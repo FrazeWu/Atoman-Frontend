@@ -21,8 +21,23 @@ export interface MusicCreationTrackDraft {
   songId?: string
   discNumber?: number
   lyrics?: string
+  lyricsDraft?: MusicCreationLyricsDraft
   coverUrl?: string
   contributors?: MusicCreationAlbumContributorDraft[]
+}
+
+export interface MusicCreationLyricsDraft {
+  content: string
+  translation: string
+  format: 'plain' | 'lrc'
+  language: string
+  editSummary: string
+  lines: Array<{
+    line_key?: string
+    text: string
+    translation: string
+    time_ms: number | null
+  }>
 }
 
 export interface MusicCreationArtistStageNameDraft {
@@ -83,6 +98,8 @@ export interface MusicCreationAlbumImportDraft {
     title: string
     audioKey: string
     origin: string
+    discNumber?: number
+    trackNumber?: number
   }>
   lastSyncedAt: string
   errorMessage: string

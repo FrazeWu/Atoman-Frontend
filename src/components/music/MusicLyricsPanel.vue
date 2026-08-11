@@ -1,12 +1,6 @@
 <template>
   <section class="music-lyrics-panel">
     <header class="music-lyrics-panel__header">
-      <div class="music-lyrics-panel__heading">
-        <p class="music-lyrics-panel__eyebrow">歌词</p>
-        <h2>{{ songTitle }}</h2>
-        <p class="music-lyrics-panel__meta">{{ artistText }}</p>
-      </div>
-
       <div class="music-lyrics-panel__actions">
         <PButton
           class="music-lyrics-panel__action-btn"
@@ -110,6 +104,17 @@
 
     <div class="music-lyrics-panel__layout">
       <div class="music-lyrics-panel__main">
+        <section class="music-lyrics-panel__song-info" aria-label="歌曲信息">
+          <p class="music-lyrics-panel__eyebrow">歌词</p>
+          <h2>{{ songTitle }}</h2>
+          <dl class="music-lyrics-panel__credits">
+            <div v-for="group in creditGroups" :key="group.role">
+              <dt>{{ group.label }}</dt>
+              <dd>{{ group.names.join(' / ') }}</dd>
+            </div>
+          </dl>
+        </section>
+
         <div v-if="hasTranslation" class="music-lyrics-panel__display-mode">
           <PSegmentedControl v-model="displayMode" :options="displayModeOptions" />
         </div>
@@ -198,10 +203,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
-import type {
-  MusicLyricsAnnotation,
-  MusicSongLyricsLine,
-  UpdateMusicSongLyricsInput,
+import {
+  getMusicSongDetail,
+  type MusicSongDetail,
+  type MusicLyricsAnnotation,
+  type MusicLyricsFormat,
+  type MusicLyricsSaveTarget,
+  type MusicSongLyricsLine,
+  type UpdateMusicSongLyricsInput,
 } from '@/api/musicV1'
 import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
 import MusicAnnotationPanel from '@/components/music/MusicAnnotationPanel.vue'
@@ -215,6 +224,7 @@ import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
 import { buildMusicLyricsVersionPreview, type MusicLyricsVersionDiffKind } from '@/utils/musicLyricsVersionDiff'
+import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
 
 const props = defineProps<{
   songId: string
@@ -274,11 +284,13 @@ const pendingLyricsInput = ref<UpdateMusicSongLyricsInput | null>(null)
 const conflictAnnotationIds = ref<string[]>([])
 const pendingLyricsSongId = ref('')
 const isUserScrolling = ref(false)
+const songCredits = ref<MusicSongDetail['artists']>([])
 let scrollLockTimer: ReturnType<typeof setTimeout> | null = null
 let pendingLyricsSaveGeneration = 0
 let activeLyricsSaveGeneration = 0
 let versionsViewGeneration = 0
 let rebindOperationGeneration = 0
+let songCreditsGeneration = 0
 
 function handleUserScroll() {
   isUserScrolling.value = true
@@ -318,6 +330,29 @@ const activeTimedLine = computed(() => {
 const currentLineId = computed(() => activeTimedLine.value?.line_key ?? activeTimedLine.value?.id ?? '')
 const hasTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
 const showTranslation = computed(() => hasTranslation.value && displayMode.value === 'bilingual')
+const creditGroups = computed(() => {
+  const groups = new Map<string, { role: string; label: string; names: string[] }>()
+
+  for (const credit of songCredits.value) {
+    const role = credit.role === 'custom'
+      ? `custom:${credit.custom_role?.trim() || '其他'}`
+      : credit.role
+    const label = credit.role === 'custom'
+      ? credit.custom_role?.trim() || '其他'
+      : credit.role === 'primary'
+        ? '艺术家'
+        : albumArtistRoleLabels[credit.role]
+    const group = groups.get(role) ?? { role, label, names: [] }
+    if (!group.names.includes(credit.name)) group.names.push(credit.name)
+    groups.set(role, group)
+  }
+
+  if (!groups.size && props.artistText.trim()) {
+    groups.set('primary', { role: 'primary', label: '艺术家', names: [props.artistText.trim()] })
+  }
+
+  return [...groups.values()]
+})
 const conflictMessage = computed(() => `这次修改会影响 ${conflictAnnotationIds.value.length} 条注释，保存后将通知作者重新确认。`)
 const selectedAnnotations = computed(() => {
   if (!lyrics.value || selectedAnnotationIds.value.length === 0) return []
@@ -366,9 +401,23 @@ watch(
     pendingLyricsSaveGeneration = 0
     conflictAnnotationIds.value = []
     void load(songId)
+    void loadSongCredits(songId)
   },
   { immediate: true },
 )
+
+async function loadSongCredits(songId: string) {
+  const generation = ++songCreditsGeneration
+  songCredits.value = []
+  try {
+    const detail = await getMusicSongDetail(songId)
+    if (generation === songCreditsGeneration && props.songId === songId) {
+      songCredits.value = detail.artists
+    }
+  } catch {
+    // 歌词仍可使用播放器已有的艺术家信息展示。
+  }
+}
 
 watch(currentLineId, async (lineId, previousLineId) => {
   if (!lineId || lineId === previousLineId) return
@@ -567,10 +616,13 @@ async function handleRevertVersion(version: number) {
 }
 
 async function handleSaveLyrics(payload: {
-  target: 'original' | 'translation' | 'timing' | 'import'
+  target: MusicLyricsSaveTarget
   language?: string
   translationIncluded?: boolean
   baseVersion: number
+  content: string
+  translation: string
+  format: MusicLyricsFormat
   lines: Array<{ line_key?: string, text: string, translation: string, time_ms: number | null }>
   editSummary: string
 }) {
@@ -579,6 +631,9 @@ async function handleSaveLyrics(payload: {
     target: payload.target,
     base_version: payload.baseVersion,
     lines: payload.lines,
+    content: payload.content,
+    translation: payload.translation,
+    format: payload.format,
     edit_summary: payload.editSummary,
     ...(payload.language ? { language: payload.language } : {}),
     ...(payload.translationIncluded !== undefined
@@ -682,19 +737,19 @@ function cancelLyricsConflict() {
 
 .music-lyrics-panel__header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
   align-items: flex-start;
 }
 
-.music-lyrics-panel__heading {
+.music-lyrics-panel__song-info {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
   min-width: 0;
 }
 
-.music-lyrics-panel__eyebrow,
-.music-lyrics-panel__meta {
+.music-lyrics-panel__eyebrow {
   margin: 0;
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
@@ -704,12 +759,40 @@ function cancelLyricsConflict() {
   text-transform: uppercase;
 }
 
-.music-lyrics-panel__heading h2 {
+.music-lyrics-panel__song-info h2 {
   margin: 0;
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
-  font-size: clamp(1.2rem, 2vw, 1.8rem);
+  font-size: 1.8rem;
   font-weight: 900;
+}
+
+.music-lyrics-panel__credits {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.25rem 0 0;
+}
+
+.music-lyrics-panel__credits div {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.music-lyrics-panel__credits dt,
+.music-lyrics-panel__credits dd {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.music-lyrics-panel__credits dt {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.music-lyrics-panel__credits dd {
+  color: var(--a-color-text);
+  font-size: 0.875rem;
 }
 
 .music-lyrics-panel__actions {
@@ -864,23 +947,9 @@ function cancelLyricsConflict() {
 
 .music-lyrics-panel__main {
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 1rem;
-  /* 增加高质感渐变遮罩 */
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 15%,
-    black 85%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 15%,
-    black 85%,
-    transparent 100%
-  );
 }
 
 .music-lyrics-panel__display-mode {

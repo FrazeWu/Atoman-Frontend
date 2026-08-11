@@ -14,6 +14,7 @@ import {
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
   musicImportAlbumTitle,
   musicImportGroupForStatus,
@@ -32,7 +33,8 @@ const activeGroup = ref<MusicImportGroup>('in_progress')
 const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
-let pollTimer: ReturnType<typeof setInterval> | null = null
+const importRequests = useRequestGeneration()
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 
 const albumImports = computed(() => uniqueMusicAlbumImports(imports.value))
 
@@ -93,13 +95,29 @@ function formatDate(isoString?: string): string {
 }
 
 async function loadImports(silent = false, nextPage = 1) {
+  const request = importRequests.beginRequest()
   if (!silent) loading.value = true;
   errorMessage.value = "";
   try {
-    const response = await listMusicAlbumImports({ page: nextPage, page_size: 50 });
-    imports.value = nextPage === 1 ? response.data : uniqueMusicAlbumImports([...imports.value, ...response.data]);
-    page.value = nextPage
-    hasMore.value = response.meta.has_more
+    const refreshLoadedPages = silent && nextPage === 1
+    const pagesToLoad = refreshLoadedPages
+      ? Array.from({ length: Math.max(1, page.value) }, (_, index) => index + 1)
+      : [nextPage]
+    const responses = await Promise.all(
+      pagesToLoad.map((targetPage) => listMusicAlbumImports({ page: targetPage, page_size: 50 })),
+    )
+    if (!request.isCurrent()) return
+    if (refreshLoadedPages) {
+      imports.value = uniqueMusicAlbumImports(responses.flatMap((response) => response.data))
+      hasMore.value = responses[responses.length - 1].meta.has_more
+    } else {
+      const response = responses[0]
+      imports.value = nextPage === 1
+        ? response.data
+        : uniqueMusicAlbumImports([...imports.value, ...response.data])
+      page.value = nextPage
+      hasMore.value = response.meta.has_more
+    }
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
     if (selected) {
       activeGroup.value = musicImportGroupForStatus(selected.status)
@@ -107,11 +125,13 @@ async function loadImports(silent = false, nextPage = 1) {
     if (!visibleImports.value.some((item) => item.importId === selectedId.value)) {
       selectedId.value = visibleImports.value[0]?.importId ?? null;
     }
-    checkPollState()
   } catch {
-    if (!silent) errorMessage.value = "导入记录加载失败";
+    if (request.isCurrent() && !silent) errorMessage.value = "导入记录加载失败";
   } finally {
-    if (!silent) loading.value = false;
+    if (request.isCurrent()) {
+      loading.value = false;
+      checkPollState()
+    }
   }
 }
 
@@ -131,16 +151,18 @@ async function deleteRecord() {
 }
 
 function checkPollState() {
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
   const hasProcessing = imports.value.some((item) =>
-    ['queued', 'extracting', 'analyzing', 'transcoding', 'uploading', 'pending_upload'].includes(item.status)
+    ['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(item.status)
   )
-  if (hasProcessing && !pollTimer) {
-    pollTimer = setInterval(() => {
+  if (hasProcessing) {
+    pollTimer = setTimeout(() => {
+      pollTimer = null
       void loadImports(true)
     }, 3000)
-  } else if (!hasProcessing && pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
   }
 }
 
@@ -150,9 +172,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (pollTimer) {
-    clearInterval(pollTimer)
+    clearTimeout(pollTimer)
     pollTimer = null
   }
+  importRequests.beginRequest()
 })
 
 async function retryFile(fileId: string) {
@@ -175,9 +198,11 @@ async function retryFile(fileId: string) {
 
 async function retryAllFailedFiles() {
   if (!selectedImport.value) return
-  const failedFiles = selectedImport.value.files.filter(f => f.processingStatus === 'failed')
+  const importId = selectedImport.value.importId
+  const files = [...selectedImport.value.files]
+  const failedFiles = files.filter(f => f.processingStatus === 'failed')
   const attentionFile = selectedImport.value.status === 'needs_attention'
-    ? selectedImport.value.files.find(f => f.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(f.role))
+    ? files.find(f => f.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(f.role))
     : null
   const retryFiles = failedFiles.length ? failedFiles : attentionFile ? [attentionFile] : []
   if (!retryFiles.length) {
@@ -188,7 +213,7 @@ async function retryAllFailedFiles() {
   actionBusy.value = 'retry-all'
   try {
     for (const f of retryFiles) {
-      await retryMusicAlbumImportFile(selectedImport.value.importId, f.fileId)
+      await retryMusicAlbumImportFile(importId, f.fileId)
     }
     await loadImports(true)
   } catch {

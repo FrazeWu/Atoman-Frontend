@@ -177,6 +177,41 @@ describe('player store', () => {
     expect(player.currentSong?.id).toBe('song-uuid-2')
   })
 
+  it('keeps music and podcast items with the same raw id distinct', () => {
+    const player = usePlayerStore()
+    const musicSong = { id: 101, source_type: 'music', title: 'Song', audio_url: 'song.mp3' } as any
+    const podcastSong = {
+      id: 101,
+      source_type: 'feed_podcast',
+      source_id: '101',
+      title: 'Episode',
+      audio_url: 'episode.mp3',
+    } as any
+
+    player.playSong(musicSong)
+    player.addToQueue(podcastSong)
+
+    expect(player.queue).toHaveLength(2)
+    player.playQueuedSong(podcastSong)
+    expect(player.currentSong?.title).toBe('Episode')
+
+    player.removeFromQueue(musicSong)
+    expect(player.queue.map((item) => item.title)).toEqual(['Episode'])
+  })
+
+  it('normalizes invalid album start indexes and missing queue positions', () => {
+    const player = usePlayerStore()
+    const firstSong = { id: 'first', title: 'First', audio_url: 'first.mp3' } as any
+    const secondSong = { id: 'second', title: 'Second', audio_url: 'second.mp3' } as any
+
+    player.playAlbum([firstSong, secondSong], 99)
+    expect(player.currentSong?.id).toBe('first')
+
+    player.currentSong = { id: 'restored', title: 'Restored', audio_url: 'restored.mp3' } as any
+    player.playPrevious()
+    expect(player.currentSong?.id).toBe('first')
+  })
+
   it('plays a queued feed song without shrinking the current queue', () => {
     const player = usePlayerStore()
     const firstFeedItem = {

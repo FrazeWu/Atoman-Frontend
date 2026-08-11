@@ -43,13 +43,13 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
   afterEach(() => vi.unstubAllGlobals())
 
-  it('keeps track controls in one responsive flex row', () => {
+  it('wraps track actions on narrow screens without squeezing the title', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/music/MusicCreationAlbumDetailsStep.vue'), 'utf8')
     const rowDefinitions = source.match(/\.track-row\s*\{/g) ?? []
 
-    expect(rowDefinitions).toHaveLength(1)
+    expect(rowDefinitions).toHaveLength(2)
     expect(source).toMatch(/\.track-row\s*\{[\s\S]*?display:\s*flex;/)
-    expect(source).not.toMatch(/@media \(max-width: 720px\)[\s\S]*?\.track-row\s*\{/)
+    expect(source).toMatch(/@media \(max-width: 640px\)[\s\S]*?\.track-row\s*\{[\s\S]*?flex-wrap:\s*wrap;/)
   })
 
   it('keeps text editing separate from drag sorting', () => {
@@ -66,6 +66,18 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.get('[data-testid="album-track-row-track-1"]').attributes('draggable')).toBeUndefined()
     expect(wrapper.get('[data-testid="album-track-drag-handle-track-1"]').attributes('draggable')).toBe('true')
     expect(wrapper.get('[data-testid="album-track-title-input"]').element.closest('.track-row__input')).not.toBeNull()
+  })
+
+  it('adds a lyric upload action to every new album track', () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
+    drawers.setMusicCreationStep('albumDetails')
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+    flow.draft.tracks = [{ id: 'track-lyrics', sequence: 1, title: 'Track title' }]
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    expect(wrapper.get('[data-testid="album-track-lyrics-track-lyrics"]').text()).toContain('上传歌词')
   })
 
   it('renders album details fields in the confirmed order and shows seeded draft values', () => {

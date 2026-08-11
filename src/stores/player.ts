@@ -38,6 +38,11 @@ function resolveUploadedMediaUrl(url: string) {
   return `${new URL(api.url).origin}${url}`;
 }
 
+function playbackItemKey(song: Song) {
+  const sourceType = song.source_type || "music";
+  return `${sourceType}:${song.source_id || song.id}`;
+}
+
 export const usePlayerStore = defineStore("player", () => {
   const lifecycle = useContentLifecycle();
   const authStore = useAuthStore();
@@ -96,7 +101,8 @@ export const usePlayerStore = defineStore("player", () => {
     
     const newList = shuffleArray(list);
     if (currentSong.value) {
-      const idx = newList.findIndex(s => s.id === currentSong.value?.id);
+      const currentKey = playbackItemKey(currentSong.value);
+      const idx = newList.findIndex(s => playbackItemKey(s) === currentKey);
       if (idx > -1) {
         newList.splice(idx, 1);
         newList.unshift(currentSong.value);
@@ -236,7 +242,8 @@ export const usePlayerStore = defineStore("player", () => {
   const preloadNextSong = () => {
     const list = getActiveList();
     if (!list.length || !currentSong.value) return;
-    const currentIndex = list.findIndex((s) => s.id === currentSong.value?.id);
+    const currentKey = playbackItemKey(currentSong.value);
+    const currentIndex = list.findIndex((s) => playbackItemKey(s) === currentKey);
     if (currentIndex === -1) return;
     const nextIndex = (currentIndex + 1) % list.length;
     const nextSong = list[nextIndex];
@@ -310,9 +317,10 @@ export const usePlayerStore = defineStore("player", () => {
 
   const syncCurrentSongFromLibrary = (library: Song[]) => {
     if (!currentSong.value) return;
+    if (currentSong.value.source_type && currentSong.value.source_type !== "music") return;
 
     const refreshedSong = library.find(
-      (song) => song.id === currentSong.value?.id,
+      (song) => playbackItemKey(song) === playbackItemKey(currentSong.value!),
     );
     if (!refreshedSong) return;
 
@@ -509,7 +517,7 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   const playSong = (song: Song) => {
-    if (currentSong.value?.id === song.id) {
+    if (currentSong.value && playbackItemKey(currentSong.value) === playbackItemKey(song)) {
       togglePlay();
       return;
     }
@@ -520,7 +528,7 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   const playQueuedSong = (song: Song) => {
-    if (currentSong.value?.id === song.id) {
+    if (currentSong.value && playbackItemKey(currentSong.value) === playbackItemKey(song)) {
       togglePlay();
       return;
     }
@@ -529,10 +537,12 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   const addToQueue = (song: Song, playNext = false) => {
-    if (queue.value.some((item) => item.id === song.id)) return;
+    const songKey = playbackItemKey(song);
+    if (queue.value.some((item) => playbackItemKey(item) === songKey)) return;
     if (playNext && currentSong.value) {
+      const currentKey = playbackItemKey(currentSong.value);
       const index = queue.value.findIndex(
-        (item) => item.id === currentSong.value?.id,
+        (item) => playbackItemKey(item) === currentKey,
       );
       queue.value.splice(Math.max(0, index + 1), 0, song);
       return;
@@ -540,9 +550,10 @@ export const usePlayerStore = defineStore("player", () => {
     queue.value.push(song);
   };
 
-  const removeFromQueue = (songID: Song["id"]) => {
-    if (currentSong.value?.id === songID) return;
-    queue.value = queue.value.filter((song) => song.id !== songID);
+  const removeFromQueue = (target: Song) => {
+    const targetKey = playbackItemKey(target);
+    if (currentSong.value && playbackItemKey(currentSong.value) === targetKey) return;
+    queue.value = queue.value.filter((song) => playbackItemKey(song) !== targetKey);
   };
 
   const clearQueue = () => {
@@ -565,10 +576,14 @@ export const usePlayerStore = defineStore("player", () => {
   const playAlbum = (albumSongs: Song[], startIndex = 0) => {
     if (albumSongs.length === 0) return;
 
+    const normalizedStartIndex = Number.isInteger(startIndex) && startIndex >= 0 && startIndex < albumSongs.length
+      ? startIndex
+      : 0;
+
     currentAlbum.value = albumSongs;
     queue.value = [...albumSongs];
 
-    startSong(albumSongs[startIndex]);
+    startSong(albumSongs[normalizedStartIndex]);
   };
 
   const togglePlay = () => {
@@ -607,9 +622,8 @@ export const usePlayerStore = defineStore("player", () => {
     const list = getActiveList();
     if (!currentSong.value || list.length === 0) return;
 
-    const currentIndex = list.findIndex(
-      (song) => song.id === currentSong.value?.id,
-    );
+    const currentKey = playbackItemKey(currentSong.value);
+    const currentIndex = list.findIndex((song) => playbackItemKey(song) === currentKey);
     const player = ensureAudio();
 
     let nextIndex;
@@ -619,6 +633,8 @@ export const usePlayerStore = defineStore("player", () => {
       resetListening(currentSong.value);
       attemptPlay(player);
       return;
+    } else if (currentIndex === -1) {
+      nextIndex = 0;
     } else if (repeatMode.value === "all" || currentIndex < list.length - 1) {
       nextIndex = (currentIndex + 1) % list.length;
     } else {
@@ -633,10 +649,11 @@ export const usePlayerStore = defineStore("player", () => {
     const list = getActiveList();
     if (!currentSong.value || list.length === 0) return;
 
-    const currentIndex = list.findIndex(
-      (song) => song.id === currentSong.value?.id,
-    );
-    const prevIndex = (currentIndex - 1 + list.length) % list.length;
+    const currentKey = playbackItemKey(currentSong.value);
+    const currentIndex = list.findIndex((song) => playbackItemKey(song) === currentKey);
+    const prevIndex = currentIndex === -1
+      ? 0
+      : (currentIndex - 1 + list.length) % list.length;
     startSong(list[prevIndex]);
   };
 

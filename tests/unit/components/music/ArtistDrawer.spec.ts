@@ -274,6 +274,31 @@ describe('ArtistDrawer.vue', () => {
     wrapper.unmount()
   })
 
+  it('loads artist albums page by page', async () => {
+    listMusicAlbums
+      .mockResolvedValueOnce({
+        data: [{ id: 'album-1', title: 'First Page', entry_status: 'open' }],
+        meta: { page: 1, page_size: 24, total: 2, has_more: true },
+      })
+      .mockResolvedValueOnce({
+        data: [{ id: 'album-2', title: 'Second Page', entry_status: 'open' }],
+        meta: { page: 2, page_size: 24, total: 2, has_more: false },
+      })
+
+    const wrapper = mount(ArtistDrawer)
+    await vi.dynamicImportSettled()
+
+    expect(listMusicAlbums).toHaveBeenNthCalledWith(1, { artist_id: '1', page: 1, page_size: 24 })
+    const loadMoreButton = wrapper.findAll('button').find((button) => button.text().includes('加载更多'))
+    expect(loadMoreButton).toBeDefined()
+    await loadMoreButton!.trigger('click')
+    await vi.dynamicImportSettled()
+
+    expect(listMusicAlbums).toHaveBeenNthCalledWith(2, { artist_id: '1', page: 2, page_size: 24 })
+    expect(wrapper.text()).toContain('First Page')
+    expect(wrapper.text()).toContain('Second Page')
+  })
+
   it('opens unified artist editor from the artist detail action bar', async () => {
     const wrapper = mount(ArtistDrawer)
 

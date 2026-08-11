@@ -27,6 +27,8 @@ export type MusicAlbumImportTrack = {
   title: string;
   audioKey: string;
   origin: string;
+  discNumber?: number;
+  trackNumber?: number;
 };
 
 export type MusicAlbumImportCommitStageName = {
@@ -39,7 +41,15 @@ export type MusicAlbumImportCommitStageName = {
 export type MusicAlbumImportCommitTrack = {
   song_id?: string;
   title: string;
+  disc_number: number;
   track_number: number;
+  lyrics?: {
+    content: string;
+    translation: string;
+    format: MusicLyricsFormat;
+    language: string;
+    edit_summary: string;
+  };
 };
 
 export type MusicAlbumImportCommitMember = {
@@ -754,8 +764,8 @@ export type ArtistEditDraft = {
 };
 
 export type MusicLyricsFormat = "plain" | "lrc";
-export type MusicLyricsEditTarget = "original" | "translation" | "timing";
-export type MusicLyricsSaveTarget = MusicLyricsEditTarget | "import";
+export type MusicLyricsEditTarget = "original" | "translation";
+export type MusicLyricsSaveTarget = MusicLyricsEditTarget | "import" | "all";
 export type MusicLyricsAnnotationVote = "up" | "down";
 export type MusicLyricsViewerVote = MusicLyricsAnnotationVote | "none";
 export type MusicLyricsAnnotationStatus = "active" | "deleted" | "needs_rebind";
@@ -836,6 +846,9 @@ export type UpdateMusicSongLyricsInput = {
     translation: string;
     time_ms: number | null;
   }>;
+  content?: string;
+  translation?: string;
+  format?: MusicLyricsFormat;
   edit_summary: string;
   annotation_resolutions?: MusicLyricsAnnotationResolution[];
 };

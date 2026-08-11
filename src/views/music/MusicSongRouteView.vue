@@ -10,6 +10,7 @@ import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { reportError } from '@/utils/logger'
 
 const route = useRoute()
@@ -23,6 +24,7 @@ const error = ref('')
 const actionBusy = ref('')
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const detailRequests = useRequestGeneration()
 
 function playable(song: MusicSongListItem): Song {
   return {
@@ -108,16 +110,20 @@ function openSongHistory() {
 
 async function load(songId: unknown) {
   if (typeof songId !== 'string' || !songId) return
+  const request = detailRequests.beginRequest()
   loading.value = true
   error.value = ''
   try {
-    detail.value = await getMusicSongDetail(songId)
+    const response = await getMusicSongDetail(songId)
+    if (!request.isCurrent()) return
+    detail.value = response
     favoriteSongIds.value = new Set(detail.value.bookmarked ? [String(detail.value.song.id)] : [])
   } catch {
+    if (!request.isCurrent()) return
     detail.value = null
     error.value = '歌曲无法加载'
   } finally {
-    loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 

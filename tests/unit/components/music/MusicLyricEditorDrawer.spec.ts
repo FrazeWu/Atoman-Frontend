@@ -103,58 +103,18 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(selectedRowId(timed)).not.toBe(previousIds[1])
   })
 
-  it('shows and writes the same centisecond-rounded playback time while keeping selection', async () => {
-    const wrapper = mountDrawer({
-      content: '[00:01.00]Alpha\n[00:02.00]Beta',
-      format: 'lrc',
-      currentTimeSeconds: 3.256,
-    })
-    await wrapper.get('[data-testid="mode-timing"]').trigger('click')
-    const secondId = draftRows(wrapper)[1]!.id
-    await wrapper.get(`[data-testid="lyric-time-${secondId}"]`).trigger('focus')
+  it('edits timing in original mode and only displays it in translation mode', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]Alpha', translation: '[00:01.00]甲', format: 'lrc' })
+    const rowId = draftRows(wrapper)[0]!.id
+    await wrapper.get(`[data-testid="lyric-time-${rowId}"]`).setValue('00:02.50')
+    expect(draftRows(wrapper)[0]!.timeMs).toBe(2500)
 
-    expect(wrapper.get('[data-testid="lyrics-current-time"]').text()).toBe('00:03.26')
-    expect(wrapper.get('[data-testid="lyrics-write-current-time"]').attributes('aria-label')).toBe('写入当前播放时间')
-    expect(wrapper.get('[data-testid="lyrics-write-current-time-next"]').attributes('aria-label')).toBe('写入当前播放时间并选择下一行')
-    await wrapper.get('[data-testid="lyrics-write-current-time"]').trigger('click')
-
-    expect(draftRows(wrapper)[1]!.timeMs).toBe(3260)
-    expect(selectedRowId(wrapper)).toBe(secondId)
-  })
-
-  it('writes time, selects the next row, and focuses its time input', async () => {
-    const wrapper = mountDrawer({
-      content: '[00:01.00]Alpha\n[00:02.00]Beta\n[00:03.00]Gamma',
-      format: 'lrc',
-      currentTimeSeconds: 4.444,
-    })
-    await wrapper.get('[data-testid="mode-timing"]').trigger('click')
-    const ids = draftRows(wrapper).map(row => row.id)
-    const firstInput = wrapper.get(`[data-testid="lyric-time-${ids[0]}"]`)
-    const nextInput = wrapper.get(`[data-testid="lyric-time-${ids[1]}"]`)
-    document.body.appendChild(wrapper.get('.music-lyric-editor-drawer__row-editor').element)
-    await firstInput.trigger('focus')
-    await wrapper.get('[data-testid="lyrics-write-current-time-next"]').trigger('click')
-
-    expect(draftRows(wrapper)[0]!.timeMs).toBe(4440)
-    expect(selectedRowId(wrapper)).toBe(ids[1])
-    expect(document.activeElement).toBe(nextInput.element)
-  })
-
-  it('writes the last row without adding or moving selection', async () => {
-    const wrapper = mountDrawer({
-      content: '[00:01.00]Alpha\n[00:02.00]Beta',
-      format: 'lrc',
-      currentTimeSeconds: 5,
-    })
-    await wrapper.get('[data-testid="mode-timing"]').trigger('click')
-    const ids = draftRows(wrapper).map(row => row.id)
-    await wrapper.get(`[data-testid="lyric-time-${ids[1]}"]`).trigger('focus')
-    await wrapper.get('[data-testid="lyrics-write-current-time-next"]').trigger('click')
-
-    expect(draftRows(wrapper)).toHaveLength(2)
-    expect(draftRows(wrapper)[1]!.timeMs).toBe(5000)
-    expect(selectedRowId(wrapper)).toBe(ids[1])
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
+    expect(wrapper.find(`[data-testid="lyric-time-${rowId}"]`).exists()).toBe(false)
+    expect(wrapper.text()).toContain('00:02.50')
+    expect(wrapper.get<HTMLInputElement>(`[data-testid="lyric-original-${rowId}"]`).element.readOnly).toBe(true)
+    await wrapper.get(`[data-testid="lyric-translation-${rowId}"]`).setValue('新翻译')
+    expect(draftRows(wrapper)[0]!.translation).toBe('新翻译')
   })
 
   it('selects a newly added row', async () => {
@@ -209,25 +169,8 @@ describe('MusicLyricEditorDrawer.vue', () => {
     const selectedId = draftRows(wrapper)[0]!.id
     await wrapper.get(`[data-testid="lyric-original-${selectedId}"]`).trigger('focus')
 
-    await wrapper.get('[data-testid="mode-timing"]').trigger('click')
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
     expect(selectedRowId(wrapper)).toBe(selectedId)
-  })
-
-  it('hides timing controls outside timing mode and disables them while saving or without rows', async () => {
-    const plain = mountDrawer()
-    expect(plain.find('[data-testid="lyrics-current-time"]').exists()).toBe(false)
-
-    const saving = mountDrawer({ content: '[00:01.00]Alpha', format: 'lrc', saving: true })
-    await saving.setProps({ saving: false })
-    await saving.get('[data-testid="mode-timing"]').trigger('click')
-    await saving.setProps({ saving: true })
-    expect(saving.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time"]').element.disabled).toBe(true)
-    expect(saving.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time-next"]').element.disabled).toBe(true)
-
-    const empty = mountDrawer({ content: '', translation: '', format: 'lrc' })
-    await empty.get('[data-testid="mode-timing"]').trigger('click')
-    expect(empty.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time"]').element.disabled).toBe(true)
-    expect(empty.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time-next"]').element.disabled).toBe(true)
   })
 
   it('forwards row seek events unchanged', () => {
@@ -236,13 +179,6 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.emitted('seek')).toEqual([[12.34]])
   })
 
-  it('locks timing controls to accessible touch targets and mobile-safe layout', () => {
-    expect(componentSource).toMatch(/\.music-lyric-editor-drawer__timing-actions\s*\{[^}]*gap:\s*8px;/s)
-    expect(componentSource).toMatch(/\.music-lyric-editor-drawer__timing-actions\s+:deep\(\.p-button\)\s*\{[^}]*min-height:\s*44px;/s)
-    expect(componentSource).toMatch(/\.music-lyric-editor-drawer__current-time\s*\{[^}]*font-variant-numeric:\s*tabular-nums;/s)
-    expect(componentSource).toMatch(/@media \(max-width: 767px\)[\s\S]*\.music-lyric-editor-drawer__timing\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/)
-    expect(componentSource).toMatch(/@media \(max-width: 767px\)[\s\S]*\.music-lyric-editor-drawer__timing-actions\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/)
-  })
 
   it('gives the sheet an accessible lyric editor title', () => {
     const wrapper = mountDrawer()
@@ -257,9 +193,12 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await wrapper.get('[data-testid="lyrics-save"]').trigger('click')
 
     expect(wrapper.emitted('save')?.[0]?.[0]).toEqual({
-      target: 'original',
-      language: undefined,
+      target: 'all',
+      language: 'zh-CN',
       baseVersion: 0,
+      content: 'Alpha edited\nBeta',
+      translation: '甲\n乙',
+      format: 'plain',
       lines: [
         { line_key: undefined, text: 'Alpha edited', translation: '甲', time_ms: null },
         { line_key: undefined, text: 'Beta', translation: '乙', time_ms: null },
@@ -320,21 +259,16 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await buttonByText(wrapper, '增加行').trigger('click')
     expect(wrapper.findAll('[data-testid^="lyric-original-"]')).toHaveLength(4)
 
-    await wrapper.get('[data-testid="mode-timing"]').trigger('click')
-    expect(wrapper.findAll('button').some(button => button.text().trim() === '按时间排序')).toBe(false)
     expect(wrapper.findAll('[data-testid^="lyric-time-"]')).toHaveLength(4)
   })
 
-  it('switches to translation when its field is selected and allows typing', async () => {
+  it('shows translation only after explicitly switching mode', async () => {
     const wrapper = mountDrawer()
-    const translation = wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]')
-
-    expect(translation.attributes()).toHaveProperty('readonly')
-    await translation.trigger('pointerdown')
-    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid^="lyric-translation-"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
 
     expect(wrapper.get('[data-testid="mode-translation"]').attributes('aria-checked')).toBe('true')
-    expect(translation.attributes()).not.toHaveProperty('readonly')
+    const translation = wrapper.get<HTMLInputElement>('[data-testid^="lyric-translation-"]')
     await translation.setValue('新的翻译')
     expect(draftRows(wrapper)[0]?.translation).toBe('新的翻译')
   })
@@ -359,6 +293,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await chooseFile(wrapper, '原文 LRC', fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:01.00]New')))
     await chooseFile(wrapper, '翻译 LRC', fileWithText('new-zh.lrc', vi.fn().mockResolvedValue('[00:01.00]新')))
 
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
     await vi.waitFor(() => expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('新'))
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New')
     expect(rowEditor(wrapper).props('format')).toBe('lrc')
@@ -366,14 +301,16 @@ describe('MusicLyricEditorDrawer.vue', () => {
 
     await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('导入双语歌词')
     await wrapper.get('[data-testid="lyrics-save"]').trigger('click')
-    expect(wrapper.emitted('save')?.[0]?.[0]).toEqual({
-      target: 'import',
+    expect(wrapper.emitted('save')?.[0]?.[0]).toEqual(expect.objectContaining({
+      target: 'all',
       language: 'zh-CN',
-      translationIncluded: true,
       baseVersion: 0,
+      content: '[00:01.00]New',
+      translation: '[00:01.00]新',
+      format: 'lrc',
       lines: [{ line_key: undefined, text: 'New', translation: '新', time_ms: 1000 }],
       editSummary: '导入双语歌词',
-    })
+    }))
   })
 
   it('imports a real LRC into an empty song without empty-original errors', async () => {
@@ -399,17 +336,17 @@ describe('MusicLyricEditorDrawer.vue', () => {
 
     await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('导入歌词')
     await wrapper.get('[data-testid="lyrics-save"]').trigger('click')
-    expect(wrapper.emitted('save')?.[0]?.[0]).toEqual({
-      target: 'import',
+    expect(wrapper.emitted('save')?.[0]?.[0]).toEqual(expect.objectContaining({
+      target: 'all',
       language: undefined,
-      translationIncluded: false,
       baseVersion: 0,
+      format: 'lrc',
       lines: [
         { line_key: undefined, text: 'Closed on Sunday', translation: '', time_ms: 29890 },
         { line_key: undefined, text: 'Chick-Fil-A', translation: '', time_ms: 150520 },
       ],
       editSummary: '导入歌词',
-    })
+    }))
   })
 
   it('preserves matching translation and saves one atomic import without a translation file', async () => {
@@ -423,12 +360,11 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await chooseFile(wrapper, '原文 LRC', fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:02.00]Alpha')))
     await vi.waitFor(() => expect(draftRows(wrapper)[0]?.timeMs).toBe(2000))
 
-    expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('甲')
+    expect(draftRows(wrapper)[0]?.translation).toBe('甲')
     await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('更新原文时间轴')
     await wrapper.get('[data-testid="lyrics-save"]').trigger('click')
     expect(wrapper.emitted('save')?.[0]?.[0]).toEqual(expect.objectContaining({
-      target: 'import',
-      translationIncluded: false,
+      target: 'all',
       baseVersion: 3,
       lines: [{ line_key: 'line-alpha', text: 'Alpha', translation: '甲', time_ms: 2000 }],
     }))

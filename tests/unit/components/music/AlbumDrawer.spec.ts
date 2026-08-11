@@ -132,6 +132,15 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('专辑详情')
   })
 
+  it('shows lyric editing only in the detailed track layout', async () => {
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="album-track-display-detailed"]').trigger('click')
+    expect(wrapper.get('[data-testid="track-edit-lyrics-101"]').text()).toContain('编辑歌词')
+  })
+
   it('opens album history from the contributors block', async () => {
     const wrapper = mount(AlbumDrawer)
     await flushPromises()

@@ -47,8 +47,13 @@ const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
 const artistRequests = useRequestGeneration()
+const albumRequests = useRequestGeneration()
 const contributors = ref<MusicContributor[]>([])
 const contributorTotal = ref(0)
+const albumPage = ref(1)
+const albumsHaveMore = ref(false)
+const albumsLoadingMore = ref(false)
+const albumPageSize = 24
 
 const artistAliases = computed(() => (
   artist.value?.aliases
@@ -133,10 +138,14 @@ function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision
 
 async function loadArtist(targetArtistId: string | null) {
   const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
+  albumRequests.beginRequest()
+  albumsLoadingMore.value = false
   if (!targetArtistId) {
     if (isCurrentLoad()) {
       artist.value = null
       albums.value = []
+      albumPage.value = 1
+      albumsHaveMore.value = false
       isBookmarked.value = false
       contributors.value = []
       contributorTotal.value = 0
@@ -163,10 +172,12 @@ async function loadArtist(targetArtistId: string | null) {
       return
     }
     redirectMessage.value = ''
-    const albumsResponse = await listMusicAlbums({ artist_id: targetArtistId, page: 1, page_size: 100 })
+    const albumsResponse = await listMusicAlbums({ artist_id: targetArtistId, page: 1, page_size: albumPageSize })
     if (!isCurrentLoad()) return
     artist.value = artistResponse
     albums.value = albumsResponse.data
+    albumPage.value = 1
+    albumsHaveMore.value = Boolean(albumsResponse.meta.has_more)
     try {
       const contributorResponse = await listArtistContributors(targetArtistId)
       if (!isCurrentLoad()) return
@@ -201,6 +212,27 @@ async function loadArtist(targetArtistId: string | null) {
     lastLoadKey.value = null
   } finally {
     if (isCurrentLoad()) loading.value = false
+  }
+}
+
+async function loadMoreAlbums() {
+  const currentArtistId = artistId.value
+  if (!currentArtistId || albumsLoadingMore.value || !albumsHaveMore.value) return
+  const nextPage = albumPage.value + 1
+  const { isCurrent } = albumRequests.beginRequest()
+  albumsLoadingMore.value = true
+  try {
+    const response = await listMusicAlbums({ artist_id: currentArtistId, page: nextPage, page_size: albumPageSize })
+    if (!isCurrent() || artistId.value !== currentArtistId) return
+    const byId = new Map(albums.value.map((album) => [album.id, album]))
+    response.data.forEach((album) => byId.set(album.id, album))
+    albums.value = Array.from(byId.values())
+    albumPage.value = nextPage
+    albumsHaveMore.value = Boolean(response.meta.has_more)
+  } catch (error) {
+    if (isCurrent()) reportError(error, 'Failed to load more artist albums:')
+  } finally {
+    if (isCurrent()) albumsLoadingMore.value = false
   }
 }
 
@@ -450,6 +482,14 @@ watch(
           </div>
         </div>
       </div>
+      <PButton
+        v-if="albumsHaveMore && !loading"
+        variant="secondary"
+        :loading="albumsLoadingMore"
+        @click="loadMoreAlbums"
+      >
+        {{ albumsLoadingMore ? '正在加载' : '加载更多' }}
+      </PButton>
       <MusicContributorsBlock
         :contributors="contributors"
         :total="contributorTotal"

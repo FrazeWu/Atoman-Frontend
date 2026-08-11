@@ -99,6 +99,8 @@ describe('Music ArtistsView.vue', () => {
       data: [
         {
           id: 'artist-1',
+          title: 'Hot Artist',
+          summary: 'Artist bio',
           target_path: '/music?artist=artist-1',
         },
       ],
@@ -138,7 +140,7 @@ describe('Music ArtistsView.vue', () => {
 
     expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('hot')
     expect(mocks.listArtistBookmarks).not.toHaveBeenCalled()
-    expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.getMusicArtist).not.toHaveBeenCalled()
     expect(wrapper.find('h1').text()).toContain('艺术家')
     expect(wrapper.find('.search-input').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
@@ -196,12 +198,13 @@ describe('Music ArtistsView.vue', () => {
     const input = wrapper.find('input[placeholder="搜索艺术家..."]')
     await input.trigger('focus')
     await input.setValue('kanye')
+    await vi.advanceTimersByTimeAsync(250)
     await flushPromises()
 
     expect(wrapper.find('[data-testid="music-search-dropdown"]').exists()).toBe(true)
-    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'kanye', page: 1, page_size: 20 })
+    expect(mocks.listMusicArtists).toHaveBeenCalledTimes(1)
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'kanye', page: 1, page_size: 48 })
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Hot Artist')
     expect(wrapper.text()).toContain('Ye')
 
     await wrapper.find('[data-testid="music-search-result"]').trigger('mousedown')

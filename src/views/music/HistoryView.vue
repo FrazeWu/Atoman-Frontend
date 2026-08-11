@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Clock3, Heart, ListPlus, MoreHorizontal, Play, StepForward, Trash2 } from 'lucide-vue-next'
 import {
   addMusicSongToLater,
@@ -18,12 +18,14 @@ import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 
 const pageSize = 20
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { openAlbum, openArtist } = useMusicDrawers()
 const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const historyRequests = useRequestGeneration()
 const historyItems = ref<MusicListeningHistory[]>([])
 const currentPage = ref(0)
 const hasMore = ref(false)
@@ -61,6 +63,7 @@ async function loadPage(page: number) {
   if (!authStore.isAuthenticated) return
   if (loading.value || loadingMore.value) return
   const isFirst = page === 1
+  const { isCurrent } = historyRequests.beginRequest()
   if (isFirst) {
     loading.value = true
   } else {
@@ -69,6 +72,7 @@ async function loadPage(page: number) {
   errorMessage.value = ''
   try {
     const response = await listMusicListeningHistory({ page, page_size: pageSize })
+    if (!isCurrent()) return
     if (isFirst) {
       historyItems.value = response.data
     } else {
@@ -79,17 +83,23 @@ async function loadPage(page: number) {
     currentPage.value = page
     hasMore.value = Boolean(response.meta.has_more)
   } catch (error) {
+    if (!isCurrent()) return
     reportError(error, 'Failed to load music listening history:')
     errorMessage.value = '加载播放历史失败'
   } finally {
-    loading.value = false
-    loadingMore.value = false
+    if (isCurrent()) {
+      loading.value = false
+      loadingMore.value = false
+    }
   }
 }
 
 async function clearHistory() {
   if (actionBusy.value || !historyItems.value.length) return
   if (!window.confirm('确定要清空播放历史吗？')) return
+  historyRequests.beginRequest()
+  loading.value = false
+  loadingMore.value = false
   actionBusy.value = 'clear'
   try {
     await clearMusicListeningHistory()
@@ -155,9 +165,19 @@ function formatPlayedAt(rawDate: string): string {
   })
 }
 
-onMounted(() => {
-  void loadPage(1)
-})
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    historyRequests.beginRequest()
+    historyItems.value = []
+    currentPage.value = 0
+    hasMore.value = false
+    loading.value = false
+    loadingMore.value = false
+    if (authenticated) void loadPage(1)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

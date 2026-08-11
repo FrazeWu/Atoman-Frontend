@@ -16,7 +16,7 @@ function mountEditor(options: {
   issues?: MusicLyricDraftIssue[]
   disabled?: boolean
   selectedRowId?: string
-  editTarget?: 'original' | 'translation' | 'timing' | 'all'
+  editTarget?: 'original' | 'translation' | 'all'
 } = {}) {
   return mount(MusicLyricsRowEditor, {
     props: {
@@ -56,6 +56,7 @@ describe('MusicLyricsRowEditor', () => {
     expect(originalUpdate[0]).not.toBe(inputRows[0])
     expect(originalUpdate[0].original).toBe('修改后的原文')
 
+    await wrapper.setProps({ editTarget: 'translation' })
     await wrapper.get('[data-testid="lyric-translation-first"]').setValue('Updated translation')
     const translationUpdate = lastRows(wrapper)
 
@@ -71,7 +72,7 @@ describe('MusicLyricsRowEditor', () => {
     expect(editor.classes()).not.toContain('is-lrc')
     expect(firstRow.classes()).not.toContain('is-lrc')
     expect(wrapper.get('.lyric-grid-header').findAll('span').map((item) => item.text()))
-      .toEqual(['序号', '原文', '翻译', '操作'])
+      .toEqual(['序号', '原文', '操作'])
     expect(wrapper.find('[data-testid="lyric-time-first"]').exists()).toBe(false)
 
     await wrapper.setProps({ format: 'lrc' })
@@ -79,7 +80,7 @@ describe('MusicLyricsRowEditor', () => {
     expect(editor.classes()).toContain('is-lrc')
     expect(firstRow.classes()).toContain('is-lrc')
     expect(wrapper.get('.lyric-grid-header').findAll('span').map((item) => item.text()))
-      .toEqual(['序号', '时间', '原文', '翻译', '操作'])
+      .toEqual(['序号', '时间', '原文', '操作'])
     expect(wrapper.findAll('[data-testid^="lyric-time-"]')).toHaveLength(rows.length)
   })
 
@@ -101,8 +102,11 @@ describe('MusicLyricsRowEditor', () => {
         .toBe(`时间，第 ${lineNumber} 行`)
       expect(wrapper.get(`[data-testid="lyric-original-${row.id}"]`).attributes('aria-label'))
         .toBe(`原文，第 ${lineNumber} 行`)
-      expect(wrapper.get(`[data-testid="lyric-translation-${row.id}"]`).attributes('aria-label'))
-        .toBe(`翻译，第 ${lineNumber} 行`)
+    })
+    const translated = mountEditor({ format: 'lrc', editTarget: 'translation' })
+    rows.forEach((row, index) => {
+      expect(translated.get(`[data-testid="lyric-translation-${row.id}"]`).attributes('aria-label'))
+        .toBe(`翻译，第 ${index + 1} 行`)
     })
   })
 
@@ -111,24 +115,10 @@ describe('MusicLyricsRowEditor', () => {
 
     await wrapper.get('[data-testid="lyric-time-first"]').trigger('focus')
     await wrapper.get('[data-testid="lyric-original-second"]').trigger('focus')
-    await wrapper.get('[data-testid="lyric-translation-third"]').trigger('focus')
-
     expect(wrapper.emitted('select-row')).toEqual([
       ['first'],
       ['second'],
-      ['third'],
     ])
-  })
-
-  it('点击非当前文本列时请求切换到对应编辑模式', async () => {
-    const wrapper = mountEditor({ editTarget: 'original' })
-    const translation = wrapper.get('[data-testid="lyric-translation-first"]')
-
-    expect(translation.attributes()).toHaveProperty('readonly')
-    expect(translation.attributes()).not.toHaveProperty('disabled')
-    await translation.trigger('pointerdown')
-
-    expect(wrapper.emitted('select-target')).toEqual([['translation']])
   })
 
   it('为选中行提供稳定类名和 aria-current', () => {
@@ -190,11 +180,14 @@ describe('MusicLyricsRowEditor', () => {
     const disabledWrapper = mountEditor({ format: 'lrc', disabled: true })
     await disabledWrapper.get('[data-testid="lyric-time-first"]').trigger('focus')
     await disabledWrapper.get('[data-testid="lyric-original-first"]').trigger('focus')
-    await disabledWrapper.get('[data-testid="lyric-translation-first"]').trigger('focus')
     await disabledWrapper.get('[data-testid="lyric-seek-first"]').trigger('click')
+
+    const disabledTranslation = mountEditor({ format: 'lrc', disabled: true, editTarget: 'translation' })
+    await disabledTranslation.get('[data-testid="lyric-translation-first"]').trigger('focus')
 
     expect(disabledWrapper.emitted('select-row')).toBeUndefined()
     expect(disabledWrapper.emitted('seek')).toBeUndefined()
+    expect(disabledTranslation.emitted('select-row')).toBeUndefined()
   })
 
   it('保留非空非法时间原文、显示错误并发射 null', async () => {
@@ -323,12 +316,19 @@ describe('MusicLyricsRowEditor', () => {
     expect(wrapper.get('[data-testid="lyric-time-first"]').attributes('aria-describedby'))
       .toBe('lyric-issue-first-1')
 
-    expect(wrapper.get('#lyric-issue-second-0').text()).toBe('检查翻译')
-    expect(wrapper.get('[data-testid="lyric-translation-second"]').attributes('aria-describedby'))
+    const translated = mountEditor({
+      format: 'lrc',
+      editTarget: 'translation',
+      issues: [
+        { severity: 'warning', code: 'translation_note', message: '检查翻译', rowIndex: 1, source: 'translation' },
+      ],
+    })
+    expect(translated.get('#lyric-issue-second-0').text()).toBe('检查翻译')
+    expect(translated.get('[data-testid="lyric-translation-second"]').attributes('aria-describedby'))
       .toBe('lyric-issue-second-0')
 
     expect(wrapper.get('#lyric-issue-third-0').text()).toBe('检查这一行')
-    for (const field of ['time', 'original', 'translation']) {
+    for (const field of ['time', 'original']) {
       expect(wrapper.get(`[data-testid="lyric-${field}-third"]`).attributes('aria-describedby'))
         .toBe('lyric-issue-third-0')
     }
@@ -341,10 +341,13 @@ describe('MusicLyricsRowEditor', () => {
     const mobileCss = componentSource.slice(mobileMedia!.index)
 
     expect(cssRule('.lyric-grid-line', desktopCss)).toContain(
-      'grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;',
+      'grid-template-columns: 3rem minmax(0, 1fr) 9.25rem;',
     )
     expect(cssRule('.lyric-grid-line.is-lrc', desktopCss)).toContain(
-      'grid-template-columns: 3rem 11rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;',
+      'grid-template-columns: 3rem 11rem minmax(0, 1fr) 9.25rem;',
+    )
+    expect(cssRule('.lyric-grid-line.is-lrc.is-translation-mode', desktopCss)).toContain(
+      'grid-template-columns: 3rem 8rem minmax(0, 1fr);',
     )
 
     expect(cssRule('.lyric-action', desktopCss)).toMatch(/width:\s*44px;/)

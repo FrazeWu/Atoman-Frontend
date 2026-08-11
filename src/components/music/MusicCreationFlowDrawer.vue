@@ -31,6 +31,8 @@ const router = useRouter()
 const toastVisible = ref(false)
 const toastMessage = ref('')
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
+let pendingImportAutosave: { importId: string; input: musicApi.MusicAlbumImportCommitInput } | null = null
+let importAutosaveDrain: Promise<void> | null = null
 
 const creationFlow = computed(() => state.value.creationFlow)
 const isEditFlow = computed(() => creationFlow.value?.mode === 'edit')
@@ -136,7 +138,10 @@ async function loadEditDraft() {
     }
     flow.draft.tracks = (album.songs ?? [])
       .filter((song) => song.status !== 'closed')
-      .sort((left, right) => (left.track_number ?? 0) - (right.track_number ?? 0))
+      .sort((left, right) => {
+        const discDifference = (left.disc_number ?? 1) - (right.disc_number ?? 1)
+        return discDifference || (left.track_number ?? 0) - (right.track_number ?? 0)
+      })
       .map((song, index) => ({
         id: `edit-track-${song.id}`,
         songId: song.id,
@@ -434,6 +439,11 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
   })
 }
 
+function trackNumberWithinDisc(tracks: Array<{ discNumber?: number }>, index: number) {
+  const discNumber = tracks[index]?.discNumber ?? 1
+  return tracks.slice(0, index + 1).filter((track) => (track.discNumber ?? 1) === discNumber).length
+}
+
 function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
   const primaryStageName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())
     ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
@@ -473,7 +483,17 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       tracks: flow.draft.tracks.map((track, index) => ({
         ...(track.songId ? { song_id: track.songId } : {}),
         title: track.title.trim(),
-        track_number: index + 1,
+        disc_number: track.discNumber ?? 1,
+        track_number: trackNumberWithinDisc(flow.draft.tracks, index),
+        ...(track.lyricsDraft ? {
+          lyrics: {
+            content: track.lyricsDraft.content,
+            translation: track.lyricsDraft.translation,
+            format: track.lyricsDraft.format,
+            language: track.lyricsDraft.language,
+            edit_summary: track.lyricsDraft.editSummary,
+          },
+        } : {}),
       })),
     },
     album_source: flow.draft.albumDetails.source.trim(),
@@ -488,20 +508,36 @@ function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) 
     && hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 }
 
+function flushImportAutosave() {
+  if (importAutosaveDrain) return importAutosaveDrain
+  importAutosaveDrain = (async () => {
+    while (pendingImportAutosave) {
+      const pending = pendingImportAutosave
+      pendingImportAutosave = null
+      try {
+        await musicApi.commitMusicAlbumImport(pending.importId, pending.input)
+      } catch {
+        // 最终提交会再次保存并显示错误，避免打断资料填写。
+      }
+    }
+  })().finally(() => {
+    importAutosaveDrain = null
+    if (pendingImportAutosave) void flushImportAutosave()
+  })
+  return importAutosaveDrain
+}
+
 function scheduleImportAutosave() {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
   const flow = creationFlow.value
   if (!flow || flow.submitting || !canAutosaveImportDetails(flow)) return
 
-  importAutosaveTimer = setTimeout(async () => {
+  importAutosaveTimer = setTimeout(() => {
     const currentFlow = creationFlow.value
     const importId = currentFlow?.draft.albumImport.importId?.trim()
     if (!currentFlow || !importId || currentFlow.submitting || !canAutosaveImportDetails(currentFlow)) return
-    try {
-      await musicApi.commitMusicAlbumImport(importId, buildCommitInput(currentFlow))
-    } catch {
-      // 最终提交会再次保存并显示错误，避免打断资料填写。
-    }
+    pendingImportAutosave = { importId, input: buildCommitInput(currentFlow) }
+    void flushImportAutosave()
   }, 600)
 }
 
@@ -520,14 +556,26 @@ function syncReadyImportToDraft() {
   }
 
   if (!flow.tracksCustomized && (derivedTracks.length > 0 || flow.draft.tracks.length === 0)) {
-    flow.draft.tracks = derivedTracks.map((track, index) => ({
-      id: `import-track-${index + 1}`,
-      songId: track.songId,
-      sequence: index + 1,
-      title: track.title,
-      audioKey: track.audioKey,
-      origin: track.origin,
-    }))
+    const existingTracks = flow.draft.tracks
+    flow.draft.tracks = derivedTracks.map((track, index) => {
+      const id = `import-track-${index + 1}`
+      const existing = existingTracks.find(item => (
+        (track.songId && item.songId === track.songId)
+        || item.id === id
+        || (item.sequence === (track.trackNumber ?? index + 1) && item.title.trim() === track.title.trim())
+      ))
+      return {
+        id,
+        ...(track.songId ? { songId: track.songId } : {}),
+        sequence: track.trackNumber ?? index + 1,
+        ...(track.discNumber ? { discNumber: track.discNumber } : {}),
+        title: track.title,
+        audioKey: track.audioKey,
+        origin: track.origin,
+        ...(existing?.lyrics ? { lyrics: existing.lyrics } : {}),
+        ...(existing?.lyricsDraft ? { lyricsDraft: existing.lyricsDraft } : {}),
+      }
+    })
   }
 }
 
@@ -703,7 +751,7 @@ async function completeCreation() {
         tracks: flow.draft.tracks.map((track, index) => ({
           ...(track.songId ? { id: track.songId } : {}),
           title: track.title.trim(),
-          track_number: index + 1,
+          track_number: trackNumberWithinDisc(flow.draft.tracks, index),
           disc_number: track.discNumber ?? 1,
           lyrics: track.lyrics ?? '',
           audio_url: track.audioUrl ?? '',
@@ -729,6 +777,8 @@ async function completeCreation() {
       throw new Error('commitMusicAlbumImport is unavailable')
     }
 
+    if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
+    await flushImportAutosave()
     const committedImport = await commitMusicAlbumImport(importId, buildCommitInput(flow))
     await musicApi.completeMusicAlbumImportSession(importId)
     toastMessage.value = '已提交至导入中心，后台将继续处理'

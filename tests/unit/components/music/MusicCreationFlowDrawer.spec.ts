@@ -471,7 +471,7 @@ describe('MusicCreationFlowDrawer', () => {
         description: '',
         album_type: 'album',
         release_year: 2020,
-        tracks: [{ title: 'Default Track', track_number: 1 }],
+        tracks: [{ title: 'Default Track', disc_number: 1, track_number: 1 }],
       }),
       album_source: '资料来源',
     }))
@@ -801,7 +801,7 @@ describe('MusicCreationFlowDrawer', () => {
         description: '',
         album_type: 'album',
         release_year: 2007,
-        tracks: [{ title: 'Default Track', track_number: 1 }],
+        tracks: [{ title: 'Default Track', disc_number: 1, track_number: 1 }],
       }),
       album_source: '资料来源',
     }))
@@ -875,7 +875,7 @@ describe('MusicCreationFlowDrawer', () => {
         album_type: 'album',
         release_date: '2005-08-30',
         release_year: 2005,
-        tracks: [{ title: 'Default Track', track_number: 1 }],
+        tracks: [{ title: 'Default Track', disc_number: 1, track_number: 1 }],
       }),
       album_source: '资料来源',
     }))
@@ -960,9 +960,9 @@ describe('MusicCreationFlowDrawer', () => {
       album: expect.objectContaining({
         title: 'Dragged Album',
         tracks: [
-          { title: 'Outro', track_number: 1 },
-          { title: 'Intro', track_number: 2 },
-          { title: 'Middle', track_number: 3 },
+          { title: 'Outro', disc_number: 1, track_number: 1 },
+          { title: 'Intro', disc_number: 1, track_number: 2 },
+          { title: 'Middle', disc_number: 1, track_number: 3 },
         ],
       }),
     }))

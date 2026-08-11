@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { Clock3, ListMusic, Music2, Disc3, Users } from 'lucide-vue-next'
 import {
   listMusicLibrary,
@@ -101,7 +101,23 @@ async function load(nextPage = 1) {
     page.value = nextPage
   } catch { if (isCurrent()) error.value = '收藏加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
 }
-watch([kind, sort], () => { void load() }, { flush: 'sync' }); onMounted(() => { void load() })
+watch([kind, sort], () => { void load() }, { flush: 'sync' })
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    requests.beginRequest()
+    loading.value = false
+    loadingMore.value = false
+    songs.value = []
+    albums.value = []
+    artists.value = []
+    playlists.value = []
+    page.value = 1
+    hasMore.value = false
+    if (authenticated) void load()
+  },
+  { immediate: true },
+)
 watch(query, value => {
   clearTimeout(queryTimer)
   queryTimer = setTimeout(() => {

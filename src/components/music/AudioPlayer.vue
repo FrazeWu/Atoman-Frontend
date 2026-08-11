@@ -318,7 +318,7 @@
               class="q-remove"
               :aria-label="`移除 ${song.title}`"
               title="移除"
-              @click.stop="player.removeFromQueue(song.id)"
+              @click.stop="player.removeFromQueue(song)"
             >
               ×
             </button>
@@ -507,7 +507,7 @@ const {
 async function loadPlaylists() {
   if (!authStore.isAuthenticated) {
     playlists.value = [];
-    playlistsLoaded.value = true;
+    playlistsLoaded.value = false;
     return;
   }
   try {
@@ -555,7 +555,7 @@ async function addPodcastBookmark() {
   if (!episodeId) return;
   if (!requireLogin()) return;
   try {
-    const res = await postPodcastEpisode(episodeId);
+    const res = await postPodcastEpisode(episodeId, "favorite");
     if (!res.ok) throw new Error("bookmark failed");
     toastMessage.value = "已收藏";
     toastVisible.value = true;
@@ -571,7 +571,7 @@ async function addPodcastListenLater() {
   if (!episodeId) return;
   if (!requireLogin()) return;
   try {
-    const res = await postPodcastEpisode(episodeId);
+    const res = await postPodcastEpisode(episodeId, "listen_later");
     if (!res.ok) throw new Error("listen later failed");
     toastMessage.value = "已加入稍后听";
     toastVisible.value = true;
@@ -582,7 +582,7 @@ async function addPodcastListenLater() {
   }
 }
 
-function postPodcastEpisode(episodeId: string) {
+function postPodcastEpisode(episodeId: string, kind: "favorite" | "listen_later") {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -592,7 +592,7 @@ function postPodcastEpisode(episodeId: string) {
   return apiRequest(api.podcast.bookmarks, {
     method: "POST",
     headers,
-    body: JSON.stringify({ episode_id: episodeId }),
+    body: JSON.stringify({ episode_id: episodeId, kind }),
   });
 }
 
@@ -614,14 +614,25 @@ function guardPlaylistMenu(event: MouseEvent) {
 }
 
 watch(
-  () => player.currentSong?.id,
-  async (newId) => {
+  [
+    () => player.currentSong
+      ? `${player.currentSong.source_type || "music"}:${player.currentSong.source_id || player.currentSong.id}`
+      : "",
+    () => authStore.isAuthenticated,
+  ],
+  async ([playbackKey, isAuthenticated]) => {
+    if (!isAuthenticated) {
+      playlists.value = [];
+      playlistsLoaded.value = false;
+      favoriteSongIds.value = new Set();
+      return;
+    }
     if (isPodcast.value) return;
-    if (newId) {
+    if (playbackKey && player.currentSong) {
       if (!playlistsLoaded.value) {
         await loadPlaylists();
       }
-      await loadFavorites(String(newId));
+      await loadFavorites(String(player.currentSong.id));
     }
   },
   { immediate: true },

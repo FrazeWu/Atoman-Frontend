@@ -11,7 +11,8 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
-import { Plus, Play, Heart, UserRound } from 'lucide-vue-next'
+import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
+import { FileText, Plus, Play, Heart, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -28,7 +29,7 @@ import {
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
-import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
+import { buildPlayableSongsFromAlbum, compareAlbumTracks, resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/musicAlbumCredits'
@@ -62,6 +63,7 @@ const playlistsLoaded = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const trackDisplayMode = ref<'simple' | 'detailed'>('simple')
+const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const trackDisplayOptions = [
   { label: '简单', value: 'simple', testid: 'album-track-display-simple' },
   { label: '详细', value: 'detailed', testid: 'album-track-display-detailed' },
@@ -157,7 +159,7 @@ const releaseYear = computed(() => {
   if (!year || year === '0001' || year === '0000' || year === '----') return ''
   return year
 })
-const tracks = computed(() => [...(album.value?.songs || [])].sort((a, b) => (a.track_number || 0) - (b.track_number || 0)))
+const tracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
 const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
@@ -424,6 +426,11 @@ function editAlbum() {
   })
 }
 
+function editTrackLyrics(track: { id: string; title: string }) {
+  if (!requireLogin()) return
+  lyricTrack.value = { id: String(track.id), title: track.title }
+}
+
 function mergeAlbum() {
   if (!requireLogin()) return
   openNestedAction('merge_album', { albumId: albumId.value, title: album.value?.title || '' })
@@ -461,6 +468,13 @@ watch(
     :index="sheetIndex"
     panel-class="album-drawer"
   >
+    <MusicSongLyricsEditorDrawer
+      v-if="lyricTrack"
+      show
+      :song-id="lyricTrack.id"
+      :song-title="lyricTrack.title"
+      @close="lyricTrack = null"
+    />
     <div class="drawer-body">
 	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
 	  <p v-if="album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
@@ -590,6 +604,17 @@ watch(
             </PDropdown>
           </div>
           <div v-if="trackDisplayMode === 'detailed'" class="track-specification">
+            <PButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              class="track-lyrics-action"
+              :data-testid="`track-edit-lyrics-${track.id}`"
+              @click="editTrackLyrics(track)"
+            >
+              <FileText :size="15" aria-hidden="true" />
+              编辑歌词
+            </PButton>
             <p v-if="sourceSpecification(track)" class="track-specification__line">
               <span>源文件</span>{{ sourceSpecification(track) }}
             </p>
@@ -727,6 +752,11 @@ watch(
 .artist-link:hover {
   color: var(--a-color-fg);
   text-decoration: underline;
+}
+
+.track-lyrics-action {
+  width: max-content;
+  justify-self: start;
 }
 .artist-separator {
   color: var(--a-color-border-soft);

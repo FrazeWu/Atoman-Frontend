@@ -21,6 +21,13 @@ const loginRedirect = vi.hoisted(() => ({
   requireLogin: vi.fn(),
 }))
 
+const favoriteApi = vi.hoisted(() => ({
+  favoriteSongIds: { __v_isRef: true, value: new Set<string>() },
+  loadFavoriteSongs: vi.fn(),
+  toggleFavoriteSong: vi.fn(),
+  addSongToPlaylist: vi.fn(),
+}))
+
 vi.mock('@/composables/useApi', () => ({
   useApiUrl: () => '',
   useApi: () => ({ url: '', podcast: { bookmarks: '/api/v1/podcast/bookmarks' } }),
@@ -40,12 +47,7 @@ vi.mock('@/composables/useLoginRedirect', () => ({
 }))
 
 vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
-  useMusicFavoritePlaylist: () => ({
-    favoriteSongIds: { __v_isRef: true, value: new Set<string>() },
-    loadFavoriteSongs: vi.fn().mockResolvedValue(undefined),
-    toggleFavoriteSong: vi.fn(),
-    addSongToPlaylist: vi.fn(),
-  }),
+  useMusicFavoritePlaylist: () => favoriteApi,
 }))
 
 class ResizeObserverStub {
@@ -71,6 +73,9 @@ describe('AudioPlayer', () => {
     transportApi.apiFetch.mockResolvedValue(new Response(null, { status: 201 }))
     loginRedirect.requireLogin.mockReset()
     loginRedirect.requireLogin.mockReturnValue(true)
+    favoriteApi.favoriteSongIds.value = new Set()
+    favoriteApi.loadFavoriteSongs.mockReset()
+    favoriteApi.loadFavoriteSongs.mockResolvedValue(undefined)
   })
 
   it('uses cookie-aware transport when bookmarking a podcast in a cookie session', async () => {
@@ -90,7 +95,53 @@ describe('AudioPlayer', () => {
     expect(transportApi.apiFetch).toHaveBeenCalledWith('/api/v1/podcast/bookmarks', expect.objectContaining({
       method: 'POST',
       headers: expect.not.objectContaining({ Authorization: expect.any(String) }),
+      body: JSON.stringify({ episode_id: 'episode-1', kind: 'favorite' }),
     }))
+    wrapper.unmount()
+  })
+
+  it('uses the listen_later kind for the podcast later action', async () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1', title: 'Episode 1', artist: 'Host', audio_url: '/episode.mp3',
+      source_id: 'episode-1', source_type: 'podcast_episode',
+    } as any
+
+    const wrapper = mount(AudioPlayer, {
+      global: { plugins: [createTestRouter()], stubs: { MusicLyricsPanel: true, PDropdown: true, PToast: true } },
+    })
+    await wrapper.get('[title="稍后听"]').trigger('click')
+
+    expect(transportApi.apiFetch).toHaveBeenCalledWith('/api/v1/podcast/bookmarks', expect.objectContaining({
+      body: JSON.stringify({ episode_id: 'episode-1', kind: 'listen_later' }),
+    }))
+    wrapper.unmount()
+  })
+
+  it('reloads music playlists and favorites after login and clears them after logout', async () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1', title: 'Song 1', artist: 'Artist', audio_url: '/song.mp3',
+    } as any
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.isAuthenticated = false
+
+    const wrapper = mount(AudioPlayer, {
+      global: { plugins: [createTestRouter()], stubs: { MusicLyricsPanel: true, PDropdown: true, PToast: true } },
+    })
+    await Promise.resolve()
+    expect(musicApi.listMusicPlaylists).not.toHaveBeenCalled()
+
+    auth.isAuthenticated = true
+    await wrapper.vm.$nextTick()
+    await Promise.resolve()
+    expect(musicApi.listMusicPlaylists).toHaveBeenCalledOnce()
+    expect(favoriteApi.loadFavoriteSongs).toHaveBeenCalledWith(['song-1'])
+
+    favoriteApi.favoriteSongIds.value = new Set(['song-1'])
+    auth.isAuthenticated = false
+    await wrapper.vm.$nextTick()
+    expect(favoriteApi.favoriteSongIds.value.size).toBe(0)
     wrapper.unmount()
   })
 

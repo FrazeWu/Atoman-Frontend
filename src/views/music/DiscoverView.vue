@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -30,6 +30,7 @@ import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
@@ -48,7 +49,6 @@ const router = useRouter()
 const route = useRoute()
 const player = usePlayerStore()
 const musicHome = ref<MusicHome | null>(null)
-const musicHomeLoading = ref(false)
 const {
   openAlbum,
   closeAlbum,
@@ -81,7 +81,14 @@ const searchLoading = ref(false)
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
 const albumItems = ref<MusicAlbumListItem[]>([])
+const albumPage = ref(1)
+const albumHasMore = ref(false)
+const albumLoadingMore = ref(false)
 let activeSearchRequestId = 0
+let albumSearchTimer: ReturnType<typeof setTimeout> | null = null
+let bookmarkRequestId = 0
+const musicHomeRequests = useRequestGeneration()
+const albumIndexRequests = useRequestGeneration()
 
 const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
@@ -89,19 +96,7 @@ const starredPlaylistIds = ref<string[]>([])
 
 const localFilteredAlbums = computed(() => {
   if (props.contentMode !== 'albums') return []
-  let results = albumItems.value
-
-  // 本地基于分词器的轻量级检索
-  const sq = searchQuery.value.trim().toLowerCase()
-  if (sq) {
-    results = results.filter(a => 
-      a.title.toLowerCase().includes(sq) || 
-      (a.artists && a.artists.some(artist => artist.name.toLowerCase().includes(sq))) ||
-      (a.description && a.description.toLowerCase().includes(sq))
-    )
-  }
-  
-  return results
+  return albumItems.value
 })
 
 const personalizedAlbums = computed(() => musicHome.value?.for_you ?? [])
@@ -111,43 +106,60 @@ const personalizedAlbumIds = computed(() => new Set(
 const filteredDiscoverAlbums = computed(() => discoverAlbums.value.filter(
   album => !personalizedAlbumIds.value.has(String(album.id)),
 ))
+const recentPlaybackItems = computed(() => {
+  const continueSong = musicHome.value?.continue_listening?.song
+  const recentItems = musicHome.value?.personalized ? (musicHome.value.recently_played ?? []) : []
 
-async function fetchAlbumBookmarks() {
+  return [
+    ...(continueSong ? [{ id: `continue-${continueSong.id}`, song: continueSong, isContinue: true }] : []),
+    ...recentItems
+      .filter(item => String(item.song.id) !== String(continueSong?.id ?? ''))
+      .map(item => ({ ...item, isContinue: false })),
+  ]
+})
+
+async function fetchAlbumBookmarks(requestId = bookmarkRequestId) {
   if (!authStore?.isAuthenticated) {
     starredAlbumIds.value = []
     return
   }
   try {
     const response = await listAlbumBookmarks()
-    starredAlbumIds.value = (response.data ?? []).map((bookmark) => String(bookmark.album_id))
+    if (requestId === bookmarkRequestId) {
+      starredAlbumIds.value = (response.data ?? []).map((bookmark) => String(bookmark.album_id))
+    }
   } catch (e) {
-    starredAlbumIds.value = []
+    if (requestId === bookmarkRequestId) starredAlbumIds.value = []
   }
 }
 
-async function fetchArtistBookmarks() {
+async function fetchArtistBookmarks(requestId = bookmarkRequestId) {
   if (!authStore?.isAuthenticated) {
     starredArtistIds.value = []
     return
   }
   try {
     const response = await listArtistBookmarks()
-    starredArtistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.artist_id))
+    if (requestId === bookmarkRequestId) {
+      starredArtistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.artist_id))
+    }
   } catch (e) {
-    starredArtistIds.value = []
+    if (requestId === bookmarkRequestId) starredArtistIds.value = []
   }
 }
 
-async function fetchPlaylistBookmarks() {
+async function fetchPlaylistBookmarks(requestId = bookmarkRequestId) {
   if (!authStore?.isAuthenticated) {
     starredPlaylistIds.value = []
     return
   }
   try {
     const response = await listPlaylistBookmarks()
-    starredPlaylistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.playlist_id))
+    if (requestId === bookmarkRequestId) {
+      starredPlaylistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.playlist_id))
+    }
   } catch (e) {
-    starredPlaylistIds.value = []
+    if (requestId === bookmarkRequestId) starredPlaylistIds.value = []
   }
 }
 
@@ -227,17 +239,22 @@ async function handleTogglePlaylistBookmark(playlistId: string) {
 }
 
 async function fetchMusicHome() {
-  musicHomeLoading.value = true
+  const request = musicHomeRequests.beginRequest()
+  const currentBookmarkRequestId = ++bookmarkRequestId
+  discoverLoadingMore.value = false
   loading.value = true
   errorMessage.value = ''
   try {
-    musicHome.value = await getMusicHome({ page: 1, page_size: 24 })
+    const response = await getMusicHome({ page: 1, page_size: 24 })
+    if (!request.isCurrent()) return
+    musicHome.value = response
     discoverPage.value = 1
     applyDiscoverFeed(musicHome.value.discover ?? [])
-    void fetchAlbumBookmarks()
-    void fetchArtistBookmarks()
-    void fetchPlaylistBookmarks()
+    void fetchAlbumBookmarks(currentBookmarkRequestId)
+    void fetchArtistBookmarks(currentBookmarkRequestId)
+    void fetchPlaylistBookmarks(currentBookmarkRequestId)
   } catch (error) {
+    if (!request.isCurrent()) return
     reportError(error, 'Failed to fetch music home:')
     musicHome.value = null
     discoverAlbums.value = []
@@ -245,8 +262,7 @@ async function fetchMusicHome() {
     discoverPlaylists.value = []
     errorMessage.value = '发现内容加载失败'
   } finally {
-    musicHomeLoading.value = false
-    loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 
@@ -340,35 +356,56 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], append = false) {
 
 async function loadMoreDiscover() {
   if (!musicHome.value?.discover_meta.has_more || discoverLoadingMore.value) return
+  const homeGeneration = musicHomeRequests.currentGeneration()
   discoverLoadingMore.value = true
   try {
     const nextPage = discoverPage.value + 1
     const next = await getMusicHome({ page: nextPage, page_size: musicHome.value.discover_meta.page_size || 24 })
+    if (!musicHomeRequests.isCurrent(homeGeneration)) return
     applyDiscoverFeed(next.discover ?? [], true)
     discoverPage.value = nextPage
     musicHome.value.discover_meta = next.discover_meta
     musicHome.value.discover_has_more = next.discover_has_more
   } catch (error) {
+    if (!musicHomeRequests.isCurrent(homeGeneration)) return
     reportError(error, 'Failed to load more music discovery:')
     errorMessage.value = '更多内容加载失败'
   } finally {
-    discoverLoadingMore.value = false
+    if (musicHomeRequests.isCurrent(homeGeneration)) discoverLoadingMore.value = false
   }
 }
 
-async function fetchAlbumIndex() {
-  loading.value = true
+async function fetchAlbumIndex(nextPage = 1, append = false) {
+  const request = albumIndexRequests.beginRequest()
+  if (append) albumLoadingMore.value = true
+  else loading.value = true
   errorMessage.value = ''
   try {
-    const response = await listMusicAlbums({ page: 1, page_size: 2000, sort: 'hot' })
-    albumItems.value = response.data ?? []
-    void fetchAlbumBookmarks()
+    const query = searchQuery.value.trim()
+    const response = await listMusicAlbums({
+      ...(query ? { q: query } : {}),
+      page: nextPage,
+      page_size: 24,
+      sort: 'hot',
+    })
+    if (!request.isCurrent()) return
+    albumItems.value = append
+      ? mergeDiscoverByID(albumItems.value, response.data ?? [])
+      : response.data ?? []
+    albumPage.value = nextPage
+    albumHasMore.value = response.meta.has_more
+    const currentBookmarkRequestId = ++bookmarkRequestId
+    void fetchAlbumBookmarks(currentBookmarkRequestId)
   } catch (error) {
+    if (!request.isCurrent()) return
     reportError(error, 'Failed to fetch music albums:')
     errorMessage.value = '专辑列表加载失败'
-    albumItems.value = []
+    if (!append) albumItems.value = []
   } finally {
-    loading.value = false
+    if (request.isCurrent()) {
+      loading.value = false
+      albumLoadingMore.value = false
+    }
   }
 }
 
@@ -383,7 +420,6 @@ async function fetchSearchResults() {
     return
   }
 
-  // 对于本地相册全量库模式，由于是本地过滤，我们可以跳过发起远端请求
   if (props.contentMode === 'albums') {
     searchLoading.value = false
     return
@@ -476,6 +512,12 @@ function handleSearchBlur() {
 }
 
 watch(searchQuery, () => {
+  if (props.contentMode === 'albums') {
+    albumIndexRequests.beginRequest()
+    if (albumSearchTimer) clearTimeout(albumSearchTimer)
+    albumSearchTimer = setTimeout(() => void fetchAlbumIndex(), 250)
+    return
+  }
   fetchSearchResults()
 })
 
@@ -485,6 +527,12 @@ onMounted(() => {
     return
   }
   fetchMusicHome()
+})
+
+onUnmounted(() => {
+  if (albumSearchTimer) clearTimeout(albumSearchTimer)
+  musicHomeRequests.beginRequest()
+  albumIndexRequests.beginRequest()
 })
 
 watch(
@@ -518,16 +566,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         <div class="search-shell" :class="{ 'is-open': searchOpen }">
           <SearchSurface
             v-model:query="searchQuery"
-            :open="searchOpen"
+            :open="contentMode === 'discover' && searchOpen"
             compact
             eyebrow=""
-            overlay-results
-            :status="searchLoading ? '搜索中...' : ''"
+            :overlay-results="contentMode === 'discover'"
+            :status="contentMode === 'discover' && searchLoading ? '搜索中...' : ''"
             placeholder="搜索专辑或艺术家..."
             input-test-id="music-explore-search-input"
             dropdown-test-id="music-explore-search-dropdown"
-            :loading="searchLoading"
-            :empty="hasSearchQuery && !hasSearchResults ? '没有匹配结果' : ''"
+            :loading="contentMode === 'discover' && searchLoading"
+            :empty="contentMode === 'discover' && hasSearchQuery && !hasSearchResults ? '没有匹配结果' : ''"
             @focus="handleSearchFocus"
             @blur="handleSearchBlur"
           >
@@ -577,45 +625,33 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       </div>
     </div>
 
-    <div v-if="contentMode === 'discover' && musicHomeLoading" class="state-line">正在加载...</div>
     <template v-if="contentMode === 'discover' && musicHome">
-      <section v-if="musicHome.continue_listening?.song" class="music-home-section" aria-labelledby="continue-listening-title">
-        <header class="music-home-section__header"><h2 id="continue-listening-title">继续播放</h2></header>
-        <div class="recently-played-list">
-          <div class="recently-played-item">
-            <button type="button" class="recently-played-item__play" :disabled="!musicHome.continue_listening.song.audio_url" :aria-label="`播放 ${musicHome.continue_listening.song.title}`" @click="playRecentSong(musicHome.continue_listening.song)">
-              <img v-if="musicHome.continue_listening.song.cover_url || musicHome.continue_listening.song.album?.cover_url" :src="musicHome.continue_listening.song.cover_url || musicHome.continue_listening.song.album?.cover_url" :alt="musicHome.continue_listening.song.title" />
-              <span v-else class="recently-played-item__cover" aria-hidden="true" />
-            </button>
-            <span class="recently-played-item__copy"><RouterLink :to="`/music/song/${musicHome.continue_listening.song.id}`"><strong>{{ musicHome.continue_listening.song.title }}</strong></RouterLink></span>
-          </div>
-        </div>
-      </section>
-      <section v-if="musicHome.personalized && musicHome.recently_played.length" class="music-home-section" aria-labelledby="recently-played-title">
+      <section v-if="recentPlaybackItems.length" class="music-home-section" aria-labelledby="recently-played-title">
         <header class="music-home-section__header">
           <h2 id="recently-played-title">最近播放</h2>
         </header>
         <div class="recently-played-list">
           <div
-            v-for="item in musicHome.recently_played"
+            v-for="item in recentPlaybackItems"
             :key="item.id"
             class="recently-played-item"
           >
-            <button type="button" class="recently-played-item__play" :disabled="!item.song.audio_url" :aria-label="`播放 ${item.song.title}`" data-testid="recent-song-play" @click="playRecentSong(item.song)">
+            <button type="button" class="recently-played-item__play" :disabled="!item.song.audio_url" :aria-label="`播放 ${item.song.title}`" :data-testid="item.isContinue ? 'continue-song-play' : 'recent-song-play'" @click="playRecentSong(item.song)">
               <img v-if="item.song.cover_url || item.song.album?.cover_url" :src="item.song.cover_url || item.song.album?.cover_url" :alt="item.song.title" />
               <span v-else class="recently-played-item__cover" aria-hidden="true" />
             </button>
             <span class="recently-played-item__copy">
+              <span v-if="item.isContinue" class="recently-played-item__label">继续播放</span>
               <RouterLink :to="`/music/song/${item.song.id}`"><strong>{{ item.song.title }}</strong></RouterLink>
               <span class="recently-played-item__links">
                 <template v-if="item.song.artists?.length">
                   <template v-for="(artist, index) in item.song.artists" :key="artist.id">
                     <span v-if="index" aria-hidden="true"> / </span>
-                    <button type="button" :data-testid="`recent-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+                    <button type="button" :data-testid="`${item.isContinue ? 'continue' : 'recent'}-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
                   </template>
                 </template>
                 <span v-else>未知艺术家</span>
-                <template v-if="item.song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`recent-song-album-${item.song.album.id}`" @click="openAlbum(String(item.song.album.id))">{{ item.song.album.title }}</button></template>
+                <template v-if="item.song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`${item.isContinue ? 'continue' : 'recent'}-song-album-${item.song.album.id}`" @click="openAlbum(String(item.song.album.id))">{{ item.song.album.title }}</button></template>
               </span>
             </span>
           </div>
@@ -642,38 +678,28 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         </div>
       </section>
 
-      <section v-for="section in musicHome.sections" :key="section.key" class="music-home-section" :aria-labelledby="`home-${section.key}`">
-        <header class="music-home-section__header"><h2 :id="`home-${section.key}`">{{ section.title }}</h2></header>
-        <div class="music-home-albums">
-          <MusicAlbumCard
-            v-for="album in section.albums"
-            :key="album.id"
-            :album="album"
-            :show-bookmark="false"
-            @click="openAlbum(String(album.id))"
-            @click-artist="openArtist"
-          />
-        </div>
-      </section>
     </template>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
     <p v-else-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
-    <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !musicHome?.sections.length && !personalizedAlbums.length && !musicHome?.recently_played.length" class="state-line">暂无发现内容</p>
+    <p v-else-if="contentMode === 'discover' && !personalizedAlbums.length && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !recentPlaybackItems.length" class="state-line">暂无发现内容</p>
 
-    <div v-else-if="contentMode === 'albums'" class="discover-grid" aria-label="专辑列表">
-      <MusicAlbumCard
-        v-for="album in localFilteredAlbums"
-        :key="album.id"
-        :album="album"
-        :is-bookmarked="starredAlbumIds.includes(String(album.id))"
-        data-testid="discover-album-card"
-        @click="router.push(`/music/album/${album.id}`)"
-        @click-artist="openArtist"
-        @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
-      />
-    </div>
+    <section v-else-if="contentMode === 'albums'" class="album-index">
+      <div class="discover-grid" aria-label="专辑列表">
+        <MusicAlbumCard
+          v-for="album in localFilteredAlbums"
+          :key="album.id"
+          :album="album"
+          :is-bookmarked="starredAlbumIds.includes(String(album.id))"
+          data-testid="discover-album-card"
+          @click="router.push(`/music/album/${album.id}`)"
+          @click-artist="openArtist"
+          @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
+        />
+      </div>
+      <PButton v-if="albumHasMore" variant="secondary" :disabled="albumLoadingMore" class="discover-load-more" @click="fetchAlbumIndex(albumPage + 1, true)">{{ albumLoadingMore ? '加载中' : '加载更多' }}</PButton>
+    </section>
 
     <div v-else class="discover-sections" aria-label="发现分区">
       <section v-if="filteredDiscoverAlbums.length" class="discover-section">
@@ -742,6 +768,11 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .music-explore-view {
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+}
+
+.album-index {
+  display: grid;
   gap: 1rem;
 }
 
@@ -934,6 +965,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   display: grid;
   gap: 0.2rem;
   min-width: 0;
+}
+
+.recently-played-item__label {
+  color: var(--a-color-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
 }
 
 .recently-played-item__copy strong,

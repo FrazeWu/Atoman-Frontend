@@ -272,7 +272,7 @@ describe('Music DiscoverView.vue', () => {
     await flushPromises()
 
     expect(mocks.getMusicHome).not.toHaveBeenCalled()
-    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 2000, sort: 'hot' })
+    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 24, sort: 'hot' })
     expect(wrapper.find('[aria-label="专辑列表"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(0)
@@ -293,6 +293,42 @@ describe('Music DiscoverView.vue', () => {
     await wrapper.get('[data-testid="add-album"]').trigger('click')
 
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith()
+  })
+
+  it('loads album pages incrementally and sends keywords to the server', async () => {
+    vi.useFakeTimers()
+    try {
+      mocks.listMusicAlbums
+        .mockResolvedValueOnce({
+          data: [{ id: 'album-1', title: 'First', artists: [] }],
+          meta: { page: 1, page_size: 24, total: 2, has_more: true },
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: 'album-2', title: 'Second', artists: [] }],
+          meta: { page: 2, page_size: 24, total: 2, has_more: false },
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: 'album-3', title: 'Search Result', artists: [] }],
+          meta: { page: 1, page_size: 24, total: 1, has_more: false },
+        })
+
+      const wrapper = mount(DiscoverView, { props: { contentMode: 'albums' } })
+      await flushPromises()
+      await wrapper.get('button.discover-load-more').trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(2)
+      expect(mocks.listMusicAlbums).toHaveBeenNthCalledWith(2, { page: 2, page_size: 24, sort: 'hot' })
+
+      await wrapper.get('[data-testid="music-explore-search-input"]').setValue('Search')
+      await vi.advanceTimersByTimeAsync(250)
+      await flushPromises()
+      expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({ q: 'Search', page: 1, page_size: 24, sort: 'hot' })
+      expect(wrapper.text()).toContain('Search Result')
+      expect(wrapper.text()).not.toContain('First')
+      wrapper.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('shows album and artist groups in search dropdown', async () => {
@@ -366,7 +402,38 @@ describe('Music DiscoverView.vue', () => {
     expect(sections).toEqual(['专辑', '歌单', '艺人'])
   })
 
-  it('shows personalized albums on the discover page', async () => {
+  it('keeps the latest home response when authentication changes during loading', async () => {
+    let resolveFirst!: (value: Record<string, unknown>) => void
+    const first = new Promise<Record<string, unknown>>(resolve => { resolveFirst = resolve })
+    mocks.getMusicHome
+      .mockReturnValueOnce(first)
+      .mockResolvedValueOnce({
+        personalized: true, recently_played: [], for_you: [], sections: [],
+        discover: [{ type: 'artist', id: 'artist-new', name: 'Current Artist', title: 'Current Artist' }],
+        discover_has_more: false,
+        discover_meta: { page: 1, page_size: 24, total: 1, has_more: false },
+      })
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const wrapper = mount(DiscoverView, { global: { plugins: [pinia] } })
+    const auth = useAuthStore()
+    auth.isAuthenticated = true
+    auth.token = 'new-token'
+    await flushPromises()
+    expect(wrapper.text()).toContain('Current Artist')
+
+    resolveFirst({
+      personalized: false, recently_played: [], for_you: [], sections: [],
+      discover: [{ type: 'artist', id: 'artist-old', name: 'Obsolete Artist', title: 'Obsolete Artist' }],
+      discover_has_more: false,
+      discover_meta: { page: 1, page_size: 24, total: 1, has_more: false },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Current Artist')
+    expect(wrapper.text()).not.toContain('Obsolete Artist')
+  })
+
+  it('shows personalized albums without restoring the legacy public sections', async () => {
     const wrapper = mount(DiscoverView)
     await flushPromises()
 
@@ -375,14 +442,14 @@ describe('Music DiscoverView.vue', () => {
     expect(wrapper.text()).toContain('Runaway')
     expect(wrapper.text()).toContain('为你推荐')
     expect(wrapper.text()).toContain('基于你与 Ye 相关的记录')
-    expect(wrapper.text()).toContain('热门')
+    expect(wrapper.text()).not.toContain('Graduation')
+    expect(wrapper.find('button button').exists()).toBe(false)
 
     await wrapper.get('[aria-label="打开专辑 Late Registration"]').trigger('click')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-2')
 
     await wrapper.get('[aria-label="打开艺人 Ye"]').trigger('click')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
-    expect(wrapper.find('button button').exists()).toBe(false)
 
     await wrapper.get('[data-testid="recent-song-play"]').trigger('click')
     expect(mocks.playSong).toHaveBeenCalledWith(expect.objectContaining({ id: 'song-1' }))
@@ -391,6 +458,53 @@ describe('Music DiscoverView.vue', () => {
     await wrapper.get('[data-testid="recent-song-album-album-1"]').trigger('click')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+  })
+
+  it('merges continue listening into the recent playback section', async () => {
+    mocks.getMusicHome.mockResolvedValueOnce({
+      personalized: true,
+      continue_listening: {
+        song: {
+          id: 'song-continue',
+          title: 'Ghost Town',
+          audio_url: '/uploads/ghost-town.mp3',
+          artists: [{ id: 'artist-1', name: 'Ye' }],
+          album: { id: 'album-3', title: 'ye' },
+        },
+      },
+      recently_played: [
+        {
+          id: 'history-continue',
+          song: { id: 'song-continue', title: 'Ghost Town', audio_url: '/uploads/ghost-town.mp3' },
+        },
+        {
+          id: 'history-1',
+          song: { id: 'song-1', title: 'Runaway', audio_url: '/uploads/runaway.mp3' },
+        },
+      ],
+      for_you: [],
+      sections: [],
+      discover: [],
+      discover_has_more: false,
+      discover_meta: { page: 1, page_size: 24, total: 0, has_more: false },
+    })
+
+    const wrapper = mount(DiscoverView)
+    await flushPromises()
+
+    expect(wrapper.findAll('#recently-played-title')).toHaveLength(1)
+    expect(wrapper.find('#continue-listening-title').exists()).toBe(false)
+    expect(wrapper.findAll('.recently-played-item')).toHaveLength(2)
+    expect(wrapper.findAll('.recently-played-item')[0]?.text()).toContain('继续播放')
+    expect(wrapper.findAll('.recently-played-item')[0]?.text()).toContain('Ghost Town')
+    expect(wrapper.findAll('.recently-played-item')[1]?.text()).toContain('Runaway')
+
+    await wrapper.get('[data-testid="continue-song-play"]').trigger('click')
+    await wrapper.get('[data-testid="continue-song-artist-artist-1"]').trigger('click')
+    await wrapper.get('[data-testid="continue-song-album-album-3"]').trigger('click')
+    expect(mocks.playSong).toHaveBeenCalledWith(expect.objectContaining({ id: 'song-continue' }))
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-3')
   })
 
   it('does not repeat personalized albums in the public discover section', async () => {

@@ -100,11 +100,6 @@ function selectRow(rowId: string) {
   emit('select-row', rowId)
 }
 
-function selectTarget(target: 'original' | 'translation') {
-  if (props.disabled || props.editTarget === 'all') return
-  emit('select-target', target)
-}
-
 function seekToRow(row: MusicLyricDraftRow) {
   if (props.disabled || row.timeMs === null) return
   emit('select-row', row.id)
@@ -151,27 +146,26 @@ function describedByForField(
   >
     <div
       class="lyric-grid-line lyric-grid-header"
-      :class="{ 'is-lrc': format === 'lrc' }"
+      :class="{ 'is-lrc': format === 'lrc', 'is-translation-mode': editTarget === 'translation' }"
       aria-hidden="true"
     >
       <span>序号</span>
       <span v-if="format === 'lrc'">时间</span>
-      <span>原文</span>
-      <span>翻译</span>
-      <span>操作</span>
+      <span>{{ editTarget === 'translation' ? '歌词' : '原文' }}</span>
+      <span v-if="editTarget !== 'translation'">操作</span>
     </div>
 
     <div
       v-for="(row, index) in rows"
       :key="row.id"
       class="lyric-row lyric-grid-line"
-      :class="{ 'is-lrc': format === 'lrc', 'is-selected': selectedRowId === row.id }"
+      :class="{ 'is-lrc': format === 'lrc', 'is-selected': selectedRowId === row.id, 'is-translation-mode': editTarget === 'translation' }"
       :aria-current="selectedRowId === row.id ? 'true' : undefined"
       :data-testid="`lyric-row-${row.id}`"
     >
       <span class="lyric-index" :aria-label="`第 ${index + 1} 行`">{{ index + 1 }}</span>
 
-      <div v-if="format === 'lrc'" class="lyric-field lyric-time-field">
+      <div v-if="format === 'lrc' && editTarget !== 'translation'" class="lyric-field lyric-time-field">
         <span class="mobile-label">时间</span>
         <div class="lyric-time-controls">
           <input
@@ -184,7 +178,7 @@ function describedByForField(
             :aria-label="`时间，第 ${index + 1} 行`"
             :aria-invalid="isInvalidTime(row.id)"
             :aria-describedby="describedByForField(row.id, index, 'time')"
-            :disabled="disabled || (editTarget !== 'timing' && editTarget !== 'all')"
+            :disabled="disabled"
             @focus="selectRow(row.id)"
             @input="updateTime(index, $event)"
           />
@@ -194,7 +188,7 @@ function describedByForField(
             type="button"
             title="跳转"
             :aria-label="`跳转到第 ${index + 1} 行时间`"
-            :disabled="disabled || (editTarget !== 'timing' && editTarget !== 'all') || row.timeMs === null"
+            :disabled="disabled || row.timeMs === null"
             @click="seekToRow(row)"
           >
             <Play :size="18" aria-hidden="true" />
@@ -210,7 +204,48 @@ function describedByForField(
         </span>
       </div>
 
-      <label class="lyric-field">
+      <button
+        v-else-if="format === 'lrc'"
+        type="button"
+        class="lyric-time-display"
+        :disabled="disabled || row.timeMs === null"
+        :aria-label="`跳转到第 ${index + 1} 行时间`"
+        @click="seekToRow(row)"
+      >
+        {{ row.timeMs === null ? '--:--.--' : formatMusicLyricTime(row.timeMs) }}
+      </button>
+
+      <div v-if="editTarget === 'translation'" class="lyric-translation-fields">
+        <label class="lyric-field">
+          <span class="mobile-label">原文</span>
+          <input
+            :value="row.original"
+            :data-testid="`lyric-original-${row.id}`"
+            class="lyric-input lyric-input--original-reference"
+            type="text"
+            :aria-label="`原文，第 ${index + 1} 行`"
+            readonly
+            @focus="selectRow(row.id)"
+          />
+        </label>
+        <label class="lyric-field">
+          <span class="mobile-label">翻译</span>
+          <input
+            :value="row.translation"
+            :data-testid="`lyric-translation-${row.id}`"
+            class="lyric-input"
+            type="text"
+            placeholder="翻译"
+            :aria-label="`翻译，第 ${index + 1} 行`"
+            :aria-describedby="describedByForField(row.id, index, 'translation')"
+            :disabled="disabled"
+            @focus="selectRow(row.id)"
+            @input="emitRowUpdate(index, { translation: ($event.target as HTMLInputElement).value })"
+          />
+        </label>
+      </div>
+
+      <label v-else class="lyric-field">
         <span class="mobile-label">原文</span>
         <input
           :value="row.original"
@@ -221,39 +256,19 @@ function describedByForField(
           :aria-label="`原文，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'original')"
           :disabled="disabled"
-          :readonly="editTarget !== 'original' && editTarget !== 'all'"
-          @pointerdown="selectTarget('original')"
           @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { original: ($event.target as HTMLInputElement).value })"
         />
       </label>
 
-      <label class="lyric-field">
-        <span class="mobile-label">翻译</span>
-        <input
-          :value="row.translation"
-          :data-testid="`lyric-translation-${row.id}`"
-          class="lyric-input"
-          type="text"
-          placeholder="翻译"
-          :aria-label="`翻译，第 ${index + 1} 行`"
-          :aria-describedby="describedByForField(row.id, index, 'translation')"
-          :disabled="disabled"
-          :readonly="editTarget !== 'translation' && editTarget !== 'all'"
-          @pointerdown="selectTarget('translation')"
-          @focus="selectRow(row.id)"
-          @input="emitRowUpdate(index, { translation: ($event.target as HTMLInputElement).value })"
-        />
-      </label>
-
-      <div class="lyric-actions" aria-label="行操作">
+      <div v-if="editTarget !== 'translation'" class="lyric-actions" aria-label="行操作">
         <button
           :data-testid="`lyric-move-up-${row.id}`"
           class="lyric-action"
           type="button"
           title="上移"
           :aria-label="`上移第 ${index + 1} 行`"
-          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all') || index === 0"
+          :disabled="disabled || index === 0"
           @click="moveRow(index, -1)"
         >
           <ArrowUp :size="18" aria-hidden="true" />
@@ -264,7 +279,7 @@ function describedByForField(
           type="button"
           title="下移"
           :aria-label="`下移第 ${index + 1} 行`"
-          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all') || index === rows.length - 1"
+          :disabled="disabled || index === rows.length - 1"
           @click="moveRow(index, 1)"
         >
           <ArrowDown :size="18" aria-hidden="true" />
@@ -275,7 +290,7 @@ function describedByForField(
           type="button"
           title="删除"
           :aria-label="`删除第 ${index + 1} 行`"
-          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all')"
+          :disabled="disabled"
           @click="deleteRow(index)"
         >
           <Trash2 :size="18" aria-hidden="true" />
@@ -307,13 +322,21 @@ function describedByForField(
 
 .lyric-grid-line {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;
+  grid-template-columns: 3rem minmax(0, 1fr) 9.25rem;
   gap: 0.75rem;
   align-items: start;
 }
 
 .lyric-grid-line.is-lrc {
-  grid-template-columns: 3rem 11rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;
+  grid-template-columns: 3rem 11rem minmax(0, 1fr) 9.25rem;
+}
+
+.lyric-grid-line.is-translation-mode {
+  grid-template-columns: 3rem minmax(0, 1fr);
+}
+
+.lyric-grid-line.is-lrc.is-translation-mode {
+  grid-template-columns: 3rem 8rem minmax(0, 1fr);
 }
 
 .lyric-grid-header {
@@ -373,6 +396,34 @@ function describedByForField(
 
 .lyric-time-input {
   font-variant-numeric: tabular-nums;
+}
+
+.lyric-time-display {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted, #60646c);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lyric-time-display:disabled {
+  cursor: default;
+}
+
+.lyric-translation-fields {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.lyric-input--original-reference {
+  border-color: transparent;
+  background: var(--a-color-surface-muted, #f4f4f5);
+  color: var(--a-color-muted, #60646c);
 }
 
 .lyric-time-controls {

@@ -68,6 +68,7 @@ export interface Song {
   cover_url: string;
   cover_source?: 'local' | 's3';
   track_number?: number;
+  disc_number?: number;
   status: 'open' | 'closed' | 'pending' | 'approved' | 'rejected';
   uploaded_by?: number;
   artists?: Artist[];

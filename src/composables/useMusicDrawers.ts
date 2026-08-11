@@ -319,8 +319,9 @@ export function useMusicDrawers() {
     }
     flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
       id: `import-track-${index + 1}`,
-      songId: track.songId,
-      sequence: index + 1,
+      ...(track.songId ? { songId: track.songId } : {}),
+      sequence: track.trackNumber ?? index + 1,
+      ...(track.discNumber ? { discNumber: track.discNumber } : {}),
       title: track.title,
       audioKey: track.audioKey,
       origin: track.origin,

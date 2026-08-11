@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { GripVertical, ImageUp, Plus, X } from 'lucide-vue-next'
+import { FileText, GripVertical, ImageUp, Plus, X } from 'lucide-vue-next'
 import {
   uploadMusicAsset,
   createMusicAlbumImport,
@@ -15,6 +15,8 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
+import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
+import type { MusicCreationLyricsDraft } from '@/components/music/musicCreationTypes'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 
@@ -31,6 +33,8 @@ const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const coverPreviewUrl = ref('')
 const draggedTrackId = ref<string | null>(null)
+const lyricTrackId = ref<string | null>(null)
+const lyricTrack = computed(() => tracksDraft.value.find(track => track.id === lyricTrackId.value) ?? null)
 
 const albumTypeOptions = [
   { label: '专辑', value: 'album' },
@@ -295,6 +299,36 @@ function removeTrack(trackId: string) {
   renumberTracks()
 }
 
+function openTrackLyrics(trackId: string) {
+  lyricTrackId.value = trackId
+}
+
+function closeTrackLyrics() {
+  lyricTrackId.value = null
+}
+
+function saveTrackLyrics(payload: {
+  language?: string
+  content: string
+  translation: string
+  format: 'plain' | 'lrc'
+  lines: MusicCreationLyricsDraft['lines']
+  editSummary: string
+}) {
+  const track = lyricTrack.value
+  if (!track) return
+  track.lyricsDraft = {
+    content: payload.content,
+    translation: payload.translation,
+    format: payload.format,
+    language: payload.language ?? '',
+    editSummary: payload.editSummary,
+    lines: payload.lines,
+  }
+  track.lyrics = payload.content
+  closeTrackLyrics()
+}
+
 function queueManualCoverCrop(file: File) {
   pendingCoverCrop.value = {
     kind: 'manual',
@@ -410,6 +444,18 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="albumDetailsDraft" class="album-details-step" data-testid="album-details-step">
+    <MusicLyricEditorDrawer
+      :show="!!lyricTrack"
+      :song-title="lyricTrack?.title ?? ''"
+      :content="lyricTrack?.lyricsDraft?.content ?? ''"
+      :translation="lyricTrack?.lyricsDraft?.translation ?? ''"
+      :format="lyricTrack?.lyricsDraft?.format ?? 'plain'"
+      :lines="lyricTrack?.lyricsDraft?.lines ?? []"
+      :translation-language="lyricTrack?.lyricsDraft?.language ?? ''"
+      default-edit-summary="添加歌词"
+      @close="closeTrackLyrics"
+      @save="saveTrackLyrics"
+    />
     <MusicSquareImageCropSheet
       :show="!!pendingCoverCrop"
       :source-file="pendingCoverCrop?.sourceFile || null"
@@ -631,6 +677,19 @@ onBeforeUnmount(() => {
                 @update:model-value="updateTrackTitle(track.id, $event)"
               />
             </div>
+
+            <PButton
+              v-if="!isEditMode"
+              type="button"
+              size="sm"
+              variant="secondary"
+              class="track-row__lyrics-btn"
+              :data-testid="`album-track-lyrics-${track.id}`"
+              @click="openTrackLyrics(track.id)"
+            >
+              <FileText :size="15" aria-hidden="true" />
+              {{ track.lyricsDraft ? '编辑歌词' : '上传歌词' }}
+            </PButton>
 
             <!-- 极简 X 删除按钮 -->
             <button
@@ -1005,6 +1064,10 @@ onBeforeUnmount(() => {
   font-size: 0.875rem;
 }
 
+.track-row__lyrics-btn {
+  flex: 0 0 auto;
+}
+
 .track-row__remove-btn {
   display: flex;
   align-items: center;
@@ -1032,6 +1095,21 @@ onBeforeUnmount(() => {
   height: 0 !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+@media (max-width: 640px) {
+  .track-row {
+    flex-wrap: wrap;
+  }
+
+  .track-row__input {
+    flex-basis: calc(100% - 8rem);
+  }
+
+  .track-row__lyrics-btn {
+    order: 5;
+    margin-left: auto;
+  }
 }
 
 .progress-card {

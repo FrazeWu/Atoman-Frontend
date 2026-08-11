@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   createArtistBookmark,
   deleteArtistBookmark,
-  getMusicArtist,
   listArtistBookmarks,
   listMusicArtists,
   listRecommendedArtists,
@@ -54,12 +53,13 @@ const {
 const artists = ref<MusicArtistListItem[]>([])
 const searchResults = ref<MusicArtistListItem[]>([])
 const searchQuery = ref('')
+searchQuery.value = typeof route.query.q === 'string' ? route.query.q.trim() : ''
 const loading = ref(false)
 const searchLoading = ref(false)
 const errorMessage = ref('')
 const showSearchDropdown = ref(false)
 let activeRequestId = 0
-let activeSearchRequestId = 0
+let searchTimer: ReturnType<typeof setTimeout> | undefined
 
 const starredArtistIds = ref<string[]>([])
 const { applyRouteSelection } = useMusicRouteSelection({
@@ -134,19 +134,23 @@ async function fetchArtists() {
   errorMessage.value = ''
 
   try {
-    await fetchBookmarks()
-    if (requestId !== activeRequestId) return
-
-    if (searchQuery.value.trim()) {
+    const query = searchQuery.value.trim()
+    if (query) {
+      searchLoading.value = true
       const response = await listMusicArtists({
-        q: searchQuery.value.trim(),
+        q: query,
         page: 1,
         page_size: 48,
       })
       if (requestId !== activeRequestId) return
       artists.value = response.data
+      searchResults.value = response.data
       return
     }
+
+    searchResults.value = []
+    await fetchBookmarks()
+    if (requestId !== activeRequestId) return
 
     const recommendedResponse = await listRecommendedArtists(recommendationMode.value)
     if (requestId !== activeRequestId) return
@@ -159,11 +163,16 @@ async function fetchArtists() {
       )
     }
 
-    const detailResults = await Promise.all(
-      filteredRecommendations.map((item) => getMusicArtist(item.id).catch(() => null)),
-    )
-    if (requestId !== activeRequestId) return
-    artists.value = detailResults.filter(Boolean) as MusicArtistListItem[]
+    artists.value = filteredRecommendations.map((item) => ({
+      id: item.id,
+      name: item.title,
+      display_name: item.title,
+      bio: item.summary,
+      image_url: item.image_url,
+      play_count: item.play_count,
+      bookmark_count: item.bookmark_count,
+      entry_status: 'open',
+    }))
   } catch (e) {
     if (requestId !== activeRequestId) return
     reportError(e, 'Failed to fetch music artists:')
@@ -172,6 +181,7 @@ async function fetchArtists() {
   } finally {
     if (requestId === activeRequestId) {
       loading.value = false
+      searchLoading.value = false
     }
   }
 }
@@ -188,36 +198,6 @@ watch(() => authStore.isAuthenticated, () => {
   fetchArtists()
 })
 
-async function fetchSearchResults() {
-  const query = searchQuery.value.trim()
-  const requestId = ++activeSearchRequestId
-
-  if (!query) {
-    searchResults.value = []
-    searchLoading.value = false
-    return
-  }
-
-  searchLoading.value = true
-  try {
-    const response = await listMusicArtists({
-      q: query,
-      page: 1,
-      page_size: 20,
-    })
-    if (requestId !== activeSearchRequestId) return
-    searchResults.value = response.data
-  } catch (e) {
-    if (requestId !== activeSearchRequestId) return
-    reportError(e, 'Failed to search music artists:')
-    searchResults.value = []
-  } finally {
-    if (requestId === activeSearchRequestId) {
-      searchLoading.value = false
-    }
-  }
-}
-
 function openArtistCard(artistId: string) {
   openArtist(String(artistId))
   showSearchDropdown.value = false
@@ -230,18 +210,18 @@ function startArtistCreation() {
 }
 
 onMounted(() => {
-  if (typeof route.query.q === 'string' && route.query.q.trim()) {
-    searchQuery.value = route.query.q.trim()
-  }
-  fetchArtists()
-  fetchSearchResults()
+  void fetchArtists()
   applyRouteSelection(route.query)
 })
 
 watch(searchQuery, () => {
-  fetchSearchResults()
-  fetchArtists()
+  activeRequestId += 1
+  clearTimeout(searchTimer)
+  searchLoading.value = Boolean(searchQuery.value.trim())
+  searchTimer = setTimeout(() => void fetchArtists(), 250)
 })
+
+onUnmounted(() => clearTimeout(searchTimer))
 
 watch(
   () => [route.query.artist, route.query.album, route.query.q],

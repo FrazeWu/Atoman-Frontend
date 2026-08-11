@@ -107,13 +107,14 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Heart, ListMusic, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 
 defineProps<{
   collapsed?: boolean
@@ -125,49 +126,42 @@ const route = useRoute()
 const router = useRouter()
 const { state } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
+const playlistRequests = useRequestGeneration()
 
 const isCreating = ref(false)
 const newPlaylistName = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 
 async function fetchPlaylists() {
+  const { isCurrent } = playlistRequests.beginRequest()
   if (!isAuthenticated.value) {
     playlists.value = []
+    bookmarkedPlaylists.value = []
     return
   }
   try {
-    const response = await listMusicPlaylists()
-    playlists.value = [...(response.data || [])].sort((left, right) => {
+    const [ownedResponse, bookmarkedResponse] = await Promise.all([
+      listMusicPlaylists(),
+      listPlaylistBookmarks(),
+    ])
+    if (!isCurrent()) return
+    playlists.value = [...(ownedResponse.data || [])].sort((left, right) => {
       if (left.kind === right.kind) return 0
       if (left.kind === 'favorite') return -1
       if (right.kind === 'favorite') return 1
       return 0
     })
-  } catch (error) {
-    if (error instanceof ApiErrorResponseError && error.status === 401) {
-      playlists.value = []
-      return
-    }
-    reportError(error, 'Failed to fetch sidebar playlists:')
-  }
-}
-
-async function fetchBookmarkedPlaylists() {
-  if (!isAuthenticated.value) {
-    bookmarkedPlaylists.value = []
-    return
-  }
-  try {
-    const response = await listPlaylistBookmarks()
-    bookmarkedPlaylists.value = (response.data || [])
+    bookmarkedPlaylists.value = (bookmarkedResponse.data || [])
       .map(bookmark => bookmark.playlist)
       .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
   } catch (error) {
+    if (!isCurrent()) return
     if (error instanceof ApiErrorResponseError && error.status === 401) {
+      playlists.value = []
       bookmarkedPlaylists.value = []
       return
     }
-    reportError(error, 'Failed to fetch bookmarked playlists:')
+    reportError(error, 'Failed to fetch sidebar playlists:')
   }
 }
 
@@ -238,25 +232,12 @@ async function submitNewPlaylist() {
 }
 
 watch(
-  () => route.path,
+  () => [route.path, state.value.playlistRefreshToken, isAuthenticated.value] as const,
   () => {
-    fetchPlaylists()
-    fetchBookmarkedPlaylists()
-  }
-)
-
-watch(
-  () => state.value.playlistRefreshToken,
-  () => {
-    fetchPlaylists()
-    fetchBookmarkedPlaylists()
+    void fetchPlaylists()
   },
+  { immediate: true },
 )
-
-onMounted(() => {
-  fetchPlaylists()
-  fetchBookmarkedPlaylists()
-})
 </script>
 
 <style scoped>

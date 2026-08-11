@@ -128,9 +128,9 @@ onMounted(() => {
 .setting-management-overview__section-heading p,
 .setting-management-overview__message { margin: 0; }
 .setting-management-overview__heading h2 { font-size: 1.05rem; }
-.setting-management-overview__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--a-color-border-soft); }
+.setting-management-overview__grid { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--a-color-border-soft); }
 .setting-management-overview__section { min-width: 0; padding: 1rem 0; }
-.setting-management-overview__section + .setting-management-overview__section { padding-left: 1.25rem; border-left: 1px solid var(--a-color-border-soft); }
+.setting-management-overview__section + .setting-management-overview__section { border-top: 1px solid var(--a-color-border-soft); }
 .setting-management-overview__section-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .setting-management-overview__section-heading h3 { font-size: 0.95rem; }
 .setting-management-overview__section-heading p { margin-top: 0.25rem; color: var(--a-color-text-secondary); font-size: 0.8rem; }
@@ -141,9 +141,4 @@ onMounted(() => {
 .setting-management-overview__list strong { overflow: hidden; color: var(--a-color-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .setting-management-overview__list small { overflow: hidden; color: var(--a-color-muted); text-overflow: ellipsis; white-space: nowrap; }
 .setting-management-overview__message { padding-top: 1rem; color: var(--a-color-text-secondary); font-size: 0.82rem; }
-
-@media (max-width: 720px) {
-  .setting-management-overview__grid { grid-template-columns: 1fr; }
-  .setting-management-overview__section + .setting-management-overview__section { padding: 1rem 0 0; margin-top: 1rem; border-top: 1px solid var(--a-color-border-soft); border-left: 0; }
-}
 </style>

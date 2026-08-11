@@ -3,6 +3,14 @@ import type { Song } from '@/types'
 
 type MusicAlbumSongLike = NonNullable<MusicAlbumListItem['songs']>[number]
 
+export function compareAlbumTracks(
+  left: Pick<MusicAlbumSongLike, 'disc_number' | 'track_number'>,
+  right: Pick<MusicAlbumSongLike, 'disc_number' | 'track_number'>,
+): number {
+  const discDifference = (left.disc_number || 1) - (right.disc_number || 1)
+  return discDifference || (left.track_number || 0) - (right.track_number || 0)
+}
+
 export function resolveAlbumCoverUrl(album: Pick<MusicAlbumListItem, 'cover_url' | 'songs'>): string {
   const directCover = album.cover_url?.trim()
   if (directCover) return directCover
@@ -17,7 +25,7 @@ export function buildPlayableSongsFromAlbum(album: MusicAlbumListItem): Song[] {
 
   return (album.songs || [])
     .filter((song): song is MusicAlbumSongLike & { audio_url: string } => typeof song.audio_url === 'string' && song.audio_url.trim().length > 0)
-    .sort((a, b) => (a.track_number || 0) - (b.track_number || 0))
+    .sort(compareAlbumTracks)
     .map((song) => ({
       id: song.id,
       title: song.title,
@@ -30,6 +38,7 @@ export function buildPlayableSongsFromAlbum(album: MusicAlbumListItem): Song[] {
       audio_url: song.audio_url,
       cover_url: song.cover_url?.trim() || coverUrl,
       track_number: song.track_number,
+      disc_number: song.disc_number,
       status: (song.status as Song['status'] | undefined) || 'approved',
       artists: album.artists?.map((artist) => ({
         id: artist.id,

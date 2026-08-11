@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 
 const apiMocks = vi.hoisted(() => ({
   getMusicSongLyrics: vi.fn(),
+  getMusicSongDetail: vi.fn(),
 }))
 
 const authState = vi.hoisted(() => ({
@@ -85,6 +86,7 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
   return {
     ...actual,
     getMusicSongLyrics: apiMocks.getMusicSongLyrics,
+    getMusicSongDetail: apiMocks.getMusicSongDetail,
   }
 })
 
@@ -296,6 +298,7 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.revertVersion.mockReset()
     mocks.currentLine.mockReset()
     mocks.removePendingMusicLyricsAnnotation.mockReset()
+    apiMocks.getMusicSongDetail.mockReset()
 
     mocks.load.mockResolvedValue(undefined)
     mocks.save.mockResolvedValue(lyricsState.lyrics.value)
@@ -306,6 +309,15 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.loadVersions.mockResolvedValue(lyricsState.versions.value)
     mocks.revertVersion.mockResolvedValue(true)
     mocks.currentLine.mockReturnValue(lyricsState.lyrics.value.lines[1])
+    apiMocks.getMusicSongDetail.mockResolvedValue({
+      song: { id: 'song-1', title: 'Midnight Radio', entry_status: 'open' },
+      artists: [
+        { id: 'artist-1', name: 'Atoman', role: 'primary', position: 1 },
+        { id: 'writer-1', name: 'Lin', role: 'writer', position: 2 },
+      ],
+      bookmarked: false,
+      playable: true,
+    })
   })
 
   it('加载歌词并展示当前行与注释面板', async () => {
@@ -320,6 +332,17 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
 
     expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1')
+  })
+
+  it('在歌词正文前展示歌曲名与已有署名', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    const info = wrapper.get('.music-lyrics-panel__song-info')
+    expect(apiMocks.getMusicSongDetail).toHaveBeenCalledWith('song-1')
+    expect(info.get('h2').text()).toBe('Midnight Radio')
+    expect(info.text()).toContain('艺术家Atoman')
+    expect(info.text()).toContain('作词Lin')
   })
 
   it('从歌词选区创建注释', async () => {

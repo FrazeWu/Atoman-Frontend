@@ -54,7 +54,6 @@ export interface MusicCreationArtistMemberDraft {
   id: string
   artistId: string | null
   name: string
-  disambiguation: string
   joinDateParts: MusicCreationDatePartsDraft
   leaveDateParts: MusicCreationDatePartsDraft
 }

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { computed, onMounted, ref, watch } from 'vue'
 import type { Channel, PodcastEpisode } from '@/types'
-import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -16,7 +15,6 @@ type TabKey = 'episodes' | 'shows' | 'collections' | 'listenLater'
 type EpisodeBookmark = { id: string; episode?: PodcastEpisode }
 type ShowBookmark = { id: string; channel?: Channel }
 
-const api = useApi()
 const authStore = getActivePinia() ? useAuthStore() : null
 const isAuth = computed(() => !authStore || authStore.isAuthenticated || Boolean(authStore.token))
 const player = usePlayerStore()
@@ -39,10 +37,6 @@ const listenLaterEpisodes = computed(() =>
   listenLaterRows.value.map(row => row.episode).filter((ep): ep is PodcastEpisode => Boolean(ep))
 )
 
-function headers() {
-  return { Authorization: `Bearer ${authStore?.token || ''}` }
-}
-
 function playEpisode(ep: PodcastEpisode, queue: PodcastEpisode[]) {
   player.setQueueFromPodcastEpisodes(queue)
   player.playQueuedSong(player.createPodcastEpisodeSong(ep))
@@ -55,23 +49,17 @@ async function loadActiveTab() {
   loading.value = true
   try {
     if (tab === 'episodes') {
-      const res = await apiRequest(`${api.podcast.bookmarks}?kind=favorite`, { headers: headers() })
-      if (!res.ok) throw new Error('Failed to load episode bookmarks')
-      const data = await res.json()
+      const data = await getPodcastBookmarks<{ data?: EpisodeBookmark[] }>('favorite', authStore?.token ?? undefined)
       if (request === latestLoadRequest && activeTab.value === tab) {
         episodeBookmarks.value = Array.isArray(data?.data) ? data.data : []
       }
     } else if (tab === 'shows') {
-      const res = await apiRequest(api.podcast.showBookmarks, { headers: headers() })
-      if (!res.ok) throw new Error('Failed to load show bookmarks')
-      const data = await res.json()
+      const data = await getPodcastShowBookmarks<{ data?: ShowBookmark[] }>(authStore?.token ?? undefined)
       if (request === latestLoadRequest && activeTab.value === tab) {
         showBookmarks.value = Array.isArray(data?.data) ? data.data : []
       }
     } else if (tab === 'listenLater') {
-      const res = await apiRequest(`${api.podcast.bookmarks}?kind=listen_later`, { headers: headers() })
-      if (!res.ok) throw new Error('Failed to load listen later bookmarks')
-      const data = await res.json()
+      const data = await getPodcastBookmarks<{ data?: EpisodeBookmark[] }>('listen_later', authStore?.token ?? undefined)
       if (request === latestLoadRequest && activeTab.value === tab) {
         listenLaterRows.value = Array.isArray(data?.data) ? data.data : []
       }

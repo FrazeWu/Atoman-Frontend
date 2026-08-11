@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { addPodcastEpisodeBookmark, getPodcastShowBookmarks, getPodcastShowEpisodes } from '@/api/podcast'
 import { computed, onMounted, ref } from 'vue'
 import type { PodcastEpisode, PodcastEpisodeProgress } from '@/types'
-import { useApi } from '@/composables/useApi'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
@@ -10,7 +9,6 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
 
-const api = useApi()
 const authStore = useAuthStore()
 const player = usePlayerStore()
 
@@ -21,10 +19,6 @@ const message = ref('')
 const shows = ref<Array<{ id: string; channel?: { id: string; name: string; slug?: string } }>>([])
 
 const progressByEpisode = computed(() => new Map(progressRows.value.map(row => [row.episode_id, row])))
-
-function headers() {
-  return { Authorization: `Bearer ${authStore.token}` }
-}
 
 function fmtDuration(sec: number) {
   if (!sec) return ''
@@ -48,25 +42,23 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 async function listenLater(ep: PodcastEpisode) {
-  const res = await apiRequest(api.podcast.bookmarks, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers() },
-    body: JSON.stringify({ episode_id: ep.id }),
-  })
-  message.value = res.ok ? '已加入稍后听' : '操作失败'
+  try {
+    await addPodcastEpisodeBookmark(ep.id, 'listen_later', authStore.token ?? undefined)
+    message.value = '已加入稍后听'
+  } catch {
+    message.value = '操作失败'
+  }
 }
 
 onMounted(async () => {
   loading.value = true
   try {
-    const subscriptionsRes = await apiRequest(api.podcast.showBookmarks, { headers: headers() })
-    const subscriptionsData = await subscriptionsRes.json()
+    const subscriptionsData = await getPodcastShowBookmarks<{ data?: typeof shows.value }>(authStore.token ?? undefined)
     shows.value = Array.isArray(subscriptionsData?.data) ? subscriptionsData.data : []
-    const episodeResponses = await Promise.all(shows.value
+    const episodeData = await Promise.all(shows.value
       .map((show: { channel?: { slug?: string } }) => show.channel?.slug)
       .filter((slug): slug is string => Boolean(slug))
-      .map((slug) => apiRequest(api.podcast.showEpisodes(slug))))
-    const episodeData = await Promise.all(episodeResponses.map((response) => response.json()))
+      .map((slug) => getPodcastShowEpisodes<{ episodes?: PodcastEpisode[] }>(slug)))
     episodes.value = episodeData.flatMap((data) => Array.isArray(data?.episodes) ? data.episodes : [])
     progressRows.value = listPodcastProgress().map((record) => ({
       id: record.episode_id,

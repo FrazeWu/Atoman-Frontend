@@ -76,6 +76,18 @@ describe('player store', () => {
 		vi.useRealTimers()
 	})
 
+	it('uses the CORS-enabled cache version for production R2 audio', async () => {
+		const player = usePlayerStore()
+		player.playSong({
+			id: 'r2-song',
+			title: 'R2 Song',
+			audio_url: 'https://assets.atoman.org/music/audio/r2-song.mp3',
+		} as any)
+
+		expect(player.currentSong?.audio_url).toBe('https://assets.atoman.org/music/audio/r2-song.mp3?cors=1')
+		expect(audioInstances[0]?.src).toBe('https://assets.atoman.org/music/audio/r2-song.mp3?cors=1')
+	})
+
 	it('records a restored song after five seconds of resumed playback', async () => {
 		vi.useFakeTimers()
 		localStorage.setItem('playbackState', JSON.stringify({

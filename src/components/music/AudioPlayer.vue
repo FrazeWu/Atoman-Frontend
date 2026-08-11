@@ -147,7 +147,7 @@
             class="player-fav-btn"
             title="收藏单集"
             data-hint="收藏单集"
-            @click="addPodcastBookmark"
+          @click="addPodcastBookmark(player.currentSong?.source_id)"
           >
             <Heart :size="16" />
           </button>
@@ -158,7 +158,7 @@
             class="player-add-btn"
             title="稍后听"
             data-hint="稍后听"
-            @click="addPodcastListenLater"
+          @click="addPodcastListenLater(player.currentSong?.source_id)"
           >
             <Clock :size="16" />
           </button>
@@ -283,66 +283,7 @@
   </Transition>
 
   <Transition name="slide-up">
-    <div v-if="player.showQueue" class="queue-panel">
-      <div class="queue-header">
-        <h2 class="queue-title">播放队列 ({{ player.queue.length }})</h2>
-        <button
-          type="button"
-          class="queue-clear"
-          title="清空队列"
-          @click="player.clearQueue"
-        >
-          清空
-        </button>
-        <span class="close-btn" @click="player.toggleQueue">关闭</span>
-      </div>
-      <div class="queue-content">
-        <div v-if="player.queue.length" class="queue-list">
-          <div
-            v-for="(song, idx) in player.queue"
-            :key="song.id"
-            class="queue-item"
-            :class="{ active: player.currentSong?.id === song.id }"
-            @dragover.prevent
-            @drop="dropQueueItem(idx)"
-            @click="player.playQueuedSong(song)"
-          >
-            <button
-              type="button"
-              class="q-drag"
-              draggable="true"
-              :aria-label="`拖动 ${song.title}`"
-              title="拖动排序"
-              @click.stop
-              @dragstart="startQueueDrag(idx)"
-              @dragend="draggedQueueIndex = null"
-            >
-              <GripVertical :size="16" aria-hidden="true" />
-            </button>
-            <span class="q-idx"
-              >{{ (idx + 1).toString().padStart(2, "0") }}.</span
-            >
-            <span class="q-title">{{ song.title }}</span>
-            <span class="q-artist">{{ song.artist }}</span>
-            <span class="q-mobile-order">
-              <button type="button" :disabled="idx === 0" :aria-label="`上移 ${song.title}`" title="上移" @click.stop="moveQueueItem(idx, idx - 1)"><ChevronUp :size="16" aria-hidden="true" /></button>
-              <button type="button" :disabled="idx === player.queue.length - 1" :aria-label="`下移 ${song.title}`" title="下移" @click.stop="moveQueueItem(idx, idx + 1)"><ChevronDown :size="16" aria-hidden="true" /></button>
-            </span>
-            <button
-              v-if="player.currentSong?.id !== song.id"
-              type="button"
-              class="q-remove"
-              :aria-label="`移除 ${song.title}`"
-              title="移除"
-              @click.stop="player.removeFromQueue(song)"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-        <p v-else class="placeholder-text">队列为空</p>
-      </div>
-    </div>
+    <AudioPlayerQueue v-if="player.showQueue" />
   </Transition>
   <PToast v-model="toastVisible" :message="toastMessage" type="success" />
 </template>
@@ -358,10 +299,8 @@ import {
 } from "vue";
 import { useRoute } from "vue-router";
 import { ApiErrorResponseError } from "@/api/client";
-import { apiRequest } from "@/api/client";
 import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
-import { useApi } from "@/composables/useApi";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import {
@@ -377,42 +316,24 @@ import {
   Clock,
   Pin,
   PinOff,
-  GripVertical,
-  ChevronUp,
-  ChevronDown,
   FileText,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
+import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
 import PDropdown from "@/components/ui/PDropdown.vue";
 import PToast from "@/components/ui/PToast.vue";
 import { useMusicFavoritePlaylist } from "@/composables/useMusicFavoritePlaylist";
 import { useLoginRedirect } from "@/composables/useLoginRedirect";
 import { listMusicPlaylists, type MusicPlaylistSummary } from "@/api/musicV1";
 import { reportError } from "@/utils/logger";
+import { usePodcastPlayerActions } from "@/composables/usePodcastPlayerActions";
 
 const player = usePlayerStore();
-const draggedQueueIndex = ref<number | null>(null);
-
-function startQueueDrag(index: number) {
-  draggedQueueIndex.value = index;
-}
-
-function moveQueueItem(from: number, to: number) {
-  if (to < 0 || to >= player.queue.length) return;
-  player.moveQueueItem(from, to);
-}
-
-function dropQueueItem(index: number) {
-  if (draggedQueueIndex.value === null) return;
-  moveQueueItem(draggedQueueIndex.value, index);
-  draggedQueueIndex.value = null;
-}
 const route = useRoute();
 const { openAlbum, openArtist } = useMusicDrawers();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
-const api = useApi();
 const playerInfoRef = ref<HTMLElement | null>(null);
 const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
@@ -514,6 +435,11 @@ const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);
 const toastVisible = ref(false);
 const toastMessage = ref("");
+const showToast = (message: string) => {
+  toastMessage.value = message;
+  toastVisible.value = true;
+};
+const { addPodcastBookmark, addPodcastListenLater } = usePodcastPlayerActions(showToast);
 const {
   favoriteSongIds,
   loadFavoriteSongs,
@@ -567,51 +493,6 @@ async function toggleTrackFavorite(songId: string) {
   }
 }
 
-async function addPodcastBookmark() {
-  const episodeId = player.currentSong?.source_id;
-  if (!episodeId) return;
-  if (!requireLogin()) return;
-  try {
-    const res = await postPodcastEpisode(episodeId, "favorite");
-    if (!res.ok) throw new Error("bookmark failed");
-    toastMessage.value = "已收藏";
-    toastVisible.value = true;
-  } catch (err) {
-    reportError(err, "收藏播客节目失败");
-    toastMessage.value = "操作失败";
-    toastVisible.value = true;
-  }
-}
-
-async function addPodcastListenLater() {
-  const episodeId = player.currentSong?.source_id;
-  if (!episodeId) return;
-  if (!requireLogin()) return;
-  try {
-    const res = await postPodcastEpisode(episodeId, "listen_later");
-    if (!res.ok) throw new Error("listen later failed");
-    toastMessage.value = "已加入稍后听";
-    toastVisible.value = true;
-  } catch (err) {
-    reportError(err, "添加稍后收听失败");
-    toastMessage.value = "操作失败";
-    toastVisible.value = true;
-  }
-}
-
-function postPodcastEpisode(episodeId: string, kind: "favorite" | "listen_later") {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (authStore.token && authStore.token !== "cookie-session") {
-    headers.Authorization = `Bearer ${authStore.token}`;
-  }
-  return apiRequest(api.podcast.bookmarks, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ episode_id: episodeId, kind }),
-  });
-}
 
 async function addTrackToPlaylist(playlistId: string, songId: string) {
   if (!requireLogin()) return;
@@ -1371,113 +1252,6 @@ watch(
   color: var(--a-color-muted);
 }
 
-.queue-panel {
-  position: fixed;
-  top: var(--a-topbar-height);
-  bottom: var(--a-content-bottom-offset);
-  right: 0;
-  width: 420px;
-  height: calc(
-    100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset)
-  );
-  background: var(--a-color-bg);
-  border-left: 1px solid var(--a-color-border-soft);
-  border-top: 1px solid var(--a-color-border-soft);
-  z-index: var(--a-z-player-queue);
-  padding: 2rem 3rem;
-  display: flex;
-  flex-direction: column;
-}
-.queue-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-.queue-title {
-  font-family: inherit;
-  font-weight: var(--a-font-weight-strong, 700);
-  font-size: 1.1rem;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.queue-clear,
-.q-remove {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-.queue-clear {
-  margin-left: auto;
-  margin-right: 0.75rem;
-  color: var(--a-color-muted);
-}
-.q-remove {
-  font-size: 1.15rem;
-  line-height: 1;
-  padding: 0.25rem;
-}
-.queue-item.active .q-remove {
-  color: inherit;
-}
-.queue-content {
-  flex: 1;
-  overflow-y: auto;
-}
-.queue-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.queue-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-.queue-item:hover {
-  background: var(--a-color-surface-muted);
-}
-.queue-item.active {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-}
-.q-idx {
-  font-family: var(--a-font-sans);
-  font-size: 0.7rem;
-  opacity: 0.5;
-}
-.q-drag,
-.q-mobile-order button {
-  width: 30px;
-  height: 30px;
-  display: inline-grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-.q-drag { cursor: grab; }
-.q-drag:active { cursor: grabbing; }
-.q-mobile-order { display: none; }
-.q-title {
-  font-family: inherit;
-  font-weight: var(--a-font-weight-strong, 700);
-  flex: 1;
-}
-.q-artist {
-  font-family: inherit;
-  font-size: 0.7rem;
-  opacity: 0.7;
-  text-transform: uppercase;
-}
-
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: transform 0.5s cubic-bezier(0.2, 0, 0, 1);
@@ -1693,14 +1467,5 @@ watch(
     white-space: nowrap;
   }
 
-  .queue-panel {
-    width: 100%;
-    padding: 1.25rem 1rem;
-  }
-
-  .q-drag { display: none; }
-  .q-mobile-order { display: inline-flex; }
-  .q-artist,
-  .q-idx { display: none; }
 }
 </style>

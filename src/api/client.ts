@@ -28,6 +28,27 @@ export function apiRequest(input: RequestInfo | URL, init?: RequestInit): Promis
   return init === undefined ? apiFetch(input) : apiFetch(input, init)
 }
 
+export async function apiRequestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+  const response = await apiRequest(input, init)
+  const payload = await parseJson(response).catch(() => ({}))
+  if (!response.ok) {
+    const errorPayload = payload as Partial<ApiErrorEnvelope>
+    const error = errorPayload.error
+    const message = typeof error === 'string'
+      ? error
+      : typeof error === 'object' && error
+        ? error.message
+        : 'Request failed.'
+    throw new ApiErrorResponseError(
+      response.status,
+      typeof error === 'object' && error ? error.code ?? 'system.internal_error' : 'system.internal_error',
+      message,
+      typeof error === 'object' && error ? error.details ?? {} : {},
+    )
+  }
+  return payload as T
+}
+
 async function parseJson(response: Response): Promise<unknown> {
   const text = await response.text()
   if (!text) return {}

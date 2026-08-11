@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, StepForward } from 'lucide-vue-next'
-import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
+import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
+import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
+import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
@@ -10,6 +13,7 @@ import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
+import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { reportError } from '@/utils/logger'
 
@@ -25,6 +29,19 @@ const actionBusy = ref('')
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const detailRequests = useRequestGeneration()
+const {
+  lyrics,
+  loading: lyricsLoading,
+  errorMessage: lyricsError,
+  load: loadLyrics,
+  currentLine: currentLyricLine,
+} = useMusicLyrics()
+const lyricsEditorOpen = ref(false)
+const lyricsDisplayMode = ref<'original' | 'translation'>('original')
+const lyricsDisplayOptions = [
+  { label: '原文', value: 'original' },
+  { label: '翻译', value: 'translation' },
+]
 
 function playable(song: MusicSongListItem): Song {
   return {
@@ -57,6 +74,12 @@ const roleLabels: Record<string, string> = {
   writer: '作词', composer: '作曲', arranger: '编曲', producer: '制作人', vocal_producer: '人声制作',
   recording_engineer: '录音', mixing_engineer: '混音', mastering_engineer: '母带', remixer: '重混',
 }
+const hasTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
+const activeLyricLineId = computed(() => {
+  if (!detail.value || String(player.currentSong?.id ?? '') !== String(detail.value.song.id)) return ''
+  const line = currentLyricLine(player.currentTime ?? 0)
+  return line?.line_key ?? line?.id ?? ''
+})
 
 function showToast(message: string) {
   toastMessage.value = message
@@ -108,7 +131,19 @@ function openSongHistory() {
   openNestedAction('song_history', { songId: String(detail.value.song.id) })
 }
 
-async function load(songId: unknown) {
+function openLyricsEditor() {
+  if (!detail.value || !requireLogin()) return
+  lyricsEditorOpen.value = true
+}
+
+function handleLyricsSaved(updated: MusicSongLyrics) {
+  if (!detail.value || String(updated.song_id) !== String(detail.value.song.id)) return
+  lyrics.value = updated
+  detail.value.song.lyrics = updated.content
+  lyricsEditorOpen.value = false
+}
+
+async function loadDetail(songId: unknown) {
   if (typeof songId !== 'string' || !songId) return
   const request = detailRequests.beginRequest()
   loading.value = true
@@ -127,7 +162,16 @@ async function load(songId: unknown) {
   }
 }
 
-watch([() => route.params.songId, () => state.value.songRefreshToken], ([songId]) => load(songId), { immediate: true })
+watch(
+  [() => route.params.songId, () => state.value.songRefreshToken],
+  ([songId]) => {
+    lyricsEditorOpen.value = false
+    lyricsDisplayMode.value = 'original'
+    void loadDetail(songId)
+    if (typeof songId === 'string' && songId) void loadLyrics(songId)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -135,6 +179,13 @@ watch([() => route.params.songId, () => state.value.songRefreshToken], ([songId]
     <p v-if="loading" class="song-detail__state">正在加载</p>
     <p v-else-if="error" class="song-detail__state song-detail__state--error">{{ error }}</p>
     <section v-else-if="detail" class="song-detail__content">
+      <MusicSongLyricsEditorDrawer
+        :show="lyricsEditorOpen"
+        :song-id="String(detail.song.id)"
+        :song-title="detail.song.title"
+        @close="lyricsEditorOpen = false"
+        @saved="handleLyricsSaved"
+      />
       <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
       <div class="song-detail__main">
         <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
@@ -154,9 +205,34 @@ watch([() => route.params.songId, () => state.value.songRefreshToken], ([songId]
           <PButton variant="secondary" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本记录</PButton>
         </div>
       </div>
-      <section v-if="detail.song.lyrics" class="song-detail__lyrics">
-        <h2>歌词</h2>
-        <pre>{{ detail.song.lyrics }}</pre>
+      <section class="song-detail__lyrics">
+        <header class="song-detail__lyrics-header">
+          <h2>歌词</h2>
+          <div class="song-detail__lyrics-actions">
+            <PSegmentedControl
+              v-if="hasTranslation"
+              v-model="lyricsDisplayMode"
+              :options="lyricsDisplayOptions"
+              aria-label="歌词显示"
+            />
+            <PButton data-testid="song-detail-edit-lyrics" size="sm" variant="secondary" @click="openLyricsEditor">
+              <Pencil :size="15" aria-hidden="true" />编辑歌词
+            </PButton>
+          </div>
+        </header>
+        <p v-if="lyricsLoading" class="song-detail__state">正在加载歌词</p>
+        <p v-else-if="lyricsError" class="song-detail__state song-detail__state--error">{{ lyricsError }}</p>
+        <p v-else-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
+        <div v-else class="song-detail__lyric-lines">
+          <MusicLyricsLine
+            v-for="line in lyrics.lines"
+            :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
+            :line="line"
+            :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
+            :bilingual="lyricsDisplayMode === 'translation'"
+            :can-select="false"
+          />
+        </div>
       </section>
       <nav class="song-detail__navigation" aria-label="相邻曲目">
         <RouterLink v-if="detail.previous" :to="`/music/song/${detail.previous.id}`"><ChevronLeft :size="16" aria-hidden="true" />{{ detail.previous.title }}</RouterLink>
@@ -180,9 +256,13 @@ watch([() => route.params.songId, () => state.value.songRefreshToken], ([songId]
 .song-detail__navigation { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
 .song-detail__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .song-detail__lyrics { grid-column: 1 / -1; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
-.song-detail__lyrics h2 { margin: 0 0 0.75rem; font-size: 1rem; }
-.song-detail__lyrics pre { margin: 0; max-height: 18rem; overflow: auto; white-space: pre-wrap; font: inherit; line-height: 1.7; }
+.song-detail__lyrics-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.song-detail__lyrics h2 { margin: 0; font-size: 1rem; }
+.song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+.song-detail__lyric-lines { display: grid; gap: 0.15rem; max-height: 32rem; overflow-y: auto; overflow-x: hidden; }
+.song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; }
+.song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.65; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
-@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } }
+@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } }
 </style>

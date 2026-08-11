@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { addPodcastShowBookmark, getPodcastShowEpisodes } from '@/api/podcast'
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode, Channel } from '@/types'
@@ -31,9 +31,7 @@ async function loadShow(slug: string) {
   loading.value = true
 
   try {
-    const res = await apiRequest(`${api.url}/podcast/shows/${slug}/episodes`)
-    if (!res.ok) return
-    const data = await res.json()
+    const data = await getPodcastShowEpisodes<{ channel: Channel; episodes: PodcastEpisode[] }>(slug)
     if (request !== latestRequest) return
     channel.value = data.channel
     episodes.value = data.episodes
@@ -59,12 +57,8 @@ async function subscribeShow() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await apiRequest(api.podcast.showBookmarks, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ channel_id: channel.value.id }),
-  })
-  actionMessage.value = res.ok ? '已订阅' : '订阅失败'
+  const ok = await addPodcastShowBookmark(channel.value.id, authStore.token ?? undefined)
+  actionMessage.value = ok ? '已订阅' : '订阅失败'
 }
 </script>
 

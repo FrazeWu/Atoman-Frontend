@@ -132,8 +132,6 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
-import { reportError } from '@/utils/logger'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AtSign, Quote } from 'lucide-vue-next'
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
@@ -143,12 +141,10 @@ import { markdown } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
-import * as Y from 'yjs'
-import { WebsocketProvider } from 'y-websocket'
-import { yCollab } from 'y-codemirror.next'
-import { useApi, useApiWebSocketUrl } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
+import { useEditorCollaboration } from '@/composables/editor/useEditorCollaboration'
+import { useEditorImageUpload } from '@/composables/editor/useEditorImageUpload'
 import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
 import {
   fitReferenceMenuPosition,
@@ -166,7 +162,6 @@ import {
 } from './editor/resourceReferenceExtension'
 import { enhancePreviewCodeBlocks } from './editor/previewEnhancements'
 
-interface Peer { clientId: number; name: string; color: string }
 interface Props {
   modelValue?: string
   mode: 'normal' | 'split'
@@ -218,7 +213,6 @@ const emit = defineEmits<{
   'collab-ready': [value: string]
 }>()
 
-const api = useApi()
 const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
 const effectiveMode = computed<'normal' | 'split'>(() => (props.enableCollab ? 'split' : props.mode))
@@ -236,16 +230,29 @@ const lineNumberCompartment = new Compartment()
 const resourceReferenceCompartment = new Compartment()
 const contentAttributesCompartment = new Compartment()
 let cmView: EditorView | null = null
+const {
+  imageInputRef,
+  uploadingImage,
+  isDragging,
+  triggerImageUpload,
+  handleImageUploadFile,
+  onCmPaste,
+  handleDropFiles,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+} = useEditorImageUpload({
+  enabled: () => props.enableImageUpload,
+  getView: () => cmView,
+})
 
-const CURSOR_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
-const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)]
 const myName = computed(() => authStore.user?.display_name || authStore.user?.username || '匿名')
-const collabPeers = ref<Peer[]>([])
-
-let ydoc: Y.Doc | null = null
-let provider: WebsocketProvider | null = null
-let ytext: Y.Text | null = null
-let hasEmittedCollabReady = false
+const collaboration = useEditorCollaboration({
+  userName: myName,
+  initialValue: () => props.modelValue,
+  onReady: value => emit('collab-ready', value),
+})
+const collabPeers = collaboration.peers
 
 function findActiveHeadingLine(docText: string, position: number): number | null {
   const lines = docText.split('\n')
@@ -315,13 +322,7 @@ function teardownEditor() {
     clearTimeout(mentionDebounce)
     mentionDebounce = null
   }
-  provider?.destroy()
-  ydoc?.destroy()
-  provider = null
-  ydoc = null
-  ytext = null
-  hasEmittedCollabReady = false
-  collabPeers.value = []
+  collaboration.stop()
   cmView?.destroy()
   cmView = null
 }
@@ -340,22 +341,8 @@ function editorContentAttributes(): Record<string, string> {
   return props.editorAriaLabel ? { 'aria-label': props.editorAriaLabel } : {}
 }
 
-function emitCollabReadyIfNeeded() {
-  if (hasEmittedCollabReady || !ytext) return
-  hasEmittedCollabReady = true
-  emit('collab-ready', ytext.toString())
-}
-
 function replaceDocument(markdown: string) {
-  if (props.enableCollab && ytext) {
-    if (ytext.length > 0) {
-      ytext.delete(0, ytext.length)
-    }
-    if (markdown) {
-      ytext.insert(0, markdown)
-    }
-    return
-  }
+  if (props.enableCollab && collaboration.replaceDocument(markdown)) return
 
   if (!cmView) return
 
@@ -552,37 +539,11 @@ function initCodeMirror() {
   }
 
   if (props.enableCollab && props.collabRoomId) {
-    ydoc = new Y.Doc()
-    provider = new WebsocketProvider(
-      useApiWebSocketUrl('collab/ws'),
-      props.collabRoomId,
-      ydoc,
-      { connect: true },
-    )
-    ytext = ydoc.getText('codemirror')
-
-    provider.awareness.on('change', () => {
-      const list: Peer[] = []
-      provider!.awareness.getStates().forEach((state, clientId) => {
-        if (clientId === provider!.awareness.clientID) return
-        if (state.user) list.push({ clientId, name: state.user.name as string, color: state.user.color as string })
-      })
-      collabPeers.value = list
-    })
-    provider.awareness.setLocalStateField('user', { name: myName.value, color: myColor })
-
-    provider.on('sync', (isSynced: boolean) => {
-      if (!isSynced || hasEmittedCollabReady) return
-      if (ytext?.length === 0 && props.modelValue) {
-        ytext.insert(0, props.modelValue)
-      }
-      emitCollabReadyIfNeeded()
-    })
-
-    extensions.push(yCollab(ytext, provider.awareness))
+    const session = collaboration.start(props.collabRoomId)
+    extensions.push(session.extension)
     cmView = new EditorView({
       state: EditorState.create({
-        doc: ytext.toString(),
+        doc: session.document,
         extensions,
       }),
       parent: cmContainerRef.value,
@@ -736,91 +697,6 @@ function insertEmbed(kind: 'post' | 'music' | 'video') {
   const { from } = getCmSelection()
   const md = `\n:::${kind}{id="${id}"}\n:::\n`
   cmInsert(from, from, md)
-}
-
-const imageInputRef = ref<HTMLInputElement | null>(null)
-const uploadingImage = ref(false)
-
-function triggerImageUpload() {
-  imageInputRef.value?.click()
-}
-
-async function handleImageUploadFile(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  if (imageInputRef.value) imageInputRef.value.value = ''
-  await uploadImage(file)
-}
-
-async function uploadImage(file: File) {
-  if (!cmView) return
-  const uploadId = Math.random().toString(36).slice(2, 8)
-  const placeholder = `![上传中-${uploadId}]()`
-
-  const { from } = getCmSelection()
-  cmInsert(from, from, placeholder)
-
-  uploadingImage.value = true
-  try {
-    const formData = new FormData()
-    formData.append('image', file)
-    const res = await apiRequest(api.blog.uploadImage, {
-      method: 'POST',
-      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
-      body: formData,
-    })
-    if (!res.ok) throw new Error('upload failed')
-    const data = await res.json()
-    const url: string = data.url
-
-    const doc = cmView.state.doc.toString()
-    const idx = doc.indexOf(placeholder)
-    if (idx !== -1) {
-      const finalMd = `![图片](${url})`
-      cmView.dispatch({
-        changes: { from: idx, to: idx + placeholder.length, insert: finalMd },
-      })
-    }
-  } catch (err) {
-    reportError(err, '图片上传失败')
-    const doc = cmView.state.doc.toString()
-    const idx = doc.indexOf(placeholder)
-    if (idx !== -1) {
-      cmView.dispatch({ changes: { from: idx, to: idx + placeholder.length, insert: '' } })
-    }
-  } finally {
-    uploadingImage.value = false
-  }
-}
-
-function onCmPaste(e: ClipboardEvent) {
-  if (!props.enableImageUpload) return
-  const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'))
-  if (files.length === 0) return
-  e.preventDefault()
-  files.forEach((f) => uploadImage(f))
-}
-
-const isDragging = ref(false)
-
-function onDragOver() {
-  isDragging.value = true
-}
-
-function onDragLeave() {
-  isDragging.value = false
-}
-
-function onDrop(e: DragEvent) {
-  isDragging.value = false
-  if (!props.enableImageUpload) return
-  handleDropFiles(e.dataTransfer?.files)
-}
-
-function handleDropFiles(files?: FileList | null) {
-  if (!files) return
-  const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'))
-  imageFiles.forEach((f) => uploadImage(f))
 }
 
 const mention = ref({

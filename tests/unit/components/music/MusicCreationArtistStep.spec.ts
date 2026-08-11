@@ -162,6 +162,19 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(row.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
   })
 
+  it('keeps single-line labels inline and removes disambiguation fields', async () => {
+    const wrapper = mountArtistStep()
+
+    expect(wrapper.get('[data-testid="artist-legal-name-input"]').element.closest('.single-line-field')).not.toBeNull()
+    expect(wrapper.get('[data-testid="artist-birth-input"]').element.closest('.single-line-field')).not.toBeNull()
+    expect(wrapper.find('[data-testid="artist-disambiguation-input"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
+    await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="artist-member-disambiguation-input-0"]').exists()).toBe(false)
+  })
+
   it('shows required markers for mandatory personal artist fields', () => {
     const wrapper = mountArtistStep()
 

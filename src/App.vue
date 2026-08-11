@@ -1,6 +1,5 @@
 <template>
-  <n-config-provider :theme-overrides="themeOverrides">
-    <div :class="['app-shell', { 'has-sidebar': hasSidebar }]">
+  <div :class="['app-shell', { 'has-sidebar': hasSidebar }]">
       <AppTopbar />
       <main :class="[
         'app-main', 
@@ -14,13 +13,11 @@
       <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="!isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
-    </div>
-  </n-config-provider>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted } from 'vue'
-import { NConfigProvider } from 'naive-ui'
 import { useRoute } from 'vue-router'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
@@ -32,15 +29,6 @@ import { useTransitionRelay } from '@/composables/useTransitionRelay'
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
-
-const themeOverrides = {
-  common: {
-    primaryColor: '#000000',
-    primaryColorHover: '#333333',
-    primaryColorPressed: '#000000',
-    borderRadius: '0px',
-  },
-}
 
 const route = useRoute()
 const player = usePlayerStore()

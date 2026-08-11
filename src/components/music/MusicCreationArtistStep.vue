@@ -149,7 +149,6 @@ function addMember() {
     id: `member-${Date.now()}-${artistDraft.value.members.length + 1}`,
     artistId: null,
     name: '',
-    disambiguation: '',
     joinDateParts: createEmptyDateParts(),
     leaveDateParts: createEmptyDateParts(),
   })
@@ -182,7 +181,6 @@ async function searchMember(member: NonNullable<typeof artistDraft.value>['membe
 function selectMember(member: NonNullable<typeof artistDraft.value>['members'][number], artist: MusicArtistListItem) {
   member.artistId = artist.id
   member.name = artist.display_name || artist.name
-  member.disambiguation = artist.disambiguation || ''
   memberResults.value[member.id] = []
   membersErrorMessage.value = ''
 }
@@ -194,7 +192,6 @@ async function createMemberDraft(member: NonNullable<typeof artistDraft.value>['
   try {
     const artist = await createMusicArtist({
       name: member.name.trim(),
-      disambiguation: member.disambiguation.trim() || undefined,
       draft_context: 'member',
     })
     member.artistId = artist.id
@@ -355,7 +352,7 @@ defineExpose({
           />
 
           <div class="avatar-upload-fields">
-            <div v-if="!isGroup" class="field-group">
+            <div v-if="!isGroup" class="field-group single-line-field">
               <PInput
                 v-model="artistDraft.legalName"
                 data-testid="artist-legal-name-input"
@@ -364,7 +361,7 @@ defineExpose({
                 :label="requiredLabel('本名')"
               />
             </div>
-            <div v-if="artistDraft.stageNames.length" class="field-group">
+            <div v-if="artistDraft.stageNames.length" class="field-group single-line-field">
               <PInput
                 v-model="artistDraft.stageNames[0].name"
                 :data-testid="isGroup ? 'artist-group-name-input' : 'artist-stage-name-input-0'"
@@ -375,17 +372,21 @@ defineExpose({
               />
             </div>
             <div v-if="isGroup" class="field-grid field-grid--duo">
-              <PMaskedDateInput
-                v-model="artistDraft.activeStartDateParts"
-                :label="requiredLabel('成立时间')"
-                testId="artist-group-start-date-input"
-              />
-              <PMaskedDateInput
-                v-model="artistDraft.activeEndDateParts"
-                label="结束时间"
-                testId="artist-group-end-date-input"
-                present-when-empty
-              />
+              <div class="single-line-field">
+                <PMaskedDateInput
+                  v-model="artistDraft.activeStartDateParts"
+                  :label="requiredLabel('成立时间')"
+                  testId="artist-group-start-date-input"
+                />
+              </div>
+              <div class="single-line-field">
+                <PMaskedDateInput
+                  v-model="artistDraft.activeEndDateParts"
+                  label="结束时间"
+                  testId="artist-group-end-date-input"
+                  present-when-empty
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -430,31 +431,37 @@ defineExpose({
               v-if="index > 0"
               class="stage-name-card"
             >
-              <PInput
-                v-model="stageName.name"
-                :data-testid="`artist-stage-name-input-${index}`"
-                type="text"
-                label="艺名"
-                placeholder="例如 Kanye West / Ye"
-                @update:model-value="stageNameErrorMessage = ''"
-              />
+              <div class="single-line-field">
+                <PInput
+                  v-model="stageName.name"
+                  :data-testid="`artist-stage-name-input-${index}`"
+                  type="text"
+                  label="艺名"
+                  placeholder="例如 Kanye West / Ye"
+                  @update:model-value="stageNameErrorMessage = ''"
+                />
+              </div>
               <div class="stage-name-dates">
-                <PInput
-                  v-model="stageName.startDateText"
-                  :data-testid="`artist-stage-start-input-${index}`"
-                  type="text"
-                  label="开始时间"
-                  placeholder="例如 2018"
-                  @update:model-value="stageNameErrorMessage = ''"
-                />
-                <PInput
-                  v-model="stageName.endDateText"
-                  :data-testid="`artist-stage-end-input-${index}`"
-                  type="text"
-                  label="结束时间"
-                  placeholder="例如 2021 / 至今"
-                  @update:model-value="stageNameErrorMessage = ''"
-                />
+                <div class="single-line-field">
+                  <PInput
+                    v-model="stageName.startDateText"
+                    :data-testid="`artist-stage-start-input-${index}`"
+                    type="text"
+                    label="开始时间"
+                    placeholder="例如 2018"
+                    @update:model-value="stageNameErrorMessage = ''"
+                  />
+                </div>
+                <div class="single-line-field">
+                  <PInput
+                    v-model="stageName.endDateText"
+                    :data-testid="`artist-stage-end-input-${index}`"
+                    type="text"
+                    label="结束时间"
+                    placeholder="例如 2021 / 至今"
+                    @update:model-value="stageNameErrorMessage = ''"
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -491,14 +498,25 @@ defineExpose({
             class="stage-name-card"
           >
             <div class="member-card__header">
-              <PInput
-                v-model="member.name"
-                :data-testid="`artist-member-name-input-${index}`"
-                type="text"
-                label="成员名"
-                placeholder="例如 Thomas Bangalter"
-                @update:model-value="updateMemberName(member)"
-              />
+              <div class="single-line-field">
+                <PInput
+                  v-model="member.name"
+                  :data-testid="`artist-member-name-input-${index}`"
+                  type="text"
+                  label="成员名"
+                  placeholder="例如 Thomas Bangalter"
+                  @update:model-value="updateMemberName(member)"
+                />
+              </div>
+              <button
+                v-if="!member.artistId"
+                type="button"
+                class="ui-action ui-action--inline"
+                :disabled="memberBusyId === member.id || !member.name.trim()"
+                @click="createMemberDraft(member)"
+              >
+                {{ memberBusyId === member.id ? '处理中…' : '创建草稿' }}
+              </button>
               <button
                 type="button"
                 class="ui-action ui-action--inline"
@@ -520,27 +538,13 @@ defineExpose({
               </button>
             </div>
 
-            <div v-if="!member.artistId" class="field-grid field-grid--duo">
-              <PInput
-                v-model="member.disambiguation"
-                :data-testid="`artist-member-disambiguation-input-${index}`"
-                label="区分信息"
-                placeholder="例如 南京音乐人"
-              />
-              <button
-                type="button"
-                class="ui-action member-create-action"
-                :disabled="memberBusyId === member.id || !member.name.trim()"
-                @click="createMemberDraft(member)"
-              >
-                {{ memberBusyId === member.id ? '处理中…' : '创建成员草稿' }}
-              </button>
-            </div>
-
             <div class="field-grid field-grid--duo">
-              <PMaskedDateInput v-model="member.joinDateParts" :label="requiredLabel('加入时间')" :testId="`artist-member-join-input-${index}`" />
-
-              <PMaskedDateInput v-model="member.leaveDateParts" label="退出时间" :testId="`artist-member-leave-input-${index}`" present-when-empty />
+              <div class="single-line-field">
+                <PMaskedDateInput v-model="member.joinDateParts" :label="requiredLabel('加入时间')" :testId="`artist-member-join-input-${index}`" />
+              </div>
+              <div class="single-line-field">
+                <PMaskedDateInput v-model="member.leaveDateParts" label="退出时间" :testId="`artist-member-leave-input-${index}`" present-when-empty />
+              </div>
             </div>
           </div>
 
@@ -563,7 +567,7 @@ defineExpose({
 
         <div class="field-stack">
           <div v-if="!isGroup" class="field-grid field-grid--duo">
-            <div class="field-group">
+            <div class="field-group single-line-field">
               <PCountryRegionField
                 v-model="artistDraft.nationality"
                 :label="requiredLabel('国籍')"
@@ -573,17 +577,9 @@ defineExpose({
                 option-prefix="artist-country-option-"
               />
             </div>
-            <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiredLabel('生日')" testId="artist-birth-input" />
-          </div>
-
-          <div class="field-group">
-            <PInput
-              v-model="artistDraft.disambiguation"
-              data-testid="artist-disambiguation-input"
-              type="text"
-              label="区分信息"
-              placeholder="同名时填写，例如 南京音乐人"
-            />
+            <div class="single-line-field">
+              <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiredLabel('生日')" testId="artist-birth-input" />
+            </div>
           </div>
 
           <div class="field-group">
@@ -663,10 +659,6 @@ defineExpose({
 .member-search-result:last-child {
   border-bottom: 0;
 }
-.member-create-action {
-  align-self: end;
-}
-
 .artist-hero {
   display: none !important;
   gap: 0.7rem;
@@ -812,6 +804,24 @@ defineExpose({
 .field-grid--duo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .field-group { display: grid; gap: 0.45rem; }
 .field-group--narrow { max-width: 16rem; }
+.single-line-field :deep(.p-field),
+.single-line-field :deep(.p-date-input-container),
+.single-line-field :deep(.country-field) {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.single-line-field :deep(.p-field-label),
+.single-line-field :deep(.field-label-row),
+.single-line-field :deep(.country-field-label) {
+  margin: 0;
+  white-space: nowrap;
+}
+.single-line-field :deep(.p-field-error),
+.single-line-field :deep(.p-field-hint) {
+  grid-column: 2;
+}
 .stage-name-card {
   display: grid;
   gap: 0.75rem;
@@ -828,9 +838,9 @@ defineExpose({
 
 .member-card__header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.75rem;
-  align-items: end;
+  align-items: center;
 }
 
 :deep(.p-input:focus),
@@ -882,9 +892,33 @@ defineExpose({
 
 @media (max-width: 720px) {
   .field-grid--duo,
-  .stage-name-dates,
-    .avatar-upload-section {
+  .stage-name-dates {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-upload-section {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .single-line-field :deep(.p-field),
+  .single-line-field :deep(.p-date-input-container),
+  .single-line-field :deep(.country-field) {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .single-line-field :deep(.p-field-error),
+  .single-line-field :deep(.p-field-hint) {
+    grid-column: 1;
+  }
+
+  .member-card__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .member-card__header .single-line-field {
+    grid-column: 1 / -1;
   }
 }
 </style>

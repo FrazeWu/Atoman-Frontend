@@ -38,6 +38,22 @@ function resolveUploadedMediaUrl(url: string) {
   return `${new URL(api.url).origin}${url}`;
 }
 
+function resolvePlaybackAudioUrl(url: string) {
+  const resolved = resolveUploadedMediaUrl(url);
+  try {
+    const parsed = new URL(resolved);
+    if (parsed.hostname !== "assets.atoman.org") return resolved;
+    parsed.searchParams.set("cors", "1");
+    return parsed.toString();
+  } catch {
+    return resolved;
+  }
+}
+
+function normalizePlaybackSong(song: Song) {
+  return { ...song, audio_url: resolvePlaybackAudioUrl(song.audio_url) };
+}
+
 function playbackItemKey(song: Song) {
   const sourceType = song.source_type || "music";
   return `${sourceType}:${song.source_id || song.id}`;
@@ -252,8 +268,9 @@ export const usePlayerStore = defineStore("player", () => {
     if (!preloaderAudio) {
       preloaderAudio = new Audio();
     }
-    if (preloaderAudio.src !== nextSong.audio_url) {
-      preloaderAudio.src = nextSong.audio_url;
+    const nextAudioUrl = resolvePlaybackAudioUrl(nextSong.audio_url);
+    if (preloaderAudio.src !== nextAudioUrl) {
+      preloaderAudio.src = nextAudioUrl;
       preloaderAudio.preload = "auto";
     }
   };
@@ -293,7 +310,7 @@ export const usePlayerStore = defineStore("player", () => {
     nextAudio.volume = volume.value;
 
     if (currentSong.value) {
-      nextAudio.src = currentSong.value.audio_url;
+      nextAudio.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
       if (currentTime.value > 0) {
         nextAudio.currentTime = currentTime.value;
       }
@@ -324,11 +341,12 @@ export const usePlayerStore = defineStore("player", () => {
     );
     if (!refreshedSong) return;
 
-    currentSong.value = refreshedSong;
+    const normalizedSong = normalizePlaybackSong(refreshedSong);
+    currentSong.value = normalizedSong;
 
     if (!audio) return;
 
-    audio.src = refreshedSong.audio_url;
+    audio.src = normalizedSong.audio_url;
     audio.volume = volume.value;
     if (currentTime.value > 0) {
       audio.currentTime = currentTime.value;
@@ -392,7 +410,7 @@ export const usePlayerStore = defineStore("player", () => {
       playbackMode.value = state.playbackMode || "loop";
       currentTime.value =
         typeof state.currentTime === "number" ? state.currentTime : 0;
-      currentSong.value = state.song || null;
+      currentSong.value = state.song ? normalizePlaybackSong(state.song) : null;
       queue.value = Array.isArray(state.queue)
         ? state.queue
         : state.song
@@ -461,9 +479,10 @@ export const usePlayerStore = defineStore("player", () => {
     savePodcastProgress();
     resetListening(song);
     const player = ensureAudio();
-    player.src = song.audio_url;
+    const normalizedSong = normalizePlaybackSong(song);
+    player.src = normalizedSong.audio_url;
     player.volume = volume.value;
-    currentSong.value = song;
+    currentSong.value = normalizedSong;
     const savedProgress =
       song.source_type === "podcast_episode" && song.source_id
         ? readPodcastProgress(song.source_id)

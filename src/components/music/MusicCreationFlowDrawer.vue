@@ -107,7 +107,6 @@ async function loadEditDraft() {
           id: `member-${member.artist_id}-${index}`,
           artistId: member.artist_id,
           name: member.name,
-          disambiguation: '',
           joinDateParts: parsePartialDateParts(formatStoredPartialDate(member.join_date, member.join_date_precision)),
           leaveDateParts: parsePartialDateParts(formatStoredPartialDate(member.leave_date, member.leave_date_precision)),
         })),

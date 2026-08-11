@@ -29,6 +29,17 @@ vi.mock('@/components/music/MusicSquareImageCropSheet.vue', () => ({
   },
 }))
 
+vi.mock('@/components/music/MusicSongLyricsEditorDrawer.vue', () => ({
+  default: {
+    props: ['show', 'songId', 'songTitle'],
+    template: `
+      <div v-if="show" data-testid="existing-song-lyrics-editor" :data-song-id="songId">
+        <button data-testid="existing-song-lyrics-save" @click="$emit('saved', { song_id: songId, content: '[00:01.00]Updated' })">save</button>
+      </div>
+    `,
+  },
+}))
+
 describe('MusicCreationAlbumDetailsStep.vue', () => {
   beforeEach(() => {
     const drawers = useMusicDrawers()
@@ -78,6 +89,29 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     const wrapper = mount(MusicCreationAlbumDetailsStep)
     expect(wrapper.get('[data-testid="album-track-lyrics-track-lyrics"]').text()).toContain('上传歌词')
+  })
+
+  it('uses the structured lyric editor for an existing album track', async () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ mode: 'edit', entity: 'album', albumId: 'album-1', startStep: 'albumDetails' })
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+    flow.draft.tracks = [{
+      id: 'existing-track',
+      songId: 'song-1',
+      sequence: 1,
+      title: 'Existing track',
+      lyrics: '[00:01.00]Original',
+    }]
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    expect(wrapper.get('[data-testid="album-track-lyrics-existing-track"]').text()).toContain('编辑歌词')
+    await wrapper.get('[data-testid="album-track-lyrics-existing-track"]').trigger('click')
+    expect(wrapper.get('[data-testid="existing-song-lyrics-editor"]').attributes('data-song-id')).toBe('song-1')
+
+    await wrapper.get('[data-testid="existing-song-lyrics-save"]').trigger('click')
+    expect(flow.draft.tracks[0]?.lyrics).toBe('[00:01.00]Updated')
+    expect(wrapper.find('[data-testid="existing-song-lyrics-editor"]').exists()).toBe(false)
   })
 
   it('renders album details fields in the confirmed order and shows seeded draft values', () => {

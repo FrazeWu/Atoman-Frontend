@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { getPodcastRecommendations, listPodcastEpisodes } from '@/api/podcast'
 import { computed, onMounted, ref } from 'vue'
 import { Headphones, Play } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
@@ -7,7 +7,6 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import { useApiUrl } from '@/composables/useApi'
 import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
@@ -34,7 +33,6 @@ type RecommendedEpisodePayload = {
 
 const player = usePlayerStore()
 
-const API_URL = useApiUrl()
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(false)
 const recommendedEpisodes = ref<RecommendedEpisode[]>([])
@@ -49,8 +47,7 @@ const recommendationOptions = [
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await apiRequest(`${API_URL}/podcast/episodes`)
-    if (res.ok) episodes.value = await res.json()
+    episodes.value = await listPodcastEpisodes()
   } finally {
     loading.value = false
   }
@@ -60,12 +57,7 @@ onMounted(async () => {
 async function fetchRecommendedEpisodes() {
   recommendationLoading.value = true
   try {
-    const res = await apiRequest(`${API_URL}/podcast/recommend/episodes?mode=${recommendationMode.value}&page=1&page_size=8`)
-    if (!res.ok) {
-      recommendedEpisodes.value = []
-      return
-    }
-    const data = await res.json() as { data?: RecommendedEpisodePayload[] }
+    const data = await getPodcastRecommendations<RecommendedEpisodePayload>(recommendationMode.value)
     recommendedEpisodes.value = Array.isArray(data.data)
       ? data.data.map((item) => ({
           id: item.id,
@@ -76,6 +68,8 @@ async function fetchRecommendedEpisodes() {
           imageUrl: item.image_url || item.episode_cover_url || item.channel_cover_url || '',
         }))
       : []
+  } catch {
+    recommendedEpisodes.value = []
   } finally {
     recommendationLoading.value = false
   }

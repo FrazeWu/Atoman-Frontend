@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { FileText, GripVertical, ImageUp, Plus, X } from 'lucide-vue-next'
-import {
-  uploadMusicAsset,
-  createMusicAlbumImport,
-  type MusicAlbumImport,
-} from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
+import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 import MusicCreationContributorPicker from '@/components/music/MusicCreationContributorPicker.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -16,25 +13,47 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
-import type { MusicCreationLyricsDraft } from '@/components/music/musicCreationTypes'
+import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
-const coverInputRef = ref<HTMLInputElement | null>(null)
-
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 const creationFlow = computed(() => state.value.creationFlow)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
-const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
-const coverUploading = ref(false)
-const coverErrorMessage = ref('')
-const coverPreviewUrl = ref('')
-const draggedTrackId = ref<string | null>(null)
-const lyricTrackId = ref<string | null>(null)
-const lyricTrack = computed(() => tracksDraft.value.find(track => track.id === lyricTrackId.value) ?? null)
+const {
+  coverInputRef,
+  coverUploading,
+  coverErrorMessage,
+  coverDisplayUrl,
+  pendingCoverCrop,
+  unresolvedImportedCoverUrl,
+  onCoverChange,
+  reopenImportedCoverCrop,
+  confirmCoverCrop,
+  clearPendingCoverCrop,
+} = useMusicAlbumCoverEditor()
+const {
+  orderedTracks,
+  draggedTrackId,
+  dragOverTrackId,
+  lyricTrack,
+  addTrack,
+  updateTrackTitle,
+  moveTrack,
+  handleTrackDragStart,
+  handleTrackDragOver,
+  handleTrackDragLeave,
+  handleTrackDrop,
+  removeTrack,
+  openTrackLyrics,
+  closeTrackLyrics,
+  saveExistingTrackLyrics,
+  saveTrackLyrics,
+  formatSequence,
+} = useMusicAlbumTrackEditor()
 
 const albumTypeOptions = [
   { label: '专辑', value: 'album' },
@@ -60,12 +79,6 @@ const customAlbumType = computed<string>({
 	get: () => albumDetailsDraft.value?.type === 'custom' ? '' : knownAlbumTypes.includes(albumDetailsDraft.value?.type ?? '') ? '' : albumDetailsDraft.value?.type ?? '',
 	set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value },
 })
-const pendingCoverCrop = ref<{
-  kind: 'manual' | 'imported'
-  sourceFile?: File | null
-  sourceUrl?: string
-} | null>(null)
-const handledImportedCoverUrl = ref('')
 const titleModel = computed({
   get: () => albumDetailsDraft.value?.title ?? '',
   set: (value: string) => {
@@ -86,27 +99,6 @@ function handleTitleBlur() {
     albumImportDraft.value.derivedAlbumTitle = val
   }
 }
-const unresolvedImportedCoverUrl = computed(() => {
-  const coverUrl = albumImportDraft.value?.coverUrl?.trim() || ''
-  const derivedCover = albumImportDraft.value?.derivedCover?.trim() || ''
-  const nextCoverUrl = coverUrl || derivedCover
-  if (!nextCoverUrl) return ''
-  if (handledImportedCoverUrl.value === nextCoverUrl) return ''
-  return nextCoverUrl
-})
-const coverDisplayUrl = computed(() => coverPreviewUrl.value || albumDetailsDraft.value?.coverUrl || '')
-
-function clearCoverPreviewUrl() {
-  if (!coverPreviewUrl.value) return
-  URL.revokeObjectURL(coverPreviewUrl.value)
-  coverPreviewUrl.value = ''
-}
-
-function replaceCoverPreviewUrl(file: File) {
-  clearCoverPreviewUrl()
-  coverPreviewUrl.value = URL.createObjectURL(file)
-}
-
 function requiredLabel(label: string) {
   return `${label}*`
 }
@@ -162,20 +154,6 @@ watch(
 
 
 
-function addTrack() {
-  if (!creationFlow.value) return
-  creationFlow.value.tracksCustomized = true
-  creationFlow.value.draft.tracks = [
-    ...creationFlow.value.draft.tracks,
-    {
-      id: `manual-track-${Date.now()}`,
-      sequence: creationFlow.value.draft.tracks.length + 1,
-      title: '',
-      origin: 'manual',
-    },
-  ]
-}
-
 function syncLockedNewArtistContributor() {
   if (!creationFlow.value || !albumDetailsDraft.value) return
 
@@ -211,217 +189,9 @@ function syncLockedNewArtistContributor() {
   albumDetailsDraft.value.contributors = [nextContributor, ...albumDetailsDraft.value.contributors]
 }
 
-function updateTrackTitle(trackId: string, title: string) {
-  if (!creationFlow.value) return
-  creationFlow.value.tracksCustomized = true
-  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
-    track.id === trackId
-      ? { ...track, title }
-      : track
-  ))
-}
-
-const orderedTracks = computed(() => tracksDraft.value)
-
-function formatSequence(index: number) {
-  return String(index).padStart(2, '0')
-}
-
-function renumberTracks() {
-  if (!creationFlow.value) return
-  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track, index) => ({
-    ...track,
-    sequence: index + 1,
-  }))
-}
-
-function moveTrack(index: number, direction: -1 | 1) {
-  if (!creationFlow.value) return
-  const target = index + direction
-  if (target < 0 || target >= creationFlow.value.draft.tracks.length) return
-
-  const next = [...creationFlow.value.draft.tracks]
-  const [track] = next.splice(index, 1)
-  next.splice(target, 0, track)
-  creationFlow.value.tracksCustomized = true
-  creationFlow.value.draft.tracks = next
-  renumberTracks()
-}
-
-const dragOverTrackId = ref<string | null>(null)
-
-function handleTrackDragStart(trackId: string, event: DragEvent) {
-  draggedTrackId.value = trackId
-  event.dataTransfer?.setData('text/plain', trackId)
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-  }
-}
-
-function handleTrackDragOver(trackId: string) {
-  if (draggedTrackId.value && draggedTrackId.value !== trackId) {
-    dragOverTrackId.value = trackId
-  }
-}
-
-function handleTrackDragLeave(trackId: string) {
-  if (dragOverTrackId.value === trackId) {
-    dragOverTrackId.value = null
-  }
-}
-
-function handleTrackDrop(targetTrackId: string, event: DragEvent) {
-  event.preventDefault()
-  dragOverTrackId.value = null
-  if (!creationFlow.value) return
-
-  const sourceTrackId = event.dataTransfer?.getData('text/plain') || draggedTrackId.value
-  draggedTrackId.value = null
-  if (!sourceTrackId || sourceTrackId === targetTrackId) return
-
-  const nextTracks = [...creationFlow.value.draft.tracks]
-  const sourceIndex = nextTracks.findIndex((track) => track.id === sourceTrackId)
-  const targetIndex = nextTracks.findIndex((track) => track.id === targetTrackId)
-  if (sourceIndex < 0 || targetIndex < 0) return
-
-  const [sourceTrack] = nextTracks.splice(sourceIndex, 1)
-  const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
-  nextTracks.splice(insertionIndex, 0, sourceTrack)
-  creationFlow.value.tracksCustomized = true
-  creationFlow.value.draft.tracks = nextTracks
-  renumberTracks()
-}
-
-function removeTrack(trackId: string) {
-  if (!creationFlow.value) return
-  creationFlow.value.tracksCustomized = true
-  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.filter((track) => track.id !== trackId)
-  renumberTracks()
-}
-
-function openTrackLyrics(trackId: string) {
-  lyricTrackId.value = trackId
-}
-
-function closeTrackLyrics() {
-  lyricTrackId.value = null
-}
-
-function saveTrackLyrics(payload: {
-  language?: string
-  content: string
-  translation: string
-  format: 'plain' | 'lrc'
-  lines: MusicCreationLyricsDraft['lines']
-  editSummary: string
-}) {
-  const track = lyricTrack.value
-  if (!track) return
-  track.lyricsDraft = {
-    content: payload.content,
-    translation: payload.translation,
-    format: payload.format,
-    language: payload.language ?? '',
-    editSummary: payload.editSummary,
-    lines: payload.lines,
-  }
-  track.lyrics = payload.content
-  closeTrackLyrics()
-}
-
-function queueManualCoverCrop(file: File) {
-  pendingCoverCrop.value = {
-    kind: 'manual',
-    sourceFile: file,
-  }
-}
-
-function queueImportedCoverCrop(sourceUrl: string) {
-  if (!creationFlow.value || !sourceUrl.trim()) return
-
-  if (creationFlow.value.draft.albumDetails.coverUrl === sourceUrl) {
-    creationFlow.value.draft.albumDetails.coverUrl = ''
-    creationFlow.value.draft.albumDetails.coverAsset = null
-  }
-
-  pendingCoverCrop.value = {
-    kind: 'imported',
-    sourceUrl,
-  }
-}
-
-function reopenImportedCoverCrop() {
-  if (!unresolvedImportedCoverUrl.value) return
-  queueImportedCoverCrop(unresolvedImportedCoverUrl.value)
-}
-
-function clearPendingCoverCrop() {
-  pendingCoverCrop.value = null
-}
-
-async function confirmCoverCrop(file: File) {
-  const flow = creationFlow.value
-  const draft = albumDetailsDraft.value
-  if (!flow || !draft) return
-
-  const importedSourceUrl = pendingCoverCrop.value?.kind === 'imported'
-    ? pendingCoverCrop.value.sourceUrl?.trim() || ''
-    : ''
-
-  replaceCoverPreviewUrl(file)
-  coverUploading.value = true
-  coverErrorMessage.value = ''
-  flow.assetUploading = true
-  if (importedSourceUrl) {
-    handledImportedCoverUrl.value = importedSourceUrl
-  }
-  pendingCoverCrop.value = null
-
-  try {
-    const asset = await uploadMusicAsset(file, 'music.cover')
-    draft.coverAsset = asset
-    draft.coverUrl = asset.url
-    clearCoverPreviewUrl()
-  } catch (error) {
-    coverErrorMessage.value = error instanceof Error ? error.message : '封面上传失败'
-  } finally {
-    coverUploading.value = false
-    flow.assetUploading = false
-  }
-}
-
-async function onCoverChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  queueManualCoverCrop(file)
-  input.value = ''
-}
-
 function goBack() {
   setMusicCreationStep('albumImport')
 }
-
-watch(
-  () => unresolvedImportedCoverUrl.value,
-  (nextCoverUrl) => {
-    if (!creationFlow.value || !nextCoverUrl) return
-    if (albumDetailsDraft.value?.coverUrl.trim()) return
-    if (pendingCoverCrop.value?.kind === 'manual') return
-    if (handledImportedCoverUrl.value === nextCoverUrl) return
-
-    if (
-      pendingCoverCrop.value?.kind === 'imported'
-      && pendingCoverCrop.value.sourceUrl?.trim() === nextCoverUrl
-    ) {
-      return
-    }
-
-    queueImportedCoverCrop(nextCoverUrl)
-  },
-  { immediate: true },
-)
 
 watch(
   () => [
@@ -437,14 +207,20 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(() => {
-  clearCoverPreviewUrl()
-})
 </script>
 
 <template>
   <div v-if="albumDetailsDraft" class="album-details-step" data-testid="album-details-step">
+    <MusicSongLyricsEditorDrawer
+      v-if="lyricTrack?.songId"
+      :show="true"
+      :song-id="String(lyricTrack.songId)"
+      :song-title="lyricTrack.title"
+      @close="closeTrackLyrics"
+      @saved="saveExistingTrackLyrics"
+    />
     <MusicLyricEditorDrawer
+      v-else
       :show="!!lyricTrack"
       :song-title="lyricTrack?.title ?? ''"
       :content="lyricTrack?.lyricsDraft?.content ?? ''"
@@ -679,7 +455,6 @@ onBeforeUnmount(() => {
             </div>
 
             <PButton
-              v-if="!isEditMode"
               type="button"
               size="sm"
               variant="secondary"
@@ -688,7 +463,7 @@ onBeforeUnmount(() => {
               @click="openTrackLyrics(track.id)"
             >
               <FileText :size="15" aria-hidden="true" />
-              {{ track.lyricsDraft ? '编辑歌词' : '上传歌词' }}
+              {{ track.songId || track.lyricsDraft ? '编辑歌词' : '上传歌词' }}
             </PButton>
 
             <!-- 极简 X 删除按钮 -->

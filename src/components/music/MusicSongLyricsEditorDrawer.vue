@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
-import type { MusicLyricsFormat, MusicLyricsSaveTarget, UpdateMusicSongLyricsInput } from '@/api/musicV1'
+import type { MusicLyricsFormat, MusicLyricsSaveTarget, MusicSongLyrics, UpdateMusicSongLyricsInput } from '@/api/musicV1'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -15,7 +15,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  saved: []
+  saved: [lyrics: MusicSongLyrics]
 }>()
 
 const { lyrics, loading, saving, load, save } = useMusicLyrics()
@@ -55,8 +55,8 @@ async function handleSave(payload: {
     edit_summary: payload.editSummary,
   }
   try {
-    await save(props.songId, input)
-    emit('saved')
+    const updated = await save(props.songId, input)
+    emit('saved', updated)
     emit('close')
   } catch (error) {
     if (error instanceof ApiErrorResponseError && error.status === 409 && error.code === 'music.annotation_anchor_conflict') {
@@ -88,8 +88,8 @@ async function confirmAnnotationConflict() {
   pendingInput.value = null
   conflictingAnnotationIds.value = []
   try {
-    await save(props.songId, input)
-    emit('saved')
+    const updated = await save(props.songId, input)
+    emit('saved', updated)
     emit('close')
   } catch {
     toastMessage.value = '歌词保存失败'

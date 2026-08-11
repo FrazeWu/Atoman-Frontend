@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { addPodcastEpisodeBookmark, addPodcastShowBookmark, getPodcastEpisode } from '@/api/podcast'
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
-import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PPress from '@/components/ui/PPress.vue'
@@ -12,7 +11,6 @@ import PodcastCommentSection from '@/components/podcast/PodcastCommentSection.vu
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { writePodcastProgress } from '@/composables/usePodcastProgress'
 
-const api = useApi()
 const authStore = useAuthStore()
 const player = usePlayerStore()
 const lifecycle = useContentLifecycle()
@@ -35,9 +33,7 @@ async function loadEpisode(id: string) {
   loading.value = true
 
   try {
-    const res = await apiRequest(`${api.url}/podcast/episodes/${id}`)
-    if (res.ok) {
-      const episode = await res.json() as PodcastEpisode
+    const episode = await getPodcastEpisode(id)
       if (request !== latestRequest) return
       ep.value = episode
       if (authStore.token) {
@@ -58,9 +54,6 @@ async function loadEpisode(id: string) {
         playEpisode()
         player.seek(startAt)
       }
-    } else if (request === latestRequest) {
-      error.value = '单集不存在'
-    }
   } catch {
     if (request !== latestRequest) return
     error.value = '加载失败，请重试'
@@ -94,12 +87,8 @@ async function subscribeShow() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await apiRequest(api.podcast.showBookmarks, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ channel_id: ep.value.channel_id }),
-  })
-  actionMessage.value = res.ok ? '已订阅' : '订阅失败'
+  const ok = await addPodcastShowBookmark(ep.value.channel_id, authStore.token ?? undefined)
+  actionMessage.value = ok ? '已订阅' : '订阅失败'
 }
 
 async function favoriteEpisode() {
@@ -108,12 +97,12 @@ async function favoriteEpisode() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await apiRequest(api.podcast.bookmarks, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ episode_id: ep.value.id, kind: 'favorite' }),
-  })
-  actionMessage.value = res.ok ? '已收藏' : '收藏失败'
+  try {
+    await addPodcastEpisodeBookmark(ep.value.id, 'favorite', authStore.token)
+    actionMessage.value = '已收藏'
+  } catch {
+    actionMessage.value = '收藏失败'
+  }
 }
 
 async function listenLater() {
@@ -122,12 +111,12 @@ async function listenLater() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await apiRequest(api.podcast.bookmarks, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ episode_id: ep.value.id, kind: 'listen_later' }),
-  })
-  actionMessage.value = res.ok ? '已加入稍后听' : '操作失败'
+  try {
+    await addPodcastEpisodeBookmark(ep.value.id, 'listen_later', authStore.token)
+    actionMessage.value = '已加入稍后听'
+  } catch {
+    actionMessage.value = '操作失败'
+  }
 }
 
 async function shareEpisode() {

@@ -29,7 +29,7 @@ const favoriteApi = vi.hoisted(() => ({
 }))
 
 vi.mock('@/composables/useApi', () => ({
-  useApiUrl: () => '',
+  useApiUrl: () => '/api/v1',
   useApi: () => ({ url: '', podcast: { bookmarks: '/api/v1/podcast/bookmarks' } }),
 }))
 

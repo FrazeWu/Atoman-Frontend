@@ -1,23 +1,20 @@
 import { vi } from 'vitest'
-import axios from 'axios'
 
 import { apiFetch, clearCSRFToken, setCSRFToken } from '@/api/transport'
 
-vi.mock('axios', () => ({ default: { request: vi.fn() } }))
-
-const axiosRequest = vi.mocked(axios.request)
-const axiosResponse = (status: number, data: unknown = null) => ({ status, statusText: '', headers: {}, data })
+let fetchMock: ReturnType<typeof vi.fn>
 
 describe('api transport', () => {
   beforeEach(() => {
     clearCSRFToken()
 	vi.restoreAllMocks()
-	axiosRequest.mockReset()
+	vi.stubGlobal('fetch', vi.fn())
+	fetchMock = vi.mocked(fetch)
   })
 
   it('uses cookie and csrf while preserving an explicit bearer token', async () => {
 	setCSRFToken('csrf-value')
-	axiosRequest.mockResolvedValue(axiosResponse(204) as never)
+	fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
 
 	await apiFetch('/api/v1/users/me', {
 	  method: 'PUT',
@@ -25,64 +22,64 @@ describe('api transport', () => {
 	  body: '{}',
 	})
 
-	const [config] = axiosRequest.mock.calls[0]
-	expect(config?.withCredentials).toBe(true)
-	expect(config?.headers?.authorization).toBe('Bearer legacy-token')
-	expect(config?.headers?.['x-csrf-token']).toBe('csrf-value')
+	const [, init] = fetchMock.mock.calls[0]
+	expect(init?.credentials).toBe('include')
+	expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer legacy-token')
+	expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('csrf-value')
   })
 
   it('removes the cookie-session placeholder while sending cookie credentials', async () => {
-	axiosRequest.mockResolvedValue(axiosResponse(204) as never)
+	fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
 
 	await apiFetch('/api/v1/users/me', {
 	  headers: { Authorization: 'Bearer cookie-session' },
 	})
 
-	const [config] = axiosRequest.mock.calls[0]
-	expect(config?.withCredentials).toBe(true)
-	expect(config?.headers?.authorization).toBeUndefined()
+	const [, init] = fetchMock.mock.calls[0]
+	expect(init?.credentials).toBe('include')
+	expect(new Headers(init?.headers).get('Authorization')).toBeNull()
   })
 
   it('preserves caller header objects when no transport header is required', async () => {
-	axiosRequest.mockResolvedValue(axiosResponse(204) as never)
+	fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
 	const headers = { Accept: 'application/json' }
 
 	await apiFetch('/api/v1/posts', { headers })
 
-	const [config] = axiosRequest.mock.calls[0]
-	expect(config?.headers?.accept).toBe('application/json')
+	const [, init] = fetchMock.mock.calls[0]
+	expect(new Headers(init?.headers).get('Accept')).toBe('application/json')
   })
 
   it('does not change non-api requests', async () => {
-	axiosRequest.mockResolvedValue(axiosResponse(204) as never)
+	fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
 	await apiFetch('https://uploads.example.com/file', { headers: { Authorization: 'Bearer upload-token' } })
-	const [config] = axiosRequest.mock.calls[0]
-	expect(config?.headers?.authorization).toBe('Bearer upload-token')
-	expect(config?.withCredentials).toBe(false)
+	const [, init] = fetchMock.mock.calls[0]
+	expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer upload-token')
+	expect(init?.credentials).toBeUndefined()
   })
 
   it('does not send csrf credentials to an external URL with an API-like path', async () => {
 	setCSRFToken('csrf-value')
-	axiosRequest.mockResolvedValue(axiosResponse(204) as never)
+	fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
 
 	await apiFetch('https://external.example/api/v1/users/me', { method: 'PUT' })
 
-	const [config] = axiosRequest.mock.calls[0]
-	expect(config?.withCredentials).toBe(false)
-	expect(config?.headers?.['x-csrf-token']).toBeUndefined()
+	const [, init] = fetchMock.mock.calls[0]
+	expect(init?.credentials).toBeUndefined()
+	expect(new Headers(init?.headers).get('X-CSRF-Token')).toBeNull()
   })
 
 	it('refreshes csrf once before retrying a rejected mutation', async () => {
 	setCSRFToken('expired-csrf')
-	axiosRequest
-	  .mockResolvedValueOnce(axiosResponse(403, { error: { code: 'auth.csrf_invalid', message: 'expired', details: {} } }) as never)
-	  .mockResolvedValueOnce(axiosResponse(200, { csrf_token: 'fresh-csrf', user: { username: 'demo', email: 'demo@example.com' } }) as never)
-	  .mockResolvedValueOnce(axiosResponse(204) as never)
+	fetchMock
+	  .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'auth.csrf_invalid', message: 'expired', details: {} } }), { status: 403 }))
+	  .mockResolvedValueOnce(new Response(JSON.stringify({ csrf_token: 'fresh-csrf', user: { username: 'demo', email: 'demo@example.com' } }), { status: 200 }))
+	  .mockResolvedValueOnce(new Response(null, { status: 204 }))
 	const response = await apiFetch('/api/v1/users/me/password', { method: 'PUT', body: '{}' })
 	expect(response.status).toBe(204)
-	expect(axiosRequest).toHaveBeenCalledTimes(3)
-	const [retryConfig] = axiosRequest.mock.calls[2]
-	expect(retryConfig?.headers?.['x-csrf-token']).toBe('fresh-csrf')
+	expect(fetchMock).toHaveBeenCalledTimes(3)
+	const [, retryInit] = fetchMock.mock.calls[2]
+	expect(new Headers(retryInit?.headers).get('X-CSRF-Token')).toBe('fresh-csrf')
   })
 
 })

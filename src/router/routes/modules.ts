@@ -15,9 +15,8 @@ export function commonModuleRoutes(): RouteRecordRaw[] {
   ]
 }
 
-export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
+export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
   blog: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/blog/BlogLayout.vue'),
@@ -38,10 +37,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       component: () => import('@/views/blog/PostDetailView.vue'),
       beforeEnter: to => to.params.id === 'new' ? '/__not_found__' : true,
     },
-    ...commonModuleRoutes(),
   ],
   music: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/music/MusicLayout.vue'),
@@ -102,10 +99,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         },
       ],
     },
-    ...commonModuleRoutes(),
   ],
   feed: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/feed/FeedLayout.vue'),
@@ -121,10 +116,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'reading-list', component: () => import('@/views/feed/FeedReadingListView.vue'), meta: { requiresAuth: true } },
       ],
     },
-    ...commonModuleRoutes(),
   ],
   forum: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/forum/ForumLayout.vue'),
@@ -136,10 +129,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'topic/:id', component: () => import('@/views/forum/ForumTopicView.vue') },
       ],
     },
-    ...commonModuleRoutes(),
   ],
   debate: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/debate/DebateLayout.vue'),
@@ -150,10 +141,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: ':id', component: () => import('@/views/debate/DebateTopicView.vue') },
       ],
     },
-    ...commonModuleRoutes(),
   ],
   timeline: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/timeline/TimelineLayout.vue'),
@@ -164,10 +153,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'person/:id', component: () => import('@/views/timeline/PersonMapView.vue') },
       ],
     },
-    ...commonModuleRoutes(),
   ],
   podcast: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/podcast/PodcastLayout.vue'),
@@ -180,10 +167,8 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'episode/:id', component: () => import('@/views/podcast/PodcastEpisodeView.vue') },
       ],
     },
-    ...commonModuleRoutes(),
   ],
   video: [
-    ...settingRoutes,
     {
       path: '/',
       component: () => import('@/views/video/VideoLayout.vue'),
@@ -196,6 +181,12 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       ],
     },
     { path: '/watch/:id', redirect: (to) => `/videos/watch/${to.params.id}` },
-    ...commonModuleRoutes(),
   ],
 }
+
+export const moduleRoutes = Object.fromEntries(
+  Object.entries(moduleFeatureRoutes).map(([module, routes]) => [
+    module,
+    [...settingRoutes, ...routes, ...commonModuleRoutes()],
+  ]),
+) as Record<ModuleRoomKey, RouteRecordRaw[]>

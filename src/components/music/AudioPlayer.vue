@@ -185,7 +185,6 @@
           data-hint="歌词 (L)"
           @click="player.toggleLyrics"
         >
-          <FileText :size="18" aria-hidden="true" />
           <span>{{ featureLabel }}</span>
         </button>
 
@@ -429,7 +428,7 @@ const isPodcast = computed(
 const isPodcastEpisode = computed(
   () => player.currentSong?.source_type === "podcast_episode",
 );
-const featureLabel = computed(() => (isPodcast.value ? "说明" : "歌词"));
+const featureLabel = computed(() => (isPodcast.value ? "说明" : "词"));
 
 const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);

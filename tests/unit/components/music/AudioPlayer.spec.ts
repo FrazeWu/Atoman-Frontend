@@ -260,7 +260,7 @@ describe('AudioPlayer', () => {
 
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 44px 88px;/)
     expect(source).toContain('class="feature-link"')
-    expect(source).toContain('const featureLabel = computed(() => (isPodcast.value ? "说明" : "歌词"))')
+    expect(source).toContain('const featureLabel = computed(() => (isPodcast.value ? "说明" : "词"))')
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-controls-hub\s*\{[^}]*position: static;[^}]*transform: none;/)
   })
 

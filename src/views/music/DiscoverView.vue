@@ -104,7 +104,13 @@ const localFilteredAlbums = computed(() => {
   return results
 })
 
-const filteredDiscoverAlbums = computed(() => discoverAlbums.value)
+const personalizedAlbums = computed(() => musicHome.value?.for_you ?? [])
+const personalizedAlbumIds = computed(() => new Set(
+  personalizedAlbums.value.map(album => String(album.id)),
+))
+const filteredDiscoverAlbums = computed(() => discoverAlbums.value.filter(
+  album => !personalizedAlbumIds.value.has(String(album.id)),
+))
 
 async function fetchAlbumBookmarks() {
   if (!authStore?.isAuthenticated) {
@@ -616,17 +622,20 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         </div>
       </section>
 
-      <section v-if="musicHome.personalized && musicHome.for_you.length" class="music-home-section" aria-labelledby="for-you-title">
+      <section v-if="personalizedAlbums.length" class="music-home-section" aria-labelledby="for-you-title">
         <header class="music-home-section__header">
-          <h2 id="for-you-title">为你发现</h2>
+          <h2 id="for-you-title">为你推荐</h2>
         </header>
-        <div class="music-home-albums">
-          <div v-for="album in musicHome.for_you" :key="album.id" class="discover-result">
+        <div class="discover-layout discover-layout--albums" aria-label="为你推荐专辑">
+          <div v-for="album in personalizedAlbums" :key="album.id" class="discover-result">
             <MusicAlbumCard
+              class="discover-layout__item"
               :album="album"
-              :show-bookmark="false"
+              :is-bookmarked="starredAlbumIds.includes(String(album.id))"
+              data-testid="personalized-album-card"
               @click="openAlbum(String(album.id))"
               @click-artist="openArtist"
+              @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
             />
             <p v-if="album.reason" class="discover-result__reason">{{ album.reason }}</p>
           </div>
@@ -651,7 +660,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
     <p v-else-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
-    <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !musicHome?.sections.length && !musicHome?.for_you.length && !musicHome?.recently_played.length" class="state-line">暂无发现内容</p>
+    <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !musicHome?.sections.length && !personalizedAlbums.length && !musicHome?.recently_played.length" class="state-line">暂无发现内容</p>
 
     <div v-else-if="contentMode === 'albums'" class="discover-grid" aria-label="专辑列表">
       <MusicAlbumCard
@@ -667,7 +676,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     </div>
 
     <div v-else class="discover-sections" aria-label="发现分区">
-      <section v-if="discoverAlbums.length" class="discover-section">
+      <section v-if="filteredDiscoverAlbums.length" class="discover-section">
         <div class="discover-section__header">
           <h2 class="discover-section__title" data-testid="discover-section-title">专辑</h2>
         </div>

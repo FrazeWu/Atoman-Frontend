@@ -348,7 +348,7 @@ describe('Music DiscoverView.vue', () => {
     expect(mocks.listRecommendedArtists).not.toHaveBeenCalled()
     expect(mocks.listPublicMusicPlaylists).not.toHaveBeenCalled()
     expect(wrapper.find('[aria-label="发现分区"]').exists()).toBe(true)
-    expect(wrapper.find('[aria-label="推荐专辑列表"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="为你推荐专辑"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="发现专辑分区"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="发现歌单分区"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="发现艺人分区"]').exists()).toBe(true)
@@ -366,14 +366,14 @@ describe('Music DiscoverView.vue', () => {
     expect(sections).toEqual(['专辑', '歌单', '艺人'])
   })
 
-  it('shows the former music home sections on the discover page', async () => {
+  it('shows personalized albums on the discover page', async () => {
     const wrapper = mount(DiscoverView)
     await flushPromises()
 
     expect(mocks.getMusicHome).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('最近播放')
     expect(wrapper.text()).toContain('Runaway')
-    expect(wrapper.text()).toContain('为你发现')
+    expect(wrapper.text()).toContain('为你推荐')
     expect(wrapper.text()).toContain('基于你与 Ye 相关的记录')
     expect(wrapper.text()).toContain('热门')
 
@@ -391,6 +391,31 @@ describe('Music DiscoverView.vue', () => {
     await wrapper.get('[data-testid="recent-song-album-album-1"]').trigger('click')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+  })
+
+  it('does not repeat personalized albums in the public discover section', async () => {
+    mocks.getMusicHome.mockResolvedValueOnce({
+      personalized: true,
+      recently_played: [],
+      for_you: [{ id: 'album-1', title: '2049', artists: [{ id: 'artist-1', name: 'Ye' }] }],
+      sections: [],
+      discover: [{
+        type: 'album',
+        id: 'album-1',
+        title: '2049',
+        target_path: '/music/album/album-1',
+        artists: [{ id: 'artist-1', name: 'Ye' }],
+      }],
+      discover_has_more: false,
+      discover_meta: { page: 1, page_size: 24, total: 1, has_more: false },
+    })
+
+    const wrapper = mount(DiscoverView)
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-testid="personalized-album-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(0)
+    expect(wrapper.find('[aria-label="发现专辑分区"]').exists()).toBe(false)
   })
 
   it('hides the playlist section when public playlists are empty', async () => {

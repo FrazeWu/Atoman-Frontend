@@ -198,13 +198,13 @@ export function useMusicDrawers() {
   const openArtist = (id: string) => {
     sheetStack.push(artistLayer(id))
   }
-  const closeArtist = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
+  const closeArtist = (key = [...sheetStack.layers.value].reverse().find(layer => layer.kind === 'artist')?.key ?? '') => closeLayerAndAbove(key)
   const refreshArtist = () => { state.value.artistRefreshToken += 1 }
   
   const openAlbum = (id: string) => {
     sheetStack.push(albumLayer(id))
   }
-  const closeAlbum = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
+  const closeAlbum = (key = [...sheetStack.layers.value].reverse().find(layer => layer.kind === 'album')?.key ?? '') => closeLayerAndAbove(key)
   const refreshAlbum = () => { state.value.albumRefreshToken += 1 }
   const refreshSong = () => { state.value.songRefreshToken += 1 }
 
@@ -319,6 +319,7 @@ export function useMusicDrawers() {
     }
     flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
       id: `import-track-${index + 1}`,
+      songId: track.songId,
       sequence: index + 1,
       title: track.title,
       audioKey: track.audioKey,

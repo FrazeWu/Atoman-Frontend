@@ -195,8 +195,7 @@ async function importInitialLyrics(page: Page, songId: string) {
     mimeType: 'text/plain',
     buffer: Buffer.from('[00:01.00]Anchor token is annotated\n[00:02.00]A separate target phrase'),
   })
-  await page.getByRole('button', { name: '预览导入' }).click()
-  await page.getByTestId('lyrics-import-confirm').click()
+  await expect(page.locator('[data-testid^="lyric-original-"]').first()).toHaveValue('Anchor token is annotated')
   await page.getByTestId('lyrics-edit-summary').fill('创建可注释歌词')
   const saveResponse = page.waitForResponse(response => (
     response.request().method() === 'PUT'

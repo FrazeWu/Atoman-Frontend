@@ -28,20 +28,24 @@ export function useMusicRouteSelection(handlers: MusicRouteSelectionHandlers) {
     const editor = query.editor
     const name = query.name
 
-    if (typeof artist === 'string' && artist) {
-      handlers.openArtist(artist)
-      lastRouteArtist = artist
-    } else if (lastRouteArtist !== null) {
-      handlers.closeArtist()
+    const nextArtist = typeof artist === 'string' && artist ? artist : null
+    const nextAlbum = typeof album === 'string' && album ? album : null
+    if (nextArtist !== lastRouteArtist || nextAlbum !== lastRouteAlbum) {
+      // Route-selected layers are rebuilt in reverse/forward order so replacing
+      // one entity cannot leave the previous artist or album under the new one.
+      if (lastRouteAlbum !== null) handlers.closeAlbum()
+      if (lastRouteArtist !== null) handlers.closeArtist()
       lastRouteArtist = null
-    }
-
-    if (typeof album === 'string' && album) {
-      handlers.openAlbum(album)
-      lastRouteAlbum = album
-    } else if (lastRouteAlbum !== null) {
-      handlers.closeAlbum()
       lastRouteAlbum = null
+
+      if (nextArtist !== null) {
+        handlers.openArtist(nextArtist)
+        lastRouteArtist = nextArtist
+      }
+      if (nextAlbum !== null) {
+        handlers.openAlbum(nextAlbum)
+        lastRouteAlbum = nextAlbum
+      }
     }
 
     const nextEditorKey = [

@@ -471,6 +471,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
+        ...(track.songId ? { song_id: track.songId } : {}),
         title: track.title.trim(),
         track_number: index + 1,
       })),
@@ -521,6 +522,7 @@ function syncReadyImportToDraft() {
   if (!flow.tracksCustomized && (derivedTracks.length > 0 || flow.draft.tracks.length === 0)) {
     flow.draft.tracks = derivedTracks.map((track, index) => ({
       id: `import-track-${index + 1}`,
+      songId: track.songId,
       sequence: index + 1,
       title: track.title,
       audioKey: track.audioKey,

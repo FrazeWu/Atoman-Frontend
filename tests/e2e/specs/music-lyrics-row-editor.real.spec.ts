@@ -88,9 +88,6 @@ async function runWorkflow(
   for (const heading of ['序号', '原文', '翻译', '操作']) {
     await expect(desktopHeader.getByText(heading, { exact: true })).toBeVisible()
   }
-  const initialOriginalValues = await editor.locator('[data-testid^="lyric-original-"]')
-    .evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value))
-
   await page.getByLabel('原文 LRC').setInputFiles({
     name: 'song.lrc',
     mimeType: 'text/plain',
@@ -101,11 +98,9 @@ async function runWorkflow(
     mimeType: 'text/plain',
     buffer: Buffer.from(descendingTranslation),
   })
-  await page.getByRole('button', { name: '预览导入' }).click()
-  await expect(page.getByRole('dialog', { name: '导入预览' }).getByRole('cell', { name: 'One A' })).toBeVisible()
+  await expect(editor.locator('[data-testid^="lyric-original-"]').first()).toHaveValue('One A')
   await expect(page.getByText('时间不能早于上一行')).toBeVisible()
-  await expect(page.getByTestId('lyrics-import-confirm')).toBeDisabled()
-  await page.getByRole('button', { name: '取消', exact: true }).last().click()
+  await expect(page.getByTestId('lyrics-save')).toBeDisabled()
 
   await page.getByLabel('原文 LRC').setInputFiles({
     name: 'song.lrc',
@@ -117,14 +112,6 @@ async function runWorkflow(
     mimeType: 'text/plain',
     buffer: Buffer.from(sortedTranslation),
   })
-  await page.getByRole('button', { name: '预览导入' }).click()
-  await expect(page.getByRole('dialog', { name: '导入预览' }).getByRole('cell', { name: 'One A' })).toBeVisible()
-  await page.getByRole('button', { name: '取消', exact: true }).last().click()
-  expect(await editor.locator('[data-testid^="lyric-original-"]')
-    .evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value))).toEqual(initialOriginalValues)
-
-  await page.getByRole('button', { name: '预览导入' }).click()
-  await page.getByTestId('lyrics-import-confirm').click()
   await expect(desktopHeader.getByText('时间', { exact: true })).toBeVisible()
   await expect(editor.locator('[data-testid^="lyric-original-"]').first()).toHaveValue('One A')
   await expect(page.getByText('存在重复时间')).toBeVisible()

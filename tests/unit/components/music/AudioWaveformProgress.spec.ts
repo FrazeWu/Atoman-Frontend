@@ -1,8 +1,22 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import AudioWaveformProgress from '@/components/music/AudioWaveformProgress.vue'
+import { loadAudioWaveform } from '@/utils/audioWaveform'
+
+vi.mock('@/utils/audioWaveform', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/audioWaveform')>()
+  return {
+    ...actual,
+    loadAudioWaveform: vi.fn(),
+  }
+})
+
+afterEach(() => {
+  vi.mocked(loadAudioWaveform).mockReset()
+  vi.unstubAllGlobals()
+})
 
 describe('AudioWaveformProgress', () => {
   it('seeks from pointer position and exposes an accessible range', async () => {
@@ -36,5 +50,24 @@ describe('AudioWaveformProgress', () => {
     expect(range.attributes('aria-valuetext')).toBe('0:15 / 1:40')
     await range.setValue(25)
     expect(wrapper.emitted('seek')?.at(-1)?.[0]).toBe(25)
+  })
+
+  it('renders loud audio as separate bars instead of a filled block', async () => {
+    vi.stubGlobal('AudioContext', class {})
+    vi.mocked(loadAudioWaveform).mockResolvedValue(Array.from({ length: 280 }, () => 1))
+
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'loud-song',
+        audioUrl: '/loud-song.mp3',
+        currentTime: 20,
+        duration: 100,
+      },
+    })
+    await flushPromises()
+
+    const path = wrapper.get('.waveform-shape__unplayed').attributes('d')
+    expect(path.match(/M /g)).toHaveLength(280)
+    expect(path).not.toContain('Z')
   })
 })

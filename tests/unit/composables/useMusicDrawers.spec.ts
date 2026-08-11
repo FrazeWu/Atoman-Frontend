@@ -27,6 +27,19 @@ describe('useMusicDrawers', () => {
     expect(state.value.albumId).toBeNull()
   })
 
+  it('closes an album and the action layers above it', () => {
+    const { state, openArtist, openAlbum, openNestedAction, closeAlbum } = useMusicDrawers()
+
+    openArtist('artist-1')
+    openAlbum('album-1')
+    openNestedAction('history', { albumId: 'album-1' })
+    closeAlbum()
+
+    expect(state.value.artistId).toBe('artist-1')
+    expect(state.value.albumId).toBeNull()
+    expect(state.value.nestedAction).toBeNull()
+  })
+
   it('manages nested action drawer state', () => {
     const { state, openNestedAction, closeNestedAction } = useMusicDrawers()
     openNestedAction('revise', { title: 'Test' })

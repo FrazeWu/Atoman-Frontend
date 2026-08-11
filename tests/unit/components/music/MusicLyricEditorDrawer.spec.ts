@@ -1,7 +1,6 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
-import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import * as musicLyricsDraft from '@/utils/musicLyricsDraft'
 import { downloadTextFile } from '@/utils/textDownload'
@@ -329,41 +328,41 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.findAll('[data-testid^="lyric-time-"]')).toHaveLength(4)
   })
 
-  it('selects import files without changing rows and cancels preview without replacing', async () => {
+  it('switches to translation when its field is selected and allows typing', async () => {
     const wrapper = mountDrawer()
-    const original = fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:01.00]New'))
-    const translation = fileWithText('new-zh.lrc', vi.fn().mockResolvedValue('[00:01.00]新'))
+    const translation = wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]')
 
-    await chooseFile(wrapper, '原文 LRC', original)
-    await chooseFile(wrapper, '翻译 LRC', translation)
-    expect(wrapper.get('input[aria-label="原文 LRC"]').attributes('accept')).toContain('.lrc')
-    expect(wrapper.get('input[aria-label="翻译 LRC"]').attributes('accept')).toContain('.lrc')
-    expect(wrapper.findAll<HTMLInputElement>('[data-testid^="lyric-original-"]')[0]!.element.value).toBe('Alpha')
-
-    await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(wrapper.findComponent(MusicLyricsImportPreview).props('show')).toBe(true))
-    expect(wrapper.findComponent(MusicLyricsImportPreview).props('rows')[0].original).toBe('New')
-
-    const cancel = Array.from(document.body.querySelectorAll('button'))
-      .find(button => button.textContent?.trim() === '取消')
-    cancel?.click()
+    expect(translation.attributes()).toHaveProperty('readonly')
+    await translation.trigger('pointerdown')
     await wrapper.vm.$nextTick()
-    expect(wrapper.findAll<HTMLInputElement>('[data-testid^="lyric-original-"]')[0]!.element.value).toBe('Alpha')
+
+    expect(wrapper.get('[data-testid="mode-translation"]').attributes('aria-checked')).toBe('true')
+    expect(translation.attributes()).not.toHaveProperty('readonly')
+    await translation.setValue('新的翻译')
+    expect(draftRows(wrapper)[0]?.translation).toBe('新的翻译')
   })
 
-  it('confirms a valid bilingual import as the complete LRC draft', async () => {
+  it('parses an original LRC immediately and shows the result without a preview action', async () => {
+    const wrapper = mountDrawer()
+    const original = fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:01.00]New'))
+
+    await chooseFile(wrapper, '原文 LRC', original)
+    expect(wrapper.get('input[aria-label="原文 LRC"]').attributes('accept')).toContain('.lrc')
+    expect(wrapper.get('input[aria-label="翻译 LRC"]').attributes('accept')).toContain('.lrc')
+    await vi.waitFor(() => expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New'))
+    expect(wrapper.text()).toContain('已解析 1 行歌词')
+    expect(wrapper.text()).toContain('new.lrc')
+    expect(wrapper.text()).not.toContain('预览导入')
+    expect(wrapper.find('[data-testid="lyrics-import-confirm"]').exists()).toBe(false)
+  })
+
+  it('reparses immediately after a translation LRC is selected', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:01.00]New')))
     await chooseFile(wrapper, '翻译 LRC', fileWithText('new-zh.lrc', vi.fn().mockResolvedValue('[00:01.00]新')))
 
-    await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(document.body.querySelector('[data-testid="lyrics-import-confirm"]')).not.toBeNull())
-    document.body.querySelector<HTMLButtonElement>('[data-testid="lyrics-import-confirm"]')?.click()
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.findAll('[data-testid^="lyric-original-"]')).toHaveLength(1)
+    await vi.waitFor(() => expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('新'))
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New')
-    expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('新')
     expect(rowEditor(wrapper).props('format')).toBe('lrc')
     expect(selectedRowId(wrapper)).toBe(draftRows(wrapper)[0]!.id)
 
@@ -398,10 +397,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
       '[02:30.52]Chick-Fil-A',
     ].join('\n')
     await chooseFile(wrapper, '原文 LRC', fileWithText('Closed On Sunday.lrc', vi.fn().mockResolvedValue(content)))
-    await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(document.body.querySelector('[data-testid="lyrics-import-confirm"]')).not.toBeNull())
-    document.body.querySelector<HTMLButtonElement>('[data-testid="lyrics-import-confirm"]')?.click()
-    await wrapper.vm.$nextTick()
+    await vi.waitFor(() => expect(draftRows(wrapper)).toHaveLength(2))
 
     await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('导入歌词')
     await wrapper.get('[data-testid="lyrics-save"]').trigger('click')
@@ -427,10 +423,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
       lines: [{ line_key: 'line-alpha', line_index: 0, time_ms: 1000, text: 'Alpha', translation: '甲' }],
     })
     await chooseFile(wrapper, '原文 LRC', fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:02.00]Alpha')))
-    await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(document.body.querySelector('[data-testid="lyrics-import-confirm"]')).not.toBeNull())
-    document.body.querySelector<HTMLButtonElement>('[data-testid="lyrics-import-confirm"]')?.click()
-    await wrapper.vm.$nextTick()
+    await vi.waitFor(() => expect(draftRows(wrapper)[0]?.timeMs).toBe(2000))
 
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('甲')
     await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('更新原文时间轴')
@@ -443,21 +436,18 @@ describe('MusicLyricEditorDrawer.vue', () => {
     }))
   })
 
-  it('blocks import confirmation when imported rows fail lyric validation', async () => {
+  it('keeps the current draft and reports an LRC with no importable rows', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('empty.lrc', vi.fn().mockResolvedValue('[00:01.00]')))
 
-    await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(document.body.textContent).toContain('没有可导入的歌词'))
-
-    expect(document.body.querySelector<HTMLButtonElement>('[data-testid="lyrics-import-confirm"]')?.disabled).toBe(true)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('未找到可导入的歌词'))
+    expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('Alpha')
   })
 
   it('names the original file when reading it fails and keeps the draft', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('broken-original.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
 
-    await buttonByText(wrapper, '预览导入').trigger('click')
     await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败：broken-original.lrc'))
     expect(wrapper.findAll<HTMLInputElement>('[data-testid^="lyric-original-"]')[0]!.element.value).toBe('Alpha')
   })
@@ -466,8 +456,6 @@ describe('MusicLyricEditorDrawer.vue', () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha')))
     await chooseFile(wrapper, '翻译 LRC', fileWithText('broken-translation.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
-
-    await buttonByText(wrapper, '预览导入').trigger('click')
 
     await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败：broken-translation.lrc'))
   })
@@ -480,9 +468,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
       fileWithText('broken-original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha\nnot-lrc')),
     )
 
-    await buttonByText(wrapper, '预览导入').trigger('click')
-
-    await vi.waitFor(() => expect(document.body.textContent).toContain('broken-original.lrc 第 2 行'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('broken-original.lrc 第 2 行'))
   })
 
   it('adds the translation filename and physical line to translation parse errors', async () => {
@@ -494,46 +480,41 @@ describe('MusicLyricEditorDrawer.vue', () => {
       fileWithText('broken-translation.lrc', vi.fn().mockResolvedValue('[00:01.00]甲\nnot-lrc')),
     )
 
-    await buttonByText(wrapper, '预览导入').trigger('click')
-
-    await vi.waitFor(() => expect(document.body.textContent).toContain('broken-translation.lrc 第 2 行'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('broken-translation.lrc 第 2 行'))
   })
 
-  it('keeps the newest import preview when an older file read finishes later', async () => {
+  it('keeps the newest parsed result when an older file read finishes later', async () => {
     const wrapper = mountDrawer()
     const firstRead = deferred<string>()
     const secondRead = deferred<string>()
 
     await chooseFile(wrapper, '原文 LRC', fileWithText('first.lrc', () => firstRead.promise))
-    await buttonByText(wrapper, '预览导入').trigger('click')
     await chooseFile(wrapper, '原文 LRC', fileWithText('second.lrc', () => secondRead.promise))
-    await buttonByText(wrapper, '预览导入').trigger('click')
 
     secondRead.resolve('[00:02.00]Second')
     await vi.waitFor(() => {
-      expect(wrapper.findComponent(MusicLyricsImportPreview).props('rows')[0]?.original).toBe('Second')
-      expect(wrapper.findComponent(MusicLyricsImportPreview).props('originalFileName')).toBe('second.lrc')
+      expect(draftRows(wrapper)[0]?.original).toBe('Second')
+      expect(wrapper.text()).toContain('second.lrc')
     })
 
     firstRead.resolve('[00:01.00]First')
     await firstRead.promise
     await wrapper.vm.$nextTick()
-    expect(wrapper.findComponent(MusicLyricsImportPreview).props('rows')[0]?.original).toBe('Second')
-    expect(wrapper.findComponent(MusicLyricsImportPreview).props('originalFileName')).toBe('second.lrc')
+    expect(draftRows(wrapper)[0]?.original).toBe('Second')
+    expect(wrapper.text()).toContain('second.lrc')
   })
 
   it('ignores a pending import failure after the drawer closes', async () => {
     const wrapper = mountDrawer()
     const pendingRead = deferred<string>()
     await chooseFile(wrapper, '原文 LRC', fileWithText('pending.lrc', () => pendingRead.promise))
-    await buttonByText(wrapper, '预览导入').trigger('click')
 
     await wrapper.setProps({ show: false })
     pendingRead.reject(new Error('late failure'))
     await pendingRead.promise.catch(() => undefined)
     await wrapper.vm.$nextTick()
 
-    expect((wrapper.vm as unknown as { importPreview: unknown }).importPreview).toBeNull()
+    expect((wrapper.vm as unknown as { importIssues: unknown[] }).importIssues).toEqual([])
     expect((wrapper.vm as unknown as { importError: string }).importError).toBe('')
   })
 
@@ -610,11 +591,10 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.get('[data-testid="lyrics-save"]').attributes('disabled')).toBeDefined()
   })
 
-  it('resets summary, files, preview, and read errors when reopened from new props', async () => {
+  it('resets summary, files, import state, and read errors when reopened from new props', async () => {
     const wrapper = mountDrawer()
     await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('local summary')
     await chooseFile(wrapper, '原文 LRC', fileWithText('broken.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
-    await buttonByText(wrapper, '预览导入').trigger('click')
     await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败'))
 
     await wrapper.setProps({ show: false })
@@ -625,19 +605,18 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.get<HTMLInputElement>('input[aria-label="原文 LRC"]').element.value).toBe('')
     expect(wrapper.text()).not.toContain('读取 LRC 文件失败')
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('Fresh')
-    expect(wrapper.findComponent(MusicLyricsImportPreview).props('show')).toBe(false)
+    expect(wrapper.text()).not.toContain('已解析')
   })
 
-  it('closes an open import preview when the drawer is reopened', async () => {
+  it('resets an imported file when the drawer is reopened', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:01.00]New')))
-    await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(wrapper.findComponent(MusicLyricsImportPreview).props('show')).toBe(true))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('已解析 1 行歌词'))
 
     await wrapper.setProps({ show: false })
     await wrapper.setProps({ show: true })
 
-    expect(wrapper.findComponent(MusicLyricsImportPreview).props('show')).toBe(false)
+    expect(wrapper.text()).not.toContain('已解析')
     expect(wrapper.get<HTMLInputElement>('input[aria-label="原文 LRC"]').element.value).toBe('')
   })
 })

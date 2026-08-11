@@ -19,6 +19,10 @@ vi.mock('@/stores/player', () => ({
   usePlayerStore: () => ({ playAlbum: mocks.playAlbum }),
 }))
 
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ isAuthenticated: true }),
+}))
+
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({ openAlbum: mocks.openAlbum, openArtist: mocks.openArtist }),
 }))

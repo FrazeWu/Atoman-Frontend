@@ -79,6 +79,7 @@ export interface MusicCreationAlbumImportDraft {
   derivedAlbumTitle: string
   derivedCover: string
   derivedTracks: Array<{
+    songId?: string
     title: string
     audioKey: string
     origin: string

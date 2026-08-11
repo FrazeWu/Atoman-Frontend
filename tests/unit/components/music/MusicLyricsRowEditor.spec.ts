@@ -16,6 +16,7 @@ function mountEditor(options: {
   issues?: MusicLyricDraftIssue[]
   disabled?: boolean
   selectedRowId?: string
+  editTarget?: 'original' | 'translation' | 'timing' | 'all'
 } = {}) {
   return mount(MusicLyricsRowEditor, {
     props: {
@@ -24,6 +25,7 @@ function mountEditor(options: {
       issues: options.issues,
       disabled: options.disabled,
       selectedRowId: options.selectedRowId,
+      editTarget: options.editTarget,
     },
   })
 }
@@ -116,6 +118,17 @@ describe('MusicLyricsRowEditor', () => {
       ['second'],
       ['third'],
     ])
+  })
+
+  it('点击非当前文本列时请求切换到对应编辑模式', async () => {
+    const wrapper = mountEditor({ editTarget: 'original' })
+    const translation = wrapper.get('[data-testid="lyric-translation-first"]')
+
+    expect(translation.attributes()).toHaveProperty('readonly')
+    expect(translation.attributes()).not.toHaveProperty('disabled')
+    await translation.trigger('pointerdown')
+
+    expect(wrapper.emitted('select-target')).toEqual([['translation']])
   })
 
   it('为选中行提供稳定类名和 aria-current', () => {

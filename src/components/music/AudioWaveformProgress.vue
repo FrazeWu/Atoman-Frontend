@@ -98,16 +98,13 @@ const waveformPath = computed(() => {
   const center = 50
   const amplitude = 42
   const lastIndex = Math.max(1, peaks.value.length - 1)
-  const top = peaks.value.map((peak, index) => {
+  return peaks.value.map((peak, index) => {
     const x = (index / lastIndex) * width
-    return `${x.toFixed(2)},${(center - peak * amplitude).toFixed(2)}`
-  })
-  const bottom = [...peaks.value].reverse().map((peak, reverseIndex) => {
-    const index = peaks.value.length - 1 - reverseIndex
-    const x = (index / lastIndex) * width
-    return `${x.toFixed(2)},${(center + peak * amplitude).toFixed(2)}`
-  })
-  return `M ${top.join(' L ')} L ${bottom.join(' L ')} Z`
+    const safePeak = Number.isFinite(peak) ? Math.min(1, Math.max(0.08, peak)) : 0.08
+    const top = center - safePeak * amplitude
+    const bottom = center + safePeak * amplitude
+    return `M ${x.toFixed(2)} ${top.toFixed(2)} L ${x.toFixed(2)} ${bottom.toFixed(2)}`
+  }).join(' ')
 })
 
 function formatTime(seconds: number) {
@@ -199,17 +196,26 @@ onBeforeUnmount(() => waveformController?.abort())
 }
 
 .waveform-shape {
+  display: block;
   width: 100%;
   height: 20px;
-  overflow: visible;
+  overflow: hidden;
+}
+
+.waveform-shape__unplayed,
+.waveform-shape__played {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 1.4px;
+  vector-effect: non-scaling-stroke;
 }
 
 .waveform-shape__unplayed {
-  fill: color-mix(in srgb, var(--a-color-muted) 28%, transparent);
+  stroke: color-mix(in srgb, var(--a-color-muted) 28%, transparent);
 }
 
 .waveform-shape__played {
-  fill: color-mix(in srgb, var(--a-color-primary) 82%, transparent);
+  stroke: color-mix(in srgb, var(--a-color-primary) 82%, transparent);
   transition: clip-path 80ms linear;
 }
 

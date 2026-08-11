@@ -71,6 +71,7 @@ export function useAlbumImportUpload() {
     if (!creationFlow.value.tracksCustomized && derivedTracks.length > 0) {
       creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
         id: `import-track-${index + 1}`,
+        songId: track.songId,
         sequence: index + 1,
         title: track.title,
         audioKey: track.audioKey,

@@ -51,7 +51,7 @@ describe('api v1 client', () => {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
-    expect(revisions[0].version_number).toBe(2)
+    expect(revisions.data[0]?.version_number).toBe(2)
     expect(revision.version_number).toBe(2)
   })
 

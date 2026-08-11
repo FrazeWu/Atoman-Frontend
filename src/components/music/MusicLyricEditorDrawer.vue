@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { ArrowDownUp, Clock3, Download, FileSearch, Plus, SkipForward } from 'lucide-vue-next'
+import { ArrowDownUp, Clock3, Download, FileUp, Languages, Plus, SkipForward } from 'lucide-vue-next'
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicLyricsSaveTarget, MusicSongLyricsLine } from '@/api/musicV1'
-import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -17,7 +16,7 @@ import {
   serializeMusicLyricDraft,
   sortMusicLyricDraftRows,
   validateMusicLyricDraft,
-  type MusicLyricDraftParseResult,
+  type MusicLyricDraftIssue,
   type MusicLyricDraftRow,
 } from '@/utils/musicLyricsDraft'
 import { downloadTextFile } from '@/utils/textDownload'
@@ -72,8 +71,9 @@ const editTarget = ref<MusicLyricsEditTarget>('original')
 const draftLanguage = ref('')
 const originalImportFile = ref<File | null>(null)
 const translationImportFile = ref<File | null>(null)
-const importPreview = ref<MusicLyricDraftParseResult | null>(null)
+const importIssues = ref<MusicLyricDraftIssue[]>([])
 const importError = ref('')
+const importParsing = ref(false)
 const importMode = ref(false)
 const importIncludesTranslation = ref(false)
 const exportError = ref('')
@@ -85,13 +85,17 @@ let importGeneration = 0
 const effectiveFormat = computed<MusicLyricsFormat>(() => editTarget.value === 'timing' ? 'lrc' : draftFormat.value)
 const saveTarget = computed<MusicLyricsSaveTarget>(() => importMode.value ? 'import' : editTarget.value)
 const validationIssues = computed(() => validateMusicLyricDraft(rows.value, effectiveFormat.value))
-const blockingIssues = computed(() => validationIssues.value.filter(issue => issue.severity === 'error'))
+const blockingIssues = computed(() => [
+  ...validationIssues.value,
+  ...importIssues.value,
+].filter(issue => issue.severity === 'error'))
 const hasBlockingIssues = computed(() => blockingIssues.value.length > 0)
 const canSave = computed(() => (
   rows.value.length > 0
   && !hasBlockingIssues.value
   && draftEditSummary.value.trim().length > 0
   && !props.saving
+  && !importParsing.value
 ))
 const exportBaseName = computed(() => props.songTitle.trim() || 'lyrics')
 const currentTimeMs = computed(() => Math.round(props.currentTimeSeconds * 100) * 10)
@@ -103,8 +107,9 @@ watch(
     importGeneration += 1
     if (!show) {
       selectedRowId.value = ''
-      importPreview.value = null
+      importIssues.value = []
       importError.value = ''
+      importParsing.value = false
       return
     }
 
@@ -123,10 +128,11 @@ watch(
     draftLanguage.value = translationLanguage || 'zh-CN'
     originalImportFile.value = null
     translationImportFile.value = null
-    importPreview.value = null
+    importIssues.value = []
     importMode.value = false
     importIncludesTranslation.value = false
     importError.value = ''
+    importParsing.value = false
     exportError.value = ''
     if (originalInput.value) originalInput.value.value = ''
     if (translationInput.value) translationInput.value.value = ''
@@ -186,17 +192,18 @@ async function writeCurrentTimeAndSelectNext() {
     ?.focus()
 }
 
-function selectImportFile(kind: 'original' | 'translation', event: Event) {
+async function selectImportFile(kind: 'original' | 'translation', event: Event) {
   if (props.saving) return
-  importGeneration += 1
   const file = (event.target as HTMLInputElement).files?.[0] ?? null
   if (kind === 'original') originalImportFile.value = file
   else translationImportFile.value = file
-  importPreview.value = null
+  importIssues.value = []
   importError.value = ''
+  if (!originalImportFile.value) return
+  await importSelectedLrc()
 }
 
-async function previewImport() {
+async function importSelectedLrc() {
   if (props.saving || !originalImportFile.value) return
 
   importGeneration += 1
@@ -204,13 +211,15 @@ async function previewImport() {
   const originalFile = originalImportFile.value
   const translationFile = translationImportFile.value
   const isStale = () => generation !== importGeneration || !props.show
+  importParsing.value = true
   let original: string
   try {
     original = await originalFile.text()
   } catch {
     if (isStale()) return
-    importPreview.value = null
+    importIssues.value = []
     importError.value = `读取 LRC 文件失败：${originalFile.name}`
+    importParsing.value = false
     return
   }
   if (isStale()) return
@@ -221,8 +230,9 @@ async function previewImport() {
       translation = await translationFile.text()
     } catch {
       if (isStale()) return
-      importPreview.value = null
+      importIssues.value = []
       importError.value = `读取 LRC 文件失败：${translationFile.name}`
+      importParsing.value = false
       return
     }
     if (isStale()) return
@@ -240,48 +250,33 @@ async function previewImport() {
       return { ...issue, message: `${location}：${issue.message}` }
     })
     if (isStale()) return
-    importPreview.value = {
-      rows: parsed.rows,
-      issues: [
-        ...locatedParseIssues,
-        ...(parsed.rows.length === 0 ? [{
-          severity: 'error' as const,
-          code: 'empty_import',
-          message: '未找到可导入的歌词',
-        }] : []),
-        ...validateMusicLyricDraft(parsed.rows, 'lrc'),
-      ],
-    }
+    importIssues.value = [
+      ...locatedParseIssues,
+      ...(parsed.rows.length === 0 ? [{
+        severity: 'error' as const,
+        code: 'empty_import',
+        message: '未找到可导入的歌词',
+      }] : []),
+    ]
     importError.value = ''
+    if (parsed.rows.length > 0) {
+      importIncludesTranslation.value = Boolean(translationFile)
+      rows.value = reconcileImportedLrcRows(
+        parsed.rows,
+        rows.value,
+        importIncludesTranslation.value,
+      )
+      selectedRowId.value = rows.value[0]?.id ?? ''
+      draftFormat.value = 'lrc'
+      importMode.value = true
+    }
+    importParsing.value = false
   } catch {
     if (isStale()) return
-    importPreview.value = null
+    importIssues.value = []
     importError.value = `解析 LRC 文件失败：${originalFile.name}`
+    importParsing.value = false
   }
-}
-
-function cancelImport() {
-  importPreview.value = null
-}
-
-function confirmImport() {
-  if (
-    props.saving
-    || !importPreview.value
-    || importPreview.value.rows.length === 0
-    || importPreview.value.issues.some(issue => issue.severity === 'error')
-  ) return
-
-  importIncludesTranslation.value = Boolean(translationImportFile.value)
-  rows.value = reconcileImportedLrcRows(
-    importPreview.value.rows,
-    rows.value,
-    importIncludesTranslation.value,
-  )
-  selectedRowId.value = rows.value[0]?.id ?? ''
-  draftFormat.value = 'lrc'
-  importMode.value = true
-  importPreview.value = null
 }
 
 function exportLyrics(kind: 'original' | 'translation') {
@@ -391,6 +386,111 @@ function handleSave() {
         </div>
       </div>
 
+      <section v-if="editTarget === 'original'" class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
+        <div class="music-lyric-editor-drawer__file-grid">
+          <label
+            class="music-lyric-editor-drawer__file-field"
+            :class="{
+              'music-lyric-editor-drawer__file-field--selected': originalImportFile,
+              'music-lyric-editor-drawer__file-field--disabled': saving,
+            }"
+          >
+            <input
+              ref="originalInput"
+              type="file"
+              accept=".lrc,text/plain"
+              aria-label="原文 LRC"
+              :disabled="saving"
+              @change="selectImportFile('original', $event)"
+            />
+            <FileUp :size="18" aria-hidden="true" />
+            <span class="music-lyric-editor-drawer__file-copy">
+              <strong>原文 LRC</strong>
+              <span>{{ originalImportFile?.name || '选择文件' }}</span>
+            </span>
+            <span class="music-lyric-editor-drawer__file-action">
+              {{ originalImportFile ? '更换' : '上传' }}
+            </span>
+          </label>
+          <label
+            class="music-lyric-editor-drawer__file-field"
+            :class="{
+              'music-lyric-editor-drawer__file-field--selected': translationImportFile,
+              'music-lyric-editor-drawer__file-field--disabled': saving,
+            }"
+          >
+            <input
+              ref="translationInput"
+              type="file"
+              accept=".lrc,text/plain"
+              aria-label="翻译 LRC"
+              :disabled="saving"
+              @change="selectImportFile('translation', $event)"
+            />
+            <Languages :size="18" aria-hidden="true" />
+            <span class="music-lyric-editor-drawer__file-copy">
+              <strong>翻译 LRC</strong>
+              <span>{{ translationImportFile?.name || '选择文件' }}</span>
+            </span>
+            <span class="music-lyric-editor-drawer__file-action">
+              {{ translationImportFile ? '更换' : '上传' }}
+            </span>
+          </label>
+        </div>
+
+        <div v-if="draftFormat === 'lrc'" class="music-lyric-editor-drawer__import-actions">
+          <PButton
+            type="button"
+            variant="secondary"
+            :disabled="saving || importParsing || hasBlockingIssues"
+            @click="exportLyrics('original')"
+          >
+            <Download :size="17" aria-hidden="true" />
+            导出原文
+          </PButton>
+          <PButton
+            type="button"
+            variant="secondary"
+            :disabled="saving || importParsing || hasBlockingIssues"
+            @click="exportLyrics('translation')"
+          >
+            <Download :size="17" aria-hidden="true" />
+            导出翻译
+          </PButton>
+        </div>
+        <p
+          v-if="importParsing"
+          class="music-lyric-editor-drawer__import-status"
+          role="status"
+          aria-live="polite"
+        >
+          正在解析 LRC...
+        </p>
+        <p
+          v-else-if="importMode && originalImportFile && !importError"
+          class="music-lyric-editor-drawer__import-status"
+          role="status"
+          aria-live="polite"
+        >
+          已解析 {{ rows.length }} 行歌词
+        </p>
+        <p v-if="importError" class="music-lyric-editor-drawer__read-error" role="alert">
+          {{ importError }}
+        </p>
+        <ul v-if="importIssues.length" class="music-lyric-editor-drawer__import-issues" aria-label="LRC 解析问题">
+          <li
+            v-for="issue in importIssues"
+            :key="`${issue.code}-${issue.sourceLine ?? issue.message}`"
+            :class="`music-lyric-editor-drawer__import-issue--${issue.severity}`"
+          >
+            {{ issue.message }}
+          </li>
+        </ul>
+        <p v-if="exportError" class="music-lyric-editor-drawer__read-error" role="alert">
+          {{ exportError }}
+        </p>
+      </section>
+
       <div ref="rowEditorRoot" class="music-lyric-editor-drawer__row-editor">
         <MusicLyricsRowEditor
           :rows="rows"
@@ -401,74 +501,10 @@ function handleSave() {
           :selected-row-id="selectedRowId"
           @update:rows="handleRowsUpdate"
           @select-row="selectedRowId = $event"
+          @select-target="editTarget = $event"
           @seek="emit('seek', $event)"
         />
       </div>
-
-      <section v-if="editTarget === 'original'" class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
-        <div class="music-lyric-editor-drawer__file-grid">
-          <label class="music-lyric-editor-drawer__file-field">
-            <span>原文 LRC</span>
-            <input
-              ref="originalInput"
-              type="file"
-              accept=".lrc,text/plain"
-              aria-label="原文 LRC"
-              :disabled="saving"
-              @change="selectImportFile('original', $event)"
-            />
-          </label>
-          <label class="music-lyric-editor-drawer__file-field">
-            <span>翻译 LRC</span>
-            <input
-              ref="translationInput"
-              type="file"
-              accept=".lrc,text/plain"
-              aria-label="翻译 LRC"
-              :disabled="saving"
-              @change="selectImportFile('translation', $event)"
-            />
-          </label>
-        </div>
-
-        <div class="music-lyric-editor-drawer__import-actions">
-          <PButton
-            type="button"
-            variant="secondary"
-            :disabled="saving || !originalImportFile"
-            @click="previewImport"
-          >
-            <FileSearch :size="17" aria-hidden="true" />
-            预览导入
-          </PButton>
-          <template v-if="draftFormat === 'lrc'">
-            <PButton
-              type="button"
-              variant="secondary"
-              :disabled="saving || hasBlockingIssues"
-              @click="exportLyrics('original')"
-            >
-              <Download :size="17" aria-hidden="true" />
-              导出原文
-            </PButton>
-            <PButton
-              type="button"
-              variant="secondary"
-              :disabled="saving || hasBlockingIssues"
-              @click="exportLyrics('translation')"
-            >
-              <Download :size="17" aria-hidden="true" />
-              导出翻译
-            </PButton>
-          </template>
-        </div>
-        <p v-if="importError" class="music-lyric-editor-drawer__read-error" role="alert">
-          {{ importError }}
-        </p>
-        <p v-if="exportError" class="music-lyric-editor-drawer__read-error" role="alert">
-          {{ exportError }}
-        </p>
-      </section>
 
       <PInput
         v-if="editTarget === 'translation' || (importMode && importIncludesTranslation)"
@@ -503,15 +539,6 @@ function handleSave() {
       </div>
     </div>
 
-    <MusicLyricsImportPreview
-      :show="Boolean(importPreview) && !saving"
-      :original-file-name="originalImportFile?.name ?? ''"
-      :translation-file-name="translationImportFile?.name ?? ''"
-      :rows="importPreview?.rows ?? []"
-      :issues="importPreview?.issues ?? []"
-      @confirm="confirmImport"
-      @cancel="cancelImport"
-    />
   </PSheet>
 </template>
 
@@ -579,8 +606,10 @@ function handleSave() {
   display: grid;
   min-width: 0;
   gap: 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--a-color-border-soft);
+  padding: 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 6px;
+  background: var(--a-color-surface, var(--a-color-bg));
 }
 
 .music-lyric-editor-drawer__file-grid {
@@ -590,25 +619,103 @@ function handleSave() {
 }
 
 .music-lyric-editor-drawer__file-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 52px;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.music-lyric-editor-drawer__file-field input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.music-lyric-editor-drawer__file-field:hover,
+.music-lyric-editor-drawer__file-field:focus-within {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-bg-soft, var(--a-color-bg));
+}
+
+.music-lyric-editor-drawer__file-field:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.music-lyric-editor-drawer__file-field--selected {
+  border-color: color-mix(in srgb, var(--a-color-primary) 45%, var(--a-color-border-soft));
+}
+
+.music-lyric-editor-drawer__file-field--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.music-lyric-editor-drawer__file-field--disabled input {
+  cursor: not-allowed;
+}
+
+.music-lyric-editor-drawer__file-copy {
   display: grid;
   min-width: 0;
-  gap: 0.5rem;
-  color: var(--a-color-muted);
+  flex: 1;
+  gap: 0.125rem;
+  font-size: 0.8rem;
+}
+
+.music-lyric-editor-drawer__file-copy strong {
+  color: var(--a-color-text);
+  font-weight: 600;
+}
+
+.music-lyric-editor-drawer__file-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-lyric-editor-drawer__file-action {
+  color: var(--a-color-primary);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
-.music-lyric-editor-drawer__file-field input {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  box-sizing: border-box;
-  padding: 0.5rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  font: inherit;
+.music-lyric-editor-drawer__import-status,
+.music-lyric-editor-drawer__import-issues {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.music-lyric-editor-drawer__import-status {
+  color: var(--a-color-muted);
+}
+
+.music-lyric-editor-drawer__import-issues {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.music-lyric-editor-drawer__import-issue--error {
+  color: var(--a-color-danger);
+}
+
+.music-lyric-editor-drawer__import-issue--warning {
+  color: var(--a-color-warning, var(--a-color-muted));
 }
 
 .music-lyric-editor-drawer__read-error {
@@ -654,6 +761,12 @@ function handleSave() {
 
   .music-lyric-editor-drawer__timing-actions :deep(.p-button) {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-lyric-editor-drawer__file-field {
+    transition: none;
   }
 }
 

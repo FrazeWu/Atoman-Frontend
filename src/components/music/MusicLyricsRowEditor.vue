@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:rows': [rows: MusicLyricDraftRow[]]
   'select-row': [rowId: string]
+  'select-target': [target: 'original' | 'translation']
   seek: [timeSeconds: number]
 }>()
 
@@ -97,6 +98,11 @@ function deleteRow(index: number) {
 function selectRow(rowId: string) {
   if (props.disabled) return
   emit('select-row', rowId)
+}
+
+function selectTarget(target: 'original' | 'translation') {
+  if (props.disabled || props.editTarget === 'all') return
+  emit('select-target', target)
 }
 
 function seekToRow(row: MusicLyricDraftRow) {
@@ -214,7 +220,9 @@ function describedByForField(
           placeholder="原文"
           :aria-label="`原文，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'original')"
-          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all')"
+          :disabled="disabled"
+          :readonly="editTarget !== 'original' && editTarget !== 'all'"
+          @pointerdown="selectTarget('original')"
           @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { original: ($event.target as HTMLInputElement).value })"
         />
@@ -230,7 +238,9 @@ function describedByForField(
           placeholder="翻译"
           :aria-label="`翻译，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'translation')"
-          :disabled="disabled || (editTarget !== 'translation' && editTarget !== 'all')"
+          :disabled="disabled"
+          :readonly="editTarget !== 'translation' && editTarget !== 'all'"
+          @pointerdown="selectTarget('translation')"
           @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { translation: ($event.target as HTMLInputElement).value })"
         />

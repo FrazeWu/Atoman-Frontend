@@ -23,6 +23,7 @@ export type MusicAlbumImportStatus =
   | "canceled";
 
 export type MusicAlbumImportTrack = {
+  songId?: string;
   title: string;
   audioKey: string;
   origin: string;
@@ -36,6 +37,7 @@ export type MusicAlbumImportCommitStageName = {
 };
 
 export type MusicAlbumImportCommitTrack = {
+  song_id?: string;
   title: string;
   track_number: number;
 };

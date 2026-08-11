@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { ArrowDownUp, Clock3, Download, FileUp, Languages, Plus, SkipForward } from 'lucide-vue-next'
+import { Clock3, Download, FileUp, Languages, Plus, SkipForward } from 'lucide-vue-next'
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicLyricsSaveTarget, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -14,7 +14,6 @@ import {
   parseMusicLyricDraft,
   reconcileImportedLrcRows,
   serializeMusicLyricDraft,
-  sortMusicLyricDraftRows,
   validateMusicLyricDraft,
   type MusicLyricDraftIssue,
   type MusicLyricDraftRow,
@@ -149,11 +148,6 @@ function addRow() {
   const row = createMusicLyricDraftRow()
   rows.value = [...rows.value, row]
   selectedRowId.value = row.id
-}
-
-function sortRows() {
-  if (props.saving || editTarget.value !== 'original' || draftFormat.value !== 'lrc') return
-  rows.value = sortMusicLyricDraftRows(rows.value)
 }
 
 function handleRowsUpdate(nextRows: MusicLyricDraftRow[]) {
@@ -340,16 +334,6 @@ function handleSave() {
             <Plus :size="17" aria-hidden="true" />
             增加行
           </PButton>
-          <PButton
-            v-if="editTarget === 'original' && draftFormat === 'lrc'"
-            type="button"
-            variant="secondary"
-            :disabled="saving"
-            @click="sortRows"
-          >
-            <ArrowDownUp :size="17" aria-hidden="true" />
-            按时间排序
-          </PButton>
         </div>
       </div>
 
@@ -388,7 +372,7 @@ function handleSave() {
 
       <section v-if="editTarget === 'original'" class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
         <div class="music-lyric-editor-drawer__file-grid">
-          <label
+          <div
             class="music-lyric-editor-drawer__file-field"
             :class="{
               'music-lyric-editor-drawer__file-field--selected': originalImportFile,
@@ -397,22 +381,31 @@ function handleSave() {
           >
             <input
               ref="originalInput"
+              class="music-lyric-editor-drawer__file-input"
               type="file"
               accept=".lrc,text/plain"
               aria-label="原文 LRC"
               :disabled="saving"
               @change="selectImportFile('original', $event)"
             />
-            <FileUp :size="18" aria-hidden="true" />
+            <span class="music-lyric-editor-drawer__file-icon">
+              <FileUp :size="20" aria-hidden="true" />
+            </span>
             <span class="music-lyric-editor-drawer__file-copy">
-              <strong>原文 LRC</strong>
-              <span>{{ originalImportFile?.name || '选择文件' }}</span>
+              <strong>{{ originalImportFile?.name || '原文 LRC' }}</strong>
+              <span>{{ originalImportFile ? '文件已导入' : '支持 .lrc 文件' }}</span>
             </span>
-            <span class="music-lyric-editor-drawer__file-action">
-              {{ originalImportFile ? '更换' : '上传' }}
-            </span>
-          </label>
-          <label
+            <PButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              :disabled="saving"
+              @click="originalInput?.click()"
+            >
+              {{ originalImportFile ? '重新选择' : '选择文件' }}
+            </PButton>
+          </div>
+          <div
             class="music-lyric-editor-drawer__file-field"
             :class="{
               'music-lyric-editor-drawer__file-field--selected': translationImportFile,
@@ -421,21 +414,30 @@ function handleSave() {
           >
             <input
               ref="translationInput"
+              class="music-lyric-editor-drawer__file-input"
               type="file"
               accept=".lrc,text/plain"
               aria-label="翻译 LRC"
               :disabled="saving"
               @change="selectImportFile('translation', $event)"
             />
-            <Languages :size="18" aria-hidden="true" />
+            <span class="music-lyric-editor-drawer__file-icon">
+              <Languages :size="20" aria-hidden="true" />
+            </span>
             <span class="music-lyric-editor-drawer__file-copy">
-              <strong>翻译 LRC</strong>
-              <span>{{ translationImportFile?.name || '选择文件' }}</span>
+              <strong>{{ translationImportFile?.name || '翻译 LRC' }}</strong>
+              <span>{{ translationImportFile ? '文件已导入' : '支持 .lrc 文件' }}</span>
             </span>
-            <span class="music-lyric-editor-drawer__file-action">
-              {{ translationImportFile ? '更换' : '上传' }}
-            </span>
-          </label>
+            <PButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              :disabled="saving"
+              @click="translationInput?.click()"
+            >
+              {{ translationImportFile ? '重新选择' : '选择文件' }}
+            </PButton>
+          </div>
         </div>
 
         <div v-if="draftFormat === 'lrc'" class="music-lyric-editor-drawer__import-actions">
@@ -623,31 +625,32 @@ function handleSave() {
   display: flex;
   align-items: center;
   min-width: 0;
-  min-height: 52px;
-  gap: 0.625rem;
-  padding: 0.625rem 0.75rem;
+  min-height: 76px;
+  gap: 1rem;
+  padding: 1rem;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-bg);
+  border-radius: 6px;
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
-  cursor: pointer;
   transition: border-color 160ms ease, background-color 160ms ease;
 }
 
-.music-lyric-editor-drawer__file-field input {
+.music-lyric-editor-drawer__file-input {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   opacity: 0;
-  cursor: pointer;
+  white-space: nowrap;
 }
 
-.music-lyric-editor-drawer__file-field:hover,
+.music-lyric-editor-drawer__file-field:hover:not(.music-lyric-editor-drawer__file-field--disabled),
 .music-lyric-editor-drawer__file-field:focus-within {
   border-color: var(--a-color-primary);
-  background: var(--a-color-bg-soft, var(--a-color-bg));
+  background: var(--a-color-bg);
 }
 
 .music-lyric-editor-drawer__file-field:focus-within {
@@ -661,11 +664,17 @@ function handleSave() {
 
 .music-lyric-editor-drawer__file-field--disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
-.music-lyric-editor-drawer__file-field--disabled input {
-  cursor: not-allowed;
+.music-lyric-editor-drawer__file-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--a-color-surface-3);
+  color: var(--a-color-muted);
 }
 
 .music-lyric-editor-drawer__file-copy {
@@ -685,12 +694,6 @@ function handleSave() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.music-lyric-editor-drawer__file-action {
-  color: var(--a-color-primary);
-  font-size: 0.8rem;
-  font-weight: 600;
 }
 
 .music-lyric-editor-drawer__import-status,

@@ -204,12 +204,10 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(selectedRowId(wrapper)).toBe(ids[1])
   })
 
-  it('keeps selection while sorting and switching edit targets', async () => {
+  it('keeps selection while switching edit targets', async () => {
     const wrapper = mountDrawer({ content: '[00:02.00]Two\n[00:01.00]One', format: 'lrc' })
     const selectedId = draftRows(wrapper)[0]!.id
     await wrapper.get(`[data-testid="lyric-original-${selectedId}"]`).trigger('focus')
-    await buttonByText(wrapper, '按时间排序').trigger('click')
-    expect(selectedRowId(wrapper)).toBe(selectedId)
 
     await wrapper.get('[data-testid="mode-timing"]').trigger('click')
     expect(selectedRowId(wrapper)).toBe(selectedId)
@@ -308,17 +306,16 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.emitted('save')).toHaveLength(1)
   })
 
-  it('adds a row, switches target, and stably sorts LRC rows', async () => {
+  it('does not offer time sorting and still allows adding an LRC row', async () => {
     const wrapper = mountDrawer({
       content: '[00:02.00]Two\n[00:01.00]One A\n[00:01.00]One B',
       translation: '',
       format: 'lrc',
     })
 
-    expect(buttonByText(wrapper, '按时间排序').exists()).toBe(true)
-    await buttonByText(wrapper, '按时间排序').trigger('click')
+    expect(wrapper.findAll('button').some(button => button.text().trim() === '按时间排序')).toBe(false)
     expect(wrapper.findAll<HTMLInputElement>('[data-testid^="lyric-original-"]').map(input => input.element.value))
-      .toEqual(['One A', 'One B', 'Two'])
+      .toEqual(['Two', 'One A', 'One B'])
 
     await buttonByText(wrapper, '增加行').trigger('click')
     expect(wrapper.findAll('[data-testid^="lyric-original-"]')).toHaveLength(4)
@@ -352,6 +349,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await vi.waitFor(() => expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New'))
     expect(wrapper.text()).toContain('已解析 1 行歌词')
     expect(wrapper.text()).toContain('new.lrc')
+    expect(wrapper.findAll('button').some(button => button.text().trim() === '重新选择')).toBe(true)
     expect(wrapper.text()).not.toContain('预览导入')
     expect(wrapper.find('[data-testid="lyrics-import-confirm"]').exists()).toBe(false)
   })
@@ -585,7 +583,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.get<HTMLInputElement>('input[aria-label="原文 LRC"]').element.disabled).toBe(true)
     expect(wrapper.get<HTMLInputElement>('input[aria-label="翻译 LRC"]').element.disabled).toBe(true)
     expect(buttonByText(wrapper, '增加行').attributes('disabled')).toBeDefined()
-    expect(buttonByText(wrapper, '按时间排序').attributes('disabled')).toBeDefined()
+    expect(wrapper.findAll('button').some(button => button.text().trim() === '按时间排序')).toBe(false)
     expect(wrapper.findAll('[data-testid^="lyric-original-"]').every(input => input.attributes('disabled') !== undefined)).toBe(true)
     expect(wrapper.get('[data-testid="lyrics-edit-summary"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="lyrics-save"]').attributes('disabled')).toBeDefined()

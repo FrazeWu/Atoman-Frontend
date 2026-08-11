@@ -22,7 +22,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({ resumeMusicCreationFlow: mocks.resumeMusicCreationFlow }),
 }))
 
-function importRecord(status: 'pending_upload' | 'uploaded' | 'ready', importId = 'import-1') {
+function importRecord(status: 'pending_upload' | 'uploaded' | 'extracting' | 'ready', importId = 'import-1') {
   return {
     importId, targetAlbumId: '', albumTitle: 'Album', status,
     archiveName: 'album.zip', uploadProgress: 100, uploadSpeed: 0,
@@ -32,7 +32,7 @@ function importRecord(status: 'pending_upload' | 'uploaded' | 'ready', importId 
   }
 }
 
-function response(status: 'pending_upload' | 'uploaded' | 'ready') {
+function response(status: 'pending_upload' | 'uploaded' | 'extracting' | 'ready') {
   return { data: [importRecord(status)], meta: { page: 1, page_size: 50, total: 1, has_more: false } }
 }
 
@@ -44,6 +44,26 @@ describe('Music ImportsView', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('describes empty tracks as recognition in progress while processing', async () => {
+    mocks.listMusicAlbumImports.mockResolvedValue(response('extracting'))
+    const wrapper = mount(ImportsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('正在识别曲目')
+    expect(wrapper.text()).not.toContain('未识别到曲目')
+    wrapper.unmount()
+  })
+
+  it('reports no recognized tracks after processing finishes', async () => {
+    mocks.listMusicAlbumImports.mockResolvedValue(response('ready'))
+    const wrapper = mount(ImportsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('未识别到曲目')
+    expect(wrapper.text()).not.toContain('正在识别曲目')
+    wrapper.unmount()
   })
 
   it('does not poll while waiting for the user to upload files', async () => {

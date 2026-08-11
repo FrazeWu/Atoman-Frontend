@@ -79,6 +79,21 @@ const statusText: Record<string, string> = {
   committed: "已完成",
 };
 
+const trackRecognitionStatuses = new Set([
+  'uploading',
+  'uploaded',
+  'queued',
+  'extracting',
+  'analyzing',
+  'transcoding',
+])
+
+const emptyTrackStateText = computed(() =>
+  selectedImport.value && trackRecognitionStatuses.has(selectedImport.value.status)
+    ? '正在识别曲目'
+    : '未识别到曲目',
+)
+
 function formatDate(isoString?: string): string {
   if (!isoString) return ''
   try {
@@ -475,7 +490,7 @@ async function continueImport() {
               </li>
             </ol>
           </div>
-          <p v-else class="music-imports-view__state">尚未识别到曲目</p>
+          <p v-else class="music-imports-view__state">{{ emptyTrackStateText }}</p>
         </div>
       </section>
     </div>

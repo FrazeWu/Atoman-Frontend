@@ -70,7 +70,7 @@ export function useVideoImportUpload() {
       for (let groupStart = 1; groupStart <= totalParts; groupStart += 3) {
         const partNumbers = Array.from({ length: Math.min(3, totalParts - groupStart + 1) }, (_, index) => groupStart + index)
           .filter(partNumber => !completed.has(partNumber))
-        await Promise.all(partNumbers.map(async (partNumber) => {
+        const uploadedParts = await Promise.all(partNumbers.map(async (partNumber) => {
           if (!isCurrent()) return
           const startByte = (partNumber - 1) * task.part_size
           const endByte = Math.min(startByte + task.part_size, file.size)
@@ -80,10 +80,14 @@ export function useVideoImportUpload() {
           if (!response.ok) throw new Error(`第 ${partNumber} 个分片上传失败`)
           const etag = response.headers.get('ETag') || response.headers.get('etag')
           if (!etag) throw new Error('对象存储未返回 ETag')
-          task = await completeVideoImportPart(id, partNumber, etag, chunk.size, token.value)
-          completed.add(partNumber)
-          if (isCurrent()) setUploadState(id, { task, progress: progressOf(task) })
+          return { partNumber, etag, size: chunk.size }
         }))
+        for (const part of uploadedParts) {
+          if (!part || !isCurrent()) return
+          task = await completeVideoImportPart(id, part.partNumber, part.etag, part.size, token.value)
+          completed.add(part.partNumber)
+          setUploadState(id, { task, progress: progressOf(task) })
+        }
       }
       if (!isCurrent()) return
       task = await completeVideoImport(id, token.value)

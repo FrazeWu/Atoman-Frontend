@@ -14,8 +14,14 @@ const normalizeVersion = (value: string | undefined) => {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiProxyTarget = env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8080'
+  const apiProxyOrigin = env.VITE_DEV_PROXY_ORIGIN?.trim()
   const objectStorageProxyTarget = env.VITE_DEV_OBJECT_STORAGE_PROXY_TARGET || 'http://127.0.0.1:9100'
   const appVersion = normalizeVersion(env.VITE_APP_VERSION || packageJson.version)
+  const apiProxy = {
+    target: apiProxyTarget,
+    changeOrigin: true,
+    ...(apiProxyOrigin ? { headers: { Origin: apiProxyOrigin } } : {}),
+  }
 
   return {
     define: {
@@ -26,13 +32,11 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: apiProxyTarget,
-          changeOrigin: true,
+          ...apiProxy,
           ws: true, // proxy WebSocket connections (collab hub)
         },
         '/uploads': {
-          target: apiProxyTarget,
-          changeOrigin: true,
+          ...apiProxy,
         },
         '/__object-storage': {
           target: objectStorageProxyTarget,
@@ -46,12 +50,10 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: apiProxyTarget,
-          changeOrigin: true,
+          ...apiProxy,
         },
         '/uploads': {
-          target: apiProxyTarget,
-          changeOrigin: true,
+          ...apiProxy,
         },
         '/__object-storage': {
           target: objectStorageProxyTarget,

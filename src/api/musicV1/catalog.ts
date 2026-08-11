@@ -112,6 +112,14 @@ export async function addMusicSongToLater(
   );
 }
 
+export async function removeMusicSongFromLater(
+  songId: string,
+): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(
+    musicV1Endpoints.laterPlaylistSong(songId),
+  );
+}
+
 export async function getMusicSong(
   songId: string,
 ): Promise<MusicSongSearchResult> {

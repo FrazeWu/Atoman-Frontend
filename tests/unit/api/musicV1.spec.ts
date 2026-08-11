@@ -83,6 +83,22 @@ describe('api v1 client', () => {
     })
   })
 
+  it('removes a song from later playback through the matching endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { deleted: true } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    await musicV1.removeMusicSongFromLater('song-1')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/later/song-1', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: undefined,
+    })
+  })
+
   it('returns success envelopes when meta is needed by the caller', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: [{ id: 'album_uuid', title: 'Album' }], meta: { page: 2, page_size: 1, total: 5, has_more: true } }),

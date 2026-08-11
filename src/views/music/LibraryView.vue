@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from 'vue'
-import { Bookmark, Clock3, Music2, Play } from 'lucide-vue-next'
+import { Bookmark, Music2, Play, X } from 'lucide-vue-next'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,
   deletePlaylistBookmark,
   deleteSongBookmark,
   listMusicLibrary,
+  removeMusicSongFromLater,
   type MusicAlbumBookmark,
   type MusicAlbumListItem,
   type MusicArtistBookmark,
@@ -66,7 +67,7 @@ function playlistCardItem(playlist: MusicPlaylistSummary) {
   return { ...playlist, title: playlist.name }
 }
 
-async function removeBookmark(itemKind: Exclude<LibraryKind, 'later'>, id: string) {
+async function removeLibraryItem(itemKind: LibraryKind, id: string) {
   const key = `${itemKind}:${id}`
   if (removingKey.value) return
   removingKey.value = key
@@ -74,6 +75,9 @@ async function removeBookmark(itemKind: Exclude<LibraryKind, 'later'>, id: strin
   try {
     if (itemKind === 'song') {
       await deleteSongBookmark(id)
+      songs.value = songs.value.filter(item => String(item.id) !== id)
+    } else if (itemKind === 'later') {
+      await removeMusicSongFromLater(id)
       songs.value = songs.value.filter(item => String(item.id) !== id)
     } else if (itemKind === 'album') {
       await deleteAlbumBookmark(id)
@@ -86,7 +90,7 @@ async function removeBookmark(itemKind: Exclude<LibraryKind, 'later'>, id: strin
       playlists.value = playlists.value.filter(item => String(item.id) !== id)
     }
   } catch {
-    error.value = '取消收藏失败'
+    error.value = itemKind === 'later' ? '移出稍后播放失败' : '取消收藏失败'
   } finally {
     removingKey.value = ''
   }
@@ -213,9 +217,17 @@ onUnmounted(() => clearTimeout(queryTimer))
               class="music-library__bookmark"
               :disabled="removingKey === `song:${song.id}`"
               :aria-label="`取消收藏 ${song.title}`"
-              @click="removeBookmark('song', String(song.id))"
+              @click="removeLibraryItem('song', String(song.id))"
             ><Bookmark :size="16" fill="currentColor" aria-hidden="true" /></button>
-            <span v-else class="music-library__later-label"><Clock3 :size="14" aria-hidden="true" />稍后播放</span>
+            <button
+              v-else
+              type="button"
+              class="music-library__later-remove"
+              :disabled="removingKey === `later:${song.id}`"
+              :aria-label="`取消稍后播放 ${song.title}`"
+              title="取消稍后播放"
+              @click="removeLibraryItem('later', String(song.id))"
+            ><X :size="18" aria-hidden="true" /></button>
           </div>
           <div class="music-library__song-info">
             <h3><RouterLink :to="`/music/song/${song.id}`">{{ song.title }}</RouterLink></h3>
@@ -234,7 +246,7 @@ onUnmounted(() => clearTimeout(queryTimer))
           data-testid="library-album-card"
           @click="openAlbum(String(album.id))"
           @click-artist="openArtist"
-          @toggle-bookmark="removeBookmark('album', String(album.id))"
+          @toggle-bookmark="removeLibraryItem('album', String(album.id))"
         />
 
         <MusicArtistCard
@@ -245,7 +257,7 @@ onUnmounted(() => clearTimeout(queryTimer))
           :is-bookmarked="true"
           data-testid="library-artist-card"
           @click="openArtist(String(artist.id))"
-          @toggle-bookmark="removeBookmark('artist', String(artist.id))"
+          @toggle-bookmark="removeLibraryItem('artist', String(artist.id))"
         />
 
         <MusicPlaylistCard
@@ -256,7 +268,7 @@ onUnmounted(() => clearTimeout(queryTimer))
           :is-bookmarked="true"
           data-testid="library-playlist-card"
           @click="openPlaylist(String(playlist.id))"
-          @toggle-bookmark="removeBookmark('playlist', String(playlist.id))"
+          @toggle-bookmark="removeLibraryItem('playlist', String(playlist.id))"
         />
       </div>
       <PButton v-if="hasMore && !loading" variant="secondary" class="music-library__more" :loading="loadingMore" @click="load(page + 1)">{{ loadingMore ? '正在加载' : '加载更多' }}</PButton>
@@ -281,14 +293,16 @@ onUnmounted(() => clearTimeout(queryTimer))
 .music-library__play-indicator { position: absolute; left: 0.6rem; bottom: 0.6rem; display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 50%; background: var(--a-color-bg); color: var(--a-color-fg); box-shadow: var(--a-shadow-sm); }
 .music-library__bookmark { position: absolute; z-index: 2; top: 0.5rem; right: 0.5rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; padding: 0; border: 1px solid var(--a-color-border-soft); border-radius: 50%; background: var(--a-color-bg); color: #eaaa08; cursor: pointer; box-shadow: var(--a-shadow-sm); }
 .music-library__bookmark:disabled { cursor: default; opacity: 0.55; }
-.music-library__later-label { position: absolute; z-index: 2; top: 0.6rem; right: 0.6rem; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.5rem; border-radius: 4px; background: var(--a-color-bg); color: var(--a-color-muted); font-size: 0.72rem; }
+.music-library__later-remove { position: absolute; z-index: 2; top: 0.5rem; right: 0.5rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; padding: 0; border: 1px solid var(--a-color-border-soft); border-radius: 50%; background: var(--a-color-bg); color: var(--a-color-muted); cursor: pointer; box-shadow: var(--a-shadow-sm); }
+.music-library__later-remove:hover { color: var(--a-color-accent-destructive); }
+.music-library__later-remove:disabled { cursor: default; opacity: 0.55; }
 .music-library__song-info { display: grid; gap: 0.25rem; min-width: 0; }
 .music-library__song-info h3, .music-library__song-info p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .music-library__song-info h3 { font-size: 1rem; font-weight: 500; }
 .music-library__song-info p { color: var(--a-color-muted); font-size: 0.82rem; }
 .music-library__song-info a, .music-library__song-info button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-decoration: none; cursor: pointer; }
 .music-library__song-info a:hover, .music-library__song-info button:hover { text-decoration: underline; }
-.music-library__song-play:focus-visible, .music-library__bookmark:focus-visible, .music-library__song-info a:focus-visible, .music-library__song-info button:focus-visible { outline: 2px solid var(--a-color-focus, var(--a-color-text)); outline-offset: 2px; }
+.music-library__song-play:focus-visible, .music-library__bookmark:focus-visible, .music-library__later-remove:focus-visible, .music-library__song-info a:focus-visible, .music-library__song-info button:focus-visible { outline: 2px solid var(--a-color-focus, var(--a-color-text)); outline-offset: 2px; }
 .music-library__more { justify-self: center; margin-top: 1rem; }
 .state { text-align: center; padding: 2rem 0; color: var(--a-color-muted); }
 .error { color: var(--a-color-accent-destructive); }

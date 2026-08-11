@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   deleteArtistBookmark: vi.fn(),
   deletePlaylistBookmark: vi.fn(),
   deleteSongBookmark: vi.fn(),
+  removeMusicSongFromLater: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openPlaylist: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('@/api/musicV1', () => ({
   deleteArtistBookmark: mocks.deleteArtistBookmark,
   deletePlaylistBookmark: mocks.deletePlaylistBookmark,
   deleteSongBookmark: mocks.deleteSongBookmark,
+  removeMusicSongFromLater: mocks.removeMusicSongFromLater,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -54,6 +56,7 @@ describe('LibraryView', () => {
     mocks.deleteArtistBookmark.mockReset()
     mocks.deletePlaylistBookmark.mockReset()
     mocks.deleteSongBookmark.mockReset()
+    mocks.removeMusicSongFromLater.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
@@ -167,5 +170,25 @@ describe('LibraryView', () => {
     await flushPromises()
     expect(mocks.deleteAlbumBookmark).toHaveBeenCalledWith('album-1')
     expect(wrapper.find('[data-testid="library-album-card"]').exists()).toBe(false)
+  })
+
+  it('removes a song from later playback in place', async () => {
+    mocks.listMusicLibrary
+      .mockResolvedValueOnce({ data: [], meta: { page: 1, page_size: 24, total: 0, has_more: false } })
+      .mockResolvedValueOnce({
+        data: [{ song: { id: 'song-later', title: 'Later Song', audio_url: '/later.mp3' } }],
+        meta: { page: 1, page_size: 24, total: 1, has_more: false },
+      })
+    mocks.removeMusicSongFromLater.mockResolvedValue({ deleted: true })
+
+    const wrapper = mount(LibraryView)
+    await flushPromises()
+    await wrapper.get('[data-option="later"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[aria-label="取消稍后播放 Later Song"]').trigger('click')
+    await flushPromises()
+    expect(mocks.removeMusicSongFromLater).toHaveBeenCalledWith('song-later')
+    expect(wrapper.find('[data-testid="library-song-card"]').exists()).toBe(false)
   })
 })

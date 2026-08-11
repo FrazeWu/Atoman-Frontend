@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { Bookmark, Music2, Play, X } from 'lucide-vue-next'
 import {
   deleteAlbumBookmark,
@@ -47,10 +47,12 @@ const albums = ref<MusicAlbumListItem[]>([])
 const artists = ref<MusicArtistListItem[]>([])
 const playlists = ref<MusicPlaylistSummary[]>([])
 const removingKey = ref('')
+const playingAll = ref(false)
 const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = getActivePinia() ? useAuthStore() : { isAuthenticated: true }
 const requests = useRequestGeneration()
+const playableSongs = computed(() => songs.value.filter(song => Boolean(song.audio_url)).map(playable))
 
 const options = [
   { label: '歌曲', value: 'song' }, { label: '专辑', value: 'album' },
@@ -65,6 +67,38 @@ function playable(song: MusicSongListItem): Song {
 
 function playlistCardItem(playlist: MusicPlaylistSummary) {
   return { ...playlist, title: playlist.name }
+}
+
+async function playAllLater() {
+  if (playingAll.value || !playableSongs.value.length) return
+  player.playAlbum(playableSongs.value)
+  playingAll.value = true
+  error.value = ''
+  try {
+    const allSongs = [...songs.value]
+    let nextPage = page.value + 1
+    let more = hasMore.value
+    while (more) {
+      const response = await listMusicLibrary<LibrarySongEnvelope>('later', {
+        q: requestedQuery.value,
+        sort: sort.value,
+        page: nextPage,
+        page_size: 24,
+      })
+      const nextSongs = response.data.map(item => item.song).filter((song): song is MusicSongListItem => Boolean(song))
+      allSongs.push(...nextSongs)
+      nextSongs.filter(song => Boolean(song.audio_url)).map(playable).forEach(song => player.addToQueue(song))
+      more = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
+      nextPage += 1
+    }
+    songs.value = allSongs
+    page.value = nextPage - 1
+    hasMore.value = false
+  } catch {
+    error.value = '加载剩余稍后内容失败'
+  } finally {
+    playingAll.value = false
+  }
 }
 
 async function removeLibraryItem(itemKind: LibraryKind, id: string) {
@@ -188,10 +222,20 @@ onUnmounted(() => clearTimeout(queryTimer))
     </div>
 
     <template v-else>
-      <div class="music-library__sort">
-        <button :class="{ active: sort === 'latest' }" @click="sort = 'latest'">最近收藏</button>
-        <button :class="{ active: sort === 'name' }" @click="sort = 'name'">名称</button>
-        <button :class="{ active: sort === 'popular' }" @click="sort = 'popular'">热度</button>
+      <div class="music-library__toolbar">
+        <div class="music-library__sort">
+          <button :class="{ active: sort === 'latest' }" @click="sort = 'latest'">最近收藏</button>
+          <button :class="{ active: sort === 'name' }" @click="sort = 'name'">名称</button>
+          <button :class="{ active: sort === 'popular' }" @click="sort = 'popular'">热度</button>
+        </div>
+        <PButton
+          v-if="kind === 'later'"
+          variant="primary"
+          :disabled="!playableSongs.length"
+          :loading="playingAll"
+          data-testid="library-later-play-all"
+          @click="playAllLater"
+        ><Play :size="16" aria-hidden="true" />播放全部</PButton>
       </div>
 
       <PInput v-model="query" type="search" placeholder="搜索收藏" aria-label="搜索收藏" />
@@ -279,6 +323,7 @@ onUnmounted(() => clearTimeout(queryTimer))
 <style scoped>
 .music-library { display: grid; gap: 1.25rem; max-width: 72rem; margin: 0 auto; padding: 1.5rem 0 3rem; }
 .music-library__unauth { padding: 3rem 0; }
+.music-library__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .music-library__sort { display: flex; gap: 0.4rem; }
 .music-library__sort button { border: 0; background: transparent; color: var(--a-color-muted); padding: 0.35rem 0.6rem; border-radius: var(--a-radius-control); cursor: pointer; transition: all 0.15s ease; }
 .music-library__sort button.active { color: var(--a-color-fg); font-weight: 600; background: var(--a-color-surface-muted); }
@@ -312,6 +357,7 @@ onUnmounted(() => clearTimeout(queryTimer))
 }
 
 @media (max-width: 720px) {
+  .music-library__toolbar { align-items: stretch; flex-direction: column; }
   .music-library__cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 }
 </style>

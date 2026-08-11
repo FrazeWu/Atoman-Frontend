@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   openArtist: vi.fn(),
   openPlaylist: vi.fn(),
   playSong: vi.fn(),
+  playAlbum: vi.fn(),
+  addToQueue: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -33,7 +35,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 }))
 
 vi.mock('@/stores/player', () => ({
-  usePlayerStore: () => ({ playSong: mocks.playSong }),
+  usePlayerStore: () => ({ playSong: mocks.playSong, playAlbum: mocks.playAlbum, addToQueue: mocks.addToQueue }),
 }))
 
 vi.mock('@/components/ui/PPageHeader.vue', () => ({
@@ -61,6 +63,8 @@ describe('LibraryView', () => {
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
     mocks.playSong.mockReset()
+    mocks.playAlbum.mockReset()
+    mocks.addToQueue.mockReset()
   })
 
   it('uses 收藏 as the page name and search label', async () => {
@@ -190,5 +194,38 @@ describe('LibraryView', () => {
     await flushPromises()
     expect(mocks.removeMusicSongFromLater).toHaveBeenCalledWith('song-later')
     expect(wrapper.find('[data-testid="library-song-card"]').exists()).toBe(false)
+  })
+
+  it('plays every playable song in the later list', async () => {
+    mocks.listMusicLibrary
+      .mockResolvedValueOnce({ data: [], meta: { page: 1, page_size: 24, total: 0, has_more: false } })
+      .mockResolvedValueOnce({
+        data: [
+          { song: { id: 'song-1', title: 'Playable', audio_url: '/playable.mp3' } },
+          { song: { id: 'song-2', title: 'Unavailable', audio_url: '' } },
+        ],
+        meta: { page: 1, page_size: 24, total: 3, has_more: true },
+      })
+      .mockResolvedValueOnce({
+        data: [{ song: { id: 'song-3', title: 'Next Page', audio_url: '/next.mp3' } }],
+        meta: { page: 2, page_size: 24, total: 3, has_more: false },
+      })
+
+    const wrapper = mount(LibraryView)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="library-later-play-all"]').exists()).toBe(false)
+
+    await wrapper.get('[data-option="later"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="library-later-play-all"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.playAlbum).toHaveBeenCalledOnce()
+    expect(mocks.playAlbum).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'song-1', title: 'Playable', audio_url: '/playable.mp3' }),
+    ])
+    expect(mocks.addToQueue).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'song-3', title: 'Next Page', audio_url: '/next.mp3' }),
+    )
   })
 })

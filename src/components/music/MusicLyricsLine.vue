@@ -199,32 +199,50 @@ function formatTime(timeMs: number | null | undefined): string {
   align-items: flex-start;
   gap: 16px;
   text-align: left;
-  opacity: 0.55;
-  transition: opacity 0.25s ease, font-weight 0.2s;
-  padding: 0.9rem 0;
+  opacity: 0.38;
+  transform: scale(0.98);
+  transform-origin: left center;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.25s ease;
+  padding: 0.95rem 0;
 }
 
 .music-lyrics-line:hover,
 .music-lyrics-line:focus-within,
 .music-lyrics-line.is-annotation-mode,
 .music-lyrics-line.has-annotations {
-  opacity: 1;
+  opacity: 0.78;
+  transform: scale(1);
 }
 
 .music-lyrics-line.is-active {
   opacity: 1;
-  font-weight: 500;
+  transform: scale(1.02);
   color: var(--a-color-text);
 }
 
+.music-lyrics-line.is-active .music-lyrics-line__text {
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+.music-lyrics-line.is-active .music-lyrics-line__translation {
+  color: var(--a-color-text);
+  opacity: 0.88;
+  font-weight: 500;
+}
+
 .music-lyrics-line__time {
-  font-family: monospace;
-  font-size: 11px;
+  font-family: var(--a-font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   color: var(--a-color-muted);
+  opacity: 0.6;
   width: 42px;
   flex-shrink: 0;
   text-align: left;
-  margin-top: 0.6rem;
+  margin-top: 0.55rem;
 }
 
 .music-lyrics-line__content {
@@ -235,33 +253,39 @@ function formatTime(timeMs: number | null | undefined): string {
 .music-lyrics-line__text {
   margin: 0;
   color: inherit;
-  font-size: 1.5rem;
-  font-weight: inherit;
-  line-height: 1.3;
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1.35;
   white-space: pre-wrap;
+  transition: font-weight 0.2s ease, text-shadow 0.3s ease;
 }
 
 .music-lyrics-line__translation {
-  margin: 0.4rem 0 0;
+  margin: 0.45rem 0 0;
   color: var(--a-color-muted);
   font-size: 0.95rem;
   line-height: 1.5;
   white-space: pre-wrap;
+  transition: opacity 0.25s ease, color 0.25s ease;
 }
 
 .music-lyrics-line__highlight {
   display: inline;
   border: 0;
-  padding: 0 0.16rem;
-  background: color-mix(in srgb, #ffe27a 58%, transparent);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 20%, transparent);
+  border-bottom: 2px solid var(--a-color-primary, #3b82f6);
   color: inherit;
   cursor: pointer;
   font: inherit;
   line-height: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .music-lyrics-line__highlight:hover {
-  background: color-mix(in srgb, #ffd84c 72%, transparent);
+  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 36%, transparent);
+  border-bottom-color: #60a5fa;
 }
 
 .music-lyrics-line__actions {
@@ -273,27 +297,28 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line__annotation-action {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 36px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  padding: 0.45rem 0.6rem;
+  border-radius: 9999px;
+  padding: 0.4rem 0.75rem;
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
 
 .music-lyrics-line__annotation-action:hover,
 .music-lyrics-line__annotation-action:focus-visible {
   border-color: var(--a-color-text);
   color: var(--a-color-text);
+  transform: translateY(-1px);
 }
 
 .music-lyrics-line__annotation-action--create {
@@ -314,8 +339,14 @@ function formatTime(timeMs: number | null | undefined): string {
   }
 
   .music-lyrics-line__actions {
-    min-width: 44px;
+    min-width: 36px;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-lyrics-line {
+    transition: none;
   }
 }
 </style>

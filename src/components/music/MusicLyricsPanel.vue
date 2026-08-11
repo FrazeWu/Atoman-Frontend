@@ -840,8 +840,8 @@ function cancelLyricsConflict() {
   z-index: var(--a-z-player-lyrics);
 }
 :root.dark .music-lyrics-panel {
-  background: rgba(15, 23, 42, 0.88);
-  border-top: 1px solid var(--a-color-border-dark, #334155);
+  background: radial-gradient(circle at 50% 0%, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.96) 100%);
+  border-top: 1px solid var(--a-color-border-dark, rgba(255, 255, 255, 0.1));
 }
 
 .music-lyrics-panel__header {
@@ -872,8 +872,9 @@ function cancelLyricsConflict() {
   margin: 0;
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
-  font-size: 1.8rem;
+  font-size: 1.85rem;
   font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 .music-lyrics-panel__credits {
@@ -912,12 +913,18 @@ function cancelLyricsConflict() {
 }
 
 .music-lyrics-panel__action-btn {
-  border-radius: 4px !important;
+  border-radius: 9999px !important;
+  font-weight: 600 !important;
+  transition: transform 0.15s ease, background 0.2s ease !important;
+}
+
+.music-lyrics-panel__action-btn:hover {
+  transform: translateY(-1px);
 }
 
 .music-lyrics-panel__close {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 40px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -927,8 +934,15 @@ function cancelLyricsConflict() {
   color: var(--a-color-text);
   cursor: pointer;
   font-family: var(--a-font-sans);
-  border-radius: 4px;
+  border-radius: 9999px;
   box-shadow: none;
+  transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+
+.music-lyrics-panel__close:hover {
+  background: color-mix(in srgb, var(--a-color-text) 8%, transparent);
+  border-color: var(--a-color-text);
+  transform: scale(1.05);
 }
 
 .music-lyrics-panel__feedback,
@@ -940,7 +954,8 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__versions {
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
-  padding: 0.75rem;
+  border-radius: 12px;
+  padding: 1rem;
 }
 
 .music-lyrics-panel__version-list {
@@ -974,8 +989,14 @@ function cancelLyricsConflict() {
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 800;
-  border-radius: 4px;
+  border-radius: 9999px;
+  padding: 0.3rem 0.75rem;
   box-shadow: none;
+  transition: background 0.2s ease;
+}
+
+.music-lyrics-panel__version-action:hover {
+  background: color-mix(in srgb, var(--a-color-text) 10%, transparent);
 }
 
 .music-lyrics-panel__version-preview {
@@ -1053,7 +1074,7 @@ function cancelLyricsConflict() {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .music-lyrics-panel__main {
@@ -1072,6 +1093,9 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__lines {
   display: grid;
   gap: 0.2rem;
+  padding: 1.5rem 0;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
 }
 
 .music-lyrics-panel__sidebar {
@@ -1080,7 +1104,7 @@ function cancelLyricsConflict() {
   align-content: start;
   gap: 1rem;
   border-left: 1px solid var(--a-color-border-soft);
-  padding-left: 1.25rem;
+  padding-left: 1.5rem;
   overflow: hidden;
 }
 
@@ -1120,22 +1144,31 @@ function cancelLyricsConflict() {
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #020617;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   font-family: var(--a-font-sans);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  border: 0;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   z-index: 10;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
 }
+
+:root.dark .lyrics-sync-btn {
+  background: rgba(255, 255, 255, 0.95);
+  color: #020617;
+}
+
 .lyrics-sync-btn:hover {
-  transform: translateX(-50%) scale(1.05);
+  transform: translateX(-50%) translateY(-2px) scale(1.03);
+  background: #ffffff;
 }
 
 @media (prefers-reduced-motion: reduce) {

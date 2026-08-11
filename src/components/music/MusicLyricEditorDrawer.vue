@@ -552,17 +552,17 @@ function handleSave() {
 .music-lyric-editor-drawer__import {
   display: grid;
   min-width: 0;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: 0.85rem;
+  padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 6px;
-  background: var(--a-color-surface, var(--a-color-bg));
+  border-radius: 12px;
+  background: var(--a-color-surface-muted, var(--a-color-bg));
 }
 
 .music-lyric-editor-drawer__file-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .music-lyric-editor-drawer__file-field {
@@ -572,13 +572,13 @@ function handleSave() {
   min-width: 0;
   min-height: 76px;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1rem 1.15rem;
   overflow: hidden;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 6px;
-  background: var(--a-color-surface-muted);
+  border: 1px dashed var(--a-color-border-soft);
+  border-radius: 10px;
+  background: var(--a-color-surface, var(--a-color-bg));
   color: var(--a-color-muted);
-  transition: border-color 160ms ease, background-color 160ms ease;
+  transition: border-color 200ms ease, background-color 200ms ease, transform 150ms ease;
 }
 
 .music-lyric-editor-drawer__file-input {
@@ -595,7 +595,9 @@ function handleSave() {
 .music-lyric-editor-drawer__file-field:hover:not(.music-lyric-editor-drawer__file-field--disabled),
 .music-lyric-editor-drawer__file-field:focus-within {
   border-color: var(--a-color-primary);
-  background: var(--a-color-bg);
+  border-style: solid;
+  background: color-mix(in srgb, var(--a-color-primary) 4%, var(--a-color-bg));
+  transform: translateY(-1px);
 }
 
 .music-lyric-editor-drawer__file-field:focus-within {
@@ -604,7 +606,9 @@ function handleSave() {
 }
 
 .music-lyric-editor-drawer__file-field--selected {
-  border-color: color-mix(in srgb, var(--a-color-primary) 45%, var(--a-color-border-soft));
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--a-color-primary) 50%, var(--a-color-border-soft));
+  background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-surface, var(--a-color-bg)));
 }
 
 .music-lyric-editor-drawer__file-field--disabled {
@@ -613,13 +617,13 @@ function handleSave() {
 
 .music-lyric-editor-drawer__file-icon {
   display: grid;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   place-items: center;
   border-radius: 50%;
-  background: var(--a-color-surface-3);
-  color: var(--a-color-muted);
+  background: color-mix(in srgb, var(--a-color-primary) 12%, var(--a-color-surface-3, rgba(255, 255, 255, 0.06)));
+  color: var(--a-color-primary, var(--a-color-muted));
 }
 
 .music-lyric-editor-drawer__file-copy {
@@ -627,7 +631,7 @@ function handleSave() {
   min-width: 0;
   flex: 1;
   gap: 0.125rem;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .music-lyric-editor-drawer__file-copy strong {
@@ -674,6 +678,8 @@ function handleSave() {
 
 .music-lyric-editor-drawer__actions {
   justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 @media (max-width: 767px) {
@@ -721,7 +727,7 @@ function handleSave() {
 :global(.lyric-editor-drawer) {
   background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
-  box-shadow: none !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.2) !important;
 }
 
 :root.dark :global(.lyric-editor-drawer) {

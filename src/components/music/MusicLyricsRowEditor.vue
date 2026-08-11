@@ -324,7 +324,7 @@ function describedByForField(
   display: grid;
   grid-template-columns: 3rem minmax(0, 1fr) 9.25rem;
   gap: 0.75rem;
-  align-items: start;
+  align-items: center;
 }
 
 .lyric-grid-line.is-lrc {
@@ -344,21 +344,27 @@ function describedByForField(
   color: var(--a-color-muted, #60646c);
   font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .lyric-row {
   padding: 0.75rem;
   border-top: 1px solid var(--a-color-border-soft, #e4e4e7);
+  border-radius: 8px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lyric-row.is-selected {
-  box-shadow: inset 3px 0 0 var(--a-color-primary, #2563eb);
+  background: color-mix(in srgb, var(--a-color-primary, #2563eb) 5%, var(--a-color-surface, var(--a-color-bg)));
+  box-shadow: inset 3px 0 0 var(--a-color-primary, #2563eb), 0 2px 10px -2px rgba(0, 0, 0, 0.04);
 }
 
 .lyric-index {
-  padding-top: 0.75rem;
   color: var(--a-color-muted, #60646c);
   font-variant-numeric: tabular-nums;
+  font-family: var(--a-font-mono, monospace);
+  font-size: 0.82rem;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -380,22 +386,30 @@ function describedByForField(
   min-width: 0;
   height: 44px;
   box-sizing: border-box;
-  padding: 0 0.75rem;
+  padding: 0 0.85rem;
   border: 1px solid var(--a-color-border, #d4d4d8);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #18181b);
   font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.lyric-input:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 40%, var(--a-color-border));
 }
 
 .lyric-input:focus-visible,
 .lyric-action:focus-visible {
-  outline: 2px solid var(--a-color-primary, #2563eb);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--a-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary, #2563eb) 20%, transparent);
 }
 
 .lyric-time-input {
   font-variant-numeric: tabular-nums;
+  font-family: var(--a-font-mono, monospace);
+  letter-spacing: 0.02em;
 }
 
 .lyric-time-display {
@@ -406,8 +420,14 @@ function describedByForField(
   color: var(--a-color-muted, #60646c);
   font: inherit;
   font-variant-numeric: tabular-nums;
+  font-family: var(--a-font-mono, monospace);
   text-align: left;
   cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.lyric-time-display:hover:not(:disabled) {
+  color: var(--a-color-primary, #2563eb);
 }
 
 .lyric-time-display:disabled {
@@ -456,13 +476,22 @@ function describedByForField(
   place-items: center;
   padding: 0;
   border: 1px solid var(--a-color-border, #d4d4d8);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--a-color-bg, #ffffff);
   color: var(--a-color-muted, #52525b);
   cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
 
-.lyric-action--danger {
+.lyric-action:hover:not(:disabled) {
+  border-color: var(--a-color-text, #18181b);
+  color: var(--a-color-text, #18181b);
+  transform: translateY(-1px);
+}
+
+.lyric-action--danger:hover:not(:disabled) {
+  border-color: var(--a-color-danger, #b42318);
+  background: color-mix(in srgb, var(--a-color-danger, #b42318) 8%, var(--a-color-bg));
   color: var(--a-color-danger, #b42318);
 }
 
@@ -516,6 +545,14 @@ function describedByForField(
 
   .lyric-issues {
     grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyric-row,
+  .lyric-input,
+  .lyric-action {
+    transition: none;
   }
 }
 </style>

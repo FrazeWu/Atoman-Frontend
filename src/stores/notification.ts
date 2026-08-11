@@ -198,22 +198,48 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   const savePreference = async (category: NotificationCategory, eventType: string, enabled: boolean) => {
-    void category
-    void eventType
-    void enabled
-    return false
+    return savePreferences([{ category, event_type: eventType, enabled }])
+  }
+
+  const fetchPreferences = async (): Promise<NotificationPreference[]> => {
+    if (!authStore.token) return []
+    const res = await apiRequest(api.notifications.preferences, { headers: authHeaders() })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.data || data
   }
 
   const savePreferences = async (items: NotificationPreference[]) => {
-    void items
-    return false
+    if (!authStore.token) return false
+    const res = await apiRequest(api.notifications.preferences, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ items }),
+    })
+    if (!res.ok) return false
+    const disabledTypes = new Set(items.filter((item) => !item.enabled).map((item) => item.event_type))
+    if (disabledTypes.size) {
+      const previousLength = notifications.value.length
+      notifications.value = notifications.value.filter((item) => !disabledTypes.has(item.type))
+      total.value = Math.max(0, total.value - (previousLength - notifications.value.length))
+      await fetchUnreadCounts()
+    }
+    return true
   }
 
   const createMute = async (sourceType: string, sourceId: string, reason: string) => {
-    void sourceType
-    void sourceId
-    void reason
-    return false
+    if (!authStore.token) return false
+    const res = await apiRequest(api.notifications.mutes, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ source_type: sourceType, source_id: sourceId, reason }),
+    })
+    if (!res.ok) return false
+    const previousLength = notifications.value.length
+    notifications.value = notifications.value.filter((item) => item.source_type !== sourceType || item.source_id !== sourceId)
+    total.value = Math.max(0, total.value - (previousLength - notifications.value.length))
+    await fetchUnreadCounts()
+    return true
   }
 
   const resetStore = () => {
@@ -244,6 +270,7 @@ export const useNotificationStore = defineStore('notification', () => {
     markAllRead,
     receiveNotification,
     setDMUnread,
+    fetchPreferences,
     savePreference,
     savePreferences,
     createMute,

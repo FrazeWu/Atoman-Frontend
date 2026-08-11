@@ -226,14 +226,20 @@ describe('notification store', () => {
     expect(store.notifications.map(({ id }) => id)).toEqual(['next-mention'])
   })
 
-  it('does not call unregistered notification preference or mute endpoints', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
+  it('saves notification preferences and mutes through registered endpoints', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({
+      data: { items: {} },
+    }), { status: 200 }))
     const store = useNotificationStore()
+    store.notifications = [makeNotification('like-1', 'like', null, 'comment_like')]
+    store.total = 10
 
-    await expect(store.savePreferences([{ category: 'like', event_type: 'content.liked', enabled: false }])).resolves.toBe(false)
-    await expect(store.savePreference('like', 'content.liked', false)).resolves.toBe(false)
-    await expect(store.createMute('blog_post', 'post-1', 'reason')).resolves.toBe(false)
+    await expect(store.savePreference('like', 'comment_like', false)).resolves.toBe(true)
+    await expect(store.createMute('like', 'like-1-source', 'reason')).resolves.toBe(true)
 
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/preferences', expect.objectContaining({ method: 'PUT' }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/mutes', expect.objectContaining({ method: 'POST' }))
+    expect(store.notifications).toEqual([])
+    expect(store.total).toBe(9)
   })
 })

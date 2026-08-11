@@ -128,6 +128,12 @@ const notificationPrefs = ref({
   reply: true,
   collaboration: true,
 })
+const notificationTypes = {
+  like: ['comment_like', 'forum_like'],
+  interaction: ['comment_marked', 'forum_follow', 'forum_solved'],
+  reply: ['comment_reply', 'forum_reply', 'forum_topic_comment'],
+  collaboration: ['collaboration.required'],
+} as const
 
 const saving = ref(false)
 const error = ref('')
@@ -154,18 +160,28 @@ const loadProfile = async () => {
   }
 }
 
+const loadNotificationPreferences = async () => {
+  const items = await notificationStore.fetchPreferences()
+  const byType = new Map(items.map((item) => [item.event_type, item.enabled]))
+  for (const [category, eventTypes] of Object.entries(notificationTypes)) {
+    notificationPrefs.value[category as keyof typeof notificationTypes] = eventTypes.every((eventType) => byType.get(eventType) !== false)
+  }
+}
+
 const save = async () => {
   error.value = ''
   success.value = false
 
   saving.value = true
   try {
-    await notificationStore.savePreferences([
-      { category: 'like', event_type: 'content.liked', enabled: notificationPrefs.value.like },
-      { category: 'interaction', event_type: 'content.bookmarked', enabled: notificationPrefs.value.interaction },
-      { category: 'reply', event_type: 'content.replied', enabled: notificationPrefs.value.reply },
-      { category: 'collaboration', event_type: 'collaboration.changed', enabled: notificationPrefs.value.collaboration },
-    ])
+    const preferencesSaved = await notificationStore.savePreferences(Object.entries(notificationTypes).flatMap(([category, eventTypes]) =>
+      eventTypes.map((eventType) => ({
+        category: category as keyof typeof notificationTypes,
+        event_type: eventType,
+        enabled: notificationPrefs.value[category as keyof typeof notificationTypes],
+      })),
+    ))
+    if (!preferencesSaved) throw new Error('通知设置保存失败')
 
     const res = await apiRequest(api.users.settings, {
       method: 'PUT',
@@ -197,6 +213,7 @@ const save = async () => {
 onMounted(async () => {
   await Promise.all([
     loadProfile(),
+    loadNotificationPreferences(),
     userBlocksStore.fetchBlockedUsers(),
   ])
 })

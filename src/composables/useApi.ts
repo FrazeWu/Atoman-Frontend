@@ -244,6 +244,8 @@ export function useApi() {
       markRead: (id: string) => `${apiUrl}/notifications/${id}/read`,
       markCategoryRead: (category: string) => `${apiUrl}/notifications/${category}/read-all`,
       markAllRead: `${apiUrl}/notifications/read-all`,
+      preferences: `${apiUrl}/notifications/preferences`,
+      mutes: `${apiUrl}/notifications/mutes`,
     },
 
     comments: {

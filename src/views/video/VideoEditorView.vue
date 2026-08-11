@@ -54,6 +54,7 @@ const { creationSteps, currentStep, maxStep, goNext, goPrevious } = useMediaCrea
 // Upload state
 const videoUploadProgress = ref(0)   // 0-100, -1 = error
 const videoUploading = ref(false)
+let videoUploadTask: Promise<void> | null = null
 const coverUploading = ref(false)
 const generatedCoverPreview = ref('')
 const generatedCoverBlob = ref<Blob | null>(null)
@@ -171,16 +172,27 @@ async function onVideoFileChange(e: Event) {
   videoUploadProgress.value = 0
   urlError.value = ''
   clearGeneratedCover()
-  try {
-    const fd = new FormData()
-    fd.append('video', file)
-    const result = await uploadFormDataWithProgress<{ url: string }>(
-      `${api.url}/videos/upload-video`,
-      fd,
-      (pct) => { videoUploadProgress.value = pct },
-    )
-    form.value.video_url = result.url
+  const uploadTask = (async () => {
+    try {
+      const fd = new FormData()
+      fd.append('video', file)
+      const result = await uploadFormDataWithProgress<{ url: string }>(
+        `${api.url}/videos/upload-video`,
+        fd,
+        (pct) => { videoUploadProgress.value = pct },
+      )
+      form.value.video_url = result.url
+    } catch (err) {
+      videoUploadProgress.value = -1
+      urlError.value = errorMessage(err, '视频上传失败')
+    } finally {
+      videoUploading.value = false
+      videoUploadTask = null
+    }
+  })()
+  videoUploadTask = uploadTask
 
+  void (async () => {
     try {
       const generated = await extractFirstFrame(file)
       generatedCoverBlob.value = generated.blob
@@ -190,12 +202,9 @@ async function onVideoFileChange(e: Event) {
       generatedCoverReady.value = false
       errorMsg.value = '自动封面生成失败，可手动上传封面'
     }
-  } catch (err) {
-    videoUploadProgress.value = -1
-    urlError.value = errorMessage(err, '视频上传失败')
-  } finally {
-    videoUploading.value = false
-  }
+  })()
+
+  await uploadTask
 }
 
 async function onCoverFileChange(e: Event) {
@@ -223,10 +232,17 @@ async function onCoverFileChange(e: Event) {
 // ── Form logic ────────────────────────────────────────────
 
 function validateMedia(): boolean {
-  urlError.value = form.value.video_url.trim() ? '' : (
+  const hasMedia = form.value.video_url.trim() || (form.value.storage_type === 'local' && videoUploading.value)
+  urlError.value = hasMedia ? '' : (
     form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
   )
   return !urlError.value
+}
+
+async function waitForVideoUpload(): Promise<boolean> {
+  const pendingTask = videoUploadTask
+  if (pendingTask) await pendingTask
+  return validateMedia()
 }
 
 function validateInformation(): boolean {
@@ -354,6 +370,7 @@ async function saveDraft() {
   errorMsg.value = ''
   draftSaved.value = false
   try {
+    if (!await waitForVideoUpload()) return
     await apiSave(buildPayload('draft'))
     draftSaved.value = true
     await router.push({
@@ -378,6 +395,7 @@ async function doPublish() {
   publishing.value = true
   errorMsg.value = ''
   try {
+    if (!await waitForVideoUpload()) return
     const v = await apiSave(buildPayload('published'))
     router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
   } catch (e) {
@@ -397,6 +415,7 @@ async function schedulePublish() {
   scheduling.value = true
   errorMsg.value = ''
   try {
+    if (!await waitForVideoUpload()) return
     const video = await apiSave(buildPayload('draft'))
     await lifecycle.schedule('video', video.id, publishAt.toISOString())
     await router.push({ path: '/studio/video/content', query: { status: 'scheduled' } })
@@ -588,7 +607,7 @@ async function schedulePublish() {
           <ContentScheduleControl
             v-model="scheduledAt"
             :busy="scheduling"
-            :disabled="publishing || savingDraft || videoUploading"
+            :disabled="publishing || savingDraft"
             @schedule="schedulePublish"
           />
 
@@ -602,7 +621,7 @@ async function schedulePublish() {
 			:variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
                 :loading="savingDraft"
                 loading-text="保存中…"
-                :disabled="publishing || videoUploading"
+                :disabled="publishing"
                 @click="saveDraft"
               >
                 保存草稿
@@ -611,7 +630,7 @@ async function schedulePublish() {
 			:variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
                 :loading="publishing"
                 loading-text="发布中…"
-                :disabled="savingDraft || videoUploading"
+                :disabled="savingDraft"
                 @click="requestPublish"
               >
                 立即发布

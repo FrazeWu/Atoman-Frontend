@@ -7,6 +7,9 @@ import VideoEditorView from '@/views/video/VideoEditorView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 
+let autoCompleteUpload = true
+const pendingUploads: FakeXMLHttpRequest[] = []
+
 class FakeXMLHttpRequest {
   status = 200
   responseText = JSON.stringify({ url: '/uploads/video/files/user-1/video.mp4' })
@@ -19,7 +22,14 @@ class FakeXMLHttpRequest {
     this.listeners[event].push(listener)
   }
   send() {
-    queueMicrotask(() => this.listeners.load?.forEach(listener => listener()))
+    if (autoCompleteUpload) {
+      queueMicrotask(() => this.complete())
+      return
+    }
+    pendingUploads.push(this)
+  }
+  complete() {
+    this.listeners.load?.forEach(listener => listener())
   }
 }
 
@@ -69,6 +79,8 @@ describe('VideoEditorView', () => {
   let createElementSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
+    autoCompleteUpload = true
+    pendingUploads.length = 0
     vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest)
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
@@ -116,6 +128,46 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.form.video_url).toBe('/uploads/video/files/user-1/video.mp4')
     expect(wrapper.vm.$.setupState.urlError).toBe('')
     expect(wrapper.text()).toContain('自动封面生成失败，可手动上传封面')
+  })
+
+  it('continues to information while the selected video is still uploading', async () => {
+    autoCompleteUpload = false
+    const { wrapper } = await setup('/studio/video/new')
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+
+    await fileInput.trigger('change')
+    expect(wrapper.vm.$.setupState.videoUploading).toBe(true)
+
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+
+    pendingUploads[0]?.complete()
+    await flushPromises()
+  })
+
+  it('waits for the pending video upload before saving', async () => {
+    autoCompleteUpload = false
+    const { wrapper, router } = await setup('/studio/video/new')
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+    await fileInput.trigger('change')
+
+    wrapper.vm.$.setupState.form.title = 'Uploading video'
+    const savePromise = wrapper.vm.$.setupState.saveDraft()
+    await flushPromises()
+
+    const fetchMock = vi.mocked(fetch)
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos') && init?.method === 'POST')).toBe(false)
+
+    pendingUploads[0]?.complete()
+    await savePromise
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos') && init?.method === 'POST')).toBe(true)
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/content')
   })
 
   it('keeps the media information and publish steps inside Studio', async () => {

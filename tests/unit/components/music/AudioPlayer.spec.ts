@@ -255,10 +255,12 @@ describe('AudioPlayer', () => {
     wrapper.unmount()
   })
 
-  it('reserves separate mobile columns for metadata, playback, and queue controls', () => {
+  it('reserves mobile space for metadata, playback, lyrics, and queue controls', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/music/AudioPlayer.vue'), 'utf8')
 
-    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 44px 44px;/)
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 44px 88px;/)
+    expect(source).toContain('class="feature-link"')
+    expect(source).toContain('const featureLabel = computed(() => (isPodcast.value ? "说明" : "歌词"))')
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-controls-hub\s*\{[^}]*position: static;[^}]*transform: none;/)
   })
 

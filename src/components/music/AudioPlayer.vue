@@ -24,15 +24,23 @@
         class="player-info"
         :class="{ 'player-info--collapsed': isMetaCollapsed }"
       >
-        <div class="cover-wrap" data-hint="歌词 (Shift+F)" @click="player.toggleLyrics">
+        <button
+          type="button"
+          class="cover-wrap"
+          :aria-label="isPodcast ? '查看节目说明' : '打开歌词'"
+          :title="isPodcast ? '查看节目说明' : '打开歌词'"
+          data-hint="歌词 (Shift+F)"
+          @click="player.toggleLyrics"
+        >
           <img
             v-if="player.currentSong.cover_url"
             :src="player.currentSong.cover_url"
+            alt=""
             class="player-cover"
           />
           <div v-else class="player-cover-fallback">{{ coverFallback }}</div>
-          <div class="cover-overlay">↑</div>
-        </div>
+          <span class="cover-overlay" aria-hidden="true"><FileText :size="20" /></span>
+        </button>
         <div
           ref="playerMetaRef"
           class="player-meta"
@@ -169,9 +177,17 @@
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
-        <div class="feature-link" data-hint="歌词 (L)" @click="player.toggleLyrics">
-          {{ featureLabel }}
-        </div>
+        <button
+          type="button"
+          class="feature-link"
+          :aria-label="featureLabel"
+          :title="featureLabel"
+          data-hint="歌词 (L)"
+          @click="player.toggleLyrics"
+        >
+          <FileText :size="18" aria-hidden="true" />
+          <span>{{ featureLabel }}</span>
+        </button>
 
         <div class="feature-toggle" data-hint="播放模式" @click="player.cyclePlaybackMode()">
           <div
@@ -364,6 +380,7 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  FileText,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
@@ -491,7 +508,7 @@ const isPodcast = computed(
 const isPodcastEpisode = computed(
   () => player.currentSong?.source_type === "podcast_episode",
 );
-const featureLabel = computed(() => (isPodcast.value ? "说明" : "词"));
+const featureLabel = computed(() => (isPodcast.value ? "说明" : "歌词"));
 
 const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);
@@ -718,6 +735,9 @@ watch(
   height: 40px;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
+  padding: 0;
+  background: var(--a-color-surface);
+  color: var(--a-color-text);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -995,11 +1015,19 @@ watch(
   flex-shrink: 0;
 }
 .feature-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text);
   cursor: pointer;
   font-size: 11px;
   font-weight: 500;
   opacity: 0.5;
-  padding: 0 4px;
+  padding: 0 0.5rem;
   border-bottom: 1.5px solid transparent;
   transition:
     opacity 0.2s,
@@ -1568,7 +1596,6 @@ watch(
 
   .player-reveal-handle,
   .player-pin-btn,
-  .feature-link,
   .feature-toggle,
   .volume-container,
   .skip-btn,
@@ -1581,7 +1608,7 @@ watch(
 
   .player-inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px 44px;
+    grid-template-columns: minmax(0, 1fr) 44px 88px;
     gap: 0.75rem;
     padding: 0 0.75rem 16px;
   }
@@ -1645,6 +1672,25 @@ watch(
   .player-features {
     margin-left: 0;
     gap: 0;
+  }
+
+  .feature-link {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    opacity: 1;
+    border-bottom: 0;
+  }
+
+  .feature-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .queue-panel {

@@ -6,6 +6,16 @@
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
+          data-testid="lyrics-annotations-trigger"
+          @click="openAnnotationOverview"
+        >
+          <MessageSquareText :size="16" aria-hidden="true" />
+          解析 {{ activeAnnotationCount }}
+        </PButton>
+        <PButton
+          class="music-lyrics-panel__action-btn"
+          type="button"
+          variant="secondary"
           data-testid="lyrics-versions-trigger"
           @click="toggleVersions"
         >
@@ -24,9 +34,11 @@
         <button
           type="button"
           class="music-lyrics-panel__close"
+          aria-label="关闭歌词"
+          title="关闭歌词"
           @click="emit('close')"
         >
-          关闭
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
     </header>
@@ -105,7 +117,7 @@
     <div class="music-lyrics-panel__layout">
       <div class="music-lyrics-panel__main">
         <section class="music-lyrics-panel__song-info" aria-label="歌曲信息">
-          <p class="music-lyrics-panel__eyebrow">歌词</p>
+          <p class="music-lyrics-panel__eyebrow">歌词 · {{ activeAnnotationCount }} 条注释</p>
           <h2>{{ songTitle }}</h2>
           <dl class="music-lyrics-panel__credits">
             <div v-for="group in creditGroups" :key="group.role">
@@ -130,8 +142,11 @@
             :active="currentLineId === (line.line_key ?? line.id ?? '')"
             :bilingual="showTranslation"
             :can-select="isAuthenticated"
+            :can-annotate="isAuthenticated"
+            :annotation-mode="annotationSelectionMode"
             @select-text="handleSelectText"
             @open-annotations="handleOpenAnnotations"
+            @annotate-line="handleAnnotateLine"
           />
           <button
             v-if="isUserScrolling"
@@ -139,35 +154,65 @@
             class="lyrics-sync-btn"
             @click="resumeAutoScroll"
           >
-            回到当前播放 🎯
+            <LocateFixed :size="16" aria-hidden="true" />
+            回到当前播放
           </button>
         </div>
       </div>
 
-      <aside v-if="showSidebar" class="music-lyrics-panel__sidebar">
-        <MusicAnnotationPanel
-          v-if="visibleAnnotations.length"
+      <aside v-if="!isMobileViewport" class="music-lyrics-panel__sidebar" aria-label="歌词解析">
+        <MusicAnnotationWorkspace
           :annotations="visibleAnnotations"
           :can-write="isAuthenticated"
           :current-user-ids="currentUserIds"
+          :total-count="activeAnnotationCount"
+          :selection-mode="annotationSelectionMode"
+          :editor-visible="annotationEditorVisible"
+          :selected-text="annotationSelectedText"
+          :initial-body="annotationInitialBody"
+          :editor-mode="annotationEditorMode"
+          @create="startAnnotationSelection"
           @vote="handleVoteAnnotation"
           @edit="handleEditAnnotation"
           @delete="handleDeleteAnnotation"
           @rebind="handleRebindAnnotation"
-        />
-
-        <MusicAnnotationEditor
-          v-if="isAuthenticated"
-          :show="annotationEditorVisible"
-          :selected-text="annotationSelectedText"
-          :initial-body="annotationInitialBody"
-          :mode="annotationEditorMode"
           @save="handleSaveAnnotation"
           @cancel="handleCancelAnnotation"
           @confirm-rebind="handleConfirmRebind"
         />
       </aside>
     </div>
+
+    <PSheet
+      v-if="isMobileViewport"
+      :show="mobileAnnotationOpen"
+      side="bottom"
+      title="歌词解析"
+      height="min(78dvh, 42rem)"
+      close-type="header"
+      above-player
+      @close="closeMobileAnnotations"
+    >
+      <MusicAnnotationWorkspace
+        :annotations="visibleAnnotations"
+        :can-write="isAuthenticated"
+        :current-user-ids="currentUserIds"
+        :total-count="activeAnnotationCount"
+        :selection-mode="annotationSelectionMode"
+        :editor-visible="annotationEditorVisible"
+        :selected-text="annotationSelectedText"
+        :initial-body="annotationInitialBody"
+        :editor-mode="annotationEditorMode"
+        @create="startAnnotationSelection"
+        @vote="handleVoteAnnotation"
+        @edit="handleEditAnnotation"
+        @delete="handleDeleteAnnotation"
+        @rebind="handleRebindAnnotation"
+        @save="handleSaveAnnotation"
+        @cancel="handleCancelAnnotation"
+        @confirm-rebind="handleConfirmRebind"
+      />
+    </PSheet>
 
     <MusicLyricEditorDrawer
       v-if="isAuthenticated"
@@ -201,7 +246,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { LocateFixed, MessageSquareText, X } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,
@@ -212,13 +258,13 @@ import {
   type MusicSongLyricsLine,
   type UpdateMusicSongLyricsInput,
 } from '@/api/musicV1'
-import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
-import MusicAnnotationPanel from '@/components/music/MusicAnnotationPanel.vue'
+import MusicAnnotationWorkspace from '@/components/music/MusicAnnotationWorkspace.vue'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
@@ -267,6 +313,9 @@ const {
 } = useMusicLyrics()
 
 const selectedAnnotationIds = ref<string[]>([])
+const annotationSelectionMode = ref(false)
+const mobileAnnotationOpen = ref(false)
+const isMobileViewport = ref(false)
 const selectedTextDraft = ref<{
   line: MusicSongLyricsLine
   selectedText: string
@@ -291,6 +340,23 @@ let activeLyricsSaveGeneration = 0
 let versionsViewGeneration = 0
 let rebindOperationGeneration = 0
 let songCreditsGeneration = 0
+let mobileViewportQuery: MediaQueryList | null = null
+
+function syncMobileViewport() {
+  isMobileViewport.value = mobileViewportQuery?.matches ?? false
+  if (!isMobileViewport.value) mobileAnnotationOpen.value = false
+}
+
+onMounted(() => {
+  mobileViewportQuery = window.matchMedia?.('(max-width: 900px)') ?? null
+  syncMobileViewport()
+  mobileViewportQuery?.addEventListener('change', syncMobileViewport)
+})
+
+onBeforeUnmount(() => {
+  mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
+  if (scrollLockTimer) clearTimeout(scrollLockTimer)
+})
 
 function handleUserScroll() {
   isUserScrolling.value = true
@@ -317,7 +383,7 @@ function scrollToActiveLine() {
 
 const displayModeOptions = [
   { label: '原文', value: 'original' },
-  { label: '双语', value: 'bilingual' },
+  { label: '翻译', value: 'bilingual' },
 ]
 
 const isAuthenticated = computed(() => Boolean(authStore.isAuthenticated))
@@ -330,6 +396,9 @@ const activeTimedLine = computed(() => {
 const currentLineId = computed(() => activeTimedLine.value?.line_key ?? activeTimedLine.value?.id ?? '')
 const hasTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
 const showTranslation = computed(() => hasTranslation.value && displayMode.value === 'bilingual')
+const activeAnnotationCount = computed(() => (
+  lyrics.value?.annotations.filter((annotation) => annotation.status === 'active').length ?? 0
+))
 const creditGroups = computed(() => {
   const groups = new Map<string, { role: string; label: string; names: string[] }>()
 
@@ -376,7 +445,6 @@ const annotationInitialBody = computed(() => editingAnnotation.value?.body ?? ''
 const annotationEditorMode = computed<'create' | 'edit' | 'rebind'>(() => (
   rebindingAnnotation.value ? 'rebind' : editingAnnotation.value ? 'edit' : 'create'
 ))
-const showSidebar = computed(() => visibleAnnotations.value.length > 0 || annotationEditorVisible.value)
 const selectedVersionPreview = computed(() => {
   if (!lyrics.value || selectedVersionNumber.value === null || versionsSongId.value !== props.songId) return null
   const version = versions.value.find((item) => item.version === selectedVersionNumber.value)
@@ -390,6 +458,8 @@ watch(
     versionsViewGeneration += 1
     resetVersions()
     selectedAnnotationIds.value = []
+    annotationSelectionMode.value = false
+    mobileAnnotationOpen.value = false
     clearRebindState()
     editingAnnotation.value = null
     isLyricEditorOpen.value = false
@@ -458,7 +528,32 @@ function canManageAnnotation(annotation: MusicLyricsAnnotation) {
 function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationIds: string[] }) {
   clearRebindState()
   editingAnnotation.value = null
+  annotationSelectionMode.value = false
   selectedAnnotationIds.value = payload.annotationIds
+  if (isMobileViewport.value) mobileAnnotationOpen.value = true
+}
+
+function openAnnotationOverview() {
+  if (isMobileViewport.value) mobileAnnotationOpen.value = true
+}
+
+function startAnnotationSelection() {
+  if (!requireLogin()) return
+  clearRebindState()
+  editingAnnotation.value = null
+  selectedAnnotationIds.value = []
+  annotationSelectionMode.value = true
+  if (isMobileViewport.value) mobileAnnotationOpen.value = false
+}
+
+function handleAnnotateLine(line: MusicSongLyricsLine) {
+  if (!requireLogin() || !line.text) return
+  handleSelectText({
+    line,
+    selectedText: line.text,
+    startOffset: 0,
+    endOffset: line.text.length,
+  })
 }
 
 function openLyricEditor() {
@@ -476,12 +571,15 @@ function handleSelectText(payload: {
   if (rebindingAnnotation.value) rebindOperationGeneration += 1
   editingAnnotation.value = null
   selectedAnnotationIds.value = []
+  annotationSelectionMode.value = false
   selectedTextDraft.value = payload
+  if (isMobileViewport.value) mobileAnnotationOpen.value = true
 }
 
 function handleCancelAnnotation() {
   clearRebindState()
   editingAnnotation.value = null
+  annotationSelectionMode.value = false
 }
 
 async function handleSaveAnnotation(body: string) {
@@ -497,7 +595,7 @@ async function handleSaveAnnotation(body: string) {
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
 
-  await createAnnotation(props.songId, {
+  const annotation = await createAnnotation(props.songId, {
     line_key: lineKey,
     selected_text: selectedTextDraft.value.selectedText,
     start_offset: selectedTextDraft.value.startOffset,
@@ -506,6 +604,8 @@ async function handleSaveAnnotation(body: string) {
   })
 
   selectedTextDraft.value = null
+  annotationSelectionMode.value = false
+  if (annotation?.id) selectedAnnotationIds.value = [annotation.id]
 }
 
 function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
@@ -513,6 +613,8 @@ function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
   clearRebindState()
   editingAnnotation.value = null
   rebindingAnnotation.value = annotation
+  annotationSelectionMode.value = true
+  if (isMobileViewport.value) mobileAnnotationOpen.value = false
 }
 
 function versionDiffLabel(kind: MusicLyricsVersionDiffKind) {
@@ -550,7 +652,14 @@ async function handleConfirmRebind() {
 function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
   if (!isAuthenticated.value) return
   clearRebindState()
+  annotationSelectionMode.value = false
   editingAnnotation.value = annotation
+  if (isMobileViewport.value) mobileAnnotationOpen.value = true
+}
+
+function closeMobileAnnotations() {
+  mobileAnnotationOpen.value = false
+  handleCancelAnnotation()
 }
 
 function clearRebindState() {
@@ -798,6 +907,7 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
@@ -806,16 +916,17 @@ function cancelLyricsConflict() {
 }
 
 .music-lyrics-panel__close {
-  border: 0;
-  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--a-color-border-soft);
+  padding: 0.5rem;
   background: transparent;
   color: var(--a-color-text);
   cursor: pointer;
   font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   border-radius: 4px;
   box-shadow: none;
 }
@@ -941,7 +1052,7 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
   gap: 1.25rem;
 }
 
@@ -970,6 +1081,7 @@ function cancelLyricsConflict() {
   gap: 1rem;
   border-left: 1px solid var(--a-color-border-soft);
   padding-left: 1.25rem;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {
@@ -987,6 +1099,10 @@ function cancelLyricsConflict() {
 
   .music-lyrics-panel__layout {
     grid-template-columns: 1fr;
+  }
+
+  .music-lyrics-panel__main {
+    padding-right: 0;
   }
 
   .music-lyrics-panel__sidebar {
@@ -1012,7 +1128,7 @@ function cancelLyricsConflict() {
   font-size: 12px;
   font-weight: 700;
   border: 0;
-  border-radius: 20px;
+  border-radius: 4px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
   cursor: pointer;
   z-index: 10;
@@ -1020,5 +1136,11 @@ function cancelLyricsConflict() {
 }
 .lyrics-sync-btn:hover {
   transform: translateX(-50%) scale(1.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-sync-btn {
+    transition: none;
+  }
 }
 </style>

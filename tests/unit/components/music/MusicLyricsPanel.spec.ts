@@ -104,7 +104,7 @@ vi.mock('@/composables/usePendingMusicLyricsAnnotations', () => ({
 
 vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
   default: {
-    props: ['line', 'annotations', 'active', 'bilingual', 'canSelect'],
+    props: ['line', 'annotations', 'active', 'bilingual', 'canSelect', 'canAnnotate', 'annotationMode'],
     template: `
       <div
         class="lyrics-line-stub music-lyrics-line"
@@ -121,6 +121,9 @@ vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
         </button>
         <button type="button" class="select-text" @click="$emit('select-text', { line, selectedText: 'Neon', startOffset: 0, endOffset: 4 })">
           选中文本
+        </button>
+        <button v-if="annotationMode && canAnnotate" type="button" class="annotate-line" @click="$emit('annotate-line', line)">
+          注释整句
         </button>
       </div>
     `,
@@ -331,7 +334,7 @@ describe('MusicLyricsPanel.vue', () => {
 
     await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
 
-    expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1')
+    expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1 条注释')
   })
 
   it('在歌词正文前展示歌曲名与已有署名', async () => {
@@ -360,6 +363,26 @@ describe('MusicLyricsPanel.vue', () => {
       selected_text: 'Neon',
       start_offset: 0,
       end_offset: 4,
+      body: '新的注释',
+    })
+  })
+
+  it('从明确入口进入选择模式并创建整句注释', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="annotation-create-trigger"]').trigger('click')
+    expect(wrapper.text()).toContain('选择歌词片段')
+
+    await wrapper.get('[data-line-id="line-2"] .annotate-line').trigger('click')
+    expect(wrapper.get('.annotation-editor-selected').text()).toBe('Midnight radio')
+
+    await wrapper.get('.annotation-save').trigger('click')
+    expect(mocks.createAnnotation).toHaveBeenCalledWith('song-1', {
+      line_key: 'line-2',
+      selected_text: 'Midnight radio',
+      start_offset: 0,
+      end_offset: 14,
       body: '新的注释',
     })
   })
@@ -736,12 +759,12 @@ describe('MusicLyricsPanel.vue', () => {
     expect(mocks.revertVersion).not.toHaveBeenCalled()
   })
 
-  it('仅有翻译时提供原文和双语切换，并在切歌后恢复双语', async () => {
+  it('仅有翻译时提供原文和翻译切换，并在切歌后恢复翻译模式', async () => {
     const wrapper = await mountPanel()
     await flushPromises()
 
     expect(wrapper.get('.lyrics-mode-stub').text()).toContain('原文')
-    expect(wrapper.get('.lyrics-mode-stub').text()).toContain('双语')
+    expect(wrapper.get('.lyrics-mode-stub').text()).toContain('翻译')
     expect(wrapper.get('.lyrics-mode-stub').attributes('data-model')).toBe('bilingual')
     expect(wrapper.get('[data-line-id="line-1"]').attributes('data-bilingual')).toBe('true')
 

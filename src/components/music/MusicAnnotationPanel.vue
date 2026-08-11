@@ -1,12 +1,29 @@
 <template>
   <aside class="music-annotation-panel">
     <header class="music-annotation-panel__header">
-      <h3>注释</h3>
-      <span class="music-annotation-panel__count">{{ annotations.length }}</span>
+      <div>
+        <h3>{{ title }}</h3>
+        <span class="music-annotation-panel__count">{{ displayCount }} 条注释</span>
+      </div>
+      <PButton
+        v-if="showCreateAction"
+        type="button"
+        size="sm"
+        :variant="selectionMode ? 'primary' : 'secondary'"
+        data-testid="annotation-create-trigger"
+        @click="emit('create')"
+      >
+        <Plus :size="16" aria-hidden="true" />
+        {{ selectionMode ? '选择歌词' : '添加注释' }}
+      </PButton>
     </header>
 
-    <p v-if="!annotations.length" class="music-annotation-panel__empty">
-      暂无注释
+    <p v-if="selectionMode" class="music-annotation-panel__hint" role="status">
+      选择歌词片段，或点击某行的“注释”。
+    </p>
+
+    <p v-else-if="!annotations.length" class="music-annotation-panel__empty">
+      {{ displayCount ? '选择带标记的歌词查看注释' : '暂无注释' }}
     </p>
 
     <article
@@ -82,6 +99,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { Plus } from 'lucide-vue-next'
 import type { MusicLyricsAnnotation, MusicLyricsAnnotationVote } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
 
@@ -89,10 +108,17 @@ const props = withDefaults(defineProps<{
   annotations?: MusicLyricsAnnotation[]
   canWrite?: boolean
   currentUserIds?: string[]
+  title?: string
+  totalCount?: number
+  showCreateAction?: boolean
+  selectionMode?: boolean
 }>(), {
   annotations: () => [],
   canWrite: false,
   currentUserIds: () => [],
+  title: '解析',
+  showCreateAction: false,
+  selectionMode: false,
 })
 
 const emit = defineEmits<{
@@ -100,7 +126,10 @@ const emit = defineEmits<{
   edit: [annotation: MusicLyricsAnnotation]
   delete: [annotationId: string]
   rebind: [annotation: MusicLyricsAnnotation]
+  create: []
 }>()
+
+const displayCount = computed(() => props.totalCount ?? props.annotations.length)
 
 function collectIdentityValues(value: Record<string, unknown> | null | undefined) {
   if (!value) return []
@@ -128,16 +157,20 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   align-content: start;
   gap: 1rem;
   padding: 1rem;
-  border-left: 1px solid var(--a-color-border-soft);
-  background: color-mix(in srgb, var(--a-color-bg) 84%, #f3eadc 16%);
+  background: var(--a-color-bg);
   overflow: auto;
 }
 
 .music-annotation-panel__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.music-annotation-panel__header > div {
+  display: grid;
+  gap: 0.2rem;
 }
 
 .music-annotation-panel__header h3 {
@@ -149,10 +182,17 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 
 .music-annotation-panel__count,
 .music-annotation-panel__empty,
+.music-annotation-panel__hint,
 .music-annotation-card__score,
 .music-annotation-card__status {
   color: var(--a-color-muted);
   font-size: 0.82rem;
+}
+
+.music-annotation-panel__empty,
+.music-annotation-panel__hint {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .music-annotation-card__status {

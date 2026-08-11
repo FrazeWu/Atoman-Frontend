@@ -69,4 +69,34 @@ describe('MusicLyricsLine', () => {
     // 125000 ms = 125 seconds = 02:05
     expect(timeEl.text()).toBe('02:05')
   })
+
+  it('shows annotation count and opens all active annotations', async () => {
+    const line = { line_key: 'line-1', text: 'Hello world', translation: '' }
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line,
+        annotations: [
+          { id: 'a-1', status: 'active', start_offset: 0, end_offset: 5 },
+          { id: 'a-2', status: 'active', start_offset: 6, end_offset: 11 },
+        ] as any,
+      },
+    })
+
+    const action = wrapper.get('.music-lyrics-line__annotation-action')
+    expect(action.text()).toBe('2')
+    await action.trigger('click')
+    expect(wrapper.emitted('open-annotations')).toEqual([[
+      { line, annotationIds: ['a-1', 'a-2'] },
+    ]])
+  })
+
+  it('offers a whole-line action while annotation mode is active', async () => {
+    const line = { line_key: 'line-1', text: 'Hello world', translation: '' }
+    const wrapper = mount(MusicLyricsLine, {
+      props: { line, canAnnotate: true, annotationMode: true },
+    })
+
+    await wrapper.get('.music-lyrics-line__annotation-action--create').trigger('click')
+    expect(wrapper.emitted('annotate-line')).toEqual([[line]])
+  })
 })

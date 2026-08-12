@@ -626,7 +626,7 @@ async function schedulePublish() {
             @update:model-value="form.visibility = $event as 'public' | 'followers' | 'private'"
           />
 
-          <p v-if="errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
+          <p v-if="errorMsg || videoImportState?.error" class="ve-error" role="alert">{{ errorMsg || videoImportState?.error }}</p>
           <p v-if="draftSaved" class="ve-saved" aria-live="polite">草稿已保存</p>
 
           <ContentScheduleControl

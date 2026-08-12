@@ -9,6 +9,7 @@ import { useStudioStore } from '@/stores/studio'
 
 let autoCompleteUpload = true
 let releaseUpload: (() => void) | null = null
+let uploadNetworkFailures = 0
 
 const importTask = (overrides: Record<string, unknown> = {}) => ({
   id: 'import-1', status: 'uploading', file_name: 'clip.mp4', file_size: 5, content_type: 'video/mp4',
@@ -67,6 +68,7 @@ describe('VideoEditorView', () => {
   beforeEach(() => {
     autoCompleteUpload = true
     releaseUpload = null
+    uploadNetworkFailures = 0
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
@@ -74,6 +76,10 @@ describe('VideoEditorView', () => {
       if (url.endsWith('/videos/imports') && init?.method === 'POST') return makeJsonResponse(importTask())
       if (url.endsWith('/videos/imports/import-1/parts/1') && init?.method === 'POST') return makeJsonResponse({ part_number: 1, upload_url: 'https://storage.test/part-1' })
       if (url === 'https://storage.test/part-1' && init?.method === 'PUT') {
+        if (uploadNetworkFailures > 0) {
+          uploadNetworkFailures -= 1
+          throw new TypeError('Failed to fetch')
+        }
         if (!autoCompleteUpload) await new Promise<void>(resolve => { releaseUpload = resolve })
         return new Response('', { status: 200, headers: { ETag: '"etag-1"' } })
       }
@@ -133,6 +139,21 @@ describe('VideoEditorView', () => {
     expect(wrapper.text()).toContain('自动封面生成失败，可手动上传封面')
   })
 
+  it('retries a transient object storage network failure', async () => {
+    uploadNetworkFailures = 1
+    const { wrapper } = await setup('/studio/video/new')
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+
+    await fileInput.trigger('change')
+
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoUploaded).toBe(true))
+    expect(wrapper.vm.$.setupState.videoImportState.error).toBe('')
+    const uploads = vi.mocked(fetch).mock.calls.filter(([input, init]) => String(input) === 'https://storage.test/part-1' && init?.method === 'PUT')
+    expect(uploads).toHaveLength(2)
+  })
+
   it('continues to information while the selected video is still uploading', async () => {
     autoCompleteUpload = false
     const { wrapper } = await setup('/studio/video/new')
@@ -166,6 +187,28 @@ describe('VideoEditorView', () => {
 
     const fetchMock = vi.mocked(fetch)
     expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')).toBe(true)
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/imports?task=import-1')
+    releaseUpload?.()
+  })
+
+  it('submits publish intent without waiting for the pending upload', async () => {
+    autoCompleteUpload = false
+    const { wrapper, router } = await setup('/studio/video/new')
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+    await fileInput.trigger('change')
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1'))
+
+    wrapper.vm.$.setupState.form.title = 'Publishing video'
+    wrapper.vm.$.setupState.selectedCollectionIds = ['collection-1']
+    wrapper.vm.$.setupState.requestPublish()
+    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
+    await wrapper.vm.$.setupState.doPublish()
+    await flushPromises()
+
+    const submitCall = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toMatchObject({ publish_mode: 'published' })
     expect(router.currentRoute.value.fullPath).toBe('/studio/video/imports?task=import-1')
     releaseUpload?.()
   })

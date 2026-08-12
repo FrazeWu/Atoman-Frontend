@@ -23,6 +23,18 @@ const uploads = ref<Record<string, UploadState>>({})
 const selectedFiles = new Map<string, File>()
 const generations = new Map<string, number>()
 
+async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await operation()
+    } catch (cause) {
+      lastError = cause
+    }
+  }
+  throw lastError
+}
+
 function setUploadState(id: string, patch: Partial<UploadState>) {
   const current = uploads.value[id]
   if (!current) return
@@ -75,22 +87,25 @@ export function useVideoImportUpload() {
           const startByte = (partNumber - 1) * task.part_size
           const endByte = Math.min(startByte + task.part_size, file.size)
           const chunk = file.slice(startByte, endByte)
-          const signed = await createVideoImportPartUpload(id, partNumber, token.value)
-          const response = await apiRequest(signed.upload_url, { method: 'PUT', body: chunk })
-          if (!response.ok) throw new Error(`第 ${partNumber} 个分片上传失败`)
-          const etag = response.headers.get('ETag') || response.headers.get('etag')
-          if (!etag) throw new Error('对象存储未返回 ETag')
+          const signed = await retry(() => createVideoImportPartUpload(id, partNumber, token.value))
+          const etag = await retry(async () => {
+            const response = await apiRequest(signed.upload_url, { method: 'PUT', body: chunk })
+            if (!response.ok) throw new Error(`第 ${partNumber} 个分片上传失败`)
+            const value = response.headers.get('ETag') || response.headers.get('etag')
+            if (!value) throw new Error('对象存储未返回 ETag')
+            return value
+          })
           return { partNumber, etag, size: chunk.size }
         }))
         for (const part of uploadedParts) {
           if (!part || !isCurrent()) return
-          task = await completeVideoImportPart(id, part.partNumber, part.etag, part.size, token.value)
+          task = await retry(() => completeVideoImportPart(id, part.partNumber, part.etag, part.size, token.value))
           completed.add(part.partNumber)
           setUploadState(id, { task, progress: progressOf(task) })
         }
       }
       if (!isCurrent()) return
-      task = await completeVideoImport(id, token.value)
+      task = await retry(() => completeVideoImport(id, token.value))
       setUploadState(id, { task, uploading: false, progress: 100, error: '' })
       selectedFiles.delete(id)
     } catch (cause) {

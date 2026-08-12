@@ -262,14 +262,29 @@ watch(
         <header class="song-detail__lyrics-header">
           <h2>歌词</h2>
           <div class="song-detail__lyrics-actions">
-            <PSegmentedControl
+            <PButton
               v-if="hasTranslation"
-              v-model="lyricsDisplayMode"
-              :options="lyricsDisplayOptions"
-              aria-label="歌词显示"
-            />
-            <PButton data-testid="song-detail-edit-lyrics" size="sm" variant="secondary" @click="openLyricsEditor">
-              <Pencil :size="15" aria-hidden="true" />编辑歌词
+              size="sm"
+              :variant="lyricsDisplayMode === 'original' ? 'primary' : 'secondary'"
+              @click="lyricsDisplayMode = 'original'"
+            >
+              原文
+            </PButton>
+            <PButton
+              v-if="hasTranslation"
+              size="sm"
+              :variant="lyricsDisplayMode === 'translation' ? 'primary' : 'secondary'"
+              @click="lyricsDisplayMode = 'translation'"
+            >
+              翻译
+            </PButton>
+            <PButton
+              data-testid="song-detail-edit-lyrics"
+              size="sm"
+              variant="warning"
+              @click="openLyricsEditor"
+            >
+              编辑
             </PButton>
           </div>
         </header>

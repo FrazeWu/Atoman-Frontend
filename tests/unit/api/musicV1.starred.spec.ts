@@ -14,10 +14,9 @@ import {
   mergeMusicArtists,
   mergeMusicAlbums,
   musicV1Endpoints,
-  listSongBookmarks,
-  getSongBookmarkStatus,
-  createSongBookmark,
-  deleteSongBookmark,
+  getMusicPlaylistSongStatus,
+  addMusicPlaylistSong,
+  removeMusicPlaylistSong,
   reorderMusicPlaylistSongs,
   updateMusicPlaylist,
 } from '@/api/musicV1'
@@ -57,8 +56,7 @@ describe('music v1 starred and playlist adapters', () => {
   it('builds starred and playlist endpoint paths', () => {
     expect(musicV1Endpoints.artistBookmarks()).toBe('/api/v1/music/bookmarks/artists')
     expect(musicV1Endpoints.albumBookmarks()).toBe('/api/v1/music/bookmarks/albums')
-    expect(musicV1Endpoints.songBookmarks()).toBe('/api/v1/music/bookmarks/songs')
-		expect(musicV1Endpoints.songBookmarkStatus()).toBe('/api/v1/music/bookmarks/songs/status')
+		expect(musicV1Endpoints.playlistSongStatus('playlist-1')).toBe('/api/v1/music/playlists/playlist-1/songs/status')
 		expect(musicV1Endpoints.playlistBookmarks()).toBe('/api/v1/music/bookmarks/playlists')
 		expect(musicV1Endpoints.playlistBookmark('playlist-1')).toBe('/api/v1/music/bookmarks/playlists/playlist-1')
     expect(musicV1Endpoints.playlists()).toBe('/api/v1/music/playlists')
@@ -68,24 +66,24 @@ describe('music v1 starred and playlist adapters', () => {
     expect(musicV1Endpoints.albumDiscussions('album-1')).toBe('/api/v1/discussions/music_album/album-1/comments')
   })
 
-	it('queries and mutates standalone song bookmarks', async () => {
+	it('queries and mutates playlist song membership', async () => {
 		vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input)
 			if (url.includes('/status')) {
 				return new Response(JSON.stringify({ data: { song_ids: ['song-1'] } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 			}
-			if (url === '/api/v1/music/bookmarks/songs' && init?.method === 'POST') {
-				return new Response(JSON.stringify({ data: { id: 'bookmark-1', song_id: 'song-1' } }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+			if (url === '/api/v1/music/playlists/playlist-1/songs' && init?.method === 'POST') {
+				return new Response(JSON.stringify({ data: { playlist_id: 'playlist-1', song_id: 'song-1' } }), { status: 201, headers: { 'Content-Type': 'application/json' } })
 			}
-			if (url === '/api/v1/music/bookmarks/songs/song-1' && init?.method === 'DELETE') {
+			if (url === '/api/v1/music/playlists/playlist-1/songs/song-1' && init?.method === 'DELETE') {
 				return new Response(JSON.stringify({ data: { deleted: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 			}
 			throw new Error(`unexpected fetch: ${url}`)
 		}))
 
-		expect(await getSongBookmarkStatus(['song-1', 'song-2'])).toEqual(['song-1'])
-		await createSongBookmark('song-1')
-		await deleteSongBookmark('song-1')
+		expect(await getMusicPlaylistSongStatus('playlist-1', ['song-1', 'song-2'])).toEqual(['song-1'])
+		await addMusicPlaylistSong('playlist-1', 'song-1')
+		await removeMusicPlaylistSong('playlist-1', 'song-1')
 		expect(fetch).toHaveBeenCalledTimes(3)
 	})
 
@@ -97,9 +95,6 @@ describe('music v1 starred and playlist adapters', () => {
       }
       if (url === '/api/v1/music/bookmarks/albums') {
         return new Response(JSON.stringify({ data: [{ id: 'album-bookmark-1', album_id: 'album-1', created_at: '2026-07-01T00:00:00Z' }], meta: { page: 1, page_size: 20, total: 1, has_more: false } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      }
-      if (url === '/api/v1/music/bookmarks/songs') {
-        return new Response(JSON.stringify({ data: [{ id: 'song-bookmark-1', song_id: 'song-1', created_at: '2026-07-01T00:00:00Z', song: { id: 'song-1', title: 'cellophane', entry_status: 'open' } }], meta: { page: 1, page_size: 20, total: 1, has_more: false } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
       if (url === '/api/v1/music/bookmarks/playlists') {
         return new Response(JSON.stringify({ data: [{ id: 'playlist-bookmark-1', playlist_id: 'playlist-1', created_at: '2026-07-01T00:00:00Z', playlist: { id: 'playlist-1', name: '夜航歌单', song_count: 2 } }], meta: { page: 1, page_size: 20, total: 1, has_more: false } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -116,10 +111,9 @@ describe('music v1 starred and playlist adapters', () => {
       throw new Error(`unexpected fetch: ${url}`)
     }))
 
-    const [artistBookmarks, albumBookmarks, songBookmarks, playlistBookmarks, playlists, starred] = await Promise.all([
+    const [artistBookmarks, albumBookmarks, playlistBookmarks, playlists, starred] = await Promise.all([
       listArtistBookmarks(),
       listAlbumBookmarks(),
-      listSongBookmarks(),
       listPlaylistBookmarks(),
       listMusicPlaylists(),
       listMusicStarred(),
@@ -127,10 +121,9 @@ describe('music v1 starred and playlist adapters', () => {
 
     expect(artistBookmarks.data).toHaveLength(1)
     expect(albumBookmarks.data).toHaveLength(1)
-    expect(songBookmarks.data).toHaveLength(1)
 		expect(playlistBookmarks.data[0]?.playlist?.name).toBe('夜航歌单')
     expect(playlists.data).toHaveLength(1)
-    expect(starred.map((item) => item.kind)).toEqual(['artist', 'album', 'song', 'playlist'])
+    expect(starred.map((item) => item.kind)).toEqual(['artist', 'album', 'playlist'])
   })
 
 	it('creates and deletes playlist bookmarks through the playlist bookmark endpoint', async () => {

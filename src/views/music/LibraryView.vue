@@ -168,7 +168,10 @@ async function load(nextPage = 1) {
         nextPage === 1 ? listMusicPlaylists({ page: 1, page_size: 100 }) : Promise.resolve(null),
       ])
       const rows = response.data.map(item => item.playlist).filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
-      const favorite = ownedResponse?.data.find(playlist => playlist.kind === 'favorite')
+      const favorite = ownedResponse?.data.find(playlist => (
+        playlist.kind === 'favorite'
+        && (!keyword || playlist.name.toLocaleLowerCase().includes(keyword.toLocaleLowerCase()))
+      ))
       favoritePlaylistId.value = favorite ? String(favorite.id) : favoritePlaylistId.value
       const pageRows = favorite && !rows.some(playlist => String(playlist.id) === String(favorite.id))
         ? [favorite, ...rows]

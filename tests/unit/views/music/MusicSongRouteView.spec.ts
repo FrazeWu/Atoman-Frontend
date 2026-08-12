@@ -32,7 +32,10 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 }))
 vi.mock('@/composables/useLoginRedirect', () => ({ useLoginRedirect: () => ({ requireLogin: () => true }) }))
 vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
-  useMusicFavoritePlaylist: () => ({ favoriteSongIds: ref(new Set<string>()), toggleFavoriteSong: vi.fn() }),
+	useMusicFavoritePlaylist: () => ({
+		favoriteSongIds: ref(new Set<string>()), playlists: ref([]),
+		loadFavoriteSongs: vi.fn(), loadPlaylists: vi.fn(), toggleFavoriteSong: vi.fn(), addSongToPlaylist: vi.fn(),
+	}),
 }))
 vi.mock('@/composables/useMusicLyrics', () => ({
   useMusicLyrics: () => ({
@@ -65,7 +68,7 @@ vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
 function detail(id: string, title: string) {
   return {
     song: { id, title, audio_url: `/${id}.mp3`, artists: [], status: 'open' },
-    artists: [], bookmarked: false, playable: true, previous: null, next: null,
+    artists: [], playable: true, previous: null, next: null,
   }
 }
 

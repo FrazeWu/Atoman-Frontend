@@ -63,6 +63,7 @@ export function useMusicFavoritePlaylist() {
 
   async function addSongToPlaylist(playlistId: string, songId: string) {
     await addMusicPlaylistSong(playlistId, songId)
+    if (playlistId === favoritePlaylistId.value) setSongFavorite(songId, true)
     refreshPlaylists()
   }
 

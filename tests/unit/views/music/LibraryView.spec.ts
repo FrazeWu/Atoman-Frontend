@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   deleteAlbumBookmark: vi.fn(),
   deleteArtistBookmark: vi.fn(),
   deletePlaylistBookmark: vi.fn(),
-  deleteSongBookmark: vi.fn(),
+  listMusicPlaylists: vi.fn(),
   removeMusicSongFromLater: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('@/api/musicV1', () => ({
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
   deleteArtistBookmark: mocks.deleteArtistBookmark,
   deletePlaylistBookmark: mocks.deletePlaylistBookmark,
-  deleteSongBookmark: mocks.deleteSongBookmark,
+  listMusicPlaylists: mocks.listMusicPlaylists,
   removeMusicSongFromLater: mocks.removeMusicSongFromLater,
 }))
 
@@ -57,7 +57,8 @@ describe('LibraryView', () => {
     mocks.deleteAlbumBookmark.mockReset()
     mocks.deleteArtistBookmark.mockReset()
     mocks.deletePlaylistBookmark.mockReset()
-    mocks.deleteSongBookmark.mockReset()
+    mocks.listMusicPlaylists.mockReset()
+		mocks.listMusicPlaylists.mockResolvedValue({ data: [{ id: 'favorite-1', name: '最爱', kind: 'favorite', song_count: 1 }] })
     mocks.removeMusicSongFromLater.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
@@ -94,68 +95,49 @@ describe('LibraryView', () => {
     expect(mocks.listMusicLibrary).toHaveBeenCalledTimes(1)
     await vi.advanceTimersByTimeAsync(250)
     await flushPromises()
-    expect(mocks.listMusicLibrary).toHaveBeenLastCalledWith('song', expect.objectContaining({ q: 'Late Registration', page: 1 }))
+    expect(mocks.listMusicLibrary).toHaveBeenLastCalledWith('album', expect.objectContaining({ q: 'Late Registration', page: 1 }))
     vi.useRealTimers()
   })
 
   it('resets old pagination before loading a different collection kind', async () => {
-    let resolveAlbums!: (value: unknown) => void
-    const albumRequest = new Promise(resolve => { resolveAlbums = resolve })
+    let resolveArtists!: (value: unknown) => void
+    const artistRequest = new Promise(resolve => { resolveArtists = resolve })
     mocks.listMusicLibrary
       .mockResolvedValueOnce({
-        data: [{ song: { id: 'song-1', title: 'Song 1', audio_url: '/song-1.mp3' } }],
+			  data: [{ album: { id: 'album-1', title: 'Album 1' } }],
         meta: { page: 1, page_size: 24, total: 25, has_more: true },
       })
-      .mockReturnValueOnce(albumRequest)
+		  .mockReturnValueOnce(artistRequest)
 
     const wrapper = mount(LibraryView)
     await flushPromises()
     expect(wrapper.text()).toContain('加载更多')
 
-    await wrapper.get('[data-option="album"]').trigger('click')
+		await wrapper.get('[data-option="artist"]').trigger('click')
     expect(wrapper.text()).not.toContain('加载更多')
     expect(mocks.listMusicLibrary).toHaveBeenCalledTimes(2)
 
-    resolveAlbums({
-      data: [{ album: { id: 'album-1', title: 'Album 1', entry_status: 'open' } }],
+		resolveArtists({
+		  data: [{ artist: { id: 'artist-1', name: 'Artist 1', entry_status: 'open' } }],
       meta: { page: 1, page_size: 24, total: 1, has_more: false },
     })
     await flushPromises()
-    expect(wrapper.text()).toContain('Album 1')
+		expect(wrapper.text()).toContain('Artist 1')
   })
 
-  it('opens artist and album details from a saved song', async () => {
-    mocks.deleteSongBookmark.mockResolvedValue(undefined)
-    mocks.listMusicLibrary.mockResolvedValue({
-      data: [{
-        song: {
-          id: 'song-1', title: 'Song 1', audio_url: '/song-1.mp3', entry_status: 'open',
-          artists: [{ id: 'artist-1', name: 'Artist 1' }],
-          album: { id: 'album-1', title: 'Album 1' },
-        },
-      }],
-      meta: { page: 1, page_size: 24, total: 1, has_more: false },
-    })
-
-    const wrapper = mount(LibraryView, { global: { stubs: { RouterLink: true } } })
-    await flushPromises()
-    expect(wrapper.findAll('[data-testid="library-song-card"]')).toHaveLength(1)
-    await wrapper.get('[data-testid="library-song-artist-artist-1"]').trigger('click')
-    await wrapper.get('[data-testid="library-song-album-album-1"]').trigger('click')
-
-    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
-    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
-
-    await wrapper.get('[aria-label="取消收藏 Song 1"]').trigger('click')
-    await flushPromises()
-    expect(mocks.deleteSongBookmark).toHaveBeenCalledWith('song-1')
-    expect(wrapper.find('[data-testid="library-song-card"]').exists()).toBe(false)
-  })
+	it('shows the favorite playlist instead of a song collection', async () => {
+		mocks.listMusicLibrary.mockResolvedValue({ data: [], meta: { page: 1, page_size: 24, total: 0, has_more: false } })
+		const wrapper = mount(LibraryView)
+		await flushPromises()
+		expect(wrapper.find('[data-option="song"]').exists()).toBe(false)
+		await wrapper.get('[data-option="playlist"]').trigger('click')
+		await flushPromises()
+		expect(wrapper.get('[data-testid="library-playlist-card"]').text()).toContain('最爱')
+		expect(wrapper.find('[data-testid="library-playlist-card"] [aria-label="收藏"]').exists()).toBe(false)
+	})
 
   it('renders album bookmarks as cards and removes them in place', async () => {
-    mocks.listMusicLibrary
-      .mockResolvedValueOnce({ data: [], meta: { page: 1, page_size: 24, total: 0, has_more: false } })
-      .mockResolvedValueOnce({
+    mocks.listMusicLibrary.mockResolvedValueOnce({
         data: [{ album: { id: 'album-1', title: 'Album 1', artists: [{ id: 'artist-1', name: 'Artist 1' }] } }],
         meta: { page: 1, page_size: 24, total: 1, has_more: false },
       })
@@ -163,9 +145,6 @@ describe('LibraryView', () => {
 
     const wrapper = mount(LibraryView)
     await flushPromises()
-    await wrapper.get('[data-option="album"]').trigger('click')
-    await flushPromises()
-
     const card = wrapper.get('[data-testid="library-album-card"]')
     await card.get('[aria-label="打开专辑 Album 1"]').trigger('click')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')

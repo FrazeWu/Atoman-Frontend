@@ -571,7 +571,6 @@ export type MusicStarredItem = {
   starred_at: string;
   artist?: MusicArtistListItem;
   album?: MusicAlbumListItem;
-  song?: MusicSongListItem;
   playlist?: MusicPlaylistSummary;
 };
 

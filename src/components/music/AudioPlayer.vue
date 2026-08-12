@@ -39,7 +39,7 @@
             class="player-cover"
           />
           <div v-else class="player-cover-fallback">{{ coverFallback }}</div>
-          <span class="cover-overlay" aria-hidden="true"><FileText :size="20" /></span>
+          <span class="cover-overlay" aria-hidden="true"><ChevronUp :size="20" /></span>
         </button>
         <div
           ref="playerMetaRef"
@@ -316,7 +316,7 @@ import {
   Clock,
   Pin,
   PinOff,
-  FileText,
+  ChevronUp,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";

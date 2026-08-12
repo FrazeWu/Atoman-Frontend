@@ -289,7 +289,6 @@ function currentCommentTime() {
               :src="video.video_url"
               :poster="video.thumbnail_url || undefined"
               class="vd-native"
-              controls
               preload="metadata"
               @timeupdate="syncCurrentPlaybackTime"
               @loadedmetadata="restoreInitialPlaybackPosition"

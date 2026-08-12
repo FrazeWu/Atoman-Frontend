@@ -49,6 +49,11 @@ const VideoContinueListStub = defineComponent({
   template: '<aside>{{ videos.map((video) => video.title).join(",") }}</aside>',
 })
 
+const VideoPlayerControlsStub = defineComponent({
+  name: 'VideoPlayerControls',
+  template: '<div data-test="video-player-controls" />',
+})
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((res) => {
@@ -107,7 +112,7 @@ async function mountVideoDetail(path = '/videos/watch/video-1', authenticated = 
         CommentSection: CommentSectionStub,
         PVideoPlayerShell: PVideoPlayerShellStub,
         VideoContinueList: VideoContinueListStub,
-        VideoPlayerControls: { template: '<div />' },
+        VideoPlayerControls: VideoPlayerControlsStub,
       },
     },
   })
@@ -206,7 +211,8 @@ describe('VideoDetailView shared interactions', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
 
     const { wrapper } = await mountVideoDetail()
-    expect(wrapper.get('video').attributes('controls')).toBeDefined()
+    expect(wrapper.get('video').attributes('controls')).toBeUndefined()
+    expect(wrapper.find('[data-test="video-player-controls"]').exists()).toBe(true)
     const video = wrapper.get('video').element as HTMLVideoElement
     Object.defineProperty(video, 'currentTime', { configurable: true, value: 12.8, writable: true })
     const comments = wrapper.findComponent(CommentSectionStub)

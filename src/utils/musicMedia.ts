@@ -3,6 +3,21 @@ import type { Song } from '@/types'
 
 type MusicAlbumSongLike = NonNullable<MusicAlbumListItem['songs']>[number]
 
+export function formatAlbumTypeLabel(type?: string) {
+  if (!type) return '专辑'
+  const labels: Record<string, string> = {
+    album: '专辑',
+    ep: 'EP',
+    single: '单曲',
+    leak: '泄曲',
+    compilation: '精选集',
+    live: '现场专辑',
+    soundtrack: '原声带',
+    demo: 'Demo',
+  }
+  return labels[type.toLowerCase()] ?? type
+}
+
 export function compareAlbumTracks(
   left: Pick<MusicAlbumSongLike, 'disc_number' | 'track_number'>,
   right: Pick<MusicAlbumSongLike, 'disc_number' | 'track_number'>,

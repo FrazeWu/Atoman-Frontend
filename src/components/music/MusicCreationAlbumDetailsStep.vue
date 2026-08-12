@@ -59,6 +59,7 @@ const albumTypeOptions = [
   { label: '专辑', value: 'album' },
   { label: 'EP', value: 'ep' },
   { label: '单曲', value: 'single' },
+	{ label: '泄曲', value: 'leak' },
 	{ label: '混音带', value: 'mixtape' },
   { label: '精选集', value: 'compilation' },
   { label: '原声带', value: 'soundtrack' },

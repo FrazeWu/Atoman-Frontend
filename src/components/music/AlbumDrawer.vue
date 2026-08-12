@@ -29,7 +29,7 @@ import {
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
-import { buildPlayableSongsFromAlbum, compareAlbumTracks, resolveAlbumCoverUrl } from '@/utils/musicMedia'
+import { buildPlayableSongsFromAlbum, compareAlbumTracks, formatAlbumTypeLabel, resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/musicAlbumCredits'
@@ -501,7 +501,7 @@ watch(
           <span v-else>暂无封面</span>
         </div>
         <div class="album-info">
-          <div class="album-type">{{ album?.album_type || '专辑' }}</div>
+          <div class="album-type">{{ formatAlbumTypeLabel(album?.album_type) }}</div>
           <h2 class="album-title">{{ album?.title || `Album ${albumId}` }}</h2>
           <div class="meta-tags">
             <span class="artist-name">

@@ -7,6 +7,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -25,6 +26,7 @@ import {
   type MusicArtistListItem,
 } from '@/api/musicV1'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
+import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -68,25 +70,19 @@ const hasMemberGroups = computed(() => (
 ))
 
 type AlbumSortMode = 'date-desc' | 'date-asc' | 'hot-desc'
+type ReleaseType = 'album' | 'song'
 const albumSortMode = ref<AlbumSortMode>('date-desc')
+const releaseType = ref<ReleaseType>('album')
+const releaseTypeOptions = [
+  { label: '专辑', value: 'album', testid: 'artist-release-type-album' },
+  { label: '歌曲', value: 'song', testid: 'artist-release-type-song' },
+]
 
 const albumSortOptions = [
   { label: '最新发布 (降序)', value: 'date-desc' },
   { label: '最早发布 (升序)', value: 'date-asc' },
   { label: '按热度排序', value: 'hot-desc' },
 ]
-
-function formatAlbumTypeLabel(type?: string) {
-  if (!type) return '专辑'
-  const lower = type.toLowerCase()
-  if (lower === 'ep') return 'EP'
-  if (lower === 'single') return '单曲'
-  if (lower === 'compilation') return '精选集'
-  if (lower === 'live') return '现场专辑'
-  if (lower === 'soundtrack') return '原声带'
-  if (lower === 'demo') return 'Demo'
-  return type
-}
 
 function formatAlbumReleaseDate(album: MusicAlbumListItem) {
   if (album.release_date) {
@@ -172,7 +168,12 @@ async function loadArtist(targetArtistId: string | null) {
       return
     }
     redirectMessage.value = ''
-    const albumsResponse = await listMusicAlbums({ artist_id: targetArtistId, page: 1, page_size: albumPageSize })
+    const albumsResponse = await listMusicAlbums({
+      artist_id: targetArtistId,
+      release_type: releaseType.value,
+      page: 1,
+      page_size: albumPageSize,
+    })
     if (!isCurrentLoad()) return
     artist.value = artistResponse
     albums.value = albumsResponse.data
@@ -222,7 +223,12 @@ async function loadMoreAlbums() {
   const { isCurrent } = albumRequests.beginRequest()
   albumsLoadingMore.value = true
   try {
-    const response = await listMusicAlbums({ artist_id: currentArtistId, page: nextPage, page_size: albumPageSize })
+    const response = await listMusicAlbums({
+      artist_id: currentArtistId,
+      release_type: releaseType.value,
+      page: nextPage,
+      page_size: albumPageSize,
+    })
     if (!isCurrent() || artistId.value !== currentArtistId) return
     const byId = new Map(albums.value.map((album) => [album.id, album]))
     response.data.forEach((album) => byId.set(album.id, album))
@@ -305,6 +311,13 @@ watch(
   },
   { immediate: true },
 )
+
+watch(releaseType, () => {
+  albums.value = []
+  albumPage.value = 1
+  albumsHaveMore.value = false
+  void loadArtist(artistId.value)
+})
 </script>
 
 <template>
@@ -436,8 +449,8 @@ watch(
       </div>
 
       <div class="album-list-header">
-        <h3>专辑列表</h3>
-        <div class="album-sort-controls">
+        <PSegmentedControl v-model="releaseType" :options="releaseTypeOptions" />
+        <div class="album-list-controls">
           <PSelect
             v-model="albumSortMode"
             :options="albumSortOptions"
@@ -448,8 +461,10 @@ watch(
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="loading" class="state-line">正在加载专辑...</p>
-      <p v-else-if="!sortedAlbums.length" class="state-line">暂无专辑，可以添加新专辑。</p>
+      <p v-else-if="loading" class="state-line">正在加载...</p>
+      <p v-else-if="!sortedAlbums.length" class="state-line">
+        {{ releaseType === 'album' ? '暂无专辑，可以添加新专辑。' : '暂无歌曲。' }}
+      </p>
 
       <div
         v-for="album in sortedAlbums"
@@ -669,7 +684,7 @@ watch(
 }
 .album-list-header h3 { font-size: 1.15rem; font-weight: 500; margin: 0; letter-spacing: 0; }
 
-.album-sort-controls {
+.album-list-controls {
   min-width: 150px;
 }
 
@@ -758,6 +773,18 @@ watch(
 }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
+
+@media (max-width: 640px) {
+  .album-list-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .album-list-controls {
+    width: 100%;
+  }
+}
 
 .artist-header-profile {
   display: flex;

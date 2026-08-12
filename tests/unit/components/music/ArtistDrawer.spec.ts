@@ -143,11 +143,38 @@ describe('ArtistDrawer.vue', () => {
     expect(wrapper.text()).toContain('曾用名：Kanye West / kanye')
     
     // Check if album list is rendered
-    expect(wrapper.text()).toContain('专辑列表')
+    expect(wrapper.get('[data-testid="artist-release-type-album"]').text()).toBe('专辑')
+    expect(wrapper.get('[data-testid="artist-release-type-song"]').text()).toBe('歌曲')
     expect(wrapper.text()).toContain('The Dark Side of the Moon')
     expect(wrapper.text()).toContain('Wish You Were Here')
     expect(wrapper.text()).toContain('1973')
     expect(wrapper.text()).toContain('1975')
+  })
+
+  it('loads single and leak releases when switching to songs', async () => {
+    const wrapper = mount(ArtistDrawer)
+    await vi.dynamicImportSettled()
+    listMusicAlbums.mockResolvedValueOnce({
+      data: [
+        { id: '3', title: 'New Single', album_type: 'single', entry_status: 'open' },
+        { id: '4', title: 'Unreleased Track', album_type: 'leak', entry_status: 'open' },
+      ],
+      meta: { page: 1, page_size: 24, total: 2, has_more: false },
+    })
+
+    await wrapper.get('[data-testid="artist-release-type-song"]').trigger('click')
+    await vi.dynamicImportSettled()
+
+    expect(listMusicAlbums).toHaveBeenLastCalledWith({
+      artist_id: '1',
+      release_type: 'song',
+      page: 1,
+      page_size: 24,
+    })
+    expect(wrapper.text()).toContain('New Single')
+    expect(wrapper.text()).toContain('单曲')
+    expect(wrapper.text()).toContain('Unreleased Track')
+    expect(wrapper.text()).toContain('泄曲')
   })
 
   it('opens artist history from the contributors block', async () => {
@@ -288,13 +315,13 @@ describe('ArtistDrawer.vue', () => {
     const wrapper = mount(ArtistDrawer)
     await vi.dynamicImportSettled()
 
-    expect(listMusicAlbums).toHaveBeenNthCalledWith(1, { artist_id: '1', page: 1, page_size: 24 })
+    expect(listMusicAlbums).toHaveBeenNthCalledWith(1, { artist_id: '1', release_type: 'album', page: 1, page_size: 24 })
     const loadMoreButton = wrapper.findAll('button').find((button) => button.text().includes('加载更多'))
     expect(loadMoreButton).toBeDefined()
     await loadMoreButton!.trigger('click')
     await vi.dynamicImportSettled()
 
-    expect(listMusicAlbums).toHaveBeenNthCalledWith(2, { artist_id: '1', page: 2, page_size: 24 })
+    expect(listMusicAlbums).toHaveBeenNthCalledWith(2, { artist_id: '1', release_type: 'album', page: 2, page_size: 24 })
     expect(wrapper.text()).toContain('First Page')
     expect(wrapper.text()).toContain('Second Page')
   })

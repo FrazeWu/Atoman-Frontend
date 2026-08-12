@@ -126,9 +126,10 @@ const isArtistForm = computed(() => currentAction.value === 'revise_artist')
 const isAlbumForm = computed(() => currentAction.value === 'revise')
 const canSubmit = computed(() => !submitting.value && (isArtistForm.value || isAlbumForm.value))
 const albumTypeOptions = [
-  { label: 'Album', value: 'album' },
+  { label: '专辑', value: 'album' },
   { label: 'EP', value: 'ep' },
-  { label: 'Single', value: 'single' },
+  { label: '单曲', value: 'single' },
+  { label: '泄曲', value: 'leak' },
 ]
 
 watch(() => [currentAction.value, albumId.value, artistId.value, songId.value] as const, () => {

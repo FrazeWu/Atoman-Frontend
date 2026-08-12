@@ -698,6 +698,7 @@ export type MusicListFilters = {
   q?: string;
   artist_id?: string;
   album_id?: string;
+  release_type?: "album" | "song";
   year?: string | number;
   status?: MusicEntryStatus;
   page?: number;

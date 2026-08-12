@@ -106,7 +106,7 @@ describe('host-scoped route tables', () => {
   it('registers video detail pages under the video module root', () => {
     const videoRoot = moduleRoutes.video.find((route) => route.path === '/')
     const children = videoRoot?.children || []
-    const detailRoute = children.find((route) => route.path === 'videos/watch/:id')
+    const detailRoute = children.find((route) => route.path === 'watch/:id')
 
     expect(detailRoute).toBeTruthy()
     expect(lazyImportPath(detailRoute?.component)).toContain('VideoDetailView.vue')
@@ -115,8 +115,17 @@ describe('host-scoped route tables', () => {
   it('registers the approved video destinations', () => {
     const root = moduleRoutes.video.find(route => route.path === '/')
     const routePaths = root?.children?.map(route => route.path)
-    expect(routePaths).toEqual(expect.arrayContaining(['', 'subscriptions', 'favorites', 'videos/watch/:id']))
+    expect(routePaths).toEqual(expect.arrayContaining(['', 'subscriptions', 'favorites', 'watch/:id']))
     expect(routePaths).not.toEqual(expect.arrayContaining(['creator', 'manage', 'upload', 'edit/:id']))
+  })
+
+  it('resolves the canonical video detail path without redirect recursion', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
+
+    await router.push('/videos/watch/video-1')
+
+    expect(router.currentRoute.value.fullPath).toBe('/videos/watch/video-1')
+    expect(router.currentRoute.value.matched.at(-1)?.path).toBe('/videos/watch/:id')
   })
 
   it('defines entity profile routes as aggregation spaces', () => {

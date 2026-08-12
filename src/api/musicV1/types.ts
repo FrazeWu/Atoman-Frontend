@@ -471,6 +471,7 @@ export type MusicSongListItem = {
   track_number?: number;
   disc_number?: number;
   audio_url?: string;
+  waveform_peaks?: number[];
   cover_url?: string;
   lyrics?: string;
   status?: string;

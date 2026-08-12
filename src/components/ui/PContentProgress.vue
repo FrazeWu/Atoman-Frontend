@@ -62,7 +62,7 @@ const props = withDefaults(
     error?: string | boolean | null
     slowThresholdSeconds?: number
     timeoutSeconds?: number
-    retry?: () => void | Promise<void>
+    retry?: () => any
   }>(),
   {
     loading: false,

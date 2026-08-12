@@ -3,6 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PButton from '@/components/ui/PButton.vue'
 import {
@@ -682,11 +684,25 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     </template>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="state-line">正在加载...</p>
-    <p v-else-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
-    <p v-else-if="contentMode === 'discover' && !personalizedAlbums.length && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !recentPlaybackItems.length" class="state-line">暂无发现内容</p>
 
-    <section v-else-if="contentMode === 'albums'" class="album-index">
+    <PContentProgress
+      :loading="loading"
+      :retry="fetchMusicHome"
+    >
+      <template #skeleton>
+        <div class="discover-grid" style="padding-top: 1rem;">
+          <div v-for="i in 8" :key="i" style="display:flex;flex-direction:column;gap:0.75rem;">
+            <PSkeleton height="160px" variant="rect" />
+            <PSkeleton width="70%" height="18px" />
+            <PSkeleton width="40%" height="14px" />
+          </div>
+        </div>
+      </template>
+
+      <p v-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
+      <p v-else-if="contentMode === 'discover' && !personalizedAlbums.length && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !recentPlaybackItems.length" class="state-line">暂无发现内容</p>
+
+      <section v-else-if="contentMode === 'albums'" class="album-index">
       <div class="discover-grid" aria-label="专辑列表">
         <MusicAlbumCard
           v-for="album in localFilteredAlbums"
@@ -762,6 +778,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       </section>
       <PButton v-if="musicHome?.discover_meta.has_more" variant="secondary" :disabled="discoverLoadingMore" class="discover-load-more" @click="loadMoreDiscover">{{ discoverLoadingMore ? '加载中' : '加载更多' }}</PButton>
     </div>
+    </PContentProgress>
   </section>
 </template>
 

@@ -26,17 +26,26 @@
       <PButton outline @click="loadDebates">筛选</PButton>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="p-8 text-center">
-      <p class="font-bold">加载中...</p>
-    </div>
+    <!-- Debate List with PContentProgress -->
+    <PContentProgress
+      :loading="loading"
+      :error="error"
+      :retry="loadDebates"
+    >
+      <template #skeleton>
+        <div class="debate-list">
+          <div v-for="i in 6" :key="i" style="padding:1rem 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+            <PSkeleton width="50%" height="20px" style="margin-bottom:8px" />
+            <PSkeleton width="80%" height="16px" />
+          </div>
+        </div>
+      </template>
 
-    <!-- Empty State -->
-    <PEmpty v-else-if="error && debates.length === 0" title="加载失败" description="请刷新页面或稍后重试。" />
-    <PEmpty v-else-if="debates.length === 0" title="暂无辩题" description="成为第一个发起辩论探讨的人。" />
+      <!-- Empty State -->
+      <PEmpty v-if="debates.length === 0" title="暂无辩题" description="成为第一个发起辩论探讨的人。" />
 
-    <!-- Debate List -->
-    <div v-else class="debate-list">
+      <!-- Debate List -->
+      <div v-else class="debate-list">
       <PEntry
         v-for="debate in debates"
         :key="debate.id"
@@ -82,6 +91,7 @@
         </template>
       </PEntry>
     </div>
+    </PContentProgress>
 
     <!-- Load More -->
     <div v-if="debates.length > 0 && debates.length < debatesTotal" class="mt-6 text-center">
@@ -125,6 +135,8 @@ import { useDebateStore } from '@/stores/debate'
 import PReferenceField from '@/components/shared/PReferenceField.vue'
 import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'

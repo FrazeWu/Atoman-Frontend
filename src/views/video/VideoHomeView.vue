@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { getVideoRecommendations, listVideos } from '@/api/video'
+import { getVideo, getVideoRecommendations, listVideos } from '@/api/video'
 import { computed, ref, onMounted, watch } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import type { Video } from '@/types'
@@ -9,13 +11,7 @@ import PVideoCard from '@/components/shared/PVideoCard.vue'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 
 const videos = ref<Video[]>([])
-const recommendedVideos = ref<Array<{
-  id: string
-  title: string
-  thumbnail_url?: string
-  created_at?: string
-  view_count?: number
-}>>([])
+const recommendedVideos = ref<Video[]>([])
 const loading = ref(false)
 const recommendationLoading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
@@ -29,6 +25,7 @@ type RecommendedVideoPayload = {
   id: string
   title: string
   image_url?: string
+  target_path?: string
 }
 let fetchVideosSeq = 0
 
@@ -48,13 +45,7 @@ async function fetchRecommendedVideos() {
   try {
     const data = await getVideoRecommendations<RecommendedVideoPayload>(recommendationMode.value)
     recommendedVideos.value = Array.isArray(data.data)
-      ? data.data.map((item) => ({
-          id: item.id,
-          title: item.title,
-          thumbnail_url: item.image_url,
-          created_at: '',
-          view_count: 0,
-        }))
+      ? await Promise.all(data.data.map(item => getVideo(item.id)))
       : []
   } catch {
     recommendedVideos.value = []
@@ -89,22 +80,29 @@ watch(sort, fetchVideos)
         />
       </div>
 
-      <div v-if="recommendationLoading" class="vh-grid">
-        <div v-for="i in 4" :key="i" class="vh-skel">
-          <div class="vh-skel-thumb" />
-          <div class="vh-skel-info">
-            <div class="vh-skel-avatar" />
-            <div class="vh-skel-lines">
-              <div class="vh-skel-line" style="width:85%" />
-              <div class="vh-skel-line" style="width:55%" />
+      <PContentProgress
+        :loading="recommendationLoading"
+        :retry="fetchRecommendedVideos"
+      >
+        <template #skeleton>
+          <div class="vh-grid">
+            <div v-for="i in 4" :key="i" class="vh-skel">
+              <div class="vh-skel-thumb" />
+              <div class="vh-skel-info">
+                <div class="vh-skel-avatar" />
+                <div class="vh-skel-lines">
+                  <div class="vh-skel-line" style="width:85%" />
+                  <div class="vh-skel-line" style="width:55%" />
+                </div>
+              </div>
             </div>
           </div>
+        </template>
+        <PEmpty v-if="recommendedVideos.length === 0" title="暂无推荐" description="探索更多频道或搜索你感兴趣的视频。" />
+        <div v-else class="vh-grid vh-grid--recommendation">
+          <PVideoCard v-for="video in recommendedVideos" :key="video.id" :video="video" />
         </div>
-      </div>
-      <PEmpty v-else-if="recommendedVideos.length === 0" title="暂无推荐" description="探索更多频道或搜索你感兴趣的视频。" />
-      <div v-else class="vh-grid vh-grid--recommendation">
-        <PVideoCard v-for="video in recommendedVideos" :key="video.id" :video="video as Video" />
-      </div>
+      </PContentProgress>
     </section>
 
     <!-- Sticky filter bar -->
@@ -122,26 +120,30 @@ watch(sort, fetchVideos)
       </div>
     </div>
 
-    <!-- Skeleton -->
-    <div v-if="loading" class="vh-grid">
-      <div v-for="i in 12" :key="i" class="vh-skel">
-        <div class="vh-skel-thumb" />
-        <div class="vh-skel-info">
-          <div class="vh-skel-avatar" />
-          <div class="vh-skel-lines">
-            <div class="vh-skel-line" style="width:85%" />
-            <div class="vh-skel-line" style="width:55%" />
-            <div class="vh-skel-line" style="width:40%" />
+    <!-- Main Videos List -->
+    <PContentProgress
+      :loading="loading"
+      :retry="fetchVideos"
+    >
+      <template #skeleton>
+        <div class="vh-grid">
+          <div v-for="i in 8" :key="i" class="vh-skel">
+            <div class="vh-skel-thumb" />
+            <div class="vh-skel-info">
+              <div class="vh-skel-avatar" />
+              <div class="vh-skel-lines">
+                <div class="vh-skel-line" style="width:85%" />
+                <div class="vh-skel-line" style="width:55%" />
+              </div>
+            </div>
           </div>
         </div>
+      </template>
+      <PEmpty v-if="videos.length === 0" title="暂无视频" description="当前分区还没有发布视频。" />
+      <div v-else class="vh-grid">
+        <PVideoCard v-for="video in videos" :key="video.id" :video="video" />
       </div>
-    </div>
-
-    <PEmpty v-else-if="videos.length === 0" title="暂无视频" description="作者发布新的视频后会在这里呈现。" />
-
-    <div v-else class="vh-grid">
-      <PVideoCard v-for="v in videos" :key="v.id" :video="v" />
-    </div>
+    </PContentProgress>
   </div>
 </template>
 

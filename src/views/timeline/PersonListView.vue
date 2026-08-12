@@ -12,17 +12,26 @@
       <PButton outline :disabled="deleting || !!deletingPerson" @click="doSearch">搜索</PButton>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading && persons.length === 0" style="padding:4rem;text-align:center">
-      <p class="font-bold">加载中...</p>
-    </div>
+    <!-- Content list with PContentProgress -->
+    <PContentProgress
+      :loading="loading"
+      :error="error"
+      :retry="() => store.fetchPersons({ page: currentPage, limit, search: appliedSearch })"
+    >
+      <template #skeleton>
+        <div class="person-list">
+          <div v-for="i in 6" :key="i" style="padding:1rem 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+            <PSkeleton width="30%" height="20px" style="margin-bottom:8px" />
+            <PSkeleton width="70%" height="16px" />
+          </div>
+        </div>
+      </template>
 
-    <!-- Empty -->
-    <PEmpty v-else-if="error && persons.length === 0" text="人物加载失败，请重试" title="加载失败" description="人物数据加载失败，请重试。" />
-    <PEmpty v-else-if="persons.length === 0" text="暂无历史人物" title="暂无历史人物" description="建立人物档案与地图轨迹。" />
+      <!-- Empty -->
+      <PEmpty v-if="persons.length === 0" text="暂无历史人物" title="暂无历史人物" description="建立人物档案与地图轨迹。" />
 
-    <!-- List -->
-    <div v-else class="person-list">
+      <!-- List -->
+      <div v-else class="person-list">
       <PEntry
         v-for="person in persons"
         :key="person.id"
@@ -65,6 +74,7 @@
         </template>
       </PEntry>
     </div>
+    </PContentProgress>
 
     <div v-if="persons.length > 0 && (paginationInvalidated || persons.length < personsTotal)" style="margin-top:1.5rem;text-align:center">
       <PButton
@@ -132,6 +142,8 @@ import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import PButton from '@/components/ui/PButton.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'

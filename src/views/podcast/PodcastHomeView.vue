@@ -3,6 +3,7 @@ import { getPodcastRecommendations, listPodcastEpisodes } from '@/api/podcast'
 import { computed, onMounted, ref } from 'vue'
 import { Headphones, Play } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -44,13 +45,17 @@ const recommendationOptions = [
   { label: '探索', value: 'discover' },
 ]
 
-onMounted(async () => {
+async function loadEpisodes() {
   loading.value = true
   try {
     episodes.value = await listPodcastEpisodes()
   } finally {
     loading.value = false
   }
+}
+
+onMounted(async () => {
+  await loadEpisodes()
   void fetchRecommendedEpisodes()
 })
 
@@ -113,32 +118,39 @@ function playEpisode(ep: PodcastEpisode) {
         />
       </div>
 
-      <div v-if="recommendationLoading" class="ph-recommendation-grid" aria-label="正在加载推荐">
-        <div v-for="i in 3" :key="i" class="ph-recommendation-card-skeleton" style="display:flex;flex-direction:column;gap:0.75rem;">
-          <PSkeleton height="180px" variant="rect" />
-          <PSkeleton width="80%" height="20px" variant="text" />
-          <PSkeleton width="50%" height="16px" variant="text" />
+      <PContentProgress
+        :loading="recommendationLoading"
+        :retry="fetchRecommendedEpisodes"
+      >
+        <template #skeleton>
+          <div class="ph-recommendation-grid" aria-label="正在加载推荐">
+            <div v-for="i in 3" :key="i" class="ph-recommendation-card-skeleton" style="display:flex;flex-direction:column;gap:0.75rem;">
+              <PSkeleton height="180px" variant="rect" />
+              <PSkeleton width="80%" height="20px" variant="text" />
+              <PSkeleton width="50%" height="16px" variant="text" />
+            </div>
+          </div>
+        </template>
+        <PEmpty v-if="recommendedEpisodes.length === 0" title="暂无推荐" description="探索更多播客频道以接收个性化单集推荐。" />
+        <div v-else class="ph-recommendation-grid">
+          <RouterLink
+            v-for="item in recommendedEpisodes"
+            :key="item.id"
+            :to="item.targetPath"
+            class="ph-recommendation-card"
+          >
+            <div class="ph-recommendation-cover">
+              <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" loading="lazy" />
+              <Headphones v-else :size="28" aria-hidden="true" />
+            </div>
+            <div class="ph-recommendation-content">
+              <span class="ph-score">{{ item.scoreLabel }}</span>
+              <h3>{{ item.title }}</h3>
+              <p v-if="item.summary">{{ item.summary }}</p>
+            </div>
+          </RouterLink>
         </div>
-      </div>
-      <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" description="探索更多播客频道以接收个性化单集推荐。" />
-      <div v-else class="ph-recommendation-grid">
-        <RouterLink
-          v-for="item in recommendedEpisodes"
-          :key="item.id"
-          :to="item.targetPath"
-          class="ph-recommendation-card"
-        >
-          <div class="ph-recommendation-cover">
-            <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" loading="lazy" />
-            <Headphones v-else :size="28" aria-hidden="true" />
-          </div>
-          <div class="ph-recommendation-content">
-            <span class="ph-score">{{ item.scoreLabel }}</span>
-            <h3>{{ item.title }}</h3>
-            <p v-if="item.summary">{{ item.summary }}</p>
-          </div>
-        </RouterLink>
-      </div>
+      </PContentProgress>
     </section>
 
     <section class="ph-latest" aria-labelledby="ph-latest-title">
@@ -149,17 +161,23 @@ function playEpisode(ep: PodcastEpisode) {
         </div>
       </div>
 
-      <div v-if="loading" class="ph-episode-list" aria-label="正在加载单集">
-        <div v-for="i in 4" :key="i" style="display:flex;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--a-color-border-soft);">
-          <PSkeleton width="64px" height="64px" variant="rect" />
-          <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem;">
-            <PSkeleton width="40%" height="18px" />
-            <PSkeleton width="90%" height="14px" />
+      <PContentProgress
+        :loading="loading"
+        :retry="loadEpisodes"
+      >
+        <template #skeleton>
+          <div class="ph-episode-list" aria-label="正在加载单集">
+            <div v-for="i in 4" :key="i" style="display:flex;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--a-color-border-soft);">
+              <PSkeleton width="64px" height="64px" variant="rect" />
+              <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem;">
+                <PSkeleton width="40%" height="18px" />
+                <PSkeleton width="90%" height="14px" />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <PEmpty v-else-if="episodes.length === 0" title="暂无单集" description="作者发布新内容后会在这里呈现。" />
-      <div v-else class="ph-episode-list">
+        </template>
+        <PEmpty v-if="episodes.length === 0" title="暂无单集" description="作者发布新内容后会在这里呈现。" />
+        <div v-else class="ph-episode-list">
         <article v-for="ep in episodes" :key="ep.id" class="ph-episode-row">
           <div class="ph-episode-cover">
             <img v-if="episodeCover(ep)" :src="episodeCover(ep)" :alt="ep.post?.title || '单集封面'" loading="lazy" />
@@ -188,6 +206,7 @@ function playEpisode(ep: PodcastEpisode) {
           </PButton>
         </article>
       </div>
+      </PContentProgress>
     </section>
   </div>
 </template>

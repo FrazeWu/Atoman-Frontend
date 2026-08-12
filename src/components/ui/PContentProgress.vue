@@ -1,34 +1,41 @@
 <template>
   <div class="p-content-progress">
-    <div v-if="loading" class="p-content-progress__overlay">
-      <!-- 背景骨架屏插槽 -->
-      <div v-if="$slots.skeleton" class="p-content-progress__skeleton-wrapper">
+    <!-- 加载中遮罩卡片/居中区 -->
+    <div v-if="loading || error" class="p-content-progress__overlay">
+      <!-- 背景骨架屏插槽 (如果有) -->
+      <div v-if="loading && $slots.skeleton" class="p-content-progress__skeleton-wrapper">
         <slot name="skeleton" />
       </div>
 
-      <!-- 居中加载条 -->
+      <!-- 居中加载区 -->
       <div class="p-content-progress__loader" role="status" aria-label="正在加载">
-        <div class="p-content-progress__track">
-          <div class="p-content-progress__bar" />
-        </div>
-        <p class="p-content-progress__text">正在加载</p>
-      </div>
-    </div>
+        <template v-if="loading && !error">
+          <div class="p-content-progress__track">
+            <div class="p-content-progress__bar" />
+          </div>
+          <div class="p-content-progress__stage-wrap">
+            <Transition name="stage-slide" mode="out-in">
+              <span :key="stageIndex" class="p-content-progress__text">
+                <template v-if="stageIndex === 3">
+                  加载时间较长，<button type="button" class="p-content-progress__retry-link" @click="handleRetry">重新加载</button>
+                </template>
+                <template v-else>
+                  {{ currentText }}
+                </template>
+              </span>
+            </Transition>
+          </div>
+        </template>
 
-    <!-- 错误状态 -->
-    <div v-else-if="error" class="p-content-progress__overlay">
-      <div class="p-content-progress__loader">
-        <div class="p-content-progress__error-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </div>
-        <p class="p-content-progress__text">{{ typeof error === 'string' ? error : '加载失败' }}</p>
-        <button v-if="retry" type="button" class="p-content-progress__retry-btn" @click="retry?.()">
-          重新加载
-        </button>
+        <!-- 显式错误状态 -->
+        <template v-else-if="error">
+          <div class="p-content-progress__stage-wrap">
+            <span class="p-content-progress__text p-content-progress__text--error">
+              {{ typeof error === 'string' ? error : '加载失败' }}，
+              <button type="button" class="p-content-progress__retry-link" @click="handleRetry">重新加载</button>
+            </span>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -40,11 +47,87 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  loading?: boolean
-  error?: string | boolean | null
-  retry?: () => any
-}>()
+import { ref, computed, watch, onUnmounted } from 'vue'
+
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean
+    error?: string | boolean | null
+    retry?: () => any
+  }>(),
+  {
+    loading: false,
+    error: null,
+  }
+)
+
+const stageTexts = [
+  '正在加载',
+  '网络较慢，请稍候',
+  '仍在加载中…',
+  '加载时间较长'
+]
+
+const stageIndex = ref(0)
+const currentText = computed(() => stageTexts[stageIndex.value] || stageTexts[0])
+
+let timers: ReturnType<typeof setTimeout>[] = []
+
+function clearTimers() {
+  timers.forEach((t) => clearTimeout(t))
+  timers = []
+}
+
+function startStageTimers() {
+  clearTimers()
+  stageIndex.value = 0
+
+  // 3s -> 阶段 1
+  timers.push(
+    setTimeout(() => {
+      if (props.loading) stageIndex.value = 1
+    }, 3000)
+  )
+
+  // 8s -> 阶段 2
+  timers.push(
+    setTimeout(() => {
+      if (props.loading) stageIndex.value = 2
+    }, 8000)
+  )
+
+  // 15s -> 阶段 3（提示重新加载）
+  timers.push(
+    setTimeout(() => {
+      if (props.loading) stageIndex.value = 3
+    }, 15000)
+  )
+}
+
+function handleRetry() {
+  if (props.retry) {
+    props.retry()
+  } else {
+    window.location.reload()
+  }
+}
+
+watch(
+  () => props.loading,
+  (newVal) => {
+    if (newVal) {
+      startStageTimers()
+    } else {
+      clearTimers()
+      stageIndex.value = 0
+    }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  clearTimers()
+})
 </script>
 
 <style scoped>
@@ -96,46 +179,72 @@ defineProps<{
   width: 45%;
   background: var(--a-color-primary, #3b82f6);
   border-radius: 999px;
-  animation: p-bar-slide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: p-bar-slide 1.6s linear infinite;
 }
 
 @keyframes p-bar-slide {
-  0%   { transform: translateX(-120%); }
-  60%  { transform: translateX(240%); }
+  0% { transform: translateX(-120%); }
   100% { transform: translateX(240%); }
 }
 
-/* 文字 */
+/* 阶段文字垂直滑动容器 */
+.p-content-progress__stage-wrap {
+  width: 260px;
+  height: 1.4rem;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .p-content-progress__text {
   font-size: 0.8125rem;
   color: var(--a-color-muted, #94a3b8);
   font-weight: 500;
-  margin: 0;
+  line-height: 1.4rem;
+  white-space: nowrap;
+  text-align: center;
+  display: block;
 }
 
-/* 错误图标 */
-.p-content-progress__error-icon {
-  color: var(--a-color-danger, #ef4444);
+.p-content-progress__text--error {
+  color: var(--a-color-text, #1e293b);
 }
 
-/* 重试按钮 */
-.p-content-progress__retry-btn {
+.p-content-progress__retry-link {
   border: 0;
   background: none;
   color: var(--a-color-primary, #3b82f6);
-  font-size: 0.8125rem;
+  font-size: inherit;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
-  margin-top: 0.25rem;
+  display: inline;
 }
 
-.p-content-progress__retry-btn:hover {
-  opacity: 0.7;
+.p-content-progress__retry-link:hover {
+  opacity: 0.75;
 }
 
 .p-content-progress__content {
   width: 100%;
+}
+
+/* 向上滑出 / 向下滑入 Transition */
+.stage-slide-enter-active,
+.stage-slide-leave-active {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+}
+
+.stage-slide-enter-from {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.stage-slide-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
 }
 </style>

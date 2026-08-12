@@ -20,38 +20,39 @@ describe('PContentProgress', () => {
 
     expect(wrapper.find('.p-content-progress__overlay').exists()).toBe(true)
     expect(wrapper.find('.p-content-progress__bar').exists()).toBe(true)
-    expect(wrapper.text()).toContain('正在加载...')
+    expect(wrapper.text()).toContain('正在加载')
   })
 
-  it('shows slow network warning when loading exceeds threshold', async () => {
+  it('shows slow network message at 3s and longer loading at 8s', async () => {
     const wrapper = mount(PContentProgress, {
       props: {
-        loading: true,
-        slowThresholdSeconds: 3
+        loading: true
       }
     })
 
     vi.advanceTimersByTime(3100)
     await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('网络较慢，请稍候')
 
-    expect(wrapper.text()).toContain('网络连接较慢，正在加载...')
+    vi.advanceTimersByTime(5000)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('仍在加载中…')
   })
 
-  it('shows timeout warning and retry button when loading exceeds timeout', async () => {
+  it('shows timeout reload option at 15s and triggers retry', async () => {
     const retryFn = vi.fn()
     const wrapper = mount(PContentProgress, {
       props: {
         loading: true,
-        timeoutSeconds: 8,
         retry: retryFn
       }
     })
 
-    vi.advanceTimersByTime(8100)
+    vi.advanceTimersByTime(15100)
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('加载超时，请检查网络')
-    const retryBtn = wrapper.find('.p-content-progress__retry-btn')
+    expect(wrapper.text()).toContain('加载时间较长')
+    const retryBtn = wrapper.find('.p-content-progress__retry-link')
     expect(retryBtn.exists()).toBe(true)
 
     await retryBtn.trigger('click')

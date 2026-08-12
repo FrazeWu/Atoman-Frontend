@@ -3,6 +3,7 @@ import {
   buildLyricsAnnotationIndex,
   computeCurrentLyricLine,
   mergeLyricsWithTranslation,
+  normalizeLegacyLrcLines,
   parseLrcLyrics,
   parsePlainLyrics,
 } from '@/utils/musicLyrics'
@@ -51,6 +52,16 @@ describe('musicLyrics utils', () => {
         endTimeMs: null,
         lineNumber: 1,
       },
+    ])
+  })
+
+  it('restores timestamps from legacy LRC lines stored as plain lyrics', () => {
+    expect(normalizeLegacyLrcLines([
+      { line_key: 'line-1', text: '[00:01.50]Hello', translation: '', time_ms: null },
+      { line_key: 'line-2', text: '[01:03]World', translation: '', time_ms: null },
+    ])).toEqual([
+      { line_key: 'line-1', text: 'Hello', translation: '', time_ms: 1500 },
+      { line_key: 'line-2', text: 'World', translation: '', time_ms: 63000 },
     ])
   })
 

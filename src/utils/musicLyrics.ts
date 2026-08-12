@@ -24,13 +24,33 @@ function buildLrcLineId(startTimeMs: number, index: number) {
 }
 
 function parseLrcTimestamp(token: string): number | null {
-  const match = token.match(/^(\d{2,}):(\d{2})(?:\.(\d{1,3}))?$/)
+  const match = token.match(/^(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?$/)
   if (!match) return null
   const [, minutesToken = '', secondsToken = '', fractionToken = ''] = match
   const minutes = Number(minutesToken)
   const seconds = Number(secondsToken)
+  if (seconds >= 60) return null
   const fraction = fractionToken.padEnd(3, '0').slice(0, 3)
   return (minutes * 60 * 1000) + (seconds * 1000) + Number(fraction || '0')
+}
+
+const legacyLrcPrefixPattern = /^\s*((?:\[\d{1,3}:\d{2}(?:\.\d{1,3})?\])+)(.*)$/
+
+export function normalizeLegacyLrcLines(lines: MusicSongLyricsLine[]): MusicSongLyricsLine[] {
+  return lines.map((line) => {
+    if (line.time_ms != null || line.startTimeMs != null) return line
+
+    const match = line.text.match(legacyLrcPrefixPattern)
+    const timestamp = match?.[1]?.match(/^\[([^\]]+)\]/)?.[1]
+    const timeMs = timestamp ? parseLrcTimestamp(timestamp) : null
+    if (timeMs === null || !match) return line
+
+    return {
+      ...line,
+      time_ms: timeMs,
+      text: match[2].trim(),
+    }
+  })
 }
 
 export function parsePlainLyrics(content: string): MusicSongLyricsLine[] {

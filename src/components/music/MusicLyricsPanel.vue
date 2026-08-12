@@ -148,15 +148,6 @@
             @open-annotations="handleOpenAnnotations"
             @annotate-line="handleAnnotateLine"
           />
-          <button
-            v-if="isUserScrolling"
-            type="button"
-            class="lyrics-sync-btn"
-            @click="resumeAutoScroll"
-          >
-            <LocateFixed :size="16" aria-hidden="true" />
-            回到当前播放
-          </button>
         </div>
       </div>
 
@@ -247,7 +238,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { LocateFixed, MessageSquareText, X } from 'lucide-vue-next'
+import { MessageSquareText, X } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,
@@ -365,12 +356,6 @@ function handleUserScroll() {
     isUserScrolling.value = false
     scrollToActiveLine()
   }, 4000)
-}
-
-function resumeAutoScroll() {
-  if (scrollLockTimer) clearTimeout(scrollLockTimer)
-  isUserScrolling.value = false
-  scrollToActiveLine()
 }
 
 function scrollToActiveLine() {
@@ -1137,43 +1122,4 @@ function cancelLyricsConflict() {
   }
 }
 
-.lyrics-sync-btn {
-  position: sticky;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #020617;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  font-family: var(--a-font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 9999px;
-  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-  z-index: 10;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
-}
-
-:root.dark .lyrics-sync-btn {
-  background: rgba(255, 255, 255, 0.95);
-  color: #020617;
-}
-
-.lyrics-sync-btn:hover {
-  transform: translateX(-50%) translateY(-2px) scale(1.03);
-  background: #ffffff;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lyrics-sync-btn {
-    transition: none;
-  }
-}
 </style>

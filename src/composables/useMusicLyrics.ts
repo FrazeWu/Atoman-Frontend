@@ -16,7 +16,7 @@ import {
   type UpdateMusicLyricsAnnotationInput,
   type UpdateMusicSongLyricsInput,
 } from '@/api/musicV1'
-import { computeCurrentLyricLine } from '@/utils/musicLyrics'
+import { computeCurrentLyricLine, normalizeLegacyLrcLines } from '@/utils/musicLyrics'
 
 function replaceAnnotation(lyrics: MusicSongLyrics, updated: MusicLyricsAnnotation) {
   lyrics.annotations = lyrics.annotations.map((annotation) => annotation.id === updated.id ? updated : annotation)
@@ -93,7 +93,10 @@ export function useMusicLyrics() {
     try {
       const nextLyrics = await getMusicSongLyrics(songId)
       if (requestId !== activeLoadRequestId) return
-      lyrics.value = nextLyrics
+      lyrics.value = {
+        ...nextLyrics,
+        lines: normalizeLegacyLrcLines(nextLyrics.lines),
+      }
     } catch {
       if (requestId !== activeLoadRequestId) return
       lyrics.value = null

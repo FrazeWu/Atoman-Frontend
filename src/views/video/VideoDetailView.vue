@@ -118,6 +118,7 @@ async function load(id: string) {
     video.value = detail
     consumptionTracker = createContentConsumptionTracker({
       onEvent: (event) => {
+        if (!authStore.token) return
         void lifecycle.recordEvent({ module: 'video', content_id: detail.id, event, source: getFirstStringQueryValue(route.query.source) || 'direct' }).catch(() => undefined)
       },
       onProgress: (progress) => {

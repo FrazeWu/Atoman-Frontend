@@ -82,14 +82,14 @@ const makeVideo = (id: string, title: string, extra: Record<string, unknown> = {
   ...extra,
 })
 
-async function mountVideoDetail(path = '/videos/watch/video-1') {
+async function mountVideoDetail(path = '/videos/watch/video-1', authenticated = true) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
   const authStore = useAuthStore()
-  authStore.isAuthenticated = true
-  authStore.token = 'token-1'
-  authStore.user = { uuid: 'user-2', username: 'reader', email: 'reader@example.com' }
+  authStore.isAuthenticated = authenticated
+  authStore.token = authenticated ? 'token-1' : null
+  authStore.user = authenticated ? { uuid: 'user-2', username: 'reader', email: 'reader@example.com' } : null
 
   const router = createRouter({
     history: createMemoryHistory(),
@@ -149,6 +149,14 @@ describe('VideoDetailView shared interactions', () => {
     const comments = wrapper.findComponent(CommentSectionStub)
     expect(comments.props('target')).toEqual({ kind: 'video', resourceId: 'video-1' })
     expect(comments.props('noun')).toBe('评论')
+  })
+
+  it('游客打开视频时不发送需要登录的消费事件', async () => {
+    await mountVideoDetail('/videos/watch/video-1', false)
+
+    const urls = vi.mocked(fetch).mock.calls.map(([input]) => String(input))
+    expect(urls.some((url) => url.endsWith('/content/events'))).toBe(false)
+    expect(urls.some((url) => url.endsWith('/videos/video-1/view'))).toBe(true)
   })
 
   it('仅视频作者或版主可删除任意视频评论', async () => {

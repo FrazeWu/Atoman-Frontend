@@ -24,6 +24,12 @@ const makeJsonResponse = (data: unknown) => new Response(JSON.stringify(data), {
   headers: { 'Content-Type': 'application/json' },
 })
 
+async function goToMedia(wrapper: ReturnType<typeof mount>) {
+  wrapper.vm.$.setupState.form.title = '视频标题'
+  await wrapper.get('[data-testid="creator-next"]').trigger('click')
+  await wrapper.vm.$nextTick()
+}
+
 async function setup(path = '/studio/video/new?collection=collection-2', defaultStatus: 'draft' | 'published' = 'published') {
   const router = createRouter({
     history: createMemoryHistory(),
@@ -126,8 +132,6 @@ describe('VideoEditorView', () => {
 
   it('confirms each tag with Enter and ignores duplicates', async () => {
     const { wrapper } = await setup('/studio/video/new')
-    wrapper.vm.$.setupState.currentStep = 2
-    await wrapper.vm.$nextTick()
     const input = wrapper.get('#video-tag-input')
 
     await input.setValue('骑行')
@@ -146,6 +150,7 @@ describe('VideoEditorView', () => {
 
   it('keeps the import task when automatic cover extraction fails', async () => {
     const { wrapper } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
@@ -162,6 +167,7 @@ describe('VideoEditorView', () => {
   it('retries a transient object storage network failure', async () => {
     uploadNetworkFailures = 1
     const { wrapper } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
@@ -174,9 +180,10 @@ describe('VideoEditorView', () => {
     expect(uploads).toHaveLength(2)
   })
 
-  it('continues to information while the selected video is still uploading', async () => {
+  it('does not continue to publish while the selected video is still uploading', async () => {
     autoCompleteUpload = false
     const { wrapper } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
@@ -186,63 +193,63 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.videoUploading).toBe(true)
 
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
-    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
+    expect(wrapper.text()).toContain('请等待视频上传完成')
 
     releaseUpload?.()
     await flushPromises()
   })
 
-  it('submits draft intent without waiting for the pending upload', async () => {
+  it('does not submit a draft before the pending upload finishes', async () => {
     autoCompleteUpload = false
     const { wrapper, router } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
     await fileInput.trigger('change')
     await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1'))
 
-    wrapper.vm.$.setupState.form.title = 'Uploading video'
     await wrapper.vm.$.setupState.saveDraft()
     await flushPromises()
 
     const fetchMock = vi.mocked(fetch)
-    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')).toBe(true)
-    expect(router.currentRoute.value.fullPath).toBe('/studio/video/imports?task=import-1')
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')).toBe(false)
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/new')
     releaseUpload?.()
   })
 
-  it('submits publish intent without waiting for the pending upload', async () => {
+  it('does not request publish before the pending upload finishes', async () => {
     autoCompleteUpload = false
     const { wrapper, router } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
     await fileInput.trigger('change')
     await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1'))
 
-    wrapper.vm.$.setupState.form.title = 'Publishing video'
     wrapper.vm.$.setupState.selectedCollectionIds = ['collection-1']
     wrapper.vm.$.setupState.requestPublish()
-    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
-    await wrapper.vm.$.setupState.doPublish()
+    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(false)
     await flushPromises()
 
     const submitCall = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')
-    expect(JSON.parse(String(submitCall?.[1]?.body))).toMatchObject({ publish_mode: 'published' })
-    expect(router.currentRoute.value.fullPath).toBe('/studio/video/imports?task=import-1')
+    expect(submitCall).toBeUndefined()
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/new')
     releaseUpload?.()
   })
 
   it('keeps the media information and publish steps inside Studio', async () => {
     const { wrapper } = await setup('/studio/video/new')
-    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
-
-    wrapper.vm.$.setupState.form.storage_type = 'external'
-    wrapper.vm.$.setupState.form.video_url = 'https://example.com/video.mp4'
-    await wrapper.get('[data-testid="creator-next"]').trigger('click')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
 
     wrapper.vm.$.setupState.form.title = '三步视频'
+    wrapper.vm.$.setupState.form.storage_type = 'external'
+    wrapper.vm.$.setupState.form.video_url = 'https://example.com/video.mp4'
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
+
     wrapper.vm.$.setupState.selectedCollectionIds = []
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('发布')

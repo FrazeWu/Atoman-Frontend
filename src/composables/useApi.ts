@@ -274,6 +274,7 @@ export function useApi() {
       bookmark: (id: string) => `${apiUrl}/videos/bookmarks/${id}`,
       comments: (id: string) => `${apiUrl}/discussions/video/${encodeURIComponent(id)}/comments`,
       comment: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}`,
+      likes: `${apiUrl}/videos/likes`,
     },
 
     podcast: {

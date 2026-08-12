@@ -9,7 +9,7 @@ import ContentNotificationMode from '@/components/content/ContentNotificationMod
 type SubscriptionVideo = {
   id: string
   title: string
-  channel?: { id: string; name: string }
+  channel?: { id: string; name: string; slug?: string }
   collections?: Array<{ id: string; name: string }>
   updated_at?: string
   created_at?: string
@@ -18,7 +18,7 @@ type SubscriptionVideo = {
 
 type SourceBookmark = {
   id: string
-  channel?: { id: string; name: string }
+  channel?: { id: string; name: string; slug?: string }
   collection?: { id: string; name: string }
 }
 
@@ -81,7 +81,7 @@ onMounted(async () => {
               v-for="item in channelBookmarks"
               :key="item.id"
             >
-              <RouterLink :to="`/channel/${item.channel?.id}`">{{ item.channel?.name }}</RouterLink>
+              <RouterLink v-if="item.channel" :to="`/channel/${item.channel.slug || item.channel.id}`">{{ item.channel.name }}</RouterLink>
               <ContentNotificationMode v-if="item.channel?.id" source-type="internal_channel" :source-id="item.channel.id" />
             </div>
           </section>

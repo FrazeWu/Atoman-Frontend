@@ -1218,6 +1218,8 @@ export interface Video {
   visibility: 'public' | 'followers' | 'private'
   status: 'draft' | 'published'
   view_count: number
+  like_count?: number
+  liked?: boolean
   subtitle_url?: string
   processing_status?: VideoProcessingStatus
   processing_error?: string

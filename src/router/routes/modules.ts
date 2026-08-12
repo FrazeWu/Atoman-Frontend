@@ -170,6 +170,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: '', component: () => import('@/views/video/VideoHomeView.vue') },
         { path: 'subscriptions', component: () => import('@/views/video/VideoSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'favorites', component: () => import('@/views/video/VideoFavoritesView.vue'), meta: { requiresAuth: true } },
+        { path: 'collections/:id', component: () => import('@/views/video/VideoCollectionView.vue') },
         { path: 'watch/:id', component: () => import('@/views/video/VideoDetailView.vue') },
       ],
     },

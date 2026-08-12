@@ -8,6 +8,7 @@ import {
   deleteVideoImportRecord,
   listVideoImports,
   retryVideoImport,
+  submitVideoImport,
   type VideoImportStatus,
   type VideoImportTask,
 } from '@/api/video'
@@ -131,6 +132,20 @@ async function retryTask() {
   }
 }
 
+async function publishTask() {
+  if (!selected.value || !selected.value.upload_completed_at || selected.value.publish_requested_at) return
+  actionBusy.value = 'publish'
+  error.value = ''
+  try {
+    await submitVideoImport(selected.value.id, selected.value.payload, 'published', null, auth.token ?? undefined)
+    await loadImports(true)
+  } catch (cause) {
+    error.value = errorMessage(cause, '发布失败，请重试')
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
 async function deleteRecord() {
   if (!selected.value || !window.confirm('确认删除这条导入记录？')) return
   actionBusy.value = 'delete'
@@ -239,6 +254,7 @@ function formatDate(value: string) {
             <PButton :loading="actionBusy === 'resume'" @click="chooseResumeFile"><Upload :size="16" aria-hidden="true" />继续上传</PButton>
           </template>
           <PButton v-if="!selected.publish_requested_at && selected.status !== 'canceled'" variant="secondary" @click="router.push(`/studio/video/new?import=${selected.id}`)"><Pencil :size="16" aria-hidden="true" />继续编辑</PButton>
+          <PButton v-if="selected.upload_completed_at && !selected.publish_requested_at && selected.status !== 'canceled'" :loading="actionBusy === 'publish'" @click="publishTask"><Upload :size="16" aria-hidden="true" />立即发布</PButton>
           <PButton v-if="selected.status === 'failed' && selected.upload_completed_at && selected.publish_requested_at" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重试发布</PButton>
           <PButton v-if="selected.target_video_id" variant="secondary" :to="`/videos/watch/${selected.target_video_id}`"><ExternalLink :size="16" aria-hidden="true" />查看视频</PButton>
           <PButton v-if="!selected.target_video_id && selected.status !== 'canceled'" variant="danger" :loading="actionBusy === 'cancel'" @click="cancelTask"><XCircle :size="16" aria-hidden="true" />取消任务</PButton>

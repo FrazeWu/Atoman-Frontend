@@ -99,6 +99,12 @@ function syncInteractionState(detail: VideoDetailResponse) {
   interactions.commentCount.value = detail.comment_count ?? detail.comments_count ?? detail.CommentCount ?? 0
 }
 
+function toggleLocalPlayback() {
+  if (video.value?.storage_type !== 'local' || !videoElement.value) return
+  if (videoElement.value.paused) videoElement.value.play().catch(() => {})
+  else videoElement.value.pause()
+}
+
 async function load(id: string) {
   const seq = ++loadSeq
   loading.value = true
@@ -111,7 +117,7 @@ async function load(id: string) {
   consumptionTracker = null
   try {
     const [detail, recommendations] = await Promise.all([
-      getVideo<VideoDetailResponse>(id),
+      getVideo<VideoDetailResponse>(id, authStore.token ?? undefined),
       getRecommendedVideos<Video[]>(id).catch(() => []),
     ])
     if (seq !== loadSeq) return
@@ -289,6 +295,8 @@ function currentCommentTime() {
               :src="video.video_url"
               :poster="video.thumbnail_url || undefined"
               class="vd-native"
+              playsinline
+              @click="toggleLocalPlayback"
               preload="metadata"
               @timeupdate="syncCurrentPlaybackTime"
               @loadedmetadata="restoreInitialPlaybackPosition"
@@ -345,7 +353,7 @@ function currentCommentTime() {
             :liked="interactions.liked.value"
             :like-count="interactions.likeCount.value"
             :comment-count="interactions.commentCount.value"
-            :disabled="true"
+            :disabled="!authStore.isAuthenticated"
             @like="interactions.like"
             @unlike="interactions.unlike"
           />

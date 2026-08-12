@@ -49,6 +49,7 @@ const { creationSteps, currentStep, maxStep, goNext, goPrevious } = useMediaCrea
   isEditing: isEdit.value,
   validateMedia,
   validateInformation,
+  informationFirst: true,
 })
 
 // Upload state
@@ -62,6 +63,7 @@ const coverUploading = ref(false)
 const generatedCoverPreview = ref('')
 const generatedCoverBlob = ref<Blob | null>(null)
 const generatedCoverReady = ref(false)
+const autoPublishing = ref(false)
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = ref({
@@ -237,9 +239,11 @@ async function onCoverFileChange(e: Event) {
 // ── Form logic ────────────────────────────────────────────
 
 function validateMedia(): boolean {
-  const hasMedia = form.value.storage_type === 'local' ? videoImportId.value : form.value.video_url.trim()
+  const hasMedia = form.value.storage_type === 'local'
+    ? (isEdit.value ? Boolean(form.value.video_url.trim()) : Boolean(videoImportState.value?.task.upload_completed_at))
+    : form.value.video_url.trim()
   urlError.value = hasMedia ? '' : (
-    form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
+    form.value.storage_type === 'local' ? '请等待视频上传完成' : '请填写视频链接'
   )
   return !urlError.value
 }
@@ -262,6 +266,20 @@ function validate(status: 'draft' | 'published'): boolean {
     return false
   }
   return true
+}
+
+async function autoPublishAfterUpload() {
+  if (isEdit.value || form.value.storage_type !== 'local' || !videoUploaded.value || !videoImportId.value || autoPublishing.value) return
+  if (!validateInformation() || selectedCollectionIds.value.length === 0) return
+  autoPublishing.value = true
+  try {
+    await submitVideoImport(videoImportId.value, buildImportPayload(), 'published', null, authStore.token ?? undefined)
+    await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
+  } catch (err) {
+    errorMsg.value = errorMessage(err, '自动发布失败，请重试')
+  } finally {
+    autoPublishing.value = false
+  }
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -303,6 +321,7 @@ function scheduleImportAutosave() {
 }
 
 watch([form, selectedCollectionIds, videoImportId], scheduleImportAutosave, { deep: true })
+watch([videoUploaded, () => form.value.title, selectedCollectionIds], () => { void autoPublishAfterUpload() }, { deep: true })
 onBeforeUnmount(() => {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
 })
@@ -353,8 +372,8 @@ async function loadVideo() {
   }
   await loadCollections(form.value.channel_id)
   selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
-  currentStep.value = 2
-  maxStep.value = 2
+  currentStep.value = 1
+  maxStep.value = 1
 }
 
 onMounted(async () => {
@@ -378,8 +397,8 @@ onMounted(async () => {
       }
       await loadCollections(form.value.channel_id)
       selectedCollectionIds.value = [...task.payload.collection_ids]
-      currentStep.value = 2
-      maxStep.value = task.payload.title ? 3 : 2
+      currentStep.value = task.payload.title ? 2 : 1
+      maxStep.value = task.payload.title ? 2 : 1
       return
     } catch (err) {
       errorMsg.value = errorMessage(err, '导入任务加载失败')
@@ -486,7 +505,7 @@ async function schedulePublish() {
       <!-- 左栏 -->
       <div class="ve-main">
         <!-- 基本信息 -->
-        <section v-if="currentStep === 2" class="ve-section">
+        <section v-if="currentStep === 1" class="ve-section">
           <h2 class="ve-section-title">基本信息</h2>
           <PInput
             v-model="form.title"
@@ -523,7 +542,7 @@ async function schedulePublish() {
         </section>
 
         <!-- 视频来源 -->
-        <section v-if="currentStep === 1" class="ve-section">
+        <section v-if="currentStep === 2" class="ve-section">
           <div class="ve-step-heading">
             <div>
               <h2 class="ve-section-title">选择视频来源</h2>
@@ -597,7 +616,7 @@ async function schedulePublish() {
         </section>
 
         <!-- 合集 -->
-        <section v-if="currentStep === 2" class="ve-section">
+        <section v-if="currentStep === 1" class="ve-section">
           <h2 class="ve-section-title">归档位置</h2>
           <div class="ve-collections">
             <label class="ve-field-label">合集</label>
@@ -615,9 +634,9 @@ async function schedulePublish() {
           </div>
         </section>
 
-        <p v-if="currentStep === 2 && errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
+        <p v-if="currentStep === 1 && errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
 
-        <div v-if="currentStep === 2" class="ve-step-actions">
+        <div v-if="currentStep === 1" class="ve-step-actions">
           <PButton variant="secondary" @click="goPrevious">
             <ArrowLeft :size="16" aria-hidden="true" />
             上一步

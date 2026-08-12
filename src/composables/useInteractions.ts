@@ -57,7 +57,7 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       comment: api.interactions.forumComment,
     },
     videos: {
-      likes: undefined,
+      likes: api.videos.likes,
       comments: api.interactions.videoComments(currentTargetId()),
       comment: api.interactions.videoComment,
     },

@@ -9,10 +9,9 @@ import PButton from '@/components/ui/PButton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
-import { ChevronDown, FileText, Heart, History, Merge, MoreHorizontal, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -60,15 +59,12 @@ const contributorTotal = ref(0)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
+const playlistPage = ref(1)
+const playlistHasMore = ref(false)
+const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
-const trackDisplayMode = ref<'simple' | 'detailed'>('simple')
-const expandedTrackId = ref<string | null>(null)
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
-const trackDisplayOptions = [
-  { label: '简单', value: 'simple', testid: 'album-track-display-simple' },
-  { label: '详细', value: 'detailed', testid: 'album-track-display-detailed' },
-]
 const {
   favoriteSongIds,
   loadFavoriteSongs,
@@ -240,32 +236,47 @@ function playTrack(track: AlbumTrack) {
   player.playAlbum(playableSongs.value, startIndex)
 }
 
-function toggleTrackDetails(trackId: string) {
-  expandedTrackId.value = expandedTrackId.value === trackId ? null : trackId
-}
-
 function handleCoverError() {
   isCoverBroken.value = true
 }
 
-async function loadPlaylists() {
+async function loadPlaylists(page = 1) {
   if (!isAuthenticated.value) {
     playlists.value = []
     playlistsLoaded.value = false
+    playlistPage.value = 1
+    playlistHasMore.value = false
     return
   }
+  if (playlistsLoading.value) return
+
+  playlistsLoading.value = true
   try {
-    const res = await listMusicPlaylists()
+    const res = await listMusicPlaylists({ page, page_size: 20 })
     playlists.value = res.data
+    playlistPage.value = page
+    playlistHasMore.value = res.meta?.has_more ?? false
     playlistsLoaded.value = true
   } catch (err) {
     if (err instanceof ApiErrorResponseError && err.status === 401) {
       playlists.value = []
       playlistsLoaded.value = true
+      playlistHasMore.value = false
       return
     }
     reportError(err, 'Failed to load playlists in AlbumDrawer:')
+    playlistsLoaded.value = true
+    playlistHasMore.value = false
+  } finally {
+    playlistsLoading.value = false
   }
+}
+
+function changePlaylistPage(delta: number) {
+  const nextPage = playlistPage.value + delta
+  if (nextPage < 1 || playlistsLoading.value) return
+  if (delta > 0 && !playlistHasMore.value) return
+  void loadPlaylists(nextPage)
 }
 
 async function loadFavorites(songIds: string[]) {
@@ -290,7 +301,7 @@ async function toggleTrackFavorite(songId: string) {
     const result = await toggleFavoriteSong(songId)
     toastMessage.value = result.message
     toastVisible.value = true
-    await loadPlaylists()
+    await loadPlaylists(playlistPage.value)
   } catch (err) {
     reportError(err, 'Failed to toggle favorite:')
     toastMessage.value = '操作失败'
@@ -312,23 +323,26 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 }
 
 async function loadAlbum(albumId: string | null) {
-  const { generation: loadGeneration, isCurrent: isCurrentLoad } = albumRequests.beginRequest()
+  const { isCurrent: isCurrentLoad } = albumRequests.beginRequest()
   bookmarkLoading.value = false
+  album.value = null
+  isBookmarked.value = false
+  contributors.value = []
+  contributorTotal.value = 0
+  favoriteSongIds.value = new Set()
+  lyricTrack.value = null
+  errorMessage.value = ''
+  redirectMessage.value = ''
+  isCoverBroken.value = false
 
   if (!albumId) {
     if (isCurrentLoad()) {
-      album.value = null
-      isBookmarked.value = false
-      contributors.value = []
-      contributorTotal.value = 0
+      loading.value = false
     }
     return
   }
 
   loading.value = true
-  contributors.value = []
-  contributorTotal.value = 0
-  errorMessage.value = ''
   try {
     const resolved = await resolveMusicRedirect(albumId, getMusicAlbum)
     if (!isCurrentLoad()) return
@@ -339,44 +353,9 @@ async function loadAlbum(albumId: string | null) {
       openAlbum(albumResponse.id)
       return
     }
-    redirectMessage.value = ''
     album.value = albumResponse
-    try {
-      const contributorResponse = await listAlbumContributors(albumId)
-      if (!isCurrentLoad()) return
-      contributors.value = contributorResponse.data
-      contributorTotal.value = contributorResponse.total
-    } catch (error) {
-      if (!isCurrentLoad()) return
-      contributors.value = []
-      contributorTotal.value = 0
-      reportError(error, 'Failed to load album contributors:')
-    }
-    if (isAuthenticated.value) {
-      try {
-        const bookmarksResponse = await listAlbumBookmarks()
-        if (!isCurrentLoad()) return
-        isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
-      } catch (error) {
-        if (!isCurrentLoad()) return
-        if (error instanceof ApiErrorResponseError && error.status === 401) {
-          isBookmarked.value = false
-        } else {
-          throw error
-        }
-      }
-
-      await Promise.all([
-        playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
-        loadFavorites((albumResponse.songs || []).map(song => String(song.id))),
-      ])
-    } else {
-      isBookmarked.value = false
-      playlists.value = []
-      playlistsLoaded.value = false
-      favoriteSongIds.value = new Set()
-    }
-    isCoverBroken.value = false
+    loading.value = false
+    void loadAlbumExtras(albumId, albumResponse, isCurrentLoad)
   } catch (error) {
     if (!isCurrentLoad()) return
     reportError(error, 'Failed to fetch album:')
@@ -384,6 +363,67 @@ async function loadAlbum(albumId: string | null) {
   } finally {
     if (isCurrentLoad()) loading.value = false
   }
+}
+
+async function loadAlbumExtras(
+  targetAlbumId: string,
+  albumResponse: MusicAlbumListItem,
+  isCurrentLoad: () => boolean,
+) {
+  const contributorTask = listAlbumContributors(targetAlbumId)
+    .then((response) => {
+      if (!isCurrentLoad()) return
+      contributors.value = response.data
+      contributorTotal.value = response.total
+    })
+    .catch((error) => {
+      if (!isCurrentLoad()) return
+      contributors.value = []
+      contributorTotal.value = 0
+      reportError(error, 'Failed to load album contributors:')
+    })
+
+  if (!isAuthenticated.value) {
+    playlists.value = []
+    playlistsLoaded.value = false
+    playlistPage.value = 1
+    playlistHasMore.value = false
+    return
+  }
+
+  const bookmarkTask = loadAlbumBookmarkState(targetAlbumId, isCurrentLoad)
+  const playlistTask = playlistsLoaded.value ? Promise.resolve() : loadPlaylists()
+  const favoriteTask = loadFavorites((albumResponse.songs || []).map(song => String(song.id)))
+  await Promise.all([contributorTask, bookmarkTask, playlistTask, favoriteTask])
+}
+
+async function loadAlbumBookmarkState(targetAlbumId: string, isCurrentLoad: () => boolean) {
+  try {
+    let page = 1
+    while (true) {
+      const response = await listAlbumBookmarks({ page, page_size: 100 })
+      if (!isCurrentLoad()) return
+      if (response.data.some((bookmark) => String(bookmark.album_id) === String(targetAlbumId))) {
+        isBookmarked.value = true
+        return
+      }
+      if (!response.meta?.has_more) {
+        isBookmarked.value = false
+        return
+      }
+      page += 1
+    }
+  } catch (error) {
+    if (!isCurrentLoad()) return
+    isBookmarked.value = false
+    if (!(error instanceof ApiErrorResponseError && error.status === 401)) {
+      reportError(error, 'Failed to load album bookmarks:')
+    }
+  }
+}
+
+function retryLoadAlbum() {
+  if (albumId.value) void loadAlbum(albumId.value)
 }
 
 async function toggleAlbumBookmark() {
@@ -451,9 +491,6 @@ function guardPlaylistMenu(event: MouseEvent) {
 }
 
 watch(albumId, loadAlbum, { immediate: true })
-watch(trackDisplayMode, (mode) => {
-  if (mode === 'simple') expandedTrackId.value = null
-})
 watch(
   () => state.value.albumRefreshToken,
   () => {
@@ -481,12 +518,17 @@ watch(
       show
       :song-id="lyricTrack.id"
       :song-title="lyricTrack.title"
+      :current-time-seconds="player.currentTime"
       @close="lyricTrack = null"
+      @seek="player.seek"
     />
     <div class="drawer-body">
 	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
 	  <p v-if="album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
-      <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+      <div v-if="errorMessage" class="state-line state-line--error">
+        <span>{{ errorMessage }}</span>
+        <PButton type="button" size="sm" variant="secondary" data-testid="album-retry" @click="retryLoadAlbum">重试</PButton>
+      </div>
       <p v-else-if="loading" class="state-line">正在加载专辑...</p>
 
       <div v-else class="album-meta-row">
@@ -568,12 +610,9 @@ watch(
       </div>
 
       <div class="content-section">
-        <div class="tracklist-heading">
-          <div class="section-title">曲目</div>
-          <PSegmentedControl v-model="trackDisplayMode" :options="trackDisplayOptions" aria-label="曲目显示方式" />
-        </div>
+        <div class="section-title">曲目</div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
-        <div v-for="(track, index) in tracks" :key="track.id" class="track" :class="{ 'track--detailed': trackDisplayMode === 'detailed' }">
+        <div v-for="(track, index) in tracks" :key="track.id" class="track">
           <button
             class="track-play-btn"
             type="button"
@@ -615,7 +654,8 @@ watch(
               </template>
               <div class="track-add-menu">
                 <div class="track-add-menu-header">添加到歌单</div>
-                <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
+                <div v-if="playlistsLoading && !playlists.length" class="track-add-menu-empty">正在加载歌单...</div>
+                <div v-else-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
                 <button
                   v-for="p in playlists"
                   :key="p.id"
@@ -625,22 +665,31 @@ watch(
                 >
                   {{ p.name }}
                 </button>
+                <div v-if="playlists.length || playlistsLoading" class="track-add-menu-pagination">
+                  <button
+                    type="button"
+                    class="track-add-menu-page-btn"
+                    :disabled="playlistsLoading || playlistPage <= 1"
+                    aria-label="上一页歌单"
+                    @click.stop="changePlaylistPage(-1)"
+                  >
+                    <ChevronLeft :size="14" aria-hidden="true" />
+                  </button>
+                  <span>第 {{ playlistPage }} 页</span>
+                  <button
+                    type="button"
+                    class="track-add-menu-page-btn"
+                    :disabled="playlistsLoading || !playlistHasMore"
+                    aria-label="下一页歌单"
+                    @click.stop="changePlaylistPage(1)"
+                  >
+                    <ChevronRight :size="14" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </PDropdown>
-            <button
-              v-if="trackDisplayMode === 'detailed'"
-              type="button"
-              class="track-detail-btn"
-              :class="{ 'is-expanded': expandedTrackId === String(track.id) }"
-              :aria-expanded="expandedTrackId === String(track.id)"
-              :aria-label="`${expandedTrackId === String(track.id) ? '收起' : '展开'} ${track.title} 的详细信息`"
-              :data-testid="`track-details-${track.id}`"
-              @click="toggleTrackDetails(String(track.id))"
-            >
-              <ChevronDown :size="16" aria-hidden="true" />
-            </button>
           </div>
-          <div v-if="trackDisplayMode === 'detailed' && expandedTrackId === String(track.id)" class="track-specification">
+          <div class="track-specification">
             <PButton
               type="button"
               size="sm"
@@ -1007,28 +1056,16 @@ watch(
   color: var(--a-color-muted);
   font-weight: 500;
 }
-.tracklist-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.tracklist-heading .section-title {
-  flex: 1;
-}
 .track {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-rows: auto auto;
+  align-items: start;
   gap: 0.85rem;
   padding: 0.65rem 0.5rem;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
   font-size: 0.9rem;
   transition: background-color 0.15s ease;
-}
-.track--detailed {
-  grid-template-rows: auto auto;
-  align-items: start;
 }
 .track:last-child { border-bottom: none; }
 .track:hover {
@@ -1083,29 +1120,6 @@ watch(
   gap: 0.75rem;
   flex-shrink: 0;
 }
-.track-detail-btn {
-  display: inline-grid;
-  width: 1.75rem;
-  height: 1.75rem;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-}
-.track-detail-btn svg {
-  transition: transform 0.15s ease;
-}
-.track-detail-btn.is-expanded svg {
-  transform: rotate(180deg);
-}
-.track-detail-btn:hover,
-.track-detail-btn:focus-visible {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-}
 .track-specification {
   grid-column: 2 / -1;
   display: grid;
@@ -1149,6 +1163,11 @@ watch(
 }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
+.state-line--error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 
 /* Track Playlist Dropdown styles */
 .track-add-dropdown {
@@ -1168,6 +1187,12 @@ watch(
   justify-content: center;
   border-radius: 4px;
   transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+.track-fav-btn:focus-visible,
+.track-add-btn:focus-visible,
+.track-add-menu-page-btn:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
 }
 .track-fav-btn.is-active {
   opacity: 1 !important;
@@ -1206,17 +1231,13 @@ watch(
 
   .track-play-btn,
   .track-fav-btn,
-  .track-add-btn,
-  .track-detail-btn {
+  .track-add-btn {
     width: 2.75rem;
     height: 2.75rem;
   }
 
   .track-meta {
     gap: 0.5rem;
-  }
-
-  .track--detailed .track-meta {
     grid-column: 2 / -1;
     grid-row: 2;
     justify-content: flex-end;
@@ -1269,5 +1290,40 @@ watch(
 }
 .track-add-menu-item:hover {
   background-color: var(--a-color-surface-muted);
+}
+.track-add-menu-item:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -2px;
+  background-color: var(--a-color-surface-muted);
+}
+.track-add-menu-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.55rem 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-muted);
+  font-size: 0.7rem;
+}
+.track-add-menu-page-btn {
+  display: inline-grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+.track-add-menu-page-btn:hover:not(:disabled) {
+  background: var(--a-color-surface-muted);
+}
+.track-add-menu-page-btn:disabled {
+  color: var(--a-color-muted-soft);
+  cursor: not-allowed;
 }
 </style>

@@ -96,6 +96,7 @@ describe('AlbumDrawer.vue', () => {
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
     listAlbumContributors.mockReset()
+    listMusicPlaylists.mockReset()
     createAlbumBookmark.mockReset()
     deleteAlbumBookmark.mockReset()
     requireLogin.mockReset()
@@ -123,7 +124,12 @@ describe('AlbumDrawer.vue', () => {
       created_at: '2026-07-02T00:00:00Z',
     })
     deleteAlbumBookmark.mockResolvedValue({ deleted: true })
+    listMusicPlaylists.mockResolvedValue({ data: [] })
   })
+
+  function paginated<T>(data: T[], page: number, hasMore = false) {
+    return { data, meta: { page, page_size: data.length, total: data.length, has_more: hasMore } }
+  }
 
   it('does not render redundant sheet headings', () => {
     const wrapper = mount(AlbumDrawer, {
@@ -132,15 +138,12 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('专辑详情')
   })
 
-  it('shows lyric editing only after expanding a track in the detailed layout', async () => {
+  it('shows detailed track specifications by default', async () => {
     const wrapper = mount(AlbumDrawer)
     await flushPromises()
-    expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').exists()).toBe(false)
-
-    await wrapper.get('[data-testid="album-track-display-detailed"]').trigger('click')
-    expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').exists()).toBe(false)
-    await wrapper.get('[data-testid="track-details-101"]').trigger('click')
-    expect(wrapper.get('[data-testid="track-edit-lyrics-101"]').text()).toContain('编辑歌词')
+    expect(wrapper.find('[data-testid="album-track-display-detailed"]').exists()).toBe(false)
+    expect(wrapper.findAll('.track-specification')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').text()).toContain('编辑歌词')
   })
 
   it('opens album history from the contributors block', async () => {
@@ -323,6 +326,65 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('专辑信息加载失败')
   })
 
+  it('finds the album bookmark on a later page', async () => {
+    listAlbumBookmarks
+      .mockResolvedValueOnce(paginated([], 1, true))
+      .mockResolvedValueOnce(paginated([{ album_id: '1' }], 2))
+
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+
+    expect(listAlbumBookmarks).toHaveBeenNthCalledWith(1, { page: 1, page_size: 100 })
+    expect(listAlbumBookmarks).toHaveBeenNthCalledWith(2, { page: 2, page_size: 100 })
+    expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain('已订阅')
+  })
+
+  it('paginates playlists in the add-to-playlist menu', async () => {
+    listMusicPlaylists.mockImplementation((filters: { page?: number; page_size?: number } = {}) => {
+      if (filters.page === 2) return Promise.resolve(paginated([{ id: 'playlist-2', name: '第二歌单' }], 2))
+      if (filters.page_size === 100) return Promise.resolve(paginated([{ id: 'favorite-playlist', name: '最爱', kind: 'favorite' }], 1))
+      return Promise.resolve(paginated([{ id: 'playlist-1', name: '第一歌单' }], 1, true))
+    })
+
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+    await wrapper.get('.track-add-btn').trigger('click')
+
+    expect(wrapper.text()).toContain('第一歌单')
+    await wrapper.get('[aria-label="下一页歌单"]').trigger('click')
+    await flushPromises()
+
+    expect(listMusicPlaylists).toHaveBeenCalledWith({ page: 2, page_size: 20 })
+    expect(wrapper.text()).toContain('第二歌单')
+    expect(wrapper.text()).not.toContain('第一歌单')
+  })
+
+  it('keeps the album visible when an extra request fails', async () => {
+    listAlbumContributors.mockRejectedValueOnce(new Error('contributors unavailable'))
+    listAlbumBookmarks.mockRejectedValueOnce(new Error('bookmarks unavailable'))
+
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Test Album')
+    expect(wrapper.text()).not.toContain('专辑信息加载失败')
+  })
+
+  it('offers retry when the album request fails', async () => {
+    getMusicAlbum
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ id: '1', title: 'Recovered Album', entry_status: 'open', songs: [] })
+
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="album-retry"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="album-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Recovered Album')
+  })
+
   it('shows discussion count and track durations when real data exists', async () => {
     getMusicAlbum.mockResolvedValue({
       id: '1',
@@ -345,7 +407,7 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
 
-  it('keeps track specifications hidden until a detailed track is expanded', async () => {
+  it('shows track specifications directly in the detailed track list', async () => {
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Archive Album',
@@ -369,11 +431,6 @@ describe('AlbumDrawer.vue', () => {
 
     const wrapper = mount(AlbumDrawer)
     await flushPromises()
-
-    expect(wrapper.text()).not.toContain('01 - Master.flac')
-    await wrapper.get('[data-testid="album-track-display-detailed"]').trigger('click')
-    expect(wrapper.text()).not.toContain('01 - Master.flac')
-    await wrapper.get('[data-testid="track-details-song-1"]').trigger('click')
 
     expect(wrapper.text()).toContain('FLAC · 无损 · 24-bit · 96 kHz · 2 ch · 95.0 MB')
     expect(wrapper.text()).toContain('01 - Master.flac')
@@ -482,6 +539,30 @@ describe('AlbumDrawer.vue', () => {
 
     expect(wrapper.text()).toContain('Album B')
     expect(wrapper.text()).not.toContain('Album A')
+  })
+
+  it('clears the previous album while switching albums', async () => {
+    let resolveSecond!: (album: Record<string, unknown>) => void
+    getMusicAlbum
+      .mockResolvedValueOnce({ id: 'album-a', title: 'Album A', entry_status: 'open', songs: [{ id: 'song-a', title: 'Song A' }] })
+      .mockReturnValueOnce(new Promise<Record<string, unknown>>((resolve) => { resolveSecond = resolve }))
+
+    const wrapper = mount(AlbumDrawer, {
+      props: {
+        layer: { key: 'album-a', kind: 'album', title: '专辑详情', payload: { albumId: 'album-a' } },
+      },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Song A')
+
+    await wrapper.setProps({
+      layer: { key: 'album-b', kind: 'album', title: '专辑详情', payload: { albumId: 'album-b' } },
+    })
+
+    expect(wrapper.text()).not.toContain('Song A')
+    expect(wrapper.text()).toContain('正在加载专辑...')
+    resolveSecond({ id: 'album-b', title: 'Album B', entry_status: 'open', songs: [] })
+    await flushPromises()
   })
 
   it('does not apply a delayed album bookmark result after switching albums', async () => {

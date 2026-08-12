@@ -39,6 +39,45 @@ describe('PMaskedDateInput', () => {
 	expect((wrapper.find('input[type="text"]').element as HTMLInputElement).value).toBe('1990/--/--')
   })
 
+	it('accepts a completely unknown required date', async () => {
+		const model = ref({ year: '', month: '', day: '' })
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: model.value,
+				required: true,
+				'onUpdate:modelValue': value => { model.value = value },
+			},
+		})
+		await wrapper.find('input[type="text"]').setValue('----/--/--')
+		expect(model.value).toEqual({ year: '----', month: '--', day: '--' })
+		expect((wrapper.find('input[type="text"]').element as HTMLInputElement).value).toBe('----/--/--')
+	})
+
+	it('accepts a completely unknown date typed one dash at a time', async () => {
+		const model = ref({ year: '', month: '', day: '' })
+		const wrapper = mount(defineComponent({
+			components: { PMaskedDateInput },
+			setup() {
+				return { model }
+			},
+			template: '<PMaskedDateInput v-model="model" required />',
+		}))
+		const inputWrapper = wrapper.find('input[type="text"]')
+		const input = inputWrapper.element as HTMLInputElement
+
+		await inputWrapper.trigger('focus')
+		for (const dash of '----') {
+			const start = input.selectionStart ?? 0
+			const end = input.selectionEnd ?? start
+			input.setRangeText(dash, start, end, 'end')
+			await inputWrapper.trigger('input')
+			await nextTick()
+		}
+
+		expect(input.value).toBe('----/--/--')
+		expect(model.value).toEqual({ year: '----', month: '--', day: '--' })
+	})
+
   it('keeps year, month, and day digits in input order while typing', async () => {
     const model = ref({ year: '', month: '', day: '' })
     const wrapper = mount(defineComponent({
@@ -79,6 +118,6 @@ describe('PMaskedDateInput', () => {
 		})
 		await wrapper.get('[data-testid="leave-date-help-btn"]').trigger('click')
 		expect(wrapper.text()).toContain('不填表示至今')
-		expect(wrapper.text()).toContain('1990/--/--')
+		expect(wrapper.text()).toContain('----/--/--')
 	})
 })

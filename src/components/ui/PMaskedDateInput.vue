@@ -24,10 +24,10 @@ const showPopover = ref(false)
 const showHelp = ref(false)
 
 const defaultHelpText = computed(() => props.helpText || (
-	props.presentWhenEmpty
-		? '日期不确定时可输入 --，如 1990/05/-- 或 1990/--/--；不填表示至今。'
-		: '日期不确定时可输入 --，如 1990/05/-- 或 1990/--/--。'
-))
+		props.presentWhenEmpty
+			? '日期不确定时可输入 --，完全未知可填 ----/--/--；不填表示至今。'
+			: '日期不确定时可输入 --，完全未知可填 ----/--/--。'
+	))
 
 const now = new Date()
 const currentYear = now.getFullYear()

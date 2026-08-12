@@ -27,6 +27,13 @@ export function getBirthDateCursorIndex(digitCount: number) {
 export function parsePartialDateParts(value: string): PartialDateParts {
   const trimmed = value.trim()
   if (!trimmed) return { year: '', month: '', day: '' }
+	const unknownYearMatch = trimmed.match(/^(-{1,4})(?:\/(?:mm|--)?(?:\/(?:dd|--)?)?)?$/)
+	if (unknownYearMatch) {
+		const year = unknownYearMatch[1]
+		return year === '----'
+			? { year, month: '--', day: '--' }
+			: { year, month: '', day: '' }
+	}
 
   if (/^\d{1,8}$/.test(trimmed)) {
     return {
@@ -53,6 +60,7 @@ export function formatPartialDateInput(parts: PartialDateParts) {
 
 export function serializePartialDate(parts?: PartialDateParts) {
   const year = parts?.year.trim() ?? ''
+	if (year === '----') return '----/--/--'
   if (year.length !== 4) return ''
 
   const month = parts?.month.trim() || '--'
@@ -63,6 +71,7 @@ export function serializePartialDate(parts?: PartialDateParts) {
 }
 
 export function formatStoredPartialDate(value?: string, precision?: string) {
+	if (precision === 'unknown') return '----/--/--'
   if (!value) return ''
   const date = value.split('T')[0]
   const [year = '', month = '', day = ''] = date.split('-')

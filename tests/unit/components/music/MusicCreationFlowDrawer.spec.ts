@@ -335,6 +335,36 @@ describe('MusicCreationFlowDrawer', () => {
     expect(wrapper.get('[data-testid="music-creation-error"]').text()).toContain('创建艺术家失败')
   })
 
+	it('完全未知的出生日期可以满足必填并提交', async () => {
+		const baseFlow = createFlowState()
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: 'artist',
+			draft: {
+				...baseFlow.draft,
+				artist: {
+					...baseFlow.draft.artist,
+					id: null,
+					avatarUrl: 'https://img.test/artist.jpg',
+					legalName: 'Unknown Date Artist',
+					stageNames: [{ ...baseFlow.draft.artist.stageNames[0], name: 'Unknown Date Artist' }],
+					nationality: '中国',
+					birthDateParts: { year: '----', month: '--', day: '--' },
+					source: 'https://example.test/artist',
+				},
+			},
+		})
+		createMusicArtistMock.mockResolvedValue({ id: 'artist-unknown-date', name: 'Unknown Date Artist' })
+
+		const wrapper = mount(MusicCreationFlowDrawer)
+		await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
+		await flushPromises()
+
+		expect(createMusicArtistMock).toHaveBeenCalledWith(expect.objectContaining({
+			birth_date: '----/--/--',
+		}))
+		expect(drawerMocks.state.value.creationFlow?.step).toBe('albumImport')
+	})
+
   it('修改艺术家复用创建表单并提交完整修订', async () => {
     drawerMocks.state.value.creationFlow = createFlowState({
       mode: 'edit',

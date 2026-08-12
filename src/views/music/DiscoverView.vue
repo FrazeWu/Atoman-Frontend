@@ -980,45 +980,65 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .recently-played-item__copy {
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
   min-width: 0;
+  overflow: hidden;
 }
 
 .recently-played-item__label {
   color: var(--a-color-muted);
   font-size: 0.7rem;
   font-weight: 500;
-}
-
-.recently-played-item__copy strong,
-.recently-played-item__copy span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recently-played-item__copy strong {
-  font-size: 0.86rem;
-}
-
-.recently-played-item__copy span {
-  color: var(--a-color-muted);
-  font-size: 0.75rem;
-}
-
 .recently-played-item__copy > a {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: inherit;
   text-decoration: none;
 }
 
+.recently-played-item__copy strong {
+  display: block;
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recently-played-item__links {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
 .recently-played-item__links button {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border: 0;
   padding: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
+  vertical-align: bottom;
 }
 
 .recently-played-item__copy > a:hover,

@@ -7,7 +7,7 @@
       </div>
       <div class="settings-block__control user-blog-settings-panel__identity">
         <div class="avatar-preview-box">
-          <img v-if="form.avatar_url" :src="form.avatar_url" alt="avatar" />
+          <img v-if="form.avatar_url" :src="form.avatar_url" alt="当前头像" />
           <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
         </div>
         <div class="identity-info">
@@ -24,11 +24,21 @@
           label="显示名称"
           placeholder="用于展示的名称"
         />
-        <PInput
-          v-model="form.avatar_url"
-          label="头像 URL"
-          placeholder="https://example.com/avatar.jpg"
-        />
+        <div class="avatar-field">
+          <span class="avatar-field__label">头像</span>
+          <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }">
+            <Camera :size="16" aria-hidden="true" />
+            <span>{{ uploadingAvatar ? '上传中...' : '选择图片' }}</span>
+            <input
+              data-testid="profile-avatar-input"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              :disabled="uploadingAvatar"
+              @change="selectAvatar"
+            />
+          </label>
+          <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
+        </div>
         <PInput
           v-model="form.website"
           label="个人网站"
@@ -86,7 +96,7 @@
         <div v-if="error" class="a-error">{{ error }}</div>
         <div v-if="success" class="a-success">✓ 更改保存成功</div>
 
-        <PButton variant="primary" type="submit" :loading="saving" loading-text="保存中...">保存更改</PButton>
+        <PButton variant="primary" type="submit" :disabled="uploadingAvatar" :loading="saving" loading-text="保存中...">保存更改</PButton>
       </div>
     </form>
   </div>
@@ -96,6 +106,8 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { onMounted, ref } from 'vue'
+import { Camera } from 'lucide-vue-next'
+import { uploadUserAvatar } from '@/api/userProfile'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -136,8 +148,26 @@ const notificationTypes = {
 } as const
 
 const saving = ref(false)
+const uploadingAvatar = ref(false)
 const error = ref('')
 const success = ref(false)
+
+const selectAvatar = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  error.value = ''
+  uploadingAvatar.value = true
+  try {
+    const uploaded = await uploadUserAvatar(file)
+    form.value.avatar_url = uploaded.url
+  } catch {
+    error.value = '头像上传失败，请重新选择图片'
+  } finally {
+    uploadingAvatar.value = false
+  }
+}
 
 const loadProfile = async () => {
   try {
@@ -257,6 +287,62 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+}
+
+.avatar-field {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+}
+
+.avatar-field__label {
+  color: var(--a-color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.avatar-field__picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--a-color-text);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-control);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.avatar-field__picker:hover:not(.is-disabled) {
+  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-text-secondary);
+}
+
+.avatar-field__picker:focus-within {
+  border-color: var(--a-color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 15%, transparent);
+}
+
+.avatar-field__picker.is-disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.avatar-field__picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.avatar-field small {
+  color: var(--a-color-text-secondary);
+  font-size: 0.75rem;
 }
 
 .identity-info strong {

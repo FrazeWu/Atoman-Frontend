@@ -20,8 +20,29 @@
       <!-- ── Profile Header ─────────────────────────────── -->
       <header class="profile-header">
         <!-- Avatar -->
-        <div class="profile-header__avatar" aria-hidden="true">
-          {{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}
+        <label
+          v-if="isSelf"
+          class="profile-header__avatar profile-header__avatar--editable"
+          :class="{ 'is-uploading': uploadingAvatar }"
+          :aria-label="uploadingAvatar ? '头像上传中' : '更换头像'"
+        >
+          <img v-if="profile.avatar_url" :src="resolveMediaURL(profile.avatar_url)" alt="当前头像" />
+          <span v-else>{{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}</span>
+          <span class="profile-header__avatar-overlay" aria-hidden="true">
+            <LoaderCircle v-if="uploadingAvatar" :size="20" class="profile-header__avatar-spinner" />
+            <Camera v-else :size="20" />
+          </span>
+          <input
+            data-testid="profile-avatar-input"
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            :disabled="uploadingAvatar"
+            @change="changeAvatar"
+          />
+        </label>
+        <div v-else class="profile-header__avatar" aria-hidden="true">
+          <img v-if="profile.avatar_url" :src="resolveMediaURL(profile.avatar_url)" alt="" />
+          <span v-else>{{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}</span>
         </div>
 
         <div class="profile-header__body">
@@ -258,7 +279,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { LinkIcon, Pencil, Plus } from 'lucide-vue-next'
+import { Camera, LinkIcon, LoaderCircle, Pencil, Plus } from 'lucide-vue-next'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -276,6 +297,7 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { uploadUserAvatar } from '@/api/userProfile'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel, ShortNote } from '@/types'
 
@@ -329,6 +351,7 @@ const editDisplayName = ref('')
 const editBio = ref('')
 const editWebsite = ref('')
 const saving = ref(false)
+const uploadingAvatar = ref(false)
 
 function startEdit(field: EditableField) {
   editingField.value = field
@@ -350,20 +373,56 @@ async function saveField(field: EditableField) {
   if (field === 'website') body.website = editWebsite.value.trim()
   try {
     const res = await apiRequestResult(api.users.settings, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
       body: JSON.stringify(body),
     })
     if (res.ok) {
       const data = (await Promise.resolve(res.data)).data
       profile.value = { ...profile.value!, ...data }
-      if (authStore.user) authStore.user = { ...authStore.user, ...data }
+      authStore.updateUser(data)
       cancelEdit()
+      toastMessage.value = '资料已更新'
+      toastVisible.value = true
+    } else {
+      toastMessage.value = '保存失败，请重试'
+      toastVisible.value = true
     }
   } catch (e) {
     reportError(e)
+    toastMessage.value = '保存失败，请重试'
+    toastVisible.value = true
   } finally {
     saving.value = false
+  }
+}
+
+async function changeAvatar(event: Event) {
+  if (!profile.value || uploadingAvatar.value) return
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  uploadingAvatar.value = true
+  try {
+    const uploaded = await uploadUserAvatar(file)
+    const res = await apiRequestResult(api.users.settings, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+      body: JSON.stringify({ avatar_url: uploaded.url }),
+    })
+    if (!res.ok) throw new Error('avatar update failed')
+    const data = (await Promise.resolve(res.data)).data
+    profile.value = { ...profile.value, ...data }
+    authStore.updateUser(data)
+    toastMessage.value = '头像已更新'
+  } catch (error) {
+    reportError(error)
+    toastMessage.value = '头像更新失败，请重新选择图片'
+  } finally {
+    toastVisible.value = true
+    uploadingAvatar.value = false
   }
 }
 
@@ -564,6 +623,58 @@ onMounted(async () => {
   font-size: 2rem;
   font-weight: 500;
   user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-header__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-header__avatar--editable {
+  cursor: pointer;
+}
+
+.profile-header__avatar--editable:focus-within {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+.profile-header__avatar--editable input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.profile-header__avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgb(0 0 0 / 55%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.profile-header__avatar--editable:hover .profile-header__avatar-overlay,
+.profile-header__avatar--editable:focus-within .profile-header__avatar-overlay,
+.profile-header__avatar--editable.is-uploading .profile-header__avatar-overlay {
+  opacity: 1;
+}
+
+.profile-header__avatar-spinner {
+  animation: profile-avatar-spin 0.8s linear infinite;
+}
+
+@keyframes profile-avatar-spin {
+  to { transform: rotate(360deg); }
 }
 
 .profile-header__body { flex: 1; min-width: 0; }

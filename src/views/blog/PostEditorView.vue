@@ -365,7 +365,6 @@ const {
   ensureDefaultSelection,
   loadChannelCollections,
   onCollectionSelect,
-  syncPostCollections,
 } = usePostEditorCollections({
   isEdit,
   form,
@@ -459,7 +458,6 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   selectedNonDefaultCollectionId,
   selectedCollectionIds,
   existingCollectionIds,
-  syncPostCollections,
   clearAllDrafts,
   allowNextRouteLeave,
 })

@@ -78,6 +78,17 @@ describe('API endpoint construction contract', () => {
     expect(api.content.schedule('podcast', 'episode-1')).toBe('/api/v1/content/podcast/episode-1/schedule')
   })
 
+  it('uses registered unified interaction endpoints', () => {
+    const api = useApi()
+
+    expect(api.blog.comments('post-1')).toBe('/api/v1/discussions/blog_post/post-1/comments')
+    expect(api.blog.comments('post/1')).toBe('/api/v1/discussions/blog_post/post%2F1/comments')
+    expect(api.interactions.blogPostComments('post-1')).toBe('/api/v1/discussions/blog_post/post-1/comments')
+    expect(api.videos.comments('video-1')).toBe('/api/v1/discussions/video/video-1/comments')
+    expect(api.videos.comment('comment-1')).toBe('/api/v1/comments/comment-1')
+    expect(api.notifications.markCategoryRead('reply')).toBe('/api/v1/notifications/read-all?category=reply')
+  })
+
   it('does not expose legacy top-level music CRUD endpoints', () => {
     const api = useApi()
 
@@ -103,6 +114,14 @@ describe('API endpoint construction contract', () => {
     expect(api.podcast).not.toHaveProperty('progress')
     expect(api.podcast).not.toHaveProperty('episodeProgress')
     expect(api.podcast).not.toHaveProperty('subscriptionEpisodes')
+  })
+
+  it('does not expose removed legacy blog collection mutation endpoints', () => {
+    const api = useApi()
+
+    expect(api.blog).not.toHaveProperty('postCollections')
+    expect(api.blog).not.toHaveProperty('postCollection')
+    expect(api.blog.collectionPostOrder('collection-1')).toBe('/api/v1/blog/collections/collection-1/posts/order')
   })
 
   it('keeps VITE_API_URL access centralized in useApi helpers', () => {

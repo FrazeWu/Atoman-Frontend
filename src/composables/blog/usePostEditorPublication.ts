@@ -31,7 +31,6 @@ interface PostEditorPublicationOptions {
   selectedNonDefaultCollectionId: ComputedRef<string>
   selectedCollectionIds: Ref<string[]>
   existingCollectionIds: Ref<string[]>
-  syncPostCollections: (postId: string) => Promise<void>
   clearAllDrafts: () => Promise<void>
   allowNextRouteLeave: () => void
 }
@@ -52,7 +51,6 @@ export function usePostEditorPublication({
   selectedNonDefaultCollectionId,
   selectedCollectionIds,
   existingCollectionIds,
-  syncPostCollections,
   clearAllDrafts,
   allowNextRouteLeave,
 }: PostEditorPublicationOptions) {
@@ -146,7 +144,6 @@ export function usePostEditorPublication({
       const savedPost = data.data || data
       savedPostId.value = String(savedPost.id)
       await clearAllDrafts()
-      if (isEdit.value) await syncPostCollections(savedPostId.value)
       allowNextRouteLeave()
       if (!redirect) return savedPostId.value
       if (status === 'draft') {

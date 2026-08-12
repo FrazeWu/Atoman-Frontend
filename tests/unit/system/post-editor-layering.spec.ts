@@ -16,15 +16,11 @@ describe('PostEditorView layering', () => {
     }
   })
 
-  it('delegates collection loading and synchronization to a composable', () => {
+  it('delegates collection loading to a composable', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'src/views/blog/PostEditorView.vue'), 'utf8')
 
     expect(source).toContain('usePostEditorCollections({')
-    for (const declaration of [
-      'const loadChannelCollections = async',
-      'const syncPostCollections = async',
-      'const onCollectionSelect =',
-    ]) {
+    for (const declaration of ['const loadChannelCollections = async', 'const onCollectionSelect =']) {
       expect(source).not.toContain(declaration)
     }
   })

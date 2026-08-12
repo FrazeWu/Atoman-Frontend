@@ -66,6 +66,15 @@ describe('useInteractions', () => {
     expect(interactions.liked.value).toBe(true)
   })
 
+  it('uses the unified blog discussion endpoints', async () => {
+    fetchMock.mockResolvedValueOnce(response({ data: { items: [] } }))
+
+    const interactions = useInteractions('blog', 'post', 'post-1')
+    await interactions.fetchComments()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/discussions/blog_post/post-1/comments', expect.anything())
+  })
+
   it('uses unified Forum discussion comments and topic like endpoints', async () => {
     fetchMock
       .mockResolvedValueOnce(response({ data: { items: [], target: { comment_count: 0 } } }))

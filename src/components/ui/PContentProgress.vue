@@ -1,48 +1,34 @@
 <template>
   <div class="p-content-progress">
-    <!-- 加载中或出现错误/超时时的居中遮罩卡片 -->
-    <div v-if="loading || isTimeout || error" class="p-content-progress__overlay">
-      <!-- 背景骨架屏插槽 (如果有) -->
-      <div v-if="loading && $slots.skeleton" class="p-content-progress__skeleton-wrapper">
+    <div v-if="loading" class="p-content-progress__overlay">
+      <!-- 背景骨架屏插槽 -->
+      <div v-if="$slots.skeleton" class="p-content-progress__skeleton-wrapper">
         <slot name="skeleton" />
       </div>
 
-      <!-- 居中卡片容器 -->
-      <div class="p-content-progress__card">
-        <!-- 正常加载与慢网状态 -->
-        <template v-if="loading && !isTimeout && !error">
-          <div class="p-content-progress__track" aria-label="正在加载">
-            <div
-              class="p-content-progress__bar"
-              :style="{ width: `${progress}%` }"
-            ></div>
-          </div>
-          <p class="p-content-progress__text">
-            {{ isSlow ? '网络连接较慢，正在加载...' : '正在加载...' }}
-          </p>
-        </template>
+      <!-- 居中加载条 -->
+      <div class="p-content-progress__loader" role="status" aria-label="正在加载">
+        <div class="p-content-progress__track">
+          <div class="p-content-progress__bar" />
+        </div>
+        <p class="p-content-progress__text">正在加载</p>
+      </div>
+    </div>
 
-        <!-- 超时或发生错误状态 -->
-        <template v-else>
-          <div class="p-content-progress__error-icon" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          <p class="p-content-progress__error-text">
-            {{ isTimeout ? '加载超时，请检查网络' : (error || '加载失败') }}
-          </p>
-          <button
-            v-if="retry"
-            type="button"
-            class="p-content-progress__retry-btn"
-            @click="handleRetry"
-          >
-            重新加载
-          </button>
-        </template>
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="p-content-progress__overlay">
+      <div class="p-content-progress__loader">
+        <div class="p-content-progress__error-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <p class="p-content-progress__text">{{ typeof error === 'string' ? error : '加载失败' }}</p>
+        <button v-if="retry" type="button" class="p-content-progress__retry-btn" @click="retry?.()">
+          重新加载
+        </button>
       </div>
     </div>
 
@@ -54,106 +40,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
-
-const props = withDefaults(
-  defineProps<{
-    loading?: boolean
-    error?: string | boolean | null
-    slowThresholdSeconds?: number
-    timeoutSeconds?: number
-    retry?: () => any
-  }>(),
-  {
-    loading: false,
-    error: null,
-    slowThresholdSeconds: 3,
-    timeoutSeconds: 10
-  }
-)
-
-const progress = ref(0)
-const isSlow = ref(false)
-const isTimeout = ref(false)
-
-let progressTimer: ReturnType<typeof setInterval> | null = null
-let slowTimer: ReturnType<typeof setTimeout> | null = null
-let timeoutTimer: ReturnType<typeof setTimeout> | null = null
-
-function clearAllTimers() {
-  if (progressTimer) clearInterval(progressTimer)
-  if (slowTimer) clearTimeout(slowTimer)
-  if (timeoutTimer) clearTimeout(timeoutTimer)
-  progressTimer = null
-  slowTimer = null
-  timeoutTimer = null
-}
-
-function startLoadingTimers() {
-  clearAllTimers()
-  progress.value = 0
-  isSlow.value = false
-  isTimeout.value = false
-
-  // 1. 进度条缓动 (0% -> 90%)
-  const startTime = Date.now()
-  progressTimer = setInterval(() => {
-    if (progress.value < 90) {
-      const elapsed = (Date.now() - startTime) / 1000
-      // 缓动曲线
-      const nextProgress = Math.min(88, Math.floor(100 * (1 - Math.exp(-elapsed / 2.5))))
-      progress.value = Math.max(progress.value, nextProgress)
-    }
-  }, 100)
-
-  // 2. 慢网提示定时器
-  slowTimer = setTimeout(() => {
-    if (props.loading && !isTimeout.value) {
-      isSlow.value = true
-    }
-  }, props.slowThresholdSeconds * 1000)
-
-  // 3. 超时定时器
-  timeoutTimer = setTimeout(() => {
-    if (props.loading) {
-      isTimeout.value = true
-      if (progressTimer) clearInterval(progressTimer)
-    }
-  }, props.timeoutSeconds * 1000)
-}
-
-function finishLoading() {
-  progress.value = 100
-  setTimeout(() => {
-    clearAllTimers()
-    isSlow.value = false
-    isTimeout.value = false
-  }, 200)
-}
-
-function handleRetry() {
-  isTimeout.value = false
-  isSlow.value = false
-  if (props.retry) {
-    props.retry()
-  }
-}
-
-watch(
-  () => props.loading,
-  (newVal) => {
-    if (newVal) {
-      startLoadingTimers()
-    } else {
-      finishLoading()
-    }
-  },
-  { immediate: true }
-)
-
-onUnmounted(() => {
-  clearAllTimers()
-})
+defineProps<{
+  loading?: boolean
+  error?: string | boolean | null
+  retry?: () => any
+}>()
 </script>
 
 <style scoped>
@@ -180,102 +71,71 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.p-content-progress__card {
+/* 居中加载区 */
+.p-content-progress__loader {
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 1.5rem 2rem;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-  width: 100%;
-  max-width: 320px;
-  text-align: center;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .p-content-progress__card {
-    background: rgba(24, 24, 27, 0.85);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  }
-}
-
+/* 轨道 */
 .p-content-progress__track {
-  width: 100%;
-  height: 4px;
-  background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.06));
+  width: 200px;
+  height: 3px;
+  background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.07));
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 0.875rem;
 }
 
+/* 滑动长条 */
 .p-content-progress__bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--a-color-primary, #3b82f6), #60a5fa);
+  width: 45%;
+  background: var(--a-color-primary, #3b82f6);
   border-radius: 999px;
-  transition: width 0.15s ease-out;
+  animation: p-bar-slide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
+@keyframes p-bar-slide {
+  0%   { transform: translateX(-120%); }
+  60%  { transform: translateX(240%); }
+  100% { transform: translateX(240%); }
+}
+
+/* 文字 */
 .p-content-progress__text {
-  font-size: 0.875rem;
-  color: var(--a-color-text-muted, #64748b);
-  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--a-color-muted, #94a3b8);
   font-weight: 500;
-  animation: fadeIn 0.3s ease;
+  margin: 0;
 }
 
+/* 错误图标 */
 .p-content-progress__error-icon {
   color: var(--a-color-danger, #ef4444);
-  margin-bottom: 0.5rem;
 }
 
-.p-content-progress__error-text {
-  font-size: 0.875rem;
-  color: var(--a-color-text, #1e293b);
-  margin: 0 0 1rem 0;
-  font-weight: 500;
-}
-
+/* 重试按钮 */
 .p-content-progress__retry-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.4rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--a-color-primary, #3b82f6);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--a-color-primary, #3b82f6);
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 0;
+  text-decoration: underline;
+  margin-top: 0.25rem;
 }
 
 .p-content-progress__retry-btn:hover {
-  background: rgba(59, 130, 246, 0.15);
-  transform: translateY(-1px);
+  opacity: 0.7;
 }
 
-.p-content-progress__retry-btn:active {
-  transform: translateY(0);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.p-content-progress__content {
+  width: 100%;
 }
 </style>

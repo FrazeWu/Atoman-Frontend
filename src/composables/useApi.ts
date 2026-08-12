@@ -108,8 +108,6 @@ export function useApi() {
       postVersionRestore: (id: number | string, version: number) => `${apiUrl}/blog/posts/${id}/versions/${version}/restore`,
       draft: `${apiUrl}/blog/drafts`,
       drafts: `${apiUrl}/blog/posts/drafts`,
-      postCollections: (id: number | string) => `${apiUrl}/blog/posts/${id}/collections`,
-      postCollection: (id: number | string, collectionId: number | string) => `${apiUrl}/blog/posts/${id}/collections/${collectionId}`,
       collectionPostOrder: (id: number | string) => `${apiUrl}/blog/collections/${id}/posts/order`,
       uploadImage: `${apiUrl}/blog/upload-image`,
 
@@ -117,8 +115,8 @@ export function useApi() {
       shortNote: (id: number | string) => `${apiUrl}/short-notes/${id}`,
       shortNoteLike: (id: number | string) => `${apiUrl}/short-notes/${id}/like`,
 
-      comments: `${apiUrl}/blog/comments`,
-      postComments: (id: number | string) => `${apiUrl}/blog/posts/${id}/comments`,
+      comments: (id: number | string) => `${apiUrl}/discussions/blog_post/${encodeURIComponent(id)}/comments`,
+      postComments: (id: number | string) => `${apiUrl}/discussions/blog_post/${encodeURIComponent(id)}/comments`,
 
       likes: `${apiUrl}/blog/likes`,
       postLikesCount: (id: number | string) => `${apiUrl}/blog/posts/${id}/likes/count`,
@@ -155,8 +153,8 @@ export function useApi() {
 
     interactions: {
       blogLikes: `${apiUrl}/blog/likes`,
-      blogPostComments: (postId: number | string) => `${apiUrl}/blog/posts/${postId}/comments`,
-      blogComment: (commentId: number | string) => `${apiUrl}/blog/comments/${commentId}`,
+      blogPostComments: (postId: number | string) => `${apiUrl}/discussions/blog_post/${encodeURIComponent(postId)}/comments`,
+      blogComment: (commentId: number | string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}`,
       shortNoteComments: (noteId: number | string) => `${apiUrl}/discussions/short_note/${noteId}/comments`,
       forumTopicLike: (topicId: number | string) => `${apiUrl}/forum/topics/${topicId}/like`,
       forumTopicComments: (topicId: number | string) => `${apiUrl}/discussions/forum_topic/${topicId}/comments`,
@@ -242,7 +240,7 @@ export function useApi() {
       unreadCount: `${apiUrl}/notifications/unread-count`,
       unreadCounts: `${apiUrl}/notifications/unread-counts`,
       markRead: (id: string) => `${apiUrl}/notifications/${id}/read`,
-      markCategoryRead: (category: string) => `${apiUrl}/notifications/${category}/read-all`,
+      markCategoryRead: (category: string) => `${apiUrl}/notifications/read-all?category=${encodeURIComponent(category)}`,
       markAllRead: `${apiUrl}/notifications/read-all`,
       preferences: `${apiUrl}/notifications/preferences`,
       mutes: `${apiUrl}/notifications/mutes`,
@@ -274,8 +272,8 @@ export function useApi() {
       recommended: (id: string) => `${apiUrl}/videos/${id}/recommended`,
       bookmarks: `${apiUrl}/videos/bookmarks`,
       bookmark: (id: string) => `${apiUrl}/videos/bookmarks/${id}`,
-      comments: (id: string) => `${apiUrl}/videos/${id}/comments`,
-      comment: (commentId: string) => `${apiUrl}/videos/comments/${commentId}`,
+      comments: (id: string) => `${apiUrl}/discussions/video/${encodeURIComponent(id)}/comments`,
+      comment: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}`,
     },
 
     podcast: {

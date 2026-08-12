@@ -279,6 +279,7 @@ export const usePlayerStore = defineStore("player", () => {
     if (audio) return audio;
 
     const nextAudio = new Audio();
+    nextAudio.preload = "auto";
     nextAudio.addEventListener("timeupdate", () => {
       currentTime.value = nextAudio.currentTime;
       savePodcastProgress();

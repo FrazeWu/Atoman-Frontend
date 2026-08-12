@@ -48,6 +48,7 @@ const playableSongs = computed<Song[]>(() => historyItems.value
     release_date: '',
     lyrics: item.song.lyrics || '',
     audio_url: item.song.audio_url || '',
+    waveform_peaks: item.song.waveform_peaks,
     cover_url: item.song.cover_url || item.song.album?.cover_url || '',
     track_number: item.song.track_number,
     status: (item.song.status as Song['status']) || 'approved',

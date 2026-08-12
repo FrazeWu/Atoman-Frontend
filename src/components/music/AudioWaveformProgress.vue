@@ -62,12 +62,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { generateWaveformPlaceholder, loadAudioWaveform } from '@/utils/audioWaveform'
+import { computed, ref } from 'vue'
+import { generateWaveformPlaceholder } from '@/utils/audioWaveform'
 
 const props = withDefaults(defineProps<{
   songId: string
   audioUrl: string
+  waveformPeaks?: number[]
   currentTime: number
   duration: number
   generateWaveform?: boolean
@@ -80,11 +81,19 @@ const emit = defineEmits<{
 }>()
 
 const rootRef = ref<HTMLElement | null>(null)
-const peaks = ref<number[]>([])
 const dragging = ref(false)
 const hoverRatio = ref<number | null>(null)
-let waveformController: AbortController | null = null
 const waveformPeakCount = 280
+
+const peaks = computed(() => {
+  if (!props.generateWaveform) return []
+  const stored = props.waveformPeaks
+    ?.filter((peak) => Number.isFinite(peak))
+    .map((peak) => Math.max(0.08, Math.min(1, peak / 100)))
+  return stored?.length === waveformPeakCount
+    ? stored
+    : generateWaveformPlaceholder(props.songId, waveformPeakCount)
+})
 
 const progressRatio = computed(() => {
   if (!props.duration) return 0
@@ -159,28 +168,6 @@ function handleRangeInput(event: Event) {
   emit('seek', Number((event.target as HTMLInputElement).value))
 }
 
-watch(
-  () => [props.songId, props.audioUrl, props.generateWaveform] as const,
-  async ([songId, audioUrl, generateWaveform]) => {
-    waveformController?.abort()
-    waveformController = null
-    peaks.value = []
-    if (!generateWaveform || !songId || !audioUrl || typeof window === 'undefined' || !window.AudioContext) return
-
-    peaks.value = generateWaveformPlaceholder(songId, waveformPeakCount)
-
-    const controller = new AbortController()
-    waveformController = controller
-    try {
-      peaks.value = await loadAudioWaveform(songId, audioUrl, controller.signal, waveformPeakCount)
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return
-    }
-  },
-  { immediate: true },
-)
-
-onBeforeUnmount(() => waveformController?.abort())
 </script>
 
 <style scoped>

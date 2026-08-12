@@ -4,6 +4,8 @@ import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -563,9 +565,22 @@ onMounted(async () => {
     <p v-else-if="themesLoading" class="state-line">正在加载主题...</p>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="state-line">正在加载...</p>
 
-    <div v-else-if="sourceScope === 'external'" class="recommend-grid recommend-grid--single">
+    <PContentProgress
+      :loading="loading"
+      :retry="fetchRecommendations"
+    >
+      <template #skeleton>
+        <div class="recommend-grid">
+          <div v-for="i in 6" :key="i" style="padding: 1.25rem; border: 1px solid rgba(0,0,0,0.05); border-radius: 8px;">
+            <PSkeleton width="60%" height="22px" style="margin-bottom: 8px;" />
+            <PSkeleton width="90%" height="16px" style="margin-bottom: 8px;" />
+            <PSkeleton width="40%" height="14px" />
+          </div>
+        </div>
+      </template>
+
+      <div v-if="sourceScope === 'external'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
         <div class="section-head"><p class="section-kicker">站外</p><h2>RSS 订阅源</h2></div>
         <div class="external-source-controls">
@@ -742,6 +757,7 @@ onMounted(async () => {
         />
       </section>
     </div>
+    </PContentProgress>
   </div>
 </template>
 

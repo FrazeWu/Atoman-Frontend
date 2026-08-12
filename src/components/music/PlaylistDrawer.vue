@@ -320,6 +320,7 @@ const playableSongs = computed<Song[]>(() => {
         release_date: '',
         lyrics: song.lyrics || '',
         audio_url: song.audio_url,
+        waveform_peaks: song.waveform_peaks,
         cover_url: song.cover_url || '',
         track_number: song.track_number,
         status: (song.status as Song['status']) || 'approved',

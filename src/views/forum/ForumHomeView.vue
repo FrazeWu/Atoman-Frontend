@@ -39,16 +39,24 @@
         @toggle-follow="forumStore.toggleFollow($event.targetType, $event.targetKey)"
       />
 
-      <!-- Loading state -->
-      <div v-if="forumStore.loading" class="topic-list">
-        <div v-for="i in 8" :key="i" class="topic-row-skeleton a-skeleton" />
-      </div>
+      <PContentProgress
+        :loading="forumStore.loading"
+        :retry="() => loadTopics(true)"
+      >
+        <template #skeleton>
+          <div class="topic-list">
+            <div v-for="i in 6" :key="i" style="padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);">
+              <PSkeleton width="40%" height="20px" style="margin-bottom: 8px;" />
+              <PSkeleton width="80%" height="16px" />
+            </div>
+          </div>
+        </template>
 
-      <!-- Empty state -->
-      <PEmpty v-else-if="forumStore.topics.length === 0" title="暂无话题" description="成为第一个发起探讨的人。" />
+        <!-- Empty state -->
+        <PEmpty v-if="forumStore.topics.length === 0" title="暂无话题" description="成为第一个发起探讨的人。" />
 
-      <!-- Topic rows -->
-      <div v-else ref="topicListRef" class="topic-list">
+        <!-- Topic rows -->
+        <div v-else ref="topicListRef" class="topic-list">
         <PEntry
           v-for="(topic, index) in forumStore.topics"
           :key="topic.id"
@@ -99,6 +107,7 @@
           </template>
         </PEntry>
       </div>
+      </PContentProgress>
 
       <!-- Load more -->
       <div v-if="hasMore && !forumStore.loading" class="load-more-wrap">
@@ -131,6 +140,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import ForumTopicFilters from '@/components/forum/ForumTopicFilters.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'

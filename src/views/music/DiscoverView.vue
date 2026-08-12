@@ -278,6 +278,7 @@ function toPlayableSong(song: MusicSongListItem): Song | null {
     release_date: '',
     lyrics: song.lyrics || '',
     audio_url: song.audio_url,
+    waveform_peaks: song.waveform_peaks,
     cover_url: song.cover_url || song.album?.cover_url || '',
     track_number: song.track_number || 0,
     status: (song.status as Song['status']) || 'approved',

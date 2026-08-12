@@ -58,6 +58,7 @@ function playable(song: MusicSongListItem): Song {
     release_date: '',
     lyrics: song.lyrics || '',
     audio_url: song.audio_url || '',
+    waveform_peaks: song.waveform_peaks,
     cover_url: song.cover_url || song.album?.cover_url || '',
     status: 'approved',
   }

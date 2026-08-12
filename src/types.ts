@@ -63,6 +63,7 @@ export interface Song {
   release_date: string;
   lyrics: string;
   audio_url: string;
+  waveform_peaks?: number[];
   media_kind?: 'music_song' | 'feed_item';
   audio_source?: 'local' | 's3';
   cover_url: string;

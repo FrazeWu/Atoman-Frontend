@@ -27,145 +27,138 @@
     </header>
 
     <div id="sections" class="portal-hot__container">
-      <section v-if="loading" class="portal-hot__loading" aria-label="热门内容加载中">
-        <div class="portal-hot__loading-grid">
-          <div v-for="index in 4" :key="index" class="portal-hot__card-skeleton a-skeleton" />
-        </div>
-      </section>
-
-      <section v-else-if="error" class="portal-hot__empty">
-        <div class="portal-hot__empty-icon">⚠️</div>
-        <p class="portal-hot__kicker">加载失败</p>
-        <h2>热门内容暂时没有加载出来</h2>
-        <p>{{ error }}</p>
-        <PButton size="sm" @click="loadHotContent">重试</PButton>
-        <div class="portal-hot__fallback-links">
-          <RouterLink
-            v-for="room in visibleRooms"
-            :key="room.key"
-            :to="moduleUrl(room.key)"
-          >
-            先去{{ room.name }}
-          </RouterLink>
-        </div>
-      </section>
-
-      <template v-else-if="hasContent">
-        <!-- 核心推荐 (Featured) -->
-        <section v-if="recommendationItems.length" class="portal-hot__recommendations" aria-label="推荐内容">
-          <div class="portal-hot__section-header">
-            <div>
-              <p class="portal-hot__kicker">SPOTLIGHT</p>
-              <h2>焦点精选</h2>
+      <PContentProgress
+        :loading="loading"
+        :error="error"
+        :retry="loadHotContent"
+      >
+        <template #skeleton>
+          <div class="portal-hot__loading-grid">
+            <div v-for="index in 4" :key="index" class="portal-hot__card-skeleton">
+              <PSkeleton height="140px" style="margin-bottom: 12px;" />
+              <PSkeleton width="60%" height="20px" style="margin-bottom: 8px;" />
+              <PSkeleton width="90%" height="16px" />
             </div>
-            <span class="portal-hot__header-line"></span>
           </div>
-          <div class="portal-hot__recommendation-grid">
-            <RouterLink
-              v-for="item in recommendationItems"
-              :key="`${item.module}-${item.id}`"
-              :to="item.target_path"
-              class="portal-hot__recommendation-card"
-              :class="{ 'has-image': item.image_url }"
-            >
-              <div v-if="item.image_url" class="portal-hot__recommendation-image">
-                <img
-                  :src="item.image_url"
-                  :alt="item.title"
-                  :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
-                  :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
-                />
-                <div class="portal-hot__image-overlay"></div>
-              </div>
-              <div class="portal-hot__recommendation-body">
-                <div class="portal-hot__meta-row">
-                  <span class="portal-hot__tag">{{ moduleLabel(item.module) }}</span>
-                  <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
-                </div>
-                <h2>{{ item.title }}</h2>
-                <p v-if="item.summary">{{ item.summary }}</p>
-                <div class="portal-hot__card-footer">
-                  <span class="portal-hot__read-more">阅读更多 &rarr;</span>
-                </div>
-              </div>
-            </RouterLink>
-          </div>
-        </section>
+        </template>
 
-        <!-- 分模块热门内容 -->
-        <section class="portal-hot__sections" aria-label="模块热门内容">
-          <article
-            v-for="section in displaySections"
-            :key="section.module"
-            class="portal-hot__section"
-          >
-            <div class="portal-hot__section-head">
-              <div class="portal-hot__section-title-group">
-                <span class="portal-hot__section-badge">{{ moduleLabel(section.module) }}</span>
-                <h2>{{ section.title }}</h2>
+        <template v-if="hasContent">
+          <!-- 核心推荐 (Featured) -->
+          <section v-if="recommendationItems.length" class="portal-hot__recommendations" aria-label="推荐内容">
+            <div class="portal-hot__section-header">
+              <div>
+                <p class="portal-hot__kicker">SPOTLIGHT</p>
+                <h2>焦点精选</h2>
               </div>
-              <RouterLink :to="moduleHomePath(section.module)" class="portal-hot__module-link">
-                <span>查看全部</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </RouterLink>
+              <span class="portal-hot__header-line"></span>
             </div>
-
-            <div class="portal-hot__grid">
+            <div class="portal-hot__recommendation-grid">
               <RouterLink
-                v-for="item in section.items"
-                :key="`${section.module}-${item.id}`"
+                v-for="item in recommendationItems"
+                :key="`${item.module}-${item.id}`"
                 :to="item.target_path"
-                class="portal-hot__card"
+                class="portal-hot__recommendation-card"
+                :class="{ 'has-image': item.image_url }"
               >
-                <div v-if="item.image_url" class="portal-hot__thumb">
+                <div v-if="item.image_url" class="portal-hot__recommendation-image">
                   <img
                     :src="item.image_url"
                     :alt="item.title"
                     :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
                     :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
                   />
-                  <div class="portal-hot__thumb-overlay"></div>
+                  <div class="portal-hot__image-overlay"></div>
                 </div>
-                <div class="portal-hot__card-body">
-                  <div class="portal-hot__card-meta">
-                    <span>{{ item.score_label }}</span>
+                <div class="portal-hot__recommendation-body">
+                  <div class="portal-hot__meta-row">
+                    <span class="portal-hot__tag">{{ moduleLabel(item.module) }}</span>
+                    <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
                   </div>
-                  <strong>{{ item.title }}</strong>
+                  <h2>{{ item.title }}</h2>
                   <p v-if="item.summary">{{ item.summary }}</p>
+                  <div class="portal-hot__card-footer">
+                    <span class="portal-hot__read-more">阅读更多 &rarr;</span>
+                  </div>
                 </div>
               </RouterLink>
             </div>
-          </article>
-        </section>
+          </section>
 
-        <nav v-if="!displaySections.length" class="portal-hot__module-strip" aria-label="探索更多模块">
-          <span>探索更多模块：</span>
-          <div class="portal-hot__strip-links">
+          <!-- 分模块热门内容 -->
+          <section class="portal-hot__sections" aria-label="模块热门内容">
+            <article
+              v-for="section in displaySections"
+              :key="section.module"
+              class="portal-hot__section"
+            >
+              <div class="portal-hot__section-head">
+                <div class="portal-hot__section-title-group">
+                  <span class="portal-hot__section-badge">{{ moduleLabel(section.module) }}</span>
+                  <h2>{{ section.title }}</h2>
+                </div>
+                <RouterLink :to="moduleHomePath(section.module)" class="portal-hot__module-link">
+                  <span>查看全部</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </RouterLink>
+              </div>
+
+              <div class="portal-hot__grid">
+                <RouterLink
+                  v-for="item in section.items"
+                  :key="`${section.module}-${item.id}`"
+                  :to="item.target_path"
+                  class="portal-hot__card"
+                >
+                  <div v-if="item.image_url" class="portal-hot__thumb">
+                    <img
+                      :src="item.image_url"
+                      :alt="item.title"
+                      :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
+                      :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                    />
+                    <div class="portal-hot__thumb-overlay"></div>
+                  </div>
+                  <div class="portal-hot__card-body">
+                    <div class="portal-hot__card-meta">
+                      <span>{{ item.score_label }}</span>
+                    </div>
+                    <strong>{{ item.title }}</strong>
+                    <p v-if="item.summary">{{ item.summary }}</p>
+                  </div>
+                </RouterLink>
+              </div>
+            </article>
+          </section>
+
+          <nav v-if="!displaySections.length" class="portal-hot__module-strip" aria-label="探索更多模块">
+            <span>探索更多模块：</span>
+            <div class="portal-hot__strip-links">
+              <RouterLink
+                v-for="room in otherRooms"
+                :key="room.key"
+                :to="moduleUrl(room.key)"
+              >{{ room.name }}</RouterLink>
+            </div>
+          </nav>
+        </template>
+
+        <section v-else class="portal-hot__empty">
+          <p class="portal-hot__kicker">暂无内容</p>
+          <h2>还没有可展示的热点内容</h2>
+          <p>可以先从任一模块开始发布、订阅或讨论，首页会自动汇总最活跃的内容。</p>
+          <div class="portal-hot__fallback-links">
             <RouterLink
-              v-for="room in otherRooms"
+              v-for="room in visibleRooms"
               :key="room.key"
               :to="moduleUrl(room.key)"
-            >{{ room.name }}</RouterLink>
+            >
+              {{ room.name }}
+            </RouterLink>
           </div>
-        </nav>
-      </template>
-
-      <section v-else class="portal-hot__empty">
-        <p class="portal-hot__kicker">暂无内容</p>
-        <h2>还没有可展示的热点内容</h2>
-        <p>可以先从任一模块开始发布、订阅或讨论，首页会自动汇总最活跃的内容。</p>
-        <div class="portal-hot__fallback-links">
-          <RouterLink
-            v-for="room in visibleRooms"
-            :key="room.key"
-            :to="moduleUrl(room.key)"
-          >
-            {{ room.name }}
-          </RouterLink>
-        </div>
-      </section>
+        </section>
+      </PContentProgress>
     </div>
   </main>
 </template>
@@ -176,6 +169,8 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { useApi } from '@/composables/useApi'
 import { moduleUrl } from '@/router/siteUrls'

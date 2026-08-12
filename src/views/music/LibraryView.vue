@@ -62,7 +62,7 @@ const options = [
 let queryTimer: ReturnType<typeof setTimeout> | undefined
 
 function playable(song: MusicSongListItem): Song {
-  return { id: song.id, title: song.title, artist: song.artists?.map(item => item.name).join(' / ') || '未知艺术家', album: song.album?.title || '', album_id: song.album?.id || '', year: 0, release_date: '', lyrics: song.lyrics || '', audio_url: song.audio_url || '', cover_url: song.cover_url || song.album?.cover_url || '', status: 'approved' }
+  return { id: song.id, title: song.title, artist: song.artists?.map(item => item.name).join(' / ') || '未知艺术家', album: song.album?.title || '', album_id: song.album?.id || '', year: 0, release_date: '', lyrics: song.lyrics || '', audio_url: song.audio_url || '', waveform_peaks: song.waveform_peaks, cover_url: song.cover_url || song.album?.cover_url || '', status: 'approved' }
 }
 
 function playlistCardItem(playlist: MusicPlaylistSummary) {

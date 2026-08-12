@@ -778,7 +778,7 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: min(600px, calc(100% - 780px));
+  width: clamp(280px, calc(100% - 780px), 600px);
   min-width: 280px;
 }
 .ctrl-row {
@@ -1166,8 +1166,7 @@ watch(
   }
 
   .player-controls-hub {
-    width: min(440px, calc(100% - 420px));
-    min-width: 240px;
+    width: clamp(240px, calc(100% - 420px), 440px);
   }
 
   .ctrl-row {
@@ -1187,8 +1186,7 @@ watch(
     flex-basis: 320px;
   }
   .player-controls-hub {
-    width: min(420px, calc(100% - 620px));
-    min-width: 240px;
+    width: clamp(240px, calc(100% - 620px), 420px);
   }
   .player-features {
     gap: 12px;

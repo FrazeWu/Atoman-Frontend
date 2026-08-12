@@ -33,7 +33,10 @@
 
   <div class="dropdown-wrap" data-dropdown="user">
     <button class="user-btn" @click="toggleDropdown('user')">
-      <span class="user-avatar">{{ userInitial }}</span>
+      <span class="user-avatar">
+        <img v-if="avatarSrc" :src="avatarSrc" :alt="`${authStore.user?.username || '用户'}的头像`" />
+        <span v-else>{{ userInitial }}</span>
+      </span>
       <span class="user-name">{{ authStore.user?.username }}</span>
       <span class="chevron" :style="activeDropdown === 'user' ? 'transform:rotate(180deg)' : ''">▾</span>
     </button>
@@ -54,6 +57,7 @@ import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 import { Bell, PencilLine, Settings } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
@@ -62,6 +66,7 @@ const router = useRouter()
 
 const activeDropdown = ref<string | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
+const avatarSrc = computed(() => authStore.user?.avatar_url ? resolveMediaURL(authStore.user.avatar_url) : '')
 const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
 const toggleDropdown = (name: string) => {
@@ -252,6 +257,12 @@ const logout = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-name {

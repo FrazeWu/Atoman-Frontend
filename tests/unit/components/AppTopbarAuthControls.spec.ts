@@ -85,6 +85,32 @@ describe('AppTopbarAuthControls', () => {
     expect(wrapper.html()).not.toContain('/blog/bookmarks')
   })
 
+  it('renders the user avatar when the session contains one', async () => {
+    const authStore = useAuthStore()
+    authStore.user = {
+      id: 1,
+      uuid: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'user',
+      avatar_url: 'http://localhost:9100/atoman-dev/users/avatar.png',
+    }
+
+    const wrapper = await mountTopbar()
+    const avatar = wrapper.find('.user-avatar img')
+
+    expect(avatar.exists()).toBe(true)
+    expect(avatar.attributes('src')).toBe('/__object-storage/atoman-dev/users/avatar.png')
+    expect(wrapper.find('.user-avatar > span').exists()).toBe(false)
+  })
+
+  it('falls back to the user initial without an avatar', async () => {
+    const wrapper = await mountTopbar()
+
+    expect(wrapper.find('.user-avatar img').exists()).toBe(false)
+    expect(wrapper.find('.user-avatar').text()).toBe('A')
+  })
+
   it('renders one creator entry that points to Studio', async () => {
     const wrapper = await mountTopbar()
 

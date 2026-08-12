@@ -63,7 +63,7 @@ onMounted(() => {
 
 .app-main {
   flex: 1 0 auto;
-  background: #fff;
+  background: var(--a-color-bg);
   transition: opacity 0.5s ease, filter 0.5s ease;
 }
 

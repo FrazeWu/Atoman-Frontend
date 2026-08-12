@@ -8,6 +8,7 @@ import { useApiUrl } from '@/composables/useApi'
 import type { User } from '@/types'
 
 const API_URL = useApiUrl()
+const SESSION_RESTORE_TIMEOUT_MS = 1500
 
 type AuthApiPayload = {
   csrf_token?: unknown
@@ -81,6 +82,27 @@ function isAuthInvalidationCode(code: unknown) {
 
 function networkAuthError() {
   return new Error('无法连接服务器，请检查网络后重试')
+}
+
+async function requestSessionWithTimeout() {
+  const controller = new AbortController()
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      apiRequest(`${API_URL}/auth/session`, {
+        credentials: 'include',
+        signal: controller.signal,
+      }),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort()
+          reject(new Error('session restore timed out'))
+        }, SESSION_RESTORE_TIMEOUT_MS)
+      }),
+    ])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -204,7 +226,7 @@ export const useAuthStore = defineStore('auth', () => {
     let currentRestore!: Promise<boolean>
     currentRestore = (async () => {
       try {
-        const response = await apiRequest(`${API_URL}/auth/session`, { credentials: 'include' })
+        const response = await requestSessionWithTimeout()
         if (restoreGeneration !== sessionGeneration) return false
         if (response.status === 204) {
           clearSessionState()

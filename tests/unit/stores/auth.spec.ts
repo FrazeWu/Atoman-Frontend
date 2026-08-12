@@ -75,6 +75,27 @@ describe('auth store cookie session', () => {
 	expect(auth.lastAuthError).toBeNull()
   })
 
+  it('stops waiting when cookie session restoration times out', async () => {
+	vi.useFakeTimers()
+	try {
+	  let requestSignal: AbortSignal | null = null
+	  vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => {
+		requestSignal = init?.signal ?? null
+		return new Promise<Response>(() => {})
+	  })
+	  const auth = useAuthStore()
+	  const restoring = auth.restoreSession()
+
+	  await vi.advanceTimersByTimeAsync(1500)
+
+	  await expect(restoring).resolves.toBe(false)
+	  expect(requestSignal?.aborted).toBe(true)
+	  expect(auth.isAuthenticated).toBe(false)
+	} finally {
+	  vi.useRealTimers()
+	}
+  })
+
   it('keeps an existing session when a forced restore has no session payload', async () => {
 	vi.spyOn(globalThis, 'fetch')
 	  .mockResolvedValueOnce(new Response(JSON.stringify({ csrf_token: 'csrf-existing', user }), { status: 200 }))

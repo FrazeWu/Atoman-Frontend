@@ -28,6 +28,13 @@ describe('modern flat UI design-system contract', () => {
     expect(css).toMatch(/--a-shadow-sm:\s*0\s+\d+px\s+\d+px/)
   })
 
+  it('uses the active theme background for the application content', () => {
+    const app = read('src/App.vue')
+
+    expect(app).toContain('background: var(--a-color-bg);')
+    expect(app).not.toMatch(/\.app-main\s*\{[^}]*background:\s*#fff;/s)
+  })
+
   it('does not expose the retired paper and ink token vocabulary', () => {
     const css = read('src/style.css')
 

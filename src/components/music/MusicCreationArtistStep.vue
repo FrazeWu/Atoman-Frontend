@@ -295,6 +295,16 @@ defineExpose({
         <h4>新建艺术家</h4>
       </header>
 
+      <section class="artist-card artist-kind-card" data-testid="artist-kind-section">
+        <p class="card-kicker">类型</p>
+        <PSegmentedControl
+          :model-value="artistDraft.kind"
+          :options="artistKindOptions"
+          aria-label="艺术家类型"
+          @update:model-value="setArtistKind"
+        />
+      </section>
+
       <section class="artist-card artist-card--primary">
         <div class="card-header">
           <div>
@@ -302,56 +312,51 @@ defineExpose({
           </div>
         </div>
 
-        <PSegmentedControl
-          :model-value="artistDraft.kind"
-          :options="artistKindOptions"
-          aria-label="艺术家类型"
-          @update:model-value="setArtistKind"
-        />
-
-        <div class="avatar-upload-section">
-          <div class="field-group avatar-label-group">
-            <span class="field-label">{{ !isGroup ? requiredLabel('头像') : '头像' }}</span>
-            <span class="field-hint">建议尺寸大于 600×600。</span>
-          </div>
-          <div
-            data-testid="artist-avatar-preview"
-            class="avatar-uploader"
-            :class="{ 'is-uploading': avatarUploading, 'is-square': true }"
-            title="点击添加头像"
-            @click="triggerFileInput"
-          >
-            <div class="artist-avatar-frame">
-              <img
-                v-if="avatarDisplayUrl"
-                data-testid="artist-avatar-preview-image"
-                :src="avatarDisplayUrl"
-                :alt="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
-                class="artist-avatar-image"
-              >
-              <PAvatar
-                v-else
-                :name="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
-                size="xl"
-              />
+        <div class="artist-profile-grid">
+          <div class="avatar-upload-section">
+            <div class="field-group avatar-label-group">
+              <span class="field-label">{{ !isGroup ? requiredLabel('头像') : '头像' }}</span>
+              <span class="field-hint">建议大于 600×600</span>
             </div>
-            <div class="avatar-uploader-hover">
-              <span v-if="avatarUploading">上传中...</span>
-              <span v-else>{{ avatarDisplayUrl ? '修改头像' : '添加头像' }}</span>
+            <div
+              data-testid="artist-avatar-preview"
+              class="avatar-uploader"
+              :class="{ 'is-uploading': avatarUploading, 'is-square': true }"
+              title="点击添加头像"
+              @click="triggerFileInput"
+            >
+              <div class="artist-avatar-frame">
+                <img
+                  v-if="avatarDisplayUrl"
+                  data-testid="artist-avatar-preview-image"
+                  :src="avatarDisplayUrl"
+                  :alt="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
+                  class="artist-avatar-image"
+                >
+                <PAvatar
+                  v-else
+                  :name="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
+                  size="xl"
+                />
+              </div>
+              <div class="avatar-uploader-hover">
+                <span v-if="avatarUploading">上传中...</span>
+                <span v-else>{{ avatarDisplayUrl ? '修改头像' : '添加头像' }}</span>
+              </div>
             </div>
+            <input
+              ref="fileInputRef"
+              data-testid="artist-avatar-input"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              :disabled="avatarUploading"
+              @click.stop
+              @change="onAvatarChange"
+            />
           </div>
-          <input
-            ref="fileInputRef"
-            data-testid="artist-avatar-input"
-            type="file"
-            accept="image/*"
-            style="display: none"
-            :disabled="avatarUploading"
-            @click.stop
-            @change="onAvatarChange"
-          />
 
-          <div class="avatar-upload-fields">
+          <div class="artist-basic-fields" data-testid="artist-basic-fields">
             <div v-if="!isGroup" class="field-group single-line-field">
               <PInput
                 v-model="artistDraft.legalName"
@@ -371,22 +376,33 @@ defineExpose({
                 @update:model-value="() => { stageNameErrorMessage = ''; groupErrorMessage = '' }"
               />
             </div>
-            <div v-if="isGroup" class="field-grid field-grid--duo">
-              <div class="single-line-field">
-                <PMaskedDateInput
-                  v-model="artistDraft.activeStartDateParts"
-                  :label="requiredLabel('成立时间')"
-                  testId="artist-group-start-date-input"
-                />
-              </div>
-              <div class="single-line-field">
-                <PMaskedDateInput
-                  v-model="artistDraft.activeEndDateParts"
-                  label="结束时间"
-                  testId="artist-group-end-date-input"
-                  present-when-empty
-                />
-              </div>
+            <div v-if="!isGroup" class="field-group single-line-field">
+              <PCountryRegionField
+                v-model="artistDraft.nationality"
+                :label="requiredLabel('国籍')"
+                placeholder="选择国家或地区"
+                trigger-test-id="artist-country-trigger"
+                search-test-id="artist-country-search"
+                option-prefix="artist-country-option-"
+              />
+            </div>
+            <div v-if="!isGroup" class="single-line-field">
+              <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiredLabel('生日')" testId="artist-birth-input" />
+            </div>
+            <div v-if="isGroup" class="single-line-field">
+              <PMaskedDateInput
+                v-model="artistDraft.activeStartDateParts"
+                :label="requiredLabel('成立时间')"
+                testId="artist-group-start-date-input"
+              />
+            </div>
+            <div v-if="isGroup" class="single-line-field">
+              <PMaskedDateInput
+                v-model="artistDraft.activeEndDateParts"
+                label="结束时间"
+                testId="artist-group-end-date-input"
+                present-when-empty
+              />
             </div>
           </div>
         </div>
@@ -495,35 +511,39 @@ defineExpose({
           <div
             v-for="(member, index) in artistDraft.members"
             :key="member.id"
-            class="stage-name-card"
+            class="stage-name-card member-card"
           >
             <div class="member-card__header">
-              <div class="single-line-field">
-                <PInput
-                  v-model="member.name"
-                  :data-testid="`artist-member-name-input-${index}`"
-                  type="text"
-                  label="成员名"
-                  placeholder="例如 Thomas Bangalter"
-                  @update:model-value="updateMemberName(member)"
-                />
+              <span class="member-card__title">成员 {{ String(index + 1).padStart(2, '0') }}</span>
+              <div class="member-card__actions">
+                <button
+                  v-if="!member.artistId"
+                  type="button"
+                  class="ui-action ui-action--inline"
+                  :disabled="memberBusyId === member.id || !member.name.trim()"
+                  @click="createMemberDraft(member)"
+                >
+                  {{ memberBusyId === member.id ? '处理中…' : '创建草稿' }}
+                </button>
+                <button
+                  type="button"
+                  class="ui-action ui-action--inline"
+                  @click="removeMember(member.id)"
+                >
+                  删除
+                </button>
               </div>
-              <button
-                v-if="!member.artistId"
-                type="button"
-                class="ui-action ui-action--inline"
-                :disabled="memberBusyId === member.id || !member.name.trim()"
-                @click="createMemberDraft(member)"
-              >
-                {{ memberBusyId === member.id ? '处理中…' : '创建草稿' }}
-              </button>
-              <button
-                type="button"
-                class="ui-action ui-action--inline"
-                @click="removeMember(member.id)"
-              >
-                删除
-              </button>
+            </div>
+
+            <div class="member-card__name single-line-field">
+              <PInput
+                v-model="member.name"
+                :data-testid="`artist-member-name-input-${index}`"
+                type="text"
+                label="成员名"
+                placeholder="例如 Thomas Bangalter"
+                @update:model-value="updateMemberName(member)"
+              />
             </div>
 
             <div v-if="memberResults[member.id]?.length" class="member-search-results">
@@ -538,7 +558,7 @@ defineExpose({
               </button>
             </div>
 
-            <div class="field-grid field-grid--duo">
+            <div class="member-card__dates">
               <div class="single-line-field">
                 <PMaskedDateInput v-model="member.joinDateParts" :label="requiredLabel('加入时间')" :testId="`artist-member-join-input-${index}`" />
               </div>
@@ -565,23 +585,7 @@ defineExpose({
           </div>
         </div>
 
-        <div class="field-stack">
-          <div v-if="!isGroup" class="field-grid field-grid--duo">
-            <div class="field-group single-line-field">
-              <PCountryRegionField
-                v-model="artistDraft.nationality"
-                :label="requiredLabel('国籍')"
-                placeholder="选择国家或地区"
-                trigger-test-id="artist-country-trigger"
-                search-test-id="artist-country-search"
-                option-prefix="artist-country-option-"
-              />
-            </div>
-            <div class="single-line-field">
-              <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiredLabel('生日')" testId="artist-birth-input" />
-            </div>
-          </div>
-
+        <div class="supplementary-grid">
           <div class="field-group">
             <PTextarea
               v-model="artistDraft.bio"
@@ -725,10 +729,22 @@ defineExpose({
   flex-wrap: wrap;
 }
 
-.avatar-upload-section {
-  display: flex;
-  gap: 1.5rem;
+.artist-kind-card {
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
+}
+
+.artist-profile-grid {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.avatar-upload-section {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
 }
 
 .avatar-uploader {
@@ -793,15 +809,13 @@ defineExpose({
   opacity: 1;
 }
 
-.avatar-upload-fields {
-  flex: 1;
+.artist-basic-fields {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .field-stack { display: grid; gap: 1rem; }
-.field-grid { display: grid; gap: 1rem; }
-.field-grid--duo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .field-group { display: grid; gap: 0.45rem; }
 .field-group--narrow { max-width: 16rem; }
 .single-line-field :deep(.p-field),
@@ -837,10 +851,30 @@ defineExpose({
 }
 
 .member-card__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: flex;
+  justify-content: space-between;
   gap: 0.75rem;
   align-items: center;
+}
+
+.member-card__title {
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.member-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.member-card__dates,
+.supplementary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 :deep(.p-input:focus),
@@ -891,34 +925,28 @@ defineExpose({
 }
 
 @media (max-width: 720px) {
-  .field-grid--duo,
-  .stage-name-dates {
+  .stage-name-dates,
+  .member-card__dates,
+  .supplementary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .artist-profile-grid {
     grid-template-columns: 1fr;
   }
 
   .avatar-upload-section {
-    flex-direction: column;
-    align-items: stretch;
+    justify-items: start;
   }
 
   .single-line-field :deep(.p-field),
   .single-line-field :deep(.p-date-input-container),
   .single-line-field :deep(.country-field) {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-
-  .single-line-field :deep(.p-field-error),
-  .single-line-field :deep(.p-field-hint) {
-    grid-column: 1;
+    grid-template-columns: 5rem minmax(0, 1fr);
   }
 
   .member-card__header {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .member-card__header .single-line-field {
-    grid-column: 1 / -1;
+    align-items: flex-start;
   }
 }
 </style>

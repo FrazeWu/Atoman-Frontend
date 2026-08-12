@@ -134,13 +134,17 @@ describe('MusicCreationArtistStep.vue', () => {
     expect((wrapper.get('[data-testid="artist-birth-input"]').element as HTMLInputElement).value).toBe('1987/mm/dd')
   })
 
-  it('places nationality and birthday on the same row', () => {
+  it('places personal single-line fields in the shared basic information column', () => {
     const wrapper = mountArtistStep()
 
-    const row = wrapper.find('.field-grid--duo')
-    expect(row.exists()).toBe(true)
-    expect(row.find('[data-testid="artist-nationality-input"]').exists()).toBe(true)
-    expect(row.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
+    const basicFields = wrapper.get('[data-testid="artist-basic-fields"]')
+    expect(basicFields.find('[data-testid="artist-legal-name-input"]').exists()).toBe(true)
+    expect(basicFields.find('[data-testid="artist-stage-name-input-0"]').exists()).toBe(true)
+    expect(basicFields.find('[data-testid="artist-nationality-input"]').exists()).toBe(true)
+    expect(basicFields.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
+    expect(basicFields.findAll('.single-line-field')).toHaveLength(4)
+    expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-bio-input"]').exists()).toBe(true)
+    expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-source-input"]').exists()).toBe(true)
   })
 
   it('keeps single-line labels inline and removes disambiguation fields', async () => {
@@ -154,6 +158,10 @@ describe('MusicCreationArtistStep.vue', () => {
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
 
     expect(wrapper.find('[data-testid="artist-member-disambiguation-input-0"]').exists()).toBe(false)
+    expect(wrapper.get('.member-card__header').text()).toContain('成员 01')
+    expect(wrapper.get('.member-card__name').text()).toContain('成员名')
+    expect(wrapper.get('.member-card__dates').find('[data-testid="artist-member-join-input-0"]').exists()).toBe(true)
+    expect(wrapper.get('.member-card__dates').find('[data-testid="artist-member-leave-input-0"]').exists()).toBe(true)
   })
 
   it('shows required markers for mandatory personal artist fields', () => {

@@ -16,6 +16,8 @@ import {
 } from '@/api/musicV1'
 import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -320,32 +322,46 @@ function handleSearchBlur() {
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="loading" class="state-line">正在加载艺术家...</p>
 
-      <div v-else-if="!artists.length" class="empty-state">
-        <p class="state-line">{{ activeTab === 'subscribed' ? '暂无订阅的艺术家' : '没有匹配的艺术家' }}</p>
-        <div class="empty-actions">
-          <PButton
-            variant="primary"
-            data-testid="empty-add-artist"
-            @click="startArtistCreation"
-          >
-            添加艺术家
-          </PButton>
+      <PContentProgress
+        :loading="loading"
+        :retry="fetchArtists"
+      >
+        <template #skeleton>
+          <div class="artist-results-grid" style="padding-top: 1rem;">
+            <div v-for="i in 8" :key="i" style="display:flex;flex-direction:column;gap:0.75rem;align-items:center;">
+              <PSkeleton width="120px" height="120px" variant="circle" />
+              <PSkeleton width="60%" height="18px" />
+              <PSkeleton width="40%" height="14px" />
+            </div>
+          </div>
+        </template>
+
+        <div v-if="!artists.length" class="empty-state">
+          <p class="state-line">{{ activeTab === 'subscribed' ? '暂无订阅的艺术家' : '没有匹配的艺术家' }}</p>
+          <div class="empty-actions">
+            <PButton
+              variant="primary"
+              data-testid="empty-add-artist"
+              @click="startArtistCreation"
+            >
+              添加艺术家
+            </PButton>
+          </div>
         </div>
-      </div>
 
-      <div v-else class="artist-results-grid">
-        <MusicArtistCard
-          v-for="artist in artists"
-          :key="artist.id"
-          :artist="artist"
-          :is-bookmarked="starredArtistIds.includes(String(artist.id))"
-          data-testid="artist-card"
-          @click="openArtistCard(artist.id)"
-          @toggle-bookmark="handleToggleBookmark(String(artist.id))"
-        />
-      </div>
+        <div v-else class="artist-results-grid">
+          <MusicArtistCard
+            v-for="artist in artists"
+            :key="artist.id"
+            :artist="artist"
+            :is-bookmarked="starredArtistIds.includes(String(artist.id))"
+            data-testid="artist-card"
+            @click="openArtistCard(artist.id)"
+            @toggle-bookmark="handleToggleBookmark(String(artist.id))"
+          />
+        </div>
+      </PContentProgress>
     </div>
 
   </div>

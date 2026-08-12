@@ -5,6 +5,8 @@ import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type Mus
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PToast from '@/components/ui/PToast.vue'
@@ -197,6 +199,13 @@ async function loadDetail(songId: unknown) {
   }
 }
 
+function reloadLyrics() {
+  const songId = route.params.songId
+  if (typeof songId === 'string' && songId) {
+    void loadLyrics(songId)
+  }
+}
+
 watch(
   [() => route.params.songId, () => state.value.songRefreshToken],
   ([songId]) => {
@@ -264,19 +273,32 @@ watch(
             </PButton>
           </div>
         </header>
-        <p v-if="lyricsLoading" class="song-detail__state">正在加载歌词</p>
-        <p v-else-if="lyricsError" class="song-detail__state song-detail__state--error">{{ lyricsError }}</p>
-        <p v-else-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
-        <div v-else class="song-detail__lyric-lines">
-          <MusicLyricsLine
-            v-for="line in lyrics.lines"
-            :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
-            :line="line"
-            :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
-            :bilingual="lyricsDisplayMode === 'translation'"
-            :can-select="false"
-          />
-        </div>
+        <PContentProgress
+          :loading="lyricsLoading"
+          :error="lyricsError"
+          :retry="reloadLyrics"
+        >
+          <template #skeleton>
+            <div style="padding: 1.5rem 0; display: flex; flex-direction: column; gap: 0.75rem;">
+              <PSkeleton width="50%" height="18px" />
+              <PSkeleton width="70%" height="18px" />
+              <PSkeleton width="40%" height="18px" />
+              <PSkeleton width="60%" height="18px" />
+            </div>
+          </template>
+
+          <p v-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
+          <div v-else class="song-detail__lyric-lines">
+            <MusicLyricsLine
+              v-for="line in lyrics.lines"
+              :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
+              :line="line"
+              :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
+              :bilingual="lyricsDisplayMode === 'translation'"
+              :can-select="false"
+            />
+          </div>
+        </PContentProgress>
       </section>
       <nav class="song-detail__navigation" aria-label="相邻曲目">
         <RouterLink v-if="detail.previous" :to="`/music/song/${detail.previous.id}`"><ChevronLeft :size="16" aria-hidden="true" />{{ detail.previous.title }}</RouterLink>

@@ -14,7 +14,7 @@ let uploadNetworkFailures = 0
 const importTask = (overrides: Record<string, unknown> = {}) => ({
   id: 'import-1', status: 'uploading', file_name: 'clip.mp4', file_size: 5, content_type: 'video/mp4',
   part_size: 10 * 1024 * 1024, progress_current: 0, progress_total: 5, completed_parts: [],
-  payload: { channel_id: 'channel-1', title: '', description: '', thumbnail_url: '', visibility: 'public', tags: [], collection_ids: [] },
+  payload: { channel_id: 'channel-1', title: '', description: '', thumbnail_url: '', duration_sec: 0, visibility: 'public', tags: [], collection_ids: [] },
   publish_mode: '', error_message: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   ...overrides,
 })
@@ -122,6 +122,26 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.form.visibility).toBe('private')
     expect(wrapper.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1'])
     expect(wrapper.vm.$.setupState.preferredPublishStatus).toBe('draft')
+  })
+
+  it('confirms each tag with Enter and ignores duplicates', async () => {
+    const { wrapper } = await setup('/studio/video/new')
+    wrapper.vm.$.setupState.currentStep = 2
+    await wrapper.vm.$nextTick()
+    const input = wrapper.get('#video-tag-input')
+
+    await input.setValue('骑行')
+    await input.trigger('keydown', { key: 'Enter' })
+    await input.setValue('旅行')
+    await input.trigger('keydown', { key: 'Enter' })
+    await input.setValue('骑行')
+    await input.trigger('keydown', { key: 'Enter' })
+
+    expect(wrapper.vm.$.setupState.form.tags).toEqual(['骑行', '旅行'])
+    expect(wrapper.findAll('.ve-tag').map(tag => tag.text())).toEqual(['骑行', '旅行'])
+
+    await wrapper.get('[aria-label="删除标签 骑行"]').trigger('click')
+    expect(wrapper.vm.$.setupState.form.tags).toEqual(['旅行'])
   })
 
   it('keeps the import task when automatic cover extraction fails', async () => {

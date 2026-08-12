@@ -10,6 +10,7 @@ export interface VideoImportPayload {
   title: string
   description: string
   thumbnail_url: string
+  duration_sec: number
   visibility: 'public' | 'followers' | 'private'
   tags: string[]
   collection_ids: string[]

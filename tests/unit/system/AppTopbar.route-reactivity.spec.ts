@@ -12,6 +12,7 @@ const makeRouter = async () => {
       { path: '/', component: { template: '<div />' } },
       { path: '/feed', component: { template: '<div />' } },
       { path: '/music', component: { template: '<div />' } },
+      { path: '/studio/video/content', component: { template: '<div />' } },
       { path: '/login', component: { template: '<div />' } },
     ],
   })
@@ -59,6 +60,14 @@ describe('AppTopbar route reactivity', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('does not activate subscriptions inside Studio', async () => {
+    const router = await makeRouter()
+    await router.push('/studio/video/content')
+    const wrapper = mount(AppTopbar, { global: { plugins: [router] } })
+
+    expect(activeNavText(wrapper)).toEqual([])
   })
 
   it('expands the bottom line after the main content scrolls', async () => {

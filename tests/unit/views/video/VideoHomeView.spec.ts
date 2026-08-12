@@ -72,8 +72,14 @@ describe('VideoHomeView', () => {
       if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
         return makeJsonResponse({ data: [{ id: 'rec-1', title: '推荐视频', target_path: '/videos/watch/rec-1', content_type: 'video', score_label: '热度 92' }] })
       }
+      if (url.endsWith('/videos/rec-1')) {
+        return makeJsonResponse({ id: 'rec-1', title: '推荐视频', created_at: '2026-08-12T00:00:00Z', view_count: 3, channel: { name: '视频频道' } })
+      }
       if (url.includes('/videos/recommend/items?mode=featured&page=1&page_size=8')) {
         return makeJsonResponse({ data: [{ id: 'rec-2', title: '精选视频', target_path: '/videos/watch/rec-2', content_type: 'video', score_label: '精选 88' }] })
+      }
+      if (url.endsWith('/videos/rec-2')) {
+        return makeJsonResponse({ id: 'rec-2', title: '精选视频', created_at: '2026-08-11T00:00:00Z', view_count: 2, channel: { name: '精选频道' } })
       }
       throw new Error(`unexpected fetch: ${url}`)
     })
@@ -95,6 +101,7 @@ describe('VideoHomeView', () => {
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
     expect(requestedUrls).toContain('/api/v1/videos/recommend/items?mode=hot&page=1&page_size=8')
+    expect(requestedUrls).toContain('/api/v1/videos/rec-1')
 
     await wrapper.findAll('button').find(button => button.text() === '精选')!.trigger('click')
     await flushPromises()

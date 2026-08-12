@@ -198,6 +198,7 @@ describe('VideoDetailView shared interactions', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
 
     const { wrapper } = await mountVideoDetail()
+    expect(wrapper.get('video').attributes('controls')).toBeDefined()
     const video = wrapper.get('video').element as HTMLVideoElement
     Object.defineProperty(video, 'currentTime', { configurable: true, value: 12.8, writable: true })
     const comments = wrapper.findComponent(CommentSectionStub)

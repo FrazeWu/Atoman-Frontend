@@ -47,6 +47,10 @@ function pathnameContext(pathname: string): SiteContext | null {
   }
 
   const [first, second] = segments
+  if (first === 'studio') {
+    return { type: 'portal' }
+  }
+
   const moduleFromPath = modulePathSegments[first]
   if (moduleFromPath) {
     return { type: 'module', module: moduleFromPath }

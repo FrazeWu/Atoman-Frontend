@@ -12,7 +12,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PCreationSteps from '@/components/ui/PCreationSteps.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import { ArrowLeft, ArrowRight, CheckCircle2, Upload, Video as VideoIcon } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload, Video as VideoIcon, X } from 'lucide-vue-next'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Collection } from '@/types'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
@@ -39,6 +39,7 @@ const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
 const urlError = ref('')
+const tagDraft = ref('')
 const collections = ref<Collection[]>([])
 const selectedCollectionIds = ref<string[]>([])
 const selectedCollectionFromQuery = computed(() => (
@@ -70,9 +71,22 @@ const form = ref({
   storage_type: 'local' as 'local' | 'external',
   video_url: '',
   thumbnail_url: '',
+  duration_sec: 0,
   visibility: 'public' as 'public' | 'followers' | 'private',
-  tags: '',
+  tags: [] as string[],
 })
+
+function addTag() {
+  const tag = tagDraft.value.trim()
+  if (tag && !form.value.tags.includes(tag)) {
+    form.value.tags.push(tag)
+  }
+  tagDraft.value = ''
+}
+
+function removeTag(tag: string) {
+  form.value.tags = form.value.tags.filter(item => item !== tag)
+}
 
 const storageOptions = [
   { label: '本地上传', value: 'local' },
@@ -100,7 +114,7 @@ function clearGeneratedCover() {
   generatedCoverPreview.value = ''
 }
 
-async function extractFirstFrame(file: File): Promise<{ blob: Blob, preview: string }> {
+async function extractFirstFrame(file: File): Promise<{ blob: Blob, preview: string, durationSec: number }> {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file)
     const video = document.createElement('video')
@@ -132,7 +146,7 @@ async function extractFirstFrame(file: File): Promise<{ blob: Blob, preview: str
           reject(new Error('封面提取失败'))
           return
         }
-        resolve({ blob, preview: canvas.toDataURL('image/jpeg', 0.9) })
+        resolve({ blob, preview: canvas.toDataURL('image/jpeg', 0.9), durationSec: Math.round(video.duration || 0) })
       }, 'image/jpeg', 0.9)
     }, { once: true })
 
@@ -175,6 +189,7 @@ async function onVideoFileChange(e: Event) {
       generatedCoverBlob.value = generated.blob
       generatedCoverPreview.value = generated.preview
       generatedCoverReady.value = true
+      form.value.duration_sec = generated.durationSec
     } catch {
       generatedCoverReady.value = false
       errorMsg.value = '自动封面生成失败，可手动上传封面'
@@ -257,9 +272,10 @@ function buildPayload(status: 'draft' | 'published') {
     storage_type: form.value.storage_type,
     video_url: form.value.video_url.trim(),
     thumbnail_url: form.value.thumbnail_url,
+    duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
     status,
-    tags: form.value.tags.split(',').map(t => t.trim()).filter(Boolean),
+    tags: [...form.value.tags],
     collection_ids: selectedCollectionIds.value,
   }
 }
@@ -270,8 +286,9 @@ function buildImportPayload(): VideoImportPayload {
     title: form.value.title.trim(),
     description: form.value.description,
     thumbnail_url: form.value.thumbnail_url,
+    duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
-    tags: form.value.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+    tags: [...form.value.tags],
     collection_ids: [...selectedCollectionIds.value],
   }
 }
@@ -330,8 +347,9 @@ async function loadVideo() {
     storage_type: v.storage_type,
     video_url: v.video_url,
     thumbnail_url: v.thumbnail_url,
+    duration_sec: v.duration_sec,
     visibility: v.visibility,
-    tags: v.tags?.map(t => t.name).join(', ') ?? '',
+    tags: v.tags?.map(t => t.name) ?? [],
   }
   await loadCollections(form.value.channel_id)
   selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
@@ -355,7 +373,8 @@ onMounted(async () => {
       form.value = {
         channel_id: task.payload.channel_id || studio.currentChannel?.id || '', title: task.payload.title,
         description: task.payload.description, storage_type: 'local', video_url: '',
-        thumbnail_url: task.payload.thumbnail_url, visibility: task.payload.visibility || 'public', tags: task.payload.tags.join(', '),
+        thumbnail_url: task.payload.thumbnail_url, duration_sec: task.payload.duration_sec || 0,
+        visibility: task.payload.visibility || 'public', tags: [...task.payload.tags],
       }
       await loadCollections(form.value.channel_id)
       selectedCollectionIds.value = [...task.payload.collection_ids]
@@ -482,12 +501,25 @@ async function schedulePublish() {
             placeholder="介绍视频内容、背景或注意事项…"
             :rows="5"
           />
-          <PInput
-            v-model="form.tags"
-            label="标签"
-            placeholder="music, tutorial, vlog（逗号分隔）"
-            hint="多个标签用英文逗号隔开"
-          />
+          <div class="ve-tags">
+            <label class="ve-field-label" for="video-tag-input">标签</label>
+            <div v-if="form.tags.length" class="ve-tag-list" aria-label="已添加标签">
+              <span v-for="tag in form.tags" :key="tag" class="ve-tag">
+                {{ tag }}
+                <button type="button" :aria-label="`删除标签 ${tag}`" @click="removeTag(tag)">
+                  <X :size="14" aria-hidden="true" />
+                </button>
+              </span>
+            </div>
+            <input
+              id="video-tag-input"
+              v-model="tagDraft"
+              class="ve-tag-input"
+              type="text"
+              placeholder="输入标签后按回车"
+              @keydown.enter.prevent="addTag"
+            />
+          </div>
         </section>
 
         <!-- 视频来源 -->
@@ -758,6 +790,67 @@ async function schedulePublish() {
   font-weight: 600;
   color: var(--a-color-fg);
   margin-bottom: 0.375rem;
+}
+
+.ve-tags {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ve-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ve-tag {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.35rem 0.25rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  font-size: 0.8125rem;
+}
+
+.ve-tag button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+
+.ve-tag button:hover,
+.ve-tag button:focus-visible {
+  background: var(--a-color-surface);
+  color: var(--a-color-text);
+}
+
+.ve-tag-input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font: inherit;
+}
+
+.ve-tag-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
+  border-color: var(--a-color-primary);
 }
 
 /* ── Video upload area ── */

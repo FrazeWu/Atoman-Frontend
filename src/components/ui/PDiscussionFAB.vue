@@ -1,6 +1,11 @@
 <!-- web/src/components/ui/PDiscussionFAB.vue -->
 <template>
-  <button class="discussion-fab" @click="$emit('click')">
+  <button
+    type="button"
+    class="discussion-fab"
+    :aria-label="count === undefined ? '打开讨论' : `打开讨论，共 ${count} 条`"
+    @click="$emit('click')"
+  >
     <div class="fab-label">讨论<template v-if="count !== undefined"> ({{ count }})</template></div>
   </button>
 </template>
@@ -43,5 +48,27 @@ defineEmits(['click'])
   font-weight: 500;
   letter-spacing: 0.15em;
   color: var(--a-color-bg);
+}
+
+@media (max-width: 767px) {
+  .discussion-fab {
+    position: static;
+    width: calc(100% - 2rem);
+    height: 44px;
+    margin: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+    padding: 0 0.9rem;
+    border-right: 1px solid var(--a-color-text);
+    border-radius: 4px;
+    transform: none;
+  }
+
+  .discussion-fab:hover {
+    transform: translateY(-1px);
+  }
+
+  .fab-label {
+    writing-mode: horizontal-tb;
+    letter-spacing: 0;
+  }
 }
 </style>

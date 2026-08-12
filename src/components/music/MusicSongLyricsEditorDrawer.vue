@@ -11,10 +11,12 @@ const props = defineProps<{
   show: boolean
   songId: string
   songTitle: string
+  currentTimeSeconds?: number
 }>()
 
 const emit = defineEmits<{
   close: []
+  seek: [timeSeconds: number]
   saved: [lyrics: MusicSongLyrics]
 }>()
 
@@ -113,8 +115,10 @@ function cancelAnnotationConflict() {
     :lines="lyrics?.lines ?? []"
     :version="lyrics?.version ?? 0"
     :translation-language="lyrics?.translation_language ?? ''"
+    :current-time-seconds="currentTimeSeconds"
     :saving="saving || loading"
     @close="emit('close')"
+    @seek="emit('seek', $event)"
     @save="handleSave"
   />
   <PConfirm

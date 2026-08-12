@@ -9,6 +9,7 @@ import {
   reconcileImportedLrcRows,
   serializeBilingualLrcDraft,
   serializeMusicLyricDraft,
+  shiftMusicLyricDraftTimes,
   sortMusicLyricDraftRows,
   validateMusicLyricDraft,
   type MusicLyricDraftRow,
@@ -89,6 +90,17 @@ describe('musicLyricsDraft', () => {
     expect(formatMusicLyricTime(62_344)).toBe('01:02.34')
     expect(formatMusicLyricTime(62_345)).toBe('01:02.35')
     expect(formatMusicLyricTime(59_999)).toBe('01:00.00')
+  })
+
+  it('整体调整时间时保留未打点行并避免负数', () => {
+    const rows = [
+      createMusicLyricDraftRow({ timeMs: 50, original: 'First' }),
+      createMusicLyricDraftRow({ timeMs: null, original: 'Untimed' }),
+      createMusicLyricDraftRow({ timeMs: 2_000, original: 'Last' }),
+    ]
+
+    expect(shiftMusicLyricDraftTimes(rows, -100).map(row => row.timeMs)).toEqual([0, null, 1_900])
+    expect(rows.map(row => row.timeMs)).toEqual([50, null, 2_000])
   })
 
   it('keeps formatted timestamps parseable at numeric boundaries', () => {

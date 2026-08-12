@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { ArrowDown, ArrowUp, Play, Trash2 } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, Minus, Play, Plus, Trash2 } from 'lucide-vue-next'
 import type { MusicLyricsEditTarget, MusicLyricsFormat } from '@/api/musicV1'
 import {
   formatMusicLyricTime,
@@ -28,6 +28,8 @@ const emit = defineEmits<{
   'select-row': [rowId: string]
   'select-target': [target: 'original' | 'translation']
   seek: [timeSeconds: number]
+  'advance-row': [rowId: string]
+  'adjust-time': [rowId: string, offsetMs: number]
 }>()
 
 const rawTimes = reactive<Record<string, string>>({})
@@ -193,6 +195,30 @@ function describedByForField(
           >
             <Play :size="18" aria-hidden="true" />
           </button>
+          <div class="lyric-time-adjust-group" aria-label="调整单行时间">
+            <button
+              :data-testid="`lyric-adjust-down-${row.id}`"
+              class="lyric-action lyric-time-adjust"
+              type="button"
+              title="提前 0.1 秒"
+              :aria-label="`第 ${index + 1} 行提前 0.1 秒`"
+              :disabled="disabled || row.timeMs === null"
+              @click="emit('adjust-time', row.id, -100)"
+            >
+              <Minus :size="16" aria-hidden="true" />
+            </button>
+            <button
+              :data-testid="`lyric-adjust-up-${row.id}`"
+              class="lyric-action lyric-time-adjust"
+              type="button"
+              title="延后 0.1 秒"
+              :aria-label="`第 ${index + 1} 行延后 0.1 秒`"
+              :disabled="disabled || row.timeMs === null"
+              @click="emit('adjust-time', row.id, 100)"
+            >
+              <Plus :size="16" aria-hidden="true" />
+            </button>
+          </div>
         </div>
         <span
           v-if="isInvalidTime(row.id)"
@@ -257,6 +283,7 @@ function describedByForField(
           :aria-describedby="describedByForField(row.id, index, 'original')"
           :disabled="disabled"
           @focus="selectRow(row.id)"
+          @keydown.enter.prevent="emit('advance-row', row.id)"
           @input="emitRowUpdate(index, { original: ($event.target as HTMLInputElement).value })"
         />
       </label>
@@ -453,6 +480,12 @@ function describedByForField(
   gap: 8px;
 }
 
+.lyric-time-adjust-group {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+
 .lyric-time-error,
 .lyric-issue--error {
   color: var(--a-color-danger, #b42318);
@@ -541,6 +574,7 @@ function describedByForField(
   .lyric-time-controls {
     width: 100%;
     min-width: 0;
+    grid-template-columns: minmax(0, 1fr) 44px;
   }
 
   .lyric-issues {

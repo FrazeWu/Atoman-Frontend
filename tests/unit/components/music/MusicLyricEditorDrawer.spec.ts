@@ -117,6 +117,56 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(draftRows(wrapper)[0]!.translation).toBe('新翻译')
   })
 
+  it('空歌词可以从当前播放时间开始打点并输入', async () => {
+    const wrapper = mountDrawer({ content: '', translation: '', format: 'plain', currentTimeSeconds: 12.345 })
+    const focusSpy = vi.spyOn(HTMLInputElement.prototype, 'focus')
+
+    await buttonByText(wrapper, '打点并输入').trigger('click')
+
+    expect(rowEditor(wrapper).props('format')).toBe('lrc')
+    expect(draftRows(wrapper)).toHaveLength(1)
+    expect(draftRows(wrapper)[0]).toMatchObject({ timeMs: 12_345, original: '' })
+    expect(focusSpy).toHaveBeenCalled()
+    focusSpy.mockRestore()
+  })
+
+  it('纯文本歌词开始对时后，打点会自动选择下一条未打点行', async () => {
+    const wrapper = mountDrawer({ content: 'Alpha\nBeta', translation: '', format: 'plain', currentTimeSeconds: 8.2 })
+    const ids = draftRows(wrapper).map(row => row.id)
+
+    await buttonByText(wrapper, '开始对时').trigger('click')
+    expect(rowEditor(wrapper).props('format')).toBe('lrc')
+    expect(selectedRowId(wrapper)).toBe(ids[0])
+
+    await buttonByText(wrapper, '打点 (00:08.20)').trigger('click')
+    expect(draftRows(wrapper).map(row => row.timeMs)).toEqual([8_200, null])
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+  })
+
+  it('可以单独或整体微调 LRC 时间轴', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]Alpha\n[00:02.00]Beta', format: 'lrc' })
+    const ids = draftRows(wrapper).map(row => row.id)
+
+    await wrapper.get(`[data-testid="lyric-adjust-up-${ids[0]}"]`).trigger('click')
+    expect(draftRows(wrapper).map(row => row.timeMs)).toEqual([1_100, 2_000])
+
+    await wrapper.get('button[title="全部提前 0.1 秒"]').trigger('click')
+    expect(draftRows(wrapper).map(row => row.timeMs)).toEqual([1_000, 1_900])
+
+    await wrapper.get('button[title="全部延后 0.1 秒"]').trigger('click')
+    expect(draftRows(wrapper).map(row => row.timeMs)).toEqual([1_100, 2_000])
+  })
+
+  it('原文输入按 Enter 会进入下一行，末行会自动增加一行', async () => {
+    const wrapper = mountDrawer({ content: 'Alpha', format: 'plain' })
+    const firstId = draftRows(wrapper)[0]!.id
+
+    await wrapper.get(`[data-testid="lyric-original-${firstId}"]`).trigger('keydown.enter')
+
+    expect(draftRows(wrapper)).toHaveLength(2)
+    expect(selectedRowId(wrapper)).toBe(draftRows(wrapper)[1]!.id)
+  })
+
   it('selects a newly added row', async () => {
     const wrapper = mountDrawer({ content: '[00:01.00]Alpha', format: 'lrc' })
     await buttonByText(wrapper, '增加行').trigger('click')

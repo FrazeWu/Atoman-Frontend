@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Clock, Download, FileUp, Languages, Plus } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Clock, Download, FileUp, Languages, Minus, Plus, Sparkles } from 'lucide-vue-next'
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -14,6 +14,7 @@ import {
   parseMusicLyricDraft,
   reconcileImportedLrcRows,
   serializeMusicLyricDraft,
+  shiftMusicLyricDraftTimes,
   validateMusicLyricDraft,
   type MusicLyricDraftIssue,
   type MusicLyricDraftRow,
@@ -99,6 +100,17 @@ const canSave = computed(() => (
   && !importParsing.value
 ))
 const exportBaseName = computed(() => props.songTitle.trim() || 'lyrics')
+const workflow = computed<'create' | 'sync' | 'calibrate'>(() => {
+  if (rows.value.length === 0) return 'create'
+  return draftFormat.value === 'lrc' ? 'calibrate' : 'sync'
+})
+const workflowTitle = computed(() => ({
+  create: '新建歌词',
+  sync: '纯文本对时',
+  calibrate: '校准时间轴',
+}[workflow.value]))
+const timedRowCount = computed(() => rows.value.filter(row => row.timeMs !== null).length)
+const workflowProgress = computed(() => `${timedRowCount.value} / ${rows.value.length} 行已打点`)
 
 watch(
   () => [props.show, props.content, props.translation, props.format, props.lines, props.translationLanguage] as const,
@@ -150,6 +162,35 @@ function addRow() {
   selectedRowId.value = row.id
 }
 
+function focusSelectedOriginal() {
+  void nextTick(() => {
+    if (!selectedRowId.value) return
+    rowEditorRoot.value?.querySelector<HTMLInputElement>(`[data-testid="lyric-original-${selectedRowId.value}"]`)?.focus()
+  })
+}
+
+function beginTiming() {
+  if (props.saving || rows.value.length === 0) return
+  draftFormat.value = 'lrc'
+  selectedRowId.value = rows.value.find(row => row.timeMs === null)?.id ?? rows.value[0]?.id ?? ''
+  focusSelectedOriginal()
+}
+
+function stampAndInput() {
+  if (props.saving) return
+  if (rows.value.length === 0) {
+    draftFormat.value = 'lrc'
+    const row = createMusicLyricDraftRow({ timeMs: Math.round((props.currentTimeSeconds ?? 0) * 1000) })
+    rows.value = [row]
+    selectedRowId.value = row.id
+    focusSelectedOriginal()
+    return
+  }
+  if (draftFormat.value !== 'lrc') draftFormat.value = 'lrc'
+  stampCurrentTime()
+  focusSelectedOriginal()
+}
+
 function stampCurrentTime() {
   if (props.saving || editTarget.value !== 'original' || !selectedRowId.value) return
   const index = rows.value.findIndex((row) => row.id === selectedRowId.value)
@@ -160,9 +201,35 @@ function stampCurrentTime() {
   nextRows[index] = { ...nextRows[index], timeMs }
   rows.value = nextRows
 
-  if (index < rows.value.length - 1) {
-    selectedRowId.value = rows.value[index + 1]!.id
+  const next = rows.value.slice(index + 1).find(row => row.timeMs === null)
+    ?? rows.value[index + 1]
+  if (next) selectedRowId.value = next.id
+}
+
+function advanceRow(rowId: string) {
+  if (props.saving || editTarget.value !== 'original') return
+  const index = rows.value.findIndex(row => row.id === rowId)
+  if (index < 0) return
+  const next = rows.value[index + 1]
+  if (next) {
+    selectedRowId.value = next.id
+    focusSelectedOriginal()
+    return
   }
+  addRow()
+  focusSelectedOriginal()
+}
+
+function adjustRowTime(rowId: string, offsetMs: number) {
+  if (props.saving || draftFormat.value !== 'lrc') return
+  rows.value = rows.value.map(row => row.id === rowId && row.timeMs !== null
+    ? { ...row, timeMs: Math.max(0, row.timeMs + offsetMs) }
+    : row)
+}
+
+function shiftAllTimes(offsetMs: number) {
+  if (props.saving || draftFormat.value !== 'lrc') return
+  rows.value = shiftMusicLyricDraftTimes(rows.value, offsetMs)
 }
 
 function handleGlobalKeydown(event: KeyboardEvent) {
@@ -345,6 +412,26 @@ function handleSave() {
 
         <div class="music-lyric-editor-drawer__toolbar-actions">
           <PButton
+            v-if="workflow === 'create'"
+            type="button"
+            variant="primary"
+            :disabled="saving"
+            @click="stampAndInput"
+          >
+            <Sparkles :size="17" aria-hidden="true" />
+            打点并输入
+          </PButton>
+          <PButton
+            v-else-if="workflow === 'sync'"
+            type="button"
+            variant="primary"
+            :disabled="saving"
+            @click="beginTiming"
+          >
+            <Clock :size="17" aria-hidden="true" />
+            开始对时
+          </PButton>
+          <PButton
             v-if="editTarget === 'original' && draftFormat === 'lrc'"
             type="button"
             variant="secondary"
@@ -356,11 +443,27 @@ function handleSave() {
             打点 ({{ formatMusicLyricTime(Math.round((currentTimeSeconds ?? 0) * 1000)) }})
           </PButton>
 
+          <div v-if="workflow === 'calibrate'" class="music-lyric-editor-drawer__offset-actions" aria-label="整体调整时间">
+            <span>整体偏移</span>
+            <button type="button" class="music-lyric-editor-drawer__icon-action" title="全部提前 0.1 秒" aria-label="全部提前 0.1 秒" :disabled="saving" @click="shiftAllTimes(-100)">
+              <Minus :size="16" aria-hidden="true" />
+            </button>
+            <button type="button" class="music-lyric-editor-drawer__icon-action" title="全部延后 0.1 秒" aria-label="全部延后 0.1 秒" :disabled="saving" @click="shiftAllTimes(100)">
+              <Plus :size="16" aria-hidden="true" />
+            </button>
+          </div>
+
           <PButton v-if="editTarget === 'original'" type="button" variant="secondary" :disabled="saving" @click="addRow">
             <Plus :size="17" aria-hidden="true" />
             增加行
           </PButton>
         </div>
+      </div>
+
+      <div class="music-lyric-editor-drawer__workflow" role="status" aria-live="polite">
+        <strong>{{ workflowTitle }}</strong>
+        <span v-if="rows.length">{{ workflowProgress }}</span>
+        <span v-else>播放歌曲后点击“打点并输入”</span>
       </div>
 
       <section v-if="editTarget === 'original'" class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
@@ -498,6 +601,8 @@ function handleSave() {
           @select-row="selectedRowId = $event"
           @select-target="editTarget = $event"
           @seek="emit('seek', $event)"
+          @advance-row="advanceRow"
+          @adjust-time="adjustRowTime"
         />
       </div>
 
@@ -552,6 +657,49 @@ function handleSave() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.music-lyric-editor-drawer__workflow {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 8px;
+  background: var(--a-color-surface-muted, var(--a-color-bg));
+  color: var(--a-color-muted);
+  font-size: 0.875rem;
+}
+
+.music-lyric-editor-drawer__workflow strong {
+  color: var(--a-color-text);
+}
+
+.music-lyric-editor-drawer__offset-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--a-color-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.music-lyric-editor-drawer__icon-action {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 8px;
+  background: var(--a-color-surface, var(--a-color-bg));
+  color: var(--a-color-text);
+}
+
+.music-lyric-editor-drawer__icon-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .music-lyric-editor-drawer__toolbar {

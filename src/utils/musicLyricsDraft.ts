@@ -291,6 +291,18 @@ export function sortMusicLyricDraftRows(
     .map(({ row }) => row)
 }
 
+export function shiftMusicLyricDraftTimes(
+  rows: readonly MusicLyricDraftRow[],
+  offsetMs: number,
+): MusicLyricDraftRow[] {
+  if (!Number.isFinite(offsetMs) || offsetMs === 0) return rows.map((row) => ({ ...row }))
+
+  return rows.map((row) => ({
+    ...row,
+    timeMs: row.timeMs === null ? null : Math.max(0, row.timeMs + offsetMs),
+  }))
+}
+
 type ParsedLrcLine = {
   timeMs: number
   text: string

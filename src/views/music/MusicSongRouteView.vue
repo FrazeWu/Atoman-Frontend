@@ -227,7 +227,9 @@ watch(
         :show="lyricsEditorOpen"
         :song-id="String(detail.song.id)"
         :song-title="detail.song.title"
+        :current-time-seconds="player.currentTime"
         @close="lyricsEditorOpen = false"
+        @seek="player.seek"
         @saved="handleLyricsSaved"
       />
       <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">

@@ -15,7 +15,7 @@ describe('site access store', () => {
     const store = useSiteAccessStore()
     await store.load()
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/site/access')
+    expect(fetch).toHaveBeenCalledWith('/api/v1/site/access', { credentials: 'include' })
     expect(fetch).not.toHaveBeenCalledWith('/api/v1/settings/public/site-access')
   })
 

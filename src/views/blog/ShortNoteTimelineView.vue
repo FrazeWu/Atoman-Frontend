@@ -49,6 +49,16 @@
       </aside>
     </div>
   </div>
+  <PConfirm
+    :show="deletePending !== null"
+    title="删除短话"
+    message="确定删除这条短话吗？"
+    confirm-text="删除"
+    danger
+    :loading="deleting"
+    @confirm="confirmRemove"
+    @cancel="deletePending = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -57,6 +67,7 @@ import { Flame, Heart, MessageSquare, Sparkles } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
@@ -77,6 +88,8 @@ const page = ref(1)
 const hasMore = ref(false)
 const publishing = ref(false)
 const composerKey = ref(0)
+const deletePending = ref<ShortNote | null>(null)
+const deleting = ref(false)
 const hotNotes = computed(() => [...notes.value]
   .sort((left, right) => (right.likes_count + right.comments_count) - (left.likes_count + left.comments_count))
   .slice(0, 4))
@@ -129,11 +142,22 @@ async function publish(payload: { content: string; media_urls: string[] }) {
   }
 }
 async function remove(note: ShortNote) {
-  if (!window.confirm('确定删除这条短话吗？')) return
+  if (deleting.value) return
+  deletePending.value = note
+}
+
+async function confirmRemove() {
+  const note = deletePending.value
+  if (!note || deleting.value) return
+  deleting.value = true
   try {
     await apiRequestEnvelope(api.blog.shortNote(note.id), { method: 'DELETE', headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {} })
     notes.value = notes.value.filter(item => item.id !== note.id)
   } catch { error.value = '删除失败，请重试' }
+  finally {
+    deleting.value = false
+    deletePending.value = null
+  }
 }
 onMounted(() => void load())
 </script>
@@ -303,4 +327,3 @@ onMounted(() => void load())
   }
 }
 </style>
-

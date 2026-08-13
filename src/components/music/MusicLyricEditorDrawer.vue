@@ -409,55 +409,6 @@ function handleSave() {
           :disabled="saving"
           aria-label="修改内容"
         />
-
-        <div class="music-lyric-editor-drawer__toolbar-actions">
-          <PButton
-            v-if="workflow === 'create'"
-            type="button"
-            variant="primary"
-            :disabled="saving"
-            @click="stampAndInput"
-          >
-            <Sparkles :size="17" aria-hidden="true" />
-            打点并输入
-          </PButton>
-          <PButton
-            v-else-if="workflow === 'sync'"
-            type="button"
-            variant="primary"
-            :disabled="saving"
-            @click="beginTiming"
-          >
-            <Clock :size="17" aria-hidden="true" />
-            开始对时
-          </PButton>
-          <PButton
-            v-if="editTarget === 'original' && draftFormat === 'lrc'"
-            type="button"
-            variant="secondary"
-            :disabled="saving || !selectedRowId"
-            title="快捷键 Ctrl+Space / Shift+Enter"
-            @click="stampCurrentTime"
-          >
-            <Clock :size="17" aria-hidden="true" />
-            打点 ({{ formatMusicLyricTime(Math.round((currentTimeSeconds ?? 0) * 1000)) }})
-          </PButton>
-
-          <div v-if="workflow === 'calibrate'" class="music-lyric-editor-drawer__offset-actions" aria-label="整体调整时间">
-            <span>整体偏移</span>
-            <button type="button" class="music-lyric-editor-drawer__icon-action" title="全部提前 0.1 秒" aria-label="全部提前 0.1 秒" :disabled="saving" @click="shiftAllTimes(-100)">
-              <Minus :size="16" aria-hidden="true" />
-            </button>
-            <button type="button" class="music-lyric-editor-drawer__icon-action" title="全部延后 0.1 秒" aria-label="全部延后 0.1 秒" :disabled="saving" @click="shiftAllTimes(100)">
-              <Plus :size="16" aria-hidden="true" />
-            </button>
-          </div>
-
-          <PButton v-if="editTarget === 'original'" type="button" variant="secondary" :disabled="saving" @click="addRow">
-            <Plus :size="17" aria-hidden="true" />
-            增加行
-          </PButton>
-        </div>
       </div>
 
       <div class="music-lyric-editor-drawer__workflow" role="status" aria-live="polite">
@@ -603,7 +554,65 @@ function handleSave() {
           @seek="emit('seek', $event)"
           @advance-row="advanceRow"
           @adjust-time="adjustRowTime"
-        />
+        >
+          <template #tools>
+            <div class="music-lyric-editor-drawer__tools-primary">
+              <PButton
+                v-if="workflow === 'create'"
+                type="button"
+                variant="primary"
+                :disabled="saving"
+                @click="stampAndInput"
+              >
+                <Sparkles :size="17" aria-hidden="true" />
+                打点并输入
+              </PButton>
+              <PButton
+                v-else-if="workflow === 'sync'"
+                type="button"
+                variant="primary"
+                :disabled="saving"
+                @click="beginTiming"
+              >
+                <Clock :size="17" aria-hidden="true" />
+                开始对时
+              </PButton>
+              <PButton
+                v-if="editTarget === 'original' && draftFormat === 'lrc'"
+                type="button"
+                variant="secondary"
+                :disabled="saving || !selectedRowId"
+                title="快捷键 Ctrl+Space / Shift+Enter"
+                @click="stampCurrentTime"
+              >
+                <Clock :size="17" aria-hidden="true" />
+                打点 ({{ formatMusicLyricTime(Math.round((currentTimeSeconds ?? 0) * 1000)) }})
+              </PButton>
+
+              <div v-if="workflow === 'calibrate'" class="music-lyric-editor-drawer__offset-actions" aria-label="整体调整时间">
+                <span>整体偏移</span>
+                <button type="button" class="music-lyric-editor-drawer__icon-action" title="全部提前 0.1 秒" aria-label="全部提前 0.1 秒" :disabled="saving" @click="shiftAllTimes(-100)">
+                  <Minus :size="14" aria-hidden="true" />
+                </button>
+                <button type="button" class="music-lyric-editor-drawer__icon-action" title="全部延后 0.1 秒" aria-label="全部延后 0.1 秒" :disabled="saving" @click="shiftAllTimes(100)">
+                  <Plus :size="14" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <PButton
+              v-if="editTarget === 'original'"
+              class="music-lyric-editor-drawer__add-row"
+              type="button"
+              variant="secondary"
+              :disabled="saving"
+              @click="addRow"
+            >
+              <Plus :size="17" aria-hidden="true" />
+              增加行
+            </PButton>
+          </template>
+        </MusicLyricsRowEditor>
       </div>
 
       <PInput
@@ -617,7 +626,7 @@ function handleSave() {
       <PInput
         v-model="draftEditSummary"
         data-testid="lyrics-edit-summary"
-        label="摘要"
+        label="修改原因"
         placeholder="写本次修改"
         :disabled="saving"
       />
@@ -651,7 +660,6 @@ function handleSave() {
 }
 
 .music-lyric-editor-drawer__toolbar,
-.music-lyric-editor-drawer__toolbar-actions,
 .music-lyric-editor-drawer__import-actions,
 .music-lyric-editor-drawer__actions {
   display: flex;
@@ -685,15 +693,35 @@ function handleSave() {
   white-space: nowrap;
 }
 
+.music-lyric-editor-drawer__tools-primary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.music-lyric-editor-drawer__add-row {
+  margin-left: auto;
+}
+
 .music-lyric-editor-drawer__icon-action {
   display: inline-grid;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--a-color-surface, var(--a-color-bg));
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.music-lyric-editor-drawer__icon-action:hover:not(:disabled) {
+  border-color: var(--a-color-border-soft);
+  background: var(--a-color-surface-muted, var(--a-color-bg));
   color: var(--a-color-text);
 }
 
@@ -884,16 +912,18 @@ function handleSave() {
   }
 
   .music-lyric-editor-drawer__toolbar,
-  .music-lyric-editor-drawer__toolbar-actions,
   .music-lyric-editor-drawer__import-actions {
     align-items: stretch;
     flex-direction: column;
   }
 
   .music-lyric-editor-drawer__toolbar :deep(.p-segmented-control),
-  .music-lyric-editor-drawer__toolbar-actions :deep(.p-button),
   .music-lyric-editor-drawer__import-actions :deep(.p-button) {
     width: 100%;
+  }
+
+  .music-lyric-editor-drawer__tools-primary {
+    flex-wrap: nowrap;
   }
 
   .music-lyric-editor-drawer__file-grid {

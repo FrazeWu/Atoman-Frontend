@@ -12,7 +12,7 @@
       <PEmpty text="内容不存在或已被删除" />
       <div style="text-align:center;margin-top:3rem">
         <RouterLink to="/feed" style="text-decoration:none">
-          <PPress variant="secondary" label="← 返回订阅" />
+          <PButton variant="secondary" label="← 返回订阅" />
         </RouterLink>
       </div>
     </div>
@@ -42,7 +42,7 @@
       >
         <div class="player-label">AUDIO_ENCLOSURE</div>
         <div style="display:flex;align-items:center;gap:1.5rem">
-          <PPress
+          <PButton
             @click="togglePlay"
             :label="isPlaying ? '⏸ PAUSE' : '▶ PLAY AUDIO'"
             :variant="isPlaying ? 'secondary' : 'primary'"
@@ -85,7 +85,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'

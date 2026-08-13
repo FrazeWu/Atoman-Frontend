@@ -8,6 +8,8 @@ import type {
 import type { MusicCreationFlowSeed, MusicEditorState, MusicSheetLayer, NestedActionType } from '@/components/music/musicSheetTypes'
 import { createSheetStack } from '@/composables/useSheetStack'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
+import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
+import { parsePartialDateParts } from '@/components/music/birthDateMask'
 
 export type { MusicEditorEntity, MusicEditorMode, MusicEditorState } from '@/components/music/musicSheetTypes'
 
@@ -302,10 +304,20 @@ export function useMusicDrawers() {
       derivedAlbumTitle: snapshot.derivedAlbumTitle,
       derivedCover: snapshot.derivedCover,
       derivedTracks: snapshot.derivedTracks,
+      derivedReleaseDate: snapshot.derivedReleaseDate,
+      derivedAlbumType: snapshot.derivedAlbumType,
+      metadataSourceUrl: snapshot.metadataSourceUrl,
+      missingArtists: snapshot.missingArtists ?? [],
       lastSyncedAt: snapshot.lastSyncedAt,
       errorMessage: snapshot.errorMessage,
     }
     flow.draft.albumDetails.title = snapshot.albumTitle?.trim() || snapshot.derivedAlbumTitle
+    if (snapshot.derivedReleaseDate) {
+      flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(snapshot.derivedReleaseDate)
+    }
+    if (snapshot.derivedAlbumType) flow.draft.albumDetails.type = snapshot.derivedAlbumType
+    if (snapshot.derivedCover) flow.draft.albumDetails.coverUrl = snapshot.derivedCover
+    if (snapshot.metadataSourceUrl) flow.draft.albumDetails.source = snapshot.metadataSourceUrl
     if (contributors.length > 0) {
       flow.draft.albumDetails.contributors = contributors.map((artist) => ({
         id: `contributor-${artist.id}`,
@@ -325,6 +337,22 @@ export function useMusicDrawers() {
       title: track.title,
       audioKey: track.audioKey,
       origin: track.origin,
+      ...(track.lyrics ? {
+        lyrics: track.lyrics.content,
+        lyricsDraft: {
+          content: track.lyrics.content,
+          translation: track.lyrics.translation || '',
+          format: track.lyrics.format,
+          language: track.lyrics.language || '',
+          editSummary: track.lyrics.edit_summary || '自动匹配歌词',
+          lines: parseMusicLyricDraft(track.lyrics.content, track.lyrics.translation || '', track.lyrics.format).map(row => ({
+            line_key: row.lineKey,
+            text: row.original,
+            translation: row.translation,
+            time_ms: row.timeMs,
+          })),
+        },
+      } : {}),
     }))
   }
 

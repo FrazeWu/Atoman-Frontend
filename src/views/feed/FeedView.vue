@@ -7,13 +7,13 @@
       <PPageHeader accent :title="feedCopy.name" :sub="feedCopy.homepageSub" mb="1rem">
         <template #action>
           <div style="display:flex;gap:0.75rem;align-items:center">
-            <PPress
+            <PButton
               v-if="authStore.isAuthenticated"
               @click="toggleAddModal"
               :label="showAddModal ? '取消添加' : '+ 订阅'"
               :variant="showAddModal ? 'secondary' : 'primary'"
             />
-            <PPress
+            <PButton
               v-if="authStore.isAuthenticated"
               variant="secondary"
               label="订阅源管理"
@@ -290,7 +290,6 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PField from '@/components/ui/PField.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PPress from '@/components/ui/PPress.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 

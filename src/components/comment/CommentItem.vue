@@ -63,16 +63,16 @@
         :title="comment.edited_at"
       >已编辑 {{ formatDate(comment.edited_at) }}</time>
       <div v-if="authenticated" class="comment-item__actions">
-        <button type="button" :aria-pressed="comment.liked" :disabled="likePending" title="点赞" @click="$emit('like')">
+        <button type="button" :aria-pressed="comment.liked" :disabled="likePending || actionPending" title="点赞" @click="$emit('like')">
           <Heart :size="15" :fill="comment.liked ? 'currentColor' : 'none'" />
           <span>{{ comment.like_count || '' }}</span>
         </button>
-        <button v-if="canReply" type="button" data-test="reply-comment" title="回复" @click="$emit('reply')"><Reply :size="15" /></button>
-        <button v-if="isOwner" type="button" title="编辑" @click="$emit('edit')"><Pencil :size="15" /></button>
-        <button v-if="isOwner || canDelete" type="button" title="删除" data-test="delete-comment" @click="$emit('delete')"><Trash2 :size="15" /></button>
-        <button type="button" title="举报" @click="$emit('report')"><Flag :size="15" /></button>
-        <button v-if="canMark && depth === 0 && !showMarked" type="button" :title="markLabel" @click="$emit('mark')"><Pin :size="15" /></button>
-        <button v-if="canMark && depth === 0 && showMarked" type="button" :title="`取消${markLabel}`" @click="$emit('unmark')"><PinOff :size="15" /></button>
+        <button v-if="canReply && !isFolded" type="button" data-test="reply-comment" title="回复" :disabled="actionPending" @click="$emit('reply')"><Reply :size="15" /></button>
+        <button v-if="isOwner" type="button" title="编辑" :disabled="actionPending" @click="$emit('edit')"><Pencil :size="15" /></button>
+        <button v-if="isOwner || canDelete" type="button" title="删除" data-test="delete-comment" :disabled="actionPending" @click="$emit('delete')"><Trash2 :size="15" /></button>
+        <button v-if="!isOwner" type="button" title="举报" :disabled="actionPending" @click="$emit('report')"><Flag :size="15" /></button>
+        <button v-if="canMark && depth === 0 && !showMarked && !isFolded" type="button" :title="markLabel" :disabled="actionPending" @click="$emit('mark')"><Pin :size="15" /></button>
+        <button v-if="canMark && depth === 0 && showMarked" type="button" :title="`取消${markLabel}`" :disabled="actionPending" @click="$emit('unmark')"><PinOff :size="15" /></button>
       </div>
     </footer>
   </article>
@@ -100,6 +100,7 @@ const props = withDefaults(defineProps<{
   markedCommentId?: string | null
   markLabel?: '置顶' | '最佳回答'
   likePending?: boolean
+  actionPending?: boolean
 }>(), {
   depth: 0,
   authenticated: false,
@@ -110,6 +111,7 @@ const props = withDefaults(defineProps<{
   markedCommentId: null,
   markLabel: '置顶',
   likePending: false,
+  actionPending: false,
 })
 
 defineEmits<{

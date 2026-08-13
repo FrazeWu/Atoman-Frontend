@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import { apiRequest } from '@/api/client'
+import { apiRequest, apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type {
@@ -23,6 +23,16 @@ const apiErrorMessage = (payload: unknown, fallback: string) => {
   }
   const message = (payload as { message?: unknown }).message
   return typeof message === 'string' && message.trim() ? message : fallback
+}
+
+const readJsonErrorPayload = async (response: Response): Promise<unknown> => {
+  const text = await response.text().catch(() => '')
+  if (!text) return {}
+  try {
+    return JSON.parse(text)
+  } catch {
+    return {}
+  }
 }
 
 const isAlreadySubscribedPayload = (payload: unknown) => {
@@ -66,7 +76,7 @@ export const createFeedSourcesState = ({
     const authStore = useAuthStore()
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscribe/${entity}/${id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscribe/${entity}/${id}`, {
         method,
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -86,11 +96,11 @@ export const createFeedSourcesState = ({
     const authStore = useAuthStore()
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscribe/${entity}/${id}/status`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscribe/${entity}/${id}/status`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         return isCurrentSession(generation) && (data.subscribed || false)
       }
     } catch (e) {
@@ -110,7 +120,7 @@ export const createFeedSourcesState = ({
     const generation = sessionGeneration
 
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ target_type: 'external_rss', rss_url: normalized, title }),
@@ -120,7 +130,7 @@ export const createFeedSourcesState = ({
         return true
       }
       if (res.status === 400 || res.status === 409) {
-        const data = await res.json().catch(() => ({}))
+        const data = res.data
         if (isCurrentSession(generation) && isAlreadySubscribedPayload(data)) {
           await fetchSubscriptions()
           return true
@@ -137,20 +147,20 @@ export const createFeedSourcesState = ({
     const generation = sessionGeneration
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ target_type: 'external_rss', rss_url: payload.rss_url, title: payload.title }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = res.data
         if (isCurrentSession(generation)) error.value = apiErrorMessage(data, '添加失败')
         return false
       }
-      const subscriptionId = (await res.json()).data?.id
+      const subscriptionId = res.data.data?.id
       if (!isCurrentSession(generation)) return false
       if (payload.group_id && subscriptionId) {
-        const moveRes = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}/group`, {
+        const moveRes = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}/group`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
           body: JSON.stringify({ group_id: payload.group_id }),
@@ -177,17 +187,17 @@ export const createFeedSourcesState = ({
     const generation = sessionGeneration
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/feed/discover`, {
+      const res = await apiRequestResult(`${api.url}/feed/discover`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ url }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = res.data
         if (isCurrentSession(generation)) error.value = apiErrorMessage(data, '发现订阅源失败')
         return []
       }
-      const data = await res.json()
+      const data = res.data
       return isCurrentSession(generation) ? data.candidates || [] : []
     } catch (e) {
       reportError(e, 'Failed to discover feed candidates')
@@ -202,12 +212,12 @@ export const createFeedSourcesState = ({
     const generation = sessionGeneration
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/resolve`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ input }),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = res.data
       if (!isCurrentSession(generation)) return null
       if (!res.ok) {
         error.value = apiErrorMessage(data, '检测订阅源失败')
@@ -227,12 +237,12 @@ export const createFeedSourcesState = ({
     const generation = sessionGeneration
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/auto-add`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/auto-add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = res.data
       if (!isCurrentSession(generation)) return false
       if (!res.ok) {
         error.value = apiErrorMessage(data, '添加失败')
@@ -252,13 +262,13 @@ export const createFeedSourcesState = ({
     if (!authStore.isAuthenticated || !sourceIds.length) return null
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/sources/batch-subscribe`, {
+      const res = await apiRequestResult(`${api.url}/feed/sources/batch-subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ source_ids: sourceIds }),
       })
       if (!res.ok) return null
-      const data = await res.json()
+      const data = res.data
       if (!isCurrentSession(generation)) return null
       await fetchSubscriptions()
       return {
@@ -279,17 +289,17 @@ export const createFeedSourcesState = ({
     const form = new FormData()
     form.append('file', file)
     try {
-      const res = await apiRequest(`${api.url}/feed/opml/import`, {
+      const res = await apiRequestResult(`${api.url}/feed/opml/import`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
         body: form,
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = res.data
         if (isCurrentSession(generation)) error.value = apiErrorMessage(data, '导入 OPML 失败')
         return null
       }
-      const result = await res.json()
+      const result = res.data
       if (!isCurrentSession(generation)) return null
       await Promise.all([fetchGroups(), fetchSubscriptions()])
       return result
@@ -309,7 +319,7 @@ export const createFeedSourcesState = ({
     })
     if (!isCurrentSession(generation)) throw new Error('登录状态已变更')
     if (!res.ok) {
-      throw new Error(apiErrorMessage(await res.json().catch(() => ({})), '导出 OPML 失败'))
+      throw new Error(apiErrorMessage(await readJsonErrorPayload(res), '导出 OPML 失败'))
     }
     const blob = await res.blob()
     if (!isCurrentSession(generation)) throw new Error('登录状态已变更')
@@ -328,20 +338,20 @@ export const createFeedSourcesState = ({
     const generation = sessionGeneration
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/feed/sources/create-from-provider`, {
+      const res = await apiRequestResult(`${api.url}/feed/sources/create-from-provider`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = res.data
         if (isCurrentSession(generation)) error.value = apiErrorMessage(data, '创建来源失败')
         return false
       }
-      const subscriptionId = (await res.json().catch(() => ({}))).data?.id
+      const subscriptionId = res.data.data?.id
       if (!isCurrentSession(generation)) return false
       if (payload.group_id && subscriptionId) {
-        const moveRes = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}/group`, {
+        const moveRes = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}/group`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
           body: JSON.stringify({ group_id: payload.group_id }),
@@ -382,7 +392,7 @@ export const createFeedSourcesState = ({
         )
         if (!subscription) return true
       }
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subscription.id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subscription.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })

@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PodcastShownotes from '@/components/podcast/PodcastShownotes.vue'
 import PodcastCommentSection from '@/components/podcast/PodcastCommentSection.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
@@ -149,11 +149,11 @@ async function shareEpisode() {
           <span v-if="ep.duration_sec">{{ fmtDuration(ep.duration_sec) }}</span>
         </div>
         <div class="pev-actions">
-          <PPress label="播放" @click="playEpisode" />
-          <PPress label="订阅" variant="secondary" @click="subscribeShow" />
-          <PPress label="收藏" variant="secondary" @click="favoriteEpisode" />
-          <PPress label="稍后听" variant="secondary" @click="listenLater" />
-          <PPress
+          <PButton label="播放" @click="playEpisode" />
+          <PButton label="订阅" variant="secondary" @click="subscribeShow" />
+          <PButton label="收藏" variant="secondary" @click="favoriteEpisode" />
+          <PButton label="稍后听" variant="secondary" @click="listenLater" />
+          <PButton
             v-if="ep.post?.visibility !== 'private'"
             label="分享"
             variant="secondary"

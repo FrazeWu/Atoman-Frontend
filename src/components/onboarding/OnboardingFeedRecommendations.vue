@@ -42,7 +42,7 @@
       <button data-test="onboarding-skip" class="onboarding-recommendations__skip" type="button" :disabled="busy" @click="$emit('skip')">
         跳过
       </button>
-      <PPress
+      <PButton
         data-test="onboarding-subscribe-selected"
         :label="subscribeLabel"
         :disabled="!selectedRecommendations.length || busy"
@@ -57,7 +57,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Check } from 'lucide-vue-next'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import type { OnboardingFeedRecommendation } from '@/stores/onboarding'
 
 const props = withDefaults(defineProps<{
@@ -212,7 +212,7 @@ const toggle = (id: string) => {
   opacity: 0.5;
 }
 
-.onboarding-recommendations__actions :deep(.p-press) {
+.onboarding-recommendations__actions :deep(.p-button) {
   min-height: 36px;
   padding: 0 16px;
 }

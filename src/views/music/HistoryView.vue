@@ -13,6 +13,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
@@ -35,6 +36,7 @@ const errorMessage = ref('')
 const actionBusy = ref('')
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const clearPending = ref(false)
 
 const playableSongs = computed<Song[]>(() => historyItems.value
   .filter((item) => Boolean(item.song.audio_url))
@@ -97,7 +99,11 @@ async function loadPage(page: number) {
 
 async function clearHistory() {
   if (actionBusy.value || !historyItems.value.length) return
-  if (!window.confirm('确定要清空播放历史吗？')) return
+  clearPending.value = true
+}
+
+async function confirmClearHistory() {
+  if (actionBusy.value || !historyItems.value.length) return
   historyRequests.beginRequest()
   loading.value = false
   loadingMore.value = false
@@ -115,6 +121,7 @@ async function clearHistory() {
     toastVisible.value = true
   } finally {
     actionBusy.value = ''
+    clearPending.value = false
   }
 }
 
@@ -272,6 +279,16 @@ watch(
     </template>
     <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </div>
+  <PConfirm
+    :show="clearPending"
+    title="清空播放历史"
+    message="确定要清空播放历史吗？"
+    confirm-text="清空"
+    danger
+    :loading="actionBusy === 'clear'"
+    @confirm="confirmClearHistory"
+    @cancel="clearPending = false"
+  />
 </template>
 
 <style scoped>

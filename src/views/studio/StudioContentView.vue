@@ -14,55 +14,50 @@
     </header>
 
     <form class="studio-content__filters" role="search" @submit.prevent="applySearch">
-      <label class="studio-content__search">
+      <div class="studio-content__search">
         <span class="sr-only">搜索{{ config.itemLabel }}</span>
         <Search :size="16" aria-hidden="true" />
-        <input v-model="searchQuery" type="search" :placeholder="`搜索${config.itemLabel}`">
-      </label>
+        <PInput v-model="searchQuery" type="search" :aria-label="`搜索${config.itemLabel}`" :placeholder="`搜索${config.itemLabel}`" />
+      </div>
 
-      <label>
-        <span class="sr-only">状态</span>
-        <select
-          data-testid="status-filter"
-          :value="filters.status"
-          aria-label="状态"
-          @change="updateFilter('status', selectValue($event))"
-        >
-          <option value="">全部状态</option>
-          <option value="published">已发布</option>
-          <option value="draft">草稿</option>
-        </select>
-      </label>
+      <PSelect
+        class="studio-content__filter-select"
+        data-testid="status-filter"
+        :model-value="filters.status"
+        label="状态"
+        :options="[
+          { label: '全部状态', value: '' },
+          { label: '已发布', value: 'published' },
+          { label: '草稿', value: 'draft' },
+        ]"
+        @update:model-value="updateFilter('status', String($event))"
+      />
 
-      <label>
-        <span class="sr-only">可见范围</span>
-        <select
-          :value="filters.visibility"
-          aria-label="可见范围"
-          @change="updateFilter('visibility', selectValue($event))"
-        >
-          <option value="">全部范围</option>
-          <option value="public">公开</option>
-          <option value="subscribers">订阅者</option>
-          <option value="private">私密</option>
-        </select>
-      </label>
+      <PSelect
+        class="studio-content__filter-select"
+        :model-value="filters.visibility"
+        label="可见范围"
+        :options="[
+          { label: '全部范围', value: '' },
+          { label: '公开', value: 'public' },
+          { label: '订阅者', value: 'subscribers' },
+          { label: '私密', value: 'private' },
+        ]"
+        @update:model-value="updateFilter('visibility', String($event))"
+      />
 
       <div class="studio-content__collection-filter">
-        <label>
-          <span class="sr-only">合集</span>
-          <select
-            data-testid="collection-filter"
-            :value="filters.collection_id"
-            aria-label="合集"
-            @change="updateFilter('collection_id', selectValue($event))"
-          >
-            <option value="">全部合集</option>
-            <option v-for="collection in studio.collections[module]" :key="collection.id" :value="collection.id">
-              {{ collection.name }}
-            </option>
-          </select>
-        </label>
+        <PSelect
+          class="studio-content__filter-select"
+          data-testid="collection-filter"
+          :model-value="filters.collection_id"
+          label="合集"
+          :options="[
+            { label: '全部合集', value: '' },
+            ...studio.collections[module].map(collection => ({ label: collection.name, value: collection.id })),
+          ]"
+          @update:model-value="updateFilter('collection_id', String($event))"
+        />
         <button
           class="studio-content__icon-button"
           type="button"
@@ -123,6 +118,8 @@ import StudioCollectionSheet from '@/components/studio/StudioCollectionSheet.vue
 import StudioContentTable from '@/components/studio/StudioContentTable.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -173,10 +170,6 @@ const createRoute = computed(() => ({
   path: `/studio/${module.value}/new`,
   query: filters.value.collection_id ? { collection: filters.value.collection_id } : undefined,
 }))
-
-function selectValue(event: Event) {
-  return (event.target as HTMLSelectElement).value
-}
 
 async function replaceQuery(values: Record<string, string | number>) {
   const query = { ...route.query }
@@ -303,9 +296,13 @@ watch(
 .studio-content__filters { display: grid; grid-template-columns: minmax(12rem, 1fr) repeat(3, minmax(9rem, auto)); gap: 0.625rem; align-items: center; }
 .studio-content__search { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); }
 .studio-content__search:focus-within { outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent); outline-offset: 1px; border-color: var(--a-color-primary); }
-.studio-content__search input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--a-color-text); font: inherit; }
-.studio-content select { min-height: 44px; width: 100%; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); padding: 0 2rem 0 0.75rem; font: inherit; }
-.studio-content select:focus-visible, .studio-content__icon-button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.studio-content__search :deep(.p-field) { flex: 1; min-width: 0; }
+.studio-content__search :deep(.p-input) { min-width: 0; min-height: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--a-color-text); font: inherit; padding: 0; }
+.studio-content__search :deep(.p-input:focus) { outline: 0; border-color: transparent; }
+.studio-content__filter-select { min-width: 0; }
+.studio-content__filter-select :deep(.p-field-label) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.studio-content__filter-select :deep(.p-select-trigger) { min-height: 44px; }
+.studio-content__icon-button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .studio-content__collection-filter { display: grid; grid-template-columns: minmax(8rem, 1fr) 44px; gap: 0.5rem; }
 .studio-content__icon-button { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; }
 .studio-content__icon-button:hover { background: var(--a-color-surface-muted); }

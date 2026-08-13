@@ -6,8 +6,8 @@
         <small>统一整理新增订阅和已有订阅。</small>
       </div>
       <div class="settings-block__control manage-toolbar">
-        <PPress variant="secondary" label="新建规则" :disabled="busy" @click="openCreateRule" />
-        <PPress
+        <PButton variant="secondary" label="新建规则" :disabled="busy" @click="openCreateRule" />
+        <PButton
           variant="secondary"
           label="重算全部订阅"
           :disabled="busy || !subscriptionRules.length"
@@ -39,16 +39,16 @@
           <p class="a-muted">{{ ruleActionSummary(rule) }}</p>
         </div>
         <div class="subscription-rule-actions settings-block__control">
-          <PPress variant="secondary" label="上移" :disabled="busy" @click="moveRuleUp(rule.id)" />
-          <PPress variant="secondary" label="下移" :disabled="busy" @click="moveRuleDown(rule.id)" />
-          <PPress variant="secondary" label="编辑" :disabled="busy" @click="openEditRule(rule)" />
-          <PPress
+          <PButton variant="secondary" label="上移" :disabled="busy" @click="moveRuleUp(rule.id)" />
+          <PButton variant="secondary" label="下移" :disabled="busy" @click="moveRuleDown(rule.id)" />
+          <PButton variant="secondary" label="编辑" :disabled="busy" @click="openEditRule(rule)" />
+          <PButton
             variant="secondary"
             label="应用到已有订阅"
             :disabled="busy"
             @click="applyRule(rule.id)"
           />
-          <PPress variant="secondary" label="删除规则" :disabled="busy" @click="confirmDeleteRule(rule.id)" />
+          <PButton variant="secondary" label="删除规则" :disabled="busy" @click="requestDeleteRule(rule.id)" />
         </div>
       </article>
     </div>
@@ -73,11 +73,23 @@
     @close="closeRuleEditor"
     @submit="submitRuleEditor"
   />
+
+  <PConfirm
+    :show="deletePending !== null"
+    title="删除规则"
+    message="确定删除这条规则吗？"
+    confirm-text="删除"
+    danger
+    :loading="props.busy"
+    @confirm="confirmDeleteRule"
+    @cancel="deletePending = null"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import SubscriptionRuleEditorSheet from '@/components/feed/SubscriptionRuleEditorSheet.vue'
 import type {
   ApplySubscriptionRulesSummary,
@@ -122,6 +134,7 @@ const emit = defineEmits<{
 const showRuleEditor = ref(false)
 const ruleEditorMode = ref<'create' | 'edit'>('create')
 const editingRule = ref<FeedSubscriptionRule | null>(null)
+const deletePending = ref<string | null>(null)
 
 const joinList = (items: unknown[]) => items.map((item) => String(item).trim()).filter(Boolean).join(' / ')
 
@@ -217,9 +230,15 @@ const applyAllRules = () => {
   emit('apply-all-rules')
 }
 
-const confirmDeleteRule = (id: string) => {
+const requestDeleteRule = (id: string) => {
   if (props.busy) return
-  if (!window.confirm('确定删除这条规则吗？')) return
+  deletePending.value = id
+}
+
+const confirmDeleteRule = () => {
+  if (props.busy || !deletePending.value) return
+  const id = deletePending.value
+  deletePending.value = null
   emit('delete-rule', id)
 }
 </script>

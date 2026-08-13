@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useApi } from '@/composables/useApi'
@@ -53,14 +53,14 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     if (!authStore.isAuthenticated || !authStore.user || completing.value) return false
     completing.value = true
     try {
-      const response = await apiRequest(api.auth.onboardingComplete, {
+      const response = await apiRequestResult(api.auth.onboardingComplete, {
         method: 'POST',
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         credentials: 'include',
       })
       if (!response.ok) return false
 
-      const data = await response.json().catch(() => ({}))
+      const data = response.data
       const completedAt = data.onboarding_completed_at || data.data?.onboarding_completed_at
       if (!completedAt) return false
 
@@ -101,12 +101,12 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loadingRecommendations.value = true
     recommendationError.value = ''
     try {
-      const response = await apiRequest(api.auth.onboardingRecommendations, {
+      const response = await apiRequestResult(api.auth.onboardingRecommendations, {
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         credentials: 'include',
       })
       if (!response.ok) throw new Error('加载推荐订阅源失败')
-      const data = await response.json().catch(() => ({}))
+      const data = response.data
       recommendations.value = Array.isArray(data.items) ? data.items : []
     } catch (error) {
       recommendationError.value = error instanceof Error ? error.message : '加载推荐订阅源失败'

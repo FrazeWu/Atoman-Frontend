@@ -64,10 +64,10 @@
           <PInput v-model="form.name" label="合集名称" placeholder="输入合集名称" />
           <PTextarea v-model="form.description" label="合集描述" placeholder="简短介绍这个合集" :rows="3" />
           <div class="modal-actions">
-            <PPress label="取消" variant="secondary" @click="editModalOpen = false" />
-            <PPress :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
+            <PButton label="取消" variant="secondary" @click="editModalOpen = false" />
+            <PButton :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
               更新
-            </PPress>
+            </PButton>
           </div>
         </div>
       </PModal>
@@ -77,7 +77,7 @@
         <div style="display:flex;flex-direction:column;gap:1rem">
           <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？此操作不可恢复，但不会删除其中的文章。</p>
           <div class="modal-actions">
-            <PPress label="取消" variant="secondary" @click="deleteModalOpen = false" />
+            <PButton label="取消" variant="secondary" @click="deleteModalOpen = false" />
             <PReject label="删除" @click="deleteCollection" />
           </div>
         </div>
@@ -100,7 +100,7 @@ import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PLink from '@/components/ui/PLink.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PReject from '@/components/ui/PReject.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'

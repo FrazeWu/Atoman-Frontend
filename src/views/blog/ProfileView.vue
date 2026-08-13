@@ -25,6 +25,7 @@
           class="profile-header__avatar profile-header__avatar--editable"
           :class="{ 'is-uploading': uploadingAvatar }"
           :aria-label="uploadingAvatar ? '头像上传中' : '更换头像'"
+          :title="uploadingAvatar ? '头像上传中' : '更换头像'"
         >
           <img v-if="profile.avatar_url" :src="resolveMediaURL(profile.avatar_url)" alt="当前头像" />
           <span v-else>{{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}</span>
@@ -55,11 +56,11 @@
                 class="profile-header__inline-input"
                 maxlength="50"
                 placeholder="显示名"
-                @keydown.enter="saveField('display_name')"
+                @keydown.enter.prevent="saveField('display_name')"
                 @keydown.escape="cancelEdit"
               />
-              <button class="profile-header__inline-save" @click="saveField('display_name')">保存</button>
-              <button class="profile-header__inline-cancel" @click="cancelEdit">取消</button>
+              <PButton label="保存" size="sm" :loading="saving" loading-text="保存中..." @click="saveField('display_name')" />
+              <PButton label="取消" size="sm" variant="ghost" :disabled="saving" @click="cancelEdit" />
             </div>
             <div v-else class="profile-header__name-wrap">
               <h1 class="profile-header__name">{{ profile.display_name || profile.username }}</h1>
@@ -126,8 +127,8 @@
                 rows="2"
               />
               <div class="profile-header__inline-actions">
-                <button class="profile-header__inline-save" @click="saveField('bio')">保存</button>
-                <button class="profile-header__inline-cancel" @click="cancelEdit">取消</button>
+                <PButton label="保存" size="sm" :loading="saving" loading-text="保存中..." @click="saveField('bio')" />
+                <PButton label="取消" size="sm" variant="ghost" :disabled="saving" @click="cancelEdit" />
               </div>
             </template>
             <template v-else>
@@ -135,6 +136,7 @@
               <button
                 v-if="isSelf"
                 class="profile-header__bio-edit-btn"
+                :aria-label="profile.bio ? '编辑简介' : '添加简介'"
                 @click="startEdit('bio')"
               >
                 <template v-if="profile.bio"><Pencil :size="13" /> 编辑简介</template>
@@ -152,11 +154,11 @@
                 type="url"
                 maxlength="200"
                 placeholder="https://example.com"
-                @keydown.enter="saveField('website')"
+                @keydown.enter.prevent="saveField('website')"
                 @keydown.escape="cancelEdit"
               />
-              <button class="profile-header__inline-save" @click="saveField('website')">保存</button>
-              <button class="profile-header__inline-cancel" @click="cancelEdit">取消</button>
+              <PButton label="保存" size="sm" :loading="saving" loading-text="保存中..." @click="saveField('website')" />
+              <PButton label="取消" size="sm" variant="ghost" :disabled="saving" @click="cancelEdit" />
             </template>
             <template v-else>
               <a v-if="profile.website" :href="profile.website" target="_blank" class="profile-header__website a-link">
@@ -165,6 +167,7 @@
               <button
                 v-if="isSelf"
                 class="profile-header__bio-edit-btn"
+                :aria-label="profile.website ? '编辑链接' : '添加链接'"
                 @click="startEdit('website')"
               >
                 <template v-if="profile.website"><Pencil :size="13" /> 编辑链接</template>
@@ -172,6 +175,7 @@
               </button>
             </template>
           </div>
+          <p v-if="profile.location" class="profile-header__location">{{ profile.location }}</p>
         </div>
       </header>
 
@@ -272,6 +276,16 @@
       </section>
     </template>
   </div>
+  <PConfirm
+    :show="deletePending !== null"
+    title="删除短话"
+    message="确定删除这条短话吗？"
+    confirm-text="删除"
+    danger
+    :loading="deleting"
+    @confirm="confirmRemoveNote"
+    @cancel="deletePending = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -285,6 +299,7 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PToast from '@/components/ui/PToast.vue'
@@ -321,9 +336,18 @@ const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => { void feedStore.togglePostBookmark(id) }
 const toggleReadingList = (id: string) => { void feedStore.toggleReadingListItem(id) }
+const deletePending = ref<ShortNote | null>(null)
+const deleting = ref(false)
 
-async function removeNote(noteToRemove: ShortNote) {
-  if (!window.confirm('确定删除这条短话吗？')) return
+function removeNote(noteToRemove: ShortNote) {
+  if (deleting.value) return
+  deletePending.value = noteToRemove
+}
+
+async function confirmRemoveNote() {
+  const noteToRemove = deletePending.value
+  if (!noteToRemove || deleting.value) return
+  deleting.value = true
   try {
     await apiRequestEnvelope(api.blog.shortNote(noteToRemove.id), {
       method: 'DELETE',
@@ -333,6 +357,9 @@ async function removeNote(noteToRemove: ShortNote) {
   } catch {
     toastMessage.value = '删除失败，请重试'
     toastVisible.value = true
+  } finally {
+    deleting.value = false
+    deletePending.value = null
   }
 }
 
@@ -696,7 +723,7 @@ onMounted(async () => {
 .profile-header__name {
   font-size: 1.625rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.2;
 }
 
@@ -717,8 +744,8 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   color: var(--a-color-text-secondary);
   background: transparent;
   border: 1px solid transparent;
@@ -771,11 +798,18 @@ onMounted(async () => {
   font-size: 0.85rem;
 }
 
+.profile-header__location {
+  margin: 0 0 0.35rem;
+  color: var(--a-color-text-secondary);
+  font-size: 0.85rem;
+}
+
 .profile-header__bio-edit-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   padding: 0.2rem 0.5rem;
+  min-height: 2.75rem;
   color: var(--a-color-text-secondary);
   font-size: 0.8rem;
   background: transparent;
@@ -1036,6 +1070,11 @@ onMounted(async () => {
   .profile-header__top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .profile-header__avatar--editable .profile-header__avatar-overlay {
+    opacity: 1;
+    background: rgb(0 0 0 / 30%);
   }
 }
 </style>

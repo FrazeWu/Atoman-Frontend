@@ -1,6 +1,6 @@
 import { computed, ref, watch, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import type { TimelineEvent } from '@/types'
 import { reportError } from '@/utils/logger'
@@ -235,10 +235,9 @@ export function useTimelineComparison({ sortedEvents }: TimelineComparisonOption
 
   const fetchEventById = async (id: string) => {
     try {
-      const response = await apiRequest(`${api.url}/timeline/events/${id}`)
+      const response = await apiRequestResult(`${api.url}/timeline/events/${id}`)
       if (!response.ok) return null
-      const data = await response.json()
-      return data.data as TimelineEvent
+      return response.data.data as TimelineEvent
     } catch (error) {
       reportError(error)
       return null

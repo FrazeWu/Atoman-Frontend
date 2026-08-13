@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { onScopeDispose, ref } from 'vue'
 import { defineStore, getActivePinia } from 'pinia'
 import type { TimelineItem } from '@/types'
@@ -216,7 +216,7 @@ export const useFeedStore = defineStore('feed', () => {
     applyFilterRules(nextRules)
     const authStore = useAuthStore()
     if (authStore.isAuthenticated) {
-      void apiRequest(`${api.url}/feed/preferences`, {
+      void apiRequestResult(`${api.url}/feed/preferences`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ hidden_keywords: nextRules.hiddenKeywords }),
@@ -234,9 +234,9 @@ export const useFeedStore = defineStore('feed', () => {
     if (!authStore.isAuthenticated) return false
     const generation = preferenceGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/preferences`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+      const res = await apiRequestResult(`${api.url}/feed/preferences`, { headers: { Authorization: `Bearer ${authStore.token}` } })
       if (!res.ok) return false
-      const data = await res.json()
+      const data = res.data
       if (generation !== preferenceGeneration) return false
       applyFilterRules({ hiddenKeywords: normalizeRuleList(data.data?.hidden_keywords), mutedSourceIds: [] })
       return true
@@ -279,11 +279,11 @@ export const useFeedStore = defineStore('feed', () => {
       })
       const query = params.toString()
       const url = query ? `${api.url}/feed/timeline?${query}` : `${api.url}/feed/timeline`
-      const res = await apiRequest(url, {
+      const res = await apiRequestResult(url, {
         headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (generation !== timelineGeneration) return
         timeline.value = data.data || []
       }
@@ -296,7 +296,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!feedItemIds.length) return false
     try {
-      const res = await apiRequest(`${api.url}/feed/timeline/mark-read`, {
+      const res = await apiRequestResult(`${api.url}/feed/timeline/mark-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
@@ -312,7 +312,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!feedItemIds.length) return false
     try {
-      const res = await apiRequest(`${api.url}/feed/timeline/mark-unread`, {
+      const res = await apiRequestResult(`${api.url}/feed/timeline/mark-unread`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
@@ -328,7 +328,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!subscriptionId) return false
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}/mark-read`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}/mark-read`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -343,7 +343,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!subscriptionId) return false
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}/mark-unread`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}/mark-unread`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -357,7 +357,7 @@ export const useFeedStore = defineStore('feed', () => {
   const markAllRead = async (): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/timeline/mark-all-read`, {
+      const res = await apiRequestResult(`${api.url}/feed/timeline/mark-all-read`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -371,7 +371,7 @@ export const useFeedStore = defineStore('feed', () => {
   const markAllUnread = async (): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/timeline/mark-all-unread`, {
+      const res = await apiRequestResult(`${api.url}/feed/timeline/mark-all-unread`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })

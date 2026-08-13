@@ -13,6 +13,7 @@ import {
 } from "@/api/musicV1";
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
+import PConfirm from "@/components/ui/PConfirm.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
@@ -27,6 +28,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
+const pendingConfirmation = ref<{ kind: 'record' | 'file' | 'cancel'; importId: string; fileId?: string } | null>(null)
 const page = ref(1)
 const hasMore = ref(false)
 const activeGroup = ref<MusicImportGroup>('in_progress')
@@ -152,14 +154,47 @@ async function loadImports(silent = false, nextPage = 1) {
 
 async function deleteRecord() {
   if (!selectedImport.value) return
-  if (!window.confirm('确认删除这条导入记录？已发布的专辑和歌曲不会被删除。')) return
-  actionBusy.value = 'delete-record'
+  pendingConfirmation.value = { kind: 'record', importId: selectedImport.value.importId }
+}
+
+async function confirmPendingAction() {
+  const pending = pendingConfirmation.value
+  if (!pending || actionBusy.value) return
+  pendingConfirmation.value = null
+  if (pending.kind === 'record') {
+    actionBusy.value = 'delete-record'
+    try {
+      await deleteMusicAlbumImportRecord(pending.importId)
+      selectedId.value = null
+      await loadImports(true)
+    } catch {
+      errorMessage.value = '删除记录失败'
+    } finally {
+      actionBusy.value = null
+    }
+    return
+  }
+
+  if (pending.kind === 'file' && pending.fileId) {
+    actionBusy.value = pending.fileId
+    try {
+      await deleteMusicAlbumImportFile(pending.importId, pending.fileId)
+      await loadImports(true)
+    } catch {
+      errorMessage.value = '删除失败'
+    } finally {
+      actionBusy.value = null
+    }
+    return
+  }
+
+  actionBusy.value = 'cancel'
   try {
-    await deleteMusicAlbumImportRecord(selectedImport.value.importId)
+    await cancelMusicAlbumImportSession(pending.importId)
     selectedId.value = null
     await loadImports(true)
   } catch {
-    errorMessage.value = '删除记录失败'
+    errorMessage.value = '取消失败'
   } finally {
     actionBusy.value = null
   }
@@ -240,16 +275,7 @@ async function retryAllFailedFiles() {
 
 async function deleteFile(fileId: string) {
   if (!selectedImport.value) return;
-  actionBusy.value = fileId;
-  try {
-    if (!window.confirm('确认移除这个文件？')) return
-    await deleteMusicAlbumImportFile(selectedImport.value.importId, fileId);
-    await loadImports(true);
-  } catch {
-    errorMessage.value = "删除失败";
-  } finally {
-    actionBusy.value = null;
-  }
+  pendingConfirmation.value = { kind: 'file', importId: selectedImport.value.importId, fileId }
 }
 
 function chooseReplacement(fileId: string) { replacementInputs.value[fileId]?.click() }
@@ -267,17 +293,7 @@ async function replaceFile(fileId: string, event: Event) {
 
 async function cancelImport() {
   if (!selectedImport.value) return;
-  actionBusy.value = "cancel";
-  try {
-    if (!window.confirm('确认取消这个导入任务？')) return
-    await cancelMusicAlbumImportSession(selectedImport.value.importId);
-    selectedId.value = null;
-    await loadImports(true);
-  } catch {
-    errorMessage.value = "取消失败";
-  } finally {
-    actionBusy.value = null;
-  }
+  pendingConfirmation.value = { kind: 'cancel', importId: selectedImport.value.importId }
 }
 
 async function repairImport() {
@@ -496,6 +512,20 @@ async function continueImport() {
     </div>
     <PButton v-if="hasMore" variant="secondary" @click="loadImports(false, page + 1)">加载更多</PButton>
   </div>
+  <PConfirm
+    :show="pendingConfirmation !== null"
+    title="确认导入操作"
+    :message="pendingConfirmation?.kind === 'record'
+      ? '确认删除这条导入记录？已发布的专辑和歌曲不会被删除。'
+      : pendingConfirmation?.kind === 'file'
+        ? '确认移除这个文件？'
+        : '确认取消这个导入任务？'"
+    :confirm-text="pendingConfirmation?.kind === 'cancel' ? '取消任务' : '确认删除'"
+    danger
+    :loading="actionBusy !== null"
+    @confirm="confirmPendingAction"
+    @cancel="pendingConfirmation = null"
+  />
 </template>
 
 <style scoped>

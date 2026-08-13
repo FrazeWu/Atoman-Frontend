@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
@@ -24,12 +24,11 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     pendingLoad = (async () => {
       loading.value = true
       const api = useApi()
-      const response = await apiRequest(api.site.access)
+      const response = await apiRequestResult(api.site.access)
       if (!response.ok) {
         throw new Error(`站点访问配置加载失败 (${response.status})`)
       }
-      const data = await response.json()
-      access.value = mergeSiteAccess(data)
+      access.value = mergeSiteAccess(response.data)
       loaded.value = true
     })().finally(() => {
       loading.value = false
@@ -41,7 +40,7 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
 
   async function save(nextAccess: SiteAccessInput, token: string | null) {
     const api = useApi()
-    const response = await apiRequest(api.settings.siteAccess, {
+    const response = await apiRequestResult(api.settings.siteAccess, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -51,12 +50,10 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     })
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
-      throw new Error(data.error || '保存失败')
+      throw new Error(response.data?.error || '保存失败')
     }
 
-    const data = await response.json()
-    access.value = mergeSiteAccess(data)
+    access.value = mergeSiteAccess(response.data)
   }
 
   function isModuleVisible(module: ModuleRoomKey) {

@@ -1,4 +1,5 @@
 import * as apiConfig from '@/composables/useApi'
+import type { ApiSessionPayload } from './types'
 
 let csrfToken = ''
 
@@ -65,21 +66,21 @@ function prepareInit(input: RequestInfo | URL, init: RequestInit = {}): RequestI
   if (!isAtomanAPI(input)) return init
 
   const requiresCSRFHeader = csrfToken && isMutation(requestMethod(input, init))
-  const authorization = new Headers(init.headers).get('Authorization')
-  const removeCookieSessionPlaceholder = authorization === 'Bearer cookie-session'
-  if (!requiresCSRFHeader && !removeCookieSessionPlaceholder) {
-    return { ...init, credentials: 'include' }
-  }
-
   const headers = new Headers(typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined)
   new Headers(init.headers).forEach((value, key) => headers.set(key, value))
+  const authorization = headers.get('Authorization')
+  const removeCookieSessionPlaceholder = authorization === 'Bearer cookie-session'
   if (removeCookieSessionPlaceholder) {
     headers.delete('Authorization')
   }
   if (requiresCSRFHeader) {
     headers.set('X-CSRF-Token', csrfToken)
   }
-  return { ...init, credentials: 'include', headers }
+  return {
+    ...init,
+    credentials: 'include',
+    ...(requiresCSRFHeader || removeCookieSessionPlaceholder ? { headers } : {}),
+  }
 }
 
 async function hasCSRFError(response: Response) {
@@ -88,26 +89,27 @@ async function hasCSRFError(response: Response) {
   return payload?.error?.code === 'auth.csrf_invalid' || payload?.code === 'auth.csrf_invalid'
 }
 
-async function request(input: RequestInfo | URL, init: RequestInit = {}, originalInitProvided = true): Promise<Response> {
+async function request(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const prepared = prepareInit(input, init)
-  return originalInitProvided ? globalThis.fetch(input, prepared) : globalThis.fetch(input)
+  return globalThis.fetch(input, prepared)
 }
 
-async function execute(input: RequestInfo | URL, init: RequestInit = {}, retry = true, originalInitProvided = true): Promise<Response> {
-  const response = await request(input, init, originalInitProvided)
+async function execute(input: RequestInfo | URL, init: RequestInit = {}, retry = true): Promise<Response> {
+  const response = await request(input, init)
   if (!retry || !isAtomanAPI(input) || !await hasCSRFError(response)) return response
 
   const base = getApiBaseURL()
   const sessionResponse = await request(`${base}/auth/session`, { credentials: 'include' })
   if (!sessionResponse.ok) return response
-  const session = await sessionResponse.json().catch(() => null) as { csrf_token?: unknown } | null
-  if (typeof session?.csrf_token !== 'string' || !session.csrf_token) return response
-  setCSRFToken(session.csrf_token)
-  return execute(input, init, false, originalInitProvided)
+  const session = await sessionResponse.json().catch(() => null) as ApiSessionPayload | null
+  const sessionToken = session?.csrf_token ?? session?.data?.csrf_token
+  if (!sessionToken) return response
+  setCSRFToken(sessionToken)
+  return execute(input, init, false)
 }
 
 export function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  return execute(input, init, true, arguments.length > 1)
+  return execute(input, init, true)
 }
 
 export function configureApiXHR(xhr: XMLHttpRequest, method: string) {

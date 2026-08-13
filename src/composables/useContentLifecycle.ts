@@ -1,5 +1,5 @@
 import { useApi } from '@/composables/useApi'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { StudioModule } from '@/types'
 
@@ -53,7 +53,7 @@ export interface ScheduledContent {
 
 export interface ContentNotificationPreference {
   id?: string
-  source_type: 'internal_user' | 'internal_channel'
+  source_type: 'internal_user' | 'internal_channel' | 'internal_collection'
   source_id: string
   mode: 'feed_only' | 'all' | 'daily'
 }
@@ -113,10 +113,19 @@ async function request<T>(url: string, token: string | null | undefined, init: R
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token && token !== 'cookie-session') headers.Authorization = `Bearer ${token}`
   const requestInit = { credentials: 'include' as const, ...init, headers: { ...headers, ...(init.headers || {}) } }
-  const response = await apiRequest(url, requestInit)
-  const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body?.error?.message || body?.error || '请求失败')
-  return (body?.data ?? body) as T
+  const response = await apiRequestResult<T>(url, requestInit)
+  const body = response.data as unknown
+  const payload = body && typeof body === 'object' ? body as Record<string, unknown> : {}
+  if (!response.ok) {
+    const nestedError = payload.error
+    const nestedMessage = nestedError && typeof nestedError === 'object'
+      ? (nestedError as Record<string, unknown>).message
+      : undefined
+    throw new Error(typeof nestedMessage === 'string'
+      ? nestedMessage
+      : typeof nestedError === 'string' ? nestedError : '请求失败')
+  }
+  return (payload.data ?? body) as T
 }
 
 export function createContentLifecycleClient(options: ClientOptions) {

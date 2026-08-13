@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import type { MusicSongLyrics } from '@/api/musicV1'
+import type { UploadAsset } from '@/api/types'
 import type { MusicCreationLyricsDraft } from '@/components/music/musicCreationTypes'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
@@ -21,13 +22,25 @@ export function useMusicAlbumTrackEditor() {
     }))
   }
 
-  function addTrack() {
+  function addTrack(asset: UploadAsset, fileName: string) {
     updateTracks(tracks => [...tracks, {
       id: `manual-track-${Date.now()}`,
       sequence: tracks.length + 1,
-      title: '',
+      title: titleFromFileName(fileName),
+      audioUrl: asset.url,
+      audioKey: asset.key,
+      audioFileName: fileName,
       origin: 'manual',
     }])
+  }
+
+  function replaceTrackAudio(trackId: string, asset: UploadAsset, fileName: string) {
+    updateTracks(tracks => tracks.map(track => track.id === trackId ? {
+      ...track,
+      audioUrl: asset.url,
+      audioKey: asset.key,
+      audioFileName: fileName,
+    } : track))
   }
 
   function updateTrackTitle(trackId: string, title: string) {
@@ -117,6 +130,7 @@ export function useMusicAlbumTrackEditor() {
     dragOverTrackId,
     lyricTrack,
     addTrack,
+    replaceTrackAudio,
     updateTrackTitle,
     moveTrack,
     handleTrackDragStart,
@@ -130,4 +144,9 @@ export function useMusicAlbumTrackEditor() {
     saveTrackLyrics,
     formatSequence: (sequence: number) => String(sequence).padStart(2, '0'),
   }
+}
+
+function titleFromFileName(fileName: string) {
+  const baseName = fileName.split(/[\\/]/).pop() || fileName
+  return baseName.replace(/\.[^.]+$/, '') || baseName
 }

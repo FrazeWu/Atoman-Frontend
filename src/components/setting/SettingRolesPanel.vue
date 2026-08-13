@@ -7,11 +7,12 @@
     </div>
 
     <div class="setting-roles__toolbar">
-      <input
-        v-model.trim="query"
+      <PInput
+        :model-value="query"
         class="setting-roles__search"
         type="search"
         placeholder="搜索用户名、邮箱、显示名"
+        @update:model-value="query = $event.trim()"
         @keydown.enter.prevent="loadUsers"
       />
       <PButton :loading="loading" loading-text="搜索中..." @click="loadUsers">搜索</PButton>
@@ -61,6 +62,7 @@ import { apiRequestResult } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PCard from '@/components/ui/PCard.vue'
+import PInput from '@/components/ui/PInput.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -178,6 +180,10 @@ onMounted(() => {
   font-size: 1rem;
   box-sizing: border-box;
   outline: none;
+}
+
+.setting-roles__toolbar :deep(.p-field) {
+  width: min(100%, 420px);
 }
 
 .setting-roles__list {

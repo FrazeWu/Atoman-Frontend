@@ -166,7 +166,7 @@ test.describe('Comment surfaces and core API', () => {
       },
     }))
 
-    await page.goto('/videos/videos/watch/video-1')
+    await page.goto('/videos/watch/video-1')
     const composer = page.locator('[data-testid="video-comments"] textarea').first()
     await composer.fill('1:24 这里开始')
     await page.locator('[data-testid="video-comments"] [data-test="comment-submit"]').click()

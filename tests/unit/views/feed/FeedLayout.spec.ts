@@ -188,7 +188,10 @@ describe('FeedLayout', () => {
 
     await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger('click')
 
-    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { manage_subscriptions: '1' } })
+    expect(pushSpy).toHaveBeenCalledWith({
+      path: '/feed',
+      query: { manage_subscriptions: '1', manage_tab: 'groups' },
+    })
   })
 
   it('opens the feed mobile sources sheet from the header action and reuses source actions', async () => {
@@ -220,7 +223,7 @@ describe('FeedLayout', () => {
 
     expect(pushSpy).toHaveBeenCalledWith({
       path: '/feed',
-      query: { source_id: 'sub-1', manage_subscriptions: '1' },
+      query: { source_id: 'sub-1', manage_subscriptions: '1', manage_tab: 'groups' },
     })
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
   })

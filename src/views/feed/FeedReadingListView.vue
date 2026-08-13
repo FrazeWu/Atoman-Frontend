@@ -3,7 +3,7 @@
     <PPageHeader title="稍后阅读" mb="1.25rem">
       <template #action>
         <RouterLink to="/feed" style="text-decoration:none">
-          <PPress variant="secondary" label="← 返回订阅" />
+          <PButton variant="secondary" label="← 返回订阅" />
         </RouterLink>
       </template>
     </PPageHeader>
@@ -73,7 +73,7 @@ import PEntry from '@/components/ui/PEntry.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useAuthStore } from '@/stores/auth'

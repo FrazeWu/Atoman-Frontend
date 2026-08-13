@@ -168,8 +168,17 @@ describe('shared responsive shell CSS', () => {
   })
 
   it('defines shared desktop offsets for the responsive shell', () => {
+    expect(styleSource).toContain('body:has(.app-shell.has-sidebar) {\n  --a-sidebar-width: 12rem;')
     expect(hasSidebarBlock).toContain('--a-mobile-nav-offset: 0px;')
-    expect(mainContentBlock).toContain('calc(12rem + var(--a-mobile-nav-offset))')
+    expect(mainContentBlock).toContain('calc(8rem + var(--a-mobile-nav-offset, 0px))')
+  })
+
+  it('keeps page scrolling on the document while the sidebar owns its scroll area', () => {
+    expect(styleSource).toMatch(/\.p-sidebar\s*\{[\s\S]*?height:\s*calc\(100dvh - var\(--a-topbar-height\)[\s\S]*?overflow-y:\s*auto;/)
+    expect(mainContentBlock).toContain('padding: 2.5rem 2rem')
+    expect(mainContentBlock).not.toContain('position: sticky;')
+    expect(mainContentBlock).not.toContain('height: calc(100dvh')
+    expect(mainContentBlock).not.toContain('overflow-y: auto;')
   })
 
   it('reserves safe-area space for the mobile bottom navigation', () => {

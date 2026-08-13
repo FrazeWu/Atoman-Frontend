@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
+import { describe, expect, it } from 'vitest'
 
 import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.vue'
 
@@ -75,16 +76,6 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
     stubs: {
       PSheet: { template: '<div><slot /></div>' },
       PField: { props: ['label'], template: '<label><span>{{ label }}</span><slot /></label>' },
-      PPress: {
-        props: ['label'],
-        emits: ['click'],
-        template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
-      },
-      PSelect: {
-        props: ['modelValue', 'options'],
-        emits: ['update:modelValue'],
-        template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
-      },
       SubscriptionRuleEditorSheet: true,
     },
   },
@@ -97,14 +88,17 @@ describe('SubscriptionManageSheet', () => {
     expect(wrapper.find('h2').exists()).toBe(false)
   })
 
-  it('shows the source name instead of the raw rss url in subscription cards', () => {
+  it('shows the source name instead of the raw rss url in subscription cards', async () => {
     const wrapper = mountSheet()
+
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
 
     expect(wrapper.text()).not.toContain('https://example.com/feed.xml')
   })
 
   it('shows subscription health details and emits health check actions', async () => {
     const wrapper = mountSheet()
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
 
     expect(wrapper.text()).toContain('异常')
     expect(wrapper.text()).toContain('HTTP 500')
@@ -119,10 +113,12 @@ describe('SubscriptionManageSheet', () => {
 
   it('emits subscription flag updates from source cards', async () => {
     const wrapper = mountSheet()
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
+    const flags = wrapper.findAll('input[type="checkbox"]')
 
-    await wrapper.get('[data-test="subscription-flag-muted"]').setValue(true)
-    await wrapper.get('[data-test="subscription-flag-auto-read"]').setValue(true)
-    await wrapper.get('[data-test="subscription-flag-reading-list"]').setValue(true)
+    await flags[0].setValue(true)
+    await flags[1].setValue(true)
+    await flags[2].setValue(true)
 
     expect(wrapper.emitted('update-subscription')).toEqual([
       ['sub-1', { is_muted: true }],
@@ -133,11 +129,13 @@ describe('SubscriptionManageSheet', () => {
 
   it('allows moving a subscription back to unassigned', async () => {
     const wrapper = mountSheet()
-    const groupSelect = wrapper.get('select')
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
+    const groupSelect = wrapper.get('.p-select-root')
 
+    await groupSelect.get('.p-select-trigger').trigger('click')
     expect(groupSelect.text()).toContain('未分类')
 
-    await groupSelect.setValue('')
+    await groupSelect.findAll('.p-select-option').find(option => option.text() === '未分类')!.trigger('click')
 
     expect(wrapper.emitted('move-subscription')).toEqual([['sub-1', '']])
   })
@@ -145,18 +143,25 @@ describe('SubscriptionManageSheet', () => {
   it('separates manage content into task tabs', async () => {
     const wrapper = mountSheet()
 
+    expect(wrapper.get('[data-test="subscription-manage-tab-groups"]').classes()).toContain('is-active')
+    expect(wrapper.text()).not.toContain('Example Feed')
+    expect(wrapper.text()).not.toContain('规则管理')
+
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
+
     expect(wrapper.get('[data-test="subscription-manage-tab-sources"]').classes()).toContain('is-active')
     expect(wrapper.text()).toContain('Example Feed')
-    expect(wrapper.text()).not.toContain('规则管理')
 
     await wrapper.get('[data-test="subscription-manage-tab-rules"]').trigger('click')
 
+    expect(wrapper.get('[data-test="subscription-manage-tab-rules"]').classes()).toContain('is-active')
     expect(wrapper.text()).toContain('规则管理')
     expect(wrapper.text()).toContain('播客自动整理')
     expect(wrapper.text()).not.toContain('Example Feed')
 
     await wrapper.get('[data-test="subscription-manage-tab-keywords"]').trigger('click')
 
+    expect(wrapper.get('[data-test="subscription-manage-tab-keywords"]').classes()).toContain('is-active')
     expect(wrapper.text()).toContain('过滤规则')
     expect(wrapper.text()).not.toContain('播客自动整理')
   })
@@ -178,16 +183,19 @@ describe('SubscriptionManageSheet', () => {
   })
 
   it('emits group rename and delete actions', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountSheet()
 
     await wrapper.get('[data-test="group-name-input"]').setValue('技术观察')
     await wrapper.get('[data-test="group-name-input"]').trigger('blur')
-    await wrapper.findAll('button').find((button) => button.text() === '删除分组')!.trigger('click')
+    await wrapper.get('.group-manage-row').find('button').trigger('click')
+    const confirmButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.p-modal-footer button'))
+      .find((button) => button.textContent?.trim() === '删除')
+    expect(confirmButton).toBeDefined()
+    confirmButton!.click()
+    await nextTick()
 
     expect(wrapper.emitted('rename-group')).toEqual([['group-1', '技术观察']])
     expect(wrapper.emitted('delete-group')).toEqual([['group-1']])
-    confirm.mockRestore()
   })
 
   it('keeps only hidden keyword local controls and emits keyword updates', async () => {
@@ -206,7 +214,6 @@ describe('SubscriptionManageSheet', () => {
   })
 
   it('shows subscription rules summary and emits rule management events', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountSheet()
 
     await wrapper.get('[data-test="subscription-manage-tab-rules"]').trigger('click')
@@ -226,6 +233,11 @@ describe('SubscriptionManageSheet', () => {
     await wrapper.findAll('button').find((button) => button.text() === '编辑')!.trigger('click')
     await wrapper.findAll('button').find((button) => button.text() === '应用到已有订阅')!.trigger('click')
     await wrapper.findAll('button').find((button) => button.text() === '删除规则')!.trigger('click')
+    const confirmButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.p-modal-footer button'))
+      .find((button) => button.textContent?.trim() === '删除')
+    expect(confirmButton).toBeDefined()
+    confirmButton!.click()
+    await nextTick()
 
     expect(wrapper.emitted('create-rule')).toEqual([[]])
     expect(wrapper.emitted('apply-all-rules')).toEqual([[]])
@@ -234,8 +246,6 @@ describe('SubscriptionManageSheet', () => {
     expect(wrapper.emitted('edit-rule')).toEqual([['rule-1']])
     expect(wrapper.emitted('apply-rule')).toEqual([['rule-1']])
     expect(wrapper.emitted('delete-rule')).toEqual([['rule-1']])
-
-    confirm.mockRestore()
   })
 
   it('opens the rule editor and emits save when editor confirms payload', async () => {
@@ -248,16 +258,6 @@ describe('SubscriptionManageSheet', () => {
         stubs: {
           PSheet: { template: '<div><slot /></div>' },
           PField: { props: ['label'], template: '<label><span>{{ label }}</span><slot /></label>' },
-          PPress: {
-            props: ['label'],
-            emits: ['click'],
-            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
-          },
-          PSelect: {
-            props: ['modelValue', 'options'],
-            emits: ['update:modelValue'],
-            template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
-          },
           SubscriptionRuleEditorSheet: {
             props: ['show', 'mode', 'groups', 'rule'],
             emits: ['close', 'submit'],
@@ -337,16 +337,6 @@ describe('SubscriptionManageSheet', () => {
         stubs: {
           PSheet: { template: '<div><slot /></div>' },
           PField: { props: ['label'], template: '<label><span>{{ label }}</span><slot /></label>' },
-          PPress: {
-            props: ['label'],
-            emits: ['click'],
-            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
-          },
-          PSelect: {
-            props: ['modelValue', 'options'],
-            emits: ['update:modelValue'],
-            template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
-          },
         },
       },
     })

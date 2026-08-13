@@ -334,7 +334,7 @@ describe('MusicLyricsRowEditor', () => {
     }
   })
 
-  it('锁定桌面网格、44px 按钮、8px 间距和移动端防溢出 CSS', () => {
+  it('锁定桌面网格、轻量图标按钮、8px 间距和移动端防溢出 CSS', () => {
     const mobileMedia = /@media\s*\(max-width:\s*767px\)\s*\{/.exec(componentSource)
     expect(mobileMedia).toBeTruthy()
     const desktopCss = componentSource.slice(0, mobileMedia!.index)
@@ -344,18 +344,18 @@ describe('MusicLyricsRowEditor', () => {
       'grid-template-columns: 3rem minmax(0, 1fr) 9.25rem;',
     )
     expect(cssRule('.lyric-grid-line.is-lrc', desktopCss)).toContain(
-      'grid-template-columns: 3rem 11rem minmax(0, 1fr) 9.25rem;',
+      'grid-template-columns: 3rem 20rem minmax(0, 1fr) 9.25rem;',
     )
     expect(cssRule('.lyric-grid-line.is-lrc.is-translation-mode', desktopCss)).toContain(
       'grid-template-columns: 3rem 8rem minmax(0, 1fr);',
     )
 
-    expect(cssRule('.lyric-action', desktopCss)).toMatch(/width:\s*44px;/)
-    expect(cssRule('.lyric-action', desktopCss)).toMatch(/height:\s*44px;/)
-    expect(cssRule('.lyric-actions', desktopCss)).toContain('grid-template-columns: repeat(3, 44px);')
+    expect(cssRule('.lyric-action', desktopCss)).toMatch(/width:\s*36px;/)
+    expect(cssRule('.lyric-action', desktopCss)).toMatch(/height:\s*36px;/)
+    expect(cssRule('.lyric-actions', desktopCss)).toContain('grid-template-columns: repeat(3, 36px);')
     expect(cssRule('.lyric-actions', desktopCss)).toContain('gap: 8px;')
     expect(cssRule('.lyric-time-controls', desktopCss)).toContain(
-      'grid-template-columns: minmax(0, 1fr) 44px;',
+      'grid-template-columns: minmax(0, 1fr) repeat(3, 36px);',
     )
     expect(cssRule('.lyric-time-controls', desktopCss)).toContain('gap: 8px;')
 

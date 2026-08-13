@@ -17,8 +17,9 @@ describe('ContentNotificationMode', () => {
     const wrapper = mount(ContentNotificationMode, { props: { sourceType: 'internal_channel', sourceId: 'channel-1' } })
     await flushPromises()
 
-    expect(wrapper.get('select').element.value).toBe('all')
-    await wrapper.get('select').setValue('daily')
+    expect(wrapper.get('.p-select-trigger').text()).toContain('即时通知')
+    await wrapper.get('.p-select-trigger').trigger('click')
+    await wrapper.findAll('.p-select-option').find(option => option.text() === '每日汇总')!.trigger('click')
     await flushPromises()
     expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/content/notification-preferences', expect.objectContaining({ method: 'PUT' }))
   })

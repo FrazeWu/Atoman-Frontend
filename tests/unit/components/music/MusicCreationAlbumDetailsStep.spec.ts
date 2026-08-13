@@ -91,6 +91,75 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.get('[data-testid="album-track-lyrics-track-lyrics"]').text()).toContain('上传歌词')
   })
 
+  it('uploads audio before adding a new track and uses the file name as its initial title', async () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
+    drawers.setMusicCreationStep('albumDetails')
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    vi.mocked(uploadMusicAsset).mockResolvedValue({
+      url: 'https://audio.example/new-track.mp3',
+      key: 'music/audio/new-track.mp3',
+      content_type: 'audio/mpeg',
+      size: 12,
+    })
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    const input = wrapper.get('[data-testid="album-track-audio-input"]')
+    const file = new File(['audio'], 'new-track.mp3', { type: 'audio/mpeg' })
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [file] })
+
+    await wrapper.get('.track-adjustment__add-btn').trigger('click')
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(uploadMusicAsset).toHaveBeenCalledWith(file, 'music.audio')
+    expect(flow.draft.tracks).toEqual([expect.objectContaining({
+      title: 'new-track',
+      audioUrl: 'https://audio.example/new-track.mp3',
+      audioKey: 'music/audio/new-track.mp3',
+      audioFileName: 'new-track.mp3',
+      origin: 'manual',
+    })])
+  })
+
+  it('uploads replacement audio for an existing track without adding another row', async () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ mode: 'edit', entity: 'album', albumId: 'album-1', startStep: 'albumDetails' })
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+    flow.draft.tracks = [{
+      id: 'track-existing',
+      songId: 'song-1',
+      sequence: 1,
+      title: 'Existing track',
+      audioUrl: 'https://audio.example/old.mp3',
+      origin: 'existing',
+    }]
+    vi.mocked(uploadMusicAsset).mockResolvedValue({
+      url: 'https://audio.example/replaced.flac',
+      key: 'music/audio/replaced.flac',
+      content_type: 'audio/flac',
+      size: 12,
+    })
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    const input = wrapper.get('[data-testid="album-track-audio-input"]')
+    const file = new File(['audio'], 'replaced.flac', { type: 'audio/flac' })
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [file] })
+
+    await wrapper.get('[data-testid="album-track-audio-track-existing"]').trigger('click')
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(flow.draft.tracks).toHaveLength(1)
+    expect(flow.draft.tracks[0]).toMatchObject({
+      id: 'track-existing',
+      audioUrl: 'https://audio.example/replaced.flac',
+      audioKey: 'music/audio/replaced.flac',
+      audioFileName: 'replaced.flac',
+    })
+  })
+
   it('uses the structured lyric editor for an existing album track', async () => {
     const drawers = useMusicDrawers()
     drawers.openMusicCreationFlow({ mode: 'edit', entity: 'album', albumId: 'album-1', startStep: 'albumDetails' })

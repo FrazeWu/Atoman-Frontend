@@ -240,6 +240,34 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(wrapper.get('[data-testid="album-import-speed"]').text()).toContain('上传速度 128 KB/s')
   })
 
+  it('提示自动匹配并在成功后显示 MusicBrainz 来源', async () => {
+    const drawers = useMusicDrawers()
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    const wrapper = mount(MusicCreationAlbumUploadZone)
+
+    expect(wrapper.get('[data-testid="album-import-metadata-hint"]').text()).toContain('上传后将自动匹配专辑信息、曲序和歌词')
+
+    drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl = 'https://musicbrainz.org/release/release-id'
+    await flushPromises()
+
+    const source = wrapper.get('[data-testid="album-import-metadata-hint"] a')
+    expect(source.text()).toContain('查看 MusicBrainz 来源')
+    expect(source.attributes()).toMatchObject({
+      href: 'https://musicbrainz.org/release/release-id',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    })
+  })
+
+  it('提示补充 MusicBrainz 中缺少的艺术家', async () => {
+    const drawers = useMusicDrawers()
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    drawers.state.value.creationFlow.draft.albumImport.missingArtists = ['Jay-Z', 'KIDS SEE GHOSTS']
+    const wrapper = mount(MusicCreationAlbumUploadZone)
+
+    expect(wrapper.text()).toContain('该发行版还包括 Jay-Z、KIDS SEE GHOSTS，请在专辑信息中补充艺术家')
+  })
+
   it('上传后应用后台处理中的最新快照', async () => {
     vi.useFakeTimers()
     const archive = new File(['zip'], 'stages.zip', { type: 'application/zip' })

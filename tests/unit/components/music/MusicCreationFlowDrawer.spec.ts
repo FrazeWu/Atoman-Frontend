@@ -661,6 +661,7 @@ describe('MusicCreationFlowDrawer', () => {
           importId: 'import-1',
           status: 'ready',
           coverUrl: 'https://img.test/cover.jpg',
+          metadataSourceUrl: 'https://musicbrainz.org/release/release-id',
           derivedTracks: [{ title: 'Preview Track', audioKey: 'audio-1', origin: 'import' }],
           files: [{ fileId: 'file-failed', relativePath: 'broken.mp3', fileName: 'broken.mp3', role: 'audio', detectedFormat: 'mp3', size: 1, uploadStatus: 'failed', processingStatus: 'failed', discNumber: 1, trackNumber: 1, title: '', errorMessage: '上传失败' }],
         },
@@ -673,6 +674,7 @@ describe('MusicCreationFlowDrawer', () => {
 
     expect(drawerMocks.state.value.creationFlow?.step).toBe('preview')
     expect(wrapper.get('[data-testid="album-import-preview-step"]').text()).toContain('Preview Track')
+    expect(wrapper.get('[data-testid="album-import-metadata-source"] a').attributes('href')).toBe('https://musicbrainz.org/release/release-id')
     expect(wrapper.get('img[alt="专辑封面预览"]').attributes('src')).toBe('https://img.test/default-cover.jpg')
     expect(wrapper.text()).toContain('broken.mp3')
 

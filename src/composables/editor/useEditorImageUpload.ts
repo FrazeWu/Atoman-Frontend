@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { EditorView } from '@codemirror/view'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { reportError } from '@/utils/logger'
@@ -38,13 +38,13 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
     try {
       const formData = new FormData()
       formData.append('image', file)
-      const response = await apiRequest(api.blog.uploadImage, {
+      const response = await apiRequestResult(api.blog.uploadImage, {
         method: 'POST',
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         body: formData,
       })
       if (!response.ok) throw new Error('upload failed')
-      const data = await response.json() as { url: string }
+      const data = response.data as { url: string }
       replacePlaceholder(placeholder, `![图片](${data.url})`)
     } catch (error) {
       reportError(error, '图片上传失败')

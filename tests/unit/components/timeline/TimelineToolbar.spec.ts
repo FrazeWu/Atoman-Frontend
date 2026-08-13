@@ -14,9 +14,9 @@ describe('TimelineToolbar', () => {
       },
     })
 
-    await wrapper.find('input[type="number"]').setValue('1800')
-    await wrapper.find('input[type="text"]').setValue('政治')
-    await wrapper.get('button').trigger('click')
+    await wrapper.get('input[placeholder="如 1800"]').setValue('1800')
+    await wrapper.get('input[placeholder="政治 / 文化 / 科技…"]').setValue('政治')
+    await wrapper.findAll('button').find((button) => button.text() === '筛选')?.trigger('click')
     await wrapper.get('.tl-action-btn').trigger('click')
 
     expect(wrapper.emitted('update:yearStart')?.[0]).toEqual([1800])

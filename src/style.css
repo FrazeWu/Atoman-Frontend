@@ -116,7 +116,7 @@ body {
 }
 
 body:has(.app-shell.has-sidebar) {
-  --a-sidebar-width: 16rem;
+  --a-sidebar-width: 12rem;
   --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
 }
 
@@ -1108,14 +1108,7 @@ body:has(.app-shell.has-sidebar) {
   min-width: 0;
   max-width: 80rem;
   margin: 0 auto;
-  /* 滚动层延伸到 Topbar 后方，顶部内边距保持首屏内容位置 */
-  position: sticky;
-  top: 0;
-  margin-top: calc(-1 * var(--a-topbar-height));
-  height: calc(100dvh - var(--a-mobile-nav-reserved-height) - var(--a-footer-reserved-height));
-  overflow-y: auto;
-  scroll-padding-bottom: calc(12rem + var(--a-mobile-nav-offset));
-  padding: calc(2.5rem + var(--a-topbar-height)) 2rem calc(8rem + var(--a-mobile-nav-offset, 0px));
+  padding: 2.5rem 2rem calc(8rem + var(--a-mobile-nav-offset, 0px));
 }
 
 .mobile-bottom-nav {

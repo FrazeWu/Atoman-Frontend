@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type {
@@ -62,11 +62,11 @@ export const createFeedRulesState = (refreshSubscriptions: () => Promise<boolean
     }
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscription-rules`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscription-rules`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (!res.ok) return false
-      const data = await res.json()
+      const data = res.data
       if (generation !== sessionGeneration) return false
       subscriptionRules.value = data.data || []
       return true
@@ -82,7 +82,7 @@ export const createFeedRulesState = (refreshSubscriptions: () => Promise<boolean
     if (!authStore.isAuthenticated || !hasSubscriptionRuleAction(payload) || !hasSubscriptionRuleConditions(payload)) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscription-rules`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscription-rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
@@ -102,7 +102,7 @@ export const createFeedRulesState = (refreshSubscriptions: () => Promise<boolean
     if (!authStore.isAuthenticated || !hasSubscriptionRuleAction(payload) || !hasSubscriptionRuleConditions(payload)) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscription-rules/${id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscription-rules/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
@@ -122,7 +122,7 @@ export const createFeedRulesState = (refreshSubscriptions: () => Promise<boolean
     if (!authStore.isAuthenticated) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscription-rules/${id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscription-rules/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -141,7 +141,7 @@ export const createFeedRulesState = (refreshSubscriptions: () => Promise<boolean
     if (!authStore.isAuthenticated) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscription-rules/reorder`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscription-rules/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ rule_ids: ruleIds }),
@@ -161,13 +161,13 @@ export const createFeedRulesState = (refreshSubscriptions: () => Promise<boolean
     if (!authStore.isAuthenticated) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscription-rules/apply`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscription-rules/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
       })
       if (!res.ok || generation !== sessionGeneration) return false
-      const data = await res.json().catch(() => ({}))
+      const data = res.data
       if (generation !== sessionGeneration) return false
       ruleApplySummary.value = data.data || null
       await refreshSubscriptions()

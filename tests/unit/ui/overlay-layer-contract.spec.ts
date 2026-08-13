@@ -58,8 +58,8 @@ describe('overlay layer contract', () => {
   })
 
   it('keeps one visible page rail for every lower sheet layer', () => {
-    expect(sheetSource).toContain('const layerInset = computed(() => 16 + (effectiveLayerIndex.value * 80))')
-    expect(sheetSource).toContain('width: 80px;')
+    expect(sheetSource).toContain('const layerInset = computed(() => effectiveLayerIndex.value * 32)')
+    expect(sheetSource).toContain('width: 32px;')
     expect(sheetSource).not.toContain('opacity: 0.6;\n  pointer-events: none;')
   })
 })

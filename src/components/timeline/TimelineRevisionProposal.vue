@@ -7,22 +7,14 @@
 
     <div v-if="authStore.isAuthenticated" class="timeline-proposals__composer">
       <div class="timeline-proposals__change">
-        <label>修改字段
-          <select v-model="field" class="a-input" data-test="proposal-field">
-            <option v-for="option in fieldOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
-        </label>
+        <PSelect v-model="field" :options="fieldOptions" label="修改字段" data-test="proposal-field" />
         <div v-if="field === 'coordinates'" class="timeline-proposals__coordinates">
-          <label>纬度<input v-model="latitudeValue" class="a-input" data-test="proposal-latitude" placeholder="-90 到 90" /></label>
-          <label>经度<input v-model="longitudeValue" class="a-input" data-test="proposal-longitude" placeholder="-180 到 180" /></label>
+          <PInput v-model="latitudeValue" label="纬度" data-test="proposal-latitude" placeholder="-90 到 90" />
+          <PInput v-model="longitudeValue" label="经度" data-test="proposal-longitude" placeholder="-180 到 180" />
         </div>
-        <label v-else>新内容
-          <input v-model="value" class="a-input" data-test="proposal-value" :placeholder="valuePlaceholder" />
-        </label>
+        <PInput v-else v-model="value" label="新内容" data-test="proposal-value" :placeholder="valuePlaceholder" />
       </div>
-      <label>来源依据
-        <input v-model="evidence" class="a-input" data-test="proposal-evidence" placeholder="链接、书名或档案来源" />
-      </label>
+      <PInput v-model="evidence" label="来源依据" data-test="proposal-evidence" placeholder="链接、书名或档案来源" />
       <CommentComposer :key="composerKey" ref="composer" submit-label="提交提案" :submitting="submitting" @submit="createProposal" />
       <p v-if="mutationError" class="timeline-proposals__error" role="alert">{{ mutationError }}</p>
     </div>
@@ -38,8 +30,8 @@
           <span><strong>来源</strong>：{{ proposal.evidence }}</span>
         </div>
         <div v-if="canDecide && proposal.status === 'pending'" class="timeline-proposals__actions">
-          <button type="button" data-test="accept-proposal" :disabled="decidingId === proposal.comment.id" @click="decide(proposal, 'accept')">接受</button>
-          <button type="button" data-test="reject-proposal" :disabled="decidingId === proposal.comment.id" @click="decide(proposal, 'reject')">拒绝</button>
+          <PButton size="sm" data-test="accept-proposal" :disabled="decidingId === proposal.comment.id" @click="decide(proposal, 'accept')">接受</PButton>
+          <PButton size="sm" variant="danger" data-test="reject-proposal" :disabled="decidingId === proposal.comment.id" @click="decide(proposal, 'reject')">拒绝</PButton>
         </div>
         <CommentThread
           :root="proposal.comment"
@@ -59,7 +51,7 @@
           @report="openReport"
         />
       </article>
-      <button v-if="rootHasMore" type="button" class="timeline-proposals__more" data-test="load-more-proposals" :disabled="loading" @click="loadMoreRoots">继续加载提案</button>
+      <PButton v-if="rootHasMore" class="timeline-proposals__more" outline data-test="load-more-proposals" :disabled="loading" @click="loadMoreRoots">继续加载提案</PButton>
     </div>
     <CommentReportDialog v-model="reportVisible" :on-submit="submitReport" />
   </section>
@@ -73,6 +65,9 @@ import { timelineRevisionProposalApi, type TimelineProposalDecision, type Timeli
 import CommentComposer from '@/components/comment/CommentComposer.vue'
 import CommentReportDialog from '@/components/comment/CommentReportDialog.vue'
 import CommentThread from '@/components/comment/CommentThread.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isModeratorRole } from '@/utils/roles'
 
@@ -317,8 +312,8 @@ function displayValue(changed: unknown) { return Array.isArray(changed) ? change
 .timeline-proposals__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.65rem; border: 1px solid var(--a-color-border); background: var(--a-color-surface); font-size: var(--a-text-sm); }
 .timeline-proposals__status { font-weight: 800; }
 .timeline-proposals__actions { display: flex; gap: 0.5rem; }
-.timeline-proposals__actions button { min-height: 36px; padding: 0 0.8rem; border: 1px solid var(--a-color-text); background: var(--a-color-bg); cursor: pointer; }
-.timeline-proposals__more { min-height: 40px; border: 1px solid var(--a-color-border); background: var(--a-color-bg); cursor: pointer; }
+.timeline-proposals__actions button { min-height: 36px; }
+.timeline-proposals__more { justify-self: start; }
 .timeline-proposals__error { margin: 0; color: var(--a-color-accent-destructive); }
 @media (max-width: 560px) { .timeline-proposals__change { grid-template-columns: 1fr; } }
 </style>

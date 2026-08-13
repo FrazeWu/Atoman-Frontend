@@ -12,6 +12,11 @@ const source = readFileSync(resolve(__dirname, '../../../../src/views/feed/FeedR
 
 const routerPush = vi.fn()
 const routerReplace = vi.fn()
+const publicRequestOptions = { credentials: 'include' as const }
+const authenticatedSourceRequestOptions = {
+  credentials: 'include' as const,
+  headers: { Authorization: 'Bearer token' },
+}
 const routeQuery = {
   mode: undefined as string | undefined,
   target: undefined as string | undefined,
@@ -84,7 +89,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: { props: ['label'], template: '<button class="p-press" @click="$emit(\'click\')">{{ label }}</button>' },
+          PButton: { props: ['label'], template: '<button class="p-button" @click="$emit(\'click\')">{{ label }}</button>' },
           PEmpty: true,
         },
       },
@@ -92,28 +97,28 @@ describe('FeedRecommendedView', () => {
     await flushPromises()
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/feed/explore/sources?page=1&limit=20'),
-      { credentials: 'include', headers: { Authorization: 'Bearer token' } },
+      expect.stringContaining('/api/v1/feed/explore/sources?page=1&limit=20'),
+      authenticatedSourceRequestOptions,
     )
     expect(routerReplace).toHaveBeenCalledWith(expect.objectContaining({ query: expect.objectContaining({ scope: 'external' }) }))
 
     await wrapper.get('[data-test="external-source-search"]').setValue('open')
     await flushPromises()
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('q=open'),
-      { credentials: 'include', headers: { Authorization: 'Bearer token' } },
+      expect.stringContaining('/api/v1/feed/explore/sources?page=1&limit=20&q=open'),
+      authenticatedSourceRequestOptions,
     )
 
     await wrapper.get('[data-test="external-source-select-all"]').setValue(true)
-    await wrapper.findAll('.p-press').find((button) => button.text() === '订阅选中来源')!.trigger('click')
+    await wrapper.findAll('.p-button').find((button) => button.text() === '订阅选中来源')!.trigger('click')
     await flushPromises()
     expect(batchSubscribeSpy).toHaveBeenCalledWith(['source-1', 'source-2'])
 
     await wrapper.findAll('.feed-page-control').find((button) => button.text().includes('下一页'))!.trigger('click')
     await flushPromises()
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('page=2'),
-      { credentials: 'include', headers: { Authorization: 'Bearer token' } },
+      expect.stringContaining('/api/v1/feed/explore/sources?page=2&limit=20&q=open'),
+      authenticatedSourceRequestOptions,
     )
   })
 
@@ -151,7 +156,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: {
             props: ['title'],
             template: '<div class="p-empty">{{ title }}</div>',
@@ -212,7 +217,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: {
             props: ['title'],
             template: '<div class="p-empty">{{ title }}</div>',
@@ -283,9 +288,9 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: {
+          PButton: {
             props: ['label'],
-            template: '<button class="p-press" @click="$emit(\'click\')">{{ label }}</button>',
+            template: '<button class="p-button" @click="$emit(\'click\')">{{ label }}</button>',
           },
           PEmpty: {
             props: ['title'],
@@ -297,9 +302,9 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=all'))
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=hot'))
-    expect(fetchSpy).not.toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/themes?category=all'), publicRequestOptions)
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/articles?mode=hot'), publicRequestOptions)
+    expect(fetchSpy).not.toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/channels?mode=hot'), publicRequestOptions)
 
     expect(wrapper.text()).toContain('Article 1')
     expect(wrapper.text()).not.toContain('Channel 1')
@@ -307,7 +312,7 @@ describe('FeedRecommendedView', () => {
     await wrapper.findAll('.segmented-option').find((node) => node.text() === '频道')?.trigger('click')
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/channels?mode=hot'), publicRequestOptions)
     expect(wrapper.text()).toContain('Channel 1')
   })
 
@@ -319,7 +324,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: true,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -349,7 +354,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -397,7 +402,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -405,10 +410,9 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=blog'))
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=featured'))
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('category=blog'))
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('theme=ai'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/themes?category=blog'), publicRequestOptions)
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/channels?mode=featured'), publicRequestOptions)
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/channels?mode=featured&page=1&page_size=20&category=blog&theme=ai'), publicRequestOptions)
     expect(wrapper.text()).toContain('AI Channel')
   })
 
@@ -446,7 +450,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -469,7 +473,7 @@ describe('FeedRecommendedView', () => {
     await newsCategoryTab?.trigger('click')
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=news'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/themes?category=news'), publicRequestOptions)
     expect(routerReplace).toHaveBeenLastCalledWith(expect.objectContaining({
       query: expect.objectContaining({ theme: 'all', category: 'news' }),
     }))
@@ -493,7 +497,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -507,7 +511,7 @@ describe('FeedRecommendedView', () => {
     await featuredTab?.trigger('click')
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenLastCalledWith(expect.stringContaining('/feed/recommend/articles?mode=featured'))
+    expect(fetchSpy).toHaveBeenLastCalledWith(expect.stringContaining('/api/v1/feed/recommend/articles?mode=featured'), publicRequestOptions)
     expect(wrapper.text()).toContain('Article featured')
   })
 
@@ -519,9 +523,9 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: true,
-          PPress: {
+          PButton: {
             props: ['label'],
-            template: '<button class="p-press" @click="$emit(\'click\')">{{ label }}</button>',
+            template: '<button class="p-button" @click="$emit(\'click\')">{{ label }}</button>',
           },
           PEmpty: true,
         },
@@ -529,7 +533,7 @@ describe('FeedRecommendedView', () => {
     })
 
     await flushPromises()
-    const backBtn = wrapper.find('.p-press')
+    const backBtn = wrapper.find('.p-button')
     await backBtn.trigger('click')
     expect(routerPush).toHaveBeenCalledWith('/feed')
   })
@@ -557,7 +561,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: true,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -593,7 +597,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: {
             props: ['title'],
             template: '<div class="p-empty">{{ title }}</div>',
@@ -645,7 +649,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: {
             props: ['title'],
             template: '<div class="p-empty">{{ title }}</div>',
@@ -700,7 +704,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: {
             props: ['title'],
             template: '<div class="p-empty">{{ title }}</div>',
@@ -747,7 +751,7 @@ describe('FeedRecommendedView', () => {
           PSegmentedControl: {
             ...segmentedControlStub,
           },
-          PPress: true,
+          PButton: true,
           PEmpty: true,
           PEntry: {
             props: ['title', 'summary'],
@@ -765,13 +769,13 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=hot&page=1&page_size=20'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/articles?mode=hot&page=1&page_size=20'), publicRequestOptions)
     expect(wrapper.text()).toContain('Article Page 1')
 
     await wrapper.find('.next-page').trigger('click')
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=hot&page=2&page_size=20'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/articles?mode=hot&page=2&page_size=20'), publicRequestOptions)
     expect(wrapper.text()).toContain('Article Page 2')
 
     const featuredButton = wrapper.findAll('.segmented-option').find((node) => node.text() === '精选')
@@ -779,7 +783,7 @@ describe('FeedRecommendedView', () => {
     await featuredButton?.trigger('click')
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=featured&page=1&page_size=20'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/v1/feed/recommend/articles?mode=featured&page=1&page_size=20'), publicRequestOptions)
   })
 
   it('renders article recommendation cards without the channel two-column grid layout', async () => {
@@ -806,7 +810,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: true,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },
@@ -871,7 +875,7 @@ describe('FeedRecommendedView', () => {
         stubs: {
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSegmentedControl: segmentedControlStub,
-          PPress: true,
+          PButton: true,
           PEmpty: true,
         },
       },

@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref } from 'vue'
 
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { TimelineEvent, TimelineRevision } from '@/types'
@@ -30,14 +30,13 @@ export function useTimelineHistory() {
     historyRevisions.value = []
     loadingHistory.value = true
     try {
-      const response = await apiRequest(`${api.url}/timeline/events/${targetEventId}/history`, {
+      const response = await apiRequestResult(`${api.url}/timeline/events/${targetEventId}/history`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (!isCurrentRequest() || !response.ok) return
 
-      const data = await response.json()
       if (!isCurrentRequest()) return
-      historyRevisions.value = data.data || []
+      historyRevisions.value = response.data.data || []
     } catch {
       if (isCurrentRequest()) historyRevisions.value = []
     } finally {

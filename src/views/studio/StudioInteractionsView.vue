@@ -66,11 +66,12 @@
       </article>
     </div>
 
-    <nav v-if="pagination && (pagination.page > 1 || pagination.has_more)" class="studio-interactions__pagination" aria-label="互动分页">
-      <PButton variant="secondary" size="sm" :disabled="pagination.page <= 1" @click="changePage(pagination.page - 1)">上一页</PButton>
-      <span>第 {{ pagination.page }} 页</span>
-      <PButton variant="secondary" size="sm" :disabled="!pagination.has_more" @click="changePage(pagination.page + 1)">下一页</PButton>
-    </nav>
+    <PaginationBar
+      v-if="paginationMeta && (paginationMeta.page > 1 || paginationMeta.has_more)"
+      :meta="paginationMeta"
+      :loading="loading"
+      @change="changePage"
+    />
   </section>
 
   <PModal v-model="deleteModalOpen" title="删除评论" size="sm">
@@ -91,6 +92,7 @@ import { commentApi, type CommentTargetKind, type CommentTargetRef } from '@/api
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioInteractionItem, StudioModule } from '@/types'
@@ -106,6 +108,10 @@ const replyDraft = ref('')
 const pendingDelete = ref<StudioInteractionItem | null>(null)
 const filters = reactive({ unreplied: route.query.unreplied === 'true', anchored: false, page: 1 })
 const pagination = computed(() => studio.interactionPagination[module.value])
+const paginationMeta = computed(() => {
+  const value = pagination.value
+  return value ? { ...value, has_more: Boolean(value.has_more) } : null
+})
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
   set: value => { if (!value) pendingDelete.value = null },
@@ -250,7 +256,6 @@ watch(module, () => {
 .studio-interactions__item footer button { min-height: 44px; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0 0.5rem; border: 0; background: transparent; color: var(--a-color-muted); cursor: pointer; }
 .studio-interactions__item footer button:hover { color: var(--a-color-text); }
 .studio-interactions__item footer button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
-.studio-interactions__pagination { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; color: var(--a-color-muted); font-size: 0.8rem; }
 @media (max-width: 600px) {
   .studio-interactions__header, .studio-interactions__item > header { align-items: flex-start; flex-direction: column; }
   .studio-interactions__item > header a { text-align: left; }

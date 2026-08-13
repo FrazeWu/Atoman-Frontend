@@ -33,7 +33,7 @@ describe('debate store', () => {
     await store.fetchDebates({ status: 'active', search: '能源', tag: '政策', page: 1, pageSize: 15 })
     await store.fetchDebates({ status: 'active', search: '能源', tag: '政策', page: 2, pageSize: 15 })
 
-    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics?status=active&search=%E8%83%BD%E6%BA%90&tag=%E6%94%BF%E7%AD%96&page=1&page_size=15')
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics?status=active&search=%E8%83%BD%E6%BA%90&tag=%E6%94%BF%E7%AD%96&page=1&page_size=15', { credentials: 'include' })
     expect(store.debates.map(({ id }) => id)).toEqual(['first', 'second'])
     expect(store.debatesTotal).toBe(2)
     expect(store.debatesMeta).toEqual({ page: 2, page_size: 15, total: 2, has_more: false })
@@ -393,7 +393,10 @@ describe('debate store', () => {
       current_direction: 'yes',
       current_user_vote: 'yes',
     }
-    vi.mocked(fetch).mockResolvedValue(response({ data: voteData }))
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: voteData }))
+      .mockResolvedValueOnce(response({ data: voteData }))
+      .mockResolvedValueOnce(response({ data: voteData }))
     const store = useDebateStore()
 
     await store.fetchVotes('topic-1')
@@ -431,9 +434,9 @@ describe('debate store', () => {
     const revision = await store.fetchRevision('topic-1', 'revision-2')
     const diff = await store.fetchRevisionDiff('topic-1', 'revision-2', 'revision-1')
 
-    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics/topic-1/revisions')
-    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/debate/topics/topic-1/revisions/revision-2')
-    expect(fetch).toHaveBeenNthCalledWith(3, '/api/v1/debate/topics/topic-1/revisions/revision-2/diff?against=revision-1')
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics/topic-1/revisions', { credentials: 'include' })
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/debate/topics/topic-1/revisions/revision-2', { credentials: 'include' })
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/v1/debate/topics/topic-1/revisions/revision-2/diff?against=revision-1', { credentials: 'include' })
     expect(revisions?.[0]?.id).toBe('revision-2')
     expect(revision?.version_number).toBe(2)
     expect(diff?.against_revision_id).toBe('revision-1')
@@ -478,7 +481,7 @@ describe('debate store', () => {
 
     const conclusions = await store.fetchConclusions('topic-1')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/debate/topics/topic-1/conclusions')
+    expect(fetch).toHaveBeenCalledWith('/api/v1/debate/topics/topic-1/conclusions', { credentials: 'include' })
     expect(conclusions?.[0]?.direction).toBe('yes')
   })
 
@@ -490,7 +493,7 @@ describe('debate store', () => {
 
     await store.fetchRelationGraph('root', 'graph', 3)
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/debates/root/relations?view=graph&depth=3')
+    expect(fetch).toHaveBeenCalledWith('/api/v1/debates/root/relations?view=graph&depth=3', { credentials: 'include' })
     expect(store.relationGraph?.root_id).toBe('root')
     expect(store.relationGraph?.expandable_node_ids).toEqual(['next'])
   })
@@ -530,7 +533,7 @@ describe('debate store', () => {
 
     await store.fetchRelationGraph('root', 'tree')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/debates/root/relations?view=tree')
+    expect(fetch).toHaveBeenCalledWith('/api/v1/debates/root/relations?view=tree', { credentials: 'include' })
   })
 
   it('searches the real list endpoint and keeps only citable active debates', async () => {
@@ -547,7 +550,7 @@ describe('debate store', () => {
 
     const results = await store.searchCitableDebates('肺癌', 'no')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/debate/topics?search=%E8%82%BA%E7%99%8C&status=active&page_size=10')
+    expect(fetch).toHaveBeenCalledWith('/api/v1/debate/topics?search=%E8%82%BA%E7%99%8C&status=active&page_size=10', { credentials: 'include' })
     expect(results.map(({ id }) => id)).toEqual(['yes'])
   })
 

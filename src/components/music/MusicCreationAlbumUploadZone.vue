@@ -4,6 +4,7 @@ import { SUPPORTED_ARCHIVE_ACCEPT, SUPPORTED_AUDIO_ACCEPT } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useAlbumImportUpload } from '@/composables/useAlbumImportUpload'
 import PButton from '@/components/ui/PButton.vue'
+import { ExternalLink } from 'lucide-vue-next'
 
 const { state } = useMusicDrawers()
 const creationFlow = computed(() => state.value.creationFlow)
@@ -86,7 +87,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
         ref="filesInputRef"
         data-testid="album-import-files-input"
         type="file"
-        :accept="SUPPORTED_ARCHIVE_ACCEPT + ',' + SUPPORTED_AUDIO_ACCEPT + ',.cue,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
+        :accept="SUPPORTED_ARCHIVE_ACCEPT + ',' + SUPPORTED_AUDIO_ACCEPT + ',.cue,.lrc,.txt,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
         multiple
         :disabled="uploading"
         style="display: none"
@@ -158,6 +159,24 @@ function formatUploadSpeed(bytesPerSecond: number) {
       </div>
       <p class="upload-hint">推荐上传 ZIP，识别更快更稳定。</p>
     </div>
+
+    <p class="metadata-match-hint" data-testid="album-import-metadata-hint">
+      <template v-if="albumImportDraft.metadataSourceUrl">
+        已自动匹配专辑信息、曲序和歌词。
+        <a
+          :href="albumImportDraft.metadataSourceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          查看 MusicBrainz 来源
+          <ExternalLink :size="14" aria-hidden="true" />
+        </a>
+      </template>
+      <template v-else>上传后将自动匹配专辑信息、曲序和歌词。</template>
+    </p>
+    <p v-if="albumImportDraft.missingArtists?.length" class="metadata-artist-hint" role="status">
+      该发行版还包括 {{ albumImportDraft.missingArtists.join('、') }}，请在专辑信息中补充艺术家。
+    </p>
 
     <!-- File list (multi-file / folder mode) -->
     <ul
@@ -267,6 +286,29 @@ function formatUploadSpeed(bytesPerSecond: number) {
 }
 .field-group { display: grid; gap: 0.45rem; }
 .upload-hint { margin: 0; color: var(--a-color-muted); font-size: 0.78rem; }
+.metadata-match-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+.metadata-artist-hint {
+  margin: -0.25rem 0 0;
+  color: var(--a-color-text-secondary);
+  font-size: 0.8rem;
+}
+.metadata-match-hint a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--a-color-text);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
 .progress-panel { display: grid; gap: 0.7rem; }
 .state-line {
   margin: 0;

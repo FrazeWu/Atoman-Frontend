@@ -5,7 +5,7 @@
         <h1 class="a-title">通知</h1>
         <p class="a-muted">查看互动、协作提醒和私信。</p>
       </div>
-      <PPress v-if="activeTab !== 'dm'" variant="secondary" @click="markCurrentNotificationsRead" label="标为已读" />
+      <PButton v-if="activeTab !== 'dm'" variant="secondary" @click="markCurrentNotificationsRead" label="标为已读" />
     </div>
 
     <div class="inbox-shell">
@@ -28,7 +28,7 @@
         <div class="inbox-list-pane">
           <div class="pane-heading">
             <span>{{ activeTabLabel }}</span>
-            <PPress v-if="activeTab === 'dm'" variant="secondary" @click="dmStore.fetchConversations" label="刷新" />
+            <PButton v-if="activeTab === 'dm'" variant="secondary" @click="dmStore.fetchConversations" label="刷新" />
           </div>
 
           <div v-if="activeTab !== 'dm'" class="sidebar-list">

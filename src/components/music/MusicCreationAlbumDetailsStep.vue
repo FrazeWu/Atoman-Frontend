@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { FileText, GripVertical, ImageUp, Plus, X } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
+import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
 import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
@@ -41,6 +42,7 @@ const {
   dragOverTrackId,
   lyricTrack,
   addTrack,
+  replaceTrackAudio,
   updateTrackTitle,
   moveTrack,
   handleTrackDragStart,
@@ -54,6 +56,41 @@ const {
   saveTrackLyrics,
   formatSequence,
 } = useMusicAlbumTrackEditor()
+
+const trackAudioInputRef = ref<HTMLInputElement | null>(null)
+const pendingAudioTrackId = ref<string | null>(null)
+const trackAudioUploading = ref(false)
+const trackAudioError = ref('')
+
+function openTrackAudioPicker(trackId: string | null = null) {
+  if (trackAudioUploading.value) return
+  trackAudioError.value = ''
+  pendingAudioTrackId.value = trackId
+  trackAudioInputRef.value?.click()
+}
+
+async function handleTrackAudioChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  input.value = ''
+  if (!file) return
+
+  trackAudioUploading.value = true
+  trackAudioError.value = ''
+  try {
+    const asset = await uploadMusicAsset(file, 'music.audio')
+    if (pendingAudioTrackId.value) {
+      replaceTrackAudio(pendingAudioTrackId.value, asset, file.name)
+    } else {
+      addTrack(asset, file.name)
+    }
+  } catch (error) {
+    trackAudioError.value = error instanceof Error ? error.message : '音频上传失败，请重试'
+  } finally {
+    trackAudioUploading.value = false
+    pendingAudioTrackId.value = null
+  }
+}
 
 const albumTypeOptions = [
   { label: '专辑', value: 'album' },
@@ -413,15 +450,27 @@ watch(
             <span class="field-label">曲目列表</span>
             <p class="track-adjustment__count" data-testid="album-details-track-count">{{ orderedTracks.length }} 首</p>
           </div>
+          <input
+            ref="trackAudioInputRef"
+            data-testid="album-track-audio-input"
+            type="file"
+            :accept="SUPPORTED_AUDIO_ACCEPT"
+            :disabled="trackAudioUploading"
+            class="track-audio-input"
+            @change="handleTrackAudioChange"
+          />
           <button
             type="button"
             class="track-adjustment__add-btn"
-            @click="addTrack"
+            :disabled="trackAudioUploading"
+            @click="openTrackAudioPicker()"
           >
-            <Plus :size="14" />
-            <span>添加曲目</span>
+            <LoaderCircle v-if="trackAudioUploading && !pendingAudioTrackId" :size="14" class="is-spinning" />
+            <Plus v-else :size="14" />
+            <span>{{ trackAudioUploading && !pendingAudioTrackId ? '上传中...' : '添加曲目' }}</span>
           </button>
         </div>
+        <p v-if="trackAudioError" class="track-adjustment__error" role="alert">{{ trackAudioError }}</p>
 
         <div v-if="orderedTracks.length" class="track-list">
           <div
@@ -455,6 +504,22 @@ watch(
                 placeholder="曲目标题"
                 @update:model-value="updateTrackTitle(track.id, $event)"
               />
+            </div>
+
+            <div class="track-row__audio">
+              <span v-if="track.audioFileName || track.audioUrl || track.audioKey" class="track-row__audio-name">
+                {{ track.audioFileName || '已上传音频' }}
+              </span>
+              <button
+                type="button"
+                class="track-row__audio-btn"
+                :disabled="trackAudioUploading"
+                :data-testid="`album-track-audio-${track.id}`"
+                @click="openTrackAudioPicker(track.id)"
+              >
+                <RefreshCw :size="14" aria-hidden="true" />
+                <span>{{ trackAudioUploading && pendingAudioTrackId === track.id ? '上传中...' : '替换音频' }}</span>
+              </button>
             </div>
 
             <PButton
@@ -751,6 +816,23 @@ watch(
   border-color: rgba(37, 99, 235, 0.35);
 }
 
+.track-adjustment__add-btn:disabled,
+.track-row__audio-btn:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.track-audio-input {
+  display: none;
+}
+
+.track-adjustment__error {
+  margin: -0.4rem 0 0.75rem;
+  color: var(--a-color-accent-destructive);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .track-list {
   display: flex;
   flex-direction: column;
@@ -834,6 +916,43 @@ watch(
   font-size: 0.875rem;
 }
 
+.track-row__audio {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.track-row__audio-name {
+  max-width: 10rem;
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-row__audio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 36px;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-text);
+  background: var(--a-color-bg);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.track-row__audio-btn:hover {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
 .track-row__lyrics-btn {
   flex: 0 0 auto;
 }
@@ -879,6 +998,12 @@ watch(
   .track-row__lyrics-btn {
     order: 5;
     margin-left: auto;
+  }
+
+  .track-row__audio {
+    order: 4;
+    flex: 1 1 100%;
+    padding-left: 3.5rem;
   }
 }
 

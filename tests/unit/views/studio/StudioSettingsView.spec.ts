@@ -6,6 +6,12 @@ import { describe, expect, it, vi } from 'vitest'
 import StudioSettingsView from '@/views/studio/StudioSettingsView.vue'
 import { useStudioStore } from '@/stores/studio'
 
+async function selectOption(wrapper: ReturnType<typeof mount>, testId: string, label: string) {
+  const field = wrapper.get(`[data-testid="${testId}"]`)
+  await field.get('.p-select-trigger').trigger('click')
+  await field.findAll('.p-select-option').find(option => option.text() === label)!.trigger('click')
+}
+
 async function setup(module: 'blog' | 'podcast') {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/studio/:module/settings', component: { template: '<div />' } }] })
   await router.push(`/studio/${module}/settings`)
@@ -37,9 +43,9 @@ describe('StudioSettingsView', () => {
 
   it('saves collection visibility publish status and autoplay for podcasts', async () => {
     const { wrapper, store } = await setup('podcast')
-    await wrapper.find('[data-testid="default-collection-setting"]').setValue('collection-1')
-    await wrapper.find('[data-testid="visibility-setting"]').setValue('subscribers')
-    await wrapper.find('[data-testid="publish-status-setting"]').setValue('draft')
+    await selectOption(wrapper, 'default-collection-setting', '默认合集')
+    await selectOption(wrapper, 'visibility-setting', '订阅者')
+    await selectOption(wrapper, 'publish-status-setting', '草稿')
     await wrapper.find('[data-testid="autoplay-setting"]').setValue(true)
     await wrapper.find('[data-testid="save-settings"]').trigger('click')
     await flushPromises()

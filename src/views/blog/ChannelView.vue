@@ -95,10 +95,10 @@
         <PTextarea v-model="collectionForm.description" placeholder="合集描述（可选）" :rows="3" />
       </div>
       <div class="modal-actions">
-        <PPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
-        <PPress :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
+        <PButton label="取消" variant="secondary" @click="collectionModalOpen = false" />
+        <PButton :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
           {{ editingCollection ? '更新' : '创建' }}
-        </PPress>
+        </PButton>
       </div>
     </PModal>
   </div>
@@ -128,7 +128,6 @@ import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PTab from '@/components/ui/PTab.vue'
-import PPress from '@/components/ui/PPress.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'

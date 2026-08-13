@@ -9,7 +9,7 @@ import {
   type Ref,
 } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAutoSave } from '@/composables/useAutoSave'
 import { useAuthStore } from '@/stores/auth'
@@ -241,11 +241,11 @@ export function usePostEditorDraftSession({
   const fetchServerDraft = async () => {
     if (!authStore.token) return null
     try {
-      const res = await apiRequest(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
+      const res = await apiRequestResult(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
         headers: authHeaders(),
       })
       if (!res.ok) return null
-      const data = await res.json()
+      const data = res.data
       return (data.data || null) as BlogDraft | null
     } catch (error) {
       reportError(error, 'Failed to fetch blog draft:')
@@ -284,7 +284,7 @@ export function usePostEditorDraftSession({
     serverDraftSavedAt.value = null
     if (!authStore.token) return
     try {
-      await apiRequest(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
+      await apiRequestResult(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -302,13 +302,13 @@ export function usePostEditorDraftSession({
 
     serverDraftState.value = 'syncing'
     try {
-      const res = await apiRequest(api.blog.draft, {
+      const res = await apiRequestResult(api.blog.draft, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Failed to sync draft')
-      const data = await res.json()
+      const data = res.data
       const draft = (data.data || null) as BlogDraft | null
       serverDraftSavedAt.value = draft ? parseDraftTimestamp(draft.updated_at) : Date.now()
       serverDraftState.value = 'synced'

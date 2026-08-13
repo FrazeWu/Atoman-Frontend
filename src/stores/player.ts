@@ -1,5 +1,5 @@
 import { reportError } from "@/utils/logger";
-import { apiRequest } from "@/api/client";
+import { apiRequestResult } from "@/api/client";
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
@@ -453,13 +453,13 @@ export const usePlayerStore = defineStore("player", () => {
     songLibraryLoading.value = true;
     songsRequest = (async () => {
       try {
-        const response = await apiRequest(`${api.url}/songs`);
+        const response = await apiRequestResult<Song[]>(`${api.url}/songs`);
         if (!response.ok) {
           songLibraryLoaded.value = false;
           return;
         }
 
-        const library = (await response.json()) as Song[];
+        const library = response.data;
         songs.value = library;
         songLibraryLoaded.value = true;
         syncCurrentSongFromLibrary(library);

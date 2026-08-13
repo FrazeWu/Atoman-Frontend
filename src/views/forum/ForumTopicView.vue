@@ -156,6 +156,16 @@
     </div>
   </PModal>
 
+  <PConfirm
+    :show="deletePending !== null"
+    title="删除话题"
+    message="确定删除这个话题吗？"
+    confirm-text="删除"
+    danger
+    :loading="deletingTopic"
+    @confirm="confirmDeleteTopic"
+    @cancel="deletePending = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -170,6 +180,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import { useApi } from '@/composables/useApi'
@@ -194,6 +205,8 @@ const canEditTopic = computed(() => Boolean(forumStore.currentTopic?.permissions
 const canPinTopic = computed(() => Boolean(forumStore.currentTopic?.permissions?.pin ?? forumStore.currentTopic?.can_pin_topic))
 const canLockTopic = computed(() => Boolean(forumStore.currentTopic?.permissions?.lock ?? forumStore.currentTopic?.can_lock_topic))
 const moderationPending = ref(false)
+const deletePending = ref<string | null>(null)
+const deletingTopic = ref(false)
 const topicState = computed(() => {
   const topic = forumStore.currentTopic
   return topic?.state ?? {
@@ -313,10 +326,22 @@ const editTopic = () => {
   if (forumStore.currentTopic) router.push(`/forum/topic/${forumStore.currentTopic.id}/edit`)
 }
 
-const deleteTopic = async () => {
+const deleteTopic = () => {
   const topic = forumStore.currentTopic
-  if (!topic || !window.confirm('确定删除这个话题吗？')) return
-  if (await forumStore.deleteTopic(topic.id)) router.push('/forum')
+  if (!topic || deletingTopic.value) return
+  deletePending.value = topic.id
+}
+
+const confirmDeleteTopic = async () => {
+  const topicIdToDelete = deletePending.value
+  if (!topicIdToDelete || deletingTopic.value) return
+  deletingTopic.value = true
+  try {
+    if (await forumStore.deleteTopic(topicIdToDelete)) router.push('/forum')
+  } finally {
+    deletingTopic.value = false
+    deletePending.value = null
+  }
 }
 
 const toggleModeration = async (action: 'lock' | 'unlock' | 'pin' | 'unpin') => {

@@ -21,16 +21,7 @@
             </div>
 
             <template v-if="item.key === 'general'">
-              <div class="settings-block">
-                <div class="settings-block__copy">
-                  <strong>账号</strong>
-                  <small>当前登录身份</small>
-                </div>
-                <div class="settings-block__control settings-block__control--stack">
-                  <strong>{{ authStore.user?.display_name || authStore.user?.username }}</strong>
-                  <small>@{{ authStore.user?.username }}</small>
-                </div>
-              </div>
+              <UserBlogSettingsPanel :include-account-extras="false" />
               <PasswordSettingsPanel :has-password="authStore.user?.has_password" />
               <OAuthIdentitySettingsPanel :return-to="route.fullPath" />
               <AccountSecurityPanel :email="authStore.user?.email || ''" />
@@ -49,8 +40,6 @@
               @apply-all-rules="applyAllSubscriptionRules"
               @delete-rule="deleteSubscriptionRule"
             />
-
-            <UserBlogSettingsPanel v-else-if="item.key === 'blog'" :include-account-extras="false" />
 
             <DMSettingsPanel v-else-if="item.key === 'privacy'" :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
 
@@ -76,6 +65,16 @@
       />
     </div>
   </main>
+  <PConfirm
+    :show="pendingRuleApplication !== null"
+    title="应用订阅规则"
+    message="规则已保存，是否立即应用到已有订阅？"
+    confirm-text="立即应用"
+    cancel-text="稍后"
+    :loading="applyingRule"
+    @confirm="confirmRuleApplication"
+    @cancel="pendingRuleApplication = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -89,12 +88,13 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 
-type UserSettingSectionKey = 'general' | 'feed' | 'blog' | 'notification' | 'privacy' | 'music' | 'forum'
+type UserSettingSectionKey = 'general' | 'feed' | 'notification' | 'privacy' | 'music' | 'forum'
 
 const settingSections: Array<{
   key: UserSettingSectionKey
@@ -102,13 +102,12 @@ const settingSections: Array<{
   label: string
   description: string
 }> = [
-  { key: 'general', kicker: '01 / GENERAL', label: '通用', description: '账号基础信息。' },
+  { key: 'general', kicker: '01 / GENERAL', label: '通用', description: '个人资料与账号安全。' },
   { key: 'feed', kicker: '02 / FEED', label: '订阅', description: '整理订阅源规则。' },
-  { key: 'blog', kicker: '03 / BLOG', label: '博客', description: '编辑资料与博客相关偏好。' },
-  { key: 'notification', kicker: '04 / NOTIFY', label: '通知', description: '尚未开放。' },
-  { key: 'privacy', kicker: '05 / PRIVACY', label: '隐私', description: '尚未开放。' },
-  { key: 'music', kicker: '06 / MUSIC', label: '音乐', description: '尚未开放。' },
-  { key: 'forum', kicker: '07 / FORUM', label: '论坛', description: '尚未开放。' },
+  { key: 'notification', kicker: '03 / NOTIFY', label: '通知', description: '尚未开放。' },
+  { key: 'privacy', kicker: '04 / PRIVACY', label: '隐私', description: '尚未开放。' },
+  { key: 'music', kicker: '05 / MUSIC', label: '音乐', description: '尚未开放。' },
+  { key: 'forum', kicker: '06 / FORUM', label: '论坛', description: '尚未开放。' },
 ]
 
 const route = useRoute()
@@ -118,6 +117,8 @@ const feedStore = useFeedStore()
 const activeSection = ref<UserSettingSectionKey>('general')
 const directoryCollapsed = ref(false)
 const ruleBusy = ref(false)
+const pendingRuleApplication = ref<string | null>(null)
+const applyingRule = ref(false)
 const sectionMap = new Map<UserSettingSectionKey, HTMLElement>()
 let ticking = false
 
@@ -212,10 +213,20 @@ const saveSubscriptionRule = async (saved: { id: string | null; payload: Subscri
       : await feedStore.createSubscriptionRule(saved.payload)
     if (!success) return
     const ruleId = findSavedRuleId(saved)
-    if (ruleId && window.confirm('规则已保存，是否立即应用到已有订阅？')) {
-      await feedStore.applySubscriptionRules({ rule_id: ruleId })
-    }
+    if (ruleId) pendingRuleApplication.value = ruleId
   })
+}
+
+const confirmRuleApplication = async () => {
+  const ruleId = pendingRuleApplication.value
+  if (!ruleId || applyingRule.value) return
+  applyingRule.value = true
+  try {
+    await feedStore.applySubscriptionRules({ rule_id: ruleId })
+  } finally {
+    applyingRule.value = false
+    pendingRuleApplication.value = null
+  }
 }
 
 const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
@@ -278,7 +289,7 @@ onMounted(async () => {
   window.addEventListener('scroll', onScroll, { passive: true })
 })
 
-onBeforeUnmount(() => {
+  onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
 })
 </script>

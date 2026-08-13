@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { loadReadingListFeedItemIds, loadStarredFeedItemIds } from '@/api/feedMembership'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
@@ -129,13 +129,13 @@ export function createFeedMembershipState() {
   const requestStarToggle = async (feedItemId: string, fallback: boolean): Promise<boolean | null> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/timeline/star`, {
+      const res = await apiRequestResult(`${api.url}/feed/timeline/star`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_id: feedItemId }),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         const starred = data.data?.starred ?? data.starred ?? fallback
         return Boolean(starred)
       }
@@ -182,11 +182,11 @@ export function createFeedMembershipState() {
     }
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/blog/bookmarks`, {
+      const res = await apiRequestResult(`${api.url}/blog/bookmarks`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (generation !== sessionGeneration) return
         const bookmarks = (data.data || []) as Array<{ post_id?: unknown }>
         const ids = bookmarks
@@ -205,14 +205,14 @@ export function createFeedMembershipState() {
     const generation = sessionGeneration
     try {
       if (bookmarkedPostIds.value.has(postId)) {
-        const res = await apiRequest(`${api.url}/blog/bookmarks`, {
+        const res = await apiRequestResult(`${api.url}/blog/bookmarks`, {
           headers: { Authorization: `Bearer ${authStore.token}` },
         })
         if (!res.ok) return null
-        const data = await res.json()
+        const data = res.data
         const bookmark = (data.data || []).find((item: { post_id?: unknown }) => item.post_id === postId) as { id?: string } | undefined
         if (!bookmark?.id) return null
-        const deleteRes = await apiRequest(`${api.url}/blog/bookmarks/${bookmark.id}`, {
+        const deleteRes = await apiRequestResult(`${api.url}/blog/bookmarks/${bookmark.id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authStore.token}` },
         })
@@ -223,7 +223,7 @@ export function createFeedMembershipState() {
         return false
       }
 
-      const res = await apiRequest(`${api.url}/blog/bookmarks`, {
+      const res = await apiRequestResult(`${api.url}/blog/bookmarks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ post_id: postId }),
@@ -245,7 +245,7 @@ export function createFeedMembershipState() {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
-      const res = await apiRequest(`${api.url}/feed/stars/${feedItemId}/group`, {
+      const res = await apiRequestResult(`${api.url}/feed/stars/${feedItemId}/group`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ group_id: groupId }),
@@ -286,13 +286,13 @@ export function createFeedMembershipState() {
   const requestReadingListToggle = async (feedItemId: string, fallback: boolean): Promise<boolean | null> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/reading-list`, {
+      const res = await apiRequestResult(`${api.url}/feed/reading-list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_id: feedItemId }),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         const saved = data.data?.saved ?? data.saved ?? fallback
         return Boolean(saved)
       }

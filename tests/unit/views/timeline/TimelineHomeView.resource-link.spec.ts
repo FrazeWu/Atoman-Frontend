@@ -55,7 +55,10 @@ describe('TimelineHomeView resource link', () => {
     })
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/timeline/events/event-123')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/timeline/events/event-123',
+      expect.objectContaining({ credentials: 'include' }),
+    )
     expect(wrapper.get('[data-testid="event-detail"]').text()).toContain('被推荐的历史事件')
   })
 })

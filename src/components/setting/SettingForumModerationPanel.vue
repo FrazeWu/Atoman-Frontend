@@ -1,9 +1,15 @@
 <template>
   <section class="moderation-panel">
     <div class="moderation-panel__toolbar">
-      <label>状态
-        <select v-model="status" @change="loadReports"><option value="open">待处理</option><option value="resolved">已处理</option></select>
-      </label>
+      <PSelect
+        v-model="status"
+        label="状态"
+        :options="[
+          { label: '待处理', value: 'open' },
+          { label: '已处理', value: 'resolved' },
+        ]"
+        @update:model-value="loadReports"
+      />
       <span>{{ total }} 条</span>
     </div>
     <p v-if="error" role="alert" class="moderation-panel__error">{{ error }}</p>
@@ -13,8 +19,7 @@
         <p>{{ reasonLabel(report.reason) }}<span v-if="report.note"> · {{ report.note }}</span></p>
         <RouterLink v-if="reportLink(report)" :to="reportLink(report)!">查看帖子</RouterLink>
         <div v-if="report.status === 'open'" class="moderation-panel__resolve">
-          <label :for="`note-${report.id}`">处理备注</label>
-          <input :id="`note-${report.id}`" v-model="notes[report.id]" :data-test="`report-note-${report.id}`" placeholder="输入处理备注" />
+          <PInput :id="`note-${report.id}`" v-model="notes[report.id]" :data-test="`report-note-${report.id}`" label="处理备注" placeholder="输入处理备注" />
           <PButton :data-test="`report-resolve-${report.id}`" size="sm" :disabled="resolvingId === report.id" @click="resolve(report.id)">解决</PButton>
         </div>
         <p v-else-if="report.review_note">{{ report.review_note }}</p>
@@ -28,6 +33,8 @@
 import { apiRequestResult } from '@/api/client'
 import { onMounted, reactive, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -74,5 +81,5 @@ onMounted(loadReports)
 </script>
 
 <style scoped>
-.moderation-panel,.moderation-panel__list,.moderation-panel__item{display:grid;gap:1rem}.moderation-panel__toolbar,.moderation-panel__item header,.moderation-panel__resolve{display:flex;align-items:center;gap:.75rem;justify-content:space-between}.moderation-panel__item{padding:1rem 0;border-bottom:1px solid var(--a-color-border)}.moderation-panel__item p{margin:0}.moderation-panel__resolve{justify-content:flex-start;flex-wrap:wrap}.moderation-panel__resolve input,.moderation-panel__toolbar select{min-height:2.75rem;border:1px solid var(--a-color-border);background:var(--a-color-surface);color:var(--a-color-text);padding:.5rem}.moderation-panel__resolve input{flex:1;min-width:12rem}.moderation-panel__error{color:var(--a-color-danger)}.moderation-panel__empty{color:var(--a-color-text-secondary)}time{color:var(--a-color-text-secondary);font-size:.875rem}
+.moderation-panel,.moderation-panel__list,.moderation-panel__item{display:grid;gap:1rem}.moderation-panel__toolbar,.moderation-panel__item header,.moderation-panel__resolve{display:flex;align-items:center;gap:.75rem;justify-content:space-between}.moderation-panel__item{padding:1rem 0;border-bottom:1px solid var(--a-color-border)}.moderation-panel__item p{margin:0}.moderation-panel__resolve{justify-content:flex-start;flex-wrap:wrap}.moderation-panel__resolve :deep(.p-field){flex:1;min-width:12rem}.moderation-panel__error{color:var(--a-color-danger)}.moderation-panel__empty{color:var(--a-color-text-secondary)}time{color:var(--a-color-text-secondary);font-size:.875rem}
 </style>

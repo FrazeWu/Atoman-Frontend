@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>加载条预览</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* 进度条 */
+    .track {
+      width: 200px;
+      height: 3px;
+      background: rgba(0, 0, 0, 0.07);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar {
+      height: 100%;
+      width: 45%;
+      background: #3b82f6;
+      border-radius: 999px;
+      animation: slide 1.6s linear infinite;
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-120%); }
+      100% { transform: translateX(240%); }
+    }
+
+    /* 文字滑动区域 */
+    .stage-wrap {
+      width: 200px;
+      height: 1.4rem;
+      overflow: hidden;
+      position: relative;
+    }
+    .stage-text {
+      font-size: 0.8125rem;
+      color: #94a3b8;
+      font-weight: 500;
+      line-height: 1.4rem;
+      position: absolute;
+      left: 0; right: 0;
+      text-align: center;
+      white-space: nowrap;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    }
+    .stage-text.enter  { transform: translateY(100%); opacity: 0; }
+    .stage-text.active { transform: translateY(0);    opacity: 1; }
+    .stage-text.exit   { transform: translateY(-100%); opacity: 0; }
+
+    /* 超时文字中的重新加载链接 */
+    .stage-text .retry-link {
+      color: #3b82f6;
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      font: inherit;
+      padding: 0;
+    }
+
+    /* demo 时间轴提示 */
+    .timeline {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.5rem;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+    }
+    .timeline span { padding: 0.2rem 0.6rem; border: 1px solid #e2e8f0; border-radius: 4px; }
+    .timeline span.active { color: #3b82f6; border-color: #3b82f6; }
+  </style>
+</head>
+<body>
+
+  <!-- 进度条 -->
+  <div class="track"><div class="bar"></div></div>
+
+  <!-- 文字滑动区 -->
+  <div class="stage-wrap" id="stageWrap">
+    <span class="stage-text active">正在加载</span>
+  </div>
+
+  <!-- demo 时间轴 -->
+  <div class="timeline">
+    <span id="t0" class="active">0s 正在加载</span>
+    <span id="t1">3s 网络较慢</span>
+    <span id="t2">8s 仍在加载</span>
+    <span id="t3">15s 重新加载</span>
+  </div>
+
+<script>
+  let timers = []
+
+  function slideTo(html) {
+    const wrap = document.getElementById('stageWrap')
+    const old  = wrap.querySelector('.stage-text')
+
+    const next = document.createElement('span')
+    next.className = 'stage-text enter'
+    next.innerHTML = html
+    wrap.appendChild(next)
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (old) old.className = 'stage-text exit'
+        next.className = 'stage-text active'
+      })
+    })
+
+    setTimeout(() => old?.remove(), 400)
+  }
+
+  function setActive(idx) {
+    document.querySelectorAll('.timeline span').forEach((el, i) => {
+      el.classList.toggle('active', i === idx)
+    })
+  }
+
+  function restart() {
+    timers.forEach(clearTimeout)
+    timers = []
+    start()
+  }
+
+  function start() {
+    const wrap = document.getElementById('stageWrap')
+    wrap.innerHTML = '<span class="stage-text active">正在加载</span>'
+    setActive(0)
+
+    timers.push(setTimeout(() => { slideTo('网络较慢，请稍候'); setActive(1) }, 3000))
+    timers.push(setTimeout(() => { slideTo('仍在加载中…'); setActive(2) }, 8000))
+    timers.push(setTimeout(() => {
+      slideTo('加载时间较长，<button class="retry-link" onclick="window.location.reload()">重新加载</button>')
+      setActive(3)
+    }, 15000))
+  }
+
+  start()
+</script>
+</body>
+</html>

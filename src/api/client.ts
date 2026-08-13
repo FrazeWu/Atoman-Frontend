@@ -1,4 +1,4 @@
-import type { ApiErrorEnvelope, ApiSuccess } from './types'
+import type { ApiErrorDetails, ApiSuccess } from './types'
 import { apiFetch } from './transport'
 
 export class ApiErrorResponseError extends Error {
@@ -24,29 +24,15 @@ const multipartHeaders = {
   Accept: 'application/json',
 }
 
-export function apiRequest(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  return init === undefined ? apiFetch(input) : apiFetch(input, init)
+/** The raw Response boundary. Callers own status checks and body parsing. */
+export function apiRequest(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  return apiFetch(input, init)
 }
 
+/** Returns the decoded body exactly as sent by the server, envelope or bare payload. */
 export async function apiRequestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await apiRequest(input, init)
-  const payload = await parseJson(response).catch(() => ({}))
-  if (!response.ok) {
-    const errorPayload = payload as Partial<ApiErrorEnvelope>
-    const error = errorPayload.error
-    const message = typeof error === 'string'
-      ? error
-      : typeof error === 'object' && error
-        ? error.message
-        : 'Request failed.'
-    throw new ApiErrorResponseError(
-      response.status,
-      typeof error === 'object' && error ? error.code ?? 'system.internal_error' : 'system.internal_error',
-      message,
-      typeof error === 'object' && error ? error.details ?? {} : {},
-    )
-  }
-  return payload as T
+  return readResponsePayload<T>(response)
 }
 
 export interface ApiResult<T> {
@@ -54,12 +40,66 @@ export interface ApiResult<T> {
   status: number
   data: T
   headers: Headers
+  error?: ApiErrorDetails
+}
+
+export type ApiResponseResult<T = any> = ApiResult<T>
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function mergeHeaders(defaults: Record<string, string>, overrides?: HeadersInit): Record<string, string> {
+  const merged = { ...defaults }
+  if (!overrides) return merged
+
+  new Headers(overrides).forEach((value, key) => {
+    const existingKey = Object.keys(merged).find((candidate) => candidate.toLowerCase() === key)
+    merged[existingKey ?? key] = value
+  })
+  return merged
+}
+
+function getApiError(payload: unknown): ApiErrorDetails {
+  const body = isRecord(payload) ? payload : {}
+  const nestedError = body.error
+  const error = isRecord(nestedError) ? nestedError : {}
+  const message = typeof nestedError === 'string'
+    ? nestedError
+    : typeof error.message === 'string'
+      ? error.message
+      : typeof body.message === 'string'
+        ? body.message
+        : 'Request failed.'
+  const code = typeof error.code === 'string'
+    ? error.code
+    : typeof body.code === 'string'
+      ? body.code
+      : 'system.internal_error'
+  const details = isRecord(error.details)
+    ? error.details
+    : isRecord(body.details)
+      ? body.details
+      : {}
+
+  return { code, message, details }
+}
+
+function throwApiError(status: number, payload: unknown): never {
+  const error = getApiError(payload)
+  throw new ApiErrorResponseError(status, error.code, error.message, error.details)
 }
 
 export async function apiRequestResult<T = any>(input: RequestInfo | URL, init?: RequestInit): Promise<ApiResult<T>> {
   const response = await apiRequest(input, init)
   const data = await parseJson(response).catch(() => ({})) as T
-  return { ok: response.ok, status: response.status, data, headers: response.headers }
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    headers: response.headers,
+    ...(response.ok ? {} : { error: getApiError(data) }),
+  }
 }
 
 async function parseJson(response: Response): Promise<unknown> {
@@ -71,7 +111,7 @@ async function parseJson(response: Response): Promise<unknown> {
   return response.json()
 }
 
-async function unwrapResponseEnvelope<T, M = Record<string, unknown>>(response: Response): Promise<ApiSuccess<T, M>> {
+async function readResponsePayload<T>(response: Response): Promise<T> {
   let payload: unknown
   try {
     payload = await parseJson(response)
@@ -82,23 +122,12 @@ async function unwrapResponseEnvelope<T, M = Record<string, unknown>>(response: 
     payload = {}
   }
 
-  if (!response.ok) {
-    const errorPayload = payload as Partial<ApiErrorEnvelope>
-    const apiError = errorPayload.error
-    const fallbackMessage = typeof apiError === 'string'
-      ? apiError
-      : typeof (payload as { message?: unknown }).message === 'string'
-        ? (payload as { message: string }).message
-        : 'Request failed.'
-    throw new ApiErrorResponseError(
-      response.status,
-      typeof apiError === 'object' && apiError ? apiError.code ?? 'system.internal_error' : 'system.internal_error',
-      typeof apiError === 'object' && apiError ? apiError.message ?? fallbackMessage : fallbackMessage,
-      typeof apiError === 'object' && apiError ? apiError.details ?? {} : {},
-    )
-  }
+  if (!response.ok) throwApiError(response.status, payload)
+  return payload as T
+}
 
-  return payload as ApiSuccess<T, M>
+async function unwrapResponseEnvelope<T, M = Record<string, unknown>>(response: Response): Promise<ApiSuccess<T, M>> {
+  return readResponsePayload<ApiSuccess<T, M>>(response)
 }
 
 async function unwrapResponse<T>(response: Response): Promise<T> {
@@ -134,16 +163,17 @@ export async function apiRequestEnvelope<T, M = Record<string, unknown>>(url: st
   return unwrapResponseEnvelope<T, M>(await apiFetch(url, {
     ...init,
     credentials: 'include',
-    headers: { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) },
+    headers: mergeHeaders({ Accept: 'application/json' }, init.headers),
   }))
 }
 
+/** Returns the decoded body without imposing the standard envelope shape. */
 export async function apiGetRaw<T>(url: string, init: RequestInit = {}): Promise<T> {
-  return unwrapResponseEnvelope<T>(await apiFetch(url, {
+  return readResponsePayload<T>(await apiFetch(url, {
     ...init,
     credentials: 'include',
-    headers: { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) },
-  })) as Promise<T>
+    headers: mergeHeaders({ Accept: 'application/json' }, init.headers),
+  }))
 }
 
 export async function apiPostJson<T>(url: string, body: unknown): Promise<T> {

@@ -1,8 +1,7 @@
 <template>
   <section class="user-moderation">
     <div class="user-moderation__search">
-      <label for="moderation-user-query">搜索用户</label>
-      <input id="moderation-user-query" v-model="query" data-test="user-query" placeholder="输入用户名或显示名" @keyup.enter="searchUsers" />
+      <PInput id="moderation-user-query" v-model="query" data-test="user-query" label="搜索用户" placeholder="输入用户名或显示名" @keyup.enter="searchUsers" />
       <PButton data-test="user-search" size="sm" :disabled="!query.trim() || searching" @click="searchUsers">搜索</PButton>
     </div>
     <p v-if="error" role="alert" class="user-moderation__error">{{ error }}</p>
@@ -31,12 +30,29 @@
 
     <PModal v-model="modalOpen" :title="actionLabel(draft.action)" size="sm">
       <div class="user-moderation__form">
-        <label v-if="requiresReason" for="moderation-reason">原因</label>
-        <input v-if="requiresReason" id="moderation-reason" v-model="draft.reason" data-test="action-reason" placeholder="输入原因" />
+        <PInput v-if="requiresReason" id="moderation-reason" v-model="draft.reason" data-test="action-reason" label="原因" placeholder="输入原因" />
         <template v-if="draft.action === 'silence'">
-          <label for="moderation-duration">时长</label>
-          <select id="moderation-duration" v-model.number="draft.duration_hours"><option :value="24">24 小时</option><option :value="72">72 小时</option><option :value="168">7 天</option><option value="custom">自定义</option></select>
-          <input v-if="draft.duration_hours === 'custom'" v-model.number="customDuration" type="number" min="1" max="2160" aria-label="禁言小时数" />
+          <PSelect
+            id="moderation-duration"
+            :model-value="draft.duration_hours"
+            label="时长"
+            :options="[
+              { label: '24 小时', value: 24 },
+              { label: '72 小时', value: 72 },
+              { label: '7 天', value: 168 },
+              { label: '自定义', value: 'custom' },
+            ]"
+            @update:model-value="updateDuration"
+          />
+          <PInput
+            v-if="draft.duration_hours === 'custom'"
+            :model-value="customDuration"
+            type="number"
+            min="1"
+            max="2160"
+            aria-label="禁言小时数"
+            @update:model-value="customDuration = Number($event)"
+          />
         </template>
       </div>
       <template #footer><PButton variant="secondary" @click="modalOpen = false">取消</PButton><PButton data-test="action-submit" :disabled="submitting || (requiresReason && !draft.reason.trim())" @click="submitAction">确认</PButton></template>
@@ -48,7 +64,9 @@
 import { apiRequestResult } from '@/api/client'
 import { computed, reactive, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types'
@@ -67,6 +85,9 @@ const canModerate = computed(() => {
   if (selected.value.role === 'owner') return false
   return !(auth.user?.role === 'admin' && selected.value.role === 'admin')
 })
+function updateDuration(value: string | number) {
+  draft.duration_hours = value === 'custom' ? 'custom' : Number(value)
+}
 async function response<T>(raw: { ok: boolean; data: unknown }, fallback: string): Promise<{ data: T; meta?: { total?: number } }> { const body = (raw.data || {}) as { data?: T; meta?: { total?: number }; error?: { message?: string } }; if (!raw.ok) throw new Error(body.error?.message || fallback); return { data: body.data as T, meta: body.meta } }
 async function searchUsers() { const generation = ++searchGeneration; searching.value = true; error.value = ''; try { const params = new URLSearchParams({ q: query.value.trim(), page_size: '20' }); const result = (await response<SearchUser[]>(await apiRequestResult(`${api.v1.forum.moderationUsers}?${params}`, { headers: headers() }), '搜索用户失败')).data || []; if (generation === searchGeneration) users.value = result } catch (cause) { if (generation === searchGeneration) error.value = cause instanceof Error ? cause.message : '搜索用户失败' } finally { if (generation === searchGeneration) searching.value = false } }
 async function selectUser(user: SearchUser) { selected.value = user; actions.value = []; const id = user.uuid || ''; loadingActions.value = true; try { const result = await response<Action[]>(await apiRequestResult(`${api.v1.forum.userActions}?user_id=${id}&page=1&page_size=50`, { headers: headers() }), '加载处罚历史失败'); if (selected.value?.uuid === id) actions.value = result.data || [] } catch (cause) { if (selected.value?.uuid === id) error.value = cause instanceof Error ? cause.message : '加载处罚历史失败' } finally { if (selected.value?.uuid === id) loadingActions.value = false } }
@@ -78,5 +99,5 @@ function formatTime(value: string) { return new Date(value).toLocaleString('zh-C
 </script>
 
 <style scoped>
-.user-moderation,.user-moderation__workspace,.user-moderation__history,.user-moderation__form{display:grid;gap:1rem}.user-moderation__search,.user-moderation__workspace>header,.user-moderation__actions,.user-moderation__history-row{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.user-moderation__search input,.user-moderation__form input,.user-moderation__form select{min-height:2.75rem;border:1px solid var(--a-color-border);background:var(--a-color-surface);color:var(--a-color-text);padding:.5rem}.user-moderation__search input{flex:1;min-width:12rem}.user-moderation__results{display:grid;border-top:1px solid var(--a-color-border)}.user-moderation__results button{display:flex;justify-content:space-between;min-height:3rem;padding:.75rem;border:0;border-bottom:1px solid var(--a-color-border);background:transparent;color:var(--a-color-text);text-align:left;cursor:pointer}.user-moderation__results button.active{background:var(--a-color-surface-muted)}.user-moderation__results span span,.user-moderation__results small{display:block}.user-moderation__workspace>header{justify-content:space-between;padding-top:.5rem}.user-moderation__workspace h3,.user-moderation__workspace p,.user-moderation__history h4{margin:0}.user-moderation__history-row{display:grid;grid-template-columns:7rem 1fr auto;padding:.75rem 0;border-bottom:1px solid var(--a-color-border)}.user-moderation__error{color:var(--a-color-danger)}time,small{color:var(--a-color-text-secondary)}@media(max-width:640px){.user-moderation__history-row{grid-template-columns:1fr}.user-moderation__workspace>header{align-items:flex-start}}
+.user-moderation,.user-moderation__workspace,.user-moderation__history,.user-moderation__form{display:grid;gap:1rem}.user-moderation__search,.user-moderation__workspace>header,.user-moderation__actions,.user-moderation__history-row{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.user-moderation__search :deep(.p-field){flex:1;min-width:12rem}.user-moderation__results{display:grid;border-top:1px solid var(--a-color-border)}.user-moderation__results button{display:flex;justify-content:space-between;min-height:3rem;padding:.75rem;border:0;border-bottom:1px solid var(--a-color-border);background:transparent;color:var(--a-color-text);text-align:left;cursor:pointer}.user-moderation__results button.active{background:var(--a-color-surface-muted)}.user-moderation__results span span,.user-moderation__results small{display:block}.user-moderation__workspace>header{justify-content:space-between;padding-top:.5rem}.user-moderation__workspace h3,.user-moderation__workspace p,.user-moderation__history h4{margin:0}.user-moderation__history-row{display:grid;grid-template-columns:7rem 1fr auto;padding:.75rem 0;border-bottom:1px solid var(--a-color-border)}.user-moderation__error{color:var(--a-color-danger)}time,small{color:var(--a-color-text-secondary)}@media(max-width:640px){.user-moderation__history-row{grid-template-columns:1fr}.user-moderation__workspace>header{align-items:flex-start}}
 </style>

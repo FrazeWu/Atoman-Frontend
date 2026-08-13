@@ -45,6 +45,9 @@ const loading = ref(true)
 const error = ref('')
 const theaterMode = ref(getStoredTheaterMode())
 const showNextPrompt = ref(false)
+const videoError = ref('')
+const hasRecordedView = ref(false)
+const hasStartedPlayback = ref(false)
 let lastProgressSave = 0
 let loadSeq = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
@@ -112,6 +115,9 @@ async function load(id: string) {
   video.value = null
   recommended.value = []
   showNextPrompt.value = false
+  videoError.value = ''
+  hasRecordedView.value = false
+  hasStartedPlayback.value = false
   currentPlaybackTime.value = 0
   lastProgressSave = 0
   consumptionTracker = null
@@ -140,8 +146,8 @@ async function load(id: string) {
     consumptionTracker.open()
     syncInteractionState(detail)
     if (seq === loadSeq) recommended.value = recommendations
-    // Fire-and-forget view count increment
-    if (seq === loadSeq) void recordVideoView(id)
+    // 外部平台没有可监听的播放事件，在打开详情时记录一次。
+    if (seq === loadSeq && detail.storage_type !== 'local') void recordVideoViewOnce(id)
   } catch {
     if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {
@@ -161,10 +167,20 @@ function syncCurrentPlaybackTime() {
   const duration = videoElement.value?.duration
   currentPlaybackTime.value = current
   if (!video.value || typeof duration !== 'number' || !Number.isFinite(duration)) return
+  const progress = duration > 0 ? current / duration : 0
+  consumptionTracker?.update(progress)
+  if (hasStartedPlayback.value && !hasRecordedView.value && progress >= 0.1) void recordVideoViewOnce(video.value.id)
   if (Date.now() - lastProgressSave < 5000) return
   lastProgressSave = Date.now()
   saveVideoProgress(video.value.id, current, Math.floor(duration))
-  consumptionTracker?.update(duration > 0 ? current / duration : 0)
+}
+
+async function recordVideoViewOnce(id: string) {
+  if (hasRecordedView.value) return
+  hasRecordedView.value = true
+  await recordVideoView(id).catch(() => {
+    hasRecordedView.value = false
+  })
 }
 
 function seekLocalVideo(value: number) {
@@ -203,6 +219,19 @@ function handleVideoEnded() {
   clearVideoProgress(video.value.id)
   consumptionTracker?.update(1)
   showNextPrompt.value = recommended.value.length > 0
+}
+
+function handleVideoError() {
+  videoError.value = '视频暂时无法播放，请重试'
+}
+
+function handleVideoPlay() {
+  hasStartedPlayback.value = true
+}
+
+function retryVideoPlayback() {
+  videoError.value = ''
+  videoElement.value?.load()
 }
 
 async function copyVideoLink() {
@@ -289,20 +318,27 @@ function currentCommentTime() {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen
             />
-            <video
-              v-else-if="video.storage_type === 'local'"
-              ref="videoElement"
-              :src="video.video_url"
-              :poster="video.thumbnail_url || undefined"
-              class="vd-native"
-              playsinline
-              @click="toggleLocalPlayback"
-              preload="metadata"
-              @timeupdate="syncCurrentPlaybackTime"
-              @loadedmetadata="restoreInitialPlaybackPosition"
-              @pause="handlePauseOrUnload"
-              @ended="handleVideoEnded"
-            />
+            <template v-else-if="video.storage_type === 'local'">
+              <video
+                ref="videoElement"
+                :src="video.video_url"
+                :poster="video.thumbnail_url || undefined"
+                class="vd-native"
+                playsinline
+                @click="toggleLocalPlayback"
+                preload="metadata"
+                @timeupdate="syncCurrentPlaybackTime"
+                @play="handleVideoPlay"
+                @loadedmetadata="restoreInitialPlaybackPosition"
+                @error="handleVideoError"
+                @pause="handlePauseOrUnload"
+                @ended="handleVideoEnded"
+              />
+              <div v-if="videoError" class="vd-player-error" role="alert">
+                <p>{{ videoError }}</p>
+                <button type="button" @click="retryVideoPlayback">重试播放</button>
+              </div>
+            </template>
             <div v-else class="vd-external">
               <a :href="video.video_url" target="_blank" rel="noopener noreferrer" class="vd-external-link">
                 在外部平台观看 →
@@ -460,6 +496,24 @@ function currentCommentTime() {
   width: 100%;
   aspect-ratio: 16/9;
   background: #000;
+}
+.vd-player-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  justify-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.72);
+}
+.vd-player-error p { margin: 0; }
+.vd-player-error button {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  padding: 0.4rem 0.8rem;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
 }
 .vd-external {
   aspect-ratio: 16/9;

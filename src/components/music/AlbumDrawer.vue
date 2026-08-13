@@ -1075,11 +1075,11 @@ watch(
 }
 .track {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
-  align-items: start;
-  gap: 0.85rem;
-  padding: 0.65rem 0.5rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0.5rem;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
   font-size: 0.9rem;
   transition: background-color 0.15s ease;
@@ -1089,8 +1089,8 @@ watch(
   background-color: var(--a-color-surface-muted);
 }
 .track-play-btn {
-  width: 24px;
-  height: 24px;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1121,8 +1121,12 @@ watch(
   display: none;
 }
 .track-title {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
   color: var(--a-color-text);
   font-size: 0.9rem;
+  line-height: 1.35;
   min-width: 0;
   overflow: hidden;
   text-decoration: none;
@@ -1161,6 +1165,7 @@ watch(
   color: var(--a-color-text);
 }
 .track-specification {
+  align-self: start;
   grid-column: 2 / -1;
   display: grid;
   gap: 0.2rem;
@@ -1276,7 +1281,7 @@ watch(
   .track {
     grid-template-columns: 2.75rem minmax(0, 1fr) auto;
     gap: 0.5rem;
-    padding: 0.4rem 0;
+    padding: 0.25rem 0;
   }
 
   .track-play-btn,

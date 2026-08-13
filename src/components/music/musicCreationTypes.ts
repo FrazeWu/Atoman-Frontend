@@ -17,6 +17,7 @@ export interface MusicCreationTrackDraft {
   title: string
   audioUrl?: string
   audioKey?: string
+  audioFileName?: string
   origin?: string
   songId?: string
   discNumber?: number
@@ -99,7 +100,19 @@ export interface MusicCreationAlbumImportDraft {
     origin: string
     discNumber?: number
     trackNumber?: number
+    lyrics?: {
+      content: string
+      translation: string
+      format: 'plain' | 'lrc'
+      language: string
+      edit_summary: string
+    }
+    lyricsSource?: string
   }>
+  derivedReleaseDate?: string
+  derivedAlbumType?: string
+  metadataSourceUrl?: string
+  missingArtists?: string[]
   lastSyncedAt: string
   errorMessage: string
 }

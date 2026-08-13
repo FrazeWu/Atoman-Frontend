@@ -16,26 +16,26 @@
             accept=".opml,.xml"
             @change="handleOPMLSelected"
           />
-          <PPress
+          <PButton
             variant="secondary"
             label="导入 OPML"
             :disabled="busy || healthChecking"
             @click="openOPMLPicker"
           />
-          <PPress
+          <PButton
             variant="secondary"
             label="导出 OPML"
             :disabled="busy || healthChecking || !subscriptions.length"
             @click="exportOPML"
           />
-          <PPress
+          <PButton
             data-test="sync-all-subscriptions"
             variant="secondary"
             :label="syncingAllSubscriptions ? '刷新中...' : '刷新全部'"
             :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
             @click="syncAllSubscriptions"
           />
-          <PPress
+          <PButton
             variant="secondary"
             :label="healthChecking ? '检查中...' : '全部检查'"
             :disabled="busy || healthChecking || !subscriptions.length"
@@ -65,7 +65,7 @@
           <PField label="新建分组">
             <div class="inline-form">
               <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
-              <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
+              <PButton variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
             </div>
           </PField>
         </form>
@@ -88,11 +88,11 @@
             <span class="group-manage-count a-muted">
               {{ groupSubscriptionCount(group.id) }} 个订阅源
             </span>
-            <PPress
+            <PButton
               variant="secondary"
               label="删除"
               :disabled="busy"
-              @click="confirmDeleteGroup(group.id)"
+              @click="requestDelete('group', group.id)"
             />
           </div>
         </div>
@@ -189,7 +189,7 @@
                     :disabled="busy"
                     @update:model-value="moveSubscription(sub.id, String($event))"
                   />
-                  <PPress
+                  <PButton
                     v-if="sub.feed_source?.source_type === 'external_rss'"
                     data-test="sync-subscription"
                     variant="secondary"
@@ -197,13 +197,13 @@
                     :disabled="busy || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
                     @click="syncSubscription(sub.id)"
                   />
-                  <PPress
+                  <PButton
                     variant="secondary"
                     label="检查"
                     :disabled="busy || healthChecking"
                     @click="checkSubscriptionHealth(sub.id)"
                   />
-                  <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
+                  <PButton variant="secondary" label="删除" :disabled="busy" @click="requestDelete('subscription', sub.id)" />
                 </div>
               </div>
             </div>
@@ -243,7 +243,7 @@
               :disabled="busy"
               @keydown.enter.prevent="submitKeyword"
             />
-            <PPress variant="secondary" label="添加关键词" :disabled="busy" @click="submitKeyword" />
+            <PButton variant="secondary" label="添加关键词" :disabled="busy" @click="submitKeyword" />
           </div>
         </PField>
 
@@ -263,6 +263,17 @@
       </section>
     </div>
   </PSheet>
+
+  <PConfirm
+    :show="deletePending !== null"
+    title="删除订阅管理项"
+    :message="deletePending?.kind === 'group' ? '确定删除这个分组吗？分组内订阅源会移动到默认分组。' : '确定删除这个订阅源吗？'"
+    confirm-text="删除"
+    danger
+    :loading="props.busy"
+    @confirm="confirmDelete"
+    @cancel="deletePending = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -277,7 +288,8 @@ import type {
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import type { FeedAutomationRules, FeedFilterRules } from '@/stores/feed'
@@ -332,6 +344,7 @@ const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
 const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.initialTab ?? 'groups')
+const deletePending = ref<{ kind: 'subscription' | 'group'; id: string } | null>(null)
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
@@ -488,16 +501,17 @@ const exportOPML = () => {
   emit('export-opml')
 }
 
-const confirmDelete = (id: string) => {
+const requestDelete = (kind: 'subscription' | 'group', id: string) => {
   if (props.busy) return
-  if (!window.confirm('确定删除这个订阅源吗？')) return
-  emit('delete-subscription', id)
+  deletePending.value = { kind, id }
 }
 
-const confirmDeleteGroup = (id: string) => {
-  if (props.busy) return
-  if (!window.confirm('确定删除这个分组吗？分组内订阅源会移动到默认分组。')) return
-  emit('delete-group', id)
+const confirmDelete = () => {
+  if (props.busy || !deletePending.value) return
+  const pending = deletePending.value
+  deletePending.value = null
+  if (pending.kind === 'group') emit('delete-group', pending.id)
+  else emit('delete-subscription', pending.id)
 }
 
 const subscriptionHealthStatus = (sub: Subscription) => sub.health_status || 'healthy'

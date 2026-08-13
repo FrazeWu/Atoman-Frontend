@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client'
+import { apiRequest, apiRequestResult } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
@@ -126,8 +126,20 @@ function buildHeaders(token: string | null, withJson = false): HeadersInit {
 }
 
 async function parseError(response: Response, fallback: string): Promise<string> {
-  const data = await response.json().catch(() => ({} as Record<string, unknown>))
-  return typeof data.error === 'string' ? data.error : fallback
+  const text = await response.clone().text().catch(() => '')
+  let data: unknown = {}
+  try {
+    data = text ? JSON.parse(text) : {}
+  } catch {
+    data = {}
+  }
+  return parseErrorPayload(data, fallback)
+}
+
+function parseErrorPayload(data: unknown, fallback: string): string {
+  return typeof data === 'object' && data !== null && typeof (data as Record<string, unknown>).error === 'string'
+    ? (data as Record<string, unknown>).error as string
+    : fallback
 }
 
 export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => {
@@ -148,13 +160,13 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   async function fetchHealth(token: string | null) {
     loadingHealth.value = true
     try {
-      const response = await apiRequest(api.admin.feedFulltext.health, {
+      const result = await apiRequestResult(api.admin.feedFulltext.health, {
         headers: buildHeaders(token),
       })
-      if (!response.ok) {
-        throw new Error(await parseError(response, '加载概览失败'))
+      if (!result.ok) {
+        throw new Error(parseErrorPayload(result.data, '加载概览失败'))
       }
-      health.value = await response.json()
+      health.value = result.data
       return health.value
     } finally {
       loadingHealth.value = false
@@ -164,13 +176,13 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   async function fetchSettings(token: string | null) {
     loadingSettings.value = true
     try {
-      const response = await apiRequest(api.admin.feedFulltext.settings, {
+      const result = await apiRequestResult(api.admin.feedFulltext.settings, {
         headers: buildHeaders(token),
       })
-      if (!response.ok) {
-        throw new Error(await parseError(response, '加载抓取设置失败'))
+      if (!result.ok) {
+        throw new Error(parseErrorPayload(result.data, '加载抓取设置失败'))
       }
-      settings.value = await response.json()
+      settings.value = result.data
       return settings.value
     } finally {
       loadingSettings.value = false
@@ -188,13 +200,13 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
       if (typeof options.enabled === 'boolean') query.set('enabled', String(options.enabled))
       if (options.status) query.set('status', options.status)
       if (options.q) query.set('q', options.q)
-      const response = await apiRequest(`${api.admin.feedFulltext.sources}?${query.toString()}`, {
+      const result = await apiRequestResult(`${api.admin.feedFulltext.sources}?${query.toString()}`, {
         headers: buildHeaders(token),
       })
-      if (!response.ok) {
-        throw new Error(await parseError(response, '加载订阅源失败'))
+      if (!result.ok) {
+        throw new Error(parseErrorPayload(result.data, '加载订阅源失败'))
       }
-      const payload = await response.json()
+      const payload = result.data
       sources.value = payload.data || []
       sourcesMeta.value = payload.meta || sourcesMeta.value
       return sources.value
@@ -216,13 +228,13 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
       if (options.sourceId) query.set('source_id', options.sourceId)
       if (options.q) query.set('q', options.q)
 
-      const response = await apiRequest(`${api.admin.feedFulltext.items}?${query.toString()}`, {
+      const result = await apiRequestResult(`${api.admin.feedFulltext.items}?${query.toString()}`, {
         headers: buildHeaders(token),
       })
-      if (!response.ok) {
-        throw new Error(await parseError(response, '加载条目失败'))
+      if (!result.ok) {
+        throw new Error(parseErrorPayload(result.data, '加载条目失败'))
       }
-      const payload = await response.json()
+      const payload = result.data
       items.value = payload.data || []
       itemsMeta.value = payload.meta || itemsMeta.value
       return items.value
@@ -232,55 +244,55 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function fetchOnboardingRecommendations(token: string | null) {
-    const response = await apiRequest(api.admin.feed.onboardingRecommendations, {
+    const result = await apiRequestResult(api.admin.feed.onboardingRecommendations, {
       headers: buildHeaders(token),
     })
-    if (!response.ok) throw new Error(await parseError(response, '加载新手推荐失败'))
-    const payload = await response.json()
+    if (!result.ok) throw new Error(parseErrorPayload(result.data, '加载新手推荐失败'))
+    const payload = result.data
     onboardingRecommendations.value = payload.items || []
     return onboardingRecommendations.value
   }
 
   async function createOnboardingRecommendation(payload: { feed_source_id: string; enabled: boolean; sort_order: number }, token: string | null) {
-    const response = await apiRequest(api.admin.feed.onboardingRecommendations, {
+    const result = await apiRequestResult(api.admin.feed.onboardingRecommendations, {
       method: 'POST',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
     })
-    if (!response.ok) throw new Error(await parseError(response, '添加新手推荐失败'))
-    return response.json()
+    if (!result.ok) throw new Error(parseErrorPayload(result.data, '添加新手推荐失败'))
+    return result.data
   }
 
   async function updateOnboardingRecommendation(id: string, payload: { enabled?: boolean; sort_order?: number }, token: string | null) {
-    const response = await apiRequest(api.admin.feed.onboardingRecommendation(id), {
+    const result = await apiRequestResult(api.admin.feed.onboardingRecommendation(id), {
       method: 'PATCH',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
     })
-    if (!response.ok) throw new Error(await parseError(response, '更新新手推荐失败'))
-    return response.json()
+    if (!result.ok) throw new Error(parseErrorPayload(result.data, '更新新手推荐失败'))
+    return result.data
   }
 
   async function deleteOnboardingRecommendation(id: string, token: string | null) {
-    const response = await apiRequest(api.admin.feed.onboardingRecommendation(id), {
+    const result = await apiRequestResult(api.admin.feed.onboardingRecommendation(id), {
       method: 'DELETE',
       headers: buildHeaders(token),
     })
-    if (!response.ok) throw new Error(await parseError(response, '移除新手推荐失败'))
+    if (!result.ok) throw new Error(parseErrorPayload(result.data, '移除新手推荐失败'))
   }
 
   async function updateSourceEnabled(sourceId: string, enabled: boolean, token: string | null) {
-    const response = await apiRequest(api.admin.feedFulltext.sourceSettings(sourceId), {
+    const result = await apiRequestResult(api.admin.feedFulltext.sourceSettings(sourceId), {
       method: 'PUT',
       headers: buildHeaders(token, true),
       body: JSON.stringify({ full_text_enabled: enabled }),
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '更新订阅源失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '更新订阅源失败'))
     }
 
-    const payload = await response.json()
+    const payload = result.data
     const row = sources.value.find((source) => source.id === sourceId)
     if (row) {
       row.full_text_enabled = Boolean(payload.full_text_enabled)
@@ -290,60 +302,60 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function createSource(payload: AdminFeedSourcePayload, token: string | null) {
-    const response = await apiRequest(api.admin.feedFulltext.sources, {
+    const result = await apiRequestResult(api.admin.feedFulltext.sources, {
       method: 'POST',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '新增订阅源失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '新增订阅源失败'))
     }
 
-    return response.json()
+    return result.data
   }
 
   async function updateSource(sourceId: string, payload: AdminFeedSourcePayload, token: string | null) {
-    const response = await apiRequest(api.admin.feedFulltext.source(sourceId), {
+    const result = await apiRequestResult(api.admin.feedFulltext.source(sourceId), {
       method: 'PUT',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '更新订阅源失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '更新订阅源失败'))
     }
 
-    return response.json()
+    return result.data
   }
 
   async function importGlobalOPML(file: File, token: string | null): Promise<AdminFeedOPMLImportResult> {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await apiRequest(api.admin.feed.opmlImport, {
+    const result = await apiRequestResult(api.admin.feed.opmlImport, {
       method: 'POST',
       headers: buildHeaders(token),
       body: formData,
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '导入 OPML 失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '导入 OPML 失败'))
     }
 
-    return response.json()
+    return result.data
   }
 
   async function retryGlobalOPMLSource(payload: { title?: string; url: string }, token: string | null) {
-    const response = await apiRequest(api.admin.feed.opmlRetryImport, {
+    const result = await apiRequestResult(api.admin.feed.opmlRetryImport, {
       method: 'POST',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
     })
-    if (!response.ok) {
-      throw new Error(await parseError(response, '重试订阅源失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '重试订阅源失败'))
     }
-    return response.json()
+    return result.data
   }
 
   async function exportGlobalOPML(token: string | null): Promise<Blob> {
@@ -359,29 +371,29 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function syncSource(sourceId: string, token: string | null) {
-    const response = await apiRequest(api.admin.feedFulltext.syncSource(sourceId), {
+    const result = await apiRequestResult(api.admin.feedFulltext.syncSource(sourceId), {
       method: 'POST',
       headers: buildHeaders(token),
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '手工爬取失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '手工爬取失败'))
     }
 
-    return response.json()
+    return result.data
   }
 
   async function retryItem(itemId: string, token: string | null) {
-    const response = await apiRequest(api.admin.feedFulltext.retryItem(itemId), {
+    const result = await apiRequestResult(api.admin.feedFulltext.retryItem(itemId), {
       method: 'POST',
       headers: buildHeaders(token),
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '重试条目失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '重试条目失败'))
     }
 
-    const payload = await response.json()
+    const payload = result.data
     const row = items.value.find((item) => item.id === itemId)
     if (row) {
       row.full_text_status = payload.full_text_status
@@ -391,17 +403,17 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function updateSettings(nextSettings: AdminFeedFulltextSettings, token: string | null) {
-    const response = await apiRequest(api.admin.feedFulltext.settings, {
+    const result = await apiRequestResult(api.admin.feedFulltext.settings, {
       method: 'PUT',
       headers: buildHeaders(token, true),
       body: JSON.stringify(nextSettings),
     })
 
-    if (!response.ok) {
-      throw new Error(await parseError(response, '更新抓取设置失败'))
+    if (!result.ok) {
+      throw new Error(parseErrorPayload(result.data, '更新抓取设置失败'))
     }
 
-    settings.value = await response.json()
+    settings.value = result.data
     return settings.value
   }
 

@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PlaylistEditSheet from '@/components/music/PlaylistEditSheet.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -48,6 +49,7 @@ const errorMessage = ref('')
 const editing = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
+const deletePending = ref(false)
 const editName = ref('')
 const editDescription = ref('')
 const editIsPublic = ref(false)
@@ -206,8 +208,11 @@ async function savePlaylist() {
 
 async function deletePlaylist() {
   if (!playlist.value || deleting.value || !requireLogin()) return
-  if (!window.confirm('删除后无法恢复，确定删除这张歌单吗？')) return
+  deletePending.value = true
+}
 
+async function confirmDeletePlaylist() {
+  if (!playlist.value || deleting.value) return
   deleting.value = true
   errorMessage.value = ''
   try {
@@ -224,6 +229,7 @@ async function deletePlaylist() {
         : '歌单删除失败'
   } finally {
     deleting.value = false
+    deletePending.value = false
   }
 }
 
@@ -604,6 +610,17 @@ watch(playlist, syncEditForm, { immediate: true })
     @update:name="editName = $event"
     @update:description="editDescription = $event"
     @update:is-public="editIsPublic = $event"
+  />
+
+  <PConfirm
+    :show="deletePending"
+    title="删除歌单"
+    message="删除后无法恢复，确定删除这张歌单吗？"
+    confirm-text="删除"
+    danger
+    :loading="deleting"
+    @confirm="confirmDeletePlaylist"
+    @cancel="deletePending = false"
   />
 </template>
 

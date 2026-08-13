@@ -50,7 +50,7 @@ describe('useTimelineComparison', () => {
     expect(comparison.compareIds.value).toEqual(['event-a', 'event-b'])
     expect(comparison.compareEvents.value.map(({ id }) => id)).toEqual(['event-a', 'event-b'])
     expect(comparison.activeCompareId.value).toBe('event-b')
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/timeline/events/event-b')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/timeline/events/event-b', { credentials: 'include' })
 
     comparison.removeCompareId('event-a')
     comparison.viewMode.value = 'lanes'

@@ -147,6 +147,16 @@ describe('MusicLyricEditorDrawer.vue', () => {
     const wrapper = mountDrawer({ content: '[00:01.00]Alpha\n[00:02.00]Beta', format: 'lrc' })
     const ids = draftRows(wrapper).map(row => row.id)
 
+    const tools = wrapper.get('[data-testid="lyric-editor-tools"]')
+    expect(tools.text()).toContain('整体偏移')
+    expect(tools.get('button[title="全部提前 0.1 秒"]').exists()).toBe(true)
+    expect(tools.get('.music-lyric-editor-drawer__tools-primary').exists()).toBe(true)
+    expect(tools.get('.music-lyric-editor-drawer__add-row').exists()).toBe(true)
+    expect(wrapper.find('.music-lyric-editor-drawer__toolbar-actions').exists()).toBe(false)
+    expect(wrapper.find('.lyric-editor-tools').element.compareDocumentPosition(wrapper.find('.lyric-grid-header').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const summaryField = wrapper.get('[data-testid="lyrics-edit-summary"]').element.closest('.p-field')
+    expect(summaryField?.querySelector('label')?.textContent).toContain('修改原因')
+
     await wrapper.get(`[data-testid="lyric-adjust-up-${ids[0]}"]`).trigger('click')
     expect(draftRows(wrapper).map(row => row.timeMs)).toEqual([1_100, 2_000])
 

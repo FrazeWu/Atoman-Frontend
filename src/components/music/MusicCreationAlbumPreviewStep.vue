@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
+import { ExternalLink } from 'lucide-vue-next'
 
 const { state } = useMusicDrawers()
 const albumDetails = computed(() => state.value.creationFlow?.draft.albumDetails ?? null)
@@ -57,6 +58,16 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
     <p v-if="albumImport.status !== 'ready'" class="album-preview-step__hint">
       已开启导入中心后台托管，直接提交即可，解包与格式提取将在后台自动完成。
     </p>
+    <p v-if="albumImport.metadataSourceUrl" class="album-preview-step__source" data-testid="album-import-metadata-source">
+      已自动匹配专辑信息、曲序和歌词。
+      <a :href="albumImport.metadataSourceUrl" target="_blank" rel="noopener noreferrer">
+        查看 MusicBrainz 来源
+        <ExternalLink :size="14" aria-hidden="true" />
+      </a>
+    </p>
+    <p v-if="albumImport.missingArtists?.length" class="album-preview-step__source" role="status">
+      还需补充艺术家：{{ albumImport.missingArtists.join('、') }}
+    </p>
     <p v-if="albumImport.errorMessage" class="album-preview-step__error">{{ albumImport.errorMessage }}</p>
     <div v-if="coverUrl" class="album-preview-step__cover">
       <img :src="coverUrl" alt="专辑封面预览" />
@@ -107,5 +118,7 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
 .album-preview-step__section h4, .album-preview-step__section p { margin: 0; }
 .album-preview-step__error { margin: 0; color: var(--a-color-accent-destructive); }
 .album-preview-step__hint { margin: 0; padding: 0.5rem 0.75rem; background: var(--a-color-surface-muted); border-radius: 4px; color: var(--a-color-muted); font-size: 0.82rem; }
+.album-preview-step__source { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: 0; color: var(--a-color-muted); font-size: 0.82rem; }
+.album-preview-step__source a { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--a-color-text); font-weight: 800; text-decoration: underline; text-underline-offset: 0.18em; }
 .album-preview-step__tracks, .album-preview-step__failures, .album-preview-step__contributors { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
 </style>

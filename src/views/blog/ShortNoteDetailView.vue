@@ -16,6 +16,16 @@
       </div>
     </template>
   </div>
+  <PConfirm
+    :show="deletePending !== null"
+    title="删除短话"
+    message="确定删除这条短话吗？"
+    confirm-text="删除"
+    danger
+    :loading="deleting"
+    @confirm="confirmRemove"
+    @cancel="deletePending = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -25,6 +35,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { ShortNote } from '@/types'
@@ -37,17 +48,30 @@ const id = computed(() => String(route.params.id ?? ''))
 const note = ref<ShortNote | null>(null)
 const loading = ref(true)
 const error = ref('')
+const deletePending = ref<ShortNote | null>(null)
+const deleting = ref(false)
 async function load() {
   try { note.value = (await apiRequestEnvelope<ShortNote>(api.blog.shortNote(id.value))).data }
   catch { error.value = '短话不存在或暂时无法加载' }
   finally { loading.value = false }
 }
-async function remove(noteToRemove: ShortNote) {
-  if (!window.confirm('确定删除这条短话吗？')) return
+function remove(noteToRemove: ShortNote) {
+  if (deleting.value) return
+  deletePending.value = noteToRemove
+}
+
+async function confirmRemove() {
+  const noteToRemove = deletePending.value
+  if (!noteToRemove || deleting.value) return
+  deleting.value = true
   try {
     await apiRequestEnvelope(api.blog.shortNote(noteToRemove.id), { method: 'DELETE', headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {} })
     await router.replace('/posts/notes')
   } catch { error.value = '删除失败，请重试' }
+  finally {
+    deleting.value = false
+    deletePending.value = null
+  }
 }
 onMounted(load)
 </script>
@@ -97,4 +121,3 @@ onMounted(load)
   color: var(--a-color-danger);
 }
 </style>
-

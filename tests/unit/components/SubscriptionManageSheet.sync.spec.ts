@@ -7,7 +7,7 @@ const stubs = {
   PSheet: { props: ['show', 'title'], template: '<section v-if="show"><slot /></section>' },
   PField: { template: '<label><slot /></label>' },
   PInput: { template: '<input />' },
-  PPress: {
+  PButton: {
     props: ['label', 'disabled'],
     emits: ['click'],
     template: '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
@@ -79,14 +79,16 @@ describe('SubscriptionManageSheet sync controls', () => {
     await refreshAll.trigger('click')
     expect(wrapper.emitted('sync-all-subscriptions')).toHaveLength(1)
 
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
     const refreshButtons = wrapper.findAll('button[data-test="sync-subscription"]')
     expect(refreshButtons).toHaveLength(1)
     await refreshButtons[0]!.trigger('click')
     expect(wrapper.emitted('sync-subscription')).toEqual([['external-sub']])
   })
 
-  it('shows the latest fetch time and new item count', () => {
+  it('shows the latest fetch time and new item count', async () => {
     const wrapper = mountSheet()
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
     expect(wrapper.text()).toContain('最近更新')
     expect(wrapper.text()).toContain('新增 3 篇')
   })

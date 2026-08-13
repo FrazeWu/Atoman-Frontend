@@ -3,7 +3,7 @@
     <PPageHeader title="订阅收藏" mb="1.25rem">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
-          <PPress variant="secondary" label="← 返回订阅" @click="router.push('/feed')" />
+          <PButton variant="secondary" label="← 返回订阅" @click="router.push('/feed')" />
         </div>
       </template>
     </PPageHeader>
@@ -138,7 +138,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useAuthStore } from '@/stores/auth'

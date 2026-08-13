@@ -18,6 +18,8 @@ import {
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { readAlbumImportPreview, shouldIgnoreAlbumImportPath } from '@/utils/musicImportPreview'
+import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
+import { parsePartialDateParts } from '@/components/music/birthDateMask'
 
 // Global state for album import upload so it survives step transitions
 const uploading = ref(false)
@@ -61,6 +63,10 @@ export function useAlbumImportUpload() {
     creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
     creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
     creationFlow.value.draft.albumImport.derivedTracks = derivedTracks
+    creationFlow.value.draft.albumImport.derivedReleaseDate = snapshot.derivedReleaseDate
+    creationFlow.value.draft.albumImport.derivedAlbumType = snapshot.derivedAlbumType
+    creationFlow.value.draft.albumImport.metadataSourceUrl = snapshot.metadataSourceUrl
+    creationFlow.value.draft.albumImport.missingArtists = snapshot.missingArtists ?? []
     creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
     creationFlow.value.draft.albumImport.errorMessage =
       snapshot.errorMessage || snapshot.errors?.[0]?.message || ''
@@ -68,6 +74,18 @@ export function useAlbumImportUpload() {
     if (!creationFlow.value.titleCustomized) {
       creationFlow.value.draft.albumDetails.title =
         snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
+    }
+    if (snapshot.derivedReleaseDate && !creationFlow.value.draft.albumDetails.releaseDate.trim()) {
+      creationFlow.value.draft.albumDetails.releaseDateParts = parsePartialDateParts(snapshot.derivedReleaseDate)
+    }
+    if (snapshot.derivedAlbumType) {
+      creationFlow.value.draft.albumDetails.type = snapshot.derivedAlbumType
+    }
+    if (snapshot.derivedCover && !creationFlow.value.draft.albumDetails.coverUrl.trim()) {
+      creationFlow.value.draft.albumDetails.coverUrl = snapshot.derivedCover
+    }
+    if (snapshot.metadataSourceUrl && !creationFlow.value.draft.albumDetails.source.trim()) {
+      creationFlow.value.draft.albumDetails.source = snapshot.metadataSourceUrl
     }
 
     if (!creationFlow.value.tracksCustomized && derivedTracks.length > 0) {
@@ -79,6 +97,22 @@ export function useAlbumImportUpload() {
         title: track.title,
         audioKey: track.audioKey,
         origin: track.origin,
+        ...(track.lyrics ? {
+          lyrics: track.lyrics.content,
+          lyricsDraft: {
+            content: track.lyrics.content,
+            translation: track.lyrics.translation || '',
+            format: track.lyrics.format,
+            language: track.lyrics.language || '',
+            editSummary: track.lyrics.edit_summary || '自动匹配歌词',
+            lines: parseMusicLyricDraft(track.lyrics.content, track.lyrics.translation || '', track.lyrics.format).map(row => ({
+              line_key: row.lineKey,
+              text: row.original,
+              translation: row.translation,
+              time_ms: row.timeMs,
+            })),
+          },
+        } : {}),
       }))
     }
     return true
@@ -233,8 +267,12 @@ export function useAlbumImportUpload() {
     }
 
     try {
+	  const artistName = creationFlow.value.draft.artist.stageNames.find(item => item.isPrimary && item.name.trim())?.name.trim()
+		|| creationFlow.value.draft.artist.stageNames.find(item => item.name.trim())?.name.trim()
+		|| creationFlow.value.draft.artist.legalName.trim()
       const session = await createMusicAlbumImport({
         artistId: creationFlow.value.draft.artist.id,
+		...(artistName ? { artistName } : {}),
         inputMode: autoMode,
       })
       if (generation !== operationGeneration || creationFlow.value !== flow || albumImportDraft.value !== draft) return

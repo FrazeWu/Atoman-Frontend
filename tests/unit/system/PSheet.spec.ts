@@ -32,10 +32,12 @@ describe('PSheet.vue', () => {
     expect(wrapper.get('.p-sheet-panel').attributes('aria-label')).toBe('TEST TITLE')
   })
 
-  it('centers the close control and title on the same page rail axis', () => {
+  it('keeps the close control and title centered as one group', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/ui/PSheet.vue'), 'utf8')
 
     expect(source).toMatch(/\.sheet-layer-rail\s*\{[\s\S]*?align-items:\s*center/)
+    expect(source).toMatch(/\.sheet-layer-rail\s*\{[\s\S]*?width:\s*32px/)
+    expect(source).toMatch(/\.sheet-layer-controls\s*\{[\s\S]*?flex-direction:\s*column[\s\S]*?align-self:\s*center[\s\S]*?align-items:\s*flex-start/)
     expect(source).not.toMatch(/\.sheet-layer-rail \.sheet-close-btn-bookmark\s*\{/)
   })
 
@@ -82,7 +84,7 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.p-sheet-panel').classes()).toContain('is-shifted')
   })
 
-  it('moves each new layer right by one 80px page rail', () => {
+  it('moves each new layer right by one tighter page rail', () => {
     const wrapper = mount(PSheet, {
       props: {
         show: true,
@@ -94,7 +96,7 @@ describe('PSheet.vue', () => {
     })
 
     const panel = wrapper.get('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 16px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 0px)')
     expect(panel.style.right).toBe('0px')
     expect(panel.style.width).toBe('auto')
   })
@@ -117,8 +119,9 @@ describe('PSheet.vue', () => {
       },
     })
 
-    expect((bottom.get('.p-sheet-panel').element as HTMLElement).style.left).toBe('calc(var(--a-sidebar-width) + 16px)')
-    expect((top.get('.p-sheet-panel').element as HTMLElement).style.left).toBe('calc(var(--a-sidebar-width) + 176px)')
+    expect((bottom.get('.p-sheet-panel').element as HTMLElement).style.left).toBe('calc(var(--a-sidebar-width) + 0px)')
+    expect((top.get('.p-sheet-panel').element as HTMLElement).style.left).toBe('calc(var(--a-sidebar-width) + 64px)')
+    expect((top.get('.p-sheet-panel').element as HTMLElement).style.top).toBe('calc(64px)')
   })
 
   it('ignores custom width for adaptive right sheets', () => {
@@ -192,7 +195,7 @@ describe('PSheet.vue', () => {
       props: { show: true, index: 1 }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 96px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 32px)')
     expect(panel.style.width).toBe('auto')
   })
 
@@ -201,7 +204,7 @@ describe('PSheet.vue', () => {
       props: { show: true }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 16px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 0px)')
     expect(panel.style.width).toBe('auto')
   })
 

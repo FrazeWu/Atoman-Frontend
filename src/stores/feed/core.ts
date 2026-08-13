@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type {
@@ -48,7 +48,7 @@ export const createFeedCoreState = () => {
       return false
     }
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (
@@ -57,7 +57,7 @@ export const createFeedCoreState = () => {
         || authStore.token !== token
       ) return false
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (
           generation !== subscriptionsRequestGeneration
           || authStore.user?.uuid !== userId
@@ -82,7 +82,7 @@ export const createFeedCoreState = () => {
       return false
     }
     try {
-      const res = await apiRequest(`${api.url}/feed/groups`, {
+      const res = await apiRequestResult(`${api.url}/feed/groups`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (
@@ -91,7 +91,7 @@ export const createFeedCoreState = () => {
         || authStore.token !== token
       ) return false
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (
           generation !== groupsRequestGeneration
           || authStore.user?.uuid !== userId
@@ -109,7 +109,7 @@ export const createFeedCoreState = () => {
   const createGroup = async (name: string) => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/groups`, {
+      const res = await apiRequestResult(`${api.url}/feed/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ name }),
@@ -127,7 +127,7 @@ export const createFeedCoreState = () => {
   const updateGroup = async (id: string, name: string) => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/groups/${id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/groups/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ name }),
@@ -145,7 +145,7 @@ export const createFeedCoreState = () => {
   const deleteGroup = async (id: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/groups/${id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/groups/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -167,11 +167,11 @@ export const createFeedCoreState = () => {
     }
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/star-groups`, {
+      const res = await apiRequestResult(`${api.url}/feed/star-groups`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (generation !== sessionGeneration) return
         starGroups.value = data.data || []
       }
@@ -185,7 +185,7 @@ export const createFeedCoreState = () => {
     if (!authStore.isAuthenticated) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/star-groups`, {
+      const res = await apiRequestResult(`${api.url}/feed/star-groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ name }),
@@ -213,7 +213,7 @@ export const createFeedCoreState = () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${id}`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
@@ -231,7 +231,7 @@ export const createFeedCoreState = () => {
   const setSubscriptionGroup = async (subId: string, groupId: string | null): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subId}/group`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subId}/group`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ group_id: groupId }),
@@ -248,7 +248,7 @@ export const createFeedCoreState = () => {
   const subscribe = async (targetType: string, targetId: string, title?: string) => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,7 +265,7 @@ export const createFeedCoreState = () => {
   const unsubscribe = async (subscriptionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -283,7 +283,7 @@ export const createFeedCoreState = () => {
     if (!authStore.isAuthenticated) return false
     const generation = sessionGeneration
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}/health`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}/health`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -303,7 +303,7 @@ export const createFeedCoreState = () => {
     const generation = sessionGeneration
     healthChecking.value = true
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/health/check-all`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/health/check-all`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -325,11 +325,11 @@ export const createFeedCoreState = () => {
     const generation = sessionGeneration
     syncingSubscriptionIds.value.add(subscriptionId)
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/${subscriptionId}/sync`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/${subscriptionId}/sync`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
-      const payload = await res.json().catch(() => ({}))
+      const payload = res.data
       if (generation !== sessionGeneration) return null
       if (!res.ok) {
         const failed: SubscriptionSyncResult = {
@@ -363,11 +363,11 @@ export const createFeedCoreState = () => {
     const generation = sessionGeneration
     syncingAllSubscriptions.value = true
     try {
-      const res = await apiRequest(`${api.url}/feed/subscriptions/sync-all`, {
+      const res = await apiRequestResult(`${api.url}/feed/subscriptions/sync-all`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
-      const payload = await res.json().catch(() => ({}))
+      const payload = res.data
       if (generation !== sessionGeneration) return null
       if (!res.ok) return null
       const summary = (payload.data ?? payload) as SubscriptionSyncSummary

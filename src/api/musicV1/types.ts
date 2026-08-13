@@ -29,6 +29,14 @@ export type MusicAlbumImportTrack = {
   origin: string;
   discNumber?: number;
   trackNumber?: number;
+  lyrics?: {
+    content: string;
+    translation: string;
+    format: MusicLyricsFormat;
+    language: string;
+    edit_summary: string;
+  };
+  lyricsSource?: "local" | "lrclib" | string;
 };
 
 export type MusicAlbumImportCommitStageName = {
@@ -43,6 +51,7 @@ export type MusicAlbumImportCommitTrack = {
   title: string;
   disc_number: number;
   track_number: number;
+  audio_url?: string;
   lyrics?: {
     content: string;
     translation: string;
@@ -157,6 +166,10 @@ export type MusicAlbumImport = {
   derivedAlbumTitle: string;
   derivedCover: string;
   derivedTracks: MusicAlbumImportTrack[];
+  derivedReleaseDate?: string;
+  derivedAlbumType?: string;
+  metadataSourceUrl?: string;
+  missingArtists?: string[];
   lastSyncedAt: string;
   errorMessage: string;
   inputMode: MusicAlbumImportInputMode;
@@ -179,6 +192,7 @@ export type MusicAlbumImportMultipartPart = {
 
 export type CreateMusicAlbumImportInput = {
   artistId?: string | null;
+  artistName?: string;
   inputMode?: MusicAlbumImportInputMode;
 };
 

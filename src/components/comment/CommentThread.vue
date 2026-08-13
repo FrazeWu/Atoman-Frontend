@@ -10,6 +10,7 @@
       :marked-comment-id="markedCommentId"
       :mark-label="markLabel"
       :like-pending="likePending(root.id)"
+      :action-pending="actionPending(root.id) || mutationPending"
       @seek="$emit('seek', $event)"
       @like="$emit('like', root.id)"
       @reply="replyingTo = root"
@@ -33,6 +34,7 @@
         :marked-comment-id="markedCommentId"
         :mark-label="markLabel"
         :like-pending="likePending(reply.id)"
+        :action-pending="actionPending(reply.id) || mutationPending"
         @seek="$emit('seek', $event)"
         @like="$emit('like', reply.id)"
         @reply="replyingTo = reply"
@@ -67,9 +69,11 @@
       class="comment-thread__composer"
       :reply-to-name="replyingTo.author.display_name || replyingTo.author.username"
       :current-time="currentTime"
+      :initial-content="replyDraftContent"
       submit-label="回复"
       :submitting="mutationPending"
       @cancel="replyingTo = null"
+      @content-change="scheduleReplyDraft"
       @submit="submitReply"
     />
     <CommentComposer
@@ -89,13 +93,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { MessagesSquare } from 'lucide-vue-next'
 
 import type { CommentDTO, CreateCommentInput } from '@/api/comments'
 import CommentComposer from './CommentComposer.vue'
 import CommentItem from './CommentItem.vue'
 import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
+import { useCommentDraft } from '@/composables/useCommentDraft'
 
 defineOptions({ name: 'CommentThread' })
 
@@ -114,6 +119,8 @@ const props = withDefaults(defineProps<{
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
   likePending?: (id: string) => boolean
+  actionPending?: (id: string) => boolean
+  draftKeyFor?: (commentId: string) => string
   onReply?: (comment: CommentDTO, input: CreateCommentInput) => Promise<unknown>
   onEdit?: (comment: CommentDTO, input: CreateCommentInput) => Promise<unknown>
 }>(), {
@@ -130,6 +137,8 @@ const props = withDefaults(defineProps<{
   markLabel: '置顶',
   currentTime: undefined,
   likePending: () => false,
+  actionPending: () => false,
+  draftKeyFor: undefined,
   onReply: undefined,
   onEdit: undefined,
 })
@@ -149,9 +158,26 @@ const replyingTo = ref<CommentDTO | null>(null)
 const editing = ref<CommentDTO | null>(null)
 const mutationPending = ref(false)
 const mutationError = ref('')
+const replyDraftContent = ref('')
+const commentDraft = useCommentDraft()
 const allReplies = computed(() => props.replies ?? props.root.replies)
 const visibleReplies = computed(() => props.expanded ? allReplies.value : allReplies.value.slice(0, 3))
 const showExpand = computed(() => !props.expanded && props.root.reply_count > visibleReplies.value.length)
+
+watch(replyingTo, (comment) => {
+  replyDraftContent.value = comment && props.draftKeyFor ? commentDraft.read(props.draftKeyFor(comment.id)) : ''
+})
+
+function actionPending(commentId: string) {
+  return props.actionPending?.(commentId) ?? false
+}
+
+function scheduleReplyDraft(content: string) {
+  replyDraftContent.value = content
+  if (replyingTo.value && props.draftKeyFor) {
+    commentDraft.schedule(props.draftKeyFor(replyingTo.value.id), content)
+  }
+}
 
 async function submitReply(input: CreateCommentInput) {
   if (!replyingTo.value) return
@@ -160,6 +186,8 @@ async function submitReply(input: CreateCommentInput) {
   mutationError.value = ''
   try {
     await props.onReply?.(submitted, input)
+    if (props.draftKeyFor) commentDraft.clear(props.draftKeyFor(submitted.id))
+    replyDraftContent.value = ''
     if (replyingTo.value?.id === submitted.id) replyingTo.value = null
   } catch (error) {
     if (replyingTo.value?.id === submitted.id) {

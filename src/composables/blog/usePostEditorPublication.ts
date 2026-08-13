@@ -1,6 +1,6 @@
 import { nextTick, type ComputedRef, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
@@ -66,12 +66,12 @@ export function usePostEditorPublication({
     try {
       const postId = String(route.params.id || '')
       if (!postId) return
-      const response = await apiRequest(api.blog.post(postId), {
+      const response = await apiRequestResult(api.blog.post(postId), {
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
       })
       if (!response.ok) return
 
-      const data = await response.json()
+      const data = response.data
       const post = data.data || data
       form.value = {
         title: post.title,
@@ -119,7 +119,7 @@ export function usePostEditorPublication({
     const payload = { ...form.value, status }
     try {
       const postId = String(route.params.id || '')
-      const response = await apiRequest(
+      const response = await apiRequestResult(
         isEdit.value ? api.blog.post(postId) : api.blog.posts,
         {
           method: isEdit.value ? 'PUT' : 'POST',
@@ -132,7 +132,7 @@ export function usePostEditorPublication({
         },
       )
       if (!response.ok) {
-        const responseError = await response.json()
+        const responseError = response.data
         error.value = referencePublishErrorMessage(
           responseError,
           typeof responseError.error === 'string' ? responseError.error : '保存失败，请重试',
@@ -140,7 +140,7 @@ export function usePostEditorPublication({
         return null
       }
 
-      const data = await response.json()
+      const data = response.data
       const savedPost = data.data || data
       savedPostId.value = String(savedPost.id)
       await clearAllDrafts()

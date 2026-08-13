@@ -6,6 +6,7 @@ import { apiRequestEnvelope } from '@/api/client'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
@@ -35,6 +36,8 @@ const { getNoteState, updateNoteState } = useShortNoteSync()
 
 const note = ref<ShortNote | null>(null)
 const loading = ref(false)
+const deleting = ref(false)
+const deletePending = ref(false)
 const errorMessage = ref('')
 
 const showLightbox = ref(false)
@@ -89,8 +92,14 @@ function handleCommentCountChange(count: number) {
   updateNoteState(noteId.value, { commentCount: count })
 }
 
-async function remove() {
-  if (!note.value || !window.confirm('确定删除这条短话吗？')) return
+function remove() {
+  if (!note.value || deleting.value) return
+  deletePending.value = true
+}
+
+async function confirmRemove() {
+  if (!note.value || deleting.value) return
+  deleting.value = true
   try {
     await apiRequestEnvelope(api.blog.shortNote(note.value.id), {
       method: 'DELETE',
@@ -99,6 +108,9 @@ async function remove() {
     sheets.closeLayer(props.layer.key)
   } catch {
     errorMessage.value = '删除失败，请重试'
+  } finally {
+    deleting.value = false
+    deletePending.value = false
   }
 }
 
@@ -216,6 +228,17 @@ watch(noteId, () => void loadNote(), { immediate: true })
       :index="lightboxIndex"
     />
   </PSheet>
+
+  <PConfirm
+    :show="deletePending"
+    title="删除短话"
+    message="确定删除这条短话吗？"
+    confirm-text="删除"
+    danger
+    :loading="deleting"
+    @confirm="confirmRemove"
+    @cancel="deletePending = false"
+  />
 </template>
 
 <style scoped>

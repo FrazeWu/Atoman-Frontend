@@ -4,12 +4,12 @@ export const settingRoutes: RouteRecordRaw[] = [
   {
     path: '/site/setting',
     component: () => import('@/views/setting/SettingManagementLayout.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, authLayout: true },
+    meta: { requiresAuth: true, authLayout: true },
     children: [
-      { path: '', component: () => import('@/views/setting/SettingAccessView.vue') },
-      { path: 'community', component: () => import('@/views/setting/SettingCommunityView.vue') },
-      { path: 'users', component: () => import('@/views/setting/SettingUsersView.vue') },
-      { path: 'subscriptions', component: () => import('@/views/setting/SettingSubscriptionsView.vue') },
+      { path: '', component: () => import('@/views/setting/SettingAccessView.vue'), meta: { requiresAdmin: true } },
+      { path: 'community', component: () => import('@/views/setting/SettingCommunityView.vue'), meta: { requiresModerator: true } },
+      { path: 'users', component: () => import('@/views/setting/SettingUsersView.vue'), meta: { requiresAdmin: true } },
+      { path: 'subscriptions', component: () => import('@/views/setting/SettingSubscriptionsView.vue'), meta: { requiresAdmin: true } },
     ],
   },
 ]

@@ -37,6 +37,16 @@ export interface VideoImportTask {
   updated_at: string
 }
 
+export interface VideoSubscriptionPage {
+  data: Video[]
+  meta: { page: number; page_size: number; total: number; has_more: boolean }
+}
+
+export interface VideoRecommendationPage<T> {
+  data: T[]
+  meta: { page: number; page_size: number; total: number; has_more: boolean }
+}
+
 const videoUrl = (path: string) => `${useApiUrl()}/videos${path}`
 const authHeaders = (token?: string): Record<string, string> => (
   token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : {}
@@ -47,8 +57,11 @@ export const getVideo = <T = Video>(id: string, token?: string) => (
   apiRequestJson<T>(videoUrl(`/${id}`), token ? { headers: authHeaders(token) } : undefined)
 )
 export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUrl(`/${id}/recommended`))
-export const getVideoRecommendations = <T>(mode: string) => (
-  apiRequestJson<{ data?: T[] }>(videoUrl(`/recommend/items?mode=${mode}&page=1&page_size=8`))
+export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8) => (
+  apiRequestJson<VideoRecommendationPage<T>>(videoUrl(`/recommend/items?mode=${mode}&page=${page}&page_size=${pageSize}`))
+)
+export const getVideoSubscriptions = (page = 1, pageSize = 20) => (
+  apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`))
 )
 export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${id}/view`), { method: 'POST' })
 

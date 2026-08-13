@@ -133,25 +133,7 @@
         </table>
       </div>
 
-      <footer v-if="meta.total > 0" class="setting-users__pagination">
-        <span>第 {{ meta.page }} 页，共 {{ meta.total }} 位用户</span>
-        <div>
-          <PButton
-            variant="secondary"
-            size="sm"
-            :disabled="meta.page <= 1 || loading"
-            aria-label="上一页"
-            @click="changePage(meta.page - 1)"
-          ><ChevronLeft :size="16" aria-hidden="true" />上一页</PButton>
-          <PButton
-            variant="secondary"
-            size="sm"
-            :disabled="!meta.has_more || loading"
-            aria-label="下一页"
-            @click="changePage(meta.page + 1)"
-          >下一页<ChevronRight :size="16" aria-hidden="true" /></PButton>
-        </div>
-      </footer>
+      <PaginationBar :meta="meta" :loading="loading" @change="changePage" />
     </PSurface>
 
     <AdminUserAuditView v-else />
@@ -256,7 +238,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
-  ChevronLeft,
   ChevronRight,
   Eye,
   EyeOff,
@@ -287,6 +268,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -605,16 +587,13 @@ onMounted(() => {
 .setting-users__heading,
 .setting-users__views,
 .setting-users__filters,
-.setting-users__pagination,
-.setting-users__pagination > div,
 .setting-users__identity,
 .setting-users__actions {
   display: flex;
   align-items: center;
 }
 
-.setting-users__heading,
-.setting-users__pagination {
+.setting-users__heading {
   justify-content: space-between;
   gap: 1rem;
 }
@@ -745,8 +724,7 @@ onMounted(() => {
 }
 
 .setting-users__identity small,
-.setting-users__unavailable,
-.setting-users__pagination {
+.setting-users__unavailable {
   color: var(--a-color-text-secondary);
   font-size: 0.8rem;
 }
@@ -787,8 +765,7 @@ onMounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.setting-users__actions,
-.setting-users__pagination > div {
+.setting-users__actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -810,14 +787,6 @@ onMounted(() => {
 
 .setting-users__icon-button:hover {
   background: var(--a-color-surface-muted);
-}
-
-.setting-users__pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1.25rem;
-  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .setting-users__form {
@@ -889,8 +858,7 @@ onMounted(() => {
 }
 
 @media (max-width: 720px) {
-  .setting-users__heading,
-  .setting-users__pagination {
+  .setting-users__heading {
     align-items: stretch;
     flex-direction: column;
     gap: 0.85rem;
@@ -965,9 +933,5 @@ onMounted(() => {
     width: 100%;
   }
 
-  .setting-users__pagination > div {
-    justify-content: space-between;
-    width: 100%;
-  }
 }
 </style>

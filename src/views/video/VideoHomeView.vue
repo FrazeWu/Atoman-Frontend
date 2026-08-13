@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { getVideo, getVideoRecommendations, listVideos } from '@/api/video'
+import { getVideoRecommendations, listVideos } from '@/api/video'
 import { computed, ref, onMounted, watch } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import type { Video } from '@/types'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
@@ -16,6 +17,7 @@ const loading = ref(false)
 const recommendationLoading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
+const recommendationMeta = ref({ page: 1, page_size: 8, total: 0, has_more: false })
 const recommendationOptions = [
   { label: '热度', value: 'hot' },
   { label: '精选', value: 'featured' },
@@ -26,8 +28,10 @@ type RecommendedVideoPayload = {
   title: string
   image_url?: string
   target_path?: string
+  video?: Video
 }
 let fetchVideosSeq = 0
+let fetchRecommendationsSeq = 0
 
 async function fetchVideos() {
   const seq = ++fetchVideosSeq
@@ -41,17 +45,33 @@ async function fetchVideos() {
 }
 
 async function fetchRecommendedVideos() {
+  const seq = ++fetchRecommendationsSeq
   recommendationLoading.value = true
   try {
-    const data = await getVideoRecommendations<RecommendedVideoPayload>(recommendationMode.value)
-    recommendedVideos.value = Array.isArray(data.data)
-      ? await Promise.all(data.data.map(item => getVideo(item.id)))
-      : []
+    const data = await getVideoRecommendations<RecommendedVideoPayload>(
+      recommendationMode.value,
+      recommendationMeta.value.page,
+      recommendationMeta.value.page_size,
+    )
+    if (seq !== fetchRecommendationsSeq) return
+    recommendedVideos.value = data.data.flatMap(item => item.video ? [item.video] : [])
+    recommendationMeta.value = data.meta
   } catch {
-    recommendedVideos.value = []
+    if (seq === fetchRecommendationsSeq) recommendedVideos.value = []
   } finally {
-    recommendationLoading.value = false
+    if (seq === fetchRecommendationsSeq) recommendationLoading.value = false
   }
+}
+
+function changeRecommendationPage(page: number) {
+  if (page < 1 || page === recommendationMeta.value.page || recommendationLoading.value) return
+  recommendationMeta.value = { ...recommendationMeta.value, page }
+  void fetchRecommendedVideos()
+}
+
+function changeRecommendationMode() {
+  recommendationMeta.value = { ...recommendationMeta.value, page: 1 }
+  void fetchRecommendedVideos()
 }
 
 onMounted(() => {
@@ -76,7 +96,7 @@ watch(sort, fetchVideos)
         <PSegmentedControl
           v-model="recommendationMode"
           :options="recommendationOptions"
-          @change="() => void fetchRecommendedVideos()"
+          @change="changeRecommendationMode"
         />
       </div>
 
@@ -102,6 +122,7 @@ watch(sort, fetchVideos)
         <div v-else class="vh-grid vh-grid--recommendation">
           <PVideoCard v-for="video in recommendedVideos" :key="video.id" :video="video" />
         </div>
+        <PaginationBar :meta="recommendationMeta" :loading="recommendationLoading" @change="changeRecommendationPage" />
       </PContentProgress>
     </section>
 

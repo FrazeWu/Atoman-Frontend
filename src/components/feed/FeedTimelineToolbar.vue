@@ -11,8 +11,8 @@
   <div class="feed-actions">
     <form class="feed-search" data-test="feed-search-form" @submit.prevent="emit('search')">
       <input v-model="searchValue" data-test="feed-search-input" class="feed-search__input" type="search" placeholder="搜索标题、来源、摘要" aria-label="搜索订阅内容" />
-      <PPress type="submit" label="搜索" />
-      <PPress v-if="activeSearchLabel" variant="secondary" data-test="feed-search-clear" label="清空" @click="emit('clear-search')" />
+      <PButton type="submit" label="搜索" />
+      <PButton v-if="activeSearchLabel" variant="secondary" data-test="feed-search-clear" label="清空" @click="emit('clear-search')" />
     </form>
     <div class="source-type-filters" aria-label="来源类型筛选"><PSegmentedControl v-model="sourceTypeValue" :options="sourceTypeFilterOptions" /></div>
     <label v-if="!querySourceId" class="feed-merge-duplicates">
@@ -24,7 +24,7 @@
     </div>
     <button v-if="authenticated" class="filter-toggle-btn" :class="{ active: unreadOnly }" :title="unreadOnly ? '显示全部' : '只看未读'" @click="emit('toggle-unread')"><Filter :size="20" aria-hidden="true" /></button>
     <div v-if="authenticated" style="width: 2rem" />
-    <PPress v-if="authenticated" variant="secondary" :loading="markingAllRead" loading-text="处理中..." :label="bulkReadLabel" @click="emit('toggle-all-read')" />
+    <PButton v-if="authenticated" variant="secondary" :loading="markingAllRead" loading-text="处理中..." :label="bulkReadLabel" @click="emit('toggle-all-read')" />
   </div>
 
   <div v-if="hasNewTimelineContent" class="feed-new-content-region" aria-live="polite">
@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Filter, RefreshCw } from 'lucide-vue-next'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import type { FeedSourceTypeFilter } from '@/composables/feed/useFeedTimelinePresentation'
 

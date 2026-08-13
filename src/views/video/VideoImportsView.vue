@@ -13,6 +13,7 @@ import {
   type VideoImportTask,
 } from '@/api/video'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { useVideoImportUpload } from '@/composables/useVideoImportUpload'
 import { useAuthStore } from '@/stores/auth'
@@ -28,6 +29,7 @@ const imports = ref<VideoImportTask[]>([])
 const loading = ref(false)
 const actionBusy = ref('')
 const error = ref('')
+const pendingConfirmation = ref<'cancel' | 'delete' | null>(null)
 const activeGroup = ref<ImportGroup>('active')
 const selectedId = ref(typeof route.query.task === 'string' ? route.query.task : '')
 const resumeInput = ref<HTMLInputElement | null>(null)
@@ -53,6 +55,15 @@ const groupTabs: Array<{ value: ImportGroup; label: string }> = [
 const statusLabels: Record<VideoImportStatus, string> = {
   pending_upload: '等待上传', uploading: '上传中', completing: '正在完成', awaiting_submit: '等待提交',
   publishing: '正在发布', published: '已发布', draft: '已保存草稿', scheduled: '已定时', failed: '需要处理', canceled: '已取消',
+}
+
+function statusDescription(task: VideoImportTask) {
+  if (task.status === 'awaiting_submit') return '文件已上传，可以继续编辑或发布'
+  if (task.status === 'publishing') return '资料已提交，正在创建视频'
+  if (task.status === 'published') return '视频已发布，后台会继续生成播放预览'
+  if (task.status === 'failed') return task.error_message || '发布失败，可以重试'
+  if (task.status === 'canceled') return '任务已取消'
+  return ''
 }
 
 onMounted(() => void loadImports())
@@ -106,17 +117,28 @@ async function resumeUpload(event: Event) {
 }
 
 async function cancelTask() {
-  if (!selected.value || !window.confirm('确认取消这个导入任务？')) return
+  if (!selected.value || actionBusy.value) return
+  pendingConfirmation.value = 'cancel'
+}
+
+async function confirmPendingAction() {
+  const action = pendingConfirmation.value
+  const task = selected.value
+  if (!action || !task || actionBusy.value) return
+  pendingConfirmation.value = null
+  if (action === 'cancel') {
   actionBusy.value = 'cancel'
   try {
-    uploader.stop(selected.value.id)
-    await cancelVideoImport(selected.value.id, auth.token ?? undefined)
+    uploader.stop(task.id)
+    await cancelVideoImport(task.id, auth.token ?? undefined)
     await loadImports(true)
   } catch (cause) {
     error.value = errorMessage(cause, '取消失败')
   } finally {
     actionBusy.value = ''
   }
+  return
+}
 }
 
 async function retryTask() {
@@ -147,10 +169,17 @@ async function publishTask() {
 }
 
 async function deleteRecord() {
-  if (!selected.value || !window.confirm('确认删除这条导入记录？')) return
+  if (!selected.value || actionBusy.value) return
+  pendingConfirmation.value = 'delete'
+}
+
+async function confirmDeleteRecord() {
+  const task = selected.value
+  if (!task || actionBusy.value) return
+  pendingConfirmation.value = null
   actionBusy.value = 'delete'
   try {
-    await deleteVideoImportRecord(selected.value.id, auth.token ?? undefined)
+    await deleteVideoImportRecord(task.id, auth.token ?? undefined)
     selectedId.value = ''
     await loadImports(true)
   } catch (cause) {
@@ -235,6 +264,10 @@ function formatDate(value: string) {
           <strong>{{ statusLabels[selected.status] }}</strong>
         </header>
 
+        <p v-if="statusDescription(selected)" class="video-imports__status-hint">
+          {{ statusDescription(selected) }}
+        </p>
+
         <div class="video-imports__progress" :aria-label="`上传进度 ${selectedProgress}%`">
           <div><span>上传进度</span><strong>{{ selectedProgress }}%</strong></div>
           <div class="video-imports__progress-track"><span :style="{ width: `${selectedProgress}%` }" /></div>
@@ -263,6 +296,16 @@ function formatDate(value: string) {
       </section>
     </div>
   </div>
+  <PConfirm
+    :show="pendingConfirmation !== null"
+    title="确认导入操作"
+    :message="pendingConfirmation === 'cancel' ? '确认取消这个导入任务？' : '确认删除这条导入记录？'"
+    :confirm-text="pendingConfirmation === 'cancel' ? '取消任务' : '删除记录'"
+    danger
+    :loading="Boolean(actionBusy)"
+    @confirm="pendingConfirmation === 'cancel' ? confirmPendingAction() : confirmDeleteRecord()"
+    @cancel="pendingConfirmation = null"
+  />
 </template>
 
 <style scoped>
@@ -287,6 +330,7 @@ function formatDate(value: string) {
 .video-imports__detail h2 { font-size: 1.125rem; }
 .video-imports__detail header p { margin-top: .25rem; color: var(--a-color-muted); }
 .video-imports__detail header > strong { flex: none; font-size: .875rem; }
+.video-imports__status-hint { color: var(--a-color-muted); font-size: .875rem; }
 .video-imports__progress { display: grid; gap: .5rem; }
 .video-imports__progress > div:first-child { display: flex; justify-content: space-between; }
 .video-imports__progress-track { height: 6px; overflow: hidden; background: var(--a-color-surface-muted); }

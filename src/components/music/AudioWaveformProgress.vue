@@ -9,55 +9,60 @@
     @pointercancel="stopSeek"
     @pointerleave="leavePointer"
   >
-    <svg
-      v-if="peaks.length"
-      class="waveform-shape"
-      viewBox="0 0 1000 100"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <path class="waveform-shape__unplayed" :d="waveformPath" />
-      <path
-        class="waveform-shape__played"
-        :d="waveformPath"
-        :style="{ clipPath: `inset(0 ${100 - progressRatio * 100}% 0 0)` }"
-      />
-    </svg>
-    <div v-else class="waveform-fallback-line" aria-hidden="true">
-      <span :style="{ width: `${progressRatio * 100}%` }" />
-    </div>
-    <div class="waveform-mobile-line" aria-hidden="true">
-      <span :style="{ width: `${progressRatio * 100}%` }" />
-    </div>
-
-    <span
-      class="waveform-playhead"
-      aria-hidden="true"
-      :style="{ left: `${progressRatio * 100}%` }"
-    />
-    <template v-if="hoverRatio !== null">
-      <span class="waveform-hover-line" aria-hidden="true" :style="{ left: `${hoverRatio * 100}%` }" />
-      <span
-        class="waveform-time waveform-time--hover"
-        :class="timePositionClass(hoverRatio)"
-        :style="{ left: `${hoverRatio * 100}%` }"
+    <div ref="trackRef" class="waveform-track">
+      <svg
+        v-if="peaks.length"
+        class="waveform-shape"
+        viewBox="0 0 1000 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
       >
-        {{ formatTime(hoverRatio * duration) }}
-      </span>
-    </template>
+        <path class="waveform-shape__unplayed" :d="waveformPath" />
+        <path
+          class="waveform-shape__played"
+          :d="waveformPath"
+          :style="{ clipPath: `inset(0 ${100 - progressRatio * 100}% 0 0)` }"
+        />
+      </svg>
+      <div v-else class="waveform-fallback-line" aria-hidden="true">
+        <span :style="{ width: `${progressRatio * 100}%` }" />
+      </div>
+      <div class="waveform-mobile-line" aria-hidden="true">
+        <span :style="{ width: `${progressRatio * 100}%` }" />
+      </div>
 
-    <input
-      class="waveform-range"
-      type="range"
-      min="0"
-      :max="duration || 0"
-      step="0.1"
-      :value="currentTime"
-      :disabled="!duration"
-      aria-label="播放进度"
-      :aria-valuetext="`${formatTime(currentTime)} / ${formatTime(duration)}`"
-      @input="handleRangeInput"
-    />
+      <span
+        class="waveform-playhead"
+        aria-hidden="true"
+        :style="{ left: `${progressRatio * 100}%` }"
+      />
+      <template v-if="hoverRatio !== null">
+        <span class="waveform-hover-line" aria-hidden="true" :style="{ left: `${hoverRatio * 100}%` }" />
+        <span
+          class="waveform-time waveform-time--hover"
+          :class="timePositionClass(hoverRatio)"
+          :style="{ left: `${hoverRatio * 100}%` }"
+        >
+          {{ formatTime(hoverRatio * duration) }}
+        </span>
+      </template>
+
+      <input
+        class="waveform-range"
+        type="range"
+        min="0"
+        :max="duration || 0"
+        step="0.1"
+        :value="currentTime"
+        :disabled="!duration"
+        aria-label="播放进度"
+        :aria-valuetext="`${formatTime(currentTime)} / ${formatTime(duration)}`"
+        @input="handleRangeInput"
+      />
+    </div>
+    <output class="waveform-duration" data-testid="waveform-duration" aria-label="播放时间">
+      {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+    </output>
   </div>
 </template>
 
@@ -81,6 +86,7 @@ const emit = defineEmits<{
 }>()
 
 const rootRef = ref<HTMLElement | null>(null)
+const trackRef = ref<HTMLElement | null>(null)
 const dragging = ref(false)
 const hoverRatio = ref<number | null>(null)
 const waveformPeakCount = 280
@@ -130,7 +136,8 @@ function timePositionClass(ratio: number) {
 }
 
 function pointerRatio(event: PointerEvent) {
-  const rect = rootRef.value?.getBoundingClientRect()
+  const trackRect = trackRef.value?.getBoundingClientRect()
+  const rect = trackRect?.width ? trackRect : rootRef.value?.getBoundingClientRect()
   if (!rect?.width) return 0
   return Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
 }
@@ -175,11 +182,21 @@ function handleRangeInput(event: Event) {
   position: relative;
   width: 100%;
   height: 34px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
   cursor: pointer;
   touch-action: none;
   user-select: none;
+}
+
+.waveform-track {
+  position: relative;
+  min-width: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
 }
 
 .waveform-shape {
@@ -294,6 +311,18 @@ function handleRangeInput(event: Event) {
   pointer-events: none;
 }
 
+.waveform-duration {
+  min-width: 74px;
+  color: var(--a-color-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: right;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .waveform-range:focus-visible + * {
   outline: none;
 }
@@ -305,6 +334,11 @@ function handleRangeInput(event: Event) {
 
 @media (max-width: 767px) {
   .waveform-progress {
+    height: 24px;
+    gap: 8px;
+  }
+
+  .waveform-track {
     height: 24px;
   }
 
@@ -327,8 +361,11 @@ function handleRangeInput(event: Event) {
     background: var(--a-color-primary);
   }
 
-  .waveform-time {
-    display: none;
+  .waveform-time { display: none; }
+
+  .waveform-duration {
+    min-width: 68px;
+    font-size: 9px;
   }
 }
 

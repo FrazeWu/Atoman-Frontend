@@ -74,8 +74,8 @@
       <div v-if="addError" class="a-error mb-6">{{ addError }}</div>
 
       <div class="form-actions">
-        <PPress variant="secondary" label="取消" @click="$emit('close')" />
-        <PPress
+        <PButton variant="secondary" label="取消" @click="$emit('close')" />
+        <PButton
           :loading="submitting"
           loading-text="处理中..."
           label="确认订阅"
@@ -99,7 +99,7 @@ import type {
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useFeedStore } from '@/stores/feed'
 

@@ -63,7 +63,7 @@ describe('FeedStarredView', () => {
             emits: ['click'],
             template: '<button @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PPress: true,
+          PButton: true,
           PShortcutHints: true,
           FeedArticleSheet: true,
           FeedTimelineFooter: true,
@@ -75,11 +75,13 @@ describe('FeedStarredView', () => {
     const feedStore = useFeedStore()
     expect(feedStore.starredItemIds.has('feed-item-1')).toBe(true)
 
-    await wrapper.get('button').trigger('click')
+    await wrapper.get('article button').trigger('click')
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/feed/timeline/star', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/timeline/star', expect.objectContaining({
       method: 'POST',
+      body: JSON.stringify({ feed_item_id: 'feed-item-1' }),
+      credentials: 'include',
     }))
     await vi.waitFor(() => expect(feedStore.starredItemIds.has('feed-item-1')).toBe(false))
   })

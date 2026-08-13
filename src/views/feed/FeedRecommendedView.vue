@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -525,7 +525,7 @@ onMounted(async () => {
       title="探索订阅源"
       mb="1.25rem"
     >
-      <template #action><PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
+      <template #action><PButton variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
     </PPageHeader>
 
     <div class="filters-wrap" data-test="feed-filter-wrap">
@@ -589,7 +589,7 @@ onMounted(async () => {
             <span>全选当前页</span>
           </label>
           <input v-model="externalSearch" data-test="external-source-search" class="external-source-search" type="search" placeholder="搜索订阅源" />
-          <PPress v-if="authStore.isAuthenticated && selectedExternalSourceIds.length" label="订阅选中来源" :loading="externalLoading" @click="subscribeSelectedExternalSources" />
+          <PButton v-if="authStore.isAuthenticated && selectedExternalSourceIds.length" label="订阅选中来源" :loading="externalLoading" @click="subscribeSelectedExternalSources" />
         </div>
         <PEmpty v-if="!externalLoading && !externalSources.length" title="暂无订阅源" />
         <div v-else class="card-stack">

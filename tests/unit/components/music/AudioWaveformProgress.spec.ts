@@ -37,6 +37,7 @@ describe('AudioWaveformProgress', () => {
 
     const range = wrapper.get<HTMLInputElement>('[aria-label="播放进度"]')
     expect(range.attributes('aria-valuetext')).toBe('0:15 / 1:40')
+    expect(wrapper.get('[data-testid="waveform-duration"]').text()).toBe('0:15 / 1:40')
     await range.setValue(25)
     expect(wrapper.emitted('seek')?.at(-1)?.[0]).toBe(25)
   })

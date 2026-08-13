@@ -32,7 +32,7 @@ describe('VideoHomeView', () => {
       if (url.endsWith('/videos?sort=latest')) return latest.promise
       if (url.endsWith('/videos?sort=popular')) return popular.promise
       if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
-        return Promise.resolve(makeJsonResponse({ data: [] }))
+        return Promise.resolve(makeJsonResponse({ data: [], meta: { page: 1, page_size: 8, total: 0, has_more: false } }))
       }
       throw new Error(`unexpected fetch: ${url}`)
     }))
@@ -70,16 +70,22 @@ describe('VideoHomeView', () => {
         return makeJsonResponse([{ id: 'latest-1', title: '最新视频' }])
       }
       if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
-        return makeJsonResponse({ data: [{ id: 'rec-1', title: '推荐视频', target_path: '/videos/watch/rec-1', content_type: 'video', score_label: '热度 92' }] })
-      }
-      if (url.endsWith('/videos/rec-1')) {
-        return makeJsonResponse({ id: 'rec-1', title: '推荐视频', created_at: '2026-08-12T00:00:00Z', view_count: 3, channel: { name: '视频频道' } })
+        return makeJsonResponse({
+          data: [{
+            id: 'rec-1', title: '推荐视频', target_path: '/videos/watch/rec-1', content_type: 'video', score_label: '热度 92',
+            video: { id: 'rec-1', title: '推荐视频', created_at: '2026-08-12T00:00:00Z', view_count: 3, channel: { name: '视频频道' } },
+          }],
+          meta: { page: 1, page_size: 8, total: 1, has_more: false },
+        })
       }
       if (url.includes('/videos/recommend/items?mode=featured&page=1&page_size=8')) {
-        return makeJsonResponse({ data: [{ id: 'rec-2', title: '精选视频', target_path: '/videos/watch/rec-2', content_type: 'video', score_label: '精选 88' }] })
-      }
-      if (url.endsWith('/videos/rec-2')) {
-        return makeJsonResponse({ id: 'rec-2', title: '精选视频', created_at: '2026-08-11T00:00:00Z', view_count: 2, channel: { name: '精选频道' } })
+        return makeJsonResponse({
+          data: [{
+            id: 'rec-2', title: '精选视频', target_path: '/videos/watch/rec-2', content_type: 'video', score_label: '精选 88',
+            video: { id: 'rec-2', title: '精选视频', created_at: '2026-08-11T00:00:00Z', view_count: 2, channel: { name: '精选频道' } },
+          }],
+          meta: { page: 1, page_size: 8, total: 1, has_more: false },
+        })
       }
       throw new Error(`unexpected fetch: ${url}`)
     })
@@ -101,12 +107,54 @@ describe('VideoHomeView', () => {
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
     expect(requestedUrls).toContain('/api/v1/videos/recommend/items?mode=hot&page=1&page_size=8')
-    expect(requestedUrls).toContain('/api/v1/videos/rec-1')
+    expect(requestedUrls).not.toContain('/api/v1/videos/rec-1')
 
     await wrapper.findAll('button').find(button => button.text() === '精选')!.trigger('click')
     await flushPromises()
 
     const requestedAfterSwitch = fetchMock.mock.calls.map(([input]) => String(input))
     expect(requestedAfterSwitch).toContain('/api/v1/videos/recommend/items?mode=featured&page=1&page_size=8')
+  })
+
+  it('推荐列表翻页时请求下一页', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/videos?sort=latest')) return makeJsonResponse([])
+      if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
+        return makeJsonResponse({
+          data: [{ id: 'rec-1', title: '第一页', video: { id: 'rec-1', title: '第一页' } }],
+          meta: { page: 1, page_size: 8, total: 9, has_more: true },
+        })
+      }
+      if (url.includes('/videos/recommend/items?mode=hot&page=2&page_size=8')) {
+        return makeJsonResponse({
+          data: [{ id: 'rec-9', title: '第二页', video: { id: 'rec-9', title: '第二页' } }],
+          meta: { page: 2, page_size: 8, total: 9, has_more: false },
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(VideoHomeView, {
+      global: {
+        stubs: {
+          PButton: { template: '<button><slot /></button>' },
+          PPageHeader: { template: '<header />' },
+          PVideoCard: {
+            props: ['video'],
+            template: '<article data-testid="video-card">{{ video.title }}</article>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.find('button[aria-label="下一页"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toContain(
+      '/api/v1/videos/recommend/items?mode=hot&page=2&page_size=8',
+    )
+    expect(wrapper.text()).toContain('第二页')
   })
 })

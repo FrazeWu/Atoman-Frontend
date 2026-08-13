@@ -1,5 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -171,10 +171,9 @@ export function useFeedArticleBrowser({
       const headers: HeadersInit = authStore.isAuthenticated
         ? { Authorization: `Bearer ${authStore.token}` }
         : {}
-      const response = await apiRequest(`${apiURL}/feed/timeline?${params}`, { headers })
+      const response = await apiRequestResult(`${apiURL}/feed/timeline?${params}`, { headers })
       if (response.ok) {
-        const data = await response.json()
-        sourceArticles.value = data.data || []
+        sourceArticles.value = response.data.data || []
       }
     } catch (error) {
       reportError(error)

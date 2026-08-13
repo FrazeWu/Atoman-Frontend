@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { getVideoResource } from '@/api/video'
+import { getVideoResource, getVideoSubscriptions } from '@/api/video'
 import { onMounted, ref } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { useAuthStore } from '@/stores/auth'
 import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
+import { useContentLifecycle, type ContentNotificationPreference } from '@/composables/useContentLifecycle'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 
 type SubscriptionVideo = {
   id: string
@@ -28,6 +30,9 @@ const channelBookmarks = ref<SourceBookmark[]>([])
 const collectionBookmarks = ref<SourceBookmark[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+const notificationPreferences = ref<ContentNotificationPreference[]>([])
+const lifecycle = useContentLifecycle()
+const pageMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false })
 
 async function fetchJson<T>(path: string): Promise<T> {
   return getVideoResource<T>(path, authStore.token ?? undefined)
@@ -37,20 +42,42 @@ onMounted(async () => {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [videoItems, channelItems, collectionItems] = await Promise.all([
-      fetchJson<SubscriptionVideo[]>('/videos/subscriptions'),
+    const [videoPage, channelItems, collectionItems, preferences] = await Promise.all([
+      getVideoSubscriptions(),
       fetchJson<SourceBookmark[]>('/videos/channel-bookmarks'),
       fetchJson<SourceBookmark[]>('/videos/collection-bookmarks'),
+      lifecycle.listNotificationPreferences().catch(() => []),
     ])
-    videos.value = videoItems
+    videos.value = videoPage.data
+    pageMeta.value = videoPage.meta
     channelBookmarks.value = channelItems
     collectionBookmarks.value = collectionItems
+    notificationPreferences.value = preferences
   } catch {
     errorMessage.value = '订阅加载失败'
   } finally {
     loading.value = false
   }
 })
+
+async function changePage(page: number) {
+  if (page < 1 || page === pageMeta.value.page || loading.value) return
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const videoPage = await getVideoSubscriptions(page, pageMeta.value.page_size)
+    videos.value = videoPage.data
+    pageMeta.value = videoPage.meta
+  } catch {
+    errorMessage.value = '订阅加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+function notificationMode(sourceType: ContentNotificationPreference['source_type'], sourceId: string) {
+  return notificationPreferences.value.find(item => item.source_type === sourceType && item.source_id === sourceId)?.mode || 'feed_only'
+}
 </script>
 
 <template>
@@ -71,7 +98,11 @@ onMounted(async () => {
     <template v-else>
       <p v-if="loading" class="video-subscriptions-state">正在加载...</p>
       <p v-else-if="errorMessage" class="video-subscriptions-state video-subscriptions-state--error">{{ errorMessage }}</p>
-      <PEmpty v-else-if="!videos.length" title="暂无订阅更新" description="订阅频道或合集后新发布的视频将显示在这里。" />
+      <PEmpty
+        v-else-if="!videos.length && !channelBookmarks.length && !collectionBookmarks.length"
+        title="暂无视频订阅"
+        description="订阅频道或合集后，新发布的视频会显示在这里。"
+      />
 
       <div v-else class="video-subscriptions-content">
         <aside class="video-subscriptions-sources" aria-label="订阅来源">
@@ -82,36 +113,49 @@ onMounted(async () => {
               :key="item.id"
             >
               <RouterLink v-if="item.channel" :to="`/channel/${item.channel.slug || item.channel.id}`">{{ item.channel.name }}</RouterLink>
-              <ContentNotificationMode v-if="item.channel?.id" source-type="internal_channel" :source-id="item.channel.id" />
+              <ContentNotificationMode
+                v-if="item.channel?.id"
+                source-type="internal_channel"
+                :source-id="item.channel.id"
+                :initial-mode="notificationMode('internal_channel', item.channel.id)"
+              />
             </div>
           </section>
 
           <section v-if="collectionBookmarks.length">
             <h2>合集</h2>
-            <RouterLink
-              v-for="item in collectionBookmarks"
-            :key="item.id"
-            :to="`/videos/collections/${item.collection?.id}`"
-          >
-            {{ item.collection?.name }}
-          </RouterLink>
+            <div v-for="item in collectionBookmarks" :key="item.id">
+              <RouterLink v-if="item.collection" :to="`/videos/collections/${item.collection.id}`">
+                {{ item.collection.name }}
+              </RouterLink>
+              <ContentNotificationMode
+                v-if="item.collection?.id"
+                source-type="internal_collection"
+                :source-id="item.collection.id"
+                :initial-mode="notificationMode('internal_collection', item.collection.id)"
+              />
+            </div>
         </section>
       </aside>
 
       <main class="video-subscriptions-list" aria-label="订阅更新">
-        <article
-          v-for="item in videos"
-          :key="item.id"
-          class="video-subscription-item"
-        >
-          <RouterLink :to="`/videos/watch/${item.id}`" class="video-subscription-item__title">
-            {{ item.title }}
-          </RouterLink>
-          <div class="video-subscription-item__meta">
-            <span v-if="item.channel">{{ item.channel.name }}</span>
-            <span v-for="collection in item.collections" :key="collection.id">{{ collection.name }}</span>
-          </div>
-        </article>
+        <PEmpty v-if="!videos.length" title="暂无订阅更新" description="有新视频时会显示在这里。" />
+        <template v-else>
+          <article
+            v-for="item in videos"
+            :key="item.id"
+            class="video-subscription-item"
+          >
+            <RouterLink :to="`/videos/watch/${item.id}`" class="video-subscription-item__title">
+              {{ item.title }}
+            </RouterLink>
+            <div class="video-subscription-item__meta">
+              <span v-if="item.channel">{{ item.channel.name }}</span>
+              <span v-for="collection in item.collections" :key="collection.id">{{ collection.name }}</span>
+            </div>
+          </article>
+        </template>
+        <PaginationBar :meta="pageMeta" :loading="loading" @change="changePage" />
       </main>
     </div>
     </template>

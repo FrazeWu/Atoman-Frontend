@@ -20,30 +20,32 @@
           @keydown.esc="isTopLayer && $emit('close')"
         >
           <div v-if="showLayerRail" class="sheet-layer-rail">
-            <button
-              ref="closeButtonRef"
-              class="sheet-close-btn-bookmark"
-              type="button"
-              :aria-label="closeLabel"
-              :title="closeLabel"
-              @click="$emit('close')"
-            >
-              <X :size="20" aria-hidden="true" />
-            </button>
+            <div class="sheet-layer-controls">
+              <button
+                ref="closeButtonRef"
+                class="sheet-close-btn-bookmark"
+                type="button"
+                :aria-label="closeLabel"
+                :title="closeLabel"
+                @click="$emit('close')"
+              >
+                <X :size="20" aria-hidden="true" />
+              </button>
 
-            <button
-              v-if="!isTopLayer"
-              class="sheet-layer-title sheet-layer-title--action"
-              type="button"
-              :aria-label="`返回${railTitle}`"
-              :title="`返回${railTitle}`"
-              @click="$emit('activate')"
-            >
-              <span>{{ railTitle }}</span>
-            </button>
-            <span v-else class="sheet-layer-title" :title="railTitle" aria-hidden="true">
-              <span>{{ railTitle }}</span>
-            </span>
+              <button
+                v-if="!isTopLayer"
+                class="sheet-layer-title sheet-layer-title--action"
+                type="button"
+                :aria-label="`返回${railTitle}`"
+                :title="`返回${railTitle}`"
+                @click="$emit('activate')"
+              >
+                <span>{{ railTitle }}</span>
+              </button>
+              <span v-else class="sheet-layer-title" :title="railTitle" aria-hidden="true">
+                <span>{{ railTitle }}</span>
+              </span>
+            </div>
           </div>
 
           <button
@@ -202,7 +204,8 @@ const effectiveLayerIndex = computed(() => (
   ?? (parentLayerIndex.value >= 0 ? parentLayerIndex.value + 1 : sheetIndex.value)
 ))
 provide('p-sheet-layer-index', effectiveLayerIndex)
-const layerInset = computed(() => 16 + (effectiveLayerIndex.value * 80))
+const layerInset = computed(() => effectiveLayerIndex.value * 32)
+const layerTop = computed(() => `calc(${props.top} + ${effectiveLayerIndex.value * 4}px)`)
 
 const sheetStyle = computed(() => {
   if (props.side === 'bottom') {
@@ -220,7 +223,7 @@ const sheetStyle = computed(() => {
     return {
       width: 'auto',
       'max-width': 'none',
-      top: props.top,
+      top: layerTop.value,
       left: `calc(var(--a-sidebar-width) + ${layerInset.value}px)`,
       right: 0,
     }
@@ -229,7 +232,7 @@ const sheetStyle = computed(() => {
   return {
     width: props.width,
     'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
-    top: props.top,
+    top: layerTop.value,
     left: 0,
   }
 })
@@ -254,26 +257,26 @@ const sheetStyle = computed(() => {
   background: #ffffff;
   display: flex;
   flex-direction: column;
+  border-top: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-sheet);
 }
 
 .p-sheet-layer.is-right {
   right: 0;
   border-left: 1px solid var(--a-color-border-soft);
-  box-shadow: none;
+  box-shadow: -8px 0 18px -16px rgba(0, 0, 0, 0.35);
 }
 
 .p-sheet-layer.is-left {
   left: 0;
   border-right: 1px solid var(--a-color-border-soft);
-  box-shadow: none;
+  box-shadow: 8px 0 18px -16px rgba(0, 0, 0, 0.35);
 }
 
 .p-sheet-layer.is-bottom {
   left: 0;
   right: 0;
   top: auto;
-  border-top: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
 
@@ -309,10 +312,18 @@ const sheetStyle = computed(() => {
   inset: 0 auto 0 0;
   z-index: 1002;
   display: flex;
-  width: 80px;
+  width: 32px;
   flex-direction: column;
   align-items: center;
   background: #ffffff;
+}
+
+.sheet-layer-controls {
+  display: flex;
+  width: 44px;
+  flex-direction: column;
+  align-self: center;
+  align-items: flex-start;
 }
 
 .sheet-close-btn-bookmark {
@@ -349,11 +360,11 @@ const sheetStyle = computed(() => {
 .sheet-layer-title {
   display: flex;
   min-height: 0;
-  flex: 1;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-start;
   width: 44px;
-  margin: 0.75rem 0 1.25rem;
+  margin: 0.25rem 0 1.25rem;
   padding: 0.5rem 0;
   overflow: hidden;
   border: 0;
@@ -386,7 +397,7 @@ const sheetStyle = computed(() => {
 }
 
 .is-right .sheet-content--has-bookmark-close {
-  padding-left: 7.5rem;
+  padding-left: 6.5rem;
 }
 
 .is-left .sheet-content--has-bookmark-close {
@@ -476,7 +487,7 @@ const sheetStyle = computed(() => {
   .sheet-layer-rail {
     right: auto;
     bottom: auto;
-    width: 64px;
+    width: 56px;
   }
 
   .sheet-layer-title {

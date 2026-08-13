@@ -147,6 +147,17 @@ function describedByForField(
     data-testid="lyric-editor-grid"
   >
     <div
+      v-if="$slots.tools && editTarget !== 'translation'"
+      class="lyric-grid-line lyric-editor-tools"
+      :class="{ 'is-lrc': format === 'lrc' }"
+      data-testid="lyric-editor-tools"
+    >
+      <div class="lyric-editor-tools__content">
+        <slot name="tools" />
+      </div>
+    </div>
+
+    <div
       class="lyric-grid-line lyric-grid-header"
       :class="{ 'is-lrc': format === 'lrc', 'is-translation-mode': editTarget === 'translation' }"
       aria-hidden="true"
@@ -193,7 +204,7 @@ function describedByForField(
             :disabled="disabled || row.timeMs === null"
             @click="seekToRow(row)"
           >
-            <Play :size="18" aria-hidden="true" />
+            <Play :size="16" aria-hidden="true" />
           </button>
           <div class="lyric-time-adjust-group" aria-label="调整单行时间">
             <button
@@ -205,7 +216,7 @@ function describedByForField(
               :disabled="disabled || row.timeMs === null"
               @click="emit('adjust-time', row.id, -100)"
             >
-              <Minus :size="16" aria-hidden="true" />
+              <Minus :size="14" aria-hidden="true" />
             </button>
             <button
               :data-testid="`lyric-adjust-up-${row.id}`"
@@ -216,7 +227,7 @@ function describedByForField(
               :disabled="disabled || row.timeMs === null"
               @click="emit('adjust-time', row.id, 100)"
             >
-              <Plus :size="16" aria-hidden="true" />
+              <Plus :size="14" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -355,7 +366,7 @@ function describedByForField(
 }
 
 .lyric-grid-line.is-lrc {
-  grid-template-columns: 3rem 11rem minmax(0, 1fr) 9.25rem;
+  grid-template-columns: 3rem 20rem minmax(0, 1fr) 9.25rem;
 }
 
 .lyric-grid-line.is-translation-mode {
@@ -384,6 +395,29 @@ function describedByForField(
 .lyric-row.is-selected {
   background: color-mix(in srgb, var(--a-color-primary, #2563eb) 5%, var(--a-color-surface, var(--a-color-bg)));
   box-shadow: inset 3px 0 0 var(--a-color-primary, #2563eb), 0 2px 10px -2px rgba(0, 0, 0, 0.04);
+}
+
+.lyric-editor-tools {
+  min-height: 44px;
+  padding: 0.25rem 0.75rem 0.5rem;
+}
+
+.lyric-editor-tools__content {
+  grid-column: 1 / -1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.lyric-editor-tools__content :deep(.music-lyric-editor-drawer__tools-primary) {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .lyric-index {
@@ -476,14 +510,12 @@ function describedByForField(
 .lyric-time-controls {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 36px);
   gap: 8px;
 }
 
 .lyric-time-adjust-group {
-  display: inline-flex;
-  grid-column: 1 / -1;
-  gap: 8px;
+  display: contents;
 }
 
 .lyric-time-error,
@@ -498,28 +530,28 @@ function describedByForField(
 
 .lyric-actions {
   display: grid;
-  grid-template-columns: repeat(3, 44px);
+  grid-template-columns: repeat(3, 36px);
   gap: 8px;
 }
 
 .lyric-action {
   display: inline-grid;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--a-color-border, #d4d4d8);
+  border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--a-color-bg, #ffffff);
+  background: transparent;
   color: var(--a-color-muted, #52525b);
   cursor: pointer;
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
 
 .lyric-action:hover:not(:disabled) {
-  border-color: var(--a-color-text, #18181b);
+  border-color: var(--a-color-border-soft, #e4e4e7);
+  background: var(--a-color-surface-muted, #f4f4f5);
   color: var(--a-color-text, #18181b);
-  transform: translateY(-1px);
 }
 
 .lyric-action--danger:hover:not(:disabled) {
@@ -568,13 +600,21 @@ function describedByForField(
   }
 
   .lyric-actions {
-    grid-template-columns: repeat(3, 44px);
+    grid-template-columns: repeat(3, 36px);
   }
 
   .lyric-time-controls {
     width: 100%;
     min-width: 0;
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 36px);
+  }
+
+  .lyric-editor-tools {
+    padding-inline: 0;
+  }
+
+  .lyric-editor-tools__content {
+    grid-column: 1;
   }
 
   .lyric-issues {

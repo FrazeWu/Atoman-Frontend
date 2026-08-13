@@ -1,5 +1,5 @@
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { TimelineEvent, TimelinePerson, PersonLocation } from '@/types'
@@ -55,11 +55,11 @@ export const useTimelineStore = defineStore('timeline', () => {
         if (params.yearStart) query.set('year_start', String(params.yearStart))
         if (params.yearEnd) query.set('year_end', String(params.yearEnd))
 
-        const res = await apiRequest(`${api.url}/timeline/events?${query}`)
+        const res = await apiRequestResult(`${api.url}/timeline/events?${query}`)
         if (requestSequence !== eventsRequestSequence) return
         if (!res.ok) throw new Error('Failed to fetch events')
 
-        const data: unknown = await res.json()
+        const data: unknown = res.data
         if (requestSequence !== eventsRequestSequence) return
         if (
           typeof data !== 'object' || data === null
@@ -113,9 +113,9 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/timeline/events/${id}`)
+      const res = await apiRequestResult(`${api.url}/timeline/events/${id}`)
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         currentEvent.value = data.data
       }
     } catch (e) {
@@ -141,17 +141,17 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public?: boolean
   }) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/events`, {
+      const res = await apiRequestResult(`${api.url}/timeline/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         events.value.unshift(data.data)
         return data.data as TimelineEvent
       }
-      const err = await res.json()
+      const err = res.data
       throw new Error(err.error || 'Failed to create event')
     } catch (e) {
       throw e
@@ -173,19 +173,19 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public: boolean
   }>) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/events/${id}`, {
+      const res = await apiRequestResult(`${api.url}/timeline/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         const idx = events.value.findIndex((e) => e.id === id)
         if (idx !== -1) events.value[idx] = data.data
         if (currentEvent.value?.id === id) currentEvent.value = data.data
         return data.data as TimelineEvent
       }
-      const err = await res.json()
+      const err = res.data
       throw new Error(err.error || 'Failed to update event')
     } catch (e) {
       throw e
@@ -194,14 +194,14 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deleteEvent = async (id: string) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/events/${id}`, {
+      const res = await apiRequestResult(`${api.url}/timeline/events/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
       if (res.ok) {
         events.value = events.value.filter((e) => e.id !== id)
       } else {
-        const err = await res.json()
+        const err = res.data
         throw new Error(err.error || 'Failed to delete event')
       }
     } catch (e) {
@@ -226,11 +226,11 @@ export const useTimelineStore = defineStore('timeline', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('limit', String(params.limit))
 
-      const res = await apiRequest(`${api.url}/timeline/persons?${query}`)
+      const res = await apiRequestResult(`${api.url}/timeline/persons?${query}`)
       if (requestSequence !== personsRequestSequence) return
       if (!res.ok) throw new Error('Failed to fetch persons')
 
-      const data = await res.json()
+      const data = res.data
       if (requestSequence !== personsRequestSequence) return
       if (!Array.isArray(data?.data) || typeof data.total !== 'number' || typeof data.page !== 'number' || typeof data.limit !== 'number') {
         throw new Error('Invalid persons response')
@@ -259,9 +259,9 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await apiRequest(`${api.url}/timeline/persons/${id}`)
+      const res = await apiRequestResult(`${api.url}/timeline/persons/${id}`)
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         currentPerson.value = data.data
       }
     } catch (e) {
@@ -281,17 +281,17 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public?: boolean
   }) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/persons`, {
+      const res = await apiRequestResult(`${api.url}/timeline/persons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         persons.value.unshift(data.data)
         return data.data as TimelinePerson
       }
-      const err = await res.json()
+      const err = res.data
       throw new Error(err.error || 'Failed to create person')
     } catch (e) {
       throw e
@@ -307,19 +307,19 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public: boolean
   }>) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/persons/${id}`, {
+      const res = await apiRequestResult(`${api.url}/timeline/persons/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         const idx = persons.value.findIndex((p) => p.id === id)
         if (idx !== -1) persons.value[idx] = data.data
         if (currentPerson.value?.id === id) currentPerson.value = data.data
         return data.data as TimelinePerson
       }
-      const err = await res.json()
+      const err = res.data
       throw new Error(err.error || 'Failed to update person')
     } catch (e) {
       throw e
@@ -328,7 +328,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deletePerson = async (id: string) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/persons/${id}`, {
+      const res = await apiRequestResult(`${api.url}/timeline/persons/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -337,7 +337,7 @@ export const useTimelineStore = defineStore('timeline', () => {
         persons.value = persons.value.filter((p) => p.id !== id)
         if (wasListed) personsTotal.value = Math.max(0, personsTotal.value - 1)
       } else {
-        const err = await res.json()
+        const err = res.data
         throw new Error(err.error || 'Failed to delete person')
       }
     } catch (e) {
@@ -349,9 +349,9 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const fetchPersonLocations = async (personId: string) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/persons/${personId}/locations`)
+      const res = await apiRequestResult(`${api.url}/timeline/persons/${personId}/locations`)
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         return data.data as PersonLocation[]
       }
       return []
@@ -370,13 +370,13 @@ export const useTimelineStore = defineStore('timeline', () => {
     note?: string
   }) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/persons/${personId}/locations`, {
+      const res = await apiRequestResult(`${api.url}/timeline/persons/${personId}/locations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (currentPerson.value?.id === personId) {
           if (!currentPerson.value.locations) currentPerson.value.locations = []
           currentPerson.value.locations.push(data.data)
@@ -386,7 +386,7 @@ export const useTimelineStore = defineStore('timeline', () => {
         }
         return data.data as PersonLocation
       }
-      const err = await res.json()
+      const err = res.data
       throw new Error(err.error || 'Failed to add location')
     } catch (e) {
       throw e
@@ -402,13 +402,13 @@ export const useTimelineStore = defineStore('timeline', () => {
     note?: string
   }) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/locations/${locationId}`, {
+      const res = await apiRequestResult(`${api.url}/timeline/locations/${locationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = res.data
         if (currentPerson.value?.locations) {
           const idx = currentPerson.value.locations.findIndex((l) => l.id === locationId)
           if (idx !== -1) {
@@ -420,7 +420,7 @@ export const useTimelineStore = defineStore('timeline', () => {
         }
         return data.data as PersonLocation
       }
-      const err = await res.json()
+      const err = res.data
       throw new Error(err.error || 'Failed to update location')
     } catch (e) {
       throw e
@@ -429,7 +429,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deleteLocation = async (locationId: string) => {
     try {
-      const res = await apiRequest(`${api.url}/timeline/locations/${locationId}`, {
+      const res = await apiRequestResult(`${api.url}/timeline/locations/${locationId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -440,7 +440,7 @@ export const useTimelineStore = defineStore('timeline', () => {
           )
         }
       } else {
-        const err = await res.json()
+        const err = res.data
         throw new Error(err.error || 'Failed to delete location')
       }
     } catch (e) {

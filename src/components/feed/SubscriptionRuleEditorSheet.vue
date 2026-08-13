@@ -93,8 +93,8 @@
       </div>
 
       <div class="rule-editor-actions">
-        <PPress variant="secondary" label="取消" @click="$emit('close')" />
-        <PPress
+        <PButton variant="secondary" label="取消" @click="$emit('close')" />
+        <PButton
           label="保存规则"
           :disabled="!canSubmit"
           @click="submitRule"
@@ -110,7 +110,7 @@ import type { FeedSubscriptionRule, FeedSubscriptionRuleMatchType, Subscription,
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 

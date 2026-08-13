@@ -14,9 +14,13 @@ import {
 interface ReplyPaginationState { expanded: boolean; page: number; pageSize: number; hasMore: boolean; loading: boolean }
 
 const targetKey = (target: CommentTargetRef) => `${target.kind}:${target.resourceId}`
-const mergeById = (current: CommentDTO[], incoming: CommentDTO[]) => {
-  const seen = new Set(current.map(({ id }) => id))
-  const merged = [...current]
+const mergeById = (current: CommentDTO[], incoming: CommentDTO[]): CommentDTO[] => {
+  const incomingById = new Map(incoming.map((comment) => [comment.id, comment]))
+  const merged = current.map((comment) => {
+    const next = incomingById.get(comment.id)
+    return next ? { ...next, replies: mergeById(comment.replies, next.replies) } : comment
+  })
+  const seen = new Set(merged.map(({ id }) => id))
   incoming.forEach((comment) => {
     if (seen.has(comment.id)) return
     seen.add(comment.id)

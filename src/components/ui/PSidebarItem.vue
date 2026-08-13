@@ -78,8 +78,9 @@ defineEmits(['click'])
 .p-sidebar-item.active {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  border-color: transparent;
+  border-radius: 2px;
+  box-shadow: none;
   font-weight: 650;
 }
 </style>

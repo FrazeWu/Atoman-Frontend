@@ -7,7 +7,7 @@
       </div>
       <div class="settings-block__control user-blog-settings-panel__identity">
         <div class="avatar-preview-box">
-          <img v-if="form.avatar_url" :src="form.avatar_url" alt="当前头像" />
+          <img v-if="form.avatar_url" :src="resolveMediaURL(form.avatar_url)" alt="当前头像" />
           <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
         </div>
         <div class="identity-info">
@@ -60,7 +60,7 @@
         </div>
       </div>
 
-      <section v-if="includeAccountExtras" class="settings-section">
+      <section v-if="props.includeAccountExtras" class="settings-section">
         <h3 class="section-title">通知设置</h3>
         <div class="toggles-grid">
           <label class="settings-toggle">
@@ -83,7 +83,7 @@
         <small class="a-muted">私信、@我、账号安全和关键权限变化始终提醒。</small>
       </section>
 
-      <section v-if="includeAccountExtras" class="settings-section">
+      <section v-if="props.includeAccountExtras" class="settings-section">
         <h3 class="section-title">已拉黑用户</h3>
         <div v-if="userBlocksStore.blockedUsers.length === 0" class="a-muted text-sm">暂无拉黑用户</div>
         <div v-for="item in userBlocksStore.blockedUsers" :key="item.id" class="blocked-user-row">
@@ -115,13 +115,14 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useUserBlocksStore } from '@/stores/userBlocks'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const userBlocksStore = useUserBlocksStore()
 const api = useApi()
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   includeAccountExtras?: boolean
 }>(), {
   includeAccountExtras: true,
@@ -204,14 +205,16 @@ const save = async () => {
 
   saving.value = true
   try {
-    const preferencesSaved = await notificationStore.savePreferences(Object.entries(notificationTypes).flatMap(([category, eventTypes]) =>
-      eventTypes.map((eventType) => ({
-        category: category as keyof typeof notificationTypes,
-        event_type: eventType,
-        enabled: notificationPrefs.value[category as keyof typeof notificationTypes],
-      })),
-    ))
-    if (!preferencesSaved) throw new Error('通知设置保存失败')
+    if (props.includeAccountExtras) {
+      const preferencesSaved = await notificationStore.savePreferences(Object.entries(notificationTypes).flatMap(([category, eventTypes]) =>
+        eventTypes.map((eventType) => ({
+          category: category as keyof typeof notificationTypes,
+          event_type: eventType,
+          enabled: notificationPrefs.value[category as keyof typeof notificationTypes],
+        })),
+      ))
+      if (!preferencesSaved) throw new Error('通知设置保存失败')
+    }
 
     const res = await apiRequestResult(api.users.settings, {
       method: 'PUT',
@@ -225,11 +228,7 @@ const save = async () => {
     const d = await Promise.resolve(res.data)
     const updated = d.data || d
     if (authStore.user) {
-      authStore.updateUser({
-        display_name: updated.display_name,
-        avatar_url: updated.avatar_url,
-        bio: updated.bio,
-      })
+      authStore.updateUser(updated)
     }
     success.value = true
     setTimeout(() => { success.value = false }, 3000)
@@ -241,11 +240,11 @@ const save = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    loadProfile(),
-    loadNotificationPreferences(),
-    userBlocksStore.fetchBlockedUsers(),
-  ])
+  const tasks = [loadProfile()]
+  if (props.includeAccountExtras) {
+    tasks.push(loadNotificationPreferences(), userBlocksStore.fetchBlockedUsers())
+  }
+  await Promise.all(tasks)
 })
 </script>
 

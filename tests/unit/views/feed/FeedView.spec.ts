@@ -10,6 +10,12 @@ import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { usePlayerStore } from '@/stores/player'
 
+const PButtonStub = {
+  props: ['label', 'disabled', 'loading', 'loadingText'],
+  emits: ['click'],
+  template: '<button type="button" v-bind="$attrs" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ loading ? loadingText : label }}<slot /></button>',
+}
+
 const { navigateModuleWithShutter, routerPush, routerReplace, routeQuery } = vi.hoisted(() => ({
   navigateModuleWithShutter: vi.fn(),
   routerPush: vi.fn(),
@@ -29,7 +35,7 @@ vi.mock('@/composables/useAsyncNavigate', () => ({
 }))
 
 const feedViewStubs = {
-  PButton: true,
+  PButton: PButtonStub,
   PModal: true,
   PEmpty: true,
   PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -499,7 +505,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -551,7 +557,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -582,7 +588,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -608,7 +614,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -649,7 +655,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -722,7 +728,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -813,7 +819,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -906,7 +912,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -995,7 +1001,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1065,7 +1071,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1126,7 +1132,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1260,7 +1266,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1369,7 +1375,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1431,7 +1437,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1541,7 +1547,7 @@ describe('FeedView', () => {
     mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1613,7 +1619,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1733,7 +1739,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1867,7 +1873,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -1939,7 +1945,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2034,7 +2040,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2120,7 +2126,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2154,7 +2160,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2183,7 +2189,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2213,7 +2219,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2271,7 +2277,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2316,7 +2322,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2372,7 +2378,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2484,7 +2490,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2624,7 +2630,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2674,7 +2680,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2728,7 +2734,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2759,7 +2765,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2797,7 +2803,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2860,7 +2866,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2900,7 +2906,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2934,7 +2940,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -2966,7 +2972,7 @@ describe('FeedView', () => {
     mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -3002,7 +3008,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: {
             name: 'PEmpty',
@@ -3034,7 +3040,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -3070,7 +3076,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -3122,7 +3128,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -3163,7 +3169,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
@@ -3221,7 +3227,7 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          PButton: true,
+          PButton: PButtonStub,
           PModal: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },

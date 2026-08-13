@@ -22,9 +22,9 @@
       :current-time="currentTime"
       :submitting="creating"
       @submit="createRoot"
-      @content-change="rootDraftContent = $event"
+      @content-change="scheduleRootDraft"
     />
-    <div v-else-if="readonly" class="comment-section__login">该话题已锁定</div>
+    <div v-else-if="readonly" class="comment-section__login">评论已关闭</div>
     <div v-else class="comment-section__login">
       <MessageSquare :size="18" aria-hidden="true" />
       <span>登录后{{ noun }}</span>
@@ -52,6 +52,8 @@
         :mark-label="effectiveMarkLabel"
         :current-time="currentTime"
         :like-pending="(id) => comments.isLikePending(id).value"
+        :action-pending="isActionPending"
+        :draft-key-for="replyDraftKey"
         :on-reply="createReply"
         :on-edit="editComment"
         @seek="$emit('seek', $event)"
@@ -75,13 +77,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { MessageSquare } from 'lucide-vue-next'
 
 import type { CommentDTO, CommentTargetRef, CreateCommentInput, ReportCommentInput } from '@/api/comments'
 import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useComments } from '@/composables/useComments'
+import { commentDraftKey, useCommentDraft } from '@/composables/useCommentDraft'
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
@@ -119,10 +122,12 @@ const emit = defineEmits<{
 const authStore = useAuthStore()
 const forumStore = useForumStore()
 const comments = useComments(() => props.target)
+const commentDraft = useCommentDraft()
 const creating = ref(false)
 const mutationError = ref('')
 const rootComposer = ref<{ reset: () => void; setContent?: (value: string) => void } | null>(null)
 const rootDraftContent = ref('')
+const pendingActions = reactive(new Set<string>())
 const reportVisible = ref(false)
 const reportingCommentId = ref('')
 const sectionElement = ref<HTMLElement | null>(null)
@@ -139,18 +144,19 @@ const sortOptions = [
 let focusRequest = 0
 let focusQueue = Promise.resolve()
 let targetGeneration = 0
-let draftSaveTimer: ReturnType<typeof setInterval> | null = null
-
-const rootDraftKey = computed(() => props.target.kind === 'forum_topic'
-  ? `reply:${props.target.resourceId}:root`
-  : '')
+const rootDraftKey = computed(() => commentDraftKey(props.target))
+const forumDraftKey = computed(() => `reply:${props.target.resourceId}:root`)
+let forumDraftSyncTimer: ReturnType<typeof setTimeout> | null = null
 
 async function restoreRootDraft(request: number) {
   const key = rootDraftKey.value
   if (!key || !authStore.isAuthenticated || props.readonly) return
-  const draft = await forumStore.fetchDraft(key) ?? forumStore.loadDraftLocal(key)
+  const localContent = commentDraft.read(key)
+  const draft = props.target.kind === 'forum_topic'
+    ? await forumStore.fetchDraft(forumDraftKey.value) ?? forumStore.loadDraftLocal(forumDraftKey.value)
+    : null
   if (request !== focusRequest || key !== rootDraftKey.value) return
-  rootDraftContent.value = draft?.content ?? ''
+  rootDraftContent.value = draft?.content ?? localContent
   rootComposer.value?.setContent?.(rootDraftContent.value)
 }
 
@@ -159,13 +165,33 @@ async function saveRootDraft() {
   if (!key || !authStore.isAuthenticated || props.readonly) return
   const content = rootDraftContent.value.trim()
   if (!content) {
-    if (rootDraftContent.value === '') return
-    await forumStore.deleteDraft(key)
+    commentDraft.clear(key)
+    if (props.target.kind === 'forum_topic') await forumStore.deleteDraft(forumDraftKey.value)
     return
   }
-  const draft = { context_key: key, title: '', content, tags: '' }
-  forumStore.saveDraftLocal(key, draft)
-  await forumStore.putDraft(draft)
+  commentDraft.save(key, content)
+  if (props.target.kind === 'forum_topic') {
+    const draft = { context_key: forumDraftKey.value, title: '', content, tags: '' }
+    forumStore.saveDraftLocal(forumDraftKey.value, draft)
+    await forumStore.putDraft(draft)
+  }
+}
+
+function scheduleRootDraft(content: string) {
+  rootDraftContent.value = content
+  if (authStore.isAuthenticated && !props.readonly) commentDraft.schedule(rootDraftKey.value, content)
+  if (forumDraftSyncTimer) clearTimeout(forumDraftSyncTimer)
+  if (props.target.kind === 'forum_topic' && authStore.isAuthenticated && !props.readonly) {
+    forumDraftSyncTimer = setTimeout(() => { void saveRootDraft() }, 600)
+  }
+}
+
+function replyDraftKey(commentId: string) {
+  return commentDraftKey(props.target, { replyToId: commentId })
+}
+
+function isActionPending(commentId: string) {
+  return pendingActions.has(commentId) || pendingActions.has('target')
 }
 
 watch(() => [
@@ -200,12 +226,12 @@ watch(() => [
 }, { immediate: true })
 
 watch(rootDraftKey, (key) => {
-  if (draftSaveTimer) clearInterval(draftSaveTimer)
-  draftSaveTimer = key ? setInterval(() => { void saveRootDraft() }, 3000) : null
+  if (forumDraftSyncTimer) clearTimeout(forumDraftSyncTimer)
+  rootDraftContent.value = key ? commentDraft.read(key) : ''
 }, { immediate: true })
 
 onBeforeUnmount(() => {
-  if (draftSaveTimer) clearInterval(draftSaveTimer)
+  if (forumDraftSyncTimer) clearTimeout(forumDraftSyncTimer)
   void saveRootDraft()
 })
 
@@ -262,7 +288,8 @@ async function createRoot(input: CreateCommentInput) {
   try {
     await comments.create(input)
     if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
-    if (rootDraftKey.value) await forumStore.deleteDraft(rootDraftKey.value)
+    if (rootDraftKey.value) commentDraft.clear(rootDraftKey.value)
+    if (props.target.kind === 'forum_topic') await forumStore.deleteDraft(forumDraftKey.value)
     rootDraftContent.value = ''
     rootComposer.value?.reset()
     emitCount()
@@ -290,12 +317,16 @@ async function editComment(comment: CommentDTO, input: CreateCommentInput) {
 async function removeComment(commentId: string) {
   const requestedTargetKey = targetKey(props.target)
   const requestedTargetGeneration = targetGeneration
+  if (pendingActions.has(commentId)) return
+  pendingActions.add(commentId)
   try {
     await comments.remove(commentId)
     if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
     emitCount()
   } catch {
     if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) mutationError.value = '删除失败，请重试'
+  } finally {
+    pendingActions.delete(commentId)
   }
 }
 
@@ -328,20 +359,28 @@ async function loadMore() {
 }
 
 async function markComment(commentId: string) {
+  if (pendingActions.has(commentId)) return
+  pendingActions.add(commentId)
   try {
     await comments.mark(commentId)
     emit('marked-change', true)
   } catch {
     mutationError.value = '设置失败，请重试'
+  } finally {
+    pendingActions.delete(commentId)
   }
 }
 
 async function unmarkComment() {
+  if (pendingActions.has('target')) return
+  pendingActions.add('target')
   try {
     await comments.unmark()
     emit('marked-change', false)
   } catch {
     mutationError.value = '取消失败，请重试'
+  } finally {
+    pendingActions.delete('target')
   }
 }
 

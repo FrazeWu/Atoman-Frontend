@@ -124,4 +124,29 @@ describe('useComments', () => {
       expanded: false, page: 0, pageSize: 20, hasMore: true, loading: false,
     })
   })
+
+  it('刷新或分页遇到相同评论时用服务端最新内容覆盖旧对象，并保留已展开回复', async () => {
+    const target = ref({ kind: 'video' as const, resourceId: 'video-a' })
+    const first = root('root-a')
+    first.replies = [root('reply-a')]
+    const updated = root('root-a')
+    updated.content = 'edited on server'
+    updated.like_count = 3
+    updated.replies = []
+    const firstList = rootList('video-a', [first])
+    firstList.per_page = 1
+    firstList.total_roots = 2
+    const listRoots = vi.fn()
+      .mockResolvedValueOnce(firstList)
+      .mockResolvedValueOnce({ ...rootList('video-a', [updated]), page: 2, per_page: 1, total_roots: 2 })
+    const comments = useComments(target, createClient(listRoots))
+
+    await comments.load()
+    await comments.loadMore()
+
+    expect(comments.roots.value).toHaveLength(1)
+    expect(comments.roots.value[0].content).toBe('edited on server')
+    expect(comments.roots.value[0].like_count).toBe(3)
+    expect(comments.roots.value[0].replies.map(({ id }) => id)).toEqual(['reply-a'])
+  })
 })

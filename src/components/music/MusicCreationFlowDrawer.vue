@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
 import PToast from '@/components/ui/PToast.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
@@ -12,6 +13,7 @@ import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
+import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -48,6 +50,7 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : f
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentCreationFlow = () => closeMusicCreationFlow(props.layer?.key)
 const loadedEditKey = ref('')
+const closePending = ref(false)
 
 function sourceText(sources?: musicApi.MusicSource[]) {
   const source = sources?.[0]
@@ -284,6 +287,7 @@ const forwardBlockReason = computed(() => {
 	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
 	if (!flow.draft.albumDetails.source.trim()) return '请填写专辑来源'
 	if (!flow.draft.tracks.length || flow.draft.tracks.some((track) => !track.title.trim())) return '请至少添加一首完整音轨'
+	if (flow.draft.tracks.some((track) => track.origin === 'manual' && !hasTrackAudio(track))) return '请为新增曲目上传音频'
 	if (!flow.draft.albumDetails.contributors?.length) {
 		return '请添加创作者'
 	}
@@ -315,9 +319,9 @@ const canGoForward = computed(() => {
       && !!formatDateFromParts(flow.draft.artist.birthDateParts)
       && !!flow.draft.artist.source.trim()
   }
-  if (flow.step === 'albumImport') {
-    return !!flow.draft.albumImport.importId
-  }
+	if (flow.step === 'albumImport') {
+		return !!flow.draft.albumImport.importId
+	}
 	if (flow.step === 'albumDetails') {
 		return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
 			&& !!flow.draft.albumDetails.title.trim()
@@ -326,6 +330,7 @@ const canGoForward = computed(() => {
 			&& !!flow.draft.albumDetails.source.trim()
 			&& flow.draft.tracks.length > 0
 			&& flow.draft.tracks.every((track) => !!track.title.trim())
+			&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 	}
 	return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
@@ -335,6 +340,7 @@ const canGoForward = computed(() => {
 		&& !!flow.draft.albumDetails.source.trim()
 		&& flow.draft.tracks.length > 0
 		&& flow.draft.tracks.every((track) => !!track.title.trim())
+		&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
 		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
@@ -443,6 +449,10 @@ function trackNumberWithinDisc(tracks: Array<{ discNumber?: number }>, index: nu
   return tracks.slice(0, index + 1).filter((track) => (track.discNumber ?? 1) === discNumber).length
 }
 
+function hasTrackAudio(track: { audioUrl?: string; audioKey?: string }) {
+  return !!track.audioUrl?.trim() || !!track.audioKey?.trim()
+}
+
 function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
   const primaryStageName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())
     ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
@@ -451,7 +461,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const artists = buildContributorPayload(flow)
 
   return {
-    ...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
+		...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
@@ -479,12 +489,13 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
-      tracks: flow.draft.tracks.map((track, index) => ({
-        ...(track.songId ? { song_id: track.songId } : {}),
-        title: track.title.trim(),
-        disc_number: track.discNumber ?? 1,
-        track_number: trackNumberWithinDisc(flow.draft.tracks, index),
-        ...(track.lyricsDraft ? {
+		tracks: flow.draft.tracks.map((track, index) => ({
+			...(track.songId ? { song_id: track.songId } : {}),
+			title: track.title.trim(),
+			disc_number: track.discNumber ?? 1,
+			track_number: trackNumberWithinDisc(flow.draft.tracks, index),
+			...(track.audioUrl ? { audio_url: track.audioUrl } : {}),
+			...(track.lyricsDraft ? {
           lyrics: {
             content: track.lyricsDraft.content,
             translation: track.lyricsDraft.translation,
@@ -572,7 +583,22 @@ function syncReadyImportToDraft() {
         audioKey: track.audioKey,
         origin: track.origin,
         ...(existing?.lyrics ? { lyrics: existing.lyrics } : {}),
-        ...(existing?.lyricsDraft ? { lyricsDraft: existing.lyricsDraft } : {}),
+        ...(existing?.lyricsDraft ? { lyricsDraft: existing.lyricsDraft } : track.lyrics ? {
+          lyrics: track.lyrics.content,
+          lyricsDraft: {
+            content: track.lyrics.content,
+            translation: track.lyrics.translation || '',
+            format: track.lyrics.format,
+            language: track.lyrics.language || '',
+            editSummary: track.lyrics.edit_summary || '自动匹配歌词',
+            lines: parseMusicLyricDraft(track.lyrics.content, track.lyrics.translation || '', track.lyrics.format).map(row => ({
+              line_key: row.lineKey,
+              text: row.original,
+              translation: row.translation,
+              time_ms: row.timeMs,
+            })),
+          },
+        } : {}),
       }
     })
   }
@@ -611,7 +637,15 @@ function requestClose() {
 
   const hasDraft = hasCreationDraft(flow)
 
-  if (hasDraft && !window.confirm('确认关闭？未保存的内容将丢失。')) return
+  if (hasDraft) {
+    closePending.value = true
+    return
+  }
+  closeCurrentCreationFlow()
+}
+
+function confirmClose() {
+  closePending.value = false
   closeCurrentCreationFlow()
 }
 
@@ -747,13 +781,13 @@ async function completeCreation() {
         cover: details.coverAsset ?? undefined,
         description: details.bio.trim(),
         album_type: details.type.trim() || 'album',
-        tracks: flow.draft.tracks.map((track, index) => ({
-          ...(track.songId ? { id: track.songId } : {}),
-          title: track.title.trim(),
-          track_number: trackNumberWithinDisc(flow.draft.tracks, index),
-          disc_number: track.discNumber ?? 1,
-          lyrics: track.lyrics ?? '',
-          audio_url: track.audioUrl ?? '',
+		tracks: flow.draft.tracks.map((track, index) => ({
+			...(track.songId ? { id: track.songId } : {}),
+			title: track.title.trim(),
+			track_number: trackNumberWithinDisc(flow.draft.tracks, index),
+			disc_number: track.discNumber ?? 1,
+			lyrics: track.lyrics ?? '',
+			audio_url: track.audioUrl ?? '',
           cover_url: track.coverUrl ?? '',
           artist_credits: albumArtistCreditsFromContributors(track.contributors ?? details.contributors),
           removed: false,
@@ -875,6 +909,16 @@ async function completeCreation() {
       </div>
     </div>
   </PSheet>
+
+  <PConfirm
+    :show="closePending"
+    title="关闭创建流程"
+    message="确认关闭？未保存的内容将丢失。"
+    confirm-text="关闭"
+    danger
+    @confirm="confirmClose"
+    @cancel="closePending = false"
+  />
 </template>
 
 <style scoped>

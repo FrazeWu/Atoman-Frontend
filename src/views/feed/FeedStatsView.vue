@@ -4,7 +4,7 @@
       <template #action>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:flex-end">
           <RouterLink to="/feed" style="text-decoration:none">
-            <PPress variant="secondary" label="返回订阅" />
+            <PButton variant="secondary" label="返回订阅" />
           </RouterLink>
         </div>
       </template>
@@ -14,7 +14,7 @@
       <p class="a-title-xl a-muted" style="margin-bottom:1rem">阅读统计</p>
       <p class="a-muted" style="max-width:28rem;margin-bottom:1.5rem">登录后即可查看你的 RSS 阅读趋势和来源分布。</p>
       <RouterLink to="/login" style="text-decoration:none">
-        <PPress label="登录账户" />
+        <PButton label="登录账户" />
       </RouterLink>
     </div>
 
@@ -25,7 +25,7 @@
           :options="periodOptions"
           @change="selectPeriod"
         />
-        <PPress
+        <PButton
           @click="fetchStats"
           :loading="loading"
           loading-text="刷新中..."
@@ -95,7 +95,7 @@ import Chart from 'chart.js/auto'
 import { RouterLink } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'

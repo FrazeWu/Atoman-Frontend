@@ -1,6 +1,6 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -153,11 +153,11 @@ export function useFeedTimelineController({
 
     checkingTimelineUpdates.value = true
     try {
-      const response = await apiRequest(`${apiURL}/feed/timeline/updates?${buildTimelineUpdatesQuery()}`, {
+      const response = await apiRequestResult(`${apiURL}/feed/timeline/updates?${buildTimelineUpdatesQuery()}`, {
         headers: authHeaders(),
       })
       if (!response.ok) return
-      const payload = await response.json()
+      const payload = response.data
       const update = payload.data ?? payload
       if (typeof update.checked_at !== 'string') return
       if (!timelineUpdatesCursor.value) {
@@ -223,11 +223,11 @@ export function useFeedTimelineController({
         hideDuplicates: mergeDuplicates.value && !querySourceId.value,
         q: querySearch.value,
       })
-      const response = await apiRequest(`${apiURL}/feed/timeline?${params}`, { headers: authHeaders() })
+      const response = await apiRequestResult(`${apiURL}/feed/timeline?${params}`, { headers: authHeaders() })
       if (requestSequence !== timelineRequestSequence) return
       if (!response.ok) return
 
-      const data = await response.json()
+      const data = response.data
       if (requestSequence !== timelineRequestSequence) return
       const items: TimelineItem[] = data.data || []
       const total = data.total ?? data.meta?.total ?? 0

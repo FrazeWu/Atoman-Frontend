@@ -8,6 +8,12 @@ import StudioModuleLayout from '@/views/studio/StudioModuleLayout.vue'
 import { useStudioStore } from '@/stores/studio'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 
+async function selectOption(wrapper: ReturnType<typeof mount>, testId: string, label: string) {
+  const field = wrapper.get(`[data-testid="${testId}"]`)
+  await field.get('.p-select-trigger').trigger('click')
+  await field.findAll('.p-select-option').find(option => option.text() === label)!.trigger('click')
+}
+
 const routes = [{
   path: '/studio/:module',
   component: StudioModuleLayout,
@@ -66,13 +72,13 @@ describe('StudioContentView', () => {
 
     const wrapper = mount(StudioModuleLayout, { global: { plugins: [pinia, router] } })
     await flushPromises()
-    await wrapper.find('[data-testid="status-filter"]').setValue('published')
+    await selectOption(wrapper, 'status-filter', '已发布')
     await flushPromises()
 
     expect(router.currentRoute.value.query.status).toBe('published')
     expect(router.currentRoute.value.query.page).toBeUndefined()
 
-    await wrapper.find('[data-testid="collection-filter"]').setValue('')
+    await selectOption(wrapper, 'collection-filter', '全部合集')
     await flushPromises()
     expect(router.currentRoute.value.query.collection_id).toBeUndefined()
     expect(wrapper.find('[data-testid="create-content"]').attributes('href')).toBe('/studio/blog/new')

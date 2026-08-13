@@ -41,7 +41,7 @@
           </div>
         </div>
 
-        <PPress
+        <PButton
           v-if="source"
           :label="source.subscribed ? '已订阅' : '订阅'"
           :variant="source.subscribed ? 'secondary' : 'primary'"
@@ -108,7 +108,7 @@ import { computed, ref } from 'vue'
 
 import type { FeedArticleSource, TimelineItem } from '@/types'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PPress from '@/components/ui/PPress.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import {
   buildSourceAvatarLabel,

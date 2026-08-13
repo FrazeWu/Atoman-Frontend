@@ -48,6 +48,16 @@ function openPanel(panel: FootbarPanel, label: string) {
         </nav>
       </div>
 
+      <div class="site-footer-center">
+        <a
+          class="site-footer-link"
+          href="https://proxy.atoman.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-footer-action="docker-proxy"
+        >镜像加速</a>
+      </div>
+
       <div class="site-footer-row site-footer-secondary">
         <span>© {{ copyrightYear }} 凹凸庵</span>
         <div class="site-footer-meta">
@@ -90,6 +100,13 @@ function openPanel(panel: FootbarPanel, label: string) {
   justify-content: space-between;
   gap: var(--a-space-5);
   min-height: 44px;
+}
+
+.site-footer-center {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
 }
 
 .site-footer-brand {

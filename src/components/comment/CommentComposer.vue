@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { AtSign, Clock3, Image as ImageIcon, ImagePlus, Send, X } from 'lucide-vue-next'
 
 import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
@@ -133,6 +133,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   submit: [input: CreateCommentInput]
   cancel: []
+  'content-change': [content: string]
 }>()
 
 interface LocalAttachment { id: string; name: string }
@@ -164,6 +165,11 @@ const uploading = ref(false)
 const imageError = ref('')
 let referenceRequest = 0
 let referenceDebounce: ReturnType<typeof setTimeout> | null = null
+
+watch(content, (value) => emit('content-change', value))
+watch(() => props.initialContent, (value) => {
+  if (value !== content.value) content.value = value
+})
 
 const codePointLength = computed(() => commentCodePointLength(content.value))
 const markdownValidation = computed(() => validateCommentMarkdown(content.value))
@@ -338,7 +344,11 @@ function reset() {
   imageError.value = ''
 }
 
-defineExpose({ reset })
+function setContent(value: string) {
+  content.value = value
+}
+
+defineExpose({ reset, setContent })
 
 onBeforeUnmount(() => {
   if (referenceDebounce) clearTimeout(referenceDebounce)

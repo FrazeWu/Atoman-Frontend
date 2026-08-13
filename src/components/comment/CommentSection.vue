@@ -18,9 +18,11 @@
       v-if="authStore.isAuthenticated && !readonly"
       ref="rootComposer"
       :placeholder="`写下${noun}`"
+      :initial-content="rootDraftContent"
       :current-time="currentTime"
       :submitting="creating"
       @submit="createRoot"
+      @content-change="rootDraftContent = $event"
     />
     <div v-else-if="readonly" class="comment-section__login">该话题已锁定</div>
     <div v-else class="comment-section__login">
@@ -73,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { MessageSquare } from 'lucide-vue-next'
 
 import type { CommentDTO, CommentTargetRef, CreateCommentInput, ReportCommentInput } from '@/api/comments'
@@ -81,6 +83,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useComments } from '@/composables/useComments'
 import { useAuthStore } from '@/stores/auth'
+import { useForumStore } from '@/stores/forum'
 import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 import CommentComposer from './CommentComposer.vue'
 import CommentReportDialog from './CommentReportDialog.vue'
@@ -114,10 +117,12 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
+const forumStore = useForumStore()
 const comments = useComments(() => props.target)
 const creating = ref(false)
 const mutationError = ref('')
-const rootComposer = ref<{ reset: () => void } | null>(null)
+const rootComposer = ref<{ reset: () => void; setContent?: (value: string) => void } | null>(null)
+const rootDraftContent = ref('')
 const reportVisible = ref(false)
 const reportingCommentId = ref('')
 const sectionElement = ref<HTMLElement | null>(null)
@@ -134,6 +139,34 @@ const sortOptions = [
 let focusRequest = 0
 let focusQueue = Promise.resolve()
 let targetGeneration = 0
+let draftSaveTimer: ReturnType<typeof setInterval> | null = null
+
+const rootDraftKey = computed(() => props.target.kind === 'forum_topic'
+  ? `reply:${props.target.resourceId}:root`
+  : '')
+
+async function restoreRootDraft(request: number) {
+  const key = rootDraftKey.value
+  if (!key || !authStore.isAuthenticated || props.readonly) return
+  const draft = await forumStore.fetchDraft(key) ?? forumStore.loadDraftLocal(key)
+  if (request !== focusRequest || key !== rootDraftKey.value) return
+  rootDraftContent.value = draft?.content ?? ''
+  rootComposer.value?.setContent?.(rootDraftContent.value)
+}
+
+async function saveRootDraft() {
+  const key = rootDraftKey.value
+  if (!key || !authStore.isAuthenticated || props.readonly) return
+  const content = rootDraftContent.value.trim()
+  if (!content) {
+    if (rootDraftContent.value === '') return
+    await forumStore.deleteDraft(key)
+    return
+  }
+  const draft = { context_key: key, title: '', content, tags: '' }
+  forumStore.saveDraftLocal(key, draft)
+  await forumStore.putDraft(draft)
+}
 
 watch(() => [
   `${props.target.kind}:${props.target.resourceId}`,
@@ -143,6 +176,7 @@ watch(() => [
   if (previous && previous[0] !== targetKey) {
     targetGeneration += 1
     creating.value = false
+    rootDraftContent.value = ''
     rootComposer.value?.reset()
     mutationError.value = ''
   }
@@ -156,6 +190,7 @@ watch(() => [
         if (request !== focusRequest) return
         emitCount()
       }
+      await restoreRootDraft(request)
       if (request !== focusRequest) return
       await focusRequestedComment(request)
     } catch {
@@ -163,6 +198,16 @@ watch(() => [
     }
   })
 }, { immediate: true })
+
+watch(rootDraftKey, (key) => {
+  if (draftSaveTimer) clearInterval(draftSaveTimer)
+  draftSaveTimer = key ? setInterval(() => { void saveRootDraft() }, 3000) : null
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (draftSaveTimer) clearInterval(draftSaveTimer)
+  void saveRootDraft()
+})
 
 async function focusRequestedComment(request: number) {
   const commentId = props.focusCommentId
@@ -217,6 +262,8 @@ async function createRoot(input: CreateCommentInput) {
   try {
     await comments.create(input)
     if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
+    if (rootDraftKey.value) await forumStore.deleteDraft(rootDraftKey.value)
+    rootDraftContent.value = ''
     rootComposer.value?.reset()
     emitCount()
   } catch (error) {

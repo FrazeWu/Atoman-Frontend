@@ -120,6 +120,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'search', component: () => import('@/views/forum/ForumSearchView.vue') },
         { path: 'new', component: () => import('@/views/forum/ForumNewTopicView.vue'), meta: { requiresAuth: true, featureGate: { module: 'forum', feature: 'topic.create' } } },
         { path: 'topic/:id', component: () => import('@/views/forum/ForumTopicView.vue') },
+        { path: 'topic/:id/edit', component: () => import('@/views/forum/ForumNewTopicView.vue'), meta: { requiresAuth: true } },
       ],
     },
   ],

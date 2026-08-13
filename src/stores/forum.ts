@@ -149,14 +149,19 @@ export const useForumStore = defineStore('forum', () => {
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       })
+      if (!res.ok) {
+        const responseError = await res.json().catch(() => ({}))
+        error.value = referencePublishErrorMessage(responseError, '保存失败，请重试')
+      }
       return res.ok
     } catch (e) {
       reportError(e, 'Failed to update topic')
+      error.value = referencePublishErrorMessage(e, '保存失败，请重试')
       return false
     }
   }
 
-  const deleteTopic = async (id: string) => {
+  const deleteTopic = async (id: string): Promise<boolean> => {
     try {
       const res = await apiRequest(`${api.url}/forum/topics/${id}`, {
         method: 'DELETE',
@@ -164,9 +169,12 @@ export const useForumStore = defineStore('forum', () => {
       })
       if (res.ok) {
         topics.value = topics.value.filter((t) => t.id !== id)
+        if (currentTopic.value?.id === id) currentTopic.value = null
       }
+      return res.ok
     } catch (e) {
       reportError(e, 'Failed to delete topic')
+      return false
     }
   }
 

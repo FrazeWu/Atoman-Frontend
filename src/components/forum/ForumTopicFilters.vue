@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTab from '@/components/ui/PTab.vue'

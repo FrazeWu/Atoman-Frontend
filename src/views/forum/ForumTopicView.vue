@@ -69,6 +69,17 @@
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
           >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</PButton>
 
+          <div v-if="canEditTopic || canPinTopic || canLockTopic" class="topic-action-group">
+            <PButton v-if="canEditTopic" outline size="sm" @click="editTopic">编辑</PButton>
+            <PButton v-if="canEditTopic" outline size="sm" class="topic-action-danger" @click="deleteTopic">删除</PButton>
+            <PButton v-if="canLockTopic" outline size="sm" @click="toggleClosed">
+              {{ forumStore.currentTopic.closed ? '解锁' : '锁定' }}
+            </PButton>
+            <PButton v-if="canPinTopic" outline size="sm" @click="togglePinned">
+              {{ forumStore.currentTopic.pinned ? '取消置顶' : '置顶' }}
+            </PButton>
+          </div>
+
           <!-- Report button (non-owner, authenticated) -->
           <PButton
             v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
@@ -178,6 +189,10 @@ const canDeleteAnyComment = computed(() => Boolean(
     isAdminRole(authStore.user.role)
   ),
 ))
+const canEditTopic = computed(() => Boolean(forumStore.currentTopic?.can_edit_topic))
+const canPinTopic = computed(() => Boolean(forumStore.currentTopic?.can_pin_topic))
+const canLockTopic = computed(() => Boolean(forumStore.currentTopic?.can_lock_topic))
+const moderationPending = ref(false)
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -273,7 +288,7 @@ const submitReport = async () => {
 const toggleFeatured = async () => {
   const topic = forumStore.currentTopic!
   const method = topic.featured ? 'DELETE' : 'POST'
-  const res = await apiRequestResult(`${api.url}/forum/topics/${topic.id}/feature`, {
+  const res = await apiRequestResult(`${api.url}/forum/moderation/topics/${topic.id}/feature`, {
     method,
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
@@ -281,6 +296,34 @@ const toggleFeatured = async () => {
     topic.featured = !topic.featured
   }
 }
+
+const editTopic = () => {
+  if (forumStore.currentTopic) router.push(`/forum/topic/${forumStore.currentTopic.id}/edit`)
+}
+
+const deleteTopic = async () => {
+  const topic = forumStore.currentTopic
+  if (!topic || !window.confirm('确定删除这个话题吗？')) return
+  if (await forumStore.deleteTopic(topic.id)) router.push('/forum')
+}
+
+const toggleModeration = async (action: 'lock' | 'unlock' | 'pin' | 'unpin') => {
+  const topic = forumStore.currentTopic
+  if (!topic || moderationPending.value) return
+  moderationPending.value = true
+  try {
+    const res = await apiRequestResult(`${api.url}/forum/moderation/topics/${topic.id}/${action}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authStore.token}` },
+    })
+    if (res.ok) await loadTopic()
+  } finally {
+    moderationPending.value = false
+  }
+}
+
+const toggleClosed = () => toggleModeration(forumStore.currentTopic?.closed ? 'unlock' : 'lock')
+const togglePinned = () => toggleModeration(forumStore.currentTopic?.pinned ? 'unpin' : 'pin')
 </script>
 
 <style scoped>
@@ -359,6 +402,17 @@ const toggleFeatured = async () => {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.topic-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.topic-action-danger {
+  color: var(--a-color-accent-destructive);
+  border-color: var(--a-color-accent-destructive);
 }
 
 .topic-action-btn-active {

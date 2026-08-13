@@ -1,6 +1,6 @@
 <template>
   <div class="a-page">
-    <PPageHeader title="发布话题">
+    <PPageHeader :title="isEditing ? '编辑话题' : '发布话题'">
       <template #action>
         <PButton outline @click="router.back()">取消</PButton>
       </template>
@@ -24,6 +24,7 @@
             size="sm"
             class="category-btn"
             :class="{ 'category-btn-selected': selectedCategoryId === cat.id }"
+            :disabled="isEditing"
             @click="selectedCategoryId = cat.id"
           >
             <span class="category-dot" :style="{ background: cat.color || 'var(--a-color-fg)' }" />
@@ -88,7 +89,7 @@
       <!-- Submit -->
       <div class="form-actions">
         <PButton :disabled="submitting" @click="submit">
-          {{ submitting ? '发布中...' : '发布话题' }}
+          {{ submitting ? (isEditing ? '保存中...' : '发布中...') : (isEditing ? '保存修改' : '发布话题') }}
         </PButton>
         <PButton outline @click="router.back()">取消</PButton>
         <PButton v-if="hasDraft" outline size="sm" @click="clearDraft">清除草稿</PButton>
@@ -98,8 +99,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEditor from '@/components/shared/PEditor.vue'
@@ -107,11 +108,13 @@ import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 import type { ForumDraft } from '@/types'
 
-const DRAFT_KEY = 'new_topic'
-
+const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 const authStore = useAuthStore()
+const isEditing = computed(() => Boolean(route.params.id && route.params.id !== 'new'))
+const topicId = computed(() => String(route.params.id || ''))
+const DRAFT_KEY = computed(() => isEditing.value ? `edit_topic:${topicId.value}` : 'new_topic')
 
 const selectedCategoryId = ref('')
 const editorValue = ref('')
@@ -153,12 +156,12 @@ const saveDraft = async () => {
   const { title, content } = parseEditor()
   if (!title && !content) return
   const draft: ForumDraft = {
-    context_key: DRAFT_KEY,
+    context_key: DRAFT_KEY.value,
     title,
     content,
     tags: tags.value.join(','),
   }
-  forumStore.saveDraftLocal(DRAFT_KEY, draft)
+  forumStore.saveDraftLocal(DRAFT_KEY.value, draft)
   await forumStore.putDraft(draft)
   const now = new Date()
   draftSavedAt.value = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -166,7 +169,7 @@ const saveDraft = async () => {
 }
 
 const restoreDraft = async () => {
-  const draft = await forumStore.fetchDraft(DRAFT_KEY) ?? forumStore.loadDraftLocal(DRAFT_KEY)
+  const draft = await forumStore.fetchDraft(DRAFT_KEY.value) ?? forumStore.loadDraftLocal(DRAFT_KEY.value)
   if (!draft) return
   if (draft.content) {
     const titleLine = draft.title ? `# ${draft.title}\n\n` : ''
@@ -179,7 +182,7 @@ const restoreDraft = async () => {
 }
 
 const clearDraft = async () => {
-  await forumStore.deleteDraft(DRAFT_KEY)
+  await forumStore.deleteDraft(DRAFT_KEY.value)
   hasDraft.value = false
   draftSavedAt.value = ''
 }
@@ -226,12 +229,11 @@ const submit = async () => {
   submitting.value = true
   try {
     const { title, content } = parseEditor()
-    const topic = await forumStore.createTopic({
-      category_id: selectedCategoryId.value,
-      title,
-      content,
-      tags: tags.value,
-    })
+    const topic = isEditing.value
+      ? (await forumStore.updateTopic(topicId.value, { title, content, tags: tags.value })
+        ? await forumStore.fetchTopic(topicId.value)
+        : null)
+      : await forumStore.createTopic({ category_id: selectedCategoryId.value, title, content, tags: tags.value })
     if (topic) {
       await clearDraft()
       router.push(`/forum/topic/${topic.id}`)
@@ -255,6 +257,13 @@ onMounted(async () => {
   }
   if (forumStore.categories.length > 0 && !selectedCategoryId.value) {
     selectedCategoryId.value = forumStore.categories[0].id
+  }
+  if (isEditing.value) {
+    const topic = await forumStore.fetchTopic(topicId.value)
+    if (!topic) return
+    selectedCategoryId.value = topic.category_id
+    editorValue.value = `# ${topic.title}\n\n${topic.content}`
+    tags.value = [...(topic.tags || [])]
   }
   await restoreDraft()
   startAutosave()

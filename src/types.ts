@@ -791,6 +791,9 @@ export interface ForumTopic {
   last_reply_at?: string
   is_liked: boolean
   is_bookmarked: boolean
+  can_edit_topic?: boolean
+  can_pin_topic?: boolean
+  can_lock_topic?: boolean
   references?: ResolvedReference[]
   created_at: string
   updated_at: string

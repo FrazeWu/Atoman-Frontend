@@ -37,6 +37,7 @@
     <SubscriptionManageSheet
       v-if="!showAddModal"
       :show="showManageSheet"
+      :initial-tab="manageInitialTab"
       :subscriptions="subscriptions"
       :groups="groups"
       :subscription-rules="feedStore.subscriptionRules"
@@ -557,12 +558,21 @@ const scrollToTop = async () => {
 }
 
 
+const manageInitialTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>('groups')
+
 watch(() => route.query.manage_subscriptions, async (value) => {
   if (value !== '1') return
   const query = { ...route.query }
+  const tab = query.manage_tab
   delete query.manage_subscriptions
+  delete query.manage_tab
   await router.replace({ query })
   if (authStore.isAuthenticated) {
+    if (tab === 'sources' || tab === 'rules' || tab === 'keywords' || tab === 'groups') {
+      manageInitialTab.value = tab
+    } else {
+      manageInitialTab.value = 'groups'
+    }
     showManageSheet.value = true
   }
 }, { immediate: true })

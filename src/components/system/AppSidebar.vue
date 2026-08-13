@@ -290,7 +290,7 @@ const selectAllSources = () => {
 
 const openManageSheet = () => {
   if (router && route) {
-    void router.push({ path: moduleUrl('feed'), query: { ...route.query, manage_subscriptions: '1' } })
+    void router.push({ path: moduleUrl('feed'), query: { ...route.query, manage_subscriptions: '1', manage_tab: 'groups' } })
   }
 }
 

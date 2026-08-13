@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="订阅源管理"
+    :title="activeManageTab === 'groups' ? '分组管理' : '订阅源管理'"
     close-type="header"
     @close="$emit('close')"
   >
@@ -59,7 +59,8 @@
         </button>
       </div>
 
-      <template v-if="activeManageTab === 'sources'">
+      <!-- 分组管理 tab -->
+      <template v-if="activeManageTab === 'groups'">
         <form class="create-group-form" @submit.prevent="submitGroup">
           <PField label="新建分组">
             <div class="inline-form">
@@ -69,6 +70,36 @@
           </PField>
         </form>
 
+        <div v-if="!groups.length" class="empty-state a-muted">
+          暂无分组，在上方新建第一个分组。
+        </div>
+
+        <div v-else class="group-manage-list">
+          <div v-for="group in groups" :key="group.id" class="group-manage-row">
+            <PInput
+              :model-value="draftGroupNames[group.id] ?? group.name"
+              data-test="group-name-input"
+              class="group-name-input"
+              :disabled="busy"
+              @input="updateDraftGroupName(group.id, $event)"
+              @blur="submitGroupRename(group)"
+              @keydown.enter.prevent="submitGroupRename(group)"
+            />
+            <span class="group-manage-count a-muted">
+              {{ groupSubscriptionCount(group.id) }} 个订阅源
+            </span>
+            <PPress
+              variant="secondary"
+              label="删除"
+              :disabled="busy"
+              @click="confirmDeleteGroup(group.id)"
+            />
+          </div>
+        </div>
+      </template>
+
+      <!-- 订阅源管理 tab -->
+      <template v-else-if="activeManageTab === 'sources'">
         <div v-if="!subscriptions.length" class="empty-state a-muted">
           暂无订阅源，点击页面上的 “+ 订阅” 添加。
         </div>
@@ -76,24 +107,7 @@
         <div v-else class="group-list">
           <section v-for="group in displayGroups" :key="group.id" class="group-section">
             <div class="group-title">
-              <PInput
-                v-if="!group.virtual"
-                :model-value="draftGroupNames[group.id] ?? group.name"
-                data-test="group-name-input"
-                class="group-name-input"
-                :disabled="busy"
-                @input="updateDraftGroupName(group.id, $event)"
-                @blur="submitGroupRename(group)"
-                @keydown.enter.prevent="submitGroupRename(group)"
-              />
-              <span v-else class="a-font-meta">/ {{ group.name }}</span>
-              <PPress
-                v-if="!group.virtual"
-                variant="secondary"
-                label="删除分组"
-                :disabled="busy"
-                @click="confirmDeleteGroup(group.id)"
-              />
+              <span class="group-label-virtual">{{ group.name }}</span>
             </div>
 
             <div v-if="!group.subscriptions.length" class="group-empty a-muted">
@@ -273,6 +287,7 @@ const props = defineProps<{
   subscriptions: Subscription[]
   groups: SubscriptionGroup[]
   subscriptionRules: FeedSubscriptionRule[]
+  initialTab?: 'groups' | 'sources' | 'rules' | 'keywords'
   ruleApplySummary: ApplySubscriptionRulesSummary | null
   filterRules: FeedFilterRules
   automationRules: FeedAutomationRules
@@ -316,13 +331,14 @@ const newKeyword = ref('')
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
-const activeManageTab = ref<'sources' | 'rules' | 'keywords'>('sources')
+const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.initialTab ?? 'groups')
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
 })
 
 const manageTabs = [
+  { key: 'groups', label: '分组' },
   { key: 'sources', label: '订阅源' },
   { key: 'rules', label: '规则' },
   { key: 'keywords', label: '过滤' },
@@ -357,6 +373,9 @@ const subscriptionTitle = (sub: Subscription) =>
 
 const subscriptionSourceLabel = (sub: Subscription) =>
   sub.feed_source?.title || sub.title || sub.feed_source?.rss_url || 'RSS'
+
+const groupSubscriptionCount = (groupId: string) =>
+  props.subscriptions.filter((sub) => sub.subscription_group_id === groupId).length
 
 const emitFilterRules = (rules: FeedFilterRules) => {
   localFilterRules.value = {
@@ -508,6 +527,7 @@ watch(() => props.show, (visible) => {
   if (!visible) {
     return
   }
+  activeManageTab.value = props.initialTab ?? 'groups'
   newGroupName.value = ''
   newKeyword.value = ''
   localFilterRules.value = {
@@ -784,6 +804,34 @@ watch(() => props.filterRules, (rules) => {
   max-width: 18rem;
   font-weight: 500;
   font-size: 0.8rem;
+}
+
+.group-label-virtual {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--a-color-fg);
+  letter-spacing: 0.01em;
+}
+
+.group-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group-manage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+}
+
+.group-manage-count {
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .subscription-list {

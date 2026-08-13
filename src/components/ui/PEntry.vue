@@ -7,9 +7,11 @@
     <div style="display:flex;gap:1.25rem;align-items:flex-start;position:relative;">
       
       <!-- Left Badge / Image Area -->
-      <slot name="visual">
-        <span v-if="badge" class="a-badge-fill" style="flex-shrink:0">{{ badge }}</span>
-      </slot>
+      <div class="p-entry-visual">
+        <slot name="visual">
+          <span v-if="badge" class="a-badge-fill">{{ badge }}</span>
+        </slot>
+      </div>
 
       <!-- Main Content Area -->
       <div style="flex:1;min-width:0">
@@ -135,6 +137,11 @@ defineEmits(['click'])
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted-soft);
+}
+
+.p-entry-visual {
+  flex-shrink: 0;
+  margin-top: 1.1rem;
 }
 
 .feed-entry-summary {

@@ -239,8 +239,8 @@ describe('MusicCreationFlowDrawer', () => {
           derivedAlbumTitle: 'Imported Album',
           derivedCover: 'https://img.test/cover.jpg',
           derivedTracks: [
-            { title: 'Track A', audioKey: 'audio-a', origin: 'import' },
-            { title: 'Track B', audioKey: 'audio-b', origin: 'import' },
+            { songId: 'song-a', title: 'Track A', audioKey: 'audio-a', origin: 'import' },
+            { songId: 'song-b', title: 'Track B', audioKey: 'audio-b', origin: 'import' },
           ],
         },
       },
@@ -253,8 +253,8 @@ describe('MusicCreationFlowDrawer', () => {
     expect(flow?.draft.albumDetails.coverUrl).toBe('https://img.test/default-cover.jpg')
     expect(flow?.draft.albumImport.derivedCover).toBe('https://img.test/cover.jpg')
     expect(flow?.draft.tracks).toEqual([
-      { id: 'import-track-1', sequence: 1, title: 'Track A', audioKey: 'audio-a', origin: 'import' },
-      { id: 'import-track-2', sequence: 2, title: 'Track B', audioKey: 'audio-b', origin: 'import' },
+      { id: 'import-track-1', songId: 'song-a', sequence: 1, title: 'Track A', audioKey: 'audio-a', origin: 'import' },
+      { id: 'import-track-2', songId: 'song-b', sequence: 2, title: 'Track B', audioKey: 'audio-b', origin: 'import' },
     ])
 
     wrapper.unmount()
@@ -1005,9 +1005,9 @@ describe('MusicCreationFlowDrawer', () => {
           title: 'Dragged Album',
         },
         tracks: [
-          { id: 'track-9', sequence: 9, title: 'Outro' },
-          { id: 'track-3', sequence: 3, title: 'Intro' },
-          { id: 'track-5', sequence: 5, title: 'Middle' },
+          { id: 'track-9', songId: 'song-outro', sequence: 9, title: 'Outro' },
+          { id: 'track-3', songId: 'song-intro', sequence: 3, title: 'Intro' },
+          { id: 'track-5', songId: 'song-middle', sequence: 5, title: 'Middle' },
         ],
       },
     })
@@ -1026,9 +1026,9 @@ describe('MusicCreationFlowDrawer', () => {
       album: expect.objectContaining({
         title: 'Dragged Album',
         tracks: [
-          { title: 'Outro', disc_number: 1, track_number: 1 },
-          { title: 'Intro', disc_number: 1, track_number: 2 },
-          { title: 'Middle', disc_number: 1, track_number: 3 },
+          { song_id: 'song-outro', title: 'Outro', disc_number: 1, track_number: 1 },
+          { song_id: 'song-intro', title: 'Intro', disc_number: 1, track_number: 2 },
+          { song_id: 'song-middle', title: 'Middle', disc_number: 1, track_number: 3 },
         ],
       }),
     }))
@@ -1143,7 +1143,6 @@ describe('MusicCreationFlowDrawer', () => {
   })
 
   it('仅填写新的生日分段字段时，关闭前仍会视为有未保存内容', async () => {
-    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(false)
     drawerMocks.state.value.creationFlow = createFlowState({
       step: 'artist',
       draft: {
@@ -1175,10 +1174,14 @@ describe('MusicCreationFlowDrawer', () => {
 
     await wrapper.get('[data-testid="music-creation-close-button"]').trigger('click')
 
-    expect(confirmMock).toHaveBeenCalledTimes(1)
+    const confirm = wrapper.getComponent({ name: 'PConfirm' })
+    expect(confirm.props('show')).toBe(true)
     expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
 
-    confirmMock.mockRestore()
+    confirm.vm.$emit('cancel')
+    await flushPromises()
+    expect(confirm.props('show')).toBe(false)
+    expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
   })
 
   it('提交失败时保留抽屉并显示错误', async () => {

@@ -18,9 +18,13 @@ function importSnapshot(status: 'pending_upload' | 'uploading' | 'uploaded' | 'q
     coverUrl: '',
     coverKey: '',
     derivedAlbumTitle: status === 'ready' ? 'E2E Import Album' : '',
-    derivedCover: '',
+    derivedCover: status === 'ready' ? 'https://img.example.test/e2e-cover.jpg' : '',
+    derivedReleaseDate: status === 'ready' ? '2026-08-13' : '',
+    derivedAlbumType: status === 'ready' ? 'album' : '',
+    metadataSourceUrl: status === 'ready' ? 'https://musicbrainz.org/release/e2e-release' : '',
+    missingArtists: [],
     derivedTracks: status === 'ready'
-      ? [{ title: 'E2E Imported Track', audioKey: 'music/e2e-track.mp3', origin: 'import' }]
+      ? [{ songId: 'song-e2e-1', title: 'E2E Imported Track', audioKey: 'music/e2e-track.mp3', origin: 'import' }]
       : [],
     lastSyncedAt: '2026-07-23T00:00:00Z',
     errorMessage: '',
@@ -49,17 +53,19 @@ test('通过真实专辑创建界面完成 v2 分片导入并显示识别曲目'
   const requestPaths: string[] = []
   let importPolls = 0
 
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'e2e-token')
-    localStorage.setItem('user', JSON.stringify({ id: 'user-e2e', username: 'e2e-user' }))
-  })
-
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
     const path = url.pathname
     requestPaths.push(`${request.method()} ${path}`)
 
+    if (request.method() === 'GET' && path === '/api/v1/auth/session') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        csrf_token: 'e2e-csrf',
+        user: { uuid: 'user-e2e', username: 'e2e-user', email: 'e2e@example.test', role: 'user' },
+      }) })
+      return
+    }
     if (request.method() === 'GET' && path === '/api/v1/music/artists/artist-e2e-1') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: envelope({
         id: 'artist-e2e-1', name: 'E2E Artist', legal_name: 'E2E Artist', albums: [], entry_status: 'open',
@@ -94,10 +100,6 @@ test('通过真实专辑创建界面完成 v2 分片导入并显示识别曲目'
       await route.fulfill({ status: 200, contentType: 'application/json', body: envelope(importSnapshot('uploaded')) })
       return
     }
-    if (request.method() === 'POST' && path === `/api/v1/music/imports/albums/${importId}/complete`) {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: envelope(importSnapshot('queued')) })
-      return
-    }
     if (request.method() === 'GET' && path === `/api/v1/music/imports/albums/${importId}`) {
       importPolls += 1
       await route.fulfill({ status: 200, contentType: 'application/json', body: envelope(importSnapshot(importPolls >= 1 ? 'ready' : 'queued')) })
@@ -122,19 +124,18 @@ test('通过真实专辑创建界面完成 v2 分片导入并显示识别曲目'
     buffer: Buffer.from([1, 2, 3]),
   })
 
-  await expect.poll(() => requestPaths).toEqual(expect.arrayContaining([
+  await expect.poll(() => requestPaths, { timeout: 20_000 }).toEqual(expect.arrayContaining([
     `POST /api/v1/music/imports/albums`,
     `POST /api/v1/music/imports/albums/${importId}/files`,
     `POST /api/v1/music/imports/albums/${importId}/files/${fileId}/parts/1`,
     `POST /api/v1/music/imports/albums/${importId}/files/${fileId}/parts/1/complete`,
     `POST /api/v1/music/imports/albums/${importId}/files/${fileId}/complete`,
-    `POST /api/v1/music/imports/albums/${importId}/complete`,
   ]))
   await expect.poll(() => importPolls).toBeGreaterThan(0)
   await expect(creationDialog.getByLabel('专辑名*')).toHaveValue('E2E Import Album')
 
   await expect(creationDialog.getByTestId('album-import-status')).toBeVisible()
-  await creationDialog.getByRole('button', { name: '继续' }).click()
+  await creationDialog.getByTestId('artist-next-button').click()
   await expect(creationDialog.getByTestId('album-import-preview-step')).toBeVisible()
   await expect(creationDialog.getByText('E2E Imported Track')).toBeVisible()
 })

@@ -17,7 +17,7 @@
       <PButton @click="doSearch">搜索</PButton>
     </div>
 
-    <div v-if="forumStore.loading" class="forum-search-skeletons">
+    <div v-if="forumStore.searchLoading" class="forum-search-skeletons">
       <div v-for="i in 5" :key="i" class="forum-search-skeleton a-skeleton" />
     </div>
 
@@ -117,9 +117,12 @@ const doSearch = async () => {
 
 const loadMore = async () => {
   loadingMore.value = true
-  page.value++
-  await forumStore.searchTopics(searchQuery.value, page.value)
-  loadingMore.value = false
+  const nextPage = page.value + 1
+  try {
+    if (await forumStore.searchTopics(searchQuery.value, nextPage)) page.value = nextPage
+  } finally {
+    loadingMore.value = false
+  }
 }
 
 onMounted(async () => {

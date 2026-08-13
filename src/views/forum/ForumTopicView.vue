@@ -24,10 +24,10 @@
         </h1>
 
         <div class="topic-status-row">
-          <span v-if="forumStore.currentTopic.pinned" class="topic-status-badge">置顶</span>
-          <span v-if="forumStore.currentTopic.featured" class="topic-status-badge">精华</span>
-          <span v-if="forumStore.currentTopic.closed" class="topic-status-badge topic-status-muted">已关闭</span>
-          <span v-if="forumStore.currentTopic.is_solved" class="topic-status-badge topic-status-solved">已解决</span>
+          <span v-if="topicState.pinned" class="topic-status-badge">置顶</span>
+          <span v-if="topicState.featured" class="topic-status-badge">精华</span>
+          <span v-if="topicState.closed" class="topic-status-badge topic-status-muted">已关闭</span>
+          <span v-if="topicState.solved" class="topic-status-badge topic-status-solved">已解决</span>
         </div>
 
         <!-- Tags -->
@@ -110,7 +110,7 @@
             :target="{ kind: 'forum_topic', resourceId: topicId }"
             noun="回复"
             mark-label="最佳回答"
-            :readonly="forumStore.currentTopic.closed"
+            :readonly="topicState.closed"
             :can-delete="canDeleteAnyComment"
             @count-change="interactions.commentCount.value = $event"
           />
@@ -155,6 +155,7 @@
       <PButton @click="submitReport">提交举报</PButton>
     </div>
   </PModal>
+
 </template>
 
 <script setup lang="ts">
@@ -189,10 +190,19 @@ const canDeleteAnyComment = computed(() => Boolean(
     isAdminRole(authStore.user.role)
   ),
 ))
-const canEditTopic = computed(() => Boolean(forumStore.currentTopic?.can_edit_topic))
-const canPinTopic = computed(() => Boolean(forumStore.currentTopic?.can_pin_topic))
-const canLockTopic = computed(() => Boolean(forumStore.currentTopic?.can_lock_topic))
+const canEditTopic = computed(() => Boolean(forumStore.currentTopic?.permissions?.edit ?? forumStore.currentTopic?.can_edit_topic))
+const canPinTopic = computed(() => Boolean(forumStore.currentTopic?.permissions?.pin ?? forumStore.currentTopic?.can_pin_topic))
+const canLockTopic = computed(() => Boolean(forumStore.currentTopic?.permissions?.lock ?? forumStore.currentTopic?.can_lock_topic))
 const moderationPending = ref(false)
+const topicState = computed(() => {
+  const topic = forumStore.currentTopic
+  return topic?.state ?? {
+    closed: Boolean(topic?.closed),
+    solved: Boolean(topic?.is_solved),
+    pinned: Boolean(topic?.pinned),
+    featured: Boolean(topic?.featured),
+  }
+})
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -287,13 +297,15 @@ const submitReport = async () => {
 
 const toggleFeatured = async () => {
   const topic = forumStore.currentTopic!
-  const method = topic.featured ? 'DELETE' : 'POST'
+  const featured = topicState.value.featured
+  const method = featured ? 'DELETE' : 'POST'
   const res = await apiRequestResult(`${api.url}/forum/moderation/topics/${topic.id}/feature`, {
     method,
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (res.ok) {
-    topic.featured = !topic.featured
+    topic.featured = !featured
+    if (topic.state) topic.state.featured = !featured
   }
 }
 
@@ -322,8 +334,8 @@ const toggleModeration = async (action: 'lock' | 'unlock' | 'pin' | 'unpin') => 
   }
 }
 
-const toggleClosed = () => toggleModeration(forumStore.currentTopic?.closed ? 'unlock' : 'lock')
-const togglePinned = () => toggleModeration(forumStore.currentTopic?.pinned ? 'unpin' : 'pin')
+const toggleClosed = () => toggleModeration(topicState.value.closed ? 'unlock' : 'lock')
+const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 'pin')
 </script>
 
 <style scoped>

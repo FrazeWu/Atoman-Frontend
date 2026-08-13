@@ -762,6 +762,24 @@ export interface OrbitItem {
 
 // ===== Forum Types =====
 
+export interface ForumTopicState {
+	closed: boolean
+	solved: boolean
+	pinned: boolean
+	featured: boolean
+}
+
+export interface ForumTopicPermissions {
+	edit: boolean
+	delete: boolean
+	reply: boolean
+	mark_answer: boolean
+	pin: boolean
+	lock: boolean
+	feature: boolean
+	report: boolean
+}
+
 export interface ForumCategory {
   id: string
   name: string
@@ -791,9 +809,11 @@ export interface ForumTopic {
   last_reply_at?: string
   is_liked: boolean
   is_bookmarked: boolean
-  can_edit_topic?: boolean
-  can_pin_topic?: boolean
-  can_lock_topic?: boolean
+	can_edit_topic?: boolean
+	can_pin_topic?: boolean
+	can_lock_topic?: boolean
+	state?: ForumTopicState
+	permissions?: ForumTopicPermissions
   references?: ResolvedReference[]
   created_at: string
   updated_at: string
@@ -846,6 +866,7 @@ export interface UserProfile {
   avatar_url?: string
   bio?: string
   website?: string
+  location?: string
   role: string
   followers_count?: number
   following_count?: number

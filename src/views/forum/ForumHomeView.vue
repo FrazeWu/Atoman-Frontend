@@ -40,7 +40,7 @@
       />
 
       <PContentProgress
-        :loading="forumStore.loading"
+        :loading="forumStore.topicsLoading"
         :retry="() => loadTopics(true)"
       >
         <template #skeleton>
@@ -65,8 +65,8 @@
         >
           <!-- Tags / Category badge -->
           <template #meta>
-            <span v-if="topic.pinned" class="tr-badge a-badge tr-badge-pin">置顶</span>
-            <span v-if="topic.closed" class="tr-badge a-badge tr-badge-closed">已关闭</span>
+            <span v-if="topicState(topic).pinned" class="tr-badge a-badge tr-badge-pin">置顶</span>
+            <span v-if="topicState(topic).closed" class="tr-badge a-badge tr-badge-closed">已关闭</span>
             <span
               v-if="topic.category"
               class="tr-badge a-badge tr-badge-cat"
@@ -110,7 +110,7 @@
       </PContentProgress>
 
       <!-- Load more -->
-      <div v-if="hasMore && !forumStore.loading" class="load-more-wrap">
+      <div v-if="hasMore && !forumStore.topicsLoading" class="load-more-wrap">
         <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </main>
@@ -248,6 +248,13 @@ const avatarInitial = (name?: string) => {
   return name.charAt(0).toUpperCase()
 }
 
+const topicState = (topic: ForumTopic) => topic.state ?? {
+  closed: Boolean(topic.closed),
+  solved: Boolean(topic.is_solved),
+  pinned: Boolean(topic.pinned),
+  featured: Boolean(topic.featured),
+}
+
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
 const invalidateTopicPagination = () => {
@@ -264,6 +271,7 @@ const loadTopics = async (resetPage = true) => {
     page.value = 1
     focusedIndex.value = -1
   }
+  forumStore.topicsLoading = true
   forumStore.loading = true
   forumStore.error = null
   try {
@@ -290,6 +298,7 @@ const loadTopics = async (resetPage = true) => {
     }
   } finally {
     if (generation === topicsGeneration) {
+      forumStore.topicsLoading = false
       forumStore.loading = false
     }
   }
@@ -449,6 +458,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   isUnmounted = true
   invalidateTopicPagination()
+  forumStore.topicsLoading = false
   forumStore.loading = false
   window.removeEventListener('keydown', handleKeydown)
   if (searchTimer) clearTimeout(searchTimer)

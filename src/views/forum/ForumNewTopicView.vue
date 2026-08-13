@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -128,7 +128,8 @@ const errors = ref({ category: '', editor: '' })
 const draftSavedAt = ref('')
 const hasDraft = ref(false)
 
-let autosaveTimer: ReturnType<typeof setInterval> | null = null
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+let autosaveEnabled = false
 
 // ─── Tag management ──────────────────────────────────────────────────────────
 
@@ -187,13 +188,17 @@ const clearDraft = async () => {
   draftSavedAt.value = ''
 }
 
-// Start autosave every 3s while on the page
-const startAutosave = () => {
-  autosaveTimer = setInterval(saveDraft, 3000)
+const scheduleAutosave = () => {
+  if (!autosaveEnabled) return
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  autosaveTimer = setTimeout(() => { void saveDraft() }, 1000)
 }
 
+watch(() => [editorValue.value, selectedCategoryId.value, tags.value.join(',')], scheduleAutosave)
+
 onBeforeUnmount(() => {
-  if (autosaveTimer) clearInterval(autosaveTimer)
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  if (autosaveEnabled) void saveDraft()
 })
 
 // ─── Submission ──────────────────────────────────────────────────────────────
@@ -235,6 +240,8 @@ const submit = async () => {
         : null)
       : await forumStore.createTopic({ category_id: selectedCategoryId.value, title, content, tags: tags.value })
     if (topic) {
+      autosaveEnabled = false
+      if (autosaveTimer) clearTimeout(autosaveTimer)
       await clearDraft()
       router.push(`/forum/topic/${topic.id}`)
     } else {
@@ -266,7 +273,7 @@ onMounted(async () => {
     tags.value = [...(topic.tags || [])]
   }
   await restoreDraft()
-  startAutosave()
+  autosaveEnabled = true
 })
 </script>
 

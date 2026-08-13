@@ -43,10 +43,10 @@ const {
   currentLine: currentLyricLine,
 } = useMusicLyrics()
 const lyricsEditorOpen = ref(false)
-const lyricsDisplayMode = ref<'original' | 'translation'>('original')
+const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
 const lyricsDisplayOptions = [
   { label: '原文', value: 'original' },
-  { label: '翻译', value: 'translation' },
+  { label: '双语', value: 'bilingual' },
 ]
 
 function playable(song: MusicSongListItem): Song {
@@ -275,10 +275,10 @@ watch(
             <PButton
               v-if="hasTranslation"
               size="sm"
-              :variant="lyricsDisplayMode === 'translation' ? 'primary' : 'secondary'"
-              @click="lyricsDisplayMode = 'translation'"
+              :variant="lyricsDisplayMode === 'bilingual' ? 'primary' : 'secondary'"
+              @click="lyricsDisplayMode = 'bilingual'"
             >
-              翻译
+              双语
             </PButton>
             <PButton
               data-testid="song-detail-edit-lyrics"
@@ -311,8 +311,9 @@ watch(
               :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
               :line="line"
               :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
-              :bilingual="lyricsDisplayMode === 'translation'"
+              :bilingual="lyricsDisplayMode === 'bilingual'"
               :can-select="false"
+              @seek="player.seek"
             />
           </div>
         </PContentProgress>

@@ -105,7 +105,7 @@ describe('MusicSongRouteView', () => {
     expect(wrapper.get('.song-detail__lyric-lines').text()).toBe('Original')
     expect(wrapper.text()).not.toContain('[00:01.00]Original')
 
-    await wrapper.get('[data-testid="lyrics-mode-translation"]').trigger('click')
+    await wrapper.get('.song-detail__lyrics-actions button:nth-child(2)').trigger('click')
     expect(wrapper.get('.song-detail__lyric-lines').text()).toContain('翻译')
 
     await wrapper.get('[data-testid="song-detail-edit-lyrics"]').trigger('click')

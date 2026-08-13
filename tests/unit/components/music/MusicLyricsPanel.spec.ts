@@ -125,6 +125,9 @@ vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
         <button v-if="annotationMode && canAnnotate" type="button" class="annotate-line" @click="$emit('annotate-line', line)">
           注释整句
         </button>
+        <button type="button" class="seek-line" @click="$emit('seek', 19.625)">
+          定位
+        </button>
       </div>
     `,
   },
@@ -342,10 +345,13 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     const info = wrapper.get('.music-lyrics-panel__song-info')
+    const lyricsScroller = wrapper.get('.music-lyrics-panel__lines')
     expect(apiMocks.getMusicSongDetail).toHaveBeenCalledWith('song-1')
     expect(info.get('h2').text()).toBe('Midnight Radio')
     expect(info.text()).toContain('艺术家Atoman')
     expect(info.text()).toContain('作词Lin')
+    expect(info.element.parentElement).toBe(lyricsScroller.element)
+    expect(wrapper.get('.music-lyrics-panel__main').find('.music-lyrics-panel__song-info').exists()).toBe(true)
   })
 
   it('从歌词选区创建注释', async () => {
@@ -551,6 +557,15 @@ describe('MusicLyricsPanel.vue', () => {
 
     await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
     await wrapper.get('.drawer-seek').trigger('click')
+
+    expect(wrapper.emitted('seek')).toEqual([[19.625]])
+  })
+
+  it('原样转发歌词行的定位事件', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-line-id="line-1"] .seek-line').trigger('click')
 
     expect(wrapper.emitted('seek')).toEqual([[19.625]])
   })
@@ -764,7 +779,7 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     expect(wrapper.get('.lyrics-mode-stub').text()).toContain('原文')
-    expect(wrapper.get('.lyrics-mode-stub').text()).toContain('翻译')
+    expect(wrapper.get('.lyrics-mode-stub').text()).toContain('双语')
     expect(wrapper.get('.lyrics-mode-stub').attributes('data-model')).toBe('bilingual')
     expect(wrapper.get('[data-line-id="line-1"]').attributes('data-bilingual')).toBe('true')
 
@@ -780,7 +795,7 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.find('.lyrics-mode-stub').exists()).toBe(false)
   })
 
-  it('当前定时行变化后平滑居中滚动，忽略初始、重复和无时间行', async () => {
+  it('打开时将当前定时行居中，并在行变化后平滑滚动，忽略重复和无时间行', async () => {
     const scrollIntoView = vi.fn()
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
       configurable: true,
@@ -793,20 +808,21 @@ describe('MusicLyricsPanel.vue', () => {
 
     const wrapper = await mountPanel()
     await flushPromises()
-    expect(scrollIntoView).not.toHaveBeenCalled()
-
-    await wrapper.setProps({ currentTimeSeconds: 1 })
-    await flushPromises()
     expect(scrollIntoView).toHaveBeenCalledOnce()
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
 
+    await wrapper.setProps({ currentTimeSeconds: 1 })
+    await flushPromises()
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'center' })
+
     await wrapper.setProps({ currentTimeSeconds: 2 })
     await flushPromises()
-    expect(scrollIntoView).toHaveBeenCalledOnce()
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
 
     await wrapper.setProps({ currentTimeSeconds: 3 })
     await flushPromises()
-    expect(scrollIntoView).toHaveBeenCalledOnce()
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
   })
 
   it('歌词注释冲突经确认后携带全部 needs_rebind resolution 重试', async () => {

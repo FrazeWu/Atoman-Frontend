@@ -70,6 +70,32 @@ describe('MusicLyricsLine', () => {
     expect(timeEl.text()).toBe('02:05')
   })
 
+  it('点击歌词行本身不会触发定位', async () => {
+    const line = { line_key: 'line-1', text: 'Timed line', translation: '', time_ms: 125000 }
+    const wrapper = mount(MusicLyricsLine, { props: { line } })
+
+    await wrapper.trigger('click')
+
+    expect(wrapper.emitted('seek')).toBeUndefined()
+  })
+
+  it('点击时间戳播放按钮会发出秒数定位事件', async () => {
+    const line = { line_key: 'line-1', text: 'Timed line', translation: '', time_ms: 125000 }
+    const wrapper = mount(MusicLyricsLine, { props: { line } })
+
+    await wrapper.get('.music-lyrics-line__seek').trigger('click')
+
+    expect(wrapper.emitted('seek')).toEqual([[125]])
+  })
+
+  it('无时间轴的歌词行没有定位按钮', async () => {
+    const wrapper = mount(MusicLyricsLine, {
+      props: { line: { line_key: 'line-1', text: 'Untimed line', translation: '' } },
+    })
+
+    expect(wrapper.find('.music-lyrics-line__seek').exists()).toBe(false)
+  })
+
   it('shows annotation count and opens all active annotations', async () => {
     const line = { line_key: 'line-1', text: 'Hello world', translation: '' }
     const wrapper = mount(MusicLyricsLine, {

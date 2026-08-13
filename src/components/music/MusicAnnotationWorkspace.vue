@@ -72,6 +72,5 @@ const emit = defineEmits<{
   display: grid;
   align-content: start;
   gap: 1rem;
-  overflow: auto;
 }
 </style>

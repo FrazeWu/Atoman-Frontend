@@ -116,38 +116,40 @@
 
     <div class="music-lyrics-panel__layout">
       <div class="music-lyrics-panel__main">
-        <section class="music-lyrics-panel__song-info" aria-label="歌曲信息">
-          <p class="music-lyrics-panel__eyebrow">歌词 · {{ activeAnnotationCount }} 条注释</p>
-          <h2>{{ songTitle }}</h2>
-          <dl class="music-lyrics-panel__credits">
-            <div v-for="group in creditGroups" :key="group.role">
-              <dt>{{ group.label }}</dt>
-              <dd>{{ group.names.join(' / ') }}</dd>
-            </div>
-          </dl>
-        </section>
-
         <div v-if="hasTranslation" class="music-lyrics-panel__display-mode">
           <PSegmentedControl v-model="displayMode" :options="displayModeOptions" />
         </div>
-        <p v-if="loading" class="music-lyrics-panel__placeholder">加载中</p>
-        <p v-else-if="!lyrics?.lines.length" class="music-lyrics-panel__placeholder">暂无歌词</p>
+        <div ref="lyricsLinesElement" class="music-lyrics-panel__lines" @wheel="handleUserScroll" @touchmove="handleUserScroll">
+          <section class="music-lyrics-panel__song-info" aria-label="歌曲信息">
+            <p class="music-lyrics-panel__eyebrow">歌词 · {{ activeAnnotationCount }} 条注释</p>
+            <h2>{{ songTitle }}</h2>
+            <dl class="music-lyrics-panel__credits">
+              <div v-for="group in creditGroups" :key="group.role">
+                <dt>{{ group.label }}</dt>
+                <dd>{{ group.names.join(' / ') }}</dd>
+              </div>
+            </dl>
+          </section>
 
-        <div v-else ref="lyricsLinesElement" class="music-lyrics-panel__lines" @wheel="handleUserScroll" @touchmove="handleUserScroll">
-          <MusicLyricsLine
-            v-for="line in lyrics.lines"
-            :key="line.line_key ?? line.id ?? line.text"
-            :line="line"
-            :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
-            :active="currentLineId === (line.line_key ?? line.id ?? '')"
-            :bilingual="showTranslation"
-            :can-select="isAuthenticated"
-            :can-annotate="isAuthenticated"
-            :annotation-mode="annotationSelectionMode"
-            @select-text="handleSelectText"
-            @open-annotations="handleOpenAnnotations"
-            @annotate-line="handleAnnotateLine"
-          />
+          <p v-if="loading" class="music-lyrics-panel__placeholder">加载中</p>
+          <p v-else-if="!lyrics?.lines.length" class="music-lyrics-panel__placeholder">暂无歌词</p>
+          <template v-else>
+            <MusicLyricsLine
+              v-for="line in lyrics.lines"
+              :key="line.line_key ?? line.id ?? line.text"
+              :line="line"
+              :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
+              :active="currentLineId === (line.line_key ?? line.id ?? '')"
+              :bilingual="showTranslation"
+              :can-select="isAuthenticated"
+              :can-annotate="isAuthenticated"
+              :annotation-mode="annotationSelectionMode"
+              @select-text="handleSelectText"
+              @open-annotations="handleOpenAnnotations"
+              @annotate-line="handleAnnotateLine"
+              @seek="emit('seek', $event)"
+            />
+          </template>
         </div>
       </div>
 
@@ -361,14 +363,14 @@ function handleUserScroll() {
 function scrollToActiveLine() {
   if (isUserScrolling.value || !lyricsLinesElement.value || !currentLineId.value) return
   const activeEl = lyricsLinesElement.value.querySelector('.music-lyrics-line.is-active') as HTMLElement | null
-  if (activeEl) {
+  if (activeEl && typeof activeEl.scrollIntoView === 'function') {
     activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
 
 const displayModeOptions = [
   { label: '原文', value: 'original' },
-  { label: '翻译', value: 'bilingual' },
+  { label: '双语', value: 'bilingual' },
 ]
 
 const isAuthenticated = computed(() => Boolean(authStore.isAuthenticated))
@@ -475,12 +477,10 @@ async function loadSongCredits(songId: string) {
 }
 
 watch(currentLineId, async (lineId, previousLineId) => {
-  if (!lineId || lineId === previousLineId) return
+  if (!lineId || (previousLineId !== undefined && lineId === previousLineId)) return
   await nextTick()
-  lyricsLinesElement.value
-    ?.querySelector<HTMLElement>('.music-lyrics-line.is-active')
-    ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-})
+  scrollToActiveLine()
+}, { immediate: true })
 
 watch(
   () => [props.focusAnnotationId, props.startRebind, lyrics.value?.song_id, lyrics.value?.annotations] as const,
@@ -817,15 +817,13 @@ function cancelLyricsConflict() {
   grid-template-rows: auto 1fr;
   gap: 1rem;
   padding: 1.5rem 2rem 2rem;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--a-color-bg);
   border-top: 1px solid var(--a-color-border-soft);
   box-shadow: none;
   z-index: var(--a-z-player-lyrics);
 }
 :root.dark .music-lyrics-panel {
-  background: radial-gradient(circle at 50% 0%, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.96) 100%);
+  background: var(--a-color-bg);
   border-top: 1px solid var(--a-color-border-dark, rgba(255, 255, 255, 0.1));
 }
 
@@ -839,8 +837,9 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__song-info {
   display: grid;
   gap: 0.5rem;
-  margin-bottom: 2rem;
   min-width: 0;
+  margin: 0;
+  padding: 1rem 0 2.5rem;
 }
 
 .music-lyrics-panel__eyebrow {
@@ -1064,9 +1063,10 @@ function cancelLyricsConflict() {
 
 .music-lyrics-panel__main {
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   padding-right: 1rem;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .music-lyrics-panel__display-mode {
@@ -1076,9 +1076,16 @@ function cancelLyricsConflict() {
 }
 
 .music-lyrics-panel__lines {
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: grid;
   gap: 0.2rem;
-  padding: 1.5rem 0;
+  /* 让首句和末句也能在滚动边界停留在可视区中线。 */
+  padding: 50vh 0;
+  scroll-behavior: smooth;
   mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
 }
@@ -1112,6 +1119,10 @@ function cancelLyricsConflict() {
 
   .music-lyrics-panel__main {
     padding-right: 0;
+  }
+
+  .music-lyrics-panel__lines {
+    padding-block: 55vh;
   }
 
   .music-lyrics-panel__sidebar {

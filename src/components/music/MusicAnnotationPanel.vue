@@ -158,7 +158,6 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   gap: 1rem;
   padding: 1rem;
   background: var(--a-color-bg);
-  overflow: auto;
 }
 
 .music-annotation-panel__header {

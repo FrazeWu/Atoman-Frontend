@@ -7,8 +7,17 @@
       'has-annotations': activeAnnotations.length > 0,
     }"
   >
-    <div v-if="line.time_ms != null" class="music-lyrics-line__time">
-      {{ formatTime(line.time_ms) }}
+    <div v-if="lineTimeMs != null" class="music-lyrics-line__time">
+      <span>{{ formatTime(lineTimeMs) }}</span>
+      <button
+        type="button"
+        class="music-lyrics-line__seek"
+        :aria-label="`播放 ${formatTime(lineTimeMs)}`"
+        :title="`播放 ${formatTime(lineTimeMs)}`"
+        @click.stop="handleSeek"
+      >
+        <Play :size="13" aria-hidden="true" />
+      </button>
     </div>
     <div class="music-lyrics-line__content">
       <p
@@ -22,7 +31,7 @@
             v-else
             type="button"
             class="music-lyrics-line__highlight"
-            @click="emit('open-annotations', { line, annotationIds: segment.annotationIds })"
+            @click.stop="emit('open-annotations', { line, annotationIds: segment.annotationIds })"
           >
             {{ segment.text }}
           </button>
@@ -39,7 +48,7 @@
         class="music-lyrics-line__annotation-action"
         :aria-label="`查看这句歌词的 ${activeAnnotations.length} 条注释`"
         :title="`查看 ${activeAnnotations.length} 条注释`"
-        @click="openLineAnnotations"
+        @click.stop="openLineAnnotations"
       >
         <MessageSquareText :size="17" aria-hidden="true" />
         <span>{{ activeAnnotations.length }}</span>
@@ -50,7 +59,7 @@
         class="music-lyrics-line__annotation-action music-lyrics-line__annotation-action--create"
         aria-label="注释这句歌词"
         title="注释这句歌词"
-        @click="emit('annotate-line', line)"
+        @click.stop="emit('annotate-line', line)"
       >
         <SquarePen :size="17" aria-hidden="true" />
         <span>注释</span>
@@ -61,7 +70,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { MessageSquareText, SquarePen } from 'lucide-vue-next'
+import { MessageSquareText, Play, SquarePen } from 'lucide-vue-next'
 import type { MusicLyricsAnnotation, MusicSongLyricsLine } from '@/api/musicV1'
 
 type HighlightSegment = {
@@ -99,10 +108,12 @@ const emit = defineEmits<{
     annotationIds: string[]
   }]
   'annotate-line': [line: MusicSongLyricsLine]
+  seek: [timeSeconds: number]
 }>()
 
 const textElement = ref<HTMLElement | null>(null)
 const activeAnnotations = computed(() => props.annotations.filter((annotation) => annotation.status === 'active'))
+const lineTimeMs = computed(() => props.line.time_ms ?? props.line.startTimeMs ?? null)
 
 const segments = computed<HighlightSegment[]>(() => {
   const text = props.line.text
@@ -184,6 +195,16 @@ function openLineAnnotations() {
   })
 }
 
+function seekTimeSeconds() {
+  const timeMs = lineTimeMs.value
+  return typeof timeMs === 'number' ? timeMs / 1000 : null
+}
+
+function handleSeek() {
+  const timeSeconds = seekTimeSeconds()
+  if (timeSeconds !== null) emit('seek', timeSeconds)
+}
+
 function formatTime(timeMs: number | null | undefined): string {
   if (timeMs == null) return ''
   const totalSeconds = Math.floor(timeMs / 1000)
@@ -234,15 +255,47 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-family: var(--a-font-mono, monospace);
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   color: var(--a-color-muted);
   opacity: 0.6;
-  width: 42px;
+  width: 4.25rem;
   flex-shrink: 0;
   text-align: left;
   margin-top: 0.55rem;
+}
+
+.music-lyrics-line__seek {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.music-lyrics-line:hover .music-lyrics-line__seek,
+.music-lyrics-line:focus-within .music-lyrics-line__seek {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.music-lyrics-line__seek:hover,
+.music-lyrics-line__seek:focus-visible {
+  background: color-mix(in srgb, var(--a-color-text) 12%, transparent);
+  outline: none;
 }
 
 .music-lyrics-line__content {
@@ -331,7 +384,14 @@ function formatTime(timeMs: number | null | undefined): string {
   }
 
   .music-lyrics-line__time {
-    display: none;
+    display: inline-flex;
+    width: 4.25rem;
+    font-size: 0.68rem;
+  }
+
+  .music-lyrics-line__seek {
+    opacity: 1;
+    transform: none;
   }
 
   .music-lyrics-line__text {

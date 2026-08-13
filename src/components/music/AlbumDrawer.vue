@@ -11,7 +11,7 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
-import { ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -64,6 +64,7 @@ const playlistHasMore = ref(false)
 const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const expandedTrackId = ref<string | null>(null)
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const {
   favoriteSongIds,
@@ -236,6 +237,10 @@ function playTrack(track: AlbumTrack) {
   player.playAlbum(playableSongs.value, startIndex)
 }
 
+function toggleTrackDetails(trackId: string) {
+  expandedTrackId.value = expandedTrackId.value === trackId ? null : trackId
+}
+
 function handleCoverError() {
   isCoverBroken.value = true
 }
@@ -331,6 +336,7 @@ async function loadAlbum(albumId: string | null) {
   contributorTotal.value = 0
   favoriteSongIds.value = new Set()
   lyricTrack.value = null
+  expandedTrackId.value = null
   errorMessage.value = ''
   redirectMessage.value = ''
   isCoverBroken.value = false
@@ -688,29 +694,40 @@ watch(
                 </div>
               </div>
             </PDropdown>
-          </div>
-          <div class="track-specification">
-            <PButton
+            <button
               type="button"
-              size="sm"
-              variant="secondary"
-              class="track-lyrics-action"
-              :data-testid="`track-edit-lyrics-${track.id}`"
-              @click="editTrackLyrics(track)"
+              class="track-detail-btn"
+              :class="{ 'is-expanded': expandedTrackId === String(track.id) }"
+              :aria-expanded="expandedTrackId === String(track.id)"
+              :aria-label="`${expandedTrackId === String(track.id) ? '收起' : '展开'} ${track.title} 的更多信息`"
+              :data-testid="`track-details-${track.id}`"
+              @click="toggleTrackDetails(String(track.id))"
             >
-              <FileText :size="15" aria-hidden="true" />
-              编辑歌词
-            </PButton>
+              <ChevronDown :size="16" aria-hidden="true" />
+            </button>
+          </div>
+          <div v-if="expandedTrackId === String(track.id)" class="track-specification">
             <p v-if="sourceSpecification(track)" class="track-specification__line">
-              <span>源文件</span>{{ sourceSpecification(track) }}
-            </p>
-            <p v-if="track.source_file_name" class="track-specification__line track-specification__file">
-              <span>文件名</span>{{ track.source_file_name }}
+              <span>音频源</span>{{ sourceSpecification(track) }}
             </p>
             <p v-if="playbackSpecification(track)" class="track-specification__line">
               <span>播放版本</span>{{ playbackSpecification(track) }}
             </p>
-            <p v-if="!sourceSpecification(track) && !playbackSpecification(track)" class="track-specification__empty">暂无规格信息</p>
+            <div class="track-lyrics-row">
+              <span>歌词</span>
+              <span class="track-lyrics-status">{{ track.lyrics?.trim() ? '已上传' : '暂无歌词' }}</span>
+              <PButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                class="track-lyrics-action"
+                :data-testid="`track-edit-lyrics-${track.id}`"
+                @click="editTrackLyrics(track)"
+              >
+                <FileText :size="15" aria-hidden="true" />
+                {{ track.lyrics?.trim() ? '编辑歌词' : '上传歌词' }}
+              </PButton>
+            </div>
           </div>
         </div>
       </div>
@@ -1120,6 +1137,29 @@ watch(
   gap: 0.75rem;
   flex-shrink: 0;
 }
+.track-detail-btn {
+  display: inline-grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+.track-detail-btn svg {
+  transition: transform 0.15s ease;
+}
+.track-detail-btn.is-expanded svg {
+  transform: rotate(180deg);
+}
+.track-detail-btn:hover,
+.track-detail-btn:focus-visible {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+}
 .track-specification {
   grid-column: 2 / -1;
   display: grid;
@@ -1130,8 +1170,7 @@ watch(
   font-size: 0.75rem;
   line-height: 1.45;
 }
-.track-specification__line,
-.track-specification__empty {
+.track-specification__line {
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -1142,11 +1181,22 @@ watch(
   color: var(--a-color-text-secondary);
   font-weight: 600;
 }
-.track-specification__file {
-  font-family: var(--a-font-mono, monospace);
+.track-lyrics-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
 }
-.track-specification__empty {
-  color: var(--a-color-muted-soft);
+.track-lyrics-row > span:first-child {
+  min-width: 4.5rem;
+  color: var(--a-color-text-secondary);
+  font-weight: 600;
+}
+.track-lyrics-status {
+  color: var(--a-color-muted);
+}
+.track-lyrics-action {
+  margin-left: auto;
 }
 .track-unavailable {
   font-family: var(--a-font-sans);
@@ -1231,7 +1281,8 @@ watch(
 
   .track-play-btn,
   .track-fav-btn,
-  .track-add-btn {
+  .track-add-btn,
+  .track-detail-btn {
     width: 2.75rem;
     height: 2.75rem;
   }

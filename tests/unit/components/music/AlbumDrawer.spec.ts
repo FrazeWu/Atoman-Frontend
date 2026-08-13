@@ -138,12 +138,12 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('专辑详情')
   })
 
-  it('shows detailed track specifications by default', async () => {
+  it('collapses track details by default', async () => {
     const wrapper = mount(AlbumDrawer)
     await flushPromises()
     expect(wrapper.find('[data-testid="album-track-display-detailed"]').exists()).toBe(false)
-    expect(wrapper.findAll('.track-specification')).toHaveLength(2)
-    expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').text()).toContain('编辑歌词')
+    expect(wrapper.findAll('.track-specification')).toHaveLength(0)
+    expect(wrapper.get('[data-testid="track-details-101"]').attributes('aria-expanded')).toBe('false')
   })
 
   it('opens album history from the contributors block', async () => {
@@ -407,7 +407,7 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
 
-  it('shows track specifications directly in the detailed track list', async () => {
+  it('shows audio specifications and lyrics status after expanding a track', async () => {
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Archive Album',
@@ -426,15 +426,21 @@ describe('AlbumDrawer.vue', () => {
         source_lossless: true,
         playback_container: 'mp3',
         playback_bitrate_kbps: 320,
+        lyrics: '第一行歌词',
       }],
     })
 
     const wrapper = mount(AlbumDrawer)
     await flushPromises()
 
+    expect(wrapper.text()).not.toContain('01 - Master.flac')
+    await wrapper.get('[data-testid="track-details-song-1"]').trigger('click')
+
     expect(wrapper.text()).toContain('FLAC · 无损 · 24-bit · 96 kHz · 2 ch · 95.0 MB')
-    expect(wrapper.text()).toContain('01 - Master.flac')
     expect(wrapper.text()).toContain('MP3 · 320 kbps')
+    expect(wrapper.text()).toContain('歌词已上传')
+    expect(wrapper.get('[data-testid="track-edit-lyrics-song-1"]').text()).toContain('编辑歌词')
+    expect(wrapper.text()).not.toContain('01 - Master.flac')
   })
 
   it('opens unified album editor from the more menu', async () => {

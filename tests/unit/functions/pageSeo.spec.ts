@@ -4,7 +4,7 @@ import { buildStaticPageHtml } from "../../../functions/_lib/pageSeo";
 import { onRequest as pageMiddleware } from "../../../functions/_middleware";
 
 const shell =
-	'<!doctype html><html><head><title>Atoman</title><meta data-default-meta name="description" content="old"></head><body></body></html>';
+	'<!doctype html><html><head><title>Atoman</title><meta data-default-meta name="description" content="old"><link data-default-meta rel="canonical" href="https://www.atoman.org/"></head><body></body></html>';
 
 describe("static page SEO", () => {
 	it("renders independent metadata and a www canonical for public module pages", () => {
@@ -35,6 +35,7 @@ describe("static page SEO", () => {
 		);
 		expect(privateHtml).toContain("<title>Atoman</title>");
 		expect(privateHtml).toContain('content="old"');
+		expect(privateHtml).not.toContain('rel="canonical"');
 		expect(
 			buildStaticPageHtml(shell, "/auth/oauth/callback", "www.atoman.org"),
 		).toContain('<meta name="robots" content="noindex, nofollow">');

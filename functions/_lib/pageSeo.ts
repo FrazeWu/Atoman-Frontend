@@ -108,7 +108,10 @@ export function buildStaticPageHtml(
 		? html
 				.replace(/<title[^>]*>[\s\S]*?<\/title>/i, "")
 				.replace(/\s*<(?:meta|link)[^>]*data-default-meta[^>]*>/gi, "")
-		: html;
+		: html.replace(
+				/\s*<link(?=[^>]*data-default-meta)(?=[^>]*rel=["']canonical["'])[^>]*>/gi,
+				"",
+			);
 	return cleanHtml.replace(
 		/<\/head>/i,
 		`    ${tags.join("\n    ")}\n  </head>`,

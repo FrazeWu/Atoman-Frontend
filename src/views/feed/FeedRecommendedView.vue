@@ -572,7 +572,7 @@ onMounted(async () => {
     >
       <template #skeleton>
         <div class="recommend-grid">
-          <div v-for="i in 6" :key="i" style="padding: 1.25rem; border: 1px solid rgba(0,0,0,0.05); border-radius: 8px;">
+          <div v-for="i in 6" :key="i" style="padding: 1.25rem; border: 1px solid rgba(0,0,0,0.05); border-radius: var(--a-radius-control);">
             <PSkeleton width="60%" height="22px" style="margin-bottom: 8px;" />
             <PSkeleton width="90%" height="16px" style="margin-bottom: 8px;" />
             <PSkeleton width="40%" height="14px" />

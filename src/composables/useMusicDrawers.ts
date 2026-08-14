@@ -284,7 +284,7 @@ export function useMusicDrawers() {
     openMusicCreationFlow({
       artistId: artistId || undefined,
       artistName: contributors[0]?.name ?? '',
-      startStep: isRepair ? 'albumDetails' : artistId ? 'albumImport' : 'artist',
+      startStep: isRepair || !artistId ? 'albumDetails' : 'albumImport',
     })
     const flow = state.value.creationFlow
     if (!flow) return

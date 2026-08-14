@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicDrawers } from '../../../src/composables/useMusicDrawers'
+import type { MusicSheetLayer } from '../../../src/components/music/musicSheetTypes'
 
 describe('useMusicDrawers', () => {
   beforeEach(() => {
@@ -130,7 +131,7 @@ describe('useMusicDrawers', () => {
     drawers.openNestedAction('revise', { albumId: 'album-1' })
     drawers.openNestedAction('history', { albumId: 'album-1' })
 
-    expect(drawers.layers.value.map(layer => layer.key)).toEqual([
+    expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.key)).toEqual([
       'album:album-1',
       'action:history:album-1',
     ])
@@ -245,6 +246,40 @@ describe('useMusicDrawers music creation flow', () => {
     ])
   })
 
+  it('resumes an unfinished import without an artist at album details', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.resumeMusicCreationFlow({
+      importId: 'import-unassigned',
+      targetAlbumId: '',
+      artistId: '',
+      albumTitle: 'Freshman Adjustment',
+      status: 'ready',
+      inputMode: 'archive',
+      stage: 'ready',
+      progress: { current: 1, total: 1 },
+      files: [],
+      errors: [],
+      archiveName: 'Freshman Adjustment.zip',
+      uploadProgress: 100,
+      uploadSpeed: 0,
+      coverUrl: '',
+      coverKey: '',
+      derivedAlbumTitle: 'Freshman Adjustment',
+      derivedCover: '',
+      derivedTracks: [{ title: 'Intro', audioKey: 'track-1', origin: 'archive' }],
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+
+    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
+    expect(drawers.state.value.creationFlow?.draft.artist.id).toBeNull()
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([])
+    expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([
+      expect.objectContaining({ title: 'Intro', audioKey: 'track-1' }),
+    ])
+  })
+
   it('resumes an unfinished import at upload when the original artist is stored', () => {
     const drawers = useMusicDrawers()
 
@@ -274,7 +309,7 @@ describe('useMusicDrawers music creation flow', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
     expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-2')
     expect(drawers.state.value.creationFlow?.draft.albumDetails.title).toBe('Discovery')
-    expect(drawers.layers.value.map((layer) => layer.kind)).toEqual(['creation'])
+    expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.kind)).toEqual(['creation'])
   })
 
   it('clears the creation flow draft when closeMusicCreationFlow is called', () => {
@@ -317,7 +352,7 @@ describe('useMusicDrawers music creation flow', () => {
 
     expect(drawers.state.value.creationFlow).not.toBeNull()
     expect(drawers.state.value.musicEditor).toBeNull()
-    expect(drawers.layers.value.some((layer) => layer.kind === 'editor')).toBe(false)
-    expect(drawers.layers.value.map((layer) => layer.kind)).toEqual(['artist', 'creation'])
+    expect(drawers.layers.value.some((layer: MusicSheetLayer) => layer.kind === 'editor')).toBe(false)
+    expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.kind)).toEqual(['artist', 'creation'])
   })
 })

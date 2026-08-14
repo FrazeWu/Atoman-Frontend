@@ -524,6 +524,19 @@ function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) 
   return !!flow.draft.albumImport.importId && hasRequiredDetails && canSubmitAtCurrentStep
 }
 
+async function finishAutomaticallyCommittedImport(
+  flow: NonNullable<typeof creationFlow.value>,
+  committed: Awaited<ReturnType<typeof musicApi.commitMusicAlbumImport>>,
+) {
+  if (committed.status !== 'committed' || flow.submitting) return
+  const albumId = committed.targetAlbumId?.trim()
+  const artistId = committed.artistId?.trim() || flow.draft.artist.id?.trim()
+  refreshArtist()
+  refreshAlbum()
+  closeCurrentCreationFlow()
+  await router.push(albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports')
+}
+
 function flushImportAutosave() {
   if (importAutosaveDrain) return importAutosaveDrain
   importAutosaveDrain = (async () => {
@@ -536,6 +549,7 @@ function flushImportAutosave() {
         if (flow?.draft.albumImport.importId === pending.importId) {
           flow.draft.albumImport.status = committed.status
           flow.draft.albumImport.errorMessage = committed.errorMessage ?? ''
+          await finishAutomaticallyCommittedImport(flow, committed)
         }
       } catch {
         // 最终提交会再次保存并显示错误，避免打断资料填写。

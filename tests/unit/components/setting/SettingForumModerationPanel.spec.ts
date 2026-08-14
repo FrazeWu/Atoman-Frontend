@@ -54,7 +54,8 @@ describe('SettingForumModerationPanel', () => {
     vi.stubGlobal('fetch', fetchMock)
     const wrapper = mount(SettingForumModerationPanel, { global: { stubs: { PButton, RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } } } })
 
-    await wrapper.get('select').setValue('resolved')
+    await wrapper.get('.p-select-trigger').trigger('click')
+    await wrapper.findAll('[role="option"]').find((option) => option.text() === '已处理')!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('resolved result')
 

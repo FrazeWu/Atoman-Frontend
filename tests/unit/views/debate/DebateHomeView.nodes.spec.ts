@@ -3,6 +3,8 @@ import { flushPromises, shallowMount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
+import { useDebateStore } from '@/stores/debate'
+import type { Debate } from '@/types'
 import DebateHomeView from '@/views/debate/DebateHomeView.vue'
 
 const routerPush = vi.hoisted(() => vi.fn())
@@ -10,11 +12,11 @@ const routerPush = vi.hoisted(() => vi.fn())
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }))
 
 const debateRow = {
-  id: 'debate-1', user_id: 'user-1', user: { username: 'fafa' },
+  id: 'debate-1', user_id: 'user-1', user: { username: 'fafa', email: 'fafa@example.com' },
   title: '长期吸烟会不会显著增加肺癌风险？', description: '', content: '',
   status: 'active', tags: [], view_count: 2, current_revision_id: 'revision-debate-1', references: [],
   conclusion_type: 'yes', created_at: '2026-07-18T00:00:00Z', updated_at: '2026-07-18T00:00:00Z',
-}
+} satisfies Debate
 
 let createResponse: Record<string, unknown>
 
@@ -24,7 +26,8 @@ function mountView() {
       stubs: {
         PPageHeader: { template: '<header><slot name="action" /></header>' },
         PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
-        PEntry: { template: '<article><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
+        PContentProgress: { template: '<div><slot /></div>' },
+        PEntry: { template: '<article><slot /><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
         PSelect: {
           props: ['options'],
           template: '<select data-test="status-filter" :data-options="options.map(option => option.value).join(\',\')" />',
@@ -74,6 +77,9 @@ describe('DebateHomeView node wording', () => {
   })
 
   it('treats every item as a debate node and uses the unified conclusion stamp', async () => {
+    const store = useDebateStore()
+    store.debates = [debateRow]
+    store.debatesTotal = 1
     const wrapper = mountView()
     await flushPromises()
 

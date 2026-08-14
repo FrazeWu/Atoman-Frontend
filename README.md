@@ -42,7 +42,7 @@ bun run test:unit
 bun run build
 ```
 
-开发环境读取 `.env.dev`，生产构建读取 `.env.prod`。
+开发环境读取 `.env.dev`，生产构建读取 `.env.production`。
 
 ## 部署
 

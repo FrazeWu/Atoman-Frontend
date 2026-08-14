@@ -28,6 +28,7 @@ const changedFiles = runGit([
 	`${baseCommit}..HEAD`,
 	"--",
 	"src",
+	"functions",
 	"tests",
 ])
 	.split("\n")

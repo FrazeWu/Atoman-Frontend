@@ -337,6 +337,7 @@ export interface Post {
 	cover_url?: string;
 	status: "draft" | "published" | "scheduled";
 	visibility: "public" | "followers" | "private";
+	allow_comments?: boolean;
 	pinned: boolean;
 	collections?: Collection[];
 	published_at?: string;
@@ -398,6 +399,7 @@ export interface BlogDraft {
 	summary?: string;
 	cover_url?: string;
 	visibility: "public" | "followers" | "private";
+	allow_comments?: boolean;
 	channel_id?: string;
 	collection_id?: string;
 	collection_ids: string[];

@@ -111,7 +111,7 @@ import { RouterLink } from 'vue-router'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { studioModules } from '@/config/studioModules'
-import type { StudioContentItem, StudioModule, StudioPagination, StudioPublishStatus, StudioVisibility } from '@/types'
+import type { StudioContentItem, StudioContentStatus, StudioModule, StudioPagination, StudioPublishStatus, StudioVisibility } from '@/types'
 
 const props = defineProps<{
   items: StudioContentItem[]
@@ -144,8 +144,8 @@ const metricColumns = computed(() => ({
   ],
 }[props.module]))
 
-function statusLabel(status: StudioPublishStatus) {
-  return status === 'published' ? '已发布' : '草稿'
+function statusLabel(status: StudioContentStatus) {
+  return { published: '已发布', scheduled: '定时发布', draft: '草稿' }[status]
 }
 
 function visibilityLabel(visibility: StudioVisibility) {

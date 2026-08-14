@@ -230,7 +230,7 @@ export function usePostEditorDraftSession({
     summary: draft.summary || '',
     cover_url: draft.cover_url || '',
     visibility: draft.visibility || 'public',
-    allow_comments: draft.allow_comments,
+    allow_comments: draft.allow_comments ?? true,
     channel_id: draft.channel_id,
     collection_ids: draft.collection_ids || [],
   })

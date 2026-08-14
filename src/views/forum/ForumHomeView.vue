@@ -87,7 +87,11 @@
 
           <!-- Title -->
           <template #title>
-            {{ topic.title }}
+            <RouterLink
+              :to="`/forum/topic/${topic.id}`"
+              class="topic-title-link"
+              @click.stop
+            >{{ topic.title }}</RouterLink>
           </template>
 
           <template #actions>
@@ -1069,4 +1073,13 @@ const submitCategoryRequest = async () => {
     width: 46px;
   }
 }
+.topic-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.topic-title-link:hover {
+  text-decoration: underline;
+}
+
 </style>

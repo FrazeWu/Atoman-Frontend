@@ -1,4 +1,5 @@
 import { buildSitemapXml, resolveApiBase, type SitemapItem } from './_lib/blogSeo'
+import { collectPublicSitemapItems } from './_lib/publicContentSeo'
 
 type SitemapContext = {
   request: Request
@@ -45,6 +46,11 @@ export async function onRequest(context: SitemapContext) {
     if (!isSitemapItems(payload.data)) return unavailable()
     const itemsByPath = new Map(staticPages.map(item => [item.path, item]))
     payload.data.forEach(item => itemsByPath.set(item.path, item))
+    const publicItems = await collectPublicSitemapItems(apiBase)
+    publicItems.forEach(item => {
+      const existing = itemsByPath.get(item.path)
+      if (!existing?.last_modified || item.last_modified) itemsByPath.set(item.path, item)
+    })
     return new Response(buildSitemapXml([...itemsByPath.values()], canonicalOrigin), {
       headers: {
         'cache-control': 'public, max-age=300, s-maxage=3600',

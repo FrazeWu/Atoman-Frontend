@@ -75,7 +75,11 @@
 
         <!-- Title -->
         <template #title>
-          {{ debate.title }}
+          <RouterLink
+            :to="`/debate/${debate.id}`"
+            class="debate-title-link"
+            @click.stop
+          >{{ debate.title }}</RouterLink>
         </template>
 
         <!-- Description -->
@@ -294,4 +298,13 @@ onMounted(async () => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
 }
+.debate-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.debate-title-link:hover {
+  text-decoration: underline;
+}
+
 </style>

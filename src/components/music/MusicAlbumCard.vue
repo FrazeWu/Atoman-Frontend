@@ -69,19 +69,24 @@
     <div class="music-info">
       <div class="music-text">
         <h3 class="music-title a-clamp-1">
-          <button type="button" class="album-title-btn" :title="album.title" @click="emit('click')">{{ album.title }}</button>
+          <RouterLink
+            :to="`/music/album/${album.id}`"
+            class="album-title-btn"
+            :title="album.title"
+            @click.prevent.stop="emit('click')"
+          >{{ album.title }}</RouterLink>
         </h3>
         <p class="music-summary a-clamp-2" :title="`${artistNames} · ${albumYear}`">
           <template v-if="album.artists?.length">
             <template v-for="(artist, index) in album.artists" :key="artist.id || `${artist.name}-${index}`">
               <span v-if="index" aria-hidden="true"> / </span>
-              <button
+              <RouterLink
                 v-if="artist.id"
-                type="button"
+                :to="`/music/artist/${artist.id}`"
                 class="artist-link"
                 :aria-label="`打开艺人 ${artist.name}`"
-                @click="emit('click-artist', String(artist.id))"
-              >{{ artist.name }}</button>
+                @click.prevent.stop="emit('click-artist', String(artist.id))"
+              >{{ artist.name }}</RouterLink>
               <span v-else>{{ artist.name }}</span>
             </template>
           </template>
@@ -376,6 +381,7 @@ const albumYear = computed(() => {
   color: inherit;
   font: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -398,6 +404,7 @@ const albumYear = computed(() => {
   background: transparent;
   color: inherit;
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
 }
 

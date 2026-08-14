@@ -2,6 +2,11 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 
+const RouterLinkStub = {
+  props: ['to'],
+  template: '<a :href="to"><slot /></a>',
+}
+
 describe('MusicAlbumCard', () => {
   it('resolves cover_s3_key through the configured public asset base instead of localhost', () => {
     const env = import.meta.env as ImportMetaEnv
@@ -15,13 +20,14 @@ describe('MusicAlbumCard', () => {
           cover_s3_key: 'music/covers/album-1.jpg',
         },
       },
+      global: { stubs: { RouterLink: RouterLinkStub } },
     })
 
     const image = wrapper.get('img')
     expect(image.attributes('src')).toBe('https://assets.atoman.org/music/covers/album-1.jpg')
   })
 
-  it('keeps album, artist, and bookmark actions as separate buttons', async () => {
+  it('renders crawlable links while keeping album, artist, and bookmark actions separate', async () => {
     const wrapper = mount(MusicAlbumCard, {
       props: {
         album: {
@@ -30,9 +36,11 @@ describe('MusicAlbumCard', () => {
           artists: [{ id: 'artist-1', name: 'Artist One' }],
         },
       },
+      global: { stubs: { RouterLink: RouterLinkStub } },
     })
 
-    expect(wrapper.find('button button').exists()).toBe(false)
+    expect(wrapper.get('.album-title-btn').attributes('href')).toBe('/music/album/album-1')
+    expect(wrapper.get('.artist-link').attributes('href')).toBe('/music/artist/artist-1')
 
     await wrapper.get('.cover-action').trigger('click')
     await wrapper.get('.album-title-btn').trigger('click')

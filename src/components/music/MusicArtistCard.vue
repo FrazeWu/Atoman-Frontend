@@ -60,8 +60,14 @@
 
     <div class="artist-info">
       <h3 class="artist-title" :title="displayName">
-        {{ displayName }}
-        <span v-if="birthYear" class="birth-year">· {{ birthYear }}</span>
+        <RouterLink
+          :to="`/music/artist/${artist.id}`"
+          class="artist-title-link"
+          @click.prevent.stop="$emit('click')"
+        >
+          {{ displayName }}
+          <span v-if="birthYear" class="birth-year">· {{ birthYear }}</span>
+        </RouterLink>
       </h3>
     </div>
   </div>
@@ -291,6 +297,16 @@ const formattedSubscribers = computed(() => {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
+}
+
+.artist-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.artist-title-link:focus-visible {
+  outline: 2px solid var(--a-color-focus, var(--a-color-text));
+  outline-offset: 2px;
 }
 
 .birth-year {

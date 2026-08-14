@@ -22,7 +22,7 @@ import {
 
 type LinkAlbumLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 const props = withDefaults(defineProps<{ layer?: LinkAlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeNestedAction, returnToLayer, refreshArtist, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closeNestedAction, closeMusicCreationFlow, returnToLayer, refreshArtist, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
 
 const payload = computed(() => props.layer?.payload.data && typeof props.layer.payload.data === 'object'
@@ -32,6 +32,7 @@ const payload = computed(() => props.layer?.payload.data && typeof props.layer.p
 		: {})
 const artistId = computed(() => String(payload.value.artistId ?? state.value.artistId ?? ''))
 const artistName = computed(() => String(payload.value.artistName ?? ''))
+const completeCreationFlow = computed(() => payload.value.completeCreationFlow === true)
 const query = ref('')
 const results = ref<MusicAlbumListItem[]>([])
 const selectedAlbum = ref<MusicAlbumListItem | null>(null)
@@ -119,7 +120,8 @@ async function submitLink() {
 		})
 		refreshArtist()
 		refreshAlbum()
-		closeCurrent()
+		if (completeCreationFlow.value) closeMusicCreationFlow()
+		else closeCurrent()
 	} catch {
 		errorMessage.value = '关联专辑失败'
 	} finally {

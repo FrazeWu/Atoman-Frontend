@@ -365,13 +365,61 @@ describe("MusicCreationFlowDrawer", () => {
 				sources: [{ type: "url", url: "https://example.test/ye" }],
 			}),
 		);
-		expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1);
-		expect(drawerMocks.openArtist).toHaveBeenCalledWith("artist-created");
+		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
+		expect(drawerMocks.openArtist).not.toHaveBeenCalled();
 		expect(drawerMocks.openNestedAction).toHaveBeenCalledWith("link_album", {
 			artistId: "artist-created",
 			artistName: "Ye",
+			completeCreationFlow: true,
 		});
 		expect(drawerMocks.routerPush).not.toHaveBeenCalled();
+	});
+
+	it("关联已创建的艺术家时保留创建流以便取消后继续", async () => {
+		const baseFlow = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "artist",
+			draft: {
+				...baseFlow.draft,
+				artist: {
+					...baseFlow.draft.artist,
+					id: "artist-existing",
+					avatarUrl: "https://img.test/existing-artist.jpg",
+					legalName: "Existing Artist",
+					stageNames: [{
+						...baseFlow.draft.artist.stageNames[0],
+						name: "Existing Artist",
+					}],
+					nationality: "中国",
+					birthDateParts: { year: "1990", month: "01", day: "01" },
+					source: "https://example.test/existing-artist",
+				},
+				albumDetails: {
+					...baseFlow.draft.albumDetails,
+					contributors: [{
+						id: "contributor-artist-existing",
+						artistId: "artist-existing",
+						name: "Existing Artist",
+						avatarUrl: "",
+						kind: "person",
+						locked: true,
+						roles: [{ id: "role-existing-primary", role: "primary", label: "主艺术家" }],
+					}],
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="artist-link-album-button"]').trigger("click");
+		await flushPromises();
+
+		expect(createMusicArtistMock).not.toHaveBeenCalled();
+		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
+		expect(drawerMocks.openNestedAction).toHaveBeenCalledWith("link_album", {
+			artistId: "artist-existing",
+			artistName: "Existing Artist",
+			completeCreationFlow: true,
+		});
 	});
 
 	it("创建艺术家失败时保留当前表单", async () => {

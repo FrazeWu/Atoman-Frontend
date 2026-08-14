@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 	getMusicAlbum: vi.fn(),
 		submitAlbumRevision: vi.fn(),
 	closeNestedAction: vi.fn(),
+	closeMusicCreationFlow: vi.fn(),
 	refreshArtist: vi.fn(),
 	refreshAlbum: vi.fn(),
 	requireLogin: vi.fn(() => true),
@@ -22,6 +23,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 	useMusicDrawers: () => ({
 		state: { value: { artistId: 'artist-current', nestedPayload: null } },
 		closeNestedAction: mocks.closeNestedAction,
+		closeMusicCreationFlow: mocks.closeMusicCreationFlow,
 		returnToLayer: vi.fn(),
 		refreshArtist: mocks.refreshArtist,
 		refreshAlbum: mocks.refreshAlbum,
@@ -96,5 +98,33 @@ describe('MusicAlbumCreditLinkDrawer.vue', () => {
 		}))
 		expect(mocks.refreshArtist).toHaveBeenCalled()
 		expect(mocks.closeNestedAction).toHaveBeenCalled()
+		expect(mocks.closeMusicCreationFlow).not.toHaveBeenCalled()
+	})
+
+	it('completes the pending creation flow only after the association succeeds', async () => {
+		const wrapper = mount(MusicAlbumCreditLinkDrawer, {
+			props: {
+				layer: {
+					key: 'action:link_album:artist-current',
+					kind: 'action',
+					title: '关联现有专辑',
+					payload: {
+						action: 'link_album',
+						data: { artistId: 'artist-current', artistName: 'Current Artist', completeCreationFlow: true },
+					},
+				},
+			},
+		})
+
+		await wrapper.get('[data-testid="link-album-search"]').setValue('Existing')
+		await vi.advanceTimersByTimeAsync(250)
+		await flushPromises()
+		await wrapper.get('.album-link__results button').trigger('click')
+		await flushPromises()
+		await wrapper.findAll('button').find((button) => button.text() === '确认关联')?.trigger('click')
+		await flushPromises()
+
+		expect(mocks.closeMusicCreationFlow).toHaveBeenCalledOnce()
+		expect(mocks.closeNestedAction).not.toHaveBeenCalled()
 	})
 })

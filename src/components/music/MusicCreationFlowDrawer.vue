@@ -25,7 +25,6 @@ const {
   setMusicCreationStep,
   refreshArtist,
   refreshAlbum,
-  openArtist,
   openNestedAction,
   isLayerShifted,
   isTopLayer,
@@ -702,15 +701,16 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
           roles: [{ id: `role-${artist.id}-primary`, role: 'primary', label: '主艺术家' }],
         }]
         refreshArtist()
-        if (artistNextAction === 'link_album') {
-          closeCurrentCreationFlow()
-          openArtist(artist.id)
-          openNestedAction('link_album', {
-            artistId: artist.id,
-            artistName: artist.display_name || artist.name,
-          })
-          return
-        }
+      }
+      if (artistNextAction === 'link_album') {
+        const artistId = flow.draft.artist.id
+        if (!artistId) throw new Error('缺少艺术家，无法关联专辑')
+        openNestedAction('link_album', {
+          artistId,
+          artistName: flow.draft.albumDetails.contributors[0]?.name || flow.draft.artist.legalName,
+          completeCreationFlow: true,
+        })
+        return
       }
       setMusicCreationStep('albumImport')
     } catch (error) {

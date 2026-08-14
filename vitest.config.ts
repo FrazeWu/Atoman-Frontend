@@ -7,7 +7,7 @@ export const nodeOnlyTests = [
 	"tests/unit/components/AppTopbar.auth-loading.spec.ts",
 	"tests/unit/composables/{useCommentDraft,useComments,useContentLifecycle,useGlobalSearch,useInteractions,useMarkdownRenderer.styles,useMediaCreationSteps,useMusicFavoritePlaylist,useMusicLyrics,useMusicRouteSelection,usePendingMusicLyricsAnnotations,useRequestGeneration,useVideoBookmarks,useVideoDeepLink}.spec.ts",
 	"tests/unit/config/*.spec.ts",
-	"tests/unit/e2e/base-fixture.spec.ts",
+	"tests/unit/e2e/*.spec.ts",
 	"tests/unit/functions/*.spec.ts",
 	"tests/unit/references/*.spec.ts",
 	"tests/unit/router/{musicRoutes,routes,shortNoteRoutes,siteContext,studioRoutes}.spec.ts",

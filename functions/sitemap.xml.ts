@@ -5,6 +5,19 @@ type SitemapContext = {
   env: { VITE_API_URL?: string }
 }
 
+const canonicalOrigin = 'https://www.atoman.org'
+const staticPages: SitemapItem[] = [
+  { path: '/' },
+  { path: '/feed' },
+  { path: '/posts' },
+  { path: '/music' },
+  { path: '/forum' },
+  { path: '/debate' },
+  { path: '/timeline' },
+  { path: '/podcasts' },
+  { path: '/videos' },
+]
+
 function isSitemapItems(value: unknown): value is SitemapItem[] {
   return Array.isArray(value) && value.every(item => Boolean(item)
     && typeof item === 'object'
@@ -23,15 +36,20 @@ function unavailable() {
 }
 
 export async function onRequest(context: SitemapContext) {
-  const requestUrl = new URL(context.request.url)
   try {
+    const requestUrl = new URL(context.request.url)
     const apiBase = resolveApiBase(context.env.VITE_API_URL, requestUrl.origin)
     const response = await fetch(`${apiBase}/blog/seo/sitemap`, { headers: { Accept: 'application/json' } })
     if (!response.ok) throw new Error('SEO sitemap unavailable')
     const payload = await response.json() as { data?: unknown }
     if (!isSitemapItems(payload.data)) return unavailable()
-    return new Response(buildSitemapXml(payload.data, requestUrl.origin), {
-      headers: { 'content-type': 'application/xml; charset=UTF-8' },
+    const itemsByPath = new Map(staticPages.map(item => [item.path, item]))
+    payload.data.forEach(item => itemsByPath.set(item.path, item))
+    return new Response(buildSitemapXml([...itemsByPath.values()], canonicalOrigin), {
+      headers: {
+        'cache-control': 'public, max-age=300, s-maxage=3600',
+        'content-type': 'application/xml; charset=UTF-8',
+      },
     })
   } catch {
     return unavailable()

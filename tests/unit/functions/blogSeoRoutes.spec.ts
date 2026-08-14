@@ -60,16 +60,22 @@ describe('blog SEO Pages Functions', () => {
     const response = await sitemapHandler({ request: new Request('https://atoman.org/sitemap.xml'), env: {} })
 
     expect(response.headers.get('content-type')).toContain('application/xml')
-    expect(await response.text()).toContain('<loc>https://atoman.org/posts/post/post-1</loc>')
+    expect(response.headers.get('cache-control')).toContain('s-maxage=3600')
+    const xml = await response.text()
+    expect(xml).toContain('<loc>https://www.atoman.org/</loc>')
+    expect(xml).toContain('<loc>https://www.atoman.org/feed</loc>')
+    expect(xml).toContain('<loc>https://www.atoman.org/posts/post/post-1</loc>')
   })
 
-  it('serves a valid empty sitemap for an empty backend data set', async () => {
+  it('serves static public pages when the backend data set is empty', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ data: [] }))))
 
     const response = await sitemapHandler({ request: new Request('https://atoman.org/sitemap.xml'), env: {} })
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('<urlset')
+    const xml = await response.text()
+    expect(xml).toContain('<urlset')
+    expect(xml).toContain('<loc>https://www.atoman.org/posts</loc>')
   })
 
   it.each([

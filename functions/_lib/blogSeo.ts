@@ -11,7 +11,7 @@ export type BlogSeoPost = {
 
 export type SitemapItem = {
   path: string
-  last_modified: string
+  last_modified?: string
 }
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
@@ -80,7 +80,10 @@ export function buildArticleHtml(html: string, post: BlogSeoPost, origin: string
 export function buildSitemapXml(items: SitemapItem[], origin: string) {
   const entries = items.map(item => {
     const path = item.path.startsWith('/') ? item.path : `/${item.path}`
-    return `  <url>\n    <loc>${escapeXml(`${origin}${path}`)}</loc>\n    <lastmod>${escapeXml(item.last_modified)}</lastmod>\n  </url>`
+    const lastModified = item.last_modified
+      ? `\n    <lastmod>${escapeXml(item.last_modified)}</lastmod>`
+      : ''
+    return `  <url>\n    <loc>${escapeXml(`${origin}${path}`)}</loc>${lastModified}\n  </url>`
   }).join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`
 }

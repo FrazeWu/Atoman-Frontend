@@ -6,21 +6,21 @@
       <div class="portal-hot__hero-content">
         <div class="portal-hot__hero-badge">
           <span class="portal-hot__badge-dot"></span>
-          <span>ATOMAN PLATFORM</span>
+          <span>ATOMAN</span>
         </div>
         <h1 class="portal-hot__hero-title">
-          探索全极简与高质感<br />
-          <span class="portal-hot__hero-gradient">精选社区与全域内容</span>
+          3 分钟建立你的<br />
+          <span class="portal-hot__hero-gradient">高质量内容订阅流</span>
         </h1>
         <p class="portal-hot__hero-subtitle">
-          汇总动态、音乐、博客、论战与音频等多元化高品质优质内容，随时开启深度探索与互动。
+          聚合博客、播客、音乐与讨论，不用在多个平台反复筛选。
         </p>
         <div class="portal-hot__hero-actions">
           <PButton variant="primary" size="md" :to="moduleUrl('feed')">
-            进入订阅流
+            浏览今日精选
           </PButton>
           <a href="#sections" class="portal-hot__secondary-btn">
-            浏览全域模块
+            查看真实内容
           </a>
         </div>
       </div>

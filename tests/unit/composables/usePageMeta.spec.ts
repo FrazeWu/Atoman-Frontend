@@ -2,7 +2,7 @@ import { defineComponent } from 'vue'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { usePageMeta } from '@/composables/usePageMeta'
+import { usePageMeta } from '../../../src/composables/usePageMeta'
 
 describe('usePageMeta SSR lifecycle', () => {
   beforeEach(() => {
@@ -40,14 +40,14 @@ describe('usePageMeta SSR lifecycle', () => {
 
     wrapper.unmount()
 
-    expect(document.title).toBe('Atoman')
+    expect(document.title).toBe('Atoman - 3 分钟建立你的高质量内容订阅流')
     expect(document.head.querySelector('[data-page-meta="article"]')).toBeNull()
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
     expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
     expect(document.head.querySelector('meta[property^="article:"]')).toBeNull()
-    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Atoman 内容社区')
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('聚合博客、播客、音乐与讨论，帮助深度内容读者快速建立自己的高质量内容订阅流。')
     expect(document.head.querySelector('meta[property="og:type"]')?.getAttribute('content')).toBe('website')
-    expect(document.head.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe('Atoman')
-    expect(document.head.querySelector('meta[name="twitter:title"]')?.getAttribute('content')).toBe('Atoman')
+    expect(document.head.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe('Atoman - 3 分钟建立你的高质量内容订阅流')
+    expect(document.head.querySelector('meta[name="twitter:title"]')?.getAttribute('content')).toBe('Atoman - 3 分钟建立你的高质量内容订阅流')
   })
 })

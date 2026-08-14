@@ -41,7 +41,7 @@ const titleError = ref('')
 const urlError = ref('')
 const tagDraft = ref('')
 const collections = ref<Collection[]>([])
-const selectedCollectionIds = ref<string[]>([])
+const selectedCollectionId = ref('')
 const selectedCollectionFromQuery = computed(() => (
   typeof route.query.collection === 'string' ? route.query.collection : ''
 ))
@@ -259,18 +259,13 @@ function validateInformation(): boolean {
   return true
 }
 
-function validate(status: 'draft' | 'published'): boolean {
-  if (!validateMedia() || !validateInformation()) return false
-  if (status === 'published' && selectedCollectionIds.value.length === 0) {
-    errorMsg.value = '请先选择合集'
-    return false
-  }
-  return true
+function validate(_status: 'draft' | 'published'): boolean {
+  return validateMedia() && validateInformation()
 }
 
 async function autoPublishAfterUpload() {
   if (isEdit.value || form.value.storage_type !== 'local' || !videoUploaded.value || !videoImportId.value || autoPublishing.value) return
-  if (!validateInformation() || selectedCollectionIds.value.length === 0) return
+  if (!validateInformation()) return
   autoPublishing.value = true
   try {
     await submitVideoImport(videoImportId.value, buildImportPayload(), 'published', null, authStore.token ?? undefined)
@@ -294,7 +289,7 @@ function buildPayload(status: 'draft' | 'published') {
     visibility: form.value.visibility,
     status,
     tags: [...form.value.tags],
-    collection_ids: selectedCollectionIds.value,
+    collection_id: selectedCollectionId.value || null,
   }
 }
 
@@ -307,7 +302,7 @@ function buildImportPayload(): VideoImportPayload {
     duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
     tags: [...form.value.tags],
-    collection_ids: [...selectedCollectionIds.value],
+    collection_id: selectedCollectionId.value || null,
   }
 }
 
@@ -320,8 +315,8 @@ function scheduleImportAutosave() {
   }, 600)
 }
 
-watch([form, selectedCollectionIds, videoImportId], scheduleImportAutosave, { deep: true })
-watch([videoUploaded, () => form.value.title, selectedCollectionIds], () => { void autoPublishAfterUpload() }, { deep: true })
+watch([form, selectedCollectionId, videoImportId], scheduleImportAutosave, { deep: true })
+watch([videoUploaded, () => form.value.title, selectedCollectionId], () => { void autoPublishAfterUpload() }, { deep: true })
 onBeforeUnmount(() => {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
 })
@@ -337,20 +332,10 @@ async function loadCollections(channelID: string) {
   collections.value = studio.collections.video
   if (!isEdit.value) {
     const queryCollectionId = selectedCollectionFromQuery.value
-    selectedCollectionIds.value = queryCollectionId && collections.value.some(collection => collection.id === queryCollectionId)
-      ? [queryCollectionId]
-      : []
+    selectedCollectionId.value = queryCollectionId && collections.value.some(collection => collection.id === queryCollectionId)
+      ? queryCollectionId
+      : ''
   }
-}
-
-function toggleCollection(id: string, checked: boolean) {
-  if (checked) {
-    if (!selectedCollectionIds.value.includes(id)) {
-      selectedCollectionIds.value.push(id)
-    }
-    return
-  }
-  selectedCollectionIds.value = selectedCollectionIds.value.filter(item => item !== id)
 }
 
 async function loadVideo() {
@@ -371,7 +356,10 @@ async function loadVideo() {
     tags: v.tags?.map(t => t.name) ?? [],
   }
   await loadCollections(form.value.channel_id)
-  selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
+  selectedCollectionId.value = v.collection_id
+    || v.collection?.id
+    || v.collections?.[0]?.id
+    || ''
   currentStep.value = 1
   maxStep.value = 1
 }
@@ -396,7 +384,7 @@ onMounted(async () => {
         visibility: task.payload.visibility || 'public', tags: [...task.payload.tags],
       }
       await loadCollections(form.value.channel_id)
-      selectedCollectionIds.value = [...task.payload.collection_ids]
+      selectedCollectionId.value = task.payload.collection_id || task.payload.collection_ids?.[0] || ''
       currentStep.value = task.payload.title ? 2 : 1
       maxStep.value = task.payload.title ? 2 : 1
       return
@@ -406,12 +394,14 @@ onMounted(async () => {
   }
   await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('video')])
 	const settings = studio.settings.video
-	preferredPublishStatus.value = settings?.default_publish_status || 'published'
+	preferredPublishStatus.value = settings?.default_publish_status || 'draft'
   if (settings?.default_visibility) {
     form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
   }
-  if (!selectedCollectionIds.value.length && settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)) {
-    selectedCollectionIds.value = [settings.default_collection_id]
+  if (!selectedCollectionId.value) {
+    selectedCollectionId.value = settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)
+      ? settings.default_collection_id
+      : collections.value.find(item => item.is_default)?.id || ''
   }
 })
 
@@ -430,7 +420,7 @@ async function saveDraft() {
     draftSaved.value = true
     await router.push({
       path: '/studio/video/content',
-      query: selectedCollectionIds.value[0] ? { collection_id: selectedCollectionIds.value[0] } : undefined,
+      query: selectedCollectionId.value ? { collection_id: selectedCollectionId.value } : undefined,
     })
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e) {
@@ -624,9 +614,11 @@ async function schedulePublish() {
             <div v-else class="ve-collections-list">
               <label v-for="collection in collections" :key="collection.id" class="ve-collection-item">
                 <input
-                  type="checkbox"
-                  :checked="selectedCollectionIds.includes(collection.id)"
-                  @change="toggleCollection(collection.id, ($event.target as HTMLInputElement).checked)"
+                  type="radio"
+                  name="video-collection"
+                  :value="collection.id"
+                  :checked="selectedCollectionId === collection.id"
+                  @change="selectedCollectionId = collection.id"
                 />
                 <span>{{ collection.name }}</span>
               </label>
@@ -665,7 +657,7 @@ async function schedulePublish() {
               <p v-if="form.description">{{ form.description }}</p>
               <dl>
                 <div><dt>来源</dt><dd>{{ form.storage_type === 'local' ? '本地上传' : '外部链接' }}</dd></div>
-                <div><dt>合集</dt><dd>{{ selectedCollectionIds.length }} 个</dd></div>
+                <div><dt>合集</dt><dd>{{ collections.find(item => item.id === selectedCollectionId)?.name || '默认合集' }}</dd></div>
               </dl>
             </div>
           </div>

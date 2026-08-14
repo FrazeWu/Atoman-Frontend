@@ -275,7 +275,7 @@ function formatDate(value: string) {
 
         <dl>
           <div><dt>可见范围</dt><dd>{{ selected.payload.visibility === 'private' ? '私密' : selected.payload.visibility === 'followers' ? '仅关注者' : '公开' }}</dd></div>
-          <div><dt>合集</dt><dd>{{ selected.payload.collection_ids.length }} 个</dd></div>
+          <div><dt>合集</dt><dd>{{ selected.payload.collection_id || selected.payload.collection_ids?.[0] ? '已选择' : '默认合集' }}</dd></div>
           <div><dt>提交方式</dt><dd>{{ selected.publish_mode === 'scheduled' ? '定时发布' : selected.publish_mode === 'draft' ? '保存草稿' : selected.publish_mode === 'published' ? '自动发布' : '尚未提交' }}</dd></div>
         </dl>
 

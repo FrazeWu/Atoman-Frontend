@@ -104,11 +104,11 @@ describe('PodcastEditorView Studio integration', () => {
 
     const fetchMock = vi.mocked(fetch)
     const postCall = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/podcast/episodes') && init?.method === 'POST')
-    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({ channel_id: 'channel-1', collection_ids: [], status: 'draft' })
+    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({ channel_id: 'channel-1', collection_id: null, status: 'draft' })
     expect(router.currentRoute.value.fullPath).toBe('/studio/podcast/content')
   })
 
-  it('requires a collection before publishing', async () => {
+  it('allows publishing without an explicit collection so the backend can apply the default', async () => {
     const { wrapper } = await setup('/studio/podcast/new')
     const form = wrapper.vm.$.setupState.form as { title: string; audio_url: string }
     form.title = '测试单集'
@@ -122,8 +122,8 @@ describe('PodcastEditorView Studio integration', () => {
     wrapper.vm.$.setupState.requestPublish()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('请先选择合集')
-    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(false)
+    expect(wrapper.text()).not.toContain('请先选择合集')
+    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
   })
 
   it('switches Studio state to an edited episodes channel before loading collections', async () => {
@@ -133,13 +133,14 @@ describe('PodcastEditorView Studio integration', () => {
         return makeJsonResponse({
           id: 'episode-1', channel_id: 'channel-2', audio_url: 'https://cdn.example.com/audio.mp3',
           episode_cover_url: '', season_number: 1, episode_number: 1,
-          post: { title: '旧单集', content: '', visibility: 'public', collections: [] }, collections: [],
+          post: { title: '旧单集', content: '', visibility: 'public', collection_id: 'collection-2', collections: [] }, collections: [],
         })
       }
       throw new Error(`unexpected fetch: ${url}`)
     }))
-    const { studio } = await setup('/studio/podcast/episode-1/edit')
+    const { wrapper, studio } = await setup('/studio/podcast/episode-1/edit')
     expect(studio.selectChannel).toHaveBeenCalledWith('channel-2')
     expect(studio.loadCollections).toHaveBeenCalledWith('podcast')
+    expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-2')
   })
 })

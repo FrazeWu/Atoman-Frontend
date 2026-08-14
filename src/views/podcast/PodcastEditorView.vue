@@ -272,13 +272,8 @@ function validateInformation(): boolean {
   return true
 }
 
-function validate(status: 'draft' | 'published'): boolean {
-  if (!validateMedia() || !validateInformation()) return false
-  if (status === 'published' && !selectedCollectionId.value) {
-    errorMsg.value = '请先选择合集'
-    return false
-  }
-  return true
+function validate(_status: 'draft' | 'published'): boolean {
+  return validateMedia() && validateInformation()
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -292,7 +287,7 @@ function buildPayload(status: 'draft' | 'published') {
     episode_number: form.value.episode_number,
     status,
     visibility: form.value.visibility,
-    collection_ids: selectedCollectionId.value ? [selectedCollectionId.value] : [],
+    collection_id: selectedCollectionId.value || null,
   }
 }
 
@@ -344,21 +339,29 @@ async function loadEpisode() {
     episode_number: ep.episode_number,
   }
   await loadCollections(ep.channel_id)
-  selectedCollectionId.value = ep.post?.collections?.[0]?.id || ep.collections?.[0]?.id || ''
+  selectedCollectionId.value = ep.post?.collection_id
+    || ep.post?.collection?.id
+    || ep.collection_id
+    || ep.collection?.id
+    || ep.post?.collections?.[0]?.id
+    || ep.collections?.[0]?.id
+    || ''
   currentStep.value = 2
   maxStep.value = 2
 }
 
 function applyCreationDefaults() {
   const settings = studio.settings.podcast
-  preferredPublishStatus.value = settings?.default_publish_status || 'published'
+  preferredPublishStatus.value = settings?.default_publish_status || 'draft'
   if (settings?.default_visibility) {
     form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
   }
   if (selectedCollectionFromQuery.value) return
   if (settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)) {
     selectedCollectionId.value = settings.default_collection_id
+    return
   }
+  selectedCollectionId.value = collections.value.find(item => item.is_default)?.id || ''
 }
 
 onMounted(async () => {

@@ -14,7 +14,7 @@ let uploadNetworkFailures = 0
 const importTask = (overrides: Record<string, unknown> = {}) => ({
   id: 'import-1', status: 'uploading', file_name: 'clip.mp4', file_size: 5, content_type: 'video/mp4',
   part_size: 10 * 1024 * 1024, progress_current: 0, progress_total: 5, completed_parts: [],
-  payload: { channel_id: 'channel-1', title: '', description: '', thumbnail_url: '', duration_sec: 0, visibility: 'public', tags: [], collection_ids: [] },
+  payload: { channel_id: 'channel-1', title: '', description: '', thumbnail_url: '', duration_sec: 0, visibility: 'public', tags: [], collection_id: null },
   publish_mode: '', error_message: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   ...overrides,
 })
@@ -119,14 +119,14 @@ describe('VideoEditorView', () => {
   it('uses the Studio channel, hides the channel picker and preselects collection query', async () => {
     const { wrapper } = await setup()
     expect(wrapper.vm.$.setupState.form.channel_id).toBe('channel-1')
-    expect(wrapper.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
+    expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-2')
     expect(wrapper.text()).not.toContain('关联频道')
   })
 
   it('applies Studio creation defaults', async () => {
     const { wrapper } = await setup('/studio/video/new', 'draft')
     expect(wrapper.vm.$.setupState.form.visibility).toBe('private')
-    expect(wrapper.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1'])
+    expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-1')
     expect(wrapper.vm.$.setupState.preferredPublishStatus).toBe('draft')
   })
 
@@ -229,7 +229,7 @@ describe('VideoEditorView', () => {
     await fileInput.trigger('change')
     await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1'))
 
-    wrapper.vm.$.setupState.selectedCollectionIds = ['collection-1']
+    wrapper.vm.$.setupState.selectedCollectionId = 'collection-1'
     wrapper.vm.$.setupState.requestPublish()
     expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(false)
     await flushPromises()
@@ -250,7 +250,7 @@ describe('VideoEditorView', () => {
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
 
-    wrapper.vm.$.setupState.selectedCollectionIds = []
+    wrapper.vm.$.setupState.selectedCollectionId = ''
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('发布')
     expect(wrapper.get('.ve-review').text()).toContain('三步视频')
@@ -262,29 +262,29 @@ describe('VideoEditorView', () => {
     form.storage_type = 'external'
     form.title = 'Draft video'
     form.video_url = 'https://example.com/video'
-    wrapper.vm.$.setupState.selectedCollectionIds = []
+    wrapper.vm.$.setupState.selectedCollectionId = ''
 
     await wrapper.vm.$.setupState.saveDraft()
     await flushPromises()
 
     const fetchMock = vi.mocked(fetch)
     const postCall = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/videos') && init?.method === 'POST')
-    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({ channel_id: 'channel-1', collection_ids: [], status: 'draft' })
+    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({ channel_id: 'channel-1', collection_id: null, status: 'draft' })
     expect(router.currentRoute.value.fullPath).toBe('/studio/video/content')
   })
 
-  it('requires a collection before publishing', async () => {
+  it('allows publishing without an explicit collection so the backend can apply the default', async () => {
     const { wrapper } = await setup('/studio/video/new')
     const form = wrapper.vm.$.setupState.form as { storage_type: string; title: string; video_url: string }
     form.storage_type = 'external'
     form.title = 'Video'
     form.video_url = 'https://example.com/video'
-    wrapper.vm.$.setupState.selectedCollectionIds = []
+    wrapper.vm.$.setupState.selectedCollectionId = ''
 
     wrapper.vm.$.setupState.requestPublish()
     await flushPromises()
-    expect(wrapper.text()).toContain('请先选择合集')
-    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(false)
+    expect(wrapper.text()).not.toContain('请先选择合集')
+    expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
   })
 
   it('switches Studio state for an edited video before loading collections', async () => {

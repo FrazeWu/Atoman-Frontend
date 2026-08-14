@@ -4,6 +4,19 @@ import type { PodcastEpisode } from '@/types'
 
 export type PodcastBookmarkKind = 'favorite' | 'listen_later'
 
+export interface PodcastEpisodeSavePayload {
+  channel_id: string
+  title: string
+  shownotes: string
+  audio_url: string
+  episode_cover_url: string
+  season_number: number
+  episode_number: number
+  status: 'draft' | 'published'
+  visibility: 'public' | 'followers' | 'private'
+  collection_id: string | null
+}
+
 const podcastUrl = (path: string) => `${useApiUrl()}/podcast${path}`
 
 export const getPodcastEpisode = (id: string, token?: string) => (
@@ -46,7 +59,7 @@ export function uploadPodcastCover(file: File, token?: string) {
   })
 }
 
-export function savePodcastEpisode<T>(payload: unknown, token?: string, id?: string) {
+export function savePodcastEpisode<T>(payload: PodcastEpisodeSavePayload, token?: string, id?: string) {
   return apiRequestJson<T>(podcastUrl(id ? `/episodes/${id}` : '/episodes'), {
     method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },

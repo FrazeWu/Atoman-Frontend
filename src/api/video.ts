@@ -13,7 +13,14 @@ export interface VideoImportPayload {
   duration_sec: number
   visibility: 'public' | 'followers' | 'private'
   tags: string[]
-  collection_ids: string[]
+  collection_id: string | null
+  collection_ids?: string[] | null
+}
+
+export interface VideoSavePayload extends VideoImportPayload {
+  storage_type: 'local' | 'external'
+  video_url: string
+  status: 'draft' | 'published'
 }
 
 export interface VideoImportTask {
@@ -75,7 +82,7 @@ export function uploadVideoCover(file: File, token?: string) {
   })
 }
 
-export function saveVideo(payload: unknown, token?: string, id?: string) {
+export function saveVideo(payload: VideoSavePayload, token?: string, id?: string) {
   return apiRequestJson<Video>(videoUrl(id ? `/${id}` : ''), {
     method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },

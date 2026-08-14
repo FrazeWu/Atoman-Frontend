@@ -279,6 +279,7 @@ const forwardBlockReason = computed(() => {
     return ''
   }
   if (!['albumDetails', 'preview'].includes(flow.step)) return ''
+  if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
 	if (!flow.draft.albumDetails.coverUrl.trim()) return '请上传专辑封面'
 	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'

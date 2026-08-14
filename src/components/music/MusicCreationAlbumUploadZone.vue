@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { SUPPORTED_ARCHIVE_ACCEPT, SUPPORTED_AUDIO_ACCEPT } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useAlbumImportUpload } from '@/composables/useAlbumImportUpload'
@@ -20,7 +20,18 @@ const {
   handleReplaceFile,
   handleDeleteFile,
   cancelUpload,
+  startPolling,
+  stopPolling,
 } = useAlbumImportUpload()
+
+onMounted(() => {
+  const draft = albumImportDraft.value
+  if (draft?.importId && ['queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) {
+    startPolling(draft.importId)
+  }
+})
+
+onUnmounted(stopPolling)
 
 const filesInputRef = ref<HTMLInputElement | null>(null)
 const folderInputRef = ref<HTMLInputElement | null>(null)

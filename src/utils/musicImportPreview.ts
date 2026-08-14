@@ -82,23 +82,74 @@ const imageContentTypes: Record<string, string> = {
 	png: "image/png",
 	webp: "image/webp",
 };
-const preferredCoverNames = /(?:^|[\s_.-])(cover|folder|front|album)(?:[\s_.-]|$)/i;
+const preferredCoverNames =
+	/(?:^|[\s_.-])(cover|folder|front|album)(?:[\s_.-]|$)/i;
+const maxRarPreviewBytes = 256 * 1024 * 1024;
 
 function imageContentType(fileName: string): string | null {
 	const extension = fileName.split(".").pop()?.toLowerCase() || "";
 	return imageContentTypes[extension] ?? null;
 }
 
-function coverFileFromPicture(picture: { data: Uint8Array; format?: string } | undefined): File | undefined {
+function coverFileFromPicture(
+	picture: { data: Uint8Array; format?: string } | undefined,
+): File | undefined {
 	if (!picture) return undefined;
 	const contentType = picture.format?.trim() || "image/jpeg";
 	const extension = coverFileExtension(contentType);
 	const blob = new Blob([picture.data], { type: contentType });
-	return new File([blob], `cover_extracted.${extension}`, { type: contentType });
+	return new File([blob], `cover_extracted.${extension}`, {
+		type: contentType,
+	});
 }
 
-function coverFileFromArchiveImage(entry: JSZip.JSZipObject, contentType: string): Promise<File> {
-	return entry.async("blob").then((blob) => new File([blob], entry.name.split("/").pop() || "cover", { type: contentType }));
+function coverFileFromArchiveImage(
+	entry: JSZip.JSZipObject,
+	contentType: string,
+): Promise<File> {
+	return entry
+		.async("blob")
+		.then(
+			(blob) =>
+				new File([blob], entry.name.split("/").pop() || "cover", {
+					type: contentType,
+				}),
+		);
+}
+
+function archiveTracks(paths: string[]): string[] {
+	return paths
+		.filter(isAudioPath)
+		.sort((left, right) => trackPathCollator.compare(left, right))
+		.map((entry) => trackTitle(entry.split("/").pop() ?? entry))
+		.filter(Boolean);
+}
+
+async function readRarAlbumImportPreview(
+	file: File,
+	title: string,
+): Promise<MusicAlbumImportPreview> {
+	if (file.size > maxRarPreviewBytes) return { title, tracks: [] };
+
+	const [{ createExtractorFromData }, wasmModule] = await Promise.all([
+		import("node-unrar-js/esm"),
+		import("node-unrar-js/esm/js/unrar.wasm?url"),
+	]);
+	const response = await fetch(wasmModule.default);
+	if (!response.ok) throw new Error("无法加载 RAR 预览组件");
+	const extractor = await createExtractorFromData({
+		data: await file.arrayBuffer(),
+		wasmBinary: await response.arrayBuffer(),
+	});
+	const archive = extractor.getFileList();
+	if (archive.arcHeader.flags.headerEncrypted) {
+		return { title, tracks: [] };
+	}
+	const paths = Array.from(archive.fileHeaders)
+		.filter((entry) => !entry.flags.directory)
+		.map((entry) => entry.name)
+		.filter((entry) => !shouldIgnoreAlbumImportPath(entry));
+	return { title, tracks: archiveTracks(paths) };
 }
 
 export type MusicAlbumImportPreview = {
@@ -135,7 +186,11 @@ export async function readAlbumImportPreview(
 		return { title, tracks: [title] };
 	}
 
-	if (!file.name.toLowerCase().endsWith(".zip")) return { title, tracks: [] };
+	const lowerFileName = file.name.toLowerCase();
+	if (lowerFileName.endsWith(".rar")) {
+		return readRarAlbumImportPreview(file, title);
+	}
+	if (!lowerFileName.endsWith(".zip")) return { title, tracks: [] };
 
 	const archive = await JSZip.loadAsync(file);
 	const entries = Object.values(archive.files).filter(
@@ -144,19 +199,29 @@ export async function readAlbumImportPreview(
 	const audioEntries = entries
 		.filter((entry) => isAudioPath(entry.name))
 		.sort((left, right) => trackPathCollator.compare(left.name, right.name));
-	const tracks = audioEntries
-		.map((entry) => trackTitle(entry.name.split("/").pop() ?? entry.name))
-		.filter(Boolean);
+	const tracks = archiveTracks(audioEntries.map((entry) => entry.name));
 
 	const imageEntries = entries
 		.map((entry) => ({ entry, contentType: imageContentType(entry.name) }))
-		.filter((candidate): candidate is { entry: JSZip.JSZipObject; contentType: string } => !!candidate.contentType)
-		.sort((left, right) => Number(preferredCoverNames.test(right.entry.name)) - Number(preferredCoverNames.test(left.entry.name)));
+		.filter(
+			(
+				candidate,
+			): candidate is { entry: JSZip.JSZipObject; contentType: string } =>
+				!!candidate.contentType,
+		)
+		.sort(
+			(left, right) =>
+				Number(preferredCoverNames.test(right.entry.name)) -
+				Number(preferredCoverNames.test(left.entry.name)),
+		);
 	if (imageEntries[0]) {
 		return {
 			title,
 			tracks,
-			albumCoverFile: await coverFileFromArchiveImage(imageEntries[0].entry, imageEntries[0].contentType),
+			albumCoverFile: await coverFileFromArchiveImage(
+				imageEntries[0].entry,
+				imageEntries[0].contentType,
+			),
 		};
 	}
 

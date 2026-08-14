@@ -29,6 +29,7 @@
         "marked-katex-extension": "^5.1.7",
         "markstream-vue": "^0.0.12",
         "music-metadata-browser": "^2.5.11",
+        "node-unrar-js": "^2.0.2",
         "ol": "^10.8.0",
         "pinia": "2.1.7",
         "simple-icons": "16.26.0",
@@ -927,6 +928,8 @@
     "music-metadata-browser": ["music-metadata-browser@2.5.11", "", { "dependencies": { "buffer": "^6.0.3", "debug": "^4.3.4", "music-metadata": "^7.13.3", "readable-stream": "^4.3.0", "readable-web-to-node-stream": "^3.0.2" } }, "sha512-Khq5nYapffIet0PUVb5J69pZPgqgn+/yoEr0jkO/OjH5xwfdz6rdwj0zsWPaqo3ylv+OthXoGjT6EegVHbMkJQ=="],
 
     "nanoid": ["nanoid@3.3.12", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ=="],
+
+    "node-unrar-js": ["node-unrar-js@2.0.2", "", {}, "sha512-hLNmoJzqaKJnod8yiTVGe9hnlNRHotUi0CreSv/8HtfRi/3JnRC8DvsmKfeGGguRjTEulhZK6zXX5PXoVuDZ2w=="],
 
     "nopt": ["nopt@7.2.1", "", { "dependencies": { "abbrev": "^2.0.0" }, "bin": { "nopt": "bin/nopt.js" } }, "sha512-taM24ViiimT/XntxbPyJQzCG+p4EKOpgD3mxFwW38mGjVUrfERQOeY4EDHjdnptttfHuHQXFx+lTP08Q+mLa/w=="],
 

@@ -436,6 +436,13 @@ export function useAlbumImportUpload() {
 				draft.importId === session.importId
 			) {
 				await refreshWhenFilesUploaded(snapshot, session.importId);
+				if (
+					["queued", "extracting", "analyzing", "transcoding"].includes(
+						snapshot.status,
+					)
+				) {
+					startPolling(session.importId);
+				}
 			}
 		} catch (error) {
 			if (

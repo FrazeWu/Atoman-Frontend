@@ -1,16 +1,64 @@
 import JSZip from "jszip";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseBlob } from "music-metadata-browser";
 import {
 	readAlbumImportPreview,
 	shouldIgnoreAlbumImportPath,
 } from "../../../src/utils/musicImportPreview";
 
+const rarMocks = vi.hoisted(() => ({
+	createExtractorFromData: vi.fn(),
+}));
+
+vi.mock("node-unrar-js/esm", () => rarMocks);
+vi.mock("node-unrar-js/esm/js/unrar.wasm?url", () => ({
+	default: "/assets/unrar.wasm",
+}));
+
 vi.mock("music-metadata-browser", () => ({
 	parseBlob: vi.fn(),
 }));
 
 describe("readAlbumImportPreview", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.clearAllMocks();
+	});
+
+	it("从 RAR 文件目录预填专辑名与曲目", async () => {
+		rarMocks.createExtractorFromData.mockResolvedValue({
+			getFileList: () => ({
+				arcHeader: { flags: { headerEncrypted: false } },
+				fileHeaders: [
+					{ name: "Disc 1/10 - Finale.mp3", flags: { directory: false } },
+					{ name: "01 - Intro.flac", flags: { directory: false } },
+					{ name: "__MACOSX/._02 - Hidden.mp3", flags: { directory: false } },
+					{ name: "Disc 1", flags: { directory: true } },
+					{ name: "Disc 1/2-01 Main Theme.mp3", flags: { directory: false } },
+				].values(),
+			}),
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: true,
+				arrayBuffer: async () => new ArrayBuffer(8),
+			}),
+		);
+
+		const preview = await readAlbumImportPreview(
+			new File(["rar"], "Northern Lights.rar", {
+				type: "application/vnd.rar",
+			}),
+		);
+
+		expect(preview).toEqual({
+			title: "Northern Lights",
+			tracks: ["Intro", "Main Theme", "Finale"],
+		});
+		expect(rarMocks.createExtractorFromData).toHaveBeenCalledOnce();
+	});
+
 	it("从 ZIP 文件名和目录预填专辑名与曲目", async () => {
 		const zip = new JSZip();
 		zip.file("01 - Intro.flac", "audio");

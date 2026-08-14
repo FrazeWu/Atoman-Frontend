@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { parseBlob } from 'music-metadata-browser'
 import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAsset, uploadMusicAssetWithProgress } from '@/api/musicV1'
@@ -53,7 +53,7 @@ const {
   handleTrackDragOver,
   handleTrackDragLeave,
   handleTrackDrop,
-  removeTrack,
+  removeTrack: removeTrackDraft,
   openTrackLyrics,
   closeTrackLyrics,
   saveExistingTrackLyrics,
@@ -65,6 +65,18 @@ const trackAudioInputRef = ref<HTMLInputElement | null>(null)
 const pendingAudioTrackId = ref<string | null>(null)
 const trackAudioUploading = ref(false)
 const trackAudioError = ref('')
+const activeTrackUploads = new Map<string, AbortController>()
+
+onUnmounted(() => {
+  for (const controller of activeTrackUploads.values()) controller.abort()
+  activeTrackUploads.clear()
+})
+
+function removeTrack(trackId: string) {
+  activeTrackUploads.get(trackId)?.abort()
+  activeTrackUploads.delete(trackId)
+  removeTrackDraft(trackId)
+}
 
 function openTrackAudioPicker(trackId: string | null = null) {
   if (trackAudioUploading.value) return
@@ -87,10 +99,18 @@ async function readTrackTitle(file: File): Promise<string> {
 }
 
 async function uploadNewTrack(file: File, trackId: string) {
-  const asset = await uploadMusicAssetWithProgress(file, 'music.audio', {
-    onProgress: ({ loaded, total }) => updateTrackUpload(trackId, total > 0 ? Math.round((loaded / total) * 100) : 0),
-  })
-  completeTrackUpload(trackId, asset, file.name)
+  const controller = new AbortController()
+  activeTrackUploads.set(trackId, controller)
+  try {
+    const asset = await uploadMusicAssetWithProgress(file, 'music.audio', {
+      signal: controller.signal,
+      timeoutMs: 5 * 60 * 1000,
+      onProgress: ({ loaded, total }) => updateTrackUpload(trackId, total > 0 ? Math.round((loaded / total) * 100) : 0),
+    })
+    completeTrackUpload(trackId, asset, file.name)
+  } finally {
+    activeTrackUploads.delete(trackId)
+  }
 }
 
 async function handleTrackAudioChange(event: Event) {

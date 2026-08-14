@@ -190,6 +190,65 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(flow.draft.tracks[0]?.uploadProgress).toBeUndefined();
 	});
 
+	it("aborts an in-flight upload when its pending track is removed", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+
+		let signal: AbortSignal | undefined;
+		vi.mocked(uploadMusicAssetWithProgress).mockImplementationOnce(
+			async (_file, _purpose, options) => {
+				signal = options?.signal;
+				return new Promise(() => undefined);
+			},
+		);
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		const input = wrapper.get('[data-testid="album-track-audio-input"]');
+		Object.defineProperty(input.element, "files", {
+			configurable: true,
+			value: [new File(["audio"], "pending.mp3", { type: "audio/mpeg" })],
+		});
+
+		await wrapper.get(".track-adjustment__add-btn").trigger("click");
+		await input.trigger("change");
+		await flushPromises();
+
+		const trackId = flow.draft.tracks[0]?.id;
+		expect(trackId).toBeTruthy();
+		expect(signal?.aborted).toBe(false);
+		await wrapper.get(`[data-testid="album-track-delete-${trackId}"]`).trigger("click");
+		expect(signal?.aborted).toBe(true);
+		expect(flow.draft.tracks).toHaveLength(0);
+	});
+
+	it("aborts in-flight uploads when the creation step unmounts", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		let signal: AbortSignal | undefined;
+		vi.mocked(uploadMusicAssetWithProgress).mockImplementationOnce(
+			async (_file, _purpose, options) => {
+				signal = options?.signal;
+				return new Promise(() => undefined);
+			},
+		);
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		const input = wrapper.get('[data-testid="album-track-audio-input"]');
+		Object.defineProperty(input.element, "files", {
+			configurable: true,
+			value: [new File(["audio"], "pending.mp3", { type: "audio/mpeg" })],
+		});
+
+		await wrapper.get(".track-adjustment__add-btn").trigger("click");
+		await input.trigger("change");
+		await flushPromises();
+		wrapper.unmount();
+
+		expect(signal?.aborted).toBe(true);
+	});
+
 	it("uploads audio before adding a new track and uses the file name as its initial title", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

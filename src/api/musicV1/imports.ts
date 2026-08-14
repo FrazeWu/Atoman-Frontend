@@ -188,6 +188,8 @@ export async function uploadMusicAsset(
 
 export type MusicAssetUploadOptions = {
 	onProgress?: (progress: { loaded: number; total: number }) => void;
+	signal?: AbortSignal;
+	timeoutMs?: number;
 };
 
 type MusicAssetUploadResponse = {
@@ -207,7 +209,15 @@ export async function uploadMusicAssetWithProgress(
 
 	return new Promise<UploadAsset>((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
+		const abort = () => xhr.abort();
+		if (options.signal?.aborted) {
+			reject(new Error("音频上传已取消"));
+			return;
+		}
 		xhr.open("POST", musicV1Endpoints.uploads());
+		if (options.timeoutMs && options.timeoutMs > 0)
+			xhr.timeout = options.timeoutMs;
+		options.signal?.addEventListener("abort", abort, { once: true });
 		configureApiXHR(xhr, "POST");
 		xhr.setRequestHeader("Accept", "application/json");
 		xhr.upload.addEventListener("progress", (event) => {
@@ -238,6 +248,9 @@ export async function uploadMusicAssetWithProgress(
 		});
 		xhr.addEventListener("error", () =>
 			reject(new Error("音频上传失败，请重试")),
+		);
+		xhr.addEventListener("timeout", () =>
+			reject(new Error("音频上传超时，请重试")),
 		);
 		xhr.addEventListener("abort", () => reject(new Error("音频上传已取消")));
 		xhr.send(form);

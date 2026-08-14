@@ -22,6 +22,7 @@ import {
   uploadMusicAlbumArchiveMultipart,
   uploadMusicAlbumArchive,
   uploadMusicAsset,
+  uploadMusicAssetWithProgress,
 } from '@/api/musicV1'
 import * as musicV1 from '@/api/musicV1'
 
@@ -500,6 +501,52 @@ describe('music v1 adapter', () => {
 	        edit_summary: 'Update album tracks',
 	      }),
 	    }))
+  })
+
+  it('cancels music asset uploads before sending when the signal is already aborted', async () => {
+    class FakeXMLHttpRequest {
+      static lastInstance: FakeXMLHttpRequest | null = null
+      upload = { addEventListener: vi.fn() }
+      send = vi.fn()
+      open = vi.fn()
+      setRequestHeader = vi.fn()
+      addEventListener = vi.fn()
+      constructor() {
+        FakeXMLHttpRequest.lastInstance = this
+      }
+    }
+    const controller = new AbortController()
+    controller.abort()
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
+
+    await expect(uploadMusicAssetWithProgress(new File(['x'], 'track.mp3'), 'music.audio', {
+      signal: controller.signal,
+    })).rejects.toThrow('音频上传已取消')
+    expect(FakeXMLHttpRequest.lastInstance?.send).not.toHaveBeenCalled()
+  })
+
+  it('reports a retryable error when music asset upload times out', async () => {
+    class FakeXMLHttpRequest {
+      upload = { addEventListener: vi.fn() }
+      timeout = 0
+      status = 0
+      responseText = ''
+      private listeners: Record<string, Array<() => void>> = {}
+      open = vi.fn()
+      setRequestHeader = vi.fn()
+      addEventListener(name: string, listener: () => void) {
+        this.listeners[name] = this.listeners[name] || []
+        this.listeners[name].push(listener)
+      }
+      send() {
+        this.listeners.timeout?.forEach((listener) => listener())
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
+
+    await expect(uploadMusicAssetWithProgress(new File(['x'], 'track.mp3'), 'music.audio', {
+      timeoutMs: 123,
+    })).rejects.toThrow('音频上传超时，请重试')
   })
 
   it('uploads music cover assets with the correct purpose', async () => {

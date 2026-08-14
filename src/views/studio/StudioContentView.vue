@@ -67,16 +67,13 @@
       :items="studio.contents[module]"
       :module="module"
       :pagination="studio.contentPagination[module]"
-      :can-reorder="canReorder"
       @page="changePage"
-	  @reorder="reorderContent"
 	  @status="updateStatus"
 	  @cancel-schedule="cancelSchedule"
 	  @share="shareContent"
 	  @delete="pendingDelete = $event"
 	  @reupload="openReupload"
 	  @reprocess="reprocessVideo"
-	  @resolve="resolveCollectionConflict"
     />
 
 	<p v-if="actionMessage" class="studio-content__feedback" role="status">{{ actionMessage }}</p>
@@ -152,11 +149,6 @@ const filters = computed<StudioContentFilters>(() => ({
   page: queryPage(route.query.page),
 }))
 
-const canReorder = computed(() => {
-  const pagination = studio.contentPagination[module.value]
-  return Boolean(filters.value.collection_id && !pagination?.has_more && (pagination?.page ?? 1) === 1)
-})
-
 const createRoute = computed(() => ({
   path: `/studio/${module.value}/new`,
   query: filters.value.collection_id ? { collection: filters.value.collection_id } : undefined,
@@ -201,19 +193,6 @@ async function runMutation(action: () => Promise<void>, success: string) {
   } finally {
     mutationBusy.value = false
   }
-}
-
-async function resolveCollectionConflict(item: StudioContentItem, collectionID: string) {
-  await runMutation(() => studio.resolveCollectionConflict(module.value, item.id, collectionID), '合集归属已确认')
-}
-
-async function reorderContent(item: StudioContentItem, direction: -1 | 1) {
-  const index = studio.contents[module.value].findIndex(candidate => candidate.id === item.id)
-  const target = index + direction
-  if (!canReorder.value || index < 0 || target < 0 || target >= studio.contents[module.value].length || !filters.value.collection_id) return
-  const ordered = [...studio.contents[module.value]]
-  ;[ordered[index], ordered[target]] = [ordered[target], ordered[index]]
-  await runMutation(() => studio.reorderCollectionContents(module.value, filters.value.collection_id, ordered.map(candidate => candidate.id)), '排序已保存')
 }
 
 async function updateStatus(item: StudioContentItem, status: StudioPublishStatus) {

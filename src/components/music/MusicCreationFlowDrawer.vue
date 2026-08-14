@@ -25,6 +25,8 @@ const {
   setMusicCreationStep,
   refreshArtist,
   refreshAlbum,
+  openArtist,
+  openNestedAction,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -698,6 +700,14 @@ async function handlePrimaryAction() {
           locked: true,
           roles: [{ id: `role-${artist.id}-primary`, role: 'primary', label: '主艺术家' }],
         }]
+        refreshArtist()
+        closeCurrentCreationFlow()
+        openArtist(artist.id)
+        openNestedAction('link_album', {
+          artistId: artist.id,
+          artistName: artist.display_name || artist.name,
+        })
+        return
       }
       setMusicCreationStep('albumImport')
     } catch (error) {

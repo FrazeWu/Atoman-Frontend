@@ -512,10 +512,21 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
 }
 
 function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) {
-  return ['pending_upload', 'uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status)
-    && !!flow.draft.albumImport.importId
-    && !!flow.draft.albumDetails.title.trim()
-    && hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
+  const details = flow.draft.albumDetails
+  const tracks = flow.draft.tracks
+  const hasRequiredDetails = !!details.title.trim()
+    && !!details.coverUrl.trim()
+    && !!formatDateFromParts(details.releaseDateParts)
+    && !!details.source.trim()
+    && tracks.length > 0
+    && tracks.every((track) => !!track.title.trim())
+    && tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
+    && hasValidAlbumContributors(details.contributors ?? [])
+  const status = flow.draft.albumImport.status
+  const canSubmitAtCurrentStep = ['pending_upload', 'uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(status)
+    || (status === 'ready' && flow.step === 'albumDetails')
+
+  return !!flow.draft.albumImport.importId && hasRequiredDetails && canSubmitAtCurrentStep
 }
 
 function flushImportAutosave() {
@@ -525,7 +536,12 @@ function flushImportAutosave() {
       const pending = pendingImportAutosave
       pendingImportAutosave = null
       try {
-        await musicApi.commitMusicAlbumImport(pending.importId, pending.input)
+        const committed = await musicApi.commitMusicAlbumImport(pending.importId, pending.input)
+        const flow = creationFlow.value
+        if (flow?.draft.albumImport.importId === pending.importId) {
+          flow.draft.albumImport.status = committed.status
+          flow.draft.albumImport.errorMessage = committed.errorMessage ?? ''
+        }
       } catch {
         // 最终提交会再次保存并显示错误，避免打断资料填写。
       }

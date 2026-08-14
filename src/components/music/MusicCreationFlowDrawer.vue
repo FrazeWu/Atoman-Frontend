@@ -52,11 +52,6 @@ const closeCurrentCreationFlow = () => closeMusicCreationFlow(props.layer?.key)
 const loadedEditKey = ref('')
 const closePending = ref(false)
 
-function sourceText(sources?: musicApi.MusicSource[]) {
-  const source = sources?.[0]
-  return source?.url?.trim() || source?.title?.trim() || ''
-}
-
 function parseStageNames(raw: string | undefined, fallbackName: string) {
   try {
     const parsed = JSON.parse(raw || '[]') as musicApi.MusicAlbumImportCommitStageName[]
@@ -120,7 +115,7 @@ async function loadEditDraft() {
         activeEndDateParts: parsePartialDateParts(formatStoredPartialDate(artist.active_end_date, artist.active_end_date_precision)),
         birthDate: formatStoredPartialDate(artist.birth_date, artist.birth_date_precision),
         bio: artist.bio ?? '',
-        source: sourceText(artist.sources),
+        source: '',
       }
       return
     }
@@ -136,7 +131,7 @@ async function loadEditDraft() {
       type: album.album_type?.trim() || 'album',
       releaseYear: album.release_date?.slice(0, 4) || '',
       bio: album.description ?? '',
-      source: sourceText(album.sources),
+      source: '',
     }
     flow.draft.tracks = (album.songs ?? [])
       .filter((song) => song.status !== 'closed')

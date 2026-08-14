@@ -1,5 +1,0 @@
-[   35014ms] [WARNING] The keyword 'slider-vertical' specified to an 'appearance' property is not standardized. It will be removed in the future. Use <input type=range style="writing-mode: vertical-lr; direction: rtl"> instead. @ http://localhost:5173/@vite/client:1106
-[   39996ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/plays:0
-[   40001ms] [ERROR] Failed to record music play:: ApiErrorResponseError: Login required to perform this action
-    at unwrapResponseEnvelope (http://localhost:5173/src/api/client.ts:40:11)
-    at async unwrapResponse (http://localhost:5173/src/api/client.ts:50:19) @ http://localhost:5173/src/utils/logger.ts:10

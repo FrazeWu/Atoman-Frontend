@@ -1414,6 +1414,40 @@ describe("MusicCreationFlowDrawer", () => {
 		);
 	});
 
+	it("处理失败后保留本地填写的专辑资料和曲目", async () => {
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "albumDetails",
+			draft: {
+				...createFlowState().draft,
+				albumDetails: {
+					...createFlowState().draft.albumDetails,
+					title: "Original Album",
+					source: "Manual source",
+				},
+				tracks: [{ id: "local-1", sequence: 1, title: "Original Track" }],
+				albumImport: {
+					...createFlowState().draft.albumImport,
+					status: "needs_attention",
+					stage: "failed",
+					errorMessage: "处理失败",
+					derivedTracks: [],
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await flushPromises();
+
+		const flow = drawerMocks.state.value.creationFlow;
+		expect(flow?.draft.albumDetails.title).toBe("Original Album");
+		expect(flow?.draft.albumDetails.source).toBe("Manual source");
+		expect(flow?.draft.tracks).toEqual([
+			{ id: "local-1", sequence: 1, title: "Original Track" },
+		]);
+
+		wrapper.unmount();
+	});
+
 	it("ready import 不会覆盖已经手动调整过的曲目", async () => {
 		const wrapper = mount(MusicCreationFlowDrawer);
 

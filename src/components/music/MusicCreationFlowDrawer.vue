@@ -584,7 +584,7 @@ function syncReadyImportToDraft() {
   if (!flow) return
 
   const { albumImport, albumDetails } = flow.draft
-  if (albumImport.status !== 'ready' && albumImport.status !== 'needs_attention') return
+  if (albumImport.status !== 'ready') return
   const derivedTracks = albumImport.derivedTracks ?? []
 
   if (albumImport.derivedAlbumTitle.trim()) {
@@ -593,7 +593,7 @@ function syncReadyImportToDraft() {
     }
   }
 
-  if (!flow.tracksCustomized && (derivedTracks.length > 0 || flow.draft.tracks.length === 0)) {
+  if (!flow.tracksCustomized && derivedTracks.length > 0) {
     const existingTracks = flow.draft.tracks
     flow.draft.tracks = derivedTracks.map((track, index) => {
       const id = `import-track-${index + 1}`

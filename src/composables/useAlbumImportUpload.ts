@@ -80,7 +80,9 @@ export function useAlbumImportUpload() {
 		if (snapshot.derivedCover) {
 			creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover;
 		}
-		creationFlow.value.draft.albumImport.derivedTracks = derivedTracks;
+		if (derivedTracks.length > 0) {
+			creationFlow.value.draft.albumImport.derivedTracks = derivedTracks;
+		}
 		creationFlow.value.draft.albumImport.derivedReleaseDate =
 			snapshot.derivedReleaseDate;
 		creationFlow.value.draft.albumImport.derivedAlbumType =

@@ -2,25 +2,30 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 
-const nodeOnlyTests = [
+export const nodeOnlyTests = [
 	"tests/unit/api/{client,dm,feedMembership,musicV1,musicV1.album-import-v2,musicV1.lyrics,musicV1.starred.integration,podcast-comments,references,transport,upload,useApi-contract,userProfile}.spec.ts",
-	"tests/unit/app/App.shell-loading.spec.ts",
-	"tests/unit/components/{AppTopbar.auth-loading,PEditor.public-loading,PEditor.runtime-loading}.spec.ts",
+	"tests/unit/components/AppTopbar.auth-loading.spec.ts",
 	"tests/unit/composables/{useCommentDraft,useComments,useContentLifecycle,useGlobalSearch,useInteractions,useMarkdownRenderer.styles,useMediaCreationSteps,useMusicFavoritePlaylist,useMusicLyrics,useMusicRouteSelection,usePendingMusicLyricsAnnotations,useRequestGeneration,useVideoBookmarks,useVideoDeepLink}.spec.ts",
 	"tests/unit/config/*.spec.ts",
 	"tests/unit/e2e/base-fixture.spec.ts",
 	"tests/unit/functions/*.spec.ts",
 	"tests/unit/references/*.spec.ts",
-	"tests/unit/router/{musicRoutes,router.layout-loading,routes,shortNoteRoutes,siteContext,studioRoutes}.spec.ts",
+	"tests/unit/router/{musicRoutes,routes,shortNoteRoutes,siteContext,studioRoutes}.spec.ts",
 	"tests/unit/services/*.spec.ts",
 	"tests/unit/stores/{adminFeedFulltext,dm,forum.topic-race,notification,playerPodcastAdapter}.spec.ts",
-	"tests/unit/system/{AppSidebar.blog-short-note,AppTopbar.kanbo,AppTopbar.roomNames,ContentLayouts.sidebar,MusicAlbumsRoomName,SidebarRoomNames,blog-layering,feed-item-actions-layering,feed-layering,feed-presentation-layering,layering-contract,layering-imports,media-editor-upload-layering,music-api-layering,post-editor-layering,timeline-home-layering}.spec.ts",
-	"tests/unit/ui/{borderless-white-ui,design-system-contract,module-style-contract,music-shell-ui-compliance,overlay-layer-contract,podcast-video-creator-ui,ui-guidelines}.spec.ts",
+	"tests/unit/system/{ContentLayouts.sidebar,blog-layering,feed-item-actions-layering,feed-layering,feed-presentation-layering,layering-imports,media-editor-upload-layering,music-api-layering,navigation.contract,post-editor-layering,runtime-loading.contract,timeline-home-layering}.spec.ts",
+	"tests/unit/ui/{design-system-contract,module-style-contract,music-shell-ui-compliance,overlay-layer-contract,ui-guidelines}.spec.ts",
 	"tests/unit/utils/{audioWaveform,blogCollectionSelection,debateReferences,feedSourcePresentation,feedSubscriptions,feedTimelineQuery,logger,mediaUrl,musicImportDisplay,musicLyrics,musicLyricsDraft,musicLyricsVersionDiff,musicMedia,musicRecommendations,musicRedirect,resourceReferences}.spec.ts",
-	"tests/unit/views/blog/{BlogLayout,PostEditorView.layout,ShortNoteTimelineView}.spec.ts",
-	"tests/unit/views/music/{MusicArtistsView.layout,MusicDiscoverView.layout,music-loading}.spec.ts",
-	"tests/unit/views/timeline/{TimelineHomeView.map-loading,TimelineRoutePrefixes}.spec.ts",
-	"tests/unit/views/video/VideoLayout.spec.ts",
+	"tests/unit/views/blog/{PostEditorView.layout,ShortNoteTimelineView}.spec.ts",
+];
+
+const jsdomOnlyTests = [
+	"tests/unit/components/feed/{FeedArticleSheet,FeedSourceIdentityCard}.spec.ts",
+	"tests/unit/components/music/MusicCreationAlbumImportStep.spec.ts",
+	"tests/unit/composables/useMarkdownRenderer.sanitize.spec.ts",
+	"tests/unit/system/PSheet.spec.ts",
+	"tests/unit/views/feed/FeedView.spec.ts",
+	"tests/unit/views/video/VideoEditorView.spec.ts",
 ];
 
 export default defineConfig({
@@ -56,12 +61,30 @@ export default defineConfig({
 					},
 				},
 				test: {
+					name: "happy-dom",
+					environment: "happy-dom",
+					globals: true,
+					setupFiles: ["./tests/unit/setup.ts"],
+					include: ["tests/unit/**/*.spec.ts", "src/**/*.spec.ts"],
+					exclude: [...nodeOnlyTests, ...jsdomOnlyTests],
+					clearMocks: true,
+					restoreMocks: true,
+					mockReset: true,
+				},
+			},
+			{
+				plugins: [vue()],
+				resolve: {
+					alias: {
+						"@": path.resolve(__dirname, "./src"),
+					},
+				},
+				test: {
 					name: "jsdom",
 					environment: "jsdom",
 					globals: true,
 					setupFiles: ["./tests/unit/setup.ts"],
-					include: ["tests/unit/**/*.spec.ts", "src/**/*.spec.ts"],
-					exclude: nodeOnlyTests,
+					include: jsdomOnlyTests,
 					clearMocks: true,
 					restoreMocks: true,
 					mockReset: true,

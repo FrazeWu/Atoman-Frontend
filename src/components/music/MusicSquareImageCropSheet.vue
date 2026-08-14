@@ -105,7 +105,12 @@ async function resolveSource() {
     }
 
     if (props.sourceUrl?.trim()) {
-      const proxyUrl = `/media/cover?url=${encodeURIComponent(props.sourceUrl.trim())}`
+      const sourceUrl = props.sourceUrl.trim()
+      if (sourceUrl.startsWith('blob:')) {
+        resolvedSourceUrl.value = sourceUrl
+        return
+      }
+      const proxyUrl = `/media/cover?url=${encodeURIComponent(sourceUrl)}`
       const response = await fetch(proxyUrl)
       if (!response.ok) throw new Error('封面加载失败，请重新选择图片')
       const blob = await response.blob()

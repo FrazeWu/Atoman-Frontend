@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+// @ts-expect-error Vite resolves Vue SFC imports during the project type check.
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 
 describe('MusicSquareImageCropSheet.vue', () => {
@@ -77,6 +78,36 @@ describe('MusicSquareImageCropSheet.vue', () => {
     expect(createObjectURLMock).toHaveBeenCalledWith(coverBlob)
     expect(wrapper.get('img').attributes('src')).toBe('blob:remote-cover')
     wrapper.unmount()
+  })
+
+  it('loads a browser blob cover without proxying it through the server', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(MusicSquareImageCropSheet, {
+      props: {
+        show: true,
+        sourceUrl: 'blob:archive-cover',
+      },
+      global: {
+        stubs: {
+          PSheet: {
+            props: ['show'],
+            template: '<div v-if="show"><slot /></div>',
+          },
+          PButton: {
+            props: ['disabled'],
+            emits: ['click'],
+            template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(wrapper.get('img').attributes('src')).toBe('blob:archive-cover')
   })
 
   it('shows a concise message when a remote cover cannot be loaded', async () => {

@@ -696,9 +696,9 @@ watch(
 /* 上传专辑与封面并排 */
 .album-details-step__upload-cover-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
+  grid-template-columns: minmax(0, 1fr) 28rem;
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* 左侧专辑信息与右侧简介等高 */
@@ -730,6 +730,7 @@ watch(
 }
 
 .album-details-step__cover-card {
+  align-self: end;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);

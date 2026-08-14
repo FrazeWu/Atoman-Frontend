@@ -74,6 +74,33 @@ function coverFileExtension(contentType: string): string {
 	}
 }
 
+const imageContentTypes: Record<string, string> = {
+	bmp: "image/bmp",
+	gif: "image/gif",
+	jpeg: "image/jpeg",
+	jpg: "image/jpeg",
+	png: "image/png",
+	webp: "image/webp",
+};
+const preferredCoverNames = /(?:^|[\s_.-])(cover|folder|front|album)(?:[\s_.-]|$)/i;
+
+function imageContentType(fileName: string): string | null {
+	const extension = fileName.split(".").pop()?.toLowerCase() || "";
+	return imageContentTypes[extension] ?? null;
+}
+
+function coverFileFromPicture(picture: { data: Uint8Array; format?: string } | undefined): File | undefined {
+	if (!picture) return undefined;
+	const contentType = picture.format?.trim() || "image/jpeg";
+	const extension = coverFileExtension(contentType);
+	const blob = new Blob([picture.data], { type: contentType });
+	return new File([blob], `cover_extracted.${extension}`, { type: contentType });
+}
+
+function coverFileFromArchiveImage(entry: JSZip.JSZipObject, contentType: string): Promise<File> {
+	return entry.async("blob").then((blob) => new File([blob], entry.name.split("/").pop() || "cover", { type: contentType }));
+}
+
 export type MusicAlbumImportPreview = {
 	title: string;
 	tracks: string[];
@@ -92,16 +119,7 @@ export async function readAlbumImportPreview(
 			const trackTitle = metadata.common.title || title;
 			const albumTitle = metadata.common.album || trackTitle;
 
-			let albumCoverFile: File | undefined;
-			if (metadata.common.picture && metadata.common.picture.length > 0) {
-				const picture = metadata.common.picture[0];
-				const contentType = picture.format?.trim() || "image/jpeg";
-				const extension = coverFileExtension(contentType);
-				const blob = new Blob([picture.data], { type: contentType });
-				albumCoverFile = new File([blob], `cover_extracted.${extension}`, {
-					type: contentType,
-				});
-			}
+			const albumCoverFile = coverFileFromPicture(metadata.common.picture?.[0]);
 
 			const artist =
 				metadata.common.artist || metadata.common.albumartist || "";
@@ -120,16 +138,37 @@ export async function readAlbumImportPreview(
 	if (!file.name.toLowerCase().endsWith(".zip")) return { title, tracks: [] };
 
 	const archive = await JSZip.loadAsync(file);
-	const tracks = Object.values(archive.files)
-		.filter(
-			(entry) =>
-				!entry.dir &&
-				!shouldIgnoreAlbumImportPath(entry.name) &&
-				isAudioPath(entry.name),
-		)
-		.sort((left, right) => trackPathCollator.compare(left.name, right.name))
+	const entries = Object.values(archive.files).filter(
+		(entry) => !entry.dir && !shouldIgnoreAlbumImportPath(entry.name),
+	);
+	const audioEntries = entries
+		.filter((entry) => isAudioPath(entry.name))
+		.sort((left, right) => trackPathCollator.compare(left.name, right.name));
+	const tracks = audioEntries
 		.map((entry) => trackTitle(entry.name.split("/").pop() ?? entry.name))
 		.filter(Boolean);
+
+	const imageEntries = entries
+		.map((entry) => ({ entry, contentType: imageContentType(entry.name) }))
+		.filter((candidate): candidate is { entry: JSZip.JSZipObject; contentType: string } => !!candidate.contentType)
+		.sort((left, right) => Number(preferredCoverNames.test(right.entry.name)) - Number(preferredCoverNames.test(left.entry.name)));
+	if (imageEntries[0]) {
+		return {
+			title,
+			tracks,
+			albumCoverFile: await coverFileFromArchiveImage(imageEntries[0].entry, imageEntries[0].contentType),
+		};
+	}
+
+	for (const entry of audioEntries.slice(0, 8)) {
+		try {
+			const metadata = await parseBlob(await entry.async("blob"));
+			const albumCoverFile = coverFileFromPicture(metadata.common.picture?.[0]);
+			if (albumCoverFile) return { title, tracks, albumCoverFile };
+		} catch {
+			// A malformed audio file must not prevent the remaining files from being checked.
+		}
+	}
 
 	return { title, tracks };
 }

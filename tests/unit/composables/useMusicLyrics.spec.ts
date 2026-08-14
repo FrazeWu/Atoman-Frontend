@@ -415,6 +415,9 @@ describe('useMusicLyrics', () => {
     const staleRevert = deferred<any>()
     const currentRevert = deferred<any>()
 
+    apiMocks.getMusicSongLyrics.mockResolvedValueOnce({
+      song_id: 'song-2', content: 'song two', lines: [], annotations: [], version: 1,
+    })
     apiMocks.listMusicSongLyricsVersions
       .mockResolvedValueOnce([{ id: 'song-1-version-1', song_id: 'song-1', version: 1, content: 'old one' }])
       .mockResolvedValueOnce([{ id: 'song-2-version-1', song_id: 'song-2', version: 1, content: 'old two' }])

@@ -161,16 +161,14 @@ describe('PlaylistDrawer', () => {
   })
 
   it('deletes the playlist from the drawer editor after confirmation', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-
     const wrapper = mount(PlaylistDrawer)
     await flushPromises()
 
     await wrapper.get('[data-testid="playlist-edit-button"]').trigger('click')
     await wrapper.get('[data-testid="playlist-delete-button"]').trigger('click')
+    await wrapper.findComponent({ name: 'PConfirm' }).vm.$emit('confirm')
     await flushPromises()
 
-    expect(window.confirm).toHaveBeenCalledWith('删除后无法恢复，确定删除这张歌单吗？')
     expect(mocks.deleteMusicPlaylist).toHaveBeenCalledWith('playlist-1')
     expect(mocks.refreshPlaylists).toHaveBeenCalled()
     expect(mocks.closePlaylist).toHaveBeenCalled()

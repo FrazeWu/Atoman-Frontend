@@ -77,6 +77,9 @@ export function useMusicLyrics() {
   }
 
   async function load(songId: string) {
+    activeVersionsRequestId += 1
+    versionsLoading.value = false
+    versionsErrorMessage.value = ''
     if (activeRevertSongId && activeRevertSongId !== songId) {
       activeRevertRequestId += 1
       activeRevertSongId = ''

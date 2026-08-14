@@ -15,10 +15,10 @@
     to="/studio"
     class="studio-link"
     data-testid="studio-link"
-    aria-label="创作中心"
+    aria-label="创作"
   >
     <PencilLine :size="17" aria-hidden="true" />
-    <span>创作中心</span>
+    <span>创作</span>
   </RouterLink>
 
   <RouterLink

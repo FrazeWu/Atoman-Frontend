@@ -46,29 +46,17 @@
         @update:model-value="updateFilter('visibility', String($event))"
       />
 
-      <div class="studio-content__collection-filter">
-        <PSelect
-          class="studio-content__filter-select"
-          data-testid="collection-filter"
-          :model-value="filters.collection_id"
-          label="合集"
-          :options="[
-            { label: '全部合集', value: '' },
-            ...studio.collections[module].map(collection => ({ label: collection.name, value: collection.id })),
-          ]"
-          @update:model-value="updateFilter('collection_id', String($event))"
-        />
-        <button
-          class="studio-content__icon-button"
-          type="button"
-          data-testid="manage-collections"
-          aria-label="管理合集"
-          title="管理合集"
-          @click="collectionSheetOpen = true"
-        >
-          <Settings2 :size="18" aria-hidden="true" />
-        </button>
-      </div>
+      <PSelect
+        class="studio-content__filter-select"
+        data-testid="collection-filter"
+        :model-value="filters.collection_id"
+        label="合集"
+        :options="[
+          { label: '全部合集', value: '' },
+          ...studio.collections[module].map(collection => ({ label: collection.name, value: collection.id })),
+        ]"
+        @update:model-value="updateFilter('collection_id', String($event))"
+      />
     </form>
 
     <p v-if="loading" class="studio-content__message">加载中...</p>
@@ -89,13 +77,6 @@
 	<p v-if="actionMessage" class="studio-content__feedback" role="status">{{ actionMessage }}</p>
 	<p v-if="actionError" class="studio-content__feedback studio-content__feedback--error" role="alert">{{ actionError }}</p>
 
-    <StudioCollectionSheet
-      :show="collectionSheetOpen"
-      :module="module"
-      @close="collectionSheetOpen = false"
-      @changed="reloadContents"
-    />
-
 	<PConfirm
 	  :show="pendingDelete !== null"
 	  title="删除内容"
@@ -111,10 +92,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Plus, Search, Settings2 } from 'lucide-vue-next'
+import { Plus, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
-import StudioCollectionSheet from '@/components/studio/StudioCollectionSheet.vue'
 import StudioContentTable from '@/components/studio/StudioContentTable.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -135,7 +115,6 @@ const publishingFeature = { blog: 'post.create', podcast: 'podcast.publish', vid
 const canCreate = computed(() => siteAccess.isFeatureEnabled(module.value, publishingFeature[module.value]))
 const loading = ref(true)
 const error = ref('')
-const collectionSheetOpen = ref(false)
 const searchQuery = ref('')
 const ready = ref(false)
 let latestPageRequest = 0
@@ -302,10 +281,6 @@ watch(
 .studio-content__filter-select { min-width: 0; }
 .studio-content__filter-select :deep(.p-field-label) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .studio-content__filter-select :deep(.p-select-trigger) { min-height: 44px; }
-.studio-content__icon-button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
-.studio-content__collection-filter { display: grid; grid-template-columns: minmax(8rem, 1fr) 44px; gap: 0.5rem; }
-.studio-content__icon-button { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; }
-.studio-content__icon-button:hover { background: var(--a-color-surface-muted); }
 .studio-content__message { color: var(--a-color-muted); padding: 2rem 0; }
 .studio-content__feedback { margin: 0; color: var(--a-color-muted); }
 .studio-content__feedback--error { color: var(--a-color-danger); }

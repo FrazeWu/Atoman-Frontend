@@ -22,7 +22,7 @@
         <nav data-testid="studio-primary-nav" aria-label="创作中心">
           <RouterLink to="/studio" exact-active-class="is-active" @click="mobileNavOpen = false">
             <LayoutDashboard :size="18" aria-hidden="true" />
-            <span>Dashboard</span>
+            <span>概览</span>
           </RouterLink>
           <RouterLink to="/studio/blog" active-class="is-active" @click="mobileNavOpen = false">
             <FileText :size="18" aria-hidden="true" />
@@ -38,7 +38,7 @@
           </RouterLink>
           <RouterLink to="/studio/channel" active-class="is-active" @click="mobileNavOpen = false">
             <RadioTower :size="18" aria-hidden="true" />
-            <span>频道设置</span>
+            <span>频道管理</span>
           </RouterLink>
         </nav>
       </aside>

@@ -4,6 +4,7 @@
       <h1>{{ config.label }}</h1>
       <nav aria-label="模块管理">
         <RouterLink :to="`/studio/${module}/content`">内容</RouterLink>
+        <RouterLink :to="`/studio/${module}/collections`">合集</RouterLink>
         <RouterLink v-if="module === 'video'" :to="`/studio/${module}/imports`">导入</RouterLink>
         <RouterLink :to="`/studio/${module}/analytics`">数据</RouterLink>
         <RouterLink :to="`/studio/${module}/interactions`">互动</RouterLink>

@@ -2,6 +2,7 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="blog" />
     <main class="a-main-content">
+      <ModuleCreateAction module="blog" />
       <router-view />
     </main>
   </div>
@@ -9,6 +10,7 @@
 
 <script setup lang="ts">
 import AppSidebar from '@/components/system/AppSidebar.vue'
+import ModuleCreateAction from '@/components/studio/ModuleCreateAction.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
 const { sidebarCollapsed } = useSidebar()

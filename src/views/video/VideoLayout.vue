@@ -2,6 +2,7 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="video" />
     <main class="a-main-content">
+      <ModuleCreateAction module="video" />
       <router-view />
     </main>
   </div>
@@ -10,6 +11,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import AppSidebar from '@/components/system/AppSidebar.vue'
+import ModuleCreateAction from '@/components/studio/ModuleCreateAction.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'

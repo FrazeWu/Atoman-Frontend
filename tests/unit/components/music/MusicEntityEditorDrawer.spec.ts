@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   closeMusicCreationFlow: vi.fn(),
   getMusicSongDetail: vi.fn(),
   uploadMusicAsset: vi.fn(),
+  uploadMusicAssetWithProgress: vi.fn(),
   submitSongRevision: vi.fn(),
   queueMusicSongAudioReplacement: vi.fn(),
 }))
@@ -55,6 +56,7 @@ vi.mock('@/api/musicV1', () => ({
   submitSongRevision: mocks.submitSongRevision,
   queueMusicSongAudioReplacement: mocks.queueMusicSongAudioReplacement,
   uploadMusicAsset: mocks.uploadMusicAsset,
+  uploadMusicAssetWithProgress: mocks.uploadMusicAssetWithProgress,
 }))
 
 describe('MusicEntityEditorDrawer.vue', () => {
@@ -76,6 +78,12 @@ describe('MusicEntityEditorDrawer.vue', () => {
       playable: true,
     })
     mocks.uploadMusicAsset.mockResolvedValue({
+      url: 'https://assets.example.test/audio/new.mp3',
+      key: 'music/audio/new.mp3',
+      content_type: 'audio/mpeg',
+      size: 1,
+    })
+    mocks.uploadMusicAssetWithProgress.mockResolvedValue({
       url: 'https://assets.example.test/audio/new.mp3',
       key: 'music/audio/new.mp3',
       content_type: 'audio/mpeg',
@@ -126,7 +134,14 @@ describe('MusicEntityEditorDrawer.vue', () => {
     await wrapper.findAll('button').find(button => button.text() === '保存歌曲')?.trigger('click')
     await flushPromises()
 
-    expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(audioFile, 'music.audio')
+    expect(mocks.uploadMusicAssetWithProgress).toHaveBeenCalledWith(
+      audioFile,
+      'music.audio',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+        timeoutMs: 5 * 60 * 1000,
+      }),
+    )
     expect(mocks.submitSongRevision).toHaveBeenCalled()
     expect(mocks.queueMusicSongAudioReplacement).toHaveBeenCalled()
     expect(mocks.refreshSong).toHaveBeenCalled()

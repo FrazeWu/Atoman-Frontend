@@ -3,6 +3,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchSources = vi.fn().mockResolvedValue([])
+const fetchHealth = vi.fn().mockResolvedValue(null)
+const fetchSettings = vi.fn().mockResolvedValue(null)
+const updateSettings = vi.fn().mockResolvedValue(null)
+const updateSourceVisibility = vi.fn().mockResolvedValue(null)
 const createSource = vi.fn().mockResolvedValue(null)
 const updateSource = vi.fn().mockResolvedValue(null)
 const updateSourceEnabled = vi.fn().mockResolvedValue(null)
@@ -19,9 +23,16 @@ const deleteOnboardingRecommendation = vi.fn().mockResolvedValue(null)
 
 const storeState = reactive({
   sources: [] as Array<Record<string, any>>,
+  sourcesMeta: { page: 1, limit: 20, total: 0 },
+  health: null as Record<string, any> | null,
+  settings: null as Record<string, any> | null,
   onboardingRecommendations: [] as Array<Record<string, any>>,
   loadingSources: false,
   fetchSources,
+  fetchHealth,
+  fetchSettings,
+  updateSettings,
+  updateSourceVisibility,
   createSource,
   updateSource,
   updateSourceEnabled,
@@ -80,6 +91,7 @@ function createSourceRow(overrides: Record<string, any> = {}) {
     rss_url: 'https://example.com/feed.xml',
     source_type: 'external_rss',
     full_text_enabled: true,
+    hidden: false,
     success_count: 0,
     retry_count: 0,
     failed_count: 0,
@@ -93,17 +105,20 @@ function createSourceRow(overrides: Record<string, any> = {}) {
   }
 }
 
-function findTextInputs(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('input').filter((input) => input.attributes('type') !== 'file')
-}
-
 describe('SettingFeedSourcePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storeState.sources = []
+    storeState.sourcesMeta = { page: 1, limit: 20, total: 0 }
+    storeState.health = null
+    storeState.settings = null
     storeState.onboardingRecommendations = []
     storeState.loadingSources = false
     fetchSources.mockResolvedValue([])
+    fetchHealth.mockResolvedValue(null)
+    fetchSettings.mockResolvedValue(null)
+    updateSettings.mockResolvedValue(null)
+    updateSourceVisibility.mockResolvedValue(null)
     createSource.mockResolvedValue(null)
     updateSource.mockResolvedValue(null)
     updateSourceEnabled.mockResolvedValue(null)
@@ -127,7 +142,7 @@ describe('SettingFeedSourcePanel', () => {
 
     await flushPromises()
 
-    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { page: 1, limit: 20, hidden: false })
     expect(fetchOnboardingRecommendations).toHaveBeenCalledWith('admin-token')
   })
 
@@ -208,13 +223,14 @@ describe('SettingFeedSourcePanel', () => {
 
     await flushPromises()
     fetchSources.mockClear()
+    const filterFrame = wrapper.get('[data-testid="feed-source-status-filter-frame"]')
 
     const degradedButton = wrapper.findAll('button').find((button) => button.text() === '降级')
     expect(degradedButton).toBeTruthy()
     await degradedButton!.trigger('click')
     await flushPromises()
 
-    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100, status: 'degraded' })
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 20, hidden: false, status: 'degraded' })
 
     fetchSources.mockClear()
     const refreshButton = wrapper.findAll('button').find((button) => button.text() === '刷新')
@@ -222,28 +238,87 @@ describe('SettingFeedSourcePanel', () => {
     await refreshButton!.trigger('click')
     await flushPromises()
 
-    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100, status: 'degraded' })
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { page: 1, limit: 20, hidden: false, status: 'degraded' })
 
     const invalidButton = wrapper.findAll('button').find((button) => button.text() === '无效')
     expect(invalidButton).toBeTruthy()
     await invalidButton!.trigger('click')
     await flushPromises()
 
-    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100, status: 'failing' })
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 20, hidden: false, status: 'failing' })
 
     const healthyButton = wrapper.findAll('button').find((button) => button.text() === '正常')
     expect(healthyButton).toBeTruthy()
     await healthyButton!.trigger('click')
     await flushPromises()
 
-    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100, status: 'healthy' })
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 20, hidden: false, status: 'healthy' })
 
-    const allButton = wrapper.findAll('button').find((button) => button.text() === '全部')
+    const allButton = filterFrame.findAll('button').find((button) => button.text() === '全部')
     expect(allButton).toBeTruthy()
     await allButton!.trigger('click')
     await flushPromises()
 
-    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100 })
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 20, hidden: false })
+  })
+
+  it('搜索订阅源并隐藏当前来源', async () => {
+    storeState.sources = [createSourceRow()]
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+    fetchSources.mockClear()
+
+    const searchInput = wrapper.findAll('label').find((label) => label.text().includes('搜索订阅源'))!.get('input')
+    await searchInput.setValue('example')
+    await wrapper.findAll('button').find((button) => button.text() === '搜索')!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', {
+      page: 1,
+      limit: 20,
+      q: 'example',
+      hidden: false,
+      status: undefined,
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === '隐藏')!.trigger('click')
+    await flushPromises()
+    expect(updateSourceVisibility).toHaveBeenCalledWith('source-1', true, 'admin-token')
+  })
+
+  it('展示抓取健康并保存自动同步设置', async () => {
+    storeState.health = {
+      enabled_sources: 3,
+      pending_items: 4,
+      retry_items: 2,
+      failed_items: 1,
+      success_rate: 0.9,
+    }
+    storeState.settings = {
+      auto_sync_enabled: false,
+      auto_sync_interval_minutes: 60,
+    }
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('积压 4')
+    const autoSync = wrapper.get('.setting-feed-panel__toggle input')
+    await autoSync.setValue(true)
+    const intervalInput = wrapper.findAll('label').find((label) => label.text().includes('同步间隔'))!.get('input')
+    await intervalInput.setValue('30')
+    await wrapper.findAll('button').find((button) => button.text() === '保存')!.trigger('click')
+    await flushPromises()
+
+    expect(updateSettings).toHaveBeenCalledWith({
+      auto_sync_enabled: true,
+      auto_sync_interval_minutes: 30,
+    }, 'admin-token')
   })
 
   it('新增订阅源时调用 admin feed source 创建接口', async () => {
@@ -255,9 +330,10 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
     fetchSources.mockClear()
 
-    const inputs = findTextInputs(wrapper)
-    await inputs[0].setValue('新的源')
-    await inputs[1].setValue('https://example.com/new.xml')
+    const titleInput = wrapper.findAll('label').find((label) => label.text().includes('订阅源名称'))!.get('input')
+    const rssInput = wrapper.findAll('label').find((label) => label.text().includes('RSS 地址'))!.get('input')
+    await titleInput.setValue('新的源')
+    await rssInput.setValue('https://example.com/new.xml')
 
     const addButton = wrapper.findAll('button').find((button) => button.text() === '添加订阅源')
     expect(addButton).toBeTruthy()
@@ -269,7 +345,7 @@ describe('SettingFeedSourcePanel', () => {
       title: '新的源',
       rss_url: 'https://example.com/new.xml',
     }, 'admin-token')
-    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { page: 1, limit: 20, hidden: false })
   })
 
   it('编辑订阅源时调用更新接口，手工爬取时调用同步接口', async () => {
@@ -287,9 +363,10 @@ describe('SettingFeedSourcePanel', () => {
     await editButton!.trigger('click')
     await nextTick()
 
-    const inputs = findTextInputs(wrapper)
-    await inputs[0].setValue('更新后的源')
-    await inputs[1].setValue('https://example.com/updated.xml')
+    const titleInput = wrapper.findAll('label').find((label) => label.text().includes('订阅源名称'))!.get('input')
+    const rssInput = wrapper.findAll('label').find((label) => label.text().includes('RSS 地址'))!.get('input')
+    await titleInput.setValue('更新后的源')
+    await rssInput.setValue('https://example.com/updated.xml')
 
     const saveButton = wrapper.findAll('button').find((button) => button.text() === '保存修改')
     expect(saveButton).toBeTruthy()
@@ -308,7 +385,7 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
 
     expect(syncSource).toHaveBeenCalledWith('source-1', 'admin-token')
-    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { page: 1, limit: 20, hidden: false })
   })
 
   it('点击订阅源后打开条目 sheet 并按 source 拉取条目', async () => {
@@ -395,7 +472,7 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
 
     expect(importGlobalOPML).toHaveBeenCalledWith(file, 'admin-token')
-    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { page: 1, limit: 20, hidden: false })
     expect(wrapper.text()).toContain('导入 1，复用 2，失败 0')
   })
 

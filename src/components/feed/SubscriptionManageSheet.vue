@@ -42,7 +42,14 @@
             @click="checkAllSubscriptionsHealth"
           />
         </div>
-        <p v-if="error" class="manage-error">{{ error }}</p>
+        <p v-if="error" class="manage-error" role="alert">{{ error }}</p>
+        <p v-if="message" class="manage-message" role="status">{{ message }}</p>
+        <ul v-if="opmlImportResult?.failed_sources?.length" class="opml-failure-list">
+          <li v-for="failure in opmlImportResult.failed_sources" :key="failure.url" class="opml-failure-row">
+            <span>{{ failure.title || failure.url }}：{{ failure.reason }}</span>
+            <PButton variant="secondary" label="重试" :disabled="busy" @click="retryOPMLFailure(failure)" />
+          </li>
+        </ul>
       </div>
 
       <div class="manage-tabs" aria-label="订阅源管理分区">
@@ -88,8 +95,9 @@
             <span class="group-manage-count a-muted">
               {{ groupSubscriptionCount(group.id) }} 个订阅源
             </span>
+            <PButton variant="secondary" label="上移" :disabled="busy || group.position === 0" @click="moveGroup(group.id, -1)" />
+            <PButton variant="secondary" label="下移" :disabled="busy || group.position === groups.length - 1" @click="moveGroup(group.id, 1)" />
             <PButton
-              variant="secondary"
               label="删除"
               :disabled="busy"
               @click="requestDelete('group', group.id)"
@@ -100,8 +108,43 @@
 
       <!-- 订阅源管理 tab -->
       <template v-else-if="activeManageTab === 'sources'">
+        <div v-if="subscriptions.length" class="source-manage-tools">
+          <PInput v-model="sourceSearch" label="搜索订阅源" placeholder="名称或 RSS 地址" />
+          <PSelect
+            v-model="healthFilter"
+            label="健康状态"
+            :options="[
+              { label: '全部状态', value: '' },
+              { label: '正常', value: 'healthy' },
+              { label: '警告', value: 'warning' },
+              { label: '异常', value: 'error' },
+            ]"
+          />
+        </div>
+
+        <div v-if="subscriptions.length" class="batch-toolbar">
+          <label class="batch-select-all">
+            <input type="checkbox" :checked="allVisibleSelected" :disabled="busy || !visibleSubscriptionIds.length" @change="toggleAllVisible" />
+            选择当前结果
+          </label>
+          <span class="a-muted">已选 {{ selectedSubscriptionIds.size }} 个</span>
+          <PSelect v-model="batchGroupId" :options="groups.map(group => ({ label: group.name, value: group.id }))" placeholder="移动到分组" :disabled="busy || !selectedSubscriptionIds.size" />
+          <PButton variant="secondary" label="移动" :disabled="busy || !selectedSubscriptionIds.size || !batchGroupId" @click="applyBatchGroup" />
+          <PButton variant="secondary" label="静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', true)" />
+          <PButton variant="secondary" label="取消静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', false)" />
+          <PButton variant="secondary" label="自动已读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_mark_read', true)" />
+          <PButton variant="secondary" label="取消自动已读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_mark_read', false)" />
+          <PButton variant="secondary" label="自动稍后阅读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_add_reading_list', true)" />
+          <PButton variant="secondary" label="取消自动稍后阅读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_add_reading_list', false)" />
+          <PButton variant="secondary" label="取消订阅" :disabled="busy || !selectedSubscriptionIds.size" @click="requestBatchDelete" />
+        </div>
+
         <div v-if="!subscriptions.length" class="empty-state a-muted">
           暂无订阅源，点击页面上的 “+ 订阅” 添加。
+        </div>
+
+        <div v-else-if="!filteredSubscriptions.length" class="empty-state a-muted">
+          没有符合条件的订阅源
         </div>
 
         <div v-else class="group-list">
@@ -116,6 +159,14 @@
 
             <div v-else class="subscription-list">
               <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
+                <label class="subscription-select" :aria-label="`选择 ${subscriptionTitle(sub)}`">
+                  <input
+                    type="checkbox"
+                    :checked="selectedSubscriptionIds.has(sub.id)"
+                    :disabled="busy"
+                    @change="toggleSubscriptionSelection(sub.id, ($event.target as HTMLInputElement).checked)"
+                  />
+                </label>
                 <div class="subscription-main">
                   <PInput
                     :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
@@ -189,12 +240,18 @@
                     :disabled="busy"
                     @update:model-value="moveSubscription(sub.id, String($event))"
                   />
+                  <PButton variant="secondary" label="暂停" :disabled="busy || Boolean(sub.is_paused)" @click="setSubscriptionPaused(sub.id, true)" />
+                  <PButton variant="secondary" label="恢复" :disabled="busy || !sub.is_paused" @click="setSubscriptionPaused(sub.id, false)" />
+                  <PButton v-if="!group.virtual" variant="secondary" label="上移" :disabled="busy || group.subscriptions[0]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, -1)" />
+                  <PButton v-if="!group.virtual" variant="secondary" label="下移" :disabled="busy || group.subscriptions[group.subscriptions.length - 1]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, 1)" />
+                  <PButton variant="secondary" label="全部已读" :disabled="busy" @click="markSubscriptionReadState(sub.id, true)" />
+                  <PButton variant="secondary" label="全部未读" :disabled="busy" @click="markSubscriptionReadState(sub.id, false)" />
                   <PButton
                     v-if="sub.feed_source?.source_type === 'external_rss'"
                     data-test="sync-subscription"
                     variant="secondary"
                     :label="syncingSubscriptionIds?.has(sub.id) ? '刷新中...' : '刷新'"
-                    :disabled="busy || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
+                    :disabled="busy || Boolean(sub.is_paused) || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
                     @click="syncSubscription(sub.id)"
                   />
                   <PButton
@@ -266,8 +323,12 @@
 
   <PConfirm
     :show="deletePending !== null"
-    title="删除订阅管理项"
-    :message="deletePending?.kind === 'group' ? '确定删除这个分组吗？分组内订阅源会移动到默认分组。' : '确定删除这个订阅源吗？'"
+    :title="deletePending?.kind === 'batch' ? '批量取消订阅' : '删除订阅管理项'"
+    :message="deletePending?.kind === 'batch'
+      ? `确定取消选中的 ${deletePending.ids?.length || 0} 个订阅源吗？`
+      : deletePending?.kind === 'group'
+        ? '确定删除这个分组吗？分组内订阅源会移动到默认分组。'
+        : '确定删除这个订阅源吗？'"
     confirm-text="删除"
     danger
     :loading="props.busy"
@@ -292,7 +353,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
-import type { FeedAutomationRules, FeedFilterRules } from '@/stores/feed'
+import type { FeedAutomationRules, FeedFilterRules, FeedOPMLImportResult } from '@/stores/feed'
 
 const props = defineProps<{
   show: boolean
@@ -309,6 +370,8 @@ const props = defineProps<{
   syncingAllSubscriptions?: boolean
   subscriptionSyncResults?: Record<string, SubscriptionSyncResult>
   error?: string
+  message?: string
+  opmlImportResult?: FeedOPMLImportResult | null
 }>()
 
 const emit = defineEmits<{
@@ -325,7 +388,14 @@ const emit = defineEmits<{
   (e: 'sync-subscription', id: string): void
   (e: 'sync-all-subscriptions'): void
   (e: 'import-opml', file: File): void
+  (e: 'retry-opml-failure', failure: { url: string; title?: string; group?: string }): void
   (e: 'export-opml'): void
+  (e: 'batch-update-subscriptions', ids: string[], payload: { group_id?: string; is_muted?: boolean; auto_mark_read?: boolean; auto_add_reading_list?: boolean }): void
+  (e: 'batch-delete-subscriptions', ids: string[]): void
+  (e: 'mark-subscription-read-state', id: string, read: boolean): void
+  (e: 'set-subscription-paused', id: string, paused: boolean): void
+  (e: 'reorder-subscription-groups', ids: string[]): void
+  (e: 'reorder-subscriptions', groupId: string, ids: string[]): void
   (e: 'create-rule'): void
   (e: 'edit-rule', id: string): void
   (e: 'save-rule', payload: { id: string | null; payload: SubscriptionRuleSavePayload }): void
@@ -340,11 +410,19 @@ const emit = defineEmits<{
 
 const newGroupName = ref('')
 const newKeyword = ref('')
+const sourceSearch = ref('')
+const healthFilter = ref('')
+const batchGroupId = ref('')
+const selectedSubscriptionIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
 const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.initialTab ?? 'groups')
-const deletePending = ref<{ kind: 'subscription' | 'group'; id: string } | null>(null)
+const deletePending = ref<{
+  kind: 'subscription' | 'group' | 'batch'
+  id?: string
+  ids?: string[]
+} | null>(null)
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
@@ -362,20 +440,37 @@ const groupOptions = computed(() => [
   ...props.groups.map(group => ({ label: group.name, value: group.id })),
 ])
 
+const filteredSubscriptions = computed(() => {
+  const query = sourceSearch.value.trim().toLowerCase()
+  return props.subscriptions.filter((sub) => {
+    if (healthFilter.value && subscriptionHealthStatus(sub) !== healthFilter.value) return false
+    if (!query) return true
+    return [subscriptionTitle(sub), sub.feed_source?.title, sub.feed_source?.rss_url]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(query)
+  })
+})
+
 const displayGroups = computed(() => [
   ...props.groups.map(group => ({
     id: group.id,
     name: group.name,
     virtual: false,
-    subscriptions: props.subscriptions.filter(sub => sub.subscription_group_id === group.id),
+    subscriptions: filteredSubscriptions.value.filter(sub => sub.subscription_group_id === group.id),
   })),
   {
     id: 'unassigned',
     name: '未分类',
     virtual: true,
-    subscriptions: props.subscriptions.filter(sub => !sub.subscription_group_id),
+    subscriptions: filteredSubscriptions.value.filter(sub => !sub.subscription_group_id),
   },
-])
+].filter(group => group.subscriptions.length > 0 || (!sourceSearch.value && !healthFilter.value)))
+
+const visibleSubscriptionIds = computed(() => displayGroups.value.flatMap(group => group.subscriptions.map(sub => sub.id)))
+const allVisibleSelected = computed(() => visibleSubscriptionIds.value.length > 0
+  && visibleSubscriptionIds.value.every(id => selectedSubscriptionIds.value.has(id)))
 
 const externalSubscriptions = computed(() => props.subscriptions.filter(
   (subscription) => subscription.feed_source?.source_type === 'external_rss',
@@ -463,6 +558,31 @@ const updateSubscriptionFlag = (
   emit('update-subscription', id, { [key]: value })
 }
 
+const setSubscriptionPaused = (id: string, paused: boolean) => {
+  if (props.busy) return
+  emit('set-subscription-paused', id, paused)
+}
+
+const moveGroup = (id: string, direction: -1 | 1) => {
+  const ids = props.groups.map(group => group.id)
+  const index = ids.indexOf(id)
+  const target = index + direction
+  if (props.busy || index < 0 || target < 0 || target >= ids.length) return
+  ;[ids[index], ids[target]] = [ids[target], ids[index]]
+  emit('reorder-subscription-groups', ids)
+}
+
+const moveSubscriptionOrder = (groupId: string, id: string, direction: -1 | 1) => {
+  const ids = props.subscriptions
+    .filter(subscription => subscription.subscription_group_id === groupId)
+    .map(subscription => subscription.id)
+  const index = ids.indexOf(id)
+  const target = index + direction
+  if (props.busy || index < 0 || target < 0 || target >= ids.length) return
+  ;[ids[index], ids[target]] = [ids[target], ids[index]]
+  emit('reorder-subscriptions', groupId, ids)
+}
+
 const checkSubscriptionHealth = (id: string) => {
   if (props.busy || props.healthChecking) return
   emit('check-subscription-health', id)
@@ -501,17 +621,67 @@ const exportOPML = () => {
   emit('export-opml')
 }
 
+const retryOPMLFailure = (failure: { url: string; title?: string; group?: string }) => {
+  if (props.busy) return
+  emit('retry-opml-failure', failure)
+}
+
+const selectedIds = () => [...selectedSubscriptionIds.value]
+
+const toggleSubscriptionSelection = (id: string, checked: boolean) => {
+  const next = new Set(selectedSubscriptionIds.value)
+  if (checked) next.add(id)
+  else next.delete(id)
+  selectedSubscriptionIds.value = next
+}
+
+const toggleAllVisible = () => {
+  const next = new Set(selectedSubscriptionIds.value)
+  if (allVisibleSelected.value) visibleSubscriptionIds.value.forEach(id => next.delete(id))
+  else visibleSubscriptionIds.value.forEach(id => next.add(id))
+  selectedSubscriptionIds.value = next
+}
+
+const applyBatchGroup = () => {
+  const ids = selectedIds()
+  if (props.busy || !ids.length || !batchGroupId.value) return
+  emit('batch-update-subscriptions', ids, { group_id: batchGroupId.value })
+}
+
+const applyBatchFlag = (key: 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list', value: boolean) => {
+  const ids = selectedIds()
+  if (props.busy || !ids.length) return
+  emit('batch-update-subscriptions', ids, { [key]: value })
+}
+
+const markSubscriptionReadState = (id: string, read: boolean) => {
+  if (props.busy) return
+  emit('mark-subscription-read-state', id, read)
+}
+
 const requestDelete = (kind: 'subscription' | 'group', id: string) => {
   if (props.busy) return
   deletePending.value = { kind, id }
+}
+
+const requestBatchDelete = () => {
+  const ids = selectedIds()
+  if (props.busy || !ids.length) return
+  deletePending.value = { kind: 'batch', ids }
 }
 
 const confirmDelete = () => {
   if (props.busy || !deletePending.value) return
   const pending = deletePending.value
   deletePending.value = null
-  if (pending.kind === 'group') emit('delete-group', pending.id)
-  else emit('delete-subscription', pending.id)
+  if (pending.kind === 'batch' && pending.ids?.length) {
+    emit('batch-delete-subscriptions', pending.ids)
+    selectedSubscriptionIds.value = new Set()
+  } else if (pending.kind === 'group' && pending.id) {
+    emit('delete-group', pending.id)
+  } else if (pending.id) {
+    emit('delete-subscription', pending.id)
+  }
 }
 
 const subscriptionHealthStatus = (sub: Subscription) => sub.health_status || 'healthy'
@@ -544,6 +714,10 @@ watch(() => props.show, (visible) => {
   activeManageTab.value = props.initialTab ?? 'groups'
   newGroupName.value = ''
   newKeyword.value = ''
+  sourceSearch.value = ''
+  healthFilter.value = ''
+  batchGroupId.value = ''
+  selectedSubscriptionIds.value = new Set()
   localFilterRules.value = {
     mutedSourceIds: [...props.filterRules.mutedSourceIds],
     hiddenKeywords: [...props.filterRules.hiddenKeywords],
@@ -564,6 +738,8 @@ watch(() => props.subscriptions, (subscriptions) => {
       nextDrafts[sub.id] = subscriptionTitle(sub)
     }
   })
+  const validIds = new Set(subscriptions.map(sub => sub.id))
+  selectedSubscriptionIds.value = new Set([...selectedSubscriptionIds.value].filter(id => validIds.has(id)))
   draftTitles.value = nextDrafts
 })
 
@@ -614,11 +790,35 @@ watch(() => props.filterRules, (rules) => {
   margin: 0;
 }
 
-.manage-error {
+.manage-error,
+.manage-message {
   margin: 0.5rem 0 0;
-  color: var(--a-color-danger);
   font-size: 0.82rem;
   font-weight: 500;
+}
+
+.manage-error {
+  color: var(--a-color-danger);
+}
+
+.manage-message {
+  color: var(--a-color-success);
+}
+
+.opml-failure-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opml-failure-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
 }
 
 .sync-meta,
@@ -637,7 +837,7 @@ watch(() => props.filterRules, (rules) => {
 
 .manage-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid var(--a-color-border-soft);
 }
 
@@ -848,6 +1048,34 @@ watch(() => props.filterRules, (rules) => {
   white-space: nowrap;
 }
 
+.source-manage-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+  gap: 0.75rem;
+}
+
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-block: 1px solid var(--a-color-border-soft);
+}
+
+.batch-select-all,
+.subscription-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.batch-select-all input,
+.subscription-select input {
+  width: 1rem;
+  height: 1rem;
+}
+
 .subscription-list {
   display: flex;
   flex-direction: column;
@@ -856,7 +1084,7 @@ watch(() => props.filterRules, (rules) => {
 
 .subscription-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 15rem;
+  grid-template-columns: auto minmax(0, 1fr) 15rem;
   gap: 1rem;
   align-items: start;
   padding: 1rem;
@@ -939,9 +1167,14 @@ watch(() => props.filterRules, (rules) => {
 
 @media (max-width: 640px) {
   .inline-form,
-  .subscription-card {
+  .subscription-card,
+  .opml-failure-row {
     display: flex;
     flex-direction: column;
+  }
+
+  .source-manage-tools {
+    grid-template-columns: 1fr;
   }
 
   .subscription-actions {

@@ -33,7 +33,10 @@ describe('admin feed fulltext store OPML', () => {
     }))
     const body = fetchMock.mock.calls[0][1]?.body
     expect(body).toBeInstanceOf(FormData)
-    expect((body as FormData).get('file')).toBe(file)
+    const uploadedFile = (body as FormData).get('file')
+    expect(uploadedFile).toBeInstanceOf(Blob)
+    expect((uploadedFile as File).name).toBe('feeds.opml')
+    expect(await (uploadedFile as Blob).text()).toBe('<opml version="2.0"><body /></opml>')
   })
 
   it('exports global OPML as a blob download payload', async () => {

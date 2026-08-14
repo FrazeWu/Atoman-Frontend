@@ -19,6 +19,44 @@
       </div>
     </div>
 
+    <section v-if="health || settings" class="setting-feed-panel__operations" aria-label="抓取运行状态">
+      <div v-if="health" class="setting-feed-panel__health-summary">
+        <span>启用 {{ health.enabled_sources }}</span>
+        <span>积压 {{ health.pending_items }}</span>
+        <span>重试 {{ health.retry_items }}</span>
+        <span>失败 {{ health.failed_items }}</span>
+        <span>成功率 {{ Math.round(health.success_rate * 100) }}%</span>
+      </div>
+      <div v-if="settings" class="setting-feed-panel__sync-settings">
+        <label class="setting-feed-panel__toggle">
+          <span>自动同步</span>
+          <input v-model="autoSyncEnabled" type="checkbox" />
+        </label>
+        <PInput v-model="syncIntervalMinutes" label="同步间隔（分钟）" inputmode="numeric" />
+        <PButton size="sm" variant="secondary" :loading="savingSettings" :disabled="savingSettings" @click="saveSyncSettings">
+          保存
+        </PButton>
+      </div>
+    </section>
+
+    <form class="setting-feed-panel__search" @submit.prevent="applySearch">
+      <PInput v-model="searchQuery" label="搜索订阅源" placeholder="名称或 RSS 地址" />
+      <PButton size="sm" variant="secondary" :disabled="loading" @click="applySearch">搜索</PButton>
+    </form>
+
+    <div class="setting-feed-panel__visibility" aria-label="订阅源可见性筛选">
+      <button
+        v-for="option in visibilityFilterOptions"
+        :key="option.value"
+        type="button"
+        class="setting-feed-panel__filter"
+        :class="{ 'is-active': visibilityFilter === option.value }"
+        @click="setVisibilityFilter(option.value)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+
     <div
       class="setting-feed-panel__filter-frame"
       data-testid="feed-source-status-filter-frame"
@@ -179,7 +217,7 @@
           <strong @click="openItemsSheet(source)">{{ source.title || '未命名订阅源' }}</strong>
           <small>{{ source.rss_url }}</small>
           <small>
-            状态：{{ sourceStatusLabel(source.status) }} ·
+            状态：{{ source.hidden ? '已隐藏' : sourceStatusLabel(source.status) }} ·
             待处理 {{ source.pending_count || 0 }} ·
             重试 {{ source.retry_count || 0 }}
           </small>
@@ -208,6 +246,18 @@
           <PButton
             size="sm"
             variant="secondary"
+            :disabled="pendingVisibilityIds.has(source.id)"
+            :loading="pendingVisibilityIds.has(source.id)"
+            @click="toggleVisibility(source)"
+          >
+            {{ source.hidden ? '恢复' : '隐藏' }}
+          </PButton>
+          <PButton size="sm" variant="secondary" @click="openDiagnostics(source)">诊断</PButton>
+          <PButton size="sm" variant="secondary" @click="openImpact(source)">影响</PButton>
+          <PButton v-if="isOwner" size="sm" variant="danger" @click="beginDelete(source)">永久删除</PButton>
+          <PButton
+            size="sm"
+            variant="secondary"
             :disabled="syncingSourceIds.has(source.id)"
             :loading="syncingSourceIds.has(source.id)"
             loading-text="爬取中..."
@@ -216,10 +266,25 @@
             手工爬取
           </PButton>
         </div>
+        <div v-if="impactSourceId === source.id && sourceImpact" class="setting-feed-panel__detail">
+          <span>订阅 {{ sourceImpact.subscriptions }}</span><span>条目 {{ sourceImpact.feed_items }}</span><span>收藏 {{ sourceImpact.starred_items }}</span><span>稍后阅读 {{ sourceImpact.reading_list_items }}</span>
+        </div>
+        <div v-if="diagnosticSourceId === source.id" class="setting-feed-panel__detail">
+          <span v-if="diagnosticsLoading">加载诊断中...</span><span v-else-if="!diagnostics.length">近 90 天没有诊断记录</span><span v-for="diagnostic in diagnostics" :key="diagnostic.id">{{ diagnostic.kind === 'failure' ? '失败' : '已恢复' }}：{{ diagnostic.message }}</span>
+        </div>
+        <div v-if="deleteCandidate?.id === source.id" class="setting-feed-panel__delete-confirm"><PInput v-model="deleteConfirmTitle" label="输入订阅源名称以继续" /><PButton size="sm" variant="danger" :disabled="deleteConfirmTitle !== source.title" @click="requestDeleteConfirmation">继续删除</PButton></div>
       </div>
     </div>
 
-    <p v-else class="setting-feed-panel__empty">暂无外部 RSS 订阅源。</p>
+    <PConfirm :show="deleteConfirmOpen" title="永久删除订阅源" message="删除后无法恢复。" confirm-text="永久删除" danger :loading="deleting" @confirm="confirmDelete" @cancel="deleteConfirmOpen = false" />
+
+    <nav v-if="sourcesMeta.total > sourcesMeta.limit" class="setting-feed-panel__pagination" aria-label="订阅源分页">
+      <PButton size="sm" variant="secondary" label="上一页" :disabled="currentPage <= 1 || loading" @click="changePage(currentPage - 1)" />
+      <span>第 {{ currentPage }} / {{ totalPages }} 页，共 {{ sourcesMeta.total }} 个</span>
+      <PButton size="sm" variant="secondary" label="下一页" :disabled="currentPage >= totalPages || loading" @click="changePage(currentPage + 1)" />
+    </nav>
+
+    <p v-else-if="!sources.length" class="setting-feed-panel__empty">暂无外部 RSS 订阅源。</p>
 
     <SettingFeedSourceItemsSheet
       :show="itemsSheetOpen"
@@ -239,6 +304,8 @@ import { computed, onMounted, ref } from 'vue'
 import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceItemsSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import { isOwnerRole } from '@/utils/roles'
 import { useAuthStore } from '@/stores/auth'
 import {
   useAdminFeedFulltextStore,
@@ -267,7 +334,16 @@ const message = ref('')
 const error = ref('')
 const statusFilter = ref<'healthy' | 'degraded' | 'failing' | ''>('')
 const pendingSourceIds = ref(new Set<string>())
+const pendingVisibilityIds = ref(new Set<string>())
 const syncingSourceIds = ref(new Set<string>())
+const searchQuery = ref('')
+const appliedSearchQuery = ref('')
+const visibilityFilter = ref<'visible' | 'hidden' | 'all'>('visible')
+const currentPage = ref(1)
+const pageSize = 20
+const autoSyncEnabled = ref(false)
+const syncIntervalMinutes = ref('60')
+const savingSettings = ref(false)
 const itemsSheetOpen = ref(false)
 const itemsSheetLoading = ref(false)
 const itemsSheetError = ref('')
@@ -281,8 +357,21 @@ const draft = ref({
   rssUrl: '',
 })
 const recommendationSourceId = ref('')
+const impactSourceId = ref('')
+const sourceImpact = ref<{ subscriptions: number; feed_items: number; read_records: number; starred_items: number; reading_list_items: number } | null>(null)
+const diagnosticSourceId = ref('')
+const diagnostics = ref<Array<{ id: string; kind: 'failure' | 'recovered'; message: string }>>([])
+const diagnosticsLoading = ref(false)
+const deleteCandidate = ref<AdminFeedFulltextSourceRow | null>(null)
+const deleteConfirmTitle = ref('')
+const deleteConfirmOpen = ref(false)
+const deleting = ref(false)
 
 const sources = computed(() => adminFeedFulltextStore.sources as AdminFeedFulltextSourceRow[])
+const sourcesMeta = computed(() => adminFeedFulltextStore.sourcesMeta)
+const health = computed(() => adminFeedFulltextStore.health)
+const settings = computed(() => adminFeedFulltextStore.settings)
+const totalPages = computed(() => Math.max(1, Math.ceil(sourcesMeta.value.total / sourcesMeta.value.limit)))
 const recommendations = computed(() => (
   adminFeedFulltextStore.onboardingRecommendations as AdminOnboardingFeedRecommendation[]
 ).slice().sort((a, b) => a.sort_order - b.sort_order))
@@ -292,6 +381,12 @@ const availableRecommendationSources = computed(() => sources.value.filter((sour
   && !recommendedSourceIds.value.has(source.id)
 )))
 const canSubmit = computed(() => draft.value.rssUrl.trim().length > 0)
+const isOwner = computed(() => isOwnerRole(authStore.user?.role))
+const visibilityFilterOptions = [
+  { label: '显示中', value: 'visible' },
+  { label: '已隐藏', value: 'hidden' },
+  { label: '全部', value: 'all' },
+] as const
 const statusFilterOptions = [
   { label: '全部', value: '' },
   { label: '正常', value: 'healthy' },
@@ -306,9 +401,13 @@ function sourceStatusLabel(status?: string) {
 }
 
 function sourceFetchOptions() {
-  return statusFilter.value
-    ? { limit: 100, status: statusFilter.value }
-    : { limit: 100 }
+  return {
+    page: currentPage.value,
+    limit: pageSize,
+    q: appliedSearchQuery.value || undefined,
+    hidden: visibilityFilter.value === 'all' ? undefined : visibilityFilter.value === 'hidden',
+    status: statusFilter.value || undefined,
+  }
 }
 
 function resetForm() {
@@ -327,7 +426,13 @@ async function refresh() {
     await Promise.all([
       adminFeedFulltextStore.fetchSources(authStore.token, sourceFetchOptions()),
       adminFeedFulltextStore.fetchOnboardingRecommendations(authStore.token),
+      adminFeedFulltextStore.fetchHealth(authStore.token),
+      adminFeedFulltextStore.fetchSettings(authStore.token),
     ])
+    if (adminFeedFulltextStore.settings) {
+      autoSyncEnabled.value = adminFeedFulltextStore.settings.auto_sync_enabled
+      syncIntervalMinutes.value = String(adminFeedFulltextStore.settings.auto_sync_interval_minutes)
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载订阅源失败'
   } finally {
@@ -401,7 +506,50 @@ async function removeRecommendation(id: string) {
 async function setStatusFilter(nextStatus: typeof statusFilter.value) {
   if (statusFilter.value === nextStatus) return
   statusFilter.value = nextStatus
+  currentPage.value = 1
   await refresh()
+}
+
+async function setVisibilityFilter(nextVisibility: typeof visibilityFilter.value) {
+  if (visibilityFilter.value === nextVisibility) return
+  visibilityFilter.value = nextVisibility
+  currentPage.value = 1
+  await refresh()
+}
+
+async function applySearch() {
+  appliedSearchQuery.value = searchQuery.value.trim()
+  currentPage.value = 1
+  await refresh()
+}
+
+async function changePage(page: number) {
+  const nextPage = Math.min(Math.max(1, page), totalPages.value)
+  if (nextPage === currentPage.value) return
+  currentPage.value = nextPage
+  await refresh()
+}
+
+async function saveSyncSettings() {
+  if (!authStore.token || savingSettings.value) return
+  const interval = Number.parseInt(syncIntervalMinutes.value, 10)
+  if (!Number.isFinite(interval) || interval < 5) {
+    error.value = '同步间隔不能少于 5 分钟'
+    return
+  }
+  savingSettings.value = true
+  error.value = ''
+  try {
+    await adminFeedFulltextStore.updateSettings({
+      auto_sync_enabled: autoSyncEnabled.value,
+      auto_sync_interval_minutes: interval,
+    }, authStore.token)
+    message.value = '抓取设置已保存'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '保存抓取设置失败'
+  } finally {
+    savingSettings.value = false
+  }
 }
 
 async function submitSource() {
@@ -496,6 +644,40 @@ async function exportOPML() {
   }
 }
 
+async function openImpact(source: AdminFeedFulltextSourceRow) {
+  if (!authStore.token) return
+  impactSourceId.value = source.id
+  try { sourceImpact.value = await adminFeedFulltextStore.fetchSourceImpact(source.id, authStore.token) } catch (err) { error.value = err instanceof Error ? err.message : '加载影响范围失败' }
+}
+
+async function openDiagnostics(source: AdminFeedFulltextSourceRow) {
+  if (!authStore.token) return
+  diagnosticSourceId.value = source.id
+  diagnosticsLoading.value = true
+  try { diagnostics.value = await adminFeedFulltextStore.fetchSourceDiagnostics(source.id, authStore.token) } catch (err) { error.value = err instanceof Error ? err.message : '加载诊断记录失败' } finally { diagnosticsLoading.value = false }
+}
+
+function beginDelete(source: AdminFeedFulltextSourceRow) {
+  deleteCandidate.value = source
+  deleteConfirmTitle.value = ''
+}
+
+function requestDeleteConfirmation() {
+  if (deleteCandidate.value && deleteConfirmTitle.value === deleteCandidate.value.title) deleteConfirmOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!authStore.token || !deleteCandidate.value) return
+  deleting.value = true
+  try {
+    await adminFeedFulltextStore.deleteSource(deleteCandidate.value.id, deleteConfirmTitle.value, authStore.token)
+    message.value = '订阅源已永久删除'
+    deleteCandidate.value = null
+    deleteConfirmOpen.value = false
+    await refresh()
+  } catch (err) { error.value = err instanceof Error ? err.message : '删除订阅源失败' } finally { deleting.value = false }
+}
+
 function startEdit(source: AdminFeedFulltextSourceRow) {
   editingId.value = source.id
   draft.value = {
@@ -523,6 +705,23 @@ async function openItemsSheet(source: AdminFeedFulltextSourceRow) {
     selectedSourceItems.value = []
   } finally {
     itemsSheetLoading.value = false
+  }
+}
+
+async function toggleVisibility(source: AdminFeedFulltextSourceRow) {
+  if (!authStore.token || pendingVisibilityIds.value.has(source.id)) return
+  pendingVisibilityIds.value = new Set([...pendingVisibilityIds.value, source.id])
+  error.value = ''
+  message.value = ''
+  const nextHidden = !source.hidden
+  try {
+    await adminFeedFulltextStore.updateSourceVisibility(source.id, nextHidden, authStore.token)
+    message.value = nextHidden ? '订阅源已隐藏' : '订阅源已恢复'
+    await refresh()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '更新订阅源可见性失败'
+  } finally {
+    pendingVisibilityIds.value = new Set([...pendingVisibilityIds.value].filter(id => id !== source.id))
   }
 }
 
@@ -614,6 +813,40 @@ defineExpose({ refresh })
   justify-content: flex-end;
   gap: 0.75rem;
   align-items: center;
+}
+
+.setting-feed-panel__operations {
+  display: grid;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+  border-block: 1px solid var(--a-color-border-soft);
+}
+
+.setting-feed-panel__health-summary,
+.setting-feed-panel__sync-settings,
+.setting-feed-panel__search,
+.setting-feed-panel__visibility,
+.setting-feed-panel__pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.setting-feed-panel__health-summary {
+  color: var(--a-color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.setting-feed-panel__sync-settings .p-field,
+.setting-feed-panel__search .p-field {
+  flex: 1 1 16rem;
+}
+
+.setting-feed-panel__pagination {
+  justify-content: space-between;
+  color: var(--a-color-text-secondary);
+  font-size: 0.82rem;
 }
 
 .setting-feed-panel__filter-frame {
@@ -795,7 +1028,10 @@ defineExpose({ refresh })
   .setting-feed-panel__header,
   .setting-feed-panel__row,
   .setting-feed-panel__recommendations-header,
-  .setting-feed-panel__recommendation-row {
+  .setting-feed-panel__recommendation-row,
+  .setting-feed-panel__sync-settings,
+  .setting-feed-panel__search,
+  .setting-feed-panel__pagination {
     flex-direction: column;
     align-items: stretch;
   }

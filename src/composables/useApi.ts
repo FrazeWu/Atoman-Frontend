@@ -177,6 +177,14 @@ export function useApi() {
 				`${apiUrl}/studio/${module}/collections`,
 			collection: (module: "blog" | "podcast" | "video", id: string) =>
 				`${apiUrl}/studio/${module}/collections/${id}`,
+			reorderCollectionContents: (
+				module: "blog" | "podcast" | "video",
+				id: string,
+			) => `${apiUrl}/studio/${module}/collections/${id}/contents/order`,
+			resolveCollectionConflict: (
+				module: "blog" | "podcast" | "video",
+				id: string,
+			) => `${apiUrl}/studio/${module}/contents/${id}/collection`,
 			analytics: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/analytics`,
 			interactions: (module: "blog" | "podcast" | "video") =>
@@ -243,6 +251,10 @@ export function useApi() {
 				sources: `${apiUrl}/admin/feed/sources`,
 				source: (sourceId: number | string) =>
 					`${apiUrl}/admin/feed/sources/${sourceId}`,
+				sourceImpact: (sourceId: number | string) =>
+					`${apiUrl}/admin/feed/sources/${sourceId}/impact`,
+				sourceDiagnostics: (sourceId: number | string) =>
+					`${apiUrl}/admin/feed/sources/${sourceId}/diagnostics`,
 				onboardingRecommendations: `${apiUrl}/admin/feed/onboarding/recommendations`,
 				onboardingRecommendation: (recommendationId: number | string) =>
 					`${apiUrl}/admin/feed/onboarding/recommendations/${recommendationId}`,

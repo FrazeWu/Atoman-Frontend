@@ -50,6 +50,8 @@
       :syncing-all-subscriptions="feedStore.syncingAllSubscriptions"
       :subscription-sync-results="feedStore.subscriptionSyncResults"
       :error="manageError"
+      :message="manageMessage"
+      :opml-import-result="opmlImportResult"
       @close="showManageSheet = false"
       @create-group="createSubscriptionGroup"
       @rename-subscription="renameSubscription"
@@ -63,7 +65,14 @@
       @sync-subscription="syncSubscription"
       @sync-all-subscriptions="syncAllSubscriptions"
       @import-opml="importOPML"
+      @retry-opml-failure="retryOPMLFailure"
       @export-opml="exportOPML"
+      @batch-update-subscriptions="batchUpdateSubscriptions"
+      @batch-delete-subscriptions="batchDeleteSubscriptions"
+      @mark-subscription-read-state="markSubscriptionReadState"
+      @set-subscription-paused="setSubscriptionPaused"
+      @reorder-subscription-groups="reorderSubscriptionGroups"
+      @reorder-subscriptions="reorderSubscriptions"
       @save-rule="saveSubscriptionRule"
       @move-rule-up="moveSubscriptionRuleUp"
       @move-rule-down="moveSubscriptionRuleDown"
@@ -472,6 +481,8 @@ const {
   showManageSheet,
   manageBusy,
   manageError,
+  manageMessage,
+  opmlImportResult,
   addSubscriptionError,
   addSubscriptionResetKey,
   onboardingBusy,
@@ -496,7 +507,14 @@ const {
   syncSubscription,
   syncAllSubscriptions,
   importOPML,
+  retryOPMLFailure,
   exportOPML,
+  batchUpdateSubscriptions,
+  batchDeleteSubscriptions,
+  markSubscriptionReadState,
+  setSubscriptionPaused,
+  reorderSubscriptionGroups,
+  reorderSubscriptions,
   saveSubscriptionRule,
   moveSubscriptionRuleUp,
   moveSubscriptionRuleDown,

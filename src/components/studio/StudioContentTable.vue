@@ -5,6 +5,7 @@
       <table>
         <thead>
           <tr>
+            <th>选择</th>
             <th>标题</th>
             <th>状态</th>
             <th>可见范围</th>
@@ -19,6 +20,7 @@
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
+            <td data-label="选择"><input v-if="item.collection_conflict" type="checkbox" :aria-label="`选择${item.title || config.itemLabel}`" @change="emit('selectConflict', item, ($event.target as HTMLInputElement).checked)" /></td>
             <td data-label="标题">
               <strong>{{ item.title || `未命名${config.itemLabel}` }}</strong>
               <span v-if="item.processing_status && item.processing_status !== 'ready'">{{ item.processing_status }}</span>
@@ -28,7 +30,7 @@
             <td data-label="合集">
               <span v-if="item.collection_conflict" class="studio-content-table__collection-conflict">
                 待确认{{ item.collections.length ? `：${item.collections.map(collection => collection.name).join('、')}` : '' }}
-                <select :aria-label="`确认${item.title || config.itemLabel}的合集`" @change="resolveCandidate(item, $event)">
+                <select :aria-label="`确认${item.title || config.itemLabel}的合集`" @change="selectCandidate(item, $event)">
                   <option value="">选择合集</option>
                   <option v-for="collection in item.collections" :key="collection.id" :value="collection.id">{{ collection.name }}</option>
                 </select>
@@ -167,13 +169,14 @@ const emit = defineEmits<{
   delete: [item: StudioContentItem]
   reupload: [item: StudioContentItem]
   reprocess: [item: StudioContentItem]
-  resolve: [item: StudioContentItem, collectionID: string]
+  selectConflict: [item: StudioContentItem, selected: boolean]
+  candidate: [item: StudioContentItem, collectionID: string]
   reorder: [item: StudioContentItem, direction: -1 | 1]
 }>()
 
-function resolveCandidate(item: StudioContentItem, event: Event) {
+function selectCandidate(item: StudioContentItem, event: Event) {
   const collectionID = (event.target as HTMLSelectElement).value
-  if (collectionID) emit('resolve', item, collectionID)
+  if (collectionID) emit('candidate', item, collectionID)
 }
 
 const config = computed(() => studioModules[props.module])

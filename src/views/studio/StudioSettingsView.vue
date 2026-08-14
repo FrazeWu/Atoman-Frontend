@@ -71,7 +71,7 @@ const error = ref('')
 const form = reactive({
   default_collection_id: '',
   default_visibility: 'public' as StudioVisibility,
-  default_publish_status: 'published' as StudioPublishStatus,
+  default_publish_status: 'draft' as StudioPublishStatus,
   autoplay_enabled: false,
 })
 
@@ -79,7 +79,7 @@ function applySettings() {
   const settings = studio.settings[module.value]
   form.default_collection_id = settings?.default_collection_id || ''
   form.default_visibility = settings?.default_visibility || 'public'
-  form.default_publish_status = settings?.default_publish_status || 'published'
+  form.default_publish_status = settings?.default_publish_status || 'draft'
   form.autoplay_enabled = module.value === 'blog' ? false : Boolean(settings?.autoplay_enabled)
 }
 

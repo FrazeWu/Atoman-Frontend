@@ -185,6 +185,8 @@ export function useApi() {
 				module: "blog" | "podcast" | "video",
 				id: string,
 			) => `${apiUrl}/studio/${module}/contents/${id}/collection`,
+			resolveCollectionConflicts: (module: "blog" | "podcast" | "video") =>
+				`${apiUrl}/studio/${module}/contents/collections/resolve`,
 			analytics: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/analytics`,
 			interactions: (module: "blog" | "podcast" | "video") =>

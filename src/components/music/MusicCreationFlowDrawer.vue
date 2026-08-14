@@ -285,7 +285,7 @@ const forwardBlockReason = computed(() => {
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
 	if (!flow.draft.albumDetails.coverUrl.trim()) return '请上传专辑封面'
 	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
-	if (!flow.draft.albumDetails.source.trim()) return '请填写专辑来源'
+	if (!flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'
 	if (!flow.draft.tracks.length || flow.draft.tracks.some((track) => !track.title.trim())) return '请至少添加一首完整音轨'
 	if (flow.draft.tracks.some((track) => track.origin === 'manual' && !hasTrackAudio(track))) return '请为新增曲目上传音频'
 	if (!flow.draft.albumDetails.contributors?.length) {

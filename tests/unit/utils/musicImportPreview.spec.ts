@@ -1,6 +1,11 @@
 import JSZip from 'jszip'
-import { describe, expect, it } from 'vitest'
-import { readAlbumImportPreview, shouldIgnoreAlbumImportPath } from '@/utils/musicImportPreview'
+import { describe, expect, it, vi } from 'vitest'
+import { parseBlob } from 'music-metadata-browser'
+import { readAlbumImportPreview, shouldIgnoreAlbumImportPath } from '../../../src/utils/musicImportPreview'
+
+vi.mock('music-metadata-browser', () => ({
+  parseBlob: vi.fn(),
+}))
 
 describe('readAlbumImportPreview', () => {
   it('从 ZIP 文件名和目录预填专辑名与曲目', async () => {
@@ -44,5 +49,23 @@ describe('readAlbumImportPreview', () => {
       title: 'Live at Home',
       tracks: ['Live at Home'],
     })
+  })
+
+  it('uses JPEG when embedded cover metadata omits its MIME type', async () => {
+    vi.mocked(parseBlob).mockResolvedValue({
+      common: {
+        title: 'Track Title',
+        album: 'Album Title',
+        picture: [{ data: new Uint8Array([1, 2, 3]), format: '' }],
+      },
+    } as never)
+
+    const preview = await readAlbumImportPreview(
+      new File(['audio'], 'track.mp3', { type: 'audio/mpeg' }),
+    )
+
+    expect(preview.albumCoverFile).toBeInstanceOf(File)
+    expect(preview.albumCoverFile?.name).toBe('cover_extracted.jpg')
+    expect(preview.albumCoverFile?.type).toBe('image/jpeg')
   })
 })

@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { parseBlob } from 'music-metadata-browser'
 import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
-import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAsset, uploadMusicAssetWithProgress } from '@/api/musicV1'
+import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
 import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
@@ -125,8 +125,17 @@ async function handleTrackAudioChange(event: Event) {
   let pendingTrackId: string | null = null
   try {
     if (replacingTrackId) {
-      const asset = await uploadMusicAsset(file, 'music.audio')
-      replaceTrackAudio(replacingTrackId, asset, file.name)
+      const controller = new AbortController()
+      activeTrackUploads.set(replacingTrackId, controller)
+      try {
+        const asset = await uploadMusicAssetWithProgress(file, 'music.audio', {
+          signal: controller.signal,
+          timeoutMs: 5 * 60 * 1000,
+        })
+        replaceTrackAudio(replacingTrackId, asset, file.name)
+      } finally {
+        activeTrackUploads.delete(replacingTrackId)
+      }
     } else {
       pendingTrackId = addPendingTrack(file.name, titleFromAudioFile(file))
       void readTrackTitle(file).then(title => updateTrackTitle(pendingTrackId!, title))
@@ -633,8 +642,8 @@ watch(
           v-model="albumDetailsDraft.source"
           data-testid="album-details-source-input"
           :rows="2"
-          placeholder="填写来源/厂牌"
-          :label="requiredLabel('来源')"
+          placeholder="填写信息来源或修改原因"
+          :label="requiredLabel('信息来源/修改原因')"
         />
       </div>
     </div>

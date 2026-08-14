@@ -11,7 +11,7 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
-import { ChevronDown, ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pause, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -230,8 +230,17 @@ function canPlayTrack(track: AlbumTrack) {
   return playableSongIdSet.value.has(String(track.id))
 }
 
+function isTrackPlaying(track: AlbumTrack) {
+  const current = player.currentSong
+  return player.isPlaying && !!current && String(current.source_id || current.id) === String(track.id)
+}
+
 function playTrack(track: AlbumTrack) {
   if (!canPlayTrack(track)) return
+  if (isTrackPlaying(track)) {
+    player.togglePlay()
+    return
+  }
   const startIndex = playableSongs.value.findIndex((song) => String(song.id) === String(track.id))
   if (startIndex < 0) return
   player.playAlbum(playableSongs.value, startIndex)
@@ -625,10 +634,11 @@ watch(
             :disabled="!canPlayTrack(track)"
             :data-testid="`track-play-${track.id}`"
             @click="playTrack(track)"
-            :aria-label="`播放 ${track.title}`"
+            :aria-label="`${isTrackPlaying(track) ? '暂停' : '播放'} ${track.title}`"
           >
             <span class="track-num">{{ index + 1 }}</span>
-            <Play class="track-play-icon" :size="14" fill="currentColor" />
+            <Pause v-if="isTrackPlaying(track)" class="track-play-icon" :size="14" fill="currentColor" />
+            <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
           <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
           <div class="track-meta">

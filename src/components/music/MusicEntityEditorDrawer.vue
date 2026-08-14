@@ -5,6 +5,7 @@ import {
   queueMusicSongAudioReplacement,
   submitSongRevision,
   uploadMusicAsset,
+  uploadMusicAssetWithProgress,
 } from '@/api/musicV1'
 import MusicCreationContributorPicker from '@/components/music/MusicCreationContributorPicker.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -52,7 +53,11 @@ const sheetIndex = computed(() => {
 })
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
-const closeCurrentEditor = () => closeMusicEditor(props.layer?.key)
+let audioUploadController: AbortController | null = null
+const closeCurrentEditor = () => {
+  audioUploadController?.abort()
+  closeMusicEditor(props.layer?.key)
+}
 
 const songLoading = ref(false)
 const songSubmitting = ref(false)
@@ -97,7 +102,10 @@ function revokeSongCoverPreview() {
   songCoverObjectURL = ''
 }
 
-onBeforeUnmount(revokeSongCoverPreview)
+onBeforeUnmount(() => {
+  audioUploadController?.abort()
+  revokeSongCoverPreview()
+})
 
 async function loadSong(songId: string) {
   songLoading.value = true
@@ -176,7 +184,13 @@ async function handleSongEditSubmit() {
       ? await uploadMusicAsset(songDraft.coverFile, 'music.cover')
       : null
     const audioAsset = songDraft.audioFile
-      ? await uploadMusicAsset(songDraft.audioFile, 'music.audio')
+      ? await (() => {
+        audioUploadController = new AbortController()
+        return uploadMusicAssetWithProgress(songDraft.audioFile!, 'music.audio', {
+          signal: audioUploadController.signal,
+          timeoutMs: 5 * 60 * 1000,
+        }).finally(() => { audioUploadController = null })
+      })()
       : null
     await submitSongRevision(current.id, {
       title: songDraft.title.trim(),

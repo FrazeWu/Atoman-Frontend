@@ -218,7 +218,9 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		const trackId = flow.draft.tracks[0]?.id;
 		expect(trackId).toBeTruthy();
 		expect(signal?.aborted).toBe(false);
-		await wrapper.get(`[data-testid="album-track-delete-${trackId}"]`).trigger("click");
+		await wrapper
+			.get(`[data-testid="album-track-delete-${trackId}"]`)
+			.trigger("click");
 		expect(signal?.aborted).toBe(true);
 		expect(flow.draft.tracks).toHaveLength(0);
 	});
@@ -314,7 +316,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 				origin: "existing",
 			},
 		];
-		vi.mocked(uploadMusicAsset).mockResolvedValue({
+		vi.mocked(uploadMusicAssetWithProgress).mockResolvedValue({
 			url: "https://audio.example/replaced.flac",
 			key: "music/audio/replaced.flac",
 			content_type: "audio/flac",
@@ -335,12 +337,22 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		await flushPromises();
 
 		expect(flow.draft.tracks).toHaveLength(1);
-		expect(flow.draft.tracks[0]).toMatchObject({
-			id: "track-existing",
-			audioUrl: "https://audio.example/replaced.flac",
-			audioKey: "music/audio/replaced.flac",
-			audioFileName: "replaced.flac",
-		});
+		expect(uploadMusicAssetWithProgress).toHaveBeenCalledWith(
+			file,
+			"music.audio",
+			expect.objectContaining({
+				signal: expect.any(AbortSignal),
+				timeoutMs: 5 * 60 * 1000,
+			}),
+		);
+		expect(flow.draft.tracks).toMatchObject([
+			{
+				id: "track-existing",
+				audioUrl: "https://audio.example/replaced.flac",
+				audioKey: "music/audio/replaced.flac",
+				audioFileName: "replaced.flac",
+			},
+		]);
 	});
 
 	it("uses the structured lyric editor for an existing album track", async () => {
@@ -509,7 +521,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(wrapper.text()).toContain("专辑名*");
 		expect(wrapper.text()).toContain("日期*");
 		expect(wrapper.text()).toContain("类型*");
-		expect(wrapper.text()).toContain("来源*");
+		expect(wrapper.text()).toContain("信息来源/修改原因*");
 	});
 
 	it("searches existing artists, adds contributors, and allows removing unlocked contributors", async () => {

@@ -1,5 +1,10 @@
 import { apiFetch } from "@/api/transport";
 import {
+	clearMusicUploadResume,
+	loadMusicUploadResume,
+	saveMusicUploadResume,
+} from "@/utils/musicUploadResume";
+import {
 	apiDeleteJson,
 	apiGet,
 	apiGetEnvelope,
@@ -192,6 +197,139 @@ export type MusicAssetUploadOptions = {
 	timeoutMs?: number;
 };
 
+const resumableMusicAudioThreshold = 32 * 1024 * 1024;
+
+type MusicAssetUploadPart = {
+	part_number: number;
+	etag: string;
+	size: number;
+};
+
+type MusicAssetUploadSession = {
+	id: string;
+	status: string;
+	file_name: string;
+	content_type: string;
+	size: number;
+	part_size: number;
+	completed_parts: MusicAssetUploadPart[];
+	expires_at: string;
+};
+
+type MusicAssetUploadPartURL = {
+	part_number: number;
+	upload_url: string;
+};
+
+async function uploadMusicAudioResumable(
+	file: File,
+	options: MusicAssetUploadOptions,
+): Promise<UploadAsset> {
+	let session: MusicAssetUploadSession | undefined;
+	const resumeId = await loadMusicUploadResume(file);
+	if (resumeId) {
+		try {
+			const resumed = await apiGet<MusicAssetUploadSession>(
+				musicV1Endpoints.musicUpload(resumeId),
+			);
+			if (
+				resumed.status === "uploading" &&
+				Date.parse(resumed.expires_at) > Date.now()
+			) {
+				session = resumed;
+			} else {
+				await clearMusicUploadResume(file);
+			}
+		} catch {
+			await clearMusicUploadResume(file);
+		}
+	}
+	if (!session) {
+		session = await apiPostJson<MusicAssetUploadSession>(
+			musicV1Endpoints.musicUploads(),
+			{ file_name: file.name, content_type: file.type, size: file.size },
+		);
+		await saveMusicUploadResume(file, session.id, session.expires_at);
+	}
+	if (!session) throw new Error("音频上传会话创建失败");
+	const activeSession = session;
+	const completed = new Set(
+		activeSession.completed_parts.map((part) => part.part_number),
+	);
+	const totalParts = Math.ceil(file.size / activeSession.part_size);
+	let loaded = activeSession.completed_parts.reduce(
+		(sum, part) => sum + part.size,
+		0,
+	);
+	const reportProgress = () =>
+		options.onProgress?.({
+			loaded: Math.min(loaded, file.size),
+			total: file.size,
+		});
+	const missing = Array.from(
+		{ length: totalParts },
+		(_, index) => index + 1,
+	).filter((partNumber) => !completed.has(partNumber));
+
+	async function uploadPart(partNumber: number): Promise<void> {
+		if (options.signal?.aborted) throw new Error("音频上传已取消");
+		const start = (partNumber - 1) * activeSession.part_size;
+		const body = file.slice(
+			start,
+			Math.min(start + activeSession.part_size, file.size),
+		);
+		const presigned = await apiPostJson<MusicAssetUploadPartURL>(
+			musicV1Endpoints.musicUploadPart(activeSession.id, partNumber),
+			{},
+		);
+		const response = await apiFetch(presigned.upload_url, {
+			method: "PUT",
+			body,
+			signal: options.signal,
+		});
+		if (!response.ok) throw new Error(`上传分片失败 (${response.status})`);
+		const etag = response.headers.get("ETag") || response.headers.get("etag");
+		if (!etag) throw new Error("上传分片失败");
+		await apiPostJson<MusicAssetUploadSession>(
+			musicV1Endpoints.musicUploadPartComplete(activeSession.id, partNumber),
+			{ etag, size: body.size },
+		);
+		loaded += body.size;
+		reportProgress();
+	}
+
+	try {
+		let next = 0;
+		await Promise.all(
+			Array.from({ length: Math.min(3, missing.length) }, async () => {
+				while (next < missing.length) {
+					const partNumber = missing[next];
+					next += 1;
+					if (partNumber !== undefined)
+						await retry(() => uploadPart(partNumber), 2);
+				}
+				return undefined;
+			}),
+		);
+		if (missing.length === 0) reportProgress();
+		const asset = await apiPostJson<UploadAsset>(
+			musicV1Endpoints.musicUploadComplete(activeSession.id),
+			{},
+		);
+		await clearMusicUploadResume(file);
+		return asset;
+	} catch (error) {
+		if (options.signal?.aborted) {
+			await apiDeleteJson<void>(
+				musicV1Endpoints.musicUpload(activeSession.id),
+			).catch(() => undefined);
+			await clearMusicUploadResume(file);
+			throw new Error("音频上传已取消");
+		}
+		throw error;
+	}
+}
+
 type MusicAssetUploadResponse = {
 	data?: UploadAsset;
 	error?: { message?: string };
@@ -203,6 +341,9 @@ export async function uploadMusicAssetWithProgress(
 	purpose: Extract<UploadPurpose, "music.cover" | "music.audio">,
 	options: MusicAssetUploadOptions = {},
 ): Promise<UploadAsset> {
+	if (purpose === "music.audio" && file.size >= resumableMusicAudioThreshold) {
+		return uploadMusicAudioResumable(file, options);
+	}
 	const form = new FormData();
 	form.append("file", file);
 	form.append("purpose", purpose);

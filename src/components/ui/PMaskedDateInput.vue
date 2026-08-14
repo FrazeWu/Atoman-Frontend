@@ -76,6 +76,29 @@ function handleInput(event: Event) {
 	emit('update:modelValue', parts)
 }
 
+function dateSlotAt(cursor: number): number | null {
+	for (let index = Math.max(0, cursor); index < internalValue.value.length; index += 1) {
+		if (index !== 4 && index !== 7) return index
+	}
+	return null
+}
+
+function handleKeydown(event: KeyboardEvent) {
+	if (!/^[0-9-]$/.test(event.key) || event.metaKey || event.ctrlKey || event.altKey) return
+	const input = event.target as HTMLInputElement
+	if (input.selectionStart !== input.selectionEnd) return
+	const slot = dateSlotAt(input.selectionStart ?? 0)
+	if (slot === null) return
+	event.preventDefault()
+	const nextValue = `${internalValue.value.slice(0, slot)}${event.key}${internalValue.value.slice(slot + 1)}`
+	const parts = parsePartialDateParts(nextValue)
+	internalValue.value = formatPartialDateInput(parts)
+	input.value = internalValue.value
+	const nextSlot = dateSlotAt(slot + 1) ?? internalValue.value.length
+	input.setSelectionRange(nextSlot, nextSlot)
+	emit('update:modelValue', parts)
+}
+
 function handleSelect() {
 	if (internalValue.value === 'yyyy/mm/dd') inputRef.value?.select()
 }
@@ -205,6 +228,7 @@ onUnmounted(() => {
         class="birth-date-input"
         :placeholder="placeholder || 'yyyy/mm/dd'"
         @input="handleInput"
+        @keydown="handleKeydown"
         @click="handleSelect"
         @focus="handleSelect"
       >

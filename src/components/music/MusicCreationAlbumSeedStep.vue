@@ -290,8 +290,8 @@ async function onCoverChange(event: Event) {
               v-model="albumDetailsDraft.source"
               data-testid="album-details-source-input"
               type="text"
-              label="来源"
-              placeholder="填写专辑信息来源"
+              label="信息来源/修改原因"
+              placeholder="填写信息来源或修改原因"
             />
           </div>
         </div>

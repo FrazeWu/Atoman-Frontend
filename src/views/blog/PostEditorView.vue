@@ -3,13 +3,19 @@
     <div class="editor-shell">
       <div v-if="error" class="editor-error a-error">{{ error }}</div>
 
-      <ContentScheduleControl
-        v-if="contentReady"
-        v-model="scheduledAt"
-        :busy="scheduling"
-        :disabled="Boolean(saving) || uploading || coverUploading"
-        @schedule="schedulePublish"
-      />
+      <div class="editor-lifecycle-controls">
+        <ContentScheduleControl
+          v-if="contentReady"
+          v-model="scheduledAt"
+          :busy="scheduling"
+          :disabled="Boolean(saving) || uploading || coverUploading"
+          @schedule="schedulePublish"
+        />
+        <PButton v-if="isEdit && contentReady" type="button" variant="secondary" size="sm" @click="versionHistoryOpen = true">
+          <History :size="16" aria-hidden="true" />
+          版本历史
+        </PButton>
+      </div>
 
       <div class="editor-layout">
         <PostEditorSidebar
@@ -22,7 +28,6 @@
           :default-collection-id="defaultCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
-          :allow-comments="form.allow_comments"
           :cover-url="form.cover_url"
           :cover-uploading="coverUploading"
           :cover-upload-error="coverUploadError"
@@ -35,7 +40,6 @@
           @select-collection="onCollectionSelect"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
-          @update:allowComments="(value) => (form.allow_comments = value)"
           @cover-upload="handleCoverUpload"
           @remove-cover="removeCover"
           @jump-to-heading="jumpToHeading"
@@ -177,12 +181,20 @@
         </div>
       </template>
     </PModal>
+
+    <PostVersionHistoryModal
+      v-if="versionHistoryOpen && isEdit"
+      :post-id="String(route.params.id || '')"
+      @close="versionHistoryOpen = false"
+      @restored="handleVersionRestored"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
+import { History } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 
 import PEditor from '@/components/shared/PEditor.vue'
@@ -191,6 +203,7 @@ import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PostEditorDraftRecoveryModal from '@/components/blog/PostEditorDraftRecoveryModal.vue'
+import PostVersionHistoryModal from '@/components/blog/PostVersionHistoryModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
@@ -238,6 +251,7 @@ const preferredPublishStatus = ref<SaveTarget>('published')
 const savedPostId = ref<string | null>(null)
 const scheduling = ref(false)
 const scheduledAt = ref('')
+const versionHistoryOpen = ref(false)
 
 // ── 状态 ─────────────────────────────────────────────────
 const isEdit = computed(() => !!route.params.id)
@@ -263,7 +277,6 @@ const form = ref<PostEditorDraftForm>({
   summary: '',
   cover_url: '',
   visibility: 'public' as BlogVisibility,
-  allow_comments: true,
 })
 
 // ── Title-in-editor binding ──────────────────────────────
@@ -381,7 +394,6 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   summary: form.value.summary,
   cover_url: form.value.cover_url,
   visibility: form.value.visibility,
-  allow_comments: form.value.allow_comments,
   channel_id: currentChannelId.value || derivedChannelId.value || undefined,
   collection_ids: Array.from(new Set(selectedCollectionIds.value)),
 }))
@@ -461,6 +473,13 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   clearAllDrafts,
   allowNextRouteLeave,
 })
+
+const handleVersionRestored = async () => {
+  versionHistoryOpen.value = false
+  savedPostId.value = null
+  contentReady.value = false
+  await loadPost()
+}
 
 const handleCoverUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -580,6 +599,14 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.editor-lifecycle-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .editor-page {
   height: calc(100vh - 64px);
   background: var(--a-color-bg);

@@ -32,14 +32,14 @@
         </div>
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">文章数量</p>
-          <p style="font-weight: 500;margin:0">{{ posts.length }}篇</p>
+          <p style="font-weight: 500;margin:0">{{ postsTotal }}篇</p>
         </div>
       </PCard>
 
       <section>
         <div class="section-headline">
           <PSectionHeader title="收录文章" rule />
-          <span class="a-muted" style="font-size:.875rem">{{ posts.length }} 篇</span>
+          <span class="a-muted" style="font-size:.875rem">{{ postsTotal }} 篇</span>
         </div>
 
         <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
@@ -55,6 +55,9 @@
             @toggle-bookmark="toggleStar(post.id)"
             @toggle-reading-list="toggleReadingList(post.id)"
           />
+        </div>
+        <div v-if="postsHasMore" class="collection-load-more">
+          <PButton variant="secondary" :loading="postsLoading" @click="loadMorePosts">加载更多</PButton>
         </div>
       </section>
 
@@ -75,7 +78,7 @@
       <!-- Delete Confirmation Modal -->
       <PModal v-model="deleteModalOpen" title="确认删除合集">
         <div style="display:flex;flex-direction:column;gap:1rem">
-          <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？此操作不可恢复，但不会删除其中的文章。</p>
+          <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？只能删除没有文章的合集。</p>
           <div class="modal-actions">
             <PButton label="取消" variant="secondary" @click="deleteModalOpen = false" />
             <PReject label="删除" @click="deleteCollection" />
@@ -127,6 +130,10 @@ const loading = ref(true)
 const collection = ref<Collection | null>(null)
 const channel = ref<Channel | null>(null)
 const posts = ref<Post[]>([])
+const postsPage = ref(1)
+const postsTotal = ref(0)
+const postsHasMore = ref(false)
+const postsLoading = ref(false)
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -134,10 +141,16 @@ const form = ref({ name: '', description: '' })
 const saving = ref(false)
 const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
+let collectionRequestId = 0
+let postsRequestId = 0
 
 const collectionId = computed(() => props.id || (typeof route.params.id === 'string' ? route.params.id : ''))
 const channelId = computed(() => collection.value?.channel_id || '')
-const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
+const authHeader = computed<Record<string, string>>(() => {
+  const headers: Record<string, string> = {}
+  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
+  return headers
+})
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
@@ -178,20 +191,36 @@ const summarize = (content: string) => {
 }
 
 const fetchCollection = async () => {
+  const requestId = ++collectionRequestId
+  postsRequestId++
+  const requestedCollectionId = collectionId.value
   loading.value = true
+  postsLoading.value = false
+  collection.value = null
+  channel.value = null
+  collectionSubscribed.value = false
+  collectionSubscribeLoading.value = false
+  posts.value = []
+  postsPage.value = 1
+  postsTotal.value = 0
+  postsHasMore.value = false
   try {
-    const res = await apiRequestResult(api.blog.collection(collectionId.value))
+    const res = await apiRequestResult(api.blog.collection(requestedCollectionId))
+    if (requestId !== collectionRequestId || requestedCollectionId !== collectionId.value) return
     if (res.ok) {
       const data = await Promise.resolve(res.data)
+      if (requestId !== collectionRequestId || requestedCollectionId !== collectionId.value) return
       collection.value = data.data
       if (collection.value?.channel_id) {
-        await fetchChannel()
-        await fetchPosts()
+        await Promise.all([fetchChannel(requestId, collection.value.channel_id), fetchPosts()])
       }
 
+      if (requestId !== collectionRequestId || requestedCollectionId !== collectionId.value) return
       if (authStore.isAuthenticated && collection.value?.id) {
         collectionSubscribeLoading.value = true
-        collectionSubscribed.value = await feedStore.isSubscribedToCollection(collection.value.id)
+        const subscribed = await feedStore.isSubscribedToCollection(collection.value.id)
+        if (requestId !== collectionRequestId || requestedCollectionId !== collectionId.value) return
+        collectionSubscribed.value = subscribed
         collectionSubscribeLoading.value = false
       }
 
@@ -202,42 +231,59 @@ const fetchCollection = async () => {
   } catch (e) {
     reportError(e, 'Failed to fetch collection:')
   } finally {
-    loading.value = false
+    if (requestId === collectionRequestId) loading.value = false
   }
 }
 
 watch(collectionId, () => {
-  fetchCollection()
+  void fetchCollection()
 })
 
-const fetchChannel = async () => {
-  if (!channelId.value) return
+const fetchChannel = async (requestId: number, requestedChannelId: string) => {
+  if (!requestedChannelId) return
   try {
-    const res = await apiRequestResult(api.blog.channel(channelId.value))
-    if (res.ok) {
-      const data = await Promise.resolve(res.data)
-      channel.value = data.data
-    }
+    const res = await apiRequestResult(api.blog.channel(requestedChannelId))
+    if (requestId !== collectionRequestId || !res.ok) return
+    const data = await Promise.resolve(res.data)
+    if (requestId === collectionRequestId) channel.value = data.data
   } catch (e) {
     reportError(e, 'Failed to fetch channel:')
   }
 }
 
-const fetchPosts = async () => {
-  if (!collectionId.value) return
+const fetchPosts = async (page = 1, append = false) => {
+  if (!collectionId.value || (append && postsLoading.value)) return
+  const requestedCollectionId = collectionId.value
+  const requestId = ++postsRequestId
+  postsLoading.value = true
   try {
-    const loadedPosts: Post[] = []
-    for (let page = 1; ; page += 1) {
-      const res = await apiRequestResult(`${api.blog.posts}?collection_id=${encodeURIComponent(collectionId.value)}&page_size=100&page=${page}`)
+    const params = new URLSearchParams({
+      collection_id: requestedCollectionId,
+      page_size: '20',
+      page: String(page),
+    })
+    const res = await apiRequestResult(`${api.blog.posts}?${params}`, { headers: authHeader.value })
+    if (requestId !== postsRequestId || requestedCollectionId !== collectionId.value || !res.ok) {
       if (!res.ok) throw new Error(`Failed to fetch collection posts (${res.status})`)
-      const data = await Promise.resolve(res.data)
-      loadedPosts.push(...((data.data || []) as Post[]))
-      if (!data.meta?.has_more) break
+      return
     }
-    posts.value = loadedPosts
+    const data = await Promise.resolve(res.data)
+    if (requestId !== postsRequestId || requestedCollectionId !== collectionId.value) return
+    const nextPosts = (data.data || []) as Post[]
+    posts.value = append ? [...posts.value, ...nextPosts] : nextPosts
+    postsPage.value = page
+    postsTotal.value = Number(data.meta?.total ?? posts.value.length)
+    postsHasMore.value = Boolean(data.meta?.has_more)
   } catch (e) {
     reportError(e, 'Failed to fetch posts:')
+  } finally {
+    if (requestId === postsRequestId) postsLoading.value = false
   }
+}
+
+const loadMorePosts = () => {
+  if (!postsHasMore.value || postsLoading.value) return
+  void fetchPosts(postsPage.value + 1, true)
 }
 
 const openEditModal = () => {
@@ -330,6 +376,12 @@ onMounted(() => {
 .modal-actions {
   justify-content: flex-end;
   margin-top: 0.5rem;
+}
+
+.collection-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
 }
 
 .collection-meta-card {

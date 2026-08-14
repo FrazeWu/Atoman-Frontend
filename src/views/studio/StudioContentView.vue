@@ -28,6 +28,7 @@
         :options="[
           { label: '全部状态', value: '' },
           { label: '已发布', value: 'published' },
+          { label: '定时发布', value: 'scheduled' },
           { label: '草稿', value: 'draft' },
         ]"
         @update:model-value="updateFilter('status', String($event))"
@@ -66,12 +67,16 @@
       :items="studio.contents[module]"
       :module="module"
       :pagination="studio.contentPagination[module]"
+      :can-reorder="canReorder"
       @page="changePage"
+	  @reorder="reorderContent"
 	  @status="updateStatus"
+	  @cancel-schedule="cancelSchedule"
 	  @share="shareContent"
 	  @delete="pendingDelete = $event"
 	  @reupload="openReupload"
 	  @reprocess="reprocessVideo"
+	  @resolve="resolveCollectionConflict"
     />
 
 	<p v-if="actionMessage" class="studio-content__feedback" role="status">{{ actionMessage }}</p>
@@ -103,12 +108,14 @@ import PSelect from '@/components/ui/PSelect.vue'
 import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import type { StudioContentFilters, StudioContentItem, StudioModule, StudioPublishStatus } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const studio = useStudioStore()
 const siteAccess = useSiteAccessStore()
+const lifecycle = useContentLifecycle()
 const module = computed(() => route.params.module as StudioModule)
 const config = computed(() => studioModules[module.value])
 const publishingFeature = { blog: 'post.create', podcast: 'podcast.publish', video: 'video.publish' } as const
@@ -134,7 +141,7 @@ function queryPage(value: unknown) {
 
 const filters = computed<StudioContentFilters>(() => ({
   q: queryString(route.query.q),
-  status: queryString(route.query.status) === 'published' || queryString(route.query.status) === 'draft'
+  status: ['published', 'scheduled', 'draft'].includes(queryString(route.query.status))
     ? queryString(route.query.status) as StudioContentFilters['status']
     : '',
   visibility: ['public', 'subscribers', 'private'].includes(queryString(route.query.visibility))
@@ -144,6 +151,11 @@ const filters = computed<StudioContentFilters>(() => ({
 	...(queryString(route.query.issue) ? { issue: queryString(route.query.issue) } : {}),
   page: queryPage(route.query.page),
 }))
+
+const canReorder = computed(() => {
+  const pagination = studio.contentPagination[module.value]
+  return Boolean(filters.value.collection_id && !pagination?.has_more && (pagination?.page ?? 1) === 1)
+})
 
 const createRoute = computed(() => ({
   path: `/studio/${module.value}/new`,
@@ -191,8 +203,25 @@ async function runMutation(action: () => Promise<void>, success: string) {
   }
 }
 
+async function resolveCollectionConflict(item: StudioContentItem, collectionID: string) {
+  await runMutation(() => studio.resolveCollectionConflict(module.value, item.id, collectionID), '合集归属已确认')
+}
+
+async function reorderContent(item: StudioContentItem, direction: -1 | 1) {
+  const index = studio.contents[module.value].findIndex(candidate => candidate.id === item.id)
+  const target = index + direction
+  if (!canReorder.value || index < 0 || target < 0 || target >= studio.contents[module.value].length || !filters.value.collection_id) return
+  const ordered = [...studio.contents[module.value]]
+  ;[ordered[index], ordered[target]] = [ordered[target], ordered[index]]
+  await runMutation(() => studio.reorderCollectionContents(module.value, filters.value.collection_id, ordered.map(candidate => candidate.id)), '排序已保存')
+}
+
 async function updateStatus(item: StudioContentItem, status: StudioPublishStatus) {
   await runMutation(() => studio.updateContentStatus(module.value, item, status), status === 'published' ? '已发布' : '已转为草稿')
+}
+
+async function cancelSchedule(item: StudioContentItem) {
+  await runMutation(async () => { await lifecycle.cancelSchedule(module.value, item.id) }, '已取消定时发布')
 }
 
 async function shareContent(item: StudioContentItem) {

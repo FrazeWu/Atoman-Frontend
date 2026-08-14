@@ -83,11 +83,7 @@
         </div>
 
         <!-- Comments -->
-        <div v-if="commentNotice" class="comment-notice">
-          {{ commentNotice }}
-        </div>
         <CommentSection
-          v-else
           :target="{ kind: 'blog_post', resourceId: postId }"
           :can-delete="canDeleteAllComments"
           @count-change="interactions.commentCount.value = $event"
@@ -187,7 +183,6 @@ const startReadingTracking = (contentID: string, source: string) => {
 
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const isInReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
-const commentNotice = computed(() => post.value?.allow_comments ? '' : '评论已关闭')
 const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })

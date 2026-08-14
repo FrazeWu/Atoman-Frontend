@@ -25,10 +25,19 @@
             </td>
             <td data-label="状态">{{ statusLabel(item.status) }}</td>
             <td data-label="可见范围">{{ visibilityLabel(item.visibility) }}</td>
-            <td data-label="合集">{{ item.collections.map(collection => collection.name).join('、') || '未加入合集' }}</td>
+            <td data-label="合集">
+              <span v-if="item.collection_conflict" class="studio-content-table__collection-conflict">
+                待确认{{ item.collections.length ? `：${item.collections.map(collection => collection.name).join('、')}` : '' }}
+                <select :aria-label="`确认${item.title || config.itemLabel}的合集`" @change="resolveCandidate(item, $event)">
+                  <option value="">选择合集</option>
+                  <option v-for="collection in item.collections" :key="collection.id" :value="collection.id">{{ collection.name }}</option>
+                </select>
+              </span>
+              <span v-else>{{ item.collection?.name || item.collections.map(collection => collection.name).join('、') || '未加入合集' }}</span>
+            </td>
 			<td v-if="module !== 'blog'" data-label="时长">{{ formatDuration(item.duration_sec || 0) }}</td>
 			<td v-for="column in metricColumns" :key="column.key" :data-label="column.label">{{ formatNumber(item.metrics?.[column.key] ?? 0) }}</td>
-			<td v-if="module === 'blog'" data-label="发布时间">{{ item.published_at ? formatDate(item.published_at) : '—' }}</td>
+			<td v-if="module === 'blog'" data-label="发布时间">{{ item.scheduled_at ? `定时 ${formatDateTime(item.scheduled_at)}` : item.published_at ? formatDate(item.published_at) : '—' }}</td>
 			<td v-if="module === 'video'" data-label="处理状态">{{ item.processing_status || 'ready' }}</td>
             <td data-label="更新时间"><time :datetime="item.updated_at">{{ formatDate(item.updated_at) }}</time></td>
 			<td data-label="操作">
@@ -36,6 +45,36 @@
 				<RouterLink class="studio-content-table__action" :to="`/studio/${module}/${item.id}/edit`" aria-label="编辑" title="编辑">
 				  <Pencil :size="16" aria-hidden="true" />
 				</RouterLink>
+				<button
+				  v-if="canReorder && !item.collection_conflict"
+				  type="button"
+				  :disabled="items.findIndex(candidate => candidate.id === item.id) === 0"
+				  aria-label="上移"
+				  title="上移"
+				  @click="$emit('reorder', item, -1)"
+				>
+				  <ArrowUp :size="16" aria-hidden="true" />
+				</button>
+				<button
+				  v-if="canReorder && !item.collection_conflict"
+				  type="button"
+				  :disabled="items.findIndex(candidate => candidate.id === item.id) === items.length - 1"
+				  aria-label="下移"
+				  title="下移"
+				  @click="$emit('reorder', item, 1)"
+				>
+				  <ArrowDown :size="16" aria-hidden="true" />
+				</button>
+                <button
+                  v-if="item.status === 'scheduled'"
+                  type="button"
+                  :data-testid="`cancel-schedule-${item.id}`"
+                  aria-label="取消定时发布"
+                  title="取消定时发布"
+                  @click="$emit('cancelSchedule', item)"
+                >
+                  <CalendarX :size="16" aria-hidden="true" />
+                </button>
 				<button
 				  type="button"
 				  :data-testid="`toggle-status-${item.id}`"
@@ -106,27 +145,36 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArchiveRestore, ArrowLeft, ArrowRight, Pencil, RefreshCw, Send, Share2, Trash2, Upload } from 'lucide-vue-next'
+import { ArchiveRestore, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarX, Pencil, RefreshCw, Send, Share2, Trash2, Upload } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { studioModules } from '@/config/studioModules'
 import type { StudioContentItem, StudioContentStatus, StudioModule, StudioPagination, StudioPublishStatus, StudioVisibility } from '@/types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   items: StudioContentItem[]
   module: StudioModule
   pagination: StudioPagination | null
-}>()
+  canReorder?: boolean
+}>(), { canReorder: false })
 
-defineEmits<{
+const emit = defineEmits<{
   page: [page: number]
   status: [item: StudioContentItem, status: StudioPublishStatus]
+  cancelSchedule: [item: StudioContentItem]
   share: [item: StudioContentItem]
   delete: [item: StudioContentItem]
   reupload: [item: StudioContentItem]
   reprocess: [item: StudioContentItem]
+  resolve: [item: StudioContentItem, collectionID: string]
+  reorder: [item: StudioContentItem, direction: -1 | 1]
 }>()
+
+function resolveCandidate(item: StudioContentItem, event: Event) {
+  const collectionID = (event.target as HTMLSelectElement).value
+  if (collectionID) emit('resolve', item, collectionID)
+}
 
 const config = computed(() => studioModules[props.module])
 const metricColumns = computed(() => ({
@@ -156,6 +204,12 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+}
+
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60)
   return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
@@ -176,6 +230,7 @@ td { font-size: 0.875rem; }
 td:first-child { min-width: 14rem; }
 td strong, td span { display: block; }
 td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
+.studio-content-table__collection-conflict { color: var(--a-color-danger); font-weight: 600; }
 .studio-content-table__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; }
 .studio-content-table__action, .studio-content-table__actions button { width: 34px; height: 34px; display: inline-grid; place-items: center; flex: 0 0 34px; border: 1px solid transparent; background: transparent; color: var(--a-color-text); cursor: pointer; }
 .studio-content-table__action:hover, .studio-content-table__actions button:hover { border-color: var(--a-color-border-soft); background: var(--a-color-surface-muted); }

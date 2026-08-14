@@ -53,7 +53,7 @@
               :active="activeCollectionId === null"
               @click="activeCollectionId = null"
             >
-              全部内容 <span class="collection-count">{{ channelPosts.length }}</span>
+              全部内容 <span class="collection-count">{{ postsTotal }}</span>
             </PTab>
             <PTab
               v-for="col in collections"
@@ -62,14 +62,13 @@
               @click="activeCollectionId = col.id"
             >
               <span class="a-clamp-1">{{ col.name }}</span>
-              <span class="collection-count">{{ postCountByCollection(col.id) }}</span>
             </PTab>
           </div>
         </aside>
 
         <!-- Right: posts -->
         <main class="post-main">
-          <PEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
+          <PEmpty v-if="!postsLoading && !filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
           <div v-else class="post-list">
             <BlogItemCard
               v-for="post in filteredPosts"
@@ -82,6 +81,9 @@
               @toggle-bookmark="toggleStar(post.id)"
               @toggle-reading-list="toggleReadingList(post.id)"
             />
+          </div>
+          <div v-if="postsHasMore" class="post-load-more">
+            <PButton variant="secondary" :loading="postsLoading" @click="loadMorePosts">加载更多</PButton>
           </div>
         </main>
       </div>
@@ -144,6 +146,10 @@ const channel = ref<Channel | null>(null)
 const collections = ref<Collection[]>([])
 const channelPosts = ref<Post[]>([])
 const activeCollectionId = ref<string | null>(null)
+const postsPage = ref(1)
+const postsTotal = ref(0)
+const postsHasMore = ref(false)
+const postsLoading = ref(false)
 
 const collectionModalOpen = ref(false)
 const editingCollection = ref<Collection | null>(null)
@@ -155,6 +161,7 @@ const channelSubscribeLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 let loadGeneration = 0
+let postsRequestId = 0
 
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
 const routeParam = computed(() => {
@@ -182,18 +189,11 @@ const channelRssUrl = computed(() => {
   return api.blog.channelArticleRssBySlug(channel.value.slug)
 })
 
-const filteredPosts = computed(() => {
-  if (activeCollectionId.value === null) return channelPosts.value
-  return channelPosts.value.filter(p =>
-    (p.collections || []).some(c => c.id === activeCollectionId.value)
-  )
-})
+const filteredPosts = computed(() => channelPosts.value)
 
 const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
 const summarize = (content: string) =>
   content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\[\]()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
-const postCountByCollection = (cid: string) =>
-  channelPosts.value.filter(p => (p.collections || []).some(c => c.id === cid)).length
 
 const fetchChannel = async (param: string, slug: boolean, generation: number) => {
   try {
@@ -235,29 +235,37 @@ const fetchCollections = async (loadedChannel: Channel, param: string, slug: boo
   }
 }
 
-const fetchPosts = async (loadedChannel: Channel, generation: number) => {
+const fetchPosts = async (loadedChannel: Channel, generation: number, page = 1, append = false) => {
+  const requestId = ++postsRequestId
+  postsLoading.value = true
   try {
     const headers: Record<string, string> = {}
-    if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-    const loadedPosts: Post[] = []
-    for (let page = 1; ; page += 1) {
-      const params = new URLSearchParams({
-        channel_id: loadedChannel.id,
-        page: String(page),
-        page_size: '100',
-      })
-      const res = await apiRequestResult(`${api.blog.posts}?${params}`, { headers })
-      if (generation !== loadGeneration) return
-      if (!res.ok) return
-      const data = await Promise.resolve(res.data)
-      if (generation !== loadGeneration) return
-      loadedPosts.push(...(data.data || []))
-      if (!data.meta?.has_more) break
-    }
-    if (generation === loadGeneration) channelPosts.value = loadedPosts
+    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
+    const params = new URLSearchParams({
+      channel_id: loadedChannel.id,
+      page: String(page),
+      page_size: '20',
+    })
+    if (activeCollectionId.value) params.set('collection_id', activeCollectionId.value)
+    const res = await apiRequestResult(`${api.blog.posts}?${params}`, { headers })
+    if (generation !== loadGeneration || requestId !== postsRequestId || !res.ok) return
+    const data = await Promise.resolve(res.data)
+    if (generation !== loadGeneration || requestId !== postsRequestId) return
+    const nextPosts = (data.data || []) as Post[]
+    channelPosts.value = append ? [...channelPosts.value, ...nextPosts] : nextPosts
+    postsPage.value = page
+    postsTotal.value = Number(data.meta?.total ?? channelPosts.value.length)
+    postsHasMore.value = Boolean(data.meta?.has_more)
   } catch {
     return
+  } finally {
+    if (generation === loadGeneration && requestId === postsRequestId) postsLoading.value = false
   }
+}
+
+const loadMorePosts = () => {
+  if (!channel.value || !postsHasMore.value || postsLoading.value) return
+  void fetchPosts(channel.value, loadGeneration, postsPage.value + 1, true)
 }
 
 const openCollectionModal = (collection?: Collection) => {
@@ -319,12 +327,16 @@ const copyRssLink = async () => {
 
 const loadChannel = async () => {
   const generation = ++loadGeneration
+  postsRequestId++
   const param = routeParam.value
   const slug = isSlug.value
   loading.value = true
   channel.value = null
   collections.value = []
   channelPosts.value = []
+  postsPage.value = 1
+  postsTotal.value = 0
+  postsHasMore.value = false
   activeCollectionId.value = null
   channelSubscribed.value = false
   channelSubscribeLoading.value = false
@@ -347,6 +359,15 @@ const loadChannel = async () => {
   }
 }
 
+watch(activeCollectionId, () => {
+  if (!channel.value) return
+  channelPosts.value = []
+  postsPage.value = 1
+  postsTotal.value = 0
+  postsHasMore.value = false
+  void fetchPosts(channel.value, loadGeneration)
+})
+
 watch(routeParam, () => { void loadChannel() }, { immediate: true })
 </script>
 
@@ -366,6 +387,7 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 }
 
 .post-main { flex: 1; min-width: 0; }
+.post-load-more { display: flex; justify-content: center; margin-top: 1.5rem; }
 
 .collection-list {
   display: flex;
@@ -410,8 +432,9 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 }
 
 @media (max-width: 768px) {
-  .channel-body { flex-direction: column; }
-  .collection-sidebar { width: 100%; position: static; }
+  .channel-body { flex-direction: column; align-items: stretch; }
+  .collection-sidebar, .post-main { width: 100%; }
+  .collection-sidebar { position: static; }
   .collection-list { flex-direction: row; overflow-x: auto; padding-bottom: .5rem; }
 }
 </style>

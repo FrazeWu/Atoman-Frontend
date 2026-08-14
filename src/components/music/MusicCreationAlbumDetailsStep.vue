@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { parseBlob } from 'music-metadata-browser'
 import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
-import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAsset } from '@/api/musicV1'
+import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAsset, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
 import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
@@ -41,7 +42,10 @@ const {
   draggedTrackId,
   dragOverTrackId,
   lyricTrack,
-  addTrack,
+  addPendingTrack,
+  updateTrackUpload,
+  completeTrackUpload,
+  failTrackUpload,
   replaceTrackAudio,
   updateTrackTitle,
   moveTrack,
@@ -69,23 +73,52 @@ function openTrackAudioPicker(trackId: string | null = null) {
   trackAudioInputRef.value?.click()
 }
 
+function titleFromAudioFile(file: File): string {
+  const baseName = file.name.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '').trim() || file.name
+  return baseName.replace(/^\s*(?:track\s*)?\d{1,3}\s*(?:[-_.]\s*|\s+)/i, '').trim() || baseName
+}
+
+async function readTrackTitle(file: File): Promise<string> {
+  try {
+    return (await parseBlob(file)).common.title?.trim() || titleFromAudioFile(file)
+  } catch {
+    return titleFromAudioFile(file)
+  }
+}
+
+async function uploadNewTrack(file: File, trackId: string) {
+  const asset = await uploadMusicAssetWithProgress(file, 'music.audio', {
+    onProgress: ({ loaded, total }) => updateTrackUpload(trackId, total > 0 ? Math.round((loaded / total) * 100) : 0),
+  })
+  completeTrackUpload(trackId, asset, file.name)
+}
+
 async function handleTrackAudioChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0] ?? null
   input.value = ''
   if (!file) return
 
+  const replacingTrackId = pendingAudioTrackId.value
   trackAudioUploading.value = true
   trackAudioError.value = ''
+  let pendingTrackId: string | null = null
   try {
-    const asset = await uploadMusicAsset(file, 'music.audio')
-    if (pendingAudioTrackId.value) {
-      replaceTrackAudio(pendingAudioTrackId.value, asset, file.name)
+    if (replacingTrackId) {
+      const asset = await uploadMusicAsset(file, 'music.audio')
+      replaceTrackAudio(replacingTrackId, asset, file.name)
     } else {
-      addTrack(asset, file.name)
+      pendingTrackId = addPendingTrack(file.name, titleFromAudioFile(file))
+      void readTrackTitle(file).then(title => updateTrackTitle(pendingTrackId!, title))
+      await uploadNewTrack(file, pendingTrackId)
     }
   } catch (error) {
-    trackAudioError.value = error instanceof Error ? error.message : '音频上传失败，请重试'
+    const message = error instanceof Error ? error.message : '音频上传失败，请重试'
+    if (pendingTrackId) {
+      failTrackUpload(pendingTrackId, message)
+    } else {
+      trackAudioError.value = message
+    }
   } finally {
     trackAudioUploading.value = false
     pendingAudioTrackId.value = null
@@ -507,18 +540,25 @@ watch(
             </div>
 
             <div class="track-row__audio">
-              <span v-if="track.audioFileName || track.audioUrl || track.audioKey" class="track-row__audio-name">
+              <span v-if="track.uploadProgress !== undefined" class="track-row__upload-status" :data-testid="`album-track-upload-${track.id}`">
+                上传中 {{ track.uploadProgress }}%
+              </span>
+              <span v-else-if="track.uploadError" class="track-row__upload-error" role="alert">{{ track.uploadError }}</span>
+              <div v-if="track.uploadProgress !== undefined" class="track-row__upload-progress" aria-hidden="true">
+                <span :style="{ width: `${track.uploadProgress}%` }" />
+              </div>
+              <span v-else-if="track.audioFileName || track.audioUrl || track.audioKey" class="track-row__audio-name">
                 {{ track.audioFileName || '已上传音频' }}
               </span>
               <button
                 type="button"
                 class="track-row__audio-btn"
-                :disabled="trackAudioUploading"
+                :disabled="trackAudioUploading || track.uploadProgress !== undefined"
                 :data-testid="`album-track-audio-${track.id}`"
                 @click="openTrackAudioPicker(track.id)"
               >
                 <RefreshCw :size="14" aria-hidden="true" />
-                <span>{{ trackAudioUploading && pendingAudioTrackId === track.id ? '上传中...' : '替换音频' }}</span>
+                <span>{{ track.uploadProgress !== undefined ? `上传中 ${track.uploadProgress}%` : track.uploadError ? '重试上传' : trackAudioUploading && pendingAudioTrackId === track.id ? '上传中...' : '替换音频' }}</span>
               </button>
             </div>
 
@@ -922,6 +962,37 @@ watch(
   gap: 0.35rem;
   min-width: 0;
   flex: 0 1 auto;
+}
+
+.track-row__upload-status,
+.track-row__upload-error {
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.track-row__upload-status {
+  color: var(--a-color-primary);
+}
+
+.track-row__upload-error {
+  color: var(--a-color-accent-destructive);
+}
+
+.track-row__upload-progress {
+  width: 5rem;
+  height: 4px;
+  overflow: hidden;
+  background: var(--a-color-border-soft);
+  border-radius: 999px;
+}
+
+.track-row__upload-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--a-color-primary);
+  border-radius: inherit;
+  transition: width 0.15s ease-out;
 }
 
 .track-row__audio-name {

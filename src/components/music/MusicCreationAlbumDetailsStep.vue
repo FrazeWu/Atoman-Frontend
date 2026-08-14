@@ -696,7 +696,7 @@ watch(
 /* 上传专辑与封面并排 */
 .album-details-step__upload-cover-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 28rem;
+  grid-template-columns: minmax(0, 1fr) 18rem;
   gap: 1.5rem;
   align-items: stretch;
 }

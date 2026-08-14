@@ -676,7 +676,7 @@ function confirmClose() {
   closeCurrentCreationFlow()
 }
 
-async function handlePrimaryAction() {
+async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_album' = 'create_album') {
   const flow = creationFlow.value
   if (!flow) return
   if (!canGoForward.value) {
@@ -701,13 +701,15 @@ async function handlePrimaryAction() {
           roles: [{ id: `role-${artist.id}-primary`, role: 'primary', label: '主艺术家' }],
         }]
         refreshArtist()
-        closeCurrentCreationFlow()
-        openArtist(artist.id)
-        openNestedAction('link_album', {
-          artistId: artist.id,
-          artistName: artist.display_name || artist.name,
-        })
-        return
+        if (artistNextAction === 'link_album') {
+          closeCurrentCreationFlow()
+          openArtist(artist.id)
+          openNestedAction('link_album', {
+            artistId: artist.id,
+            artistName: artist.display_name || artist.name,
+          })
+          return
+        }
       }
       setMusicCreationStep('albumImport')
     } catch (error) {
@@ -932,11 +934,21 @@ async function completeCreation() {
             返回上一步
           </button>
           <button
+            v-if="creationFlow.mode !== 'edit' && creationFlow.step === 'artist'"
+            data-testid="artist-link-album-button"
+            type="button"
+            class="ui-action"
+            :disabled="creationFlow.submitting"
+            @click="handlePrimaryAction('link_album')"
+          >
+            关联现有专辑
+          </button>
+          <button
             :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="primary-action"
             :disabled="creationFlow.submitting"
-            @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction()"
+            @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction('create_album')"
           >
             {{ finishButtonLabel }}
           </button>

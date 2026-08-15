@@ -141,20 +141,17 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(basicFields.find('[data-testid="artist-stage-name-input-0"]').exists()).toBe(true)
     expect(basicFields.find('[data-test="artist-country-trigger"]').exists()).toBe(true)
     expect(basicFields.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
-    expect(basicFields.findAll('.single-line-field')).toHaveLength(5)
+    expect(basicFields.findAll('.single-line-field')).toHaveLength(4)
     expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-bio-input"]').exists()).toBe(true)
     expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-source-input"]').exists()).toBe(true)
   })
 
-  it('keeps single-line labels inline and stores optional disambiguation', async () => {
-    const drawers = useMusicDrawers()
+  it('keeps single-line labels inline without disambiguation', async () => {
     const wrapper = mountArtistStep()
 
     expect(wrapper.get('[data-testid="artist-legal-name-input"]').element.closest('.single-line-field')).not.toBeNull()
     expect(wrapper.get('[data-testid="artist-birth-input"]').element.closest('.single-line-field')).not.toBeNull()
-    expect(wrapper.find('[data-testid="artist-disambiguation-input"]').exists()).toBe(true)
-    await wrapper.get('[data-testid="artist-disambiguation-input"]').setValue('美国歌手')
-    expect(drawers.state.value.creationFlow?.draft.artist.disambiguation).toBe('美国歌手')
+    expect(wrapper.find('[data-testid="artist-disambiguation-input"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')

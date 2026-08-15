@@ -364,7 +364,12 @@ describe('MusicCreationAlbumImportStep.vue', () => {
       stage: 'queued',
       files: [fileRecord],
     }))
-    const createPart = vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload')
+		const createPart = vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload')
+		vi.spyOn(musicApi, 'getMusicAlbumImport').mockResolvedValue(snapshot({
+			status: 'ready',
+			stage: 'ready',
+			derivedTracks: [{ title: 'Recovered Track', audioKey: 'audio-1', origin: 'archive' }],
+		}))
 
     const drawers = useMusicDrawers()
     if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
@@ -383,7 +388,15 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     await flushPromises()
 
     expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(createPart).not.toHaveBeenCalled()
-    expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('queued')
+		expect(createPart).not.toHaveBeenCalled()
+		expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('queued')
+
+		await vi.advanceTimersByTimeAsync(2_000)
+		await flushPromises()
+
+		expect(musicApi.getMusicAlbumImport).toHaveBeenCalledWith('import-1')
+		expect(drawers.state.value.creationFlow.draft.tracks).toEqual([
+			expect.objectContaining({ title: 'Recovered Track', audioKey: 'audio-1' }),
+		])
   })
 })

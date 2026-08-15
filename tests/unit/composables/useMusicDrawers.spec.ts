@@ -244,7 +244,7 @@ describe("useMusicDrawers music creation flow", () => {
 		).toEqual([]);
 	});
 
-	it("resumes a committed import repair at album details with its original artists", () => {
+	it("resumes a committed import repair at the album creation page with its original artists", () => {
 		const drawers = useMusicDrawers();
 		drawers.resumeMusicCreationFlow(
 			{
@@ -257,6 +257,8 @@ describe("useMusicDrawers music creation flow", () => {
 				files: [],
 				errors: [],
 				archiveName: "Discovery.zip",
+				artistSource: "https://example.test/artist",
+				albumSource: "https://example.test/album",
 				uploadProgress: 100,
 				uploadSpeed: 0,
 				coverUrl: "https://cdn.example.com/discovery.jpg",
@@ -272,7 +274,9 @@ describe("useMusicDrawers music creation flow", () => {
 			[{ id: "artist-1", name: "Daft Punk" }],
 		);
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
+		expect(drawers.state.value.creationFlow?.draft.artist.source).toBe("https://example.test/artist");
+		expect(drawers.state.value.creationFlow?.draft.albumDetails.source).toBe("https://example.test/album");
 		expect(
 			drawers.state.value.creationFlow?.draft.albumDetails.contributors,
 		).toEqual([
@@ -284,7 +288,7 @@ describe("useMusicDrawers music creation flow", () => {
 		]);
 	});
 
-	it("resumes an unfinished import without an artist at album details", () => {
+	it("resumes an unfinished import without an artist at the album creation page", () => {
 		const drawers = useMusicDrawers();
 
 		drawers.resumeMusicCreationFlow({
@@ -312,7 +316,7 @@ describe("useMusicDrawers music creation flow", () => {
 			errorMessage: "",
 		});
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
 		expect(drawers.state.value.creationFlow?.draft.artist.id).toBeNull();
 		expect(
 			drawers.state.value.creationFlow?.draft.albumDetails.contributors,

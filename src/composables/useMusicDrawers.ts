@@ -346,12 +346,11 @@ export function useMusicDrawers() {
 			kind?: "person" | "group";
 		}> = [],
 	) => {
-		const isRepair = !!snapshot.targetAlbumId;
 		const artistId = snapshot.artistId?.trim() || contributors[0]?.id || "";
 		openMusicCreationFlow({
 			artistId: artistId || undefined,
 			artistName: contributors[0]?.name ?? "",
-			startStep: isRepair || !artistId ? "albumDetails" : "albumImport",
+			startStep: "albumImport",
 		});
 		const flow = state.value.creationFlow;
 		if (!flow) return;
@@ -391,6 +390,10 @@ export function useMusicDrawers() {
 			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
 		if (snapshot.metadataSourceUrl)
 			flow.draft.albumDetails.source = snapshot.metadataSourceUrl;
+		if (snapshot.artistSource)
+			flow.draft.artist.source = snapshot.artistSource;
+		if (snapshot.albumSource)
+			flow.draft.albumDetails.source = snapshot.albumSource;
 		if (contributors.length > 0) {
 			flow.draft.albumDetails.contributors = contributors.map((artist) => ({
 				id: `contributor-${artist.id}`,

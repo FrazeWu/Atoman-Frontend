@@ -256,11 +256,18 @@ export function useAlbumImportUpload() {
 		fileProgress.value = new Map(fileProgress.value).set(fileId, 100);
 	}
 
-	async function refreshWhenFilesUploaded(
+	function startPollingWhenProcessing(snapshot: MusicAlbumImport, importId: string) {
+		if (["queued", "extracting", "analyzing", "transcoding"].includes(snapshot.status)) {
+			startPolling(importId);
+		}
+	}
+
+	function refreshWhenFilesUploaded(
 		snapshot: MusicAlbumImport,
 		importId: string,
 	) {
-		applyImportSnapshot(snapshot, importId);
+		if (!applyImportSnapshot(snapshot, importId)) return;
+		startPollingWhenProcessing(snapshot, importId);
 	}
 
 	async function handleFilesUpload(fileList: FileList) {
@@ -438,13 +445,6 @@ export function useAlbumImportUpload() {
 				draft.importId === session.importId
 			) {
 				await refreshWhenFilesUploaded(snapshot, session.importId);
-				if (
-					["queued", "extracting", "analyzing", "transcoding"].includes(
-						snapshot.status,
-					)
-				) {
-					startPolling(session.importId);
-				}
 			}
 		} catch (error) {
 			if (

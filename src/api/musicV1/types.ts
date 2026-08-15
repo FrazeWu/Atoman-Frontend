@@ -156,7 +156,9 @@ export type MusicAlbumImport = {
   importId: string;
   targetAlbumId: string;
   artistId?: string;
+  artistSource?: string;
   albumTitle?: string;
+  albumSource?: string;
   status: MusicAlbumImportStatus;
   archiveName: string;
   uploadProgress: number;

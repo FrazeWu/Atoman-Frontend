@@ -376,6 +376,15 @@ defineExpose({
                 @update:model-value="() => { stageNameErrorMessage = ''; groupErrorMessage = '' }"
               />
             </div>
+            <div class="field-group single-line-field">
+              <PInput
+                v-model="artistDraft.disambiguation"
+                data-testid="artist-disambiguation-input"
+                type="text"
+                label="区分信息"
+                placeholder="例如 美国歌手 / 芝加哥 DJ"
+              />
+            </div>
             <div v-if="!isGroup" class="field-group single-line-field">
               <PCountryRegionField
                 v-model="artistDraft.nationality"

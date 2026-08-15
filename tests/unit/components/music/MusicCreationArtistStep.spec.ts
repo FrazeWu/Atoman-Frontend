@@ -1,7 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationArtistStep from '@/components/music/MusicCreationArtistStep.vue'
-import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { uploadMusicAsset } from '@/api/musicV1'
 
@@ -88,7 +87,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     await wrapper.get('[data-testid="artist-legal-name-input"]').setValue('Kanye Omari West')
     await wrapper.get('[data-testid="artist-stage-name-input-0"]').setValue('Kanye West')
-    await wrapper.get('[data-testid="artist-nationality-input"]').setValue('US')
+    drawers.state.value.creationFlow!.draft.artist.nationality = 'US'
     drawers.state.value.creationFlow!.draft.artist.birthDateParts = { year: '1977', month: '06', day: '08' }
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/source')
     const input = wrapper.get('[data-testid="artist-avatar-input"]').element as HTMLInputElement
@@ -140,19 +139,22 @@ describe('MusicCreationArtistStep.vue', () => {
     const basicFields = wrapper.get('[data-testid="artist-basic-fields"]')
     expect(basicFields.find('[data-testid="artist-legal-name-input"]').exists()).toBe(true)
     expect(basicFields.find('[data-testid="artist-stage-name-input-0"]').exists()).toBe(true)
-    expect(basicFields.find('[data-testid="artist-nationality-input"]').exists()).toBe(true)
+    expect(basicFields.find('[data-test="artist-country-trigger"]').exists()).toBe(true)
     expect(basicFields.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
-    expect(basicFields.findAll('.single-line-field')).toHaveLength(4)
+    expect(basicFields.findAll('.single-line-field')).toHaveLength(5)
     expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-bio-input"]').exists()).toBe(true)
     expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-source-input"]').exists()).toBe(true)
   })
 
-  it('keeps single-line labels inline and removes disambiguation fields', async () => {
+  it('keeps single-line labels inline and stores optional disambiguation', async () => {
+    const drawers = useMusicDrawers()
     const wrapper = mountArtistStep()
 
     expect(wrapper.get('[data-testid="artist-legal-name-input"]').element.closest('.single-line-field')).not.toBeNull()
     expect(wrapper.get('[data-testid="artist-birth-input"]').element.closest('.single-line-field')).not.toBeNull()
-    expect(wrapper.find('[data-testid="artist-disambiguation-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="artist-disambiguation-input"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="artist-disambiguation-input"]').setValue('美国歌手')
+    expect(drawers.state.value.creationFlow?.draft.artist.disambiguation).toBe('美国歌手')
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
@@ -190,7 +192,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
 
-    await wrapper.get('[data-testid="artist-nationality-input"]').setValue('US')
+    drawers.state.value.creationFlow!.draft.artist.nationality = 'US'
     drawers.state.value.creationFlow!.draft.artist.birthDateParts = { year: '1977', month: '06', day: '08' }
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/source')
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
@@ -225,7 +227,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     expect(drawers.state.value.creationFlow?.draft.artist.kind).toBe('group')
     expect(wrapper.find('[data-testid="artist-legal-name-input"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="artist-nationality-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="artist-country-trigger"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="artist-add-stage-name-button"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="artist-members-error"]').text()).toContain('组合至少需要 2 名成员')
     expect(drawers.state.value.creationFlow?.step).toBe('artist')

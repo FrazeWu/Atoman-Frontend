@@ -139,7 +139,7 @@ describe('MusicCreationArtistStep.vue', () => {
     const basicFields = wrapper.get('[data-testid="artist-basic-fields"]')
     expect(basicFields.find('[data-testid="artist-legal-name-input"]').exists()).toBe(true)
     expect(basicFields.find('[data-testid="artist-stage-name-input-0"]').exists()).toBe(true)
-    expect(basicFields.find('[data-test="artist-country-trigger"]').exists()).toBe(true)
+    expect(basicFields.find('[data-testid="artist-nationality-input"]').exists()).toBe(true)
     expect(basicFields.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
     expect(basicFields.findAll('.single-line-field')).toHaveLength(4)
     expect(wrapper.get('.supplementary-grid').find('[data-testid="artist-bio-input"]').exists()).toBe(true)
@@ -224,7 +224,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     expect(drawers.state.value.creationFlow?.draft.artist.kind).toBe('group')
     expect(wrapper.find('[data-testid="artist-legal-name-input"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="artist-country-trigger"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="artist-nationality-input"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="artist-add-stage-name-button"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="artist-members-error"]').text()).toContain('组合至少需要 2 名成员')
     expect(drawers.state.value.creationFlow?.step).toBe('artist')

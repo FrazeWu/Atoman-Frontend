@@ -154,7 +154,12 @@ async function fetchArtists() {
     await fetchBookmarks()
     if (requestId !== activeRequestId) return
 
-    const recommendedResponse = await listRecommendedArtists(recommendationMode.value)
+    const [recommendedResponse, ownedDraftResponse] = await Promise.all([
+      listRecommendedArtists(recommendationMode.value),
+      authStore.isAuthenticated
+        ? listMusicArtists({ page: 1, page_size: 48 })
+        : Promise.resolve(null),
+    ])
     if (requestId !== activeRequestId) return
 
     let filteredRecommendations = recommendedResponse.data
@@ -165,7 +170,7 @@ async function fetchArtists() {
       )
     }
 
-    artists.value = filteredRecommendations.map((item) => ({
+    const recommendedArtists = filteredRecommendations.map((item) => ({
       id: item.id,
       name: item.title,
       display_name: item.title,
@@ -173,8 +178,12 @@ async function fetchArtists() {
       image_url: item.image_url,
       play_count: item.play_count,
       bookmark_count: item.bookmark_count,
-      entry_status: 'open',
+      entry_status: 'open' as const,
     }))
+    const ownedDrafts = (ownedDraftResponse?.data ?? []).filter((artist) => artist.entry_status === 'draft')
+    artists.value = [...ownedDrafts, ...recommendedArtists.filter((artist) =>
+      !ownedDrafts.some((draft) => String(draft.id) === String(artist.id)),
+    )]
   } catch (e) {
     if (requestId !== activeRequestId) return
     reportError(e, 'Failed to fetch music artists:')

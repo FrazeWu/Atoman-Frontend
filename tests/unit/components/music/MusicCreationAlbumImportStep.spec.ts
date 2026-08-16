@@ -1,402 +1,723 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import JSZip from 'jszip'
-import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
-import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
-import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
-import * as musicApi from '@/api/musicV1'
-import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { flushPromises, mount } from "@vue/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import JSZip from "jszip";
+import MusicCreationAlbumSeedStep from "@/components/music/MusicCreationAlbumSeedStep.vue";
+import MusicCreationAlbumDetailsStep from "@/components/music/MusicCreationAlbumDetailsStep.vue";
+import MusicCreationAlbumUploadZone from "@/components/music/MusicCreationAlbumUploadZone.vue";
+import * as musicApi from "@/api/musicV1";
+import { useMusicDrawers } from "@/composables/useMusicDrawers";
+import { useAlbumImportUpload } from "@/composables/useAlbumImportUpload";
 
-function snapshot(overrides: Partial<musicApi.MusicAlbumImport> = {}): musicApi.MusicAlbumImport {
-  return {
-    importId: 'import-1',
-    status: 'pending_upload',
-    archiveName: '',
-    uploadProgress: 0,
-    uploadSpeed: 0,
-    coverUrl: '',
-    coverKey: '',
-    derivedAlbumTitle: '',
-    derivedCover: '',
-    derivedTracks: [],
-    lastSyncedAt: '',
-    errorMessage: '',
-    inputMode: 'files',
-    stage: 'upload',
-    progress: { current: 0, total: 0 },
-    files: [],
-    errors: [],
-    ...overrides,
-  }
+function snapshot(
+	overrides: Partial<musicApi.MusicAlbumImport> = {},
+): musicApi.MusicAlbumImport {
+	return {
+		importId: "import-1",
+		status: "pending_upload",
+		archiveName: "",
+		uploadProgress: 0,
+		uploadSpeed: 0,
+		coverUrl: "",
+		coverKey: "",
+		derivedAlbumTitle: "",
+		derivedCover: "",
+		derivedTracks: [],
+		lastSyncedAt: "",
+		errorMessage: "",
+		inputMode: "files",
+		stage: "upload",
+		progress: { current: 0, total: 0 },
+		files: [],
+		errors: [],
+		...overrides,
+	};
 }
 
 function fileInput(wrapper: ReturnType<typeof mount>) {
-  return wrapper.get('[data-testid="album-import-files-input"]')
+	return wrapper.get('[data-testid="album-import-files-input"]');
 }
 
 function setFiles(input: HTMLInputElement, files: File[]) {
-  Object.defineProperty(input, 'files', { configurable: true, value: files })
+	Object.defineProperty(input, "files", { configurable: true, value: files });
 }
 
 function mockUploadTransport() {
-  vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload').mockResolvedValue({ partNumber: 1, uploadUrl: 'https://upload.test/part-1' })
-  vi.spyOn(musicApi, 'completeMusicAlbumImportFilePart').mockResolvedValue(snapshot())
-  vi.spyOn(musicApi, 'completeMusicAlbumImportFile').mockResolvedValue(snapshot())
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 200, headers: { ETag: 'etag-1' } })))
+	vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload").mockResolvedValue({
+		partNumber: 1,
+		uploadUrl: "https://upload.test/part-1",
+	});
+	vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
+		snapshot(),
+	);
+	vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue(
+		snapshot(),
+	);
+	vi.stubGlobal(
+		"fetch",
+		vi
+			.fn()
+			.mockResolvedValue(
+				new Response("", { status: 200, headers: { ETag: "etag-1" } }),
+			),
+	);
 }
 
-describe('MusicCreationAlbumImportStep.vue', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-    const drawers = useMusicDrawers()
-    drawers.closeAll()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded', startStep: 'albumImport' })
-    drawers.setMusicCreationStep('albumImport')
-  })
+describe("MusicCreationAlbumImportStep.vue", () => {
+	beforeEach(() => {
+		vi.restoreAllMocks();
+		const drawers = useMusicDrawers();
+		drawers.closeAll();
+		drawers.openMusicCreationFlow({
+			artistId: "artist-seeded",
+			startStep: "albumImport",
+		});
+		drawers.setMusicCreationStep("albumImport");
+	});
 
-  afterEach(() => {
-    vi.useRealTimers()
-    vi.unstubAllGlobals()
-  })
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+	});
 
-  it('通过统一文件入口以 archive 自动模式注册并逐文件上传', async () => {
-    const archive = new File(['zip'], 'graduation.zip', { type: 'application/zip' })
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({
-      inputMode: 'archive',
-      files: [{ fileId: 'file-1', relativePath: 'graduation.zip', fileName: 'graduation.zip', role: 'archive', detectedFormat: 'zip', size: archive.size, uploadStatus: 'pending', processingStatus: 'pending', discNumber: 0, trackNumber: 0, title: '', errorMessage: '' }],
-    }))
-    mockUploadTransport()
-    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', inputMode: 'archive' }))
+	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.derivedAlbumType = "single";
+		flow.draft.albumImport.metadataSourceUrl = "https://metadata.test/original";
+		flow.draft.albumDetails.type = "ep";
+		flow.draft.albumDetails.source = "人工来源";
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
-    await fileInput(wrapper).trigger('change')
-    await flushPromises()
+		useAlbumImportUpload().applyImportSnapshot(
+			snapshot({
+				derivedAlbumType: "album",
+				metadataSourceUrl: "https://metadata.test/updated",
+			}),
+		);
 
-    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({ artistId: 'artist-seeded', inputMode: 'archive' })
-    expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith('import-1', { files: [{ relativePath: 'graduation.zip', fileName: 'graduation.zip', fileSize: archive.size, contentType: 'application/zip' }] })
-    expect(musicApi.createMusicAlbumImportFilePartUpload).toHaveBeenCalledWith('import-1', 'file-1', 1, archive.size)
-    expect(musicApi.completeMusicAlbumImportFilePart).toHaveBeenCalledWith('import-1', 'file-1', 1, 'etag-1', archive.size)
-    expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled()
-    expect(useMusicDrawers().state.value.creationFlow?.step).toBe('albumDetails')
-  })
+		expect(flow.draft.albumDetails.type).toBe("ep");
+		expect(flow.draft.albumDetails.source).toBe("人工来源");
+	});
 
-  it('关闭创建抽屉后继续完成已开始的上传', async () => {
-    const audio = new File(['audio'], 'track.mp3', { type: 'audio/mpeg' })
-    const fileRecord = {
-      fileId: 'file-1', relativePath: 'track.mp3', fileName: 'track.mp3', role: 'audio',
-      detectedFormat: 'mp3', size: audio.size, uploadStatus: 'pending' as const,
-      processingStatus: 'pending' as const, discNumber: 1, trackNumber: 1, title: '', errorMessage: '',
-    }
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [fileRecord] }))
-    vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload').mockResolvedValue({ partNumber: 1, uploadUrl: 'https://upload.test/part-1' })
-    const completePart = vi.spyOn(musicApi, 'completeMusicAlbumImportFilePart').mockResolvedValue(fileRecord)
-    const completeFile = vi.spyOn(musicApi, 'completeMusicAlbumImportFile').mockResolvedValue({ ...fileRecord, uploadStatus: 'uploaded' })
-    vi.spyOn(musicApi, 'getMusicAlbumImport').mockResolvedValue(snapshot())
+	it("通过统一文件入口以 archive 自动模式注册并逐文件上传", async () => {
+		const archive = new File(["zip"], "graduation.zip", {
+			type: "application/zip",
+		});
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
+			snapshot({ inputMode: "archive" }),
+		);
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({
+				inputMode: "archive",
+				files: [
+					{
+						fileId: "file-1",
+						relativePath: "graduation.zip",
+						fileName: "graduation.zip",
+						role: "archive",
+						detectedFormat: "zip",
+						size: archive.size,
+						uploadStatus: "pending",
+						processingStatus: "pending",
+						discNumber: 0,
+						trackNumber: 0,
+						title: "",
+						errorMessage: "",
+					},
+				],
+			}),
+		);
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued", inputMode: "archive" }),
+		);
 
-    let resolveUpload!: (response: Response) => void
-    const uploadResponse = new Promise<Response>((resolve) => {
-      resolveUpload = resolve
-    })
-    vi.stubGlobal('fetch', vi.fn().mockReturnValue(uploadResponse))
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
+		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [audio])
-    await fileInput(wrapper).trigger('change')
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalled())
+		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({
+			artistId: "artist-seeded",
+			inputMode: "archive",
+		});
+		expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith(
+			"import-1",
+			{
+				files: [
+					{
+						relativePath: "graduation.zip",
+						fileName: "graduation.zip",
+						fileSize: archive.size,
+						contentType: "application/zip",
+					},
+				],
+			},
+		);
+		expect(musicApi.createMusicAlbumImportFilePartUpload).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+			1,
+			archive.size,
+		);
+		expect(musicApi.completeMusicAlbumImportFilePart).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+			1,
+			"etag-1",
+			archive.size,
+		);
+		expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+		);
+		expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled();
+		expect(useMusicDrawers().state.value.creationFlow?.step).toBe(
+			"albumDetails",
+		);
+	});
 
-    useMusicDrawers().closeMusicCreationFlow()
-    resolveUpload(new Response('', { status: 200, headers: { ETag: 'etag-1' } }))
-    await vi.waitFor(() => expect(completeFile).toHaveBeenCalled())
+	it("关闭创建抽屉后继续完成已开始的上传", async () => {
+		const audio = new File(["audio"], "track.mp3", { type: "audio/mpeg" });
+		const fileRecord = {
+			fileId: "file-1",
+			relativePath: "track.mp3",
+			fileName: "track.mp3",
+			role: "audio",
+			detectedFormat: "mp3",
+			size: audio.size,
+			uploadStatus: "pending" as const,
+			processingStatus: "pending" as const,
+			discNumber: 1,
+			trackNumber: 1,
+			title: "",
+			errorMessage: "",
+		};
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({ files: [fileRecord] }),
+		);
+		vi.spyOn(
+			musicApi,
+			"createMusicAlbumImportFilePartUpload",
+		).mockResolvedValue({
+			partNumber: 1,
+			uploadUrl: "https://upload.test/part-1",
+		});
+		const completePart = vi
+			.spyOn(musicApi, "completeMusicAlbumImportFilePart")
+			.mockResolvedValue(fileRecord);
+		const completeFile = vi
+			.spyOn(musicApi, "completeMusicAlbumImportFile")
+			.mockResolvedValue({ ...fileRecord, uploadStatus: "uploaded" });
+		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(snapshot());
 
-    expect(completePart).toHaveBeenCalledWith('import-1', 'file-1', 1, 'etag-1', audio.size)
-    expect(completeFile).toHaveBeenCalledWith('import-1', 'file-1')
-  })
+		let resolveUpload!: (response: Response) => void;
+		const uploadResponse = new Promise<Response>((resolve) => {
+			resolveUpload = resolve;
+		});
+		vi.stubGlobal("fetch", vi.fn().mockReturnValue(uploadResponse));
 
-  it('拒绝过大的压缩包时不会进入上传中状态', async () => {
-    const archive = new File(['zip'], 'too-large.zip', { type: 'application/zip' })
-    Object.defineProperty(archive, 'size', { configurable: true, value: 2 * 1024 * 1024 * 1024 + 1 })
-    const createImport = vi.spyOn(musicApi, 'createMusicAlbumImport')
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [audio]);
+		await fileInput(wrapper).trigger("change");
+		await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
-    await fileInput(wrapper).trigger('change')
-    await flushPromises()
+		useMusicDrawers().closeMusicCreationFlow();
+		resolveUpload(
+			new Response("", { status: 200, headers: { ETag: "etag-1" } }),
+		);
+		await vi.waitFor(() => expect(completeFile).toHaveBeenCalled());
 
-    expect(createImport).not.toHaveBeenCalled()
-    expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport.status).toBe('pending_upload')
-    expect(wrapper.text()).toContain('文件需在 2GB 以内')
-  })
+		expect(completePart).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+			1,
+			"etag-1",
+			audio.size,
+		);
+		expect(completeFile).toHaveBeenCalledWith("import-1", "file-1");
+	});
 
-  it('在 ZIP 上传期间预填专辑名和曲目', async () => {
-    const zip = new JSZip()
-    zip.file('01 - Dawn.flac', 'audio')
-    zip.file('02 - Dusk.mp3', 'audio')
-    const archive = new File([await zip.generateAsync({ type: 'uint8array' })], 'Day Cycle.zip', { type: 'application/zip' })
+	it("拒绝过大的压缩包时不会进入上传中状态", async () => {
+		const archive = new File(["zip"], "too-large.zip", {
+			type: "application/zip",
+		});
+		Object.defineProperty(archive, "size", {
+			configurable: true,
+			value: 2 * 1024 * 1024 * 1024 + 1,
+		});
+		const createImport = vi.spyOn(musicApi, "createMusicAlbumImport");
 
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [] }))
-    mockUploadTransport()
-    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued' }))
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
+		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
-    await fileInput(wrapper).trigger('change')
-    await flushPromises()
+		expect(createImport).not.toHaveBeenCalled();
+		expect(
+			useMusicDrawers().state.value.creationFlow?.draft.albumImport.status,
+		).toBe("pending_upload");
+		expect(wrapper.text()).toContain("文件需在 2GB 以内");
+	});
 
-    await vi.waitFor(() => {
-      const draft = useMusicDrawers().state.value.creationFlow?.draft
-      expect(draft?.albumDetails.title).toBe('Day Cycle')
-      expect(draft?.tracks.map((track) => track.title)).toEqual(['Dawn', 'Dusk'])
-    })
-    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledTimes(1)
-  })
+	it("在 ZIP 上传期间预填专辑名和曲目", async () => {
+		const zip = new JSZip();
+		zip.file("01 - Dawn.flac", "audio");
+		zip.file("02 - Dusk.mp3", "audio");
+		const archive = new File(
+			[await zip.generateAsync({ type: "uint8array" })],
+			"Day Cycle.zip",
+			{ type: "application/zip" },
+		);
 
-  it('多文件选择自动使用 files 模式并保留所有注册文件', async () => {
-    const audio = new File(['audio'], '01-song.mp3', { type: 'audio/mpeg' })
-    const cover = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [] }))
-    mockUploadTransport()
-    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued' }))
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
+			snapshot({ inputMode: "archive" }),
+		);
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({ files: [] }),
+		);
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued" }),
+		);
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [audio, cover])
-    await fileInput(wrapper).trigger('change')
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
+		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 
-    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({ artistId: 'artist-seeded', inputMode: 'files' })
-    expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith('import-1', { files: [
-      { relativePath: '01-song.mp3', fileName: '01-song.mp3', fileSize: audio.size, contentType: 'audio/mpeg' },
-      { relativePath: 'cover.jpg', fileName: 'cover.jpg', fileSize: cover.size, contentType: 'image/jpeg' },
-    ] })
-  })
+		await vi.waitFor(() => {
+			const draft = useMusicDrawers().state.value.creationFlow?.draft;
+			expect(draft?.albumDetails.title).toBe("Day Cycle");
+			expect(draft?.tracks.map((track) => track.title)).toEqual([
+				"Dawn",
+				"Dusk",
+			]);
+		});
+		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledTimes(1);
+	});
 
-  it('手动封面与识别封面同时存在时明确显示手动封面', async () => {
-    const drawers = useMusicDrawers()
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
+	it("多文件选择自动使用 files 模式并保留所有注册文件", async () => {
+		const audio = new File(["audio"], "01-song.mp3", { type: "audio/mpeg" });
+		const cover = new File(["cover"], "cover.jpg", { type: "image/jpeg" });
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({ files: [] }),
+		);
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued" }),
+		);
 
-    flow.draft.albumImport.derivedCover = 'https://img.example/imported-cover.jpg'
-    vi.spyOn(musicApi, 'uploadMusicAsset').mockResolvedValue({
-      key: 'music/manual-cover.jpg',
-      url: 'https://img.example/manual-cover.jpg',
-    })
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [audio, cover]);
+		await fileInput(wrapper).trigger("change");
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    const input = wrapper.get('[data-testid="album-details-cover-input"]')
-    setFiles(input.element as HTMLInputElement, [new File(['cover'], 'manual-cover.jpg', { type: 'image/jpeg' })])
-    await input.trigger('change')
-    await flushPromises()
+		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({
+			artistId: "artist-seeded",
+			inputMode: "files",
+		});
+		expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith(
+			"import-1",
+			{
+				files: [
+					{
+						relativePath: "01-song.mp3",
+						fileName: "01-song.mp3",
+						fileSize: audio.size,
+						contentType: "audio/mpeg",
+					},
+					{
+						relativePath: "cover.jpg",
+						fileName: "cover.jpg",
+						fileSize: cover.size,
+						contentType: "image/jpeg",
+					},
+				],
+			},
+		);
+	});
 
-    expect(wrapper.get('[data-testid="album-import-cover-preview"]').attributes('src')).toBe('https://img.example/imported-cover.jpg')
-    expect(wrapper.get('[data-testid="album-selected-cover-preview"]').attributes('src')).toBe('https://img.example/manual-cover.jpg')
-    expect(flow.draft.albumDetails.coverUrl).toBe('https://img.example/manual-cover.jpg')
-  })
+	it("手动封面与识别封面同时存在时明确显示手动封面", async () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
 
-  it('接受会话快照中的空数组而不崩溃', async () => {
-    const file = new File(['audio'], 'song.mp3', { type: 'audio/mpeg' })
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: null, errors: null, derivedTracks: null } as unknown as Partial<musicApi.MusicAlbumImport>))
-    mockUploadTransport()
-    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', files: null, errors: null, derivedTracks: null } as unknown as Partial<musicApi.MusicAlbumImport>))
+		flow.draft.albumImport.derivedCover =
+			"https://img.example/imported-cover.jpg";
+		vi.spyOn(musicApi, "uploadMusicAsset").mockResolvedValue({
+			key: "music/manual-cover.jpg",
+			url: "https://img.example/manual-cover.jpg",
+		});
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [file])
-    await fileInput(wrapper).trigger('change')
-    await flushPromises()
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		const input = wrapper.get('[data-testid="album-details-cover-input"]');
+		setFiles(input.element as HTMLInputElement, [
+			new File(["cover"], "manual-cover.jpg", { type: "image/jpeg" }),
+		]);
+		await input.trigger("change");
+		await flushPromises();
 
-    const draft = useMusicDrawers().state.value.creationFlow?.draft.albumImport
-    expect(draft?.files).toEqual([])
-    expect(draft?.derivedTracks).toEqual([])
-  })
+		expect(
+			wrapper
+				.get('[data-testid="album-import-cover-preview"]')
+				.attributes("src"),
+		).toBe("https://img.example/imported-cover.jpg");
+		expect(
+			wrapper
+				.get('[data-testid="album-selected-cover-preview"]')
+				.attributes("src"),
+		).toBe("https://img.example/manual-cover.jpg");
+		expect(flow.draft.albumDetails.coverUrl).toBe(
+			"https://img.example/manual-cover.jpg",
+		);
+	});
 
-  it('上传有文件列表时仍显示当前上传速度', async () => {
-    const drawers = useMusicDrawers()
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
-      status: 'uploading',
-      uploadSpeed: 128 * 1024,
-      files: [{
-        fileId: 'file-1',
-        relativePath: 'album.zip',
-        fileName: 'album.zip',
-        role: 'archive',
-        detectedFormat: 'zip',
-        size: 1024,
-        uploadStatus: 'uploading',
-        processingStatus: 'pending',
-        discNumber: 0,
-        trackNumber: 0,
-        title: '',
-        errorMessage: '',
-      }],
-    })
+	it("接受会话快照中的空数组而不崩溃", async () => {
+		const file = new File(["audio"], "song.mp3", { type: "audio/mpeg" });
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({
+				files: null,
+				errors: null,
+				derivedTracks: null,
+			} as unknown as Partial<musicApi.MusicAlbumImport>),
+		);
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({
+				status: "queued",
+				files: null,
+				errors: null,
+				derivedTracks: null,
+			} as unknown as Partial<musicApi.MusicAlbumImport>),
+		);
 
-    const wrapper = mount(MusicCreationAlbumUploadZone)
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [file]);
+		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 
-    expect(wrapper.get('[data-testid="album-import-speed"]').text()).toContain('上传速度 128 KB/s')
-  })
+		const draft = useMusicDrawers().state.value.creationFlow?.draft.albumImport;
+		expect(draft?.files).toEqual([]);
+		expect(draft?.derivedTracks).toEqual([]);
+	});
 
-  it('提示自动匹配并在成功后显示 MusicBrainz 来源', async () => {
-    const drawers = useMusicDrawers()
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    const wrapper = mount(MusicCreationAlbumUploadZone)
+	it("上传有文件列表时仍显示当前上传速度", async () => {
+		const drawers = useMusicDrawers();
+		if (!drawers.state.value.creationFlow)
+			throw new Error("creation flow missing");
+		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+			status: "uploading",
+			uploadSpeed: 128 * 1024,
+			files: [
+				{
+					fileId: "file-1",
+					relativePath: "album.zip",
+					fileName: "album.zip",
+					role: "archive",
+					detectedFormat: "zip",
+					size: 1024,
+					uploadStatus: "uploading",
+					processingStatus: "pending",
+					discNumber: 0,
+					trackNumber: 0,
+					title: "",
+					errorMessage: "",
+				},
+			],
+		});
 
-    expect(wrapper.get('[data-testid="album-import-metadata-hint"]').text()).toContain('上传后将自动匹配专辑信息、曲序和歌词')
+		const wrapper = mount(MusicCreationAlbumUploadZone);
 
-    drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl = 'https://musicbrainz.org/release/release-id'
-    await flushPromises()
+		expect(wrapper.get('[data-testid="album-import-speed"]').text()).toContain(
+			"上传速度 128 KB/s",
+		);
+	});
 
-    const source = wrapper.get('[data-testid="album-import-metadata-hint"] a')
-    expect(source.text()).toContain('查看 MusicBrainz 来源')
-    expect(source.attributes()).toMatchObject({
-      href: 'https://musicbrainz.org/release/release-id',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    })
-  })
+	it("提示自动匹配并在成功后显示 MusicBrainz 来源", async () => {
+		const drawers = useMusicDrawers();
+		if (!drawers.state.value.creationFlow)
+			throw new Error("creation flow missing");
+		const wrapper = mount(MusicCreationAlbumUploadZone);
 
-  it('提示补充 MusicBrainz 中缺少的艺术家', async () => {
-    const drawers = useMusicDrawers()
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    drawers.state.value.creationFlow.draft.albumImport.missingArtists = ['Jay-Z', 'KIDS SEE GHOSTS']
-    const wrapper = mount(MusicCreationAlbumUploadZone)
+		expect(
+			wrapper.get('[data-testid="album-import-metadata-hint"]').text(),
+		).toContain("上传后将自动匹配专辑信息、曲序和歌词");
 
-    expect(wrapper.text()).toContain('该发行版还包括 Jay-Z、KIDS SEE GHOSTS，请在专辑信息中补充艺术家')
-  })
+		drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl =
+			"https://musicbrainz.org/release/release-id";
+		await flushPromises();
 
-  it('上传后应用后台处理中的最新快照', async () => {
-    vi.useFakeTimers()
-    const archive = new File(['zip'], 'stages.zip', { type: 'application/zip' })
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({
-      files: [{
-        fileId: 'file-1',
-        relativePath: archive.name,
-        fileName: archive.name,
-        role: 'archive',
-        detectedFormat: 'zip',
-        size: archive.size,
-        uploadStatus: 'pending',
-        processingStatus: 'pending',
-        discNumber: 0,
-        trackNumber: 0,
-        title: '',
-        errorMessage: '',
-      }],
-    }))
-    mockUploadTransport()
-    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', stage: 'queued' }))
-    vi.spyOn(musicApi, 'getMusicAlbumImport')
-      .mockResolvedValueOnce(snapshot({ status: 'extracting', stage: 'extracting', inputMode: 'archive' }))
+		const source = wrapper.get('[data-testid="album-import-metadata-hint"] a');
+		expect(source.text()).toContain("查看 MusicBrainz 来源");
+		expect(source.attributes()).toMatchObject({
+			href: "https://musicbrainz.org/release/release-id",
+			target: "_blank",
+			rel: "noopener noreferrer",
+		});
+	});
 
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
-    await fileInput(wrapper).trigger('change')
-    await flushPromises()
+	it("提示补充 MusicBrainz 中缺少的艺术家", async () => {
+		const drawers = useMusicDrawers();
+		if (!drawers.state.value.creationFlow)
+			throw new Error("creation flow missing");
+		drawers.state.value.creationFlow.draft.albumImport.missingArtists = [
+			"Jay-Z",
+			"KIDS SEE GHOSTS",
+		];
+		const wrapper = mount(MusicCreationAlbumUploadZone);
 
-    expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(1)
-    expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport).toEqual(expect.objectContaining({
-      status: 'extracting',
-      stage: 'extracting',
-      inputMode: 'archive',
-      totalBytesLoaded: archive.size,
-      totalBytesTotal: archive.size,
-    }))
-  })
+		expect(wrapper.text()).toContain(
+			"该发行版还包括 Jay-Z、KIDS SEE GHOSTS，请在专辑信息中补充艺术家",
+		);
+	});
 
-  it('失败文件可重试并可用替换文件重新上传', async () => {
-    const original = new File(['audio'], 'broken.mp3', { type: 'audio/mpeg' })
-    const replacement = new File(['audio'], 'fixed.mp3', { type: 'audio/mpeg' })
-    const fileRecord = { fileId: 'file-1', relativePath: 'broken.mp3', fileName: 'broken.mp3', role: 'audio', detectedFormat: 'mp3', size: original.size, uploadStatus: 'failed' as const, processingStatus: 'failed' as const, discNumber: 1, trackNumber: 1, title: '', errorMessage: '网络错误' }
-    vi.spyOn(musicApi, 'retryMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [fileRecord] }))
-    vi.spyOn(musicApi, 'replaceMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [{ ...fileRecord, fileName: 'fixed.mp3', relativePath: 'fixed.mp3' }] }))
-    mockUploadTransport()
-    vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue({
-      ...fileRecord,
-      uploadStatus: 'uploaded',
-      processingStatus: 'pending',
-    })
-    vi.spyOn(musicApi, 'getMusicAlbumImport').mockResolvedValue(snapshot({
-      status: 'uploaded',
-      files: [{ ...fileRecord, uploadStatus: 'uploaded', processingStatus: 'pending' }],
-    }))
-    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({
-      status: 'queued',
-      stage: 'queued',
-      files: [{ ...fileRecord, uploadStatus: 'uploaded', processingStatus: 'pending' }],
-    }))
+	it("上传后应用后台处理中的最新快照", async () => {
+		vi.useFakeTimers();
+		const archive = new File(["zip"], "stages.zip", {
+			type: "application/zip",
+		});
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
+			snapshot({ inputMode: "archive" }),
+		);
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({
+				files: [
+					{
+						fileId: "file-1",
+						relativePath: archive.name,
+						fileName: archive.name,
+						role: "archive",
+						detectedFormat: "zip",
+						size: archive.size,
+						uploadStatus: "pending",
+						processingStatus: "pending",
+						discNumber: 0,
+						trackNumber: 0,
+						title: "",
+						errorMessage: "",
+					},
+				],
+			}),
+		);
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued", stage: "queued" }),
+		);
+		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValueOnce(
+			snapshot({
+				status: "extracting",
+				stage: "extracting",
+				inputMode: "archive",
+			}),
+		);
 
-    const drawers = useMusicDrawers()
-    drawers.setMusicCreationStep('albumDetails')
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    Object.assign(drawers.state.value.creationFlow.draft.albumImport, { importId: 'import-1', status: 'failed', files: [fileRecord] })
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const replacementInput = wrapper.findAll('input[type="file"]')[1]
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
+		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 
-    await wrapper.get('.import-file-action').trigger('click')
-    await flushPromises()
-    expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled()
-    expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('uploaded')
+		expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(1);
+		expect(
+			useMusicDrawers().state.value.creationFlow?.draft.albumImport,
+		).toEqual(
+			expect.objectContaining({
+				status: "extracting",
+				stage: "extracting",
+				inputMode: "archive",
+				totalBytesLoaded: archive.size,
+				totalBytesTotal: archive.size,
+			}),
+		);
+	});
 
-    Object.assign(drawers.state.value.creationFlow.draft.albumImport, { status: 'failed', files: [fileRecord] })
-    await flushPromises()
-    await wrapper.findAll('.import-file-action')[1].trigger('click')
-    setFiles(replacementInput.element as HTMLInputElement, [replacement])
-    await replacementInput.trigger('change')
-    await flushPromises()
-    expect(musicApi.replaceMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1', {
-      relativePath: 'fixed.mp3', fileName: 'fixed.mp3', fileSize: replacement.size, contentType: 'audio/mpeg',
-    })
-    expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled()
-  })
+	it("失败文件可重试并可用替换文件重新上传", async () => {
+		const original = new File(["audio"], "broken.mp3", { type: "audio/mpeg" });
+		const replacement = new File(["audio"], "fixed.mp3", {
+			type: "audio/mpeg",
+		});
+		const fileRecord = {
+			fileId: "file-1",
+			relativePath: "broken.mp3",
+			fileName: "broken.mp3",
+			role: "audio",
+			detectedFormat: "mp3",
+			size: original.size,
+			uploadStatus: "failed" as const,
+			processingStatus: "failed" as const,
+			discNumber: 1,
+			trackNumber: 1,
+			title: "",
+			errorMessage: "网络错误",
+		};
+		vi.spyOn(musicApi, "retryMusicAlbumImportFile").mockResolvedValue(
+			snapshot({ status: "uploading", files: [fileRecord] }),
+		);
+		vi.spyOn(musicApi, "replaceMusicAlbumImportFile").mockResolvedValue(
+			snapshot({
+				status: "uploading",
+				files: [
+					{ ...fileRecord, fileName: "fixed.mp3", relativePath: "fixed.mp3" },
+				],
+			}),
+		);
+		mockUploadTransport();
+		vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue({
+			...fileRecord,
+			uploadStatus: "uploaded",
+			processingStatus: "pending",
+		});
+		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(
+			snapshot({
+				status: "uploaded",
+				files: [
+					{
+						...fileRecord,
+						uploadStatus: "uploaded",
+						processingStatus: "pending",
+					},
+				],
+			}),
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({
+				status: "queued",
+				stage: "queued",
+				files: [
+					{
+						...fileRecord,
+						uploadStatus: "uploaded",
+						processingStatus: "pending",
+					},
+				],
+			}),
+		);
 
-  it('会话处理失败后可直接重试而不重复上传', async () => {
-    vi.useFakeTimers()
-    const fileRecord = { fileId: 'file-1', relativePath: 'album.zip', fileName: 'album.zip', role: 'archive', detectedFormat: 'zip', size: 1024, uploadStatus: 'uploaded' as const, processingStatus: 'pending' as const, discNumber: 0, trackNumber: 0, title: '', errorMessage: '' }
-    vi.spyOn(musicApi, 'retryMusicAlbumImportFile').mockResolvedValue(snapshot({
-      status: 'queued',
-      stage: 'queued',
-      files: [fileRecord],
-    }))
-		const createPart = vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload')
-		vi.spyOn(musicApi, 'getMusicAlbumImport').mockResolvedValue(snapshot({
-			status: 'ready',
-			stage: 'ready',
-			derivedTracks: [{ title: 'Recovered Track', audioKey: 'audio-1', origin: 'archive' }],
-		}))
+		const drawers = useMusicDrawers();
+		drawers.setMusicCreationStep("albumDetails");
+		if (!drawers.state.value.creationFlow)
+			throw new Error("creation flow missing");
+		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+			importId: "import-1",
+			status: "failed",
+			files: [fileRecord],
+		});
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		const replacementInput = wrapper.findAll('input[type="file"]')[1];
 
-    const drawers = useMusicDrawers()
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
-      importId: 'import-1',
-      status: 'needs_attention',
-      stage: 'failed',
-      errorMessage: '处理空间不足',
-      files: [fileRecord],
-    })
-    const wrapper = mount(MusicCreationAlbumUploadZone)
+		await wrapper.get(".import-file-action").trigger("click");
+		await flushPromises();
+		expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+		);
+		expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled();
+		expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe(
+			"uploaded",
+		);
 
-    expect(wrapper.text()).toContain('处理失败，请重试')
-    expect(wrapper.text()).not.toContain('处理空间不足')
-    await wrapper.get('[data-testid="album-import-processing-retry"]').trigger('click')
-    await flushPromises()
+		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+			status: "failed",
+			files: [fileRecord],
+		});
+		await flushPromises();
+		await wrapper.findAll(".import-file-action")[1].trigger("click");
+		setFiles(replacementInput.element as HTMLInputElement, [replacement]);
+		await replacementInput.trigger("change");
+		await flushPromises();
+		expect(musicApi.replaceMusicAlbumImportFile).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+			{
+				relativePath: "fixed.mp3",
+				fileName: "fixed.mp3",
+				fileSize: replacement.size,
+				contentType: "audio/mpeg",
+			},
+		);
+		expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+		);
+		expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled();
+	});
 
-    expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-		expect(createPart).not.toHaveBeenCalled()
-		expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('queued')
+	it("会话处理失败后可直接重试而不重复上传", async () => {
+		vi.useFakeTimers();
+		const fileRecord = {
+			fileId: "file-1",
+			relativePath: "album.zip",
+			fileName: "album.zip",
+			role: "archive",
+			detectedFormat: "zip",
+			size: 1024,
+			uploadStatus: "uploaded" as const,
+			processingStatus: "pending" as const,
+			discNumber: 0,
+			trackNumber: 0,
+			title: "",
+			errorMessage: "",
+		};
+		vi.spyOn(musicApi, "retryMusicAlbumImportFile").mockResolvedValue(
+			snapshot({
+				status: "queued",
+				stage: "queued",
+				files: [fileRecord],
+			}),
+		);
+		const createPart = vi.spyOn(
+			musicApi,
+			"createMusicAlbumImportFilePartUpload",
+		);
+		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(
+			snapshot({
+				status: "ready",
+				stage: "ready",
+				derivedTracks: [
+					{ title: "Recovered Track", audioKey: "audio-1", origin: "archive" },
+				],
+			}),
+		);
 
-		await vi.advanceTimersByTimeAsync(2_000)
-		await flushPromises()
+		const drawers = useMusicDrawers();
+		if (!drawers.state.value.creationFlow)
+			throw new Error("creation flow missing");
+		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+			importId: "import-1",
+			status: "needs_attention",
+			stage: "failed",
+			errorMessage: "处理空间不足",
+			files: [fileRecord],
+		});
+		const wrapper = mount(MusicCreationAlbumUploadZone);
 
-		expect(musicApi.getMusicAlbumImport).toHaveBeenCalledWith('import-1')
+		expect(wrapper.text()).toContain("处理失败，请重试");
+		expect(wrapper.text()).not.toContain("处理空间不足");
+		await wrapper
+			.get('[data-testid="album-import-processing-retry"]')
+			.trigger("click");
+		await flushPromises();
+
+		expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+		);
+		expect(createPart).not.toHaveBeenCalled();
+		expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe(
+			"queued",
+		);
+
+		await vi.advanceTimersByTimeAsync(2_000);
+		await flushPromises();
+
+		expect(musicApi.getMusicAlbumImport).toHaveBeenCalledWith("import-1");
 		expect(drawers.state.value.creationFlow.draft.tracks).toEqual([
-			expect.objectContaining({ title: 'Recovered Track', audioKey: 'audio-1' }),
-		])
-  })
-})
+			expect.objectContaining({
+				title: "Recovered Track",
+				audioKey: "audio-1",
+			}),
+		]);
+	});
+});

@@ -259,6 +259,60 @@ describe("useMusicDrawers music creation flow", () => {
 				archiveName: "Discovery.zip",
 				artistSource: "https://example.test/artist",
 				albumSource: "https://example.test/album",
+				commitRequest: {
+					artist_id: "artist-1",
+					artist: {
+						name: "Daft Punk",
+						legal_name: "Daft Punk",
+						bio: "人工艺人简介",
+						nationality: "FR",
+						birth_date: "1974-01-01",
+						stage_names: [
+							{
+								name: "Daft Punk",
+								is_primary: true,
+								start_date_text: "",
+								end_date_text: "",
+							},
+						],
+						birth_place: "Paris",
+					},
+					artists: [
+						{
+							artist_id: "artist-1",
+							name: "Daft Punk",
+							roles: [{ role: "primary" }],
+							legal_name: "",
+							bio: "",
+							nationality: "",
+							birth_date: "",
+							stage_names: [],
+							birth_place: "",
+							artist_form: "person",
+							active_start_date: "",
+							active_end_date: "",
+							members: [],
+						},
+					],
+					artist_source: "https://example.test/artist",
+					album: {
+						title: "Discovery",
+						description: "人工专辑简介",
+						album_type: "album",
+						cover_url: "https://cdn.example.com/manual.jpg",
+						release_date: "2001-02-26",
+						release_year: 2001,
+						tracks: [
+							{
+								title: "One More Time",
+								disc_number: 1,
+								track_number: 1,
+								audio_url: "https://cdn.example.com/one-more-time.mp3",
+							},
+						],
+					},
+					album_source: "https://example.test/album",
+				},
 				uploadProgress: 100,
 				uploadSpeed: 0,
 				coverUrl: "https://cdn.example.com/discovery.jpg",
@@ -274,9 +328,19 @@ describe("useMusicDrawers music creation flow", () => {
 			[{ id: "artist-1", name: "Daft Punk" }],
 		);
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
-		expect(drawers.state.value.creationFlow?.draft.artist.source).toBe("https://example.test/artist");
-		expect(drawers.state.value.creationFlow?.draft.albumDetails.source).toBe("https://example.test/album");
+		expect(drawers.state.value.creationFlow?.draft.albumDetails.bio).toBe(
+			"人工专辑简介",
+		);
+		expect(drawers.state.value.creationFlow?.draft.albumDetails.coverUrl).toBe(
+			"https://cdn.example.com/manual.jpg",
+		);
+		expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([
+			expect.objectContaining({
+				audioUrl: "https://cdn.example.com/one-more-time.mp3",
+			}),
+		]);
+		expect(drawers.state.value.creationFlow?.tracksCustomized).toBe(true);
+		expect(drawers.state.value.creationFlow?.titleCustomized).toBe(true);
 		expect(
 			drawers.state.value.creationFlow?.draft.albumDetails.contributors,
 		).toEqual([

@@ -54,6 +54,10 @@ export function useAlbumImportUpload() {
 		)
 			return false;
 		const derivedTracks = snapshot.derivedTracks ?? [];
+		const previousDerivedAlbumType =
+			creationFlow.value.draft.albumImport.derivedAlbumType;
+		const previousMetadataSourceURL =
+			creationFlow.value.draft.albumImport.metadataSourceUrl;
 
 		creationFlow.value.draft.albumImport.importId = snapshot.importId;
 		creationFlow.value.draft.albumImport.inputMode = snapshot.inputMode;
@@ -107,10 +111,19 @@ export function useAlbumImportUpload() {
 			creationFlow.value.draft.albumDetails.releaseDateParts =
 				parsePartialDateParts(snapshot.derivedReleaseDate);
 		}
-		if (snapshot.derivedAlbumType) {
+		if (
+			snapshot.derivedAlbumType &&
+			(!previousDerivedAlbumType ||
+				creationFlow.value.draft.albumDetails.type === previousDerivedAlbumType)
+		) {
 			creationFlow.value.draft.albumDetails.type = snapshot.derivedAlbumType;
 		}
-		if (snapshot.metadataSourceUrl) {
+		if (
+			snapshot.metadataSourceUrl &&
+			(!creationFlow.value.draft.albumDetails.source.trim() ||
+				creationFlow.value.draft.albumDetails.source ===
+					previousMetadataSourceURL)
+		) {
 			creationFlow.value.draft.albumDetails.source = snapshot.metadataSourceUrl;
 		}
 
@@ -256,8 +269,15 @@ export function useAlbumImportUpload() {
 		fileProgress.value = new Map(fileProgress.value).set(fileId, 100);
 	}
 
-	function startPollingWhenProcessing(snapshot: MusicAlbumImport, importId: string) {
-		if (["queued", "extracting", "analyzing", "transcoding"].includes(snapshot.status)) {
+	function startPollingWhenProcessing(
+		snapshot: MusicAlbumImport,
+		importId: string,
+	) {
+		if (
+			["queued", "extracting", "analyzing", "transcoding"].includes(
+				snapshot.status,
+			)
+		) {
 			startPolling(importId);
 		}
 	}

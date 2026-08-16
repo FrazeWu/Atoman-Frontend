@@ -1,5 +1,8 @@
 import { ref, computed, watch } from "vue";
-import type { MusicAlbumImport } from "@/api/musicV1";
+import type {
+	MusicAlbumImport,
+	MusicAlbumImportCommitInput,
+} from "@/api/musicV1";
 import type {
 	MusicCreationDraft,
 	MusicCreationFlowState,
@@ -58,6 +61,122 @@ function createSeededContributors(seed?: MusicCreationFlowSeed) {
 			roles: [primaryAlbumRole(`role-${seed.artistId}-primary`)],
 		},
 	];
+}
+
+function restoreCommittedAlbumImportDraft(
+	flow: MusicCreationFlowState,
+	request: MusicAlbumImportCommitInput,
+	fallbackArtistID: string,
+) {
+	const primary =
+		request.artists?.find(
+			(artist) => !artist.artist_id || artist.artist_id === request.artist_id,
+		) ?? request.artists?.[0];
+	const artist = primary ?? request.artist;
+	const stageNames = artist.stage_names ?? [];
+	flow.draft.artist.id = request.artist_id?.trim() || fallbackArtistID || null;
+	flow.draft.artist.avatarUrl = artist.image_url?.trim() || "";
+	flow.draft.artist.kind =
+		"artist_form" in artist && artist.artist_form === "group"
+			? "group"
+			: "person";
+	flow.draft.artist.legalName = artist.legal_name ?? "";
+	flow.draft.artist.stageNames = stageNames.length
+		? stageNames.map((name, index) => ({
+				id: `stage-name-${index}`,
+				name: name.name ?? "",
+				isPrimary: name.is_primary || index === 0,
+				startDateParts: createEmptyDateParts(),
+				endDateParts: createEmptyDateParts(),
+				startDateText: name.start_date_text ?? "",
+				endDateText: name.end_date_text ?? "",
+			}))
+		: flow.draft.artist.stageNames;
+	flow.draft.artist.nationality = artist.nationality ?? "";
+	flow.draft.artist.birthPlace = artist.birth_place ?? "";
+	flow.draft.artist.birthDateParts = parsePartialDateParts(
+		artist.birth_date ?? "",
+	);
+	flow.draft.artist.bio = artist.bio ?? "";
+	flow.draft.artist.source =
+		request.artist_source?.trim() || flow.draft.artist.source;
+	if (primary) {
+		flow.draft.artist.activeStartDateParts = parsePartialDateParts(
+			primary.active_start_date ?? "",
+		);
+		flow.draft.artist.activeEndDateParts = parsePartialDateParts(
+			primary.active_end_date ?? "",
+		);
+		flow.draft.artist.members = primary.members.map((member, index) => ({
+			id: `member-${member.artist_id || index}`,
+			artistId: member.artist_id || null,
+			name: member.name ?? "",
+			joinDateParts: parsePartialDateParts(member.join_date ?? ""),
+			leaveDateParts: parsePartialDateParts(member.leave_date ?? ""),
+		}));
+	}
+	flow.draft.albumDetails.title = request.album.title ?? "";
+	flow.draft.albumDetails.bio = request.album.description ?? "";
+	flow.draft.albumDetails.type = request.album.album_type?.trim() || "album";
+	flow.draft.albumDetails.coverUrl = request.album.cover_url?.trim() || "";
+	flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
+		request.album.release_date ?? "",
+	);
+	flow.draft.albumDetails.releaseYear = String(
+		request.album.release_year || "",
+	);
+	flow.draft.albumDetails.source =
+		request.album_source?.trim() || flow.draft.albumDetails.source;
+	if (request.artists?.length) {
+		flow.draft.albumDetails.contributors = request.artists.map(
+			(contributor, index) => ({
+				id: `contributor-${contributor.artist_id || index}`,
+				artistId: contributor.artist_id || null,
+				name: contributor.name ?? "",
+				avatarUrl: contributor.image_url ?? "",
+				kind: contributor.artist_form === "group" ? "group" : "person",
+				locked: !!contributor.artist_id,
+				roles: contributor.roles.map((role, roleIndex) => ({
+					id: `role-${contributor.artist_id || index}-${roleIndex}`,
+					role: role.role,
+					label: role.label ?? "",
+				})),
+			}),
+		);
+	}
+	flow.draft.tracks = request.album.tracks.map((track, index) => ({
+		id: `import-track-${index + 1}`,
+		...(track.song_id ? { songId: track.song_id } : {}),
+		sequence: track.track_number || index + 1,
+		discNumber: track.disc_number || 1,
+		title: track.title,
+		...(track.audio_url ? { audioUrl: track.audio_url } : {}),
+		origin: "import",
+		...(track.lyrics
+			? {
+					lyrics: track.lyrics.content,
+					lyricsDraft: {
+						content: track.lyrics.content,
+						translation: track.lyrics.translation,
+						format: track.lyrics.format,
+						language: track.lyrics.language,
+						editSummary: track.lyrics.edit_summary,
+						lines: parseMusicLyricDraft(
+							track.lyrics.content,
+							track.lyrics.translation,
+							track.lyrics.format,
+						).map((row) => ({
+							line_key: row.lineKey,
+							text: row.original,
+							translation: row.translation,
+							time_ms: row.timeMs,
+						})),
+					},
+				}
+			: {}),
+	}));
+	flow.titleCustomized = true;
+	flow.tracksCustomized = true;
 }
 
 function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
@@ -390,11 +509,13 @@ export function useMusicDrawers() {
 			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
 		if (snapshot.metadataSourceUrl)
 			flow.draft.albumDetails.source = snapshot.metadataSourceUrl;
-		if (snapshot.artistSource)
-			flow.draft.artist.source = snapshot.artistSource;
+		if (snapshot.artistSource) flow.draft.artist.source = snapshot.artistSource;
 		if (snapshot.albumSource)
 			flow.draft.albumDetails.source = snapshot.albumSource;
-		if (contributors.length > 0) {
+		if (snapshot.commitRequest) {
+			restoreCommittedAlbumImportDraft(flow, snapshot.commitRequest, artistId);
+		}
+		if (contributors.length > 0 && !snapshot.commitRequest) {
 			flow.draft.albumDetails.contributors = contributors.map((artist) => ({
 				id: `contributor-${artist.id}`,
 				artistId: artist.id,
@@ -405,37 +526,39 @@ export function useMusicDrawers() {
 				roles: [primaryAlbumRole(`role-${artist.id}-primary`)],
 			}));
 		}
-		flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
-			id: `import-track-${index + 1}`,
-			...(track.songId ? { songId: track.songId } : {}),
-			sequence: track.trackNumber ?? index + 1,
-			...(track.discNumber ? { discNumber: track.discNumber } : {}),
-			title: track.title,
-			audioKey: track.audioKey,
-			origin: track.origin,
-			...(track.lyrics
-				? {
-						lyrics: track.lyrics.content,
-						lyricsDraft: {
-							content: track.lyrics.content,
-							translation: track.lyrics.translation || "",
-							format: track.lyrics.format,
-							language: track.lyrics.language || "",
-							editSummary: track.lyrics.edit_summary || "自动匹配歌词",
-							lines: parseMusicLyricDraft(
-								track.lyrics.content,
-								track.lyrics.translation || "",
-								track.lyrics.format,
-							).map((row) => ({
-								line_key: row.lineKey,
-								text: row.original,
-								translation: row.translation,
-								time_ms: row.timeMs,
-							})),
-						},
-					}
-				: {}),
-		}));
+		if (!snapshot.commitRequest) {
+			flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+				id: `import-track-${index + 1}`,
+				...(track.songId ? { songId: track.songId } : {}),
+				sequence: track.trackNumber ?? index + 1,
+				...(track.discNumber ? { discNumber: track.discNumber } : {}),
+				title: track.title,
+				audioKey: track.audioKey,
+				origin: track.origin,
+				...(track.lyrics
+					? {
+							lyrics: track.lyrics.content,
+							lyricsDraft: {
+								content: track.lyrics.content,
+								translation: track.lyrics.translation || "",
+								format: track.lyrics.format,
+								language: track.lyrics.language || "",
+								editSummary: track.lyrics.edit_summary || "自动匹配歌词",
+								lines: parseMusicLyricDraft(
+									track.lyrics.content,
+									track.lyrics.translation || "",
+									track.lyrics.format,
+								).map((row) => ({
+									line_key: row.lineKey,
+									text: row.original,
+									translation: row.translation,
+									time_ms: row.timeMs,
+								})),
+							},
+						}
+					: {}),
+			}));
+		}
 	};
 
 	const setMusicCreationStep = (step: MusicCreationFlowStep) => {

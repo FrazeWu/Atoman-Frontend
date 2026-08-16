@@ -39,7 +39,7 @@ function metaTag(attribute: 'name' | 'property', key: string, value: string) {
 export function buildArticleHtml(html: string, post: BlogSeoPost, origin: string) {
   const canonical = articleUrl(origin, post.id)
   const title = `${post.title} | Atoman`
-  const image = post.image_url || `${origin}/favicon.png`
+  const image = post.image_url || `${origin}/atoman-share.png`
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',

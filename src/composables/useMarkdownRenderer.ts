@@ -246,6 +246,33 @@ function preprocessDirectives(content: string, options?: RenderMarkdownOptions):
   return next
 }
 
+const canonicalOrigin = 'https://www.atoman.org'
+const internalOrigins = new Set([canonicalOrigin, 'https://atoman.org'])
+
+function decorateOutboundLinks(html: string): string {
+  if (typeof document === 'undefined') return html
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+  template.content.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
+    try {
+      const destination = new URL(link.href, canonicalOrigin)
+      if (!['http:', 'https:'].includes(destination.protocol) || internalOrigins.has(destination.origin)) return
+
+      const relations = new Set(link.rel.split(/\s+/).filter(Boolean))
+      relations.add('ugc')
+      relations.add('nofollow')
+      relations.add('noreferrer')
+      relations.add('noopener')
+      link.rel = [...relations].join(' ')
+    } catch {
+      // DOMPurify has already removed unsafe URLs; leave malformed links untouched.
+    }
+  })
+
+  return template.innerHTML
+}
+
 export function useMarkdownRenderer() {
   function renderMarkdown(content: string, options?: RenderMarkdownOptions): string {
     if (!content) return ''
@@ -257,7 +284,7 @@ export function useMarkdownRenderer() {
 
     try {
       const html = marked(preprocessDirectives(content, options)) as string
-      return DOMPurify.sanitize(html)
+      return decorateOutboundLinks(DOMPurify.sanitize(html))
     } catch {
       return `<pre>${escapeHtml(content)}</pre>`
     }
@@ -272,7 +299,7 @@ export function useMarkdownRenderer() {
         options?.references,
         options?.referenceField,
       )
-      return DOMPurify.sanitize(marked.parseInline(referenced) as string)
+      return decorateOutboundLinks(DOMPurify.sanitize(marked.parseInline(referenced) as string))
     } catch {
       return escapeHtml(content)
     }

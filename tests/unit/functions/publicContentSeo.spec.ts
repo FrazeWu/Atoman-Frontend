@@ -120,6 +120,7 @@ describe("public content SEO", () => {
 
 		expect(html).toContain("是否应该继续探索太空？ | 辩题 | Atoman");
 		expect(html).toContain("https://www.atoman.org/debate/debate-1");
+		expect(html).toContain('property="og:image" content="https://www.atoman.org/atoman-share.png"');
 		expect(html).toContain('"@type":"Article"');
 	});
 

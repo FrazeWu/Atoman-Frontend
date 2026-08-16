@@ -41,6 +41,13 @@ describe('blog SEO helpers', () => {
     expect(html).not.toContain('</script><script>alert(1)</script>')
   })
 
+  it('uses the site share image when an article has no cover', () => {
+    const html = buildArticleHtml('<html><head></head><body></body></html>', { ...post, image_url: '' }, 'https://www.atoman.org')
+
+    expect(html).toContain('property="og:image" content="https://www.atoman.org/atoman-share.png"')
+    expect(html).toContain('name="twitter:image" content="https://www.atoman.org/atoman-share.png"')
+  })
+
   it('builds escaped absolute sitemap URLs and robots discovery', () => {
     const xml = buildSitemapXml([
       { path: '/posts/post/one&two', last_modified: '2026-07-14T09:30:00Z' },

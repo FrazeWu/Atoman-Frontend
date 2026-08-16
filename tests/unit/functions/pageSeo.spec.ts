@@ -17,6 +17,12 @@ describe("static page SEO", () => {
 		expect(html).toContain(
 			'property="og:url" content="https://www.atoman.org/feed"',
 		);
+		expect(html).toContain(
+			'property="og:image" content="https://www.atoman.org/atoman-share.png"',
+		);
+		expect(html).toContain(
+			'name="twitter:image" content="https://www.atoman.org/atoman-share.png"',
+		);
 		expect(html).not.toContain('content="old"');
 		expect(html).not.toContain('name="robots"');
 	});

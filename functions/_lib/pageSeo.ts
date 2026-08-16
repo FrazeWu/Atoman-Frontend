@@ -4,7 +4,7 @@ type StaticPageMeta = {
 };
 
 const canonicalOrigin = "https://www.atoman.org";
-const defaultImage = `${canonicalOrigin}/favicon.png`;
+const defaultImage = `${canonicalOrigin}/atoman-share.png`;
 
 const pageMeta: Record<string, StaticPageMeta> = {
 	"/": {

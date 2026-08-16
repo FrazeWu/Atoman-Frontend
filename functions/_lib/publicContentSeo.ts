@@ -18,7 +18,7 @@ export type PublicContentLookup = {
 type Fetcher = typeof fetch;
 
 const canonicalOrigin = "https://www.atoman.org";
-const defaultImage = `${canonicalOrigin}/favicon.png`;
+const defaultImage = `${canonicalOrigin}/atoman-share.png`;
 
 const escapeHtml = (value: string) =>
 	value

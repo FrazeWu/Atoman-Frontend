@@ -24,6 +24,18 @@ describe('useMarkdownRenderer sanitize', () => {
     expect(renderMarkdownInline('@thread:topic', { references })).toBe('<a href="/forum/topic/topic-1">@讨论主题</a>')
   })
 
+  it('adds UGC link annotations only to external HTTP links', () => {
+    const { renderMarkdown, renderMarkdownInline } = useMarkdownRenderer()
+
+    const html = renderMarkdown('[external](https://example.com/path) [internal](/forum/topic-1) [canonical](https://www.atoman.org/feed)')
+    expect(html).toContain('href="https://example.com/path" rel="ugc nofollow noreferrer noopener"')
+    expect(html).toContain('href="/forum/topic-1"')
+    expect(html).not.toMatch(/href="\/forum\/topic-1"[^>]*rel=/)
+    expect(html).toContain('href="https://www.atoman.org/feed"')
+    expect(html).not.toMatch(/href="https:\/\/www\.atoman\.org\/feed"[^>]*rel=/)
+    expect(renderMarkdownInline('[external](https://example.com)')).toContain('rel="ugc nofollow noreferrer noopener"')
+  })
+
   it('renders scoped post and music embed fallback links', () => {
     const { renderMarkdown } = useMarkdownRenderer()
     const postId = '11111111-1111-1111-1111-111111111111'

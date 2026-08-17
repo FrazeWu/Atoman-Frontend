@@ -1,5 +1,5 @@
 import { apiRequest } from "@/api/client";
-import { ref, computed } from "vue";
+import { computed, ref, type Ref } from "vue";
 import {
 	createMusicAlbumImport,
 	validateMusicAlbumArchiveFile,
@@ -23,18 +23,39 @@ import {
 } from "@/utils/musicImportPreview";
 import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
 import { parsePartialDateParts } from "@/components/music/birthDateMask";
+import type { MusicCreationFlowState } from "@/components/music/musicCreationTypes";
 
-// Global state for album import upload so it survives step transitions
-const uploading = ref(false);
-const errorMessage = ref("");
-const fileProgress = ref<Map<string, number>>(new Map());
-let pollTimer: ReturnType<typeof setTimeout> | null = null;
-let uploadStartedAt = 0;
-let operationGeneration = 0;
-let pollingGeneration = 0;
+type AlbumImportUploadState = {
+	uploading: Ref<boolean>;
+	errorMessage: Ref<string>;
+	fileProgress: Ref<Map<string, number>>;
+	pollTimer: ReturnType<typeof setTimeout> | null;
+	uploadStartedAt: number;
+	operationGeneration: number;
+	pollingGeneration: number;
+	selectedFiles: Map<string, File>;
+};
 
 const FILE_PART_SIZE = 10 * 1024 * 1024; // 10MB
-const selectedFiles = new Map<string, File>();
+const uploadStates = new WeakMap<MusicCreationFlowState, AlbumImportUploadState>();
+
+function uploadStateFor(flow: MusicCreationFlowState) {
+	let uploadState = uploadStates.get(flow);
+	if (uploadState) return uploadState;
+
+	uploadState = {
+		uploading: ref(false),
+		errorMessage: ref(""),
+		fileProgress: ref(new Map()),
+		pollTimer: null,
+		uploadStartedAt: 0,
+		operationGeneration: 0,
+		pollingGeneration: 0,
+		selectedFiles: new Map(),
+	};
+	uploadStates.set(flow, uploadState);
+	return uploadState;
+}
 
 export function useAlbumImportUpload() {
 	const { state, setMusicCreationStep } = useMusicDrawers();
@@ -43,92 +64,87 @@ export function useAlbumImportUpload() {
 	const albumImportDraft = computed(
 		() => creationFlow.value?.draft.albumImport ?? null,
 	);
+	const currentUploadState = computed(() =>
+		creationFlow.value ? uploadStateFor(creationFlow.value) : null,
+	);
+	const uploading = computed(
+		() => currentUploadState.value?.uploading.value ?? false,
+	);
+	const errorMessage = computed(
+		() => currentUploadState.value?.errorMessage.value ?? "",
+	);
+	const fileProgress = computed(
+		() => currentUploadState.value?.fileProgress.value ?? new Map<string, number>(),
+	);
 
-	function applyImportSnapshot(
+	function applyImportSnapshotToFlow(
+		flow: MusicCreationFlowState,
 		snapshot: MusicAlbumImport,
 		expectedImportId = snapshot.importId,
 	) {
-		if (
-			!creationFlow.value ||
-			albumImportDraft.value?.importId !== expectedImportId
-		)
-			return false;
+		const draft = flow.draft.albumImport;
+		if (draft.importId !== expectedImportId) return false;
 		const derivedTracks = snapshot.derivedTracks ?? [];
-		const previousDerivedAlbumType =
-			creationFlow.value.draft.albumImport.derivedAlbumType;
-		const previousMetadataSourceURL =
-			creationFlow.value.draft.albumImport.metadataSourceUrl;
+		const previousDerivedAlbumType = draft.derivedAlbumType;
+		const previousMetadataSourceURL = draft.metadataSourceUrl;
 
-		creationFlow.value.draft.albumImport.importId = snapshot.importId;
-		creationFlow.value.draft.albumImport.inputMode = snapshot.inputMode;
-		creationFlow.value.draft.albumImport.status = snapshot.status;
-		creationFlow.value.draft.albumImport.stage = snapshot.stage;
-		creationFlow.value.draft.albumImport.archiveName = snapshot.archiveName;
+		draft.importId = snapshot.importId;
+		draft.inputMode = snapshot.inputMode;
+		draft.status = snapshot.status;
+		draft.stage = snapshot.stage;
+		draft.archiveName = snapshot.archiveName;
 		if (snapshot.stage === "upload") {
-			creationFlow.value.draft.albumImport.uploadProgress =
-				snapshot.uploadProgress;
-			creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed;
+			draft.uploadProgress = snapshot.uploadProgress;
+			draft.uploadSpeed = snapshot.uploadSpeed;
 			if (snapshot.progress.total > 0) {
-				creationFlow.value.draft.albumImport.totalBytesLoaded =
-					snapshot.progress.current;
-				creationFlow.value.draft.albumImport.totalBytesTotal =
-					snapshot.progress.total;
+				draft.totalBytesLoaded = snapshot.progress.current;
+				draft.totalBytesTotal = snapshot.progress.total;
 			}
 		} else {
-			creationFlow.value.draft.albumImport.uploadSpeed = 0;
+			draft.uploadSpeed = 0;
 		}
-		creationFlow.value.draft.albumImport.coverUrl = snapshot.coverUrl;
-		creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey;
-		creationFlow.value.draft.albumImport.derivedAlbumTitle =
-			snapshot.derivedAlbumTitle;
-		if (snapshot.derivedCover) {
-			creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover;
-		}
-		if (derivedTracks.length > 0) {
-			creationFlow.value.draft.albumImport.derivedTracks = derivedTracks;
-		}
-		creationFlow.value.draft.albumImport.derivedReleaseDate =
-			snapshot.derivedReleaseDate;
-		creationFlow.value.draft.albumImport.derivedAlbumType =
-			snapshot.derivedAlbumType;
-		creationFlow.value.draft.albumImport.metadataSourceUrl =
-			snapshot.metadataSourceUrl;
-		creationFlow.value.draft.albumImport.missingArtists =
-			snapshot.missingArtists ?? [];
-		creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt;
-		creationFlow.value.draft.albumImport.errorMessage =
+		draft.coverUrl = snapshot.coverUrl;
+		draft.coverKey = snapshot.coverKey;
+		draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
+		if (snapshot.derivedCover) draft.derivedCover = snapshot.derivedCover;
+		if (derivedTracks.length > 0) draft.derivedTracks = derivedTracks;
+		draft.derivedReleaseDate = snapshot.derivedReleaseDate;
+		draft.derivedAlbumType = snapshot.derivedAlbumType;
+		draft.metadataSourceUrl = snapshot.metadataSourceUrl;
+		draft.missingArtists = snapshot.missingArtists ?? [];
+		draft.lastSyncedAt = snapshot.lastSyncedAt;
+		draft.errorMessage =
 			snapshot.errorMessage || snapshot.errors?.[0]?.message || "";
-		creationFlow.value.draft.albumImport.files = snapshot.files ?? [];
-		if (!creationFlow.value.titleCustomized) {
-			creationFlow.value.draft.albumDetails.title =
-				snapshot.derivedAlbumTitle ||
-				creationFlow.value.draft.albumDetails.title;
+		draft.files = snapshot.files ?? [];
+		if (!flow.titleCustomized) {
+			flow.draft.albumDetails.title =
+				snapshot.derivedAlbumTitle || flow.draft.albumDetails.title;
 		}
 		if (
 			snapshot.derivedReleaseDate &&
-			!creationFlow.value.draft.albumDetails.releaseDate.trim()
+			!flow.draft.albumDetails.releaseDate.trim()
 		) {
-			creationFlow.value.draft.albumDetails.releaseDateParts =
-				parsePartialDateParts(snapshot.derivedReleaseDate);
+			flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
+				snapshot.derivedReleaseDate,
+			);
 		}
 		if (
 			snapshot.derivedAlbumType &&
 			(!previousDerivedAlbumType ||
-				creationFlow.value.draft.albumDetails.type === previousDerivedAlbumType)
+				flow.draft.albumDetails.type === previousDerivedAlbumType)
 		) {
-			creationFlow.value.draft.albumDetails.type = snapshot.derivedAlbumType;
+			flow.draft.albumDetails.type = snapshot.derivedAlbumType;
 		}
 		if (
 			snapshot.metadataSourceUrl &&
-			(!creationFlow.value.draft.albumDetails.source.trim() ||
-				creationFlow.value.draft.albumDetails.source ===
-					previousMetadataSourceURL)
+			(!flow.draft.albumDetails.source.trim() ||
+				flow.draft.albumDetails.source === previousMetadataSourceURL)
 		) {
-			creationFlow.value.draft.albumDetails.source = snapshot.metadataSourceUrl;
+			flow.draft.albumDetails.source = snapshot.metadataSourceUrl;
 		}
 
-		if (!creationFlow.value.tracksCustomized && derivedTracks.length > 0) {
-			creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
+		if (!flow.tracksCustomized && derivedTracks.length > 0) {
+			flow.draft.tracks = derivedTracks.map((track, index) => ({
 				id: `import-track-${index + 1}`,
 				...(track.songId ? { songId: track.songId } : {}),
 				sequence: track.trackNumber ?? index + 1,
@@ -163,22 +179,42 @@ export function useAlbumImportUpload() {
 		return true;
 	}
 
-	function startPolling(importId: string) {
-		if (pollTimer) clearTimeout(pollTimer);
-		const generation = ++pollingGeneration;
+	function applyImportSnapshot(
+		snapshot: MusicAlbumImport,
+		expectedImportId = snapshot.importId,
+	) {
+		const flow = creationFlow.value;
+		return flow
+			? applyImportSnapshotToFlow(flow, snapshot, expectedImportId)
+			: false;
+	}
+
+	function stopPollingFor(flow: MusicCreationFlowState) {
+		const uploadState = uploadStateFor(flow);
+		uploadState.pollingGeneration += 1;
+		if (uploadState.pollTimer) {
+			clearTimeout(uploadState.pollTimer);
+			uploadState.pollTimer = null;
+		}
+	}
+
+	function startPollingFor(flow: MusicCreationFlowState, importId: string) {
+		const uploadState = uploadStateFor(flow);
+		if (uploadState.pollTimer) clearTimeout(uploadState.pollTimer);
+		const generation = ++uploadState.pollingGeneration;
 		const poll = async () => {
 			if (
-				generation !== pollingGeneration ||
-				albumImportDraft.value?.importId !== importId
+				generation !== uploadState.pollingGeneration ||
+				flow.draft.albumImport.importId !== importId
 			) {
-				pollTimer = null;
+				uploadState.pollTimer = null;
 				return;
 			}
 			try {
 				const snapshot = await getMusicAlbumImport(importId);
 				if (
-					generation !== pollingGeneration ||
-					!applyImportSnapshot(snapshot, importId)
+					generation !== uploadState.pollingGeneration ||
+					!applyImportSnapshotToFlow(flow, snapshot, importId)
 				)
 					return;
 				const done = [
@@ -188,34 +224,38 @@ export function useAlbumImportUpload() {
 					"canceled",
 					"committed",
 				].includes(snapshot.status);
-				pollTimer = done ? null : setTimeout(poll, 3000);
+				uploadState.pollTimer = done ? null : setTimeout(poll, 3000);
 			} catch {
 				if (
-					generation === pollingGeneration &&
-					albumImportDraft.value?.importId === importId
+					generation === uploadState.pollingGeneration &&
+					flow.draft.albumImport.importId === importId
 				) {
-					pollTimer = setTimeout(poll, 5000);
+					uploadState.pollTimer = setTimeout(poll, 5000);
 				}
 			}
 		};
-		pollTimer = setTimeout(poll, 2000);
+		uploadState.pollTimer = setTimeout(poll, 2000);
+	}
+
+	function startPolling(importId: string) {
+		const flow = creationFlow.value;
+		if (flow) startPollingFor(flow, importId);
 	}
 
 	function stopPolling() {
-		pollingGeneration += 1;
-		if (pollTimer) {
-			clearTimeout(pollTimer);
-			pollTimer = null;
-		}
+		const flow = creationFlow.value;
+		if (flow) stopPollingFor(flow);
 	}
 
 	async function uploadSingleFileMultipart(
+		uploadState: AlbumImportUploadState,
+		draft: MusicCreationFlowState["draft"]["albumImport"],
 		importId: string,
 		file: File,
 		fileId: string,
-		isCurrent: () => boolean = () =>
-			albumImportDraft.value?.importId === importId,
+		generation: number,
 	): Promise<void> {
+		const isCurrent = () => generation === uploadState.operationGeneration;
 		const totalParts = Math.ceil(file.size / FILE_PART_SIZE);
 		for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
 			if (!isCurrent()) return;
@@ -230,7 +270,6 @@ export function useAlbumImportUpload() {
 				partNumber,
 				partSize,
 			);
-
 			const response = await apiRequest(upload.uploadUrl, {
 				method: "PUT",
 				body: chunk,
@@ -245,31 +284,28 @@ export function useAlbumImportUpload() {
 				etag,
 				partSize,
 			);
-
 			if (!isCurrent()) return;
 
-			fileProgress.value = new Map(fileProgress.value).set(
-				fileId,
-				Math.round((end / file.size) * 100),
+			uploadState.fileProgress.value = new Map(
+				uploadState.fileProgress.value,
+			).set(fileId, Math.round((end / file.size) * 100));
+			draft.totalBytesLoaded += partSize;
+			const elapsedSeconds = Math.max(
+				(Date.now() - uploadState.uploadStartedAt) / 1000,
+				0.001,
 			);
-
-			if (albumImportDraft.value?.importId === importId) {
-				albumImportDraft.value.totalBytesLoaded += partSize;
-				const elapsedSeconds = Math.max(
-					(Date.now() - uploadStartedAt) / 1000,
-					0.001,
-				);
-				albumImportDraft.value.uploadSpeed =
-					albumImportDraft.value.totalBytesLoaded / elapsedSeconds;
-			}
+			draft.uploadSpeed = draft.totalBytesLoaded / elapsedSeconds;
 		}
 		if (!isCurrent()) return;
 		await completeMusicAlbumImportFile(importId, fileId);
 		if (!isCurrent()) return;
-		fileProgress.value = new Map(fileProgress.value).set(fileId, 100);
+		uploadState.fileProgress.value = new Map(
+			uploadState.fileProgress.value,
+		).set(fileId, 100);
 	}
 
 	function startPollingWhenProcessing(
+		flow: MusicCreationFlowState,
 		snapshot: MusicAlbumImport,
 		importId: string,
 	) {
@@ -278,22 +314,26 @@ export function useAlbumImportUpload() {
 				snapshot.status,
 			)
 		) {
-			startPolling(importId);
+			startPollingFor(flow, importId);
 		}
 	}
 
 	function refreshWhenFilesUploaded(
+		flow: MusicCreationFlowState,
 		snapshot: MusicAlbumImport,
 		importId: string,
 	) {
-		if (!applyImportSnapshot(snapshot, importId)) return;
-		startPollingWhenProcessing(snapshot, importId);
+		if (!applyImportSnapshotToFlow(flow, snapshot, importId)) return;
+		startPollingWhenProcessing(flow, snapshot, importId);
 	}
 
 	async function handleFilesUpload(fileList: FileList) {
-		if (!creationFlow.value || !albumImportDraft.value) return;
 		const flow = creationFlow.value;
-		const generation = ++operationGeneration;
+		const draft = flow?.draft.albumImport;
+		if (!flow || !draft) return;
+		const uploadState = uploadStateFor(flow);
+		const generation = ++uploadState.operationGeneration;
+		const isCurrent = () => generation === uploadState.operationGeneration;
 		const files = Array.from(fileList).filter((file) => {
 			const relativePath =
 				(file as File & { webkitRelativePath?: string }).webkitRelativePath ||
@@ -301,12 +341,15 @@ export function useAlbumImportUpload() {
 			return !shouldIgnoreAlbumImportPath(relativePath);
 		});
 		if (files.length === 0) {
-			errorMessage.value = "未发现可导入的音频文件";
+			uploadState.errorMessage.value = "未发现可导入的音频文件";
 			return;
 		}
 
 		const hasRelativePaths = files.some(
-			(f) => !!(f as File & { webkitRelativePath?: string }).webkitRelativePath,
+			(file) =>
+				Boolean(
+					(file as File & { webkitRelativePath?: string }).webkitRelativePath,
+				),
 		);
 		const isArchive =
 			files.length === 1 &&
@@ -316,28 +359,27 @@ export function useAlbumImportUpload() {
 		try {
 			if (isArchive) validateMusicAlbumArchiveFile(files[0]);
 		} catch (error) {
-			errorMessage.value =
+			uploadState.errorMessage.value =
 				error instanceof Error ? error.message : "文件无法上传";
 			return;
 		}
 
-		uploading.value = true;
-		errorMessage.value = "";
-		fileProgress.value = new Map();
-		selectedFiles.clear();
-
-		const draft = albumImportDraft.value;
+		uploadState.uploading.value = true;
+		uploadState.errorMessage.value = "";
+		uploadState.fileProgress.value = new Map();
+		uploadState.selectedFiles.clear();
 		draft.status = "uploading";
-		const autoMode: MusicAlbumImportInputMode = isArchive
-			? "archive"
-			: hasRelativePaths
-				? "folder"
-				: "files";
+		let autoMode: MusicAlbumImportInputMode = "files";
+		if (isArchive) {
+			autoMode = "archive";
+		} else if (hasRelativePaths) {
+			autoMode = "folder";
+		}
 		draft.inputMode = autoMode;
 		draft.totalBytesLoaded = 0;
-		draft.totalBytesTotal = files.reduce((sum, f) => sum + f.size, 0);
+		draft.totalBytesTotal = files.reduce((sum, file) => sum + file.size, 0);
 		draft.uploadSpeed = 0;
-		uploadStartedAt = Date.now();
+		uploadState.uploadStartedAt = Date.now();
 
 		const previewFile = isArchive
 			? files[0]
@@ -351,12 +393,7 @@ export function useAlbumImportUpload() {
 		if (previewFile) {
 			void readAlbumImportPreview(previewFile)
 				.then((preview) => {
-					if (
-						generation !== operationGeneration ||
-						creationFlow.value !== flow ||
-						albumImportDraft.value !== draft
-					)
-						return;
+					if (!isCurrent()) return;
 					if (files.length === 1) {
 						draft.derivedAlbumTitle = preview.title;
 						draft.derivedTracks = preview.tracks.map((title) => ({
@@ -388,55 +425,45 @@ export function useAlbumImportUpload() {
 
 		try {
 			const artistName =
-				creationFlow.value.draft.artist.stageNames
+				flow.draft.artist.stageNames
 					.find((item) => item.isPrimary && item.name.trim())
 					?.name.trim() ||
-				creationFlow.value.draft.artist.stageNames
+				flow.draft.artist.stageNames
 					.find((item) => item.name.trim())
 					?.name.trim() ||
-				creationFlow.value.draft.artist.legalName.trim();
+				flow.draft.artist.legalName.trim();
 			const session = await createMusicAlbumImport({
-				artistId: creationFlow.value.draft.artist.id,
+				artistId: flow.draft.artist.id,
 				...(artistName ? { artistName } : {}),
 				inputMode: autoMode,
 			});
-			if (
-				generation !== operationGeneration ||
-				creationFlow.value !== flow ||
-				albumImportDraft.value !== draft
-			)
-				return;
+			if (!isCurrent()) return;
 			draft.importId = session.importId;
-			setMusicCreationStep("albumDetails");
+			if (creationFlow.value === flow) setMusicCreationStep("albumDetails");
 
-			const fileInputs = files.map((f) => ({
+			const fileInputs = files.map((file) => ({
 				relativePath:
-					(f as File & { webkitRelativePath?: string }).webkitRelativePath ||
-					f.name,
-				fileName: f.name,
-				fileSize: f.size,
-				contentType: f.type || "application/octet-stream",
+					(file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+					file.name,
+				fileName: file.name,
+				fileSize: file.size,
+				contentType: file.type || "application/octet-stream",
 			}));
-
 			const registered = await registerMusicAlbumImportFiles(session.importId, {
 				files: fileInputs,
 			});
-			if (
-				generation !== operationGeneration ||
-				draft.importId !== session.importId
-			)
-				return;
+			if (!isCurrent() || draft.importId !== session.importId) return;
 			draft.files = registered.files ?? [];
 
 			const fileMap = new Map<string, File>();
-			for (const f of files) {
-				const relPath =
-					(f as File & { webkitRelativePath?: string }).webkitRelativePath ||
-					f.name;
-				fileMap.set(relPath, f);
-				fileMap.set(f.name, f);
-				selectedFiles.set(f.name, f);
-				selectedFiles.set(relPath, f);
+			for (const file of files) {
+				const relativePath =
+					(file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+					file.name;
+				fileMap.set(relativePath, file);
+				fileMap.set(file.name, file);
+				uploadState.selectedFiles.set(file.name, file);
+				uploadState.selectedFiles.set(relativePath, file);
 			}
 
 			const uploadTasks = (registered.files ?? []).map(
@@ -445,38 +472,32 @@ export function useAlbumImportUpload() {
 						fileMap.get(registeredFile.relativePath) ??
 						fileMap.get(registeredFile.fileName);
 					if (!file) throw new Error(`${registeredFile.fileName} 未找到`);
-					selectedFiles.set(registeredFile.fileId, file);
+					uploadState.selectedFiles.set(registeredFile.fileId, file);
 					await uploadSingleFileMultipart(
+						uploadState,
+						draft,
 						session.importId,
 						file,
 						registeredFile.fileId,
-						() => generation === operationGeneration,
+						generation,
 					);
 				},
 			);
-
-			for (let i = 0; i < uploadTasks.length; i += 3) {
-				await Promise.all(uploadTasks.slice(i, i + 3).map((fn) => fn()));
+			for (let index = 0; index < uploadTasks.length; index += 3) {
+				await Promise.all(uploadTasks.slice(index, index + 3).map((task) => task()));
 			}
 
 			const snapshot = await getMusicAlbumImport(session.importId);
-			if (
-				generation === operationGeneration &&
-				draft.importId === session.importId
-			) {
-				await refreshWhenFilesUploaded(snapshot, session.importId);
+			if (isCurrent() && draft.importId === session.importId) {
+				refreshWhenFilesUploaded(flow, snapshot, session.importId);
 			}
 		} catch (error) {
-			if (
-				generation !== operationGeneration ||
-				albumImportDraft.value !== draft
-			)
-				return;
+			if (!isCurrent()) return;
 			draft.status = "failed";
 			draft.errorMessage = error instanceof Error ? error.message : "上传失败";
-			errorMessage.value = draft.errorMessage;
+			uploadState.errorMessage.value = draft.errorMessage;
 		} finally {
-			if (generation === operationGeneration) uploading.value = false;
+			if (isCurrent()) uploadState.uploading.value = false;
 		}
 	}
 
@@ -484,66 +505,69 @@ export function useAlbumImportUpload() {
 		const input = event.target as HTMLInputElement;
 		const fileList = input.files;
 		if (!fileList || fileList.length === 0) return;
-
 		await handleFilesUpload(fileList);
-
 		input.value = "";
 	}
 
 	async function handleRetryFile(fileId: string) {
-		const draft = albumImportDraft.value;
-		if (!draft?.importId) return;
+		const flow = creationFlow.value;
+		const draft = flow?.draft.albumImport;
+		if (!flow || !draft?.importId) return;
+		const uploadState = uploadStateFor(flow);
 		const needsUpload =
 			draft.files.find((file) => file.fileId === fileId)?.uploadStatus ===
 			"failed";
-		const file = selectedFiles.get(fileId);
+		const file = uploadState.selectedFiles.get(fileId);
 		if (needsUpload && !file) {
-			errorMessage.value = "请替换文件后重新上传";
+			uploadState.errorMessage.value = "请替换文件后重新上传";
 			return;
 		}
 
 		const importId = draft.importId;
-		const generation = ++operationGeneration;
-		uploading.value = true;
-		errorMessage.value = "";
+		const generation = ++uploadState.operationGeneration;
+		const isCurrent = () => generation === uploadState.operationGeneration;
+		uploadState.uploading.value = true;
+		uploadState.errorMessage.value = "";
 		try {
 			const snapshot = await retryMusicAlbumImportFile(importId, fileId);
-			if (
-				generation !== operationGeneration ||
-				!applyImportSnapshot(snapshot, importId)
-			)
+			if (!isCurrent() || !applyImportSnapshotToFlow(flow, snapshot, importId))
 				return;
 			if (needsUpload && file) {
 				await uploadSingleFileMultipart(
+					uploadState,
+					draft,
 					importId,
 					file,
 					fileId,
-					() =>
-						generation === operationGeneration &&
-						albumImportDraft.value?.importId === importId,
+					generation,
 				);
-				await refreshWhenFilesUploaded(
+				refreshWhenFilesUploaded(
+					flow,
 					await getMusicAlbumImport(importId),
 					importId,
 				);
 			} else if (!needsUpload) {
-				startPolling(importId);
+				startPollingFor(flow, importId);
 			}
 		} catch (error) {
-			if (generation === operationGeneration)
-				errorMessage.value =
+			if (isCurrent()) {
+				uploadState.errorMessage.value =
 					error instanceof Error ? error.message : "重试失败";
+			}
 		} finally {
-			if (generation === operationGeneration) uploading.value = false;
+			if (isCurrent()) uploadState.uploading.value = false;
 		}
 	}
 
 	async function handleReplaceFile(fileId: string, file: File) {
-		const draft = albumImportDraft.value;
-		if (!draft?.importId) return;
+		const flow = creationFlow.value;
+		const draft = flow?.draft.albumImport;
+		if (!flow || !draft?.importId) return;
+		const uploadState = uploadStateFor(flow);
 		const importId = draft.importId;
-		const generation = ++operationGeneration;
-		uploading.value = true;
+		const generation = ++uploadState.operationGeneration;
+		const isCurrent = () => generation === uploadState.operationGeneration;
+		uploadState.uploading.value = true;
 		try {
 			await replaceMusicAlbumImportFile(importId, fileId, {
 				relativePath: file.name,
@@ -552,42 +576,45 @@ export function useAlbumImportUpload() {
 				contentType: file.type || "application/octet-stream",
 			});
 			const snapshot = await getMusicAlbumImport(importId);
-			if (
-				generation !== operationGeneration ||
-				!applyImportSnapshot(snapshot, importId)
-			)
+			if (!isCurrent() || !applyImportSnapshotToFlow(flow, snapshot, importId))
 				return;
-			selectedFiles.set(fileId, file);
+			uploadState.selectedFiles.set(fileId, file);
 			await uploadSingleFileMultipart(
+				uploadState,
+				draft,
 				importId,
 				file,
 				fileId,
-				() =>
-					generation === operationGeneration &&
-					albumImportDraft.value?.importId === importId,
+				generation,
 			);
-			await refreshWhenFilesUploaded(
+			refreshWhenFilesUploaded(
+				flow,
 				await getMusicAlbumImport(importId),
 				importId,
 			);
 		} catch (error) {
-			if (generation === operationGeneration)
-				errorMessage.value =
-					error instanceof Error ? error.message : "替换失败";
+			if (isCurrent()) {
+				uploadState.errorMessage.value =
+				error instanceof Error ? error.message : "替换失败";
+			}
 		} finally {
-			if (generation === operationGeneration) uploading.value = false;
+			if (isCurrent()) uploadState.uploading.value = false;
 		}
 	}
 
 	async function cancelUpload() {
-		const importId = albumImportDraft.value?.importId;
-		if (!importId) return;
+		const flow = creationFlow.value;
+		const draft = flow?.draft.albumImport;
+		if (!flow || !draft?.importId) return;
+		const uploadState = uploadStateFor(flow);
+		uploadState.operationGeneration += 1;
 		try {
-			await cancelMusicAlbumImportSession(importId);
-			stopPolling();
-			if (albumImportDraft.value) albumImportDraft.value.status = "canceled";
+			await cancelMusicAlbumImportSession(draft.importId);
+			stopPollingFor(flow);
+			draft.status = "canceled";
+			uploadState.uploading.value = false;
 		} catch (error) {
-			errorMessage.value =
+			uploadState.errorMessage.value =
 				error instanceof Error ? error.message : "取消上传失败";
 		}
 	}
@@ -595,20 +622,27 @@ export function useAlbumImportUpload() {
 	async function handleDeleteFile(fileId: string) {
 		const draft = albumImportDraft.value;
 		if (!draft?.importId) return;
+		const uploadState = currentUploadState.value;
 		try {
 			await deleteMusicAlbumImportFile(draft.importId, fileId);
-			draft.files = draft.files.filter((f) => f.fileId !== fileId);
+			draft.files = draft.files.filter((file) => file.fileId !== fileId);
 		} catch (error) {
-			errorMessage.value = error instanceof Error ? error.message : "移除失败";
+			if (uploadState) {
+				uploadState.errorMessage.value =
+					error instanceof Error ? error.message : "移除失败";
+			}
 		}
 	}
 
 	function resetUploadState() {
-		operationGeneration += 1;
-		uploading.value = false;
-		errorMessage.value = "";
-		fileProgress.value.clear();
-		stopPolling();
+		const flow = creationFlow.value;
+		if (!flow) return;
+		const uploadState = uploadStateFor(flow);
+		uploadState.operationGeneration += 1;
+		uploadState.uploading.value = false;
+		uploadState.errorMessage.value = "";
+		uploadState.fileProgress.value.clear();
+		stopPollingFor(flow);
 	}
 
 	return {

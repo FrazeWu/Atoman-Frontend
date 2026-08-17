@@ -27,6 +27,7 @@ const {
   refreshArtist,
   refreshAlbum,
   openNestedAction,
+  openMusicCreationFlow,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -265,6 +266,11 @@ const finishButtonLabel = computed(() => {
   if (creationFlow.value?.submitting && creationFlow.value.step === 'preview') return '提交中…'
   if (creationFlow.value?.assetUploading) return '图片上传中…'
   return activeStep.value.cta
+})
+const canStartAnotherAlbum = computed(() => {
+  const flow = creationFlow.value
+  if (!flow || flow.mode === 'edit' || !flow.draft.albumImport.importId) return false
+  return ['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding', 'ready', 'needs_attention'].includes(flow.draft.albumImport.status)
 })
 const forwardBlockReason = computed(() => {
   const flow = creationFlow.value
@@ -808,6 +814,11 @@ function goBackStep() {
   }
 }
 
+function startAnotherAlbum() {
+  if (!canStartAnotherAlbum.value) return
+  openMusicCreationFlow({ startStep: 'albumImport' })
+}
+
 async function completeCreation() {
   const flow = creationFlow.value
   if (!flow || flow.submitting) return
@@ -977,6 +988,16 @@ async function completeCreation() {
             @click="goBackStep"
           >
             返回上一步
+          </button>
+          <button
+            v-if="canStartAnotherAlbum"
+            data-testid="music-creation-start-another-album"
+            type="button"
+            class="ui-action"
+            :disabled="creationFlow.submitting"
+            @click="startAnotherAlbum"
+          >
+            新建专辑
           </button>
           <button
             v-if="creationFlow.mode !== 'edit' && creationFlow.step === 'artist'"

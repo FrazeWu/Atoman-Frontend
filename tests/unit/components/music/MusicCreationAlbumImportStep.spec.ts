@@ -1,18 +1,22 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import JSZip from "jszip";
-import MusicCreationAlbumSeedStep from "@/components/music/MusicCreationAlbumSeedStep.vue";
-import MusicCreationAlbumDetailsStep from "@/components/music/MusicCreationAlbumDetailsStep.vue";
-import MusicCreationAlbumUploadZone from "@/components/music/MusicCreationAlbumUploadZone.vue";
-import * as musicApi from "@/api/musicV1";
-import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import { useAlbumImportUpload } from "@/composables/useAlbumImportUpload";
+// @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
+import MusicCreationAlbumSeedStep from "../../../../src/components/music/MusicCreationAlbumSeedStep.vue";
+// @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
+import MusicCreationAlbumDetailsStep from "../../../../src/components/music/MusicCreationAlbumDetailsStep.vue";
+// @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
+import MusicCreationAlbumUploadZone from "../../../../src/components/music/MusicCreationAlbumUploadZone.vue";
+import * as musicApi from "../../../../src/api/musicV1";
+import { useMusicDrawers } from "../../../../src/composables/useMusicDrawers";
+import { useAlbumImportUpload } from "../../../../src/composables/useAlbumImportUpload";
 
 function snapshot(
 	overrides: Partial<musicApi.MusicAlbumImport> = {},
 ): musicApi.MusicAlbumImport {
 	return {
 		importId: "import-1",
+		targetAlbumId: "",
 		status: "pending_upload",
 		archiveName: "",
 		uploadProgress: 0,
@@ -33,6 +37,26 @@ function snapshot(
 	};
 }
 
+function importFile(
+	overrides: Partial<musicApi.MusicAlbumImportFile> = {},
+): musicApi.MusicAlbumImportFile {
+	return {
+		fileId: "file-1",
+		relativePath: "album.mp3",
+		fileName: "album.mp3",
+		role: "audio",
+		detectedFormat: "mp3",
+		size: 1,
+		uploadStatus: "pending",
+		processingStatus: "pending",
+		discNumber: 1,
+		trackNumber: 1,
+		title: "",
+		errorMessage: "",
+		...overrides,
+	};
+}
+
 function fileInput(wrapper: ReturnType<typeof mount>) {
 	return wrapper.get('[data-testid="album-import-files-input"]');
 }
@@ -47,10 +71,10 @@ function mockUploadTransport() {
 		uploadUrl: "https://upload.test/part-1",
 	});
 	vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
-		snapshot(),
+		importFile(),
 	);
 	vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue(
-		snapshot(),
+		importFile(),
 	);
 	vi.stubGlobal(
 		"fetch",
@@ -239,6 +263,102 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(completeFile).toHaveBeenCalledWith("import-1", "file-1");
 	});
 
+	it("新建另一张专辑后不会中断已有上传", async () => {
+		const firstFile = new File(["first"], "first.mp3", {
+			type: "audio/mpeg",
+		});
+		const secondFile = new File(["second"], "second.mp3", {
+			type: "audio/mpeg",
+		});
+		const firstRecord = {
+			fileId: "first-file",
+			relativePath: firstFile.name,
+			fileName: firstFile.name,
+			role: "audio" as const,
+			detectedFormat: "mp3",
+			size: firstFile.size,
+			uploadStatus: "pending" as const,
+			processingStatus: "pending" as const,
+			discNumber: 1,
+			trackNumber: 1,
+			title: "",
+			errorMessage: "",
+		};
+		const secondRecord = {
+			...firstRecord,
+			fileId: "second-file",
+			relativePath: secondFile.name,
+			fileName: secondFile.name,
+			size: secondFile.size,
+		};
+		vi.spyOn(musicApi, "createMusicAlbumImport")
+			.mockResolvedValueOnce(snapshot({ importId: "import-1" }))
+			.mockResolvedValueOnce(snapshot({ importId: "import-2" }));
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockImplementation(
+			async (importId: string) =>
+				snapshot({
+					importId,
+					files: [importId === "import-1" ? firstRecord : secondRecord],
+				}),
+		);
+		vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload").mockImplementation(
+			async (importId: string) => ({
+				partNumber: 1,
+				uploadUrl: `https://upload.test/${importId}`,
+			}),
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
+			firstRecord,
+		);
+		const completeFile = vi
+			.spyOn(musicApi, "completeMusicAlbumImportFile")
+			.mockResolvedValue({ ...firstRecord, uploadStatus: "uploaded" });
+		vi.spyOn(musicApi, "getMusicAlbumImport").mockImplementation(
+			async (importId: string) => snapshot({ importId }),
+		);
+
+		let resolveFirstUpload!: (response: Response) => void;
+		const firstUpload = new Promise<Response>((resolve) => {
+			resolveFirstUpload = resolve;
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn((url: string) =>
+				url.endsWith("import-1")
+					? firstUpload
+					: Promise.resolve(
+							new Response("", { status: 200, headers: { ETag: "etag-2" } }),
+						),
+			),
+		);
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [firstFile]);
+		await fileInput(wrapper).trigger("change");
+		await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({
+			artistId: "artist-seeded",
+			startStep: "albumImport",
+		});
+		const secondFiles = {
+			0: secondFile,
+			length: 1,
+			item: (index: number) => (index === 0 ? secondFile : null),
+		} as unknown as FileList;
+		void useAlbumImportUpload().handleFilesUpload(secondFiles);
+		await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+
+		resolveFirstUpload(
+			new Response("", { status: 200, headers: { ETag: "etag-1" } }),
+		);
+		await vi.waitFor(() => {
+			expect(completeFile).toHaveBeenCalledWith("import-1", "first-file");
+			expect(completeFile).toHaveBeenCalledWith("import-2", "second-file");
+		});
+	});
+
 	it("拒绝过大的压缩包时不会进入上传中状态", async () => {
 		const archive = new File(["zip"], "too-large.zip", {
 			type: "application/zip",
@@ -290,7 +410,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.waitFor(() => {
 			const draft = useMusicDrawers().state.value.creationFlow?.draft;
 			expect(draft?.albumDetails.title).toBe("Day Cycle");
-			expect(draft?.tracks.map((track) => track.title)).toEqual([
+			expect(draft?.tracks.map((track: { title: string }) => track.title)).toEqual([
 				"Dawn",
 				"Dusk",
 			]);
@@ -349,6 +469,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		vi.spyOn(musicApi, "uploadMusicAsset").mockResolvedValue({
 			key: "music/manual-cover.jpg",
 			url: "https://img.example/manual-cover.jpg",
+			content_type: "image/jpeg",
+			size: 5,
 		});
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
@@ -556,12 +678,17 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			snapshot({ status: "uploading", files: [fileRecord] }),
 		);
 		vi.spyOn(musicApi, "replaceMusicAlbumImportFile").mockResolvedValue(
-			snapshot({
-				status: "uploading",
-				files: [
-					{ ...fileRecord, fileName: "fixed.mp3", relativePath: "fixed.mp3" },
-				],
+			importFile({
+				...fileRecord,
+				fileName: "fixed.mp3",
+				relativePath: "fixed.mp3",
 			}),
+		);
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
+			snapshot({ inputMode: "files" }),
+		);
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({ files: [fileRecord] }),
 		);
 		mockUploadTransport();
 		vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue({
@@ -596,6 +723,12 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 
 		const drawers = useMusicDrawers();
+		const originalFiles = {
+			0: original,
+			length: 1,
+			item: (index: number) => (index === 0 ? original : null),
+		} as unknown as FileList;
+		await useAlbumImportUpload().handleFilesUpload(originalFiles);
 		drawers.setMusicCreationStep("albumDetails");
 		if (!drawers.state.value.creationFlow)
 			throw new Error("creation flow missing");

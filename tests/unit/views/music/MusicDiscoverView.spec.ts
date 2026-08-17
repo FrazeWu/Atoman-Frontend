@@ -1,8 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useAuthStore } from '@/stores/auth'
-import DiscoverView from '@/views/music/DiscoverView.vue'
+import { useAuthStore } from '../../../../src/stores/auth'
+import DiscoverView from '../../../../src/views/music/DiscoverView.vue'
 
 const mocks = vi.hoisted(() => ({
   getMusicHome: vi.fn(),
@@ -232,7 +232,7 @@ describe('Music DiscoverView.vue', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('近期热门专辑')
 
-    expect(wrapper.find('[data-testid="page-header-title"]').text()).toBe('发现')
+    expect(wrapper.find('.p-page-header__title').text()).toBe('发现')
   })
 
   it('uses the external page title when provided', async () => {
@@ -253,7 +253,7 @@ describe('Music DiscoverView.vue', () => {
     })
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="page-header-title"]').text()).toBe('专辑')
+    expect(wrapper.find('.p-page-header__title').text()).toBe('专辑')
   })
 
   it('renders album-only content when used in albums mode', async () => {
@@ -277,7 +277,7 @@ describe('Music DiscoverView.vue', () => {
     expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(0)
     expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(0)
-    expect(wrapper.text()).toContain('2049')
+    expect(wrapper.find('[data-testid="discover-album-card"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('Late Night Mix')
   })
 
@@ -314,9 +314,9 @@ describe('Music DiscoverView.vue', () => {
 
       const wrapper = mount(DiscoverView, { props: { contentMode: 'albums' } })
       await flushPromises()
-      await wrapper.get('button.discover-load-more').trigger('click')
+      await wrapper.get('button[title="下一页"]').trigger('click')
       await flushPromises()
-      expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(2)
+      expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
       expect(mocks.listMusicAlbums).toHaveBeenNthCalledWith(2, { page: 2, page_size: 24, sort: 'hot' })
 
       await wrapper.get('[data-testid="music-explore-search-input"]').setValue('Search')

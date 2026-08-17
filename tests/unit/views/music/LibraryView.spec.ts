@@ -111,10 +111,9 @@ describe('LibraryView', () => {
 
     const wrapper = mount(LibraryView)
     await flushPromises()
-    expect(wrapper.text()).toContain('加载更多')
+    expect(wrapper.text()).toContain('第 1 页，共 25 条')
 
 		await wrapper.get('[data-option="artist"]').trigger('click')
-    expect(wrapper.text()).not.toContain('加载更多')
     expect(mocks.listMusicLibrary).toHaveBeenCalledTimes(2)
 
 		resolveArtists({

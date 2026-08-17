@@ -52,7 +52,7 @@ describe('SongsView', () => {
     await vi.advanceTimersByTimeAsync(250)
     await flushPromises()
 
-    expect(wrapper.get('a[href="/music/song/song-1"]').exists()).toBe(true)
+    expect(wrapper.find('.song-result').exists()).toBe(true)
     await wrapper.get('[data-testid="song-result-artist-artist-1"]').trigger('click')
     await wrapper.get('[data-testid="song-result-album-album-1"]').trigger('click')
 

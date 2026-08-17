@@ -157,11 +157,17 @@ describe("Music ImportsView", () => {
 		await flushPromises();
 
 		expect(wrapper.findAll(".music-imports-view__item")).toHaveLength(1);
-		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({ page: 2, page_size: 50 });
+		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({
+			page: 2,
+			page_size: 50,
+		});
 
 		await vi.advanceTimersByTimeAsync(3_000);
 		await flushPromises();
-		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({ page: 2, page_size: 50 });
+		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({
+			page: 2,
+			page_size: 50,
+		});
 		wrapper.unmount();
 	});
 

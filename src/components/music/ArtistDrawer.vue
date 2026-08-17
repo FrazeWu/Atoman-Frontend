@@ -279,7 +279,7 @@ function createAlbum() {
     artistId: artistId.value,
     artistName: artist.value?.name || '',
     artistLegalName: artist.value?.legal_name || '',
-    startStep: 'albumImport',
+    startStep: 'albumDetails',
   })
 }
 

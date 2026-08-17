@@ -380,7 +380,7 @@ describe("useMusicDrawers music creation flow", () => {
 			errorMessage: "",
 		});
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumDetails");
 		expect(drawers.state.value.creationFlow?.draft.artist.id).toBeNull();
 		expect(
 			drawers.state.value.creationFlow?.draft.albumDetails.contributors,
@@ -416,7 +416,7 @@ describe("useMusicDrawers music creation flow", () => {
 			errorMessage: "",
 		});
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumDetails");
 		expect(drawers.state.value.creationFlow?.draft.artist.id).toBe("artist-2");
 		expect(drawers.state.value.creationFlow?.draft.albumDetails.title).toBe(
 			"Discovery",

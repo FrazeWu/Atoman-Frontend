@@ -386,31 +386,43 @@ describe("MusicCreationFlowDrawer", () => {
 					id: "artist-existing",
 					avatarUrl: "https://img.test/existing-artist.jpg",
 					legalName: "Existing Artist",
-					stageNames: [{
-						...baseFlow.draft.artist.stageNames[0],
-						name: "Existing Artist",
-					}],
+					stageNames: [
+						{
+							...baseFlow.draft.artist.stageNames[0],
+							name: "Existing Artist",
+						},
+					],
 					nationality: "中国",
 					birthDateParts: { year: "1990", month: "01", day: "01" },
 					source: "https://example.test/existing-artist",
 				},
 				albumDetails: {
 					...baseFlow.draft.albumDetails,
-					contributors: [{
-						id: "contributor-artist-existing",
-						artistId: "artist-existing",
-						name: "Existing Artist",
-						avatarUrl: "",
-						kind: "person",
-						locked: true,
-						roles: [{ id: "role-existing-primary", role: "primary", label: "主艺术家" }],
-					}],
+					contributors: [
+						{
+							id: "contributor-artist-existing",
+							artistId: "artist-existing",
+							name: "Existing Artist",
+							avatarUrl: "",
+							kind: "person",
+							locked: true,
+							roles: [
+								{
+									id: "role-existing-primary",
+									role: "primary",
+									label: "主艺术家",
+								},
+							],
+						},
+					],
 				},
 			},
 		});
 
 		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper.get('[data-testid="artist-link-album-button"]').trigger("click");
+		await wrapper
+			.get('[data-testid="artist-link-album-button"]')
+			.trigger("click");
 		await flushPromises();
 
 		expect(createMusicArtistMock).not.toHaveBeenCalled();
@@ -493,7 +505,7 @@ describe("MusicCreationFlowDrawer", () => {
 				birth_date: "----/--/--",
 			}),
 		);
-		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumImport");
+		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumDetails");
 		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
 		expect(drawerMocks.openArtist).not.toHaveBeenCalled();
 		expect(drawerMocks.openNestedAction).not.toHaveBeenCalled();

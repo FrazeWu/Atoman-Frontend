@@ -268,7 +268,7 @@ function validateAndExpose() {
   }
 
   const { setMusicCreationStep } = useMusicDrawers()
-  setMusicCreationStep('albumImport')
+  setMusicCreationStep('albumDetails')
   return true
 }
 

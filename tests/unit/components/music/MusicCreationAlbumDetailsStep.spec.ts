@@ -897,7 +897,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		await wrapper
 			.get('[data-testid="album-details-back-button"]')
 			.trigger("click");
-		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
+		expect(drawers.state.value.creationFlow?.step).toBe("artist");
 
 		drawers.setMusicCreationStep("albumDetails");
 		await wrapper

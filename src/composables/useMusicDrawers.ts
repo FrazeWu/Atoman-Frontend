@@ -469,7 +469,7 @@ export function useMusicDrawers() {
 		openMusicCreationFlow({
 			artistId: artistId || undefined,
 			artistName: contributors[0]?.name ?? "",
-			startStep: "albumImport",
+			startStep: "albumDetails",
 		});
 		const flow = state.value.creationFlow;
 		if (!flow) return;

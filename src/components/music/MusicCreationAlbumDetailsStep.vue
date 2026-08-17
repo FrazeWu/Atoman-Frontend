@@ -290,7 +290,7 @@ function syncLockedNewArtistContributor() {
 }
 
 function goBack() {
-  setMusicCreationStep('albumImport')
+  setMusicCreationStep('artist')
 }
 
 watch(

@@ -712,7 +712,7 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         })
         return
       }
-      setMusicCreationStep('albumImport')
+      setMusicCreationStep('albumDetails')
     } catch (error) {
       flow.errorMessage = error instanceof Error ? error.message : '创建艺术家草稿失败'
     } finally {
@@ -760,7 +760,7 @@ function goBackStep() {
   if (creationFlow.value.step === 'preview') {
     setMusicCreationStep('albumDetails')
   } else if (creationFlow.value.step === 'albumDetails') {
-    setMusicCreationStep('albumImport')
+    setMusicCreationStep('artist')
   }
 }
 

@@ -501,7 +501,7 @@ function openArtistResult(artist: MusicArtistListItem) {
 
 function startAlbumCreation() {
   if (!requireLogin()) return
-  openMusicCreationFlow()
+  openMusicCreationFlow({ startStep: 'albumDetails' })
 }
 
 function handleSearchFocus() {

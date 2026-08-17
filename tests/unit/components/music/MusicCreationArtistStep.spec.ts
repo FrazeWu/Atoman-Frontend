@@ -208,7 +208,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
+    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
   })
 
   it('switches to group mode, hides person-only fields, and requires at least two members', async () => {
@@ -319,7 +319,7 @@ describe('MusicCreationArtistStep.vue', () => {
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/group-source')
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
+    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
   })
 
   it('opens square crop sheet before applying artist avatar preview', async () => {

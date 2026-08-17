@@ -12,7 +12,31 @@ type MiddlewareContext = {
 	next: () => Promise<Response>;
 };
 
+const legacyRouteRedirects: Record<string, string> = {
+	"/podcast": "/podcasts",
+	"/video": "/videos",
+};
+
+function redirectLegacyRoute(request: Request) {
+	if (request.method !== "GET" && request.method !== "HEAD") return undefined;
+
+	try {
+		const requestUrl = new URL(request.url);
+		const pathname = requestUrl.pathname.replace(/\/+$/, "") || "/";
+		const destination = legacyRouteRedirects[pathname];
+		if (!destination) return undefined;
+
+		requestUrl.pathname = destination;
+		return Response.redirect(requestUrl, 301);
+	} catch {
+		return undefined;
+	}
+}
+
 export async function onRequest(context: MiddlewareContext) {
+	const redirect = redirectLegacyRoute(context.request);
+	if (redirect) return redirect;
+
 	const response = await context.next();
 	const contentType = response.headers.get("content-type") || "";
 	if (!contentType.includes("text/html")) return response;

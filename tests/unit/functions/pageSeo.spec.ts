@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { buildStaticPageHtml } from "../../../functions/_lib/pageSeo";
 import { onRequest as pageMiddleware } from "../../../functions/_middleware";
@@ -51,6 +51,31 @@ describe("static page SEO", () => {
 		expect(
 			buildStaticPageHtml(shell, "/posts/post/post-1", "www.atoman.org"),
 		).toBe(shell);
+	});
+
+	it("redirects legacy singular public module URLs to their canonical routes", async () => {
+		const next = vi.fn(async () => new Response(shell));
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/podcast/?source=legacy"),
+			next,
+		});
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("location")).toBe(
+			"https://www.atoman.org/podcasts?source=legacy",
+		);
+		expect(next).not.toHaveBeenCalled();
+	});
+
+	it("only redirects legacy routes for safe navigation methods", async () => {
+		const next = vi.fn(async () => new Response(shell));
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/video", { method: "POST" }),
+			next,
+		});
+
+		expect(response.status).toBe(200);
+		expect(next).toHaveBeenCalledOnce();
 	});
 
 	it("only transforms HTML responses in middleware", async () => {

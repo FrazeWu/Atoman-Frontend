@@ -292,7 +292,7 @@ describe('Music DiscoverView.vue', () => {
 
     await wrapper.get('[data-testid="add-album"]').trigger('click')
 
-    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith()
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'albumDetails' })
   })
 
   it('loads album pages incrementally and sends keywords to the server', async () => {

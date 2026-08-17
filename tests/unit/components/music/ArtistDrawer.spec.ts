@@ -352,7 +352,8 @@ describe('ArtistDrawer.vue', () => {
       artistId: '1',
       artistName: 'Ye',
       artistLegalName: 'Kanye Omari West',
-      startStep: 'albumImport',
+      artistSource: '',
+      startStep: 'albumDetails',
     })
     expect(musicDrawerMocks.openMusicEditor).not.toHaveBeenCalled()
   })

@@ -15,12 +15,31 @@ export function musicImportGroupForStatus(status: string): MusicImportGroup {
   return 'in_progress'
 }
 
+function normalizedImportIdentityPart(value?: string | null): string {
+  return value?.trim().toLocaleLowerCase().replace(/\s+/g, ' ') || ''
+}
+
+function importIdentityKey(item: MusicAlbumImport): string {
+  const targetAlbumId = item.targetAlbumId?.trim()
+  if (targetAlbumId) return `album:${targetAlbumId}`
+
+  const title = normalizedImportIdentityPart(item.albumTitle || item.derivedAlbumTitle)
+  const artistId = normalizedImportIdentityPart(item.artistId)
+  if (artistId && title) return `draft:${artistId}:${title}`
+
+  const archiveName = normalizedImportIdentityPart(item.archiveName)
+  if (title && archiveName && ['needs_attention', 'failed'].includes(item.status)) {
+    return `retry:${title}:${archiveName}`
+  }
+
+  return `import:${item.importId}`
+}
+
 export function uniqueMusicAlbumImports(items: MusicAlbumImport[]): MusicAlbumImport[] {
   const seen = new Set<string>()
 
   return items.filter((item) => {
-    const targetAlbumId = item.targetAlbumId?.trim()
-    const key = targetAlbumId ? `album:${targetAlbumId}` : `import:${item.importId}`
+    const key = importIdentityKey(item)
     if (seen.has(key)) return false
     seen.add(key)
     return true

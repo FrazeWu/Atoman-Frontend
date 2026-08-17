@@ -14,6 +14,7 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
@@ -29,7 +30,7 @@ const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const historyRequests = useRequestGeneration()
 const historyItems = ref<MusicListeningHistory[]>([])
 const currentPage = ref(0)
-const hasMore = ref(false)
+const historyMeta = ref({ page: 1, page_size: pageSize, total: 0, has_more: false })
 const loading = ref(false)
 const loadingMore = ref(false)
 const errorMessage = ref('')
@@ -76,15 +77,9 @@ async function loadPage(page: number) {
   try {
     const response = await listMusicListeningHistory({ page, page_size: pageSize })
     if (!isCurrent()) return
-    if (isFirst) {
-      historyItems.value = response.data
-    } else {
-      const byId = new Map(historyItems.value.map((item) => [item.id, item]))
-      response.data.forEach((item) => byId.set(item.id, item))
-      historyItems.value = Array.from(byId.values())
-    }
+    historyItems.value = response.data
     currentPage.value = page
-    hasMore.value = Boolean(response.meta.has_more)
+    historyMeta.value = response.meta
   } catch (error) {
     if (!isCurrent()) return
     reportError(error, 'Failed to load music listening history:')
@@ -111,7 +106,7 @@ async function confirmClearHistory() {
   try {
     await clearMusicListeningHistory()
     historyItems.value = []
-    hasMore.value = false
+    historyMeta.value = { page: 1, page_size: pageSize, total: 0, has_more: false }
     currentPage.value = 0
     toastMessage.value = '播放历史已清空'
     toastVisible.value = true
@@ -178,9 +173,7 @@ watch(
   (authenticated) => {
     historyRequests.beginRequest()
     historyItems.value = []
-    currentPage.value = 0
-    hasMore.value = false
-    loading.value = false
+    historyMeta.value = { page: 1, page_size: pageSize, total: 0, has_more: false }
     loadingMore.value = false
     if (authenticated) void loadPage(1)
   },
@@ -265,17 +258,11 @@ watch(
       </ol>
 
       <p v-if="errorMessage" class="history-state history-state--error">{{ errorMessage }}</p>
-      <div v-if="hasMore" class="history-more">
-        <PButton
-          outline
-          :loading="loadingMore"
-          loading-text="正在加载..."
-          data-testid="history-load-more"
-          @click="loadPage(currentPage + 1)"
-        >
-          加载更多
-        </PButton>
-      </div>
+      <PaginationBar
+        :meta="historyMeta"
+        :loading="loading || loadingMore"
+        @change="loadPage"
+      />
     </template>
     <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </div>

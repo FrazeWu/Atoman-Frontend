@@ -331,20 +331,34 @@ export async function getMusicPlaylist(
 ): Promise<MusicPlaylistDetail> {
   const [playlist, songsResponse] = await Promise.all([
     apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
-    apiGetEnvelope<MusicPlaylistSongEnvelope[], PaginationMeta>(
-      musicV1Endpoints.playlistSongs(playlistId),
-    ),
+    listMusicPlaylistSongs(playlistId, { page: 1, page_size: 20 }),
   ]);
   return {
     ...playlist,
-    songs: (songsResponse.data || [])
-      .map((item) => item.song)
-      .filter((song): song is MusicSongListItem => Boolean(song))
-      .map((song) => ({
-        ...song,
-        cover_url: song.cover_url || song.album?.cover_url || "",
-      })),
+    songs: songsResponse.data,
   };
+}
+
+export async function listMusicPlaylistSongs(
+  playlistId: string,
+  filters: Pick<MusicListFilters, "page" | "page_size"> = {},
+): Promise<MusicListResponse<MusicSongListItem>> {
+  const response = await apiGetEnvelope<MusicPlaylistSongEnvelope[], PaginationMeta>(
+    `${musicV1Endpoints.playlistSongs(playlistId)}${queryString(filters)}`,
+  );
+  return listResponseWithPaginationFallback(
+    {
+      ...response,
+      data: (response.data || [])
+        .map((item) => item.song)
+        .filter((song): song is MusicSongListItem => Boolean(song))
+        .map((song) => ({
+          ...song,
+          cover_url: song.cover_url || song.album?.cover_url || "",
+        })),
+    },
+    filters,
+  );
 }
 
 export async function addMusicPlaylistSong(
@@ -706,10 +720,15 @@ export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
   );
 }
 
-export async function listRecommendedArtists(mode: MusicRecommendationMode) {
-  return apiGetEnvelope<MusicRecommendationItem[]>(
-    musicV1Endpoints.recommendArtists(mode),
-  );
+export async function listRecommendedArtists(
+  mode: MusicRecommendationMode,
+  filters: Pick<MusicListFilters, "page" | "page_size"> = {},
+): Promise<MusicListResponse<MusicRecommendationItem>> {
+  const params = queryString(filters)
+  const response = await apiGetEnvelope<MusicRecommendationItem[], PaginationMeta>(
+    `${musicV1Endpoints.recommendArtists(mode)}${params ? `&${params.slice(1)}` : ""}`,
+  )
+  return listResponseWithPaginationFallback(response, filters)
 }
 
 export async function listMusicArtists(

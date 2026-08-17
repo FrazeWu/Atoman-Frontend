@@ -12,6 +12,7 @@ import PInput from "@/components/ui/PInput.vue";
 import PSegmentedControl from "@/components/ui/PSegmentedControl.vue";
 import PEmpty from "@/components/ui/PEmpty.vue";
 import PButton from "@/components/ui/PButton.vue";
+import PaginationBar from "@/components/ui/PaginationBar.vue";
 
 const query = ref("");
 const selectedType = ref<"" | MusicSearchKind>("");
@@ -35,38 +36,36 @@ let timer: number | undefined;
 let requestID = 0;
 let controller: AbortController | undefined;
 const page = ref(1);
-const hasMore = ref(false);
-
-function mergeByID<T extends { id: string }>(current: T[], incoming: T[]): T[] {
-  const byID = new Map(current.map((item) => [String(item.id), item]));
-  incoming.forEach((item) => byID.set(String(item.id), item));
-  return [...byID.values()];
-}
+const searchMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false });
 
 function trackSearchClick(entityType: MusicSearchKind, entityId: string) {
   if (!authStore?.isAuthenticated) return;
   void recordMusicSearchInteraction({ query: query.value.trim(), entity_type: entityType, entity_id: entityId }).catch(() => undefined);
 }
 
-async function runSearch(reset: boolean) {
+async function runSearch(targetPage = 1) {
   const keyword = query.value.trim();
   if (!keyword) return;
   controller?.abort();
   controller = new AbortController();
   const current = ++requestID;
-  const nextPage = reset ? 1 : page.value + 1;
   loading.value = true;
   error.value = "";
   try {
-    const result = await searchMusic(keyword, { type: selectedType.value || undefined, page: nextPage, page_size: 20, signal: controller.signal });
+    const result = await searchMusic(keyword, { type: selectedType.value || undefined, page: targetPage, page_size: 20, signal: controller.signal });
     if (current !== requestID) return;
-    songs.value = reset ? result.songs : mergeByID(songs.value, result.songs);
-    albums.value = reset ? result.albums : mergeByID(albums.value, result.albums);
-    artists.value = reset ? result.artists : mergeByID(artists.value, result.artists);
-    playlists.value = reset ? result.playlists : mergeByID(playlists.value, result.playlists);
-    page.value = nextPage;
+    songs.value = result.songs;
+    albums.value = result.albums;
+    artists.value = result.artists;
+    playlists.value = result.playlists;
+    page.value = targetPage;
     const kinds: MusicSearchKind[] = selectedType.value ? [selectedType.value] : ["song", "album", "artist", "playlist"];
-    hasMore.value = kinds.some((kind) => result.meta.has_more[kind]);
+    searchMeta.value = {
+      page: targetPage,
+      page_size: 20,
+      total: Math.max(...kinds.map((kind) => result.meta.totals[kind] ?? 0)),
+      has_more: kinds.some((kind) => result.meta.has_more[kind]),
+    };
   } catch (caught) {
     if (caught instanceof DOMException && caught.name === "AbortError") return;
     if (current === requestID) error.value = "搜索失败，请重试";
@@ -103,10 +102,10 @@ watch([query, selectedType], ([value]) => {
     artists.value = [];
     playlists.value = [];
     error.value = "";
-    hasMore.value = false;
+    searchMeta.value = { page: 1, page_size: 20, total: 0, has_more: false };
     return;
   }
-  timer = window.setTimeout(() => void runSearch(true), 250);
+  timer = window.setTimeout(() => void runSearch(1), 250);
 });
 
 onBeforeUnmount(() => {
@@ -256,15 +255,12 @@ onBeforeUnmount(() => {
         </button>
       </section>
 
-      <PButton
-        v-if="hasMore"
-        variant="secondary"
-        class="load-more"
+      <PaginationBar
+        v-if="searchMeta.total > 0"
+        :meta="searchMeta"
         :loading="loading"
-        @click="runSearch(false)"
-      >
-        {{ loading ? '加载中' : '加载更多' }}
-      </PButton>
+        @change="runSearch"
+      />
     </div>
   </main>
 </template>

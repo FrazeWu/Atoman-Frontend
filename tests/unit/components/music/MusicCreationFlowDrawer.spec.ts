@@ -705,7 +705,7 @@ describe("MusicCreationFlowDrawer", () => {
 			}),
 		);
 		const submittedInput = commitMusicAlbumImportMock.mock.calls[0]?.[1];
-			expect(submittedInput).toHaveProperty("artist_sources", [
+		expect(submittedInput).toHaveProperty("artist_sources", [
 			{ type: "url", url: "https://example.test/seeded-artist" },
 		]);
 		expect(submittedInput).toHaveProperty("album_sources", [
@@ -736,19 +736,23 @@ describe("MusicCreationFlowDrawer", () => {
 				albumDetails: {
 					...baseFlow.draft.albumDetails,
 					title: "Kendrick Album",
-					contributors: [{
-						...baseFlow.draft.albumDetails.contributors[0],
-						artistId: "artist-kendrick",
-						name: "Kendrick Lamar",
-						source: "https://example.test/kendrick",
-						locked: false,
-					}],
+					contributors: [
+						{
+							...baseFlow.draft.albumDetails.contributors[0],
+							artistId: "artist-kendrick",
+							name: "Kendrick Lamar",
+							source: "https://example.test/kendrick",
+							locked: false,
+						},
+					],
 				},
 			},
 		});
 
 		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await wrapper
+			.get('[data-testid="music-creation-finish-button"]')
+			.trigger("click");
 		await flushPromises();
 
 		expect(commitMusicAlbumImportMock).toHaveBeenCalledWith(
@@ -1168,10 +1172,12 @@ describe("MusicCreationFlowDrawer", () => {
 				albumDetails: {
 					...createFlowState().draft.albumDetails,
 					title: "Graduation",
-					contributors: [{
-						...createFlowState().draft.albumDetails.contributors[0],
-						artistId: "artist-existing",
-					}],
+					contributors: [
+						{
+							...createFlowState().draft.albumDetails.contributors[0],
+							artistId: "artist-existing",
+						},
+					],
 					releaseDateParts: {
 						year: "2007",
 						month: "",

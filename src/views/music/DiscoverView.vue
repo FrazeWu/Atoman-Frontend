@@ -7,6 +7,7 @@ import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import {
   createAlbumBookmark,
   createArtistBookmark,
@@ -76,16 +77,19 @@ const discoverAlbums = ref<MusicAlbumListItem[]>([])
 const discoverArtists = ref<MusicRecommendationItem[]>([])
 const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
 const discoverLoadingMore = ref(false)
-const discoverPage = ref(1)
+const discoverMeta = computed(() => ({
+  page: musicHome.value?.discover_meta.page ?? 1,
+  page_size: musicHome.value?.discover_meta.page_size ?? 24,
+  total: musicHome.value?.discover_meta.total ?? 0,
+  has_more: musicHome.value?.discover_meta.has_more ?? false,
+}))
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
 const albumItems = ref<MusicAlbumListItem[]>([])
-const albumPage = ref(1)
-const albumHasMore = ref(false)
-const albumLoadingMore = ref(false)
+const albumMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
 let activeSearchRequestId = 0
 let albumSearchTimer: ReturnType<typeof setTimeout> | null = null
 let bookmarkRequestId = 0
@@ -250,7 +254,6 @@ async function fetchMusicHome() {
     const response = await getMusicHome({ page: 1, page_size: 24 })
     if (!request.isCurrent()) return
     musicHome.value = response
-    discoverPage.value = 1
     applyDiscoverFeed(musicHome.value.discover ?? [])
     void fetchAlbumBookmarks(currentBookmarkRequestId)
     void fetchArtistBookmarks(currentBookmarkRequestId)
@@ -357,31 +360,30 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], append = false) {
   discoverPlaylists.value = append ? mergeDiscoverByID(discoverPlaylists.value, playlists) : playlists
 }
 
-async function loadMoreDiscover() {
-  if (!musicHome.value?.discover_meta.has_more || discoverLoadingMore.value) return
+async function loadDiscoverPage(targetPage: number) {
+  if (!musicHome.value || discoverLoadingMore.value) return
   const homeGeneration = musicHomeRequests.currentGeneration()
   discoverLoadingMore.value = true
   try {
-    const nextPage = discoverPage.value + 1
-    const next = await getMusicHome({ page: nextPage, page_size: musicHome.value.discover_meta.page_size || 24 })
+    const response = await getMusicHome({
+      page: targetPage,
+      page_size: musicHome.value.discover_meta.page_size || 24,
+    })
     if (!musicHomeRequests.isCurrent(homeGeneration)) return
-    applyDiscoverFeed(next.discover ?? [], true)
-    discoverPage.value = nextPage
-    musicHome.value.discover_meta = next.discover_meta
-    musicHome.value.discover_has_more = next.discover_has_more
+    musicHome.value = response
+    applyDiscoverFeed(response.discover ?? [])
   } catch (error) {
     if (!musicHomeRequests.isCurrent(homeGeneration)) return
-    reportError(error, 'Failed to load more music discovery:')
-    errorMessage.value = '更多内容加载失败'
+    reportError(error, 'Failed to load music discovery page:')
+    errorMessage.value = '发现内容加载失败'
   } finally {
     if (musicHomeRequests.isCurrent(homeGeneration)) discoverLoadingMore.value = false
   }
 }
 
-async function fetchAlbumIndex(nextPage = 1, append = false) {
+async function fetchAlbumIndex(nextPage = 1) {
   const request = albumIndexRequests.beginRequest()
-  if (append) albumLoadingMore.value = true
-  else loading.value = true
+  loading.value = true
   errorMessage.value = ''
   try {
     const query = searchQuery.value.trim()
@@ -392,23 +394,17 @@ async function fetchAlbumIndex(nextPage = 1, append = false) {
       sort: 'hot',
     })
     if (!request.isCurrent()) return
-    albumItems.value = append
-      ? mergeDiscoverByID(albumItems.value, response.data ?? [])
-      : response.data ?? []
-    albumPage.value = nextPage
-    albumHasMore.value = response.meta.has_more
+    albumItems.value = response.data ?? []
+    albumMeta.value = response.meta
     const currentBookmarkRequestId = ++bookmarkRequestId
     void fetchAlbumBookmarks(currentBookmarkRequestId)
   } catch (error) {
     if (!request.isCurrent()) return
     reportError(error, 'Failed to fetch music albums:')
     errorMessage.value = '专辑列表加载失败'
-    if (!append) albumItems.value = []
+    albumItems.value = []
   } finally {
-    if (request.isCurrent()) {
-      loading.value = false
-      albumLoadingMore.value = false
-    }
+    if (request.isCurrent()) loading.value = false
   }
 }
 
@@ -715,7 +711,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
         />
       </div>
-      <PButton v-if="albumHasMore" variant="secondary" :disabled="albumLoadingMore" class="discover-load-more" @click="fetchAlbumIndex(albumPage + 1, true)">{{ albumLoadingMore ? '加载中' : '加载更多' }}</PButton>
+      <PaginationBar
+        v-if="albumMeta.total > 0"
+        :meta="albumMeta"
+        :loading="loading"
+        @change="fetchAlbumIndex"
+      />
     </section>
 
     <div v-else class="discover-sections" aria-label="发现分区">
@@ -776,7 +777,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           </div>
         </div>
       </section>
-      <PButton v-if="musicHome?.discover_meta.has_more" variant="secondary" :disabled="discoverLoadingMore" class="discover-load-more" @click="loadMoreDiscover">{{ discoverLoadingMore ? '加载中' : '加载更多' }}</PButton>
+      <PaginationBar
+        v-if="discoverMeta.total > 0"
+        :meta="discoverMeta"
+        :loading="discoverLoadingMore"
+        @change="loadDiscoverPage"
+      />
     </div>
     </PContentProgress>
   </section>

@@ -16,6 +16,7 @@ import {
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
 import PConfirm from "@/components/ui/PConfirm.vue";
+import PaginationBar from "@/components/ui/PaginationBar.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
@@ -33,7 +34,7 @@ const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
 const pendingConfirmation = ref<{ kind: 'record' | 'file' | 'cancel'; importId: string; fileId?: string } | null>(null)
 const page = ref(1)
-const hasMore = ref(false)
+const importsMeta = ref({ page: 1, page_size: 50, total: 0, has_more: false })
 const activeGroup = ref<MusicImportGroup>('in_progress')
 const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
@@ -120,30 +121,16 @@ function formatDate(isoString?: string): string {
   }
 }
 
-async function loadImports(silent = false, nextPage = 1) {
+async function loadImports(silent = false, nextPage = page.value) {
   const request = importRequests.beginRequest()
   if (!silent) loading.value = true;
   errorMessage.value = "";
   try {
-    const refreshLoadedPages = silent && nextPage === 1
-    const pagesToLoad = refreshLoadedPages
-      ? Array.from({ length: Math.max(1, page.value) }, (_, index) => index + 1)
-      : [nextPage]
-    const responses = await Promise.all(
-      pagesToLoad.map((targetPage) => listMusicAlbumImports({ page: targetPage, page_size: 50 })),
-    )
+    const response = await listMusicAlbumImports({ page: nextPage, page_size: 50 })
     if (!request.isCurrent()) return
-    if (refreshLoadedPages) {
-      imports.value = uniqueMusicAlbumImports(responses.flatMap((response) => response.data))
-      hasMore.value = responses[responses.length - 1].meta.has_more
-    } else {
-      const response = responses[0]
-      imports.value = nextPage === 1
-        ? response.data
-        : uniqueMusicAlbumImports([...imports.value, ...response.data])
-      page.value = nextPage
-      hasMore.value = response.meta.has_more
-    }
+    imports.value = uniqueMusicAlbumImports(response.data)
+    page.value = nextPage
+    importsMeta.value = response.meta
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
     if (selected) {
       activeGroup.value = musicImportGroupForStatus(selected.status)
@@ -543,7 +530,11 @@ async function continueImport() {
         </div>
       </section>
     </div>
-    <PButton v-if="hasMore" variant="secondary" @click="loadImports(false, page + 1)">加载更多</PButton>
+    <PaginationBar
+      :meta="importsMeta"
+      :loading="loading"
+      @change="(nextPage) => loadImports(false, nextPage)"
+    />
   </div>
   <PConfirm
     :show="pendingConfirmation !== null"

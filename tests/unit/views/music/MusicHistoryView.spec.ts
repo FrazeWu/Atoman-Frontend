@@ -70,7 +70,7 @@ describe('Music HistoryView.vue', () => {
     mocks.toggleFavoriteSong.mockReset()
   })
 
-  it('appends the next history page and hides load more at the end', async () => {
+  it('replaces history rows when moving to the next page', async () => {
     mocks.listMusicListeningHistory
       .mockResolvedValueOnce({
         data: [historyItem('1', 'First Song')],
@@ -90,13 +90,13 @@ describe('Music HistoryView.vue', () => {
     expect(wrapper.text()).toContain('First Song')
     expect(wrapper.text()).toContain('播放 3 次')
 
-    await wrapper.get('[data-testid="history-load-more"]').trigger('click')
+    await wrapper.get('button[title="下一页"]').trigger('click')
     await flushPromises()
 
     expect(mocks.listMusicListeningHistory).toHaveBeenLastCalledWith({ page: 2, page_size: 20 })
-    expect(wrapper.findAll('[data-testid="history-row"]')).toHaveLength(2)
+    expect(wrapper.findAll('[data-testid="history-row"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Second Song')
-    expect(wrapper.find('[data-testid="history-load-more"]').exists()).toBe(false)
+    expect(wrapper.get('button[title="下一页"]').attributes('disabled')).toBeDefined()
   })
 
   it('plays from the selected song using the loaded history as the queue', async () => {

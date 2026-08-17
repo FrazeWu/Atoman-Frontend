@@ -9,6 +9,7 @@ import {
   deleteArtistBookmark,
   listArtistBookmarks,
   listMusicArtists,
+  listMusicLibrary,
   listRecommendedArtists,
   type MusicArtistBookmark,
   type MusicArtistListItem,
@@ -21,13 +22,11 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useAuthStore } from '@/stores/auth'
-import {
-  filterArtistRecommendationsByBookmarks,
-  MUSIC_RECOMMENDATION_MODE_OPTIONS,
-} from '@/utils/musicRecommendations'
+import { MUSIC_RECOMMENDATION_MODE_OPTIONS } from '@/utils/musicRecommendations'
 
 type ArtistFilterTab = 'all' | 'subscribed'
 const activeTab = ref<ArtistFilterTab>('all')
@@ -64,6 +63,7 @@ let activeRequestId = 0
 let searchTimer: ReturnType<typeof setTimeout> | undefined
 
 const starredArtistIds = ref<string[]>([])
+const artistMeta = ref({ page: 1, page_size: 48, total: 0, has_more: false })
 const { applyRouteSelection } = useMusicRouteSelection({
   openAlbum,
   closeAlbum,
@@ -130,7 +130,7 @@ async function handleToggleBookmark(artistId: string) {
   }
 }
 
-async function fetchArtists() {
+async function fetchArtists(page = 1) {
   const requestId = ++activeRequestId
   loading.value = true
   errorMessage.value = ''
@@ -139,14 +139,11 @@ async function fetchArtists() {
     const query = searchQuery.value.trim()
     if (query) {
       searchLoading.value = true
-      const response = await listMusicArtists({
-        q: query,
-        page: 1,
-        page_size: 48,
-      })
+      const response = await listMusicArtists({ q: query, page: 1, page_size: 48 })
       if (requestId !== activeRequestId) return
       artists.value = response.data
       searchResults.value = response.data
+      artistMeta.value = response.meta ?? { page: 1, page_size: 48, total: response.data.length, has_more: false }
       return
     }
 
@@ -154,23 +151,31 @@ async function fetchArtists() {
     await fetchBookmarks()
     if (requestId !== activeRequestId) return
 
+    if (activeTab.value === 'subscribed') {
+      const response = await listMusicLibrary<MusicArtistBookmark>('artist', { page, page_size: 48 })
+      if (requestId !== activeRequestId) return
+      artists.value = response.data
+        .map((bookmark) => bookmark.artist)
+        .filter((artist): artist is MusicArtistListItem => Boolean(artist))
+      artistMeta.value = response.meta ?? { page, page_size: 48, total: response.data.length, has_more: false }
+      return
+    }
+
     const [recommendedResponse, ownedDraftResponse] = await Promise.all([
-      listRecommendedArtists(recommendationMode.value),
-      authStore.isAuthenticated
+      listRecommendedArtists(recommendationMode.value, { page, page_size: 48 }),
+      authStore.isAuthenticated && page === 1
         ? listMusicArtists({ page: 1, page_size: 48 })
         : Promise.resolve(null),
     ])
     if (requestId !== activeRequestId) return
-
-    let filteredRecommendations = recommendedResponse.data
-    if (activeTab.value === 'subscribed') {
-      filteredRecommendations = filterArtistRecommendationsByBookmarks(
-        recommendedResponse.data,
-        starredArtistIds.value.map((artistId) => ({ artist_id: artistId })) as MusicArtistBookmark[],
-      )
+    artistMeta.value = recommendedResponse.meta ?? {
+      page,
+      page_size: 48,
+      total: recommendedResponse.data.length,
+      has_more: false,
     }
 
-    const recommendedArtists = filteredRecommendations.map((item) => ({
+    const recommendedArtists = recommendedResponse.data.map((item) => ({
       id: item.id,
       name: item.title,
       display_name: item.title,
@@ -181,9 +186,11 @@ async function fetchArtists() {
       entry_status: 'open' as const,
     }))
     const ownedDrafts = (ownedDraftResponse?.data ?? []).filter((artist) => artist.entry_status === 'draft')
-    artists.value = [...ownedDrafts, ...recommendedArtists.filter((artist) =>
-      !ownedDrafts.some((draft) => String(draft.id) === String(artist.id)),
-    )]
+    artists.value = page === 1
+      ? [...ownedDrafts, ...recommendedArtists.filter((artist) =>
+          !ownedDrafts.some((draft) => String(draft.id) === String(artist.id)),
+        )]
+      : recommendedArtists
   } catch (e) {
     if (requestId !== activeRequestId) return
     reportError(e, 'Failed to fetch music artists:')
@@ -198,15 +205,15 @@ async function fetchArtists() {
 }
 
 watch(activeTab, () => {
-  fetchArtists()
+  void fetchArtists(1)
 })
 
 watch(recommendationMode, () => {
-  fetchArtists()
+  void fetchArtists(1)
 })
 
 watch(() => authStore.isAuthenticated, () => {
-  fetchArtists()
+  void fetchArtists(1)
 })
 
 function openArtistCard(artistId: string) {
@@ -221,7 +228,7 @@ function startArtistCreation() {
 }
 
 onMounted(() => {
-  void fetchArtists()
+  void fetchArtists(1)
   applyRouteSelection(route.query)
 })
 
@@ -229,7 +236,7 @@ watch(searchQuery, () => {
   activeRequestId += 1
   clearTimeout(searchTimer)
   searchLoading.value = Boolean(searchQuery.value.trim())
-  searchTimer = setTimeout(() => void fetchArtists(), 250)
+  searchTimer = setTimeout(() => void fetchArtists(1), 250)
 })
 
 onUnmounted(() => clearTimeout(searchTimer))
@@ -370,9 +377,15 @@ function handleSearchBlur() {
             @toggle-bookmark="handleToggleBookmark(String(artist.id))"
           />
         </div>
+
+        <PaginationBar
+          v-if="!hasSearchQuery && artistMeta.total > 0"
+          :meta="artistMeta"
+          :loading="loading"
+          @change="fetchArtists"
+        />
       </PContentProgress>
     </div>
-
   </div>
 </template>
 

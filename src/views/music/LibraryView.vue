@@ -21,6 +21,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -41,6 +42,7 @@ const loadingMore = ref(false)
 const error = ref('')
 const page = ref(1)
 const hasMore = ref(false)
+const libraryMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
 const songs = ref<MusicSongListItem[]>([])
 const albums = ref<MusicAlbumListItem[]>([])
 const artists = ref<MusicArtistListItem[]>([])
@@ -148,20 +150,23 @@ async function load(nextPage = 1) {
       const response = await listMusicLibrary<LibrarySongEnvelope>(requestedKind, { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.song).filter((song): song is MusicSongListItem => Boolean(song))
       if (!isCurrent()) return
-      songs.value = nextPage === 1 ? rows : [...songs.value, ...rows]
+      songs.value = rows
       hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
+      libraryMeta.value = response.meta
     } else if (requestedKind === 'album') {
       const response = await listMusicLibrary<MusicAlbumBookmark>('album', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.album).filter((album): album is MusicAlbumListItem => Boolean(album))
       if (!isCurrent()) return
-      albums.value = nextPage === 1 ? rows : [...albums.value, ...rows]
+      albums.value = rows
       hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
+      libraryMeta.value = response.meta
     } else if (requestedKind === 'artist') {
       const response = await listMusicLibrary<MusicArtistBookmark>('artist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.artist).filter((artist): artist is MusicArtistListItem => Boolean(artist))
       if (!isCurrent()) return
-      artists.value = nextPage === 1 ? rows : [...artists.value, ...rows]
+      artists.value = rows
       hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
+      libraryMeta.value = response.meta
     } else {
       const [response, ownedResponse] = await Promise.all([
         listMusicLibrary<MusicPlaylistBookmark>('playlist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 }),
@@ -177,8 +182,9 @@ async function load(nextPage = 1) {
         ? [favorite, ...rows]
         : rows
       if (!isCurrent()) return
-      playlists.value = nextPage === 1 ? pageRows : [...playlists.value, ...pageRows]
+      playlists.value = pageRows
       hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
+      libraryMeta.value = response.meta
     }
     page.value = nextPage
   } catch { if (isCurrent()) error.value = '收藏加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
@@ -315,7 +321,12 @@ onUnmounted(() => clearTimeout(queryTimer))
           @toggle-bookmark="removeLibraryItem('playlist', String(playlist.id))"
         />
       </div>
-      <PButton v-if="hasMore && !loading" variant="secondary" class="music-library__more" :loading="loadingMore" @click="load(page + 1)">{{ loadingMore ? '正在加载' : '加载更多' }}</PButton>
+      <PaginationBar
+        v-if="libraryMeta.total > 0"
+        :meta="libraryMeta"
+        :loading="loading || loadingMore"
+        @change="load"
+      />
     </template>
   </main>
 </template>

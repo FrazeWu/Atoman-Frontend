@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PlaylistEditSheet from '@/components/music/PlaylistEditSheet.vue'
 import { ApiErrorResponseError } from '@/api/client'
@@ -16,6 +17,7 @@ import {
   deletePlaylistBookmark,
   deleteMusicPlaylist,
   getMusicPlaylist,
+  listMusicPlaylistSongs,
   listPlaylistBookmarks,
   removeMusicPlaylistSong,
   reorderMusicPlaylistSongs,
@@ -62,6 +64,9 @@ const reordering = ref(false)
 const pendingSongOrders = new Map<string, MusicSongListItem[]>()
 const confirmedSongOrders = new Map<string, MusicSongListItem[]>()
 const playlistRequests = useRequestGeneration()
+const playlistSongRequests = useRequestGeneration()
+const playlistSongMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false })
+const playlistSongsLoading = ref(false)
 
 async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolean) {
   if (!authStore.isAuthenticated) {
@@ -84,13 +89,14 @@ async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolea
 }
 
 async function loadPlaylist(playlistId: string | null) {
-  const { generation: loadGeneration, isCurrent: isCurrentLoad } = playlistRequests.beginRequest()
+  const { isCurrent: isCurrentLoad } = playlistRequests.beginRequest()
   bookmarkLoading.value = false
 
   if (!playlistId) {
     if (isCurrentLoad()) {
       playlist.value = null
       editing.value = false
+      playlistSongMeta.value = { page: 1, page_size: 20, total: 0, has_more: false }
     }
     return
   }
@@ -103,6 +109,12 @@ async function loadPlaylist(playlistId: string | null) {
     if (!isCurrentLoad()) return
 
     playlist.value = detail
+    playlistSongMeta.value = {
+      page: 1,
+      page_size: 20,
+      total: detail.song_count ?? detail.songs.length,
+      has_more: (detail.song_count ?? detail.songs.length) > detail.songs.length,
+    }
     confirmedSongOrders.set(detail.id, [...detail.songs])
     if (authStore.isAuthenticated) {
       await loadBookmarkState(String(detail.id), isCurrentLoad)
@@ -121,6 +133,25 @@ async function loadPlaylist(playlistId: string | null) {
   }
 }
 
+async function loadPlaylistSongs(targetPage: number) {
+  const currentPlaylistId = playlistId.value
+  if (!currentPlaylistId || playlistSongsLoading.value) return
+  const { isCurrent } = playlistSongRequests.beginRequest()
+  playlistSongsLoading.value = true
+  try {
+    const response = await listMusicPlaylistSongs(currentPlaylistId, { page: targetPage, page_size: 20 })
+    if (!isCurrent() || playlistId.value !== currentPlaylistId || !playlist.value) return
+    playlist.value = { ...playlist.value, songs: response.data }
+    playlistSongMeta.value = response.meta
+  } catch (error) {
+    if (isCurrent()) {
+      reportError(error, 'Failed to load playlist songs:')
+      errorMessage.value = '歌单曲目加载失败'
+    }
+  } finally {
+    if (isCurrent()) playlistSongsLoading.value = false
+  }
+}
 function syncEditForm(detail: MusicPlaylistDetail | null) {
   editName.value = detail?.name || ''
   editDescription.value = detail?.description || ''
@@ -258,7 +289,7 @@ async function removePlaylistSong(songId: string) {
 
 async function persistSongOrder(nextSongs: MusicSongListItem[]) {
   const current = playlist.value
-  if (!current || !requireLogin() || !canManagePlaylistSongs.value) return
+  if (!current || !requireLogin() || !canReorderPlaylistSongs.value) return
 
   playlist.value = { ...current, songs: nextSongs }
   pendingSongOrders.set(current.id, nextSongs)
@@ -360,6 +391,10 @@ const canEditPlaylist = computed(() => (
   && playlist.value?.kind !== 'later'
 ))
 const canManagePlaylistSongs = computed(() => ownsPlaylist.value)
+const canReorderPlaylistSongs = computed(() => (
+  canManagePlaylistSongs.value
+  && playlistSongMeta.value.total <= playlistSongMeta.value.page_size
+))
 const canBookmarkPlaylist = computed(() => {
   if (!playlist.value?.is_public) return false
   if (!authStore.isAuthenticated) return true
@@ -528,7 +563,7 @@ watch(playlist, syncEditForm, { immediate: true })
               @click="playTrack(track)"
               aria-label="播放单曲"
             >
-              <span class="row-num">{{ index + 1 }}</span>
+              <span class="row-num">{{ (playlistSongMeta.page - 1) * playlistSongMeta.page_size + index + 1 }}</span>
               <Play class="row-play-icon" :size="14" fill="currentColor" />
             </button>
           </div>
@@ -555,11 +590,11 @@ watch(playlist, syncEditForm, { immediate: true })
 
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
-            <span v-if="canManagePlaylistSongs" class="track-order-actions">
+            <span v-if="canReorderPlaylistSongs" class="track-order-actions">
               <button
                 type="button"
                 class="track-order-btn"
-                :disabled="index === 0 || reordering"
+                :disabled="index === 0 || reordering || !canReorderPlaylistSongs"
                 :data-testid="`playlist-move-song-up-${track.id}`"
                 aria-label="上移歌曲"
                 @click="movePlaylistSong(index, -1)"
@@ -569,7 +604,7 @@ watch(playlist, syncEditForm, { immediate: true })
               <button
                 type="button"
                 class="track-order-btn"
-                :disabled="index === playlist.songs.length - 1 || reordering"
+                :disabled="index === playlist.songs.length - 1 || reordering || !canReorderPlaylistSongs"
                 :data-testid="`playlist-move-song-down-${track.id}`"
                 aria-label="下移歌曲"
                 @click="movePlaylistSong(index, 1)"
@@ -589,6 +624,12 @@ watch(playlist, syncEditForm, { immediate: true })
             </button>
           </div>
         </div>
+        <PaginationBar
+          v-if="playlistSongMeta.total > playlistSongMeta.page_size"
+          :meta="playlistSongMeta"
+          :loading="playlistSongsLoading"
+          @change="loadPlaylistSongs"
+        />
       </div>
     </div>
   </PSheet>

@@ -138,7 +138,7 @@ describe('Music ArtistsView.vue', () => {
     })
     await flushPromises()
 
-    expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('hot')
+    expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('hot', { page: 1, page_size: 48 })
     expect(mocks.listArtistBookmarks).not.toHaveBeenCalled()
     expect(mocks.getMusicArtist).not.toHaveBeenCalled()
     expect(wrapper.find('h1').text()).toContain('艺术家')

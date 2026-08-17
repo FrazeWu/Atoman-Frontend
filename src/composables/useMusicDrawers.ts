@@ -70,7 +70,9 @@ function musicSourceValue(sources?: MusicSource[]) {
 	const source = sources?.find(
 		(item) => item.url?.trim() || item.title?.trim(),
 	);
-	return normalizeMusicImportSource(source?.url?.trim() || source?.title?.trim());
+	return normalizeMusicImportSource(
+		source?.url?.trim() || source?.title?.trim(),
+	);
 }
 
 function restoreCommittedAlbumImportDraft(
@@ -108,9 +110,9 @@ function restoreCommittedAlbumImportDraft(
 		artist.birth_date ?? "",
 	);
 	flow.draft.artist.bio = artist.bio ?? "";
-	flow.draft.artist.source = normalizeMusicImportSource(
-		request.artist_source,
-	) || normalizeMusicImportSource(flow.draft.artist.source);
+	flow.draft.artist.source =
+		normalizeMusicImportSource(request.artist_source) ||
+		normalizeMusicImportSource(flow.draft.artist.source);
 	if (primary) {
 		flow.draft.artist.activeStartDateParts = parsePartialDateParts(
 			primary.active_start_date ?? "",
@@ -137,7 +139,8 @@ function restoreCommittedAlbumImportDraft(
 		request.album.release_year || "",
 	);
 	flow.draft.albumDetails.source =
-		normalizeMusicImportSource(request.album_source) || normalizeMusicImportSource(flow.draft.albumDetails.source);
+		normalizeMusicImportSource(request.album_source) ||
+		normalizeMusicImportSource(flow.draft.albumDetails.source);
 	if (request.artists?.length) {
 		flow.draft.albumDetails.contributors = request.artists.map(
 			(contributor, index) => ({
@@ -527,8 +530,13 @@ export function useMusicDrawers() {
 		if (snapshot.derivedCover)
 			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
 		if (snapshot.metadataSourceUrl)
-			flow.draft.albumDetails.source = normalizeMusicImportSource(snapshot.metadataSourceUrl);
-		if (snapshot.artistSource) flow.draft.artist.source = normalizeMusicImportSource(snapshot.artistSource);
+			flow.draft.albumDetails.source = normalizeMusicImportSource(
+				snapshot.metadataSourceUrl,
+			);
+		if (snapshot.artistSource)
+			flow.draft.artist.source = normalizeMusicImportSource(
+				snapshot.artistSource,
+			);
 		if (snapshot.albumSource) {
 			const albumSource = normalizeMusicImportSource(snapshot.albumSource);
 			if (albumSource) flow.draft.albumDetails.source = albumSource;

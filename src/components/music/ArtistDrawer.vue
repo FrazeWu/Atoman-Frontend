@@ -6,6 +6,7 @@ import { UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
@@ -53,7 +54,7 @@ const albumRequests = useRequestGeneration()
 const contributors = ref<MusicContributor[]>([])
 const contributorTotal = ref(0)
 const albumPage = ref(1)
-const albumsHaveMore = ref(false)
+const albumMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
 const albumsLoadingMore = ref(false)
 const albumPageSize = 24
 
@@ -141,7 +142,7 @@ async function loadArtist(targetArtistId: string | null) {
       artist.value = null
       albums.value = []
       albumPage.value = 1
-      albumsHaveMore.value = false
+      albumMeta.value = { page: 1, page_size: albumPageSize, total: 0, has_more: false }
       isBookmarked.value = false
       contributors.value = []
       contributorTotal.value = 0
@@ -178,7 +179,7 @@ async function loadArtist(targetArtistId: string | null) {
     artist.value = artistResponse
     albums.value = albumsResponse.data
     albumPage.value = 1
-    albumsHaveMore.value = Boolean(albumsResponse.meta.has_more)
+    albumMeta.value = albumsResponse.meta
     try {
       const contributorResponse = await listArtistContributors(targetArtistId)
       if (!isCurrentLoad()) return
@@ -216,27 +217,24 @@ async function loadArtist(targetArtistId: string | null) {
   }
 }
 
-async function loadMoreAlbums() {
+async function loadAlbumsPage(targetPage: number) {
   const currentArtistId = artistId.value
-  if (!currentArtistId || albumsLoadingMore.value || !albumsHaveMore.value) return
-  const nextPage = albumPage.value + 1
+  if (!currentArtistId || albumsLoadingMore.value) return
   const { isCurrent } = albumRequests.beginRequest()
   albumsLoadingMore.value = true
   try {
     const response = await listMusicAlbums({
       artist_id: currentArtistId,
       release_type: releaseType.value,
-      page: nextPage,
+      page: targetPage,
       page_size: albumPageSize,
     })
     if (!isCurrent() || artistId.value !== currentArtistId) return
-    const byId = new Map(albums.value.map((album) => [album.id, album]))
-    response.data.forEach((album) => byId.set(album.id, album))
-    albums.value = Array.from(byId.values())
-    albumPage.value = nextPage
-    albumsHaveMore.value = Boolean(response.meta.has_more)
+    albums.value = response.data
+    albumPage.value = targetPage
+    albumMeta.value = response.meta
   } catch (error) {
-    if (isCurrent()) reportError(error, 'Failed to load more artist albums:')
+    if (isCurrent()) reportError(error, 'Failed to load artist albums:')
   } finally {
     if (isCurrent()) albumsLoadingMore.value = false
   }
@@ -317,7 +315,7 @@ watch(
 watch(releaseType, () => {
   albums.value = []
   albumPage.value = 1
-  albumsHaveMore.value = false
+  albumMeta.value = { page: 1, page_size: albumPageSize, total: 0, has_more: false }
   void loadArtist(artistId.value)
 })
 </script>
@@ -499,14 +497,12 @@ watch(releaseType, () => {
           </div>
         </div>
       </div>
-      <PButton
-        v-if="albumsHaveMore && !loading"
-        variant="secondary"
+      <PaginationBar
+        v-if="albumMeta.total > 0 && !loading"
+        :meta="albumMeta"
         :loading="albumsLoadingMore"
-        @click="loadMoreAlbums"
-      >
-        {{ albumsLoadingMore ? '正在加载' : '加载更多' }}
-      </PButton>
+        @change="loadAlbumsPage"
+      />
       <MusicContributorsBlock
         :contributors="contributors"
         :total="contributorTotal"

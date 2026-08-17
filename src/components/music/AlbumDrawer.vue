@@ -6,6 +6,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
@@ -65,6 +66,8 @@ const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const expandedTrackId = ref<string | null>(null)
+const trackPage = ref(1)
+const trackPageSize = 20
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const {
   favoriteSongIds,
@@ -157,7 +160,17 @@ const releaseYear = computed(() => {
   if (!year || year === '0001' || year === '0000' || year === '----') return ''
   return year
 })
-const tracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
+const allTracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
+const tracks = computed(() => allTracks.value.slice(
+  (trackPage.value - 1) * trackPageSize,
+  trackPage.value * trackPageSize,
+))
+const trackMeta = computed(() => ({
+  page: trackPage.value,
+  page_size: trackPageSize,
+  total: allTracks.value.length,
+  has_more: trackPage.value * trackPageSize < allTracks.value.length,
+}))
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
 const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
@@ -340,6 +353,7 @@ async function loadAlbum(albumId: string | null) {
   const { isCurrent: isCurrentLoad } = albumRequests.beginRequest()
   bookmarkLoading.value = false
   album.value = null
+  trackPage.value = 1
   isBookmarked.value = false
   contributors.value = []
   contributorTotal.value = 0
@@ -576,7 +590,7 @@ watch(
               <template v-if="!resolvedAlbumArtists.length">Unknown Artist</template>
             </span>
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
-            <span v-if="tracks.length" class="track-count">{{ tracks.length }} 首</span>
+            <span v-if="allTracks.length" class="track-count">{{ allTracks.length }} 首</span>
           </div>
           <p class="summary">{{ album?.description || '暂无专辑简介。' }}</p>
           <div class="album-actions">
@@ -636,7 +650,7 @@ watch(
             @click="playTrack(track)"
             :aria-label="`${isTrackPlaying(track) ? '暂停' : '播放'} ${track.title}`"
           >
-            <span class="track-num">{{ index + 1 }}</span>
+            <span class="track-num">{{ (trackPage - 1) * trackPageSize + index + 1 }}</span>
             <Pause v-if="isTrackPlaying(track)" class="track-play-icon" :size="14" fill="currentColor" />
             <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
@@ -740,9 +754,15 @@ watch(
             </div>
           </div>
         </div>
+        <PaginationBar
+          v-if="trackMeta.total > trackMeta.page_size"
+          :meta="trackMeta"
+          :loading="loading"
+          @change="(page) => { trackPage = page; expandedTrackId = null }"
+        />
       </div>
 
-		  <section v-if="albumCreatorCredits.length" class="content-section album-artists-section">
+	  <section v-if="albumCreatorCredits.length" class="content-section album-artists-section">
 		<div class="section-title">创作者</div>
         <div class="artist-cards-grid">
           <button

@@ -837,12 +837,16 @@ watch(playlist, syncEditForm, { immediate: true })
   grid-template-columns: 2.5rem minmax(0, 1.5fr) minmax(0, 1fr) 7.5rem;
   align-items: center;
   padding: 0.6rem 0.75rem;
+  border-left: 4px solid transparent;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 5%, transparent);
-  transition: background-color 0.15s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.track-row:hover {
+.track-row:hover,
+.track-row:focus-within {
   background-color: var(--a-color-surface-muted);
+  border-left-color: var(--a-color-text);
+  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
 }
 
 .track-row:last-child {

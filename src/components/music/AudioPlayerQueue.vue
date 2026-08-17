@@ -104,8 +104,9 @@ function dropQueueItem(index: number) {
 .q-remove { font-size: 1.15rem; line-height: 1; padding: 0.25rem; }
 .queue-content { flex: 1; overflow-y: auto; }
 .queue-list { display: flex; flex-direction: column; gap: 4px; }
-.queue-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.15s, color 0.15s, border-color 0.15s; border-bottom: 1px solid var(--a-color-border-soft); }
-.queue-item:hover { background: var(--a-color-surface-muted); }
+.queue-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s; border-left: 4px solid transparent; border-bottom: 1px solid var(--a-color-border-soft); }
+.queue-item:hover:not(.active),
+.queue-item:focus-within:not(.active) { background: var(--a-color-surface-muted); border-left-color: var(--a-color-text); box-shadow: inset 0 0 0 1px var(--a-color-border-soft); }
 .queue-item.active { background: var(--a-color-text); color: var(--a-color-bg); }
 .q-idx { font-family: var(--a-font-sans); font-size: 0.7rem; opacity: 0.5; }
 .q-drag,

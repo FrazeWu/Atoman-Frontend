@@ -309,9 +309,11 @@ onBeforeUnmount(() => {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.song-result:hover {
+.song-result:hover,
+.song-result:focus-within {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
 }
 
 .song-result button,
@@ -405,9 +407,10 @@ onBeforeUnmount(() => {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.entity:hover {
+.entity:hover,
+.entity:focus-visible {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
   background: var(--a-color-surface-muted);
 }
 

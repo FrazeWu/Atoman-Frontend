@@ -333,7 +333,7 @@ watch(
   align-items: center;
   gap: 0.65rem;
   width: 100%;
-  border: 0;
+  border: 1px solid transparent;
   border-left: 3px solid transparent;
   padding: 0.45rem 0.5rem;
   background: transparent;
@@ -341,22 +341,29 @@ watch(
   text-align: left;
   cursor: pointer;
   border-radius: 4px;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.music-sidebar-playlists__item:hover {
+.music-sidebar-playlists__item:hover,
+.music-sidebar-playlists__item:focus-visible {
   background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+  box-shadow: inset 3px 0 0 var(--a-color-text);
+  outline: none;
 }
 
-.music-sidebar-playlists__item:hover .music-sidebar-playlists__name {
+.music-sidebar-playlists__item:hover .music-sidebar-playlists__name,
+.music-sidebar-playlists__item:focus-visible .music-sidebar-playlists__name {
   color: var(--a-color-fg);
 }
 
 .music-sidebar-playlists__item.is-active {
-  background-color: var(--a-color-surface);
+  background-color: var(--a-color-surface-muted);
   font-weight: 800;
+  border-color: transparent;
   border-left-color: var(--a-color-text);
+  box-shadow: inset 3px 0 0 var(--a-color-text);
   padding-left: 0.5rem;
 }
 
@@ -405,7 +412,7 @@ watch(
 .collapsed-icon-btn {
   width: 2.5rem;
   height: 2.5rem;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
   display: flex;
@@ -413,17 +420,22 @@ watch(
   justify-content: center;
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.collapsed-icon-btn:hover {
+.collapsed-icon-btn:hover,
+.collapsed-icon-btn:focus-visible {
   background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+  box-shadow: inset 3px 0 0 var(--a-color-text);
+  outline: none;
 }
 
 .collapsed-icon-btn.is-active {
-  background-color: var(--a-color-surface);
+  background-color: var(--a-color-surface-muted);
   color: var(--a-color-text);
-  border-left: none;
+  border-color: transparent;
+  box-shadow: inset 3px 0 0 var(--a-color-text);
 }
 </style>

@@ -297,8 +297,19 @@ watch(
   gap: 1rem;
   align-items: center;
   min-height: 72px;
-  padding: 0.65rem 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  margin-inline: -0.65rem;
+  padding: 0.65rem;
+  border: 1px solid transparent;
+  border-bottom-color: var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.history-row:hover,
+.history-row:focus-within {
+  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-border-soft);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
 }
 
 .history-song {

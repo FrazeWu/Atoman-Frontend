@@ -64,9 +64,12 @@ const { sidebarCollapsed } = useSidebar()
   border-bottom: 1px solid transparent;
 }
 
-:deep(.p-sidebar-item:hover) {
-  background: var(--a-color-surface);
+:deep(.p-sidebar-item:hover),
+:deep(.p-sidebar-item.is-focused) {
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+  box-shadow: inset 3px 0 0 var(--a-color-text);
 }
 
 :deep(.p-sidebar-item:focus-visible) {
@@ -75,9 +78,10 @@ const { sidebarCollapsed } = useSidebar()
 }
 
 :deep(.p-sidebar-item.active) {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border-left-color: var(--a-color-fg);
+  border-left-color: var(--a-color-text);
+  box-shadow: inset 3px 0 0 var(--a-color-text);
   font-weight: 650;
 }
 

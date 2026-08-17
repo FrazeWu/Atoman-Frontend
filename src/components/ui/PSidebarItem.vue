@@ -66,9 +66,10 @@ defineEmits(['click'])
 }
 .p-sidebar-item:hover,
 .p-sidebar-item.is-focused {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
+  box-shadow: inset 3px 0 0 var(--a-color-text);
 }
 .p-sidebar-item:focus-visible {
   outline: 2px solid var(--a-color-text);
@@ -80,7 +81,7 @@ defineEmits(['click'])
   color: var(--a-color-fg);
   border-color: transparent;
   border-radius: 2px;
-  box-shadow: none;
+  box-shadow: inset 3px 0 0 var(--a-color-text);
   font-weight: 650;
 }
 </style>

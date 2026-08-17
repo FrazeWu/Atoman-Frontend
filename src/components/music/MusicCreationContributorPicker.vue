@@ -30,12 +30,19 @@ function inferArtistKind(artist: MusicArtistListItem): MusicArtistKind {
   return artist.members?.trim() ? 'group' : 'person'
 }
 
+function sourceValue(sources?: MusicArtistListItem['sources']) {
+  const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
+  return source?.url?.trim() || source?.title?.trim() || ''
+}
+
 function toContributor(artist: MusicArtistListItem): MusicCreationAlbumContributorDraft {
   return {
     id: `contributor-${artist.id}`,
     artistId: artist.id,
     name: artist.display_name || artist.name,
     avatarUrl: artist.image_url ?? '',
+    ...(sourceValue(artist.sources) ? { source: sourceValue(artist.sources) } : {}),
+    ...(artist.entry_status ? { entryStatus: artist.entry_status } : {}),
     kind: inferArtistKind(artist),
     locked: false,
     roles: [],

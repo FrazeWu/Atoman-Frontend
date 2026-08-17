@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+// @ts-expect-error Vue SFC modules are resolved by the Vitest Vite plugin.
 import ImportsView from '@/views/music/ImportsView.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -22,17 +23,17 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({ resumeMusicCreationFlow: mocks.resumeMusicCreationFlow }),
 }))
 
-function importRecord(status: 'pending_upload' | 'uploaded' | 'extracting' | 'ready', importId = 'import-1') {
+function importRecord(status: 'pending_upload' | 'uploaded' | 'extracting' | 'ready' | 'needs_attention', importId = 'import-1') {
   return {
     importId, targetAlbumId: '', albumTitle: 'Album', status,
     archiveName: 'album.zip', uploadProgress: 100, uploadSpeed: 0,
     coverUrl: '', coverKey: '', derivedAlbumTitle: 'Album', derivedCover: '',
     derivedTracks: [], lastSyncedAt: '', errorMessage: '', inputMode: 'archive',
-    stage: 'processing', progress: {}, files: [], errors: [],
+    stage: status === 'needs_attention' ? 'ready' : 'processing', progress: {}, files: [], errors: [],
   }
 }
 
-function response(status: 'pending_upload' | 'uploaded' | 'extracting' | 'ready') {
+function response(status: 'pending_upload' | 'uploaded' | 'extracting' | 'ready' | 'needs_attention') {
   return { data: [importRecord(status)], meta: { page: 1, page_size: 50, total: 1, has_more: false } }
 }
 
@@ -126,10 +127,30 @@ describe('Music ImportsView', () => {
     await vi.advanceTimersByTimeAsync(3_000)
     await flushPromises()
 
-    expect((wrapper.vm as unknown as { imports: Array<{ importId: string }> }).imports.map((item) => item.importId))
-      .toEqual(['import-1', 'import-2'])
+    expect(wrapper.findAll('.music-imports-view__item')).toHaveLength(2)
     expect(mocks.listMusicAlbumImports).toHaveBeenNthCalledWith(3, { page: 1, page_size: 50 })
     expect(mocks.listMusicAlbumImports).toHaveBeenNthCalledWith(4, { page: 2, page_size: 50 })
+    wrapper.unmount()
+  })
+
+  it('opens the details action instead of file retry for a ready validation failure', async () => {
+    const readyError = {
+      ...importRecord('needs_attention', 'import-ready-error'),
+      errorMessage: 'at least one source is required',
+    }
+    mocks.listMusicAlbumImports.mockResolvedValue({
+      data: [readyError],
+      meta: { page: 1, page_size: 50, total: 1, has_more: false },
+    })
+    const wrapper = mount(ImportsView)
+    await flushPromises()
+    const attentionTab = wrapper.findAll('button').find((button) => button.text().startsWith('需处理'))
+    await attentionTab!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('媒体处理已完成，请补充艺术家和专辑资料后提交。')
+    expect(wrapper.text()).toContain('请填写艺术家和专辑资料来源')
+    expect(wrapper.text()).not.toContain('一键重试失败文件')
     wrapper.unmount()
   })
 })

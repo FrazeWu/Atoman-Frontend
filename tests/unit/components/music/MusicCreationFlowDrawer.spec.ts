@@ -57,7 +57,7 @@ const createFlowState = (
 			members: [],
 			birthDate: "",
 			bio: "",
-			source: "",
+			source: "https://example.test/seeded-artist",
 		},
 		albumImport: {
 			importId: "import-1",
@@ -685,7 +685,7 @@ describe("MusicCreationFlowDrawer", () => {
 						members: [],
 					}),
 				],
-				artist_source: "",
+				artist_source: "https://example.test/seeded-artist",
 				album: expect.objectContaining({
 					title: "Imported Album",
 					description: "",
@@ -697,11 +697,60 @@ describe("MusicCreationFlowDrawer", () => {
 			}),
 		);
 		const submittedInput = commitMusicAlbumImportMock.mock.calls[0]?.[1];
-		expect(submittedInput).not.toHaveProperty("artist_sources");
+			expect(submittedInput).toHaveProperty("artist_sources", [
+			{ type: "url", url: "https://example.test/seeded-artist" },
+		]);
 		expect(submittedInput).toHaveProperty("album_sources", [
 			{ type: "text", title: "资料来源" },
 		]);
 		expect(drawerMocks.state.value.creationFlow).toBeNull();
+	});
+
+	it("uses the selected primary contributor source when the artist is chosen on album details", async () => {
+		commitMusicAlbumImportMock.mockResolvedValue({
+			importId: "import-1",
+			status: "committed",
+		});
+		const baseFlow = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "preview",
+			draft: {
+				...baseFlow.draft,
+				artist: {
+					...baseFlow.draft.artist,
+					id: "artist-seeded",
+				},
+				albumImport: {
+					...baseFlow.draft.albumImport,
+					importId: "import-1",
+					status: "ready",
+				},
+				albumDetails: {
+					...baseFlow.draft.albumDetails,
+					title: "Kendrick Album",
+					contributors: [{
+						...baseFlow.draft.albumDetails.contributors[0],
+						artistId: "artist-kendrick",
+						name: "Kendrick Lamar",
+						source: "https://example.test/kendrick",
+						locked: false,
+					}],
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+
+		expect(commitMusicAlbumImportMock).toHaveBeenCalledWith(
+			"import-1",
+			expect.objectContaining({
+				artist_id: "artist-kendrick",
+				artist_source: "https://example.test/kendrick",
+				artist_sources: [{ type: "url", url: "https://example.test/kendrick" }],
+			}),
+		);
 	});
 
 	it("提交新艺术家时按后端协议发送阶段名字段", async () => {
@@ -1111,6 +1160,10 @@ describe("MusicCreationFlowDrawer", () => {
 				albumDetails: {
 					...createFlowState().draft.albumDetails,
 					title: "Graduation",
+					contributors: [{
+						...createFlowState().draft.albumDetails.contributors[0],
+						artistId: "artist-existing",
+					}],
 					releaseDateParts: {
 						year: "2007",
 						month: "",
@@ -1157,7 +1210,7 @@ describe("MusicCreationFlowDrawer", () => {
 						members: [],
 					}),
 				],
-				artist_source: "",
+				artist_source: "https://example.test/seeded-artist",
 				album: expect.objectContaining({
 					title: "Graduation",
 					description: "",
@@ -1234,7 +1287,7 @@ describe("MusicCreationFlowDrawer", () => {
 						members: [],
 					}),
 				],
-				artist_source: "",
+				artist_source: "https://example.test/seeded-artist",
 				album: expect.objectContaining({
 					title: "Late Registration",
 					description: "",

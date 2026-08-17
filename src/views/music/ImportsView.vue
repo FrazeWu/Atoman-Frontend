@@ -24,6 +24,7 @@ import {
   uniqueMusicAlbumImports,
   type MusicImportGroup,
 } from '@/utils/musicImportDisplay'
+import { normalizeMusicImportSource } from '@/utils/musicImportSource'
 
 const imports = ref<MusicAlbumImport[]>([]);
 const loading = ref(false);
@@ -97,6 +98,12 @@ const emptyTrackStateText = computed(() =>
     ? '正在识别曲目'
     : '未识别到曲目',
 )
+
+function importErrorText(value: string, status?: string, stage?: string) {
+  if (value === 'at least one source is required') return '请填写艺术家和专辑资料来源'
+  if (['failed', 'needs_attention'].includes(status || '') && stage !== 'ready') return '处理失败，请重试'
+  return value
+}
 
 function formatDate(isoString?: string): string {
   if (!isoString) return ''
@@ -252,13 +259,9 @@ async function retryAllFailedFiles() {
   if (!selectedImport.value) return
   const importId = selectedImport.value.importId
   const files = [...selectedImport.value.files]
-  const failedFiles = files.filter(f => f.processingStatus === 'failed')
-  const attentionFile = selectedImport.value.status === 'needs_attention'
-    ? files.find(f => f.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(f.role))
-    : null
-  const retryFiles = failedFiles.length ? failedFiles : attentionFile ? [attentionFile] : []
+  const retryFiles = files.filter(f => f.processingStatus === 'failed')
   if (!retryFiles.length) {
-    errorMessage.value = '请替换上传失败的文件后再试'
+    errorMessage.value = '没有可重试的失败文件'
     return
   }
 
@@ -315,7 +318,7 @@ async function repairImport() {
 
 function sourceValue(sources?: MusicSource[]) {
   const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
-  return source?.url?.trim() || source?.title?.trim() || ''
+  return normalizeMusicImportSource(source?.url?.trim() || source?.title?.trim())
 }
 
 async function resumeImport(snapshot: MusicAlbumImport) {
@@ -333,10 +336,21 @@ async function resumeImport(snapshot: MusicAlbumImport) {
     return
   }
   const album = await getMusicAlbum(snapshot.targetAlbumId)
-  resumeMusicCreationFlow(snapshot, (album.artists ?? []).map((artist) => ({
-    id: String(artist.id),
-    name: artist.name,
-  })), artistSource)
+  const albumArtists = await Promise.all((album.artists ?? []).map(async (artist) => {
+    let source = ''
+    try {
+      source = sourceValue((await getMusicArtist(String(artist.id))).sources)
+    } catch {
+      // The artist can still be selected without a prefilled source.
+    }
+    return {
+      id: String(artist.id),
+      name: artist.name,
+      source,
+    }
+  }))
+  const resolvedArtistSource = artistSource || albumArtists.find((artist) => artist.id === snapshot.artistId)?.source || ''
+  resumeMusicCreationFlow(snapshot, albumArtists, resolvedArtistSource)
 }
 
 async function continueImport() {
@@ -428,15 +442,18 @@ async function continueImport() {
           <p v-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
             上传尚未完成，可继续填写资料。
           </p>
+          <p v-else-if="selectedImport.status === 'needs_attention' && selectedImport.stage === 'ready'" class="status-hint">
+            媒体处理已完成，请补充艺术家和专辑资料后提交。
+          </p>
           <p v-else-if="selectedImport.status === 'needs_attention'" class="status-hint">
-            请重新选择未完成的源文件恢复上传。
+            请替换或重试未完成的源文件恢复处理。
           </p>
 
           <p
             v-if="selectedImport.errorMessage"
             class="music-imports-view__error"
           >
-            {{ selectedImport.errorMessage }}
+            {{ importErrorText(selectedImport.errorMessage, selectedImport.status, selectedImport.stage) }}
           </p>
 
           <div class="music-imports-view__actions">
@@ -449,7 +466,7 @@ async function continueImport() {
             </PButton>
 
             <PButton
-              v-if="selectedImport.status === 'needs_attention' || selectedImport.files.some(f => f.processingStatus === 'failed')"
+              v-if="selectedImport.files.some(f => f.processingStatus === 'failed')"
               variant="secondary"
               :loading="actionBusy === 'retry-all'"
               @click="retryAllFailedFiles"

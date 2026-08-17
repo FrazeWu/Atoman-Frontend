@@ -14,6 +14,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
+import { normalizeMusicImportSource } from '@/utils/musicImportSource'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -288,9 +289,10 @@ const forwardBlockReason = computed(() => {
 	if (!flow.draft.albumDetails.contributors?.length) {
 		return '请添加创作者'
 	}
-	if (!hasValidAlbumContributors(flow.draft.albumDetails.contributors)) {
-		return '请设置创作者身份并保留主艺术家'
+  if (!hasValidAlbumContributors(flow.draft.albumDetails.contributors)) {
+    return '请设置创作者身份并保留主艺术家'
   }
+  if (!hasRequiredArtistSource(flow)) return '请填写艺术家资料来源'
   return ''
 })
 const canGoForward = computed(() => {
@@ -329,6 +331,7 @@ const canGoForward = computed(() => {
 			&& flow.draft.tracks.every((track) => !!track.title.trim())
 			&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
+			&& hasRequiredArtistSource(flow)
 	}
 	return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
 		&& !!flow.draft.albumDetails.title.trim()
@@ -339,6 +342,7 @@ const canGoForward = computed(() => {
 		&& flow.draft.tracks.every((track) => !!track.title.trim())
 		&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
 		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
+		&& hasRequiredArtistSource(flow)
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<musicApi.MusicAlbumImport>
@@ -372,7 +376,7 @@ function buildNormalizedContributors(flow: NonNullable<typeof creationFlow.value
     flow.draft.artist.id
     && contributors.length === 1
     && !contributors[0].locked
-    && contributors[0].artistId !== flow.draft.artist.id
+    && !contributors[0].artistId
   ) {
     contributors[0] = {
       ...contributors[0],
@@ -381,6 +385,31 @@ function buildNormalizedContributors(flow: NonNullable<typeof creationFlow.value
     }
   }
   return contributors
+}
+
+function primaryContributor(flow: NonNullable<typeof creationFlow.value>) {
+  return buildNormalizedContributors(flow).find((contributor) =>
+    contributor.roles.some((role) => role.role === 'primary'),
+  )
+}
+
+function resolvedArtistSource(flow: NonNullable<typeof creationFlow.value>) {
+  const primary = primaryContributor(flow)
+  const primarySource = normalizeMusicImportSource(primary?.source)
+  const primaryDiffersFromFlowArtist = !!primary?.artistId && primary.artistId !== flow.draft.artist.id
+  return primaryDiffersFromFlowArtist
+    ? primarySource
+    : normalizeMusicImportSource(flow.draft.artist.source) || primarySource
+}
+
+function requiresArtistSource(flow: NonNullable<typeof creationFlow.value>) {
+  const primary = primaryContributor(flow)
+  return !primary?.artistId || !primary.entryStatus || primary.entryStatus === 'draft'
+}
+
+function hasRequiredArtistSource(flow: NonNullable<typeof creationFlow.value>) {
+  if (flow.mode === 'edit' && flow.entity === 'album') return true
+  return !requiresArtistSource(flow) || !!resolvedArtistSource(flow)
 }
 
 function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): NonNullable<musicApi.MusicAlbumImportCommitInput['artists']> {
@@ -456,11 +485,12 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const releaseDate = formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
   const derivedReleaseYear = deriveYearFromParts(flow.draft.albumDetails.releaseDateParts)
   const artists = buildContributorPayload(flow)
-  const artistSource = flow.draft.artist.source.trim()
-  const albumSource = flow.draft.albumDetails.source.trim()
+  const primaryArtistID = primaryContributor(flow)?.artistId || flow.draft.artist.id
+  const artistSource = resolvedArtistSource(flow)
+  const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
 
   return {
-		...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
+		...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
@@ -521,6 +551,7 @@ function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) 
     && tracks.every((track) => !!track.title.trim())
     && tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
     && hasValidAlbumContributors(details.contributors ?? [])
+    && hasRequiredArtistSource(flow)
   const status = flow.draft.albumImport.status
   const canSubmitAtCurrentStep = ['pending_upload', 'uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(status)
     || (status === 'ready' && flow.step === 'albumDetails')

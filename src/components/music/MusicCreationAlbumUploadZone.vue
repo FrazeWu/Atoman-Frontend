@@ -75,6 +75,9 @@ const processingErrorMessage = computed(() => {
   if (errorMessage.value) return errorMessage.value
   const message = albumImportDraft.value?.errorMessage?.trim() || ''
   if (message === 'at least one source is required') return '请填写艺术家和专辑资料来源'
+  if (['failed', 'needs_attention'].includes(albumImportDraft.value?.status || '') && albumImportDraft.value?.stage !== 'ready') {
+    return '处理失败，请重试'
+  }
   return message
 })
 
@@ -186,6 +189,14 @@ function formatUploadSpeed(bytesPerSecond: number) {
         </a>
       </template>
       <template v-else>上传后将自动匹配专辑信息、曲序和歌词。</template>
+    </p>
+    <p
+      v-if="['ready', 'needs_attention'].includes(albumImportDraft.status)"
+      class="metadata-artist-hint"
+      data-testid="album-import-artist-metadata-hint"
+      role="status"
+    >
+      音频标签中没有艺术家信息时不会自动识别，请在下方手动选择艺术家。
     </p>
     <p v-if="albumImportDraft.missingArtists?.length" class="metadata-artist-hint" role="status">
       该发行版还包括 {{ albumImportDraft.missingArtists.join('、') }}，请在专辑信息中补充艺术家。

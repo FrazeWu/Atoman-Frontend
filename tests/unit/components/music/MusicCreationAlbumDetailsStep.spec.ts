@@ -531,6 +531,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 					id: "artist-1",
 					name: "Bladee",
 					image_url: "https://img.example/bladee.png",
+					sources: [{ type: "url", url: "https://example.test/bladee" }],
 					entry_status: "open",
 				},
 				{
@@ -572,6 +573,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 				artistId: "artist-1",
 				name: "Bladee",
 				avatarUrl: "https://img.example/bladee.png",
+				source: "https://example.test/bladee",
 				kind: "person",
 				locked: false,
 			}),

@@ -4,6 +4,7 @@ import type {
 	MusicAlbumImportInputMode,
 	MusicAlbumImportStage,
 	MusicAlbumImportStatus,
+	MusicEntryStatus,
 } from "@/api/musicV1";
 import type { MusicAlbumArtistRole } from "@/api/musicV1";
 
@@ -141,6 +142,8 @@ export interface MusicCreationAlbumContributorDraft {
 	artistId: string | null;
 	name: string;
 	avatarUrl: string;
+	source?: string;
+	entryStatus?: MusicEntryStatus;
 	kind: MusicArtistKind;
 	locked: boolean;
 	roles: Array<{

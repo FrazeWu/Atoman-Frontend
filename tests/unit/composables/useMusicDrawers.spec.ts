@@ -157,11 +157,16 @@ describe("useMusicDrawers music creation flow", () => {
 		expect(drawers.isMainShifted.value).toBe(false);
 		expect(drawers.isArtistShifted.value).toBe(false);
 
-		drawers.openMusicCreationFlow({ artistId: "artist-7" });
+		drawers.openMusicCreationFlow({
+			artistId: "artist-7",
+			artistSource: "https://example.test/artist-7",
+		});
 
 		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
 		expect(drawers.state.value.creationFlow?.draft.artist.id).toBe("artist-7");
-		expect(drawers.state.value.creationFlow?.draft.artist.kind).toBe("person");
+		expect(drawers.state.value.creationFlow?.draft.artist.source).toBe(
+			"https://example.test/artist-7",
+		);
 		expect(drawers.state.value.creationFlow?.draft.artist.members).toEqual([]);
 		expect(
 			drawers.state.value.creationFlow?.draft.artist.birthDateParts,

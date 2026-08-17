@@ -275,10 +275,12 @@ function editArtist() {
 
 function createAlbum() {
   if (!requireLogin()) return
+  const artistSource = artist.value?.sources?.find((source) => source.url?.trim() || source.title?.trim())
   openMusicCreationFlow({
     artistId: artistId.value,
     artistName: artist.value?.name || '',
     artistLegalName: artist.value?.legal_name || '',
+    artistSource: artistSource?.url?.trim() || artistSource?.title?.trim() || '',
     startStep: 'albumDetails',
   })
 }

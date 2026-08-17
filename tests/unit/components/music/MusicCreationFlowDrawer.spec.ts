@@ -696,7 +696,11 @@ describe("MusicCreationFlowDrawer", () => {
 				album_source: "资料来源",
 			}),
 		);
-		expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1);
+		const submittedInput = commitMusicAlbumImportMock.mock.calls[0]?.[1];
+		expect(submittedInput).not.toHaveProperty("artist_sources");
+		expect(submittedInput).toHaveProperty("album_sources", [
+			{ type: "text", title: "资料来源" },
+		]);
 		expect(drawerMocks.state.value.creationFlow).toBeNull();
 	});
 

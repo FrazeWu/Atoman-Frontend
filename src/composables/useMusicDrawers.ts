@@ -2,6 +2,7 @@ import { ref, computed, watch } from "vue";
 import type {
 	MusicAlbumImport,
 	MusicAlbumImportCommitInput,
+	MusicSource,
 } from "@/api/musicV1";
 import type {
 	MusicCreationDraft,
@@ -61,6 +62,11 @@ function createSeededContributors(seed?: MusicCreationFlowSeed) {
 			roles: [primaryAlbumRole(`role-${seed.artistId}-primary`)],
 		},
 	];
+}
+
+function musicSourceValue(sources?: MusicSource[]) {
+	const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
+	return source?.url?.trim() || source?.title?.trim() || ""
 }
 
 function restoreCommittedAlbumImportDraft(
@@ -207,7 +213,7 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
 			activeEndDateParts: createEmptyDateParts(),
 			birthDate: "",
 			bio: "",
-			source: "",
+			source: seed?.artistSource?.trim() ?? "",
 		},
 		albumImport: {
 			importId: null,
@@ -464,11 +470,17 @@ export function useMusicDrawers() {
 			imageUrl?: string;
 			kind?: "person" | "group";
 		}> = [],
+		artistSource = "",
 	) => {
-		const artistId = snapshot.artistId?.trim() || contributors[0]?.id || "";
+		const resolvedArtistSource =
+			artistSource.trim()
+			|| snapshot.artistSource?.trim()
+			|| snapshot.commitRequest?.artist_source?.trim()
+			|| musicSourceValue(snapshot.commitRequest?.artist_sources)
 		openMusicCreationFlow({
-			artistId: artistId || undefined,
+			artistId: snapshot.artistId?.trim() || contributors[0]?.id || undefined,
 			artistName: contributors[0]?.name ?? "",
+			artistSource: resolvedArtistSource,
 			startStep: "albumDetails",
 		});
 		const flow = state.value.creationFlow;
@@ -513,7 +525,8 @@ export function useMusicDrawers() {
 		if (snapshot.albumSource)
 			flow.draft.albumDetails.source = snapshot.albumSource;
 		if (snapshot.commitRequest) {
-			restoreCommittedAlbumImportDraft(flow, snapshot.commitRequest, artistId);
+			restoreCommittedAlbumImportDraft(flow, snapshot.commitRequest, flow.draft.artist.id || "");
+			if (resolvedArtistSource) flow.draft.artist.source = resolvedArtistSource;
 		}
 		if (contributors.length > 0 && !snapshot.commitRequest) {
 			flow.draft.albumDetails.contributors = contributors.map((artist) => ({

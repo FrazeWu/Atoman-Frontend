@@ -456,6 +456,8 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const releaseDate = formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
   const derivedReleaseYear = deriveYearFromParts(flow.draft.albumDetails.releaseDateParts)
   const artists = buildContributorPayload(flow)
+  const artistSource = flow.draft.artist.source.trim()
+  const albumSource = flow.draft.albumDetails.source.trim()
 
   return {
 		...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
@@ -477,8 +479,8 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       birth_place: flow.draft.artist.birthPlace.trim(),
     },
     artists,
-    artist_source: flow.draft.artist.source.trim(),
-    artist_sources: [buildSource(flow.draft.artist.source)],
+    artist_source: artistSource,
+    ...(artistSource ? { artist_sources: [buildSource(artistSource)] } : {}),
     album: {
       title: flow.draft.albumDetails.title.trim(),
       description: flow.draft.albumDetails.bio.trim(),
@@ -503,8 +505,8 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
         } : {}),
       })),
     },
-    album_source: flow.draft.albumDetails.source.trim(),
-    album_sources: [buildSource(flow.draft.albumDetails.source)],
+    album_source: albumSource,
+    ...(albumSource ? { album_sources: [buildSource(albumSource)] } : {}),
   }
 }
 

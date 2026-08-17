@@ -18,6 +18,7 @@ export interface MusicCreationFlowSeed {
   albumId?: string | null
   artistName?: string
   artistLegalName?: string
+  artistSource?: string
   startStep?: MusicCreationFlowStep
 }
 

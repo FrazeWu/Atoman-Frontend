@@ -5,11 +5,13 @@ import {
   deleteMusicAlbumImportRecord,
   deleteMusicAlbumImportFile,
   getMusicAlbum,
+  getMusicArtist,
   listMusicAlbumImports,
   repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
   retryMusicAlbumImportFile,
   type MusicAlbumImport,
+  type MusicSource,
 } from "@/api/musicV1";
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
@@ -311,16 +313,30 @@ async function repairImport() {
   }
 }
 
+function sourceValue(sources?: MusicSource[]) {
+  const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
+  return source?.url?.trim() || source?.title?.trim() || ''
+}
+
 async function resumeImport(snapshot: MusicAlbumImport) {
+  let artistSource = ''
+  if (snapshot.artistId?.trim()) {
+    try {
+      artistSource = sourceValue((await getMusicArtist(snapshot.artistId)).sources)
+    } catch {
+      // The import can still be resumed and the source can be entered manually.
+    }
+  }
+
   if (!snapshot.targetAlbumId) {
-    resumeMusicCreationFlow(snapshot)
+    resumeMusicCreationFlow(snapshot, [], artistSource)
     return
   }
   const album = await getMusicAlbum(snapshot.targetAlbumId)
   resumeMusicCreationFlow(snapshot, (album.artists ?? []).map((artist) => ({
     id: String(artist.id),
     name: artist.name,
-  })))
+  })), artistSource)
 }
 
 async function continueImport() {

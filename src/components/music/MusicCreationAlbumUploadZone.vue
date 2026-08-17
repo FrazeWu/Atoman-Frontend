@@ -68,12 +68,14 @@ const isBackendProcessing = computed(() => {
 })
 const processingRetryFile = computed(() => {
   const draft = albumImportDraft.value
-  if (!draft || !['failed', 'needs_attention'].includes(draft.status)) return null
+  if (!draft || !['failed', 'needs_attention'].includes(draft.status) || draft.stage === 'ready') return null
   return draft.files.find((file) => file.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(file.role)) ?? null
 })
 const processingErrorMessage = computed(() => {
   if (errorMessage.value) return errorMessage.value
-  return albumImportDraft.value?.errorMessage ? '处理失败，请重试' : ''
+  const message = albumImportDraft.value?.errorMessage?.trim() || ''
+  if (message === 'at least one source is required') return '请填写艺术家和专辑资料来源'
+  return message
 })
 
 const stageLabelMap: Record<string, string> = {

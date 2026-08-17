@@ -540,7 +540,15 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(
 			wrapper.get('[data-testid="music-creation-finish-button"]').text(),
 		).toBe("保存");
-		expect(drawerMocks.state.value.creationFlow?.draft.artist.source).toBe("");
+		expect(drawerMocks.state.value.creationFlow?.draft.artist.source).toBe(
+			"https://example.test/jean",
+		);
+		expect(drawerMocks.state.value.creationFlow?.draft.artist.nationality).toBe(
+			"US",
+		);
+		expect(
+			drawerMocks.state.value.creationFlow?.draft.artist.birthDateParts,
+		).toEqual({ year: "1976", month: "11", day: "26" });
 		if (!drawerMocks.state.value.creationFlow)
 			throw new Error("creation flow missing");
 		drawerMocks.state.value.creationFlow.draft.artist.source = "修正艺人资料";

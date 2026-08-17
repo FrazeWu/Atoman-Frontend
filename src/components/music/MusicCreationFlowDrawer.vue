@@ -82,6 +82,17 @@ function parseStageNames(raw: string | undefined, fallbackName: string) {
   }]
 }
 
+function formatStoredArtistDate(value?: string, precision?: string, fallbackYear?: number) {
+  const formatted = formatStoredPartialDate(value, precision)
+  if (formatted) return formatted
+  return fallbackYear && fallbackYear > 0 ? `${fallbackYear}/--/--` : ''
+}
+
+function firstArtistSourceValue(sources?: Array<{ url?: string; title?: string }>) {
+  const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
+  return source?.url?.trim() || source?.title?.trim() || ''
+}
+
 async function loadEditDraft() {
   const flow = creationFlow.value
   const targetId = flow?.targetId?.trim()
@@ -93,7 +104,7 @@ async function loadEditDraft() {
   flow.errorMessage = ''
   try {
     if (flow.entity === 'artist') {
-      const artist = await musicApi.getMusicArtist(targetId)
+      const artist = await musicApi.getMusicArtist(targetId, { force: true })
       const members = [...(artist.member_groups?.current ?? []), ...(artist.member_groups?.former ?? [])]
       flow.draft.artist = {
         id: artist.id,
@@ -112,12 +123,12 @@ async function loadEditDraft() {
         })),
         nationality: artist.nationality ?? '',
         birthPlace: artist.birth_place ?? '',
-        birthDateParts: parsePartialDateParts(formatStoredPartialDate(artist.birth_date, artist.birth_date_precision)),
+        birthDateParts: parsePartialDateParts(formatStoredArtistDate(artist.birth_date, artist.birth_date_precision, artist.birth_year)),
         activeStartDateParts: parsePartialDateParts(formatStoredPartialDate(artist.active_start_date, artist.active_start_date_precision)),
         activeEndDateParts: parsePartialDateParts(formatStoredPartialDate(artist.active_end_date, artist.active_end_date_precision)),
-        birthDate: formatStoredPartialDate(artist.birth_date, artist.birth_date_precision),
+        birthDate: formatStoredArtistDate(artist.birth_date, artist.birth_date_precision, artist.birth_year),
         bio: artist.bio ?? '',
-        source: '',
+        source: firstArtistSourceValue(artist.sources),
       }
       return
     }

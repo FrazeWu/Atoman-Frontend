@@ -1,12 +1,12 @@
 <template>
   <div class="p-avatar" :class="[`is-size-${size}`]" :style="avatarStyle">
-    <img v-if="avatarSrc" :src="avatarSrc" :alt="alt" class="avatar-img" />
+    <img v-if="avatarSrc && !imageFailed" :src="avatarSrc" :alt="alt" class="avatar-img" @error="imageFailed = true" />
     <span v-else class="avatar-fallback">{{ initials }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
@@ -26,6 +26,11 @@ const initials = computed(() => {
 })
 
 const avatarSrc = computed(() => props.src ? resolveMediaURL(props.src) : '')
+const imageFailed = ref(false)
+
+watch(avatarSrc, () => {
+  imageFailed.value = false
+})
 
 const avatarStyle = computed(() => ({
   filter: props.grayscale ? 'grayscale(100%)' : 'none'

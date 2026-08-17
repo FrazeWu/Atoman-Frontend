@@ -17,13 +17,13 @@
   >
     <!-- Visual / Cover / Avatar -->
     <template #visual>
-      <div v-if="coverUrl" class="blog-item-card__visual">
-        <img :src="coverUrl" :alt="displayTitle" class="blog-item-card__cover" loading="lazy" />
+      <div v-if="coverUrl && !coverImageFailed" class="blog-item-card__visual">
+        <img :src="coverUrl" :alt="displayTitle" class="blog-item-card__cover" loading="lazy" @error="coverImageFailed = true" />
       </div>
       <PAvatar
         v-else
         :src="avatarUrl"
-        :name="authorName || displayTitle"
+        :name="authorName || sourceTitle || displayTitle"
         size="sm"
       />
     </template>
@@ -94,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -146,6 +146,8 @@ const feedItem = computed<FeedItem | null>(() => {
   return (props.item.feed_item || props.item) as FeedItem
 })
 
+const coverImageFailed = ref(false)
+
 const displayTitle = computed(() => {
   if (postItem.value) return postItem.value.title
   if (feedItem.value) return feedItem.value.title
@@ -162,11 +164,17 @@ const displaySummary = computed(() => {
 const coverUrl = computed(() => {
   if (postItem.value?.cover_url) return resolveMediaURL(postItem.value.cover_url)
   if (feedItem.value?.image_url) return resolveMediaURL(feedItem.value.image_url)
+  if (feedItem.value?.feed_source?.cover_url) return resolveMediaURL(feedItem.value.feed_source.cover_url)
   return ''
+})
+
+watch(coverUrl, () => {
+  coverImageFailed.value = false
 })
 
 const avatarUrl = computed(() => {
   if (postItem.value?.user?.avatar_url) return resolveMediaURL(postItem.value.user.avatar_url)
+  if (feedItem.value?.feed_source?.cover_url) return resolveMediaURL(feedItem.value.feed_source.cover_url)
   return ''
 })
 

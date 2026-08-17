@@ -44,11 +44,15 @@
     </template>
     
     <template v-else-if="article && article.type === 'feed_item' && article.feed_item">
-      <img
-        v-if="article.feed_item.image_url"
-        :src="article.feed_item.image_url"
-        class="article-cover"
-      />
+      <div v-if="feedCoverUrl" class="article-cover" :class="{ 'article-cover--fallback': feedCoverFailed }">
+        <img
+          v-if="!feedCoverFailed"
+          :src="feedCoverUrl"
+          :alt="article.feed_item.title"
+          @error="feedCoverFailed = true"
+        />
+        <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
+      </div>
       <div class="article-meta">
         <span class="a-label a-muted">{{ article.feed_item.author || article.feed_item.feed_source?.title || 'RSS' }}</span>
         <span style="color:var(--a-color-muted-soft)">{{ formatDate(article.feed_item.published_at) }}</span>
@@ -109,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { FeedItem, Post, TimelineItem } from '@/types'
 import DOMPurify from 'dompurify'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -118,6 +122,7 @@ import CommentSection from '@/components/comment/CommentSection.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   show: boolean
@@ -129,6 +134,18 @@ const props = defineProps<{
 }>()
 
 const { renderMarkdown } = useMarkdownRenderer()
+const feedCoverFailed = ref(false)
+
+const feedCoverUrl = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  const rawURL = props.article.feed_item.image_url || props.article.feed_item.feed_source?.cover_url || ''
+  return rawURL ? resolveMediaURL(rawURL) : ''
+})
+
+watch(() => props.article?.feed_item?.id, () => {
+  feedCoverFailed.value = false
+})
+
 const renderedContent = computed(() => {
   if (props.article?.type === 'post' && props.article.post?.content) {
     return renderMarkdown(props.article.post.content)
@@ -237,10 +254,27 @@ const emitPlayPodcast = () => {
 .article-cover {
   width: 100%;
   height: 280px;
-  object-fit: cover;
   margin-bottom: 3rem;
   border: 1px solid var(--a-color-border-soft);
   filter: grayscale(100%);
+  overflow: hidden;
+}
+
+.article-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.article-cover--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--a-color-text-secondary);
+  background: var(--a-color-surface-muted);
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .article-meta {

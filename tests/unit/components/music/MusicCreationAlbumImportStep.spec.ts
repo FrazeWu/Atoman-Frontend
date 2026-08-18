@@ -301,12 +301,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 					files: [importId === "import-1" ? firstRecord : secondRecord],
 				}),
 		);
-		vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload").mockImplementation(
-			async (importId: string) => ({
-				partNumber: 1,
-				uploadUrl: `https://upload.test/${importId}`,
-			}),
-		);
+		vi.spyOn(
+			musicApi,
+			"createMusicAlbumImportFilePartUpload",
+		).mockImplementation(async (importId: string) => ({
+			partNumber: 1,
+			uploadUrl: `https://upload.test/${importId}`,
+		}));
 		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
 			firstRecord,
 		);
@@ -410,10 +411,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.waitFor(() => {
 			const draft = useMusicDrawers().state.value.creationFlow?.draft;
 			expect(draft?.albumDetails.title).toBe("Day Cycle");
-			expect(draft?.tracks.map((track: { title: string }) => track.title)).toEqual([
-				"Dawn",
-				"Dusk",
-			]);
+			expect(
+				draft?.tracks.map((track: { title: string }) => track.title),
+			).toEqual(["Dawn", "Dusk"]);
 		});
 		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledTimes(1);
 	});

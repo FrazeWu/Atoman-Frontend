@@ -76,17 +76,21 @@
       <!-- Center: Controls -->
       <div ref="playerControlsRef" class="player-controls-hub">
         <div class="ctrl-row">
-          <span class="skip-btn" data-hint="后退 5S (←)" @click="player.skip(-5)">-5S</span>
-          <span class="nav-btn" data-hint="上一首 (Alt+←)" @click="player.playPrevious()">上一首</span>
+          <button type="button" class="skip-btn" aria-label="后退 5 秒" title="后退 5 秒" data-hint="后退 5S (←)" @click="player.skip(-5)"><Rewind :size="17" aria-hidden="true" /></button>
+          <button type="button" class="nav-btn" aria-label="上一首" title="上一首" data-hint="上一首 (Alt+←)" @click="player.playPrevious()"><SkipBack :size="18" aria-hidden="true" /></button>
           <button
+            type="button"
             class="main-play-btn"
+            :aria-label="player.isPlaying ? '暂停' : '播放'"
+            :title="player.isPlaying ? '暂停' : '播放'"
             :data-hint="player.isPlaying ? '暂停 (Space)' : '播放 (Space)'"
             @click="player.togglePlay()"
           >
-            {{ player.isPlaying ? "暂停" : "播放" }}
+            <Pause v-if="player.isPlaying" :size="17" aria-hidden="true" />
+            <Play v-else :size="17" aria-hidden="true" />
           </button>
-          <span class="nav-btn" data-hint="下一首 (Alt+→)" @click="player.playNext()">下一首</span>
-          <span class="skip-btn" data-hint="前进 5S (→)" @click="player.skip(5)">+5S</span>
+          <button type="button" class="nav-btn" aria-label="下一首" title="下一首" data-hint="下一首 (Alt+→)" @click="player.playNext()"><SkipForward :size="18" aria-hidden="true" /></button>
+          <button type="button" class="skip-btn" aria-label="前进 5 秒" title="前进 5 秒" data-hint="前进 5S (→)" @click="player.skip(5)"><FastForward :size="17" aria-hidden="true" /></button>
 
           <button
             v-if="player.currentSong && !isPodcast"
@@ -189,7 +193,7 @@
           <span>{{ featureLabel }}</span>
         </button>
 
-        <div class="feature-toggle" data-hint="播放模式" @click="player.cyclePlaybackMode()">
+        <button type="button" class="feature-toggle" aria-label="切换播放模式" title="切换播放模式" data-hint="播放模式" @click="player.cyclePlaybackMode()">
           <div
             v-if="player.playbackMode === 'single'"
             class="repeat-one-wrapper"
@@ -201,7 +205,7 @@
             <Repeat v-if="player.playbackMode === 'loop'" :size="20" />
             <Shuffle v-else-if="player.playbackMode === 'random'" :size="20" />
           </span>
-        </div>
+        </button>
 
         <div class="volume-container">
           <div class="volume-control">
@@ -226,8 +230,11 @@
             </div>
           </div>
           <div class="vol-trigger" data-hint="静音 / 解除静音 (M)">
-            <span
+            <button
+              type="button"
               class="vol-icon"
+              :aria-label="player.volume > 0 ? '静音' : '解除静音'"
+              :title="player.volume > 0 ? '静音' : '解除静音'"
               style="display: flex; align-items: center"
               @click="player.setVolume(player.volume > 0 ? 0 : 0.5)"
             >
@@ -235,7 +242,7 @@
               <Volume1 v-else-if="player.volume > 0.2" :size="20" />
               <Volume v-else-if="player.volume > 0" :size="20" />
               <VolumeX v-else :size="20" />
-            </span>
+            </button>
           </div>
         </div>
 
@@ -317,6 +324,12 @@ import {
   Pin,
   PinOff,
   ChevronUp,
+  Rewind,
+  FastForward,
+  SkipBack,
+  SkipForward,
+  Play,
+  Pause,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
@@ -807,6 +820,13 @@ watch(
   font-size: 11px;
   font-weight: 500;
   opacity: 0.5;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition:
     opacity 0.2s,
@@ -868,7 +888,10 @@ watch(
   font-weight: 500;
   font-size: 11px;
   cursor: pointer;
-  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0;
   transition:
     transform 0.1s,
     background-color 0.15s;
@@ -923,6 +946,9 @@ watch(
   cursor: pointer;
   display: flex;
   align-items: center;
+  border: 0;
+  background: transparent;
+  padding: 4px;
   color: var(--a-color-muted);
   transition: color 0.2s;
 }
@@ -1025,6 +1051,9 @@ watch(
 }
 .vol-icon {
   cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 4px;
   color: var(--a-color-muted);
   transition: color 0.2s;
   flex-shrink: 0;

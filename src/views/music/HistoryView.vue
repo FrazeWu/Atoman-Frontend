@@ -26,7 +26,7 @@ const pageSize = 20
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { openAlbum, openArtist } = useMusicDrawers()
-const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const historyRequests = useRequestGeneration()
 const historyItems = ref<MusicListeningHistory[]>([])
 const currentPage = ref(0)
@@ -54,7 +54,7 @@ const playableSongs = computed<Song[]>(() => historyItems.value
     waveform_peaks: item.song.waveform_peaks,
     cover_url: item.song.cover_url || item.song.album?.cover_url || '',
     track_number: item.song.track_number,
-    status: (item.song.status as Song['status']) || 'approved',
+    status: (item.song.status as Song['status']) || 'open',
     artists: item.song.artists?.map((artist) => ({
       id: artist.id,
       name: artist.name,
@@ -76,6 +76,8 @@ async function loadPage(page: number) {
   errorMessage.value = ''
   try {
     const response = await listMusicListeningHistory({ page, page_size: pageSize })
+    if (!isCurrent()) return
+    await loadFavoriteSongs(response.data.map((item) => String(item.song.id)))
     if (!isCurrent()) return
     historyItems.value = response.data
     currentPage.value = page

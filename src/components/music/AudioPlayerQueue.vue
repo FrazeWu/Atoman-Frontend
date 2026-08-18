@@ -11,9 +11,9 @@
       <div v-if="player.queue.length" class="queue-list">
         <div
           v-for="(song, index) in player.queue"
-          :key="song.id"
+          :key="player.playbackItemKey(song)"
           class="queue-item"
-          :class="{ active: player.currentSong?.id === song.id }"
+          :class="{ active: player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(song) }"
           @dragover.prevent
           @drop="dropQueueItem(index)"
           @click="player.playQueuedSong(song)"
@@ -42,7 +42,7 @@
             </button>
           </span>
           <button
-            v-if="player.currentSong?.id !== song.id"
+            v-if="!player.currentSong || player.playbackItemKey(player.currentSong) !== player.playbackItemKey(song)"
             type="button"
             class="q-remove"
             :aria-label="`移除 ${song.title}`"

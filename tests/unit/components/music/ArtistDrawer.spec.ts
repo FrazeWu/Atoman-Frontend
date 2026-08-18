@@ -1,391 +1,467 @@
 // web/tests/unit/ArtistDrawer.spec.ts
-import { nextTick, ref } from 'vue'
-import { mount } from '@vue/test-utils'
-import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { ApiErrorResponseError } from '@/api/client'
-import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
+import { nextTick, ref } from "vue";
+import { mount } from "@vue/test-utils";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { ApiErrorResponseError } from "../../../../src/api/client";
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
+import ArtistDrawer from "../../../../src/components/music/ArtistDrawer.vue";
 
-vi.mock('@/components/ui/PSheet.vue', () => ({
-  default: {
-    template: '<div><slot name="header" /><slot /></div>',
-  },
-}))
+vi.mock("@/components/ui/PSheet.vue", () => ({
+	default: {
+		template: '<div><slot name="header" /><slot /></div>',
+	},
+}));
 
-const drawerState = ref({ artistId: '1', artistRefreshToken: 0 })
+const drawerState = ref({ artistId: "1", artistRefreshToken: 0 });
 const musicDrawerMocks = vi.hoisted(() => ({
-  openNestedAction: vi.fn(),
-  openArtist: vi.fn(),
-  openAlbum: vi.fn(),
-  openMusicEditor: vi.fn(),
-  openMusicCreationFlow: vi.fn(),
-  requireLogin: vi.fn(),
-  isAuthenticated: { value: true },
-}))
+	openNestedAction: vi.fn(),
+	openArtist: vi.fn(),
+	openAlbum: vi.fn(),
+	openMusicEditor: vi.fn(),
+	openMusicCreationFlow: vi.fn(),
+	requireLogin: vi.fn(),
+	isAuthenticated: { value: true },
+}));
 
-vi.mock('@/composables/useMusicDrawers', () => ({
-  useMusicDrawers: () => ({
-    state: drawerState,
-    closeArtist: vi.fn(),
-    isArtistShifted: ref(false),
-    openNestedAction: musicDrawerMocks.openNestedAction,
-    openArtist: musicDrawerMocks.openArtist,
-    openAlbum: musicDrawerMocks.openAlbum,
-    openMusicEditor: musicDrawerMocks.openMusicEditor,
-    openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
-  })
-}))
+vi.mock("@/composables/useMusicDrawers", () => ({
+	useMusicDrawers: () => ({
+		state: drawerState,
+		closeArtist: vi.fn(),
+		isArtistShifted: ref(false),
+		openNestedAction: musicDrawerMocks.openNestedAction,
+		openArtist: musicDrawerMocks.openArtist,
+		openAlbum: musicDrawerMocks.openAlbum,
+		openMusicEditor: musicDrawerMocks.openMusicEditor,
+		openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
+	}),
+}));
 
-vi.mock('@/composables/useLoginRedirect', () => ({
-  useLoginRedirect: () => ({
-    isAuthenticated: musicDrawerMocks.isAuthenticated,
-    requireLogin: musicDrawerMocks.requireLogin,
-  }),
-}))
+vi.mock("@/composables/useLoginRedirect", () => ({
+	useLoginRedirect: () => ({
+		isAuthenticated: musicDrawerMocks.isAuthenticated,
+		requireLogin: musicDrawerMocks.requireLogin,
+	}),
+}));
 
 const {
-  getMusicArtist,
-  listMusicAlbums,
-  listArtistContributors,
-  listArtistBookmarks,
-  createArtistBookmark,
-  deleteArtistBookmark,
+	getMusicArtist,
+	listMusicAlbums,
+	listArtistContributors,
+	listArtistBookmarks,
+	createArtistBookmark,
+	deleteArtistBookmark,
 } = vi.hoisted(() => ({
-  getMusicArtist: vi.fn(),
-  listMusicAlbums: vi.fn(),
-  listArtistContributors: vi.fn(),
-  listArtistBookmarks: vi.fn(),
-  createArtistBookmark: vi.fn(),
-  deleteArtistBookmark: vi.fn(),
-}))
+	getMusicArtist: vi.fn(),
+	listMusicAlbums: vi.fn(),
+	listArtistContributors: vi.fn(),
+	listArtistBookmarks: vi.fn(),
+	createArtistBookmark: vi.fn(),
+	deleteArtistBookmark: vi.fn(),
+}));
 
-vi.mock('@/api/musicV1', () => ({
-  getMusicArtist,
-  listMusicAlbums,
-  listArtistContributors,
-  listArtistBookmarks,
-  createArtistBookmark,
-  deleteArtistBookmark,
-}))
+vi.mock("@/api/musicV1", () => ({
+	getMusicArtist,
+	listMusicAlbums,
+	listArtistContributors,
+	listArtistBookmarks,
+	createArtistBookmark,
+	deleteArtistBookmark,
+}));
 
-describe('ArtistDrawer.vue', () => {
-  beforeEach(() => {
-    drawerState.value = { artistId: '1', artistRefreshToken: 0 }
-    getMusicArtist.mockReset()
-    listMusicAlbums.mockReset()
-    listArtistContributors.mockReset()
-    listArtistBookmarks.mockReset()
-    createArtistBookmark.mockReset()
-    deleteArtistBookmark.mockReset()
-    musicDrawerMocks.openNestedAction.mockReset()
-    musicDrawerMocks.openArtist.mockReset()
-    musicDrawerMocks.openAlbum.mockReset()
-    musicDrawerMocks.openMusicEditor.mockReset()
-    musicDrawerMocks.openMusicCreationFlow.mockReset()
-    musicDrawerMocks.requireLogin.mockReset()
-    musicDrawerMocks.requireLogin.mockReturnValue(true)
-    musicDrawerMocks.isAuthenticated.value = true
+describe("ArtistDrawer.vue", () => {
+	beforeEach(() => {
+		drawerState.value = { artistId: "1", artistRefreshToken: 0 };
+		getMusicArtist.mockReset();
+		listMusicAlbums.mockReset();
+		listArtistContributors.mockReset();
+		listArtistBookmarks.mockReset();
+		createArtistBookmark.mockReset();
+		deleteArtistBookmark.mockReset();
+		musicDrawerMocks.openNestedAction.mockReset();
+		musicDrawerMocks.openArtist.mockReset();
+		musicDrawerMocks.openAlbum.mockReset();
+		musicDrawerMocks.openMusicEditor.mockReset();
+		musicDrawerMocks.openMusicCreationFlow.mockReset();
+		musicDrawerMocks.requireLogin.mockReset();
+		musicDrawerMocks.requireLogin.mockReturnValue(true);
+		musicDrawerMocks.isAuthenticated.value = true;
 
-    getMusicArtist.mockResolvedValue({
-      id: '1',
-      name: 'Ye',
-      legal_name: 'Kanye Omari West',
-      artist_form: 'group',
-      aliases: [
-        { alias: 'Kanye West' },
-        { alias: 'kanye' },
-      ],
-      member_groups: {
-        current: [
-          {
-            artist_id: '2',
-            name: 'Pusha T',
-            image_url: 'https://example.com/pusha-t.jpg',
-            join_date: '2020-01-01',
-            leave_date: '',
-          },
-        ],
-        former: [
-          {
-            artist_id: '3',
-            name: 'Kid Cudi',
-            image_url: '',
-            join_date: '2018-01-01',
-            leave_date: '2022-06-30',
-          },
-        ],
-      },
-      bio: 'English rock band',
-      entry_status: 'open',
-    })
-    listMusicAlbums.mockResolvedValue({
-      data: [
-        { id: '1', title: 'The Dark Side of the Moon', release_date: '1973-03-01', songs: new Array(10).fill(null), album_type: 'album', entry_status: 'open' },
-        { id: '2', title: 'Wish You Were Here', release_date: '1975-09-12', songs: new Array(5).fill(null), album_type: 'album', entry_status: 'open' },
-      ],
-      meta: { page: 1, page_size: 20, total: 2, has_more: false },
-    })
-    listArtistContributors.mockResolvedValue({
-      data: [{ user_id: 'user-1', username: 'editor', display_name: 'Editor', avatar_url: '', revision_count: 1, last_contributed_at: '2026-08-09T10:00:00Z' }],
-      total: 1,
-    })
-    listArtistBookmarks.mockResolvedValue({ data: [] })
-    createArtistBookmark.mockResolvedValue({ id: 'artist-bookmark-1', artist_id: '1', created_at: '2026-07-02T00:00:00Z' })
-    deleteArtistBookmark.mockResolvedValue({ deleted: true })
-  })
+		getMusicArtist.mockResolvedValue({
+			id: "1",
+			name: "Ye",
+			legal_name: "Kanye Omari West",
+			artist_form: "group",
+			aliases: [{ alias: "Kanye West" }, { alias: "kanye" }],
+			member_groups: {
+				current: [
+					{
+						artist_id: "2",
+						name: "Pusha T",
+						image_url: "https://example.com/pusha-t.jpg",
+						join_date: "2020-01-01",
+						leave_date: "",
+					},
+				],
+				former: [
+					{
+						artist_id: "3",
+						name: "Kid Cudi",
+						image_url: "",
+						join_date: "2018-01-01",
+						leave_date: "2022-06-30",
+					},
+				],
+			},
+			bio: "English rock band",
+			entry_status: "open",
+		});
+		listMusicAlbums.mockResolvedValue({
+			data: [
+				{
+					id: "1",
+					title: "The Dark Side of the Moon",
+					release_date: "1973-03-01",
+					songs: new Array(10).fill(null),
+					album_type: "album",
+					entry_status: "open",
+				},
+				{
+					id: "2",
+					title: "Wish You Were Here",
+					release_date: "1975-09-12",
+					songs: new Array(5).fill(null),
+					album_type: "album",
+					entry_status: "open",
+				},
+			],
+			meta: { page: 1, page_size: 20, total: 2, has_more: false },
+		});
+		listArtistContributors.mockResolvedValue({
+			data: [
+				{
+					user_id: "user-1",
+					username: "editor",
+					display_name: "Editor",
+					avatar_url: "",
+					revision_count: 1,
+					last_contributed_at: "2026-08-09T10:00:00Z",
+				},
+			],
+			total: 1,
+		});
+		listArtistBookmarks.mockResolvedValue({ data: [] });
+		createArtistBookmark.mockResolvedValue({
+			id: "artist-bookmark-1",
+			artist_id: "1",
+			created_at: "2026-07-02T00:00:00Z",
+		});
+		deleteArtistBookmark.mockResolvedValue({ deleted: true });
+	});
 
-  it('renders artist information and albums when artistId is present', async () => {
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
-    
-    // Check if artist title is rendered (artistId is '1' in mock)
-    expect(wrapper.text()).toContain('Ye')
-    expect(wrapper.text()).toContain('本名：Kanye Omari West')
-    expect(wrapper.text()).toContain('曾用名：Kanye West / kanye')
-    
-    // Check if album list is rendered
-    expect(wrapper.get('[data-testid="artist-release-type-album"]').text()).toBe('专辑')
-    expect(wrapper.get('[data-testid="artist-release-type-song"]').text()).toBe('歌曲')
-    expect(wrapper.text()).toContain('The Dark Side of the Moon')
-    expect(wrapper.text()).toContain('Wish You Were Here')
-    expect(wrapper.text()).toContain('1973')
-    expect(wrapper.text()).toContain('1975')
-  })
+	it("renders artist information and albums when artistId is present", async () => {
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-  it('loads single and leak releases when switching to songs', async () => {
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
-    listMusicAlbums.mockResolvedValueOnce({
-      data: [
-        { id: '3', title: 'New Single', album_type: 'single', entry_status: 'open' },
-        { id: '4', title: 'Unreleased Track', album_type: 'leak', entry_status: 'open' },
-      ],
-      meta: { page: 1, page_size: 24, total: 2, has_more: false },
-    })
+		// Check if artist title is rendered (artistId is '1' in mock)
+		expect(wrapper.text()).toContain("Ye");
+		expect(wrapper.text()).toContain("本名：Kanye Omari West");
+		expect(wrapper.text()).toContain("曾用名：Kanye West / kanye");
 
-    await wrapper.get('[data-testid="artist-release-type-song"]').trigger('click')
-    await vi.dynamicImportSettled()
+		// Check if album list is rendered
+		expect(
+			wrapper.get('[data-testid="artist-release-type-album"]').text(),
+		).toBe("专辑");
+		expect(wrapper.get('[data-testid="artist-release-type-song"]').text()).toBe(
+			"歌曲",
+		);
+		expect(wrapper.text()).toContain("The Dark Side of the Moon");
+		expect(wrapper.text()).toContain("Wish You Were Here");
+		expect(wrapper.text()).toContain("1973");
+		expect(wrapper.text()).toContain("1975");
+	});
 
-    expect(listMusicAlbums).toHaveBeenLastCalledWith({
-      artist_id: '1',
-      release_type: 'song',
-      page: 1,
-      page_size: 24,
-    })
-    expect(wrapper.text()).toContain('New Single')
-    expect(wrapper.text()).toContain('单曲')
-    expect(wrapper.text()).toContain('Unreleased Track')
-    expect(wrapper.text()).toContain('泄曲')
-  })
+	it("loads single and leak releases when switching to songs", async () => {
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+		listMusicAlbums.mockResolvedValueOnce({
+			data: [
+				{
+					id: "3",
+					title: "New Single",
+					album_type: "single",
+					entry_status: "open",
+				},
+				{
+					id: "4",
+					title: "Unreleased Track",
+					album_type: "leak",
+					entry_status: "open",
+				},
+			],
+			meta: { page: 1, page_size: 24, total: 2, has_more: false },
+		});
 
-  it('opens artist history from the contributors block', async () => {
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
+		await wrapper
+			.get('[data-testid="artist-release-type-song"]')
+			.trigger("click");
+		await vi.dynamicImportSettled();
 
-    await wrapper.get('[data-testid="music-contributors-open-history"]').trigger('click')
+		expect(listMusicAlbums).toHaveBeenLastCalledWith({
+			artist_id: "1",
+			release_type: "song",
+			sort: "-release_date",
+			page: 1,
+			page_size: 24,
+		});
+		expect(wrapper.text()).toContain("New Single");
+		expect(wrapper.text()).toContain("单曲");
+		expect(wrapper.text()).toContain("Unreleased Track");
+		expect(wrapper.text()).toContain("泄曲");
+	});
 
-    expect(listArtistContributors).toHaveBeenCalledWith('1')
-    expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith('artist_history', { artistId: '1' })
-  })
+	it("opens artist history from the contributors block", async () => {
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-  it('opens the merge target when the artist is closed with redirect_to', async () => {
-    getMusicArtist.mockResolvedValueOnce({
-      id: '1',
-      name: 'Merged Artist',
-      entry_status: 'closed',
-      redirect_to: 'artist-target',
-    })
-	getMusicArtist.mockResolvedValueOnce({
-		id: 'artist-target',
-		name: 'Target Artist',
-		entry_status: 'open',
-	})
+		await wrapper
+			.get('[data-testid="music-contributors-open-history"]')
+			.trigger("click");
 
-    mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
+		expect(listArtistContributors).toHaveBeenCalledWith("1");
+		expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith(
+			"artist_history",
+			{ artistId: "1" },
+		);
+	});
 
-    expect(musicDrawerMocks.openArtist).toHaveBeenCalledWith('artist-target')
-  })
+	it("opens the merge target when the artist is closed with redirect_to", async () => {
+		getMusicArtist.mockResolvedValueOnce({
+			id: "1",
+			name: "Merged Artist",
+			entry_status: "closed",
+			redirect_to: "artist-target",
+		});
+		getMusicArtist.mockResolvedValueOnce({
+			id: "artist-target",
+			name: "Target Artist",
+			entry_status: "open",
+		});
 
-  it('renders current and former members for group artists', async () => {
-    const wrapper = mount(ArtistDrawer)
+		mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-    await vi.dynamicImportSettled()
+		expect(musicDrawerMocks.openArtist).toHaveBeenCalledWith("artist-target");
+	});
 
-    expect(wrapper.text()).toContain('现成员')
-    expect(wrapper.text()).toContain('前成员')
-    expect(wrapper.text()).toContain('Pusha T')
-    expect(wrapper.text()).toContain('2020-01-01 - 至今')
-    expect(wrapper.text()).toContain('Kid Cudi')
-    expect(wrapper.text()).toContain('2018-01-01 - 2022-06-30')
-  })
+	it("renders current and former members for group artists", async () => {
+		const wrapper = mount(ArtistDrawer);
 
-  it('opens the member artist page when clicking a member item', async () => {
-    const wrapper = mount(ArtistDrawer)
+		await vi.dynamicImportSettled();
 
-    await vi.dynamicImportSettled()
+		expect(wrapper.text()).toContain("现成员");
+		expect(wrapper.text()).toContain("前成员");
+		expect(wrapper.text()).toContain("Pusha T");
+		expect(wrapper.text()).toContain("2020-01-01 - 至今");
+		expect(wrapper.text()).toContain("Kid Cudi");
+		expect(wrapper.text()).toContain("2018-01-01 - 2022-06-30");
+	});
 
-    await wrapper.get('[data-testid="artist-member-2"]').trigger('click')
+	it("opens the member artist page when clicking a member item", async () => {
+		const wrapper = mount(ArtistDrawer);
 
-    expect(musicDrawerMocks.openArtist).toHaveBeenCalledWith('2')
-  })
+		await vi.dynamicImportSettled();
 
-  it('creates an artist bookmark when clicking 订阅 and reflects the state', async () => {
-    const wrapper = mount(ArtistDrawer)
+		await wrapper.get('[data-testid="artist-member-2"]').trigger("click");
 
-    await vi.dynamicImportSettled()
+		expect(musicDrawerMocks.openArtist).toHaveBeenCalledWith("2");
+	});
 
-    const bookmarkButton = wrapper.get('[data-testid="artist-bookmark-toggle"]')
-    expect(bookmarkButton.text()).toContain('订阅')
+	it("creates an artist bookmark when clicking 订阅 and reflects the state", async () => {
+		const wrapper = mount(ArtistDrawer);
 
-    await bookmarkButton.trigger('click')
-    await vi.dynamicImportSettled()
+		await vi.dynamicImportSettled();
 
-    expect(createArtistBookmark).toHaveBeenCalledWith('1')
-    expect(wrapper.get('[data-testid="artist-bookmark-toggle"]').text()).toContain('已订阅')
-  })
+		const bookmarkButton = wrapper.get(
+			'[data-testid="artist-bookmark-toggle"]',
+		);
+		expect(bookmarkButton.text()).toContain("订阅");
 
-  it('still renders artist details when bookmark lookup returns 401', async () => {
-    listArtistBookmarks.mockRejectedValueOnce(new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'))
+		await bookmarkButton.trigger("click");
+		await vi.dynamicImportSettled();
 
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
+		expect(createArtistBookmark).toHaveBeenCalledWith("1");
+		expect(
+			wrapper.get('[data-testid="artist-bookmark-toggle"]').text(),
+		).toContain("已订阅");
+	});
 
-    expect(wrapper.text()).toContain('Ye')
-    expect(wrapper.text()).toContain('本名：Kanye Omari West')
-    expect(wrapper.text()).not.toContain('艺术家信息加载失败')
-  })
+	it("still renders artist details when bookmark lookup returns 401", async () => {
+		listArtistBookmarks.mockRejectedValueOnce(
+			new ApiErrorResponseError(401, "auth.unauthorized", "Login required"),
+		);
 
-  it('does not request private bookmarks while a guest reads artist details', async () => {
-    musicDrawerMocks.isAuthenticated.value = false
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
+		expect(wrapper.text()).toContain("Ye");
+		expect(wrapper.text()).toContain("本名：Kanye Omari West");
+		expect(wrapper.text()).not.toContain("艺术家信息加载失败");
+	});
 
-    expect(wrapper.text()).toContain('Ye')
-    expect(listArtistBookmarks).not.toHaveBeenCalled()
-  })
+	it("does not request private bookmarks while a guest reads artist details", async () => {
+		musicDrawerMocks.isAuthenticated.value = false;
 
-  it('re-fetches artist data when artistRefreshToken changes', async () => {
-    const wrapper = mount(ArtistDrawer)
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-    await vi.dynamicImportSettled()
-    const artistCallsBeforeRefresh = getMusicArtist.mock.calls.length
-    const albumCallsBeforeRefresh = listMusicAlbums.mock.calls.length
+		expect(wrapper.text()).toContain("Ye");
+		expect(listArtistBookmarks).not.toHaveBeenCalled();
+	});
 
-    drawerState.value = { artistId: '1', artistRefreshToken: 1 }
-    await nextTick()
-    await vi.dynamicImportSettled()
+	it("re-fetches artist data when artistRefreshToken changes", async () => {
+		const wrapper = mount(ArtistDrawer);
 
-    expect(getMusicArtist.mock.calls.length).toBeGreaterThan(artistCallsBeforeRefresh)
-    expect(listMusicAlbums.mock.calls.length).toBeGreaterThan(albumCallsBeforeRefresh)
-    wrapper.unmount()
-  })
+		await vi.dynamicImportSettled();
+		const artistCallsBeforeRefresh = getMusicArtist.mock.calls.length;
+		const albumCallsBeforeRefresh = listMusicAlbums.mock.calls.length;
 
-  it('uses the fresh album list instead of cached albums embedded in artist data', async () => {
-    getMusicArtist.mockResolvedValueOnce({
-      id: '1',
-      name: 'Ye',
-      albums: [{ id: 'stale-album', title: 'Stale Album', entry_status: 'open' }],
-      entry_status: 'open',
-    })
-    listMusicAlbums.mockResolvedValueOnce({
-      data: [{ id: 'fresh-album', title: 'Reconsider', entry_status: 'open' }],
-      meta: { page: 1, page_size: 100, total: 1, has_more: false },
-    })
+		drawerState.value = { artistId: "1", artistRefreshToken: 1 };
+		await nextTick();
+		await vi.dynamicImportSettled();
 
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
+		expect(getMusicArtist.mock.calls.length).toBeGreaterThan(
+			artistCallsBeforeRefresh,
+		);
+		expect(listMusicAlbums.mock.calls.length).toBeGreaterThan(
+			albumCallsBeforeRefresh,
+		);
+		wrapper.unmount();
+	});
 
-    expect(wrapper.text()).toContain('Reconsider')
-    expect(wrapper.text()).not.toContain('Stale Album')
-    wrapper.unmount()
-  })
+	it("uses the fresh album list instead of cached albums embedded in artist data", async () => {
+		getMusicArtist.mockResolvedValueOnce({
+			id: "1",
+			name: "Ye",
+			albums: [
+				{ id: "stale-album", title: "Stale Album", entry_status: "open" },
+			],
+			entry_status: "open",
+		});
+		listMusicAlbums.mockResolvedValueOnce({
+			data: [{ id: "fresh-album", title: "Reconsider", entry_status: "open" }],
+			meta: { page: 1, page_size: 100, total: 1, has_more: false },
+		});
 
-  it('loads artist albums page by page', async () => {
-    listMusicAlbums
-      .mockResolvedValueOnce({
-        data: [{ id: 'album-1', title: 'First Page', entry_status: 'open' }],
-        meta: { page: 1, page_size: 24, total: 2, has_more: true },
-      })
-      .mockResolvedValueOnce({
-        data: [{ id: 'album-2', title: 'Second Page', entry_status: 'open' }],
-        meta: { page: 2, page_size: 24, total: 2, has_more: false },
-      })
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-    const wrapper = mount(ArtistDrawer)
-    await vi.dynamicImportSettled()
+		expect(wrapper.text()).toContain("Reconsider");
+		expect(wrapper.text()).not.toContain("Stale Album");
+		wrapper.unmount();
+	});
 
-    expect(listMusicAlbums).toHaveBeenNthCalledWith(1, { artist_id: '1', release_type: 'album', page: 1, page_size: 24 })
-    const loadMoreButton = wrapper.findAll('button').find((button) => button.text().includes('加载更多'))
-    expect(loadMoreButton).toBeDefined()
-    await loadMoreButton!.trigger('click')
-    await vi.dynamicImportSettled()
+	it("loads artist albums page by page", async () => {
+		listMusicAlbums
+			.mockResolvedValueOnce({
+				data: [{ id: "album-1", title: "First Page", entry_status: "open" }],
+				meta: { page: 1, page_size: 24, total: 2, has_more: true },
+			})
+			.mockResolvedValueOnce({
+				data: [{ id: "album-2", title: "Second Page", entry_status: "open" }],
+				meta: { page: 2, page_size: 24, total: 2, has_more: false },
+			});
 
-    expect(listMusicAlbums).toHaveBeenNthCalledWith(2, { artist_id: '1', release_type: 'album', page: 2, page_size: 24 })
-    expect(wrapper.text()).toContain('First Page')
-    expect(wrapper.text()).toContain('Second Page')
-  })
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-  it('opens unified artist editor from the artist detail action bar', async () => {
-    const wrapper = mount(ArtistDrawer)
+		expect(listMusicAlbums).toHaveBeenNthCalledWith(1, {
+			artist_id: "1",
+			release_type: "album",
+			sort: "-release_date",
+			page: 1,
+			page_size: 24,
+		});
+		const pagination = wrapper.findComponent({ name: "PaginationBar" });
+		expect(pagination.exists()).toBe(true);
+		pagination.vm.$emit("change", 2);
+		await vi.dynamicImportSettled();
 
-    await vi.dynamicImportSettled()
+		expect(listMusicAlbums).toHaveBeenNthCalledWith(2, {
+			artist_id: "1",
+			release_type: "album",
+			sort: "-release_date",
+			page: 2,
+			page_size: 24,
+		});
+		expect(wrapper.text()).not.toContain("First Page");
+		expect(wrapper.text()).toContain("Second Page");
+	});
 
-    await wrapper.get('button:nth-of-type(2)').trigger('click')
+	it("opens unified artist editor from the artist detail action bar", async () => {
+		const wrapper = mount(ArtistDrawer);
 
-    expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
-      mode: 'edit',
-      entity: 'artist',
-      artistId: '1',
-      startStep: 'artist',
-    })
-  })
+		await vi.dynamicImportSettled();
 
-  it('opens the album creation flow with seeded artist data from the artist detail action bar', async () => {
-    const wrapper = mount(ArtistDrawer)
+		await wrapper.get("button:nth-of-type(2)").trigger("click");
 
-    await vi.dynamicImportSettled()
+		expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
+			mode: "edit",
+			entity: "artist",
+			artistId: "1",
+			startStep: "artist",
+		});
+	});
 
-    await wrapper.get('button:nth-of-type(3)').trigger('click')
+	it("opens the album creation flow with seeded artist data from the artist detail action bar", async () => {
+		const wrapper = mount(ArtistDrawer);
 
-    expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
-      artistId: '1',
-      artistName: 'Ye',
-      artistLegalName: 'Kanye Omari West',
-      artistSource: '',
-      startStep: 'albumDetails',
-    })
-    expect(musicDrawerMocks.openMusicEditor).not.toHaveBeenCalled()
-  })
+		await vi.dynamicImportSettled();
 
-	it('opens the existing album association flow from the artist detail action bar', async () => {
-		const wrapper = mount(ArtistDrawer)
-		await vi.dynamicImportSettled()
+		await wrapper.get("button:nth-of-type(3)").trigger("click");
 
-		await wrapper.get('[data-testid="artist-link-album-action"]').trigger('click')
+		expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
+			artistId: "1",
+			artistName: "Ye",
+			artistLegalName: "Kanye Omari West",
+			artistSource: "",
+			startStep: "albumDetails",
+		});
+		expect(musicDrawerMocks.openMusicEditor).not.toHaveBeenCalled();
+	});
 
-		expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith('link_album', {
-			artistId: '1',
-			artistName: 'Ye',
-		})
-	})
+	it("opens the existing album association flow from the artist detail action bar", async () => {
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
 
-  it('keeps artist details visible when bookmark loading requires login', async () => {
-    listArtistBookmarks.mockRejectedValueOnce(
-      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
-    )
+		await wrapper
+			.get('[data-testid="artist-link-album-action"]')
+			.trigger("click");
 
-    const wrapper = mount(ArtistDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
-        },
-      },
-    })
+		expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith(
+			"link_album",
+			{
+				artistId: "1",
+				artistName: "Ye",
+			},
+		);
+	});
 
-    await vi.dynamicImportSettled()
+	it("keeps artist details visible when bookmark loading requires login", async () => {
+		listArtistBookmarks.mockRejectedValueOnce(
+			new ApiErrorResponseError(401, "auth.unauthorized", "Login required"),
+		);
 
-    expect(wrapper.text()).toContain('Ye')
-    expect(wrapper.text()).not.toContain('艺术家信息加载失败')
-  })
-})
+		const wrapper = mount(ArtistDrawer, {
+			global: {
+				stubs: {
+					PSheet: { template: '<div><slot name="header" /><slot /></div>' },
+				},
+			},
+		});
+
+		await vi.dynamicImportSettled();
+
+		expect(wrapper.text()).toContain("Ye");
+		expect(wrapper.text()).not.toContain("艺术家信息加载失败");
+	});
+});

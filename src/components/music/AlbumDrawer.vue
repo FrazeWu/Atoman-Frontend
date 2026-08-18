@@ -11,6 +11,7 @@ import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
+import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import { ChevronDown, ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pause, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -373,7 +374,7 @@ async function loadAlbum(albumId: string | null) {
 
   loading.value = true
   try {
-    const resolved = await resolveMusicRedirect(albumId, getMusicAlbum)
+    const resolved = await resolveMusicRedirect(albumId, (id) => getMusicAlbum(id, { force: true }))
     if (!isCurrentLoad()) return
 
     const albumResponse = resolved.entity
@@ -559,8 +560,16 @@ watch(
         <PButton type="button" size="sm" variant="secondary" data-testid="album-retry" @click="retryLoadAlbum">重试</PButton>
       </div>
       <p v-else-if="loading" class="state-line">正在加载专辑...</p>
+      <MusicEntryStateControl
+        v-if="album"
+        entity-type="album"
+        :entity-id="String(album.id)"
+        :lifecycle-status="album.lifecycle_status"
+        :edit-status="album.edit_status"
+        @submitted="loadAlbum(String(album.id))"
+      />
 
-      <div v-else class="album-meta-row">
+      <div v-if="!loading && album" class="album-meta-row">
         <div class="album-cover">
           <img
             v-if="coverUrl && !isCoverBroken"
@@ -619,7 +628,7 @@ watch(
               </template>
               <template #default="{ close }">
                 <div class="album-more-menu">
-                  <button type="button" data-testid="album-edit-action" @click="close(); editAlbum()">
+                  <button type="button" data-testid="album-edit-action" :disabled="album?.edit_status && album.edit_status !== 'development'" @click="close(); editAlbum()">
                     <Pencil :size="16" aria-hidden="true" />
                     编辑专辑
                   </button>

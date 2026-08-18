@@ -286,7 +286,7 @@ function toPlayableSong(song: MusicSongListItem): Song | null {
     waveform_peaks: song.waveform_peaks,
     cover_url: song.cover_url || song.album?.cover_url || '',
     track_number: song.track_number || 0,
-    status: (song.status as Song['status']) || 'approved',
+    status: (song.status as Song['status']) || 'open',
     artists: song.artists?.map((artist) => ({
       id: artist.id,
       name: artist.name,

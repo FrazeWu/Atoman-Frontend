@@ -72,6 +72,7 @@ export function useMusicAlbumTrackEditor() {
 							...track,
 							audioUrl: asset.url,
 							audioKey: asset.key,
+							audioAssetId: asset.id,
 							audioFileName: fileName,
 							uploadProgress: undefined,
 							uploadError: undefined,
@@ -104,6 +105,7 @@ export function useMusicAlbumTrackEditor() {
 				title: titleFromFileName(fileName),
 				audioUrl: asset.url,
 				audioKey: asset.key,
+				audioAssetId: asset.id,
 				audioFileName: fileName,
 				origin: "manual",
 			},
@@ -122,6 +124,7 @@ export function useMusicAlbumTrackEditor() {
 							...track,
 							audioUrl: asset.url,
 							audioKey: asset.key,
+							audioAssetId: asset.id,
 							audioFileName: fileName,
 						}
 					: track,

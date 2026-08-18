@@ -129,7 +129,6 @@ const drawerMocks = {
 	refreshAlbum: vi.fn(),
 	openArtist: vi.fn(),
 	openNestedAction: vi.fn(),
-	openMusicCreationFlow: vi.fn(),
 	setMusicCreationStep: vi.fn(),
 	routerPush: vi.fn(),
 	routerReplace: vi.fn(),
@@ -181,7 +180,6 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		refreshAlbum: drawerMocks.refreshAlbum,
 		openArtist: drawerMocks.openArtist,
 		openNestedAction: drawerMocks.openNestedAction,
-		openMusicCreationFlow: drawerMocks.openMusicCreationFlow,
 		setMusicCreationStep: drawerMocks.setMusicCreationStep,
 		isMainShifted: computed(() => false),
 		isCreationFlowOpen: computed(
@@ -227,7 +225,6 @@ describe("MusicCreationFlowDrawer", () => {
 		drawerMocks.refreshAlbum.mockReset();
 		drawerMocks.openArtist.mockReset();
 		drawerMocks.openNestedAction.mockReset();
-		drawerMocks.openMusicCreationFlow.mockReset();
 		drawerMocks.setMusicCreationStep.mockReset();
 		drawerMocks.routerPush.mockReset();
 		drawerMocks.routerReplace.mockReset();
@@ -248,7 +245,7 @@ describe("MusicCreationFlowDrawer", () => {
 		drawerMocks.state.value.creationFlow = null;
 	});
 
-	it("导入进行时可直接新建另一张专辑", async () => {
+	it("导入进行时不展示新建专辑入口", () => {
 		const baseFlow = createFlowState();
 		drawerMocks.state.value.creationFlow = createFlowState({
 			draft: {
@@ -261,13 +258,12 @@ describe("MusicCreationFlowDrawer", () => {
 		});
 
 		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper
-			.get('[data-testid="music-creation-start-another-album"]')
-			.trigger("click");
 
-		expect(drawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
-			startStep: "albumImport",
-		});
+		expect(
+			wrapper
+				.find('[data-testid="music-creation-start-another-album"]')
+				.exists(),
+		).toBe(false);
 	});
 
 	it("回填 ready import 的专辑标题和曲目", async () => {

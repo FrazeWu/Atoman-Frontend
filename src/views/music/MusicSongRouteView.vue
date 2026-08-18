@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
 import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
+import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
@@ -62,7 +63,7 @@ function playable(song: MusicSongListItem): Song {
     audio_url: song.audio_url || '',
     waveform_peaks: song.waveform_peaks,
     cover_url: song.cover_url || song.album?.cover_url || '',
-    status: 'approved',
+    status: 'open',
   }
 }
 
@@ -237,6 +238,13 @@ watch(
         <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
         <p v-else class="song-detail__album">单曲</p>
         <h1>{{ detail.song.title }}</h1>
+        <MusicEntryStateControl
+          entity-type="song"
+          :entity-id="String(detail.song.id)"
+          :lifecycle-status="detail.song.lifecycle_status"
+          :edit-status="detail.song.edit_status"
+          @submitted="loadDetail(detail.song.id)"
+        />
         <div v-for="[role, artists] in roleGroups" :key="role" class="song-detail__artists">
           <span>{{ roleLabels[role] || role }}</span>
           <button v-for="artist in artists" :key="artist.id" type="button" class="song-detail__entity-link" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
@@ -256,7 +264,7 @@ watch(
           <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" />下一首</PButton>
           <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" />加入队列</PButton>
           <PButton variant="secondary" :loading="actionBusy === 'later'" @click="addToLater"><Clock3 :size="16" aria-hidden="true" />稍后播放</PButton>
-          <PButton variant="secondary" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
+          <PButton variant="secondary" :disabled="detail.song.edit_status !== undefined && (detail.song.edit_status !== 'development' || detail.song.album?.edit_status === 'closed')" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
           <PButton variant="secondary" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本记录</PButton>
         </div>
       </div>
@@ -284,6 +292,7 @@ watch(
               data-testid="song-detail-edit-lyrics"
               size="sm"
               variant="warning"
+              :disabled="detail.song.edit_status !== undefined && detail.song.edit_status !== 'development'"
               @click="openLyricsEditor"
             >
               编辑

@@ -2,6 +2,9 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 
+// Test workers must not inherit a production Vue runtime from the shell.
+process.env.NODE_ENV = "test";
+
 export const nodeOnlyTests = [
 	"tests/unit/api/{client,dm,feedMembership,musicV1,musicV1.album-import-v2,musicV1.lyrics,musicV1.starred.integration,podcast-comments,references,transport,upload,useApi-contract,userProfile}.spec.ts",
 	"tests/unit/components/AppTopbar.auth-loading.spec.ts",
@@ -48,6 +51,7 @@ export default defineConfig({
 				test: {
 					name: "node-contracts",
 					environment: "node",
+					env: { NODE_ENV: "test" },
 					globals: true,
 					setupFiles: ["./tests/unit/setup-node.ts"],
 					include: nodeOnlyTests,
@@ -63,6 +67,7 @@ export default defineConfig({
 				test: {
 					name: "happy-dom",
 					environment: "happy-dom",
+					env: { NODE_ENV: "test" },
 					globals: true,
 					setupFiles: ["./tests/unit/setup.ts"],
 					include: ["tests/unit/**/*.spec.ts", "src/**/*.spec.ts"],
@@ -82,6 +87,7 @@ export default defineConfig({
 				test: {
 					name: "jsdom",
 					environment: "jsdom",
+					env: { NODE_ENV: "test" },
 					globals: true,
 					setupFiles: ["./tests/unit/setup.ts"],
 					include: jsdomOnlyTests,

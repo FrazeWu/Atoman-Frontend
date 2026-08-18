@@ -10,6 +10,7 @@ import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
+import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -84,6 +85,12 @@ const albumSortOptions = [
   { label: '最早发布 (升序)', value: 'date-asc' },
   { label: '按热度排序', value: 'hot-desc' },
 ]
+
+function albumSortQuery(mode: AlbumSortMode) {
+  if (mode === 'date-asc') return 'release_date'
+  if (mode === 'hot-desc') return 'hot'
+  return '-release_date'
+}
 
 function formatAlbumReleaseDate(album: MusicAlbumListItem) {
   if (album.release_date) {
@@ -172,6 +179,7 @@ async function loadArtist(targetArtistId: string | null) {
     const albumsResponse = await listMusicAlbums({
       artist_id: targetArtistId,
       release_type: releaseType.value,
+      sort: albumSortQuery(albumSortMode.value),
       page: 1,
       page_size: albumPageSize,
     })
@@ -226,6 +234,7 @@ async function loadAlbumsPage(targetPage: number) {
     const response = await listMusicAlbums({
       artist_id: currentArtistId,
       release_type: releaseType.value,
+      sort: albumSortQuery(albumSortMode.value),
       page: targetPage,
       page_size: albumPageSize,
     })
@@ -312,7 +321,7 @@ watch(
   { immediate: true },
 )
 
-watch(releaseType, () => {
+watch([releaseType, albumSortMode], () => {
   albums.value = []
   albumPage.value = 1
   albumMeta.value = { page: 1, page_size: albumPageSize, total: 0, has_more: false }
@@ -354,6 +363,14 @@ watch(releaseType, () => {
     <div class="drawer-body">
 	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
 	  <p v-if="artist?.entry_status === 'closed' && !artist?.redirect_to" class="state-line">该条目已关闭</p>
+      <MusicEntryStateControl
+        v-if="artist"
+        entity-type="artist"
+        :entity-id="String(artist.id)"
+        :lifecycle-status="artist.lifecycle_status"
+        :edit-status="artist.edit_status"
+        @submitted="loadArtist(String(artist.id))"
+      />
       <div class="actions">
         <PButton
           variant="secondary"
@@ -365,6 +382,7 @@ watch(releaseType, () => {
         </PButton>
         <PButton
           variant="warning"
+          :disabled="artist?.edit_status && artist.edit_status !== 'development'"
           data-testid="artist-edit-action"
           @click="editArtist"
         >

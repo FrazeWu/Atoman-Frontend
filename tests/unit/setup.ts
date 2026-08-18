@@ -1,34 +1,38 @@
-import '@testing-library/jest-dom/vitest'
-import { beforeEach, vi } from 'vitest'
+import "@testing-library/jest-dom/vitest";
+import { beforeEach, vi } from "vitest";
 
-process.env.TZ = 'Asia/Shanghai'
+process.env.TZ = "Asia/Shanghai";
 
-if (typeof import.meta.env !== 'undefined') {
-  import.meta.env.VITE_API_URL = ''
+const testImportMeta = import.meta as ImportMeta & {
+	env?: Record<string, string>;
+};
+if (testImportMeta.env) {
+	testImportMeta.env.VITE_API_URL = "";
 }
 
-const storage = new Map<string, string>()
-const createUnmockedFetch = () => vi.fn(async (input: RequestInfo | URL) => {
-	throw new Error(`未 mock fetch: ${String(input)}`)
-})
+const storage = new Map<string, string>();
+const createUnmockedFetch = () =>
+	vi.fn(async (input: RequestInfo | URL) => {
+		throw new Error(`未 mock fetch: ${String(input)}`);
+	});
 
-vi.stubGlobal('localStorage', {
+vi.stubGlobal("localStorage", {
 	getItem: (key: string) => storage.get(key) ?? null,
 	setItem: (key: string, value: string) => {
-		storage.set(key, value)
+		storage.set(key, value);
 	},
 	removeItem: (key: string) => {
-		storage.delete(key)
+		storage.delete(key);
 	},
 	clear: () => {
-		storage.clear()
+		storage.clear();
 	},
-})
+});
 
-vi.stubGlobal('fetch', createUnmockedFetch())
-vi.stubGlobal('scrollTo', vi.fn())
+vi.stubGlobal("fetch", createUnmockedFetch());
+vi.stubGlobal("scrollTo", vi.fn());
 
 beforeEach(() => {
-	storage.clear()
-	vi.stubGlobal('fetch', createUnmockedFetch())
-})
+	storage.clear();
+	vi.stubGlobal("fetch", createUnmockedFetch());
+});

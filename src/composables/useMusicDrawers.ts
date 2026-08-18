@@ -164,7 +164,6 @@ function restoreCommittedAlbumImportDraft(
 		sequence: track.track_number || index + 1,
 		discNumber: track.disc_number || 1,
 		title: track.title,
-		...(track.audio_url ? { audioUrl: track.audio_url } : {}),
 		origin: "import",
 		...(track.lyrics
 			? {

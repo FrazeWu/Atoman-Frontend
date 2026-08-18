@@ -203,9 +203,9 @@ async function handleSongEditSubmit() {
     })
     if (audioAsset) {
       try {
+        if (!audioAsset.id) throw new Error('上传资产缺少 ID')
         await queueMusicSongAudioReplacement(current.id, {
-          audio_url: audioAsset.url,
-          source_key: audioAsset.key,
+          asset_id: audioAsset.id,
         })
       } catch (error) {
         reportError(error, 'Failed to queue song audio replacement:')

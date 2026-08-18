@@ -67,6 +67,7 @@ const playlistRequests = useRequestGeneration()
 const playlistSongRequests = useRequestGeneration()
 const playlistSongMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false })
 const playlistSongsLoading = ref(false)
+const playAllLoading = ref(false)
 
 async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolean) {
   if (!authStore.isAuthenticated) {
@@ -337,38 +338,40 @@ function movePlaylistSong(index: number, direction: -1 | 1) {
   void persistSongOrder(nextSongs)
 }
 
+function musicSongToPlayerSong(song: MusicSongListItem, playlistName: string, playlistId: string): Song {
+  const albumTitle = song.album?.title || playlistName
+  const albumId = song.album?.id || playlistId
+  const artistText = song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家'
+  return {
+    id: song.id,
+    title: song.title,
+    artist: artistText,
+    album: albumTitle,
+    album_id: albumId,
+    year: 0,
+    release_date: '',
+    lyrics: song.lyrics || '',
+    audio_url: song.audio_url || '',
+    waveform_peaks: song.waveform_peaks,
+    cover_url: song.cover_url || '',
+    track_number: song.track_number,
+    status: (song.status as Song['status']) || 'open',
+    artists: song.artists?.map((artist) => ({
+      id: artist.id,
+      name: artist.name,
+      username: '',
+      email: '',
+    })),
+  }
+}
+
 const playableSongs = computed<Song[]>(() => {
   if (!playlist.value?.songs) return []
   const playlistName = playlist.value.name
-  const playlistId = playlist.value.id
+  const currentPlaylistId = playlist.value.id
   return playlist.value.songs
     .filter((song): song is MusicSongListItem & { audio_url: string } => typeof song.audio_url === 'string' && song.audio_url.trim().length > 0)
-    .map((song) => {
-      const albumTitle = song.album?.title || playlistName
-      const albumId = song.album?.id || playlistId
-      const artistText = song.artists?.map((a) => a.name).join(' / ') || '未知艺术家'
-      return {
-        id: song.id,
-        title: song.title,
-        artist: artistText,
-        album: albumTitle,
-        album_id: albumId,
-        year: 0,
-        release_date: '',
-        lyrics: song.lyrics || '',
-        audio_url: song.audio_url,
-        waveform_peaks: song.waveform_peaks,
-        cover_url: song.cover_url || '',
-        track_number: song.track_number,
-        status: (song.status as Song['status']) || 'approved',
-        artists: song.artists?.map((artist) => ({
-          id: artist.id,
-          name: artist.name,
-          username: '',
-          email: '',
-        })),
-      }
-    })
+    .map((song) => musicSongToPlayerSong(song, playlistName, currentPlaylistId))
 })
 
 const firstSongCover = computed(() => {
@@ -402,9 +405,35 @@ const canBookmarkPlaylist = computed(() => {
   return authStore.user?.uuid !== playlist.value.user_id
 })
 
-function playPlaylist() {
-  if (!playableSongs.value.length) return
-  player.playAlbum(playableSongs.value)
+async function playPlaylist() {
+  const current = playlist.value
+  if (!current || playAllLoading.value) return
+  const targetId = String(current.id)
+  const generation = playlistRequests.currentGeneration()
+  playAllLoading.value = true
+  errorMessage.value = ''
+  try {
+    const allSongs: MusicSongListItem[] = []
+    let page = 1
+    let hasMore = true
+    while (hasMore) {
+      const response = await listMusicPlaylistSongs(targetId, { page, page_size: 100 })
+      if (!playlistRequests.isCurrent(generation) || String(playlist.value?.id) !== targetId) return
+      allSongs.push(...response.data)
+      hasMore = response.meta.has_more
+      page += 1
+    }
+    const playable = allSongs
+      .filter((song) => typeof song.audio_url === 'string' && song.audio_url.trim().length > 0)
+      .map((song) => musicSongToPlayerSong(song, current.name, targetId))
+    if (playable.length) player.playAlbum(playable)
+  } catch (error) {
+    if (!playlistRequests.isCurrent(generation)) return
+    reportError(error, 'Failed to load full playlist queue:')
+    errorMessage.value = '完整歌单加载失败'
+  } finally {
+    if (playlistRequests.isCurrent(generation)) playAllLoading.value = false
+  }
 }
 
 function playTrack(track: MusicSongListItem) {
@@ -506,10 +535,10 @@ watch(playlist, syncEditForm, { immediate: true })
       <div class="playlist-actions-bar">
         <PButton
           variant="secondary"
-          :disabled="!playableSongs.length"
+          :disabled="playAllLoading || !(playlist?.song_count || playableSongs.length)"
           @click="playPlaylist"
         >
-          播放全部
+          {{ playAllLoading ? '加载中' : '播放全部' }}
         </PButton>
         <PButton
           v-if="canEditPlaylist && !editing"

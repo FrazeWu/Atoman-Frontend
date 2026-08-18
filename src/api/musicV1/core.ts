@@ -65,6 +65,15 @@ export const musicV1Endpoints = {
 	songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,
 	songAudioReplacements: (songId: string) =>
 		`${apiV1Base()}/music/songs/${songId}/audio-replacements`,
+	musicEntryStateRequests: (entityType: string, entityId: string) =>
+		`${apiV1Base()}/music/entries/${entityType}/${entityId}/state-requests`,
+	musicEntryEmergencyState: (entityType: string, entityId: string) =>
+		`${apiV1Base()}/music/entries/${entityType}/${entityId}/state/emergency`,
+	musicStateRequests: () => `${apiV1Base()}/music/state-requests`,
+	musicStateRequest: (requestId: string) =>
+		`${apiV1Base()}/music/state-requests/${requestId}`,
+	musicStateRequestDecision: (requestId: string) =>
+		`${apiV1Base()}/music/state-requests/${requestId}/decision`,
 	songRevisions: (songId: string) => `${apiV1Base()}/songs/${songId}/revisions`,
 	songRevision: (songId: string, version: number) =>
 		`${apiV1Base()}/songs/${songId}/revisions/${version}`,

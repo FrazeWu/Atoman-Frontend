@@ -27,6 +27,7 @@ export interface MusicCreationTrackDraft {
 	title: string;
 	audioUrl?: string;
 	audioKey?: string;
+	audioAssetId?: string;
 	audioFileName?: string;
 	uploadProgress?: number;
 	uploadError?: string;

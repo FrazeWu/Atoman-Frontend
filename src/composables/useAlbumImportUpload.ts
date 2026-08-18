@@ -34,10 +34,14 @@ type AlbumImportUploadState = {
 	operationGeneration: number;
 	pollingGeneration: number;
 	selectedFiles: Map<string, File>;
+	abortControllers: Set<AbortController>;
 };
 
 const FILE_PART_SIZE = 10 * 1024 * 1024; // 10MB
-const uploadStates = new WeakMap<MusicCreationFlowState, AlbumImportUploadState>();
+const uploadStates = new WeakMap<
+	MusicCreationFlowState,
+	AlbumImportUploadState
+>();
 
 function uploadStateFor(flow: MusicCreationFlowState) {
 	let uploadState = uploadStates.get(flow);
@@ -52,6 +56,7 @@ function uploadStateFor(flow: MusicCreationFlowState) {
 		operationGeneration: 0,
 		pollingGeneration: 0,
 		selectedFiles: new Map(),
+		abortControllers: new Set(),
 	};
 	uploadStates.set(flow, uploadState);
 	return uploadState;
@@ -74,7 +79,8 @@ export function useAlbumImportUpload() {
 		() => currentUploadState.value?.errorMessage.value ?? "",
 	);
 	const fileProgress = computed(
-		() => currentUploadState.value?.fileProgress.value ?? new Map<string, number>(),
+		() =>
+			currentUploadState.value?.fileProgress.value ?? new Map<string, number>(),
 	);
 
 	function applyImportSnapshotToFlow(
@@ -247,6 +253,12 @@ export function useAlbumImportUpload() {
 		if (flow) stopPollingFor(flow);
 	}
 
+	function beginUploadOperation(uploadState: AlbumImportUploadState) {
+		for (const controller of uploadState.abortControllers) controller.abort();
+		uploadState.abortControllers.clear();
+		return ++uploadState.operationGeneration;
+	}
+
 	async function uploadSingleFileMultipart(
 		uploadState: AlbumImportUploadState,
 		draft: MusicCreationFlowState["draft"]["albumImport"],
@@ -270,10 +282,19 @@ export function useAlbumImportUpload() {
 				partNumber,
 				partSize,
 			);
-			const response = await apiRequest(upload.uploadUrl, {
-				method: "PUT",
-				body: chunk,
-			});
+			const controller = new AbortController();
+			uploadState.abortControllers.add(controller);
+			let response: Response;
+			try {
+				response = await apiRequest(upload.uploadUrl, {
+					method: "PUT",
+					body: chunk,
+					signal: controller.signal,
+				});
+			} finally {
+				uploadState.abortControllers.delete(controller);
+			}
+			if (!isCurrent()) return;
 			if (!response.ok) throw new Error(`分片 ${partNumber} 上传失败`);
 
 			const etag = response.headers.get("ETag") ?? "";
@@ -332,7 +353,7 @@ export function useAlbumImportUpload() {
 		const draft = flow?.draft.albumImport;
 		if (!flow || !draft) return;
 		const uploadState = uploadStateFor(flow);
-		const generation = ++uploadState.operationGeneration;
+		const generation = beginUploadOperation(uploadState);
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		const files = Array.from(fileList).filter((file) => {
 			const relativePath =
@@ -345,11 +366,10 @@ export function useAlbumImportUpload() {
 			return;
 		}
 
-		const hasRelativePaths = files.some(
-			(file) =>
-				Boolean(
-					(file as File & { webkitRelativePath?: string }).webkitRelativePath,
-				),
+		const hasRelativePaths = files.some((file) =>
+			Boolean(
+				(file as File & { webkitRelativePath?: string }).webkitRelativePath,
+			),
 		);
 		const isArchive =
 			files.length === 1 &&
@@ -484,7 +504,9 @@ export function useAlbumImportUpload() {
 				},
 			);
 			for (let index = 0; index < uploadTasks.length; index += 3) {
-				await Promise.all(uploadTasks.slice(index, index + 3).map((task) => task()));
+				await Promise.all(
+					uploadTasks.slice(index, index + 3).map((task) => task()),
+				);
 			}
 
 			const snapshot = await getMusicAlbumImport(session.importId);
@@ -524,7 +546,7 @@ export function useAlbumImportUpload() {
 		}
 
 		const importId = draft.importId;
-		const generation = ++uploadState.operationGeneration;
+		const generation = beginUploadOperation(uploadState);
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		uploadState.uploading.value = true;
 		uploadState.errorMessage.value = "";
@@ -565,7 +587,7 @@ export function useAlbumImportUpload() {
 		if (!flow || !draft?.importId) return;
 		const uploadState = uploadStateFor(flow);
 		const importId = draft.importId;
-		const generation = ++uploadState.operationGeneration;
+		const generation = beginUploadOperation(uploadState);
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		uploadState.uploading.value = true;
 		try {
@@ -595,7 +617,7 @@ export function useAlbumImportUpload() {
 		} catch (error) {
 			if (isCurrent()) {
 				uploadState.errorMessage.value =
-				error instanceof Error ? error.message : "替换失败";
+					error instanceof Error ? error.message : "替换失败";
 			}
 		} finally {
 			if (isCurrent()) uploadState.uploading.value = false;
@@ -607,7 +629,7 @@ export function useAlbumImportUpload() {
 		const draft = flow?.draft.albumImport;
 		if (!flow || !draft?.importId) return;
 		const uploadState = uploadStateFor(flow);
-		uploadState.operationGeneration += 1;
+		beginUploadOperation(uploadState);
 		try {
 			await cancelMusicAlbumImportSession(draft.importId);
 			stopPollingFor(flow);
@@ -638,7 +660,7 @@ export function useAlbumImportUpload() {
 		const flow = creationFlow.value;
 		if (!flow) return;
 		const uploadState = uploadStateFor(flow);
-		uploadState.operationGeneration += 1;
+		beginUploadOperation(uploadState);
 		uploadState.uploading.value = false;
 		uploadState.errorMessage.value = "";
 		uploadState.fileProgress.value.clear();

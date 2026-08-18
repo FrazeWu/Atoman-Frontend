@@ -1,393 +1,615 @@
-import { createPinia, setActivePinia } from 'pinia'
-import { nextTick } from 'vue'
-import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { usePlayerStore } from '@/stores/player'
-import { useAuthStore } from '@/stores/auth'
+import { createPinia, setActivePinia } from "pinia";
+import { nextTick } from "vue";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { usePlayerStore } from "../../../src/stores/player";
+import { useAuthStore } from "../../../src/stores/auth";
+import type { Song } from "../../../src/types";
 
 const mocks = vi.hoisted(() => ({
 	recordMusicSongPlay: vi.fn(),
-}))
+}));
 
-vi.mock('@/api/musicV1', () => ({
+vi.mock("@/api/musicV1", () => ({
 	recordMusicSongPlay: mocks.recordMusicSongPlay,
-}))
+}));
 
 // Mock Audio
-const audioInstances: MockAudio[] = []
+const audioInstances: MockAudio[] = [];
+let audioPlayImplementation: () => Promise<void> = () => Promise.resolve();
 
 class MockAudio {
-  currentTime = 0
-  duration = 100
-  volume = 1
-  src = ''
-  play = vi.fn().mockResolvedValue(undefined)
-  pause = vi.fn()
-  addEventListener = vi.fn()
+	currentTime = 0;
+	duration = 100;
+	volume = 1;
+	src = "";
+	play = vi.fn(() => audioPlayImplementation());
+	pause = vi.fn();
+	addEventListener = vi.fn();
 
-  constructor() {
-    audioInstances.push(this)
-  }
+	constructor() {
+		audioInstances.push(this);
+	}
 }
 
-global.Audio = MockAudio as any
+global.Audio = MockAudio as any;
 
-describe('player store', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    vi.restoreAllMocks()
-    audioInstances.length = 0
-    mocks.recordMusicSongPlay.mockReset()
-    mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true })
-    useAuthStore().isAuthenticated = true
-    // localStorage.clear()
-  })
+function readPersistedPlaybackState(): Record<string, any> {
+	const raw = localStorage.getItem("playbackState");
+	if (!raw) return {};
+	try {
+		return JSON.parse(raw) as Record<string, any>;
+	} catch {
+		return {};
+	}
+}
 
-	it('records one play only after five seconds of active playback', async () => {
-		vi.useFakeTimers()
-		const player = usePlayerStore()
-		const song = { id: 'song-5s', title: 'Five Seconds', audio_url: 'five.mp3' } as any
+describe("player store", () => {
+	beforeEach(() => {
+		setActivePinia(createPinia());
+		vi.restoreAllMocks();
+		audioInstances.length = 0;
+		audioPlayImplementation = () => Promise.resolve();
+		mocks.recordMusicSongPlay.mockReset();
+		mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true });
+		useAuthStore().isAuthenticated = true;
+		// localStorage.clear()
+	});
 
-		player.playSong(song)
-		await audioInstances[0].play.mock.results[0]?.value
-		await vi.advanceTimersByTimeAsync(4999)
-		expect(mocks.recordMusicSongPlay).not.toHaveBeenCalled()
+	it("records one play only after five seconds of active playback", async () => {
+		vi.useFakeTimers();
+		const player = usePlayerStore();
+		const song = {
+			id: "song-5s",
+			title: "Five Seconds",
+			audio_url: "five.mp3",
+		} as any;
 
-		await vi.advanceTimersByTimeAsync(1)
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith('song-5s')
+		player.playSong(song);
+		await audioInstances[0].play.mock.results[0]?.value;
+		await vi.advanceTimersByTimeAsync(4999);
+		expect(mocks.recordMusicSongPlay).not.toHaveBeenCalled();
 
-		await vi.advanceTimersByTimeAsync(5000)
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
-		vi.useRealTimers()
-	})
+		await vi.advanceTimersByTimeAsync(1);
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("song-5s");
 
-	it('reports guest plays so the backend can count them without writing history', async () => {
-		vi.useFakeTimers()
-		useAuthStore().isAuthenticated = false
-		const player = usePlayerStore()
-		const song = { id: 'guest-song', title: 'Guest Song', audio_url: 'guest.mp3' } as any
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
+		vi.useRealTimers();
+	});
 
-		player.playSong(song)
-		await audioInstances[0].play.mock.results[0]?.value
-		await vi.advanceTimersByTimeAsync(5000)
+	it("reports guest plays so the backend can count them without writing history", async () => {
+		vi.useFakeTimers();
+		useAuthStore().isAuthenticated = false;
+		const player = usePlayerStore();
+		const song = {
+			id: "guest-song",
+			title: "Guest Song",
+			audio_url: "guest.mp3",
+		} as any;
 
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith('guest-song')
-		vi.useRealTimers()
-	})
+		player.playSong(song);
+		await audioInstances[0].play.mock.results[0]?.value;
+		await vi.advanceTimersByTimeAsync(5000);
 
-	it('uses the CORS-enabled cache version for production R2 audio', async () => {
-		const player = usePlayerStore()
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("guest-song");
+		vi.useRealTimers();
+	});
+
+	it("uses the CORS-enabled cache version for production R2 audio", async () => {
+		const player = usePlayerStore();
 		player.playSong({
-			id: 'r2-song',
-			title: 'R2 Song',
-			audio_url: 'https://assets.atoman.org/music/audio/r2-song.mp3',
-		} as any)
-
-		expect(player.currentSong?.audio_url).toBe('https://assets.atoman.org/music/audio/r2-song.mp3?cors=1')
-		expect(audioInstances[0]?.src).toBe('https://assets.atoman.org/music/audio/r2-song.mp3?cors=1')
-	})
-
-	it('records a restored song after five seconds of resumed playback', async () => {
-		vi.useFakeTimers()
-		localStorage.setItem('playbackState', JSON.stringify({
-			song: { id: 'restored-song', title: 'Restored', audio_url: 'restored.mp3' },
-			currentTime: 12,
-		}))
-		const player = usePlayerStore()
-
-		player.togglePlay()
-		await audioInstances[0].play.mock.results[0]?.value
-		await vi.advanceTimersByTimeAsync(5000)
-
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith('restored-song')
-		vi.useRealTimers()
-	})
-
-  it('toggles lyrics', () => {
-    const player = usePlayerStore()
-    expect(player.showLyrics).toBe(false)
-    player.toggleLyrics()
-    expect(player.showLyrics).toBe(true)
-    player.toggleLyrics()
-    expect(player.showLyrics).toBe(false)
-  })
-
-  it('keeps lyrics and queue open independently', () => {
-    const player = usePlayerStore()
-
-    player.toggleLyrics()
-    player.toggleQueue()
-
-    expect(player.showLyrics).toBe(true)
-    expect(player.showQueue).toBe(true)
-  })
-
-  it('persists the player pin preference independently from playback', async () => {
-    const player = usePlayerStore()
-    expect(player.isPinned).toBe(true)
-
-    player.togglePinned()
-    await nextTick()
-    expect(localStorage.getItem('playerPinned')).toBe('false')
-
-    setActivePinia(createPinia())
-    const restoredPlayer = usePlayerStore()
-    expect(restoredPlayer.isPinned).toBe(false)
-  })
-
-  it('skips forward and backward', () => {
-    const player = usePlayerStore()
-    
-    // Setup a fake current song and audio to enable skip
-    const mockSong = { id: 1, title: 'Test', audio_url: 'test.mp3' } as any
-    player.playSong(mockSong)
-    
-    player.duration = 100
-    player.seek(50)
-    
-    player.skip(5)
-    expect(player.currentTime).toBe(55)
-    
-    player.skip(-10)
-    expect(player.currentTime).toBe(45)
-    
-    // Test boundaries
-    player.skip(100)
-    expect(player.currentTime).toBe(100)
-    
-    player.skip(-200)
-    expect(player.currentTime).toBe(0)
-  })
-
-  it('keeps next and previous on the selected single song after an old queue exists', () => {
-    const player = usePlayerStore()
-    const firstQueuedSong = { id: 1, title: 'Queued 1', audio_url: 'queued-1.mp3' } as any
-    const secondQueuedSong = { id: 2, title: 'Queued 2', audio_url: 'queued-2.mp3' } as any
-    const singleSong = { id: 3, title: 'Single', audio_url: 'single.mp3' } as any
-
-    player.playAlbum([firstQueuedSong, secondQueuedSong])
-    player.playSong(singleSong)
-
-    expect(player.queue.map((song) => song.id)).toEqual([3])
-
-    player.playNext()
-    expect(player.currentSong?.id).toBe(3)
-
-    player.playPrevious()
-    expect(player.currentSong?.id).toBe(3)
-  })
-
-  it('advances to next song in an album queue with uuid ids', () => {
-    const player = usePlayerStore()
-    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
-    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
-
-    player.playAlbum([firstSong, secondSong])
-    player.playNext()
-
-    expect(player.currentSong?.id).toBe('song-uuid-2')
-  })
-
-  it('keeps music and podcast items with the same raw id distinct', () => {
-    const player = usePlayerStore()
-    const musicSong = { id: 101, source_type: 'music', title: 'Song', audio_url: 'song.mp3' } as any
-    const podcastSong = {
-      id: 101,
-      source_type: 'feed_podcast',
-      source_id: '101',
-      title: 'Episode',
-      audio_url: 'episode.mp3',
-    } as any
-
-    player.playSong(musicSong)
-    player.addToQueue(podcastSong)
-
-    expect(player.queue).toHaveLength(2)
-    player.playQueuedSong(podcastSong)
-    expect(player.currentSong?.title).toBe('Episode')
-
-    player.removeFromQueue(musicSong)
-    expect(player.queue.map((item) => item.title)).toEqual(['Episode'])
-  })
-
-  it('normalizes invalid album start indexes and missing queue positions', () => {
-    const player = usePlayerStore()
-    const firstSong = { id: 'first', title: 'First', audio_url: 'first.mp3' } as any
-    const secondSong = { id: 'second', title: 'Second', audio_url: 'second.mp3' } as any
-
-    player.playAlbum([firstSong, secondSong], 99)
-    expect(player.currentSong?.id).toBe('first')
-
-    player.currentSong = { id: 'restored', title: 'Restored', audio_url: 'restored.mp3' } as any
-    player.playPrevious()
-    expect(player.currentSong?.id).toBe('first')
-  })
-
-  it('plays a queued feed song without shrinking the current queue', () => {
-    const player = usePlayerStore()
-    const firstFeedItem = {
-      id: '101',
-      title: 'Episode 1',
-      author: 'Host',
-      published_at: '2025-01-01T00:00:00Z',
-      summary: 'First episode',
-      enclosure_url: 'episode-1.mp3',
-    }
-    const secondFeedItem = {
-      id: '102',
-      title: 'Episode 2',
-      author: 'Host',
-      published_at: '2025-01-02T00:00:00Z',
-      summary: 'Second episode',
-      enclosure_url: 'episode-2.mp3',
-    }
-
-    player.setQueueFromCurrentItems([
-      { type: 'feed_item', feed_item: firstFeedItem },
-      { type: 'feed_item', feed_item: secondFeedItem },
-    ] as any)
-    const firstSong = player.createPodcastSong(firstFeedItem as any)
-    expect(firstSong).not.toBeNull()
-    expect(firstSong?.media_kind).toBe('feed_item')
-
-    player.playQueuedSong(firstSong!)
-
-    expect(player.currentSong?.id).toBe(101)
-    expect(player.queue.map((song) => song.id)).toEqual([101, 102])
-
-    player.playNext()
-    expect(player.currentSong?.id).toBe(102)
-  })
-
-  it('keeps album queue when selecting another song from the same queue', () => {
-    const player = usePlayerStore()
-    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
-    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
-    const thirdSong = { id: 'song-uuid-3', title: 'UUID 3', audio_url: 'uuid-3.wav' } as any
-
-    player.playAlbum([firstSong, secondSong, thirdSong])
-    player.playQueuedSong(secondSong)
-
-    expect(player.queue.map((song) => song.id)).toEqual(['song-uuid-1', 'song-uuid-2', 'song-uuid-3'])
-
-    player.playNext()
-    expect(player.currentSong?.id).toBe('song-uuid-3')
-
-    player.playPrevious()
-    expect(player.currentSong?.id).toBe('song-uuid-2')
-  })
-
-  it('keeps current song title populated while moving through album queue', () => {
-    const player = usePlayerStore()
-    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
-    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
-
-    player.playAlbum([firstSong, secondSong])
-    expect(player.currentSong?.title).toBe('UUID 1')
-
-    player.playNext()
-    expect(player.currentSong?.title).toBe('UUID 2')
-
-    player.playPrevious()
-    expect(player.currentSong?.title).toBe('UUID 1')
-  })
-
-  it('does not randomly replay the current song when other queued songs exist', () => {
-    const player = usePlayerStore()
-    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
-    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
-    const thirdSong = { id: 'song-uuid-3', title: 'UUID 3', audio_url: 'uuid-3.wav' } as any
-
-    player.playAlbum([firstSong, secondSong, thirdSong])
-    player.playbackMode = 'random'
-
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
-    player.playNext()
-    randomSpy.mockRestore()
-
-    expect(player.currentSong?.id).not.toBe('song-uuid-1')
-    expect(['song-uuid-2', 'song-uuid-3']).toContain(player.currentSong?.id)
-  })
-
-  it('persists playback without playing intent and restores paused', async () => {
-    const player = usePlayerStore()
-    const song = { id: 1, title: 'Persisted', audio_url: 'persisted.mp3' } as any
-
-    player.playSong(song)
-    await nextTick()
-
-    const savedState = JSON.parse(localStorage.getItem('playbackState') || '{}')
-    expect(savedState).not.toHaveProperty('isPlaying')
-
-    setActivePinia(createPinia())
-    const restoredPlayer = usePlayerStore()
-
-    expect(restoredPlayer.currentSong?.id).toBe(1)
-    expect(restoredPlayer.isPlaying).toBe(false)
-  })
-
-  it('persists and restores the active queue', async () => {
-    localStorage.clear()
-    const player = usePlayerStore()
-    const firstSong = { id: 'song-1', title: 'Song 1', audio_url: 'song-1.mp3' } as any
-    const secondSong = { id: 'song-2', title: 'Song 2', audio_url: 'song-2.mp3' } as any
-
-    player.playAlbum([firstSong, secondSong], 1)
-    await nextTick()
-
-    const savedState = JSON.parse(localStorage.getItem('playbackState') || '{}')
-    expect(savedState.queue.map((song: any) => song.id)).toEqual(['song-1', 'song-2'])
-
-    setActivePinia(createPinia())
-    const restoredPlayer = usePlayerStore()
-
-    expect(restoredPlayer.currentSong?.id).toBe('song-2')
-    expect(restoredPlayer.queue.map((song) => song.id)).toEqual(['song-1', 'song-2'])
-
-    restoredPlayer.playPrevious()
-    expect(restoredPlayer.currentSong?.id).toBe('song-1')
-  })
-
-  it('does not mark playSong as playing when audio play fails', async () => {
-    const player = usePlayerStore()
-    const song = { id: 1, title: 'Rejected', audio_url: 'rejected.mp3' } as any
-
-    player.playSong(song)
-    audioInstances[0].play.mockRejectedValueOnce(new Error('play blocked'))
-    player.playSong({ id: 2, title: 'Next rejected', audio_url: 'next-rejected.mp3' } as any)
-    await audioInstances[0].play.mock.results.at(-1)?.value.catch(() => undefined)
-
-    expect(player.isPlaying).toBe(false)
-  })
-
-  it('keeps togglePlay paused when audio play fails', async () => {
-    const player = usePlayerStore()
-    const song = { id: 1, title: 'Toggle rejected', audio_url: 'toggle-rejected.mp3' } as any
-
-    player.playSong(song)
-    await audioInstances[0].play.mock.results[0]?.value
-    player.togglePlay()
-    audioInstances[0].play.mockRejectedValueOnce(new Error('play blocked'))
-
-    player.togglePlay()
-    await audioInstances[0].play.mock.results.at(-1)?.value.catch(() => undefined)
-
-    expect(player.isPlaying).toBe(false)
-  })
-
-  it('keeps repeat-one next paused when audio play fails', async () => {
-    const player = usePlayerStore()
-    const song = { id: 1, title: 'Repeat rejected', audio_url: 'repeat-rejected.mp3' } as any
-
-    player.playSong(song)
-    await audioInstances[0].play.mock.results[0]?.value
-    player.repeatMode = 'one'
-    audioInstances[0].play.mockRejectedValueOnce(new Error('play blocked'))
-
-    player.playNext()
-    await audioInstances[0].play.mock.results.at(-1)?.value.catch(() => undefined)
-
-    expect(player.isPlaying).toBe(false)
-  })
-})
+			id: "r2-song",
+			title: "R2 Song",
+			audio_url: "https://assets.atoman.org/music/audio/r2-song.mp3",
+		} as any);
+
+		expect(player.currentSong?.audio_url).toBe(
+			"https://assets.atoman.org/music/audio/r2-song.mp3?cors=1",
+		);
+		expect(audioInstances[0]?.src).toBe(
+			"https://assets.atoman.org/music/audio/r2-song.mp3?cors=1",
+		);
+	});
+
+	it("records a restored song after five seconds of resumed playback", async () => {
+		vi.useFakeTimers();
+		localStorage.setItem(
+			"playbackState",
+			JSON.stringify({
+				song: {
+					id: "restored-song",
+					title: "Restored",
+					audio_url: "restored.mp3",
+				},
+				currentTime: 12,
+			}),
+		);
+		const player = usePlayerStore();
+
+		player.togglePlay();
+		await audioInstances[0].play.mock.results[0]?.value;
+		await vi.advanceTimersByTimeAsync(5000);
+
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("restored-song");
+		vi.useRealTimers();
+	});
+
+	it("toggles lyrics", () => {
+		const player = usePlayerStore();
+		expect(player.showLyrics).toBe(false);
+		player.toggleLyrics();
+		expect(player.showLyrics).toBe(true);
+		player.toggleLyrics();
+		expect(player.showLyrics).toBe(false);
+	});
+
+	it("keeps lyrics and queue open independently", () => {
+		const player = usePlayerStore();
+
+		player.toggleLyrics();
+		player.toggleQueue();
+
+		expect(player.showLyrics).toBe(true);
+		expect(player.showQueue).toBe(true);
+	});
+
+	it("persists the player pin preference independently from playback", async () => {
+		const player = usePlayerStore();
+		expect(player.isPinned).toBe(true);
+
+		player.togglePinned();
+		await nextTick();
+		expect(localStorage.getItem("playerPinned")).toBe("false");
+
+		setActivePinia(createPinia());
+		const restoredPlayer = usePlayerStore();
+		expect(restoredPlayer.isPinned).toBe(false);
+	});
+
+	it("skips forward and backward", () => {
+		const player = usePlayerStore();
+
+		// Setup a fake current song and audio to enable skip
+		const mockSong = { id: 1, title: "Test", audio_url: "test.mp3" } as any;
+		player.playSong(mockSong);
+
+		player.duration = 100;
+		player.seek(50);
+
+		player.skip(5);
+		expect(player.currentTime).toBe(55);
+
+		player.skip(-10);
+		expect(player.currentTime).toBe(45);
+
+		// Test boundaries
+		player.skip(100);
+		expect(player.currentTime).toBe(100);
+
+		player.skip(-200);
+		expect(player.currentTime).toBe(0);
+	});
+
+	it("keeps next and previous on the selected single song after an old queue exists", () => {
+		const player = usePlayerStore();
+		const firstQueuedSong = {
+			id: 1,
+			title: "Queued 1",
+			audio_url: "queued-1.mp3",
+		} as any;
+		const secondQueuedSong = {
+			id: 2,
+			title: "Queued 2",
+			audio_url: "queued-2.mp3",
+		} as any;
+		const singleSong = {
+			id: 3,
+			title: "Single",
+			audio_url: "single.mp3",
+		} as any;
+
+		player.playAlbum([firstQueuedSong, secondQueuedSong]);
+		player.playSong(singleSong);
+
+		expect(player.queue.map((song: Song) => song.id)).toEqual([3]);
+
+		player.playNext();
+		expect(player.currentSong?.id).toBe(3);
+
+		player.playPrevious();
+		expect(player.currentSong?.id).toBe(3);
+	});
+
+	it("advances to next song in an album queue with uuid ids", () => {
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "song-uuid-1",
+			title: "UUID 1",
+			audio_url: "uuid-1.wav",
+		} as any;
+		const secondSong = {
+			id: "song-uuid-2",
+			title: "UUID 2",
+			audio_url: "uuid-2.wav",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong]);
+		player.playNext();
+
+		expect(player.currentSong?.id).toBe("song-uuid-2");
+	});
+
+	it("keeps music and podcast items with the same raw id distinct", () => {
+		const player = usePlayerStore();
+		const musicSong = {
+			id: 101,
+			source_type: "music",
+			title: "Song",
+			audio_url: "song.mp3",
+		} as any;
+		const podcastSong = {
+			id: 101,
+			source_type: "feed_podcast",
+			source_id: "101",
+			title: "Episode",
+			audio_url: "episode.mp3",
+		} as any;
+
+		player.playSong(musicSong);
+		player.addToQueue(podcastSong);
+
+		expect(player.queue).toHaveLength(2);
+		player.playQueuedSong(podcastSong);
+		expect(player.currentSong?.title).toBe("Episode");
+
+		player.removeFromQueue(musicSong);
+		expect(player.queue.map((item: Song) => item.title)).toEqual(["Episode"]);
+	});
+
+	it("normalizes invalid album start indexes and missing queue positions", () => {
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "first",
+			title: "First",
+			audio_url: "first.mp3",
+		} as any;
+		const secondSong = {
+			id: "second",
+			title: "Second",
+			audio_url: "second.mp3",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong], 99);
+		expect(player.currentSong?.id).toBe("first");
+
+		player.currentSong = {
+			id: "restored",
+			title: "Restored",
+			audio_url: "restored.mp3",
+		} as any;
+		player.playPrevious();
+		expect(player.currentSong?.id).toBe("first");
+	});
+
+	it("plays a queued feed song without shrinking the current queue", () => {
+		const player = usePlayerStore();
+		const firstFeedItem = {
+			id: "101",
+			title: "Episode 1",
+			author: "Host",
+			published_at: "2025-01-01T00:00:00Z",
+			summary: "First episode",
+			enclosure_url: "episode-1.mp3",
+		};
+		const secondFeedItem = {
+			id: "102",
+			title: "Episode 2",
+			author: "Host",
+			published_at: "2025-01-02T00:00:00Z",
+			summary: "Second episode",
+			enclosure_url: "episode-2.mp3",
+		};
+
+		player.setQueueFromCurrentItems([
+			{ type: "feed_item", feed_item: firstFeedItem },
+			{ type: "feed_item", feed_item: secondFeedItem },
+		] as any);
+		const firstSong = player.createPodcastSong(firstFeedItem as any);
+		expect(firstSong).not.toBeNull();
+		expect(firstSong?.media_kind).toBe("feed_item");
+
+		player.playQueuedSong(firstSong!);
+
+		expect(player.currentSong?.id).toBe(101);
+		expect(player.queue.map((song: Song) => song.id)).toEqual([101, 102]);
+
+		player.playNext();
+		expect(player.currentSong?.id).toBe(102);
+	});
+
+	it("keeps album queue when selecting another song from the same queue", () => {
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "song-uuid-1",
+			title: "UUID 1",
+			audio_url: "uuid-1.wav",
+		} as any;
+		const secondSong = {
+			id: "song-uuid-2",
+			title: "UUID 2",
+			audio_url: "uuid-2.wav",
+		} as any;
+		const thirdSong = {
+			id: "song-uuid-3",
+			title: "UUID 3",
+			audio_url: "uuid-3.wav",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong, thirdSong]);
+		player.playQueuedSong(secondSong);
+
+		expect(player.queue.map((song: Song) => song.id)).toEqual([
+			"song-uuid-1",
+			"song-uuid-2",
+			"song-uuid-3",
+		]);
+
+		player.playNext();
+		expect(player.currentSong?.id).toBe("song-uuid-3");
+
+		player.playPrevious();
+		expect(player.currentSong?.id).toBe("song-uuid-2");
+	});
+
+	it("keeps current song title populated while moving through album queue", () => {
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "song-uuid-1",
+			title: "UUID 1",
+			audio_url: "uuid-1.wav",
+		} as any;
+		const secondSong = {
+			id: "song-uuid-2",
+			title: "UUID 2",
+			audio_url: "uuid-2.wav",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong]);
+		expect(player.currentSong?.title).toBe("UUID 1");
+
+		player.playNext();
+		expect(player.currentSong?.title).toBe("UUID 2");
+
+		player.playPrevious();
+		expect(player.currentSong?.title).toBe("UUID 1");
+	});
+
+	it("does not randomly replay the current song when other queued songs exist", () => {
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "song-uuid-1",
+			title: "UUID 1",
+			audio_url: "uuid-1.wav",
+		} as any;
+		const secondSong = {
+			id: "song-uuid-2",
+			title: "UUID 2",
+			audio_url: "uuid-2.wav",
+		} as any;
+		const thirdSong = {
+			id: "song-uuid-3",
+			title: "UUID 3",
+			audio_url: "uuid-3.wav",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong, thirdSong]);
+		player.playbackMode = "random";
+
+		const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+		player.playNext();
+		randomSpy.mockRestore();
+
+		expect(player.currentSong?.id).not.toBe("song-uuid-1");
+		expect(["song-uuid-2", "song-uuid-3"]).toContain(player.currentSong?.id);
+	});
+
+	it("persists playback without playing intent and restores paused", async () => {
+		const player = usePlayerStore();
+		const song = {
+			id: 1,
+			title: "Persisted",
+			audio_url: "persisted.mp3",
+		} as any;
+
+		player.playSong(song);
+		await nextTick();
+
+		const savedState = readPersistedPlaybackState();
+		expect(savedState).not.toHaveProperty("isPlaying");
+
+		setActivePinia(createPinia());
+		const restoredPlayer = usePlayerStore();
+
+		expect(restoredPlayer.currentSong?.id).toBe(1);
+		expect(restoredPlayer.isPlaying).toBe(false);
+	});
+
+	it("persists and restores the active queue", async () => {
+		localStorage.clear();
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "song-1",
+			title: "Song 1",
+			audio_url: "song-1.mp3",
+		} as any;
+		const secondSong = {
+			id: "song-2",
+			title: "Song 2",
+			audio_url: "song-2.mp3",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong], 1);
+		await nextTick();
+
+		const savedState = readPersistedPlaybackState();
+		expect(savedState.queue.map((song: any) => song.id)).toEqual([
+			"song-1",
+			"song-2",
+		]);
+
+		setActivePinia(createPinia());
+		const restoredPlayer = usePlayerStore();
+
+		expect(restoredPlayer.currentSong?.id).toBe("song-2");
+		expect(restoredPlayer.queue.map((song: Song) => song.id)).toEqual([
+			"song-1",
+			"song-2",
+		]);
+
+		restoredPlayer.playPrevious();
+		expect(restoredPlayer.currentSong?.id).toBe("song-1");
+	});
+
+	it("ignores a stale play rejection after switching songs", async () => {
+		let rejectFirst!: (reason?: unknown) => void;
+		let resolveSecond!: () => void;
+		let call = 0;
+		audioPlayImplementation = () =>
+			new Promise<void>((resolve, reject) => {
+				call += 1;
+				if (call === 1) rejectFirst = reject;
+				else resolveSecond = resolve;
+			});
+		const player = usePlayerStore();
+
+		player.playSong({
+			id: "first",
+			title: "First",
+			audio_url: "first.mp3",
+		} as any);
+		player.playSong({
+			id: "second",
+			title: "Second",
+			audio_url: "second.mp3",
+		} as any);
+		resolveSecond();
+		await Promise.resolve();
+		expect(player.currentSong?.id).toBe("second");
+		expect(player.isPlaying).toBe(true);
+
+		try {
+			rejectFirst(new DOMException("aborted", "AbortError"));
+		} catch (error) {
+			throw new Error(
+				`Rejecting the deferred play promise threw: ${String(error)}`,
+			);
+		}
+		await Promise.resolve();
+		expect(player.currentSong?.id).toBe("second");
+		expect(player.isPlaying).toBe(true);
+	});
+
+	it("writes saved podcast progress to the audio element before playback", () => {
+		localStorage.setItem(
+			"atoman:podcast-progress:episode-1",
+			JSON.stringify({
+				episode_id: "episode-1",
+				position_sec: 37,
+				duration_sec: 120,
+				completed: false,
+				last_played_at: "",
+			}),
+		);
+		const player = usePlayerStore();
+
+		player.playSong({
+			id: "episode-1",
+			source_id: "episode-1",
+			source_type: "podcast_episode",
+			title: "Episode",
+			audio_url: "episode.mp3",
+		} as any);
+
+		expect(player.currentTime).toBe(37);
+		expect(audioInstances[0].currentTime).toBe(37);
+	});
+
+	it("omits lyrics and waveform data from persisted queue items", async () => {
+		const player = usePlayerStore();
+		player.playSong({
+			id: "compact",
+			title: "Compact",
+			audio_url: "compact.mp3",
+			lyrics: "large lyrics",
+			waveform_peaks: [1, 2, 3],
+		} as any);
+		await nextTick();
+
+		const saved = readPersistedPlaybackState();
+		expect(saved.song).not.toHaveProperty("lyrics");
+		expect(saved.song).not.toHaveProperty("waveform_peaks");
+		expect(saved.queue[0]).not.toHaveProperty("lyrics");
+	});
+
+	it("does not mark playSong as playing when audio play fails", async () => {
+		const player = usePlayerStore();
+		const song = { id: 1, title: "Rejected", audio_url: "rejected.mp3" } as any;
+
+		player.playSong(song);
+		audioInstances[0].play.mockRejectedValueOnce(new Error("play blocked"));
+		player.playSong({
+			id: 2,
+			title: "Next rejected",
+			audio_url: "next-rejected.mp3",
+		} as any);
+		await audioInstances[0].play.mock.results
+			.at(-1)
+			?.value.catch(() => undefined);
+
+		expect(player.isPlaying).toBe(false);
+	});
+
+	it("keeps togglePlay paused when audio play fails", async () => {
+		const player = usePlayerStore();
+		const song = {
+			id: 1,
+			title: "Toggle rejected",
+			audio_url: "toggle-rejected.mp3",
+		} as any;
+
+		player.playSong(song);
+		await audioInstances[0].play.mock.results[0]?.value;
+		player.togglePlay();
+		audioInstances[0].play.mockRejectedValueOnce(new Error("play blocked"));
+
+		player.togglePlay();
+		await audioInstances[0].play.mock.results
+			.at(-1)
+			?.value.catch(() => undefined);
+
+		expect(player.isPlaying).toBe(false);
+	});
+
+	it("keeps repeat-one next paused when audio play fails", async () => {
+		const player = usePlayerStore();
+		const song = {
+			id: 1,
+			title: "Repeat rejected",
+			audio_url: "repeat-rejected.mp3",
+		} as any;
+
+		player.playSong(song);
+		await audioInstances[0].play.mock.results[0]?.value;
+		player.repeatMode = "one";
+		audioInstances[0].play.mockRejectedValueOnce(new Error("play blocked"));
+
+		player.playNext();
+		await audioInstances[0].play.mock.results
+			.at(-1)
+			?.value.catch(() => undefined);
+
+		expect(player.isPlaying).toBe(false);
+	});
+});

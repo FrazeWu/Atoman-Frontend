@@ -1,7 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import MusicEntityEditorDrawer from "@/components/music/MusicEntityEditorDrawer.vue";
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
+import MusicEntityEditorDrawer from "../../../../src/components/music/MusicEntityEditorDrawer.vue";
 
 const drawerState = ref({
 	artistId: null as string | null,
@@ -89,12 +90,14 @@ describe("MusicEntityEditorDrawer.vue", () => {
 			playable: true,
 		});
 		mocks.uploadMusicAsset.mockResolvedValue({
+			id: "asset-cover-1",
 			url: "https://assets.example.test/audio/new.mp3",
 			key: "music/audio/new.mp3",
 			content_type: "audio/mpeg",
 			size: 1,
 		});
 		mocks.uploadMusicAssetWithProgress.mockResolvedValue({
+			id: "asset-audio-1",
 			url: "https://assets.example.test/audio/new.mp3",
 			key: "music/audio/new.mp3",
 			content_type: "audio/mpeg",

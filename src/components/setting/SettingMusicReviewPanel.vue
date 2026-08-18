@@ -6,18 +6,25 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { isAdminRole } from '@/utils/roles'
 import PSelect from '@/components/ui/PSelect.vue'
+import {
+  listMusicEntryStateRequests,
+  reviewMusicEntryStateRequest,
+  type MusicEntryStateRequest,
+} from '@/api/musicV1'
 
 const authStore = useAuthStore()
 const api = useApi()
 
-const activeTab = ref<'entries' | 'quality'>('entries')
+const activeTab = ref<'entries' | 'requests' | 'quality'>('entries')
 
 type MusicReviewEntry = {
   id: string
   name: string
-  type: 'album' | 'artist'
+  type: 'album' | 'artist' | 'song'
   album_type?: string
   entry_status: string
+  lifecycle_status: string
+  edit_status: string
   open_discussion_count?: number
   last_editor?: string
   updated_at?: string
@@ -31,14 +38,56 @@ const entriesStatusFilter = ref('all')
 const entriesTypeOptions = [
   { label: '全部类型', value: 'all' },
   { label: '专辑', value: 'album' },
-  { label: '艺术家', value: 'artist' },
+  { label: '歌曲', value: 'song' },
 ]
 const entriesStatusOptions = [
   { label: '全部状态', value: 'all' },
-  { label: '开放', value: 'open' },
-  { label: '已确认', value: 'confirmed' },
-  { label: '争议', value: 'disputed' },
+  { label: '开发中', value: 'development' },
+  { label: '已锁定', value: 'locked' },
+  { label: '已关闭', value: 'closed' },
 ]
+const stateRequests = ref<MusicEntryStateRequest[]>([])
+const stateRequestsLoading = ref(false)
+const requestDecisionReasons = ref<Record<string, string>>({})
+const requestDecisionBusy = ref('')
+
+async function fetchStateRequests() {
+  stateRequestsLoading.value = true
+  try {
+    stateRequests.value = await listMusicEntryStateRequests({ status: 'pending' })
+  } catch (error) {
+    reportError(error, '加载音乐状态请求失败')
+  } finally {
+    stateRequestsLoading.value = false
+  }
+}
+
+async function decideStateRequest(request: MusicEntryStateRequest, decision: 'approved' | 'rejected') {
+  const reason = requestDecisionReasons.value[request.id]?.trim()
+  if (!reason || requestDecisionBusy.value) return
+  requestDecisionBusy.value = request.id
+  try {
+    await reviewMusicEntryStateRequest(request.id, decision, reason)
+    stateRequests.value = stateRequests.value.filter((item) => item.id !== request.id)
+    const next = { ...requestDecisionReasons.value }
+    delete next[request.id]
+    requestDecisionReasons.value = next
+    await fetchEntries()
+  } catch (error) {
+    reportError(error, '处理音乐状态请求失败')
+  } finally {
+    requestDecisionBusy.value = ''
+  }
+}
+
+function stateRequestActionLabel(action: string) {
+  return ({ close: '关闭修改', reopen: '重新开发', unlock: '解除锁定' } as Record<string, string>)[action] ?? action
+}
+
+function musicEntryPath(type: string, id: string) {
+  return type === 'album' ? `/music/album/${id}` : type === 'artist' ? `/music/artist/${id}` : `/music/song/${id}`
+}
+
 type MusicQualityIssue = { type: string; entity_type: 'album' | 'artist' | 'song' | 'import'; entity_id: string; title: string }
 const qualityIssues = ref<MusicQualityIssue[]>([])
 const qualityLoading = ref(false)
@@ -106,9 +155,9 @@ const fetchEntries = async () => {
 }
 
 const entryStatusLabel = (s: string) => {
-  if (s === 'confirmed') return '已确认'
-  if (s === 'disputed') return '争议'
-  return '开放'
+  if (s === 'locked') return '已锁定'
+  if (s === 'closed') return '已关闭'
+  return '开发中'
 }
 
 watch([entriesTypeFilter, entriesStatusFilter], () => {
@@ -122,6 +171,7 @@ onMounted(async () => {
     return
   }
   await fetchEntries()
+  await fetchStateRequests()
   await fetchQualityIssues()
 })
 </script>
@@ -132,6 +182,9 @@ onMounted(async () => {
       <div class="admin-tabs">
         <button :class="['admin-tab', activeTab === 'entries' ? 'admin-tab-active' : '']" @click="activeTab = 'entries'; fetchEntries()">
           条目管理
+        </button>
+        <button :class="['admin-tab', activeTab === 'requests' ? 'admin-tab-active' : '']" @click="activeTab = 'requests'; fetchStateRequests()">
+          状态请求 ({{ stateRequests.length }})
         </button>
         <button :class="['admin-tab', activeTab === 'quality' ? 'admin-tab-active' : '']" @click="activeTab = 'quality'; fetchQualityIssues()">
           资料问题 ({{ qualityIssues.length }})
@@ -150,18 +203,38 @@ onMounted(async () => {
       <div v-else class="entries-list">
         <div v-for="entry in entries" :key="entry.id" class="entry-row">
           <div class="entry-info">
-            <RouterLink :to="entry.type === 'album' ? `/music/album/${entry.id}` : `/music/artist/${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
-            <span class="entry-type">{{ entry.type === 'album' ? '专辑' : '艺术家' }}</span>
+            <RouterLink :to="musicEntryPath(entry.type, entry.id)" class="entry-name">{{ entry.name }}</RouterLink>
+            <span class="entry-type">{{ entry.type === 'album' ? '专辑' : entry.type === 'artist' ? '艺术家' : '歌曲' }}</span>
             <span v-if="entry.album_type" class="entry-album-type">{{ entry.album_type.toUpperCase() }}</span>
           </div>
           <div class="entry-meta">
-            <span :class="['entry-status', `entry-status-${entry.entry_status}`]">{{ entryStatusLabel(entry.entry_status) }}</span>
+            <span :class="['entry-status', `entry-status-${entry.edit_status}`]">{{ entryStatusLabel(entry.edit_status) }}</span>
             <span v-if="entry.open_discussion_count" class="entry-disc">💬 {{ entry.open_discussion_count }}</span>
             <span class="entry-editor" v-if="entry.last_editor">by {{ entry.last_editor }}</span>
             <span class="entry-date">{{ entry.updated_at?.slice(0, 10) }}</span>
           </div>
         </div>
         <div v-if="entries.length === 0" class="text-gray-400 py-8 text-center">暂无条目</div>
+      </div>
+    </div>
+
+    <div v-else-if="activeTab === 'requests'">
+      <div v-if="stateRequestsLoading" class="text-center py-12 text-gray-400">加载中...</div>
+      <div v-else class="entries-list">
+        <div v-for="request in stateRequests" :key="request.id" class="entry-row state-request-row">
+          <div class="entry-info state-request-info">
+            <RouterLink :to="musicEntryPath(request.entity_type, request.entity_id)" class="entry-name">{{ stateRequestActionLabel(request.action) }}</RouterLink>
+            <span class="entry-type">{{ request.entity_type === 'album' ? '专辑' : request.entity_type === 'artist' ? '艺术家' : '歌曲' }}</span>
+            <span class="request-reason">{{ request.request_reason }}</span>
+            <span v-if="request.requester?.username" class="entry-editor">by {{ request.requester.username }}</span>
+          </div>
+          <div class="request-decision">
+            <input v-model="requestDecisionReasons[request.id]" maxlength="500" placeholder="处理理由" :aria-label="`${stateRequestActionLabel(request.action)}处理理由`" />
+            <button type="button" :disabled="requestDecisionBusy === request.id || !requestDecisionReasons[request.id]?.trim() || request.requested_by === authStore.user?.uuid" @click="decideStateRequest(request, 'approved')">批准</button>
+            <button type="button" :disabled="requestDecisionBusy === request.id || !requestDecisionReasons[request.id]?.trim() || request.requested_by === authStore.user?.uuid" @click="decideStateRequest(request, 'rejected')">拒绝</button>
+          </div>
+        </div>
+        <div v-if="!stateRequests.length" class="text-gray-400 py-8 text-center">暂无待处理请求</div>
       </div>
     </div>
 
@@ -257,9 +330,16 @@ onMounted(async () => {
   padding: 0.125rem 0.5rem;
   border: 1px solid;
 }
-.entry-status-confirmed { border-color: #166534; color: #166534; }
-.entry-status-disputed { border-color: #991b1b; color: #991b1b; }
-.entry-status-open { border-color: var(--a-color-muted-soft); color: var(--a-color-muted); }
+.entry-status-development { border-color: #166534; color: #166534; }
+.entry-status-locked { border-color: #b45309; color: #b45309; }
+.entry-status-closed { border-color: #991b1b; color: #991b1b; }
+.state-request-row { align-items: flex-start; gap: 1rem; }
+.state-request-info { flex-wrap: wrap; }
+.request-reason { color: var(--a-color-muted); flex-basis: 100%; }
+.request-decision { display: flex; align-items: center; gap: 0.4rem; min-width: min(28rem, 55%); }
+.request-decision input { min-height: 2.25rem; min-width: 10rem; flex: 1; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: inherit; padding: 0.35rem 0.5rem; }
+.request-decision button { min-height: 2.25rem; border: 1px solid var(--a-color-border-soft); background: transparent; color: inherit; padding: 0.35rem 0.65rem; cursor: pointer; }
+.request-decision button:disabled { opacity: 0.45; cursor: default; }
 .entry-disc { font-size: 0.75rem; color: var(--a-color-muted); }
 .entry-editor { font-size: 0.75rem; color: var(--a-color-muted-soft); }
 .entry-date { font-size: 0.75rem; color: var(--a-color-muted-soft); }

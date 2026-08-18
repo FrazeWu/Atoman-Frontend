@@ -107,14 +107,12 @@ function coverFileFromArchiveImage(
 	entry: JSZip.JSZipObject,
 	contentType: string,
 ): Promise<File> {
-	return entry
-		.async("blob")
-		.then(
-			(blob) =>
-				new File([blob], entry.name.split("/").pop() || "cover", {
-					type: contentType,
-				}),
-		);
+	return entry.async("blob").then(
+		(blob) =>
+			new File([blob], entry.name.split("/").pop() || "cover", {
+				type: contentType,
+			}),
+	);
 }
 
 function archiveTracks(paths: string[]): string[] {

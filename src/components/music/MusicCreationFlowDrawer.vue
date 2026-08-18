@@ -27,7 +27,6 @@ const {
   refreshArtist,
   refreshAlbum,
   openNestedAction,
-  openMusicCreationFlow,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -266,11 +265,6 @@ const finishButtonLabel = computed(() => {
   if (creationFlow.value?.submitting && creationFlow.value.step === 'preview') return '提交中…'
   if (creationFlow.value?.assetUploading) return '图片上传中…'
   return activeStep.value.cta
-})
-const canStartAnotherAlbum = computed(() => {
-  const flow = creationFlow.value
-  if (!flow || flow.mode === 'edit' || !flow.draft.albumImport.importId) return false
-  return ['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding', 'ready', 'needs_attention'].includes(flow.draft.albumImport.status)
 })
 const forwardBlockReason = computed(() => {
   const flow = creationFlow.value
@@ -540,7 +534,6 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
 			title: track.title.trim(),
 			disc_number: track.discNumber ?? 1,
 			track_number: trackNumberWithinDisc(flow.draft.tracks, index),
-			...(track.audioUrl ? { audio_url: track.audioUrl } : {}),
 			...(track.lyricsDraft ? {
           lyrics: {
             content: track.lyricsDraft.content,
@@ -814,11 +807,6 @@ function goBackStep() {
   }
 }
 
-function startAnotherAlbum() {
-  if (!canStartAnotherAlbum.value) return
-  openMusicCreationFlow({ startStep: 'albumImport' })
-}
-
 async function completeCreation() {
   const flow = creationFlow.value
   if (!flow || flow.submitting) return
@@ -867,6 +855,10 @@ async function completeCreation() {
 
     if (flow.mode === 'edit' && flow.entity === 'album' && flow.targetId) {
       const details = flow.draft.albumDetails
+      const tracks = flow.draft.tracks
+      if (tracks.some((track) => track.audioFileName && !track.audioAssetId && track.origin === 'manual')) {
+        throw new Error('音频上传资产无效，请重新选择文件')
+      }
       await musicApi.submitAlbumRevision(flow.targetId, {
         title: details.title.trim(),
         artist_credits: albumArtistCreditsFromContributors(details.contributors),
@@ -874,13 +866,13 @@ async function completeCreation() {
         cover: details.coverAsset ?? undefined,
         description: details.bio.trim(),
         album_type: details.type.trim() || 'album',
-		tracks: flow.draft.tracks.map((track, index) => ({
+		tracks: tracks.map((track, index) => ({
 			...(track.songId ? { id: track.songId } : {}),
+			...(!track.songId && track.audioAssetId ? { audio_asset_id: track.audioAssetId } : {}),
 			title: track.title.trim(),
 			track_number: trackNumberWithinDisc(flow.draft.tracks, index),
 			disc_number: track.discNumber ?? 1,
 			lyrics: track.lyrics ?? '',
-			audio_url: track.audioUrl ?? '',
           cover_url: track.coverUrl ?? '',
           artist_credits: albumArtistCreditsFromContributors(track.contributors ?? details.contributors),
           removed: false,
@@ -888,6 +880,11 @@ async function completeCreation() {
         reason: '编辑专辑与曲目',
         sources: details.source.trim() ? [buildSource(details.source)] : [],
       })
+      for (const track of tracks) {
+        if (track.songId && track.audioAssetId) {
+          await musicApi.queueMusicSongAudioReplacement(track.songId, { asset_id: track.audioAssetId })
+        }
+      }
       refreshAlbum()
       closeCurrentCreationFlow()
       await router.replace(`/music/album/${flow.targetId}`)
@@ -988,16 +985,6 @@ async function completeCreation() {
             @click="goBackStep"
           >
             返回上一步
-          </button>
-          <button
-            v-if="canStartAnotherAlbum"
-            data-testid="music-creation-start-another-album"
-            type="button"
-            class="ui-action"
-            :disabled="creationFlow.submitting"
-            @click="startAnotherAlbum"
-          >
-            新建专辑
           </button>
           <button
             v-if="creationFlow.mode !== 'edit' && creationFlow.step === 'artist'"

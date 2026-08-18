@@ -7,6 +7,33 @@ export type MusicEntryStatus =
 	| "confirmed"
 	| "protected"
 	| "closed";
+export type MusicLifecycleStatus = "draft" | "active" | "retired" | "merged";
+export type MusicEditStatus = "development" | "locked" | "closed";
+export type MusicStateRequestAction = "close" | "reopen" | "unlock";
+export type MusicStateRequestStatus =
+	| "pending"
+	| "approved"
+	| "rejected"
+	| "cancelled"
+	| "superseded";
+
+export type MusicEntryStateRequest = {
+	id: string;
+	entity_type: "artist" | "album" | "song";
+	entity_id: string;
+	action: MusicStateRequestAction;
+	status: MusicStateRequestStatus;
+	base_revision_id?: string | null;
+	requested_by: string;
+	requester?: { uuid: string; username: string };
+	request_reason: string;
+	reviewed_by?: string | null;
+	reviewer?: { uuid: string; username: string };
+	review_reason?: string;
+	created_at: string;
+	updated_at: string;
+};
+
 export type MusicSource = {
 	type: "url" | string;
 	url?: string;
@@ -56,7 +83,6 @@ export type MusicAlbumImportCommitTrack = {
 	title: string;
 	disc_number: number;
 	track_number: number;
-	audio_url?: string;
 	lyrics?: {
 		content: string;
 		translation: string;
@@ -420,6 +446,8 @@ export type MusicArtistListItem = {
 	play_count?: number;
 	bookmark_count?: number;
 	entry_status: MusicEntryStatus;
+	lifecycle_status?: MusicLifecycleStatus;
+	edit_status?: MusicEditStatus;
 	redirect_to?: string | null;
 	created_at?: string;
 	updated_at?: string;
@@ -453,6 +481,8 @@ export type MusicAlbumListItem = {
 		cover_url?: string;
 		lyrics?: string;
 		status?: string;
+		lifecycle_status?: MusicLifecycleStatus;
+		edit_status?: MusicEditStatus;
 		play_count?: number;
 		duration_sec?: number;
 		source_file_name?: string;
@@ -479,6 +509,8 @@ export type MusicAlbumListItem = {
 		}>;
 	}>;
 	entry_status: MusicEntryStatus;
+	lifecycle_status?: MusicLifecycleStatus;
+	edit_status?: MusicEditStatus;
 	redirect_to?: string | null;
 };
 
@@ -502,9 +534,17 @@ export type MusicSongListItem = {
 	cover_url?: string;
 	lyrics?: string;
 	status?: string;
+	lifecycle_status?: MusicLifecycleStatus;
+	edit_status?: MusicEditStatus;
 	entry_status: MusicEntryStatus;
 	artists?: Array<{ id: string; name: string }>;
-	album?: { id: string; title: string; cover_url?: string };
+	album?: {
+		id: string;
+		title: string;
+		cover_url?: string;
+		lifecycle_status?: MusicLifecycleStatus;
+		edit_status?: MusicEditStatus;
+	};
 	position?: number;
 };
 
@@ -628,7 +668,7 @@ export type MusicAlbumTrackEditInput = {
 	track_number: number;
 	disc_number?: number;
 	lyrics?: string;
-	audio_url?: string;
+	audio_asset_id?: string;
 	cover_url?: string;
 	artist_credits?: MusicAlbumArtistCreditInput[];
 	removed?: boolean;

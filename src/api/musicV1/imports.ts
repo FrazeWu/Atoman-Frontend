@@ -180,6 +180,9 @@ export async function uploadMusicAsset(
 	purpose: Extract<UploadPurpose, "music.cover" | "music.audio">,
 	target?: MusicUploadTarget,
 ): Promise<UploadAsset> {
+	if (purpose === "music.audio" && file.size > MAX_MUSIC_AUDIO_UPLOAD_SIZE) {
+		throw new Error("音频文件不能超过 200MB");
+	}
 	const form = new FormData();
 	form.append("file", file);
 	form.append("purpose", purpose);
@@ -198,6 +201,7 @@ export type MusicAssetUploadOptions = {
 };
 
 const resumableMusicAudioThreshold = 32 * 1024 * 1024;
+export const MAX_MUSIC_AUDIO_UPLOAD_SIZE = 200 * 1024 * 1024;
 
 type MusicAssetUploadPart = {
 	part_number: number;
@@ -341,6 +345,9 @@ export async function uploadMusicAssetWithProgress(
 	purpose: Extract<UploadPurpose, "music.cover" | "music.audio">,
 	options: MusicAssetUploadOptions = {},
 ): Promise<UploadAsset> {
+	if (purpose === "music.audio" && file.size > MAX_MUSIC_AUDIO_UPLOAD_SIZE) {
+		throw new Error("音频文件不能超过 200MB");
+	}
 	if (purpose === "music.audio" && file.size >= resumableMusicAudioThreshold) {
 		return uploadMusicAudioResumable(file, options);
 	}

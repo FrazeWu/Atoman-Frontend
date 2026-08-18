@@ -582,10 +582,11 @@ async function continueImport() {
 }
 .music-imports-view__layout {
   display: grid;
-  grid-template-columns: minmax(15rem, 24rem) minmax(0, 1fr);
+  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
   gap: 1.25rem;
 }
 .music-imports-view__list {
+  min-width: 0;
   display: grid;
   align-content: start;
   gap: 0.6rem;
@@ -692,6 +693,7 @@ async function continueImport() {
   margin-left: auto;
 }
 .music-imports-view__detail {
+  min-width: 0;
   display: grid;
   grid-template-columns: 9rem minmax(0, 1fr);
   align-content: start;
@@ -724,11 +726,13 @@ async function continueImport() {
   border-radius: 4px;
 }
 .detail-main {
+  min-width: 0;
   display: grid;
   gap: 0.75rem;
   align-content: start;
 }
 .detail-main h2 {
+  overflow-wrap: anywhere;
   font-size: 1.15rem;
   font-weight: 600;
 }
@@ -819,7 +823,7 @@ async function continueImport() {
   gap: 0.35rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   .music-imports-view {
     padding: 1rem;
   }

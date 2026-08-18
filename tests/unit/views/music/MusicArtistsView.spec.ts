@@ -120,6 +120,8 @@ describe("Music ArtistsView.vue", () => {
 					title: "Hot Artist",
 					summary: "Artist bio",
 					target_path: "/music?artist=artist-1",
+					birth_year: 1994,
+					birth_date: "1994-10-27T00:00:00Z",
 				},
 			],
 		});
@@ -166,6 +168,7 @@ describe("Music ArtistsView.vue", () => {
 		expect(wrapper.find(".search-input").exists()).toBe(true);
 		expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1);
 		expect(wrapper.text()).toContain("Hot Artist");
+		expect(wrapper.text()).toContain("1994");
 	});
 
 	it("opens artist drawers from artist cards", async () => {

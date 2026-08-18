@@ -778,6 +778,8 @@ export type MusicRecommendationItem = {
 	score_label?: string;
 	play_count?: number;
 	bookmark_count?: number;
+	birth_year?: number;
+	birth_date?: string;
 	reason?: string;
 	section?: string;
 };

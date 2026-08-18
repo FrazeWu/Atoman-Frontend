@@ -183,6 +183,8 @@ async function fetchArtists(page = 1) {
       image_url: item.image_url,
       play_count: item.play_count,
       bookmark_count: item.bookmark_count,
+      birth_year: item.birth_year,
+      birth_date: item.birth_date,
       entry_status: 'open' as const,
     }))
     const ownedDrafts = (ownedDraftResponse?.data ?? []).filter((artist) => artist.entry_status === 'draft')

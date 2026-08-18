@@ -180,6 +180,25 @@ describe("ArtistDrawer.vue", () => {
 		expect(wrapper.text()).toContain("1975");
 	});
 
+	it("renders an artist-shaped skeleton while details load", async () => {
+		getMusicArtist.mockReturnValueOnce(new Promise(() => undefined));
+
+		const wrapper = mount(ArtistDrawer);
+		await nextTick();
+
+		expect(wrapper.find('[data-testid="artist-loading-header"]').exists()).toBe(
+			true,
+		);
+		expect(
+			wrapper
+				.get('[data-testid="artist-loading-skeleton"]')
+				.attributes("aria-busy"),
+		).toBe("true");
+		expect(wrapper.findAll(".artist-skeleton-album-row")).toHaveLength(4);
+		expect(wrapper.text()).not.toContain("正在加载...");
+		wrapper.unmount();
+	});
+
 	it("loads single and leak releases when switching to songs", async () => {
 		const wrapper = mount(ArtistDrawer);
 		await vi.dynamicImportSettled();
@@ -211,7 +230,7 @@ describe("ArtistDrawer.vue", () => {
 			release_type: "song",
 			sort: "-release_date",
 			page: 1,
-			page_size: 24,
+			page_size: 100,
 		});
 		expect(wrapper.text()).toContain("New Single");
 		expect(wrapper.text()).toContain("单曲");
@@ -360,15 +379,15 @@ describe("ArtistDrawer.vue", () => {
 		wrapper.unmount();
 	});
 
-	it("loads artist albums page by page", async () => {
+	it("loads all artist album pages without rendering pagination", async () => {
 		listMusicAlbums
 			.mockResolvedValueOnce({
-				data: [{ id: "album-1", title: "First Page", entry_status: "open" }],
-				meta: { page: 1, page_size: 24, total: 2, has_more: true },
+				data: [{ id: "album-1", title: "First Batch", entry_status: "open" }],
+				meta: { page: 1, page_size: 100, total: 101, has_more: true },
 			})
 			.mockResolvedValueOnce({
-				data: [{ id: "album-2", title: "Second Page", entry_status: "open" }],
-				meta: { page: 2, page_size: 24, total: 2, has_more: false },
+				data: [{ id: "album-2", title: "Final Batch", entry_status: "open" }],
+				meta: { page: 2, page_size: 100, total: 101, has_more: false },
 			});
 
 		const wrapper = mount(ArtistDrawer);
@@ -379,22 +398,20 @@ describe("ArtistDrawer.vue", () => {
 			release_type: "album",
 			sort: "-release_date",
 			page: 1,
-			page_size: 24,
+			page_size: 100,
 		});
-		const pagination = wrapper.findComponent({ name: "PaginationBar" });
-		expect(pagination.exists()).toBe(true);
-		pagination.vm.$emit("change", 2);
-		await vi.dynamicImportSettled();
-
 		expect(listMusicAlbums).toHaveBeenNthCalledWith(2, {
 			artist_id: "1",
 			release_type: "album",
 			sort: "-release_date",
 			page: 2,
-			page_size: 24,
+			page_size: 100,
 		});
-		expect(wrapper.text()).not.toContain("First Page");
-		expect(wrapper.text()).toContain("Second Page");
+		expect(wrapper.text()).toContain("First Batch");
+		expect(wrapper.text()).toContain("Final Batch");
+		expect(wrapper.findComponent({ name: "PaginationBar" }).exists()).toBe(
+			false,
+		);
 	});
 
 	it("opens unified artist editor from the artist detail action bar", async () => {

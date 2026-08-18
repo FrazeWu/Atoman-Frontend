@@ -6,7 +6,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PaginationBar from '@/components/ui/PaginationBar.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
@@ -67,8 +67,6 @@ const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const expandedTrackId = ref<string | null>(null)
-const trackPage = ref(1)
-const trackPageSize = 20
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const {
   favoriteSongIds,
@@ -161,17 +159,7 @@ const releaseYear = computed(() => {
   if (!year || year === '0001' || year === '0000' || year === '----') return ''
   return year
 })
-const allTracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
-const tracks = computed(() => allTracks.value.slice(
-  (trackPage.value - 1) * trackPageSize,
-  trackPage.value * trackPageSize,
-))
-const trackMeta = computed(() => ({
-  page: trackPage.value,
-  page_size: trackPageSize,
-  total: allTracks.value.length,
-  has_more: trackPage.value * trackPageSize < allTracks.value.length,
-}))
+const tracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
 const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
@@ -354,7 +342,6 @@ async function loadAlbum(albumId: string | null) {
   const { isCurrent: isCurrentLoad } = albumRequests.beginRequest()
   bookmarkLoading.value = false
   album.value = null
-  trackPage.value = 1
   isBookmarked.value = false
   contributors.value = []
   contributorTotal.value = 0
@@ -553,15 +540,46 @@ watch(
       @seek="player.seek"
     />
     <div class="drawer-body">
-	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
-	  <p v-if="album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
-      <div v-if="errorMessage" class="state-line state-line--error">
+      <div v-if="loading" class="album-loading-skeleton" data-testid="album-loading-skeleton" role="status" aria-busy="true" aria-label="正在加载专辑详情">
+        <div class="album-meta-row" aria-hidden="true">
+          <div class="album-cover"><PSkeleton width="100%" height="100%" /></div>
+          <div class="album-info">
+            <PSkeleton width="4rem" height="0.75rem" />
+            <PSkeleton class="album-skeleton-title" width="min(34rem, 100%)" height="2.5rem" />
+            <PSkeleton width="12rem" height="0.9rem" />
+            <div class="album-skeleton-summary">
+              <PSkeleton width="100%" height="0.9rem" />
+              <PSkeleton width="76%" height="0.9rem" />
+              <PSkeleton width="52%" height="0.9rem" />
+            </div>
+            <div class="album-actions album-skeleton-actions">
+              <PSkeleton width="5rem" height="2.5rem" />
+              <PSkeleton width="5rem" height="2.5rem" />
+              <PSkeleton width="2.5rem" height="2.5rem" />
+            </div>
+          </div>
+        </div>
+        <div class="content-section" aria-hidden="true">
+          <div class="section-title">曲目</div>
+          <div v-for="index in 5" :key="index" class="track album-skeleton-track">
+            <PSkeleton class="album-skeleton-track-play" variant="circle" width="2rem" height="2rem" />
+            <PSkeleton width="min(24rem, 80%)" height="1rem" />
+            <div class="track-meta album-skeleton-track-meta">
+              <PSkeleton variant="circle" width="1.5rem" height="1.5rem" />
+              <PSkeleton variant="circle" width="1.5rem" height="1.5rem" />
+              <PSkeleton variant="circle" width="1.75rem" height="1.75rem" />
+            </div>
+          </div>
+        </div>
+      </div>
+	  <p v-if="!loading && redirectMessage" class="state-line">{{ redirectMessage }}</p>
+	  <p v-if="!loading && album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
+      <div v-if="!loading && errorMessage" class="state-line state-line--error">
         <span>{{ errorMessage }}</span>
         <PButton type="button" size="sm" variant="secondary" data-testid="album-retry" @click="retryLoadAlbum">重试</PButton>
       </div>
-      <p v-else-if="loading" class="state-line">正在加载专辑...</p>
       <MusicEntryStateControl
-        v-if="album"
+        v-if="!loading && album"
         entity-type="album"
         :entity-id="String(album.id)"
         :lifecycle-status="album.lifecycle_status"
@@ -599,7 +617,7 @@ watch(
               <template v-if="!resolvedAlbumArtists.length">Unknown Artist</template>
             </span>
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
-            <span v-if="allTracks.length" class="track-count">{{ allTracks.length }} 首</span>
+            <span v-if="tracks.length" class="track-count">{{ tracks.length }} 首</span>
           </div>
           <p class="summary">{{ album?.description || '暂无专辑简介。' }}</p>
           <div class="album-actions">
@@ -647,7 +665,7 @@ watch(
         </div>
       </div>
 
-      <div class="content-section">
+      <div v-if="!loading" class="content-section">
         <div class="section-title">曲目</div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="(track, index) in tracks" :key="track.id" class="track">
@@ -659,7 +677,7 @@ watch(
             @click="playTrack(track)"
             :aria-label="`${isTrackPlaying(track) ? '暂停' : '播放'} ${track.title}`"
           >
-            <span class="track-num">{{ (trackPage - 1) * trackPageSize + index + 1 }}</span>
+            <span class="track-num">{{ index + 1 }}</span>
             <Pause v-if="isTrackPlaying(track)" class="track-play-icon" :size="14" fill="currentColor" />
             <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
@@ -763,15 +781,9 @@ watch(
             </div>
           </div>
         </div>
-        <PaginationBar
-          v-if="trackMeta.total > trackMeta.page_size"
-          :meta="trackMeta"
-          :loading="loading"
-          @change="(page) => { trackPage = page; expandedTrackId = null }"
-        />
       </div>
 
-	  <section v-if="albumCreatorCredits.length" class="content-section album-artists-section">
+	  <section v-if="!loading && albumCreatorCredits.length" class="content-section album-artists-section">
 		<div class="section-title">创作者</div>
         <div class="artist-cards-grid">
           <button
@@ -794,6 +806,7 @@ watch(
         </div>
       </section>
       <MusicContributorsBlock
+        v-if="!loading"
         :contributors="contributors"
         :total="contributorTotal"
         @open-history="openAlbumHistory"
@@ -838,6 +851,20 @@ watch(
   box-shadow: none;
 }
 .album-cover-img { width: 100%; height: 100%; object-fit: cover; }
+.album-loading-skeleton { pointer-events: none; }
+.album-skeleton-title { margin-top: 0.25rem; }
+.album-skeleton-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+.album-skeleton-actions { margin-top: 1.5rem; }
+.album-skeleton-track { cursor: default; }
+.album-skeleton-track:hover {
+  background: transparent;
+  border-left-color: transparent;
+  box-shadow: none;
+}
 .album-info {
   flex: 1;
   display: flex;
@@ -1340,6 +1367,20 @@ watch(
     grid-column: 2 / -1;
     grid-row: 2;
     justify-content: flex-end;
+  }
+
+  .album-skeleton-track-play {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+  }
+
+  .album-skeleton-track-meta {
+    min-height: 2.75rem;
+  }
+
+  .album-skeleton-track-meta > .p-skeleton {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
   }
 
   .track-specification {

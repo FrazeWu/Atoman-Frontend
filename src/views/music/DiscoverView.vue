@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -20,10 +20,11 @@ import {
   listPlaylistBookmarks,
   listMusicAlbums,
   listMusicArtists,
+  listRecommendedArtists,
+  listPublicMusicPlaylists,
   getMusicHome,
   type MusicHome,
   type MusicSongListItem,
-  type MusicDiscoverItem,
   type MusicAlbumListItem,
   type MusicArtistListItem,
   type MusicPlaylistSummary,
@@ -76,13 +77,19 @@ const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
 const discoverArtists = ref<MusicRecommendationItem[]>([])
 const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
-const discoverLoadingMore = ref(false)
-const discoverMeta = computed(() => ({
-  page: musicHome.value?.discover_meta.page ?? 1,
-  page_size: musicHome.value?.discover_meta.page_size ?? 24,
-  total: musicHome.value?.discover_meta.total ?? 0,
-  has_more: musicHome.value?.discover_meta.has_more ?? false,
-}))
+type DiscoverSection = 'album' | 'artist' | 'playlist'
+type DiscoverPagination = { page: number; page_size: number; total: number; has_more: boolean }
+const discoverPageSize = 8
+const discoverSectionMeta = reactive<Record<DiscoverSection, DiscoverPagination>>({
+  album: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
+  artist: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
+  playlist: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
+})
+const discoverSectionLoading = reactive<Record<DiscoverSection, boolean>>({
+  album: false,
+  artist: false,
+  playlist: false,
+})
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
@@ -248,14 +255,17 @@ async function handleTogglePlaylistBookmark(playlistId: string) {
 async function fetchMusicHome() {
   const request = musicHomeRequests.beginRequest()
   const currentBookmarkRequestId = ++bookmarkRequestId
-  discoverLoadingMore.value = false
+  resetDiscoverSections()
   loading.value = true
   errorMessage.value = ''
   try {
-    const response = await getMusicHome({ page: 1, page_size: 24 })
+    const response = await getMusicHome({ page: 1, page_size: discoverPageSize })
     if (!request.isCurrent()) return
     musicHome.value = response
-    applyDiscoverFeed(musicHome.value.discover ?? [])
+    await Promise.all((['album', 'artist', 'playlist'] as const).map((section) => (
+      loadDiscoverSection(section, 1, false, request.isCurrent)
+    )))
+    if (!request.isCurrent()) return
     void fetchAlbumBookmarks(currentBookmarkRequestId)
     void fetchArtistBookmarks(currentBookmarkRequestId)
     void fetchPlaylistBookmarks(currentBookmarkRequestId)
@@ -263,12 +273,20 @@ async function fetchMusicHome() {
     if (!request.isCurrent()) return
     reportError(error, 'Failed to fetch music home:')
     musicHome.value = null
-    discoverAlbums.value = []
-    discoverArtists.value = []
-    discoverPlaylists.value = []
+    resetDiscoverSections()
     errorMessage.value = '发现内容加载失败'
   } finally {
     if (request.isCurrent()) loading.value = false
+  }
+}
+
+function resetDiscoverSections() {
+  discoverAlbums.value = []
+  discoverArtists.value = []
+  discoverPlaylists.value = []
+  for (const section of ['album', 'artist', 'playlist'] as const) {
+    discoverSectionMeta[section] = { page: 1, page_size: discoverPageSize, total: 0, has_more: false }
+    discoverSectionLoading[section] = false
   }
 }
 
@@ -318,78 +336,57 @@ function mergeDiscoverByID<T extends { id: string }>(current: T[], incoming: T[]
   return [...byID.values()]
 }
 
-function applyDiscoverFeed(items: MusicDiscoverItem[], append = false) {
-  const albums = items
-      .filter((item) => item.type === 'album')
-      .map((item) => ({
-        id: item.id,
-        title: item.title,
-        artists: item.artists,
-        year: typeof item.year === 'number' ? item.year : undefined,
-        release_date: item.release_date,
-        cover_url: item.cover_url || item.image_url,
-        description: item.summary,
-        reason: item.reason,
-        section: item.section,
-        play_count: item.play_count,
-        bookmark_count: item.bookmark_count,
-        entry_status: 'open' as const,
-      }))
-
-  const artists = items
-    .filter((item) => item.type === 'artist')
-    .map((item) => ({
-      id: item.id,
-      title: item.title || item.name,
-      summary: item.summary || item.bio,
-      image_url: item.image_url,
-      target_path: item.target_path,
-      play_count: item.play_count,
-      bookmark_count: item.bookmark_count,
-      reason: item.reason,
-      section: item.section,
-    }))
-
-  const playlists = items
-    .filter((item) => item.type === 'playlist')
-    .map((item) => ({
-      id: item.id,
-      name: item.title,
-      description: item.description || item.summary,
-      cover_url: item.cover_url || item.image_url,
-      song_count: item.song_count,
-      owner_username: item.owner_username,
-      is_public: true,
-      play_count: item.play_count,
-      bookmark_count: item.bookmark_count,
-      reason: item.reason,
-      section: item.section,
-    }))
-
-  discoverAlbums.value = append ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
-  discoverArtists.value = append ? mergeDiscoverByID(discoverArtists.value, artists) : artists
-  discoverPlaylists.value = append ? mergeDiscoverByID(discoverPlaylists.value, playlists) : playlists
-}
-
-async function loadDiscoverPage(targetPage: number) {
-  if (!musicHome.value || discoverLoadingMore.value) return
-  const homeGeneration = musicHomeRequests.currentGeneration()
-  discoverLoadingMore.value = true
+async function loadDiscoverSection(
+  section: DiscoverSection,
+  targetPage: number,
+  append: boolean,
+  isCurrent: () => boolean,
+) {
+  if (discoverSectionLoading[section]) return
+  discoverSectionLoading[section] = true
   try {
-    const response = await getMusicHome({
+    if (section === 'album') {
+      const response = await listMusicAlbums({ page: targetPage, page_size: discoverPageSize, sort: 'hot' })
+      if (!isCurrent()) return
+      const albums = response.data.map((album) => ({ ...album, reason: '近期热门专辑' }))
+      discoverAlbums.value = append ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
+      discoverSectionMeta.album = response.meta
+      return
+    }
+
+    if (section === 'artist') {
+      const response = await listRecommendedArtists('hot', { page: targetPage, page_size: discoverPageSize })
+      if (!isCurrent()) return
+      const artists = response.data.map((artist) => ({ ...artist, reason: '近期热门艺人', section: 'artist' }))
+      discoverArtists.value = append ? mergeDiscoverByID(discoverArtists.value, artists) : artists
+      discoverSectionMeta.artist = response.meta
+      return
+    }
+
+    const response = await listPublicMusicPlaylists({ page: targetPage, page_size: discoverPageSize })
+    if (!isCurrent()) return
+    const playlists = response.data.map((playlist) => ({ ...playlist, reason: '最新公开歌单', section: 'playlist' }))
+    discoverPlaylists.value = append ? mergeDiscoverByID(discoverPlaylists.value, playlists) : playlists
+    discoverSectionMeta.playlist = response.meta ?? {
       page: targetPage,
-      page_size: musicHome.value.discover_meta.page_size || 24,
-    })
-    if (!musicHomeRequests.isCurrent(homeGeneration)) return
-    musicHome.value = response
-    applyDiscoverFeed(response.discover ?? [])
+      page_size: discoverPageSize,
+      total: playlists.length,
+      has_more: false,
+    }
   } catch (error) {
-    if (!musicHomeRequests.isCurrent(homeGeneration)) return
-    reportError(error, 'Failed to load music discovery page:')
+    if (!isCurrent()) return
+    reportError(error, `Failed to load ${section} discovery section:`)
     errorMessage.value = '发现内容加载失败'
   } finally {
-    if (musicHomeRequests.isCurrent(homeGeneration)) discoverLoadingMore.value = false
+    if (isCurrent()) discoverSectionLoading[section] = false
   }
+}
+
+function loadMoreDiscoverSection(section: DiscoverSection) {
+  const meta = discoverSectionMeta[section]
+  if (!meta.has_more || discoverSectionLoading[section]) return
+  const generation = musicHomeRequests.currentGeneration()
+  void loadDiscoverSection(section, meta.page + 1, true, () => musicHomeRequests.isCurrent(generation))
 }
 
 async function fetchAlbumIndex(nextPage = 1) {
@@ -749,6 +746,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
           </div>
         </div>
+        <PButton
+          v-if="discoverSectionMeta.album.has_more"
+          variant="secondary"
+          :loading="discoverSectionLoading.album"
+          loading-text="加载中..."
+          data-testid="discover-albums-load-more"
+          @click="loadMoreDiscoverSection('album')"
+        >加载更多</PButton>
       </section>
 
       <section v-if="discoverPlaylists.length" class="discover-section">
@@ -768,6 +773,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
           </div>
         </div>
+        <PButton
+          v-if="discoverSectionMeta.playlist.has_more"
+          variant="secondary"
+          :loading="discoverSectionLoading.playlist"
+          loading-text="加载中..."
+          data-testid="discover-playlists-load-more"
+          @click="loadMoreDiscoverSection('playlist')"
+        >加载更多</PButton>
       </section>
 
       <section v-if="discoverArtists.length" class="discover-section">
@@ -787,13 +800,15 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
           </div>
         </div>
+        <PButton
+          v-if="discoverSectionMeta.artist.has_more"
+          variant="secondary"
+          :loading="discoverSectionLoading.artist"
+          loading-text="加载中..."
+          data-testid="discover-artists-load-more"
+          @click="loadMoreDiscoverSection('artist')"
+        >加载更多</PButton>
       </section>
-      <PaginationBar
-        v-if="discoverMeta.total > 0"
-        :meta="discoverMeta"
-        :loading="discoverLoadingMore"
-        @change="loadDiscoverPage"
-      />
     </div>
     </PContentProgress>
   </section>
@@ -1089,6 +1104,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   display: grid;
   gap: 0.85rem;
 }
+.discover-section > .p-button { justify-self: start; }
 
 .discover-section__header {
   display: flex;

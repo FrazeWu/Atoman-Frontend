@@ -1,7 +1,8 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiErrorResponseError } from "@/api/client";
-import AlbumDrawer from "@/components/music/AlbumDrawer.vue";
+import { ApiErrorResponseError } from "../../../../src/api/client";
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
+import AlbumDrawer from "../../../../src/components/music/AlbumDrawer.vue";
 
 vi.mock("@/components/ui/PSheet.vue", () => ({
 	default: {
@@ -181,6 +182,25 @@ describe("AlbumDrawer.vue", () => {
 		expect(wrapper.text()).not.toContain("专辑详情");
 	});
 
+	it("renders an album-shaped skeleton while details load", async () => {
+		getMusicAlbum.mockReturnValueOnce(new Promise(() => undefined));
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		expect(
+			wrapper
+				.get('[data-testid="album-loading-skeleton"]')
+				.attributes("aria-busy"),
+		).toBe("true");
+		expect(
+			wrapper.find(".album-loading-skeleton .album-meta-row").exists(),
+		).toBe(true);
+		expect(wrapper.findAll(".album-skeleton-track")).toHaveLength(5);
+		expect(wrapper.text()).not.toContain("正在加载专辑...");
+		wrapper.unmount();
+	});
+
 	it("collapses track details by default", async () => {
 		const wrapper = mount(AlbumDrawer);
 		await flushPromises();
@@ -193,6 +213,29 @@ describe("AlbumDrawer.vue", () => {
 				.get('[data-testid="track-details-101"]')
 				.attributes("aria-expanded"),
 		).toBe("false");
+	});
+
+	it("renders every track returned by album details without pagination", async () => {
+		getMusicAlbum.mockResolvedValue({
+			id: "1",
+			title: "Complete Album",
+			entry_status: "open",
+			songs: Array.from({ length: 21 }, (_, index) => ({
+				id: `song-${index + 1}`,
+				title: `Track ${index + 1}`,
+				track_number: index + 1,
+				audio_url: `https://cdn.test/${index + 1}.mp3`,
+			})),
+		});
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		expect(wrapper.findAll(".track")).toHaveLength(21);
+		expect(wrapper.text()).toContain("21 首");
+		expect(wrapper.findComponent({ name: "PaginationBar" }).exists()).toBe(
+			false,
+		);
 	});
 
 	it("opens album history from the contributors block", async () => {
@@ -694,14 +737,12 @@ describe("AlbumDrawer.vue", () => {
 		const firstRequest = new Promise<Record<string, unknown>>((resolve) => {
 			resolveFirst = resolve;
 		});
-		getMusicAlbum
-			.mockReturnValueOnce(firstRequest)
-			.mockResolvedValueOnce({
-				id: "album-b",
-				title: "Album B",
-				entry_status: "open",
-				songs: [],
-			});
+		getMusicAlbum.mockReturnValueOnce(firstRequest).mockResolvedValueOnce({
+			id: "album-b",
+			title: "Album B",
+			entry_status: "open",
+			songs: [],
+		});
 
 		const wrapper = mount(AlbumDrawer, {
 			props: {
@@ -773,7 +814,10 @@ describe("AlbumDrawer.vue", () => {
 		});
 
 		expect(wrapper.text()).not.toContain("Song A");
-		expect(wrapper.text()).toContain("正在加载专辑...");
+		expect(
+			wrapper.find('[data-testid="album-loading-skeleton"]').exists(),
+		).toBe(true);
+		expect(wrapper.findAll(".album-skeleton-track")).toHaveLength(5);
 		resolveSecond({
 			id: "album-b",
 			title: "Album B",

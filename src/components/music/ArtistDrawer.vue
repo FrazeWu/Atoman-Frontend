@@ -6,7 +6,7 @@ import { UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PaginationBar from '@/components/ui/PaginationBar.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
@@ -51,13 +51,9 @@ const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
 const artistRequests = useRequestGeneration()
-const albumRequests = useRequestGeneration()
 const contributors = ref<MusicContributor[]>([])
 const contributorTotal = ref(0)
-const albumPage = ref(1)
-const albumMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
-const albumsLoadingMore = ref(false)
-const albumPageSize = 24
+const artistAlbumPageSize = 100
 
 const artistAliases = computed(() => (
   artist.value?.aliases
@@ -140,16 +136,34 @@ function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision
   return `${start} - ${end}`
 }
 
+async function listAllArtistAlbums(targetArtistId: string, isCurrentLoad: () => boolean) {
+  const allAlbums: MusicAlbumListItem[] = []
+  let page = 1
+  let hasMore = true
+
+  while (hasMore) {
+    const response = await listMusicAlbums({
+      artist_id: targetArtistId,
+      release_type: releaseType.value,
+      sort: albumSortQuery(albumSortMode.value),
+      page,
+      page_size: artistAlbumPageSize,
+    })
+    if (!isCurrentLoad()) return null
+    allAlbums.push(...response.data)
+    hasMore = response.meta.has_more
+    page += 1
+  }
+
+  return allAlbums
+}
+
 async function loadArtist(targetArtistId: string | null) {
   const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
-  albumRequests.beginRequest()
-  albumsLoadingMore.value = false
   if (!targetArtistId) {
     if (isCurrentLoad()) {
       artist.value = null
       albums.value = []
-      albumPage.value = 1
-      albumMeta.value = { page: 1, page_size: albumPageSize, total: 0, has_more: false }
       isBookmarked.value = false
       contributors.value = []
       contributorTotal.value = 0
@@ -176,18 +190,10 @@ async function loadArtist(targetArtistId: string | null) {
       return
     }
     redirectMessage.value = ''
-    const albumsResponse = await listMusicAlbums({
-      artist_id: targetArtistId,
-      release_type: releaseType.value,
-      sort: albumSortQuery(albumSortMode.value),
-      page: 1,
-      page_size: albumPageSize,
-    })
-    if (!isCurrentLoad()) return
+    const allAlbums = await listAllArtistAlbums(targetArtistId, isCurrentLoad)
+    if (!isCurrentLoad() || !allAlbums) return
     artist.value = artistResponse
-    albums.value = albumsResponse.data
-    albumPage.value = 1
-    albumMeta.value = albumsResponse.meta
+    albums.value = allAlbums
     try {
       const contributorResponse = await listArtistContributors(targetArtistId)
       if (!isCurrentLoad()) return
@@ -222,30 +228,6 @@ async function loadArtist(targetArtistId: string | null) {
     lastLoadKey.value = null
   } finally {
     if (isCurrentLoad()) loading.value = false
-  }
-}
-
-async function loadAlbumsPage(targetPage: number) {
-  const currentArtistId = artistId.value
-  if (!currentArtistId || albumsLoadingMore.value) return
-  const { isCurrent } = albumRequests.beginRequest()
-  albumsLoadingMore.value = true
-  try {
-    const response = await listMusicAlbums({
-      artist_id: currentArtistId,
-      release_type: releaseType.value,
-      sort: albumSortQuery(albumSortMode.value),
-      page: targetPage,
-      page_size: albumPageSize,
-    })
-    if (!isCurrent() || artistId.value !== currentArtistId) return
-    albums.value = response.data
-    albumPage.value = targetPage
-    albumMeta.value = response.meta
-  } catch (error) {
-    if (isCurrent()) reportError(error, 'Failed to load artist albums:')
-  } finally {
-    if (isCurrent()) albumsLoadingMore.value = false
   }
 }
 
@@ -323,8 +305,6 @@ watch(
 
 watch([releaseType, albumSortMode], () => {
   albums.value = []
-  albumPage.value = 1
-  albumMeta.value = { page: 1, page_size: albumPageSize, total: 0, has_more: false }
   void loadArtist(artistId.value)
 })
 </script>
@@ -345,33 +325,73 @@ watch([releaseType, albumSortMode], () => {
   >
     <template #header>
       <div class="drawer-header-content">
-        <div class="artist-header-profile">
-          <img v-if="artist?.image_url" :src="artist.image_url" :alt="artist?.name" class="artist-header-avatar" />
-          <div v-else class="artist-header-avatar-placeholder">
-            <UserRound :size="32" aria-hidden="true" />
+        <template v-if="loading && !artist">
+          <div class="artist-header-profile artist-loading-header" data-testid="artist-loading-header" aria-label="正在加载艺术家详情">
+            <PSkeleton class="artist-skeleton-avatar" variant="rect" width="90px" height="90px" />
+            <div class="artist-header-info">
+              <PSkeleton class="artist-skeleton-name" width="min(20rem, 60vw)" height="2.6rem" />
+              <PSkeleton width="12rem" height="0.85rem" />
+              <PSkeleton width="16rem" height="0.85rem" />
+            </div>
           </div>
-          <div class="artist-header-info">
-            <h2 class="title">{{ displayName || `Artist ${artistId}` }}</h2>
-            <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
-            <p v-if="artistAliases.length" class="artist-meta-line">曾用名：{{ artistAliases.join(' / ') }}</p>
+          <PSkeleton class="artist-skeleton-bio" width="min(44rem, 100%)" height="2.5rem" />
+        </template>
+        <template v-else>
+          <div class="artist-header-profile">
+            <img v-if="artist?.image_url" :src="artist.image_url" :alt="artist?.name" class="artist-header-avatar" />
+            <div v-else class="artist-header-avatar-placeholder">
+              <UserRound :size="32" aria-hidden="true" />
+            </div>
+            <div class="artist-header-info">
+              <h2 class="title">{{ displayName || `Artist ${artistId}` }}</h2>
+              <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
+              <p v-if="artistAliases.length" class="artist-meta-line">曾用名：{{ artistAliases.join(' / ') }}</p>
+            </div>
           </div>
-        </div>
-        <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>
+          <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>
+        </template>
       </div>
     </template>
 
     <div class="drawer-body">
-	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
-	  <p v-if="artist?.entry_status === 'closed' && !artist?.redirect_to" class="state-line">该条目已关闭</p>
+      <div v-if="loading" class="artist-loading-skeleton" data-testid="artist-loading-skeleton" role="status" aria-busy="true" aria-label="正在加载艺术家详情">
+        <div class="actions artist-skeleton-actions" aria-hidden="true">
+          <PSkeleton width="5rem" height="2.5rem" />
+          <PSkeleton width="7.5rem" height="2.5rem" />
+          <PSkeleton width="6.5rem" height="2.5rem" />
+          <PSkeleton width="8rem" height="2.5rem" />
+          <PSkeleton width="6rem" height="2.5rem" />
+        </div>
+        <div class="album-list-header" aria-hidden="true">
+          <div class="artist-skeleton-release-types">
+            <PSkeleton width="4.5rem" height="2.125rem" />
+            <PSkeleton width="4.5rem" height="2.125rem" />
+          </div>
+          <PSkeleton width="9.375rem" height="2.125rem" />
+        </div>
+        <div v-for="index in 4" :key="index" class="album-row artist-skeleton-album-row" aria-hidden="true">
+          <div class="album-row-left"><PSkeleton width="3rem" height="1rem" /></div>
+          <div class="album-row-right">
+            <PSkeleton class="album-row-cover" width="80px" height="80px" />
+            <div class="album-row-info">
+              <PSkeleton width="min(18rem, 70%)" height="1.25rem" />
+              <PSkeleton width="min(24rem, 90%)" height="0.85rem" />
+              <PSkeleton width="8rem" height="0.85rem" />
+            </div>
+          </div>
+        </div>
+      </div>
+	  <p v-if="!loading && redirectMessage" class="state-line">{{ redirectMessage }}</p>
+	  <p v-if="!loading && artist?.entry_status === 'closed' && !artist?.redirect_to" class="state-line">该条目已关闭</p>
       <MusicEntryStateControl
-        v-if="artist"
+        v-if="!loading && artist"
         entity-type="artist"
         :entity-id="String(artist.id)"
         :lifecycle-status="artist.lifecycle_status"
         :edit-status="artist.edit_status"
         @submitted="loadArtist(String(artist.id))"
       />
-      <div class="actions">
+      <div v-if="!loading" class="actions">
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
@@ -414,7 +434,7 @@ watch([releaseType, albumSortMode], () => {
         </PButton>
       </div>
 
-      <div v-if="hasMemberGroups" class="member-sections">
+      <div v-if="!loading && hasMemberGroups" class="member-sections">
         <div v-if="memberGroups.current.length" class="member-section">
           <h3 class="member-section-title">现成员</h3>
           <component
@@ -466,7 +486,7 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </div>
 
-      <div class="album-list-header">
+      <div v-if="!loading" class="album-list-header">
         <PSegmentedControl v-model="releaseType" :options="releaseTypeOptions" />
         <div class="album-list-controls">
           <PSelect
@@ -478,13 +498,13 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </div>
 
-      <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="loading" class="state-line">正在加载...</p>
-      <p v-else-if="!sortedAlbums.length" class="state-line">
+      <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+      <p v-else-if="!loading && !sortedAlbums.length" class="state-line">
         {{ releaseType === 'album' ? '暂无专辑，可以添加新专辑。' : '暂无歌曲。' }}
       </p>
 
-      <div
+      <template v-if="!loading">
+        <div
         v-for="album in sortedAlbums"
         :key="album.id"
         class="album-row"
@@ -514,14 +534,10 @@ watch([releaseType, albumSortMode], () => {
             </div>
           </div>
         </div>
-      </div>
-      <PaginationBar
-        v-if="albumMeta.total > 0 && !loading"
-        :meta="albumMeta"
-        :loading="albumsLoadingMore"
-        @change="loadAlbumsPage"
-      />
+        </div>
+      </template>
       <MusicContributorsBlock
+        v-if="!loading"
         :contributors="contributors"
         :total="contributorTotal"
         @open-history="openArtistHistory"
@@ -789,6 +805,18 @@ watch([releaseType, albumSortMode], () => {
 }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
+
+.artist-loading-skeleton { pointer-events: none; }
+.artist-skeleton-actions { margin-bottom: 2rem; }
+.artist-skeleton-release-types { display: flex; gap: 0.35rem; }
+.artist-skeleton-album-row { cursor: default; }
+.artist-skeleton-album-row:hover {
+  background: transparent;
+  border-left-color: transparent;
+}
+.artist-skeleton-name { max-width: 100%; }
+.artist-skeleton-avatar { flex-shrink: 0; }
+.artist-skeleton-bio { margin-top: 0.75rem; }
 
 @media (max-width: 640px) {
   .album-list-header {

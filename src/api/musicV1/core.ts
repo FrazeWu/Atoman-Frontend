@@ -50,6 +50,8 @@ export const musicV1Endpoints = {
 		`${apiV1Base()}/music/uploads/${uploadId}/complete`,
 	artists: () => `${apiV1Base()}/music/artists`,
 	artist: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}`,
+	artistAlbumLinkSuggestions: (artistId: string) =>
+		`${apiV1Base()}/music/artists/${artistId}/album-link-suggestions`,
 	artistMerge: (artistId: string) =>
 		`${apiV1Base()}/admin/artists/${artistId}/merge`,
 	artistRevisions: (artistId: string) =>

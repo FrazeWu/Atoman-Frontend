@@ -18,6 +18,7 @@ import {
 	getMusicAlbum,
 	getMusicArtist,
 	listMusicArtists,
+	listMusicAlbumLinkSuggestions,
 	listMusicAlbums,
 	getMusicHome,
 	createAlbumDiscussion,
@@ -388,6 +389,37 @@ describe("music v1 adapter", () => {
 		);
 		expect(musicV1Endpoints).not.toHaveProperty("edits");
 		expect(musicV1Endpoints).not.toHaveProperty("editApprove");
+	});
+
+	it("requests album link suggestions through the artist music namespace", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({
+							data: {
+								local_matches: [],
+								external_only: [],
+								metadata_status: "ready",
+							},
+						}),
+						{ status: 200, headers: { "Content-Type": "application/json" } },
+					),
+			),
+		);
+
+		await expect(listMusicAlbumLinkSuggestions("artist_uuid")).resolves.toEqual(
+			{
+				local_matches: [],
+				external_only: [],
+				metadata_status: "ready",
+			},
+		);
+		expect(fetch).toHaveBeenCalledWith(
+			"/api/v1/music/artists/artist_uuid/album-link-suggestions",
+			{ credentials: "include", headers: { Accept: "application/json" } },
+		);
 	});
 
 	it("reuses the shared api base url for music endpoints", () => {

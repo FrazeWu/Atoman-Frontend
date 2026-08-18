@@ -4,6 +4,7 @@ import MusicAlbumCreditLinkDrawer from "@/components/music/MusicAlbumCreditLinkD
 
 const mocks = vi.hoisted(() => ({
 	listMusicAlbums: vi.fn(),
+	listMusicAlbumLinkSuggestions: vi.fn(),
 	getMusicAlbum: vi.fn(),
 	submitAlbumRevision: vi.fn(),
 	closeNestedAction: vi.fn(),
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/api/musicV1", () => ({
 	listMusicAlbums: mocks.listMusicAlbums,
+	listMusicAlbumLinkSuggestions: mocks.listMusicAlbumLinkSuggestions,
 	getMusicAlbum: mocks.getMusicAlbum,
 	submitAlbumRevision: mocks.submitAlbumRevision,
 }));
@@ -48,6 +50,11 @@ describe("MusicAlbumCreditLinkDrawer.vue", () => {
 		mocks.listMusicAlbums.mockResolvedValue({
 			data: [{ id: "album-1", title: "Existing Album", entry_status: "open" }],
 			meta: { page: 1, page_size: 20, total: 1, has_more: false },
+		});
+		mocks.listMusicAlbumLinkSuggestions.mockResolvedValue({
+			local_matches: [],
+			external_only: [],
+			metadata_status: "ready",
 		});
 		mocks.getMusicAlbum.mockResolvedValue({
 			id: "album-1",
@@ -120,6 +127,63 @@ describe("MusicAlbumCreditLinkDrawer.vue", () => {
 		expect(mocks.refreshArtist).toHaveBeenCalled();
 		expect(mocks.closeNestedAction).toHaveBeenCalled();
 		expect(mocks.closeMusicCreationFlow).not.toHaveBeenCalled();
+	});
+
+	it("shows exact local matches and unmatched MusicBrainz releases before search", async () => {
+		mocks.listMusicAlbumLinkSuggestions.mockResolvedValue({
+			local_matches: [
+				{
+					album: {
+						id: "album-matched",
+						title: "Matched Album",
+						entry_status: "open",
+						artists: [{ id: "artist-primary", name: "Primary Artist" }],
+					},
+					musicbrainz: {
+						release_id: "release-matched",
+						title: "Matched Album",
+						source_url: "https://musicbrainz.org/release/release-matched",
+					},
+					already_linked: false,
+					match_kind: "musicbrainz_release",
+				},
+			],
+			external_only: [
+				{
+					release_id: "release-external",
+					title: "External Album",
+					source_url: "https://musicbrainz.org/release/release-external",
+				},
+			],
+			metadata_status: "ready",
+		});
+		const wrapper = mount(MusicAlbumCreditLinkDrawer, {
+			props: {
+				layer: {
+					key: "action:link_album:artist-current",
+					kind: "action",
+					title: "关联现有专辑",
+					payload: {
+						action: "link_album",
+						data: { artistId: "artist-current", artistName: "Current Artist" },
+					},
+				},
+			},
+		});
+
+		await flushPromises();
+
+		expect(mocks.listMusicAlbumLinkSuggestions).toHaveBeenCalledWith(
+			"artist-current",
+		);
+		expect(wrapper.text()).toContain("已匹配到的目录专辑");
+		expect(wrapper.text()).toContain("Matched Album");
+		expect(wrapper.text()).toContain("MusicBrainz 中的其他发行");
+		expect(
+			wrapper
+				.get('a[href="https://musicbrainz.org/release/release-external"]')
+				.text(),
+		).toContain("External Album");
 	});
 
 	it("completes the pending creation flow only after the association succeeds", async () => {

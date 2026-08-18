@@ -514,6 +514,28 @@ export type MusicAlbumListItem = {
 	redirect_to?: string | null;
 };
 
+export type MusicAlbumLinkSuggestion = {
+	album: MusicAlbumListItem;
+	musicbrainz: MusicBrainzReleaseCandidate;
+	already_linked: boolean;
+	match_kind: "musicbrainz_release" | "musicbrainz_release_group";
+};
+
+export type MusicBrainzReleaseCandidate = {
+	release_id: string;
+	release_group_id?: string;
+	title: string;
+	release_date?: string;
+	artist_names?: string[];
+	source_url: string;
+};
+
+export type MusicAlbumLinkSuggestions = {
+	local_matches: MusicAlbumLinkSuggestion[];
+	external_only: MusicBrainzReleaseCandidate[];
+	metadata_status: "ready" | "unavailable";
+};
+
 export type MusicAlbumMergePreview = {
 	source_album: MusicAlbumListItem;
 	target_album: MusicAlbumListItem;

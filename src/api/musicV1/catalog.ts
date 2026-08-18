@@ -18,6 +18,7 @@ import type {
 	CreateMusicLyricsAnnotationInput,
 	CreateMusicPlaylistInput,
 	MusicAlbumBookmark,
+	MusicAlbumLinkSuggestions,
 	MusicAlbumListItem,
 	MusicAlbumMergePreview,
 	MusicArtistBookmark,
@@ -204,6 +205,14 @@ export async function listMusicAlbums(
 		`${musicV1Endpoints.albums()}${queryString(filters)}`,
 	);
 	return listResponseWithPaginationFallback(response, filters);
+}
+
+export async function listMusicAlbumLinkSuggestions(
+	artistId: string,
+): Promise<MusicAlbumLinkSuggestions> {
+	return apiGet<MusicAlbumLinkSuggestions>(
+		musicV1Endpoints.artistAlbumLinkSuggestions(artistId),
+	);
 }
 
 export async function listArtistBookmarks(

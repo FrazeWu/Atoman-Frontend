@@ -40,7 +40,7 @@ const {
 const {
   orderedTracks,
   draggedTrackId,
-  dragOverTrackId,
+  dragOverInsertionIndex,
   lyricTrack,
   addPendingTrack,
   updateTrackUpload,
@@ -53,6 +53,7 @@ const {
   handleTrackDragOver,
   handleTrackDragLeave,
   handleTrackDrop,
+  clearTrackDragState,
   removeTrack: removeTrackDraft,
   openTrackLyrics,
   closeTrackLyrics,
@@ -535,17 +536,24 @@ watch(
         <p v-if="trackAudioError" class="track-adjustment__error" role="alert">{{ trackAudioError }}</p>
 
         <div v-if="orderedTracks.length" class="track-list">
-          <div
+          <template
             v-for="(track, index) in orderedTracks"
             :key="track.id"
-            :data-testid="`album-track-row-${track.id}`"
-            class="track-row"
-            :class="{ 'is-dragged': draggedTrackId === track.id, 'is-drag-over': dragOverTrackId === track.id }"
-            @dragover.prevent="handleTrackDragOver(track.id)"
-            @dragleave="handleTrackDragLeave(track.id)"
-            @dragend="draggedTrackId = null; dragOverTrackId = null"
-            @drop="handleTrackDrop(track.id, $event)"
           >
+            <div
+              :data-testid="`album-track-drop-slot-${index}`"
+              class="track-drop-slot"
+              :class="{ 'is-drag-over': dragOverInsertionIndex === index }"
+              @dragover.prevent="handleTrackDragOver(index, $event)"
+              @dragleave="handleTrackDragLeave(index)"
+              @drop="handleTrackDrop(index, $event)"
+            />
+            <div
+              :data-testid="`album-track-row-${track.id}`"
+              class="track-row"
+              :class="{ 'is-dragged': draggedTrackId === track.id }"
+              @dragend="clearTrackDragState"
+            >
             <div
               :data-testid="`album-track-drag-handle-${track.id}`"
               class="track-row__drag-handle"
@@ -632,7 +640,16 @@ watch(
               style="display: none;"
               @click="moveTrack(index, 1)"
             />
-          </div>
+            </div>
+          </template>
+          <div
+            :data-testid="`album-track-drop-slot-${orderedTracks.length}`"
+            class="track-drop-slot"
+            :class="{ 'is-drag-over': dragOverInsertionIndex === orderedTracks.length }"
+            @dragover.prevent="handleTrackDragOver(orderedTracks.length, $event)"
+            @dragleave="handleTrackDragLeave(orderedTracks.length)"
+            @drop="handleTrackDrop(orderedTracks.length, $event)"
+          />
         </div>
       </section>
 
@@ -906,7 +923,30 @@ watch(
 .track-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+}
+
+.track-drop-slot {
+  position: relative;
+  flex: 0 0 0.5rem;
+  height: 0.5rem;
+}
+
+.track-drop-slot::after {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  left: 0.65rem;
+  height: 2px;
+  background: var(--a-color-primary);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.track-drop-slot.is-drag-over::after {
+  opacity: 1;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 24%, transparent);
 }
 
 .track-row {
@@ -927,13 +967,6 @@ watch(
   opacity: 0.4;
   border-style: solid;
   border-color: var(--a-color-primary);
-}
-
-.track-row.is-drag-over {
-  border-color: var(--a-color-primary);
-  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 30%, transparent);
-  transform: translateY(-2px);
 }
 
 .track-row:hover {

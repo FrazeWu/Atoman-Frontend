@@ -9,15 +9,23 @@
     </div>
     <div class="queue-content">
       <div v-if="player.queue.length" class="queue-list">
-        <div
+        <template
           v-for="(song, index) in player.queue"
           :key="player.playbackItemKey(song)"
-          class="queue-item"
-          :class="{ active: player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(song) }"
-          @dragover.prevent
-          @drop="dropQueueItem(index)"
-          @click="player.playQueuedSong(song)"
         >
+          <div
+            :data-testid="`queue-drop-slot-${index}`"
+            class="queue-drop-slot"
+            :class="{ 'is-drag-over': dragOverQueueIndex === index }"
+            @dragover.prevent="handleQueueDragOver(index, $event)"
+            @dragleave="handleQueueDragLeave(index)"
+            @drop="dropQueueItem(index, $event)"
+          />
+          <div
+            class="queue-item"
+            :class="{ active: player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(song), 'is-dragged': draggedQueueIndex === index }"
+            @click="player.playQueuedSong(song)"
+          >
           <button
             type="button"
             class="q-drag"
@@ -26,7 +34,7 @@
             title="拖动排序"
             @click.stop
             @dragstart="draggedQueueIndex = index"
-            @dragend="draggedQueueIndex = null"
+            @dragend="clearQueueDragState"
           >
             <GripVertical :size="16" aria-hidden="true" />
           </button>
@@ -51,7 +59,16 @@
           >
             ×
           </button>
-        </div>
+          </div>
+        </template>
+        <div
+          :data-testid="`queue-drop-slot-${player.queue.length}`"
+          class="queue-drop-slot"
+          :class="{ 'is-drag-over': dragOverQueueIndex === player.queue.length }"
+          @dragover.prevent="handleQueueDragOver(player.queue.length, $event)"
+          @dragleave="handleQueueDragLeave(player.queue.length)"
+          @drop="dropQueueItem(player.queue.length, $event)"
+        />
       </div>
       <p v-else class="placeholder-text">队列为空</p>
     </div>
@@ -65,16 +82,35 @@ import { usePlayerStore } from '@/stores/player'
 
 const player = usePlayerStore()
 const draggedQueueIndex = ref<number | null>(null)
+const dragOverQueueIndex = ref<number | null>(null)
 
 function moveQueueItem(from: number, to: number) {
   if (to < 0 || to >= player.queue.length) return
   player.moveQueueItem(from, to)
 }
 
-function dropQueueItem(index: number) {
+function handleQueueDragOver(index: number, event: DragEvent) {
   if (draggedQueueIndex.value === null) return
-  moveQueueItem(draggedQueueIndex.value, index)
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  dragOverQueueIndex.value = index
+}
+
+function handleQueueDragLeave(index: number) {
+  if (dragOverQueueIndex.value === index) dragOverQueueIndex.value = null
+}
+
+function clearQueueDragState() {
   draggedQueueIndex.value = null
+  dragOverQueueIndex.value = null
+}
+
+function dropQueueItem(insertionIndex: number, event: DragEvent) {
+  event.preventDefault()
+  const sourceIndex = draggedQueueIndex.value
+  clearQueueDragState()
+  if (sourceIndex === null) return
+  const targetIndex = sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex
+  moveQueueItem(sourceIndex, targetIndex)
 }
 </script>
 
@@ -103,8 +139,12 @@ function dropQueueItem(index: number) {
 .close-btn { font-weight: var(--a-font-weight-strong, 700); font-size: 10px; letter-spacing: 0.1em; border-bottom: 1px solid var(--a-color-border); }
 .q-remove { font-size: 1.15rem; line-height: 1; padding: 0.25rem; }
 .queue-content { flex: 1; overflow-y: auto; }
-.queue-list { display: flex; flex-direction: column; gap: 4px; }
+.queue-list { display: flex; flex-direction: column; }
+.queue-drop-slot { position: relative; flex: 0 0 0.5rem; height: 0.5rem; }
+.queue-drop-slot::after { position: absolute; top: 50%; right: 1rem; left: 1rem; height: 2px; background: var(--a-color-primary); content: ''; opacity: 0; pointer-events: none; transform: translateY(-50%); }
+.queue-drop-slot.is-drag-over::after { opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 24%, transparent); }
 .queue-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s; border-left: 4px solid transparent; border-bottom: 1px solid var(--a-color-border-soft); }
+.queue-item.is-dragged { opacity: 0.4; }
 .queue-item:hover:not(.active),
 .queue-item:focus-within:not(.active) { background: var(--a-color-surface-muted); border-left-color: var(--a-color-text); box-shadow: inset 0 0 0 1px var(--a-color-border-soft); }
 .queue-item.active { background: var(--a-color-text); color: var(--a-color-bg); }

@@ -9,7 +9,7 @@ export function useMusicAlbumTrackEditor() {
 	const creationFlow = computed(() => state.value.creationFlow);
 	const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? []);
 	const draggedTrackId = ref<string | null>(null);
-	const dragOverTrackId = ref<string | null>(null);
+	const dragOverInsertionIndex = ref<number | null>(null);
 	const lyricTrackId = ref<string | null>(null);
 	const lyricTrack = computed(
 		() =>
@@ -157,34 +157,38 @@ export function useMusicAlbumTrackEditor() {
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 	}
 
-	function handleTrackDragOver(trackId: string) {
-		if (draggedTrackId.value && draggedTrackId.value !== trackId)
-			dragOverTrackId.value = trackId;
+	function handleTrackDragOver(insertionIndex: number, event: DragEvent) {
+		if (!draggedTrackId.value) return;
+		if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+		dragOverInsertionIndex.value = insertionIndex;
 	}
 
-	function handleTrackDragLeave(trackId: string) {
-		if (dragOverTrackId.value === trackId) dragOverTrackId.value = null;
+	function handleTrackDragLeave(insertionIndex: number) {
+		if (dragOverInsertionIndex.value === insertionIndex)
+			dragOverInsertionIndex.value = null;
 	}
 
-	function handleTrackDrop(targetTrackId: string, event: DragEvent) {
+	function clearTrackDragState() {
+		draggedTrackId.value = null;
+		dragOverInsertionIndex.value = null;
+	}
+
+	function handleTrackDrop(insertionIndex: number, event: DragEvent) {
 		event.preventDefault();
-		dragOverTrackId.value = null;
 		const sourceTrackId =
 			event.dataTransfer?.getData("text/plain") || draggedTrackId.value;
-		draggedTrackId.value = null;
-		if (!sourceTrackId || sourceTrackId === targetTrackId) return;
+		clearTrackDragState();
+		if (!sourceTrackId) return;
 
 		updateTracks((tracks) => {
 			const next = [...tracks];
 			const sourceIndex = next.findIndex((track) => track.id === sourceTrackId);
-			const targetIndex = next.findIndex((track) => track.id === targetTrackId);
-			if (sourceIndex < 0 || targetIndex < 0) return tracks;
+			if (sourceIndex < 0 || insertionIndex < 0 || insertionIndex > next.length)
+				return tracks;
 			const [sourceTrack] = next.splice(sourceIndex, 1);
-			next.splice(
-				sourceIndex < targetIndex ? targetIndex - 1 : targetIndex,
-				0,
-				sourceTrack,
-			);
+			const targetIndex =
+				sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex;
+			next.splice(targetIndex, 0, sourceTrack);
 			return next;
 		});
 	}
@@ -232,7 +236,7 @@ export function useMusicAlbumTrackEditor() {
 		tracksDraft,
 		orderedTracks: tracksDraft,
 		draggedTrackId,
-		dragOverTrackId,
+		dragOverInsertionIndex,
 		lyricTrack,
 		addTrack,
 		addPendingTrack,
@@ -246,6 +250,7 @@ export function useMusicAlbumTrackEditor() {
 		handleTrackDragOver,
 		handleTrackDragLeave,
 		handleTrackDrop,
+		clearTrackDragState,
 		removeTrack,
 		openTrackLyrics,
 		closeTrackLyrics,

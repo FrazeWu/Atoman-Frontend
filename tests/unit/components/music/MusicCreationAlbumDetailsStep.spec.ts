@@ -780,7 +780,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		).toEqual(["01", "02"]);
 	});
 
-	it("supports drag sorting and keeps track sequence continuous after drop", async () => {
+	it("inserts a dragged track into the gap before the first track", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
 		drawers.setMusicCreationStep("albumDetails");
@@ -806,10 +806,10 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			.get('[data-testid="album-track-drag-handle-track-3"]')
 			.trigger("dragstart", { dataTransfer });
 		await wrapper
-			.get('[data-testid="album-track-row-track-1"]')
+			.get('[data-testid="album-track-drop-slot-0"]')
 			.trigger("dragover", { preventDefault: vi.fn(), dataTransfer });
 		await wrapper
-			.get('[data-testid="album-track-row-track-1"]')
+			.get('[data-testid="album-track-drop-slot-0"]')
 			.trigger("drop", { preventDefault: vi.fn(), dataTransfer });
 
 		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
@@ -826,7 +826,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(flow.tracksCustomized).toBe(true);
 	});
 
-	it("supports dragging downward with the expected final order", async () => {
+	it("inserts a dragged track into the gap after the target track", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
 		drawers.setMusicCreationStep("albumDetails");
@@ -852,10 +852,10 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			.get('[data-testid="album-track-drag-handle-track-1"]')
 			.trigger("dragstart", { dataTransfer });
 		await wrapper
-			.get('[data-testid="album-track-row-track-3"]')
+			.get('[data-testid="album-track-drop-slot-2"]')
 			.trigger("dragover", { preventDefault: vi.fn(), dataTransfer });
 		await wrapper
-			.get('[data-testid="album-track-row-track-3"]')
+			.get('[data-testid="album-track-drop-slot-2"]')
 			.trigger("drop", { preventDefault: vi.fn(), dataTransfer });
 
 		expect(flow.draft.tracks.map((track) => track.id)).toEqual([

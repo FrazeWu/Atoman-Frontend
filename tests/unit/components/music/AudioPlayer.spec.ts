@@ -293,7 +293,7 @@ describe('AudioPlayer', () => {
     expect(playerEl.classes()).toContain('player')
   })
 
-  it('renders main play button with correct class for styling', () => {
+  it('renders text labels for the main playback controls', () => {
     const player = usePlayerStore()
     player.currentSong = {
       id: 'song-1',
@@ -316,5 +316,6 @@ describe('AudioPlayer', () => {
     const playBtn = wrapper.find('.main-play-btn')
     expect(playBtn.exists()).toBe(true)
     expect(playBtn.classes()).toContain('main-play-btn')
+    expect(wrapper.get('.ctrl-row').text()).toContain('-5S上一首播放下一首+5S')
   })
 })

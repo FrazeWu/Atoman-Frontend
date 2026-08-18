@@ -1119,13 +1119,17 @@ watch(
   align-items: center;
   gap: 0.65rem;
   padding: 0.4rem 0.5rem;
+  border-left: 4px solid transparent;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
   font-size: 0.9rem;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .track:last-child { border-bottom: none; }
-.track:hover {
+.track:hover,
+.track:focus-within {
   background-color: var(--a-color-surface-muted);
+  border-left-color: var(--a-color-text);
+  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
 }
 .track-play-btn {
   width: 2rem;

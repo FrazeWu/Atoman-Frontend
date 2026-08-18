@@ -8,6 +8,8 @@ import { getMusicAlbum } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum } from '@/utils/musicMedia'
 
+defineOptions({ name: 'MusicAlbumRouteView' })
+
 const route = useRoute()
 const { openAlbum } = useMusicDrawers()
 const { syncEntityRoute } = useMusicSheetRouteSync(useRouter())

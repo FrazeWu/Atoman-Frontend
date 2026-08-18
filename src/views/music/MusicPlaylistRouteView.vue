@@ -5,6 +5,8 @@ import AlbumsView from '@/views/music/AlbumsView.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
 
+defineOptions({ name: 'MusicPlaylistRouteView' })
+
 const route = useRoute()
 const { openPlaylist } = useMusicDrawers()
 const { syncEntityRoute } = useMusicSheetRouteSync(useRouter())

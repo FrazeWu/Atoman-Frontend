@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { defineComponent, nextTick } from 'vue'
 import { describe, it, expect, vi } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
@@ -18,7 +19,8 @@ vi.mock('@/components/system/AppSidebar.vue', () => ({
 vi.mock('@/components/music/MusicSheetStack.vue', () => ({
   default: { template: '<div data-testid="music-sheet-stack-stub" />' },
 }))
-import MusicLayout from '@/views/music/MusicLayout.vue'
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
+import MusicLayout from '../../../../src/views/music/MusicLayout.vue'
 
 function mountLayout() {
   const router = createRouter({ history: createMemoryHistory(), routes: [] })
@@ -28,6 +30,14 @@ function mountLayout() {
       stubs: {
         'router-view': true,
       },
+    },
+  })
+}
+
+function mountLayoutWithRoute(router: ReturnType<typeof createRouter>) {
+  return mount(MusicLayout, {
+    global: {
+      plugins: [router],
     },
   })
 }
@@ -59,5 +69,42 @@ describe('MusicLayout.vue', () => {
   it('mounts one semantic music sheet stack', () => {
     const wrapper = mountLayout()
     expect(wrapper.findAll('[data-testid="music-sheet-stack-stub"]')).toHaveLength(1)
+  })
+
+  it('preserves a detail route shell after returning from a stacked detail route', async () => {
+    let artistMounts = 0
+    const ArtistRouteView = defineComponent({
+      name: 'MusicArtistRouteView',
+      setup() {
+        artistMounts += 1
+      },
+      template: '<div data-testid="artist-detail-route" />',
+    })
+    const AlbumRouteView = defineComponent({
+      name: 'MusicAlbumRouteView',
+      template: '<div data-testid="album-detail-route" />',
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/artist/:artistId', component: ArtistRouteView },
+        { path: '/album/:albumId', component: AlbumRouteView },
+      ],
+    })
+
+    await router.push('/artist/artist-1')
+    const wrapper = mountLayoutWithRoute(router)
+    await nextTick()
+    expect(wrapper.find('[data-testid="artist-detail-route"]').exists()).toBe(true)
+
+    await router.push('/album/album-1')
+    await nextTick()
+    expect(wrapper.find('[data-testid="album-detail-route"]').exists()).toBe(true)
+
+    await router.push('/artist/artist-1')
+    await nextTick()
+    expect(artistMounts).toBe(1)
+    expect(wrapper.find('[data-testid="artist-detail-route"]').exists()).toBe(true)
+    wrapper.unmount()
   })
 })

@@ -2,7 +2,11 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="music" />
     <main class="a-main-content music-main-content">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <KeepAlive :include="detailRouteViews">
+          <component :is="Component" />
+        </KeepAlive>
+      </router-view>
     </main>
     <MusicSheetStack />
   </div>
@@ -16,5 +20,10 @@ import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
 import { useRouter } from 'vue-router'
 
 const { sidebarCollapsed } = useSidebar()
+const detailRouteViews = [
+  'MusicArtistRouteView',
+  'MusicAlbumRouteView',
+  'MusicPlaylistRouteView',
+]
 useMusicSheetRouteSync(useRouter())
 </script>

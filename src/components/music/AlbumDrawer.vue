@@ -1142,7 +1142,7 @@ watch(
 .track {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   align-items: center;
   gap: 0.65rem;
   padding: 0.4rem 0.5rem;
@@ -1192,10 +1192,11 @@ watch(
 }
 .track-title {
   display: flex;
+  align-self: stretch;
   align-items: center;
   min-height: 2rem;
   color: var(--a-color-text);
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.35;
   min-width: 0;
   overflow: hidden;

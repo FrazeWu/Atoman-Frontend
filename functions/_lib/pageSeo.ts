@@ -8,9 +8,9 @@ const defaultImage = `${canonicalOrigin}/atoman-share.png`;
 
 const pageMeta: Record<string, StaticPageMeta> = {
 	"/": {
-		title: "Atoman | 聚合博客、播客、音乐与讨论",
+		title: "订阅与内容｜求真与开放",
 		description:
-			"聚合博客、播客、音乐与讨论，帮助深度内容读者快速建立自己的高质量内容订阅流。",
+			"聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。",
 	},
 	"/feed": {
 		title: "订阅流 | Atoman",

@@ -7,17 +7,20 @@ const shell =
 	'<!doctype html><html><head><title>Atoman</title><meta data-default-meta name="description" content="old"><link data-default-meta rel="canonical" href="https://www.atoman.org/"></head><body></body></html>';
 
 describe("static page SEO", () => {
-	it("renders a product-accurate title for the home page", () => {
+	it("renders the home page title and description", () => {
 		const html = buildStaticPageHtml(shell, "/", "www.atoman.org");
 
 		expect(html).toContain(
-			"<title data-default-meta>Atoman | 聚合博客、播客、音乐与讨论</title>",
+			"<title data-default-meta>订阅与内容｜求真与开放</title>",
 		);
 		expect(html).toContain(
-			'property="og:title" content="Atoman | 聚合博客、播客、音乐与讨论"',
+			'name="description" content="聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。"',
 		);
 		expect(html).toContain(
-			'name="twitter:title" content="Atoman | 聚合博客、播客、音乐与讨论"',
+			'property="og:title" content="订阅与内容｜求真与开放"',
+		);
+		expect(html).toContain(
+			'name="twitter:title" content="订阅与内容｜求真与开放"',
 		);
 	});
 

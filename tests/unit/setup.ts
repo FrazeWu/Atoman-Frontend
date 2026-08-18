@@ -1,3 +1,4 @@
+import { config, RouterLinkStub } from "@vue/test-utils";
 import "@testing-library/jest-dom/vitest";
 import { beforeEach, vi } from "vitest";
 
@@ -31,6 +32,10 @@ vi.stubGlobal("localStorage", {
 
 vi.stubGlobal("fetch", createUnmockedFetch());
 vi.stubGlobal("scrollTo", vi.fn());
+config.global.components = {
+	...(config.global.components ?? {}),
+	RouterLink: RouterLinkStub,
+};
 
 beforeEach(() => {
 	storage.clear();

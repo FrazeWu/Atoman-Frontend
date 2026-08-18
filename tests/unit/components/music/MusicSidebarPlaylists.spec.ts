@@ -1,156 +1,176 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
-import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'
+import MusicSidebarPlaylists from "@/components/music/MusicSidebarPlaylists.vue";
 // @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
-import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicDrawers } from "@/composables/useMusicDrawers";
 
 const mocks = vi.hoisted(() => ({
-  listMusicPlaylists: vi.fn(),
-  listPlaylistBookmarks: vi.fn(),
-  createMusicPlaylist: vi.fn(),
-  routerPush: vi.fn(),
-  requireLogin: vi.fn(),
-  isAuthenticated: { value: true },
-}))
+	listMusicPlaylists: vi.fn(),
+	listPlaylistBookmarks: vi.fn(),
+	createMusicPlaylist: vi.fn(),
+	routerPush: vi.fn(),
+	requireLogin: vi.fn(),
+	isAuthenticated: { value: true },
+}));
 
-vi.mock('vue-router', () => ({
-  useRoute: () => ({ path: '/music' }),
-  useRouter: () => ({ push: mocks.routerPush }),
-}))
+vi.mock("vue-router", () => ({
+	useRoute: () => ({ path: "/music" }),
+	useRouter: () => ({ push: mocks.routerPush }),
+}));
 
-vi.mock('@/api/musicV1', () => ({
-  listMusicPlaylists: mocks.listMusicPlaylists,
-  listPlaylistBookmarks: mocks.listPlaylistBookmarks,
-  createMusicPlaylist: mocks.createMusicPlaylist,
-}))
+vi.mock("@/api/musicV1", () => ({
+	listMusicPlaylists: mocks.listMusicPlaylists,
+	listPlaylistBookmarks: mocks.listPlaylistBookmarks,
+	createMusicPlaylist: mocks.createMusicPlaylist,
+}));
 
-vi.mock('@/composables/useLoginRedirect', () => ({
-  useLoginRedirect: () => ({
-    isAuthenticated: mocks.isAuthenticated,
-    requireLogin: mocks.requireLogin,
-  }),
-}))
+vi.mock("@/composables/useLoginRedirect", () => ({
+	useLoginRedirect: () => ({
+		isAuthenticated: mocks.isAuthenticated,
+		requireLogin: mocks.requireLogin,
+	}),
+}));
 
-describe('MusicSidebarPlaylists', () => {
-  beforeEach(() => {
-    mocks.listMusicPlaylists.mockReset()
-    mocks.listPlaylistBookmarks.mockReset()
-    mocks.createMusicPlaylist.mockReset()
-    mocks.routerPush.mockReset()
-    mocks.requireLogin.mockReset()
-    mocks.requireLogin.mockReturnValue(true)
-    mocks.isAuthenticated.value = true
-    useMusicDrawers().closeAll()
+describe("MusicSidebarPlaylists", () => {
+	beforeEach(() => {
+		mocks.listMusicPlaylists.mockReset();
+		mocks.listPlaylistBookmarks.mockReset();
+		mocks.createMusicPlaylist.mockReset();
+		mocks.routerPush.mockReset();
+		mocks.requireLogin.mockReset();
+		mocks.requireLogin.mockReturnValue(true);
+		mocks.isAuthenticated.value = true;
+		useMusicDrawers().closeAll();
 
-    mocks.listMusicPlaylists.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } })
-    mocks.listPlaylistBookmarks.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } })
-    mocks.createMusicPlaylist.mockResolvedValue({
-      id: 'playlist-1',
-      name: '新歌单',
-      description: '',
-      song_count: 0,
-      is_public: false,
-      songs: [],
-    })
-  })
+		mocks.listMusicPlaylists.mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 20, total: 0, has_more: false },
+		});
+		mocks.listPlaylistBookmarks.mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 20, total: 0, has_more: false },
+		});
+		mocks.createMusicPlaylist.mockResolvedValue({
+			id: "playlist-1",
+			name: "新歌单",
+			description: "",
+			song_count: 0,
+			is_public: false,
+			songs: [],
+		});
+	});
 
-  it('creates playlists as private by default', async () => {
-    const wrapper = mount(MusicSidebarPlaylists, {
-      props: { collapsed: false },
-    })
+	it("creates playlists as private by default", async () => {
+		const wrapper = mount(MusicSidebarPlaylists, {
+			props: { collapsed: false },
+		});
 
-    await flushPromises()
-    await wrapper.get('.create-playlist-btn').trigger('click')
-    await wrapper.get('input.playlist-input').setValue('新歌单')
-    await wrapper.get('input.playlist-input').trigger('keydown.enter')
-    await flushPromises()
+		await flushPromises();
+		await wrapper.get(".create-playlist-btn").trigger("click");
+		await wrapper.get("input.playlist-input").setValue("新歌单");
+		await wrapper.get("input.playlist-input").trigger("keydown.enter");
+		await flushPromises();
 
-    expect(mocks.createMusicPlaylist).toHaveBeenCalledWith({
-      name: '新歌单',
-      is_public: false,
-    })
-  })
+		expect(mocks.createMusicPlaylist).toHaveBeenCalledWith({
+			name: "新歌单",
+			is_public: false,
+		});
+	});
 
-  it('opens the favorite system playlist as a real playlist', async () => {
-    mocks.listMusicPlaylists.mockResolvedValue({
-      data: [{ id: 'favorite-1', name: '最爱', kind: 'favorite', song_count: 3, is_public: false }],
-      meta: { page: 1, page_size: 20, total: 1, has_more: false },
-    })
-    const wrapper = mount(MusicSidebarPlaylists, {
-      props: { collapsed: false },
-    })
-    await flushPromises()
+	it("opens the favorite system playlist as a real playlist", async () => {
+		mocks.listMusicPlaylists.mockResolvedValue({
+			data: [
+				{
+					id: "favorite-1",
+					name: "最爱",
+					kind: "favorite",
+					song_count: 3,
+					is_public: false,
+				},
+			],
+			meta: { page: 1, page_size: 20, total: 1, has_more: false },
+		});
+		const wrapper = mount(MusicSidebarPlaylists, {
+			props: { collapsed: false },
+		});
+		await flushPromises();
 
-    expect(wrapper.get('[data-testid="favorite-songs-link"]').text()).toContain('最爱')
-    await wrapper.get('[data-testid="favorite-songs-link"]').trigger('click')
+		expect(wrapper.get('[data-testid="favorite-songs-link"]').text()).toContain(
+			"最爱",
+		);
+		await wrapper.get('[data-testid="favorite-songs-link"]').trigger("click");
 
-    expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/favorite-1')
-  })
+		expect(mocks.routerPush).toHaveBeenCalledWith("/music/playlist/favorite-1");
+	});
 
-  it('does not request private playlists for guests', async () => {
-    mocks.isAuthenticated.value = false
+	it("does not request private playlists for guests", async () => {
+		mocks.isAuthenticated.value = false;
 
-    mount(MusicSidebarPlaylists, {
-      props: { collapsed: false },
-    })
-    await flushPromises()
+		mount(MusicSidebarPlaylists, {
+			props: { collapsed: false },
+		});
+		await flushPromises();
 
-    expect(mocks.listMusicPlaylists).not.toHaveBeenCalled()
-    expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled()
-  })
+		expect(mocks.listMusicPlaylists).not.toHaveBeenCalled();
+		expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled();
+	});
 
-  it('shows bookmarked playlists under my playlists', async () => {
-    mocks.listMusicPlaylists.mockResolvedValue({
-      data: [{ id: 'own-1', name: '我的歌单', song_count: 0, is_public: false }],
-      meta: { page: 1, page_size: 20, total: 1, has_more: false },
-    })
-    mocks.listPlaylistBookmarks.mockResolvedValue({
-      data: [
-        {
-          id: 'bookmark-1',
-          playlist_id: 'shared-1',
-          playlist: {
-            id: 'shared-1',
-            name: '公开歌单',
-            owner_username: 'bob',
-            song_count: 12,
-            is_public: true,
-          },
-        },
-      ],
-      meta: { page: 1, page_size: 20, total: 1, has_more: false },
-    })
+	it("shows bookmarked playlists under my playlists", async () => {
+		mocks.listMusicPlaylists.mockResolvedValue({
+			data: [
+				{ id: "own-1", name: "我的歌单", song_count: 0, is_public: false },
+			],
+			meta: { page: 1, page_size: 20, total: 1, has_more: false },
+		});
+		mocks.listPlaylistBookmarks.mockResolvedValue({
+			data: [
+				{
+					id: "bookmark-1",
+					playlist_id: "shared-1",
+					playlist: {
+						id: "shared-1",
+						name: "公开歌单",
+						owner_username: "bob",
+						song_count: 12,
+						is_public: true,
+					},
+				},
+			],
+			meta: { page: 1, page_size: 20, total: 1, has_more: false },
+		});
 
-    const wrapper = mount(MusicSidebarPlaylists, {
-      props: { collapsed: false },
-    })
-    await flushPromises()
+		const wrapper = mount(MusicSidebarPlaylists, {
+			props: { collapsed: false },
+		});
+		await flushPromises();
 
-    expect(wrapper.text()).not.toContain('PLAYLISTS')
-    expect(wrapper.text()).toContain('收藏的歌单')
-    expect(wrapper.text()).toContain('我的歌单')
-    expect(wrapper.text()).toContain('bob/公开歌单')
+		expect(wrapper.text()).not.toContain("PLAYLISTS");
+		expect(wrapper.text()).toContain("收藏的歌单");
+		expect(wrapper.text()).toContain("我的歌单");
+		expect(wrapper.text()).toContain("bob/公开歌单");
 
-    await wrapper.get('[data-testid="bookmarked-playlist-shared-1"]').trigger('click')
+		await wrapper
+			.get('[data-testid="bookmarked-playlist-shared-1"]')
+			.trigger("click");
 
-    expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/shared-1')
-  })
+		expect(mocks.routerPush).toHaveBeenCalledWith("/music/playlist/shared-1");
+	});
 
-  it('reloads sidebar playlists when playlist refresh token changes', async () => {
-    const wrapper = mount(MusicSidebarPlaylists, {
-      props: { collapsed: false },
-    })
-    await flushPromises()
+	it("reloads sidebar playlists when playlist refresh token changes", async () => {
+		const wrapper = mount(MusicSidebarPlaylists, {
+			props: { collapsed: false },
+		});
+		await flushPromises();
 
-    mocks.listMusicPlaylists.mockClear()
-    mocks.listPlaylistBookmarks.mockClear()
+		mocks.listMusicPlaylists.mockClear();
+		mocks.listPlaylistBookmarks.mockClear();
 
-    useMusicDrawers().refreshPlaylists()
-    await flushPromises()
+		useMusicDrawers().refreshPlaylists();
+		await flushPromises();
 
-    expect(wrapper.exists()).toBe(true)
-    expect(mocks.listMusicPlaylists).toHaveBeenCalled()
-    expect(mocks.listPlaylistBookmarks).toHaveBeenCalled()
-  })
-})
+		expect(wrapper.exists()).toBe(true);
+		expect(mocks.listMusicPlaylists).toHaveBeenCalled();
+		expect(mocks.listPlaylistBookmarks).toHaveBeenCalled();
+	});
+});

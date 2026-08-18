@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -113,6 +114,15 @@ const localFilteredAlbums = computed(() => {
 })
 
 const personalizedAlbums = computed(() => musicHome.value?.for_you ?? [])
+const forYouBatchSize = 6
+const forYouBatchIndex = ref(0)
+const visiblePersonalizedAlbums = computed(() => {
+  const start = forYouBatchIndex.value * forYouBatchSize
+  return personalizedAlbums.value.slice(start, start + forYouBatchSize)
+})
+const hasMorePersonalizedAlbums = computed(() => (
+  personalizedAlbums.value.length > forYouBatchSize
+))
 const personalizedAlbumIds = computed(() => new Set(
   personalizedAlbums.value.map(album => String(album.id)),
 ))
@@ -262,6 +272,7 @@ async function fetchMusicHome() {
     const response = await getMusicHome({ page: 1, page_size: discoverPageSize })
     if (!request.isCurrent()) return
     musicHome.value = response
+    forYouBatchIndex.value = 0
     await Promise.all((['album', 'artist', 'playlist'] as const).map((section) => (
       loadDiscoverSection(section, 1, false, request.isCurrent)
     )))
@@ -278,6 +289,12 @@ async function fetchMusicHome() {
   } finally {
     if (request.isCurrent()) loading.value = false
   }
+}
+
+function showNextPersonalizedAlbums() {
+  const batchCount = Math.ceil(personalizedAlbums.value.length / forYouBatchSize)
+  if (batchCount < 2) return
+  forYouBatchIndex.value = (forYouBatchIndex.value + 1) % batchCount
 }
 
 function resetDiscoverSections() {
@@ -670,9 +687,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       <section v-if="personalizedAlbums.length" class="music-home-section" aria-labelledby="for-you-title">
         <header class="music-home-section__header">
           <h2 id="for-you-title">为你推荐</h2>
+          <PButton
+            v-if="hasMorePersonalizedAlbums"
+            variant="ghost"
+            size="sm"
+            data-testid="for-you-next-batch"
+            @click="showNextPersonalizedAlbums"
+          ><RefreshCw :size="14" aria-hidden="true" /><span>换一批</span></PButton>
         </header>
-        <div class="discover-layout discover-layout--albums" aria-label="为你推荐专辑">
-          <div v-for="album in personalizedAlbums" :key="album.id" class="discover-result">
+        <div class="discover-layout discover-layout--albums for-you-layout" aria-label="为你推荐专辑">
+          <div v-for="album in visiblePersonalizedAlbums" :key="album.id" class="discover-result">
             <MusicAlbumCard
               class="discover-layout__item"
               :album="album"
@@ -954,6 +978,13 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   gap: 0.85rem;
 }
 
+.music-home-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .music-home-section__header h2 {
   margin: 0;
   font-size: 1rem;
@@ -1131,6 +1162,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.discover-layout.for-you-layout {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .discover-layout--playlists {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -1224,5 +1259,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   .discover-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .discover-layout.for-you-layout {
+    grid-template-columns: repeat(6, minmax(9rem, 1fr));
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scroll-snap-type: x mandatory;
+  }
+
+  .for-you-layout .discover-result { scroll-snap-align: start; }
 }
 </style>

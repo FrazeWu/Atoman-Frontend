@@ -749,6 +749,7 @@ defineExpose({
 
 .avatar-uploader {
   position: relative;
+  justify-self: start;
   cursor: pointer;
   border-radius: 4px;
   overflow: hidden;

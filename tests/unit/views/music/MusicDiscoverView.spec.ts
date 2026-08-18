@@ -685,6 +685,48 @@ describe("Music DiscoverView.vue", () => {
 		expect(mocks.openAlbum).toHaveBeenCalledWith("album-1");
 	});
 
+	it("shows personalized albums in one batch and cycles through the remaining recommendations", async () => {
+		mocks.getMusicHome.mockResolvedValueOnce({
+			personalized: true,
+			recently_played: [],
+			for_you: Array.from({ length: 8 }, (_, index) => ({
+				id: `album-${index + 1}`,
+				title: `Recommended Album ${index + 1}`,
+				artists: [{ id: "artist-1", name: "Ye" }],
+			})),
+			sections: [],
+			discover: [],
+			discover_has_more: false,
+			discover_meta: {
+				page: 1,
+				page_size: 24,
+				total: 0,
+				has_more: false,
+			},
+		});
+
+		const wrapper = mount(DiscoverView);
+		await flushPromises();
+
+		expect(
+			wrapper.findAll('[data-testid="personalized-album-card"]'),
+		).toHaveLength(6);
+		expect(wrapper.text()).toContain("Recommended Album 1");
+		expect(wrapper.text()).not.toContain("Recommended Album 7");
+
+		await wrapper.get('[data-testid="for-you-next-batch"]').trigger("click");
+
+		expect(
+			wrapper.findAll('[data-testid="personalized-album-card"]'),
+		).toHaveLength(2);
+		expect(wrapper.text()).toContain("Recommended Album 7");
+		expect(wrapper.text()).not.toContain("Recommended Album 1");
+
+		await wrapper.get('[data-testid="for-you-next-batch"]').trigger("click");
+
+		expect(wrapper.text()).toContain("Recommended Album 1");
+	});
+
 	it("merges continue listening into the recent playback section", async () => {
 		mocks.getMusicHome.mockResolvedValueOnce({
 			personalized: true,

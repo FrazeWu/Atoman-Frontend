@@ -227,6 +227,24 @@ describe('VideoDetailView shared interactions', () => {
     expect(play).toHaveBeenCalled()
   })
 
+  it('本地视频播放被浏览器拒绝时显示重试错误', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'POST' && url.endsWith('/view')) return makeJsonResponse({})
+      if (url.endsWith('/videos/video-1')) return makeJsonResponse(makeVideo('video-1', '本地视频', { storage_type: 'local' }))
+      if (url.endsWith('/videos/video-1/recommended')) return makeJsonResponse([])
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(new DOMException('blocked', 'NotAllowedError'))
+
+    const { wrapper } = await mountVideoDetail()
+    await wrapper.get('[data-testid="video-play"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('无法开始播放，请重试')
+    expect(wrapper.find('.vd-player-error button').text()).toBe('重试播放')
+  })
+
   it('分享视频时只使用客户端分享能力，不请求不存在的 share 接口', async () => {
     const share = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'share', { configurable: true, value: share })

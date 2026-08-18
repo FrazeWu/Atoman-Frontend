@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getRecommendedVideos, getVideo, recordVideoView } from '@/api/video'
 import { ref, onMounted, computed, watch } from 'vue'
+import { Play } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import type { CommentTargetRef } from '@/api/comments'
 import type { Video } from '@/types'
@@ -46,6 +47,7 @@ const error = ref('')
 const theaterMode = ref(getStoredTheaterMode())
 const showNextPrompt = ref(false)
 const videoError = ref('')
+const isLocalPlaybackActive = ref(false)
 const hasRecordedView = ref(false)
 const hasStartedPlayback = ref(false)
 let lastProgressSave = 0
@@ -104,8 +106,14 @@ function syncInteractionState(detail: VideoDetailResponse) {
 
 function toggleLocalPlayback() {
   if (video.value?.storage_type !== 'local' || !videoElement.value) return
-  if (videoElement.value.paused) videoElement.value.play().catch(() => {})
-  else videoElement.value.pause()
+  if (videoElement.value.paused) {
+    videoError.value = ''
+    void videoElement.value.play().catch(() => {
+      videoError.value = '无法开始播放，请重试'
+    })
+    return
+  }
+  videoElement.value.pause()
 }
 
 async function load(id: string) {
@@ -116,6 +124,7 @@ async function load(id: string) {
   recommended.value = []
   showNextPrompt.value = false
   videoError.value = ''
+  isLocalPlaybackActive.value = false
   hasRecordedView.value = false
   hasStartedPlayback.value = false
   currentPlaybackTime.value = 0
@@ -209,6 +218,7 @@ async function restoreInitialPlaybackPosition() {
 }
 
 function handlePauseOrUnload() {
+  isLocalPlaybackActive.value = false
   const duration = videoElement.value?.duration
   if (!video.value || !videoElement.value || typeof duration !== 'number' || !Number.isFinite(duration)) return
   saveVideoProgress(video.value.id, videoElement.value.currentTime, duration)
@@ -226,6 +236,7 @@ function handleVideoError() {
 }
 
 function handleVideoPlay() {
+  isLocalPlaybackActive.value = true
   hasStartedPlayback.value = true
 }
 
@@ -334,6 +345,16 @@ function currentCommentTime() {
                 @pause="handlePauseOrUnload"
                 @ended="handleVideoEnded"
               />
+              <button
+                v-if="!isLocalPlaybackActive && !videoError"
+                class="vd-play-overlay"
+                type="button"
+                aria-label="播放视频"
+                data-testid="video-play"
+                @click.stop="toggleLocalPlayback"
+              >
+                <Play :size="28" fill="currentColor" aria-hidden="true" />
+              </button>
               <div v-if="videoError" class="vd-player-error" role="alert">
                 <p>{{ videoError }}</p>
                 <button type="button" @click="retryVideoPlayback">重试播放</button>
@@ -496,6 +517,27 @@ function currentCommentTime() {
   width: 100%;
   aspect-ratio: 16/9;
   background: #000;
+}
+.vd-play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.72);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+.vd-play-overlay:hover,
+.vd-play-overlay:focus-visible {
+  background: rgba(15, 23, 42, 0.92);
+  outline: 2px solid #fff;
+  outline-offset: 3px;
 }
 .vd-player-error {
   position: absolute;

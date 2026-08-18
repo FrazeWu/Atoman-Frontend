@@ -7,6 +7,7 @@ import {
 	createMusicAlbumImportFilePartUpload,
 	completeMusicAlbumImportFilePart,
 	completeMusicAlbumImportFile,
+	completeMusicAlbumImportSession,
 	registerMusicAlbumImportFiles,
 	getMusicAlbumImport,
 	retryMusicAlbumImportFile,
@@ -509,9 +510,9 @@ export function useAlbumImportUpload() {
 				);
 			}
 
-			const snapshot = await getMusicAlbumImport(session.importId);
+			const completed = await completeMusicAlbumImportSession(session.importId);
 			if (isCurrent() && draft.importId === session.importId) {
-				refreshWhenFilesUploaded(flow, snapshot, session.importId);
+				refreshWhenFilesUploaded(flow, completed, session.importId);
 			}
 		} catch (error) {
 			if (!isCurrent()) return;

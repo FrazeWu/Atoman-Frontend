@@ -195,7 +195,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"import-1",
 			"file-1",
 		);
-		expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled();
+		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith(
+			"import-1",
+		);
 		expect(useMusicDrawers().state.value.creationFlow?.step).toBe(
 			"albumDetails",
 		);
@@ -314,8 +316,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const completeFile = vi
 			.spyOn(musicApi, "completeMusicAlbumImportFile")
 			.mockResolvedValue({ ...firstRecord, uploadStatus: "uploaded" });
-		vi.spyOn(musicApi, "getMusicAlbumImport").mockImplementation(
-			async (importId: string) => snapshot({ importId }),
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockImplementation(
+			async (importId: string) => snapshot({ importId, status: "queued", stage: "queued" }),
 		);
 
 		let resolveFirstUpload!: (response: Response) => void;
@@ -640,6 +642,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
 		await flushPromises();
+		await vi.advanceTimersByTimeAsync(2000);
 
 		expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(1);
 		expect(
@@ -746,7 +749,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"import-1",
 			"file-1",
 		);
-		expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled();
+		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(1);
 		expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe(
 			"uploaded",
 		);
@@ -774,7 +777,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"import-1",
 			"file-1",
 		);
-		expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled();
+		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(1);
 	});
 
 	it("会话处理失败后可直接重试而不重复上传", async () => {

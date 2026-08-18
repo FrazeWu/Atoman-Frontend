@@ -58,7 +58,7 @@ const { sidebarCollapsed } = useSidebar()
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
-  border-left: 3.5px solid transparent;
+  border-left: 3px solid transparent;
   border-top: 1px solid transparent;
   border-right: 1px solid transparent;
   border-bottom: 1px solid transparent;
@@ -69,7 +69,7 @@ const { sidebarCollapsed } = useSidebar()
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
 }
 
 :deep(.p-sidebar-item:focus-visible) {
@@ -81,7 +81,7 @@ const { sidebarCollapsed } = useSidebar()
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-left-color: var(--a-color-text);
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
   font-weight: 650;
 }
 

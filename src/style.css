@@ -1073,15 +1073,13 @@ body:has(.app-shell.has-sidebar) {
   color: var(--a-color-fg);
 }
 
-.a-sidebar-item.active,
-.p-sidebar-item.active {
+.a-sidebar-item.active {
   background-color: transparent;
   color: var(--a-color-fg);
   font-weight: 500;
 }
 
-.a-sidebar-item.active::before,
-.p-sidebar-item.active::before {
+.a-sidebar-item.active::before {
   content: '';
   position: absolute;
   left: 0;
@@ -1093,8 +1091,7 @@ body:has(.app-shell.has-sidebar) {
   border-radius: 2px;
 }
 
-.a-sidebar-item.active::after,
-.p-sidebar-item.active::after {
+.a-sidebar-item.active::after {
   content: none;
 }
 

@@ -349,7 +349,7 @@ watch(
   background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
   outline: none;
 }
 
@@ -363,7 +363,7 @@ watch(
   font-weight: 800;
   border-color: transparent;
   border-left-color: var(--a-color-text);
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
   padding-left: 0.5rem;
 }
 
@@ -428,7 +428,7 @@ watch(
   background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
   outline: none;
 }
 

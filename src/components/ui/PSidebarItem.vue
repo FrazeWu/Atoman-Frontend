@@ -61,6 +61,7 @@ defineEmits(['click'])
   border-radius: var(--a-radius-control);
   background: transparent;
   border: 1px solid transparent;
+  border-left: 3px solid transparent;
   box-shadow: none;
   transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -69,7 +70,7 @@ defineEmits(['click'])
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
 }
 .p-sidebar-item:focus-visible {
   outline: 2px solid var(--a-color-text);
@@ -80,8 +81,9 @@ defineEmits(['click'])
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: transparent;
+  border-left-color: var(--a-color-text);
   border-radius: 2px;
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  box-shadow: none;
   font-weight: 650;
 }
 </style>

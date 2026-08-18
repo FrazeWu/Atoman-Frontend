@@ -13,7 +13,7 @@
           <span class="portal-hot__hero-gradient">高质量内容订阅流</span>
         </h1>
         <p class="portal-hot__hero-subtitle">
-          聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。
+          聚合博客、播客、音乐与讨论，不用在多个平台反复筛选。
         </p>
         <div class="portal-hot__hero-actions">
           <PButton variant="primary" size="md" :to="moduleUrl('feed')">

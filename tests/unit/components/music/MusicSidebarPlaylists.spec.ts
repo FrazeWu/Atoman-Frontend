@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'
+// @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const mocks = vi.hoisted(() => ({

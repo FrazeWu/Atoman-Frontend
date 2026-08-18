@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { getActivePinia } from 'pinia'
+import { getMountedPinia } from '@/utils/pinia'
 import { Lock, LockOpen, ShieldCheck, X } from 'lucide-vue-next'
 import {
   cancelMusicEntryStateRequest,
@@ -23,8 +23,9 @@ const props = defineProps<{
   editStatus?: MusicEditStatus
 }>()
 const emit = defineEmits<{ submitted: [] }>()
-const authStore = getActivePinia()
-  ? useAuthStore()
+const appPinia = getMountedPinia()
+const authStore = appPinia
+  ? useAuthStore(appPinia)
   : ({ isAuthenticated: false, user: null } as ReturnType<typeof useAuthStore>)
 const pending = ref<MusicEntryStateRequest | null>(null)
 const reason = ref('')

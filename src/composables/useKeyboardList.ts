@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
-import { getActivePinia } from 'pinia'
+import { getMountedPinia } from '@/utils/pinia'
 import { useUIStore } from '@/stores/ui'
 
 interface KeyboardListOptions<T> {
@@ -12,7 +12,7 @@ interface KeyboardListOptions<T> {
 
 export function useKeyboardList<T>(options: KeyboardListOptions<T>) {
   const focusedIndex = ref(-1)
-  const uiStore = getActivePinia() ? useUIStore() : null
+  const uiStore = getMountedPinia() ? useUIStore() : null
 
   const scrollToFocused = () => {
     nextTick(() => {

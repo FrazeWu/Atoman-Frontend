@@ -1,5 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+// @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
+import { useAuthStore } from '@/stores/auth'
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import LibraryView from '@/views/music/LibraryView.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -51,7 +55,21 @@ vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
   },
 }))
 
+let pinia: ReturnType<typeof createPinia>
+
+const mountLibraryView = () => mount(LibraryView, {
+  global: { plugins: [pinia] },
+})
+
 describe('LibraryView', () => {
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+    const authStore = useAuthStore(pinia)
+    authStore.user = { uuid: 'library-user', username: 'library-user', email: 'library@example.test' }
+    authStore.isAuthenticated = true
+  })
+
   beforeEach(() => {
     mocks.listMusicLibrary.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
@@ -74,7 +92,7 @@ describe('LibraryView', () => {
       meta: { page: 1, page_size: 24, total: 0, has_more: false },
     })
 
-    const wrapper = mount(LibraryView)
+    const wrapper = mountLibraryView()
     await flushPromises()
 
     expect(wrapper.get('h1').text()).toBe('收藏')
@@ -89,7 +107,7 @@ describe('LibraryView', () => {
       data: [],
       meta: { page: 1, page_size: 24, total: 0, has_more: false },
     })
-    const wrapper = mount(LibraryView)
+    const wrapper = mountLibraryView()
     await flushPromises()
     await wrapper.get('input[type="search"]').setValue('Late Registration')
     expect(mocks.listMusicLibrary).toHaveBeenCalledTimes(1)
@@ -109,7 +127,7 @@ describe('LibraryView', () => {
       })
 		  .mockReturnValueOnce(artistRequest)
 
-    const wrapper = mount(LibraryView)
+    const wrapper = mountLibraryView()
     await flushPromises()
     expect(wrapper.text()).toContain('第 1 页，共 25 条')
 
@@ -126,7 +144,7 @@ describe('LibraryView', () => {
 
 	it('shows the favorite playlist instead of a song collection', async () => {
 		mocks.listMusicLibrary.mockResolvedValue({ data: [], meta: { page: 1, page_size: 24, total: 0, has_more: false } })
-		const wrapper = mount(LibraryView)
+		const wrapper = mountLibraryView()
 		await flushPromises()
 		expect(wrapper.find('[data-option="song"]').exists()).toBe(false)
 		await wrapper.get('[data-option="playlist"]').trigger('click')
@@ -142,7 +160,7 @@ describe('LibraryView', () => {
       })
     mocks.deleteAlbumBookmark.mockResolvedValue({ deleted: true })
 
-    const wrapper = mount(LibraryView)
+    const wrapper = mountLibraryView()
     await flushPromises()
     const card = wrapper.get('[data-testid="library-album-card"]')
     await card.get('[aria-label="打开专辑 Album 1"]').trigger('click')
@@ -163,7 +181,7 @@ describe('LibraryView', () => {
       })
     mocks.removeMusicSongFromLater.mockResolvedValue({ deleted: true })
 
-    const wrapper = mount(LibraryView)
+    const wrapper = mountLibraryView()
     await flushPromises()
     await wrapper.get('[data-option="later"]').trigger('click')
     await flushPromises()
@@ -189,7 +207,7 @@ describe('LibraryView', () => {
         meta: { page: 2, page_size: 24, total: 3, has_more: false },
       })
 
-    const wrapper = mount(LibraryView)
+    const wrapper = mountLibraryView()
     await flushPromises()
     expect(wrapper.find('[data-testid="library-later-play-all"]').exists()).toBe(false)
 

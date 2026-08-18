@@ -28,8 +28,7 @@ import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
-
-import { getActivePinia } from 'pinia'
+import { getMountedPinia } from '@/utils/pinia'
 
 type LibraryKind = 'album' | 'artist' | 'playlist' | 'later'
 type LibrarySongEnvelope = { song?: MusicSongListItem }
@@ -52,7 +51,7 @@ const removingKey = ref('')
 const playingAll = ref(false)
 const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
-const authStore = getActivePinia() ? useAuthStore() : { isAuthenticated: true }
+const authStore = getMountedPinia() ? useAuthStore() : { isAuthenticated: true }
 const requests = useRequestGeneration()
 const playableSongs = computed(() => songs.value.filter(song => Boolean(song.audio_url)).map(playable))
 

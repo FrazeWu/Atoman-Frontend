@@ -37,7 +37,7 @@ import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { getActivePinia } from 'pinia'
+import { getMountedPinia } from '@/utils/pinia'
 
 const props = withDefaults(defineProps<{
   pageTitle?: string
@@ -47,7 +47,7 @@ const props = withDefaults(defineProps<{
   contentMode: 'discover',
 })
 
-const authStore = getActivePinia() ? useAuthStore() : null
+const authStore = getMountedPinia() ? useAuthStore() : null
 const router = useRouter()
 const route = useRoute()
 const player = usePlayerStore()

@@ -20,14 +20,14 @@ import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { reportError } from '@/utils/logger'
-import { getActivePinia } from 'pinia'
+import { getMountedPinia } from '@/utils/pinia'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const player = usePlayerStore()
 const { state, openAlbum, openArtist, openMusicEditor, openNestedAction } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
-const authStore = getActivePinia() ? useAuthStore() : { isAuthenticated: false }
+const authStore = getMountedPinia() ? useAuthStore() : { isAuthenticated: false }
 const { favoriteSongIds, playlists, loadFavoriteSongs, loadPlaylists, toggleFavoriteSong, addSongToPlaylist } = useMusicFavoritePlaylist()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)

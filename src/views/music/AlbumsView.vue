@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { getActivePinia } from 'pinia'
+import { getMountedPinia } from '@/utils/pinia'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePendingMusicLyricsAnnotations } from '@/composables/usePendingMusicLyricsAnnotations'
 
 const route = useRoute()
-const authStore = getActivePinia() ? useAuthStore() : null
+const authStore = getMountedPinia() ? useAuthStore() : null
 const { pendingMusicLyricsAnnotations: pendingRebindNotifications, loadPendingMusicLyricsAnnotations } = usePendingMusicLyricsAnnotations()
 const pendingRebindCount = computed(() => pendingRebindNotifications.value.length)
 const pendingRebindUserId = computed(() => {

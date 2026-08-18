@@ -317,7 +317,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			.spyOn(musicApi, "completeMusicAlbumImportFile")
 			.mockResolvedValue({ ...firstRecord, uploadStatus: "uploaded" });
 		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockImplementation(
-			async (importId: string) => snapshot({ importId, status: "queued", stage: "queued" }),
+			async (importId: string) =>
+				snapshot({ importId, status: "queued", stage: "queued" }),
 		);
 
 		let resolveFirstUpload!: (response: Response) => void;

@@ -2,9 +2,10 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { computed, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
-import { ApiErrorResponseError } from "@/api/client";
-import { useAuthStore } from "@/stores/auth";
-import ArtistsView from "@/views/music/ArtistsView.vue";
+import { ApiErrorResponseError } from "../../../../src/api/client";
+import { useAuthStore } from "../../../../src/stores/auth";
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
+import ArtistsView from "../../../../src/views/music/ArtistsView.vue";
 
 vi.mock("@/components/music/ArtistDrawer.vue", () => ({
 	default: { template: '<div data-testid="artist-drawer-stub" />' },

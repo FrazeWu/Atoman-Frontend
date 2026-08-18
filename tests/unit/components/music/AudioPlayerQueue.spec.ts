@@ -2,8 +2,10 @@ import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
-import { usePlayerStore } from "@/stores/player";
+import type { Song } from "../../../../src/types";
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
+import AudioPlayerQueue from "../../../../src/components/music/AudioPlayerQueue.vue";
+import { usePlayerStore } from "../../../../src/stores/player";
 
 describe("AudioPlayerQueue.vue", () => {
 	beforeEach(() => {
@@ -16,7 +18,7 @@ describe("AudioPlayerQueue.vue", () => {
 			{ id: "song-1", title: "Song 1", artist: "Artist", audio_url: "/1.mp3" },
 			{ id: "song-2", title: "Song 2", artist: "Artist", audio_url: "/2.mp3" },
 			{ id: "song-3", title: "Song 3", artist: "Artist", audio_url: "/3.mp3" },
-		] as never;
+		] as Song[];
 
 		const wrapper = mount(AudioPlayerQueue);
 		const dataTransfer = { dropEffect: "move" };
@@ -36,7 +38,7 @@ describe("AudioPlayerQueue.vue", () => {
 			.get('[data-testid="queue-drop-slot-2"]')
 			.trigger("drop", { dataTransfer });
 
-		expect(player.queue.map((song) => song.id)).toEqual([
+		expect(player.queue.map((song: Song) => song.id)).toEqual([
 			"song-2",
 			"song-1",
 			"song-3",

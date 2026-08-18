@@ -13,12 +13,12 @@ export type PageMeta = {
 const defaultMeta = [
   ['name', 'description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
   ['property', 'og:type', 'website'],
-  ['property', 'og:title', '订阅与内容｜求真与开放'],
+  ['property', 'og:title', 'Atoman | 订阅与内容｜求真与开放'],
   ['property', 'og:description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
   ['property', 'og:url', 'https://www.atoman.org/'],
   ['property', 'og:image', 'https://www.atoman.org/favicon.png'],
   ['name', 'twitter:card', 'summary'],
-  ['name', 'twitter:title', '订阅与内容｜求真与开放'],
+  ['name', 'twitter:title', 'Atoman | 订阅与内容｜求真与开放'],
   ['name', 'twitter:description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
   ['name', 'twitter:image', 'https://www.atoman.org/favicon.png'],
 ] as const
@@ -33,7 +33,7 @@ function createMeta(attribute: 'name' | 'property', key: string) {
 function restoreSiteDefaults() {
   document.head.querySelectorAll('[data-page-meta="article"]').forEach(element => element.remove())
   document.head.querySelectorAll('link[rel="canonical"], meta[property^="article:"]').forEach(element => element.remove())
-  document.title = '订阅与内容｜求真与开放'
+  document.title = 'Atoman | 订阅与内容｜求真与开放'
 
   for (const [attribute, key, content] of defaultMeta) {
     const selector = `meta[${attribute}="${key}"]`

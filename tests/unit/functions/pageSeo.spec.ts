@@ -11,16 +11,16 @@ describe("static page SEO", () => {
 		const html = buildStaticPageHtml(shell, "/", "www.atoman.org");
 
 		expect(html).toContain(
-			"<title data-default-meta>订阅与内容｜求真与开放</title>",
+			"<title data-default-meta>Atoman | 订阅与内容｜求真与开放</title>",
 		);
 		expect(html).toContain(
 			'name="description" content="聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。"',
 		);
 		expect(html).toContain(
-			'property="og:title" content="订阅与内容｜求真与开放"',
+			'property="og:title" content="Atoman | 订阅与内容｜求真与开放"',
 		);
 		expect(html).toContain(
-			'name="twitter:title" content="订阅与内容｜求真与开放"',
+			'name="twitter:title" content="Atoman | 订阅与内容｜求真与开放"',
 		);
 	});
 

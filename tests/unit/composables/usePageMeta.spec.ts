@@ -40,14 +40,14 @@ describe('usePageMeta SSR lifecycle', () => {
 
     wrapper.unmount()
 
-    expect(document.title).toBe('订阅与内容｜求真与开放')
+    expect(document.title).toBe('Atoman | 订阅与内容｜求真与开放')
     expect(document.head.querySelector('[data-page-meta="article"]')).toBeNull()
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
     expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
     expect(document.head.querySelector('meta[property^="article:"]')).toBeNull()
     expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。')
     expect(document.head.querySelector('meta[property="og:type"]')?.getAttribute('content')).toBe('website')
-    expect(document.head.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe('订阅与内容｜求真与开放')
-    expect(document.head.querySelector('meta[name="twitter:title"]')?.getAttribute('content')).toBe('订阅与内容｜求真与开放')
+    expect(document.head.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe('Atoman | 订阅与内容｜求真与开放')
+    expect(document.head.querySelector('meta[name="twitter:title"]')?.getAttribute('content')).toBe('Atoman | 订阅与内容｜求真与开放')
   })
 })

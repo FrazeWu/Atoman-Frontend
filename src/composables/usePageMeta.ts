@@ -13,12 +13,12 @@ export type PageMeta = {
 const defaultMeta = [
   ['name', 'description', '聚合博客、播客、音乐与讨论，帮助深度内容读者快速建立自己的高质量内容订阅流。'],
   ['property', 'og:type', 'website'],
-  ['property', 'og:title', 'Atoman - 3 分钟建立你的高质量内容订阅流'],
+  ['property', 'og:title', 'Atoman | 聚合博客、播客、音乐与讨论'],
   ['property', 'og:description', '聚合博客、播客、音乐与讨论，帮助深度内容读者快速建立自己的高质量内容订阅流。'],
   ['property', 'og:url', 'https://www.atoman.org/'],
   ['property', 'og:image', 'https://www.atoman.org/favicon.png'],
   ['name', 'twitter:card', 'summary'],
-  ['name', 'twitter:title', 'Atoman - 3 分钟建立你的高质量内容订阅流'],
+  ['name', 'twitter:title', 'Atoman | 聚合博客、播客、音乐与讨论'],
   ['name', 'twitter:description', '聚合博客、播客、音乐与讨论，帮助深度内容读者快速建立自己的高质量内容订阅流。'],
   ['name', 'twitter:image', 'https://www.atoman.org/favicon.png'],
 ] as const
@@ -33,7 +33,7 @@ function createMeta(attribute: 'name' | 'property', key: string) {
 function restoreSiteDefaults() {
   document.head.querySelectorAll('[data-page-meta="article"]').forEach(element => element.remove())
   document.head.querySelectorAll('link[rel="canonical"], meta[property^="article:"]').forEach(element => element.remove())
-  document.title = 'Atoman - 3 分钟建立你的高质量内容订阅流'
+  document.title = 'Atoman | 聚合博客、播客、音乐与讨论'
 
   for (const [attribute, key, content] of defaultMeta) {
     const selector = `meta[${attribute}="${key}"]`

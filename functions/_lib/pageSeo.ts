@@ -8,7 +8,7 @@ const defaultImage = `${canonicalOrigin}/atoman-share.png`;
 
 const pageMeta: Record<string, StaticPageMeta> = {
 	"/": {
-		title: "Atoman - 3 分钟建立你的高质量内容订阅流",
+		title: "Atoman | 聚合博客、播客、音乐与讨论",
 		description:
 			"聚合博客、播客、音乐与讨论，帮助深度内容读者快速建立自己的高质量内容订阅流。",
 	},

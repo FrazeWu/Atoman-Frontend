@@ -7,6 +7,20 @@ const shell =
 	'<!doctype html><html><head><title>Atoman</title><meta data-default-meta name="description" content="old"><link data-default-meta rel="canonical" href="https://www.atoman.org/"></head><body></body></html>';
 
 describe("static page SEO", () => {
+	it("renders a product-accurate title for the home page", () => {
+		const html = buildStaticPageHtml(shell, "/", "www.atoman.org");
+
+		expect(html).toContain(
+			"<title data-default-meta>Atoman | 聚合博客、播客、音乐与讨论</title>",
+		);
+		expect(html).toContain(
+			'property="og:title" content="Atoman | 聚合博客、播客、音乐与讨论"',
+		);
+		expect(html).toContain(
+			'name="twitter:title" content="Atoman | 聚合博客、播客、音乐与讨论"',
+		);
+	});
+
 	it("renders independent metadata and a www canonical for public module pages", () => {
 		const html = buildStaticPageHtml(shell, "/feed/", "www.atoman.org");
 

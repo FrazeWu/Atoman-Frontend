@@ -584,9 +584,43 @@ export type MusicListeningHistory = {
 	song: MusicSongListItem;
 };
 
+export type MusicPlaybackProgress = {
+	id: string;
+	song_id: string;
+	position_seconds: number;
+	duration_seconds: number;
+	completed: boolean;
+	updated_at: string;
+	song?: MusicSongListItem;
+};
+
+export type SaveMusicPlaybackProgressInput = {
+	song_id: string;
+	position_seconds: number;
+	duration_seconds: number;
+	completed: boolean;
+	reported_at: string;
+};
+
+export type MusicPlaybackSession = {
+	queue: MusicSongListItem[];
+	current_song_id: string;
+	position_seconds: number;
+	playback_mode: "loop" | "single" | "random";
+	updated_at: string;
+};
+
+export type SaveMusicPlaybackSessionInput = {
+	song_ids: string[];
+	current_song_id: string;
+	position_seconds: number;
+	playback_mode: "loop" | "single" | "random";
+	reported_at: string;
+};
+
 export type MusicHome = {
 	personalized: boolean;
-	continue_listening?: MusicListeningHistory;
+	continue_listening?: MusicPlaybackProgress;
 	recently_played: MusicListeningHistory[];
 	for_you: Array<MusicAlbumListItem & { reason?: string }>;
 	for_you_reason?: string;

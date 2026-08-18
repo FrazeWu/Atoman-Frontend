@@ -4,7 +4,13 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
 import { useApi } from "@/composables/useApi";
-import { recordMusicSongPlay } from "@/api/musicV1";
+import {
+	getMusicPlaybackProgress,
+	getMusicPlaybackSession,
+	recordMusicSongPlay,
+	saveMusicPlaybackProgress,
+	saveMusicPlaybackSession,
+} from "@/api/musicV1";
 import {
 	readPodcastProgress,
 	writePodcastProgress,
@@ -173,11 +179,163 @@ export const usePlayerStore = defineStore("player", () => {
 	let audio: HTMLAudioElement | null = null;
 	let playGeneration = 0;
 	let songsRequest: Promise<void> | null = null;
+	let musicProgressLastSavedAt = 0;
+	let musicProgressRestored = false;
+	let musicSessionLastSavedAt = 0;
+	let musicSessionRestored = false;
+
+	const isMusicSong = (song: Song) =>
+		!song.source_type || song.source_type === "music";
+
+	const saveMusicProgress = (completed = false, force = false) => {
+		const song = currentSong.value;
+		if (!authStore.isAuthenticated || !song || !isMusicSong(song)) return;
+		const now = Date.now();
+		if (!force && now - musicProgressLastSavedAt < 15_000) return;
+		const position = audio?.currentTime ?? currentTime.value;
+		const total = audio?.duration ?? duration.value;
+		if (!Number.isFinite(position) || position < 0) return;
+		musicProgressLastSavedAt = now;
+		void saveMusicPlaybackProgress({
+			song_id: String(song.id),
+			position_seconds: position,
+			duration_seconds: Number.isFinite(total) && total > 0 ? total : 0,
+			completed,
+			reported_at: new Date(now).toISOString(),
+		}).catch((error) => {
+			reportError(error, "Failed to save music playback progress:");
+		});
+	};
+
+	const saveMusicSession = (force = false) => {
+		const song = currentSong.value;
+		const musicQueue = queue.value.filter(isMusicSong);
+		if (
+			!authStore.isAuthenticated ||
+			!song ||
+			!isMusicSong(song) ||
+			musicQueue.length === 0
+		)
+			return;
+		const songIDs = musicQueue.map((item) => String(item.id));
+		if (!songIDs.includes(String(song.id))) return;
+		const now = Date.now();
+		if (!force && now - musicSessionLastSavedAt < 15_000) return;
+		const position = audio?.currentTime ?? currentTime.value;
+		if (!Number.isFinite(position) || position < 0) return;
+		musicSessionLastSavedAt = now;
+		void saveMusicPlaybackSession({
+			song_ids: songIDs,
+			current_song_id: String(song.id),
+			position_seconds: position,
+			playback_mode: playbackMode.value,
+			reported_at: new Date(now).toISOString(),
+		}).catch((error) => {
+			reportError(error, "Failed to save music playback session:");
+		});
+	};
+
+	const musicSongFromAPI = (source: {
+		id: string;
+		title: string;
+		artists?: Array<{ name: string }>;
+		album?: { id: string; title: string; cover_url?: string };
+		audio_url?: string;
+		cover_url?: string;
+		lyrics?: string;
+		waveform_peaks?: number[];
+		track_number?: number;
+	}): Song =>
+		normalizePlaybackSong({
+			id: source.id,
+			title: source.title,
+			artist:
+				source.artists?.map((artist) => artist.name).join(" / ") ||
+				"未知艺术家",
+			album: source.album?.title || "",
+			album_id: source.album?.id || "",
+			audio_url: source.audio_url || "",
+			cover_url: source.cover_url || source.album?.cover_url || "",
+			lyrics: source.lyrics || "",
+			waveform_peaks: source.waveform_peaks,
+			track_number: source.track_number,
+			status: "open",
+		} as Song);
+
+	const restoreMusicSession = async () => {
+		if (!authStore.isAuthenticated || musicSessionRestored) return false;
+		musicSessionRestored = true;
+		try {
+			const session = await getMusicPlaybackSession();
+			if (!session?.queue.length) return false;
+			const restoredQueue = session.queue
+				.filter((song) => Boolean(song.audio_url))
+				.map(musicSongFromAPI);
+			const restoredCurrentSong = restoredQueue.find(
+				(song) => String(song.id) === session.current_song_id,
+			);
+			if (!restoredCurrentSong) return false;
+			queue.value = restoredQueue;
+			currentAlbum.value = null;
+			currentSong.value = restoredCurrentSong;
+			currentTime.value = session.position_seconds;
+			playbackMode.value = session.playback_mode;
+			isPlaying.value = false;
+			return true;
+		} catch (error) {
+			reportError(error, "Failed to restore music playback session:");
+			return false;
+		}
+	};
+
+	const restoreMusicProgress = async () => {
+		if (!authStore.isAuthenticated || musicProgressRestored) return;
+		musicProgressRestored = true;
+		try {
+			const progress = await getMusicPlaybackProgress();
+			if (!progress?.song?.audio_url || progress.completed) return;
+			const source = progress.song;
+			const song = musicSongFromAPI(source);
+			currentSong.value = song;
+			queue.value = [song];
+			currentAlbum.value = null;
+			currentTime.value = progress.position_seconds;
+			duration.value = progress.duration_seconds;
+			isPlaying.value = false;
+		} catch (error) {
+			reportError(error, "Failed to restore music playback progress:");
+		}
+	};
+
+	const restoreMusicPlayback = async () => {
+		if (await restoreMusicSession()) return;
+		await restoreMusicProgress();
+	};
+
+	if (typeof window !== "undefined") {
+		window.addEventListener("pagehide", () => {
+			saveMusicProgress(false, true);
+			saveMusicSession(true);
+		});
+	}
+
+	watch(
+		() => authStore.isAuthenticated,
+		(isAuthenticated) => {
+			if (isAuthenticated) void restoreMusicPlayback();
+			else {
+				musicProgressRestored = false;
+				musicSessionRestored = false;
+			}
+		},
+		{ immediate: true },
+	);
 
 	setForeignPlayRequestCallback(() => {
 		if (isPlaying.value && audio) {
 			playGeneration += 1;
 			savePodcastProgress();
+			saveMusicProgress(false, true);
 			audio.pause();
 			isPlaying.value = false;
 			pauseListening();
@@ -272,6 +430,8 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.addEventListener("timeupdate", () => {
 			currentTime.value = nextAudio.currentTime;
 			savePodcastProgress();
+			saveMusicProgress();
+			saveMusicSession();
 			if (duration.value > 0) {
 				updateMediaSessionPosition({
 					duration: duration.value,
@@ -295,6 +455,8 @@ export const usePlayerStore = defineStore("player", () => {
 		});
 		nextAudio.addEventListener("ended", () => {
 			savePodcastProgress(true);
+			saveMusicProgress(true, true);
+			saveMusicSession(true);
 			playNext();
 		});
 		nextAudio.volume = volume.value;
@@ -443,6 +605,19 @@ export const usePlayerStore = defineStore("player", () => {
 		{ deep: true },
 	);
 
+	let musicSessionSaveTimer: ReturnType<typeof setTimeout> | null = null;
+	watch(
+		[currentSong, queue, playbackMode],
+		() => {
+			if (musicSessionSaveTimer !== null) clearTimeout(musicSessionSaveTimer);
+			musicSessionSaveTimer = setTimeout(() => {
+				musicSessionSaveTimer = null;
+				saveMusicSession(true);
+			}, 1_000);
+		},
+		{ deep: true },
+	);
+
 	const fetchSongs = async (force = false) => {
 		if (songsRequest) return songsRequest;
 		if (songLibraryLoaded.value && !force) return;
@@ -473,8 +648,9 @@ export const usePlayerStore = defineStore("player", () => {
 		return songsRequest;
 	};
 
-	const startSong = (song: Song) => {
+	const startSong = (song: Song, startAt?: number) => {
 		savePodcastProgress();
+		saveMusicProgress(false, true);
 		resetListening(song);
 		const player = ensureAudio();
 		const normalizedSong = normalizePlaybackSong(song);
@@ -486,9 +662,9 @@ export const usePlayerStore = defineStore("player", () => {
 			song.source_type === "podcast_episode" && song.source_id
 				? readPodcastProgress(song.source_id)
 				: null;
-		currentTime.value = savedProgress?.completed
-			? 0
-			: savedProgress?.position_sec || 0;
+		currentTime.value =
+			startAt ??
+			(savedProgress?.completed ? 0 : savedProgress?.position_sec || 0);
 		const resumePosition = currentTime.value;
 		const applyResumePosition = () => {
 			if (generation !== playGeneration || audio !== player) return;
@@ -561,6 +737,12 @@ export const usePlayerStore = defineStore("player", () => {
 		currentAlbum.value = null;
 		queue.value = [song];
 		startSong(song);
+	};
+
+	const resumeSong = (song: Song, positionSeconds: number) => {
+		currentAlbum.value = null;
+		queue.value = [song];
+		startSong(song, Math.max(0, positionSeconds));
 	};
 
 	const playQueuedSong = (song: Song) => {
@@ -646,6 +828,8 @@ export const usePlayerStore = defineStore("player", () => {
 		if (isPlaying.value) {
 			playGeneration += 1;
 			savePodcastProgress();
+			saveMusicProgress(false, true);
+			saveMusicSession(true);
 			player.pause();
 			isPlaying.value = false;
 			pauseListening();
@@ -867,6 +1051,7 @@ export const usePlayerStore = defineStore("player", () => {
 		currentAlbum,
 		fetchSongs,
 		playSong,
+		resumeSong,
 		playQueuedSong,
 		addToQueue,
 		removeFromQueue,

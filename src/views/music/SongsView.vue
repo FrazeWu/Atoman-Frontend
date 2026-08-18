@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
 import { CirclePlus, Info, ListPlus, Play, Search } from "lucide-vue-next";
-import { recordMusicSearchInteraction, searchMusic, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
+import { recordMusicSearchInteraction, searchMusic, listMusicPlaylistSongs, getMusicArtist, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";
@@ -90,6 +90,50 @@ function asSong(song: MusicSongListItem): Song {
     status: "approved",
     track_number: song.track_number,
   };
+}
+
+function asAlbumSong(song: NonNullable<Awaited<ReturnType<typeof searchMusic>>["albums"][number]["songs"]>[number], album: Awaited<ReturnType<typeof searchMusic>>["albums"][number]): Song {
+  return {
+    id: song.id,
+    title: song.title,
+    artist: album.artists?.map((item) => item.name).join(" / ") || "未知艺术家",
+    album: album.title,
+    album_id: album.id,
+    year: album.year || 0,
+    release_date: album.release_date || "",
+    lyrics: song.lyrics || "",
+    audio_url: song.audio_url || "",
+    cover_url: song.cover_url || album.cover_url || "",
+    status: "approved",
+    track_number: song.track_number,
+  };
+}
+
+function playableAlbumSongs(album: Awaited<ReturnType<typeof searchMusic>>["albums"][number]) {
+  return (album.songs || []).filter((song) => song.audio_url).map((song) => asAlbumSong(song, album));
+}
+
+function playAlbumResult(album: Awaited<ReturnType<typeof searchMusic>>["albums"][number]) {
+  const tracks = playableAlbumSongs(album);
+  if (!tracks.length) return;
+  trackSearchClick("album", String(album.id));
+  player.playAlbum(tracks);
+}
+
+async function playPlaylistResult(playlist: Awaited<ReturnType<typeof searchMusic>>["playlists"][number]) {
+  const result = await listMusicPlaylistSongs(String(playlist.id), { page: 1, page_size: 200 });
+  const tracks = result.data.filter((song) => song.audio_url).map(asSong);
+  if (!tracks.length) return;
+  trackSearchClick("playlist", String(playlist.id));
+  player.playAlbum(tracks);
+}
+
+async function playArtistResult(artist: Awaited<ReturnType<typeof searchMusic>>["artists"][number]) {
+  const detail = await getMusicArtist(String(artist.id));
+  const tracks = (detail.albums || []).flatMap(playableAlbumSongs);
+  if (!tracks.length) return;
+  trackSearchClick("artist", String(artist.id));
+  player.playAlbum(tracks);
 }
 
 watch([query, selectedType], ([value]) => {
@@ -215,44 +259,41 @@ onBeforeUnmount(() => {
 
       <section v-if="albums.length">
         <h2>专辑</h2>
-        <button
-          v-for="album in albums"
-          :key="album.id"
-          type="button"
-          class="entity"
-          @click="trackSearchClick('album', String(album.id)); openAlbum(album.id)"
-        >
-          <strong>{{ album.title }}</strong>
-          <small>{{ album.artists?.map((item) => item.name).join(" / ") }}</small>
-        </button>
+        <div v-for="album in albums" :key="album.id" class="entity-row">
+          <button type="button" class="entity" @click="trackSearchClick('album', String(album.id)); openAlbum(album.id)">
+            <strong>{{ album.title }}</strong>
+            <small>{{ album.artists?.map((item) => item.name).join(" / ") }}</small>
+          </button>
+          <button type="button" class="entity-action" :data-testid="`search-album-play-${album.id}`" :disabled="!playableAlbumSongs(album).length" :aria-label="`播放专辑 ${album.title}`" :title="`播放专辑 ${album.title}`" @click="playAlbumResult(album)">
+            <Play :size="16" />
+          </button>
+        </div>
       </section>
 
       <section v-if="artists.length">
         <h2>艺术家</h2>
-        <button
-          v-for="artist in artists"
-          :key="artist.id"
-          type="button"
-          class="entity"
-          @click="trackSearchClick('artist', String(artist.id)); openArtist(artist.id)"
-        >
-          <strong>{{ artist.name }}</strong>
-          <small>{{ artist.legal_name || artist.bio }}</small>
-        </button>
+        <div v-for="artist in artists" :key="artist.id" class="entity-row">
+          <button type="button" class="entity" @click="trackSearchClick('artist', String(artist.id)); openArtist(artist.id)">
+            <strong>{{ artist.name }}</strong>
+            <small>{{ artist.legal_name || artist.bio }}</small>
+          </button>
+          <button type="button" class="entity-action" :data-testid="`search-artist-play-${artist.id}`" :aria-label="`播放 ${artist.name}`" :title="`播放 ${artist.name}`" @click="playArtistResult(artist)">
+            <Play :size="16" />
+          </button>
+        </div>
       </section>
 
       <section v-if="playlists.length">
         <h2>歌单</h2>
-        <button
-          v-for="playlist in playlists"
-          :key="playlist.id"
-          type="button"
-          class="entity"
-          @click="trackSearchClick('playlist', String(playlist.id)); openPlaylist(playlist.id)"
-        >
-          <strong>{{ playlist.name }}</strong>
-          <small>{{ playlist.song_count }} 首</small>
-        </button>
+        <div v-for="playlist in playlists" :key="playlist.id" class="entity-row">
+          <button type="button" class="entity" @click="trackSearchClick('playlist', String(playlist.id)); openPlaylist(playlist.id)">
+            <strong>{{ playlist.name }}</strong>
+            <small>{{ playlist.song_count }} 首</small>
+          </button>
+          <button type="button" class="entity-action" :data-testid="`search-playlist-play-${playlist.id}`" :aria-label="`播放歌单 ${playlist.name}`" :title="`播放歌单 ${playlist.name}`" @click="playPlaylistResult(playlist)">
+            <Play :size="16" />
+          </button>
+        </div>
       </section>
 
       <PaginationBar
@@ -400,18 +441,45 @@ onBeforeUnmount(() => {
   color: var(--a-color-accent-destructive);
 }
 
-.entity {
+.entity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  padding: 0.85rem 1rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.entity:hover,
-.entity:focus-visible {
+.entity-row:hover,
+.entity-row:focus-within {
   border-color: var(--a-color-border);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
   background: var(--a-color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+}
+
+.entity {
+  padding: 0.85rem 1rem;
+}
+
+.entity-action {
+  display: grid;
+  place-items: center;
+  min-height: 3.25rem;
+  border: 0;
+  border-left: 1px solid var(--a-color-border-soft);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+
+.entity-action:hover:not(:disabled) {
+  color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
+}
+
+.entity-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .load-more {

@@ -33,6 +33,10 @@ import type {
 	MusicListFilters,
 	MusicListResponse,
 	MusicListeningHistory,
+	MusicPlaybackProgress,
+	MusicPlaybackSession,
+	SaveMusicPlaybackProgressInput,
+	SaveMusicPlaybackSessionInput,
 	MusicLyricsAnnotation,
 	MusicLyricsAnnotationVote,
 	MusicPlaylistBookmark,
@@ -495,6 +499,36 @@ export async function recordMusicSongPlay(
 	return apiPostJson<{ recorded: boolean }>(musicV1Endpoints.plays(), {
 		song_id: songId,
 	});
+}
+
+export async function getMusicPlaybackProgress(): Promise<MusicPlaybackProgress | null> {
+	return apiGet<MusicPlaybackProgress | null>(
+		musicV1Endpoints.playbackProgress(),
+	);
+}
+
+export async function saveMusicPlaybackProgress(
+	input: SaveMusicPlaybackProgressInput,
+): Promise<MusicPlaybackProgress> {
+	return apiPutJson<MusicPlaybackProgress>(
+		musicV1Endpoints.playbackProgress(),
+		input,
+	);
+}
+
+export async function getMusicPlaybackSession(): Promise<MusicPlaybackSession | null> {
+	return apiGet<MusicPlaybackSession | null>(
+		musicV1Endpoints.playbackSession(),
+	);
+}
+
+export async function saveMusicPlaybackSession(
+	input: SaveMusicPlaybackSessionInput,
+): Promise<MusicPlaybackSession> {
+	return apiPutJson<MusicPlaybackSession>(
+		musicV1Endpoints.playbackSession(),
+		input,
+	);
 }
 
 export async function listMusicListeningHistory(

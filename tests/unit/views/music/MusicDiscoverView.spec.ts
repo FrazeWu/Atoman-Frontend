@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
 	openMusicCreationFlow: vi.fn(),
 	requireLogin: vi.fn(),
 	playSong: vi.fn(),
+	resumeSong: vi.fn(),
 	routeQuery: {} as Record<string, string>,
 }));
 
@@ -79,7 +80,10 @@ vi.mock("@/composables/useLoginRedirect", () => ({
 }));
 
 vi.mock("@/stores/player", () => ({
-	usePlayerStore: () => ({ playSong: mocks.playSong }),
+	usePlayerStore: () => ({
+		playSong: mocks.playSong,
+		resumeSong: mocks.resumeSong,
+	}),
 }));
 
 describe("Music DiscoverView.vue", () => {
@@ -110,6 +114,7 @@ describe("Music DiscoverView.vue", () => {
 		mocks.openMusicCreationFlow.mockReset();
 		mocks.requireLogin.mockReset();
 		mocks.playSong.mockReset();
+		mocks.resumeSong.mockReset();
 		mocks.requireLogin.mockReturnValue(true);
 		mocks.listMusicAlbumImports.mockResolvedValue([]);
 		mocks.routeQuery = {};
@@ -616,6 +621,7 @@ describe("Music DiscoverView.vue", () => {
 		mocks.getMusicHome.mockResolvedValueOnce({
 			personalized: true,
 			continue_listening: {
+				position_seconds: 42.5,
 				song: {
 					id: "song-continue",
 					title: "Ghost Town",
@@ -656,7 +662,7 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.find("#continue-listening-title").exists()).toBe(false);
 		expect(wrapper.findAll(".recently-played-item")).toHaveLength(2);
 		expect(wrapper.findAll(".recently-played-item")[0]?.text()).toContain(
-			"继续播放",
+			"从 0:42 继续",
 		);
 		expect(wrapper.findAll(".recently-played-item")[0]?.text()).toContain(
 			"Ghost Town",
@@ -672,8 +678,9 @@ describe("Music DiscoverView.vue", () => {
 		await wrapper
 			.get('[data-testid="continue-song-album-album-3"]')
 			.trigger("click");
-		expect(mocks.playSong).toHaveBeenCalledWith(
+		expect(mocks.resumeSong).toHaveBeenCalledWith(
 			expect.objectContaining({ id: "song-continue" }),
+			42.5,
 		);
 		expect(mocks.openArtist).toHaveBeenCalledWith("artist-1");
 		expect(mocks.openAlbum).toHaveBeenCalledWith("album-3");

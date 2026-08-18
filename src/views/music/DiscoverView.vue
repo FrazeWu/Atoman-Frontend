@@ -113,14 +113,15 @@ const filteredDiscoverAlbums = computed(() => discoverAlbums.value.filter(
   album => !personalizedAlbumIds.value.has(String(album.id)),
 ))
 const recentPlaybackItems = computed(() => {
-  const continueSong = musicHome.value?.continue_listening?.song
+  const continueProgress = musicHome.value?.continue_listening
+  const continueSong = continueProgress?.song
   const recentItems = musicHome.value?.personalized ? (musicHome.value.recently_played ?? []) : []
 
   return [
-    ...(continueSong ? [{ id: `continue-${continueSong.id}`, song: continueSong, isContinue: true }] : []),
+    ...(continueSong ? [{ id: `continue-${continueSong.id}`, song: continueSong, isContinue: true, positionSeconds: continueProgress.position_seconds }] : []),
     ...recentItems
       .filter(item => String(item.song.id) !== String(continueSong?.id ?? ''))
-      .map(item => ({ ...item, isContinue: false })),
+      .map(item => ({ ...item, isContinue: false, positionSeconds: undefined })),
   ]
 })
 
@@ -296,9 +297,19 @@ function toPlayableSong(song: MusicSongListItem): Song | null {
   }
 }
 
-function playRecentSong(song: MusicSongListItem) {
+function playRecentSong(song: MusicSongListItem, positionSeconds?: number) {
   const playable = toPlayableSong(song)
-  if (playable) player.playSong(playable)
+  if (!playable) return
+  if (positionSeconds !== undefined) {
+    player.resumeSong(playable, positionSeconds)
+    return
+  }
+  player.playSong(playable)
+}
+
+function formatPlaybackPosition(seconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(seconds))
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`
 }
 
 function mergeDiscoverByID<T extends { id: string }>(current: T[], incoming: T[]): T[] {
@@ -635,12 +646,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             :key="item.id"
             class="recently-played-item"
           >
-            <button type="button" class="recently-played-item__play" :disabled="!item.song.audio_url" :aria-label="`播放 ${item.song.title}`" :data-testid="item.isContinue ? 'continue-song-play' : 'recent-song-play'" @click="playRecentSong(item.song)">
+            <button type="button" class="recently-played-item__play" :disabled="!item.song.audio_url" :aria-label="`${item.isContinue ? '从进度继续播放' : '播放'} ${item.song.title}`" :data-testid="item.isContinue ? 'continue-song-play' : 'recent-song-play'" @click="playRecentSong(item.song, item.positionSeconds)">
               <img v-if="item.song.cover_url || item.song.album?.cover_url" :src="item.song.cover_url || item.song.album?.cover_url" :alt="item.song.title" />
               <span v-else class="recently-played-item__cover" aria-hidden="true" />
             </button>
             <span class="recently-played-item__copy">
-              <span v-if="item.isContinue" class="recently-played-item__label">继续播放</span>
+              <span v-if="item.isContinue" class="recently-played-item__label">从 {{ formatPlaybackPosition(item.positionSeconds || 0) }} 继续</span>
               <RouterLink :to="`/music/song/${item.song.id}`"><strong>{{ item.song.title }}</strong></RouterLink>
               <span class="recently-played-item__links">
                 <template v-if="item.song.artists?.length">

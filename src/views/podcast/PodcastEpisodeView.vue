@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PButton from '@/components/ui/PButton.vue'
 import PodcastShownotes from '@/components/podcast/PodcastShownotes.vue'
-import PodcastCommentSection from '@/components/podcast/PodcastCommentSection.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { writePodcastProgress } from '@/composables/usePodcastProgress'
 
@@ -123,6 +123,13 @@ async function shareEpisode() {
   await navigator.clipboard?.writeText(window.location.href)
   actionMessage.value = '已复制链接'
 }
+
+function currentCommentTime() {
+  if (!ep.value
+    || player.currentSong?.source_type !== 'podcast_episode'
+    || player.currentSong.source_id !== ep.value.id) return null
+  return player.currentTime
+}
 </script>
 
 <template>
@@ -171,8 +178,11 @@ async function shareEpisode() {
     </div>
 
     <div class="pev-comments">
-      <h2 class="pev-notes-title">评论</h2>
-      <PodcastCommentSection :episode-id="ep.id" />
+      <CommentSection
+        :target="{ kind: 'podcast_episode', resourceId: ep.id }"
+        :current-time="currentCommentTime"
+        @seek="player.seek($event)"
+      />
     </div>
   </div>
 </template>

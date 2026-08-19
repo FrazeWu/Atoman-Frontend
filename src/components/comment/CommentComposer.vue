@@ -1,8 +1,15 @@
 <template>
   <form class="comment-composer" @submit.prevent>
-    <div v-if="replyToName" class="comment-composer__reply">
-      回复 {{ replyToName }}
-      <button type="button" title="取消回复" aria-label="取消回复" @click="$emit('cancel')"><X :size="15" /></button>
+    <div class="comment-composer__heading">
+      <span class="comment-composer__label">{{ replyToName ? `回复 @${replyToName}` : '写评论' }}</span>
+      <button
+        v-if="replyToName"
+        type="button"
+        class="comment-composer__cancel"
+        title="取消回复"
+        aria-label="取消回复"
+        @click="$emit('cancel')"
+      ><X :size="16" /></button>
     </div>
 
     <div class="comment-composer__field">
@@ -11,6 +18,7 @@
         v-model="content"
         rows="4"
         :placeholder="placeholder"
+        :aria-label="replyToName ? `回复 ${replyToName}` : '评论内容'"
         :aria-invalid="Boolean(validationError)"
         aria-autocomplete="list"
         :aria-expanded="referenceVisible"
@@ -356,28 +364,34 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.comment-composer { display: grid; gap: 0.75rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); }
-.comment-composer__reply { display: flex; align-items: center; justify-content: space-between; color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
-.comment-composer__reply button, .comment-composer__attachment button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.comment-composer { display: grid; gap: 0.85rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
+.comment-composer__heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 1.5rem; }
+.comment-composer__label { color: var(--a-color-text); font-size: var(--a-text-sm); font-weight: var(--a-font-weight-strong); }
+.comment-composer__cancel, .comment-composer__attachment button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; }
+.comment-composer__cancel:hover, .comment-composer__attachment button:hover { background: var(--a-color-surface-muted); color: var(--a-color-text); }
+.comment-composer__cancel:focus-visible, .comment-composer__attachment button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .comment-composer__field { position: relative; }
-.comment-composer textarea { width: 100%; min-height: 7rem; box-sizing: border-box; resize: vertical; border: 0; border-bottom: 1px solid var(--a-color-border); background: transparent; color: var(--a-color-text); font: inherit; line-height: 1.65; }
-.comment-composer textarea:focus { outline: 2px solid var(--a-color-text); outline-offset: 3px; }
+.comment-composer textarea { width: 100%; min-height: 7.5rem; box-sizing: border-box; padding: 0.8rem; resize: vertical; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-text); font: inherit; line-height: 1.65; }
+.comment-composer textarea::placeholder { color: var(--a-color-muted-soft); }
+.comment-composer textarea:focus { border-color: var(--a-color-primary); outline: 2px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent); outline-offset: 1px; }
 .comment-composer__field :deep(.p-reference-menu) { width: 100%; }
-.comment-composer__attachments { display: grid; gap: 0.35rem; }
-.comment-composer__attachment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-height: 36px; padding-left: 0.65rem; border: 1px solid var(--a-color-border-soft); font-size: var(--a-text-sm); }
+.comment-composer__attachments { display: grid; gap: 0.4rem; }
+.comment-composer__attachment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-height: 44px; padding-left: 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
 .comment-composer__attachment span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.comment-composer__footer, .comment-composer__tools { display: flex; align-items: center; gap: 0.5rem; }
-.comment-composer__footer { justify-content: flex-end; min-height: 40px; }
+.comment-composer__footer, .comment-composer__tools { display: flex; align-items: center; gap: 0.35rem; }
+.comment-composer__footer { flex-wrap: wrap; justify-content: flex-end; min-height: 44px; padding-top: 0.75rem; border-top: 1px solid var(--a-color-border-soft); }
 .comment-composer__tools { margin-right: auto; }
-.comment-composer__tool { position: relative; display: grid; place-items: center; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); cursor: pointer; }
-.comment-composer__tool:hover { border-color: var(--a-color-text); }
+.comment-composer__tool { position: relative; display: grid; place-items: center; width: 44px; height: 44px; box-sizing: border-box; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease; }
+.comment-composer__tool:hover, .comment-composer__tool:focus-within { background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .comment-composer__tool:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .comment-composer__tool input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.comment-composer__count { color: var(--a-color-text-secondary); font-family: var(--a-font-sans); font-size: 0.75rem; }
+.comment-composer__count { margin-left: 0.25rem; color: var(--a-color-muted); font-size: var(--a-text-xs); font-variant-numeric: tabular-nums; }
 .comment-composer__count.is-over, .comment-composer__error { color: var(--a-color-accent-destructive); }
-.comment-composer__submit { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-text); background: var(--a-color-text); color: var(--a-color-bg); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+.comment-composer__submit { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; padding: 0 0.9rem; border: 1px solid var(--a-color-primary); border-radius: var(--a-radius-control); background: var(--a-color-primary); color: var(--a-color-primary-contrast); font: inherit; font-size: var(--a-text-sm); font-weight: var(--a-font-weight-strong); cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.comment-composer__submit:hover:not(:disabled) { border-color: var(--a-color-primary-hover); background: var(--a-color-primary-hover); }
+.comment-composer__submit:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .comment-composer__submit:disabled { cursor: not-allowed; opacity: 0.5; }
 .comment-composer__error { margin: 0; font-size: var(--a-text-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-@media (max-width: 560px) { .comment-composer { padding: 0.75rem; } .comment-composer__footer { flex-wrap: wrap; } }
+@media (max-width: 560px) { .comment-composer { padding: 0.85rem; } .comment-composer__footer { align-items: center; } .comment-composer__count { margin-left: auto; } }
 </style>

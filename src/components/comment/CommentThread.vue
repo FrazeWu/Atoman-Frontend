@@ -217,11 +217,13 @@ async function submitEdit(input: CreateCommentInput) {
 </script>
 
 <style scoped>
-.comment-thread { min-width: 0; border: 1px solid var(--a-color-text); box-shadow: var(--a-shadow-sm); }
-.comment-thread > :deep(.comment-item:first-child) { border: 0; }
-.comment-thread__replies { margin-left: clamp(0.75rem, 4vw, 3rem); border-left: 2px solid var(--a-color-border); }
-.comment-thread__expand { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-height: 42px; border: 0; border-top: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); color: var(--a-color-text); cursor: pointer; }
-.comment-thread__composer { margin: 0.75rem; }
-.comment-thread__error { margin: 0 0.75rem 0.75rem; color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
-@media (max-width: 560px) { .comment-thread__replies { margin-left: 0.5rem; } }
+.comment-thread { display: grid; min-width: 0; gap: 0.75rem; }
+.comment-thread__replies { display: grid; gap: 0.25rem; margin-left: clamp(0.75rem, 4vw, 2.5rem); padding-left: clamp(0.75rem, 2vw, 1rem); border-left: 2px solid var(--a-color-border-soft); }
+.comment-thread__expand { display: inline-flex; align-items: center; justify-content: flex-start; gap: 0.4rem; width: fit-content; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-primary); cursor: pointer; font: inherit; font-size: var(--a-text-sm); }
+.comment-thread__expand:hover:not(:disabled) { background: var(--a-color-surface-muted); }
+.comment-thread__expand:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.comment-thread__expand:disabled { cursor: not-allowed; opacity: 0.6; }
+.comment-thread__composer { margin-left: clamp(0.75rem, 4vw, 2.5rem); }
+.comment-thread__error { margin: 0; padding-left: clamp(0.75rem, 4vw, 2.5rem); color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
+@media (max-width: 560px) { .comment-thread { gap: 0.6rem; } .comment-thread__replies { margin-left: 0.5rem; padding-left: 0.65rem; } .comment-thread__composer { margin-left: 0.5rem; } .comment-thread__error { padding-left: 0.5rem; } }
 </style>

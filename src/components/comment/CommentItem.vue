@@ -28,7 +28,7 @@
     </div>
 
     <template v-else>
-      <div class="comment-item__content" data-test="comment-content" v-html="renderedContent" />
+      <CommentContent :html="renderedContent" />
       <div v-if="comment.attachments.length" class="comment-item__images">
         <a
           v-for="attachment in comment.attachments"
@@ -63,23 +63,23 @@
         :title="comment.edited_at"
       >已编辑 {{ formatDate(comment.edited_at) }}</time>
       <div v-if="authenticated" class="comment-item__actions">
-        <button type="button" :aria-pressed="comment.liked" :disabled="likePending || actionPending" title="点赞" @click="$emit('like')">
+        <button type="button" :aria-pressed="comment.liked" :aria-label="comment.liked ? '取消点赞' : '点赞'" :disabled="likePending || actionPending" title="点赞" @click="$emit('like')">
           <Heart :size="15" :fill="comment.liked ? 'currentColor' : 'none'" />
           <span>{{ comment.like_count || '' }}</span>
         </button>
-        <button v-if="canReply && !isFolded" type="button" data-test="reply-comment" title="回复" :disabled="actionPending" @click="$emit('reply')"><Reply :size="15" /></button>
-        <button v-if="isOwner" type="button" title="编辑" :disabled="actionPending" @click="$emit('edit')"><Pencil :size="15" /></button>
-        <button v-if="isOwner || canDelete" type="button" title="删除" data-test="delete-comment" :disabled="actionPending" @click="$emit('delete')"><Trash2 :size="15" /></button>
-        <button v-if="!isOwner" type="button" title="举报" :disabled="actionPending" @click="$emit('report')"><Flag :size="15" /></button>
-        <button v-if="canMark && depth === 0 && !showMarked && !isFolded" type="button" :title="markLabel" :disabled="actionPending" @click="$emit('mark')"><Pin :size="15" /></button>
-        <button v-if="canMark && depth === 0 && showMarked" type="button" :title="`取消${markLabel}`" :disabled="actionPending" @click="$emit('unmark')"><PinOff :size="15" /></button>
+        <button v-if="canReply && !isFolded" type="button" data-test="reply-comment" title="回复" aria-label="回复" :disabled="actionPending" @click="$emit('reply')"><Reply :size="15" /></button>
+        <button v-if="isOwner" type="button" title="编辑" aria-label="编辑" :disabled="actionPending" @click="$emit('edit')"><Pencil :size="15" /></button>
+        <button v-if="isOwner || canDelete" type="button" title="删除" aria-label="删除" data-test="delete-comment" :disabled="actionPending" @click="$emit('delete')"><Trash2 :size="15" /></button>
+        <button v-if="!isOwner" type="button" title="举报" aria-label="举报" :disabled="actionPending" @click="$emit('report')"><Flag :size="15" /></button>
+        <button v-if="canMark && depth === 0 && !showMarked && !isFolded" type="button" :title="markLabel" :aria-label="markLabel" :disabled="actionPending" @click="$emit('mark')"><Pin :size="15" /></button>
+        <button v-if="canMark && depth === 0 && showMarked" type="button" :title="`取消${markLabel}`" :aria-label="`取消${markLabel}`" :disabled="actionPending" @click="$emit('unmark')"><PinOff :size="15" /></button>
       </div>
     </footer>
   </article>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, defineComponent, h, ref, type VNodeChild } from 'vue'
 import { BadgeCheck, Flag, Heart, Pencil, Pin, PinOff, Play, Reply, Trash2 } from 'lucide-vue-next'
 
 import type { CommentDTO } from '@/api/comments'
@@ -88,6 +88,43 @@ import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
 import { applyResolvedReferences } from '@/composables/useReferenceRendering'
 
 defineOptions({ name: 'CommentItem' })
+
+const allowedCommentTags = new Set(['p', 'br', 'strong', 'em', 'code', 'a', 'blockquote'])
+
+function toCommentVNodes(html: string): VNodeChild[] {
+  const document = new DOMParser().parseFromString(html, 'text/html')
+  return Array.from(document.body.childNodes).map(toCommentVNode)
+}
+
+function toCommentVNode(node: Node): VNodeChild {
+  if (node.nodeType === 3) return node.textContent ?? ''
+  if (node.nodeType !== 1) return null
+
+  const element = node as Element
+  const tag = element.tagName.toLowerCase()
+  const children = Array.from(element.childNodes).map(toCommentVNode)
+  if (!allowedCommentTags.has(tag)) return children
+  if (tag === 'a') {
+    return h('a', {
+      href: element.getAttribute('href') ?? '',
+      rel: element.getAttribute('rel') ?? undefined,
+    }, children)
+  }
+  return h(tag, children)
+}
+
+const CommentContent = defineComponent({
+  name: 'CommentContent',
+  props: {
+    html: { type: String, required: true },
+  },
+  setup(props) {
+    return () => h('div', {
+      class: 'comment-item__content',
+      'data-test': 'comment-content',
+    }, toCommentVNodes(props.html))
+  },
+})
 
 const props = withDefaults(defineProps<{
   comment: CommentDTO
@@ -150,29 +187,40 @@ function anchorText(start: number, end: number) {
 </script>
 
 <style scoped>
-.comment-item { min-width: 0; padding: 1rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); }
-.comment-item--child { border: 0; border-top: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); }
+.comment-item { min-width: 0; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.comment-item:focus { border-color: var(--a-color-primary); outline: 2px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent); outline-offset: 2px; }
+.comment-item--child { padding: 0.85rem 0 0.25rem; border: 0; border-radius: 0; background: transparent; }
 .comment-item__header { display: flex; align-items: center; gap: 0.6rem; min-height: 32px; }
 .comment-item__identity { display: flex; min-width: 0; align-items: baseline; gap: 0.4rem; }
-.comment-item__identity strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.comment-item__identity span, .comment-item__reply-to, .comment-item__floor { color: var(--a-color-text-secondary); font-size: 0.75rem; }
+.comment-item__identity strong { overflow: hidden; color: var(--a-color-text); font-weight: var(--a-font-weight-strong); text-overflow: ellipsis; white-space: nowrap; }
+.comment-item__identity span, .comment-item__reply-to, .comment-item__floor { color: var(--a-color-muted); font-size: var(--a-text-xs); }
 .comment-item__reply-to { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.comment-item__floor { margin-left: auto; font-family: var(--a-font-sans); }
-.comment-item__marked { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.4rem; border: 1px solid var(--a-color-text); font-size: 0.7rem; font-weight: 800; }
-.comment-item__content { padding: 0.85rem 0; overflow-wrap: anywhere; line-height: 1.7; }
-.comment-item__content :deep(p) { margin: 0 0 0.55rem; }
+.comment-item__floor { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.comment-item__marked { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.45rem; border: 1px solid color-mix(in srgb, var(--a-color-primary) 35%, var(--a-color-border-soft)); border-radius: var(--a-radius-control); background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg)); color: var(--a-color-primary); font-size: var(--a-text-xs); font-weight: var(--a-font-weight-strong); white-space: nowrap; }
+.comment-item__content { padding: 0.9rem 0; overflow-wrap: anywhere; color: var(--a-color-text); line-height: 1.7; }
+.comment-item__content :deep(p) { margin: 0 0 0.65rem; }
 .comment-item__content :deep(p:last-child) { margin-bottom: 0; }
-.comment-item__content :deep(blockquote) { margin: 0.5rem 0; padding-left: 0.8rem; border-left: 3px solid var(--a-color-border); color: var(--a-color-text-secondary); }
-.comment-item__content :deep(a) { color: var(--a-color-accent-link, #2457a6); }
-.comment-item__images { display: grid; grid-template-columns: repeat(2, minmax(0, 240px)); gap: 0.5rem; margin-bottom: 0.8rem; }
-.comment-item__images img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid var(--a-color-border-soft); }
-.comment-item__anchors { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
-.comment-item__anchors button { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 32px; padding: 0 0.55rem; border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); cursor: pointer; }
-.comment-item__folded { display: flex; align-items: center; gap: 0.5rem; min-height: 48px; margin: 0.75rem 0; padding: 0 0.75rem; border-left: 3px solid var(--a-color-text-secondary); background: var(--a-color-surface-muted); color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
-.comment-item__folded button { margin-left: auto; min-width: 44px; min-height: 32px; border: 0; background: transparent; color: var(--a-color-text); text-decoration: underline; cursor: pointer; }
-.comment-item__footer { display: flex; align-items: center; gap: 0.65rem; min-height: 32px; color: var(--a-color-text-secondary); font-size: 0.72rem; }
-.comment-item__actions { display: flex; align-items: center; gap: 0.15rem; margin-left: auto; }
-.comment-item__actions button { display: inline-flex; align-items: center; justify-content: center; gap: 0.2rem; min-width: 36px; height: 36px; border: 0; background: transparent; color: var(--a-color-text-secondary); cursor: pointer; }
-.comment-item__actions button:hover, .comment-item__actions button:focus-visible { color: var(--a-color-text); background: var(--a-color-surface-muted); }
-@media (max-width: 600px) { .comment-item { padding: 0.75rem; } .comment-item__header { flex-wrap: wrap; } .comment-item__reply-to { width: 100%; padding-left: 1.8rem; } .comment-item__footer { flex-wrap: wrap; } .comment-item__actions { width: 100%; margin-left: 0; } }
+.comment-item__content :deep(blockquote) { margin: 0.65rem 0; padding: 0.2rem 0 0.2rem 0.8rem; border-left: 3px solid var(--a-color-border); color: var(--a-color-text-secondary); }
+.comment-item__content :deep(a) { color: var(--a-color-primary); }
+.comment-item__images { display: grid; grid-template-columns: repeat(2, minmax(0, 240px)); gap: 0.5rem; margin-bottom: 0.9rem; }
+.comment-item__images a { display: block; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); }
+.comment-item__images img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; transition: transform 0.2s ease; }
+.comment-item__images a:hover img { transform: scale(1.02); }
+.comment-item__anchors { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
+.comment-item__anchors button { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 44px; padding: 0 0.65rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-text-secondary); cursor: pointer; font: inherit; font-size: var(--a-text-sm); }
+.comment-item__anchors button:hover { border-color: var(--a-color-primary); color: var(--a-color-primary); }
+.comment-item__anchors button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.comment-item__folded { display: flex; align-items: center; gap: 0.5rem; min-height: 52px; margin: 0.75rem 0; padding: 0.75rem; border-left: 3px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
+.comment-item__folded button { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-primary); cursor: pointer; font: inherit; }
+.comment-item__folded button:hover { background: var(--a-color-surface-muted); }
+.comment-item__folded button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.comment-item__footer { display: flex; align-items: center; gap: 0.65rem; min-height: 40px; padding-top: 0.65rem; border-top: 1px solid var(--a-color-border-soft); color: var(--a-color-muted); font-size: var(--a-text-xs); }
+.comment-item__footer time { white-space: nowrap; }
+.comment-item__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem; margin-left: auto; }
+.comment-item__actions button { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; width: 44px; height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; font: inherit; }
+.comment-item__actions button:hover:not(:disabled), .comment-item__actions button:focus-visible { background: var(--a-color-surface-muted); color: var(--a-color-text); }
+.comment-item__actions button[aria-pressed="true"] { color: var(--a-color-primary); }
+.comment-item__actions button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.comment-item__actions button:disabled { cursor: not-allowed; opacity: 0.5; }
+@media (max-width: 600px) { .comment-item { padding: 0.85rem; } .comment-item__header { flex-wrap: wrap; } .comment-item__reply-to { width: 100%; padding-left: 1.8rem; } .comment-item__footer { align-items: flex-start; flex-wrap: wrap; } .comment-item__footer time { min-height: 32px; display: inline-flex; align-items: center; } .comment-item__actions { width: 100%; margin-left: 0; } .comment-item__images { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

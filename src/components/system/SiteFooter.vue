@@ -51,7 +51,7 @@ function openPanel(panel: FootbarPanel, label: string) {
       <div class="site-footer-center">
         <a
           class="site-footer-link"
-          href="https://proxy.atoman.org/"
+          href="https://mirror.atoman.org/"
           target="_blank"
           rel="noopener noreferrer"
           data-footer-action="docker-proxy"

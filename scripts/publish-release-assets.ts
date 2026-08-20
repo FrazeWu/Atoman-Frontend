@@ -24,7 +24,7 @@ const contentTypes = {
 
 async function listFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true })
-  const files = await Promise.all(entries.map(async (entry) => {
+  const files = await Promise.all(entries.map((entry) => {
     const path = join(directory, entry.name)
     return entry.isDirectory() ? listFiles(path) : [path]
   }))
@@ -69,10 +69,10 @@ async function main() {
   for (let index = 0; index < files.length; index += concurrency) {
     await Promise.all(files.slice(index, index + concurrency).map(uploadAsset))
   }
-  console.log(`Archived ${files.length} release assets in ${bucketName}`)
+  process.stdout.write(`Archived ${files.length} release assets in ${bucketName}\n`)
 }
 
 void main().catch((error) => {
-  console.error(error)
+  process.stderr.write(`${error instanceof Error ? error.stack || error.message : String(error)}\n`)
   process.exitCode = 1
 })

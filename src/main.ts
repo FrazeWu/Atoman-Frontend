@@ -6,6 +6,9 @@ import './assets/feed-reader.css'
 import App from './App.vue'
 import router from './router'
 import { reportError } from './utils/logger'
+import { installStaleViteChunkRecovery } from './utils/staleViteChunkRecovery'
+
+installStaleViteChunkRecovery()
 
 const app = createApp(App)
 app.config.errorHandler = (error, _instance, info) => {

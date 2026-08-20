@@ -175,6 +175,16 @@ describe('host-scoped route tables', () => {
     expect(paths(moduleRoutes.forum)).not.toContain('/topic/:id')
   })
 
+  it('registers all comment style preview URLs', () => {
+    const appRoutePaths = paths(buildAppRoutes())
+
+    expect(appRoutePaths).toEqual(expect.arrayContaining([
+      '/dev/comment-style/github',
+      '/dev/comment-style/linear',
+      '/dev/comment-style/stream',
+    ]))
+  })
+
   it('registers a disabled-module route before the catch-all route', () => {
     const appRoutePaths = paths(buildAppRoutes())
     const disabledRouteIndex = appRoutePaths.indexOf('/__disabled__')

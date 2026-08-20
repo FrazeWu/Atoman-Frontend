@@ -31,13 +31,10 @@
             :like-count="compositeState.likeCount"
             :disliked="compositeState.disliked"
             :dislike-count="compositeState.dislikeCount"
-            :bookmarked="compositeState.bookmarked"
-            :bookmark-count="compositeState.bookmarkCount"
             show-ratio-bar
             variant="bordered"
             @like-change="handleLikeChange"
             @dislike-change="handleDislikeChange"
-            @bookmark-change="handleBookmarkChange"
           />
         </div>
       </section>
@@ -88,7 +85,6 @@
             <PInteractionActions
               :like-count="100"
               :dislike-count="12"
-              :bookmark-count="45"
               show-ratio-bar
               variant="bordered"
             />
@@ -99,7 +95,6 @@
             <PInteractionActions
               :like-count="100"
               :dislike-count="100"
-              :bookmark-count="20"
               show-ratio-bar
               variant="bordered"
             />
@@ -110,12 +105,15 @@
             <PInteractionActions
               :like-count="20"
               :dislike-count="80"
-              :bookmark-count="5"
               show-ratio-bar
               variant="bordered"
             />
           </div>
         </div>
+      </section>
+
+      <section class="interaction-showcase__card interaction-showcase__comments">
+        <CommentStylePreviewView variant="stream" embedded />
       </section>
     </div>
   </div>
@@ -123,6 +121,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import CommentStylePreviewView from '@/views/dev/CommentStylePreviewView.vue'
 import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PDislikeButton from '@/components/ui/PDislikeButton.vue'
@@ -142,8 +141,6 @@ const compositeState = reactive({
   likeCount: 100,
   disliked: false,
   dislikeCount: 12,
-  bookmarked: false,
-  bookmarkCount: 45,
 })
 
 const atomicLike = ref(false)
@@ -173,15 +170,6 @@ function handleDislikeChange(nextDisliked: boolean) {
     }
   } else {
     compositeState.dislikeCount -= 1
-  }
-}
-
-function handleBookmarkChange(nextBookmarked: boolean) {
-  compositeState.bookmarked = nextBookmarked
-  if (nextBookmarked) {
-    compositeState.bookmarkCount += 1
-  } else {
-    compositeState.bookmarkCount -= 1
   }
 }
 </script>

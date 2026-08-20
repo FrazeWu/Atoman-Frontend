@@ -16,22 +16,11 @@
         v-if="showDislike"
         :disliked="disliked"
         :count="dislikeCount"
-        :show-count="showCount"
+        :show-count="showDislikeCount && showCount"
         :size="size"
         :variant="variant"
         :disabled="disabled"
         @click="$emit('dislike-change', $event)"
-      />
-
-      <PBookmarkButton
-        v-if="showBookmark"
-        :bookmarked="bookmarked"
-        :count="bookmarkCount"
-        :show-count="showCount"
-        :size="size"
-        :variant="variant"
-        :disabled="disabled"
-        @click="$emit('bookmark-change', $event)"
       />
     </div>
 
@@ -43,17 +32,9 @@
     >
       <div class="p-interaction-actions__ratio-track">
         <div
-          class="p-interaction-actions__ratio-fill is-like"
+          class="p-interaction-actions__ratio-fill"
           :style="{ width: `${likePercentage}%` }"
         />
-        <div
-          class="p-interaction-actions__ratio-fill is-dislike"
-          :style="{ width: `${dislikePercentage}%` }"
-        />
-      </div>
-      <div class="p-interaction-actions__ratio-meta">
-        <span class="p-interaction-actions__ratio-text">{{ likePercentage }}% 好评</span>
-        <span class="p-interaction-actions__ratio-votes">({{ totalVotes.toLocaleString() }} 次评价)</span>
       </div>
     </div>
   </div>
@@ -61,7 +42,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import PBookmarkButton from './PBookmarkButton.vue'
 import PDislikeButton from './PDislikeButton.vue'
 import PLikeButton from './PLikeButton.vue'
 
@@ -70,11 +50,9 @@ const props = withDefaults(defineProps<{
   likeCount?: number
   disliked?: boolean
   dislikeCount?: number
-  bookmarked?: boolean
-  bookmarkCount?: number
   showCount?: boolean
+  showDislikeCount?: boolean
   showDislike?: boolean
-  showBookmark?: boolean
   showRatioBar?: boolean
   size?: 'sm' | 'md' | 'lg'
   variant?: 'ghost' | 'bordered' | 'subtle'
@@ -84,10 +62,9 @@ const props = withDefaults(defineProps<{
   likeCount: 0,
   disliked: false,
   dislikeCount: 0,
-  bookmarked: false,
   showCount: true,
+  showDislikeCount: true,
   showDislike: true,
-  showBookmark: true,
   showRatioBar: true,
   size: 'md',
   variant: 'ghost',
@@ -97,7 +74,6 @@ const props = withDefaults(defineProps<{
 defineEmits<{
   'like-change': [liked: boolean]
   'dislike-change': [disliked: boolean]
-  'bookmark-change': [bookmarked: boolean]
 }>()
 
 const totalVotes = computed(() => (props.likeCount || 0) + (props.dislikeCount || 0))
@@ -117,58 +93,53 @@ const dislikePercentage = computed(() => {
 .p-interaction-actions {
   display: inline-flex;
   flex-direction: column;
+  align-items: stretch;
+  max-width: 100%;
   gap: 0.35rem;
+}
+
+.p-interaction-actions.is-size-sm {
+  gap: 0.2rem;
+}
+
+.p-interaction-actions.is-size-sm .p-interaction-actions__group {
+  gap: 0.15rem;
+}
+
+.p-interaction-actions.is-size-sm :deep(.p-like-button.is-size-sm),
+.p-interaction-actions.is-size-sm :deep(.p-dislike-button.is-size-sm) {
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.6875rem;
+}
+
+.p-interaction-actions.is-size-sm .p-interaction-actions__ratio-track {
+  height: 3px;
 }
 
 .p-interaction-actions__group {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   gap: 0.25rem;
 }
 
 .p-interaction-actions__ratio {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding-left: 0.15rem;
-  padding-right: 0.15rem;
+  align-self: stretch;
 }
 
 .p-interaction-actions__ratio-track {
-  display: flex;
-  height: 3px;
   width: 100%;
-  border-radius: 2px;
+  height: 4px;
   overflow: hidden;
+  border-radius: 999px;
   background: var(--a-color-border-soft, #e2e8f0);
 }
 
-.p-interaction-actions__ratio-fill.is-like {
+.p-interaction-actions__ratio-fill {
+  height: 100%;
+  border-radius: inherit;
   background: var(--a-color-primary, #2563eb);
   transition: width 0.3s ease;
-}
-
-.p-interaction-actions__ratio-fill.is-dislike {
-  background: #cbd5e1;
-  transition: width 0.3s ease;
-}
-
-.p-interaction-actions__ratio-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.725rem;
-  line-height: 1;
-  color: var(--a-color-muted, #64748b);
-}
-
-.p-interaction-actions__ratio-text {
-  font-weight: 550;
-  color: var(--a-color-fg, #0f172a);
-}
-
-.p-interaction-actions__ratio-votes {
-  font-size: 0.7rem;
-  color: var(--a-color-muted, #64748b);
 }
 </style>

@@ -61,6 +61,21 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     { path: '/dev/album-creation', component: () => import('@/views/dev/AlbumCreationShowcaseView.vue') },
     { path: '/dev/blog-template', component: () => import('@/views/dev/BlogTemplateView.vue'), meta: { hasSidebar: true } },
     { path: '/dev/blog-explore-template', component: () => import('@/views/dev/BlogExploreTemplateView.vue'), meta: { hasSidebar: true } },
+    {
+      path: '/dev/comment-style/github',
+      component: () => import('@/views/dev/CommentStylePreviewView.vue'),
+      props: { variant: 'github' },
+    },
+    {
+      path: '/dev/comment-style/linear',
+      component: () => import('@/views/dev/CommentStylePreviewView.vue'),
+      props: { variant: 'linear' },
+    },
+    {
+      path: '/dev/comment-style/stream',
+      component: () => import('@/views/dev/CommentStylePreviewView.vue'),
+      props: { variant: 'stream' },
+    },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },
     { path: '/__not_found__', component: () => import('@/views/system/NotFoundView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },

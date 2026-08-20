@@ -4,9 +4,7 @@ import { reportError } from '@/utils/logger'
 const recoveryTimeKey = 'atoman_chunk_load_recovery_time'
 const recoveryAttemptKey = 'atoman_chunk_load_recovery_attempts'
 const recoveryWindowMs = 30000
-const recoveryRetryDelayMs = 1500
-const maxRecoveryAttempts = 3
-let recoveryScheduled = false
+const maxRecoveryAttempts = 1
 let recoveryResetTimer: number | undefined
 
 function cancelRecoveryReset() {
@@ -95,36 +93,20 @@ export function cleanupRefreshParam() {
 function triggerRecoveryReload(targetUrl?: string) {
   try {
     cancelRecoveryReset()
-    const now = Date.now()
-    const lastRecoveryTime = parseInt(sessionStorage.getItem(recoveryTimeKey) || '0', 10)
     const attempts = parseInt(sessionStorage.getItem(recoveryAttemptKey) || '0', 10)
 
-    if (recoveryScheduled || attempts >= maxRecoveryAttempts) return
+    if (attempts >= maxRecoveryAttempts) return
 
     const currentPath = targetUrl || window.location.href
-    const delay = attempts > 0
-      ? Math.max(0, recoveryRetryDelayMs - (now - lastRecoveryTime))
-      : 0
 
-    const reload = () => {
-      recoveryScheduled = false
-      const reloadTime = Date.now()
-      sessionStorage.setItem(recoveryTimeKey, String(reloadTime))
-      sessionStorage.setItem(recoveryAttemptKey, String(attempts + 1))
+    const reloadTime = Date.now()
+    sessionStorage.setItem(recoveryTimeKey, String(reloadTime))
+    sessionStorage.setItem(recoveryAttemptKey, String(attempts + 1))
 
-      const urlObj = new URL(currentPath, window.location.origin)
-      urlObj.searchParams.set('_cc_refresh', String(reloadTime))
-      window.location.replace(urlObj.toString())
-    }
-
-    recoveryScheduled = true
-    if (delay > 0) {
-      window.setTimeout(reload, delay)
-    } else {
-      reload()
-    }
+    const urlObj = new URL(currentPath, window.location.origin)
+    urlObj.searchParams.set('_cc_refresh', String(reloadTime))
+    window.location.replace(urlObj.toString())
   } catch (e) {
-    recoveryScheduled = false
     reportError(e, 'Failed to trigger chunk recovery reload')
     window.location.reload()
   }

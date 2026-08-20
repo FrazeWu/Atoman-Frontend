@@ -1,6 +1,6 @@
 import type { Router } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanupRefreshParam, installChunkLoadRecovery, isAppChunkElement, isChunkLoadError } from '@/router/chunkLoadRecovery'
+import { cleanupRefreshParam, installChunkLoadRecovery, isAppChunkElement, isChunkLoadError } from '../../../src/router/chunkLoadRecovery'
 
 const { reportError } = vi.hoisted(() => ({
   reportError: vi.fn(),
@@ -59,6 +59,12 @@ describe('chunk load recovery', () => {
   })
 
   function install() {
+    type ResourceErrorHandler = (event: {
+      target: HTMLElement
+      error: unknown
+      message: string
+    }) => void
+
     installChunkLoadRecovery({
       onError,
       beforeEach: routerBeforeEach,
@@ -68,7 +74,8 @@ describe('chunk load recovery', () => {
       errorHandler: onError.mock.calls[0]?.[0],
       beforeEachHandler: routerBeforeEach.mock.calls[0]?.[0],
       afterEachHandler: routerAfterEach.mock.calls[0]?.[0],
-      resourceErrorHandler: addEventListener.mock.calls.find(([type]) => type === 'error')?.[1],
+      resourceErrorHandler: (addEventListener.mock.calls as unknown as Array<[string, ResourceErrorHandler]>)
+        .find((call) => call[0] === 'error')![1],
     }
   }
 
@@ -144,7 +151,7 @@ describe('chunk load recovery', () => {
     expect(replace.mock.calls[0][0]).toContain('/posts/notes?_cc_refresh=')
   })
 
-  it('delays a second recovery attempt during a deployment transition', async () => {
+  it('does not retry automatically when recovery has already refreshed the page', async () => {
     vi.useFakeTimers()
     sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
     sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '1')
@@ -154,12 +161,12 @@ describe('chunk load recovery', () => {
 
     expect(replace).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(1500)
-    expect(replace).toHaveBeenCalledOnce()
+    expect(replace).not.toHaveBeenCalled()
   })
 
-  it('stops after three recovery attempts', () => {
+  it('stops after one recovery attempt', () => {
     sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
-    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '3')
+    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '1')
     const { errorHandler } = install()
 
     errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
@@ -184,16 +191,21 @@ describe('chunk load recovery', () => {
   it('keeps the recovery limit when another chunk error occurs before the page is stable', async () => {
     vi.useFakeTimers()
     sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
-    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '3')
-    const { afterEachHandler, errorHandler } = install()
+    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '1')
+    const { afterEachHandler, errorHandler, resourceErrorHandler } = install()
 
     afterEachHandler({}, {}, undefined)
     await vi.advanceTimersByTimeAsync(10000)
     errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
+
+    const script = document.createElement('script')
+    script.src = 'http://localhost/assets/Forum-old.js'
+    resourceErrorHandler({ target: script, error: null, message: 'Failed to load module script' })
+
     await vi.advanceTimersByTimeAsync(30000)
     errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
 
     expect(replace).not.toHaveBeenCalled()
-    expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBe('3')
+    expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBe('1')
   })
 })

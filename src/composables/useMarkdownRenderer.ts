@@ -97,7 +97,7 @@ async function ensureMarkdownRuntime(): Promise<void> {
       await Promise.all(
         markdownHighlightLanguages.map(async ([name, loader]) => {
           const languageModule = await loader()
-          hljs.registerLanguage(name, languageModule.default as Parameters<typeof hljs.registerLanguage>[1])
+          return hljs.registerLanguage(name, languageModule.default as Parameters<typeof hljs.registerLanguage>[1])
         }),
       )
 
@@ -246,17 +246,52 @@ function preprocessDirectives(content: string, options?: RenderMarkdownOptions):
   return next
 }
 
+function disambiguateSingleMarkerLines(content: string): string {
+  const lines = content.split('\n')
+  let fenceCharacter = ''
+  let fenceLength = 0
+
+  return lines.map((line, index) => {
+    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line)
+    if (fenceMatch) {
+      const marker = fenceMatch[1]
+      const markerCharacter = marker?.[0]
+      if (!marker || !markerCharacter) return line
+
+      if (!fenceCharacter) {
+        fenceCharacter = markerCharacter
+        fenceLength = marker.length
+      } else if (markerCharacter === fenceCharacter && marker.length >= fenceLength) {
+        fenceCharacter = ''
+        fenceLength = 0
+      }
+      return line
+    }
+
+    if (fenceCharacter || index === 0 || !lines[index - 1]?.trim()) return line
+
+    const markerMatch = /^( {0,3})([-=])([ \t]*)(\r?)$/.exec(line)
+    if (!markerMatch) return line
+
+    // The entity stays visible but cannot be consumed as a Setext underline.
+    const entity = markerMatch[2] === '-' ? '&#45;' : '&#61;'
+    return `${markerMatch[1]}${entity}${markerMatch[3]}${markerMatch[4]}`
+  }).join('\n')
+}
+
 const canonicalOrigin = 'https://www.atoman.org'
 const internalOrigins = new Set([canonicalOrigin, 'https://atoman.org'])
 
 function decorateOutboundLinks(html: string): string {
-  if (typeof document === 'undefined') return html
+  if (typeof document === 'undefined') return DOMPurify.sanitize(html)
 
-  const template = document.createElement('template')
-  template.innerHTML = html
-  template.content.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
+  const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true })
+  fragment.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
     try {
-      const destination = new URL(link.href, canonicalOrigin)
+      const href = link.getAttribute('href')
+      if (!href) return
+
+      const destination = new URL(href, canonicalOrigin)
       if (!['http:', 'https:'].includes(destination.protocol) || internalOrigins.has(destination.origin)) return
 
       const relations = new Set(link.rel.split(/\s+/).filter(Boolean))
@@ -270,7 +305,9 @@ function decorateOutboundLinks(html: string): string {
     }
   })
 
-  return template.innerHTML
+  const container = document.createElement('div')
+  container.append(fragment)
+  return container.innerHTML
 }
 
 export function useMarkdownRenderer() {
@@ -283,8 +320,8 @@ export function useMarkdownRenderer() {
     }
 
     try {
-      const html = marked(preprocessDirectives(content, options)) as string
-      return decorateOutboundLinks(DOMPurify.sanitize(html))
+      const html = marked(disambiguateSingleMarkerLines(preprocessDirectives(content, options))) as string
+      return decorateOutboundLinks(html)
     } catch {
       return `<pre>${escapeHtml(content)}</pre>`
     }
@@ -299,7 +336,7 @@ export function useMarkdownRenderer() {
         options?.references,
         options?.referenceField,
       )
-      return decorateOutboundLinks(DOMPurify.sanitize(marked.parseInline(referenced) as string))
+      return decorateOutboundLinks(marked.parseInline(referenced) as string)
     } catch {
       return escapeHtml(content)
     }

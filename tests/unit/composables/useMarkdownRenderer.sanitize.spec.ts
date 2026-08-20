@@ -1,5 +1,6 @@
-import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
-import type { ResolvedReference } from '@/api/references'
+import { describe, expect, it } from 'vitest'
+import { useMarkdownRenderer } from '../../../src/composables/useMarkdownRenderer'
+import type { ResolvedReference } from '../../../src/api/references'
 
 describe('useMarkdownRenderer sanitize', () => {
   it('filters dangerous inline event handlers from rendered html', () => {
@@ -10,6 +11,17 @@ describe('useMarkdownRenderer sanitize', () => {
     expect(html).not.toContain('onerror=')
     expect(html).not.toContain('<script')
     expect(html).toContain('<img')
+  })
+
+  it('does not promote paragraphs followed by a single dash to headings', () => {
+    const { renderMarkdown } = useMarkdownRenderer()
+
+    const html = renderMarkdown('正文没有加粗 -\n-\n\n下一段')
+
+    expect(html).not.toContain('<h2')
+    expect(html).toContain('正文没有加粗')
+    expect(renderMarkdown('正常标题\n--')).toContain('<h2 id="正常标题">正常标题</h2>')
+    expect(renderMarkdown('```text\n-\n```')).toContain('<code class="language-text">-\n</code>')
   })
 
   it('renders resolved reference tokens as internal links', () => {

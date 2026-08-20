@@ -1,14 +1,13 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter, type RouteRecordRaw, type Router } from 'vue-router'
-import { vi } from 'vitest'
-import type { ModuleRoomKey } from '@/config/moduleRooms'
-import { installRouteGuards } from '@/router/guards'
-import { buildAppRoutes } from '@/router/buildAppRoutes'
-import { moduleRoutes } from '@/router/routes/modules'
-import { useAuthStore } from '@/stores/auth'
-import { useOnboardingStore } from '@/stores/onboarding'
-import { useSiteAccessStore } from '@/stores/siteAccess'
-import ModuleUnavailableView from '@/views/system/ModuleUnavailableView.vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ModuleRoomKey } from '../../../src/config/moduleRooms'
+import { installRouteGuards } from '../../../src/router/guards'
+import { buildAppRoutes } from '../../../src/router/buildAppRoutes'
+import { moduleRoutes } from '../../../src/router/routes/modules'
+import { useAuthStore } from '../../../src/stores/auth'
+import { useOnboardingStore } from '../../../src/stores/onboarding'
+import { useSiteAccessStore } from '../../../src/stores/siteAccess'
 
 const RouteStub = { template: '<main data-test-route-stub />' }
 
@@ -37,7 +36,7 @@ async function createGuardRouter(site: ModuleRoomKey) {
     history: createMemoryHistory(),
     routes: [
       ...stubRouteComponents(moduleRoutes[site]),
-      { path: '/__disabled__', component: ModuleUnavailableView },
+      { path: '/__disabled__', component: RouteStub },
     ],
   })
   installRouteGuards(router)
@@ -256,6 +255,28 @@ describe('router auth guards', () => {
     auth.isAuthenticated = true
 
     await router.push('/site/setting')
+
+    expect(router.currentRoute.value.path).toBe('/site/setting')
+  })
+
+  it('redirects non-owner admins to the existing site setting route', async () => {
+    window.history.replaceState(null, '', '/music')
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: stubRouteComponents([
+        { path: '/owner-only', component: RouteStub, meta: { requiresAuth: true, requiresOwner: true } },
+        ...buildAppRoutes(),
+      ]),
+    })
+    installRouteGuards(router)
+    await router.replace('/music')
+
+    const auth = useAuthStore()
+    auth.token = makeToken(3600)
+    auth.user = { username: 'admin', role: 'admin' } as never
+    auth.isAuthenticated = true
+
+    await router.push('/owner-only')
 
     expect(router.currentRoute.value.path).toBe('/site/setting')
   })

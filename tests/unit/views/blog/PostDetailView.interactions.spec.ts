@@ -4,9 +4,10 @@ import { createMemoryHistory, createRouter, RouterLink } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 
-import PostDetailView from "@/views/blog/PostDetailView.vue";
-import { useAuthStore } from "@/stores/auth";
-import { useFeedStore } from "@/stores/feed";
+// @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
+import PostDetailView from "../../../../src/views/blog/PostDetailView.vue";
+import { useAuthStore } from "../../../../src/stores/auth";
+import { useFeedStore } from "../../../../src/stores/feed";
 
 const mocks = vi.hoisted(() => ({
 	useInteractions: vi.fn(),
@@ -96,7 +97,7 @@ async function mountPostDetailWithRouter() {
 		routes: [
 			{ path: "/", component: { template: "<div />" } },
 			{ path: "/posts/post/:id", component: PostDetailView },
-			{ path: "/posts/post/:id/edit", component: { template: "<div />" } },
+			{ path: "/studio/blog/:id/edit", component: { template: "<div />" } },
 		],
 	});
 	await router.push("/posts/post/post-1");
@@ -245,6 +246,9 @@ describe("PostDetailView shared interactions", () => {
 		expect(mocks.interactions.likeCount.value).toBe(7);
 		expect(mocks.interactions.fetchComments).not.toHaveBeenCalled();
 		expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(true);
+		expect(wrapper.get('a[href="/studio/blog/post-1/edit"]').text()).toBe(
+			"编辑",
+		);
 		expect(wrapper.find('[data-test="unified-comment-section"]').exists()).toBe(
 			true,
 		);

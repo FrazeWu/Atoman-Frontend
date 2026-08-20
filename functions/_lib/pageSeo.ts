@@ -52,7 +52,7 @@ const noIndexPrefixes = [
 	"/forgot-password",
 	"/auth",
 	"/studio",
-	"/settings",
+	"/site/setting",
 ];
 
 function escapeHtml(value: string) {

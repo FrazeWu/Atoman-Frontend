@@ -10,6 +10,10 @@ import {
 	topbarNavOrder,
 } from "../../../src/config/moduleRooms";
 import { buildAppRoutes } from "../../../src/router/buildAppRoutes";
+import {
+	getMobileMoreItems,
+	getMobilePrimaryTabs,
+} from "../../../src/composables/useResponsiveShell";
 import type { SiteContext } from "../../../src/router/siteContext";
 
 const readSource = (relativePath: string) =>
@@ -71,6 +75,28 @@ describe("application navigation contracts", () => {
 		expect(isRoomRouteActive("blog", musicContext)).toBe(false);
 		expect(isRoomRouteActive("blog", blogContext)).toBe(true);
 		expect(isRoomRouteActive("feed", portalContext)).toBe(false);
+	});
+
+	it("keeps every static mobile navigation target out of the 404 route", () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: buildAppRoutes(),
+		});
+		const targets = [
+			...getMobilePrimaryTabs().map((tab) => tab.href),
+			...getMobileMoreItems().map((item) => item.href),
+		].filter((target): target is string => Boolean(target));
+
+		expect(
+			getMobilePrimaryTabs().find((tab) => tab.key === "create")?.href,
+		).toBe("/studio");
+		for (const target of targets) {
+			const matched = router.resolve(target).matched;
+			expect(matched.length, target).toBeGreaterThan(0);
+			expect(matched[matched.length - 1]?.path, target).not.toBe(
+				"/:pathMatch(.*)*",
+			);
+		}
 	});
 
 	it.each([

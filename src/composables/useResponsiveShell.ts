@@ -1,4 +1,4 @@
-import { modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import { moduleUrl } from '@/composables/useSubdomainNav'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 
 export type MobilePrimaryTabKey = 'discover' | 'feed' | 'create' | 'more'
@@ -19,7 +19,7 @@ export type MobileMoreItem = {
 const PRIMARY_TABS: MobilePrimaryTab[] = [
   { key: 'discover', label: '首页', module: 'blog', href: moduleUrl('blog') },
   { key: 'feed', label: '订阅', module: 'feed', href: moduleUrl('feed') },
-  { key: 'create', label: '创作', module: 'blog', href: modulePathUrl('blog', '/manage') },
+  { key: 'create', label: '创作', module: 'blog', href: '/studio' },
   { key: 'more', label: '更多' },
 ]
 

@@ -19,6 +19,14 @@ export function modulePathUrl(
   void hostname
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const prefix = `/${moduleRooms[module].publicPathSegment}`
+  if (
+    normalizedPath === prefix
+    || normalizedPath.startsWith(`${prefix}/`)
+    || normalizedPath.startsWith(`${prefix}?`)
+    || normalizedPath.startsWith(`${prefix}#`)
+  ) {
+    return normalizedPath
+  }
   return normalizedPath === '/' ? prefix : `${prefix}${normalizedPath}`
 }
 

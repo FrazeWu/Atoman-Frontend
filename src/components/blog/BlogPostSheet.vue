@@ -59,7 +59,7 @@ function editPost() {
   if (post.value.channel_id) query.set('channel', post.value.channel_id)
   if (props.layer.payload.collectionId) query.set('collection', props.layer.payload.collectionId)
   const suffix = query.size ? `?${query.toString()}` : ''
-  void router.push(`/posts/post/${post.value.id}/edit${suffix}`)
+  void router.push(`/studio/blog/${post.value.id}/edit${suffix}`)
 }
 
 watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true })

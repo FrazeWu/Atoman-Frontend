@@ -32,7 +32,7 @@
             </button>
             <RouterLink
               v-if="isOwner"
-              :to="`/posts/post/${post.id}/edit`"
+              :to="`/studio/blog/${post.id}/edit`"
               class="a-btn a-btn--sm a-btn--primary post-header__mode-btn"
             >
               编辑
@@ -58,7 +58,7 @@
             </button>
             <RouterLink
               v-if="isOwner"
-              :to="`/posts/post/${post.id}/edit`"
+              :to="`/studio/blog/${post.id}/edit`"
               class="a-btn a-btn--sm a-btn--primary post-header__mode-btn"
             >
               编辑

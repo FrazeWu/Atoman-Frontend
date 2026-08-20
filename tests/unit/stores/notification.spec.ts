@@ -1,9 +1,9 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useAuthStore } from '@/stores/auth'
-import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
-import type { Notification, NotificationCategory } from '@/types'
+import { useAuthStore } from '../../../src/stores/auth'
+import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '../../../src/stores/notification'
+import type { Notification, NotificationCategory } from '../../../src/types'
 
 const makeNotification = (id: string, category: NotificationCategory, read_at: string | null = null, type = `content.${category}`): Notification => ({
   id,
@@ -57,7 +57,7 @@ describe('notification store', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/read-all?category=reply', expect.objectContaining({ method: 'PUT' }))
     expect(store.unreadCount).toBe(3)
-    expect(store.notifications.every((item) => item.read_at)).toBe(true)
+    expect(store.notifications.every((item: Notification) => item.read_at)).toBe(true)
   })
 
   it('does not apply a stale mark-all response after reset', async () => {
@@ -100,6 +100,17 @@ describe('notification store', () => {
     expect(contentPublishedLocation({ ...published, meta: { path: 'https://evil.example' } })).toBeNull()
   })
 
+  it('locates video comment notifications without duplicating the module prefix', () => {
+    const comment = {
+      ...makeNotification('video-comment', 'reply', null, 'video_comment'),
+      meta: { target_kind: 'video' as const, resource_id: 'video-1', comment_id: 'child-1', root_id: 'root-1' },
+    }
+
+    expect(commentNotificationLocation(comment)).toEqual({
+      path: '/videos/watch/video-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
+    })
+  })
+
   it('treats forum topic comments as comment notifications and locates forum follows', () => {
     const comment = {
       ...makeNotification('forum-comment', 'reply', null, 'forum_topic_comment'),
@@ -123,7 +134,7 @@ describe('notification store', () => {
 
     store.receiveNotification(makeNotification('live-forum', 'reply', null, 'forum_topic_comment'))
 
-    expect(store.notifications.map(({ id }) => id)).toEqual(['live-forum'])
+    expect(store.notifications.map(({ id }: Notification) => id)).toEqual(['live-forum'])
     expect(store.unreadCount).toBe(1)
   })
 
@@ -160,7 +171,7 @@ describe('notification store', () => {
     resolveSecond(new Response(JSON.stringify({ data: [makeNotification('system-1', 'system')], meta: { total: 3 } }), { status: 200 }))
     await second
 
-    expect(store.notifications.map(({ id }) => id)).toEqual(['system-1'])
+    expect(store.notifications.map(({ id }: Notification) => id)).toEqual(['system-1'])
     expect(store.total).toBe(3)
     expect(store.loading).toBe(false)
   })
@@ -179,7 +190,7 @@ describe('notification store', () => {
     resolveSecond(new Response(JSON.stringify({ data: [makeNotification('system-1', 'system')], meta: { total: 3 } }), { status: 200 }))
     await second
 
-    expect(store.notifications.map(({ id }) => id)).toEqual(['system-1'])
+    expect(store.notifications.map(({ id }: Notification) => id)).toEqual(['system-1'])
     expect(store.total).toBe(3)
     expect(store.currentCategory).toBe('system')
     expect(store.currentType).toBe('system')
@@ -189,7 +200,7 @@ describe('notification store', () => {
     resolveFirst(new Response(JSON.stringify({ data: [makeNotification('like-1', 'like')], meta: { total: 1 } }), { status: 200 }))
     await first
 
-    expect(store.notifications.map(({ id }) => id)).toEqual(['system-1'])
+    expect(store.notifications.map(({ id }: Notification) => id)).toEqual(['system-1'])
     expect(store.total).toBe(3)
     expect(store.currentCategory).toBe('system')
     expect(store.currentType).toBe('system')
@@ -210,7 +221,7 @@ describe('notification store', () => {
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       expect.stringContaining('type=forum_topic_comment'), expect.stringContaining('type=forum_follow'),
     ])
-    expect(store.notifications.every(({ read_at }) => Boolean(read_at))).toBe(true)
+    expect(store.notifications.every(({ read_at }: Notification) => Boolean(read_at))).toBe(true)
   })
 
   it('clears forum realtime filters when resetting the store', async () => {
@@ -223,7 +234,7 @@ describe('notification store', () => {
     store.resetStore()
     store.receiveNotification(makeNotification('next-mention', 'mention', null, 'comment_mention'))
 
-    expect(store.notifications.map(({ id }) => id)).toEqual(['next-mention'])
+    expect(store.notifications.map(({ id }: Notification) => id)).toEqual(['next-mention'])
   })
 
   it('saves notification preferences and mutes through registered endpoints', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { subdomainDefaultPath, channelUrl, moduleUrl, userUrl } from '@/composables/useSubdomainNav'
-import { modulePathUrl } from '@/router/siteUrls'
+import { subdomainDefaultPath, channelUrl, moduleUrl, userUrl } from '../../../src/composables/useSubdomainNav'
+import { modulePathUrl } from '../../../src/router/siteUrls'
 
 describe('site URL builders', () => {
   it('builds module URLs as path prefixes', () => {
@@ -23,6 +23,12 @@ describe('site URL builders', () => {
 
   it('builds module path URLs with public path segments', () => {
     expect(modulePathUrl('music', '/album/123', 'https:', 'blog.atoman.org')).toBe('/music/album/123')
+  })
+
+  it('does not duplicate an existing module path prefix', () => {
+    expect(modulePathUrl('video', '/videos/watch/video-1')).toBe('/videos/watch/video-1')
+    expect(modulePathUrl('feed', '/feed?source_id=source-1')).toBe('/feed?source_id=source-1')
+    expect(modulePathUrl('timeline', '/timeline#event-1')).toBe('/timeline#event-1')
   })
 
   it('returns the explicit module root path for current module context', () => {

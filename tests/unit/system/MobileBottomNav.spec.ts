@@ -2,10 +2,16 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
-import { getMobileMoreItems, getMobilePrimaryTabs } from '@/composables/useResponsiveShell'
-import { modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
-import { useAuthStore } from '@/stores/auth'
+// @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
+import MobileBottomNav from '../../../src/components/system/MobileBottomNav.vue'
+import {
+  getMobileMoreItems,
+  getMobilePrimaryTabs,
+  type MobileMoreItem,
+  type MobilePrimaryTab,
+} from '../../../src/composables/useResponsiveShell'
+import { moduleUrl } from '../../../src/composables/useSubdomainNav'
+import { useAuthStore } from '../../../src/stores/auth'
 
 const { navigateModuleWithShutter } = vi.hoisted(() => ({
   navigateModuleWithShutter: vi.fn(),
@@ -26,20 +32,20 @@ describe('useResponsiveShell', () => {
   it('returns four fixed primary mobile tabs', () => {
     const tabs = getMobilePrimaryTabs()
 
-    expect(tabs.map((tab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
-    expect(tabs.map((tab) => tab.label)).toEqual(['首页', '订阅', '创作', '更多'])
+    expect(tabs.map((tab: MobilePrimaryTab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
+    expect(tabs.map((tab: MobilePrimaryTab) => tab.label)).toEqual(['首页', '订阅', '创作', '更多'])
     expect(tabs[0]?.href).toBe(moduleUrl('blog'))
     expect(tabs[1]?.href).toBe(moduleUrl('feed'))
-    expect(tabs[2]?.href).toBe(modulePathUrl('blog', '/manage'))
+    expect(tabs[2]?.href).toBe('/studio')
     expect(tabs[3]?.href).toBeUndefined()
   })
 
   it('moves low-frequency modules into the more sheet', () => {
     const items = getMobileMoreItems()
 
-    expect(items.map((item) => item.module)).toContain('forum')
-    expect(items.map((item) => item.module)).toContain('timeline')
-    expect(items.map((item) => item.module)).not.toContain('feed')
+    expect(items.map((item: MobileMoreItem) => item.module)).toContain('forum')
+    expect(items.map((item: MobileMoreItem) => item.module)).toContain('timeline')
+    expect(items.map((item: MobileMoreItem) => item.module)).not.toContain('feed')
   })
 
   it('returns defensive copies for tab and more-sheet collections', () => {
@@ -200,6 +206,6 @@ describe('useResponsiveShell', () => {
     await wrapper.get('[data-tab-key="create"]').trigger('click')
 
     expect(navigateModuleWithShutter).toHaveBeenCalledTimes(1)
-    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('blog', '/manage'))
+    expect(navigateModuleWithShutter).toHaveBeenCalledWith('/studio')
   })
 })

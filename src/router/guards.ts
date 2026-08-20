@@ -22,7 +22,7 @@ const publicSystemPaths = new Set([
 ])
 
 export function installRouteGuards(router: Router) {
-  router.beforeEach(async (to, from) => {
+  router.beforeEach(async (to, _from) => {
     const authStore = useAuthStore()
     const onboardingStore = useOnboardingStore()
     const siteAccessStore = useSiteAccessStore()
@@ -60,7 +60,7 @@ export function installRouteGuards(router: Router) {
       return '/'
     }
     if (to.meta.requiresOwner && !isOwnerRole(authStore.user?.role)) {
-      return '/setting'
+      return '/site/setting'
     }
 
     if (!isSettingRoute && !isPublicSystemRoute) {

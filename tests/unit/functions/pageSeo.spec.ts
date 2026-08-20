@@ -60,6 +60,9 @@ describe("static page SEO", () => {
 		expect(privateHtml).toContain('content="old"');
 		expect(privateHtml).not.toContain('rel="canonical"');
 		expect(
+			buildStaticPageHtml(shell, "/site/setting/users", "www.atoman.org"),
+		).toContain('<meta name="robots" content="noindex, nofollow">');
+		expect(
 			buildStaticPageHtml(shell, "/auth/oauth/callback", "www.atoman.org"),
 		).toContain('<meta name="robots" content="noindex, nofollow">');
 	});

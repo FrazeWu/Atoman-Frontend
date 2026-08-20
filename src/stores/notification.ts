@@ -50,7 +50,7 @@ export function commentNotificationLocation(notification: Notification): RouteLo
   if (!kind || !id || !rootId) return null
   const paths: Record<string, string> = {
     blog_post: modulePathUrl('blog', `/post/${id}`),
-    video: modulePathUrl('video', `/videos/watch/${id}`),
+    video: modulePathUrl('video', `/watch/${id}`),
     podcast_episode: modulePathUrl('podcast', `/episode/${id}`),
     feed_article: modulePathUrl('feed', `/item/${id}`),
     music_artist: modulePathUrl('music', `/artist/${id}`),

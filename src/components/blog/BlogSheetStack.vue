@@ -11,7 +11,7 @@ const route = useRoute()
 const { layers, closeAll } = useBlogSheets()
 
 watch(() => route.path, (path) => {
-  if (/^\/posts\/post\/(new|[^/]+\/edit)$/.test(path) || /^\/posts\/notes\/(new|[^/]+\/edit)$/.test(path)) closeAll()
+  if (/^\/studio\/blog\/(new|[^/]+\/edit)$/.test(path) || /^\/posts\/notes\/(new|[^/]+\/edit)$/.test(path)) closeAll()
 })
 </script>
 

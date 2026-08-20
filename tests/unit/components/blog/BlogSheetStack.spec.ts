@@ -2,8 +2,9 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import BlogSheetStack from '@/components/blog/BlogSheetStack.vue'
-import { useBlogSheets } from '@/composables/useBlogSheets'
+// @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
+import BlogSheetStack from '../../../../src/components/blog/BlogSheetStack.vue'
+import { useBlogSheets } from '../../../../src/composables/useBlogSheets'
 
 describe('BlogSheetStack', () => {
   beforeEach(() => useBlogSheets().closeAll())
@@ -38,7 +39,7 @@ describe('BlogSheetStack', () => {
       history: createMemoryHistory(),
       routes: [
         { path: '/posts', component: { template: '<div />' } },
-        { path: '/posts/post/:id/edit', component: { template: '<div />' } },
+        { path: '/studio/blog/:id/edit', component: { template: '<div />' } },
       ],
     })
     await router.push('/posts')
@@ -55,7 +56,7 @@ describe('BlogSheetStack', () => {
       },
     })
 
-    await router.push('/posts/post/post-1/edit')
+    await router.push('/studio/blog/post-1/edit')
 
     expect(sheets.layers.value).toHaveLength(0)
   })

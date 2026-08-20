@@ -19,7 +19,7 @@
     <div v-else-if="errorStatus === 403" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight: 500;color:var(--a-color-disabled-border);margin-bottom:1rem">草稿</p>
       <p class="a-muted" style="margin-bottom:1.5rem">该文章尚未发布，请登录后查看或编辑</p>
-      <RouterLink :to="`/posts/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+      <RouterLink :to="`/studio/blog/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
     </div>
 
     <!-- Post content -->

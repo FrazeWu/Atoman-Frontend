@@ -309,45 +309,45 @@ function sourceValue(sources?: MusicSource[]) {
 }
 
 async function resumeImport(snapshot: MusicAlbumImport) {
-  let artistSource = ''
-  if (snapshot.artistId?.trim()) {
-    try {
-      artistSource = sourceValue((await getMusicArtist(snapshot.artistId)).sources)
-    } catch {
-      // The import can still be resumed and the source can be entered manually.
-    }
-  }
+  const flow = resumeMusicCreationFlow(snapshot)
+  if (snapshot.commitRequest || !flow) return
 
-  if (!snapshot.targetAlbumId) {
-    resumeMusicCreationFlow(snapshot, [], artistSource)
-    return
+  const artistSourceRequest = snapshot.artistId?.trim()
+    ? getMusicArtist(snapshot.artistId)
+      .then((artist) => sourceValue(artist.sources))
+      .catch(() => '')
+    : Promise.resolve('')
+  const albumRequest = snapshot.targetAlbumId?.trim()
+    ? getMusicAlbum(snapshot.targetAlbumId).catch(() => null)
+    : Promise.resolve(null)
+  const [artistSource, album] = await Promise.all([artistSourceRequest, albumRequest])
+
+  if (!flow.draft.artist.source.trim() && artistSource) {
+    flow.draft.artist.source = artistSource
   }
-  const album = await getMusicAlbum(snapshot.targetAlbumId)
-  const albumArtists = await Promise.all((album.artists ?? []).map(async (artist) => {
-    let source = ''
-    try {
-      source = sourceValue((await getMusicArtist(String(artist.id))).sources)
-    } catch {
-      // The artist can still be selected without a prefilled source.
-    }
-    return {
-      id: String(artist.id),
-      name: artist.name,
-      source,
-    }
+  if (!album || flow.draft.albumDetails.contributors.length) return
+
+  flow.draft.albumDetails.contributors = (album.artists ?? []).map((artist) => ({
+    id: `contributor-${artist.id}`,
+    artistId: String(artist.id),
+    name: artist.name,
+    avatarUrl: '',
+    kind: 'person',
+    locked: true,
+    roles: [{
+      id: `role-${artist.id}-primary`,
+      role: 'primary',
+      label: '',
+    }],
   }))
-  const resolvedArtistSource = artistSource || albumArtists.find((artist) => artist.id === snapshot.artistId)?.source || ''
-  resumeMusicCreationFlow(snapshot, albumArtists, resolvedArtistSource)
 }
 
-async function continueImport() {
+function continueImport() {
   if (!selectedImport.value) return
   errorMessage.value = ''
-  try {
-    await resumeImport(selectedImport.value)
-  } catch {
+  void resumeImport(selectedImport.value).catch(() => {
     errorMessage.value = '无法继续编辑'
-  }
+  })
 }
 </script>
 

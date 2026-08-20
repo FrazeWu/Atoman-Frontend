@@ -5,6 +5,8 @@ import ImportsView from "@/views/music/ImportsView.vue";
 
 const mocks = vi.hoisted(() => ({
 	listMusicAlbumImports: vi.fn(),
+	getMusicAlbum: vi.fn(),
+	getMusicArtist: vi.fn(),
 	resumeMusicCreationFlow: vi.fn(),
 }));
 
@@ -13,7 +15,8 @@ vi.mock("@/api/musicV1", () => ({
 	cancelMusicAlbumImportSession: vi.fn(),
 	deleteMusicAlbumImportRecord: vi.fn(),
 	deleteMusicAlbumImportFile: vi.fn(),
-	getMusicAlbum: vi.fn(),
+	getMusicAlbum: mocks.getMusicAlbum,
+	getMusicArtist: mocks.getMusicArtist,
 	repairMusicAlbumImport: vi.fn(),
 	replaceAndUploadMusicAlbumImportFile: vi.fn(),
 	retryMusicAlbumImportFile: vi.fn(),
@@ -75,10 +78,78 @@ describe("Music ImportsView", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		mocks.listMusicAlbumImports.mockReset();
+		mocks.getMusicAlbum.mockReset();
+		mocks.getMusicArtist.mockReset();
+		mocks.resumeMusicCreationFlow.mockReset();
 	});
 
 	afterEach(() => {
 		vi.useRealTimers();
+	});
+
+	it("opens an import before its artist source lookup finishes", async () => {
+		const pendingImport = {
+			...importRecord("pending_upload"),
+			artistId: "artist-1",
+		};
+		mocks.listMusicAlbumImports.mockResolvedValue({
+			data: [pendingImport],
+			meta: { page: 1, page_size: 50, total: 1, has_more: false },
+		});
+		mocks.resumeMusicCreationFlow.mockReturnValue({
+			draft: {
+				artist: { source: "" },
+				albumDetails: { contributors: [] },
+			},
+		});
+		mocks.getMusicArtist.mockReturnValue(new Promise(() => {}));
+		const wrapper = mount(ImportsView);
+		await flushPromises();
+
+		const continueButton = wrapper
+			.findAll("button")
+			.find((button) => button.text() === "继续导入");
+		expect(continueButton).toBeDefined();
+		await continueButton!.trigger("click");
+
+		expect(mocks.resumeMusicCreationFlow).toHaveBeenCalledWith(pendingImport);
+		expect(mocks.getMusicArtist).toHaveBeenCalledWith("artist-1");
+		wrapper.unmount();
+	});
+
+	it("uses the saved draft without loading album or artist details again", async () => {
+		const savedImport = {
+			...importRecord("ready"),
+			targetAlbumId: "album-1",
+			artistId: "artist-1",
+			commitRequest: {
+				artist: {
+					legal_name: "Artist",
+					stage_names: [],
+					nationality: "",
+					birth_date: "",
+					birth_place: "",
+				},
+				album: { release_year: 0, tracks: [] },
+			},
+		};
+		mocks.listMusicAlbumImports.mockResolvedValue({
+			data: [savedImport],
+			meta: { page: 1, page_size: 50, total: 1, has_more: false },
+		});
+		const wrapper = mount(ImportsView);
+		await flushPromises();
+
+		const continueButton = wrapper
+			.findAll("button")
+			.find((button) => button.text() === "继续导入");
+		expect(continueButton).toBeDefined();
+		await continueButton!.trigger("click");
+
+		expect(mocks.resumeMusicCreationFlow).toHaveBeenCalledWith(savedImport);
+		expect(mocks.getMusicAlbum).not.toHaveBeenCalled();
+		expect(mocks.getMusicArtist).not.toHaveBeenCalled();
+		wrapper.unmount();
 	});
 
 	it("describes empty tracks as recognition in progress while processing", async () => {

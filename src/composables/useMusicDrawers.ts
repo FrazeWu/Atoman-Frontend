@@ -617,6 +617,7 @@ export function useMusicDrawers() {
 					: {}),
 			}));
 		}
+		return flow;
 	};
 
 	const setMusicCreationStep = (step: MusicCreationFlowStep) => {

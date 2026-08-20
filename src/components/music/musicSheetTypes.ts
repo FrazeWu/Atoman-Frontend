@@ -37,6 +37,7 @@ export interface MusicCreationFlowSeed {
 export type MusicSheetLayer =
 	| (BaseSheetLayer & { kind: "artist"; payload: { artistId: string } })
 	| (BaseSheetLayer & { kind: "album"; payload: { albumId: string } })
+	| (BaseSheetLayer & { kind: "song"; payload: { songId: string } })
 	| (BaseSheetLayer & { kind: "playlist"; payload: { playlistId: string } })
 	| (BaseSheetLayer & {
 			kind: "action";

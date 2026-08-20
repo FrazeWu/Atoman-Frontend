@@ -3,6 +3,7 @@
     :show="show"
     title="版本"
     close-type="header"
+    above-player
     @close="closeSheet"
   >
     <div class="revision-sheet">

@@ -3,7 +3,8 @@
     :show="show"
     :title="`${config.label}合集`"
     close-type="header"
-    @close="$emit('close')"
+    above-player
+    @close="requestClose"
   >
     <template #header>
       <div class="studio-collections__header">
@@ -71,6 +72,17 @@
     </div>
   </PSheet>
 
+  <PConfirm
+    :show="discardPending"
+    title="放弃修改？"
+    message="未保存的内容将丢失。"
+    confirm-text="放弃"
+    danger
+    above-player
+    @confirm="confirmDiscard"
+    @cancel="cancelDiscard"
+  />
+
   <PModal v-model="deleteModalOpen" title="删除合集" size="sm">
     <p class="studio-collections__confirm">确定删除“{{ pendingDelete?.name }}”吗？内容不会被删除。</p>
     <template #footer>
@@ -95,9 +107,11 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { studioModules } from '@/config/studioModules'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioCollection, StudioModule } from '@/types'
 
@@ -117,6 +131,13 @@ const deleteModalOpen = computed({
   set: value => { if (!value) pendingDelete.value = null },
 })
 const draft = reactive({ name: '', description: '' })
+const initialDraft = ref('')
+const isDirty = computed(() => editing.value && initialDraft.value !== JSON.stringify(draft))
+const { discardPending, requestClose, cancelDiscard, confirmDiscard } = useSheetCloseGuard({
+  isDirty,
+  isSubmitting: saving,
+  close: () => emit('close'),
+})
 
 function resetDraft() {
   editing.value = false
@@ -124,6 +145,7 @@ function resetDraft() {
   draft.name = ''
   draft.description = ''
   nameError.value = ''
+  initialDraft.value = JSON.stringify(draft)
 }
 
 function startCreate() {
@@ -138,6 +160,7 @@ function startEdit(collection: StudioCollection) {
   draft.description = collection.description || ''
   nameError.value = ''
   error.value = ''
+  initialDraft.value = JSON.stringify(draft)
 }
 
 function cancelEdit() {

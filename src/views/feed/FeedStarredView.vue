@@ -146,6 +146,7 @@ import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
+import { feedArticleRouteState } from '@/composables/feed/feedArticleRouteState'
 import type { FeedItem, StarredFeedItem, TimelineItem, FeedStarGroup } from '@/types'
 import { useApi } from '@/composables/useApi'
 
@@ -220,13 +221,28 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
     fetched_at: item.fetched_at || '',
     content_html: item.full_text_html,
   }
-  selectedArticle.value = {
+  const article: TimelineItem = {
     type: 'feed_item',
     feed_item: feedItem,
     published_at: item.published_at,
-    is_read: true
+    is_read: true,
   }
-  showArticleSheet.value = true
+  selectedArticle.value = article
+  void router.push({
+    path: `/feed/item/${feedItem.id}`,
+    state: feedArticleRouteState({ article, articles: items.value.map((entry) => ({
+      type: 'feed_item',
+      feed_item: {
+        ...entry,
+        feed_source_id: entry.feed_source_id || '',
+        guid: entry.guid || '',
+        fetched_at: entry.fetched_at || '',
+        content_html: entry.full_text_html,
+      },
+      published_at: entry.published_at,
+      is_read: entry.is_read === true,
+    })), source: null, sourceArticles: [] }),
+  })
   if (!wasRead) {
     void markItemsReadAndRefresh([item.id])
   }

@@ -40,12 +40,14 @@
       <span class="user-name">{{ authStore.user?.username }}</span>
       <span class="chevron" :style="activeDropdown === 'user' ? 'transform:rotate(180deg)' : ''">▾</span>
     </button>
-    <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
-      <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
-      <RouterLink :to="userSettingsPath" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
-      <RouterLink v-if="showSiteSettings" to="/site/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
-      <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
-    </div>
+    <Transition name="user-menu">
+      <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
+        <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
+        <RouterLink :to="userSettingsPath" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
+        <RouterLink v-if="showSiteSettings" to="/site/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
+        <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -70,7 +72,11 @@ const avatarSrc = computed(() => authStore.user?.avatar_url ? resolveMediaURL(au
 const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
 const toggleDropdown = (name: string) => {
-  activeDropdown.value = activeDropdown.value === name ? null : name
+  const willOpen = activeDropdown.value !== name
+  if (willOpen) {
+    window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail: 'user-menu' }))
+  }
+  activeDropdown.value = willOpen ? name : null
 }
 
 const closeDropdown = () => {
@@ -82,13 +88,19 @@ const handleClickOutside = (e: MouseEvent) => {
   if (!target.closest('[data-dropdown]')) closeDropdown()
 }
 
+const handleGlobalOverlayOpen = (event: Event) => {
+  if ((event as CustomEvent<string>).detail !== 'user-menu') closeDropdown()
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
   inboxStore.bootstrap()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
   inboxStore.disconnect()
 })
 
@@ -282,12 +294,26 @@ const logout = async () => {
   border: var(--a-border);
   border-radius: var(--a-radius-none);
   box-shadow: var(--a-shadow-dropdown);
-  z-index: 40;
+  z-index: var(--a-z-global-overlay);
   min-width: 140px;
 }
 
 .user-dropdown {
   width: 144px;
+}
+
+.user-menu-enter-active {
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
+}
+
+.user-menu-leave-active {
+  transition: transform 120ms cubic-bezier(0.4, 0, 1, 1), opacity 120ms ease;
+}
+
+.user-menu-enter-from,
+.user-menu-leave-to {
+  transform: translateY(-8px);
+  opacity: 0;
 }
 
 .dropdown-item {

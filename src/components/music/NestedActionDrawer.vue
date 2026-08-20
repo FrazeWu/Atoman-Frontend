@@ -32,7 +32,7 @@ import {
 
 type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeNestedAction, returnToLayer, refreshAlbum, refreshSong, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closeNestedAction, returnToLayer, refreshAlbum, refreshSong, isLayerActive, isLayerShifted, isTopLayer } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
 const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
 const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
@@ -42,14 +42,16 @@ const albumId = computed(() => String(payloadRecord.value.albumId ?? state.value
 const artistId = computed(() => String(payloadRecord.value.artistId ?? state.value.artistId ?? '') || null)
 const songId = computed(() => String(payloadRecord.value.songId ?? '') || null)
 const currentAction = computed(() => props.layer?.payload.action ?? state.value.nestedAction)
-const isOpen = computed(() => (
-  currentAction.value === 'revise'
-  || currentAction.value === 'history'
-  || currentAction.value === 'artist_history'
-  || currentAction.value === 'song_history'
-  || currentAction.value === 'discussion'
-  || currentAction.value === 'revise_artist'
-))
+const isOpen = computed(() => {
+  if (props.layer) return isLayerActive(props.layer.key)
+
+  return currentAction.value === 'revise'
+    || currentAction.value === 'history'
+    || currentAction.value === 'artist_history'
+    || currentAction.value === 'song_history'
+    || currentAction.value === 'discussion'
+    || currentAction.value === 'revise_artist'
+})
 const sheetIndex = computed(() => {
   if (props.layer) return props.layerIndex
   let count = 0
@@ -603,6 +605,7 @@ async function submitEdit() {
 
 <template>
   <PSheet
+    above-player
     :show="isOpen"
     :title="displayTitle"
     @close="closeCurrentAction"

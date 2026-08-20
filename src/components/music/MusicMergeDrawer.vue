@@ -21,6 +21,7 @@ const {
   state,
   closeNestedAction,
   returnToLayer,
+  isLayerActive,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -31,7 +32,9 @@ const payload = computed(() => {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {}
 })
 const entity = computed(() => action.value === 'merge_album' ? 'album' : 'artist')
-const isOpen = computed(() => action.value === 'merge_artist' || action.value === 'merge_album')
+const isOpen = computed(() => props.layer
+  ? isLayerActive(props.layer.key)
+  : action.value === 'merge_artist' || action.value === 'merge_album')
 const sourceId = computed(() => {
   const explicitId = entity.value === 'artist' ? payload.value.artistId : payload.value.albumId
   return String(explicitId ?? (entity.value === 'artist' ? state.value.artistId : state.value.albumId) ?? '') || null
@@ -108,6 +111,7 @@ async function merge() {
 
 <template>
   <PSheet
+    above-player
     :show="isOpen"
     :title="sheetTitle"
     content-max-width="42rem"

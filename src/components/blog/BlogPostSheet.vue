@@ -67,7 +67,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 
 <template>
   <PSheet
-    show
+    :show="sheets.isActive(layer.key)"
     :title="post?.title || layer.title"
     :index="layerIndex"
     :layer-index="layerIndex"

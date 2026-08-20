@@ -37,11 +37,11 @@ import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/mu
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
+const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
-const isOpen = computed(() => props.layer !== undefined || albumId.value !== null)
+const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : albumId.value !== null)
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isAlbumShifted.value)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)

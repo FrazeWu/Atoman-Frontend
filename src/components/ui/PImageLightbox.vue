@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <Transition name="lightbox-fade">
+    <Transition name="lightbox-fade" appear>
       <div
         v-if="show && images.length"
         class="p-lightbox-backdrop"
@@ -125,9 +125,8 @@ function handleKeydown(e: KeyboardEvent) {
 .p-lightbox-backdrop {
   position: fixed;
   inset: 0;
-  z-index: var(--a-z-modal, 9999);
+  z-index: var(--a-z-lightbox);
   background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -224,9 +223,12 @@ function handleKeydown(e: KeyboardEvent) {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-.lightbox-fade-enter-active,
+.lightbox-fade-enter-active {
+  transition: opacity 180ms ease;
+}
+
 .lightbox-fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 160ms ease;
 }
 
 .lightbox-fade-enter-from,
@@ -234,19 +236,36 @@ function handleKeydown(e: KeyboardEvent) {
   opacity: 0;
 }
 
-.lightbox-zoom-enter-active,
+.lightbox-zoom-enter-active {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
+}
+
 .lightbox-zoom-leave-active {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 160ms cubic-bezier(0.4, 0, 1, 1), opacity 160ms ease;
 }
 
 .lightbox-zoom-enter-from {
   opacity: 0;
-  transform: scale(0.95);
+  transform: scale(0.98);
 }
 
 .lightbox-zoom-leave-to {
   opacity: 0;
-  transform: scale(1.05);
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-fade-enter-active,
+  .lightbox-fade-leave-active,
+  .lightbox-zoom-enter-active,
+  .lightbox-zoom-leave-active {
+    transition-duration: 100ms;
+  }
+
+  .lightbox-zoom-enter-from,
+  .lightbox-zoom-leave-to {
+    transform: none;
+  }
 }
 
 @media (max-width: 640px) {

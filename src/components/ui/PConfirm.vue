@@ -1,5 +1,5 @@
 <template>
-  <PModal :show="show" size="sm" :title="title" :above-player="abovePlayer" @close="cancel" @update:show="(value) => { if (!value) cancel() }">
+  <PModal :show="show" size="sm" :title="title" :above-player="abovePlayer" :close-on-backdrop="false" @close="cancel" @update:show="(value) => { if (!value) cancel() }">
     <p class="p-confirm__message">{{ message }}</p>
     <template #footer>
       <PButton variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />

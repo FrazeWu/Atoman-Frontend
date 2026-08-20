@@ -79,7 +79,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
 
 <template>
   <PSheet
-    show
+    :show="sheets.isActive(layer.key)"
     :title="collection?.name || layer.title"
     :index="layerIndex"
     :layer-index="layerIndex"

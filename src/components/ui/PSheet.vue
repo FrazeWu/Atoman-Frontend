@@ -2,11 +2,11 @@
   <Teleport to="body" :disabled="isTest">
     <div class="p-sheet-root" :class="{ 'p-sheet-root--above-player': abovePlayer }">
       <!-- Backdrop to catch clicks outside the sheet -->
-      <Transition name="fade">
+      <Transition name="fade" appear>
         <div v-if="show && showBackdrop && isTopLayer" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
       </Transition>
 
-      <Transition :name="transitionName">
+      <Transition :name="transitionName" appear>
         <div
           v-if="show"
           ref="panelRef"
@@ -240,7 +240,7 @@ const sheetStyle = computed(() => {
 
 <style scoped>
 .p-sheet-panel {
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s, left 0.2s ease, right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: left 200ms ease;
 }
 
 .p-sheet-panel.is-shifted {
@@ -508,51 +508,37 @@ const sheetStyle = computed(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .p-sheet-panel,
-  .fade-enter-active,
-  .fade-leave-active {
-    transition-duration: 0.01ms;
-  }
-}
-
 .slide-right-enter-active,
 .slide-left-enter-active {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out, box-shadow 0.35s;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .slide-right-leave-active,
 .slide-left-leave-active {
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease-in, box-shadow 0.25s;
+  transition: transform 220ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .slide-right-enter-from,
 .slide-right-leave-to {
   transform: translateX(100%);
-  box-shadow: none;
-  opacity: 0;
 }
 
 .slide-left-enter-from,
 .slide-left-leave-to {
   transform: translateX(-100%);
-  box-shadow: none;
-  opacity: 0;
 }
 
 .slide-up-enter-active {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out, box-shadow 0.35s;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .slide-up-leave-active {
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease-in, box-shadow 0.25s;
+  transition: transform 220ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
-  box-shadow: none;
-  opacity: 0;
 }
 
 @media (max-width: 767px) {
@@ -570,13 +556,24 @@ const sheetStyle = computed(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .p-sheet-panel,
+  .fade-enter-active,
+  .fade-leave-active,
   .slide-right-enter-active,
   .slide-right-leave-active,
   .slide-left-enter-active,
   .slide-left-leave-active,
   .slide-up-enter-active,
   .slide-up-leave-active {
-    transition: none;
+    transition-duration: 100ms;
+  }
+
+  .slide-right-enter-from,
+  .slide-right-leave-to,
+  .slide-left-enter-from,
+  .slide-left-leave-to,
+  .slide-up-enter-from,
+  .slide-up-leave-to {
+    transform: none;
   }
 }
 </style>

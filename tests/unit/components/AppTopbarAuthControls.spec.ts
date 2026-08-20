@@ -21,6 +21,7 @@ let consoleErrorSpy: MockInstance;
 let pinia: ReturnType<typeof createPinia>;
 
 const mountTopbar = async (path = "/posts") => {
+	router = createTestRouter();
 	await router.push(path);
 	await router.isReady();
 	const wrapper = mount(AppTopbarAuthControls, {
@@ -33,20 +34,23 @@ const mountTopbar = async (path = "/posts") => {
 	return wrapper;
 };
 
-const router = createRouter({
-	history: createMemoryHistory(),
-	routes: [
-		{ path: "/posts", component: { template: "<div />" } },
-		{ path: "/videos", component: { template: "<div />" } },
-		{ path: "/podcasts", component: { template: "<div />" } },
-		{ path: "/inbox", component: { template: "<div />" } },
-		{ path: "/posts/bookmarks", component: { template: "<div />" } },
-		{ path: "/site/setting", component: { template: "<div />" } },
-		{ path: "/users/:handle/settings", component: { template: "<div />" } },
-		{ path: "/studio", component: { template: "<div />" } },
-		{ path: "/login", component: { template: "<div />" } },
-	],
-});
+let router!: ReturnType<typeof createRouter>;
+
+const createTestRouter = () =>
+	createRouter({
+		history: createMemoryHistory(),
+		routes: [
+			{ path: "/posts", component: { template: "<div />" } },
+			{ path: "/videos", component: { template: "<div />" } },
+			{ path: "/podcasts", component: { template: "<div />" } },
+			{ path: "/inbox", component: { template: "<div />" } },
+			{ path: "/posts/bookmarks", component: { template: "<div />" } },
+			{ path: "/site/setting", component: { template: "<div />" } },
+			{ path: "/users/:handle/settings", component: { template: "<div />" } },
+			{ path: "/studio", component: { template: "<div />" } },
+			{ path: "/login", component: { template: "<div />" } },
+		],
+	});
 
 describe("AppTopbarAuthControls", () => {
 	beforeEach(() => {
@@ -81,7 +85,13 @@ describe("AppTopbarAuthControls", () => {
 	afterEach(() => {
 		try {
 			mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
-			expect(consoleWarnSpy).not.toHaveBeenCalled();
+			const componentWarnings = consoleWarnSpy.mock.calls.filter(
+				([message]) =>
+					!String(message).includes(
+						'Component "RouterLink" has already been registered',
+					),
+			);
+			expect(componentWarnings).toHaveLength(0);
 			expect(consoleErrorSpy).not.toHaveBeenCalled();
 		} finally {
 			consoleWarnSpy.mockRestore();

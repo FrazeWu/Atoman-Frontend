@@ -32,6 +32,7 @@ interface DrawerState {
 	artistId: string | null;
 	artistRefreshToken: number;
 	albumId: string | null;
+	songId: string | null;
 	playlistId: string | null;
 	albumRefreshToken: number;
 	songRefreshToken: number;
@@ -277,6 +278,14 @@ const albumLayer = (id: string): MusicSheetLayer => ({
 	payload: { albumId: id },
 });
 
+const songLayer = (id: string): MusicSheetLayer => ({
+	key: `song:${id}`,
+	kind: "song",
+	title: "歌曲详情",
+	route: `/music/song/${id}`,
+	payload: { songId: id },
+});
+
 function resolveShortestMusicPath(layer: MusicSheetLayer): MusicSheetLayer[] {
 	if (layer.kind !== "action") return [layer];
 	if (!layer.payload.data || typeof layer.payload.data !== "object")
@@ -296,6 +305,7 @@ const state = ref<DrawerState>({
 	artistId: null,
 	artistRefreshToken: 0,
 	albumId: null,
+	songId: null,
 	playlistId: null,
 	albumRefreshToken: 0,
 	songRefreshToken: 0,
@@ -318,6 +328,7 @@ watch(
 		const reversed = [...layers].reverse();
 		const artist = reversed.find((layer) => layer.kind === "artist");
 		const album = reversed.find((layer) => layer.kind === "album");
+		const song = reversed.find((layer) => layer.kind === "song");
 		const playlist = reversed.find((layer) => layer.kind === "playlist");
 		const action = reversed.find((layer) => layer.kind === "action");
 		const editor = reversed.find((layer) => layer.kind === "editor");
@@ -326,6 +337,7 @@ watch(
 			artist?.kind === "artist" ? artist.payload.artistId : null;
 		state.value.albumId =
 			album?.kind === "album" ? album.payload.albumId : null;
+		state.value.songId = song?.kind === "song" ? song.payload.songId : null;
 		state.value.playlistId =
 			playlist?.kind === "playlist" ? playlist.payload.playlistId : null;
 		state.value.nestedAction =
@@ -375,6 +387,15 @@ export function useMusicDrawers() {
 	const refreshSong = () => {
 		state.value.songRefreshToken += 1;
 	};
+
+	const openSong = (id: string) => {
+		sheetStack.push(songLayer(id));
+	};
+	const closeSong = (
+		key = [...sheetStack.layers.value]
+			.reverse()
+			.find((layer) => layer.kind === "song")?.key ?? "",
+	) => closeLayerAndAbove(key);
 
 	const openPlaylist = (id: string) => {
 		sheetStack.push({
@@ -616,6 +637,7 @@ export function useMusicDrawers() {
 		state.value.artistId = null;
 		state.value.artistRefreshToken = 0;
 		state.value.albumId = null;
+		state.value.songId = null;
 		state.value.playlistId = null;
 		state.value.albumRefreshToken = 0;
 		state.value.songRefreshToken = 0;
@@ -663,6 +685,8 @@ export function useMusicDrawers() {
 		closeAlbum,
 		refreshAlbum,
 		refreshSong,
+		openSong,
+		closeSong,
 		openPlaylist,
 		closePlaylist,
 		refreshPlaylists,
@@ -687,6 +711,7 @@ export function useMusicDrawers() {
 		popToLayer: sheetStack.popTo,
 		returnToLayer,
 		isTopLayer: sheetStack.isTop,
+		isLayerActive: sheetStack.isActive,
 		isLayerShifted: sheetStack.isShifted,
 	};
 }

@@ -33,11 +33,11 @@
             <Pencil :size="15" aria-hidden="true" />
             编辑
           </PButton>
-          <PButton data-test="topic-action-revisions" variant="secondary" @click="showRevisions = true">
+          <PButton data-test="topic-action-revisions" variant="secondary" @click="openDetailSheet('revisions')">
             <History :size="15" aria-hidden="true" />
             版本
           </PButton>
-          <PButton data-test="topic-action-discussion" variant="secondary" @click="showDiscussion = true">
+          <PButton data-test="topic-action-discussion" variant="secondary" @click="openDetailSheet('discussion')">
             <MessageSquare :size="15" aria-hidden="true" />
             讨论
           </PButton>
@@ -135,13 +135,13 @@
         :show="showRevisions"
         :debate-id="debate.id"
         :current-revision-id="debate.current_revision_id"
-        @close="showRevisions = false"
+        @close="closeDetailSheet"
         @reverted="handleWikiMutation"
       />
       <DebateDiscussionSheet
         :show="showDiscussion"
         :debate-id="debate.id"
-        @close="showDiscussion = false"
+        @close="closeDetailSheet"
       />
     </template>
   </main>
@@ -174,6 +174,7 @@ import { parseResourceReferences } from '@/utils/resourceReferences'
 
 type DebateTab = 'content' | 'tree' | 'graph'
 type RelationView = Exclude<DebateTab, 'content'>
+type DebateDetailSheet = 'discussion' | 'revisions'
 
 const relationTabs = [
   { value: 'tree' as const, label: '辩论树' },
@@ -220,6 +221,10 @@ const expandedNodeIds = ref<Record<RelationView, Set<string>>>({ tree: new Set()
 const showWikiEditor = ref(false)
 const showRevisions = ref(false)
 const showDiscussion = ref(false)
+const activeDetailSheet = computed<DebateDetailSheet | null>(() => {
+  const value = route.query?.sheet
+  return value === 'discussion' || value === 'revisions' ? value : null
+})
 const reconfirmingRelationId = ref('')
 const reconfirmError = ref('')
 const routeDebateSettled = ref(false)
@@ -271,6 +276,21 @@ const renderedContent = computed(() => renderDebateContent(
   debate.value?.references ?? [],
 ))
 
+function openDetailSheet(sheet: DebateDetailSheet) {
+  void router.push({ query: { ...(route.query ?? {}), sheet } })
+}
+
+function closeDetailSheet() {
+  const query = { ...(route.query ?? {}) }
+  delete query.sheet
+  void router.push({ query })
+}
+
+watch(activeDetailSheet, (sheet) => {
+  showRevisions.value = sheet === 'revisions'
+  showDiscussion.value = sheet === 'discussion'
+}, { immediate: true })
+
 watch(() => String(route.params.id || ''), (id) => {
   if (!id) return
   routeDebateSettled.value = false
@@ -284,8 +304,6 @@ watch(() => String(route.params.id || ''), (id) => {
   activeTab.value = 'content'
   lastLoadedRelationView.value = null
   showWikiEditor.value = false
-  showRevisions.value = false
-  showDiscussion.value = false
   void loadRouteDebate(id)
   void loadRouteVotes(id)
 }, { immediate: true })

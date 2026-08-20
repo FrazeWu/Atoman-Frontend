@@ -29,6 +29,7 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		returnToLayer: vi.fn(),
 		refreshArtist: mocks.refreshArtist,
 		refreshAlbum: mocks.refreshAlbum,
+		isLayerActive: () => true,
 		isLayerShifted: () => false,
 		isTopLayer: () => true,
 	}),

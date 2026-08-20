@@ -7,6 +7,7 @@ import MusicMergeDrawer from './MusicMergeDrawer.vue'
 import MusicAlbumCreditLinkDrawer from './MusicAlbumCreditLinkDrawer.vue'
 import NestedActionDrawer from './NestedActionDrawer.vue'
 import PlaylistDrawer from './PlaylistDrawer.vue'
+import SongDrawer from './SongDrawer.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const { renderLayers } = useMusicDrawers()
@@ -17,6 +18,7 @@ const { renderLayers } = useMusicDrawers()
     <ArtistDrawer v-if="layer.kind === 'artist'" :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
     <AlbumDrawer v-else-if="layer.kind === 'album'" :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
     <PlaylistDrawer v-else-if="layer.kind === 'playlist'" :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
+    <SongDrawer v-else-if="layer.kind === 'song'" :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
     <MusicMergeDrawer
       v-else-if="layer.kind === 'action' && (layer.payload.action === 'merge_artist' || layer.payload.action === 'merge_album')"
       :layer="layer"

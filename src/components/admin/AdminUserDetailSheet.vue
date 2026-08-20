@@ -3,6 +3,7 @@
     :show="show"
     :title="detail ? detail.display_name || detail.username : '用户详情'"
     close-type="header"
+    above-player
     panel-class="admin-user-detail-sheet"
     @close="emit('close')"
   >

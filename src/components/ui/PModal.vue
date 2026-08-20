@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
-    <Transition name="modal-fade">
+    <Transition name="modal-fade" appear>
       <div
         v-if="visible"
         class="p-modal-backdrop"
         :class="{ 'p-modal-backdrop--above-player': abovePlayer }"
-        @click.self="handleClose"
+        @click.self="closeOnBackdrop && handleClose"
       >
         <div
           ref="dialogRef"
@@ -78,6 +78,7 @@ const props = withDefaults(defineProps<{
   modelValue?: boolean
   show?: boolean
   closable?: boolean
+  closeOnBackdrop?: boolean
   abovePlayer?: boolean
 }>(), {
   size: 'md',
@@ -85,6 +86,7 @@ const props = withDefaults(defineProps<{
   modelValue: undefined,
   show: undefined,
   closable: true,
+  closeOnBackdrop: true,
   abovePlayer: false,
 })
 

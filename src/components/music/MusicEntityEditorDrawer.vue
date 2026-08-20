@@ -36,13 +36,14 @@ const {
   closeMusicEditor,
   refreshSong,
   closeMusicCreationFlow,
+  isLayerActive,
   isLayerShifted,
   isTopLayer,
   returnToLayer,
 } = useMusicDrawers()
 
 const editor = computed(() => props.layer?.payload ?? state.value.musicEditor)
-const isOpen = computed(() => props.layer !== undefined || editor.value !== null)
+const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : editor.value !== null)
 const isSongEditor = computed(() => editor.value?.entity === 'song' && editor.value.mode === 'edit')
 const sheetIndex = computed(() => {
   if (props.layer) return props.layerIndex
@@ -227,6 +228,7 @@ async function handleSongEditSubmit() {
 
 <template>
   <PSheet
+    above-player
     :show="isOpen"
     title="编辑歌曲"
     content-max-width="64rem"

@@ -34,7 +34,7 @@
       </button>
     </div>
 
-    <Transition name="search-panel-slide">
+    <Transition name="search-panel-slide" appear>
       <div
         v-if="showSearch"
         ref="searchPanelRef"
@@ -87,6 +87,7 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 const searchPanelRef = ref<HTMLElement | null>(null)
 
 const openSearch = async () => {
+  window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail: 'search' }))
   showSearch.value = true
   isExpanded.value = false
   await nextTick()
@@ -139,6 +140,10 @@ const handleDocumentKeydown = (event: KeyboardEvent) => {
   }
 }
 
+const handleGlobalOverlayOpen = (event: Event) => {
+  if ((event as CustomEvent<string>).detail !== 'search') closeSearch()
+}
+
 watch(() => globalSearch.activeIndex.value, async () => {
   await nextTick()
   searchPanelRef.value?.querySelector('.is-active')?.scrollIntoView?.({ block: 'nearest' })
@@ -147,11 +152,13 @@ watch(() => globalSearch.activeIndex.value, async () => {
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleDocumentKeydown)
+  window.addEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
   document.removeEventListener('keydown', handleDocumentKeydown)
+  window.removeEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
   globalSearch.reset()
 })
 </script>
@@ -159,7 +166,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .topbar-search-wrap {
   position: relative;
-  z-index: 120;
+  z-index: var(--a-z-global-overlay);
   display: flex;
   align-items: center;
   flex: 0 1 clamp(10rem, 24vw, 24rem);
@@ -297,10 +304,14 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 
-.search-panel-slide-enter-active,
+.search-panel-slide-enter-active {
+  overflow: hidden;
+  transition: max-height 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
 .search-panel-slide-leave-active {
   overflow: hidden;
-  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  transition: max-height 160ms cubic-bezier(0.4, 0, 1, 1), opacity 160ms ease;
 }
 
 .search-panel-slide-enter-from,

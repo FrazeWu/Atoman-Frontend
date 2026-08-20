@@ -3,7 +3,8 @@
     :show="show"
     :title="mode === 'create' ? '创建订阅规则' : '编辑订阅规则'"
     close-type="header"
-    @close="$emit('close')"
+    above-player
+    @close="requestClose"
   >
     <div class="rule-editor-sheet">
       <div class="rule-editor-fields">
@@ -93,7 +94,7 @@
       </div>
 
       <div class="rule-editor-actions">
-        <PButton variant="secondary" label="取消" @click="$emit('close')" />
+        <PButton variant="secondary" label="取消" @click="requestClose" />
         <PButton
           label="保存规则"
           :disabled="!canSubmit"
@@ -102,6 +103,16 @@
       </div>
     </div>
   </PSheet>
+  <PConfirm
+    :show="discardPending"
+    title="放弃修改？"
+    message="未保存的内容将丢失。"
+    confirm-text="放弃"
+    danger
+    above-player
+    @confirm="confirmDiscard"
+    @cancel="cancelDiscard"
+  />
 </template>
 
 <script setup lang="ts">
@@ -113,6 +124,8 @@ import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 
 type RuleEditorPayload = {
   name: string
@@ -307,9 +320,27 @@ watch(keywordsInput, (value) => {
   }
 })
 
+const initialDraft = ref('')
+const draftSnapshot = () => JSON.stringify({
+  ...draft,
+  conditions_json: draft.conditions_json,
+  selectedCategories: selectedCategories.value,
+  selectedSourceIds: selectedSourceIds.value,
+  sourceIdsInput: sourceIdsInput.value,
+  keywordsInput: keywordsInput.value,
+})
+const isDirty = computed(() => initialDraft.value !== draftSnapshot())
+const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: resetCloseGuard } = useSheetCloseGuard({
+  isDirty,
+  isSubmitting: ref(false),
+  close: () => emit('close'),
+})
+
 watch(() => [props.show, props.rule], ([show]) => {
   if (!show) return
   resetDraft()
+  initialDraft.value = draftSnapshot()
+  resetCloseGuard()
 }, { immediate: true })
 
 const hasConditions = computed(() => {

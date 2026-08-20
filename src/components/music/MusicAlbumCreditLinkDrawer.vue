@@ -26,7 +26,7 @@ import {
 
 type LinkAlbumLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 const props = withDefaults(defineProps<{ layer?: LinkAlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeNestedAction, closeMusicCreationFlow, returnToLayer, refreshArtist, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closeNestedAction, closeMusicCreationFlow, returnToLayer, refreshArtist, refreshAlbum, isLayerActive, isLayerShifted, isTopLayer } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
 
 const payload = computed(() => props.layer?.payload.data && typeof props.layer.payload.data === 'object'
@@ -172,7 +172,8 @@ onBeforeUnmount(() => {
 
 <template>
 	<PSheet
-		:show="true"
+		above-player
+		:show="props.layer ? isLayerActive(props.layer.key) : false"
 		title="关联现有专辑"
 		content-max-width="48rem"
 		:index="layerIndex"

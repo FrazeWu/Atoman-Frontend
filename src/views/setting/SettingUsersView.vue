@@ -150,7 +150,12 @@
       @updated="updateUserSummary"
     />
 
-    <PModal v-model="formOpen" :title="editingUser ? '编辑用户' : '新增用户'" size="sm">
+    <PModal
+      :model-value="formOpen"
+      :title="editingUser ? '编辑用户' : '新增用户'"
+      size="sm"
+      @update:model-value="handleFormVisibility"
+    >
       <form class="setting-users__form" @submit.prevent="saveUser">
         <PInput v-model="form.username" data-test="user-form-username" label="用户名" autocomplete="off" :error="formErrors.username" />
         <PInput v-model="form.email" data-test="user-form-email" label="邮箱" type="email" autocomplete="off" :error="formErrors.email" />
@@ -187,12 +192,17 @@
         <p v-if="formError" class="setting-users__form-error" role="alert">{{ formError }}</p>
       </form>
       <template #footer>
-        <PButton variant="secondary" :disabled="saving" @click="formOpen = false">取消</PButton>
+        <PButton variant="secondary" :disabled="saving" @click="requestFormClose">取消</PButton>
         <PButton data-test="user-form-save" :loading="saving" loading-text="保存中..." @click="saveUser">保存</PButton>
       </template>
     </PModal>
 
-    <PModal v-model="passwordOpen" title="重置密码" size="sm">
+    <PModal
+      :model-value="passwordOpen"
+      title="重置密码"
+      size="sm"
+      @update:model-value="handlePasswordVisibility"
+    >
       <div class="setting-users__form">
         <PInput
           v-model="newPassword"
@@ -217,10 +227,30 @@
         </PInput>
       </div>
       <template #footer>
-        <PButton variant="secondary" :disabled="saving" @click="passwordOpen = false">取消</PButton>
+        <PButton variant="secondary" :disabled="saving" @click="requestPasswordClose">取消</PButton>
         <PButton data-test="user-password-save" :loading="saving" loading-text="保存中..." @click="savePassword">保存</PButton>
       </template>
     </PModal>
+
+    <PConfirm
+      :show="discardFormPending"
+      title="放弃修改？"
+      message="未保存的用户信息将丢失。"
+      confirm-text="放弃"
+      danger
+      @confirm="confirmFormDiscard"
+      @cancel="cancelFormDiscard"
+    />
+
+    <PConfirm
+      :show="discardPasswordPending"
+      title="放弃修改？"
+      message="未保存的新密码将丢失。"
+      confirm-text="放弃"
+      danger
+      @confirm="confirmPasswordDiscard"
+      @cancel="cancelPasswordDiscard"
+    />
 
     <PConfirm
       :show="confirmAction !== null"
@@ -275,6 +305,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PTab from '@/components/ui/PTab.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import { isOwnerRole } from '@/utils/roles'
 
 type FormState = {
@@ -312,12 +343,14 @@ const message = ref('')
 const formOpen = ref(false)
 const editingUser = ref<AdminUser | null>(null)
 const form = reactive<FormState>({ username: '', email: '', display_name: '', password: '', role: 'user' })
+const initialForm = ref('')
 const formErrors = reactive({ username: '', email: '', password: '' })
 const formError = ref('')
 const showFormPassword = ref(false)
 const passwordOpen = ref(false)
 const passwordUser = ref<AdminUser | null>(null)
 const newPassword = ref('')
+const initialPassword = ref('')
 const passwordError = ref('')
 const showResetPassword = ref(false)
 const confirmAction = ref<ConfirmAction | null>(null)
@@ -325,6 +358,16 @@ const detailOpen = ref(false)
 const selectedUserId = ref<string | null>(null)
 
 const isOwner = computed(() => isOwnerRole(authStore.user?.role))
+const { discardPending: discardFormPending, requestClose: requestFormClose, cancelDiscard: cancelFormDiscard, confirmDiscard: confirmFormDiscard, reset: resetFormCloseGuard } = useSheetCloseGuard({
+  isDirty: computed(() => formOpen.value && initialForm.value !== JSON.stringify(form)),
+  isSubmitting: saving,
+  close: () => { formOpen.value = false },
+})
+const { discardPending: discardPasswordPending, requestClose: requestPasswordClose, cancelDiscard: cancelPasswordDiscard, confirmDiscard: confirmPasswordDiscard, reset: resetPasswordCloseGuard } = useSheetCloseGuard({
+  isDirty: computed(() => passwordOpen.value && initialPassword.value !== newPassword.value),
+  isSubmitting: saving,
+  close: () => { passwordOpen.value = false },
+})
 const canEditRole = computed(() => {
   if (!isOwner.value) return false
   return !editingUser.value || editingUser.value.role === 'user' || editingUser.value.role === 'admin'
@@ -448,11 +491,21 @@ function changePage(page: number) {
   void loadUsers(page)
 }
 
+function handleFormVisibility(visible: boolean) {
+  if (!visible) requestFormClose()
+}
+
+function handlePasswordVisibility(visible: boolean) {
+  if (!visible) requestPasswordClose()
+}
+
 function resetForm() {
   Object.assign(form, { username: '', email: '', display_name: '', password: '', role: 'user' })
   Object.assign(formErrors, { username: '', email: '', password: '' })
   formError.value = ''
   showFormPassword.value = false
+  initialForm.value = JSON.stringify(form)
+  resetFormCloseGuard()
 }
 
 function openCreate() {
@@ -470,6 +523,8 @@ function openEdit(user: AdminUser) {
     display_name: user.display_name,
     role: user.role === 'admin' ? 'admin' : 'user',
   })
+  initialForm.value = JSON.stringify(form)
+  resetFormCloseGuard()
   formOpen.value = true
 }
 
@@ -516,7 +571,8 @@ async function saveUser() {
 function openPassword(user: AdminUser) {
   passwordUser.value = user
   newPassword.value = ''
-  passwordError.value = ''
+  initialPassword.value = ''
+  resetPasswordCloseGuard()
   showResetPassword.value = false
   passwordOpen.value = true
 }

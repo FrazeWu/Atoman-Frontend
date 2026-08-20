@@ -32,10 +32,10 @@ import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeArtist, returnToLayer, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
-const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
+const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : artistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentArtist = () => closeArtist(props.layer?.key)

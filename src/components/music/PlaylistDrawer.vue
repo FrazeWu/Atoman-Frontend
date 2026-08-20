@@ -33,13 +33,13 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 
 type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
 const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerShifted, isTopLayer, openAlbum, openArtist } = useMusicDrawers()
+const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerActive, isLayerShifted, isTopLayer, openAlbum, openArtist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 
 const playlistId = computed(() => props.layer?.payload.playlistId ?? state.value.playlistId)
-const isOpen = computed(() => props.layer !== undefined || playlistId.value !== null)
+const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : playlistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const editSheetIndex = computed(() => props.layerIndex + 1)

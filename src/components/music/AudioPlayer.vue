@@ -270,7 +270,7 @@
     </div>
   </div>
 
-  <Transition name="slide-up">
+  <Transition name="slide-up" appear>
     <MusicLyricsPanel
       v-if="player.showLyrics && player.currentSong"
       :song-id="String(player.currentSong.id)"
@@ -288,7 +288,7 @@
     />
   </Transition>
 
-  <Transition name="slide-up">
+  <Transition name="slide-up" appear>
     <AudioPlayerQueue v-if="player.showQueue" />
   </Transition>
   <PToast v-model="toastVisible" :message="toastMessage" type="success" />
@@ -1272,9 +1272,12 @@ watch(
   color: var(--a-color-muted);
 }
 
-.slide-up-enter-active,
+.slide-up-enter-active {
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .slide-up-leave-active {
-  transition: transform 0.5s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 220ms cubic-bezier(0.4, 0, 1, 1);
 }
 .slide-up-enter-from,
 .slide-up-leave-to {

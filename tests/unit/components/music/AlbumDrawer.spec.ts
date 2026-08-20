@@ -63,6 +63,7 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		state: { value: { albumId: "1" } },
 		closeAlbum: vi.fn(),
 		isAlbumShifted: { value: false },
+		isLayerActive: () => true,
 		isLayerShifted: () => false,
 		isTopLayer: () => true,
 		openNestedAction,

@@ -23,6 +23,7 @@ const { sidebarCollapsed } = useSidebar()
 const detailRouteViews = [
   'MusicArtistRouteView',
   'MusicAlbumRouteView',
+  'MusicSongRouteView',
   'MusicPlaylistRouteView',
 ]
 useMusicSheetRouteSync(useRouter())

@@ -8,7 +8,7 @@ const BlogPostSheet = defineAsyncComponent(() => import('@/components/blog/BlogP
 const ShortNoteSheet = defineAsyncComponent(() => import('@/components/blog/ShortNoteSheet.vue'))
 
 const route = useRoute()
-const { layers, closeAll } = useBlogSheets()
+const { renderLayers, closeAll } = useBlogSheets()
 
 watch(() => route.path, (path) => {
   if (/^\/studio\/blog\/(new|[^/]+\/edit)$/.test(path) || /^\/posts\/notes\/(new|[^/]+\/edit)$/.test(path)) closeAll()
@@ -16,9 +16,9 @@ watch(() => route.path, (path) => {
 </script>
 
 <template>
-  <template v-for="(layer, index) in layers" :key="layer.key">
-    <BlogCollectionSheet v-if="layer.kind === 'collection'" :layer="layer" :layer-index="index" :stack-size="layers.length" />
-    <ShortNoteSheet v-else-if="layer.kind === 'short_note'" :layer="layer" :layer-index="index" :stack-size="layers.length" />
-    <BlogPostSheet v-else :layer="layer" :layer-index="index" :stack-size="layers.length" />
+  <template v-for="(layer, index) in renderLayers" :key="layer.key">
+    <BlogCollectionSheet v-if="layer.kind === 'collection'" :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
+    <ShortNoteSheet v-else-if="layer.kind === 'short_note'" :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
+    <BlogPostSheet v-else :layer="layer" :layer-index="index" :stack-size="renderLayers.length" />
   </template>
 </template>

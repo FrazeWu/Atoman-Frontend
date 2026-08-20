@@ -81,6 +81,7 @@ import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
+import { feedArticleRouteState } from '@/composables/feed/feedArticleRouteState'
 import type { FeedItem, Post, TimelineItem } from '@/types'
 import { useApi } from '@/composables/useApi'
 
@@ -156,13 +157,24 @@ const openArticleSheet = (entry: ReadingListEntry, index?: number) => {
   if (!entry.feed_item) return
   const wasRead = entry.is_read === true
   entry.is_read = true
-  selectedArticle.value = {
+  const article: TimelineItem = {
     type: 'feed_item',
     feed_item: entry.feed_item,
     published_at: entry.feed_item.published_at,
-    is_read: true
+    is_read: true,
   }
-  showArticleSheet.value = true
+  selectedArticle.value = article
+  void router.push({
+    path: `/feed/item/${entry.feed_item.id}`,
+    state: feedArticleRouteState({
+      article,
+      articles: rssEntries.value.map((item) => ({
+        type: 'feed_item', feed_item: item.feed_item!, published_at: item.feed_item!.published_at, is_read: item.is_read === true,
+      })),
+      source: null,
+      sourceArticles: [],
+    }),
+  })
   if (!wasRead) {
     void markItemsReadAndRefresh([entry.feed_item.id])
   }

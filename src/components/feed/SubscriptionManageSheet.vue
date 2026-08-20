@@ -3,7 +3,8 @@
     :show="show"
     :title="activeManageTab === 'groups' ? '分组管理' : '订阅源管理'"
     close-type="header"
-    @close="$emit('close')"
+    above-player
+    @close="requestClose"
   >
     <div class="manage-sheet">
       <div class="manage-heading">
@@ -322,6 +323,17 @@
   </PSheet>
 
   <PConfirm
+    :show="discardPending"
+    title="放弃修改？"
+    message="未提交的编辑内容将丢失。"
+    confirm-text="放弃"
+    danger
+    above-player
+    @confirm="confirmDiscard"
+    @cancel="cancelDiscard"
+  />
+
+  <PConfirm
     :show="deletePending !== null"
     :title="deletePending?.kind === 'batch' ? '批量取消订阅' : '删除订阅管理项'"
     :message="deletePending?.kind === 'batch'
@@ -353,6 +365,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import type { FeedAutomationRules, FeedFilterRules, FeedOPMLImportResult } from '@/stores/feed'
 
 const props = defineProps<{
@@ -426,6 +439,22 @@ const deletePending = ref<{
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
+})
+const isDirty = computed(() => (
+  Boolean(newGroupName.value.trim() || newKeyword.value.trim())
+  || props.subscriptions.some((subscription) => {
+    const draft = draftTitles.value[subscription.id]
+    return draft !== undefined && draft !== subscriptionTitle(subscription)
+  })
+  || props.groups.some((group) => {
+    const draft = draftGroupNames.value[group.id]
+    return draft !== undefined && draft !== group.name
+  })
+))
+const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: resetCloseGuard } = useSheetCloseGuard({
+  isDirty,
+  isSubmitting: computed(() => Boolean(props.busy)),
+  close: () => emit('close'),
 })
 
 const manageTabs = [
@@ -728,6 +757,7 @@ watch(() => props.show, (visible) => {
   draftGroupNames.value = Object.fromEntries(
     props.groups.map(group => [group.id, group.name]),
   )
+  resetCloseGuard()
 })
 
 watch(() => props.subscriptions, (subscriptions) => {

@@ -7,10 +7,18 @@ import type { Song } from "../../../src/types";
 
 const mocks = vi.hoisted(() => ({
 	recordMusicSongPlay: vi.fn(),
+	getMusicPlaybackProgress: vi.fn(),
+	getMusicPlaybackSession: vi.fn(),
+	saveMusicPlaybackProgress: vi.fn(),
+	saveMusicPlaybackSession: vi.fn(),
 }));
 
 vi.mock("@/api/musicV1", () => ({
 	recordMusicSongPlay: mocks.recordMusicSongPlay,
+	getMusicPlaybackProgress: mocks.getMusicPlaybackProgress,
+	getMusicPlaybackSession: mocks.getMusicPlaybackSession,
+	saveMusicPlaybackProgress: mocks.saveMusicPlaybackProgress,
+	saveMusicPlaybackSession: mocks.saveMusicPlaybackSession,
 }));
 
 // Mock Audio
@@ -63,6 +71,14 @@ describe("player store", () => {
 		audioPlayImplementation = () => Promise.resolve();
 		mocks.recordMusicSongPlay.mockReset();
 		mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true });
+		mocks.getMusicPlaybackProgress.mockReset();
+		mocks.getMusicPlaybackProgress.mockResolvedValue(null);
+		mocks.getMusicPlaybackSession.mockReset();
+		mocks.getMusicPlaybackSession.mockResolvedValue(null);
+		mocks.saveMusicPlaybackProgress.mockReset();
+		mocks.saveMusicPlaybackProgress.mockResolvedValue({});
+		mocks.saveMusicPlaybackSession.mockReset();
+		mocks.saveMusicPlaybackSession.mockResolvedValue({});
 		useAuthStore().isAuthenticated = true;
 		// localStorage.clear()
 	});

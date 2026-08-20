@@ -3,7 +3,8 @@
     :show="show"
     title="编辑辩题"
     close-type="header"
-    @close="closeEditor"
+    above-player
+    @close="requestClose"
   >
     <form class="wiki-editor" @submit.prevent="save">
       <PInput
@@ -173,7 +174,7 @@
       <p v-else-if="saveError" class="wiki-editor__error" role="alert">保存失败，请重试</p>
 
       <div class="wiki-editor__footer">
-        <PButton variant="secondary" :disabled="saving" @click="closeEditor">
+        <PButton variant="secondary" :disabled="saving" @click="requestClose">
           取消
         </PButton>
         <PButton
@@ -188,6 +189,16 @@
       </div>
     </form>
   </PSheet>
+  <PConfirm
+    :show="discardPending"
+    title="放弃修改？"
+    message="未保存的内容将丢失。"
+    confirm-text="放弃"
+    danger
+    above-player
+    @confirm="confirmDiscard"
+    @cancel="cancelDiscard"
+  />
 </template>
 
 <script setup lang="ts">
@@ -197,7 +208,9 @@ import PEditor from '@/components/shared/PEditor.vue'
 import type { ResourceReferenceLabels } from '@/components/shared/editor/resourceReferenceExtension'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import { useDebateStore } from '@/stores/debate'
 import type { Debate, DebateRelationStance, DebateRevisionSnapshot } from '@/types'
 import { hasInvalidDebateReferenceSyntax } from '@/utils/resourceReferences'
@@ -259,6 +272,13 @@ const canSave = () => Boolean(
   && editSummary.value.trim()
   && !hasInvalidDebateReferenceSyntax(content.value),
 )
+const initialDraft = ref('')
+const isDirty = computed(() => initialDraft.value !== JSON.stringify(captureDraft()))
+const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: resetCloseGuard } = useSheetCloseGuard({
+  isDirty,
+  isSubmitting: saving,
+  close: () => closeEditor(),
+})
 const serverReferenceLabels = computed<ResourceReferenceLabels>(() => Object.fromEntries(
   normalizeDebateReferences(props.debate.references ?? []).map(reference => [
     `${reference.target.type}:${reference.target.id}`,
@@ -316,6 +336,8 @@ function startSession() {
   referenceResults.value = []
   selectedReference.value = null
   referenceStance.value = null
+  initialDraft.value = JSON.stringify(captureDraft())
+  resetCloseGuard()
 }
 
 function closeEditor() {

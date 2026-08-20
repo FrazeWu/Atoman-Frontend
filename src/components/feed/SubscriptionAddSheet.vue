@@ -3,8 +3,9 @@
     :show="show"
     title="添加订阅"
     close-type="header"
+    above-player
     :top="top"
-    @close="$emit('close')"
+    @close="requestClose"
   >
     <div class="add-sub-form">
       <div class="form-fields">
@@ -85,6 +86,16 @@
       </div>
     </div>
   </PSheet>
+  <PConfirm
+    :show="discardPending"
+    title="放弃添加？"
+    message="未保存的内容将丢失。"
+    confirm-text="放弃"
+    danger
+    above-player
+    @confirm="confirmDiscard"
+    @cancel="cancelDiscard"
+  />
 </template>
 
 <script setup lang="ts">
@@ -100,8 +111,10 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useFeedStore } from '@/stores/feed'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 
 const props = defineProps<{
   show: boolean
@@ -120,6 +133,7 @@ const emit = defineEmits<{
 const feedStore = useFeedStore()
 
 const sourceInput = ref('')
+const initialDraft = ref('')
 const customTitle = ref('')
 const selectedGroupId = ref('')
 const selectedCategory = ref<FeedSourceCategory>('blog')
@@ -167,6 +181,17 @@ const resolveStatusClass = computed(() => ({
   'resolve-status--blocked': resolved.value?.status === 'already_subscribed' || resolved.value?.status === 'invalid' || resolved.value?.status === 'not_found',
   'resolve-status--choice': resolved.value?.status === 'multiple_candidates',
 }))
+const isDirty = computed(() => initialDraft.value !== JSON.stringify({
+  sourceInput: sourceInput.value,
+  customTitle: customTitle.value,
+  selectedGroupId: selectedGroupId.value,
+  selectedCategory: selectedCategory.value,
+}))
+const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: resetCloseGuard } = useSheetCloseGuard({
+  isDirty,
+  isSubmitting: computed(() => props.submitting),
+  close: () => emit('close'),
+})
 
 watch(defaultGroupId, (val) => {
   if (val && !selectedGroupId.value) {
@@ -251,8 +276,16 @@ const submitSubscription = () => {
   })
 }
 
-watch(() => props.show, (val) => {
-  if (val) localError.value = ''
+watch(() => props.show, (show) => {
+  if (!show) return
+  localError.value = ''
+  initialDraft.value = JSON.stringify({
+    sourceInput: sourceInput.value,
+    customTitle: customTitle.value,
+    selectedGroupId: selectedGroupId.value,
+    selectedCategory: selectedCategory.value,
+  })
+  resetCloseGuard()
 })
 
 watch(() => props.resetKey, () => {

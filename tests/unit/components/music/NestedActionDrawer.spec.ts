@@ -38,6 +38,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     closeNestedAction: mocks.closeNestedAction,
     refreshAlbum: mocks.refreshAlbum,
     refreshSong: mocks.refreshSong,
+    isLayerActive: () => true,
     isLayerShifted: () => true,
     isTopLayer: () => false,
   }),

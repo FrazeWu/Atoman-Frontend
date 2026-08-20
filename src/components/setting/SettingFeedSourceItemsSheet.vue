@@ -3,6 +3,7 @@
     :show="show"
     title="订阅源条目"
     close-type="header"
+    above-player
     @close="$emit('close')"
   >
     <div class="setting-feed-items-sheet">

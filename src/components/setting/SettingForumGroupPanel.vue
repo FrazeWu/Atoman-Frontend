@@ -77,16 +77,31 @@
 	  </section>
 	</div>
 
-	<PModal v-model="groupModalOpen" :title="editingGroupId ? '编辑用户组' : '新建用户组'" size="sm">
+	<PModal
+      :model-value="groupModalOpen"
+      :title="editingGroupId ? '编辑用户组' : '新建用户组'"
+      size="sm"
+      @update:model-value="handleGroupModalVisibility"
+    >
 	  <div class="forum-group-panel__modal-form">
 		<PInput v-model="groupDraft.name" data-test="group-name" label="名称" placeholder="输入用户组名称" />
 		<PInput v-model="groupDraft.description" label="说明" placeholder="输入简短说明" />
 	  </div>
 	  <template #footer>
-		<PButton variant="secondary" @click="groupModalOpen = false">取消</PButton>
+		<PButton variant="secondary" @click="requestClose">取消</PButton>
 		<PButton data-test="group-save" :loading="savingGroup" :disabled="!groupDraft.name.trim()" @click="saveGroup">保存</PButton>
 	  </template>
 	</PModal>
+
+	<PConfirm
+      :show="discardPending"
+      title="放弃修改？"
+      message="未保存的用户组信息将丢失。"
+      confirm-text="放弃"
+      danger
+      @confirm="confirmDiscard"
+      @cancel="cancelDiscard"
+    />
 
 	<PModal v-model="deleteModalOpen" title="删除用户组" size="sm">
 	  <p>确认删除“{{ selectedGroup?.name }}”？</p>
@@ -105,8 +120,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
+import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import { useAuthStore } from '@/stores/auth'
 import type { ForumCategoryPermission, ForumGroup, User } from '@/types'
 
@@ -134,6 +151,15 @@ const savingPermission = ref(false)
 const message = ref('')
 const error = ref('')
 const groupDraft = reactive({ name: '', description: '' })
+const initialGroupDraft = ref('')
+const isGroupDraftDirty = computed(() => (
+  groupModalOpen.value && initialGroupDraft.value !== JSON.stringify(groupDraft)
+))
+const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: resetCloseGuard } = useSheetCloseGuard({
+  isDirty: isGroupDraftDirty,
+  isSubmitting: savingGroup,
+  close: () => { groupModalOpen.value = false },
+})
 const permissionDraft = reactive({ can_view: false, can_create_topic: false, can_comment: false })
 
 const selectedGroup = computed(() => groups.value.find(group => group.id === selectedGroupId.value))
@@ -187,7 +213,14 @@ function openCreateGroup() {
   editingGroupId.value = ''
   groupDraft.name = ''
   groupDraft.description = ''
+  initialGroupDraft.value = JSON.stringify(groupDraft)
+  resetCloseGuard()
   groupModalOpen.value = true
+}
+
+function handleGroupModalVisibility(visible: boolean) {
+  if (visible) return
+  requestClose()
 }
 
 function openEditGroup() {
@@ -195,6 +228,8 @@ function openEditGroup() {
   editingGroupId.value = selectedGroup.value.id
   groupDraft.name = selectedGroup.value.name
   groupDraft.description = selectedGroup.value.description || ''
+  initialGroupDraft.value = JSON.stringify(groupDraft)
+  resetCloseGuard()
   groupModalOpen.value = true
 }
 

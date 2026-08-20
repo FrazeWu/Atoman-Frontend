@@ -27,6 +27,7 @@ const {
   refreshArtist,
   refreshAlbum,
   openNestedAction,
+  isLayerActive,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -42,7 +43,7 @@ const creationFlow = computed(() => state.value.creationFlow)
 const isEditFlow = computed(() => creationFlow.value?.mode === 'edit')
 const isArtistEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'artist')
 const isAlbumEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'album')
-const isOpen = computed(() => props.layer !== undefined || creationFlow.value !== null)
+const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : creationFlow.value !== null)
 const sheetTitle = computed(() => {
   if (!isEditFlow.value) return '创建音乐条目'
   return isArtistEdit.value ? '编辑艺术家' : '编辑专辑'
@@ -931,6 +932,7 @@ async function completeCreation() {
 <template>
   <PToast v-model="toastVisible" :message="toastMessage" />
   <PSheet
+    above-player
     :show="isOpen"
     :title="sheetTitle"
     :index="sheetIndex"

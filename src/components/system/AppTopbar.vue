@@ -208,6 +208,11 @@ const toggleTheme = (event: MouseEvent) => {
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   backdrop-filter: blur(18px) saturate(180%);
 }
+.topbar:has(.topbar-search-wrap.is-open),
+.topbar:has(.dropdown-wrap .dropdown) {
+  z-index: var(--a-z-global-overlay);
+}
+
 .topbar--auth {
   background: rgba(255, 255, 255, 0.58);
 }

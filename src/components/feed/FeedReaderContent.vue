@@ -63,6 +63,15 @@ const enhanceContent = async () => {
       image.style.setProperty('--feed-reader-image-width', `${width}px`)
       image.style.setProperty('--feed-reader-image-ratio', `${width} / ${height}`)
     }
+    const setWideMedia = () => {
+      const mediaWidth = width || image.naturalWidth
+      const mediaHeight = height || image.naturalHeight
+      if (mediaWidth >= 800 && mediaWidth > mediaHeight) {
+        image.classList.add('feed-reader-media--wide')
+        image.closest('figure')?.classList.add('feed-reader-media--wide')
+      }
+    }
+    setWideMedia()
     const handleError = () => {
       image.classList.add('feed-reader-image--failed')
       if (image.nextElementSibling?.classList.contains('feed-reader-image-fallback')) return
@@ -71,8 +80,44 @@ const enhanceContent = async () => {
       fallback.textContent = image.alt ? `图片无法加载：${image.alt}` : '图片无法加载'
       image.insertAdjacentElement('afterend', fallback)
     }
+    image.addEventListener('load', setWideMedia, { once: true })
     image.addEventListener('error', handleError, { once: true })
+    cleanups.push(() => image.removeEventListener('load', setWideMedia))
     cleanups.push(() => image.removeEventListener('error', handleError))
+  })
+
+  root.querySelectorAll<HTMLPreElement>('pre').forEach((pre) => {
+    if (pre.parentElement?.classList.contains('feed-reader-code-block')) return
+    const wrapper = document.createElement('div')
+    wrapper.className = 'feed-reader-code-block'
+    pre.replaceWith(wrapper)
+    wrapper.append(pre)
+    const copyButton = document.createElement('button')
+    copyButton.type = 'button'
+    copyButton.className = 'feed-reader-code-copy'
+    copyButton.textContent = '复制'
+    const copyCode = async () => {
+      try {
+        await navigator.clipboard.writeText(pre.textContent || '')
+        copyButton.textContent = '已复制'
+      } catch {
+        copyButton.textContent = '复制失败'
+      }
+      window.setTimeout(() => { copyButton.textContent = '复制' }, 1600)
+    }
+    copyButton.addEventListener('click', copyCode)
+    wrapper.append(copyButton)
+    cleanups.push(() => copyButton.removeEventListener('click', copyCode))
+  })
+
+  root.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
+    if (table.parentElement?.classList.contains('feed-reader-table-wrap')) return
+    const wrapper = document.createElement('div')
+    wrapper.className = 'feed-reader-table-wrap'
+    wrapper.setAttribute('tabindex', '0')
+    wrapper.setAttribute('aria-label', '可横向滚动的表格')
+    table.replaceWith(wrapper)
+    wrapper.append(table)
   })
 }
 

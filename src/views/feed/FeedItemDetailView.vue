@@ -26,6 +26,7 @@
           <PBadge type="external">{{ item.feed_source?.title || 'RSS' }}</PBadge>
           <span v-if="item.author" class="author-tag">/ {{ item.author }}</span>
           <span class="date-tag">{{ formatDate(item.published_at) }}</span>
+          <span v-if="readingTimeLabel" class="reading-time-tag">{{ readingTimeLabel }}</span>
         </div>
       </header>
 
@@ -77,7 +78,7 @@
         <div style="display:flex;gap:1.5rem;justify-content:center;padding:3rem 0">
           <a :href="item.link" target="_blank" rel="noopener noreferrer" class="external-btn" @click="trackOriginalClick">
             <ExternalLink :size="17" aria-hidden="true" />
-            查看原文
+            在源站查看
           </a>
         </div>
       </footer>
@@ -121,6 +122,11 @@ const formatDate = (dateStr: string) => {
 
 const readerHTML = computed(() => item.value?.content_html || item.value?.content || item.value?.summary || '')
 const showStandaloneCover = computed(() => Boolean(item.value?.image_url) && !hasFeedReaderImage(readerHTML.value))
+
+const readingTimeLabel = computed(() => {
+  const textLength = readerHTML.value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length
+  return textLength ? `约 ${Math.max(1, Math.ceil(textLength / 400))} 分钟阅读` : ''
+})
 
 const contentSourceLabel = computed(() => {
   switch (item.value?.content_source) {
@@ -247,6 +253,10 @@ onUnmounted(() => {
 
 .author-tag {
   color: var(--a-color-text);
+}
+
+.reading-time-tag {
+  color: var(--a-color-muted);
 }
 
 .article-cover-wrap {

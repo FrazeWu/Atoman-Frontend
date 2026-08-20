@@ -2,10 +2,14 @@
   <PSheet
     :show="show"
     :title="sheetTitle"
+    width="min(100%, 800px)"
     close-type="bookmark"
     reading-mode
+    :is-shifted="commentsOpen"
+    :is-top-layer="!commentsOpen"
     :index="index"
     @close="$emit('close')"
+    @activate="commentsOpen = false"
   >
     <template v-if="article && article.type === 'post' && article.post">
       <div class="article-meta">
@@ -54,46 +58,31 @@
         <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
       </div>
       <div class="article-meta">
-        <span class="a-label a-muted">{{ article.feed_item.author || article.feed_item.feed_source?.title || 'RSS' }}</span>
-        <span style="color:var(--a-color-muted-soft)">{{ formatDate(article.feed_item.published_at) }}</span>
+        <span class="a-label a-muted">{{ article.feed_item.feed_source?.title || 'RSS' }}</span>
+        <span v-if="article.feed_item.author">{{ article.feed_item.author }}</span>
+        <span>{{ formatDate(article.feed_item.published_at) }}</span>
+        <span v-if="feedWordCountLabel">{{ feedWordCountLabel }}</span>
       </div>
       <h1 class="article-title">{{ article.feed_item.title }}</h1>
-      <div class="article-context-meta">
-        <span v-if="feedSourceTitle" class="article-context-chip">{{ feedSourceTitle }}</span>
-        <span v-if="feedContentStateLabel" class="article-context-chip">{{ feedContentStateLabel }}</span>
-        <span v-if="feedWordCountLabel" class="article-context-chip">{{ feedWordCountLabel }}</span>
-        <span v-if="feedFetchedAtLabel" class="article-context-chip">{{ feedFetchedAtLabel }}</span>
-      </div>
-      <div class="article-subtitle-meta">
-        <a :href="article.feed_item.link" target="_blank" rel="noopener noreferrer" class="read-original-link">
-          ↗ 阅读原文
+      <div class="article-toolbar">
+        <a
+          v-if="article.feed_item.link"
+          :href="article.feed_item.link"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="article-source-link"
+        >
+          <ExternalLink :size="16" aria-hidden="true" />
+          在源站查看
         </a>
-        <button
-          v-if="hasPrevious"
-          type="button"
-          class="read-original-link article-nav-link"
-          data-test="feed-article-prev"
-          @click="emit('previous')"
-        >
-          ← 上一篇
-        </button>
-        <button
-          v-if="hasNext"
-          type="button"
-          class="read-original-link article-nav-link"
-          data-test="feed-article-next"
-          @click="emit('next')"
-        >
-          下一篇 →
-        </button>
         <button
           v-if="isPlayablePodcast"
           type="button"
-          class="read-original-link article-play-link"
+          class="article-toolbar__button"
           data-test="feed-article-play"
           @click="emitPlayPodcast"
         >
-          {{ isPodcastPlaying ? '■ 播放中' : '▶ 播放播客' }}
+          {{ isPodcastPlaying ? '播放中，暂停' : '播放播客' }}
         </button>
       </div>
       
@@ -110,17 +99,46 @@
         />
         <FeedContentFeedback :item-id="article.feed_item.id" />
       </div>
-      <CommentSection :target="{ kind: 'feed_article', resourceId: article.feed_item.id }" />
-      
     </template>
+  </PSheet>
+
+  <PDiscussionFAB
+    v-if="article?.type === 'feed_item' && article.feed_item && show"
+    :count="commentCount"
+    @click="commentsOpen = true"
+  />
+  <div v-if="show" class="article-navigation" aria-label="文章导航">
+    <button type="button" :disabled="!hasPrevious" aria-label="上一篇" title="上一篇" data-test="feed-article-prev" @click="emit('previous')">
+      <ChevronLeft :size="20" aria-hidden="true" />
+    </button>
+    <button type="button" :disabled="!hasNext" aria-label="下一篇" title="下一篇" data-test="feed-article-next" @click="emit('next')">
+      <ChevronRight :size="20" aria-hidden="true" />
+    </button>
+  </div>
+  <PSheet
+    v-if="article?.type === 'feed_item' && article.feed_item"
+    :show="commentsOpen"
+    title="评论"
+    width="min(100%, 48rem)"
+    content-max-width="42rem"
+    :index="(index || 0) + 1"
+    @close="commentsOpen = false"
+    @activate="commentsOpen = false"
+  >
+    <CommentSection
+      :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
+      @count-change="commentCount = $event"
+    />
   </PSheet>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-vue-next'
 import type { FeedItem, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
 import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
@@ -141,6 +159,8 @@ const props = defineProps<{
 
 const { renderMarkdown } = useMarkdownRenderer()
 const feedCoverFailed = ref(false)
+const commentsOpen = ref(false)
+const commentCount = ref<number | undefined>(undefined)
 
 const feedCoverUrl = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
@@ -150,6 +170,8 @@ const feedCoverUrl = computed(() => {
 
 watch(() => props.article?.feed_item?.id, () => {
   feedCoverFailed.value = false
+  commentsOpen.value = false
+  commentCount.value = undefined
 })
 
 const renderedContent = computed(() => {
@@ -207,13 +229,12 @@ const feedContentStateLabel = computed(() => {
 })
 
 const feedWordCountLabel = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item?.full_text_word_count) return ''
-  return `约 ${props.article.feed_item.full_text_word_count} 字`
-})
-
-const feedFetchedAtLabel = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item?.fetched_at) return ''
-  return `抓取于 ${formatDate(props.article.feed_item.fetched_at)}`
+  const html = feedBodyHtml.value
+  const plainTextLength = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length
+  const wordCount = props.article?.type === 'feed_item' ? props.article.feed_item?.full_text_word_count : 0
+  const count = wordCount || plainTextLength
+  if (!count) return ''
+  return `约 ${count.toLocaleString('zh-CN')} 字，${Math.max(1, Math.ceil(count / 400))} 分钟阅读`
 })
 
 const feedBodyHtml = computed(() => {
@@ -255,6 +276,23 @@ const handleReadMore = (post: Post) => {
   )
 }
 
+const handleKeydown = (event: KeyboardEvent) => {
+  if (!props.show || !props.article || commentsOpen.value || event.defaultPrevented) return
+  const target = event.target
+  if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable="true"]')) return
+  if (event.key === 'ArrowLeft' && props.hasPrevious) {
+    event.preventDefault()
+    emit('previous')
+  }
+  if (event.key === 'ArrowRight' && props.hasNext) {
+    event.preventDefault()
+    emit('next')
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleKeydown))
+
 const emitPlayPodcast = () => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return
   emit('play-podcast', props.article.feed_item)
@@ -290,74 +328,91 @@ const emitPlayPodcast = () => {
 
 .article-meta {
   display: flex;
-  gap: 1rem;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin-bottom: 1.15rem;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .article-title {
-  font-family: inherit;
-  font-size: 2.25rem;
-  font-weight: 500;
-  line-height: 1.15;
-  margin-bottom: 1rem;
-  color: var(--a-color-fg);
+  max-width: 26ch;
+  margin: 0 0 1.35rem;
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
+  font-size: 2rem;
+  font-weight: 650;
+  line-height: 1.22;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
-.article-subtitle-meta {
+.article-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
   margin-bottom: 2.5rem;
 }
 
-.article-context-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-bottom: 1rem;
-}
-
-.article-context-chip {
+.article-source-link,
+.article-toolbar__button {
   display: inline-flex;
+  min-height: 36px;
   align-items: center;
-  min-height: 1.9rem;
-  padding: 0.2rem 0.65rem;
+  gap: 0.42rem;
+  padding: 0.4rem 0.7rem;
   border: 1px solid var(--a-color-border-soft);
-  color: var(--a-color-muted);
-  font-size: 0.74rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0;
-}
-
-.read-original-link {
-  display: inline-block;
-  font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: var(--a-font-weight-strong, 700);
-  color: var(--a-color-muted);
   text-decoration: none;
-  letter-spacing: 0;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--a-color-border-soft);
-  transition: all 0.15s ease;
 }
 
-.read-original-link:hover {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
+.article-source-link:hover,
+.article-toolbar__button:hover {
   border-color: var(--a-color-text);
 }
 
-.article-nav-link {
-  cursor: pointer;
-  background: var(--a-color-bg);
+.article-source-link:focus-visible,
+.article-toolbar__button:focus-visible,
+.article-navigation button:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
 }
 
-.article-play-link {
-  cursor: pointer;
+.article-navigation {
+  position: fixed;
+  right: min(816px, calc(100vw - 16px));
+  top: 50%;
+  z-index: calc(var(--a-z-sheet) + 1);
+  display: grid;
+  gap: 0.5rem;
+  transform: translateY(-50%);
+}
+
+.article-navigation button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+
+.article-navigation button:hover:not(:disabled) {
+  border-color: var(--a-color-text);
+}
+
+.article-navigation button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .article-summary {
@@ -390,7 +445,38 @@ const emitPlayPodcast = () => {
 .article-content-note {
   margin: 0;
   color: var(--a-color-muted);
-  font-size: 0.84rem;
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
   line-height: 1.6;
+}
+
+@media (max-width: 767px) {
+  .article-cover {
+    height: 220px;
+    margin-bottom: 2rem;
+  }
+
+  .article-title {
+    font-size: 1.7rem;
+  }
+
+  .article-toolbar {
+    margin-bottom: 2rem;
+  }
+
+  .article-navigation {
+    right: 1rem;
+    top: auto;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(2, 44px);
+    transform: none;
+  }
+
+  .article-navigation button {
+    width: 44px;
+    height: 44px;
+    background: var(--a-color-text);
+    color: var(--a-color-bg);
+  }
 }
 </style>

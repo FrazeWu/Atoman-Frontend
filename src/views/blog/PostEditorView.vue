@@ -3,26 +3,16 @@
     <div class="editor-shell">
       <div v-if="error" class="editor-error a-error">{{ error }}</div>
 
-      <div class="editor-lifecycle-controls">
-        <ContentScheduleControl
-          v-if="contentReady"
-          v-model="scheduledAt"
-          :busy="scheduling"
-          :disabled="Boolean(saving) || uploading || coverUploading"
-          @schedule="schedulePublish"
-        />
-        <PButton v-if="isEdit && contentReady" type="button" variant="secondary" size="sm" @click="versionHistoryOpen = true">
-          <History :size="16" aria-hidden="true" />
-          版本历史
-        </PButton>
-      </div>
-
-      <div class="editor-layout">
+      <div
+        class="editor-layout"
+        :class="{
+          'has-settings-panel': settingsPanelOpen,
+          'has-outline-panel': outlinePanelOpen,
+        }"
+      >
         <PostEditorSidebar
-          :mobile-open="mobilePanel === 'outline'"
-          :saving="saving"
-		  :preferred-status="preferredPublishStatus"
-          :has-draft-manager-access="hasDraftManagerAccess"
+          :mobile-open="mobilePanel === 'settings'"
+          :desktop-open="settingsPanelOpen"
           :channel-collections="channelCollections"
           :selected-collection-id="selectedNonDefaultCollectionId"
           :default-collection-id="defaultCollectionId"
@@ -31,68 +21,86 @@
           :cover-url="form.cover_url"
           :cover-uploading="coverUploading"
           :cover-upload-error="coverUploadError"
-          :outline-count="outline.length"
-          :flattened-outline="flattenedOutline"
-          :active-heading-line="activeHeadingLine"
-          @save-draft="save('draft')"
-          @save-published="save('published')"
-          @open-draft-manager="openDraftManager"
           @select-collection="onCollectionSelect"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
           @cover-upload="handleCoverUpload"
           @remove-cover="removeCover"
-          @jump-to-heading="jumpToHeading"
         />
-        <!-- 主编辑区 -->
-        <main class="col-center a-card-sm">
-          <div class="editor-mobile-actions">
-            <PButton type="button" variant="secondary" size="sm" @click="mobilePanel = mobilePanel === 'outline' ? null : 'outline'">目录</PButton>
-            <PButton type="button" variant="secondary" size="sm" @click="mobilePanel = mobilePanel === 'settings' ? null : 'settings'">设置</PButton>
-          </div>
 
-          <div v-if="contentReady" class="editor-workspace">
+        <main class="col-center a-card-sm">
+          <template v-if="contentReady">
             <PostEditorTopbar
               :is-edit="isEdit"
-              :char-count="charCount"
               :draft-status="draftStatus"
               :content-source="contentSource"
-              :uploading="uploading"
+              :saving="saving"
               @import-file="handleFileUpload"
+              @go-back="goBack"
+              @toggle-settings="toggleSettingsPanel"
+              @toggle-outline="toggleOutlinePanel"
               @trigger-reimport="triggerReimport"
-            />
-
-            <section class="editor-canvas">
-              <div v-if="isCollabEditing" class="collab-mode-banner">
-                <span class="collab-mode-banner__label">协作编辑</span>
-                <p class="collab-mode-banner__text">协作编辑请使用专业模式</p>
-              </div>
-              <div class="editor-body">
-                <PEditor
-                  ref="editorRef"
-                  v-model="editorBody"
-                  :mode="editorMode"
-                  :no-border="true"
-                  :protect-first-line="true"
-                  :enable-embeds="true"
-                  :enable-mentions="true"
-                  :enable-collab="shouldEnableCollab"
-                  :collab-room-id="collabRoomId"
-                  :show-mode-toggle="!shouldEnableCollab"
-                  :show-sync-scroll-toggle="true"
-                  :sync-scroll="syncScroll"
-                  @active-heading-change="activeHeadingLine = $event"
-                  @collab-ready="handleCollabReady"
-                  @mode-change="editorMode = $event"
-                  @update:sync-scroll="syncScroll = $event"
+              @open-version-history="versionHistoryOpen = true"
+              @save-draft="save('draft')"
+              @save-published="save('published')"
+            >
+              <template #schedule>
+                <ContentScheduleControl
+                  v-model="scheduledAt"
+                  :busy="scheduling"
+                  :disabled="Boolean(saving) || uploading || coverUploading"
+                  @schedule="schedulePublish"
                 />
-              </div>
-            </section>
-          </div>
+              </template>
+            </PostEditorTopbar>
+
+            <div class="editor-workspace">
+              <section class="editor-canvas">
+                <div v-if="isCollabEditing" class="collab-mode-banner">
+                  <span class="collab-mode-banner__label">协作编辑</span>
+                  <p class="collab-mode-banner__text">协作编辑请使用专业模式</p>
+                </div>
+                <div class="editor-body">
+                  <PEditor
+                    ref="editorRef"
+                    v-model="editorBody"
+                    :mode="editorMode"
+                    :no-border="true"
+                    :protect-first-line="true"
+                    :enable-embeds="true"
+                    :enable-mentions="true"
+                    :enable-collab="shouldEnableCollab"
+                    :collab-room-id="collabRoomId"
+                    :show-mode-toggle="!shouldEnableCollab"
+                    :show-sync-scroll-toggle="true"
+                    :sync-scroll="syncScroll"
+                    @active-heading-change="activeHeadingLine = $event"
+                    @collab-ready="handleCollabReady"
+                    @mode-change="editorMode = $event"
+                    @update:sync-scroll="syncScroll = $event"
+                  />
+                </div>
+              </section>
+            </div>
+          </template>
 
           <div v-else class="editor-loading">加载中…</div>
         </main>
+
+        <PostEditorOutline
+          :mobile-open="mobilePanel === 'outline'"
+          :desktop-open="outlinePanelOpen"
+          :outline-count="outline.length"
+          :flattened-outline="flattenedOutline"
+          :active-heading-line="activeHeadingLine"
+          @jump-to-heading="jumpToHeading"
+        />
       </div>
+    </div>
+
+    <div v-if="contentReady" class="editor-mobile-publish-actions">
+      <PButton type="button" variant="secondary" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="save('draft')">存草稿</PButton>
+      <PButton type="button" variant="primary" :loading="saving === 'published'" :disabled="Boolean(saving)" loading-text="发布中…" @click="save('published')">发布</PButton>
     </div>
 
     <PostEditorDraftRecoveryModal
@@ -194,10 +202,10 @@
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
-import { History } from 'lucide-vue-next'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import PEditor from '@/components/shared/PEditor.vue'
+import PostEditorOutline from '@/components/blog/PostEditorOutline.vue'
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -220,6 +228,7 @@ import {
 } from '@/composables/blog/usePostEditorDraftSession'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
 const studio = useStudioStore()
@@ -243,8 +252,32 @@ type FlattenedOutlineNode = OutlineItem & {
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
 const activeHeadingLine = ref<number | null>(null)
 const mobilePanel = ref<'outline' | 'settings' | null>(null)
+const settingsPanelOpen = ref(false)
+const outlinePanelOpen = ref(false)
 const editorMode = ref<'normal' | 'split'>('normal')
 const syncScroll = ref(true)
+
+const isCompactEditor = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 960px)').matches
+
+const toggleSettingsPanel = () => {
+  if (isCompactEditor()) {
+    mobilePanel.value = mobilePanel.value === 'settings' ? null : 'settings'
+    return
+  }
+  settingsPanelOpen.value = !settingsPanelOpen.value
+}
+
+const toggleOutlinePanel = () => {
+  if (isCompactEditor()) {
+    mobilePanel.value = mobilePanel.value === 'outline' ? null : 'outline'
+    return
+  }
+  outlinePanelOpen.value = !outlinePanelOpen.value
+}
+
+const goBack = () => {
+  router.back()
+}
 
 const saving = ref<SaveTarget | null>(null)
 const preferredPublishStatus = ref<SaveTarget>('published')
@@ -420,7 +453,6 @@ const {
   hasMeaningfulDraft,
   formatSavedTime,
   keepCurrentContent,
-  openDraftManager,
   closeDraftManager,
   restorePendingDraft,
   discardPendingDraft,
@@ -599,15 +631,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.editor-lifecycle-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
 .editor-page {
+  position: relative;
   height: calc(100vh - 64px);
   background: var(--a-color-bg);
   overflow: hidden;
@@ -615,58 +640,55 @@ onMounted(async () => {
 
 .editor-shell {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
   height: 100%;
-  box-sizing: border-box;
-}
-
-.import-actions,
-.meta-chip-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .editor-error {
+  margin: 0.75rem;
   padding: 0.9rem 1rem;
 }
 
 .editor-layout {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+  transition: grid-template-columns 160ms ease;
 }
 
-.editor-mobile-actions {
+.editor-layout.has-settings-panel {
+  grid-template-columns: 17.5rem minmax(0, 1fr) 0;
+}
+
+.editor-layout.has-outline-panel {
+  grid-template-columns: 0 minmax(0, 1fr) 15rem;
+}
+
+.editor-layout.has-settings-panel.has-outline-panel {
+  grid-template-columns: 17.5rem minmax(0, 1fr) 15rem;
+}
+
+.editor-mobile-publish-actions {
   display: none;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-bottom: var(--a-border);
 }
 
 .col-left,
 .col-center {
-  background: var(--a-color-bg);
   min-height: 0;
-}
-
-.col-left {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  overflow-y: auto;
 }
 
 .col-center {
   display: flex;
-  flex-direction: column;
   min-width: 0;
+  flex-direction: column;
   overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--a-color-bg);
 }
 
 /* 字数统计 chip */
@@ -702,81 +724,17 @@ onMounted(async () => {
 
 .editor-workspace {
   display: flex;
+  min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 1rem;
-  min-height: 0;
-  padding: 1.25rem;
-}
-
-.editor-meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.editor-meta-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.draft-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.6rem;
-  border: var(--a-border);
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  background: var(--a-color-bg);
-}
-
-.draft-status.is-ok {
-  border-color: var(--a-color-success);
-  color: var(--a-color-success);
-  background: color-mix(in srgb, var(--a-color-success) 8%, var(--a-color-bg));
-}
-
-.draft-status.is-warn {
-  border-color: var(--a-color-danger);
-  color: var(--a-color-danger);
-  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
-}
-
-.draft-status.is-muted {
-  border-color: var(--a-color-disabled-border);
-  color: var(--a-color-muted);
-  background: var(--a-color-surface);
-}
-
-
-.meta-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.65rem;
-  border: var(--a-border);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  background: var(--a-color-bg);
-}
-
-.hidden-file-input {
-  display: none;
 }
 
 .editor-canvas {
   display: flex;
-  flex: 1;
   min-height: 0;
+  flex: 1;
   flex-direction: column;
-  overflow: auto;
-  border: var(--a-border);
+  overflow: hidden;
   background: var(--a-color-bg);
 }
 
@@ -1059,46 +1017,63 @@ onMounted(async () => {
 }
 
 @media (max-width: 1200px) {
-  .editor-layout {
-    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
+  .editor-layout.has-settings-panel {
+    grid-template-columns: 17.5rem minmax(0, 1fr) 0;
+  }
+
+  .editor-layout.has-outline-panel {
+    grid-template-columns: 0 minmax(0, 1fr) 15rem;
+  }
+
+  .editor-layout.has-settings-panel.has-outline-panel {
+    grid-template-columns: 17.5rem minmax(0, 1fr) 15rem;
   }
 }
 
 @media (max-width: 960px) {
+  .editor-page {
+    height: calc(100dvh - 64px);
+  }
+
   .editor-layout {
-    grid-template-columns: minmax(0, 1fr);
+    display: block;
+    overflow: visible;
   }
 
   .editor-mobile-actions {
     display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: var(--a-border);
   }
-}
 
-@media (max-width: 800px) {
-  .editor-shell {
-    padding: 0.75rem;
+  .editor-mobile-publish-actions {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem calc(0.625rem + env(safe-area-inset-bottom));
+    border-top: var(--a-border);
+    background: var(--a-color-bg);
+  }
+
+  .editor-mobile-publish-actions :deep(.p-button) {
+    min-height: 2.75rem;
   }
 }
 
 @media (max-width: 640px) {
-  .editor-workspace {
-    padding: 1rem;
+  .editor-error {
+    margin: 0.5rem;
   }
 
   .collab-mode-banner {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .editor-meta-actions,
-  .draft-recovery-actions {
-    width: 100%;
-  }
-
-  .draft-status,
-  .editor-meta-actions :deep(.p-button) {
-    width: 100%;
-    justify-content: center;
   }
 
   .draft-manager-grid {

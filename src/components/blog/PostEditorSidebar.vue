@@ -1,32 +1,5 @@
 <template>
-  <aside class="editor-sidebar editor-sidebar-left a-card-sm" :class="{ 'is-open': mobileOpen }">
-    <section class="left-section publish-section">
-      <span class="a-label">发布</span>
-      <div class="publish-actions">
-        <PButton
-		  :variant="preferredStatus === 'draft' ? 'primary' : 'secondary'"
-          block
-          :loading="saving === 'draft'"
-          :disabled="!!saving"
-          loading-text="保存中…"
-          @click="$emit('save-draft')"
-        >
-          存草稿
-        </PButton>
-        <PButton
-		  :variant="preferredStatus === 'published' ? 'primary' : 'secondary'"
-          block
-          :loading="saving === 'published'"
-          :disabled="!!saving"
-          loading-text="发布中…"
-          @click="$emit('save-published')"
-        >
-          发布文章
-        </PButton>
-      </div>
-      <PButton v-if="hasDraftManagerAccess" type="button" variant="ghost" size="sm" block @click="$emit('open-draft-manager')">草稿管理</PButton>
-    </section>
-
+  <aside class="editor-sidebar editor-sidebar-left a-card-sm" :class="{ 'is-open': mobileOpen, 'is-expanded': desktopOpen }" aria-label="文章设置">
     <section class="left-section">
       <span class="a-label">所属合集</span>
       <div v-if="defaultCollection" class="collection-selection">
@@ -75,33 +48,6 @@
         </div>
       </details>
     </section>
-
-    <section class="left-section toc-panel">
-      <div class="section-heading-row">
-        <span class="a-label">文档目录</span>
-        <span class="a-muted">{{ outlineCount }} 个标题</span>
-      </div>
-      <div v-if="outlineCount === 0" class="col-empty">加入 Markdown 标题后显示</div>
-      <nav v-else class="outline-tree">
-        <button
-          v-for="item in flattenedOutline"
-          :key="item.id"
-          type="button"
-          class="outline-node"
-          :class="{
-            'is-active': item.line === activeHeadingLine,
-            'is-active-branch': item.isActiveBranch,
-            'has-children': item.hasChildren,
-          }"
-          :style="{ '--depth': String(item.depth) }"
-          :title="item.text"
-          @click="$emit('jump-to-heading', item.line)"
-        >
-          <span class="outline-caret" aria-hidden="true">{{ item.hasChildren ? (item.isExpanded ? '⌄' : '›') : '' }}</span>
-          <span class="outline-label">{{ item.text }}</span>
-        </button>
-      </nav>
-    </section>
   </aside>
 </template>
 
@@ -111,31 +57,18 @@ import { Check } from 'lucide-vue-next'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
-import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 
 type BlogVisibility = 'public' | 'followers' | 'private'
-type SaveTarget = 'draft' | 'published'
 type SidebarCollection = {
   id: string
   name: string
   is_default?: boolean
 }
-type FlattenedOutlineNode = {
-  id: string
-  text: string
-  line: number
-  depth: number
-  hasChildren: boolean
-  isExpanded: boolean
-  isActiveBranch: boolean
-}
 
 const props = defineProps<{
   mobileOpen: boolean
-  saving: SaveTarget | null
-	preferredStatus: SaveTarget
-  hasDraftManagerAccess: boolean
+  desktopOpen: boolean
   channelCollections: SidebarCollection[]
   selectedCollectionId?: string
   defaultCollectionId?: string
@@ -144,21 +77,14 @@ const props = defineProps<{
   coverUrl: string
   coverUploading: boolean
   coverUploadError: string
-  outlineCount: number
-  flattenedOutline: FlattenedOutlineNode[]
-  activeHeadingLine: number | null
 }>()
 
 defineEmits<{
-  (e: 'save-draft'): void
-  (e: 'save-published'): void
-  (e: 'open-draft-manager'): void
   (e: 'select-collection', id: string): void
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: BlogVisibility): void
   (e: 'cover-upload', event: Event): void
   (e: 'remove-cover'): void
-  (e: 'jump-to-heading', line: number): void
 }>()
 
 const defaultCollection = computed(() => props.channelCollections.find(collection => collection.is_default))
@@ -178,18 +104,29 @@ const triggerCoverUpload = () => {
 
 <style scoped>
 .editor-sidebar {
-  background: var(--a-color-bg);
-  min-height: 0;
   display: flex;
+  min-width: 0;
+  min-height: 0;
   flex-direction: column;
+  overflow: hidden;
+  border: 0;
+  background: var(--a-color-bg);
+  opacity: 0;
+  transform: translateX(-1rem);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+  visibility: hidden;
+}
+
+.editor-sidebar.is-expanded {
   overflow-y: auto;
+  border-right: var(--a-border);
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
 }
 
 .editor-sidebar-left {
-  position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 64px - 2rem);
-  overflow-y: auto;
+  max-height: none;
 }
 
 .left-section {
@@ -408,13 +345,19 @@ details[open] > .settings-summary::before {
 
 @media (max-width: 960px) {
   .editor-sidebar-left {
-    position: static;
-    max-height: none;
+    position: absolute;
+    z-index: 3;
+    inset: 0;
     display: none;
+    max-height: none;
   }
 
   .editor-sidebar-left.is-open {
     display: flex;
+    overflow-y: auto;
+    opacity: 1;
+    transform: translateX(0);
+    visibility: visible;
   }
 }
 

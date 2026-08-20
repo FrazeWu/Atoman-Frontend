@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { installStaleViteChunkRecovery } from '../../../src/utils/staleViteChunkRecovery'
+import { installStaleViteChunkRecovery, recoverStaleViteChunk } from '../../../src/utils/staleViteChunkRecovery'
 
 describe('stale Vite chunk recovery', () => {
   const originalLocation = window.location
@@ -31,6 +31,14 @@ describe('stale Vite chunk recovery', () => {
     window.dispatchEvent(event)
 
     expect(event.defaultPrevented).toBe(true)
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  it('only recovers dynamic module loading failures', () => {
+    expect(recoverStaleViteChunk(new Error('ordinary application failure'))).toBe(false)
+    expect(reload).not.toHaveBeenCalled()
+
+    expect(recoverStaleViteChunk(new Error('Failed to fetch dynamically imported module'))).toBe(true)
     expect(reload).toHaveBeenCalledOnce()
   })
 

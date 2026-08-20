@@ -1,0 +1,48 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useTransitionStore } from '../../../src/stores/transition'
+
+describe('transition store', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('restores the content when an exit navigation does not settle', () => {
+    const transition = useTransitionStore()
+
+    transition.triggerExit()
+    expect(transition.isExiting).toBe(true)
+
+    vi.advanceTimersByTime(1000)
+    expect(transition.isExiting).toBe(false)
+  })
+
+  it('replaces an exit state with an entry state', () => {
+    const transition = useTransitionStore()
+
+    transition.triggerExit()
+    transition.triggerEntry()
+
+    expect(transition.isExiting).toBe(false)
+    expect(transition.isEntering).toBe(true)
+
+    vi.advanceTimersByTime(800)
+    expect(transition.isEntering).toBe(false)
+  })
+
+  it('cancels pending transition timers when reset', () => {
+    const transition = useTransitionStore()
+
+    transition.triggerExit()
+    transition.reset()
+    vi.advanceTimersByTime(1000)
+
+    expect(transition.isExiting).toBe(false)
+    expect(transition.isEntering).toBe(false)
+  })
+})

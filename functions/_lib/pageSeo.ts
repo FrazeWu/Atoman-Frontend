@@ -96,7 +96,7 @@ export function buildStaticPageHtml(
 			`<meta data-default-meta property="og:description" content="${escapeHtml(meta.description)}">`,
 			`<meta data-default-meta property="og:url" content="${escapeHtml(canonical)}">`,
 			`<meta data-default-meta property="og:image" content="${defaultImage}">`,
-			'<meta data-default-meta name="twitter:card" content="summary">',
+			'<meta data-default-meta name="twitter:card" content="summary_large_image">',
 			`<meta data-default-meta name="twitter:title" content="${escapeHtml(meta.title)}">`,
 			`<meta data-default-meta name="twitter:description" content="${escapeHtml(meta.description)}">`,
 			`<meta data-default-meta name="twitter:image" content="${defaultImage}">`,

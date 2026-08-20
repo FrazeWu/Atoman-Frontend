@@ -16,11 +16,11 @@ const defaultMeta = [
   ['property', 'og:title', 'Atoman | 订阅与内容｜求真与开放'],
   ['property', 'og:description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
   ['property', 'og:url', 'https://www.atoman.org/'],
-  ['property', 'og:image', 'https://www.atoman.org/favicon.png'],
-  ['name', 'twitter:card', 'summary'],
+  ['property', 'og:image', 'https://www.atoman.org/atoman-share.png'],
+  ['name', 'twitter:card', 'summary_large_image'],
   ['name', 'twitter:title', 'Atoman | 订阅与内容｜求真与开放'],
   ['name', 'twitter:description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
-  ['name', 'twitter:image', 'https://www.atoman.org/favicon.png'],
+  ['name', 'twitter:image', 'https://www.atoman.org/atoman-share.png'],
 ] as const
 
 function createMeta(attribute: 'name' | 'property', key: string) {

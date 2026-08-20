@@ -52,4 +52,4 @@ bun run build
 - 输出目录：`dist`
 - API 地址：`VITE_API_URL=https://api.atoman.org/api`
 
-开发计划见 [ROADMAP.md](./ROADMAP.md)。
+短期 Feed 路线图见 [ROADMAP.md](./ROADMAP.md)，完整的产品、交付与质量规划见 [长期开发计划](./docs/plans/long-term-development-plan.md)。

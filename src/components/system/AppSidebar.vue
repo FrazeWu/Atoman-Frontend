@@ -231,8 +231,8 @@ const currentModule = computed(() => {
 
 // 2. Feed Navigation Items & Logic
 const feedNavItems = [
-  { to: moduleUrl('feed'), label: '订阅', icon: Rss, exact: true },
-  { to: modulePathUrl('feed', '/explore'), label: '探索', icon: Compass },
+  { to: moduleUrl('feed'), label: '探索', icon: Compass, exact: true },
+  { to: modulePathUrl('feed', '/subscriptions'), label: '订阅', icon: Rss },
   { to: modulePathUrl('feed', '/reading-list'), label: '稍后阅读', icon: Bookmark },
   { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Star },
 ]

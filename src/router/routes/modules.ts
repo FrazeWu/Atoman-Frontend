@@ -99,9 +99,14 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       component: () => import('@/views/feed/FeedLayout.vue'),
       meta: { hasSidebar: true },
       children: [
-        // allow guest view on feed home (tests expect public landing), auth required for subpages
-        { path: '', component: () => import('@/views/feed/FeedView.vue') },
-        { path: 'explore', component: () => import('@/views/feed/FeedRecommendedView.vue') },
+        // Exploration is the public feed landing; subscriptions remain available explicitly.
+        { path: '', component: () => import('@/views/feed/FeedRecommendedView.vue') },
+        { path: 'subscriptions', component: () => import('@/views/feed/FeedView.vue') },
+        { path: 'explore', redirect: (to) => ({
+          path: to.path.replace(/\/explore$/, '') || '/',
+          query: to.query,
+          hash: to.hash,
+        }) },
 
         { path: 'stats', component: () => import('@/views/feed/FeedStatsView.vue'), meta: { requiresAuth: true } },
         { path: 'item/:id', component: () => import('@/views/feed/FeedItemDetailView.vue') },

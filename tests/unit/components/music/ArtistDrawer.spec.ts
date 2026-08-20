@@ -17,6 +17,7 @@ const musicDrawerMocks = vi.hoisted(() => ({
 	openNestedAction: vi.fn(),
 	openArtist: vi.fn(),
 	openAlbum: vi.fn(),
+	openSong: vi.fn(),
 	openMusicEditor: vi.fn(),
 	openMusicCreationFlow: vi.fn(),
 	requireLogin: vi.fn(),
@@ -31,6 +32,11 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		openNestedAction: musicDrawerMocks.openNestedAction,
 		openArtist: musicDrawerMocks.openArtist,
 		openAlbum: musicDrawerMocks.openAlbum,
+		openSong: musicDrawerMocks.openSong,
+		returnToLayer: vi.fn(),
+		isLayerActive: () => true,
+		isLayerShifted: () => false,
+		isTopLayer: () => true,
 		openMusicEditor: musicDrawerMocks.openMusicEditor,
 		openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
 	}),
@@ -80,6 +86,7 @@ describe("ArtistDrawer.vue", () => {
 		musicDrawerMocks.openNestedAction.mockReset();
 		musicDrawerMocks.openArtist.mockReset();
 		musicDrawerMocks.openAlbum.mockReset();
+		musicDrawerMocks.openSong.mockReset();
 		musicDrawerMocks.openMusicEditor.mockReset();
 		musicDrawerMocks.openMusicCreationFlow.mockReset();
 		musicDrawerMocks.requireLogin.mockReset();
@@ -207,13 +214,17 @@ describe("ArtistDrawer.vue", () => {
 				{
 					id: "3",
 					title: "New Single",
+					release_date: "2024-05-01",
 					album_type: "single",
+					songs: [{ id: "song-3", title: "New Single", entry_status: "open" }],
 					entry_status: "open",
 				},
 				{
 					id: "4",
 					title: "Unreleased Track",
+					release_date: "2023-11-03",
 					album_type: "leak",
+					songs: [{ id: "song-4", title: "Unreleased Track", entry_status: "open" }],
 					entry_status: "open",
 				},
 			],
@@ -227,15 +238,15 @@ describe("ArtistDrawer.vue", () => {
 
 		expect(listMusicAlbums).toHaveBeenLastCalledWith({
 			artist_id: "1",
-			release_type: "song",
 			sort: "-release_date",
 			page: 1,
 			page_size: 100,
 		});
 		expect(wrapper.text()).toContain("New Single");
-		expect(wrapper.text()).toContain("单曲");
+		expect(wrapper.text()).toContain("2024/05/01");
 		expect(wrapper.text()).toContain("Unreleased Track");
-		expect(wrapper.text()).toContain("泄曲");
+		await wrapper.get(".artist-song-row").trigger("click");
+		expect(musicDrawerMocks.openSong).toHaveBeenCalledWith("song-3");
 	});
 
 	it("opens artist history from the contributors block", async () => {

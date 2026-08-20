@@ -24,6 +24,7 @@ const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'tes
 const creationFlow = computed(() => state.value.creationFlow)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
+const showsTrackList = computed(() => !['single', 'leak'].includes(albumDetailsDraft.value?.type ?? 'album'))
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const {
   coverInputRef,
@@ -507,7 +508,7 @@ watch(
       </section>
 
       <!-- 下一行：曲目列表 -->
-      <section class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
+      <section v-if="showsTrackList" class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
         <div class="track-adjustment__header">
           <div class="track-adjustment__header-title">
             <span class="field-label">曲目列表</span>

@@ -1,14 +1,17 @@
+// @ts-nocheck
+import { nextTick } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import MusicCreationAlbumDetailsStep from "@/components/music/MusicCreationAlbumDetailsStep.vue";
-import { useMusicDrawers } from "@/composables/useMusicDrawers";
+// @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
+import MusicCreationAlbumDetailsStep from "../../../../src/components/music/MusicCreationAlbumDetailsStep.vue";
+import { useMusicDrawers } from "../../../../src/composables/useMusicDrawers";
 import {
 	listMusicArtists,
 	uploadMusicAsset,
 	uploadMusicAssetWithProgress,
-} from "@/api/musicV1";
+} from "../../../../src/api/musicV1";
 
 vi.mock("@/api/musicV1", () => ({
 	uploadMusicAsset: vi.fn(),
@@ -104,6 +107,27 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 				.get('[data-testid="album-track-title-input"]')
 				.element.closest(".track-row__input"),
 		).not.toBeNull();
+	});
+
+	it("hides the track list for single and leak uploads while keeping it for EPs", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		flow.draft.albumDetails.type = "single";
+		await nextTick();
+		expect(wrapper.find(".track-adjustment").exists()).toBe(false);
+
+		flow.draft.albumDetails.type = "leak";
+		await nextTick();
+		expect(wrapper.find(".track-adjustment").exists()).toBe(false);
+
+		flow.draft.albumDetails.type = "ep";
+		await nextTick();
+		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
 	});
 
 	it("adds a lyric upload action to every new album track", () => {

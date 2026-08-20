@@ -26,13 +26,14 @@ import {
   type MusicContributor,
   type MusicAlbumListItem,
   type MusicArtistListItem,
+  type MusicSongListItem,
 } from '@/api/musicV1'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openSong, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : artistId.value !== null)
@@ -130,6 +131,21 @@ const sortedAlbums = computed(() => {
   }
 })
 
+const artistSongs = computed(() => {
+  const seen = new Set<string>()
+  return sortedAlbums.value.flatMap((album) => (album.songs ?? [])
+    .filter((song): song is MusicSongListItem => Boolean(song))
+    .flatMap((song) => {
+      if (seen.has(song.id)) return []
+      seen.add(song.id)
+      return [{ song, album }]
+    }))
+})
+
+function openArtistSong(song: MusicSongListItem) {
+  openSong(song.id)
+}
+
 function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision?: string, leavePrecision?: string) {
   const start = formatStoredPartialDate(joinDate, joinPrecision) || '未知'
   const end = formatStoredPartialDate(leaveDate, leavePrecision) || '至今'
@@ -144,7 +160,7 @@ async function listAllArtistAlbums(targetArtistId: string, isCurrentLoad: () => 
   while (hasMore) {
     const response = await listMusicAlbums({
       artist_id: targetArtistId,
-      release_type: releaseType.value,
+      ...(releaseType.value === 'album' ? { release_type: 'album' } : {}),
       sort: albumSortQuery(albumSortMode.value),
       page,
       page_size: artistAlbumPageSize,
@@ -499,42 +515,72 @@ watch([releaseType, albumSortMode], () => {
       </div>
 
       <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="!loading && !sortedAlbums.length" class="state-line">
+      <p v-else-if="!loading && !(releaseType === 'album' ? sortedAlbums.length : artistSongs.length)" class="state-line">
         {{ releaseType === 'album' ? '暂无专辑，可以添加新专辑。' : '暂无歌曲。' }}
       </p>
 
-      <template v-if="!loading">
+      <template v-if="!loading && releaseType === 'album'">
         <div
-        v-for="album in sortedAlbums"
-        :key="album.id"
-        class="album-row"
-        @click="openAlbum(album.id)"
-      >
-        <div class="album-row-left">
-          <div class="album-year">{{ formatAlbumReleaseDate(album) }}</div>
-        </div>
-        <div class="album-row-right">
-          <div class="album-row-cover">
-            <img v-if="album.cover_url" :src="album.cover_url" alt="" class="album-row-img" />
-            <span v-else>COVER</span>
+          v-for="album in sortedAlbums"
+          :key="album.id"
+          class="album-row"
+          @click="openAlbum(album.id)"
+        >
+          <div class="album-row-left">
+            <div class="album-year">{{ formatAlbumReleaseDate(album) }}</div>
           </div>
-          <div class="album-row-info">
-            <div class="album-row-title">{{ album.title }}</div>
-            <div v-if="album.description" class="album-row-description">
-              {{ album.description }}
+          <div class="album-row-right">
+            <div class="album-row-cover">
+              <img v-if="album.cover_url" :src="album.cover_url" alt="" class="album-row-img" />
+              <span v-else>COVER</span>
             </div>
-            <div class="album-row-meta">
-              <span class="album-meta-tag">{{ formatAlbumTypeLabel(album.album_type) }}</span>
-              <span class="album-meta-divider">•</span>
-              <span>{{ albumTrackCount(album) }} 首曲目</span>
-              <template v-if="album.play_count">
+            <div class="album-row-info">
+              <div class="album-row-title">{{ album.title }}</div>
+              <div v-if="album.description" class="album-row-description">
+                {{ album.description }}
+              </div>
+              <div class="album-row-meta">
+                <span class="album-meta-tag">{{ formatAlbumTypeLabel(album.album_type) }}</span>
                 <span class="album-meta-divider">•</span>
-                <span>{{ album.play_count }} 次播放</span>
-              </template>
+                <span>{{ albumTrackCount(album) }} 首曲目</span>
+                <template v-if="album.play_count">
+                  <span class="album-meta-divider">•</span>
+                  <span>{{ album.play_count }} 次播放</span>
+                </template>
+              </div>
             </div>
           </div>
         </div>
-        </div>
+      </template>
+
+      <template v-else-if="!loading">
+        <button
+          v-for="{ song, album } in artistSongs"
+          :key="song.id"
+          type="button"
+          class="album-row artist-song-row"
+          @click="openArtistSong(song)"
+        >
+          <div class="album-row-left">
+            <div class="album-year">{{ formatAlbumReleaseDate(album) }}</div>
+          </div>
+          <div class="album-row-right">
+            <div class="album-row-cover">
+              <img v-if="song.cover_url || album.cover_url" :src="song.cover_url || album.cover_url" alt="" class="album-row-img" />
+              <span v-else>COVER</span>
+            </div>
+            <div class="album-row-info">
+              <div class="album-row-title">{{ song.title }}</div>
+              <div class="album-row-meta">
+                <span>{{ album.title }}</span>
+                <template v-if="song.artists?.length">
+                  <span class="album-meta-divider">•</span>
+                  <span>{{ song.artists.map((item) => item.name).join(' / ') }}</span>
+                </template>
+              </div>
+            </div>
+          </div>
+        </button>
       </template>
       <MusicContributorsBlock
         v-if="!loading"

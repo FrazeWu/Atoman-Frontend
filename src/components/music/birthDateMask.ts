@@ -28,7 +28,7 @@ export function parsePartialDateParts(value: string): PartialDateParts {
 	const trimmed = value.trim();
 	if (!trimmed) return { year: "", month: "", day: "" };
 	const unknownYearMatch = trimmed.match(
-		/^(-{1,4})(?:\/(?:mm|--)?(?:\/(?:dd|--)?)?)?$/,
+		/^(-{1,4})y*(?:\/(?:mm|--)?(?:\/(?:dd|--)?)?)?$/,
 	);
 	if (unknownYearMatch) {
 		const year = unknownYearMatch[1];
@@ -67,7 +67,10 @@ export function parsePartialDateParts(value: string): PartialDateParts {
 
 export function formatPartialDateInput(parts: PartialDateParts) {
 	if (!parts.year && !parts.month && !parts.day) return "yyyy/mm/dd";
-	return `${parts.year || "yyyy"}/${parts.month || "mm"}/${parts.day || "dd"}`;
+	const year = parts.year === "----" ? "----" : `${parts.year}${"yyyy".slice(parts.year.length)}`;
+	const month = parts.month === "--" ? "--" : `${parts.month}${"mm".slice(parts.month.length)}`;
+	const day = parts.day === "--" ? "--" : `${parts.day}${"dd".slice(parts.day.length)}`;
+	return `${year}/${month}/${day}`;
 }
 
 export function serializePartialDate(parts?: PartialDateParts) {

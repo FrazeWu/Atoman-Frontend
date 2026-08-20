@@ -130,7 +130,23 @@ describe("PMaskedDateInput", () => {
 		});
 	});
 
-	it("allows sequential year entry to use the native input path", async () => {
+	it("fills the year slots in order while typing", async () => {
+		const wrapper = mount(PMaskedDateInput, {
+			props: { modelValue: { year: "", month: "", day: "" } },
+		});
+		const input = wrapper.find('input[type="text"]');
+		const element = input.element as HTMLInputElement;
+		element.setSelectionRange(0, 0);
+
+		for (const digit of "1997") {
+			await input.trigger("keydown", { key: digit });
+		}
+
+		expect(element.value).toBe("1997/mm/dd");
+		expect(element.selectionStart).toBe(5);
+	});
+
+	it("prevents native insertion so the mask keeps its fixed slots", async () => {
 		const wrapper = mount(PMaskedDateInput, {
 			props: { modelValue: { year: "2", month: "", day: "" } },
 		});
@@ -146,7 +162,8 @@ describe("PMaskedDateInput", () => {
 		element.dispatchEvent(event);
 		await nextTick();
 
-		expect(event.defaultPrevented).toBe(false);
+		expect(event.defaultPrevented).toBe(true);
+		expect(element.value).toBe("20yy/mm/dd");
 	});
 
 	it("replaces the day at the current cursor without moving the caret to the year", async () => {

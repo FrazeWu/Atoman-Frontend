@@ -84,15 +84,12 @@ function dateSlotAt(cursor: number): number | null {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-	if (!/^[0-9-]$/.test(event.key) || event.metaKey || event.ctrlKey || event.altKey) return
+	if (!/^[0-9]$/.test(event.key) || event.metaKey || event.ctrlKey || event.altKey) return
 	const input = event.target as HTMLInputElement
-	if (input.selectionStart !== input.selectionEnd) return
 	const cursor = input.selectionStart ?? 0
-	// The native input path already handles sequential entry. Only replace a digit
-	// when editing one of the two existing day slots.
-	if (cursor < 8 || cursor > 9) return
 	const slot = dateSlotAt(cursor)
 	if (slot === null) return
+
 	event.preventDefault()
 	const nextValue = `${internalValue.value.slice(0, slot)}${event.key}${internalValue.value.slice(slot + 1)}`
 	const parts = parsePartialDateParts(nextValue)

@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { config, flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "../../../../src/stores/auth";
@@ -88,6 +88,7 @@ vi.mock("@/stores/player", () => ({
 
 describe("Music DiscoverView.vue", () => {
 	afterEach(() => {
+		config.global.plugins = [];
 		setActivePinia(undefined);
 	});
 
@@ -118,6 +119,12 @@ describe("Music DiscoverView.vue", () => {
 		mocks.requireLogin.mockReturnValue(true);
 		mocks.listMusicAlbumImports.mockResolvedValue([]);
 		mocks.routeQuery = {};
+		const pinia = createPinia();
+		config.global.plugins = [pinia];
+		setActivePinia(pinia);
+		const auth = useAuthStore(pinia);
+		auth.isAuthenticated = true;
+		auth.token = "test-token";
 
 		mocks.getMusicHome.mockResolvedValue({
 			personalized: true,
@@ -496,7 +503,7 @@ describe("Music DiscoverView.vue", () => {
 		});
 		await flushPromises();
 
-		expect(mocks.getMusicHome).toHaveBeenCalledWith({ page: 1, page_size: 8 });
+		expect(mocks.getMusicHome).toHaveBeenCalledWith();
 		expect(mocks.listMusicAlbums).toHaveBeenCalledWith({
 			page: 1,
 			page_size: 8,
@@ -539,6 +546,38 @@ describe("Music DiscoverView.vue", () => {
 			.findAll('[data-testid="discover-section-title"]')
 			.map((node) => node.text());
 		expect(sections).toEqual(["专辑", "歌单", "艺人"]);
+	});
+
+	it("skips personalized home for anonymous visitors", async () => {
+		const auth = useAuthStore();
+		auth.isAuthenticated = false;
+		auth.token = null;
+
+		const wrapper = mount(DiscoverView);
+		await flushPromises();
+
+		expect(mocks.getMusicHome).not.toHaveBeenCalled();
+		expect(mocks.listMusicAlbums).toHaveBeenCalledTimes(1);
+		expect(mocks.listRecommendedArtists).toHaveBeenCalledTimes(1);
+		expect(mocks.listPublicMusicPlaylists).toHaveBeenCalledTimes(1);
+		expect(wrapper.find('[aria-label="发现分区"]').exists()).toBe(true);
+	});
+
+	it("starts public discovery before personalized home resolves", async () => {
+		let resolveHome!: (value: Record<string, unknown>) => void;
+		mocks.getMusicHome.mockImplementationOnce(() => new Promise((resolve) => {
+			resolveHome = resolve;
+		}));
+
+		mount(DiscoverView);
+		await flushPromises();
+
+		expect(mocks.listMusicAlbums).toHaveBeenCalledTimes(1);
+		expect(mocks.listRecommendedArtists).toHaveBeenCalledTimes(1);
+		expect(mocks.listPublicMusicPlaylists).toHaveBeenCalledTimes(1);
+
+		resolveHome({ personalized: true, recently_played: [], for_you: [] });
+		await flushPromises();
 	});
 
 	it("loads more items for only the selected discovery section", async () => {

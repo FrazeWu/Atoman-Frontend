@@ -102,6 +102,7 @@ let activeSearchRequestId = 0
 let albumSearchTimer: ReturnType<typeof setTimeout> | null = null
 let bookmarkRequestId = 0
 const musicHomeRequests = useRequestGeneration()
+const personalizationRequests = useRequestGeneration()
 const albumIndexRequests = useRequestGeneration()
 
 const starredAlbumIds = ref<string[]>([])
@@ -262,28 +263,46 @@ async function handleTogglePlaylistBookmark(playlistId: string) {
   }
 }
 
-async function fetchMusicHome() {
-  const request = musicHomeRequests.beginRequest()
+async function fetchPersonalizedHome() {
+  const request = personalizationRequests.beginRequest()
   const currentBookmarkRequestId = ++bookmarkRequestId
-  resetDiscoverSections()
-  loading.value = true
-  errorMessage.value = ''
+  if (!authStore?.isAuthenticated) {
+    if (!request.isCurrent()) return
+    musicHome.value = null
+    starredAlbumIds.value = []
+    starredArtistIds.value = []
+    starredPlaylistIds.value = []
+    return
+  }
+
   try {
-    const response = await getMusicHome({ page: 1, page_size: discoverPageSize })
+    const response = await getMusicHome()
     if (!request.isCurrent()) return
     musicHome.value = response
     forYouBatchIndex.value = 0
-    await Promise.all((['album', 'artist', 'playlist'] as const).map((section) => (
-      loadDiscoverSection(section, 1, false, request.isCurrent)
-    )))
-    if (!request.isCurrent()) return
     void fetchAlbumBookmarks(currentBookmarkRequestId)
     void fetchArtistBookmarks(currentBookmarkRequestId)
     void fetchPlaylistBookmarks(currentBookmarkRequestId)
   } catch (error) {
     if (!request.isCurrent()) return
-    reportError(error, 'Failed to fetch music home:')
+    reportError(error, 'Failed to fetch personalized music home:')
     musicHome.value = null
+  }
+}
+
+async function fetchMusicHome() {
+  const request = musicHomeRequests.beginRequest()
+  resetDiscoverSections()
+  loading.value = true
+  errorMessage.value = ''
+  void fetchPersonalizedHome()
+  try {
+    await Promise.all((['album', 'artist', 'playlist'] as const).map((section) => (
+      loadDiscoverSection(section, 1, false, request.isCurrent)
+    )))
+  } catch (error) {
+    if (!request.isCurrent()) return
+    reportError(error, 'Failed to fetch music discovery:')
     resetDiscoverSections()
     errorMessage.value = '发现内容加载失败'
   } finally {
@@ -558,6 +577,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (albumSearchTimer) clearTimeout(albumSearchTimer)
   musicHomeRequests.beginRequest()
+  personalizationRequests.beginRequest()
   albumIndexRequests.beginRequest()
 })
 
@@ -570,7 +590,7 @@ watch(
 watch(
   () => [authStore?.isAuthenticated, authStore?.token, authStore?.user?.uuid],
   () => {
-    if (props.contentMode === 'discover') void fetchMusicHome()
+    if (props.contentMode === 'discover') void fetchPersonalizedHome()
   },
 )
 

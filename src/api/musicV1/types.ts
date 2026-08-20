@@ -646,10 +646,6 @@ export type MusicHome = {
 	recently_played: MusicListeningHistory[];
 	for_you: Array<MusicAlbumListItem & { reason?: string }>;
 	for_you_reason?: string;
-	sections: Array<{ key: string; title: string; albums: MusicAlbumListItem[] }>;
-	discover: MusicDiscoverItem[];
-	discover_has_more: boolean;
-	discover_meta: PaginationMeta;
 };
 
 export type MusicPlaylistSummary = {

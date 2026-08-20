@@ -564,10 +564,8 @@ export async function listMusicLibrary<T>(
 	return listResponseWithPaginationFallback(response, filters);
 }
 
-export async function getMusicHome(
-	filters: { page?: number; page_size?: number } = {},
-): Promise<MusicHome> {
-	return apiGet<MusicHome>(`${musicV1Endpoints.home()}${queryString(filters)}`);
+export async function getMusicHome(): Promise<MusicHome> {
+	return apiGet<MusicHome>(musicV1Endpoints.home());
 }
 
 export async function getMusicSongLyrics(

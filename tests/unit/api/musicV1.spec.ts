@@ -435,7 +435,7 @@ describe("music v1 adapter", () => {
 		);
 	});
 
-	it("requests music home from GET /api/v1/music/home and returns its discover payload", async () => {
+	it("requests the personalized music home from GET /api/v1/music/home", async () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(
@@ -445,24 +445,14 @@ describe("music v1 adapter", () => {
 							data: {
 								personalized: false,
 								recently_played: [],
-								for_you: [],
-								sections: [],
-								discover: [
+								for_you: [
 									{
-										type: "album",
 										id: "album-1",
 										title: "Album",
-										target_path: "/music?album=album-1",
-									},
-									{
-										type: "playlist",
-										id: "playlist-1",
-										title: "Playlist",
-										song_count: 8,
-										target_path: "/music/playlists/playlist-1",
+										entry_status: "open",
+										reason: "基于最近播放",
 									},
 								],
-								discover_has_more: false,
 							},
 						}),
 						{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -476,19 +466,12 @@ describe("music v1 adapter", () => {
 			credentials: "include",
 			headers: { Accept: "application/json" },
 		});
-		expect(result.discover).toEqual([
+		expect(result.for_you).toEqual([
 			{
-				type: "album",
 				id: "album-1",
 				title: "Album",
-				target_path: "/music?album=album-1",
-			},
-			{
-				type: "playlist",
-				id: "playlist-1",
-				title: "Playlist",
-				song_count: 8,
-				target_path: "/music/playlists/playlist-1",
+				entry_status: "open",
+				reason: "基于最近播放",
 			},
 		]);
 	});

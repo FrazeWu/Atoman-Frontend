@@ -98,6 +98,50 @@ describe("static page SEO", () => {
 		expect(next).toHaveBeenCalledOnce();
 	});
 
+	it("replaces an asset SPA fallback with the archived JavaScript asset", async () => {
+		const next = vi.fn(async () => new Response(shell, {
+			headers: { "content-type": "text/html; charset=UTF-8" },
+		}));
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/assets/MusicLayout-old.js"),
+			env: {
+				FRONTEND_RELEASE_ASSETS: {
+					get: vi.fn(async () => ({
+						body: new ReadableStream({
+							start(controller) {
+								controller.enqueue(new TextEncoder().encode("export {};"));
+								controller.close();
+							},
+						}),
+						httpEtag: '"asset-etag"',
+						httpMetadata: { contentType: "application/javascript" },
+					})),
+				},
+			},
+			next,
+		});
+
+		expect(response.headers.get("content-type")).toBe("application/javascript");
+		expect(response.headers.get("cache-control")).toContain("immutable");
+		expect(await response.text()).toBe("export {};");
+		expect(next).toHaveBeenCalledOnce();
+	});
+
+	it("falls through to the current deployment when an archived asset is absent", async () => {
+		const currentAsset = new Response("current asset", {
+			headers: { "content-type": "application/javascript" },
+		});
+		const next = vi.fn(async () => currentAsset);
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/assets/current.js"),
+			env: { FRONTEND_RELEASE_ASSETS: { get: vi.fn(async () => null) } },
+			next,
+		});
+
+		expect(response).toBe(currentAsset);
+		expect(next).toHaveBeenCalledOnce();
+	});
+
 	it("only transforms HTML responses in middleware", async () => {
 		const response = await pageMiddleware({
 			request: new Request("https://www.atoman.org/feed"),

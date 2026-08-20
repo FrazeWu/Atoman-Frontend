@@ -51,5 +51,6 @@ bun run build
 - 构建命令：`bun run build`
 - 输出目录：`dist`
 - API 地址：`VITE_API_URL=https://api.atoman.org/api`
+- 历史前端资产：GitHub Actions 会把每个 `main` 构建的 `dist/assets` 归档到 R2，Pages 在旧 hash 缺失时从归档返回正确的模块文件。仓库必须配置 `CLOUDFLARE_R2_RELEASE_ASSETS_TOKEN` secret，权限限定为 `atoman-frontend-releases` bucket 的对象读写。
 
 短期 Feed 路线图见 [ROADMAP.md](./ROADMAP.md)，完整的产品、交付与质量规划见 [长期开发计划](./docs/plans/long-term-development-plan.md)。

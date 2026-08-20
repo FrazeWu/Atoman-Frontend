@@ -79,3 +79,4 @@
   },
   "packageManager": "bun@1.3.14"
 }
+    "archive:release-assets": "bun scripts/publish-release-assets.ts",

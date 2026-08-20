@@ -6,9 +6,20 @@ import {
 	resolvePublicContentSeo,
 } from "./_lib/publicContentSeo";
 
+type ArchivedAsset = {
+	body: ReadableStream;
+	httpEtag: string;
+	httpMetadata?: { contentType?: string };
+};
+
 type MiddlewareContext = {
 	request: Request;
-	env?: { VITE_API_URL?: string };
+	env?: {
+		VITE_API_URL?: string;
+		FRONTEND_RELEASE_ASSETS?: {
+			get: (key: string) => Promise<ArchivedAsset | null>;
+		};
+	};
 	next: () => Promise<Response>;
 };
 
@@ -33,12 +44,48 @@ function redirectLegacyRoute(request: Request) {
 	}
 }
 
+function archivedAssetKey(request: Request) {
+	if (request.method !== "GET" && request.method !== "HEAD") return undefined;
+
+	try {
+		const pathname = new URL(request.url).pathname;
+		return pathname.startsWith("/assets/") ? pathname.slice(1) : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+async function serveArchivedAsset(context: MiddlewareContext, key: string) {
+	if (!context.env?.FRONTEND_RELEASE_ASSETS) return undefined;
+
+	try {
+		const asset = await context.env.FRONTEND_RELEASE_ASSETS.get(key);
+		if (!asset) return undefined;
+
+		const headers = new Headers({
+			"cache-control": "public, max-age=31536000, immutable",
+			etag: asset.httpEtag,
+			"content-type": asset.httpMetadata?.contentType || "application/octet-stream",
+		});
+		return new Response(context.request.method === "HEAD" ? null : asset.body, {
+			headers,
+		});
+	} catch {
+		return undefined;
+	}
+}
+
 export async function onRequest(context: MiddlewareContext) {
 	const redirect = redirectLegacyRoute(context.request);
 	if (redirect) return redirect;
 
+	const assetKey = archivedAssetKey(context.request);
 	const response = await context.next();
 	const contentType = response.headers.get("content-type") || "";
+	if (assetKey && contentType.includes("text/html")) {
+		const archivedAsset = await serveArchivedAsset(context, assetKey);
+		if (archivedAsset) return archivedAsset;
+	}
 	if (!contentType.includes("text/html")) return response;
 
 	try {

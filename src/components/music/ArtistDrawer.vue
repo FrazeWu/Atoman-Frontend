@@ -19,6 +19,7 @@ import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import {
   getMusicArtist,
   listMusicAlbums,
+  listMusicSongs,
   createArtistBookmark,
   deleteArtistBookmark,
   listArtistBookmarks,
@@ -45,6 +46,7 @@ const displayName = computed(() => artist.value?.display_name || artist.value?.n
 const sheetTitle = computed(() => displayName.value ? `艺术家 · ${displayName.value}` : (props.layer?.title ?? '艺术家'))
 const returnCurrentArtist = () => props.layer && returnToLayer(props.layer.key)
 const albums = ref<MusicAlbumListItem[]>([])
+const songs = ref<MusicSongListItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const redirectMessage = ref('')
@@ -89,7 +91,7 @@ function albumSortQuery(mode: AlbumSortMode) {
   return '-release_date'
 }
 
-function formatAlbumReleaseDate(album: MusicAlbumListItem) {
+function formatAlbumReleaseDate(album: Pick<MusicAlbumListItem, 'release_date' | 'release_date_precision' | 'year'>) {
   if (album.release_date) {
 		const cleaned = formatStoredPartialDate(album.release_date, album.release_date_precision).replace(/-/g, '/')
     if (cleaned.length >= 4) return cleaned
@@ -131,16 +133,10 @@ const sortedAlbums = computed(() => {
   }
 })
 
-const artistSongs = computed(() => {
-  const seen = new Set<string>()
-  return sortedAlbums.value.flatMap((album) => (album.songs ?? [])
-    .filter((song): song is MusicSongListItem => Boolean(song))
-    .flatMap((song) => {
-      if (seen.has(song.id)) return []
-      seen.add(song.id)
-      return [{ song, album }]
-    }))
-})
+const artistSongs = computed(() => songs.value.map((song) => ({
+  song,
+  album: song.album ?? { id: '', title: '', cover_url: '' },
+})))
 
 function openArtistSong(song: MusicSongListItem) {
   openSong(song.id)
@@ -174,12 +170,29 @@ async function listAllArtistAlbums(targetArtistId: string, isCurrentLoad: () => 
   return allAlbums
 }
 
+async function listAllArtistSongs(targetArtistId: string, isCurrentLoad: () => boolean) {
+  const allSongs: MusicSongListItem[] = []
+  let page = 1
+  let hasMore = true
+
+  while (hasMore) {
+    const response = await listMusicSongs({ artist_id: targetArtistId, sort: albumSortQuery(albumSortMode.value), page, page_size: artistAlbumPageSize })
+    if (!isCurrentLoad()) return null
+    allSongs.push(...response.data)
+    hasMore = response.meta.has_more
+    page += 1
+  }
+
+  return allSongs
+}
+
 async function loadArtist(targetArtistId: string | null) {
   const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
   if (!targetArtistId) {
     if (isCurrentLoad()) {
       artist.value = null
       albums.value = []
+      songs.value = []
       isBookmarked.value = false
       contributors.value = []
       contributorTotal.value = 0
@@ -206,10 +219,16 @@ async function loadArtist(targetArtistId: string | null) {
       return
     }
     redirectMessage.value = ''
-    const allAlbums = await listAllArtistAlbums(targetArtistId, isCurrentLoad)
-    if (!isCurrentLoad() || !allAlbums) return
+    const allAlbums = releaseType.value === 'album'
+      ? await listAllArtistAlbums(targetArtistId, isCurrentLoad)
+      : []
+    const allSongs = releaseType.value === 'song'
+      ? await listAllArtistSongs(targetArtistId, isCurrentLoad)
+      : []
+    if (!isCurrentLoad() || !allAlbums || !allSongs) return
     artist.value = artistResponse
     albums.value = allAlbums
+    songs.value = allSongs
     try {
       const contributorResponse = await listArtistContributors(targetArtistId)
       if (!isCurrentLoad()) return

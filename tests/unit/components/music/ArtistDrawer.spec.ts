@@ -52,6 +52,7 @@ vi.mock("@/composables/useLoginRedirect", () => ({
 const {
 	getMusicArtist,
 	listMusicAlbums,
+	listMusicSongs,
 	listArtistContributors,
 	listArtistBookmarks,
 	createArtistBookmark,
@@ -59,6 +60,7 @@ const {
 } = vi.hoisted(() => ({
 	getMusicArtist: vi.fn(),
 	listMusicAlbums: vi.fn(),
+	listMusicSongs: vi.fn(),
 	listArtistContributors: vi.fn(),
 	listArtistBookmarks: vi.fn(),
 	createArtistBookmark: vi.fn(),
@@ -68,6 +70,7 @@ const {
 vi.mock("@/api/musicV1", () => ({
 	getMusicArtist,
 	listMusicAlbums,
+	listMusicSongs,
 	listArtistContributors,
 	listArtistBookmarks,
 	createArtistBookmark,
@@ -79,6 +82,7 @@ describe("ArtistDrawer.vue", () => {
 		drawerState.value = { artistId: "1", artistRefreshToken: 0 };
 		getMusicArtist.mockReset();
 		listMusicAlbums.mockReset();
+		listMusicSongs.mockReset();
 		listArtistContributors.mockReset();
 		listArtistBookmarks.mockReset();
 		createArtistBookmark.mockReset();
@@ -121,6 +125,10 @@ describe("ArtistDrawer.vue", () => {
 			},
 			bio: "English rock band",
 			entry_status: "open",
+		});
+		listMusicSongs.mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 100, total: 0, has_more: false },
 		});
 		listMusicAlbums.mockResolvedValue({
 			data: [
@@ -206,45 +214,28 @@ describe("ArtistDrawer.vue", () => {
 		wrapper.unmount();
 	});
 
-	it("loads single and leak releases when switching to songs", async () => {
+	it("loads playable songs directly when switching to songs", async () => {
 		const wrapper = mount(ArtistDrawer);
 		await vi.dynamicImportSettled();
-		listMusicAlbums.mockResolvedValueOnce({
+		listMusicSongs.mockResolvedValueOnce({
 			data: [
 				{
-					id: "3",
+					id: "song-3",
 					title: "New Single",
-					release_date: "2024-05-01",
-					album_type: "single",
-					songs: [{ id: "song-3", title: "New Single", entry_status: "open" }],
-					entry_status: "open",
-				},
-				{
-					id: "4",
-					title: "Unreleased Track",
-					release_date: "2023-11-03",
-					album_type: "leak",
-					songs: [{ id: "song-4", title: "Unreleased Track", entry_status: "open" }],
+					audio_url: "https://example.com/song-3.mp3",
+					album: { id: "3", title: "New Single", release_date: "2024-05-01" },
 					entry_status: "open",
 				},
 			],
-			meta: { page: 1, page_size: 24, total: 2, has_more: false },
+			meta: { page: 1, page_size: 100, total: 1, has_more: false },
 		});
 
-		await wrapper
-			.get('[data-testid="artist-release-type-song"]')
-			.trigger("click");
+		await wrapper.get('[data-testid="artist-release-type-song"]').trigger("click");
 		await vi.dynamicImportSettled();
 
-		expect(listMusicAlbums).toHaveBeenLastCalledWith({
-			artist_id: "1",
-			sort: "-release_date",
-			page: 1,
-			page_size: 100,
-		});
+		expect(listMusicSongs).toHaveBeenLastCalledWith({ artist_id: "1", sort: "-release_date", page: 1, page_size: 100 });
 		expect(wrapper.text()).toContain("New Single");
 		expect(wrapper.text()).toContain("2024/05/01");
-		expect(wrapper.text()).toContain("Unreleased Track");
 		await wrapper.get(".artist-song-row").trigger("click");
 		expect(musicDrawerMocks.openSong).toHaveBeenCalledWith("song-3");
 	});

@@ -198,6 +198,20 @@ export async function getMusicSong(
 	return apiGet<MusicSongSearchResult>(`${musicV1Endpoints.songs()}/${songId}`);
 }
 
+export async function listMusicSongs(
+	filters: {
+		artist_id?: string;
+		sort?: "-release_date" | "release_date" | "hot";
+		page?: number;
+		page_size?: number;
+	} = {},
+): Promise<MusicListResponse<MusicSongListItem>> {
+	const response = await apiGetEnvelope<MusicSongListItem[], PaginationMeta>(
+		`${musicV1Endpoints.songs()}${queryString(filters)}`,
+	);
+	return listResponseWithPaginationFallback(response, filters);
+}
+
 export async function listMusicAlbums(
 	filters: MusicListFilters = {},
 ): Promise<MusicListResponse<MusicAlbumListItem>> {

@@ -61,7 +61,7 @@ export const musicV1Endpoints = {
 	artistRevision: (artistId: string, version: number) =>
 		`${apiV1Base()}/artists/${artistId}/revisions/${version}`,
 	albums: () => `${apiV1Base()}/music/albums`,
-	songs: () => `${apiV1Base()}/songs`,
+	songs: () => `${apiV1Base()}/music/songs`,
 	search: () => `${apiV1Base()}/music/search`,
 	searchInteractions: () => `${apiV1Base()}/music/search/interactions`,
 	songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,

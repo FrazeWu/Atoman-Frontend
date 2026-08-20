@@ -564,6 +564,9 @@ export type MusicSongListItem = {
 		id: string;
 		title: string;
 		cover_url?: string;
+		release_date?: string;
+		release_date_precision?: string;
+		year?: number;
 		lifecycle_status?: MusicLifecycleStatus;
 		edit_status?: MusicEditStatus;
 	};

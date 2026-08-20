@@ -13,6 +13,25 @@ export interface AdminFeedFulltextHealth {
 	success_items: number;
 	failed_items: number;
 	success_rate: number;
+	reader_ready_items?: number;
+	reader_quality_pass_items?: number;
+	reader_quality_pass_rate?: number;
+	reader_feed_items?: number;
+	reader_page_items?: number;
+	reader_summary_items?: number;
+	pending_over_7d?: number;
+	reader_crawl_pending?: number;
+	reader_crawl_last_run_at?: string;
+	reader_crawl_last_scanned?: number;
+	reader_crawl_last_updated?: number;
+	reader_crawl_last_requeued?: number;
+	reader_crawl_last_skipped?: number;
+	feedback_counts?: {
+		missing: number;
+		layout: number;
+		image: number;
+		noise: number;
+	};
 	enabled: boolean;
 	concurrency: number;
 	timeout_seconds: number;
@@ -25,6 +44,17 @@ export interface AdminFeedFulltextHealth {
 export interface AdminFeedFulltextSettings {
 	auto_sync_enabled: boolean;
 	auto_sync_interval_minutes: number;
+	reader_crawl_enabled: boolean;
+	reader_crawl_days: number;
+	reader_crawl_batch_size: number;
+}
+
+export interface AdminFeedCrawlResult {
+	scanned: number;
+	updated: number;
+	requeued: number;
+	skipped: number;
+	worker_notified: boolean;
 }
 
 export interface AdminFeedOPMLImportResult {
@@ -65,6 +95,10 @@ export interface AdminFeedFulltextSourceRow {
 	failed_count: number;
 	pending_count: number;
 	success_rate: number;
+	reader_ready_count?: number;
+	reader_quality_pass_count?: number;
+	summary_fallback_count?: number;
+	reader_quality_pass_rate?: number;
 	status: "healthy" | "degraded" | "failing" | "disabled";
 	last_success_at?: string;
 	last_failure_at?: string;
@@ -112,6 +146,10 @@ export interface AdminFeedFulltextItemRow {
 	last_attempt_at?: string;
 	next_attempt_at?: string;
 	published_at: string;
+	reader_source?: "feed" | "page" | "summary";
+	reader_quality_score?: number;
+	reader_quality_flags?: string[];
+	reader_version?: number;
 }
 
 interface AdminListMeta {
@@ -578,6 +616,20 @@ export const useAdminFeedFulltextStore = defineStore(
 			return payload;
 		}
 
+		async function crawlNow(token: string | null): Promise<AdminFeedCrawlResult> {
+			const result = await apiRequestResult<AdminFeedCrawlResult>(
+				api.admin.feedFulltext.crawl,
+				{
+					method: "POST",
+					headers: buildHeaders(token),
+				},
+			);
+			if (!result.ok) {
+				throw new Error(parseErrorPayload(result.data, "启动爬取失败"));
+			}
+			return result.data;
+		}
+
 		async function updateSettings(
 			nextSettings: AdminFeedFulltextSettings,
 			token: string | null,
@@ -628,6 +680,7 @@ export const useAdminFeedFulltextStore = defineStore(
 			syncSource,
 			updateSourceEnabled,
 			retryItem,
+			crawlNow,
 			updateSettings,
 		};
 	},

@@ -23,7 +23,7 @@ export const nodeOnlyTests = [
 ];
 
 const jsdomOnlyTests = [
-	"tests/unit/components/feed/{FeedArticleSheet,FeedSourceIdentityCard}.spec.ts",
+	"tests/unit/components/feed/{FeedArticleSheet,FeedContentFeedback,FeedReaderContent,FeedSourceIdentityCard}.spec.ts",
 	"tests/unit/components/music/MusicCreationAlbumImportStep.spec.ts",
 	"tests/unit/composables/useMarkdownRenderer.sanitize.spec.ts",
 	"tests/unit/system/PSheet.spec.ts",

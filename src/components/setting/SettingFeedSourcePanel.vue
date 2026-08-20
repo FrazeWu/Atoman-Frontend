@@ -3,7 +3,7 @@
     <div v-if="showHeader" class="setting-feed-panel__header">
       <div>
         <h3 class="a-subtitle">订阅源管理</h3>
-        <p class="a-muted">管理站点 RSS 订阅源，支持增改查与手工爬取。</p>
+        <p class="a-muted">管理站点 RSS 订阅源和正文爬取。</p>
       </div>
       <div class="setting-feed-panel__header-actions">
         <PButton
@@ -27,14 +27,42 @@
         <span>失败 {{ health.failed_items }}</span>
         <span>成功率 {{ Math.round(health.success_rate * 100) }}%</span>
       </div>
+      <div v-if="health" class="setting-feed-panel__quality-summary" aria-label="正文质量">
+        <span>正文可用 {{ health.reader_ready_items || 0 }}</span>
+        <span>质量通过 {{ Math.round((health.reader_quality_pass_rate || 0) * 100) }}%</span>
+        <span>订阅正文 {{ health.reader_feed_items || 0 }}</span>
+        <span>网页正文 {{ health.reader_page_items || 0 }}</span>
+        <span>摘要降级 {{ health.reader_summary_items || 0 }}</span>
+        <span>待爬取 {{ health.reader_crawl_pending || 0 }}</span>
+        <span>超 7 天 {{ health.pending_over_7d || 0 }}</span>
+        <span v-if="health.reader_crawl_last_run_at">
+          上次处理 {{ health.reader_crawl_last_scanned || 0 }}，补齐 {{ health.reader_crawl_last_updated || 0 }}，排队 {{ health.reader_crawl_last_requeued || 0 }}
+        </span>
+      </div>
+      <div v-if="health?.feedback_counts" class="setting-feed-panel__quality-summary" aria-label="正文反馈">
+        <span>正文缺失 {{ health.feedback_counts.missing || 0 }}</span>
+        <span>排版错乱 {{ health.feedback_counts.layout || 0 }}</span>
+        <span>图片失效 {{ health.feedback_counts.image || 0 }}</span>
+        <span>噪声过多 {{ health.feedback_counts.noise || 0 }}</span>
+      </div>
       <div v-if="settings" class="setting-feed-panel__sync-settings">
         <label class="setting-feed-panel__toggle">
-          <span>自动同步</span>
+          <span>自动爬取</span>
           <input v-model="autoSyncEnabled" type="checkbox" />
         </label>
-        <PInput v-model="syncIntervalMinutes" label="同步间隔（分钟）" inputmode="numeric" />
+        <label class="setting-feed-panel__toggle">
+          <span>补齐旧文章</span>
+          <input v-model="readerCrawlEnabled" type="checkbox" />
+        </label>
+        <PInput v-model="syncIntervalMinutes" label="爬取间隔（分钟）" inputmode="numeric" />
+        <PInput v-model="readerCrawlDays" label="文章范围（天）" inputmode="numeric" />
+        <PInput v-model="readerCrawlBatchSize" label="每批文章" inputmode="numeric" />
         <PButton size="sm" variant="secondary" :loading="savingSettings" :disabled="savingSettings" @click="saveSyncSettings">
           保存
+        </PButton>
+        <PButton size="sm" :loading="crawling" :disabled="crawling" @click="runReaderCrawl">
+          <RefreshCw :size="14" aria-hidden="true" />
+          {{ crawling ? '启动中...' : '立即爬取' }}
         </PButton>
       </div>
     </section>
@@ -222,6 +250,11 @@
             重试 {{ source.retry_count || 0 }}
           </small>
           <small>
+            正文 {{ source.reader_ready_count || 0 }} ·
+            质量 {{ Math.round((source.reader_quality_pass_rate || 0) * 100) }}% ·
+            摘要 {{ source.summary_fallback_count || 0 }}
+          </small>
+          <small>
             收藏 {{ source.bookmark_count || 0 }} · 阅读 {{ source.read_count || 0 }}
           </small>
           <small v-if="source.recent_events?.length" class="setting-feed-panel__events">
@@ -300,6 +333,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 
 import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceItemsSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -310,6 +344,7 @@ import { useAuthStore } from '@/stores/auth'
 import {
   useAdminFeedFulltextStore,
   type AdminFeedFulltextItemRow,
+  type AdminFeedFulltextSettings,
   type AdminFeedFulltextSourceRow,
   type AdminOnboardingFeedRecommendation,
 } from '@/stores/adminFeedFulltext'
@@ -343,7 +378,11 @@ const currentPage = ref(1)
 const pageSize = 20
 const autoSyncEnabled = ref(false)
 const syncIntervalMinutes = ref('60')
+const readerCrawlEnabled = ref(true)
+const readerCrawlDays = ref('90')
+const readerCrawlBatchSize = ref('100')
 const savingSettings = ref(false)
+const crawling = ref(false)
 const itemsSheetOpen = ref(false)
 const itemsSheetLoading = ref(false)
 const itemsSheetError = ref('')
@@ -432,6 +471,9 @@ async function refresh() {
     if (adminFeedFulltextStore.settings) {
       autoSyncEnabled.value = adminFeedFulltextStore.settings.auto_sync_enabled
       syncIntervalMinutes.value = String(adminFeedFulltextStore.settings.auto_sync_interval_minutes)
+      readerCrawlEnabled.value = adminFeedFulltextStore.settings.reader_crawl_enabled
+      readerCrawlDays.value = String(adminFeedFulltextStore.settings.reader_crawl_days)
+      readerCrawlBatchSize.value = String(adminFeedFulltextStore.settings.reader_crawl_batch_size)
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载订阅源失败'
@@ -530,25 +572,66 @@ async function changePage(page: number) {
   await refresh()
 }
 
+function readCrawlSettings(): AdminFeedFulltextSettings | null {
+  const interval = Number.parseInt(syncIntervalMinutes.value, 10)
+  const days = Number.parseInt(readerCrawlDays.value, 10)
+  const batchSize = Number.parseInt(readerCrawlBatchSize.value, 10)
+  if (!Number.isFinite(interval) || interval < 5 || interval > 1440) {
+    error.value = '爬取间隔应为 5 到 1440 分钟'
+    return null
+  }
+  if (!Number.isFinite(days) || days < 1 || days > 3650) {
+    error.value = '文章范围应为 1 到 3650 天'
+    return null
+  }
+  if (!Number.isFinite(batchSize) || batchSize < 1 || batchSize > 100) {
+    error.value = '每批文章应为 1 到 100 篇'
+    return null
+  }
+  return {
+    auto_sync_enabled: autoSyncEnabled.value,
+    auto_sync_interval_minutes: interval,
+    reader_crawl_enabled: readerCrawlEnabled.value,
+    reader_crawl_days: days,
+    reader_crawl_batch_size: batchSize,
+  }
+}
+
 async function saveSyncSettings() {
   if (!authStore.token || savingSettings.value) return
-  const interval = Number.parseInt(syncIntervalMinutes.value, 10)
-  if (!Number.isFinite(interval) || interval < 5) {
-    error.value = '同步间隔不能少于 5 分钟'
-    return
-  }
+  const nextSettings = readCrawlSettings()
+  if (!nextSettings) return
   savingSettings.value = true
   error.value = ''
   try {
-    await adminFeedFulltextStore.updateSettings({
-      auto_sync_enabled: autoSyncEnabled.value,
-      auto_sync_interval_minutes: interval,
-    }, authStore.token)
-    message.value = '抓取设置已保存'
+    await adminFeedFulltextStore.updateSettings(nextSettings, authStore.token)
+    message.value = '爬取设置已保存'
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '保存抓取设置失败'
+    error.value = err instanceof Error ? err.message : '保存爬取设置失败'
   } finally {
     savingSettings.value = false
+  }
+}
+
+async function runReaderCrawl() {
+  if (!authStore.token || crawling.value) return
+  const nextSettings = readCrawlSettings()
+  if (!nextSettings) return
+  crawling.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    await adminFeedFulltextStore.updateSettings(nextSettings, authStore.token)
+    const result = await adminFeedFulltextStore.crawlNow(authStore.token)
+    message.value = `已处理 ${result.scanned} 篇，补齐 ${result.updated} 篇，排队 ${result.requeued} 篇`
+    await Promise.all([
+      adminFeedFulltextStore.fetchHealth(authStore.token),
+      adminFeedFulltextStore.fetchSources(authStore.token, sourceFetchOptions()),
+    ])
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '启动爬取失败'
+  } finally {
+    crawling.value = false
   }
 }
 
@@ -823,6 +906,7 @@ defineExpose({ refresh })
 }
 
 .setting-feed-panel__health-summary,
+.setting-feed-panel__quality-summary,
 .setting-feed-panel__sync-settings,
 .setting-feed-panel__search,
 .setting-feed-panel__visibility,
@@ -833,14 +917,30 @@ defineExpose({ refresh })
   gap: 0.75rem;
 }
 
-.setting-feed-panel__health-summary {
+.setting-feed-panel__health-summary,
+.setting-feed-panel__quality-summary {
   color: var(--a-color-text-secondary);
   font-size: 0.82rem;
+}
+
+.setting-feed-panel__quality-summary {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--a-color-border-soft);
 }
 
 .setting-feed-panel__sync-settings .p-field,
 .setting-feed-panel__search .p-field {
   flex: 1 1 16rem;
+}
+
+.setting-feed-panel__sync-settings {
+  display: grid;
+  grid-template-columns: auto auto repeat(3, minmax(7rem, 1fr)) auto auto;
+  align-items: end;
+}
+
+.setting-feed-panel__sync-settings .setting-feed-panel__toggle {
+  align-self: center;
 }
 
 .setting-feed-panel__pagination {
@@ -1047,6 +1147,16 @@ defineExpose({ refresh })
 
   .setting-feed-panel__recommendations-add select {
     min-width: 0;
+    width: 100%;
+  }
+
+  .setting-feed-panel__sync-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-feed-panel__sync-settings .p-field,
+  .setting-feed-panel__search .p-field {
+    flex: 0 0 auto;
     width: 100%;
   }
 

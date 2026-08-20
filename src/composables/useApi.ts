@@ -267,6 +267,7 @@ export function useApi() {
 			feedFulltext: {
 				health: `${apiUrl}/admin/feed/fulltext/health`,
 				settings: `${apiUrl}/admin/feed/fulltext/settings`,
+				crawl: `${apiUrl}/admin/feed/fulltext/crawl`,
 				sources: `${apiUrl}/admin/feed/fulltext/sources`,
 				source: (sourceId: number | string) =>
 					`${apiUrl}/admin/feed/fulltext/sources/${sourceId}`,

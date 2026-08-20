@@ -1,8 +1,9 @@
 import { mount, type MountingOptions, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { createMemoryHistory, createRouter, routerKey } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// @ts-expect-error Isolated TypeScript diagnostics do not load the Vue SFC module resolver.
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 
 const mountedWrappers = new Set<VueWrapper>()
@@ -21,7 +22,11 @@ const mountSheet = (options: MountingOptions<any>) => {
     ...options,
     global: {
       ...options.global,
-      plugins: [pinia, router],
+      plugins: [pinia],
+      provide: {
+        ...(options.global?.provide || {}),
+        [routerKey as symbol]: router,
+      },
     },
   })
   mountedWrappers.add(wrapper)
@@ -253,7 +258,7 @@ describe('FeedArticleSheet', () => {
     })
 
     expect(wrapper.text()).toContain('Longform Weekly')
-    expect(wrapper.text()).toContain('FULL TEXT')
+    expect(wrapper.text()).toContain('网页正文')
     expect(wrapper.text()).toContain('约 1280 字')
     expect(wrapper.text()).toContain('抓取于 2026年6月20日')
   })
@@ -355,9 +360,9 @@ describe('FeedArticleSheet', () => {
       },
     })
 
-    expect(fullTextWrapper.text()).toContain('已展示抓取到的全文内容')
+    expect(fullTextWrapper.text()).toContain('已展示网页正文')
     expect(summaryWrapper.text()).toContain('当前仅展示摘要')
-    expect(summaryWrapper.text()).toContain('fetch timeout')
+    expect(summaryWrapper.text()).not.toContain('fetch timeout')
   })
 
   it('falls back to content_html before summary when full-text status is available but html is missing', () => {

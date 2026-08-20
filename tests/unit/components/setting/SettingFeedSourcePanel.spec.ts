@@ -13,6 +13,7 @@ const updateSourceEnabled = vi.fn().mockResolvedValue(null)
 const syncSource = vi.fn().mockResolvedValue(null)
 const fetchItems = vi.fn().mockResolvedValue([])
 const retryItem = vi.fn().mockResolvedValue(null)
+const crawlNow = vi.fn().mockResolvedValue({ scanned: 12, updated: 4, requeued: 6, skipped: 2, worker_notified: true })
 const importGlobalOPML = vi.fn().mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
 const retryGlobalOPMLSource = vi.fn().mockResolvedValue({ imported: true, reused: false })
 const exportGlobalOPML = vi.fn().mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
@@ -39,6 +40,7 @@ const storeState = reactive({
   syncSource,
   fetchItems,
   retryItem,
+  crawlNow,
   importGlobalOPML,
   retryGlobalOPMLSource,
   exportGlobalOPML,
@@ -58,6 +60,7 @@ vi.mock('@/stores/adminFeedFulltext', () => ({
   useAdminFeedFulltextStore: () => storeState,
 }))
 
+// @ts-expect-error Isolated TypeScript diagnostics do not load the Vue SFC module resolver.
 import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 
 const stubs = {
@@ -125,6 +128,7 @@ describe('SettingFeedSourcePanel', () => {
     syncSource.mockResolvedValue(null)
     fetchItems.mockResolvedValue([])
     retryItem.mockResolvedValue(null)
+    crawlNow.mockResolvedValue({ scanned: 12, updated: 4, requeued: 6, skipped: 2, worker_notified: true })
     importGlobalOPML.mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
     retryGlobalOPMLSource.mockResolvedValue({ imported: true, reused: false })
     exportGlobalOPML.mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
@@ -296,10 +300,25 @@ describe('SettingFeedSourcePanel', () => {
       retry_items: 2,
       failed_items: 1,
       success_rate: 0.9,
+      reader_ready_items: 80,
+      reader_quality_pass_rate: 0.75,
+      reader_feed_items: 50,
+      reader_page_items: 30,
+      reader_summary_items: 20,
+      reader_crawl_pending: 12,
+      reader_crawl_last_run_at: '2026-08-20T08:00:00Z',
+      reader_crawl_last_scanned: 10,
+      reader_crawl_last_updated: 3,
+      reader_crawl_last_requeued: 5,
+      pending_over_7d: 3,
+      feedback_counts: { missing: 4, layout: 5, image: 6, noise: 7 },
     }
     storeState.settings = {
       auto_sync_enabled: false,
       auto_sync_interval_minutes: 60,
+      reader_crawl_enabled: true,
+      reader_crawl_days: 90,
+      reader_crawl_batch_size: 100,
     }
     const wrapper = mount(SettingFeedSourcePanel, {
       props: { fullTextMode: 'per_source' },
@@ -308,17 +327,36 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('积压 4')
+    expect(wrapper.text()).toContain('正文可用 80')
+    expect(wrapper.text()).toContain('质量通过 75%')
+    expect(wrapper.text()).toContain('摘要降级 20')
+    expect(wrapper.text()).toContain('待爬取 12')
+    expect(wrapper.text()).toContain('上次处理 10，补齐 3，排队 5')
+    expect(wrapper.text()).toContain('超 7 天 3')
+    expect(wrapper.text()).toContain('排版错乱 5')
     const autoSync = wrapper.get('.setting-feed-panel__toggle input')
     await autoSync.setValue(true)
-    const intervalInput = wrapper.findAll('label').find((label) => label.text().includes('同步间隔'))!.get('input')
+    const intervalInput = wrapper.findAll('label').find((label) => label.text().includes('爬取间隔'))!.get('input')
     await intervalInput.setValue('30')
+    const daysInput = wrapper.findAll('label').find((label) => label.text().includes('文章范围'))!.get('input')
+    await daysInput.setValue('180')
+    const batchInput = wrapper.findAll('label').find((label) => label.text().includes('每批文章'))!.get('input')
+    await batchInput.setValue('80')
     await wrapper.findAll('button').find((button) => button.text() === '保存')!.trigger('click')
     await flushPromises()
 
     expect(updateSettings).toHaveBeenCalledWith({
       auto_sync_enabled: true,
       auto_sync_interval_minutes: 30,
+      reader_crawl_enabled: true,
+      reader_crawl_days: 180,
+      reader_crawl_batch_size: 80,
     }, 'admin-token')
+
+    await wrapper.findAll('button').find((button) => button.text() === '立即爬取')!.trigger('click')
+    await flushPromises()
+    expect(crawlNow).toHaveBeenCalledWith('admin-token')
+    expect(wrapper.text()).toContain('已处理 12 篇，补齐 4 篇，排队 6 篇')
   })
 
   it('新增订阅源时调用 admin feed source 创建接口', async () => {
@@ -434,6 +472,9 @@ describe('SettingFeedSourcePanel', () => {
       title: '统计源',
       bookmark_count: 12,
       read_count: 34,
+      reader_ready_count: 40,
+      reader_quality_pass_rate: 0.8,
+      summary_fallback_count: 9,
       recent_events: [
         { event_type: 'detail_open', created_at: '2026-07-03T09:00:00Z' },
         { event_type: 'original_click', created_at: '2026-07-03T10:00:00Z' },
@@ -449,6 +490,9 @@ describe('SettingFeedSourcePanel', () => {
 
     expect(wrapper.text()).toContain('收藏 12')
     expect(wrapper.text()).toContain('阅读 34')
+    expect(wrapper.text()).toContain('正文 40')
+    expect(wrapper.text()).toContain('质量 80%')
+    expect(wrapper.text()).toContain('摘要 9')
     expect(wrapper.text()).toContain('detail_open')
     expect(wrapper.text()).toContain('original_click')
   })

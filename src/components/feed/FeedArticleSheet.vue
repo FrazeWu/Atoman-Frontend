@@ -44,7 +44,7 @@
     </template>
     
     <template v-else-if="article && article.type === 'feed_item' && article.feed_item">
-      <div v-if="feedCoverUrl" class="article-cover" :class="{ 'article-cover--fallback': feedCoverFailed }">
+      <div v-if="showFeedCover" class="article-cover" :class="{ 'article-cover--fallback': feedCoverFailed }">
         <img
           v-if="!feedCoverFailed"
           :src="feedCoverUrl"
@@ -98,13 +98,17 @@
       </div>
       
       <div class="article-body-wrap">
-        <PBadge v-if="article.feed_item.full_text_status" :type="article.feed_item.full_text_status === 'success' ? 'internal' : 'external'">
-          {{ article.feed_item.full_text_status === 'success' ? 'FULL TEXT' : 'SUMMARY' }}
+        <PBadge v-if="feedContentStateLabel" :type="feedContentSource === 'summary' ? 'external' : 'internal'">
+          {{ feedContentStateLabel }}
         </PBadge>
         <p v-if="feedContentStateDescription" class="article-content-note">
           {{ feedContentStateDescription }}
         </p>
-        <div class="prose-blog article-body article-body--external-feed" v-html="renderFeedHTML(feedBodyHtml)"></div>
+        <FeedReaderContent
+          class="article-body article-body--external-feed"
+          :html="feedBodyHtml"
+        />
+        <FeedContentFeedback :item-id="article.feed_item.id" />
       </div>
       <CommentSection :target="{ kind: 'feed_article', resourceId: article.feed_item.id }" />
       
@@ -115,14 +119,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { FeedItem, Post, TimelineItem } from '@/types'
-import DOMPurify from 'dompurify'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
+import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
+import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { hasFeedReaderImage } from '@/utils/feedReader'
 
 const props = defineProps<{
   show: boolean
@@ -181,13 +187,23 @@ const feedSourceTitle = computed(() => {
   return props.article.feed_item.feed_source?.title || ''
 })
 
+const feedContentSource = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return 'summary'
+  if (props.article.feed_item.content_source) return props.article.feed_item.content_source
+  if (props.article.feed_item.full_text_status === 'success') return 'page'
+  return 'summary'
+})
+
 const feedContentStateLabel = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  if (props.article.feed_item.full_text_status === 'success' || props.article.feed_item.content_source === 'full_text') {
-    return 'FULL TEXT'
+  switch (feedContentSource.value) {
+    case 'page':
+    case 'full_text':
+      return '网页正文'
+    case 'feed':
+      return '订阅正文'
+    default:
+      return '摘要'
   }
-  if (props.article.feed_item.summary) return 'SUMMARY'
-  return ''
 })
 
 const feedWordCountLabel = computed(() => {
@@ -203,24 +219,25 @@ const feedFetchedAtLabel = computed(() => {
 const feedBodyHtml = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
   return (
-    props.article.feed_item.full_text_html
-    || props.article.feed_item.content_html
+    props.article.feed_item.content_html
+    || props.article.feed_item.full_text_html
     || props.article.feed_item.content
     || props.article.feed_item.summary
     || ''
   )
 })
 
+const showFeedCover = computed(() => Boolean(feedCoverUrl.value) && !hasFeedReaderImage(feedBodyHtml.value))
+
 const feedContentStateDescription = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  if (props.article.feed_item.full_text_status === 'success' || props.article.feed_item.content_source === 'full_text') {
-    return '已展示抓取到的全文内容'
+  if (feedContentSource.value === 'page' || feedContentSource.value === 'full_text') {
+    return '已展示网页正文'
   }
-  if (props.article.feed_item.summary) {
-    const error = props.article.feed_item.full_text_error?.trim()
-    return error ? `当前仅展示摘要，全文暂不可用：${error}` : '当前仅展示摘要'
+  if (feedContentSource.value === 'feed') {
+    return '已展示订阅源提供的正文'
   }
-  return ''
+  return props.article.feed_item.summary ? '当前仅展示摘要' : ''
 })
 
 const { navigateWithShutter } = useAsyncNavigate()
@@ -229,12 +246,6 @@ const formatDate = (date?: string) => {
   if (!date) return ''
   return new Date(date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 }
-
-const renderFeedHTML = (html: string) =>
-  DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
-    ADD_ATTR: ['target', 'rel'],
-  })
 
 const handleReadMore = (post: Post) => {
   void navigateWithShutter(
@@ -359,10 +370,14 @@ const emitPlayPodcast = () => {
   border-left: 3px solid var(--a-color-fg);
 }
 
-.article-body {
+.article-body:not(.feed-reader-content) {
   margin-bottom: 4rem;
   max-width: 100%;
   min-width: 0;
+}
+
+.feed-reader-content.article-body {
+  margin-bottom: 4rem;
 }
 
 .article-body-wrap {

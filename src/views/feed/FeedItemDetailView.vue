@@ -20,7 +20,7 @@
     <!-- Content -->
     <article v-else class="feed-article">
       <header class="article-header">
-        <RouterLink to="/feed" class="back-link">← BACK TO FEED</RouterLink>
+        <RouterLink to="/feed" class="back-link"><ArrowLeft :size="16" aria-hidden="true" />返回订阅</RouterLink>
         <h1 class="article-title">{{ item.title }}</h1>
         <div class="article-meta">
           <PBadge type="external">{{ item.feed_source?.title || 'RSS' }}</PBadge>
@@ -29,7 +29,7 @@
         </div>
       </header>
 
-      <figure v-if="item.image_url" class="article-cover-wrap">
+      <figure v-if="showStandaloneCover" class="article-cover-wrap">
         <img :src="item.image_url" :alt="item.title" class="article-cover-img" />
         <figcaption v-if="item.image_caption" class="article-caption">
           {{ item.image_caption }}
@@ -40,14 +40,17 @@
         v-if="(item.enclosure_url && item.enclosure_type?.startsWith('audio/')) || item.duration"
         class="podcast-player-panel"
       >
-        <div class="player-label">AUDIO_ENCLOSURE</div>
+        <div class="player-label">音频</div>
         <div style="display:flex;align-items:center;gap:1.5rem">
           <PButton
             @click="togglePlay"
-            :label="isPlaying ? '⏸ PAUSE' : '▶ PLAY AUDIO'"
             :variant="isPlaying ? 'secondary' : 'primary'"
-          />
-          <span v-if="item.duration" class="duration-text">DURATION: {{ item.duration }}</span>
+          >
+            <Pause v-if="isPlaying" :size="17" aria-hidden="true" />
+            <Play v-else :size="17" aria-hidden="true" />
+            {{ isPlaying ? '暂停' : '播放' }}
+          </PButton>
+          <span v-if="item.duration" class="duration-text">时长 {{ item.duration }}</span>
         </div>
         <audio
           v-if="item.enclosure_url"
@@ -59,17 +62,22 @@
       </div>
 
       <div class="article-body-wrap">
-        <PBadge v-if="item.content_source" :type="item.content_source === 'full_text' ? 'internal' : 'external'">
-          {{ item.content_source === 'full_text' ? 'FULL TEXT' : 'SUMMARY' }}
+        <PBadge v-if="item.content_source" :type="item.content_source === 'summary' ? 'external' : 'internal'">
+          {{ contentSourceLabel }}
         </PBadge>
-        <div class="prose-blog article-body article-body--external-feed" v-html="renderContent(item.content_html || item.content || item.summary || '')"></div>
+        <FeedReaderContent
+          class="article-body article-body--external-feed"
+          :html="readerHTML"
+        />
+        <FeedContentFeedback :item-id="item.id" />
       </div>
 
       <footer class="article-footer">
         <div class="footer-divider"></div>
         <div style="display:flex;gap:1.5rem;justify-content:center;padding:3rem 0">
           <a :href="item.link" target="_blank" rel="noopener noreferrer" class="external-btn" @click="trackOriginalClick">
-            ↗ VIEW ORIGINAL SOURCE
+            <ExternalLink :size="17" aria-hidden="true" />
+            查看原文
           </a>
         </div>
       </footer>
@@ -80,16 +88,19 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { ArrowLeft, ExternalLink, Pause, Play } from 'lucide-vue-next'
 import { useRoute, RouterLink } from 'vue-router'
-import DOMPurify from 'dompurify'
 
+import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
+import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { FeedItem } from '@/types'
+import { hasFeedReaderImage } from '@/utils/feedReader'
 
 const route = useRoute()
 const api = useApi()
@@ -108,13 +119,20 @@ const formatDate = (dateStr: string) => {
   })
 }
 
-const renderContent = (html: string) => {
-  const clean = DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
-    ADD_ATTR: ['target', 'rel'],
-  })
-  return clean.replace(/<img/g, '<img style="max-width:100%;height:auto;border:1px solid var(--a-color-border-soft);margin:2rem 0"')
-}
+const readerHTML = computed(() => item.value?.content_html || item.value?.content || item.value?.summary || '')
+const showStandaloneCover = computed(() => Boolean(item.value?.image_url) && !hasFeedReaderImage(readerHTML.value))
+
+const contentSourceLabel = computed(() => {
+  switch (item.value?.content_source) {
+    case 'page':
+    case 'full_text':
+      return '网页正文'
+    case 'feed':
+      return '订阅正文'
+    default:
+      return '摘要'
+  }
+})
 
 const togglePlay = () => {
   if (!audioRef.value || !item.value?.enclosure_url) return
@@ -193,7 +211,9 @@ onUnmounted(() => {
   letter-spacing: 0;
   color: var(--a-color-muted);
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   margin-bottom: 2rem;
 }
 
@@ -204,9 +224,10 @@ onUnmounted(() => {
 
 .article-title {
   font-family: var(--a-font-sans);
-  font-size: 4rem;
-  font-weight: 500;
-  line-height: 1.1;
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1.18;
+  max-width: 24ch;
   margin-bottom: 1.5rem;
   color: var(--a-color-text);
   letter-spacing: 0;
@@ -235,10 +256,9 @@ onUnmounted(() => {
 .article-cover-img {
   width: 100%;
   max-height: 60vh;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   border: 1px solid var(--a-color-border-soft);
-  filter: grayscale(100%);
 }
 
 .article-caption {
@@ -279,10 +299,8 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.article-body {
-  font-size: 1rem;
-  max-width: 100%;
-  min-width: 0;
+.feed-reader-content.article-body {
+  margin-bottom: 0;
 }
 
 .article-footer {
@@ -295,8 +313,10 @@ onUnmounted(() => {
 }
 
 .external-btn {
-  display: inline-block;
-  padding: 1.25rem 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.4rem;
   background: var(--a-color-text);
   color: var(--a-color-bg);
   text-decoration: none;
@@ -319,7 +339,7 @@ onUnmounted(() => {
 
 @media (max-width: 720px) {
   .article-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 }
 </style>

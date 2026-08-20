@@ -708,7 +708,10 @@ export interface FeedItem {
 	image_caption?: string;
 	content?: string;
 	content_html?: string;
-	content_source?: "full_text" | "summary";
+	content_source?: "feed" | "page" | "summary" | "full_text";
+	reader_quality_score?: number;
+	reader_quality_flags?: string[];
+	reader_version?: number;
 	full_text_html?: string;
 	full_text_status?:
 		| "disabled"
@@ -718,7 +721,6 @@ export interface FeedItem {
 		| "success"
 		| "failed";
 	full_text_error_code?: string;
-	full_text_error?: string;
 	full_text_attempt_count?: number;
 	last_full_text_attempt_at?: string;
 	next_full_text_attempt_at?: string;
@@ -748,6 +750,11 @@ export interface StarredFeedItem {
 	duration?: string;
 	full_text_html?: string;
 	full_text_status?: FeedItem["full_text_status"];
+	content_html?: string;
+	content_source?: FeedItem["content_source"];
+	reader_quality_score?: number;
+	reader_quality_flags?: string[];
+	reader_version?: number;
 	source_title: string;
 	source_site_url?: string;
 	source_image_url?: string;

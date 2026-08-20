@@ -51,9 +51,12 @@
             type="button"
             class="feed-sidebar-sources__group-title"
             :data-test="`feed-sidebar-group-${group.id}`"
+            :aria-expanded="!collapsedGroups.has(group.id)"
             @click="toggleGroup(group.id)"
           >
-            <span>{{ collapsedGroups.has(group.id) ? '▹' : '▱' }} {{ group.name }}</span>
+            <ChevronRight v-if="collapsedGroups.has(group.id)" :size="15" aria-hidden="true" />
+            <ChevronDown v-else :size="15" aria-hidden="true" />
+            <span>{{ group.name }}</span>
           </button>
           <div v-if="!collapsedGroups.has(group.id)" class="feed-sidebar-sources__items">
             <button
@@ -93,6 +96,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 
 import type { Subscription, SubscriptionGroup } from '@/types'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
@@ -253,6 +257,38 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__groups {
   display: grid;
   gap: 1rem;
+}
+
+.feed-sidebar-sources__group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  padding: 0.35rem 0.55rem;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.feed-sidebar-sources__group-title svg {
+  flex: none;
+}
+
+.feed-sidebar-sources__group-title:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.feed-sidebar-sources__group-title:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: -2px;
 }
 
 .feed-sidebar-sources__search {

@@ -185,9 +185,14 @@ describe('FeedSidebarSources', () => {
         groups,
       },
     })
+    const groupTitle = wrapper.get('[data-test="feed-sidebar-group-g-tech"]')
 
-    await wrapper.get('[data-test="feed-sidebar-group-g-tech"]').trigger('click')
+    expect(groupTitle.attributes('aria-expanded')).toBe('true')
+    expect(groupTitle.text()).toBe('科技生活')
 
+    await groupTitle.trigger('click')
+
+    expect(groupTitle.attributes('aria-expanded')).toBe('false')
     expect(wrapper.text()).toContain('科技生活')
     expect(wrapper.text()).not.toContain('少数派')
     expect(wrapper.text()).toContain('英格兰周报')

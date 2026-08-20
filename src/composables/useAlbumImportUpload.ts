@@ -38,7 +38,7 @@ type AlbumImportUploadState = {
 	abortControllers: Set<AbortController>;
 };
 
-const FILE_PART_SIZE = 10 * 1024 * 1024; // 10MB
+const FILE_PART_SIZE = 16 * 1024 * 1024;
 const uploadStates = new WeakMap<
 	MusicCreationFlowState,
 	AlbumImportUploadState

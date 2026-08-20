@@ -537,10 +537,11 @@ export async function completeMusicAlbumImportMultipartPart(
 	importId: string,
 	partNumber: number,
 	etag: string,
+	size: number,
 ): Promise<MusicAlbumImportMultipartPart> {
 	return apiPostJson<MusicAlbumImportMultipartPart>(
 		musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber),
-		{ etag },
+		{ etag, size },
 	);
 }
 
@@ -628,7 +629,12 @@ export async function uploadMusicAlbumArchiveMultipart(
 			partNumber,
 		);
 		const etag = await uploadAlbumArchivePart(upload.uploadUrl, partBody);
-		await completeMusicAlbumImportMultipartPart(importId, partNumber, etag);
+		await completeMusicAlbumImportMultipartPart(
+			importId,
+			partNumber,
+			etag,
+			partBody.size,
+		);
 
 		loaded += partBody.size;
 		reportProgress();

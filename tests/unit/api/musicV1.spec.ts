@@ -1477,14 +1477,14 @@ describe("music v1 adapter", () => {
 			"/api/v1/music/imports/albums/import_uuid/multipart/parts/1/complete",
 			expect.objectContaining({
 				method: "POST",
-				body: JSON.stringify({ etag: '"etag-1"' }),
+				body: JSON.stringify({ etag: '"etag-1"', size: 4 }),
 			}),
 		);
 		expect(fetchMock).toHaveBeenCalledWith(
 			"/api/v1/music/imports/albums/import_uuid/multipart/parts/2/complete",
 			expect.objectContaining({
 				method: "POST",
-				body: JSON.stringify({ etag: '"etag-2"' }),
+				body: JSON.stringify({ etag: '"etag-2"', size: 4 }),
 			}),
 		);
 		expect(fetchMock).toHaveBeenCalledWith(

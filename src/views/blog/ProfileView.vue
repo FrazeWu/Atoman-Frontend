@@ -26,6 +26,7 @@
           :class="{ 'is-uploading': uploadingAvatar }"
           :aria-label="uploadingAvatar ? '头像上传中' : '更换头像'"
           :title="uploadingAvatar ? '头像上传中' : '更换头像'"
+          @click="avatarChangeStarted = true"
         >
           <img v-if="profile.avatar_url" :src="resolveMediaURL(profile.avatar_url)" alt="当前头像" />
           <span v-else>{{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}</span>
@@ -97,6 +98,18 @@
                 size="sm"
                 variant="secondary"
               >设置</PButton>
+              <PButton
+                v-if="isSelf && avatarChangeStarted && canRestoreAvatar"
+                variant="ghost"
+                size="sm"
+                :loading="restoringAvatar"
+                loading-text="恢复中..."
+                :disabled="restoringAvatar || uploadingAvatar"
+                @click="restoreAvatar"
+              >
+                <Undo2 :size="14" />
+                恢复上次头像
+              </PButton>
             </div>
           </div>
 
@@ -293,7 +306,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Camera, LinkIcon, LoaderCircle, Pencil, Plus } from 'lucide-vue-next'
+import { Camera, LinkIcon, LoaderCircle, Pencil, Plus, Undo2 } from 'lucide-vue-next'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -312,7 +325,11 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { resolveMediaURL } from '@/utils/mediaUrl'
-import { uploadUserAvatar } from '@/api/userProfile'
+import {
+  getUserAvatarRestoreAvailability,
+  restoreUserAvatar,
+  uploadUserAvatar,
+} from '@/api/userProfile'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel, ShortNote } from '@/types'
 
@@ -379,6 +396,9 @@ const editBio = ref('')
 const editWebsite = ref('')
 const saving = ref(false)
 const uploadingAvatar = ref(false)
+const restoringAvatar = ref(false)
+const canRestoreAvatar = ref(false)
+const avatarChangeStarted = ref(false)
 
 function startEdit(field: EditableField) {
   editingField.value = field
@@ -424,6 +444,33 @@ async function saveField(field: EditableField) {
   }
 }
 
+async function refreshAvatarRestoreAvailability() {
+  if (!authStore.isAuthenticated || !profile.value || !isSelf.value) return
+  try {
+    canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
+  } catch {
+    canRestoreAvatar.value = false
+  }
+}
+
+async function restoreAvatar() {
+  if (!profile.value || restoringAvatar.value || !canRestoreAvatar.value) return
+  restoringAvatar.value = true
+  try {
+    const restored = await restoreUserAvatar()
+    profile.value = { ...profile.value, avatar_url: restored.url }
+    authStore.updateUser({ avatar_url: restored.url })
+    avatarChangeStarted.value = false
+    toastMessage.value = '已恢复上次头像'
+  } catch (error) {
+    reportError(error)
+    toastMessage.value = '恢复失败，请重试'
+  } finally {
+    toastVisible.value = true
+    restoringAvatar.value = false
+  }
+}
+
 async function changeAvatar(event: Event) {
   if (!profile.value || uploadingAvatar.value) return
   const input = event.target as HTMLInputElement
@@ -434,6 +481,11 @@ async function changeAvatar(event: Event) {
   uploadingAvatar.value = true
   try {
     const uploaded = await uploadUserAvatar(file)
+    try {
+      canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
+    } catch {
+      canRestoreAvatar.value = false
+    }
     const res = await apiRequestResult(api.users.settings, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
@@ -553,7 +605,10 @@ const fetchProfile = async () => {
   if (!handle) { loading.value = false; return }
   try {
     const res = await apiRequestResult(api.users.profile(handle))
-    if (res.ok) profile.value = (await Promise.resolve(res.data)).data || null
+    if (res.ok) {
+      profile.value = (await Promise.resolve(res.data)).data || null
+      void refreshAvatarRestoreAvailability()
+    }
   } finally { loading.value = false }
 }
 

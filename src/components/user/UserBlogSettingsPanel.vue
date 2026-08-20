@@ -26,7 +26,7 @@
         />
         <div class="avatar-field">
           <span class="avatar-field__label">头像</span>
-          <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }">
+          <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }" @click="avatarChangeStarted = true">
             <Camera :size="16" aria-hidden="true" />
             <span>{{ uploadingAvatar ? '上传中...' : '选择图片' }}</span>
             <input
@@ -38,6 +38,19 @@
             />
           </label>
           <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
+          <PButton
+            v-if="avatarChangeStarted && canRestoreAvatar"
+            variant="ghost"
+            size="sm"
+            type="button"
+            :loading="restoringAvatar"
+            loading-text="恢复中..."
+            :disabled="restoringAvatar || uploadingAvatar"
+            @click="restoreAvatar"
+          >
+            <Undo2 :size="14" />
+            恢复上次头像
+          </PButton>
         </div>
         <PInput
           v-model="form.website"
@@ -106,8 +119,12 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { onMounted, ref } from 'vue'
-import { Camera } from 'lucide-vue-next'
-import { uploadUserAvatar } from '@/api/userProfile'
+import { Camera, Undo2 } from 'lucide-vue-next'
+import {
+  getUserAvatarRestoreAvailability,
+  restoreUserAvatar,
+  uploadUserAvatar,
+} from '@/api/userProfile'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -150,6 +167,9 @@ const notificationTypes = {
 
 const saving = ref(false)
 const uploadingAvatar = ref(false)
+const restoringAvatar = ref(false)
+const canRestoreAvatar = ref(false)
+const avatarChangeStarted = ref(false)
 const error = ref('')
 const success = ref(false)
 
@@ -162,11 +182,40 @@ const selectAvatar = async (event: Event) => {
   uploadingAvatar.value = true
   try {
     const uploaded = await uploadUserAvatar(file)
+    try {
+      canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
+    } catch {
+      canRestoreAvatar.value = false
+    }
     form.value.avatar_url = uploaded.url
   } catch {
     error.value = '头像上传失败，请重新选择图片'
   } finally {
     uploadingAvatar.value = false
+  }
+}
+
+const loadAvatarRestoreAvailability = async () => {
+  try {
+    canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
+  } catch {
+    canRestoreAvatar.value = false
+  }
+}
+
+const restoreAvatar = async () => {
+  if (restoringAvatar.value || !canRestoreAvatar.value) return
+  error.value = ''
+  restoringAvatar.value = true
+  try {
+    const restored = await restoreUserAvatar()
+    form.value.avatar_url = restored.url
+    authStore.updateUser({ avatar_url: restored.url })
+    avatarChangeStarted.value = false
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '恢复头像失败，请重试'
+  } finally {
+    restoringAvatar.value = false
   }
 }
 
@@ -240,7 +289,7 @@ const save = async () => {
 }
 
 onMounted(async () => {
-  const tasks = [loadProfile()]
+  const tasks = [loadProfile(), loadAvatarRestoreAvailability()]
   if (props.includeAccountExtras) {
     tasks.push(loadNotificationPreferences(), userBlocksStore.fetchBlockedUsers())
   }

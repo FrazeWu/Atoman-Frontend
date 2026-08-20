@@ -38,7 +38,23 @@ describe('blog SEO Pages Functions', () => {
     expect(await response.text()).toBe(shell)
   })
 
-  it('returns the complete SPA shell for a malformed successful SEO response', async () => {
+  it.each([403, 404])('returns a noindex 404 when the SEO API returns %i', async (status) => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('not found', { status })))
+
+    const response = await articleHandler({
+      request: new Request('https://atoman.org/posts/post/post-1'), env: {}, params: { id: 'post-1' },
+      next: async () => new Response(shell, { headers: { 'content-type': 'text/html' } }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    const html = await response.text()
+    expect(html).toContain('<meta name="robots" content="noindex, nofollow">')
+    expect(html).not.toContain('rel="canonical"')
+  })
+
+  it('returns a noindex 404 for a malformed successful SEO response', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
       data: { id: 'post-1', title: 123, description: null },
     }))))
@@ -48,8 +64,8 @@ describe('blog SEO Pages Functions', () => {
       next: async () => new Response(shell, { headers: { 'content-type': 'text/html' } }),
     })
 
-    expect(response.bodyUsed).toBe(false)
-    expect(await response.text()).toBe(shell)
+    expect(response.status).toBe(404)
+    expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   })
 
   it('serves sitemap XML from backend data', async () => {

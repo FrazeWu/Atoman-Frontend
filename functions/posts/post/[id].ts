@@ -20,6 +20,20 @@ function isBlogSeoPost(value: unknown): value is BlogSeoPost {
     && typeof post.path === 'string'
 }
 
+function unavailableArticleResponse() {
+  return new Response(
+    '<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="robots" content="noindex, nofollow"><title>文章不可用 | Atoman</title></head><body></body></html>',
+    {
+      status: 404,
+      headers: {
+        'content-type': 'text/html; charset=UTF-8',
+        'cache-control': 'no-store',
+        'x-robots-tag': 'noindex, nofollow',
+      },
+    },
+  )
+}
+
 export async function onRequest(context: ArticleContext) {
   const shell = await context.next()
   const fallback = shell.clone()
@@ -32,10 +46,13 @@ export async function onRequest(context: ArticleContext) {
     const response = await fetch(`${apiBase}/blog/seo/posts/${encodeURIComponent(id)}`, {
       headers: { Accept: 'application/json' },
     })
-    if (!response.ok) return shell
+    if (!response.ok) {
+      if (response.status === 403 || response.status === 404) return unavailableArticleResponse()
+      return shell
+    }
 
     const payload = await response.json() as { data?: BlogSeoPost }
-    if (!isBlogSeoPost(payload.data)) return shell
+    if (!isBlogSeoPost(payload.data)) return unavailableArticleResponse()
     const html = buildArticleHtml(await shell.text(), payload.data, requestUrl.origin)
     const headers = new Headers(shell.headers)
     headers.set('content-type', 'text/html; charset=UTF-8')

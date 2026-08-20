@@ -22,9 +22,21 @@ class MockAudio {
 	duration = 100;
 	volume = 1;
 	src = "";
+	preload = "";
+	private readonly listeners = new Map<string, EventListener[]>();
 	play = vi.fn(() => audioPlayImplementation());
 	pause = vi.fn();
-	addEventListener = vi.fn();
+	addEventListener = vi.fn((type: string, listener: EventListener) => {
+		const listeners = this.listeners.get(type) ?? [];
+		listeners.push(listener);
+		this.listeners.set(type, listeners);
+	});
+
+	emit(type: string) {
+		for (const listener of this.listeners.get(type) ?? []) {
+			listener(new Event(type));
+		}
+	}
 
 	constructor() {
 		audioInstances.push(this);
@@ -111,6 +123,58 @@ describe("player store", () => {
 		expect(audioInstances[0]?.src).toBe(
 			"https://assets.atoman.org/music/audio/r2-song.mp3?cors=1",
 		);
+	});
+
+	it("prefetches the first audio chunk for every queued song after the current song can play", async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				new Response(new Uint8Array(512 * 1024), { status: 206 }),
+			);
+		vi.stubGlobal("fetch", fetchMock);
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "first",
+			title: "First",
+			audio_url: "first.mp3",
+		} as any;
+		const secondSong = {
+			id: "second",
+			title: "Second",
+			audio_url: "second.mp3",
+		} as any;
+		const thirdSong = {
+			id: "third",
+			title: "Third",
+			audio_url: "third.mp3",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong, thirdSong]);
+		expect(fetchMock).not.toHaveBeenCalled();
+
+		audioInstances[0].emit("canplay");
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"second.mp3",
+			expect.objectContaining({
+				cache: "force-cache",
+				headers: { Range: "bytes=0-524287" },
+				signal: expect.any(AbortSignal),
+			}),
+		);
+		expect(fetchMock).toHaveBeenCalledWith(
+			"third.mp3",
+			expect.objectContaining({
+				cache: "force-cache",
+				headers: { Range: "bytes=0-524287" },
+				signal: expect.any(AbortSignal),
+			}),
+		);
+
+		audioInstances[0].emit("canplay");
+		await Promise.resolve();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
 	it("records a restored song after five seconds of resumed playback", async () => {

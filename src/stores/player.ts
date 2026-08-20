@@ -23,6 +23,8 @@ import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerSync } from "@/composables/useAudioPlayerSync";
 
 const api = useApi();
+const audioStartPrefetchBytes = 512 * 1024;
+const audioStartPrefetchConcurrency = 4;
 
 export type PlaybackMode = "loop" | "single" | "random";
 
@@ -150,6 +152,7 @@ export const usePlayerStore = defineStore("player", () => {
 		queue,
 		() => {
 			if (isShuffled.value) recomputeShuffledQueue();
+			if (currentSongStartCached) prefetchQueueAudioStarts();
 		},
 		{ deep: true },
 	);
@@ -178,6 +181,10 @@ export const usePlayerStore = defineStore("player", () => {
 
 	let audio: HTMLAudioElement | null = null;
 	let playGeneration = 0;
+	let currentSongStartCached = false;
+	let audioStartPrefetchController: AbortController | null = null;
+	let audioStartPrefetchKey: string | null = null;
+	const prefetchedAudioStartUrls = new Set<string>();
 	let songsRequest: Promise<void> | null = null;
 	let musicProgressLastSavedAt = 0;
 	let musicProgressRestored = false;
@@ -398,35 +405,87 @@ export const usePlayerStore = defineStore("player", () => {
 		playReported = false;
 	};
 
-	let preloaderAudio: HTMLAudioElement | null = null;
-
-	const preloadNextSong = () => {
-		const list = getActiveList();
-		if (!list.length || !currentSong.value) return;
-		const currentKey = playbackItemKey(currentSong.value);
-		const currentIndex = list.findIndex(
-			(s) => playbackItemKey(s) === currentKey,
-		);
-		if (currentIndex === -1) return;
-		const nextIndex = (currentIndex + 1) % list.length;
-		const nextSong = list[nextIndex];
-		if (!nextSong || !nextSong.audio_url) return;
-
-		if (!preloaderAudio) {
-			preloaderAudio = new Audio();
-		}
-		const nextAudioUrl = resolvePlaybackAudioUrl(nextSong.audio_url);
-		if (preloaderAudio.src !== nextAudioUrl) {
-			preloaderAudio.src = nextAudioUrl;
-			preloaderAudio.preload = "auto";
-		}
+	const resetAudioStartPrefetch = () => {
+		audioStartPrefetchController?.abort();
+		audioStartPrefetchController = null;
+		audioStartPrefetchKey = null;
 	};
+
+	function prefetchQueueAudioStarts() {
+		const current = currentSong.value;
+		if (!current || queue.value.length < 2) return;
+
+		const currentKey = playbackItemKey(current);
+		const queueKey = queue.value
+			.map(
+				(song) =>
+					`${playbackItemKey(song)}:${resolvePlaybackAudioUrl(song.audio_url)}`,
+			)
+			.join("|");
+		const prefetchKey = `${currentKey}|${queueKey}`;
+		if (audioStartPrefetchKey === prefetchKey) return;
+
+		resetAudioStartPrefetch();
+		audioStartPrefetchKey = prefetchKey;
+		const controller = new AbortController();
+		audioStartPrefetchController = controller;
+		const urls = [
+			...new Set(
+				queue.value
+					.filter(
+						(song) =>
+							playbackItemKey(song) !== currentKey && Boolean(song.audio_url),
+					)
+					.map((song) => resolvePlaybackAudioUrl(song.audio_url))
+					.filter((url) => !prefetchedAudioStartUrls.has(url)),
+			),
+		];
+		let nextUrlIndex = 0;
+		const prefetch = async () => {
+			while (!controller.signal.aborted) {
+				const url = urls[nextUrlIndex++];
+				if (!url) return;
+				try {
+					const response = await fetch(url, {
+						cache: "force-cache",
+						headers: {
+							Range: `bytes=0-${audioStartPrefetchBytes - 1}`,
+						},
+						signal: controller.signal,
+					});
+					if (response.status !== 206) {
+						await response.body?.cancel();
+						continue;
+					}
+					await response.arrayBuffer();
+					prefetchedAudioStartUrls.add(url);
+				} catch {
+					// A failed background prefetch must not affect playback.
+				}
+			}
+		};
+
+		void Promise.all(
+			Array.from(
+				{ length: Math.min(audioStartPrefetchConcurrency, urls.length) },
+				prefetch,
+			),
+		).then(() => {
+			if (audioStartPrefetchController === controller)
+				audioStartPrefetchController = null;
+		});
+	}
 
 	const ensureAudio = () => {
 		if (audio) return audio;
 
 		const nextAudio = new Audio();
 		nextAudio.preload = "auto";
+		nextAudio.addEventListener("canplay", () => {
+			if (!currentSong.value) return;
+			currentSongStartCached = true;
+			prefetchQueueAudioStarts();
+		});
 		nextAudio.addEventListener("timeupdate", () => {
 			currentTime.value = nextAudio.currentTime;
 			savePodcastProgress();
@@ -438,9 +497,6 @@ export const usePlayerStore = defineStore("player", () => {
 					playbackRate: nextAudio.playbackRate,
 					position: currentTime.value,
 				});
-				if (duration.value - nextAudio.currentTime <= 8) {
-					preloadNextSong();
-				}
 			}
 		});
 		nextAudio.addEventListener("durationchange", () => {
@@ -502,6 +558,8 @@ export const usePlayerStore = defineStore("player", () => {
 
 		if (!audio) return;
 
+		currentSongStartCached = false;
+		resetAudioStartPrefetch();
 		audio.src = normalizedSong.audio_url;
 		audio.volume = volume.value;
 		if (currentTime.value > 0) {
@@ -652,6 +710,8 @@ export const usePlayerStore = defineStore("player", () => {
 		savePodcastProgress();
 		saveMusicProgress(false, true);
 		resetListening(song);
+		currentSongStartCached = false;
+		resetAudioStartPrefetch();
 		const player = ensureAudio();
 		const normalizedSong = normalizePlaybackSong(song);
 		const generation = ++playGeneration;

@@ -247,8 +247,19 @@ describe("ArtistDrawer.vue", () => {
 					},
 					entry_status: "open",
 				},
+				{
+					id: "song-4",
+					title: "Undated Leak",
+					album: {
+						id: "4",
+						title: "Undated Leak",
+						album_type: "leak",
+						release_date: "0001-01-01T00:00:00Z",
+					},
+					entry_status: "open",
+				},
 			],
-			meta: { page: 1, page_size: 100, total: 1, has_more: false },
+			meta: { page: 1, page_size: 100, total: 2, has_more: false },
 		});
 
 		await wrapper
@@ -263,11 +274,17 @@ describe("ArtistDrawer.vue", () => {
 			page: 1,
 			page_size: 100,
 		});
-		expect(wrapper.findAll(".artist-track")).toHaveLength(1);
+		expect(wrapper.findAll(".artist-track")).toHaveLength(2);
 		expect(wrapper.text()).toContain("New Single");
+		expect(wrapper.text()).toContain("Undated Leak");
 		expect(wrapper.text()).toContain("单曲");
+		expect(wrapper.text()).toContain("泄曲");
 		expect(wrapper.text()).toContain("2024/05/01");
+		expect(wrapper.text()).toContain("----");
 		expect(wrapper.text()).toContain("3:35");
+		expect(
+			wrapper.get('[data-testid="artist-track-play-song-4"]').attributes("disabled"),
+		).toBeDefined();
 
 		await wrapper.get('[data-testid="artist-track-play-song-3"]').trigger("click");
 		expect(playerMocks.playAlbum).toHaveBeenCalledWith(

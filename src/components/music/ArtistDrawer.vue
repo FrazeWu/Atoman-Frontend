@@ -98,7 +98,7 @@ function albumSortQuery(mode: AlbumSortMode) {
 }
 
 function formatAlbumReleaseDate(album: Pick<MusicAlbumListItem, 'release_date' | 'release_date_precision' | 'year'>) {
-  if (album.release_date) {
+  if (album.release_date && !['0000', '0001', '----'].includes(album.release_date.slice(0, 4))) {
 		const cleaned = formatStoredPartialDate(album.release_date, album.release_date_precision).replace(/-/g, '/')
     if (cleaned.length >= 4) return cleaned
   }

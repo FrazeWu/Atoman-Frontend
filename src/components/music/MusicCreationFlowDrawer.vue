@@ -10,6 +10,7 @@ import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
 import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
+import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
@@ -44,10 +45,12 @@ const creationFlow = computed(() => state.value.creationFlow)
 const isEditFlow = computed(() => creationFlow.value?.mode === 'edit')
 const isArtistEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'artist')
 const isAlbumEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'album')
+const isSongEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'song')
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : creationFlow.value !== null)
 const sheetTitle = computed(() => {
   if (!isEditFlow.value) return '创建音乐条目'
-  return isArtistEdit.value ? '编辑艺术家' : '编辑专辑'
+  if (isArtistEdit.value) return '编辑艺术家'
+  return isSongEdit.value ? '编辑歌曲' : '编辑专辑'
 })
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
@@ -90,9 +93,31 @@ function formatStoredArtistDate(value?: string, precision?: string, fallbackYear
   return fallbackYear && fallbackYear > 0 ? `${fallbackYear}/--/--` : ''
 }
 
-function firstArtistSourceValue(sources?: Array<{ url?: string; title?: string }>) {
+function firstSourceValue(sources?: Array<{ url?: string; title?: string }>) {
   const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
   return source?.url?.trim() || source?.title?.trim() || ''
+}
+
+function contributorsFromSongDetail(detail: musicApi.MusicSongDetail) {
+  const contributors = new Map<string, MusicCreationAlbumContributorDraft>()
+  for (const credit of detail.artists) {
+    const current = contributors.get(credit.id) ?? {
+      id: `song-contributor-${credit.id}`,
+      artistId: credit.id,
+      name: credit.name,
+      avatarUrl: '',
+      kind: 'person' as const,
+      locked: false,
+      roles: [],
+    }
+    current.roles.push({
+      id: `song-role-${credit.id}-${credit.role}-${credit.custom_role ?? ''}`,
+      role: credit.role,
+      label: credit.custom_role ?? '',
+    })
+    contributors.set(credit.id, current)
+  }
+  return [...contributors.values()]
 }
 
 async function loadEditDraft() {
@@ -130,8 +155,46 @@ async function loadEditDraft() {
         activeEndDateParts: parsePartialDateParts(formatStoredPartialDate(artist.active_end_date, artist.active_end_date_precision)),
         birthDate: formatStoredArtistDate(artist.birth_date, artist.birth_date_precision, artist.birth_year),
         bio: artist.bio ?? '',
-        source: firstArtistSourceValue(artist.sources),
+        source: firstSourceValue(artist.sources),
       }
+      return
+    }
+
+    if (flow.entity === 'song') {
+      const detail = await musicApi.getMusicSongDetail(targetId)
+      const song = detail.song
+      if (song.album?.id || (song.release_type !== 'single' && song.release_type !== 'leak')) {
+        throw new Error('专辑曲目请使用歌曲编辑入口')
+      }
+      const contributors = contributorsFromSongDetail(detail)
+      const primary = detail.artists.find((credit) => credit.role === 'primary') ?? detail.artists[0]
+      flow.draft.artist.id = primary?.id ?? null
+      if (primary) flow.draft.artist.stageNames[0].name = primary.name
+      flow.draft.albumDetails = {
+        coverUrl: song.cover_url ?? '',
+        coverAsset: null,
+        title: song.title,
+        contributors,
+        releaseDateParts: parsePartialDateParts(formatStoredPartialDate(song.release_date, song.release_date_precision)),
+        releaseDate: formatStoredPartialDate(song.release_date, song.release_date_precision),
+        type: song.release_type,
+        releaseYear: song.release_date?.slice(0, 4) || '',
+        bio: song.description ?? '',
+        source: normalizeMusicImportSource(firstSourceValue(song.sources)),
+      }
+      flow.draft.tracks = [{
+        id: `edit-track-${song.id}`,
+        songId: song.id,
+        sequence: 1,
+        discNumber: 1,
+        title: song.title,
+        audioUrl: song.audio_url ?? '',
+        coverUrl: song.cover_url ?? '',
+        contributors,
+        origin: 'existing',
+      }]
+      flow.tracksCustomized = true
+      flow.titleCustomized = true
       return
     }
 
@@ -424,7 +487,7 @@ function requiresArtistSource(flow: NonNullable<typeof creationFlow.value>) {
 }
 
 function hasRequiredArtistSource(flow: NonNullable<typeof creationFlow.value>) {
-  if (flow.mode === 'edit' && flow.entity === 'album') return true
+  if (flow.mode === 'edit' && (flow.entity === 'album' || flow.entity === 'song')) return true
   return !requiresArtistSource(flow) || !!resolvedArtistSource(flow)
 }
 
@@ -858,6 +921,57 @@ async function completeCreation() {
       refreshArtist()
       closeCurrentCreationFlow()
       await router.replace(`/music/artist/${flow.targetId}`)
+      return
+    }
+
+    if (flow.mode === 'edit' && flow.entity === 'song' && flow.targetId) {
+      const details = flow.draft.albumDetails
+      const track = flow.draft.tracks[0]
+      if (!track?.songId) throw new Error('歌曲资料不完整，请重新打开编辑器')
+      const releaseType = details.type.trim().toLowerCase()
+      const artistCredits = albumArtistCreditsFromContributors(details.contributors)
+      const sources = details.source.trim() ? [buildSource(details.source)] : []
+      const releaseDate = formatDateFromParts(details.releaseDateParts)
+      const coverURL = details.coverAsset?.url ?? details.coverUrl.trim()
+
+      if (releaseType === 'single' || releaseType === 'leak') {
+        await musicApi.submitSongRevision(flow.targetId, {
+          title: details.title.trim(),
+          description: details.bio.trim(),
+          release_type: releaseType,
+          release_date: releaseDate,
+          ...(details.coverAsset ? { cover: details.coverAsset } : {}),
+          artist_credits: artistCredits,
+          sources,
+          reason: '编辑歌曲',
+        })
+        if (track.audioAssetId) {
+          await musicApi.queueMusicSongAudioReplacement(track.songId, { asset_id: track.audioAssetId })
+        }
+        refreshArtist()
+        refreshSong()
+        closeCurrentCreationFlow()
+        await router.replace(`/music/song/${flow.targetId}`)
+        return
+      }
+
+      const converted = await musicApi.convertMusicSongToAlbum(flow.targetId, {
+        title: details.title.trim(),
+        description: details.bio.trim(),
+        release_date: releaseDate,
+        release_type: releaseType,
+        cover_url: coverURL,
+        artist_credits: artistCredits,
+        sources,
+      })
+      if (track.audioAssetId) {
+        await musicApi.queueMusicSongAudioReplacement(track.songId, { asset_id: track.audioAssetId })
+      }
+      refreshArtist()
+      refreshAlbum()
+      refreshSong()
+      closeCurrentCreationFlow()
+      await router.replace(`/music/album/${converted.id}`)
       return
     }
 

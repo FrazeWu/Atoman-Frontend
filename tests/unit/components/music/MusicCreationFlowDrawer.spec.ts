@@ -146,9 +146,13 @@ vi.mock("../../../../src/api/musicV1", async () => {
 		createMusicArtist: vi.fn(),
 		getMusicArtist: vi.fn(),
 		getMusicAlbum: vi.fn(),
+		getMusicSongDetail: vi.fn(),
 		submitArtistRevision: vi.fn(),
 		submitAlbumRevision: vi.fn(),
+		submitSongRevision: vi.fn(),
 		convertMusicAlbumToSong: vi.fn(),
+		convertMusicSongToAlbum: vi.fn(),
+		queueMusicSongAudioReplacement: vi.fn(),
 	};
 });
 
@@ -201,9 +205,13 @@ const commitMusicAlbumImportMock = vi.mocked(
 const createMusicArtistMock = vi.mocked(musicApi.createMusicArtist);
 const getMusicArtistMock = vi.mocked(musicApi.getMusicArtist);
 const getMusicAlbumMock = vi.mocked(musicApi.getMusicAlbum);
+const getMusicSongDetailMock = vi.mocked(musicApi.getMusicSongDetail);
 const submitArtistRevisionMock = vi.mocked(musicApi.submitArtistRevision);
 const submitAlbumRevisionMock = vi.mocked(musicApi.submitAlbumRevision);
+const submitSongRevisionMock = vi.mocked(musicApi.submitSongRevision);
 const convertMusicAlbumToSongMock = vi.mocked(musicApi.convertMusicAlbumToSong);
+const convertMusicSongToAlbumMock = vi.mocked(musicApi.convertMusicSongToAlbum);
+const queueMusicSongAudioReplacementMock = vi.mocked(musicApi.queueMusicSongAudioReplacement);
 const completeMusicAlbumImportSessionMock = vi.mocked(
 	musicApi.completeMusicAlbumImportSession,
 );
@@ -214,9 +222,13 @@ describe("MusicCreationFlowDrawer", () => {
 		createMusicArtistMock.mockReset();
 		getMusicArtistMock.mockReset();
 		getMusicAlbumMock.mockReset();
+		getMusicSongDetailMock.mockReset();
 		submitArtistRevisionMock.mockReset();
 		submitAlbumRevisionMock.mockReset();
+		submitSongRevisionMock.mockReset();
 		convertMusicAlbumToSongMock.mockReset();
+		convertMusicSongToAlbumMock.mockReset();
+		queueMusicSongAudioReplacementMock.mockReset();
 		completeMusicAlbumImportSessionMock.mockReset();
 		completeMusicAlbumImportSessionMock.mockResolvedValue({
 			importId: "import-1",
@@ -660,6 +672,118 @@ describe("MusicCreationFlowDrawer", () => {
 			}),
 		);
 		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
+	});
+
+	it("独立歌曲复用发行表单并通过歌曲修订保存", async () => {
+		const base = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			mode: "edit",
+			entity: "song",
+			targetId: "song-1",
+			step: "albumDetails",
+			draft: {
+				...base.draft,
+				albumImport: { ...base.draft.albumImport, importId: null },
+			},
+		});
+		getMusicSongDetailMock.mockResolvedValue({
+			song: {
+				id: "song-1",
+				title: "Standalone Song",
+				description: "Optional description",
+				release_type: "single",
+				release_date: "2025-01-02",
+				release_date_precision: "day",
+				cover_url: "https://img.test/song.jpg",
+				audio_url: "https://audio.test/song.mp3",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+				entry_status: "open",
+			},
+			artists: [
+				{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 },
+			],
+			playable: true,
+		} as never);
+		submitSongRevisionMock.mockResolvedValue({ status: "approved" } as never);
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("编辑歌曲");
+		const flow = drawerMocks.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		expect(flow.draft.albumDetails).toMatchObject({
+			title: "Standalone Song",
+			bio: "Optional description",
+			type: "single",
+			source: "https://example.test/song",
+		});
+		expect(flow.draft.tracks).toEqual([
+			expect.objectContaining({
+				songId: "song-1",
+				title: "Standalone Song",
+				discNumber: 1,
+				sequence: 1,
+			}),
+		]);
+
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+
+		expect(submitSongRevisionMock).toHaveBeenCalledWith("song-1", expect.objectContaining({
+			title: "Standalone Song",
+			description: "Optional description",
+			release_type: "single",
+			release_date: "2025-01-02",
+			sources: [{ type: "url", url: "https://example.test/song" }],
+			artist_credits: [{
+				artist_id: "artist-1",
+				position: 1,
+				roles: [{ role: "primary" }],
+			}],
+		}));
+		expect(drawerMocks.refreshSong).toHaveBeenCalled();
+		expect(drawerMocks.routerReplace).toHaveBeenCalledWith("/music/song/song-1");
+	});
+
+	it("独立歌曲选择专辑类型时通过转换接口保存", async () => {
+		const base = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			mode: "edit",
+			entity: "song",
+			targetId: "song-1",
+			step: "albumDetails",
+			draft: { ...base.draft, albumImport: { ...base.draft.albumImport, importId: null } },
+		});
+		getMusicSongDetailMock.mockResolvedValue({
+			song: {
+				id: "song-1", title: "Standalone Song", description: "Optional",
+				release_type: "single", release_date: "2025-01-02",
+				cover_url: "https://img.test/song.jpg", audio_url: "https://audio.test/song.mp3",
+				sources: [{ type: "url", url: "https://example.test/song" }], entry_status: "open",
+			},
+			artists: [{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 }],
+			playable: true,
+		} as never);
+		convertMusicSongToAlbumMock.mockResolvedValue({ entity_type: "album", id: "album-2" });
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await flushPromises();
+		const flow = drawerMocks.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumDetails.type = "album";
+		await nextTick();
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+
+		expect(convertMusicSongToAlbumMock).toHaveBeenCalledWith("song-1", expect.objectContaining({
+			title: "Standalone Song",
+			release_type: "album",
+			cover_url: "https://img.test/song.jpg",
+		}));
+		expect(submitSongRevisionMock).not.toHaveBeenCalled();
+		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
+		expect(drawerMocks.routerReplace).toHaveBeenCalledWith("/music/album/album-2");
 	});
 
 	it("单轨专辑选择 single 时转换为独立歌曲", async () => {

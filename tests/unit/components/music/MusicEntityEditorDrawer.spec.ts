@@ -170,6 +170,32 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		expect(mocks.refreshSong).toHaveBeenCalled();
 	});
 
+	it("keeps an album track description collapsed until requested", async () => {
+		mocks.getMusicSongDetail.mockResolvedValueOnce({
+			song: {
+				id: "song-1",
+				title: "Album Track",
+				description: "Track description",
+				album: { id: "album-1", title: "Parent Album" },
+			},
+			artists: [
+				{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 },
+			],
+			playable: true,
+		});
+		drawerState.value.musicEditor = { entity: "song", mode: "edit", id: "song-1" };
+		const wrapper = mountDrawer();
+		await flushPromises();
+
+		const toggle = wrapper.get('[data-testid="song-editor-description-toggle"]');
+		expect(toggle.attributes("aria-expanded")).toBe("false");
+		expect(wrapper.find('[data-testid="song-editor-description"]').exists()).toBe(false);
+
+		await toggle.trigger("click");
+		expect(toggle.attributes("aria-expanded")).toBe("true");
+		expect(wrapper.get('[data-testid="song-editor-description"]').element).toHaveProperty("value", "Track description");
+	});
+
 	it("submits standalone release metadata without an inline lyrics draft", async () => {
 		mocks.getMusicSongDetail.mockResolvedValueOnce({
 			song: {

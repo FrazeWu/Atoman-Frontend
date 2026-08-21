@@ -27,7 +27,7 @@ const songDetail = {
 	playable: true,
 };
 
-test("独立歌曲使用紧凑元数据编辑器并通过歌曲修订保存", async ({ page }) => {
+test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ page }) => {
 	const revisionBodies: Array<{ changes?: Record<string, unknown> }> = [];
 
 	await page.setViewportSize({ width: 1000, height: 900 });
@@ -130,17 +130,23 @@ test("独立歌曲使用紧凑元数据编辑器并通过歌曲修订保存", as
 		.click();
 
 	const editor = page.getByRole("dialog", { name: "编辑歌曲" });
-	await expect(editor.getByLabel("歌曲名")).toHaveValue("Standalone Song");
-	await expect(editor.getByTestId("song-editor-release-date")).toHaveValue(
+	await expect(editor.getByTestId("album-details-progress-label")).toHaveText("编辑歌曲");
+	await expect(editor.getByTestId("album-details-title-input")).toHaveValue("Standalone Song");
+	await expect(editor.getByTestId("album-details-date-input")).toHaveValue(
 		"2025/01/02",
 	);
-	await expect(editor.getByTestId("song-editor-source")).toHaveValue(
+	await expect(editor.getByTestId("album-details-source-input")).toHaveValue(
 		"https://example.test/song-source",
 	);
-	await expect(editor.getByTestId("song-editor-description")).toHaveValue(
+	const descriptionToggle = editor.getByTestId("album-details-bio-toggle");
+	await expect(descriptionToggle).toHaveAttribute("aria-expanded", "false");
+	await expect(editor.getByTestId("album-details-bio-input")).toHaveCount(0);
+	await descriptionToggle.click();
+	await expect(descriptionToggle).toHaveAttribute("aria-expanded", "true");
+	await expect(editor.getByTestId("album-details-bio-input")).toHaveValue(
 		"Optional song description",
 	);
-	await expect(editor.getByText("歌词", { exact: true })).toHaveCount(0);
+	await expect(editor.locator('textarea[aria-label="歌词"]')).toHaveCount(0);
 	await expect(editor.getByText("碟号", { exact: true })).toHaveCount(0);
 	await expect(editor.getByText("曲序", { exact: true })).toHaveCount(0);
 
@@ -148,15 +154,15 @@ test("独立歌曲使用紧凑元数据编辑器并通过歌曲修订保存", as
 	await expect
 		.poll(() =>
 			editor
-				.locator(".song-editor")
+				.locator(".album-details-step")
 				.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
 		)
 		.toBe(true);
-	await expect(editor.getByTestId("song-editor-release-date")).toHaveValue(
+	await expect(editor.getByTestId("album-details-date-input")).toHaveValue(
 		"2025/01/02",
 	);
 
-	await editor.getByRole("button", { name: "保存歌曲" }).click();
+	await editor.getByRole("button", { name: "保存", exact: true }).click();
 	await expect.poll(() => revisionBodies.length).toBe(1);
 	const changes = revisionBodies[0]?.changes ?? {};
 	expect(changes).toMatchObject({

@@ -466,13 +466,13 @@ export function useMusicDrawers() {
 	};
 
 	const openMusicCreationFlow = (seed: MusicCreationFlowSeed = {}) => {
+		let targetId = seed.artistId ?? null;
+		if (seed.entity === "album") targetId = seed.albumId ?? null;
+		if (seed.entity === "song") targetId = seed.songId ?? null;
 		state.value.creationFlow = {
 			mode: seed.mode ?? "create",
 			entity: seed.entity,
-			targetId:
-				seed.entity === "album"
-					? (seed.albumId ?? null)
-					: (seed.artistId ?? null),
+			targetId,
 			loading: false,
 			step: seed.startStep ?? "albumImport",
 			draft: createEmptyDraft(seed),
@@ -484,7 +484,7 @@ export function useMusicDrawers() {
 			errorMessage: "",
 		};
 		sheetStack.push({
-			key: `creation:${seed.mode ?? "create"}:${seed.entity ?? "album"}:${seed.albumId ?? seed.artistId ?? "new"}`,
+			key: `creation:${seed.mode ?? "create"}:${seed.entity ?? "album"}:${seed.songId ?? seed.albumId ?? seed.artistId ?? "new"}`,
 			kind: "creation",
 			title: "创建音乐条目",
 			payload: seed,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { parseBlob } from 'music-metadata-browser'
-import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
+import { ChevronDown, FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
@@ -23,6 +23,7 @@ const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers(
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 const creationFlow = computed(() => state.value.creationFlow)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
+const isSongEdit = computed(() => isEditMode.value && creationFlow.value?.entity === 'song')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const standaloneTypeSelected = computed(() => ['single', 'leak'].includes(albumDetailsDraft.value?.type ?? 'album'))
 const standaloneHasMultipleTracks = computed(() => standaloneTypeSelected.value && (creationFlow.value?.draft.tracks.length ?? 0) > 1)
@@ -71,6 +72,7 @@ const trackAudioInputRef = ref<HTMLInputElement | null>(null)
 const pendingAudioTrackId = ref<string | null>(null)
 const trackAudioUploading = ref(false)
 const trackAudioError = ref('')
+const bioExpanded = ref(false)
 const activeTrackUploads = new Map<string, AbortController>()
 
 onUnmounted(() => {
@@ -350,7 +352,7 @@ watch(
     <section class="progress-card">
       <div class="progress-copy">
         <p class="progress-label" data-testid="album-details-progress-label">
-          {{ isEditMode ? '编辑专辑' : isTest ? '第 3 步 / 完善专辑' : '第 2 步 / 新建专辑' }}
+          {{ isEditMode ? (isSongEdit ? '编辑歌曲' : '编辑专辑') : isTest ? '第 3 步 / 完善专辑' : standaloneTypeSelected ? '第 2 步 / 新建歌曲' : '第 2 步 / 新建专辑' }}
         </p>
       </div>
       <p class="progress-value" data-testid="album-details-progress-value">
@@ -360,7 +362,7 @@ watch(
         <span class="progress-step" data-testid="album-details-step-label">1 创建艺术家</span>
         <span v-if="isTest" class="progress-step" data-testid="album-details-step-label">2 专辑名 + 批量上传</span>
         <span class="progress-step progress-step--active" data-testid="album-details-step-label">
-          {{ isTest ? '3 详细信息' : '2 新建专辑' }}
+          {{ isTest ? '3 详细信息' : standaloneTypeSelected ? '2 新建歌曲' : '2 新建专辑' }}
         </span>
       </div>
       <div class="progress-track" aria-hidden="true">
@@ -414,7 +416,7 @@ watch(
                 <ImageUp :size="28" aria-hidden="true" />
               </div>
               <div class="file-picker-text">
-                <span class="file-picker-title">上传专辑封面</span>
+                <span class="file-picker-title">上传{{ standaloneTypeSelected ? '歌曲' : '专辑' }}封面</span>
                 <span class="file-picker-subtitle">JPG / PNG 正方形</span>
               </div>
             </template>
@@ -498,13 +500,32 @@ watch(
             </p>
           </div>
         </div>
-        <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
+        <div
+          class="field-group album-details-step__bio-field"
+          :class="{ 'is-expanded': bioExpanded }"
+          data-testid="album-details-field"
+          data-field="bio"
+        >
+          <button
+            type="button"
+            class="album-details-step__bio-toggle"
+            :aria-expanded="bioExpanded"
+            aria-controls="album-details-description"
+            :title="bioExpanded ? '收起简介' : '展开简介'"
+            data-testid="album-details-bio-toggle"
+            @click="bioExpanded = !bioExpanded"
+          >
+            <span>简介</span>
+            <ChevronDown :size="18" aria-hidden="true" />
+          </button>
           <PTextarea
+            v-if="bioExpanded"
+            id="album-details-description"
             v-model="albumDetailsDraft.bio"
             data-testid="album-details-bio-input"
             :rows="3"
             :placeholder="detailsDescriptionPlaceholder"
-            label="简介"
+            aria-label="简介"
           />
         </div>
       </div>
@@ -727,12 +748,12 @@ watch(
   align-items: stretch;
 }
 
-/* 左侧专辑信息与右侧简介等高 */
+/* 左侧发行信息，右侧简介按需展开 */
 .album-details-step__content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 1.5rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .album-details-step__header-main {
@@ -766,7 +787,8 @@ watch(
 
 .album-details-step__bio-field {
   display: flex;
-  min-height: 100%;
+  width: 100%;
+  flex-direction: column;
   padding: 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
@@ -774,11 +796,43 @@ watch(
   box-shadow: var(--a-shadow-sm);
 }
 
+.album-details-step__bio-toggle {
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.album-details-step__bio-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 3px;
+}
+
+.album-details-step__bio-toggle svg {
+  flex: 0 0 auto;
+  transition: transform 0.18s ease;
+}
+
+.album-details-step__bio-field.is-expanded .album-details-step__bio-toggle svg {
+  transform: rotate(180deg);
+}
+
 .album-details-step__bio-field :deep(.p-field) {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  padding-top: 0.75rem;
 }
 
 .album-details-step__bio-field :deep(.p-textarea-wrapper) {
@@ -1439,5 +1493,11 @@ watch(
   color: var(--a-color-muted-soft);
   margin-top: 0.15rem;
   line-height: 1.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-details-step__bio-toggle svg {
+    transition: none;
+  }
 }
 </style>

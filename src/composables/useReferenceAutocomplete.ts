@@ -113,10 +113,12 @@ export async function searchReferenceSuggestions(trigger: ReferenceTrigger, limi
     .filter(({ type, label }) => !normalized || type.startsWith(normalized) || label.includes(trigger.query))
     .map(({ type, label }) => ({ kind: 'type', key: `type:${type}`, targetType: type, label }))
   let users: ReferenceSuggestion[] = []
-  try {
-    users = (await referenceApi.search('user', trigger.query, Math.min(5, limit))).map(targetSuggestion)
-  } catch {
-    users = []
+  if (trigger.query) {
+    try {
+      users = (await referenceApi.search('user', trigger.query, Math.min(5, limit))).map(targetSuggestion)
+    } catch {
+      users = []
+    }
   }
   return [...users, ...types].slice(0, limit)
 }

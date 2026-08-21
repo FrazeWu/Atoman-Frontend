@@ -60,6 +60,7 @@
                     :show-toolbar="false"
                     :show-reference-trigger="false"
                     :line-numbers="lineNumbersVisible"
+                    :show-whitespace="true"
                     @update:line-numbers="lineNumbersVisible = $event"
                     @active-heading-change="activeHeadingLine = $event"
                     @collab-ready="handleCollabReady"

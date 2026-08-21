@@ -45,7 +45,9 @@
           <span class="music-sidebar-playlists__name">{{ playlist.name }}</span>
         </button>
         
-        <p v-if="!playlists.length && !isCreating" class="music-sidebar-playlists__empty">暂无歌单</p>
+        <p v-if="!playlists.length && !isCreating" class="music-sidebar-playlists__empty">
+          {{ isAuthenticated ? '暂无歌单' : '请先登录' }}
+        </p>
       </div>
 
       <div v-if="bookmarkedPlaylists.length" class="music-sidebar-playlists__items music-sidebar-playlists__items--bookmarked">

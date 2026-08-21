@@ -18,7 +18,7 @@
       >
         <div class="source-sheet-hero">
           <span class="source-sheet-kicker">{{ sourceTypeLabel }}</span>
-          <span class="source-sheet-url" data-test="feed-source-url">{{ sourceUrl }}</span>
+          <span v-if="sourceUrl" class="source-sheet-url" data-test="feed-source-url">{{ sourceUrl }}</span>
         </div>
 
         <div class="source-sheet-heading">
@@ -113,7 +113,6 @@ import PSheet from '@/components/ui/PSheet.vue'
 import {
   buildSourceAvatarLabel,
   buildSourceColor,
-  normalizeSourceUrlForCard,
 } from '@/utils/feedSourcePresentation'
 
 const props = withDefaults(defineProps<{
@@ -150,10 +149,7 @@ const sourceTypeLabel = computed(() => {
 
 const sourceTitle = computed(() => props.source?.title?.trim() || '来源')
 
-const sourceUrl = computed(() => {
-  if (props.source?.rssUrl) return props.source.rssUrl
-  return normalizeSourceUrlForCard(undefined, sourceTitle.value)
-})
+const sourceUrl = computed(() => props.source?.rssUrl || '')
 
 const sourceAvatarLabel = computed(() => buildSourceAvatarLabel(sourceTitle.value))
 

@@ -692,4 +692,36 @@ describe("player store", () => {
 
 		expect(player.isPlaying).toBe(false);
 	});
+
+	it("treats media session play and pause as idempotent actions", async () => {
+		const handlers = new Map<string, () => void>();
+		const mediaSession = {
+			playbackState: "none",
+			setActionHandler: vi.fn((action: string, handler: () => void) => {
+				handlers.set(action, handler);
+			}),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		player.playSong({ id: "media-song", title: "Media Song", audio_url: "media.mp3" } as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		handlers.get("pause")?.();
+		handlers.get("pause")?.();
+		expect(audioInstances[0].pause).toHaveBeenCalledTimes(1);
+
+		handlers.get("play")?.();
+		await audioInstances[0].play.mock.results.at(-1)?.value;
+		handlers.get("play")?.();
+		await audioInstances[0].play.mock.results.at(-1)?.value;
+		expect(audioInstances[0].play).toHaveBeenCalledTimes(2);
+		expect(player.isPlaying).toBe(true);
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
 });

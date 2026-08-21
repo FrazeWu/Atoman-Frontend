@@ -557,6 +557,7 @@ export interface FeedSource {
 	rss_url?: string;
 	hash: string;
 	title?: string;
+	language_code?: string;
 	full_text_enabled?: boolean;
 	status?: "healthy" | "degraded" | "failing" | "disabled";
 	success_count?: number;
@@ -588,6 +589,7 @@ export interface FeedExploreSource {
 	title: string;
 	rssUrl?: string;
 	category: FeedSourceCategory;
+	language_code?: string;
 	subscriptionCount: number;
 	recentItemCount: number;
 	lastPublishedAt?: string;
@@ -696,6 +698,7 @@ export interface FeedItem {
 	feed_source?: FeedSource;
 	guid: string;
 	title: string;
+	language_code?: string;
 	link: string;
 	summary: string;
 	author: string;
@@ -739,6 +742,7 @@ export interface StarredFeedItem {
 	feed_source_id?: string;
 	guid?: string;
 	title: string;
+	language_code?: string;
 	link: string;
 	summary: string;
 	author: string;

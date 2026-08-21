@@ -17,15 +17,15 @@
   >
     <!-- Visual / Cover / Avatar -->
     <template #visual>
-      <div v-if="coverUrl && !coverImageFailed" class="blog-item-card__visual">
-        <img :src="coverUrl" :alt="displayTitle" class="blog-item-card__cover" loading="lazy" @error="coverImageFailed = true" />
+      <div class="blog-item-card__visual" :class="{ 'is-fallback': !coverUrl || coverImageFailed }">
+        <img v-if="coverUrl && !coverImageFailed" :src="coverUrl" :alt="displayTitle" class="blog-item-card__cover" loading="lazy" @error="coverImageFailed = true" />
+        <PAvatar
+          v-else
+          :src="avatarUrl"
+          :name="authorName || sourceTitle || displayTitle"
+          size="sm"
+        />
       </div>
-      <PAvatar
-        v-else
-        :src="avatarUrl"
-        :name="authorName || sourceTitle || displayTitle"
-        size="sm"
-      />
     </template>
 
     <!-- Meta row -->
@@ -241,6 +241,13 @@ function handleClick() {
 
 .blog-item-card:hover .blog-item-card__cover {
   transform: scale(1.05);
+}
+
+.blog-item-card__visual.is-fallback :deep(.p-avatar) {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
 }
 
 .blog-item-card__author {

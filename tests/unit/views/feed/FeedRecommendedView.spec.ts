@@ -105,7 +105,11 @@ describe('FeedRecommendedView', () => {
     await wrapper.get('[data-test="external-source-search"]').setValue('open')
     await flushPromises()
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/feed/explore/sources?page=1&limit=20&q=open'),
+      expect.stringContaining('/api/v1/feed/explore/sources?page=1&limit=20'),
+      authenticatedSourceRequestOptions,
+    )
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('q=open'),
       authenticatedSourceRequestOptions,
     )
 
@@ -117,7 +121,11 @@ describe('FeedRecommendedView', () => {
     await wrapper.findAll('.feed-page-control').find((button) => button.text().includes('下一页'))!.trigger('click')
     await flushPromises()
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/feed/explore/sources?page=2&limit=20&q=open'),
+      expect.stringContaining('/api/v1/feed/explore/sources?page=2&limit=20'),
+      authenticatedSourceRequestOptions,
+    )
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('q=open'),
       authenticatedSourceRequestOptions,
     )
   })
@@ -823,7 +831,7 @@ describe('FeedRecommendedView', () => {
   })
 
   it('renders channel recommendation heat labels and avatar fallback', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
       if (url.includes('/feed/recommend/themes')) {
         return new Response(JSON.stringify({ data: [] }), { status: 200 })
@@ -867,6 +875,17 @@ describe('FeedRecommendedView', () => {
           ],
         }), { status: 200 })
       }
+      if (url.includes('/blog/posts')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'post-visual-1',
+            title: '频道文章',
+            content: '频道文章正文',
+            created_at: '2026-06-20T08:30:00Z',
+          }],
+          meta: { total: 1 },
+        }), { status: 200 })
+      }
       return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
     })
 
@@ -900,5 +919,12 @@ describe('FeedRecommendedView', () => {
 
     expect(channelCards[0].find('.feed-source-card__avatar-image').attributes('src')).toBe('https://example.com/channel-cover.jpg')
     expect(channelCards[1].get('[data-test="feed-source-avatar"]').text()).toBe('N')
+
+    await channelCards[0].trigger('click')
+    await flushPromises()
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/blog/posts?channel_id=chan-visual-1'),
+      expect.anything(),
+    )
   })
 })

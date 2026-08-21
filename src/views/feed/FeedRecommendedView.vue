@@ -7,6 +7,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -14,12 +15,21 @@ import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
+import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
+import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { buildSourceAvatarLabel, buildSourceColor } from '@/utils/feedSourcePresentation'
-import type { FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory } from '@/types'
+import {
+  ALL_RECOMMENDATION_LANGUAGE,
+  detectDefaultRecommendationLanguage,
+  normalizeRecommendationLanguage,
+  recommendationLanguageOptions,
+  type RecommendationLanguage,
+} from '@/utils/recommendationLanguage'
+import type { FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 type RecommendTarget = 'articles' | 'channels' | 'mixed'
@@ -34,6 +44,7 @@ type ExploreSourcePayload = Partial<FeedExploreSource> & {
   subscription_count?: number
   recent_item_count?: number
   last_published_at?: string
+  language_code?: string
   recent_items?: Array<{ id: string; title: string; published_at?: string }>
 }
 type RecommendationItem = {
@@ -42,6 +53,7 @@ type RecommendationItem = {
   summary?: string
   description?: string
   content_type?: string
+  language_code?: string
   image_url?: string
   target_path: string
   score_label?: string
@@ -90,6 +102,7 @@ const mode = ref<RecommendationMode>('hot')
 const target = ref<RecommendTarget>('articles')
 const category = ref<FeedSourceFilterCategory>(ALL_CATEGORY)
 const theme = ref(ALL_THEME)
+const language = ref<RecommendationLanguage>('en')
 const themes = ref<FeedRecommendationTheme[]>([])
 const themesLoading = ref(false)
 const loading = ref(false)
@@ -101,6 +114,13 @@ const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
+const showChannelSheet = ref(false)
+const selectedChannelSource = ref<FeedArticleSource | null>(null)
+const channelArticles = ref<TimelineItem[]>([])
+const channelArticlesLoading = ref(false)
+const channelArticleRequestId = ref(0)
+const showChannelArticleSheet = ref(false)
+const selectedChannelArticle = ref<TimelineItem | null>(null)
 const page = ref(1)
 const pageSize = 20
 const totalArticles = ref(0)
@@ -165,6 +185,15 @@ function normalizeSourceScope(raw: unknown): SourceScope {
   return raw === 'external' ? 'external' : 'internal'
 }
 
+function defaultRecommendationLanguage(): RecommendationLanguage {
+  return detectDefaultRecommendationLanguage()
+}
+
+function normalizeLanguage(raw: unknown): RecommendationLanguage {
+  if (raw === ALL_RECOMMENDATION_LANGUAGE) return ALL_RECOMMENDATION_LANGUAGE
+  return normalizeRecommendationLanguage(raw) ?? defaultRecommendationLanguage()
+}
+
 function normalizedCategoryParam(value: FeedSourceFilterCategory) {
   return value === ALL_CATEGORY ? 'all' : value
 }
@@ -178,6 +207,7 @@ function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSourc
     subscriptionCount: payload.subscriptionCount ?? payload.subscription_count ?? 0,
     recentItemCount: payload.recentItemCount ?? payload.recent_item_count ?? 0,
     lastPublishedAt: payload.lastPublishedAt ?? payload.last_published_at,
+    language_code: payload.language_code,
     subscribed: Boolean(payload.subscribed),
     recentItems: (payload.recentItems ?? payload.recent_items ?? []).map((item) => {
       const recent = item as FeedExploreRecentItem & { published_at?: string }
@@ -198,6 +228,7 @@ function syncQuery() {
       target: target.value,
       category: category.value,
       theme: theme.value,
+      language: language.value,
       scope: sourceScope.value,
       source_q: externalSearch.value || undefined,
       source_page: sourceScope.value === 'external' && externalPage.value > 1 ? String(externalPage.value) : undefined,
@@ -236,6 +267,7 @@ async function fetchRecommendations() {
       page_size: String(pageSize),
       category: normalizedCategoryParam(category.value),
       theme: theme.value,
+      language: language.value,
     })
     const [articleRes, channelRes] = await Promise.all([
       target.value !== 'channels'
@@ -285,6 +317,7 @@ async function fetchExternalSources() {
   try {
     const params = new URLSearchParams({ page: String(externalPage.value), limit: String(externalPageSize) })
     if (category.value !== ALL_CATEGORY) params.set('category', category.value)
+    if (language.value !== ALL_RECOMMENDATION_LANGUAGE) params.set('language', language.value)
     if (externalSearch.value.trim()) params.set('q', externalSearch.value.trim())
     const res = await apiRequestResult(`${api.url}/feed/explore/sources?${params}`, authStore.isAuthenticated
       ? { headers: { Authorization: `Bearer ${authStore.token}` } }
@@ -328,6 +361,123 @@ function changeExternalPage(nextPage: number) {
 
 function openTarget(path: string) {
   router.push(path)
+}
+
+function isRecommendedExternalSource(item: RecommendationItem) {
+  return item.target_path.includes('/feed?source_id=')
+}
+
+function toRecommendedArticleSource(item: RecommendationItem): FeedArticleSource {
+  return {
+    type: isRecommendedExternalSource(item) ? 'external_rss' : 'internal_channel',
+    id: item.id,
+    title: item.title,
+    subscribed: Boolean(item.subscribed),
+    itemCount: item.recent_items?.length,
+  }
+}
+
+function channelArticleKey(item: TimelineItem) {
+  if (item.type === 'post' && item.post) return item.post.id
+  if (item.type === 'feed_item' && item.feed_item) return item.feed_item.id
+  return item.published_at
+}
+
+const selectedChannelArticleIndex = computed(() => {
+  if (!selectedChannelArticle.value) return -1
+  const key = channelArticleKey(selectedChannelArticle.value)
+  return channelArticles.value.findIndex((item) => channelArticleKey(item) === key)
+})
+
+async function openRecommendedChannel(item: RecommendationItem) {
+  const requestId = ++channelArticleRequestId.value
+  selectedChannelSource.value = toRecommendedArticleSource(item)
+  selectedChannelArticle.value = null
+  channelArticles.value = []
+  showChannelArticleSheet.value = false
+  showChannelSheet.value = true
+  channelArticlesLoading.value = true
+
+  try {
+    const headers: Record<string, string> = {}
+    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
+    const externalSource = isRecommendedExternalSource(item)
+    const params = externalSource
+      ? new URLSearchParams({ feed_source_id: item.id, page: '1', limit: '100' })
+      : new URLSearchParams({ channel_id: item.id, page: '1', page_size: '100' })
+    const url = externalSource
+      ? `${api.url}/feed/timeline?${params}`
+      : `${api.blog.posts}?${params}`
+    const response = await apiRequestResult(url, { headers })
+    if (requestId !== channelArticleRequestId.value || !response.ok) return
+
+    const payload = response.data
+    if (externalSource) {
+      const items = Array.isArray(payload?.data) ? payload.data as TimelineItem[] : []
+      channelArticles.value = items
+      selectedChannelSource.value = {
+        ...selectedChannelSource.value!,
+        itemCount: Number(payload?.meta?.total ?? items.length),
+      }
+    } else {
+      const posts = Array.isArray(payload?.data) ? payload.data as Post[] : []
+      channelArticles.value = posts.map((post) => ({
+        type: 'post',
+        post,
+        published_at: post.published_at || post.created_at,
+        is_read: true,
+      }))
+      selectedChannelSource.value = {
+        ...selectedChannelSource.value!,
+        itemCount: Number(payload?.meta?.total ?? posts.length),
+      }
+    }
+  } catch (error) {
+    if (requestId === channelArticleRequestId.value) {
+      reportError(error, 'Failed to fetch recommended channel articles:')
+      channelArticles.value = []
+    }
+  } finally {
+    if (requestId === channelArticleRequestId.value) channelArticlesLoading.value = false
+  }
+}
+
+function openRecommendedArticle(item: TimelineItem) {
+  selectedChannelArticle.value = item
+  showChannelArticleSheet.value = true
+}
+
+function openPreviousRecommendedArticle() {
+  if (selectedChannelArticleIndex.value <= 0) return
+  const previous = channelArticles.value[selectedChannelArticleIndex.value - 1]
+  if (previous) openRecommendedArticle(previous)
+}
+
+function openNextRecommendedArticle() {
+  if (selectedChannelArticleIndex.value < 0 || selectedChannelArticleIndex.value >= channelArticles.value.length - 1) return
+  const next = channelArticles.value[selectedChannelArticleIndex.value + 1]
+  if (next) openRecommendedArticle(next)
+}
+
+function returnToRecommendedChannel() {
+  showChannelArticleSheet.value = false
+}
+
+function closeRecommendedChannel() {
+  showChannelArticleSheet.value = false
+  showChannelSheet.value = false
+  selectedChannelArticle.value = null
+}
+
+async function subscribeSelectedRecommendedChannel() {
+  const source = selectedChannelSource.value
+  if (!source || source.type !== 'internal_channel') return
+  const item = channels.value.find((channel) => channel.id === source.id)
+  if (!item) return
+  await subscribeRecommendedChannel(item)
+  if (channels.value.find((channel) => channel.id === source.id)?.subscribed) {
+    selectedChannelSource.value = { ...source, subscribed: true }
+  }
 }
 
 function normalizeItemCategory(item: RecommendationItem): FeedSourceCategory {
@@ -441,6 +591,20 @@ watch([mode, page, theme], () => {
   fetchRecommendations()
 })
 
+watch(language, () => {
+  syncQuery()
+  if (sourceScope.value === 'external') {
+    if (externalPage.value === 1) void fetchExternalSources()
+    else externalPage.value = 1
+  }
+  if (!recommendationsMounted) return
+  if (page.value === 1) {
+    void fetchRecommendations()
+  } else {
+    page.value = 1
+  }
+})
+
 watch(sourceScope, () => {
   syncQuery()
   if (sourceScope.value === 'external') void fetchExternalSources()
@@ -500,6 +664,7 @@ onMounted(async () => {
   mode.value = normalizeMode(route.query.mode)
   target.value = normalizeTarget(route.query.target)
   category.value = normalizeCategory(route.query.category)
+  language.value = normalizeLanguage(route.query.language)
   theme.value = typeof route.query.theme === 'string' && route.query.theme.trim() ? route.query.theme.trim() : ALL_THEME
   sourceScope.value = normalizeSourceScope(route.query.scope)
   externalSearch.value = typeof route.query.source_q === 'string' ? route.query.source_q.trim() : ''
@@ -521,6 +686,31 @@ onMounted(async () => {
 
 <template>
   <div class="a-page-xl feed-recommend-page">
+    <FeedArticleSheet
+      :show="showChannelArticleSheet"
+      :article="selectedChannelArticle"
+      :has-previous="selectedChannelArticleIndex > 0"
+      :has-next="selectedChannelArticleIndex >= 0 && selectedChannelArticleIndex < channelArticles.length - 1"
+      :index="showChannelSheet ? 1 : 0"
+      @close="showChannelArticleSheet = false"
+      @previous="openPreviousRecommendedArticle"
+      @next="openNextRecommendedArticle"
+    />
+    <FeedSourceArticlesSheet
+      :show="showChannelSheet"
+      :source="selectedChannelSource"
+      :items="channelArticles"
+      :loading="channelArticlesLoading"
+      :subscribe-busy="selectedChannelSource ? isChannelSubscribeBusy(selectedChannelSource.id) : false"
+      :stack-size="showChannelArticleSheet ? 2 : 1"
+      :is-shifted="showChannelArticleSheet"
+      :is-top-layer="!showChannelArticleSheet"
+      @close="closeRecommendedChannel"
+      @activate="returnToRecommendedChannel"
+      @subscribe="subscribeSelectedRecommendedChannel"
+      @open-article="openRecommendedArticle"
+    />
+
     <PPageHeader
       title="探索订阅源"
       mb="1.25rem"
@@ -550,6 +740,15 @@ onMounted(async () => {
         <PSegmentedControl
           v-model="category"
           :options="categoryOptions"
+        />
+      </div>
+
+      <div class="filter-group" data-test="feed-filter-group" aria-label="语言筛选">
+        <PSelect
+          v-model="language"
+          label="语言"
+          :options="recommendationLanguageOptions"
+          data-test="recommendation-language"
         />
       </div>
 
@@ -701,7 +900,7 @@ onMounted(async () => {
                 compact
                 variant="recommend"
                 data-test="channel-card"
-                @select="openTarget(item.target_path)"
+                @select="openRecommendedChannel(item)"
                 @subscribe="subscribeRecommendedChannel(item)"
               />
             </div>
@@ -743,7 +942,7 @@ onMounted(async () => {
             compact
             variant="recommend"
             data-test="channel-card"
-            @select="openTarget(item.target_path)"
+            @select="openRecommendedChannel(item)"
             @subscribe="subscribeRecommendedChannel(item)"
           />
         </div>

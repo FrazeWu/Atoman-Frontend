@@ -1,3 +1,4 @@
+import { ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
@@ -114,6 +115,16 @@ describe("MusicSidebarPlaylists", () => {
 
 		expect(mocks.listMusicPlaylists).not.toHaveBeenCalled();
 		expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled();
+	});
+
+	it("shows a login prompt for guests instead of an empty playlist state", async () => {
+		mocks.isAuthenticated = ref(false);
+		const wrapper = mount(MusicSidebarPlaylists, {
+			props: { collapsed: false },
+		});
+		await flushPromises();
+
+		expect(wrapper.get(".music-sidebar-playlists__empty").text()).toBe("请先登录");
 	});
 
 	it("shows bookmarked playlists under my playlists", async () => {

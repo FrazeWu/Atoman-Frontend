@@ -107,8 +107,10 @@ const tools: Tool[] = [
   display: flex;
   min-height: 2.75rem;
   align-items: center;
+  align-content: center;
+  flex-wrap: wrap;
   gap: 0.25rem;
-  overflow-x: auto;
+  overflow: visible;
   padding: 0.35rem 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);

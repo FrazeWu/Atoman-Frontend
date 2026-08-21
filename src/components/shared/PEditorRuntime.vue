@@ -125,7 +125,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AtSign, Quote } from 'lucide-vue-next'
-import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
+import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType, highlightActiveLine, highlightActiveLineGutter, highlightWhitespace, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
 import { Compartment, EditorState, RangeSetBuilder, StateField, type Text } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
@@ -257,6 +257,7 @@ interface Props {
   showSyncScrollToggle?: boolean
   syncScroll?: boolean
   lineNumbers?: boolean
+  showWhitespace?: boolean
   livePreview?: boolean
   showToolbar?: boolean
   enableImageUpload?: boolean
@@ -644,6 +645,7 @@ function initCodeMirror() {
     markdown({ codeLanguages: languages }),
     lineNumberCompartment.of(lineNumberExtensions()),
     livePreviewCompartment.of(props.livePreview ? livePreviewExtensions() : []),
+    props.showWhitespace ? highlightWhitespace() : [],
     resourceReferenceCompartment.of(resourceReferenceExtensions()),
     contentAttributesCompartment.of(EditorView.contentAttributes.of(editorContentAttributes())),
     EditorView.lineWrapping,
@@ -1313,9 +1315,11 @@ onBeforeUnmount(() => {
 }
 
 .p-editor-normal-body {
-  position: relative;
-  min-height: 10rem;
+  display: flex;
+  min-height: 0;
   flex: 1;
+  flex-direction: column;
+  position: relative;
 }
 
 .p-editor-sv-body.dragging::after,
@@ -1354,11 +1358,11 @@ onBeforeUnmount(() => {
 .cm-container {
   flex: 1;
   height: 100%;
-  min-height: 16rem;
+  min-height: 0;
 }
 
 .p-editor-normal-body .cm-container {
-  min-height: 10rem;
+  min-height: 0;
 }
 
 :deep(.cm-editor) {
@@ -1367,6 +1371,14 @@ onBeforeUnmount(() => {
 
 :deep(.cm-scroller) {
   overflow: auto;
+}
+
+:deep(.cm-highlightSpace),
+:deep(.cm-highlightTab) {
+  background-image: radial-gradient(circle at 50% 55%, #888 20%, transparent 5%);
+  background-position: center;
+  background-repeat: repeat-x;
+  background-size: 0.35rem 0.35rem;
 }
 
 :deep(.cm-markdown-strike) {

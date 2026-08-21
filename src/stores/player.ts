@@ -476,6 +476,19 @@ export const usePlayerStore = defineStore("player", () => {
 		});
 	}
 
+	const pauseCurrentAudio = (player: HTMLAudioElement) => {
+		playGeneration += 1;
+		savePodcastProgress();
+		saveMusicProgress(false, true);
+		saveMusicSession(true);
+		player.pause();
+		isPlaying.value = false;
+		pauseListening();
+		if ("mediaSession" in navigator) {
+			navigator.mediaSession.playbackState = "paused";
+		}
+	};
+
 	const ensureAudio = () => {
 		if (audio) return audio;
 
@@ -525,8 +538,12 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 
 		setupMediaSession({
-			play: togglePlay,
-			pause: togglePlay,
+			play: () => {
+				if (currentSong.value && !isPlaying.value) attemptPlay(nextAudio);
+			},
+			pause: () => {
+				if (isPlaying.value) pauseCurrentAudio(nextAudio);
+			},
 			previoustrack: playPrevious,
 			nexttrack: playNext,
 			seekto: (details) => {
@@ -886,16 +903,7 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 
 		if (isPlaying.value) {
-			playGeneration += 1;
-			savePodcastProgress();
-			saveMusicProgress(false, true);
-			saveMusicSession(true);
-			player.pause();
-			isPlaying.value = false;
-			pauseListening();
-			if ("mediaSession" in navigator) {
-				navigator.mediaSession.playbackState = "paused";
-			}
+			pauseCurrentAudio(player);
 		} else {
 			if (listeningSongId !== String(currentSong.value.id))
 				resetListening(currentSong.value);

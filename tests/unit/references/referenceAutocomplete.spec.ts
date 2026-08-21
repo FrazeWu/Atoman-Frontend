@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   fitReferenceMenuPosition,
@@ -6,17 +6,18 @@ import {
   parseReferenceTrigger,
   referencePublishErrorMessage,
   referenceTokenForSuggestion,
+  searchReferenceSuggestions,
   searchDebateReferenceSuggestions,
   type ReferenceSuggestion,
-} from '@/composables/useReferenceAutocomplete'
+} from '../../../src/composables/useReferenceAutocomplete'
 
-vi.mock('@/api/references', () => ({
+vi.mock('../../../src/api/references', () => ({
   referenceApi: {
     search: vi.fn(),
   },
 }))
 
-import { referenceApi } from '@/api/references'
+import { referenceApi } from '../../../src/api/references'
 
 describe('reference autocomplete', () => {
   it('detects user and resource searches at the cursor', () => {
@@ -43,6 +44,26 @@ describe('reference autocomplete', () => {
     expect(referenceTokenForSuggestion(user)).toBe('@alice')
     expect(referenceTokenForSuggestion(post)).toBe('@post:2')
     expect(referenceTokenForSuggestion(typeChoice)).toBe('@post:')
+  })
+
+  it('does not query users for a bare @ while keeping resource type choices', async () => {
+    vi.mocked(referenceApi.search).mockClear()
+
+    const results = await searchReferenceSuggestions({ mode: 'root', query: '', start: 0 })
+
+    expect(results.every(result => result.kind === 'type')).toBe(true)
+    expect(referenceApi.search).not.toHaveBeenCalled()
+  })
+
+  it('queries users after a username query is entered', async () => {
+    vi.mocked(referenceApi.search).mockResolvedValueOnce([{
+      type: 'user', id: 'user-1', label: 'Alice', subtitle: '@alice', module: 'blog', path: '/users/alice', available: true,
+    }])
+
+    const results = await searchReferenceSuggestions({ mode: 'root', query: 'ali', start: 0 })
+
+    expect(results[0]).toMatchObject({ kind: 'target', targetType: 'user', id: 'user-1' })
+    expect(referenceApi.search).toHaveBeenCalledWith('user', 'ali', 5)
   })
 
   it('为辩论作用域只提供带立场的辩题 token', async () => {

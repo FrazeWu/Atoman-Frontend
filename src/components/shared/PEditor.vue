@@ -25,6 +25,7 @@ interface Props {
   showSyncScrollToggle?: boolean
   syncScroll?: boolean
   lineNumbers?: boolean
+  showWhitespace?: boolean
   livePreview?: boolean
   showToolbar?: boolean
   enableImageUpload?: boolean

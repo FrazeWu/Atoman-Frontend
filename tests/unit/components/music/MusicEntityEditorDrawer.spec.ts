@@ -118,7 +118,10 @@ describe("MusicEntityEditorDrawer.vue", () => {
 			size: 1,
 		});
 		mocks.submitSongRevision.mockResolvedValue({ status: "approved" });
-		mocks.convertMusicSongToAlbum.mockResolvedValue({ entity_type: "album", id: "album-2" });
+		mocks.convertMusicSongToAlbum.mockResolvedValue({
+			entity_type: "album",
+			id: "album-2",
+		});
 		mocks.queueMusicSongAudioReplacement.mockResolvedValue({
 			status: "pending",
 		});
@@ -183,69 +186,117 @@ describe("MusicEntityEditorDrawer.vue", () => {
 			],
 			playable: true,
 		});
-		drawerState.value.musicEditor = { entity: "song", mode: "edit", id: "song-1" };
+		drawerState.value.musicEditor = {
+			entity: "song",
+			mode: "edit",
+			id: "song-1",
+		};
 		const wrapper = mountDrawer();
 		await flushPromises();
 
-		const toggle = wrapper.get('[data-testid="song-editor-description-toggle"]');
+		const toggle = wrapper.get(
+			'[data-testid="song-editor-description-toggle"]',
+		);
 		expect(toggle.attributes("aria-expanded")).toBe("false");
-		expect(wrapper.find('[data-testid="song-editor-description"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="song-editor-description"]').exists(),
+		).toBe(false);
 
 		await toggle.trigger("click");
 		expect(toggle.attributes("aria-expanded")).toBe("true");
-		expect(wrapper.get('[data-testid="song-editor-description"]').element).toHaveProperty("value", "Track description");
+		expect(
+			wrapper.get('[data-testid="song-editor-description"]').element,
+		).toHaveProperty("value", "Track description");
 	});
 
 	it("submits standalone release metadata without an inline lyrics draft", async () => {
 		mocks.getMusicSongDetail.mockResolvedValueOnce({
 			song: {
-				id: "song-1", title: "Standalone Song", description: "Optional",
-				release_type: "single", release_date: "2025-01-02", release_date_precision: "day",
+				id: "song-1",
+				title: "Standalone Song",
+				description: "Optional",
+				release_type: "single",
+				release_date: "2025-01-02",
+				release_date_precision: "day",
 				cover_url: "https://assets.example.test/song.jpg",
 				sources: [{ type: "url", url: "https://example.test/song" }],
 			},
-			artists: [{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 }],
+			artists: [
+				{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 },
+			],
 			playable: true,
 		});
-		drawerState.value.musicEditor = { entity: "song", mode: "edit", id: "song-1" };
+		drawerState.value.musicEditor = {
+			entity: "song",
+			mode: "edit",
+			id: "song-1",
+		};
 		const wrapper = mountDrawer();
 		await flushPromises();
 
 		expect(wrapper.text()).not.toContain("歌词");
 		expect(wrapper.text()).not.toContain("碟号");
 		expect(wrapper.text()).not.toContain("曲序");
-		await wrapper.findAll("button").find((button) => button.text() === "保存歌曲")?.trigger("click");
+		await wrapper
+			.findAll("button")
+			.find((button) => button.text() === "保存歌曲")
+			?.trigger("click");
 		await flushPromises();
 
-		expect(mocks.submitSongRevision).toHaveBeenCalledWith("song-1", expect.objectContaining({
-			title: "Standalone Song", description: "Optional", release_type: "single", release_date: "2025-01-02",
-			sources: [{ type: "url", url: "https://example.test/song" }],
-		}));
+		expect(mocks.submitSongRevision).toHaveBeenCalledWith(
+			"song-1",
+			expect.objectContaining({
+				title: "Standalone Song",
+				description: "Optional",
+				release_type: "single",
+				release_date: "2025-01-02",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+			}),
+		);
 	});
 
 	it("converts a standalone song to an album type in one command", async () => {
 		mocks.getMusicSongDetail.mockResolvedValueOnce({
 			song: {
-				id: "song-1", title: "Standalone Song", description: "Optional",
-				release_type: "single", release_date: "2025-01-02",
+				id: "song-1",
+				title: "Standalone Song",
+				description: "Optional",
+				release_type: "single",
+				release_date: "2025-01-02",
 				cover_url: "https://assets.example.test/song.jpg",
 				sources: [{ type: "url", url: "https://example.test/song" }],
 			},
-			artists: [{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 }],
+			artists: [
+				{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 },
+			],
 			playable: true,
 		});
-		drawerState.value.musicEditor = { entity: "song", mode: "edit", id: "song-1" };
+		drawerState.value.musicEditor = {
+			entity: "song",
+			mode: "edit",
+			id: "song-1",
+		};
 		const wrapper = mountDrawer();
 		await flushPromises();
-		wrapper.findComponent({ name: "PSelect" }).vm.$emit("update:modelValue", "album");
+		wrapper
+			.findComponent({ name: "PSelect" })
+			.vm.$emit("update:modelValue", "album");
 		await nextTick();
 
-		await wrapper.findAll("button").find((button) => button.text() === "保存并转为专辑")?.trigger("click");
+		await wrapper
+			.findAll("button")
+			.find((button) => button.text() === "保存并转为专辑")
+			?.trigger("click");
 		await flushPromises();
 
-		expect(mocks.convertMusicSongToAlbum).toHaveBeenCalledWith("song-1", expect.objectContaining({
-			title: "Standalone Song", release_type: "album", cover_url: "https://assets.example.test/song.jpg",
-		}));
+		expect(mocks.convertMusicSongToAlbum).toHaveBeenCalledWith(
+			"song-1",
+			expect.objectContaining({
+				title: "Standalone Song",
+				release_type: "album",
+				cover_url: "https://assets.example.test/song.jpg",
+			}),
+		);
 		expect(mocks.submitSongRevision).not.toHaveBeenCalled();
 		expect(mocks.routerReplace).toHaveBeenCalledWith("/music/album/album-2");
 	});

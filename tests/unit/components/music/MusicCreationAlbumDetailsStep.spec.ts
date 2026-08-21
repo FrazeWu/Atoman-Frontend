@@ -105,24 +105,31 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 	it.each([
 		["专辑", "album"],
 		["歌曲", "single"],
-	])("keeps the %s description collapsed until requested", async (_label, type) => {
-		const drawers = useMusicDrawers();
-		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
-		drawers.setMusicCreationStep("albumDetails");
-		const flow = drawers.state.value.creationFlow;
-		if (!flow) throw new Error("creation flow missing");
-		flow.draft.albumDetails.type = type;
-		flow.draft.albumDetails.bio = "Existing description";
+	])(
+		"keeps the %s description collapsed until requested",
+		async (_label, type) => {
+			const drawers = useMusicDrawers();
+			drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+			drawers.setMusicCreationStep("albumDetails");
+			const flow = drawers.state.value.creationFlow;
+			if (!flow) throw new Error("creation flow missing");
+			flow.draft.albumDetails.type = type;
+			flow.draft.albumDetails.bio = "Existing description";
 
-		const wrapper = mount(MusicCreationAlbumDetailsStep);
-		const toggle = wrapper.get('[data-testid="album-details-bio-toggle"]');
-		expect(toggle.attributes("aria-expanded")).toBe("false");
-		expect(wrapper.find('[data-testid="album-details-bio-input"]').exists()).toBe(false);
+			const wrapper = mount(MusicCreationAlbumDetailsStep);
+			const toggle = wrapper.get('[data-testid="album-details-bio-toggle"]');
+			expect(toggle.attributes("aria-expanded")).toBe("false");
+			expect(
+				wrapper.find('[data-testid="album-details-bio-input"]').exists(),
+			).toBe(false);
 
-		await toggle.trigger("click");
-		expect(toggle.attributes("aria-expanded")).toBe("true");
-		expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveProperty("value", "Existing description");
-	});
+			await toggle.trigger("click");
+			expect(toggle.attributes("aria-expanded")).toBe("true");
+			expect(
+				wrapper.get('[data-testid="album-details-bio-input"]').element,
+			).toHaveProperty("value", "Existing description");
+		},
+	);
 
 	it("keeps text editing separate from drag sorting", () => {
 		const drawers = useMusicDrawers();
@@ -164,7 +171,9 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		flow.draft.albumDetails.type = "single";
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
-		expect(wrapper.find('[data-testid="album-details-single-track-error"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="album-details-single-track-error"]').exists(),
+		).toBe(false);
 
 		flow.draft.tracks.push({ id: "track-1", sequence: 1, title: "Only Song" });
 		await nextTick();
@@ -174,15 +183,23 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(false);
 
-		flow.draft.tracks.push({ id: "track-2", sequence: 2, title: "Second Song" });
+		flow.draft.tracks.push({
+			id: "track-2",
+			sequence: 2,
+			title: "Second Song",
+		});
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
-		expect(wrapper.get('[data-testid="album-details-single-track-error"]').text()).toContain("只能包含一首歌曲");
+		expect(
+			wrapper.get('[data-testid="album-details-single-track-error"]').text(),
+		).toContain("只能包含一首歌曲");
 
 		flow.draft.albumDetails.type = "ep";
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
-		expect(wrapper.find('[data-testid="album-details-single-track-error"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="album-details-single-track-error"]').exists(),
+		).toBe(false);
 	});
 
 	it("adds a lyric upload action to every new album track", () => {
@@ -572,7 +589,9 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(
 			wrapper.get('[data-testid="album-details-type-input"]').element,
 		).toHaveValue("album");
-		await wrapper.get('[data-testid="album-details-bio-toggle"]').trigger("click");
+		await wrapper
+			.get('[data-testid="album-details-bio-toggle"]')
+			.trigger("click");
 		expect(
 			wrapper.get('[data-testid="album-details-bio-input"]').element,
 		).toHaveValue("second studio album");

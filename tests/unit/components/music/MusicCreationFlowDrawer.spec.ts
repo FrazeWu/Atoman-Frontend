@@ -211,7 +211,9 @@ const submitAlbumRevisionMock = vi.mocked(musicApi.submitAlbumRevision);
 const submitSongRevisionMock = vi.mocked(musicApi.submitSongRevision);
 const convertMusicAlbumToSongMock = vi.mocked(musicApi.convertMusicAlbumToSong);
 const convertMusicSongToAlbumMock = vi.mocked(musicApi.convertMusicSongToAlbum);
-const queueMusicSongAudioReplacementMock = vi.mocked(musicApi.queueMusicSongAudioReplacement);
+const queueMusicSongAudioReplacementMock = vi.mocked(
+	musicApi.queueMusicSongAudioReplacement,
+);
 const completeMusicAlbumImportSessionMock = vi.mocked(
 	musicApi.completeMusicAlbumImportSession,
 );
@@ -727,23 +729,32 @@ describe("MusicCreationFlowDrawer", () => {
 			}),
 		]);
 
-		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await wrapper
+			.get('[data-testid="music-creation-finish-button"]')
+			.trigger("click");
 		await flushPromises();
 
-		expect(submitSongRevisionMock).toHaveBeenCalledWith("song-1", expect.objectContaining({
-			title: "Standalone Song",
-			description: "Optional description",
-			release_type: "single",
-			release_date: "2025-01-02",
-			sources: [{ type: "url", url: "https://example.test/song" }],
-			artist_credits: [{
-				artist_id: "artist-1",
-				position: 1,
-				roles: [{ role: "primary" }],
-			}],
-		}));
+		expect(submitSongRevisionMock).toHaveBeenCalledWith(
+			"song-1",
+			expect.objectContaining({
+				title: "Standalone Song",
+				description: "Optional description",
+				release_type: "single",
+				release_date: "2025-01-02",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+				artist_credits: [
+					{
+						artist_id: "artist-1",
+						position: 1,
+						roles: [{ role: "primary" }],
+					},
+				],
+			}),
+		);
 		expect(drawerMocks.refreshSong).toHaveBeenCalled();
-		expect(drawerMocks.routerReplace).toHaveBeenCalledWith("/music/song/song-1");
+		expect(drawerMocks.routerReplace).toHaveBeenCalledWith(
+			"/music/song/song-1",
+		);
 	});
 
 	it("独立歌曲选择专辑类型时通过转换接口保存", async () => {
@@ -753,19 +764,32 @@ describe("MusicCreationFlowDrawer", () => {
 			entity: "song",
 			targetId: "song-1",
 			step: "albumDetails",
-			draft: { ...base.draft, albumImport: { ...base.draft.albumImport, importId: null } },
+			draft: {
+				...base.draft,
+				albumImport: { ...base.draft.albumImport, importId: null },
+			},
 		});
 		getMusicSongDetailMock.mockResolvedValue({
 			song: {
-				id: "song-1", title: "Standalone Song", description: "Optional",
-				release_type: "single", release_date: "2025-01-02",
-				cover_url: "https://img.test/song.jpg", audio_url: "https://audio.test/song.mp3",
-				sources: [{ type: "url", url: "https://example.test/song" }], entry_status: "open",
+				id: "song-1",
+				title: "Standalone Song",
+				description: "Optional",
+				release_type: "single",
+				release_date: "2025-01-02",
+				cover_url: "https://img.test/song.jpg",
+				audio_url: "https://audio.test/song.mp3",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+				entry_status: "open",
 			},
-			artists: [{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 }],
+			artists: [
+				{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 },
+			],
 			playable: true,
 		} as never);
-		convertMusicSongToAlbumMock.mockResolvedValue({ entity_type: "album", id: "album-2" });
+		convertMusicSongToAlbumMock.mockResolvedValue({
+			entity_type: "album",
+			id: "album-2",
+		});
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		await flushPromises();
@@ -773,17 +797,24 @@ describe("MusicCreationFlowDrawer", () => {
 		if (!flow) throw new Error("creation flow missing");
 		flow.draft.albumDetails.type = "album";
 		await nextTick();
-		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await wrapper
+			.get('[data-testid="music-creation-finish-button"]')
+			.trigger("click");
 		await flushPromises();
 
-		expect(convertMusicSongToAlbumMock).toHaveBeenCalledWith("song-1", expect.objectContaining({
-			title: "Standalone Song",
-			release_type: "album",
-			cover_url: "https://img.test/song.jpg",
-		}));
+		expect(convertMusicSongToAlbumMock).toHaveBeenCalledWith(
+			"song-1",
+			expect.objectContaining({
+				title: "Standalone Song",
+				release_type: "album",
+				cover_url: "https://img.test/song.jpg",
+			}),
+		);
 		expect(submitSongRevisionMock).not.toHaveBeenCalled();
 		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
-		expect(drawerMocks.routerReplace).toHaveBeenCalledWith("/music/album/album-2");
+		expect(drawerMocks.routerReplace).toHaveBeenCalledWith(
+			"/music/album/album-2",
+		);
 	});
 
 	it("单轨专辑选择 single 时转换为独立歌曲", async () => {
@@ -793,7 +824,10 @@ describe("MusicCreationFlowDrawer", () => {
 			entity: "album",
 			targetId: "album-1",
 			step: "albumDetails",
-			draft: { ...base.draft, albumImport: { ...base.draft.albumImport, importId: null } },
+			draft: {
+				...base.draft,
+				albumImport: { ...base.draft.albumImport, importId: null },
+			},
 		});
 		getMusicAlbumMock.mockResolvedValue({
 			id: "album-1",
@@ -804,9 +838,20 @@ describe("MusicCreationFlowDrawer", () => {
 			album_type: "album",
 			description: "Optional",
 			artists: [{ id: "artist-1", name: "Artist" }],
-			songs: [{ id: "song-1", title: "One Track", track_number: 1, status: "open", artist_credits: [] }],
+			songs: [
+				{
+					id: "song-1",
+					title: "One Track",
+					track_number: 1,
+					status: "open",
+					artist_credits: [],
+				},
+			],
 		} as never);
-		convertMusicAlbumToSongMock.mockResolvedValue({ entity_type: "song", id: "song-1" });
+		convertMusicAlbumToSongMock.mockResolvedValue({
+			entity_type: "song",
+			id: "song-1",
+		});
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		await flushPromises();
@@ -815,18 +860,25 @@ describe("MusicCreationFlowDrawer", () => {
 		flow.draft.albumDetails.type = "single";
 		flow.draft.albumDetails.source = "https://example.test/song";
 		await nextTick();
-		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await wrapper
+			.get('[data-testid="music-creation-finish-button"]')
+			.trigger("click");
 		await flushPromises();
 
-		expect(convertMusicAlbumToSongMock).toHaveBeenCalledWith("album-1", expect.objectContaining({
-			title: "One Track",
-			release_type: "single",
-			cover_url: "https://img.test/album.jpg",
-			sources: [{ type: "url", url: "https://example.test/song" }],
-		}));
+		expect(convertMusicAlbumToSongMock).toHaveBeenCalledWith(
+			"album-1",
+			expect.objectContaining({
+				title: "One Track",
+				release_type: "single",
+				cover_url: "https://img.test/album.jpg",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+			}),
+		);
 		expect(submitAlbumRevisionMock).not.toHaveBeenCalled();
 		expect(drawerMocks.refreshSong).toHaveBeenCalled();
-		expect(drawerMocks.routerReplace).toHaveBeenCalledWith("/music/song/song-1");
+		expect(drawerMocks.routerReplace).toHaveBeenCalledWith(
+			"/music/song/song-1",
+		);
 	});
 
 	it("预览步骤点击提交后只调用一次 commitMusicAlbumImport", async () => {

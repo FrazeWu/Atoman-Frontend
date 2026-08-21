@@ -130,8 +130,12 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 		.click();
 
 	const editor = page.getByRole("dialog", { name: "编辑歌曲" });
-	await expect(editor.getByTestId("album-details-progress-label")).toHaveText("编辑歌曲");
-	await expect(editor.getByTestId("album-details-title-input")).toHaveValue("Standalone Song");
+	await expect(editor.getByTestId("album-details-progress-label")).toHaveText(
+		"编辑歌曲",
+	);
+	await expect(editor.getByTestId("album-details-title-input")).toHaveValue(
+		"Standalone Song",
+	);
 	await expect(editor.getByTestId("album-details-date-input")).toHaveValue(
 		"2025/01/02",
 	);

@@ -111,11 +111,15 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		const toggle = wrapper.get('[data-testid="album-seed-bio-toggle"]');
 		expect(toggle.attributes("aria-expanded")).toBe("false");
-		expect(wrapper.find('[data-testid="album-details-bio-input"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="album-details-bio-input"]').exists(),
+		).toBe(false);
 
 		await toggle.trigger("click");
 		expect(toggle.attributes("aria-expanded")).toBe("true");
-		expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveProperty("value", "Seed description");
+		expect(
+			wrapper.get('[data-testid="album-details-bio-input"]').element,
+		).toHaveProperty("value", "Seed description");
 	});
 
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {

@@ -1,4 +1,4 @@
-import type { ApiList, PaginationMeta, UploadAsset } from "../types";
+import type { ApiList, UploadAsset } from "../types";
 
 export type MusicEntryStatus =
 	| "draft"
@@ -553,6 +553,7 @@ export type MusicSongListItem = {
 	track_number?: number;
 	disc_number?: number;
 	audio_url?: string;
+	duration_sec?: number;
 	waveform_peaks?: number[];
 	cover_url?: string;
 	lyrics?: string;
@@ -565,6 +566,7 @@ export type MusicSongListItem = {
 		id: string;
 		title: string;
 		cover_url?: string;
+		album_type?: string;
 		release_date?: string;
 		release_date_precision?: string;
 		year?: number;

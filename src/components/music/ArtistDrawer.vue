@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
-import { UserRound } from 'lucide-vue-next'
+import { Pause, Play, UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -14,6 +14,8 @@ import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vu
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
+import { usePlayerStore } from '@/stores/player'
+import type { Song } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import {
@@ -36,6 +38,7 @@ type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openSong, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
+const player = usePlayerStore()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : artistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
@@ -138,11 +141,69 @@ const sortedAlbums = computed(() => {
 
 const artistSongs = computed(() => songs.value.map((song) => ({
   song,
-  album: song.album ?? { id: '', title: '', cover_url: '' },
+  album: song.album ?? { id: '', title: '', cover_url: '', album_type: '', release_date: '', year: 0 },
 })))
+
+const playableArtistSongs = computed<Song[]>(() => {
+  const playable: Song[] = []
+  for (const { song, album } of artistSongs.value) {
+    const audioUrl = song.audio_url?.trim()
+    if (!audioUrl) continue
+    const releaseDate = album.release_date || ''
+    playable.push({
+      id: song.id,
+      title: song.title,
+      artist: song.artists?.map((item) => item.name).join(', ') || displayName.value || '未知艺术家',
+      album: album.title || song.title,
+      album_id: album.id || '',
+      year: album.year || Number(releaseDate.slice(0, 4)) || 0,
+      release_date: releaseDate,
+      lyrics: song.lyrics || '',
+      audio_url: audioUrl,
+      cover_url: song.cover_url?.trim() || album.cover_url?.trim() || '',
+      track_number: song.track_number,
+      disc_number: song.disc_number,
+      status: (song.status as Song['status'] | undefined) || 'open',
+      artists: song.artists?.map((item) => ({
+        id: item.id,
+        name: item.name,
+        username: '',
+        email: '',
+      })),
+    })
+  }
+  return playable
+})
+
+const playableArtistSongIds = computed(() => new Set(playableArtistSongs.value.map((song) => String(song.id))))
 
 function openArtistSong(song: MusicSongListItem) {
   openSong(song.id)
+}
+
+function canPlayArtistSong(song: MusicSongListItem) {
+  return playableArtistSongIds.value.has(String(song.id))
+}
+
+function isArtistSongPlaying(song: MusicSongListItem) {
+  const current = player.currentSong
+  return player.isPlaying && !!current && String(current.source_id || current.id) === String(song.id)
+}
+
+function playArtistSong(song: MusicSongListItem) {
+  if (!canPlayArtistSong(song)) return
+  if (isArtistSongPlaying(song)) {
+    player.togglePlay()
+    return
+  }
+  const startIndex = playableArtistSongs.value.findIndex((item) => String(item.id) === String(song.id))
+  if (startIndex >= 0) player.playAlbum(playableArtistSongs.value, startIndex)
+}
+
+function formatArtistSongDuration(seconds?: number) {
+  if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return ''
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 }
 
 function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision?: string, leavePrecision?: string) {
@@ -181,6 +242,7 @@ async function listAllArtistSongs(targetArtistId: string, sortMode: AlbumSortMod
   while (hasMore) {
     const response = await listMusicSongs({
       artist_id: targetArtistId,
+      release_type: 'song',
       sort: albumSortQuery(sortMode),
       page,
       page_size: artistAlbumPageSize,
@@ -582,17 +644,29 @@ watch([releaseType, albumSortMode], () => {
         aria-busy="true"
         aria-label="正在加载作品列表"
       >
-        <div v-for="index in 4" :key="index" class="album-row artist-skeleton-album-row" aria-hidden="true">
-          <div class="album-row-left"><PSkeleton width="3rem" height="1rem" /></div>
-          <div class="album-row-right">
-            <PSkeleton class="album-row-cover" width="80px" height="80px" />
-            <div class="album-row-info">
-              <PSkeleton width="min(18rem, 70%)" height="1.25rem" />
-              <PSkeleton width="min(24rem, 90%)" height="0.85rem" />
-              <PSkeleton width="8rem" height="0.85rem" />
+        <template v-if="releaseType === 'album'">
+          <div v-for="index in 4" :key="index" class="album-row artist-skeleton-album-row" aria-hidden="true">
+            <div class="album-row-left"><PSkeleton width="3rem" height="1rem" /></div>
+            <div class="album-row-right">
+              <PSkeleton class="album-row-cover" width="80px" height="80px" />
+              <div class="album-row-info">
+                <PSkeleton width="min(18rem, 70%)" height="1.25rem" />
+                <PSkeleton width="min(24rem, 90%)" height="0.85rem" />
+                <PSkeleton width="8rem" height="0.85rem" />
+              </div>
             </div>
           </div>
-        </div>
+        </template>
+        <template v-else>
+          <div v-for="index in 5" :key="index" class="track artist-skeleton-track" aria-hidden="true">
+            <PSkeleton variant="circle" width="2rem" height="2rem" />
+            <PSkeleton width="min(24rem, 80%)" height="1rem" />
+            <div class="track-meta artist-skeleton-track-meta">
+              <PSkeleton width="3rem" height="0.75rem" />
+              <PSkeleton width="5rem" height="0.75rem" />
+            </div>
+          </div>
+        </template>
       </div>
 
       <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
@@ -635,35 +709,43 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </template>
 
-      <template v-else-if="!loading && !releaseLoading && artist">
-        <button
-          v-for="{ song, album } in artistSongs"
+      <div v-else-if="!loading && !releaseLoading && artist" class="artist-track-list">
+        <div
+          v-for="({ song, album }, index) in artistSongs"
           :key="song.id"
-          type="button"
-          class="album-row artist-song-row"
-          @click="openArtistSong(song)"
+          class="track artist-track"
         >
-          <div class="album-row-left">
-            <div class="album-year">{{ formatAlbumReleaseDate(album) }}</div>
+          <button
+            type="button"
+            class="track-play-btn"
+            :disabled="!canPlayArtistSong(song)"
+            :aria-label="`${isArtistSongPlaying(song) ? '暂停' : '播放'} ${song.title}`"
+            :data-testid="`artist-track-play-${song.id}`"
+            @click="playArtistSong(song)"
+          >
+            <span class="track-num">{{ index + 1 }}</span>
+            <Pause v-if="isArtistSongPlaying(song)" class="track-play-icon" :size="14" fill="currentColor" />
+            <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
+          </button>
+          <button
+            type="button"
+            class="track-title artist-track-title"
+            :title="song.title"
+            :data-testid="`artist-track-title-${song.id}`"
+            @click="openArtistSong(song)"
+          >
+            {{ song.title }}
+          </button>
+          <div class="track-meta">
+            <span v-if="!canPlayArtistSong(song)" class="track-unavailable">无音频</span>
+            <span class="artist-track-type">{{ formatAlbumTypeLabel(album.album_type) }}</span>
+            <span class="artist-track-date">{{ formatAlbumReleaseDate(album) }}</span>
+            <span v-if="formatArtistSongDuration(song.duration_sec)" class="track-time">
+              {{ formatArtistSongDuration(song.duration_sec) }}
+            </span>
           </div>
-          <div class="album-row-right">
-            <div class="album-row-cover">
-              <img v-if="song.cover_url || album.cover_url" :src="song.cover_url || album.cover_url" alt="" class="album-row-img" />
-              <span v-else>COVER</span>
-            </div>
-            <div class="album-row-info">
-              <div class="album-row-title">{{ song.title }}</div>
-              <div class="album-row-meta">
-                <span>{{ album.title }}</span>
-                <template v-if="song.artists?.length">
-                  <span class="album-meta-divider">•</span>
-                  <span>{{ song.artists.map((item) => item.name).join(' / ') }}</span>
-                </template>
-              </div>
-            </div>
-          </div>
-        </button>
-      </template>
+        </div>
+      </div>
       <MusicContributorsBlock
         v-if="!loading && artist"
         :contributors="contributors"
@@ -931,6 +1013,112 @@ watch([releaseType, albumSortMode], () => {
   font-weight: 600;
   color: var(--a-color-text);
 }
+
+.artist-track-list {
+  margin-bottom: 0.5rem;
+}
+.track {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0.5rem;
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
+  font-size: 0.9rem;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.track:last-child { border-bottom: none; }
+.track:hover,
+.track:focus-within {
+  background-color: var(--a-color-surface-muted);
+  border-left-color: var(--a-color-text);
+  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
+}
+.track-play-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+.track-play-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.track-play-btn:focus-visible,
+.artist-track-title:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+.track-play-icon { display: none; }
+.track-num {
+  color: var(--a-color-muted);
+  font-family: monospace;
+  font-size: 11px;
+}
+.track:hover .track-play-btn:not(:disabled) .track-play-icon,
+.track-play-btn:focus-visible:not(:disabled) .track-play-icon {
+  display: block;
+}
+.track:hover .track-play-btn:not(:disabled) .track-num,
+.track-play-btn:focus-visible:not(:disabled) .track-num {
+  display: none;
+}
+.track-title {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  min-width: 0;
+  min-height: 2rem;
+  overflow: hidden;
+  color: var(--a-color-text);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.artist-track-title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.artist-track-title:hover { text-decoration: underline; }
+.track-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  color: var(--a-color-muted);
+}
+.artist-track-type {
+  color: var(--a-color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.artist-track-date,
+.track-time,
+.track-unavailable {
+  font-family: monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.track-unavailable {
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  text-transform: uppercase;
+}
+
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 
@@ -956,6 +1144,30 @@ watch([releaseType, albumSortMode], () => {
 
   .album-list-controls {
     width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .track {
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  .track-play-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .track-meta {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    min-height: 1.5rem;
+    justify-content: flex-end;
+  }
+
+  .artist-skeleton-track-meta {
+    min-height: 2rem;
   }
 }
 

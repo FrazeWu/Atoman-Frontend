@@ -24,6 +24,17 @@ const musicDrawerMocks = vi.hoisted(() => ({
 	isAuthenticated: { value: true },
 }));
 
+const playerMocks = vi.hoisted(() => ({
+	currentSong: null as null | { id?: string; source_id?: string },
+	isPlaying: false,
+	playAlbum: vi.fn(),
+	togglePlay: vi.fn(),
+}));
+
+vi.mock("@/stores/player", () => ({
+	usePlayerStore: () => playerMocks,
+}));
+
 vi.mock("@/composables/useMusicDrawers", () => ({
 	useMusicDrawers: () => ({
 		state: drawerState,
@@ -94,6 +105,10 @@ describe("ArtistDrawer.vue", () => {
 		musicDrawerMocks.openMusicEditor.mockReset();
 		musicDrawerMocks.openMusicCreationFlow.mockReset();
 		musicDrawerMocks.requireLogin.mockReset();
+		playerMocks.currentSong = null;
+		playerMocks.isPlaying = false;
+		playerMocks.playAlbum.mockReset();
+		playerMocks.togglePlay.mockReset();
 		musicDrawerMocks.requireLogin.mockReturnValue(true);
 		musicDrawerMocks.isAuthenticated.value = true;
 
@@ -214,7 +229,7 @@ describe("ArtistDrawer.vue", () => {
 		wrapper.unmount();
 	});
 
-	it("loads playable songs directly when switching to songs", async () => {
+	it("loads only single and leak songs into a playable track list", async () => {
 		const wrapper = mount(ArtistDrawer);
 		await vi.dynamicImportSettled();
 		listMusicSongs.mockResolvedValueOnce({
@@ -223,7 +238,13 @@ describe("ArtistDrawer.vue", () => {
 					id: "song-3",
 					title: "New Single",
 					audio_url: "https://example.com/song-3.mp3",
-					album: { id: "3", title: "New Single", release_date: "2024-05-01" },
+					duration_sec: 215,
+					album: {
+						id: "3",
+						title: "New Single",
+						album_type: "single",
+						release_date: "2024-05-01",
+					},
 					entry_status: "open",
 				},
 			],
@@ -237,13 +258,24 @@ describe("ArtistDrawer.vue", () => {
 
 		expect(listMusicSongs).toHaveBeenLastCalledWith({
 			artist_id: "1",
+			release_type: "song",
 			sort: "-release_date",
 			page: 1,
 			page_size: 100,
 		});
+		expect(wrapper.findAll(".artist-track")).toHaveLength(1);
 		expect(wrapper.text()).toContain("New Single");
+		expect(wrapper.text()).toContain("单曲");
 		expect(wrapper.text()).toContain("2024/05/01");
-		await wrapper.get(".artist-song-row").trigger("click");
+		expect(wrapper.text()).toContain("3:35");
+
+		await wrapper.get('[data-testid="artist-track-play-song-3"]').trigger("click");
+		expect(playerMocks.playAlbum).toHaveBeenCalledWith(
+			[expect.objectContaining({ id: "song-3", title: "New Single" })],
+			0,
+		);
+
+		await wrapper.get('[data-testid="artist-track-title-song-3"]').trigger("click");
 		expect(musicDrawerMocks.openSong).toHaveBeenCalledWith("song-3");
 	});
 

@@ -4,9 +4,11 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { moduleRoutes } from '@/router/routes/modules'
-import PodcastEpisodeView from '@/views/podcast/PodcastEpisodeView.vue'
-import PodcastShowView from '@/views/podcast/PodcastShowView.vue'
+import { moduleRoutes } from '../../../../src/router/routes/modules'
+// @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
+import PodcastEpisodeView from '../../../../src/views/podcast/PodcastEpisodeView.vue'
+// @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
+import PodcastShowView from '../../../../src/views/podcast/PodcastShowView.vue'
 
 const makeJsonResponse = (data: unknown) => new Response(JSON.stringify(data), {
   status: 200,
@@ -85,15 +87,28 @@ describe('podcast routing prefix', () => {
     })))
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/podcasts/episode/:id', component: PodcastEpisodeView }],
+      routes: [
+        { path: '/episode/:id', component: PodcastEpisodeView },
+        { path: '/show/:channelSlug', component: { template: '<div />' } },
+      ],
     })
-    await router.push('/podcasts/episode/episode-1')
+    await router.push('/episode/episode-1')
     await router.isReady()
 
-    const wrapper = mount(PodcastEpisodeView, { global: { plugins: [pinia, router] } })
+    const wrapper = mount(PodcastEpisodeView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
     await flushPromises()
 
-    expect(wrapper.find('a[href="/podcasts/show/demo-show"]').exists()).toBe(true)
+    expect(wrapper.get('.pev-show').attributes('href')).toBe('/show/demo-show')
   })
 
   it('re-fetches and clears a previous show when channelSlug changes in the reused route component', async () => {

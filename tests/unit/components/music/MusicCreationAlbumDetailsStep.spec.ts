@@ -81,6 +81,27 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		);
 	});
 
+	it("reflows album metadata from the available drawer width", () => {
+		const source = readFileSync(
+			resolve(
+				process.cwd(),
+				"src/components/music/MusicCreationAlbumDetailsStep.vue",
+			),
+			"utf8",
+		);
+
+		expect(source).toContain("container: album-details / inline-size");
+		expect(source).toMatch(
+			/@container album-details \(max-width: 62rem\)[\s\S]*?\.album-details-step__content-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr;/,
+		);
+		expect(source).toMatch(
+			/\.album-details-step__basic-field :deep\(\.birth-date-field\)\s*\{[\s\S]*?min-inline-size:\s*11\.5rem;/,
+		);
+		expect(source).toMatch(
+			/@container album-details \(max-width: 32rem\)[\s\S]*?\.p-date-input-container\)[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\);/,
+		);
+	});
+
 	it("keeps text editing separate from drag sorting", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

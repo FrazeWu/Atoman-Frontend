@@ -701,6 +701,7 @@ watch(
 
 <style scoped>
 .album-details-step {
+  container: album-details / inline-size;
   display: grid;
   gap: 1.25rem;
 }
@@ -815,6 +816,10 @@ watch(
   min-width: 0;
 }
 
+.album-details-step__basic-field :deep(.birth-date-field) {
+  min-inline-size: 11.5rem;
+}
+
 .album-details-step__basic-field :deep(.field-label-row) {
   margin: 0;
 }
@@ -847,6 +852,27 @@ watch(
   text-align: center;
   padding: 1.25rem;
   width: 100%;
+}
+
+@container album-details (max-width: 62rem) {
+  .album-details-step__upload-cover-grid,
+  .album-details-step__content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@container album-details (max-width: 32rem) {
+  .album-details-step__basic-field :deep(.p-field),
+  .album-details-step__basic-field :deep(.p-date-input-container),
+  .album-details-step__contributor-field :deep(.picker-search .p-field) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  .album-details-step__basic-field :deep(.birth-date-field) {
+    min-inline-size: 0;
+  }
 }
 
 @media (max-width: 768px) {

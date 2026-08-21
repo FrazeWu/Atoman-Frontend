@@ -146,6 +146,22 @@ describe("PMaskedDateInput", () => {
 		expect(element.selectionStart).toBe(5);
 	});
 
+	it("fills a complete date in strict year-month-day order", async () => {
+		const wrapper = mount(PMaskedDateInput, {
+			props: { modelValue: { year: "", month: "", day: "" } },
+		});
+		const input = wrapper.find('input[type="text"]');
+		const element = input.element as HTMLInputElement;
+		element.setSelectionRange(0, 0);
+
+		for (const digit of "20120128") {
+			await input.trigger("keydown", { key: digit });
+		}
+
+		expect(element.value).toBe("2012/01/28");
+		expect(element.selectionStart).toBe(10);
+	});
+
 	it("prevents native insertion so the mask keeps its fixed slots", async () => {
 		const wrapper = mount(PMaskedDateInput, {
 			props: { modelValue: { year: "2", month: "", day: "" } },

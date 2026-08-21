@@ -53,6 +53,8 @@ test('通过真实专辑创建界面完成 v2 分片导入并显示识别曲目'
   const requestPaths: string[] = []
   let importPolls = 0
 
+  await page.setViewportSize({ width: 1000, height: 900 })
+
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
@@ -141,6 +143,33 @@ test('通过真实专辑创建界面完成 v2 分片导入并显示识别曲目'
   ]))
   await expect.poll(() => importPolls).toBeGreaterThan(0)
   await expect(creationDialog.getByLabel('专辑名*')).toHaveValue('E2E Import Album')
+  await page.getByRole('button', { name: '取消', exact: true }).click()
+
+  const basicFieldsBox = await creationDialog.locator('.album-details-step__header-main').boundingBox()
+  const bioFieldBox = await creationDialog.locator('.album-details-step__bio-field').boundingBox()
+  expect(basicFieldsBox).not.toBeNull()
+  expect(bioFieldBox).not.toBeNull()
+  expect(Math.abs((basicFieldsBox?.x ?? 0) - (bioFieldBox?.x ?? 0))).toBeLessThan(2)
+  expect(bioFieldBox?.y ?? 0).toBeGreaterThanOrEqual((basicFieldsBox?.y ?? 0) + (basicFieldsBox?.height ?? 0))
+
+  const dateInput = creationDialog.getByTestId('album-details-date-input')
+  await dateInput.click()
+  await dateInput.press('Control+A')
+  await dateInput.pressSequentially('20120128')
+  await dateInput.press('Tab')
+  await expect(dateInput).toHaveValue('2012/01/28')
+  expect(await dateInput.evaluate((input: HTMLInputElement) => input.scrollLeft)).toBe(0)
+
+  const roleOptions = creationDialog.locator('.credit-role-option')
+  await expect(roleOptions).toHaveCount(13)
+  const roleHeights = await roleOptions.evaluateAll((options) => options.map((option) => option.getBoundingClientRect().height))
+  expect(Math.max(...roleHeights)).toBeLessThanOrEqual(48)
+  expect(await creationDialog.locator('.credit-roles').evaluate((roles) => roles.scrollWidth > roles.clientWidth + 1)).toBe(false)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(() => creationDialog.locator('.credit-roles').evaluate((roles) => roles.scrollWidth > roles.clientWidth + 1)).toBe(false)
+  await expect(dateInput).toHaveValue('2012/01/28')
+  expect(await dateInput.evaluate((input: HTMLInputElement) => input.scrollLeft)).toBe(0)
 
   await expect(creationDialog.getByTestId('album-import-status')).toBeVisible()
   await expect(creationDialog.getByText('E2E Imported Track')).toBeVisible()

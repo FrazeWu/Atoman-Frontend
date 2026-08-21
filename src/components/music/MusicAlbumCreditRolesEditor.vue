@@ -73,25 +73,39 @@ function removeRole(id: string) {
 </template>
 
 <style scoped>
-.credit-roles { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); align-items: center; gap: 0.5rem 0.75rem; }
+.credit-roles {
+  container: credit-roles / inline-size;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  align-items: start;
+  gap: 0.5rem 0.75rem;
+}
 .credit-roles__fixed { display: contents; }
-.credit-role-option { display: inline-flex; min-width: 0; min-height: 44px; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--a-color-text); cursor: pointer; }
-.credit-role-option span { min-width: 0; overflow-wrap: anywhere; }
-.credit-role-option input { width: 1rem; height: 1rem; accent-color: var(--a-color-text); }
+.credit-role-option { display: inline-flex; min-width: 0; min-height: 44px; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--a-color-text); cursor: pointer; white-space: nowrap; }
+.credit-role-option span { min-width: 0; }
+.credit-role-option input { width: 1rem; height: 1rem; flex: 0 0 auto; accent-color: var(--a-color-text); }
 .credit-roles__custom-list { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .custom-role { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.5rem; border: 1px solid var(--a-color-border-soft); font-size: 0.78rem; }
 .custom-role button,
 .credit-roles__custom-add > button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .custom-role button { width: 20px; height: 20px; }
-.credit-roles__custom-add { grid-column: span 3; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
+.credit-roles__custom-add { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 22rem) auto; justify-content: start; align-items: center; gap: 0.5rem; }
 .credit-roles__custom-add :deep(.p-field) { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 0.75rem; }
 .credit-roles__custom-add :deep(.p-field-label) { margin: 0; white-space: nowrap; }
 .credit-roles__custom-add :deep(.p-field-label)::after { content: '：'; }
 .credit-roles__custom-add :deep(.p-input) { width: 100%; }
 .credit-roles__custom-add > button { border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); }
 
-@media (max-width: 720px) {
-  .credit-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .credit-roles__custom-add { grid-column: span 2; }
+@container credit-roles (max-width: 24rem) {
+  .credit-roles__custom-add {
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-content: stretch;
+  }
+
+  .credit-roles__custom-add :deep(.p-field) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.35rem;
+  }
 }
 </style>

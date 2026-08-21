@@ -206,7 +206,7 @@ function formatKindLabel(kind: MusicArtistKind) {
 }
 
 .contributor-chip__roles {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
 }
 
 .contributor-chip__name,

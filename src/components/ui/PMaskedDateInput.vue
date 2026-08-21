@@ -371,6 +371,8 @@ onUnmounted(() => {
   background: var(--a-color-bg);
   color: var(--a-color-text);
   font: inherit;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
   border-radius: var(--a-radius-control);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }

@@ -582,7 +582,7 @@ async function handleSongEditSubmit() {
 }
 .song-editor__layout {
   display: grid;
-  grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
 }
@@ -651,7 +651,7 @@ async function handleSongEditSubmit() {
     grid-template-columns: 1fr;
   }
   .song-editor__cover-field {
-    max-width: 15rem;
+    max-width: 14rem;
   }
 }
 @container song-editor (max-width: 34rem) {

@@ -579,6 +579,61 @@ async function uploadAlbumArchivePart(
 	return etag;
 }
 
+export type MusicAlbumImportPartUploadOptions = {
+	signal?: AbortSignal;
+	onProgress?: (progress: { loaded: number; total: number }) => void;
+};
+
+export function uploadMusicAlbumImportFilePart(
+	uploadUrl: string,
+	body: Blob,
+	options: MusicAlbumImportPartUploadOptions = {},
+): Promise<string> {
+	return new Promise((resolve, reject) => {
+		if (options.signal?.aborted) {
+			reject(new Error("上传已取消"));
+			return;
+		}
+
+		const xhr = new XMLHttpRequest();
+		let settled = false;
+		const abort = () => xhr.abort();
+		const settle = (callback: () => void) => {
+			if (settled) return;
+			settled = true;
+			options.signal?.removeEventListener("abort", abort);
+			callback();
+		};
+
+		xhr.open("PUT", uploadUrl);
+		options.signal?.addEventListener("abort", abort, { once: true });
+		xhr.upload.addEventListener("progress", (event) => {
+			if (event.lengthComputable) {
+				options.onProgress?.({ loaded: event.loaded, total: event.total });
+			}
+		});
+		xhr.addEventListener("load", () => {
+			if (xhr.status < 200 || xhr.status >= 300) {
+				settle(() => reject(new Error(`上传分片失败 (${xhr.status})`)));
+				return;
+			}
+			const etag = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
+			if (!etag) {
+				settle(() => reject(new Error("上传分片失败")));
+				return;
+			}
+			settle(() => resolve(etag));
+		});
+		xhr.addEventListener("error", () =>
+			settle(() => reject(new Error("上传分片失败，请重试"))),
+		);
+		xhr.addEventListener("abort", () =>
+			settle(() => reject(new Error("上传已取消"))),
+		);
+		xhr.send(body);
+	});
+}
+
 export async function uploadMusicAlbumArchiveMultipart(
 	importId: string,
 	file: File,

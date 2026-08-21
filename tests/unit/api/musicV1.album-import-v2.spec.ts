@@ -4,10 +4,60 @@ import {
   deleteMusicAlbumImportFile,
   getMusicAlbumImport,
   registerMusicAlbumImportFiles,
-} from '@/api/musicV1'
+  uploadMusicAlbumImportFilePart,
+} from '../../../src/api/musicV1'
 
 describe('album import v2 API', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('uploads a raw part with byte progress and returns its ETag', async () => {
+    class FakeXMLHttpRequest {
+      static current: FakeXMLHttpRequest
+      status = 200
+      open = vi.fn()
+      send = vi.fn()
+      abort = vi.fn(() => this.listeners.get('abort')?.())
+      getResponseHeader = vi.fn((name: string) => name.toLowerCase() === 'etag' ? 'etag-1' : null)
+      private listeners = new Map<string, () => void>()
+      private uploadListeners = new Map<string, (event: ProgressEvent) => void>()
+      upload = {
+        addEventListener: (event: string, listener: (event: ProgressEvent) => void) => {
+          this.uploadListeners.set(event, listener)
+        },
+      }
+
+      constructor() {
+        FakeXMLHttpRequest.current = this
+      }
+
+      addEventListener(event: string, listener: () => void) {
+        this.listeners.set(event, listener)
+      }
+
+      emitProgress(loaded: number, total: number) {
+        this.uploadListeners.get('progress')?.({ lengthComputable: true, loaded, total } as ProgressEvent)
+      }
+
+      emit(event: string) {
+        this.listeners.get(event)?.()
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
+    const progress = vi.fn()
+    const body = new Blob(['12345678'])
+
+    const result = uploadMusicAlbumImportFilePart('https://upload.test/part-1', body, {
+      onProgress: progress,
+    })
+    const xhr = FakeXMLHttpRequest.current
+    xhr.emitProgress(4, 8)
+    xhr.emit('load')
+
+    await expect(result).resolves.toBe('etag-1')
+    expect(xhr.open).toHaveBeenCalledWith('PUT', 'https://upload.test/part-1')
+    expect(xhr.send).toHaveBeenCalledWith(body)
+    expect(progress).toHaveBeenCalledWith({ loaded: 4, total: 8 })
+  })
 
   it('normalizes nullable import arrays before consumers receive a snapshot', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({

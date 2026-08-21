@@ -1,10 +1,10 @@
-import { apiRequest } from "@/api/client";
 import { computed, ref, type Ref } from "vue";
 import {
 	createMusicAlbumImport,
 	validateMusicAlbumArchiveFile,
 	SUPPORTED_ARCHIVE_ACCEPT,
 	createMusicAlbumImportFilePartUpload,
+	uploadMusicAlbumImportFilePart,
 	completeMusicAlbumImportFilePart,
 	completeMusicAlbumImportFile,
 	completeMusicAlbumImportSession,
@@ -285,20 +285,45 @@ export function useAlbumImportUpload() {
 			);
 			const controller = new AbortController();
 			uploadState.abortControllers.add(controller);
-			let response: Response;
+			let partBytesLoaded = 0;
+			const reportPartProgress = (loaded: number) => {
+				if (!isCurrent()) return;
+				const nextPartBytesLoaded = Math.min(
+					Math.max(loaded, partBytesLoaded),
+					partSize,
+				);
+				const delta = nextPartBytesLoaded - partBytesLoaded;
+				if (delta <= 0) return;
+				partBytesLoaded = nextPartBytesLoaded;
+				const nextTotalBytesLoaded = draft.totalBytesLoaded + delta;
+				draft.totalBytesLoaded =
+					draft.totalBytesTotal > 0
+						? Math.min(nextTotalBytesLoaded, draft.totalBytesTotal)
+						: nextTotalBytesLoaded;
+				uploadState.fileProgress.value = new Map(
+					uploadState.fileProgress.value,
+				).set(
+					fileId,
+					Math.round(((start + nextPartBytesLoaded) / file.size) * 100),
+				);
+				const elapsedSeconds = Math.max(
+					(Date.now() - uploadState.uploadStartedAt) / 1000,
+					0.001,
+				);
+				draft.uploadSpeed = draft.totalBytesLoaded / elapsedSeconds;
+			};
+			let etag: string;
 			try {
-				response = await apiRequest(upload.uploadUrl, {
-					method: "PUT",
-					body: chunk,
+				etag = await uploadMusicAlbumImportFilePart(upload.uploadUrl, chunk, {
 					signal: controller.signal,
+					onProgress: (progress) => reportPartProgress(progress.loaded),
 				});
 			} finally {
 				uploadState.abortControllers.delete(controller);
 			}
 			if (!isCurrent()) return;
-			if (!response.ok) throw new Error(`分片 ${partNumber} 上传失败`);
+			reportPartProgress(partSize);
 
-			const etag = response.headers.get("ETag") ?? "";
 			await completeMusicAlbumImportFilePart(
 				importId,
 				fileId,
@@ -307,16 +332,6 @@ export function useAlbumImportUpload() {
 				partSize,
 			);
 			if (!isCurrent()) return;
-
-			uploadState.fileProgress.value = new Map(
-				uploadState.fileProgress.value,
-			).set(fileId, Math.round((end / file.size) * 100));
-			draft.totalBytesLoaded += partSize;
-			const elapsedSeconds = Math.max(
-				(Date.now() - uploadState.uploadStartedAt) / 1000,
-				0.001,
-			);
-			draft.uploadSpeed = draft.totalBytesLoaded / elapsedSeconds;
 		}
 		if (!isCurrent()) return;
 		await completeMusicAlbumImportFile(importId, fileId);
@@ -366,6 +381,11 @@ export function useAlbumImportUpload() {
 			uploadState.errorMessage.value = "未发现可导入的音频文件";
 			return;
 		}
+		const emptyFile = files.find((file) => file.size <= 0);
+		if (emptyFile) {
+			uploadState.errorMessage.value = `文件“${emptyFile.name}”为空，请重新选择`;
+			return;
+		}
 
 		const hasRelativePaths = files.some((file) =>
 			Boolean(
@@ -390,6 +410,7 @@ export function useAlbumImportUpload() {
 		uploadState.fileProgress.value = new Map();
 		uploadState.selectedFiles.clear();
 		draft.status = "uploading";
+		draft.errorMessage = "";
 		let autoMode: MusicAlbumImportInputMode = "files";
 		if (isArchive) {
 			autoMode = "archive";

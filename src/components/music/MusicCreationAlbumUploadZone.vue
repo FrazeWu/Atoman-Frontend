@@ -283,7 +283,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
     </button>
 
     <!-- Archive mode progress -->
-    <div v-else-if="albumImportDraft.archiveName" class="progress-panel">
+    <div v-if="albumImportDraft.archiveName" class="progress-panel">
       <p v-if="albumImportDraft.uploadProgress > 0" class="state-line">
         上传进度 {{ albumImportDraft.uploadProgress }}%
       </p>

@@ -70,19 +70,17 @@ function mockUploadTransport() {
 		partNumber: 1,
 		uploadUrl: "https://upload.test/part-1",
 	});
+	vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockImplementation(
+		async (_uploadUrl, body, options = {}) => {
+			options.onProgress?.({ loaded: body.size, total: body.size });
+			return "etag-1";
+		},
+	);
 	vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
 		importFile(),
 	);
 	vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue(
 		importFile(),
-	);
-	vi.stubGlobal(
-		"fetch",
-		vi
-			.fn()
-			.mockResolvedValue(
-				new Response("", { status: 200, headers: { ETag: "etag-1" } }),
-			),
 	);
 }
 
@@ -238,21 +236,21 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			.mockResolvedValue({ ...fileRecord, uploadStatus: "uploaded" });
 		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(snapshot());
 
-		let resolveUpload!: (response: Response) => void;
-		const uploadResponse = new Promise<Response>((resolve) => {
+		let resolveUpload!: (etag: string) => void;
+		const uploadResponse = new Promise<string>((resolve) => {
 			resolveUpload = resolve;
 		});
-		vi.stubGlobal("fetch", vi.fn().mockReturnValue(uploadResponse));
+		const uploadPart = vi
+			.spyOn(musicApi, "uploadMusicAlbumImportFilePart")
+			.mockReturnValue(uploadResponse);
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [audio]);
 		await fileInput(wrapper).trigger("change");
-		await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+		await vi.waitFor(() => expect(uploadPart).toHaveBeenCalled());
 
 		useMusicDrawers().closeMusicCreationFlow();
-		resolveUpload(
-			new Response("", { status: 200, headers: { ETag: "etag-1" } }),
-		);
+		resolveUpload("etag-1");
 		await vi.waitFor(() => expect(completeFile).toHaveBeenCalled());
 
 		expect(completePart).toHaveBeenCalledWith(
@@ -321,25 +319,20 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				snapshot({ importId, status: "queued", stage: "queued" }),
 		);
 
-		let resolveFirstUpload!: (response: Response) => void;
-		const firstUpload = new Promise<Response>((resolve) => {
+		let resolveFirstUpload!: (etag: string) => void;
+		const firstUpload = new Promise<string>((resolve) => {
 			resolveFirstUpload = resolve;
 		});
-		vi.stubGlobal(
-			"fetch",
-			vi.fn((url: string) =>
-				url.endsWith("import-1")
-					? firstUpload
-					: Promise.resolve(
-							new Response("", { status: 200, headers: { ETag: "etag-2" } }),
-						),
-			),
-		);
+		const uploadPart = vi
+			.spyOn(musicApi, "uploadMusicAlbumImportFilePart")
+			.mockImplementation((url: string) =>
+				url.endsWith("import-1") ? firstUpload : Promise.resolve("etag-2"),
+			);
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [firstFile]);
 		await fileInput(wrapper).trigger("change");
-		await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+		await vi.waitFor(() => expect(uploadPart).toHaveBeenCalledTimes(1));
 
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({
@@ -352,11 +345,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			item: (index: number) => (index === 0 ? secondFile : null),
 		} as unknown as FileList;
 		void useAlbumImportUpload().handleFilesUpload(secondFiles);
-		await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+		await vi.waitFor(() => expect(uploadPart).toHaveBeenCalledTimes(2));
 
-		resolveFirstUpload(
-			new Response("", { status: 200, headers: { ETag: "etag-1" } }),
-		);
+		resolveFirstUpload("etag-1");
 		await vi.waitFor(() => {
 			expect(completeFile).toHaveBeenCalledWith("import-1", "first-file");
 			expect(completeFile).toHaveBeenCalledWith("import-2", "second-file");
@@ -383,6 +374,63 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			useMusicDrawers().state.value.creationFlow?.draft.albumImport.status,
 		).toBe("pending_upload");
 		expect(wrapper.text()).toContain("文件需在 2GB 以内");
+	});
+
+	it("拒绝空文件时不会创建导入会话", async () => {
+		const archive = new File([], "empty.zip", {
+			type: "application/zip",
+		});
+		const createImport = vi.spyOn(musicApi, "createMusicAlbumImport");
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
+		await fileInput(wrapper).trigger("change");
+		await flushPromises();
+
+		expect(createImport).not.toHaveBeenCalled();
+		expect(
+			useMusicDrawers().state.value.creationFlow?.draft.albumImport.status,
+		).toBe("pending_upload");
+		expect(wrapper.text()).toContain("文件“empty.zip”为空，请重新选择");
+	});
+
+	it("重新上传有效文件时立即清除上一次的大小错误", async () => {
+		const archive = new File(["zip"], "album.zip", {
+			type: "application/zip",
+		});
+		let rejectCreate!: (reason?: unknown) => void;
+		const createImport = vi
+			.spyOn(musicApi, "createMusicAlbumImport")
+			.mockReturnValue(
+				new Promise<musicApi.MusicAlbumImport>((_, reject) => {
+					rejectCreate = reject;
+				}),
+			);
+
+		const drawers = useMusicDrawers();
+		if (!drawers.state.value.creationFlow)
+			throw new Error("creation flow missing");
+		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+			status: "failed",
+			errorMessage: "album import file size is invalid",
+		});
+		const wrapper = mount(MusicCreationAlbumUploadZone);
+		const files = {
+			0: archive,
+			length: 1,
+			item: (index: number) => (index === 0 ? archive : null),
+		} as unknown as FileList;
+
+		const upload = useAlbumImportUpload().handleFilesUpload(files);
+		await vi.waitFor(() => expect(createImport).toHaveBeenCalledTimes(1));
+
+		expect(drawers.state.value.creationFlow.draft.albumImport).toEqual(
+			expect.objectContaining({ status: "uploading", errorMessage: "" }),
+		);
+		expect(wrapper.text()).not.toContain("album import file size is invalid");
+
+		rejectCreate(new Error("stop test upload"));
+		await upload;
 	});
 
 	it("在 ZIP 上传期间预填专辑名和曲目", async () => {
@@ -460,6 +508,61 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				],
 			},
 		);
+	});
+
+	it("单曲分片完成前会显示实时上传进度", async () => {
+		const audio = new File(["12345678"], "11.mp3", { type: "audio/mpeg" });
+		const fileRecord = importFile({
+			fileName: audio.name,
+			relativePath: audio.name,
+			size: audio.size,
+		});
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({ files: [fileRecord] }),
+		);
+		vi.spyOn(
+			musicApi,
+			"createMusicAlbumImportFilePartUpload",
+		).mockResolvedValue({
+			partNumber: 1,
+			uploadUrl: "https://upload.test/part-1",
+		});
+		let resolveUpload!: (etag: string) => void;
+		vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockImplementation(
+			(_uploadUrl, body, options = {}) => {
+				options.onProgress?.({ loaded: body.size / 2, total: body.size });
+				return new Promise<string>((resolve) => {
+					resolveUpload = resolve;
+				});
+			},
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
+			fileRecord,
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue({
+			...fileRecord,
+			uploadStatus: "uploaded",
+		});
+		const completeSession = vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockResolvedValue(snapshot({ status: "ready", stage: "ready" }));
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [audio]);
+		await fileInput(wrapper).trigger("change");
+
+		await vi.waitFor(() => {
+			expect(wrapper.get(".import-file-progress").text()).toBe("50%");
+			expect(wrapper.get(".progress-panel").text()).toContain("上传进度 50%");
+		});
+		expect(
+			useMusicDrawers().state.value.creationFlow?.draft.albumImport
+				.totalBytesLoaded,
+		).toBe(audio.size / 2);
+
+		resolveUpload("etag-1");
+		await vi.waitFor(() => expect(completeSession).toHaveBeenCalledTimes(1));
 	});
 
 	it("手动封面与识别封面同时存在时明确显示手动封面", async () => {

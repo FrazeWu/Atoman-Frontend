@@ -130,16 +130,21 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		).not.toBeNull();
 	});
 
-	it("hides one standalone track and exposes invalid multi-track releases for correction", async () => {
+	it("keeps the empty standalone track list actionable and only warns for multiple tracks", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
 		drawers.setMusicCreationStep("albumDetails");
 		const flow = drawers.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
-		flow.draft.tracks = [{ id: "track-1", sequence: 1, title: "Only Song" }];
+		flow.draft.tracks = [];
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 		flow.draft.albumDetails.type = "single";
+		await nextTick();
+		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
+		expect(wrapper.find('[data-testid="album-details-single-track-error"]').exists()).toBe(false);
+
+		flow.draft.tracks.push({ id: "track-1", sequence: 1, title: "Only Song" });
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(false);
 

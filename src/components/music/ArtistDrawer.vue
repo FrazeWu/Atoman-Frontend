@@ -48,12 +48,15 @@ const returnCurrentArtist = () => props.layer && returnToLayer(props.layer.key)
 const albums = ref<MusicAlbumListItem[]>([])
 const songs = ref<MusicSongListItem[]>([])
 const loading = ref(false)
+const releaseLoading = ref(false)
 const errorMessage = ref('')
+const releaseErrorMessage = ref('')
 const redirectMessage = ref('')
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
 const artistRequests = useRequestGeneration()
+const releaseRequests = useRequestGeneration()
 const contributors = ref<MusicContributor[]>([])
 const contributorTotal = ref(0)
 const artistAlbumPageSize = 100
@@ -148,7 +151,7 @@ function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision
   return `${start} - ${end}`
 }
 
-async function listAllArtistAlbums(targetArtistId: string, isCurrentLoad: () => boolean) {
+async function listAllArtistAlbums(targetArtistId: string, sortMode: AlbumSortMode, isCurrentLoad: () => boolean) {
   const allAlbums: MusicAlbumListItem[] = []
   let page = 1
   let hasMore = true
@@ -156,8 +159,8 @@ async function listAllArtistAlbums(targetArtistId: string, isCurrentLoad: () => 
   while (hasMore) {
     const response = await listMusicAlbums({
       artist_id: targetArtistId,
-      ...(releaseType.value === 'album' ? { release_type: 'album' } : {}),
-      sort: albumSortQuery(albumSortMode.value),
+      release_type: 'album',
+      sort: albumSortQuery(sortMode),
       page,
       page_size: artistAlbumPageSize,
     })
@@ -170,13 +173,18 @@ async function listAllArtistAlbums(targetArtistId: string, isCurrentLoad: () => 
   return allAlbums
 }
 
-async function listAllArtistSongs(targetArtistId: string, isCurrentLoad: () => boolean) {
+async function listAllArtistSongs(targetArtistId: string, sortMode: AlbumSortMode, isCurrentLoad: () => boolean) {
   const allSongs: MusicSongListItem[] = []
   let page = 1
   let hasMore = true
 
   while (hasMore) {
-    const response = await listMusicSongs({ artist_id: targetArtistId, sort: albumSortQuery(albumSortMode.value), page, page_size: artistAlbumPageSize })
+    const response = await listMusicSongs({
+      artist_id: targetArtistId,
+      sort: albumSortQuery(sortMode),
+      page,
+      page_size: artistAlbumPageSize,
+    })
     if (!isCurrentLoad()) return null
     allSongs.push(...response.data)
     hasMore = response.meta.has_more
@@ -186,8 +194,47 @@ async function listAllArtistSongs(targetArtistId: string, isCurrentLoad: () => b
   return allSongs
 }
 
+async function loadArtistReleases(targetArtistId: string | null) {
+  const { isCurrent } = releaseRequests.beginRequest()
+  if (!targetArtistId) {
+    if (isCurrent()) {
+      releaseLoading.value = false
+      releaseErrorMessage.value = ''
+    }
+    return
+  }
+
+  const requestedType = releaseType.value
+  const requestedSort = albumSortMode.value
+  const isCurrentLoad = () => isCurrent() && artistId.value === targetArtistId
+  releaseLoading.value = true
+  releaseErrorMessage.value = ''
+  if (requestedType === 'album') albums.value = []
+  else songs.value = []
+
+  try {
+    if (requestedType === 'album') {
+      const allAlbums = await listAllArtistAlbums(targetArtistId, requestedSort, isCurrentLoad)
+      if (!isCurrentLoad() || !allAlbums) return
+      albums.value = allAlbums
+    } else {
+      const allSongs = await listAllArtistSongs(targetArtistId, requestedSort, isCurrentLoad)
+      if (!isCurrentLoad() || !allSongs) return
+      songs.value = allSongs
+    }
+  } catch (error) {
+    if (!isCurrentLoad()) return
+    releaseErrorMessage.value = requestedType === 'album' ? '专辑列表加载失败' : '歌曲列表加载失败'
+    reportError(error, requestedType === 'album' ? 'Failed to load artist albums:' : 'Failed to load artist songs:')
+  } finally {
+    if (isCurrentLoad()) releaseLoading.value = false
+  }
+}
+
 async function loadArtist(targetArtistId: string | null) {
   const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
+  releaseRequests.beginRequest()
+  releaseLoading.value = false
   if (!targetArtistId) {
     if (isCurrentLoad()) {
       artist.value = null
@@ -196,6 +243,7 @@ async function loadArtist(targetArtistId: string | null) {
       isBookmarked.value = false
       contributors.value = []
       contributorTotal.value = 0
+      releaseErrorMessage.value = ''
       lastLoadKey.value = null
     }
     return
@@ -205,6 +253,7 @@ async function loadArtist(targetArtistId: string | null) {
   contributors.value = []
   contributorTotal.value = 0
   errorMessage.value = ''
+  releaseErrorMessage.value = ''
   try {
     const shouldForceRefresh = state.value.artistRefreshToken > 0
     const resolved = await resolveMusicRedirect(
@@ -219,16 +268,10 @@ async function loadArtist(targetArtistId: string | null) {
       return
     }
     redirectMessage.value = ''
-    const allAlbums = releaseType.value === 'album'
-      ? await listAllArtistAlbums(targetArtistId, isCurrentLoad)
-      : []
-    const allSongs = releaseType.value === 'song'
-      ? await listAllArtistSongs(targetArtistId, isCurrentLoad)
-      : []
-    if (!isCurrentLoad() || !allAlbums || !allSongs) return
     artist.value = artistResponse
-    albums.value = allAlbums
-    songs.value = allSongs
+    await loadArtistReleases(targetArtistId)
+    if (!isCurrentLoad()) return
+
     try {
       const contributorResponse = await listArtistContributors(targetArtistId)
       if (!isCurrentLoad()) return
@@ -247,10 +290,9 @@ async function loadArtist(targetArtistId: string | null) {
         isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === targetArtistId)
       } catch (error) {
         if (!isCurrentLoad()) return
-        if (error instanceof ApiErrorResponseError && error.status === 401) {
-          isBookmarked.value = false
-        } else {
-          throw error
+        isBookmarked.value = false
+        if (!(error instanceof ApiErrorResponseError && error.status === 401)) {
+          reportError(error, 'Failed to load artist bookmark:')
         }
       }
     } else {
@@ -339,8 +381,7 @@ watch(
 )
 
 watch([releaseType, albumSortMode], () => {
-  albums.value = []
-  void loadArtist(artistId.value)
+  void loadArtistReleases(artistId.value)
 })
 </script>
 
@@ -426,7 +467,7 @@ watch([releaseType, albumSortMode], () => {
         :edit-status="artist.edit_status"
         @submitted="loadArtist(String(artist.id))"
       />
-      <div v-if="!loading" class="actions">
+      <div v-if="!loading && artist" class="actions">
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
@@ -521,7 +562,7 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </div>
 
-      <div v-if="!loading" class="album-list-header">
+      <div v-if="!loading && artist" class="album-list-header">
         <PSegmentedControl v-model="releaseType" :options="releaseTypeOptions" />
         <div class="album-list-controls">
           <PSelect
@@ -533,12 +574,34 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </div>
 
+      <div
+        v-if="!loading && releaseLoading && artist"
+        class="artist-release-loading-skeleton"
+        data-testid="artist-release-loading-skeleton"
+        role="status"
+        aria-busy="true"
+        aria-label="正在加载作品列表"
+      >
+        <div v-for="index in 4" :key="index" class="album-row artist-skeleton-album-row" aria-hidden="true">
+          <div class="album-row-left"><PSkeleton width="3rem" height="1rem" /></div>
+          <div class="album-row-right">
+            <PSkeleton class="album-row-cover" width="80px" height="80px" />
+            <div class="album-row-info">
+              <PSkeleton width="min(18rem, 70%)" height="1.25rem" />
+              <PSkeleton width="min(24rem, 90%)" height="0.85rem" />
+              <PSkeleton width="8rem" height="0.85rem" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="!loading && !(releaseType === 'album' ? sortedAlbums.length : artistSongs.length)" class="state-line">
+      <p v-else-if="!loading && !releaseLoading && releaseErrorMessage" class="state-line state-line--error">{{ releaseErrorMessage }}</p>
+      <p v-else-if="!loading && !releaseLoading && artist && !(releaseType === 'album' ? sortedAlbums.length : artistSongs.length)" class="state-line">
         {{ releaseType === 'album' ? '暂无专辑，可以添加新专辑。' : '暂无歌曲。' }}
       </p>
 
-      <template v-if="!loading && releaseType === 'album'">
+      <template v-if="!loading && !releaseLoading && artist && releaseType === 'album'">
         <div
           v-for="album in sortedAlbums"
           :key="album.id"
@@ -572,7 +635,7 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </template>
 
-      <template v-else-if="!loading">
+      <template v-else-if="!loading && !releaseLoading && artist">
         <button
           v-for="{ song, album } in artistSongs"
           :key="song.id"
@@ -602,7 +665,7 @@ watch([releaseType, albumSortMode], () => {
         </button>
       </template>
       <MusicContributorsBlock
-        v-if="!loading"
+        v-if="!loading && artist"
         :contributors="contributors"
         :total="contributorTotal"
         @open-history="openArtistHistory"
@@ -871,7 +934,8 @@ watch([releaseType, albumSortMode], () => {
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 
-.artist-loading-skeleton { pointer-events: none; }
+.artist-loading-skeleton,
+.artist-release-loading-skeleton { pointer-events: none; }
 .artist-skeleton-actions { margin-bottom: 2rem; }
 .artist-skeleton-release-types { display: flex; gap: 0.35rem; }
 .artist-skeleton-album-row { cursor: default; }

@@ -230,14 +230,84 @@ describe("ArtistDrawer.vue", () => {
 			meta: { page: 1, page_size: 100, total: 1, has_more: false },
 		});
 
-		await wrapper.get('[data-testid="artist-release-type-song"]').trigger("click");
+		await wrapper
+			.get('[data-testid="artist-release-type-song"]')
+			.trigger("click");
 		await vi.dynamicImportSettled();
 
-		expect(listMusicSongs).toHaveBeenLastCalledWith({ artist_id: "1", sort: "-release_date", page: 1, page_size: 100 });
+		expect(listMusicSongs).toHaveBeenLastCalledWith({
+			artist_id: "1",
+			sort: "-release_date",
+			page: 1,
+			page_size: 100,
+		});
 		expect(wrapper.text()).toContain("New Single");
 		expect(wrapper.text()).toContain("2024/05/01");
 		await wrapper.get(".artist-song-row").trigger("click");
 		expect(musicDrawerMocks.openSong).toHaveBeenCalledWith("song-3");
+	});
+
+	it("requests only the selected release resource when switching tabs", async () => {
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+		const artistCalls = getMusicArtist.mock.calls.length;
+		const albumCalls = listMusicAlbums.mock.calls.length;
+		const songCalls = listMusicSongs.mock.calls.length;
+		const contributorCalls = listArtistContributors.mock.calls.length;
+		const bookmarkCalls = listArtistBookmarks.mock.calls.length;
+		const songResponse = {
+			data: [],
+			meta: { page: 1, page_size: 100, total: 0, has_more: false },
+		};
+		let resolveSongs!: (value: typeof songResponse) => void;
+		listMusicSongs.mockReturnValueOnce(
+			new Promise<typeof songResponse>((resolve) => {
+				resolveSongs = resolve;
+			}),
+		);
+
+		await wrapper
+			.get('[data-testid="artist-release-type-song"]')
+			.trigger("click");
+		await nextTick();
+
+		expect(getMusicArtist).toHaveBeenCalledTimes(artistCalls);
+		expect(listMusicAlbums).toHaveBeenCalledTimes(albumCalls);
+		expect(listMusicSongs).toHaveBeenCalledTimes(songCalls + 1);
+		expect(listArtistContributors).toHaveBeenCalledTimes(contributorCalls);
+		expect(listArtistBookmarks).toHaveBeenCalledTimes(bookmarkCalls);
+		expect(wrapper.find('[data-testid="artist-loading-skeleton"]').exists()).toBe(false);
+		expect(wrapper.find('[data-testid="artist-release-loading-skeleton"]').exists()).toBe(true);
+
+		resolveSongs(songResponse);
+		await vi.dynamicImportSettled();
+		await wrapper
+			.get('[data-testid="artist-release-type-album"]')
+			.trigger("click");
+		await vi.dynamicImportSettled();
+
+		expect(getMusicArtist).toHaveBeenCalledTimes(artistCalls);
+		expect(listMusicAlbums).toHaveBeenCalledTimes(albumCalls + 1);
+		expect(listMusicSongs).toHaveBeenCalledTimes(songCalls + 1);
+		expect(listArtistContributors).toHaveBeenCalledTimes(contributorCalls);
+		expect(listArtistBookmarks).toHaveBeenCalledTimes(bookmarkCalls);
+		wrapper.unmount();
+	});
+
+	it("keeps artist details visible when the song list fails", async () => {
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+		listMusicSongs.mockRejectedValueOnce(new Error("song list unavailable"));
+
+		await wrapper
+			.get('[data-testid="artist-release-type-song"]')
+			.trigger("click");
+		await vi.dynamicImportSettled();
+
+		expect(wrapper.text()).toContain("Ye");
+		expect(wrapper.text()).toContain("歌曲列表加载失败");
+		expect(wrapper.text()).not.toContain("艺术家信息加载失败");
+		wrapper.unmount();
 	});
 
 	it("opens artist history from the contributors block", async () => {
@@ -327,6 +397,19 @@ describe("ArtistDrawer.vue", () => {
 		expect(wrapper.text()).toContain("Ye");
 		expect(wrapper.text()).toContain("本名：Kanye Omari West");
 		expect(wrapper.text()).not.toContain("艺术家信息加载失败");
+	});
+
+	it("keeps artist details visible when bookmark lookup fails", async () => {
+		listArtistBookmarks.mockRejectedValueOnce(
+			new Error("bookmark service unavailable"),
+		);
+
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+
+		expect(wrapper.text()).toContain("Ye");
+		expect(wrapper.text()).not.toContain("艺术家信息加载失败");
+		wrapper.unmount();
 	});
 
 	it("does not request private bookmarks while a guest reads artist details", async () => {

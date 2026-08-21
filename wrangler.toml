@@ -16,3 +16,7 @@ VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADvlN3IzMJuOSyx2"
 VITE_API_URL = "https://api.atoman.org/api"
 VITE_R2_PUBLIC_BASE_URL = "https://assets.atoman.org"
 VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADvlN3IzMJuOSyx2"
+
+[[env.production.r2_buckets]]
+binding = "FRONTEND_RELEASE_ASSETS"
+bucket_name = "atoman-frontend-releases"

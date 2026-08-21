@@ -24,7 +24,11 @@ const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'tes
 const creationFlow = computed(() => state.value.creationFlow)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
-const showsTrackList = computed(() => !['single', 'leak'].includes(albumDetailsDraft.value?.type ?? 'album'))
+const standaloneTypeSelected = computed(() => ['single', 'leak'].includes(albumDetailsDraft.value?.type ?? 'album'))
+const standaloneTrackCountInvalid = computed(() => standaloneTypeSelected.value && (creationFlow.value?.draft.tracks.length ?? 0) !== 1)
+const detailsTitleLabel = computed(() => standaloneTypeSelected.value ? '歌曲名' : '专辑名')
+const detailsDescriptionPlaceholder = computed(() => standaloneTypeSelected.value ? '补充歌曲简介...' : '补充专辑简介...')
+const showsTrackList = computed(() => !standaloneTypeSelected.value || standaloneTrackCountInvalid.value || isEditMode.value)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const {
   coverInputRef,
@@ -458,8 +462,8 @@ watch(
               v-model="titleModel"
               data-testid="album-details-title-input"
               type="text"
-              placeholder="例如 Late Registration"
-              :label="requiredLabel('专辑名')"
+              placeholder="输入名称"
+              :label="requiredLabel(detailsTitleLabel)"
               @blur="handleTitleBlur"
             />
           </div>
@@ -489,6 +493,9 @@ watch(
               data-testid="album-details-type-input"
               type="hidden"
             />
+            <p v-if="standaloneTrackCountInvalid" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
+              单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
+            </p>
           </div>
         </div>
         <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
@@ -496,7 +503,7 @@ watch(
             v-model="albumDetailsDraft.bio"
             data-testid="album-details-bio-input"
             :rows="3"
-            placeholder="补充专辑简介..."
+            :placeholder="detailsDescriptionPlaceholder"
             label="简介"
           />
         </div>

@@ -97,13 +97,13 @@ function albumSortQuery(mode: AlbumSortMode) {
   return '-release_date'
 }
 
-function formatAlbumReleaseDate(album: Pick<MusicAlbumListItem, 'release_date' | 'release_date_precision' | 'year'>) {
-  if (album.release_date && !['0000', '0001', '----'].includes(album.release_date.slice(0, 4))) {
-		const cleaned = formatStoredPartialDate(album.release_date, album.release_date_precision).replace(/-/g, '/')
+function formatAlbumReleaseDate(release: { release_date?: string; release_date_precision?: string; year?: number }) {
+  if (release.release_date && !['0000', '0001', '----'].includes(release.release_date.slice(0, 4))) {
+		const cleaned = formatStoredPartialDate(release.release_date, release.release_date_precision).replace(/-/g, '/')
     if (cleaned.length >= 4) return cleaned
   }
-  if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
-    return String(album.year)
+  if (typeof release.year === 'number' && Number.isFinite(release.year) && release.year > 0) {
+    return String(release.year)
   }
   return '----'
 }
@@ -139,28 +139,25 @@ const sortedAlbums = computed(() => {
   }
 })
 
-const artistSongs = computed(() => songs.value.map((song) => ({
-  song,
-  album: song.album ?? { id: '', title: '', cover_url: '', album_type: '', release_date: '', year: 0 },
-})))
+const artistSongs = computed(() => songs.value)
 
 const playableArtistSongs = computed<Song[]>(() => {
   const playable: Song[] = []
-  for (const { song, album } of artistSongs.value) {
+  for (const song of artistSongs.value) {
     const audioUrl = song.audio_url?.trim()
     if (!audioUrl) continue
-    const releaseDate = album.release_date || ''
+    const releaseDate = song.release_date || ''
     playable.push({
       id: song.id,
       title: song.title,
       artist: song.artists?.map((item) => item.name).join(', ') || displayName.value || '未知艺术家',
-      album: album.title || song.title,
-      album_id: album.id || '',
-      year: album.year || Number(releaseDate.slice(0, 4)) || 0,
+      album: song.title,
+      album_id: '',
+      year: Number(releaseDate.slice(0, 4)) || 0,
       release_date: releaseDate,
       lyrics: song.lyrics || '',
       audio_url: audioUrl,
-      cover_url: song.cover_url?.trim() || album.cover_url?.trim() || '',
+      cover_url: song.cover_url?.trim() || '',
       track_number: song.track_number,
       disc_number: song.disc_number,
       status: (song.status as Song['status'] | undefined) || 'open',
@@ -220,7 +217,6 @@ async function listAllArtistAlbums(targetArtistId: string, sortMode: AlbumSortMo
   while (hasMore) {
     const response = await listMusicAlbums({
       artist_id: targetArtistId,
-      release_type: 'album',
       sort: albumSortQuery(sortMode),
       page,
       page_size: artistAlbumPageSize,
@@ -242,7 +238,7 @@ async function listAllArtistSongs(targetArtistId: string, sortMode: AlbumSortMod
   while (hasMore) {
     const response = await listMusicSongs({
       artist_id: targetArtistId,
-      release_type: 'song',
+      release_type: 'single,leak',
       sort: albumSortQuery(sortMode),
       page,
       page_size: artistAlbumPageSize,
@@ -551,7 +547,7 @@ watch([releaseType, albumSortMode], () => {
           data-testid="artist-create-album-action"
           @click="createAlbum"
         >
-          添加新专辑
+          添加专辑/歌曲
         </PButton>
 		<PButton
 			variant="secondary"
@@ -672,7 +668,7 @@ watch([releaseType, albumSortMode], () => {
       <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="!loading && !releaseLoading && releaseErrorMessage" class="state-line state-line--error">{{ releaseErrorMessage }}</p>
       <p v-else-if="!loading && !releaseLoading && artist && !(releaseType === 'album' ? sortedAlbums.length : artistSongs.length)" class="state-line">
-        {{ releaseType === 'album' ? '暂无专辑，可以添加新专辑。' : '暂无歌曲。' }}
+        {{ releaseType === 'album' ? '暂无专辑，可以添加专辑/歌曲。' : '暂无歌曲。' }}
       </p>
 
       <template v-if="!loading && !releaseLoading && artist && releaseType === 'album'">
@@ -711,7 +707,7 @@ watch([releaseType, albumSortMode], () => {
 
       <div v-else-if="!loading && !releaseLoading && artist" class="artist-track-list">
         <div
-          v-for="({ song, album }, index) in artistSongs"
+          v-for="(song, index) in artistSongs"
           :key="song.id"
           class="track artist-track"
         >
@@ -738,8 +734,8 @@ watch([releaseType, albumSortMode], () => {
           </button>
           <div class="track-meta">
             <span v-if="!canPlayArtistSong(song)" class="track-unavailable">无音频</span>
-            <span class="artist-track-type">{{ formatAlbumTypeLabel(album.album_type) }}</span>
-            <span class="artist-track-date">{{ formatAlbumReleaseDate(album) }}</span>
+            <span class="artist-track-type">{{ formatAlbumTypeLabel(song.release_type) }}</span>
+            <span class="artist-track-date">{{ formatAlbumReleaseDate(song) }}</span>
             <span v-if="formatArtistSongDuration(song.duration_sec)" class="track-time">
               {{ formatArtistSongDuration(song.duration_sec) }}
             </span>

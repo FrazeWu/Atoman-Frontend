@@ -24,6 +24,8 @@ function normalizedImportIdentityPart(value?: string | null): string {
 }
 
 function importIdentityKey(item: MusicAlbumImport): string {
+	const targetSongId = item.targetSongId?.trim();
+	if (targetSongId) return `song:${targetSongId}`;
 	const targetAlbumId = item.targetAlbumId?.trim();
 	if (targetAlbumId) return `album:${targetAlbumId}`;
 

@@ -239,23 +239,15 @@ describe("ArtistDrawer.vue", () => {
 					title: "New Single",
 					audio_url: "https://example.com/song-3.mp3",
 					duration_sec: 215,
-					album: {
-						id: "3",
-						title: "New Single",
-						album_type: "single",
-						release_date: "2024-05-01",
-					},
+					release_type: "single",
+					release_date: "2024-05-01",
 					entry_status: "open",
 				},
 				{
 					id: "song-4",
 					title: "Undated Leak",
-					album: {
-						id: "4",
-						title: "Undated Leak",
-						album_type: "leak",
-						release_date: "0001-01-01T00:00:00Z",
-					},
+					release_type: "leak",
+					release_date: "0001-01-01T00:00:00Z",
 					entry_status: "open",
 				},
 			],
@@ -269,7 +261,7 @@ describe("ArtistDrawer.vue", () => {
 
 		expect(listMusicSongs).toHaveBeenLastCalledWith({
 			artist_id: "1",
-			release_type: "song",
+			release_type: "single,leak",
 			sort: "-release_date",
 			page: 1,
 			page_size: 100,
@@ -529,14 +521,12 @@ describe("ArtistDrawer.vue", () => {
 
 		expect(listMusicAlbums).toHaveBeenNthCalledWith(1, {
 			artist_id: "1",
-			release_type: "album",
 			sort: "-release_date",
 			page: 1,
 			page_size: 100,
 		});
 		expect(listMusicAlbums).toHaveBeenNthCalledWith(2, {
 			artist_id: "1",
-			release_type: "album",
 			sort: "-release_date",
 			page: 2,
 			page_size: 100,

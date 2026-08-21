@@ -17,6 +17,11 @@ const drawerState = ref({
 const mocks = vi.hoisted(() => ({
 	closeMusicEditor: vi.fn(),
 	refreshSong: vi.fn(),
+	refreshAlbum: vi.fn(),
+	refreshArtist: vi.fn(),
+	openMusicCreationFlow: vi.fn(),
+	convertMusicSongToAlbum: vi.fn(),
+	routerReplace: vi.fn(),
 	closeMusicCreationFlow: vi.fn(),
 	getMusicSongDetail: vi.fn(),
 	uploadMusicAsset: vi.fn(),
@@ -30,11 +35,19 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		state: drawerState,
 		closeMusicEditor: mocks.closeMusicEditor,
 		refreshSong: mocks.refreshSong,
+		refreshAlbum: mocks.refreshAlbum,
+		refreshArtist: mocks.refreshArtist,
+		openMusicCreationFlow: mocks.openMusicCreationFlow,
 		closeMusicCreationFlow: mocks.closeMusicCreationFlow,
+		isLayerActive: vi.fn(() => true),
 		isLayerShifted: vi.fn(() => false),
 		isTopLayer: vi.fn(() => true),
 		returnToLayer: vi.fn(),
 	}),
+}));
+
+vi.mock("vue-router", () => ({
+	useRouter: () => ({ replace: mocks.routerReplace }),
 }));
 
 vi.mock("@/components/ui/PSheet.vue", () => ({
@@ -56,6 +69,7 @@ vi.mock("@/components/music/MusicCreationContributorPicker.vue", () => ({
 }));
 
 vi.mock("@/api/musicV1", () => ({
+	convertMusicSongToAlbum: mocks.convertMusicSongToAlbum,
 	getMusicSongDetail: mocks.getMusicSongDetail,
 	submitSongRevision: mocks.submitSongRevision,
 	queueMusicSongAudioReplacement: mocks.queueMusicSongAudioReplacement,
@@ -104,6 +118,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 			size: 1,
 		});
 		mocks.submitSongRevision.mockResolvedValue({ status: "approved" });
+		mocks.convertMusicSongToAlbum.mockResolvedValue({ entity_type: "album", id: "album-2" });
 		mocks.queueMusicSongAudioReplacement.mockResolvedValue({
 			status: "pending",
 		});
@@ -136,9 +151,8 @@ describe("MusicEntityEditorDrawer.vue", () => {
 			"song-1",
 			expect.objectContaining({
 				title: "Updated Song",
-				track_number: 2,
-				disc_number: 1,
-				lyrics: "Lyrics",
+				description: "",
+				sources: [],
 				artist_credits: [
 					{
 						artist_id: "artist-1",
@@ -148,7 +162,66 @@ describe("MusicEntityEditorDrawer.vue", () => {
 				],
 			}),
 		);
+		const submitted = mocks.submitSongRevision.mock.calls[0]?.[1];
+		expect(submitted).not.toHaveProperty("track_number");
+		expect(submitted).not.toHaveProperty("disc_number");
+		expect(submitted).not.toHaveProperty("lyrics");
+		expect(wrapper.find('textarea[aria-label="歌词"]').exists()).toBe(false);
 		expect(mocks.refreshSong).toHaveBeenCalled();
+	});
+
+	it("submits standalone release metadata without an inline lyrics draft", async () => {
+		mocks.getMusicSongDetail.mockResolvedValueOnce({
+			song: {
+				id: "song-1", title: "Standalone Song", description: "Optional",
+				release_type: "single", release_date: "2025-01-02", release_date_precision: "day",
+				cover_url: "https://assets.example.test/song.jpg",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+			},
+			artists: [{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 }],
+			playable: true,
+		});
+		drawerState.value.musicEditor = { entity: "song", mode: "edit", id: "song-1" };
+		const wrapper = mountDrawer();
+		await flushPromises();
+
+		expect(wrapper.text()).not.toContain("歌词");
+		expect(wrapper.text()).not.toContain("碟号");
+		expect(wrapper.text()).not.toContain("曲序");
+		await wrapper.findAll("button").find((button) => button.text() === "保存歌曲")?.trigger("click");
+		await flushPromises();
+
+		expect(mocks.submitSongRevision).toHaveBeenCalledWith("song-1", expect.objectContaining({
+			title: "Standalone Song", description: "Optional", release_type: "single", release_date: "2025-01-02",
+			sources: [{ type: "url", url: "https://example.test/song" }],
+		}));
+	});
+
+	it("converts a standalone song to an album type in one command", async () => {
+		mocks.getMusicSongDetail.mockResolvedValueOnce({
+			song: {
+				id: "song-1", title: "Standalone Song", description: "Optional",
+				release_type: "single", release_date: "2025-01-02",
+				cover_url: "https://assets.example.test/song.jpg",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+			},
+			artists: [{ id: "artist-1", name: "Test Artist", role: "primary", position: 1 }],
+			playable: true,
+		});
+		drawerState.value.musicEditor = { entity: "song", mode: "edit", id: "song-1" };
+		const wrapper = mountDrawer();
+		await flushPromises();
+		wrapper.findComponent({ name: "PSelect" }).vm.$emit("update:modelValue", "album");
+		await nextTick();
+
+		await wrapper.findAll("button").find((button) => button.text() === "保存并转为专辑")?.trigger("click");
+		await flushPromises();
+
+		expect(mocks.convertMusicSongToAlbum).toHaveBeenCalledWith("song-1", expect.objectContaining({
+			title: "Standalone Song", release_type: "album", cover_url: "https://assets.example.test/song.jpg",
+		}));
+		expect(mocks.submitSongRevision).not.toHaveBeenCalled();
+		expect(mocks.routerReplace).toHaveBeenCalledWith("/music/album/album-2");
 	});
 
 	it("keeps the saved metadata result clear when audio replacement queueing fails", async () => {

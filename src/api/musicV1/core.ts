@@ -67,6 +67,8 @@ export const musicV1Endpoints = {
 	songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,
 	songAudioReplacements: (songId: string) =>
 		`${apiV1Base()}/music/songs/${songId}/audio-replacements`,
+	songToAlbumConversion: (songId: string) =>
+		`${apiV1Base()}/music/songs/${songId}/convert-to-album`,
 	musicEntryStateRequests: (entityType: string, entityId: string) =>
 		`${apiV1Base()}/music/entries/${entityType}/${entityId}/state-requests`,
 	musicEntryEmergencyState: (entityType: string, entityId: string) =>
@@ -85,6 +87,8 @@ export const musicV1Endpoints = {
 	laterPlaylistSong: (songId: string) =>
 		`${apiV1Base()}/music/playlists/later/${songId}`,
 	album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
+	albumToSongConversion: (albumId: string) =>
+		`${apiV1Base()}/music/albums/${albumId}/convert-to-song`,
 	albumMerge: (albumId: string) =>
 		`${apiV1Base()}/music/albums/${albumId}/merge`,
 	albumMergePreview: (albumId: string) =>

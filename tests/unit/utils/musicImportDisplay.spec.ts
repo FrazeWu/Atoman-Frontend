@@ -75,6 +75,16 @@ describe("music import album display", () => {
 		]);
 	});
 
+	it("counts repeated sessions for the same target song once", () => {
+		const records = uniqueMusicAlbumImports([
+			importRecord({ importId: "latest", targetSongId: "song-1" }),
+			importRecord({ importId: "older", targetSongId: "song-1" }),
+			importRecord({ importId: "other", targetSongId: "song-2" }),
+		]);
+
+		expect(records.map((item) => item.importId)).toEqual(["latest", "other"]);
+	});
+
 	it("deduplicates unresolved retries for the same artist and album title", () => {
 		const records = uniqueMusicAlbumImports([
 			importRecord({

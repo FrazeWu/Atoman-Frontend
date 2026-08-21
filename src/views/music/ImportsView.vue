@@ -6,6 +6,7 @@ import {
   deleteMusicAlbumImportFile,
   getMusicAlbum,
   getMusicArtist,
+  getMusicSongDetail,
   listMusicAlbumImports,
   repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
@@ -289,7 +290,7 @@ async function cancelImport() {
 }
 
 async function repairImport() {
-  if (!selectedImport.value?.targetAlbumId) return
+  if (!selectedImport.value?.targetAlbumId && !selectedImport.value?.targetSongId) return
   actionBusy.value = 'repair'
   errorMessage.value = ''
   try {
@@ -320,12 +321,38 @@ async function resumeImport(snapshot: MusicAlbumImport) {
   const albumRequest = snapshot.targetAlbumId?.trim()
     ? getMusicAlbum(snapshot.targetAlbumId).catch(() => null)
     : Promise.resolve(null)
-  const [artistSource, album] = await Promise.all([artistSourceRequest, albumRequest])
+  const songRequest = snapshot.targetSongId?.trim()
+    ? getMusicSongDetail(snapshot.targetSongId).catch(() => null)
+    : Promise.resolve(null)
+  const [artistSource, album, songDetail] = await Promise.all([artistSourceRequest, albumRequest, songRequest])
 
   if (!flow.draft.artist.source.trim() && artistSource) {
     flow.draft.artist.source = artistSource
   }
-  if (!album || flow.draft.albumDetails.contributors.length) return
+  if (flow.draft.albumDetails.contributors.length) return
+  if (songDetail) {
+    const contributors = new Map<string, typeof flow.draft.albumDetails.contributors[number]>()
+    for (const artist of songDetail.artists) {
+      const contributor = contributors.get(artist.id) ?? {
+        id: `contributor-${artist.id}`,
+        artistId: String(artist.id),
+        name: artist.name,
+        avatarUrl: '',
+        kind: 'person' as const,
+        locked: true,
+        roles: [],
+      }
+      contributor.roles.push({
+        id: `role-${artist.id}-${artist.role}-${artist.custom_role ?? ''}`,
+        role: artist.role,
+        label: artist.custom_role ?? '',
+      })
+      contributors.set(artist.id, contributor)
+    }
+    flow.draft.albumDetails.contributors = [...contributors.values()]
+    return
+  }
+  if (!album) return
 
   flow.draft.albumDetails.contributors = (album.artists ?? []).map((artist) => ({
     id: `contributor-${artist.id}`,
@@ -467,7 +494,7 @@ function continueImport() {
             >取消导入</PButton>
 
             <PButton
-              v-else-if="selectedImport.status === 'committed' && selectedImport.targetAlbumId"
+              v-else-if="selectedImport.status === 'committed' && (selectedImport.targetAlbumId || selectedImport.targetSongId)"
               variant="secondary"
               :loading="actionBusy === 'repair'"
               @click="repairImport"

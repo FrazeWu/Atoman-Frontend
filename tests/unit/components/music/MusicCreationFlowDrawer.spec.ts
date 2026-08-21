@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
 import MusicCreationFlowDrawer from "../../../../src/components/music/MusicCreationFlowDrawer.vue";
@@ -127,6 +127,7 @@ const drawerMocks = {
 	closeMusicCreationFlow: vi.fn(),
 	refreshArtist: vi.fn(),
 	refreshAlbum: vi.fn(),
+	refreshSong: vi.fn(),
 	openArtist: vi.fn(),
 	openNestedAction: vi.fn(),
 	setMusicCreationStep: vi.fn(),
@@ -147,6 +148,7 @@ vi.mock("../../../../src/api/musicV1", async () => {
 		getMusicAlbum: vi.fn(),
 		submitArtistRevision: vi.fn(),
 		submitAlbumRevision: vi.fn(),
+		convertMusicAlbumToSong: vi.fn(),
 	};
 });
 
@@ -178,6 +180,7 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
 		refreshArtist: drawerMocks.refreshArtist,
 		refreshAlbum: drawerMocks.refreshAlbum,
+		refreshSong: drawerMocks.refreshSong,
 		openArtist: drawerMocks.openArtist,
 		openNestedAction: drawerMocks.openNestedAction,
 		setMusicCreationStep: drawerMocks.setMusicCreationStep,
@@ -200,6 +203,7 @@ const getMusicArtistMock = vi.mocked(musicApi.getMusicArtist);
 const getMusicAlbumMock = vi.mocked(musicApi.getMusicAlbum);
 const submitArtistRevisionMock = vi.mocked(musicApi.submitArtistRevision);
 const submitAlbumRevisionMock = vi.mocked(musicApi.submitAlbumRevision);
+const convertMusicAlbumToSongMock = vi.mocked(musicApi.convertMusicAlbumToSong);
 const completeMusicAlbumImportSessionMock = vi.mocked(
 	musicApi.completeMusicAlbumImportSession,
 );
@@ -212,6 +216,7 @@ describe("MusicCreationFlowDrawer", () => {
 		getMusicAlbumMock.mockReset();
 		submitArtistRevisionMock.mockReset();
 		submitAlbumRevisionMock.mockReset();
+		convertMusicAlbumToSongMock.mockReset();
 		completeMusicAlbumImportSessionMock.mockReset();
 		completeMusicAlbumImportSessionMock.mockResolvedValue({
 			importId: "import-1",
@@ -223,6 +228,7 @@ describe("MusicCreationFlowDrawer", () => {
 		});
 		drawerMocks.refreshArtist.mockReset();
 		drawerMocks.refreshAlbum.mockReset();
+		drawerMocks.refreshSong.mockReset();
 		drawerMocks.openArtist.mockReset();
 		drawerMocks.openNestedAction.mockReset();
 		drawerMocks.setMusicCreationStep.mockReset();
@@ -654,6 +660,49 @@ describe("MusicCreationFlowDrawer", () => {
 			}),
 		);
 		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
+	});
+
+	it("单轨专辑选择 single 时转换为独立歌曲", async () => {
+		const base = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			mode: "edit",
+			entity: "album",
+			targetId: "album-1",
+			step: "albumDetails",
+			draft: { ...base.draft, albumImport: { ...base.draft.albumImport, importId: null } },
+		});
+		getMusicAlbumMock.mockResolvedValue({
+			id: "album-1",
+			title: "One Track",
+			cover_url: "https://img.test/album.jpg",
+			release_date: "2025-01-02",
+			release_date_precision: "day",
+			album_type: "album",
+			description: "Optional",
+			artists: [{ id: "artist-1", name: "Artist" }],
+			songs: [{ id: "song-1", title: "One Track", track_number: 1, status: "open", artist_credits: [] }],
+		} as never);
+		convertMusicAlbumToSongMock.mockResolvedValue({ entity_type: "song", id: "song-1" });
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await flushPromises();
+		const flow = drawerMocks.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumDetails.type = "single";
+		flow.draft.albumDetails.source = "https://example.test/song";
+		await nextTick();
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+
+		expect(convertMusicAlbumToSongMock).toHaveBeenCalledWith("album-1", expect.objectContaining({
+			title: "One Track",
+			release_type: "single",
+			cover_url: "https://img.test/album.jpg",
+			sources: [{ type: "url", url: "https://example.test/song" }],
+		}));
+		expect(submitAlbumRevisionMock).not.toHaveBeenCalled();
+		expect(drawerMocks.refreshSong).toHaveBeenCalled();
+		expect(drawerMocks.routerReplace).toHaveBeenCalledWith("/music/song/song-1");
 	});
 
 	it("预览步骤点击提交后只调用一次 commitMusicAlbumImport", async () => {

@@ -32,6 +32,8 @@ import {
 	type MusicListResponse,
 	type MusicAlbumImportMultipartPartUpload,
 	type MusicRevisionSummary,
+	type MusicReleaseConversionInput,
+	type MusicReleaseConversionResult,
 	type SongEditDraft,
 	type MusicAlbumTrackEditInput,
 	type MusicUploadTarget,
@@ -158,13 +160,16 @@ export function submitSongRevision(
 			base_revision: 0,
 			changes: {
 				...(draft.title !== undefined ? { title: draft.title } : {}),
-				...(draft.track_number !== undefined
-					? { track_number: draft.track_number }
+				...(draft.description !== undefined
+					? { description: draft.description }
 					: {}),
-				...(draft.disc_number !== undefined
-					? { disc_number: draft.disc_number }
+				...(draft.release_type !== undefined
+					? { release_type: draft.release_type }
 					: {}),
-				...(draft.lyrics !== undefined ? { lyrics: draft.lyrics } : {}),
+				...(draft.release_date !== undefined
+					? { release_date: draft.release_date }
+					: {}),
+				...(draft.sources !== undefined ? { sources: draft.sources } : {}),
 				...(draft.cover ? { cover_url: draft.cover.url } : {}),
 				...(draft.artist_credits !== undefined
 					? { artist_credits: draft.artist_credits }
@@ -172,6 +177,26 @@ export function submitSongRevision(
 			},
 			edit_summary: draft.reason,
 		},
+	);
+}
+
+export function convertMusicSongToAlbum(
+	songId: string,
+	input: MusicReleaseConversionInput,
+): Promise<MusicReleaseConversionResult> {
+	return apiPostJson<MusicReleaseConversionResult>(
+		musicV1Endpoints.songToAlbumConversion(songId),
+		input,
+	);
+}
+
+export function convertMusicAlbumToSong(
+	albumId: string,
+	input: MusicReleaseConversionInput,
+): Promise<MusicReleaseConversionResult> {
+	return apiPostJson<MusicReleaseConversionResult>(
+		musicV1Endpoints.albumToSongConversion(albumId),
+		input,
 	);
 }
 

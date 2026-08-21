@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { Disc3, FileAudio, Upload } from "lucide-vue-next";
+import { ChevronDown, Disc3, FileAudio, Upload } from "lucide-vue-next";
 import {
   convertMusicSongToAlbum,
   getMusicSongDetail,
@@ -90,6 +90,7 @@ let songCoverObjectURL = "";
 const songLoading = ref(false);
 const songSubmitting = ref(false);
 const songErrorMessage = ref("");
+const descriptionExpanded = ref(false);
 const standaloneSong = ref(false);
 const parentAlbum = ref<{ id: string; title: string } | null>(null);
 const coverInput = ref<HTMLInputElement | null>(null);
@@ -156,6 +157,7 @@ function resetSongState() {
   songDraft.coverFile = null;
   songDraft.audioFile = null;
   songDraft.contributors = [];
+  descriptionExpanded.value = false;
   revokeSongCoverPreview();
 }
 
@@ -476,13 +478,29 @@ async function handleSongEditSubmit() {
                 />
               </template>
             </div>
-            <PTextarea
-              v-model="songDraft.description"
-              :rows="3"
-              label="简介"
-              placeholder="补充歌曲简介"
-              data-testid="song-editor-description"
-            />
+            <div class="song-editor__description" :class="{ 'is-expanded': descriptionExpanded }">
+              <button
+                type="button"
+                class="song-editor__description-toggle"
+                :aria-expanded="descriptionExpanded"
+                aria-controls="song-editor-description"
+                :title="descriptionExpanded ? '收起简介' : '展开简介'"
+                data-testid="song-editor-description-toggle"
+                @click="descriptionExpanded = !descriptionExpanded"
+              >
+                <span>简介</span>
+                <ChevronDown :size="18" aria-hidden="true" />
+              </button>
+              <PTextarea
+                v-if="descriptionExpanded"
+                id="song-editor-description"
+                v-model="songDraft.description"
+                :rows="3"
+                aria-label="简介"
+                placeholder="补充歌曲简介"
+                data-testid="song-editor-description"
+              />
+            </div>
           </div>
         </div>
 
@@ -608,6 +626,40 @@ async function handleSongEditSubmit() {
   gap: 0.75rem;
   align-content: start;
 }
+.song-editor__description {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+}
+.song-editor__description-toggle {
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.song-editor__description-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 3px;
+}
+.song-editor__description-toggle svg {
+  transition: transform 0.18s ease;
+}
+.song-editor__description.is-expanded .song-editor__description-toggle svg {
+  transform: rotate(180deg);
+}
 .song-editor__contributors {
   display: grid;
   gap: 0.55rem;
@@ -653,6 +705,12 @@ async function handleSongEditSubmit() {
   .song-editor__audio {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .song-editor__description-toggle svg {
+    transition: none;
   }
 }
 

@@ -238,6 +238,28 @@ describe("useMusicDrawers music creation flow", () => {
 		expect(drawers.isArtistShifted.value).toBe(true);
 	});
 
+	it("opens a standalone song edit in the shared release flow", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.openMusicCreationFlow({
+			mode: "edit",
+			entity: "song",
+			songId: "song-1",
+			startStep: "albumDetails",
+		});
+
+		expect(drawers.state.value.creationFlow).toMatchObject({
+			mode: "edit",
+			entity: "song",
+			targetId: "song-1",
+			step: "albumDetails",
+		});
+		expect(drawers.layers.value.at(-1)).toMatchObject({
+			key: "creation:edit:song:song-1",
+			kind: "creation",
+		});
+	});
+
 	it("opens standalone artist-first flow with empty contributors and reusable member draft structure", () => {
 		const drawers = useMusicDrawers();
 

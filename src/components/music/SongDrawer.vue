@@ -37,6 +37,7 @@ const {
   isTopLayer,
   openAlbum,
   openArtist,
+  openMusicCreationFlow,
   openMusicEditor,
   openNestedAction,
 } = useMusicDrawers()
@@ -178,7 +179,17 @@ async function addToLater() {
 
 function editSong() {
   if (!detail.value || !requireLogin()) return
-  openMusicEditor({ entity: 'song', mode: 'edit', id: String(detail.value.song.id) })
+  const song = detail.value.song
+  if (song.release_type === 'single' || song.release_type === 'leak') {
+    openMusicCreationFlow({
+      mode: 'edit',
+      entity: 'song',
+      songId: String(song.id),
+      startStep: 'albumDetails',
+    })
+    return
+  }
+  openMusicEditor({ entity: 'song', mode: 'edit', id: String(song.id) })
 }
 
 function openSongHistory() {

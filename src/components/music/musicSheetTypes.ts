@@ -25,9 +25,10 @@ export interface MusicEditorState {
 
 export interface MusicCreationFlowSeed {
 	mode?: "create" | "edit";
-	entity?: "artist" | "album";
+	entity?: "artist" | "album" | "song";
 	artistId?: string | null;
 	albumId?: string | null;
+	songId?: string | null;
 	artistName?: string;
 	artistLegalName?: string;
 	artistSource?: string;

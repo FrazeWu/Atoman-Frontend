@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 
 const bucketName = process.env.FRONTEND_RELEASE_ASSET_BUCKET || 'atoman-frontend-releases'
 const distAssetsDirectory = join(process.cwd(), 'dist', 'assets')
-const concurrency = 4
+const concurrency = 1
 
 const contentTypes = {
   '.avif': 'image/avif',

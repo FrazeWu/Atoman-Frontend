@@ -1376,7 +1376,8 @@ onBeforeUnmount(() => {
 :deep(.cm-markdown-widget) {
   display: block;
   width: 100%;
-  margin: 0.75rem 0;
+  margin: 0;
+  padding-block: 0.5rem;
   cursor: text;
 }
 

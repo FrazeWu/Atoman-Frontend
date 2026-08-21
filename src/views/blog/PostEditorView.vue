@@ -706,6 +706,23 @@ onMounted(async () => {
   line-height: 1.45 !important;
 }
 
+.editor-body :deep(.p-editor[data-live-preview="false"] .cm-scroller) {
+  line-height: 1.35 !important;
+}
+
+.editor-body :deep(.p-editor[data-live-preview="false"] .cm-line:first-child) {
+  padding-bottom: 0 !important;
+  font-size: 1em !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
+.editor-body :deep(.p-editor[data-live-preview="false"] .cm-line span) {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
 .editor-body :deep(.cm-line:first-child) {
   padding-bottom: 0.25rem;
 }
@@ -716,8 +733,12 @@ onMounted(async () => {
 }
 
 .editor-body :deep(.cm-lineNumbers .cm-gutterElement) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   min-width: 38px !important;
   padding: 0 4px !important;
+  line-height: 1;
 }
 
 .editor-body :deep(.cm-content) {

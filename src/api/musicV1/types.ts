@@ -184,9 +184,12 @@ export type MusicAlbumImportCommitInput = {
 	album_sources?: MusicSource[];
 };
 
+export type MusicStandaloneSongType = "single" | "leak";
+
 export type MusicAlbumImport = {
 	importId: string;
 	targetAlbumId: string;
+	targetSongId?: string;
 	artistId?: string;
 	artistSource?: string;
 	commitRequest?: MusicAlbumImportCommitInput;
@@ -318,6 +321,7 @@ export function normalizeMusicAlbumImport(
 	return {
 		...snapshot,
 		targetAlbumId: snapshot.targetAlbumId ?? "",
+		targetSongId: snapshot.targetSongId ?? "",
 		artistId: snapshot.artistId ?? "",
 		commitRequest: snapshot.commitRequest,
 		albumTitle: snapshot.albumTitle ?? "",
@@ -550,6 +554,13 @@ export type MusicAlbumMergePreview = {
 export type MusicSongListItem = {
 	id: string;
 	title: string;
+	description?: string;
+	release_type?: MusicStandaloneSongType;
+	release_date?: string;
+	release_date_precision?: string;
+	sources?: MusicSource[];
+	effective_sources?: MusicSource[];
+	album_id?: string | null;
 	track_number?: number;
 	disc_number?: number;
 	audio_url?: string;
@@ -834,7 +845,7 @@ export type MusicListFilters = {
 	q?: string;
 	artist_id?: string;
 	album_id?: string;
-	release_type?: "album" | "song";
+	release_type?: MusicStandaloneSongType | "single,leak";
 	year?: string | number;
 	status?: MusicEntryStatus;
 	page?: number;
@@ -863,12 +874,28 @@ export type AlbumEditDraft = {
 
 export type SongEditDraft = {
 	title?: string;
-	track_number?: number;
-	disc_number?: number;
-	lyrics?: string;
+	description?: string;
+	release_type?: MusicStandaloneSongType;
+	release_date?: string;
 	cover?: UploadAsset | null;
 	artist_credits?: MusicAlbumArtistCreditInput[];
+	sources?: MusicSource[];
 	reason: string;
+};
+
+export type MusicReleaseConversionInput = {
+	title: string;
+	description: string;
+	release_date: string;
+	release_type: string;
+	cover_url: string;
+	artist_credits: MusicAlbumArtistCreditInput[];
+	sources: MusicSource[];
+};
+
+export type MusicReleaseConversionResult = {
+	entity_type: "album" | "song";
+	id: string;
 };
 
 export type ArtistEditDraft = {

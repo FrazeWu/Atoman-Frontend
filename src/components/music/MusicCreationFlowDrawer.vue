@@ -26,6 +26,7 @@ const {
   setMusicCreationStep,
   refreshArtist,
   refreshAlbum,
+  refreshSong,
   openNestedAction,
   isLayerActive,
   isLayerShifted,
@@ -292,12 +293,12 @@ const forwardBlockReason = computed(() => {
   }
   if (!['albumDetails', 'preview'].includes(flow.step)) return ''
   if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
-  if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
-	if (!flow.draft.albumDetails.coverUrl.trim()) return '请上传专辑封面'
+  if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
+	if (!flow.draft.albumDetails.coverUrl.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
 	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
 	if (!flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'
 	if (!flow.draft.tracks.length || flow.draft.tracks.some((track) => !track.title.trim())) return '请至少添加一首完整音轨'
-	if (['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) && flow.draft.tracks.length !== 1) return '单曲和泄曲只能保留一首音轨'
+	if (['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) && flow.draft.tracks.length !== 1) return '单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型'
 	if (flow.draft.tracks.some((track) => track.origin === 'manual' && !hasTrackAudio(track))) return '请为新增曲目上传音频'
 	if (!flow.draft.albumDetails.contributors?.length) {
 		return '请添加创作者'
@@ -341,6 +342,7 @@ const canGoForward = computed(() => {
 			&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
 			&& !!flow.draft.albumDetails.source.trim()
 			&& flow.draft.tracks.length > 0
+			&& (!['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) || flow.draft.tracks.length === 1)
 			&& flow.draft.tracks.every((track) => !!track.title.trim())
 			&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
@@ -352,6 +354,7 @@ const canGoForward = computed(() => {
 		&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
 		&& !!flow.draft.albumDetails.source.trim()
 		&& flow.draft.tracks.length > 0
+		&& (!['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) || flow.draft.tracks.length === 1)
 		&& flow.draft.tracks.every((track) => !!track.title.trim())
 		&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
 		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
@@ -501,6 +504,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const primaryArtistID = primaryContributor(flow)?.artistId || flow.draft.artist.id
   const artistSource = resolvedArtistSource(flow)
   const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
+  const isStandaloneSong = ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase())
 
   return {
 		...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
@@ -533,7 +537,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       release_year: derivedReleaseYear || 0,
 		tracks: flow.draft.tracks.map((track, index) => ({
 			...(track.songId ? { song_id: track.songId } : {}),
-			title: track.title.trim(),
+			title: isStandaloneSong ? flow.draft.albumDetails.title.trim() : track.title.trim(),
 			disc_number: track.discNumber ?? 1,
 			track_number: trackNumberWithinDisc(flow.draft.tracks, index),
 			...(track.lyricsDraft ? {
@@ -577,11 +581,13 @@ async function finishAutomaticallyCommittedImport(
 ) {
   if (committed.status !== 'committed' || flow.submitting) return
   const albumId = committed.targetAlbumId?.trim()
+  const songId = committed.targetSongId?.trim()
   const artistId = committed.artistId?.trim() || flow.draft.artist.id?.trim()
   refreshArtist()
   refreshAlbum()
+  refreshSong()
   closeCurrentCreationFlow()
-  await router.push(albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports')
+  await router.push(songId ? `/music/song/${songId}` : albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports')
 }
 
 function flushImportAutosave() {
@@ -861,6 +867,30 @@ async function completeCreation() {
       if (tracks.some((track) => track.audioFileName && !track.audioAssetId && track.origin === 'manual')) {
         throw new Error('音频上传资产无效，请重新选择文件')
       }
+      const standaloneType = ['single', 'leak'].includes(details.type.trim().toLowerCase())
+      if (standaloneType) {
+        if (tracks.length !== 1 || !tracks[0]?.songId) {
+          throw new Error('单曲和泄曲只能包含一首已有歌曲，请先修改曲目')
+        }
+        const converted = await musicApi.convertMusicAlbumToSong(flow.targetId, {
+          title: details.title.trim(),
+          description: details.bio.trim(),
+          release_date: formatDateFromParts(details.releaseDateParts),
+          release_type: details.type.trim().toLowerCase(),
+          cover_url: details.coverAsset?.url ?? details.coverUrl.trim(),
+          artist_credits: albumArtistCreditsFromContributors(details.contributors),
+          sources: details.source.trim() ? [buildSource(details.source)] : [],
+        })
+        if (tracks[0].audioAssetId) {
+          await musicApi.queueMusicSongAudioReplacement(tracks[0].songId, { asset_id: tracks[0].audioAssetId })
+        }
+        refreshArtist()
+        refreshAlbum()
+        refreshSong()
+        closeCurrentCreationFlow()
+        await router.replace(`/music/song/${converted.id}`)
+        return
+      }
       await musicApi.submitAlbumRevision(flow.targetId, {
         title: details.title.trim(),
         artist_credits: albumArtistCreditsFromContributors(details.contributors),
@@ -874,7 +904,6 @@ async function completeCreation() {
 			title: track.title.trim(),
 			track_number: trackNumberWithinDisc(flow.draft.tracks, index),
 			disc_number: track.discNumber ?? 1,
-			lyrics: track.lyrics ?? '',
           cover_url: track.coverUrl ?? '',
           artist_credits: albumArtistCreditsFromContributors(track.contributors ?? details.contributors),
           removed: false,
@@ -914,11 +943,13 @@ async function completeCreation() {
     toastMessage.value = '已提交至导入中心，后台将继续处理'
     toastVisible.value = true
     const albumId = committedImport.targetAlbumId?.trim()
+    const songId = committedImport.targetSongId?.trim()
     const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     refreshArtist()
+    refreshSong()
     closeCurrentCreationFlow()
     await router.push(committedImport.status === 'committed'
-      ? albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports'
+      ? songId ? `/music/song/${songId}` : albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports'
       : '/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'

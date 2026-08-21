@@ -19,6 +19,8 @@ import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { reportError } from '@/utils/logger'
+import { formatAlbumTypeLabel } from '@/utils/musicMedia'
+import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { getMountedPinia } from '@/utils/pinia'
 import { useAuthStore } from '@/stores/auth'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -73,8 +75,8 @@ function playable(song: MusicSongListItem): Song {
     artist: song.artists?.map(artist => artist.name).join(' / ') || '未知艺术家',
     album: song.album?.title || '',
     album_id: song.album?.id || '',
-    year: 0,
-    release_date: '',
+    year: Number(song.release_date?.slice(0, 4)) || 0,
+    release_date: song.release_date || '',
     lyrics: song.lyrics || '',
     audio_url: song.audio_url || '',
     waveform_peaks: song.waveform_peaks,
@@ -104,6 +106,14 @@ const activeLyricLineId = computed(() => {
   const line = currentLyricLine(player.currentTime ?? 0)
   return line?.line_key ?? line?.id ?? ''
 })
+
+const standaloneReleaseLabel = computed(() => formatAlbumTypeLabel(detail.value?.song.release_type))
+const formattedReleaseDate = computed(() => {
+  const song = detail.value?.song
+  if (!song?.release_date) return ''
+  return formatStoredPartialDate(song.release_date, song.release_date_precision).replace(/-/g, '/')
+})
+const effectiveSources = computed(() => detail.value?.song.effective_sources ?? detail.value?.song.sources ?? [])
 
 function showToast(message: string) {
   toastMessage.value = message
@@ -262,8 +272,9 @@ watch(
         <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
         <div class="song-detail__main">
           <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
-          <p v-else class="song-detail__album">单曲</p>
+          <p v-else class="song-detail__album">{{ standaloneReleaseLabel }}</p>
           <h1>{{ detail.song.title }}</h1>
+          <p v-if="formattedReleaseDate" class="song-detail__release-date">{{ formattedReleaseDate }}</p>
           <MusicEntryStateControl
             entity-type="song"
             :entity-id="String(detail.song.id)"
@@ -274,6 +285,14 @@ watch(
           <div v-for="[role, artists] in roleGroups" :key="role" class="song-detail__artists">
             <span>{{ roleLabels[role] || role }}</span>
             <button v-for="artist in artists" :key="artist.id" type="button" class="song-detail__entity-link" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+          </div>
+          <p v-if="detail.song.description" class="song-detail__description">{{ detail.song.description }}</p>
+          <div v-if="effectiveSources.length" class="song-detail__sources">
+            <span>来源</span>
+            <template v-for="(source, index) in effectiveSources" :key="`${source.url || source.title}-${index}`">
+              <a v-if="source.url" :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title || source.url }}</a>
+              <span v-else>{{ source.title }}</span>
+            </template>
           </div>
           <div class="song-detail__actions">
             <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
@@ -368,8 +387,11 @@ watch(
 .song-detail__content { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; }
 .song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--a-color-bg-subtle); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
-.song-detail__main h1, .song-detail__album { margin: 0; }
-.song-detail__album, .song-detail__artists span, .song-detail__state { color: var(--a-color-muted); }
+.song-detail__main h1, .song-detail__album, .song-detail__release-date, .song-detail__description { margin: 0; }
+.song-detail__album, .song-detail__release-date, .song-detail__artists span, .song-detail__state { color: var(--a-color-muted); }
+.song-detail__description { max-width: 42rem; color: var(--a-color-muted); line-height: 1.6; white-space: pre-wrap; }
+.song-detail__sources { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--a-color-muted); font-size: 0.85rem; }
+.song-detail__sources a { color: inherit; overflow-wrap: anywhere; }
 .song-detail__artists { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .song-detail__artists a { color: inherit; }
 .song-detail__entity-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; }

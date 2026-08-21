@@ -201,7 +201,7 @@ export async function getMusicSong(
 export async function listMusicSongs(
 	filters: {
 		artist_id?: string;
-		release_type?: "album" | "song";
+		release_type?: "single" | "leak" | "single,leak";
 		sort?: "-release_date" | "release_date" | "hot";
 		page?: number;
 		page_size?: number;

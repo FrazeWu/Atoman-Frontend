@@ -130,12 +130,13 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		).not.toBeNull();
 	});
 
-	it("hides the track list for single and leak uploads while keeping it for EPs", async () => {
+	it("hides one standalone track and exposes invalid multi-track releases for correction", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
 		drawers.setMusicCreationStep("albumDetails");
 		const flow = drawers.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
+		flow.draft.tracks = [{ id: "track-1", sequence: 1, title: "Only Song" }];
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 		flow.draft.albumDetails.type = "single";
@@ -146,9 +147,15 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(false);
 
+		flow.draft.tracks.push({ id: "track-2", sequence: 2, title: "Second Song" });
+		await nextTick();
+		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
+		expect(wrapper.get('[data-testid="album-details-single-track-error"]').text()).toContain("只能包含一首歌曲");
+
 		flow.draft.albumDetails.type = "ep";
 		await nextTick();
 		expect(wrapper.find(".track-adjustment").exists()).toBe(true);
+		expect(wrapper.find('[data-testid="album-details-single-track-error"]').exists()).toBe(false);
 	});
 
 	it("adds a lyric upload action to every new album track", () => {

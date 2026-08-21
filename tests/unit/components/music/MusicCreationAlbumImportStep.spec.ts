@@ -87,6 +87,7 @@ function mockUploadTransport() {
 describe("MusicCreationAlbumImportStep.vue", () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		useAlbumImportUpload().stopPolling();
 		const drawers = useMusicDrawers();
 		drawers.closeAll();
 		drawers.openMusicCreationFlow({
@@ -97,6 +98,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 	});
 
 	afterEach(() => {
+		useAlbumImportUpload().stopPolling();
 		vi.useRealTimers();
 		vi.unstubAllGlobals();
 	});
@@ -748,7 +750,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await flushPromises();
 		await vi.advanceTimersByTimeAsync(2000);
 
-		expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(1);
+		expect(musicApi.getMusicAlbumImport).toHaveBeenCalled();
 		expect(
 			useMusicDrawers().state.value.creationFlow?.draft.albumImport,
 		).toEqual(

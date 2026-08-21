@@ -80,6 +80,7 @@ export type MusicAlbumImportCommitStageName = {
 
 export type MusicAlbumImportCommitTrack = {
 	song_id?: string;
+	audio_url?: string;
 	title: string;
 	disc_number: number;
 	track_number: number;

@@ -274,7 +274,7 @@ export const usePlayerStore = defineStore("player", () => {
 		musicSessionRestored = true;
 		try {
 			const session = await getMusicPlaybackSession();
-			if (!session?.queue.length) return false;
+			if (!session?.queue?.length) return false;
 			const restoredQueue = session.queue
 				.filter((song) => Boolean(song.audio_url))
 				.map(musicSongFromAPI);

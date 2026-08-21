@@ -75,6 +75,8 @@ export function useFeedArticleBrowser({
 		if (!item.post && !item.feed_item) return;
 
 		if (item.type === "feed_item" && item.feed_item) {
+			selectedArticle.value = item;
+			showArticleSheet.value = true;
 			void router.push({
 				path: `/feed/item/${item.feed_item.id}`,
 				state: feedArticleRouteState({

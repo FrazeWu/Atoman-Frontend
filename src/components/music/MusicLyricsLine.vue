@@ -258,7 +258,7 @@ function formatTime(timeMs: number | null | undefined): string {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   color: var(--a-color-muted);

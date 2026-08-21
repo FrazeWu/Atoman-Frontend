@@ -844,7 +844,7 @@ watch(
   padding: 4px 8px;
   background: var(--a-color-fg);
   color: var(--a-color-bg);
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
   font-weight: 600;
   border-radius: 4px;
@@ -1027,7 +1027,7 @@ watch(
 .vol-percentage {
   font-size: 11px;
   font-weight: 600;
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   color: var(--a-color-muted);
   user-select: none;
   line-height: 1;

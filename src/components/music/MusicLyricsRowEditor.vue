@@ -469,7 +469,7 @@ function describedByForField(
 
 .lyric-time-input {
   font-variant-numeric: tabular-nums;
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: 0.02em;
 }
 

@@ -416,7 +416,7 @@ async function submitReport(input: ReportCommentInput) {
 .comment-section__title-icon { flex: 0 0 auto; color: var(--a-color-primary); }
 .comment-section__header h2 { margin: 0; color: var(--a-color-text); font-size: 1.25rem; font-weight: var(--a-font-weight-strong); line-height: 1.25; }
 .comment-section__count { display: block; margin-top: 0.15rem; color: var(--a-color-muted); font-size: var(--a-text-xs); line-height: 1.35; }
-.comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 7rem; padding: 1rem; border: 1px dashed var(--a-color-border); border-radius: var(--a-radius-card); background: var(--a-color-surface); color: var(--a-color-text-secondary); text-align: center; }
+.comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 7rem; padding: 1rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-card); background: var(--a-color-surface); color: var(--a-color-text-secondary); text-align: center; }
 .comment-section__login :deep(.p-button) { margin-left: 0.25rem; }
 .comment-section__threads { display: grid; gap: 1rem; }
 .comment-section__error { margin: 0; padding: 0.75rem 1rem; border-left: 3px solid var(--a-color-accent-destructive); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }

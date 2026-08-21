@@ -25,18 +25,23 @@ function nameWithoutExtension(fileName: string): string {
 	return fileName.replace(/\.[^.]+$/, "").trim();
 }
 
-function trackTitle(fileName: string): string {
-	const base = nameWithoutExtension(fileName);
+function trackTitle(fileName: string, expectedTrack = 0): string {
+	const base = nameWithoutExtension(fileName)
 	const multiDisc = base.match(
 		/^\s*\d{1,2}\s*[-_.]\s*\d{1,3}(?:\s*[-_.]\s*|\s+)(.+?)\s*$/i,
-	);
-	if (multiDisc?.[1]) return multiDisc[1].trim();
+	)
+	if (multiDisc?.[1]) return multiDisc[1].trim()
 	const explicitTrack = base.match(
 		/^\s*(?:track\s*)?\d{1,3}\s*(?:[-_]\s*|\.\s+)(.+?)\s*$/i,
-	);
-	if (explicitTrack?.[1]) return explicitTrack[1].trim();
-	const zeroPaddedTrack = base.match(/^\s*0\d{1,2}\s+(.+?)\s*$/);
-	return zeroPaddedTrack?.[1]?.trim() || base;
+	)
+	if (explicitTrack?.[1]) return explicitTrack[1].trim()
+	const zeroPaddedTrack = base.match(/^\s*0\d{1,2}\s+(.+?)\s*$/)
+	if (zeroPaddedTrack?.[1]) return zeroPaddedTrack[1].trim()
+	const numberedTrack = base.match(/^\s*(\d{1,3})\s+(.+?)\s*$/)
+	if (numberedTrack?.[1] && Number(numberedTrack[1]) === expectedTrack) {
+		return numberedTrack[2].trim()
+	}
+	return base
 }
 
 function isAudioPath(fileName: string): boolean {
@@ -115,12 +120,23 @@ function coverFileFromArchiveImage(
 	);
 }
 
+function archiveTrackDisc(fileName: string): number {
+	const match = fileName.match(/(?:^|[\\/])(?:disc|cd)\s*(\d+)/i)
+	return match?.[1] ? Number(match[1]) || 1 : 1
+}
+
 function archiveTracks(paths: string[]): string[] {
+	const nextTrackByDisc = new Map<number, number>()
 	return paths
 		.filter(isAudioPath)
 		.sort((left, right) => trackPathCollator.compare(left, right))
-		.map((entry) => trackTitle(entry.split("/").pop() ?? entry))
-		.filter(Boolean);
+		.map((entry) => {
+			const disc = archiveTrackDisc(entry)
+			const expectedTrack = (nextTrackByDisc.get(disc) ?? 0) + 1
+			nextTrackByDisc.set(disc, expectedTrack)
+			return trackTitle(entry.split(/[\\/]/).pop() ?? entry, expectedTrack)
+		})
+		.filter(Boolean)
 }
 
 async function readRarAlbumImportPreview(

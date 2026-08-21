@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChevronDown } from 'lucide-vue-next'
 import {
   uploadMusicAsset,
   createMusicAlbumImport,
@@ -16,7 +15,6 @@ import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumU
 
 const { state, setMusicCreationStep } = useMusicDrawers()
 const coverInputRef = ref<HTMLInputElement | null>(null)
-const bioExpanded = ref(false)
 
 const creationFlow = computed(() => state.value.creationFlow)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
@@ -277,25 +275,13 @@ async function onCoverChange(event: Event) {
             </div>
           </div>
 
-          <div class="field-group album-seed-bio" :class="{ 'is-expanded': bioExpanded }">
-            <button
-              type="button"
-              class="album-seed-bio__toggle"
-              :aria-expanded="bioExpanded"
-              aria-controls="album-seed-description"
-              :title="bioExpanded ? '收起简介' : '展开简介'"
-              data-testid="album-seed-bio-toggle"
-              @click="bioExpanded = !bioExpanded"
-            >
-              <span>简介</span>
-              <ChevronDown :size="18" aria-hidden="true" />
-            </button>
+          <div class="field-group album-seed-bio">
             <PTextarea
-              v-if="bioExpanded"
               id="album-seed-description"
               v-model="albumDetailsDraft.bio"
               data-testid="album-details-bio-input"
               :rows="4"
+              label="简介"
               aria-label="简介"
               placeholder="补充专辑简介"
             />
@@ -330,36 +316,6 @@ async function onCoverChange(event: Event) {
   padding: 0.75rem 1rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-}
-
-.album-seed-bio__toggle {
-  display: flex;
-  min-height: 44px;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
-  font: inherit;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
-.album-seed-bio__toggle:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
-  outline-offset: 3px;
-}
-
-.album-seed-bio__toggle svg {
-  transition: transform 0.18s ease;
-}
-
-.album-seed-bio.is-expanded .album-seed-bio__toggle svg {
-  transform: rotate(180deg);
 }
 
 .album-page {

@@ -124,6 +124,15 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 	await expect(
 		songDialog.getByRole("heading", { name: "Standalone Song" }),
 	).toBeVisible();
+	const detailDescriptionToggle = songDialog.getByTestId("song-description-toggle");
+	await expect(detailDescriptionToggle).toHaveAttribute("aria-expanded", "false");
+	await expect(songDialog.locator("#song-description")).toHaveCount(0);
+	await detailDescriptionToggle.click();
+	await expect(detailDescriptionToggle).toHaveAttribute("aria-expanded", "true");
+	await expect(songDialog.locator("#song-description")).toHaveText(
+		"Optional song description",
+	);
+
 	await songDialog
 		.locator(".song-detail__actions")
 		.getByRole("button", { name: "编辑", exact: true })
@@ -142,11 +151,7 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 	await expect(editor.getByTestId("album-details-source-input")).toHaveValue(
 		"https://example.test/song-source",
 	);
-	const descriptionToggle = editor.getByTestId("album-details-bio-toggle");
-	await expect(descriptionToggle).toHaveAttribute("aria-expanded", "false");
-	await expect(editor.getByTestId("album-details-bio-input")).toHaveCount(0);
-	await descriptionToggle.click();
-	await expect(descriptionToggle).toHaveAttribute("aria-expanded", "true");
+	expect(await editor.getByTestId("album-details-bio-toggle").count()).toBe(0);
 	await expect(editor.getByTestId("album-details-bio-input")).toHaveValue(
 		"Optional song description",
 	);

@@ -282,17 +282,11 @@ function formatUploadSpeed(bytesPerSecond: number) {
       取消上传
     </button>
 
-    <!-- Archive mode progress -->
-    <div v-if="albumImportDraft.archiveName" class="progress-panel">
-      <p v-if="albumImportDraft.uploadProgress > 0" class="state-line">
-        上传进度 {{ albumImportDraft.uploadProgress }}%
-      </p>
-      <p v-else class="state-line">上传后会自动识别封面和曲目信息。</p>
-    </div>
-
-    <!-- Multi-file mode progress -->
-    <div v-else-if="albumImportDraft.totalBytesTotal > 0" class="progress-panel">
+    <div v-if="albumImportDraft.totalBytesTotal > 0" class="progress-panel">
       <p class="state-line">上传进度 {{ multiFileTotalProgress }}%</p>
+    </div>
+    <div v-else-if="albumImportDraft.uploadProgress > 0" class="progress-panel">
+      <p class="state-line">上传进度 {{ albumImportDraft.uploadProgress }}%</p>
     </div>
 
     <!-- Backend processing stage banner -->

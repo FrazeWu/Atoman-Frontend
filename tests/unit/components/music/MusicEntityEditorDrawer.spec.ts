@@ -173,7 +173,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		expect(mocks.refreshSong).toHaveBeenCalled();
 	});
 
-	it("keeps an album track description collapsed until requested", async () => {
+	it("renders an album track description as a normal editable field", async () => {
 		mocks.getMusicSongDetail.mockResolvedValueOnce({
 			song: {
 				id: "song-1",
@@ -194,19 +194,11 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		const wrapper = mountDrawer();
 		await flushPromises();
 
-		const toggle = wrapper.get(
-			'[data-testid="song-editor-description-toggle"]',
+		expect(wrapper.find('[data-testid="song-editor-description-toggle"]').exists()).toBe(false);
+		expect(wrapper.get('[data-testid="song-editor-description"]').element).toHaveProperty(
+			"value",
+			"Track description",
 		);
-		expect(toggle.attributes("aria-expanded")).toBe("false");
-		expect(
-			wrapper.find('[data-testid="song-editor-description"]').exists(),
-		).toBe(false);
-
-		await toggle.trigger("click");
-		expect(toggle.attributes("aria-expanded")).toBe("true");
-		expect(
-			wrapper.get('[data-testid="song-editor-description"]').element,
-		).toHaveProperty("value", "Track description");
 	});
 
 	it("submits standalone release metadata without an inline lyrics draft", async () => {

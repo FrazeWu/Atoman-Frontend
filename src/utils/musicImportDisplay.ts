@@ -6,9 +6,16 @@ export type MusicImportGroup =
 	| "published"
 	| "canceled";
 
+function archiveTitle(value: string): string {
+	return value.replace(/\.(?:zip|rar|7z|tar(?:\.(?:bz2|gz|xz))?)$/i, "").trim();
+}
+
 export function musicImportAlbumTitle(item: MusicAlbumImport): string {
 	return (
-		item.albumTitle?.trim() || item.derivedAlbumTitle?.trim() || "未命名专辑"
+		item.albumTitle?.trim() ||
+		item.derivedAlbumTitle?.trim() ||
+		archiveTitle(item.archiveName?.trim() || "") ||
+		"待上传专辑"
 	);
 }
 

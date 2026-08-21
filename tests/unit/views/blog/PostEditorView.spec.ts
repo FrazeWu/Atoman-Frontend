@@ -1,13 +1,15 @@
 import { createPinia, setActivePinia } from "pinia";
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, enableAutoUnmount } from "@vue/test-utils";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { defineComponent, h, nextTick } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // @ts-expect-error Vue test files are outside the app tsconfig shim scope.
 import PostEditorView from "../../../../src/views/blog/PostEditorView.vue";
 import { useAuthStore } from "../../../../src/stores/auth";
 import { useStudioStore } from "../../../../src/stores/studio";
+
+enableAutoUnmount(afterEach);
 
 const editorControl = {
 	lastModelValue: "",
@@ -33,6 +35,10 @@ vi.mock("@/components/shared/PEditor.vue", () => ({
 			mode: {
 				type: String,
 				default: "normal",
+			},
+			livePreview: {
+				type: Boolean,
+				default: false,
 			},
 			showModeToggle: {
 				type: Boolean,
@@ -76,6 +82,7 @@ vi.mock("@/components/shared/PEditor.vue", () => ({
 						class: "editor-stub",
 						"data-model-value": props.modelValue,
 						"data-mode": props.mode,
+						"data-live-preview": String(props.livePreview),
 						"data-show-mode-toggle": String(props.showModeToggle),
 						"data-enable-collab": String(props.enableCollab),
 						"data-collab-room-id": props.collabRoomId,
@@ -950,7 +957,7 @@ describe("PostEditorView", () => {
 		expect(wrapper.text()).toContain("本地正文");
 	});
 
-	it("编辑已有文章且真实启用协作连接时，显示专业模式提示", async () => {
+	it("协作编辑共用同一个 Markdown 实例，并可切换可视形式和预览", async () => {
 		const router = createRouter({
 			history: createMemoryHistory(),
 			routes: [{ path: "/posts/post/:id/edit", component: PostEditorView }],
@@ -1026,7 +1033,20 @@ describe("PostEditorView", () => {
 
 		await flushPromises();
 
-		expect(wrapper.text()).toContain("协作编辑请使用专业模式");
+		expect(wrapper.text()).not.toContain("实时协作仅在 Markdown 中可编辑");
+		const editor = wrapper.get(".editor-stub");
+		expect(editor.attributes("data-mode")).toBe("normal");
+		expect(editor.attributes("data-live-preview")).toBe("false");
+
+		const visualMode = wrapper
+			.findAll("button")
+			.find((button) => button.text().includes("所见即所得"));
+		expect(visualMode).toBeDefined();
+		await visualMode!.trigger("click");
+		expect(editor.attributes("data-live-preview")).toBe("true");
+
+		await wrapper.get('[title="打开预览"]').trigger("click");
+		expect(editor.attributes("data-mode")).toBe("split");
 	});
 
 	it("编辑已有文章且真实启用协作连接时，不暴露普通模式入口", async () => {

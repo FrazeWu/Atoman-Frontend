@@ -6,6 +6,7 @@
     @active-heading-change="emit('active-heading-change', $event)"
     @mode-change="emit('mode-change', $event)"
     @update:syncScroll="emit('update:syncScroll', $event)"
+    @update:line-numbers="emit('update:lineNumbers', $event)"
     @collab-ready="emit('collab-ready', $event)"
   />
 </template>
@@ -13,6 +14,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, ref } from 'vue'
 import type { ResourceReferenceLabels } from './editor/resourceReferenceExtension'
+import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
 
 interface Props {
   modelValue?: string
@@ -22,9 +24,12 @@ interface Props {
   showModeToggle?: boolean
   showSyncScrollToggle?: boolean
   syncScroll?: boolean
+  lineNumbers?: boolean
+  livePreview?: boolean
   showToolbar?: boolean
   enableImageUpload?: boolean
   enableMentions?: boolean
+  showReferenceTrigger?: boolean
   referenceAutocompleteScope?: 'global' | 'debate'
   enableEmbeds?: boolean
   enableCollab?: boolean
@@ -48,15 +53,24 @@ type PEditorExposed = {
   sv_undo: () => void
   sv_redo: () => void
   triggerImageUpload: () => void
+  executeCommand: (command: PostEditorCommand) => void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  syncScroll: true,
+  lineNumbers: undefined,
+  livePreview: true,
+  showToolbar: true,
+  enableImageUpload: true,
+  showReferenceTrigger: true,
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   'active-heading-change': [line: number | null]
   'mode-change': [value: 'normal' | 'split']
   'update:syncScroll': [value: boolean]
+  'update:lineNumbers': [value: boolean]
   'collab-ready': [value: string]
 }>()
 
@@ -111,6 +125,10 @@ function triggerImageUpload() {
   runtimeRef.value?.triggerImageUpload()
 }
 
+function executeCommand(command: PostEditorCommand) {
+  runtimeRef.value?.executeCommand(command)
+}
+
 defineExpose({
   scrollToHeadingLine,
   replaceDocument,
@@ -123,5 +141,6 @@ defineExpose({
   sv_undo,
   sv_redo,
   triggerImageUpload,
+  executeCommand,
 })
 </script>

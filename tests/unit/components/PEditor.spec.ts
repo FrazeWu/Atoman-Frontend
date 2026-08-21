@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { commonmarkLanguage } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
@@ -79,12 +80,13 @@ vi.mock('y-websocket', () => {
   return { WebsocketProvider }
 })
 
-import PEditor from '@/components/shared/PEditor.vue'
+// @ts-expect-error Vitest resolves Vue SFC imports through Vite.
+import PEditor from '../../../src/components/shared/PEditor.vue'
 import {
   resourceReferenceExtension,
   updateResourceReferenceLabels,
   type ResourceReferenceLabels,
-} from '@/components/shared/editor/resourceReferenceExtension'
+} from '../../../src/components/shared/editor/resourceReferenceExtension'
 
 // Task 1 先固定统一编辑器的最小未来契约，后续 Task 2 再让实现对齐这些 props 和语义标识。
 const FUTURE_NORMAL_MODE = 'normal'
@@ -108,6 +110,11 @@ if (!Range.prototype.getClientRects) {
     value: () => [] as unknown as DOMRectList,
   })
 }
+
+Object.defineProperty(document, 'compatMode', {
+  configurable: true,
+  value: 'CSS1Compat',
+})
 
 async function flushCollabSync() {
   vi.useFakeTimers()
@@ -168,6 +175,96 @@ describe('PEditor', () => {
     expect(wrapper.find(FUTURE_PREVIEW_PANE).exists()).toBe(true)
   })
 
+  it('switches live preview decorations without changing the Markdown document', async () => {
+    const wrapper = await mountEditor({
+      modelValue: '# Title\n\n**bold**',
+      mode: FUTURE_NORMAL_MODE,
+      livePreview: false,
+    })
+    const view = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)!
+    expect(wrapper.find('.cm-content').text()).toContain('**bold**')
+
+    await wrapper.setProps({ livePreview: true })
+    await nextTick()
+
+    expect(view.state.doc.toString()).toBe('# Title\n\n**bold**')
+    expect(wrapper.find('.cm-content').text()).not.toContain('**bold**')
+  })
+
+  it('renders standalone media as an editable visual widget', async () => {
+    const markdown = '# Title\n\n![Cover](https://example.com/cover.png)'
+    const wrapper = await mountEditor({
+      modelValue: markdown,
+      mode: FUTURE_NORMAL_MODE,
+      livePreview: true,
+    })
+    const view = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)!
+    const widget = wrapper.get('.cm-markdown-widget')
+    expect(widget.get('img').attributes('src')).toBe('https://example.com/cover.png')
+
+    await widget.trigger('click')
+    await nextTick()
+
+    expect(view.state.doc.toString()).toBe(markdown)
+    expect(wrapper.find('.cm-markdown-widget').exists()).toBe(false)
+    expect(wrapper.find('.cm-content').text()).toContain('![Cover]')
+  })
+
+  it('renders fenced code blocks without changing their Markdown source', async () => {
+    const markdown = '# Title\n\n```ts\nconst answer = 42\n```'
+    const wrapper = await mountEditor({
+      modelValue: markdown,
+      mode: FUTURE_NORMAL_MODE,
+      livePreview: true,
+    })
+    const view = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)!
+
+    expect(wrapper.get('.cm-markdown-widget').find('pre').exists()).toBe(true)
+    expect(view.state.doc.toString()).toBe(markdown)
+  })
+
+  it('renders tables and mathematics from the same Markdown document', async () => {
+    const markdown = [
+      '# Title',
+      '',
+      '| A | B |',
+      '|---|---|',
+      '| 1 | 2 |',
+      '',
+      '$$',
+      'x^2',
+      '$$',
+    ].join('\n')
+    const wrapper = await mountEditor({
+      modelValue: markdown,
+      mode: FUTURE_NORMAL_MODE,
+      livePreview: true,
+    })
+    await vi.dynamicImportSettled()
+    await nextTick()
+
+    expect(wrapper.find('.cm-markdown-widget table').exists()).toBe(true)
+    expect(wrapper.find('.cm-markdown-widget .katex').exists()).toBe(true)
+    const view = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)!
+    expect(view.state.doc.toString()).toBe(markdown)
+  })
+
+  it('opens preview without reconnecting the collaborative document', async () => {
+    const wrapper = await mountEditor({
+      modelValue: 'hello',
+      mode: FUTURE_NORMAL_MODE,
+      enableCollab: true,
+      collabRoomId: 'room-1',
+    })
+    await flushCollabSync()
+
+    await wrapper.setProps({ mode: FUTURE_SPLIT_MODE })
+    await nextTick()
+
+    expect(wrapper.find(FUTURE_PREVIEW_PANE).exists()).toBe(true)
+    expect(collabMockState.urls).toEqual(['ws://localhost:3000/api/v1/collab/ws'])
+  })
+
   it('shows mode toggle when enabled', async () => {
     const wrapper = await mountEditor({
       modelValue: '',
@@ -203,7 +300,50 @@ describe('PEditor', () => {
     expect(wrapper.find('.cm-content').text()).toContain('replaced from api')
   })
 
-  it('forces collab sessions to use split mode with preview pane', async () => {
+  it('keeps the built-in line-number toggle uncontrolled for other editors', async () => {
+    const wrapper = await mountEditor({
+      modelValue: 'first\nsecond',
+      mode: FUTURE_SPLIT_MODE,
+    })
+    expect(wrapper.find('.cm-lineNumbers').exists()).toBe(false)
+
+    const toggle = wrapper.findAll('button').find(button => button.attributes('title') === '行号')!
+    await toggle.trigger('click')
+    await nextTick()
+    expect(wrapper.find('.cm-lineNumbers').exists()).toBe(true)
+  })
+
+  it('uses the controlled line-number state without changing the shared default', async () => {
+    const wrapper = await mountEditor({
+      modelValue: 'first\nsecond',
+      mode: FUTURE_NORMAL_MODE,
+      lineNumbers: true,
+    })
+    expect(wrapper.find('.cm-lineNumbers').exists()).toBe(true)
+
+    await wrapper.setProps({ lineNumbers: false })
+    await nextTick()
+    expect(wrapper.find('.cm-lineNumbers').exists()).toBe(false)
+  })
+
+  it('preserves the full line when applying a line prefix from the middle', async () => {
+    const wrapper = await mountEditor({
+      modelValue: '# title\nabcdef',
+      mode: FUTURE_NORMAL_MODE,
+      protectFirstLine: true,
+    })
+    const view = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)!
+    const cursor = view.state.doc.line(2).from + 3
+    view.dispatch({ selection: { anchor: cursor } })
+
+    wrapper.vm.sv_wrapLinePrefix('## ', '标题')
+    await nextTick()
+
+    expect(view.state.doc.toString()).toBe('# title\n## abcdef')
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['# title\n## abcdef'])
+  })
+
+  it('keeps collab sessions in the requested focused mode', async () => {
     const wrapper = await mountEditor({
       modelValue: 'hello',
       mode: FUTURE_NORMAL_MODE,
@@ -212,13 +352,13 @@ describe('PEditor', () => {
     })
     await flushCollabSync()
 
-    expect(wrapper.attributes('data-editor-mode')).toBe(FUTURE_SPLIT_MODE)
+    expect(wrapper.attributes('data-editor-mode')).toBe(FUTURE_NORMAL_MODE)
     expect(wrapper.find('.cm-editor').exists()).toBe(true)
-    expect(wrapper.find(FUTURE_PREVIEW_PANE).exists()).toBe(true)
+    expect(wrapper.find(FUTURE_PREVIEW_PANE).exists()).toBe(false)
     expect(collabMockState.urls).toEqual(['ws://localhost:3000/api/v1/collab/ws'])
   })
 
-  it('does not expose a misleading mode toggle in collab mode', async () => {
+  it('does not render the legacy internal mode toggle in collab mode', async () => {
     const wrapper = await mountEditor({
       modelValue: 'hello',
       mode: FUTURE_NORMAL_MODE,
@@ -228,7 +368,6 @@ describe('PEditor', () => {
     })
     await flushCollabSync()
 
-    expect(wrapper.find(FUTURE_EDITOR_ROOT).find(FUTURE_MODE_TOGGLE).exists()).toBe(false)
     expect(wrapper.find(FUTURE_MODE_TOGGLE).exists()).toBe(false)
     expect(wrapper.emitted('mode-change')).toBeUndefined()
   })

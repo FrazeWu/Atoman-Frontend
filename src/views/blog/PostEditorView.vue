@@ -5,29 +5,8 @@
 
       <div
         class="editor-layout"
-        :class="{
-          'has-settings-panel': settingsPanelOpen,
-          'has-outline-panel': outlinePanelOpen,
-        }"
+        :class="{ 'has-sidebar-panel': sidebarPanelOpen }"
       >
-        <PostEditorSidebar
-          :mobile-open="mobilePanel === 'settings'"
-          :desktop-open="settingsPanelOpen"
-          :channel-collections="channelCollections"
-          :selected-collection-id="selectedNonDefaultCollectionId"
-          :default-collection-id="defaultCollectionId"
-          :summary="form.summary"
-          :visibility="form.visibility"
-          :cover-url="form.cover_url"
-          :cover-uploading="coverUploading"
-          :cover-upload-error="coverUploadError"
-          @select-collection="onCollectionSelect"
-          @update:summary="(value) => (form.summary = value)"
-          @update:visibility="(value) => (form.visibility = value)"
-          @cover-upload="handleCoverUpload"
-          @remove-cover="removeCover"
-        />
-
         <main class="col-center a-card-sm">
           <template v-if="contentReady">
             <PostEditorTopbar
@@ -35,11 +14,14 @@
               :draft-status="draftStatus"
               :content-source="contentSource"
               :saving="saving"
+              :content-mode="contentMode"
+              :preview-open="previewOpen"
+              :sidebar-open="sidebarPanelOpen || mobilePanel === 'sidebar'"
               @import-file="handleFileUpload"
               @go-back="goBack"
-              @toggle-settings="toggleSettingsPanel"
-              @toggle-outline="toggleOutlinePanel"
-              @trigger-reimport="triggerReimport"
+              @toggle-sidebar="toggleSidebarPanel"
+              @toggle-preview="togglePreview"
+              @update:content-mode="contentMode = $event"
               @open-version-history="versionHistoryOpen = true"
               @save-draft="save('draft')"
               @save-published="save('published')"
@@ -55,29 +37,32 @@
             </PostEditorTopbar>
 
             <div class="editor-workspace">
-              <section class="editor-canvas">
-                <div v-if="isCollabEditing" class="collab-mode-banner">
-                  <span class="collab-mode-banner__label">协作编辑</span>
-                  <p class="collab-mode-banner__text">协作编辑请使用专业模式</p>
-                </div>
+              <section class="editor-canvas" :class="{ 'is-preview-open': previewOpen }">
+                <PostEditorFormattingToolbar
+                  :line-numbers="lineNumbersVisible"
+                  @command="executeFormattingCommand"
+                  @update:line-numbers="lineNumbersVisible = $event"
+                />
                 <div class="editor-body">
                   <PEditor
                     ref="editorRef"
                     v-model="editorBody"
-                    :mode="editorMode"
+                    :mode="previewOpen ? 'split' : 'normal'"
+                    :live-preview="contentMode === 'visual'"
                     :no-border="true"
                     :protect-first-line="true"
                     :enable-embeds="true"
                     :enable-mentions="true"
                     :enable-collab="shouldEnableCollab"
                     :collab-room-id="collabRoomId"
-                    :show-mode-toggle="!shouldEnableCollab"
-                    :show-sync-scroll-toggle="true"
-                    :sync-scroll="syncScroll"
+                    :show-mode-toggle="false"
+                    :show-sync-scroll-toggle="false"
+                    :show-toolbar="false"
+                    :show-reference-trigger="false"
+                    :line-numbers="lineNumbersVisible"
+                    @update:line-numbers="lineNumbersVisible = $event"
                     @active-heading-change="activeHeadingLine = $event"
                     @collab-ready="handleCollabReady"
-                    @mode-change="editorMode = $event"
-                    @update:sync-scroll="syncScroll = $event"
                   />
                 </div>
               </section>
@@ -87,18 +72,31 @@
           <div v-else class="editor-loading">加载中…</div>
         </main>
 
-        <PostEditorOutline
-          :mobile-open="mobilePanel === 'outline'"
-          :desktop-open="outlinePanelOpen"
+        <PostEditorSidebar
+          :mobile-open="mobilePanel === 'sidebar'"
+          :desktop-open="sidebarPanelOpen"
+          :channel-collections="channelCollections"
+          :selected-collection-id="selectedNonDefaultCollectionId"
+          :summary="form.summary"
+          :visibility="form.visibility"
+          :cover-url="form.cover_url"
+          :cover-uploading="coverUploading"
+          :cover-upload-error="coverUploadError"
           :outline-count="outline.length"
           :flattened-outline="flattenedOutline"
           :active-heading-line="activeHeadingLine"
+          @select-collection="onCollectionSelect"
+          @update:summary="(value) => (form.summary = value)"
+          @update:visibility="(value) => (form.visibility = value)"
+          @cover-upload="handleCoverUpload"
+          @remove-cover="removeCover"
           @jump-to-heading="jumpToHeading"
+          @close="mobilePanel = null"
         />
       </div>
     </div>
 
-    <div v-if="contentReady" class="editor-mobile-publish-actions">
+    <div v-if="contentReady && mobilePanel !== 'sidebar'" class="editor-mobile-publish-actions">
       <PButton type="button" variant="secondary" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="save('draft')">存草稿</PButton>
       <PButton type="button" variant="primary" :loading="saving === 'published'" :disabled="Boolean(saving)" loading-text="发布中…" @click="save('published')">发布</PButton>
     </div>
@@ -205,7 +203,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import PEditor from '@/components/shared/PEditor.vue'
-import PostEditorOutline from '@/components/blog/PostEditorOutline.vue'
+import PostEditorFormattingToolbar from '@/components/blog/PostEditorFormattingToolbar.vue'
+import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -251,28 +250,31 @@ type FlattenedOutlineNode = OutlineItem & {
 
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
 const activeHeadingLine = ref<number | null>(null)
-const mobilePanel = ref<'outline' | 'settings' | null>(null)
-const settingsPanelOpen = ref(false)
-const outlinePanelOpen = ref(false)
-const editorMode = ref<'normal' | 'split'>('normal')
-const syncScroll = ref(true)
+const lineNumbersVisible = ref(true)
+const previewOpen = ref(false)
+const mobilePanel = ref<'sidebar' | null>(null)
+const sidebarPanelOpen = ref(false)
+const contentMode = ref<'markdown' | 'visual'>('markdown')
+
+const executeFormattingCommand = (command: PostEditorCommand) => {
+  editorRef.value?.executeCommand(command)
+}
 
 const isCompactEditor = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 960px)').matches
 
-const toggleSettingsPanel = () => {
+const toggleSidebarPanel = () => {
   if (isCompactEditor()) {
-    mobilePanel.value = mobilePanel.value === 'settings' ? null : 'settings'
+    const opening = mobilePanel.value !== 'sidebar'
+    mobilePanel.value = opening ? 'sidebar' : null
+    if (opening) previewOpen.value = false
     return
   }
-  settingsPanelOpen.value = !settingsPanelOpen.value
+  sidebarPanelOpen.value = !sidebarPanelOpen.value
 }
 
-const toggleOutlinePanel = () => {
-  if (isCompactEditor()) {
-    mobilePanel.value = mobilePanel.value === 'outline' ? null : 'outline'
-    return
-  }
-  outlinePanelOpen.value = !outlinePanelOpen.value
+const togglePreview = () => {
+  previewOpen.value = !previewOpen.value
+  if (previewOpen.value && isCompactEditor()) mobilePanel.value = null
 }
 
 const goBack = () => {
@@ -294,13 +296,11 @@ const collabRoomId = computed(() => {
   return postId || undefined
 })
 const shouldEnableCollab = computed(() => Boolean(collabRoomId.value))
-const isCollabEditing = computed(() => shouldEnableCollab.value)
 const contentReady = ref(!route.params.id)
 const uploading = ref(false)
 const coverUploading = ref(false)
 const error = ref('')
 const coverUploadError = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
 const contentSource = ref<PostEditorContentSource>('empty')
 const loadedPostUpdatedAt = ref(0)
 
@@ -318,18 +318,13 @@ const editorBody = computed({
   set: (val: string) => {
     const nl = val.indexOf('\n')
     const firstLine = nl >= 0 ? val.slice(0, nl) : val
-    form.value.title = firstLine.replace(/^#+\s*/, '').trim()
+    if (!/^#(?:\s|$)/.test(firstLine)) {
+      form.value.content = val
+      return
+    }
+    form.value.title = firstLine.replace(/^#\s?/, '').trim()
     form.value.content = nl >= 0 ? val.slice(nl + 1) : ''
   },
-})
-
-// ── 字数统计 ─────────────────────────────────────────────
-const charCount = computed(() => {
-  const text = form.value.content
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/[#*`>~_\[\]()]/g, '')
-    .trim()
-  return text.replace(/\s+/g, '').length
 })
 
 // ── 目录提取 ─────────────────────────────────────────────
@@ -344,7 +339,7 @@ const outline = computed((): OutlineItem[] => {
 
     const level = m[1].length
     const text = m[2].trim()
-    const line = idx + 1
+    const line = idx + 2
     const id = `heading-${line}`
 
     while (levelStack.length > 0 && levelStack[levelStack.length - 1].level >= level) {
@@ -403,7 +398,6 @@ const {
   selectedCollectionIds,
   existingCollectionIds,
   currentChannelId,
-  defaultCollectionId,
   selectedNonDefaultCollectionId,
   primaryCollectionId,
   derivedChannelId,
@@ -604,16 +598,6 @@ const handleFileUpload = async (event: Event) => {
   }
 }
 
-const clearContent = () => {
-  form.value.content = ''
-  form.value.title = ''
-  contentSource.value = 'empty'
-}
-
-const triggerReimport = () => { fileInput.value?.click() }
-
-// ── 标题自动扩展高度 ─────────────────────────────────────
-
 // ── 内容变化检测 ─────────────────────────────────────────
 watch(() => form.value.title, (nv, ov) => {
   if (!ov && nv && contentSource.value === 'empty') contentSource.value = 'manual'
@@ -653,30 +637,21 @@ onMounted(async () => {
 .editor-layout {
   position: relative;
   display: grid;
-  grid-template-columns: 0 minmax(0, 1fr) 0;
+  grid-template-columns: minmax(0, 1fr) 0;
   flex: 1;
   min-height: 0;
   overflow: hidden;
   transition: grid-template-columns 160ms ease;
 }
 
-.editor-layout.has-settings-panel {
-  grid-template-columns: 17.5rem minmax(0, 1fr) 0;
-}
-
-.editor-layout.has-outline-panel {
-  grid-template-columns: 0 minmax(0, 1fr) 15rem;
-}
-
-.editor-layout.has-settings-panel.has-outline-panel {
-  grid-template-columns: 17.5rem minmax(0, 1fr) 15rem;
+.editor-layout.has-sidebar-panel {
+  grid-template-columns: minmax(0, 1fr) 17.5rem;
 }
 
 .editor-mobile-publish-actions {
   display: none;
 }
 
-.col-left,
 .col-center {
   min-height: 0;
 }
@@ -689,31 +664,6 @@ onMounted(async () => {
   border: 0;
   border-radius: 0;
   background: var(--a-color-bg);
-}
-
-/* 字数统计 chip */
-.word-count-chip {
-  font-size: 0.72rem;
-  font-weight: 500;
-  font-family: 'SFMono-Regular', 'Consolas', monospace;
-  color: var(--a-color-muted);
-  letter-spacing: 0;
-}
-
-.settings-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  resize: vertical;
-}
-
-.summary-counter {
-  font-size: 0.68rem;
-  color: var(--a-color-muted);
-  text-align: right;
-}
-
-.hidden-file-input {
-  display: none;
 }
 
 .editor-loading {
@@ -738,37 +688,6 @@ onMounted(async () => {
   background: var(--a-color-bg);
 }
 
-.collab-mode-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.9rem 1.25rem;
-  border-bottom: var(--a-border);
-  background: var(--a-color-surface);
-}
-
-.collab-mode-banner__label {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.22rem 0.45rem;
-  border: 2px solid #000;
-  background: #000;
-  color: #fff;
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.collab-mode-banner__text {
-  margin: 0;
-  font-size: 0.84rem;
-  font-weight: 500;
-  color: var(--a-color-fg);
-}
-
 .editor-body {
   flex: 1;
   min-height: 0;
@@ -781,47 +700,10 @@ onMounted(async () => {
   min-height: 0;
 }
 
-.title-placeholder {
-  padding: 1.5rem 1.5rem 0;
-  font-size: 2.5rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  line-height: 1.12;
-  color: var(--a-color-muted-soft);
-  pointer-events: none;
-  user-select: none;
-}
-
-.draft-recovery-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  padding: 1.25rem;
-}
-
-.draft-recovery-text {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--a-color-fg);
-}
-
-.draft-recovery-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 1rem;
-  background: var(--a-color-surface);
-}
-
-.draft-recovery-preview strong {
-  font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.draft-recovery-preview .a-muted {
-  margin: 0;
+.editor-body :deep(.cm-scroller) {
+  font-family: var(--a-font-sans, ui-sans-serif, system-ui, sans-serif) !important;
+  font-size: 1.0625rem;
+  line-height: 1.8 !important;
 }
 
 .draft-recovery-actions {
@@ -889,144 +771,9 @@ onMounted(async () => {
   margin: 0;
 }
 
-.toc-section {
-  flex: 1;
-}
-
-.toc-list {
-  overflow-y: auto;
-}
-
-.toc-item {
-  --toc-depth: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 0.65rem;
-  padding: 0.55rem 0.7rem;
-  color: var(--a-color-muted);
-  text-decoration: none;
-  font-size: 0.8rem;
-  font-weight: 500;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border-left: 2px solid transparent;
-}
-
-.toc-item:hover {
-  border-left-color: var(--a-color-border);
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-}
-
-.toc-rail {
-  width: calc(var(--toc-depth) * 0.8rem + 1px);
-  min-height: 1.2rem;
-  border-left: 1px solid var(--a-color-border-soft);
-  opacity: 0.9;
-}
-
-.toc-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cover-upload-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  padding: 0.9rem;
-}
-
-.cover-preview-wrap {
-  overflow: hidden;
-  border: var(--a-border);
-  background: var(--a-color-surface);
-}
-
-.cover-preview-image {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-
-.cover-empty-state {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1rem;
-  border: var(--a-border);
-  background: var(--a-color-surface);
-}
-
-.cover-empty-state strong {
-  font-size: 0.92rem;
-  font-weight: 500;
-}
-
-.cover-empty-state .a-muted,
-.cover-upload-hint {
-  margin: 0;
-}
-
-.cover-upload-actions {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.cover-upload-error {
-  margin: 0;
-  color: var(--a-color-danger);
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.option-check {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--a-color-fg);
-}
-
-.option-check {
-  justify-content: space-between;
-  padding: 0.875rem 1rem;
-  background: var(--a-color-bg);
-  cursor: pointer;
-}
-
-.option-check input {
-  width: 1rem;
-  height: 1rem;
-  margin: 0;
-  accent-color: var(--a-color-fg);
-}
-
 @media (max-width: 1200px) {
-  .editor-layout.has-settings-panel {
-    grid-template-columns: 17.5rem minmax(0, 1fr) 0;
-  }
-
-  .editor-layout.has-outline-panel {
-    grid-template-columns: 0 minmax(0, 1fr) 15rem;
-  }
-
-  .editor-layout.has-settings-panel.has-outline-panel {
-    grid-template-columns: 17.5rem minmax(0, 1fr) 15rem;
+  .editor-layout.has-sidebar-panel {
+    grid-template-columns: minmax(0, 1fr) 17.5rem;
   }
 }
 
@@ -1038,13 +785,6 @@ onMounted(async () => {
   .editor-layout {
     display: block;
     overflow: visible;
-  }
-
-  .editor-mobile-actions {
-    display: flex;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: var(--a-border);
   }
 
   .editor-mobile-publish-actions {
@@ -1064,6 +804,18 @@ onMounted(async () => {
   .editor-mobile-publish-actions :deep(.p-button) {
     min-height: 2.75rem;
   }
+
+  .editor-canvas.is-preview-open :deep(.post-format-toolbar) {
+    display: none;
+  }
+
+  .editor-body :deep(.p-editor.mode-split .sv-source) {
+    display: none;
+  }
+
+  .editor-body :deep(.p-editor.mode-split .sv-preview) {
+    min-height: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1071,17 +823,8 @@ onMounted(async () => {
     margin: 0.5rem;
   }
 
-  .collab-mode-banner {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .draft-manager-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .title-placeholder {
-    font-size: 1.75rem;
   }
 }
 </style>

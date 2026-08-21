@@ -27,27 +27,29 @@ describe("PostEditorView layout", () => {
 		expect(cssRules(".editor-canvas")).toContain("flex: 1");
 	});
 
-	it("starts focused and expands settings and outline independently from the topbar", () => {
-		expect(source).toContain("const settingsPanelOpen = ref(false)");
-		expect(source).toContain("const outlinePanelOpen = ref(false)");
-		expect(source).toContain('@toggle-settings="toggleSettingsPanel"');
-		expect(source).toContain('@toggle-outline="toggleOutlinePanel"');
+	it("starts focused and opens one right sidebar from the topbar", () => {
+		expect(source).toContain("const sidebarPanelOpen = ref(false)");
+		expect(source).toContain('@toggle-sidebar="toggleSidebarPanel"');
 		expect(cssRules(".editor-layout")).toContain(
-			"grid-template-columns: 0 minmax(0, 1fr) 0",
+			"grid-template-columns: minmax(0, 1fr) 0",
 		);
-		expect(cssRules(".editor-layout.has-settings-panel")).toContain(
-			"grid-template-columns: 17.5rem minmax(0, 1fr) 0",
-		);
-		expect(cssRules(".editor-layout.has-outline-panel")).toContain(
-			"grid-template-columns: 0 minmax(0, 1fr) 15rem",
+		expect(cssRules(".editor-layout.has-sidebar-panel")).toContain(
+			"grid-template-columns: minmax(0, 1fr) 17.5rem",
 		);
 	});
 
-	it("keeps publishing separate from settings with a dedicated right outline panel", () => {
-		expect(source).toContain("PostEditorOutline");
-		expect(source).toContain('class="editor-mobile-publish-actions"');
-		expect(source).toContain(":mobile-open=\"mobilePanel === 'settings'\"");
-		expect(source).toContain(":mobile-open=\"mobilePanel === 'outline'\"");
+	it("uses one Markdown document for source, visual editing, and preview", () => {
+		expect(source).toContain("PostEditorFormattingToolbar");
+		expect(source).not.toContain("PostEditorRichText");
+		expect(source).toContain(
+			"const contentMode = ref<'markdown' | 'visual'>('markdown')",
+		);
+		expect(source).toContain("const previewOpen = ref(false)");
+		expect(source).toContain(":mode=\"previewOpen ? 'split' : 'normal'\"");
+		expect(source).toContain(":live-preview=\"contentMode === 'visual'\"");
+		expect(source).toContain("const lineNumbersVisible = ref(true)");
+		expect(source).toContain("const line = idx + 2");
+		expect(source).toContain("mobilePanel !== 'sidebar'");
 	});
 
 	it("does not constrain the editor page with the generic sidebar content width", () => {

@@ -4,9 +4,10 @@
     :class="[noBorder ? 'no-border' : null, 'mode-' + effectiveMode]"
     data-testid="markdown-editor"
     :data-editor-mode="effectiveMode"
+    :data-live-preview="livePreview"
     @keydown="onContainerKeydown"
   >
-    <div v-if="collabPeers.length > 0 && effectiveMode === 'split'" class="p-editor-presence">
+    <div v-if="collabPeers.length > 0" class="p-editor-presence">
       <span class="p-editor-label">协作中</span>
       <div class="presence-avatars">
         <div
@@ -19,9 +20,9 @@
       </div>
     </div>
 
-    <div v-if="canShowModeSwitches || enableMentions" class="editor-mode-switches">
+    <div v-if="canShowModeSwitches || (enableMentions && showReferenceTrigger)" class="editor-mode-switches">
       <button
-        v-if="enableMentions"
+        v-if="enableMentions && showReferenceTrigger"
         type="button"
         class="editor-reference-trigger"
         title="添加引用"
@@ -77,19 +78,7 @@
         <button type="button" class="tb-btn" title="引用" aria-label="引用" @click="sv_wrapLinePrefix('> ', '引用内容')"><Quote :size="14" /></button>
         <button type="button" class="tb-btn" title="无序列表" @click="sv_wrapLinePrefix('- ', '列表项')">• 列表</button>
         <button type="button" class="tb-btn" title="有序列表" @click="sv_wrapLinePrefix('1. ', '列表项')">1. 列表</button>
-        <button type="button" class="tb-btn" :class="{ active: showLineNumbers }" title="行号" @click="toggleLineNumbers">行号</button>
-      </div>
-
-      <div class="tb-row">
-        <span class="tb-row-label">插入</span>
-        <button type="button" class="tb-btn" title="插入代码块" @click="sv_insertCodeBlock">代码块</button>
-        <button type="button" class="tb-btn" title="插入链接" @click="sv_insertLink">链接</button>
-        <button type="button" class="tb-btn" :class="{ uploading: uploadingImage }" title="上传图片" @click="triggerImageUpload">
-          {{ uploadingImage ? '上传中…' : '图片' }}
-        </button>
-        <input ref="imageInputRef" type="file" accept="image/*" class="tb-hidden-input" @change="handleImageUploadFile" />
-        <button type="button" class="tb-btn" title="插入表格" @click="sv_insertTable">表格</button>
-        <button type="button" class="tb-btn" title="插入分割线" @click="sv_insertHr">分割线</button>
+        <button type="button" class="tb-btn" :class="{ active: lineNumbersEnabled }" title="行号" @click="toggleLineNumbers">行号</button>
         <template v-if="enableEmbeds">
           <span class="tb-sep" />
           <button type="button" class="tb-btn" @click="insertEmbed('post')">文章</button>
@@ -98,6 +87,8 @@
         </template>
       </div>
     </div>
+
+    <input ref="imageInputRef" type="file" accept="image/*" class="tb-hidden-input" @change="handleImageUploadFile" />
 
     <div
       class="p-editor-body"
@@ -134,8 +125,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AtSign, Quote } from 'lucide-vue-next'
-import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
-import { Compartment, EditorState, RangeSetBuilder } from '@codemirror/state'
+import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
+import { Compartment, EditorState, RangeSetBuilder, StateField, type Text } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
@@ -161,6 +152,101 @@ import {
   type ResourceReferenceLabels,
 } from './editor/resourceReferenceExtension'
 import { enhancePreviewCodeBlocks } from './editor/previewEnhancements'
+import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
+
+function markdownTableCells(line: string) {
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
+  return trimmed.split('|').map(cell => cell.trim())
+}
+
+function markdownTableDOM(source: string) {
+  const lines = source.split('\n').filter(line => line.trim())
+  if (lines.length < 2) return null
+  const headers = markdownTableCells(lines[0])
+  const dividers = markdownTableCells(lines[1])
+  if (headers.length !== dividers.length || !dividers.every(cell => /^:?-+:?$/.test(cell))) return null
+
+  const table = document.createElement('table')
+  const head = document.createElement('thead')
+  const headRow = document.createElement('tr')
+  const body = document.createElement('tbody')
+  const alignments = dividers.map(divider => {
+    if (divider.startsWith(':') && divider.endsWith(':')) return 'center'
+    if (divider.endsWith(':')) return 'right'
+    return 'left'
+  })
+
+  headers.forEach((header, index) => {
+    const cell = document.createElement('th')
+    cell.textContent = header
+    cell.style.textAlign = alignments[index]
+    headRow.append(cell)
+  })
+  head.append(headRow)
+  lines.slice(2).forEach(line => {
+    const row = document.createElement('tr')
+    markdownTableCells(line).forEach((value, index) => {
+      const cell = document.createElement('td')
+      cell.textContent = value
+      cell.style.textAlign = alignments[index] || 'left'
+      row.append(cell)
+    })
+    body.append(row)
+  })
+  table.append(head, body)
+  return table
+}
+
+class MarkdownPreviewWidget extends WidgetType {
+  constructor(
+    private readonly html: string,
+    private readonly sourcePosition: number,
+    private readonly source: string,
+  ) {
+    super()
+  }
+
+  eq(other: MarkdownPreviewWidget) {
+    return other.html === this.html
+      && other.sourcePosition === this.sourcePosition
+      && other.source === this.source
+  }
+
+  toDOM(view: EditorView) {
+    const wrapper = document.createElement('div')
+    wrapper.className = 'cm-markdown-widget prose-blog'
+    const fence = this.source.match(/^\s*(```+|~~~+)([^\n]*)\n([\s\S]*?)\n\s*\1\s*$/)
+    if (fence) {
+      const pre = document.createElement('pre')
+      const code = document.createElement('code')
+      const language = fence[2].trim()
+      if (language) code.className = `language-${language}`
+      code.textContent = fence[3]
+      pre.append(code)
+      wrapper.append(pre)
+    } else {
+      const table = markdownTableDOM(this.source)
+      if (table) {
+        wrapper.append(table)
+      } else {
+        const template = document.createElement('template')
+        // renderMarkdown sanitizes through DOMPurify before widgets receive the HTML.
+        template.innerHTML = this.html
+        wrapper.append(template.content.cloneNode(true))
+      }
+    }
+    wrapper.addEventListener('click', event => {
+      event.preventDefault()
+      view.dispatch({ selection: { anchor: this.sourcePosition } })
+      view.focus()
+    })
+    return wrapper
+  }
+
+  ignoreEvent() {
+    return false
+  }
+}
 
 interface Props {
   modelValue?: string
@@ -170,9 +256,12 @@ interface Props {
   showModeToggle?: boolean
   showSyncScrollToggle?: boolean
   syncScroll?: boolean
+  lineNumbers?: boolean
+  livePreview?: boolean
   showToolbar?: boolean
   enableImageUpload?: boolean
   enableMentions?: boolean
+  showReferenceTrigger?: boolean
   referenceAutocompleteScope?: 'global' | 'debate'
   enableEmbeds?: boolean
   enableCollab?: boolean
@@ -191,9 +280,11 @@ const props = withDefaults(defineProps<Props>(), {
   showModeToggle: false,
   showSyncScrollToggle: false,
   syncScroll: true,
+  livePreview: true,
   showToolbar: true,
   enableImageUpload: true,
   enableMentions: false,
+  showReferenceTrigger: true,
   referenceAutocompleteScope: 'global',
   enableEmbeds: false,
   enableCollab: false,
@@ -210,12 +301,13 @@ const emit = defineEmits<{
   'active-heading-change': [line: number | null]
   'mode-change': [value: 'normal' | 'split']
   'update:syncScroll': [value: boolean]
+  'update:lineNumbers': [value: boolean]
   'collab-ready': [value: string]
 }>()
 
 const authStore = useAuthStore()
-const { renderMarkdown } = useMarkdownRenderer()
-const effectiveMode = computed<'normal' | 'split'>(() => (props.enableCollab ? 'split' : props.mode))
+const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
+const effectiveMode = computed<'normal' | 'split'>(() => props.mode)
 const canShowModeSwitches = computed(() => (
   (!props.enableCollab && props.showModeToggle) || (effectiveMode.value === 'split' && props.showSyncScrollToggle)
 ))
@@ -225,14 +317,15 @@ const svPreviewHtml = computed(() => renderMarkdown(props.modelValue))
 
 const cmContainerRef = ref<HTMLElement | null>(null)
 const previewPaneRef = ref<HTMLElement | null>(null)
-const showLineNumbers = ref(false)
+const internalLineNumbers = ref(false)
+const lineNumbersEnabled = computed(() => props.lineNumbers ?? internalLineNumbers.value)
 const lineNumberCompartment = new Compartment()
+const livePreviewCompartment = new Compartment()
 const resourceReferenceCompartment = new Compartment()
 const contentAttributesCompartment = new Compartment()
 let cmView: EditorView | null = null
 const {
   imageInputRef,
-  uploadingImage,
   isDragging,
   triggerImageUpload,
   handleImageUploadFile,
@@ -328,7 +421,7 @@ function teardownEditor() {
 }
 
 function lineNumberExtensions() {
-  return showLineNumbers.value ? [lineNumbers(), highlightActiveLineGutter()] : []
+  return lineNumbersEnabled.value ? [lineNumbers(), highlightActiveLineGutter()] : []
 }
 
 function resourceReferenceExtensions() {
@@ -358,8 +451,28 @@ function replaceDocument(markdown: string) {
 function buildLivePreviewDecos(view: EditorView): DecorationSet {
   const { state } = view
   const cursor = state.selection.main.head
-  const toHide: Array<{ from: number; to: number }> = []
-  const hide = Decoration.replace({})
+  const ranges: Array<{ from: number; to: number; decoration: Decoration }> = []
+  const hiddenMark = Decoration.replace({})
+  const strikeText = Decoration.mark({ class: 'cm-markdown-strike' })
+
+  const hideMark = (from: number, to: number) => {
+    ranges.push({ from, to, decoration: hiddenMark })
+  }
+  const renderInlineWidget = (from: number, to: number) => {
+    if (cursor >= from && cursor <= to) return false
+    ranges.push({
+      from,
+      to,
+      decoration: Decoration.replace({
+        widget: new MarkdownPreviewWidget(
+          renderMarkdown(state.sliceDoc(from, to)),
+          from,
+          state.sliceDoc(from, to),
+        ),
+      }),
+    })
+    return true
+  }
 
   for (const { from, to } of view.visibleRanges) {
     syntaxTree(state).iterate({
@@ -367,54 +480,140 @@ function buildLivePreviewDecos(view: EditorView): DecorationSet {
       to,
       enter(node) {
         const { name } = node
-
-        if (name === 'HeaderMark') {
+        if (name === 'Image') {
           const line = state.doc.lineAt(node.from)
-          if (cursor < line.from || cursor > line.to) {
-            toHide.push({ from: node.from, to: node.to })
+          if (line.text.trim() === state.sliceDoc(node.from, node.to).trim()) {
+            return !renderInlineWidget(line.from, line.to)
           }
-        } else if (name === 'QuoteMark') {
+        }
+        if (name === 'HorizontalRule') return !renderInlineWidget(node.from, node.to)
+        if (name === 'HeaderMark' || name === 'QuoteMark' || name === 'ListMark' || name === 'TaskMarker') {
           const line = state.doc.lineAt(node.from)
-          if (cursor < line.from || cursor > line.to) {
-            toHide.push({ from: node.from, to: node.to })
-          }
-        } else if (name === 'EmphasisMark') {
+          if (cursor < line.from || cursor > line.to) hideMark(node.from, node.to)
+          return
+        }
+        if (name === 'EmphasisMark' || name === 'StrikethroughMark' || name === 'CodeMark' || name === 'CodeInfo') {
           const parent = node.node.parent
-          if (parent && (parent.name === 'Emphasis' || parent.name === 'StrongEmphasis')) {
-            if (cursor < parent.from || cursor > parent.to) {
-              toHide.push({ from: node.from, to: node.to })
-            }
-          }
-        } else if (name === 'CodeMark') {
-          const parent = node.node.parent
-          if (parent && parent.name === 'InlineCode') {
-            if (cursor < parent.from || cursor > parent.to) {
-              toHide.push({ from: node.from, to: node.to })
-            }
-          }
-        } else if (name === 'LinkMark' || name === 'URL') {
-          let p = node.node.parent
-          while (p && p.name !== 'Link') p = p.parent
-          if (p) {
-            if (cursor < p.from || cursor > p.to) {
-              toHide.push({ from: node.from, to: node.to })
-            }
-          }
+          if (parent && (cursor < parent.from || cursor > parent.to)) hideMark(node.from, node.to)
+          return
+        }
+        if (name === 'LinkMark' || name === 'URL') {
+          let parent = node.node.parent
+          while (parent && parent.name !== 'Link' && parent.name !== 'Image') parent = parent.parent
+          if (parent && (cursor < parent.from || cursor > parent.to)) hideMark(node.from, node.to)
         }
       },
     })
-  }
 
-  toHide.sort((a, b) => a.from - b.from || a.to - b.to)
-  const builder = new RangeSetBuilder<Decoration>()
-  let lastTo = -1
-  for (const { from, to } of toHide) {
-    if (from >= lastTo) {
-      builder.add(from, to, hide)
-      lastTo = to
+    let line = state.doc.lineAt(from)
+    while (line.from <= to) {
+      if (cursor < line.from || cursor > line.to) {
+        for (const match of line.text.matchAll(/~~([^~\n]+)~~/g)) {
+          const start = line.from + (match.index || 0)
+          const contentFrom = start + 2
+          const contentTo = contentFrom + match[1].length
+          hideMark(start, contentFrom)
+          ranges.push({ from: contentFrom, to: contentTo, decoration: strikeText })
+          hideMark(contentTo, contentTo + 2)
+        }
+      }
+      if (line.number >= state.doc.lines) break
+      line = state.doc.line(line.number + 1)
     }
   }
+
+  ranges.sort((a, b) => a.from - b.from || b.to - a.to)
+  const builder = new RangeSetBuilder<Decoration>()
+  let lastTo = -1
+  for (const range of ranges) {
+    if (range.from < lastTo) continue
+    builder.add(range.from, range.to, range.decoration)
+    lastTo = range.to
+  }
   return builder.finish()
+}
+
+function findClosingLine(doc: Text, startLine: number, marker: string) {
+  for (let lineNumber = startLine + 1; lineNumber <= doc.lines; lineNumber += 1) {
+    if (doc.line(lineNumber).text.trim() === marker) return lineNumber
+  }
+  return null
+}
+
+function findTableEndLine(doc: Text, startLine: number) {
+  let endLine = startLine + 1
+  for (let lineNumber = startLine + 2; lineNumber <= doc.lines; lineNumber += 1) {
+    if (!/^\s*\|/.test(doc.line(lineNumber).text)) break
+    endLine = lineNumber
+  }
+  return endLine
+}
+
+function buildBlockPreviewDecos(state: EditorState): DecorationSet {
+  const cursor = state.selection.main.head
+  const ranges: Array<{ from: number; to: number }> = []
+  const addRange = (from: number, to: number) => {
+    if (cursor < from || cursor > to) ranges.push({ from, to })
+  }
+
+  syntaxTree(state).iterate({
+    enter(node) {
+      if (node.name !== 'FencedCode') return
+      addRange(node.from, node.to)
+      return false
+    },
+  })
+
+  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
+    const line = state.doc.line(lineNumber)
+    const trimmed = line.text.trim()
+    if (trimmed === '$$' || /^:::(post|music|video)\{/.test(trimmed)) {
+      const closingLine = findClosingLine(state.doc, lineNumber, trimmed === '$$' ? '$$' : ':::')
+      if (closingLine) {
+        addRange(line.from, state.doc.line(closingLine).to)
+        lineNumber = closingLine
+      }
+      continue
+    }
+    if (!/^\s*\|/.test(line.text) || lineNumber >= state.doc.lines) continue
+    if (!/^\s*\|?\s*:?-+/.test(state.doc.line(lineNumber + 1).text)) continue
+    const endLine = findTableEndLine(state.doc, lineNumber)
+    addRange(line.from, state.doc.line(endLine).to)
+    lineNumber = endLine
+  }
+
+  ranges.sort((a, b) => a.from - b.from)
+  const builder = new RangeSetBuilder<Decoration>()
+  let lastTo = -1
+  for (const range of ranges) {
+    if (range.from < lastTo) continue
+    builder.add(range.from, range.to, Decoration.replace({
+      block: true,
+      widget: new MarkdownPreviewWidget(
+        renderMarkdown(state.sliceDoc(range.from, range.to)),
+        range.from,
+        state.sliceDoc(range.from, range.to),
+      ),
+    }))
+    lastTo = range.to
+  }
+  return builder.finish()
+}
+
+function makeBlockPreviewField() {
+  return StateField.define<DecorationSet>({
+    create: state => buildBlockPreviewDecos(state),
+    update: (decorations, transaction) => (
+      transaction.docChanged || transaction.selection
+        ? buildBlockPreviewDecos(transaction.state)
+        : decorations
+    ),
+    provide: field => EditorView.decorations.from(field),
+  })
+}
+
+function livePreviewExtensions() {
+  return [makeLivePreviewPlugin(), makeBlockPreviewField()]
 }
 
 function makeLivePreviewPlugin() {
@@ -444,6 +643,7 @@ function initCodeMirror() {
     keymap.of(bindings),
     markdown({ codeLanguages: languages }),
     lineNumberCompartment.of(lineNumberExtensions()),
+    livePreviewCompartment.of(props.livePreview ? livePreviewExtensions() : []),
     resourceReferenceCompartment.of(resourceReferenceExtensions()),
     contentAttributesCompartment.of(EditorView.contentAttributes.of(editorContentAttributes())),
     EditorView.lineWrapping,
@@ -511,7 +711,6 @@ function initCodeMirror() {
         { tag: tags.link, color: '#2563eb' },
       ])
   extensions.push(syntaxHighlighting(mdHighlightStyle))
-  extensions.push(makeLivePreviewPlugin())
   if (props.renderingLevel !== 'comment') {
     extensions.push(highlightActiveLine())
   }
@@ -528,10 +727,10 @@ function initCodeMirror() {
     extensions.push(
       EditorView.baseTheme({
         '.cm-line:first-child': {
-          fontSize: '2.25rem',
-          lineHeight: '1.2',
-          fontWeight: '800',
-          marginBottom: '0.5rem',
+          fontSize: '1.5rem',
+          lineHeight: '1.35',
+          fontWeight: '700',
+          marginBottom: '0.75rem',
           display: 'block',
         },
       })
@@ -583,8 +782,24 @@ watch(() => props.modelValue, (val) => {
   }
 })
 
-watch(effectiveMode, () => {
-  syncEditorByMode()
+watch(effectiveMode, async mode => {
+  await nextTick()
+  cmView?.requestMeasure()
+  if (mode === 'split') enhancePreviewCodeBlocks(previewPaneRef.value)
+})
+
+watch(() => props.livePreview, enabled => {
+  if (!cmView) return
+  cmView.dispatch({
+    effects: livePreviewCompartment.reconfigure(enabled ? livePreviewExtensions() : []),
+  })
+})
+
+watch(markdownRuntimeState, state => {
+  if (state !== 'ready' || !props.livePreview || !cmView) return
+  cmView.dispatch({
+    effects: livePreviewCompartment.reconfigure(livePreviewExtensions()),
+  })
 })
 
 watch(() => props.enableResourceReferences, () => {
@@ -637,11 +852,22 @@ function sv_wrap(before: string, after: string, placeholder: string) {
 
 function sv_wrapLinePrefix(prefix: string, placeholder: string) {
   if (!cmView) return
-  const { from, to, selectedText } = getCmSelection()
-  const line = cmView.state.doc.lineAt(from)
-  const lineStart = line.from
-  const selected = selectedText || placeholder
-  cmInsert(lineStart, to, prefix + selected, lineStart + prefix.length, lineStart + prefix.length + selected.length)
+  const { from, to } = getCmSelection()
+  const firstLine = cmView.state.doc.lineAt(from)
+  const endPosition = to > from && to === cmView.state.doc.lineAt(to).from ? to - 1 : to
+  const lastLine = cmView.state.doc.lineAt(Math.max(from, endPosition))
+  const original = cmView.state.sliceDoc(firstLine.from, lastLine.to)
+  const lines = original.split('\n')
+  const shouldRemove = lines.every(line => !line.trim() || line.startsWith(prefix))
+  const replacement = lines.map(line => {
+    if (!line.trim()) return shouldRemove ? '' : `${prefix}${placeholder}`
+    if (shouldRemove) return line.startsWith(prefix) ? line.slice(prefix.length) : line
+    if (/^#{1,6}\s+$/.test(prefix) && /^#{1,6}\s+/.test(line)) {
+      return `${prefix}${line.replace(/^#{1,6}\s+/, '')}`
+    }
+    return `${prefix}${line}`
+  }).join('\n')
+  cmInsert(firstLine.from, lastLine.to, replacement, firstLine.from, firstLine.from + replacement.length)
 }
 
 function sv_insertLink() {
@@ -670,6 +896,14 @@ function sv_insertCodeBlock() {
   cmInsert(from, to, newText, bodyStart, bodyStart + body.length)
 }
 
+function sv_insertMath() {
+  const { from, to, selectedText } = getCmSelection()
+  const body = selectedText || '公式'
+  const markdown = `\n$$\n${body}\n$$\n`
+  const bodyStart = from + '\n$$\n'.length
+  cmInsert(from, to, markdown, bodyStart, bodyStart + body.length)
+}
+
 function sv_undo() {
   if (!cmView) return
   undo({ state: cmView.state, dispatch: cmView.dispatch.bind(cmView) })
@@ -683,10 +917,12 @@ function sv_redo() {
 }
 
 function toggleLineNumbers() {
+  const next = !lineNumbersEnabled.value
+  if (props.lineNumbers === undefined) internalLineNumbers.value = next
+  else emit('update:lineNumbers', next)
   if (!cmView) return
-  showLineNumbers.value = !showLineNumbers.value
   cmView.dispatch({
-    effects: lineNumberCompartment.reconfigure(lineNumberExtensions()),
+    effects: lineNumberCompartment.reconfigure(next ? [lineNumbers(), highlightActiveLineGutter()] : []),
   })
 }
 
@@ -698,6 +934,37 @@ function insertEmbed(kind: 'post' | 'music' | 'video') {
   const md = `\n:::${kind}{id="${id}"}\n:::\n`
   cmInsert(from, from, md)
 }
+
+function executeCommand(command: PostEditorCommand) {
+  switch (command) {
+    case 'undo': sv_undo(); break
+    case 'redo': sv_redo(); break
+    case 'heading2': sv_wrapLinePrefix('## ', '标题'); break
+    case 'heading3': sv_wrapLinePrefix('### ', '标题'); break
+    case 'heading4': sv_wrapLinePrefix('#### ', '标题'); break
+    case 'bold': sv_wrap('**', '**', '粗体文字'); break
+    case 'italic': sv_wrap('*', '*', '斜体文字'); break
+    case 'strike': sv_wrap('~~', '~~', '删除线'); break
+    case 'blockquote': sv_wrapLinePrefix('> ', '引用内容'); break
+    case 'bulletList': sv_wrapLinePrefix('- ', '列表项'); break
+    case 'orderedList': sv_wrapLinePrefix('1. ', '列表项'); break
+    case 'link': sv_insertLink(); break
+    case 'image': triggerImageUpload(); break
+    case 'table': sv_insertTable(); break
+    case 'codeBlock': sv_insertCodeBlock(); break
+    case 'horizontalRule': sv_insertHr(); break
+    case 'math': sv_insertMath(); break
+    case 'postEmbed': insertEmbed('post'); break
+    case 'musicEmbed': insertEmbed('music'); break
+    case 'videoEmbed': insertEmbed('video'); break
+    case 'reference': insertReference(); break
+  }
+}
+
+watch(() => props.lineNumbers, () => {
+  if (!cmView) return
+  cmView.dispatch({ effects: lineNumberCompartment.reconfigure(lineNumberExtensions()) })
+})
 
 const mention = ref({
   visible: false,
@@ -827,9 +1094,12 @@ defineExpose({
   sv_insertTable,
   sv_insertHr,
   sv_insertCodeBlock,
+  sv_insertMath,
   sv_undo,
   sv_redo,
   triggerImageUpload,
+  insertReference,
+  executeCommand,
 })
 
 onBeforeUnmount(() => {
@@ -1097,6 +1367,40 @@ onBeforeUnmount(() => {
 
 :deep(.cm-scroller) {
   overflow: auto;
+}
+
+:deep(.cm-markdown-strike) {
+  text-decoration: line-through;
+}
+
+:deep(.cm-markdown-widget) {
+  display: block;
+  width: 100%;
+  margin: 0.75rem 0;
+  cursor: text;
+}
+
+:deep(.cm-markdown-widget > :first-child) {
+  margin-top: 0;
+}
+
+:deep(.cm-markdown-widget > :last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.cm-markdown-widget img) {
+  display: block;
+  max-width: 100%;
+  max-height: 32rem;
+  object-fit: contain;
+}
+
+:deep(.cm-markdown-widget pre) {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
 }
 
 .sv-preview {

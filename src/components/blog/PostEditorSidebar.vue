@@ -1,5 +1,11 @@
 <template>
-  <aside class="editor-sidebar editor-sidebar-left a-card-sm" :class="{ 'is-open': mobileOpen, 'is-expanded': desktopOpen }" aria-label="文章设置">
+  <aside class="editor-sidebar editor-sidebar-left a-card-sm" :class="{ 'is-open': mobileOpen, 'is-expanded': desktopOpen }" aria-label="文章设置与目录">
+    <div class="editor-sidebar__mobile-header">
+      <strong>文章设置与目录</strong>
+      <button type="button" aria-label="关闭文章设置与目录" title="关闭" @click="$emit('close')">
+        <X :size="18" aria-hidden="true" />
+      </button>
+    </div>
     <section class="left-section">
       <span class="a-label">所属合集</span>
       <div v-if="defaultCollection" class="collection-selection">
@@ -48,16 +54,55 @@
         </div>
       </details>
     </section>
+
+    <section class="left-section toc-panel">
+      <div class="section-heading-row">
+        <span class="a-label">文档目录</span>
+        <span class="a-muted">{{ outlineCount }} 个标题</span>
+      </div>
+      <div v-if="outlineCount === 0" class="col-empty">加入 Markdown 标题后显示</div>
+      <nav v-else class="outline-tree" aria-label="文档目录">
+        <button
+          v-for="item in flattenedOutline"
+          :key="item.id"
+          type="button"
+          class="outline-node"
+          :class="{
+            'is-active': item.line === activeHeadingLine,
+            'is-active-branch': item.isActiveBranch,
+            'has-children': item.hasChildren,
+          }"
+          :style="{ '--depth': String(item.depth) }"
+          :title="item.text"
+          @click="$emit('jump-to-heading', item.line)"
+        >
+          <span class="outline-caret" aria-hidden="true">{{ item.hasChildren ? (item.isExpanded ? 'v' : '>') : '' }}</span>
+          <span class="outline-label">{{ item.text }}</span>
+        </button>
+      </nav>
+    </section>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check } from 'lucide-vue-next'
+import { Check, X } from 'lucide-vue-next'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+
+type FlattenedOutlineNode = {
+  id: string
+  level: number
+  text: string
+  line: number
+  parentId: string | null
+  depth: number
+  hasChildren: boolean
+  isExpanded: boolean
+  isActiveBranch: boolean
+}
 
 type BlogVisibility = 'public' | 'followers' | 'private'
 type SidebarCollection = {
@@ -71,12 +116,14 @@ const props = defineProps<{
   desktopOpen: boolean
   channelCollections: SidebarCollection[]
   selectedCollectionId?: string
-  defaultCollectionId?: string
   summary: string
   visibility: BlogVisibility
   coverUrl: string
   coverUploading: boolean
   coverUploadError: string
+  outlineCount: number
+  flattenedOutline: FlattenedOutlineNode[]
+  activeHeadingLine: number | null
 }>()
 
 defineEmits<{
@@ -85,6 +132,8 @@ defineEmits<{
   (e: 'update:visibility', value: BlogVisibility): void
   (e: 'cover-upload', event: Event): void
   (e: 'remove-cover'): void
+  (e: 'jump-to-heading', line: number): void
+  (e: 'close'): void
 }>()
 
 const defaultCollection = computed(() => props.channelCollections.find(collection => collection.is_default))
@@ -112,14 +161,14 @@ const triggerCoverUpload = () => {
   border: 0;
   background: var(--a-color-bg);
   opacity: 0;
-  transform: translateX(-1rem);
+  transform: translateX(1rem);
   transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
   visibility: hidden;
 }
 
 .editor-sidebar.is-expanded {
   overflow-y: auto;
-  border-right: var(--a-border);
+  border-left: var(--a-border);
   opacity: 1;
   transform: translateX(0);
   visibility: visible;
@@ -127,6 +176,10 @@ const triggerCoverUpload = () => {
 
 .editor-sidebar-left {
   max-height: none;
+}
+
+.editor-sidebar__mobile-header {
+  display: none;
 }
 
 .left-section {
@@ -139,16 +192,6 @@ const triggerCoverUpload = () => {
 
 .left-section:last-child {
   border-bottom: none;
-}
-
-.publish-section {
-  gap: 0.75rem;
-}
-
-.publish-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .collection-selection {
@@ -218,8 +261,14 @@ details[open] > .settings-summary::before {
   gap: 0.5rem;
 }
 
+.toc-panel {
+  flex: 1;
+  min-height: 12rem;
+}
+
 .outline-tree {
   display: flex;
+  overflow-y: auto;
   flex-direction: column;
 }
 
@@ -284,43 +333,6 @@ details[open] > .settings-summary::before {
   display: none;
 }
 
-.collection-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.collection-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border: var(--a-border);
-  background: var(--a-color-bg);
-  cursor: pointer;
-  transition: background 120ms;
-}
-
-.collection-item.selected {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-}
-
-.collection-item.selected .badge-default {
-  border-color: var(--a-color-bg);
-  color: var(--a-color-bg);
-}
-
-.collection-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.86rem;
-  font-weight: 500;
-}
-
 .badge-default {
   padding: 0.2rem 0.4rem;
   border: 1.5px solid var(--a-color-border);
@@ -346,10 +358,40 @@ details[open] > .settings-summary::before {
 @media (max-width: 960px) {
   .editor-sidebar-left {
     position: absolute;
-    z-index: 3;
+    z-index: 6;
     inset: 0;
     display: none;
     max-height: none;
+  }
+
+  .editor-sidebar__mobile-header {
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: var(--a-border);
+  }
+
+  .editor-sidebar__mobile-header strong {
+    font-size: 0.86rem;
+  }
+
+  .editor-sidebar__mobile-header button {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--a-color-fg);
+    cursor: pointer;
+  }
+
+  .editor-sidebar__mobile-header button:focus-visible {
+    outline: 2px solid var(--a-color-fg);
+    outline-offset: -2px;
   }
 
   .editor-sidebar-left.is-open {
@@ -358,13 +400,6 @@ details[open] > .settings-summary::before {
     opacity: 1;
     transform: translateX(0);
     visibility: visible;
-  }
-}
-
-@media (max-width: 640px) {
-  .publish-actions :deep(.p-button) {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>

@@ -9,10 +9,32 @@
     </div>
 
     <div class="editor-topbar__actions">
-      <PButton type="button" variant="ghost" size="sm" aria-label="文章设置" title="文章设置" @click="$emit('toggle-settings')">
-        <PanelLeft :size="17" aria-hidden="true" />
+      <PSegmentedControl
+        :model-value="contentMode"
+        :options="contentModeOptions"
+        @update:model-value="value => $emit('update:content-mode', value as 'markdown' | 'visual')"
+      />
+      <PButton
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="previewOpen ? '关闭预览' : '打开预览'"
+        :title="previewOpen ? '关闭预览' : '打开预览'"
+        :aria-pressed="previewOpen"
+        @click="$emit('toggle-preview')"
+      >
+        <EyeOff v-if="previewOpen" :size="17" aria-hidden="true" />
+        <Eye v-else :size="17" aria-hidden="true" />
       </PButton>
-      <PButton type="button" variant="ghost" size="sm" aria-label="文档目录" title="文档目录" @click="$emit('toggle-outline')">
+      <PButton
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label="文章设置与目录"
+        title="文章设置与目录"
+        :aria-pressed="sidebarOpen"
+        @click="$emit('toggle-sidebar')"
+      >
         <PanelRight :size="17" aria-hidden="true" />
       </PButton>
       <PDropdown position="right" label="更多操作">
@@ -48,37 +70,42 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ArrowLeft, Ellipsis, History, PanelLeft, PanelRight, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Ellipsis, Eye, EyeOff, History, PanelRight, Upload } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
 type SaveTarget = 'draft' | 'published'
 
-const props = defineProps<{
+defineProps<{
   isEdit: boolean
   draftStatus: { text: string; tone: 'ok' | 'warn' | 'muted' }
   contentSource: 'empty' | 'imported' | 'manual'
   saving: SaveTarget | null
+  contentMode: 'markdown' | 'visual'
+  previewOpen?: boolean
+  sidebarOpen?: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'go-back'): void
-  (e: 'toggle-settings'): void
-  (e: 'toggle-outline'): void
+  (e: 'toggle-sidebar'): void
+  (e: 'toggle-preview'): void
+  (e: 'update:content-mode', value: 'markdown' | 'visual'): void
   (e: 'import-file', event: Event): void
-  (e: 'trigger-reimport'): void
   (e: 'open-version-history'): void
   (e: 'save-draft'): void
   (e: 'save-published'): void
 }>()
 
+const contentModeOptions: Array<{ label: string; value: 'markdown' | 'visual' }> = [
+  { label: 'Markdown', value: 'markdown' },
+  { label: '所见即所得', value: 'visual' },
+]
+
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const handleImport = () => {
-  if (props.contentSource === 'imported') {
-    emit('trigger-reimport')
-    return
-  }
   fileInput.value?.click()
 }
 </script>
@@ -103,6 +130,14 @@ const handleImport = () => {
   gap: 0.4rem;
 }
 
+.editor-topbar__identity {
+  flex: 1;
+}
+
+.editor-topbar__actions {
+  flex-shrink: 0;
+}
+
 .editor-topbar__title {
   font-size: 0.86rem;
   font-weight: 650;
@@ -114,6 +149,8 @@ const handleImport = () => {
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .editor-topbar__status.is-ok {
@@ -169,6 +206,22 @@ const handleImport = () => {
 
   .editor-topbar__actions {
     margin-left: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor-topbar {
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+
+  .editor-topbar__status {
+    display: none;
+  }
+
+  .editor-topbar :deep(.p-segmented-control-item) {
+    padding-inline: 0.5rem;
+    font-size: 0.7rem;
   }
 }
 </style>

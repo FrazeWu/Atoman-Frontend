@@ -1,5 +1,5 @@
 import { reportError } from '@/utils/logger'
-import { shallowRef } from 'vue'
+import { readonly, shallowRef } from 'vue'
 import { marked, type Token } from 'marked'
 import DOMPurify from 'dompurify'
 import type { ResolvedReference } from '@/api/references'
@@ -342,5 +342,9 @@ export function useMarkdownRenderer() {
     }
   }
 
-  return { renderMarkdown, renderMarkdownInline }
+  return {
+    renderMarkdown,
+    renderMarkdownInline,
+    runtimeState: readonly(markdownRuntimeState),
+  }
 }

@@ -106,23 +106,29 @@ function openNoteSheet(note: ShortNote) {
   }
 }
 
-async function load(reset = false) {
-  if (loading.value) return
-  if (reset) { page.value = 1; notes.value = [] }
+async function load(reset = false, requestedPage?: number) {
+  if (loading.value) return false
+  const targetPage = requestedPage ?? (reset ? 1 : page.value)
   loading.value = true
   error.value = ''
   try {
-    const suffix = new URLSearchParams({ page: String(page.value), page_size: '20' })
+    const suffix = new URLSearchParams({ page: String(targetPage), page_size: '20' })
     const response = await apiRequestEnvelope<ShortNote[], ListMeta>(`${api.blog.shortNotes}?${suffix}`)
-    notes.value.push(...response.data)
+    notes.value = reset ? response.data : [...notes.value, ...response.data]
+    page.value = targetPage
     hasMore.value = Boolean(response.meta?.has_more)
+    return true
   } catch {
     error.value = '短话加载失败，请重试'
+    return false
   } finally {
     loading.value = false
   }
 }
-function loadMore() { page.value += 1; void load() }
+function loadMore() {
+  if (loading.value || !hasMore.value) return
+  void load(false, page.value + 1)
+}
 async function publish(payload: { content: string; media_urls: string[] }) {
   if (publishing.value) return
   publishing.value = true

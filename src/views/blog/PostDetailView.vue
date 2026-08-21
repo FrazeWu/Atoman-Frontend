@@ -12,7 +12,7 @@
     <div v-else-if="errorStatus === 404" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight: 500;color:var(--a-color-disabled-border);margin-bottom:1rem">404</p>
       <p class="a-muted" style="margin-bottom:1.5rem">文章不存在</p>
-      <RouterLink to="/" class="a-link">← 返回文章</RouterLink>
+      <RouterLink to="/posts" class="a-link">← 返回文章</RouterLink>
     </div>
 
     <!-- Draft (only visible to owner) -->

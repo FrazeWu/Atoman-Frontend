@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ChevronLeft } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
@@ -43,18 +43,28 @@ const loading = ref(isEdit.value)
 const submitting = ref(false)
 const error = ref('')
 const headers = () => ({ 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) })
+let loadSequence = 0
 
 async function load() {
-  if (!isEdit.value) return
+  const sequence = ++loadSequence
+  loading.value = true
+  error.value = ''
+  note.value = null
+  if (!isEdit.value) {
+    loading.value = false
+    return
+  }
   try {
-    note.value = (await apiRequestEnvelope<ShortNote>(api.blog.shortNote(id.value))).data
+    const loaded = (await apiRequestEnvelope<ShortNote>(api.blog.shortNote(id.value))).data
+    if (sequence !== loadSequence) return
+    note.value = loaded
     if (note.value.user_id !== authStore.user?.uuid) {
       error.value = '你无权编辑这条短话'
     }
   } catch {
-    error.value = '短话不存在或暂时无法加载'
+    if (sequence === loadSequence) error.value = '短话不存在或暂时无法加载'
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 
@@ -74,7 +84,8 @@ async function save(payload: { content: string; media_urls: string[] }) {
   }
 }
 
-onMounted(load)
+watch(id, () => { void load() })
+onMounted(() => void load())
 </script>
 
 <style scoped>

@@ -32,6 +32,7 @@ export interface EditorDraftPayload extends PostEditorDraftForm {
 	context_key: string;
 	source_post_id?: string;
 	channel_id?: string;
+	collection_id?: string;
 	collection_ids: string[];
 }
 
@@ -275,7 +276,12 @@ export function usePostEditorDraftSession({
 		cover_url: draft.cover_url || "",
 		visibility: draft.visibility || "public",
 		channel_id: draft.channel_id,
-		collection_ids: draft.collection_ids || [],
+		collection_id: draft.collection_id,
+		collection_ids: draft.collection_ids?.length
+			? draft.collection_ids
+			: draft.collection_id
+				? [draft.collection_id]
+				: [],
 	});
 	const setPendingDraftCandidate = (candidate: DraftCandidate | null) => {
 		pendingDraftCandidate.value = candidate;
@@ -355,10 +361,14 @@ export function usePostEditorDraftSession({
 
 		serverDraftState.value = "syncing";
 		try {
+			const { collection_ids: _collectionIds, ...serverPayload } = payload;
 			const res = await apiRequestResult(api.blog.draft, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json", ...authHeaders() },
-				body: JSON.stringify(payload),
+				body: JSON.stringify({
+					...serverPayload,
+					collection_id: payload.collection_id || payload.collection_ids.at(-1),
+				}),
 			});
 			if (!res.ok) throw new Error("Failed to sync draft");
 			const data = res.data;

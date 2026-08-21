@@ -36,7 +36,7 @@
       <template v-if="postItem?.channel">
         <span class="blog-item-card__dot">·</span>
         <a
-          :href="`/channel/${postItem.channel.slug || postItem.channel.id}`"
+          :href="channelUrl(postItem.channel.slug || postItem.channel.id)"
           class="blog-item-card__channel"
           @click.stop
         >
@@ -102,6 +102,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
+import { channelUrl } from '@/router/siteUrls'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 
 export type BlogItemType = 'post' | 'short_note' | 'feed_item'

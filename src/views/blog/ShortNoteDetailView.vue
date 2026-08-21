@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ChevronLeft } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
@@ -50,10 +50,22 @@ const loading = ref(true)
 const error = ref('')
 const deletePending = ref<ShortNote | null>(null)
 const deleting = ref(false)
+let loadSequence = 0
 async function load() {
-  try { note.value = (await apiRequestEnvelope<ShortNote>(api.blog.shortNote(id.value))).data }
-  catch { error.value = '短话不存在或暂时无法加载' }
-  finally { loading.value = false }
+  const sequence = ++loadSequence
+  loading.value = true
+  error.value = ''
+  note.value = null
+  try {
+    const loaded = (await apiRequestEnvelope<ShortNote>(api.blog.shortNote(id.value))).data
+    if (sequence === loadSequence) note.value = loaded
+  }
+  catch {
+    if (sequence === loadSequence) error.value = '短话不存在或暂时无法加载'
+  }
+  finally {
+    if (sequence === loadSequence) loading.value = false
+  }
 }
 function remove(noteToRemove: ShortNote) {
   if (deleting.value) return
@@ -73,7 +85,8 @@ async function confirmRemove() {
     deletePending.value = null
   }
 }
-onMounted(load)
+watch(id, () => { void load() })
+onMounted(() => void load())
 </script>
 
 <style scoped>

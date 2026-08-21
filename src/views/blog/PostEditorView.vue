@@ -423,6 +423,7 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   visibility: form.value.visibility,
   channel_id: currentChannelId.value || derivedChannelId.value || undefined,
   collection_ids: Array.from(new Set(selectedCollectionIds.value)),
+  collection_id: primaryCollectionId.value || undefined,
 }))
 
 const {

@@ -703,7 +703,34 @@ onMounted(async () => {
 .editor-body :deep(.cm-scroller) {
   font-family: var(--a-font-sans, ui-sans-serif, system-ui, sans-serif) !important;
   font-size: 1.0625rem;
-  line-height: 1.8 !important;
+  line-height: 1.45 !important;
+}
+
+.editor-body :deep(.cm-line:first-child) {
+  padding-bottom: 0.25rem;
+}
+
+.editor-body :deep(.cm-gutters),
+.editor-body :deep(.cm-gutter.cm-lineNumberGutter) {
+  min-width: 38px;
+}
+
+.editor-body :deep(.cm-lineNumbers .cm-gutterElement) {
+  min-width: 38px !important;
+  padding: 0 4px !important;
+}
+
+.editor-body :deep(.cm-content) {
+  padding-inline: 0.75rem !important;
+}
+
+.editor-body :deep(.cm-activeLine) {
+  background-color: #fffdf0 !important;
+  box-shadow: -0.75rem 0 #fffdf0, 0.75rem 0 #fffdf0;
+}
+
+.editor-body :deep(.cm-activeLineGutter) {
+  background-color: #fffdf0 !important;
 }
 
 .draft-recovery-actions {

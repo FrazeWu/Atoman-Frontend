@@ -57,6 +57,7 @@
         </div>
       </li>
     </ul>
+    <StudioDashboardView title="频道概况" />
   </section>
 
   <PModal v-model="deleteModalOpen" title="删除频道" size="sm">
@@ -80,6 +81,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
+import StudioDashboardView from '@/views/studio/StudioDashboardView.vue'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioChannel } from '@/types'
 

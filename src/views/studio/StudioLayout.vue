@@ -20,25 +20,21 @@
     <div class="studio-frame">
       <aside id="studio-primary-navigation" class="studio-sidebar" :class="{ 'is-open': mobileNavOpen }">
         <nav data-testid="studio-primary-nav" aria-label="创作中心">
-          <RouterLink to="/studio" exact-active-class="is-active" @click="mobileNavOpen = false">
-            <LayoutDashboard :size="18" aria-hidden="true" />
-            <span>概览</span>
+          <RouterLink to="/studio/channel" active-class="is-active" @click="mobileNavOpen = false">
+            <RadioTower :size="18" aria-hidden="true" />
+            <span>频道管理</span>
           </RouterLink>
           <RouterLink to="/studio/blog" active-class="is-active" @click="mobileNavOpen = false">
             <FileText :size="18" aria-hidden="true" />
             <span>博客</span>
           </RouterLink>
-          <RouterLink to="/studio/podcast" active-class="is-active" @click="mobileNavOpen = false">
-            <Mic2 :size="18" aria-hidden="true" />
-            <span>播客</span>
-          </RouterLink>
           <RouterLink to="/studio/video" active-class="is-active" @click="mobileNavOpen = false">
             <Video :size="18" aria-hidden="true" />
             <span>视频</span>
           </RouterLink>
-          <RouterLink to="/studio/channel" active-class="is-active" @click="mobileNavOpen = false">
-            <RadioTower :size="18" aria-hidden="true" />
-            <span>频道管理</span>
+          <RouterLink to="/studio/podcast" active-class="is-active" @click="mobileNavOpen = false">
+            <Mic2 :size="18" aria-hidden="true" />
+            <span>播客</span>
           </RouterLink>
         </nav>
       </aside>
@@ -53,7 +49,15 @@
           <h1>还没有频道</h1>
           <RouterLink to="/studio/channel">创建频道</RouterLink>
         </section>
-        <RouterView v-else />
+        <RouterView v-else v-slot="{ Component }">
+          <StudioRouteSheet
+            v-if="Component"
+            :title="sheetTitle"
+            @close="closeSheet"
+          >
+            <component :is="Component" />
+          </StudioRouteSheet>
+        </RouterView>
       </main>
     </div>
   </div>
@@ -61,16 +65,30 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { FileText, LayoutDashboard, Menu, Mic2, RadioTower, Video } from 'lucide-vue-next'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { FileText, Menu, Mic2, RadioTower, Video } from 'lucide-vue-next'
 
 import StudioChannelSelector from '@/components/studio/StudioChannelSelector.vue'
+import StudioRouteSheet from '@/components/studio/StudioRouteSheet.vue'
+import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
+import type { StudioModule } from '@/types'
 
 const studio = useStudioStore()
 const route = useRoute()
+const router = useRouter()
 const mobileNavOpen = ref(false)
-const isChannelRoute = computed(() => route.path === '/studio/channel')
+const isChannelRoute = computed(() => route.path.startsWith('/studio/channel'))
+const sheetTitle = computed(() => {
+  if (route.path === '/studio/channel/collections') return '合集管理'
+  if (isChannelRoute.value) return '频道管理'
+  const module = route.params.module as StudioModule | undefined
+  return module ? studioModules[module].label : '创作中心'
+})
+
+function closeSheet() {
+  void router.replace('/studio/channel')
+}
 
 onMounted(() => {
   void studio.loadState()

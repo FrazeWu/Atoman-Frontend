@@ -8,8 +8,13 @@ export const studioRoutes: RouteRecordRaw[] = [
 		children: [
 			{
 				path: "",
-				name: "studio-dashboard",
-				component: () => import("@/views/studio/StudioDashboardView.vue"),
+				redirect: "/studio/channel",
+			},
+			{
+				path: "channel/collections",
+				name: "studio-channel-collections",
+				component: () =>
+					import("@/views/studio/StudioUnifiedCollectionsView.vue"),
 			},
 			{
 				path: "channel",
@@ -68,11 +73,6 @@ export const studioRoutes: RouteRecordRaw[] = [
 						path: "content",
 						name: "studio-content",
 						component: () => import("@/views/studio/StudioContentView.vue"),
-					},
-					{
-						path: "collections",
-						name: "studio-collections",
-						component: () => import("@/views/studio/StudioCollectionView.vue"),
 					},
 					{
 						path: "imports",

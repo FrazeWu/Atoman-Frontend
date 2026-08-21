@@ -1,6 +1,6 @@
 <template>
   <section class="studio-dashboard">
-    <PPageHeader title="创作工作台" mb="1.5rem">
+    <PPageHeader :title="title" mb="1.5rem">
       <template v-if="studio.dashboard" #action>
         <span data-testid="dashboard-subscriber-count" style="color:var(--a-color-muted);font-size:0.875rem">
           频道订阅 {{ formatNumber(studio.dashboard.channel_subscriber_count) }}
@@ -33,6 +33,10 @@ import { useStudioStore } from '@/stores/studio'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { StudioDashboardSection as DashboardSection, StudioModule } from '@/types'
 
+const props = withDefaults(defineProps<{ title?: string }>(), {
+  title: '创作工作台',
+})
+const title = computed(() => props.title)
 const studio = useStudioStore()
 const siteAccess = useSiteAccessStore()
 const loading = ref(true)

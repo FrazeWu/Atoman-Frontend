@@ -9,7 +9,7 @@
     "type-check:clean": "vue-tsc -p tsconfig.json --noEmit --pretty false --incremental false",
     "type-check:watch": "vue-tsc -p tsconfig.check.json --noEmit --pretty false --watch",
     "build": "vite build --mode production",
-    "archive:release-assets": "bun scripts/publish-release-assets.ts",
+    "archive:release-assets": "node --experimental-strip-types scripts/publish-release-assets.ts",
     "preview": "bun --bun vite preview",
     "test:unit": "NODE_ENV=test ./node_modules/.bin/vitest run --maxWorkers=4",
     "test:unit:ci": "NODE_ENV=test ./node_modules/.bin/vitest run --maxWorkers=4",

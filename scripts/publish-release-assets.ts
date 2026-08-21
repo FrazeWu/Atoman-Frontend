@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 
 const bucketName = process.env.FRONTEND_RELEASE_ASSET_BUCKET || 'atoman-frontend-releases'
 const distAssetsDirectory = join(process.cwd(), 'dist', 'assets')
-const concurrency = 4
+const concurrency = 1
 
 const contentTypes = {
   '.avif': 'image/avif',
@@ -33,7 +33,7 @@ async function listFiles(directory: string): Promise<string[]> {
 
 function runWrangler(arguments_: string[]) {
   return new Promise<void>((resolve, reject) => {
-    const process_ = spawn('bunx', ['--bun', 'wrangler', ...arguments_], {
+    const process_ = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['wrangler', ...arguments_], {
       stdio: 'inherit',
     })
     process_.once('error', reject)

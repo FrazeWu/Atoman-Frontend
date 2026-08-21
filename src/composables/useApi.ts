@@ -173,6 +173,9 @@ export function useApi() {
 			dashboard: `${apiUrl}/studio/dashboard`,
 			contents: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/contents`,
+			unifiedContents: `${apiUrl}/studio/contents`,
+			unifiedCollections: `${apiUrl}/studio/collections`,
+			unifiedCollection: (id: string) => `${apiUrl}/studio/collections/${id}`,
 			collections: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/collections`,
 			collection: (module: "blog" | "podcast" | "video", id: string) =>

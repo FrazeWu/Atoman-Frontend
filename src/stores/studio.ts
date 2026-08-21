@@ -63,6 +63,7 @@ export const useStudioStore = defineStore("studio", () => {
 		emptyModuleRecord<StudioPagination | null>(() => null),
 	);
 	const collections = ref(emptyModuleRecord<StudioCollection[]>(() => []));
+	const unifiedCollections = ref<StudioCollection[]>([]);
 	const analytics = ref(emptyModuleRecord<StudioAnalytics | null>(() => null));
 	const interactions = ref(
 		emptyModuleRecord<StudioInteractionItem[]>(() => []),
@@ -229,6 +230,34 @@ export const useStudioStore = defineStore("studio", () => {
 			return;
 		contents.value[module] = response.data ?? [];
 		contentPagination.value[module] = response.meta ?? null;
+	}
+
+	async function loadUnifiedCollections() {
+		const requestChannelID = channelID();
+		unifiedCollections.value = await apiGet<StudioCollection[]>(
+			appendQuery(api.unifiedCollections, { channel_id: requestChannelID }),
+		);
+	}
+
+	async function createUnifiedCollection(input: StudioCollectionInput) {
+		await apiPostJson<StudioCollection>(api.unifiedCollections, {
+			...input,
+			channel_id: channelID(),
+		});
+		await loadUnifiedCollections();
+	}
+
+	async function updateUnifiedCollection(
+		id: string,
+		input: StudioCollectionInput,
+	) {
+		await apiPatchJson<StudioCollection>(api.unifiedCollection(id), input);
+		await loadUnifiedCollections();
+	}
+
+	async function deleteUnifiedCollection(id: string) {
+		await apiDeleteJson(api.unifiedCollection(id));
+		await loadUnifiedCollections();
 	}
 
 	async function loadCollections(module: StudioModule, track = true) {
@@ -447,6 +476,7 @@ export const useStudioStore = defineStore("studio", () => {
 		contents,
 		contentPagination,
 		collections,
+		unifiedCollections,
 		analytics,
 		interactions,
 		interactionPagination,
@@ -457,6 +487,10 @@ export const useStudioStore = defineStore("studio", () => {
 		loadDashboard,
 		loadContents,
 		loadCollections,
+		loadUnifiedCollections,
+		createUnifiedCollection,
+		updateUnifiedCollection,
+		deleteUnifiedCollection,
 		createCollection,
 		updateCollection,
 		deleteCollection,

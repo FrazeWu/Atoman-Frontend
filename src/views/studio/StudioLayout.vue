@@ -201,7 +201,11 @@ onMounted(() => {
     border-right: 0;
     border-bottom: 1px solid var(--a-color-border-soft);
   }
-  .studio-sidebar.is-open { display: block; }
+  .studio-sidebar.is-open {
+    position: relative;
+    z-index: calc(var(--a-z-player-sheet) + 1);
+    display: block;
+  }
   .studio-sidebar nav {
     position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));

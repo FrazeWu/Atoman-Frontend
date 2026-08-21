@@ -2,8 +2,8 @@
   <div data-testid="studio-collection-manager" class="studio-collections">
     <header class="studio-collections__heading">
       <div>
-        <h2>{{ config.label }}合集</h2>
-        <p>整理当前频道中的{{ config.itemLabel }}。</p>
+        <h2>合集</h2>
+        <p>整理当前频道的内容。</p>
       </div>
       <PButton data-testid="new-collection" size="sm" @click="startCreate">
         <Plus :size="16" aria-hidden="true" />
@@ -27,15 +27,15 @@
         :rows="3"
       />
       <div class="studio-collections__form-actions">
-        <PButton type="button" variant="ghost" size="sm" @click="cancelEdit">取消</PButton>
+        <PButton data-testid="cancel-collection" type="button" variant="ghost" size="sm" @click="cancelEdit">取消</PButton>
         <PButton data-testid="save-collection" type="button" size="sm" :loading="saving" @click="saveCollection">保存</PButton>
       </div>
     </form>
 
     <p v-if="error" class="studio-collections__error" role="alert">{{ error }}</p>
 
-    <ul v-if="studio.collections[module].length" class="studio-collections__list">
-      <li v-for="collection in studio.collections[module]" :key="collection.id">
+    <ul v-if="studio.unifiedCollections.length" class="studio-collections__list">
+      <li v-for="collection in studio.unifiedCollections" :key="collection.id">
         <div class="studio-collections__identity">
           <div class="studio-collections__name">
             <strong>{{ collection.name }}</strong>
@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 
 import PButton from '@/components/ui/PButton.vue'
@@ -94,14 +94,11 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioCollection, StudioModule } from '@/types'
+import type { StudioCollection } from '@/types'
 
-const props = defineProps<{ module: StudioModule }>()
 const emit = defineEmits<{ changed: [] }>()
 const studio = useStudioStore()
-const config = computed(() => studioModules[props.module])
 const editing = ref(false)
 const editingID = ref('')
 const saving = ref(false)
@@ -114,6 +111,10 @@ const deleteModalOpen = computed({
   set: value => { if (!value) pendingDelete.value = null },
 })
 const draft = reactive({ name: '', description: '' })
+
+watch(editing, () => {
+  if (!editing.value) pendingDelete.value = null
+})
 
 function resetDraft() {
   editing.value = false
@@ -152,8 +153,8 @@ async function saveCollection() {
   error.value = ''
   try {
     const input = { name, description: draft.description.trim() }
-    if (editingID.value) await studio.updateCollection(props.module, editingID.value, input)
-    else await studio.createCollection(props.module, input)
+    if (editingID.value) await studio.updateUnifiedCollection(editingID.value, input)
+    else await studio.createUnifiedCollection(input)
     resetDraft()
     emit('changed')
   } catch (cause) {
@@ -167,8 +168,9 @@ async function deleteCollection() {
   if (!pendingDelete.value || pendingDelete.value.is_default) return
   deleting.value = true
   error.value = ''
+  const collection = pendingDelete.value
   try {
-    await studio.deleteCollection(props.module, pendingDelete.value.id)
+    await studio.deleteUnifiedCollection(collection.id)
     pendingDelete.value = null
     emit('changed')
   } catch (cause) {

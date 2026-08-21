@@ -1,5 +1,5 @@
 <template>
-  <Teleport to="body" :disabled="isTest">
+  <Teleport to="body" :disabled="isTest || !teleport">
     <div class="p-sheet-root" :class="{ 'p-sheet-root--above-player': abovePlayer }">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade" appear>
@@ -126,6 +126,7 @@ const props = withDefaults(defineProps<{
   index?: number
   showBackdrop?: boolean
   abovePlayer?: boolean
+  teleport?: boolean
 }>(), {
   title: '',
   width: 'min(100%, 480px)',
@@ -139,6 +140,7 @@ const props = withDefaults(defineProps<{
   stackSize: 1,
   showBackdrop: true,
   abovePlayer: false,
+  teleport: true,
 })
 
 defineEmits(['close', 'activate'])

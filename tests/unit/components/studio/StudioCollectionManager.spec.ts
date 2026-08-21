@@ -12,10 +12,10 @@ const PModal = {
 };
 
 describe("StudioCollectionManager", () => {
-	it("creates renames and deletes module collections", async () => {
+	it("creates renames and deletes unified collections", async () => {
 		const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
 		const store = useStudioStore(pinia);
-		store.collections.blog = [
+		store.unifiedCollections = [
 			{
 				id: "collection-1",
 				channel_id: "channel-1",
@@ -40,7 +40,7 @@ describe("StudioCollectionManager", () => {
 			.setValue("新描述");
 		await wrapper.find('[data-testid="save-collection"]').trigger("click");
 		await flushPromises();
-		expect(store.createCollection).toHaveBeenCalledWith("blog", {
+		expect(store.createUnifiedCollection).toHaveBeenCalledWith({
 			name: "新合集",
 			description: "新描述",
 		});
@@ -51,11 +51,10 @@ describe("StudioCollectionManager", () => {
 		await wrapper.find('[data-testid="collection-name"]').setValue("新名称");
 		await wrapper.find('[data-testid="save-collection"]').trigger("click");
 		await flushPromises();
-		expect(store.updateCollection).toHaveBeenCalledWith(
-			"blog",
-			"collection-1",
-			{ name: "新名称", description: "旧描述" },
-		);
+		expect(store.updateUnifiedCollection).toHaveBeenCalledWith("collection-1", {
+			name: "新名称",
+			description: "旧描述",
+		});
 
 		await wrapper
 			.find('[data-testid="delete-collection-collection-1"]')
@@ -64,13 +63,13 @@ describe("StudioCollectionManager", () => {
 			.find('[data-testid="confirm-delete-collection"]')
 			.trigger("click");
 		await flushPromises();
-		expect(store.deleteCollection).toHaveBeenCalledWith("blog", "collection-1");
+		expect(store.deleteUnifiedCollection).toHaveBeenCalledWith("collection-1");
 	});
 
 	it("keeps the default collection visible without a delete action", () => {
 		const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
 		const store = useStudioStore(pinia);
-		store.collections.blog = [
+		store.unifiedCollections = [
 			{
 				id: "collection-default",
 				channel_id: "channel-1",
@@ -85,7 +84,6 @@ describe("StudioCollectionManager", () => {
 		];
 
 		const wrapper = mount(StudioCollectionManager, {
-			props: { module: "blog" },
 			global: { plugins: [pinia], stubs: { PModal } },
 		});
 
@@ -95,5 +93,37 @@ describe("StudioCollectionManager", () => {
 				.find('[data-testid="delete-collection-collection-default"]')
 				.exists(),
 		).toBe(false);
+	});
+
+	it("cancels an active edit", async () => {
+		const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
+		const store = useStudioStore(pinia);
+		store.unifiedCollections = [
+			{
+				id: "collection-1",
+				channel_id: "channel-1",
+				content_type: "blog",
+				name: "博客合集",
+				description: "",
+				cover_url: "",
+				is_default: false,
+				created_at: "",
+				updated_at: "",
+			},
+		];
+		const wrapper = mount(StudioCollectionManager, {
+			props: { module: "blog" },
+			global: { plugins: [pinia], stubs: { PModal } },
+		});
+
+		await wrapper
+			.find('[data-testid="edit-collection-collection-1"]')
+			.trigger("click");
+		expect(wrapper.find('[data-testid="collection-name"]').exists()).toBe(true);
+
+		await wrapper.find('[data-testid="cancel-collection"]').trigger("click");
+		expect(wrapper.find('[data-testid="collection-name"]').exists()).toBe(
+			false,
+		);
 	});
 });

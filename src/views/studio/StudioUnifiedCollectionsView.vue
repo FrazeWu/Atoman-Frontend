@@ -3,48 +3,26 @@
     <header class="studio-unified-collections__header">
       <div>
         <h1>合集管理</h1>
-        <p>按内容类型管理当前频道的合集。</p>
-      </div>
-      <PSegmentedControl v-model="module" :options="moduleOptions" />
+        <p>整理当前频道的内容。</p>
     </header>
 
     <p v-if="loading" class="studio-unified-collections__message">加载中...</p>
     <p v-else-if="error" class="studio-unified-collections__message studio-unified-collections__message--error" role="alert">
       {{ error }}
     </p>
-    <StudioCollectionManager v-else :module="module" />
+    <StudioCollectionManager v-else />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
 
 import StudioCollectionManager from '@/components/studio/StudioCollectionManager.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioModule } from '@/types'
 
-const route = useRoute()
-const router = useRouter()
 const studio = useStudioStore()
 const loading = ref(true)
 const error = ref('')
-const modules: StudioModule[] = ['blog', 'video', 'podcast']
-const moduleOptions = modules.map((value) => ({ label: studioModules[value].label, value }))
-
-const module = computed<StudioModule>({
-  get: () => {
-    const type = route.query.type
-    return typeof type === 'string' && modules.includes(type as StudioModule)
-      ? type as StudioModule
-      : 'blog'
-  },
-  set: (value) => {
-    void router.replace({ query: { ...route.query, type: value } })
-  },
-})
 
 let latestRequest = 0
 
@@ -54,7 +32,7 @@ async function loadCollections() {
   error.value = ''
   try {
     await studio.loadState()
-    if (studio.currentChannel) await studio.loadCollections(module.value)
+    if (studio.currentChannel) await studio.loadUnifiedCollections()
   } catch (cause) {
     if (request === latestRequest) error.value = cause instanceof Error ? cause.message : '加载失败'
   } finally {
@@ -63,7 +41,6 @@ async function loadCollections() {
 }
 
 onMounted(loadCollections)
-watch(module, loadCollections)
 </script>
 
 <style scoped>

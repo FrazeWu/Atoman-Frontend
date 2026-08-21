@@ -4,6 +4,7 @@
       <div>
         <h1>合集管理</h1>
         <p>整理当前频道的内容。</p>
+      </div>
     </header>
 
     <p v-if="loading" class="studio-unified-collections__message">加载中...</p>

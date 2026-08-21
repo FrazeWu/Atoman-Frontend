@@ -17,8 +17,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted } from 'vue'
+import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { apiRequest } from '@/api/client'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
@@ -26,6 +27,13 @@ import { usePlayerStore } from '@/stores/player'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[]
+    gtag?: (...args: unknown[]) => void
+  }
+}
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
@@ -41,9 +49,20 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const hasActiveTrack = computed(() => Boolean(player.currentSong))
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
 
+const reportPageView = () => {
+  if (isAuthRoute.value) return
+  void apiRequest('/api/v1/site/visits', { method: 'POST', keepalive: true }).catch(() => {})
+  const ga = window.gtag
+  if (typeof ga === 'function') {
+    ga('event', 'page_view', { page_path: route.fullPath, page_location: window.location.href })
+  }
+}
+
+watch(() => route.fullPath, reportPageView)
+
 onMounted(() => {
+  reportPageView()
   if (localStorage.getItem('atoman_transition_relay')) {
-    transition.triggerEntry()
     checkRelay()
   } else if (localStorage.getItem('atoman_transition_relay_basic')) {
     transition.triggerEntry()

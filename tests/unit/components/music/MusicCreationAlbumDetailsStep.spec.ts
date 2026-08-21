@@ -106,7 +106,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		["专辑", "album"],
 		["歌曲", "single"],
 	])(
-		"keeps the %s description collapsed until requested",
+		"renders the %s description as a normal editable field",
 		async (_label, type) => {
 			const drawers = useMusicDrawers();
 			drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
@@ -117,17 +117,11 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			flow.draft.albumDetails.bio = "Existing description";
 
 			const wrapper = mount(MusicCreationAlbumDetailsStep);
-			const toggle = wrapper.get('[data-testid="album-details-bio-toggle"]');
-			expect(toggle.attributes("aria-expanded")).toBe("false");
-			expect(
-				wrapper.find('[data-testid="album-details-bio-input"]').exists(),
-			).toBe(false);
-
-			await toggle.trigger("click");
-			expect(toggle.attributes("aria-expanded")).toBe("true");
-			expect(
-				wrapper.get('[data-testid="album-details-bio-input"]').element,
-			).toHaveProperty("value", "Existing description");
+			expect(wrapper.find('[data-testid="album-details-bio-toggle"]').exists()).toBe(false);
+			expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveProperty(
+				"value",
+				"Existing description",
+			);
 		},
 	);
 
@@ -589,9 +583,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(
 			wrapper.get('[data-testid="album-details-type-input"]').element,
 		).toHaveValue("album");
-		await wrapper
-			.get('[data-testid="album-details-bio-toggle"]')
-			.trigger("click");
+		expect(wrapper.find('[data-testid="album-details-bio-toggle"]').exists()).toBe(false);
 		expect(
 			wrapper.get('[data-testid="album-details-bio-input"]').element,
 		).toHaveValue("second studio album");

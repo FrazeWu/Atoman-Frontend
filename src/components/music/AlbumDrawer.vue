@@ -67,6 +67,7 @@ const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const expandedTrackId = ref<string | null>(null)
+const descriptionExpanded = ref(false)
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const {
   favoriteSongIds,
@@ -348,6 +349,7 @@ async function loadAlbum(albumId: string | null) {
   favoriteSongIds.value = new Set()
   lyricTrack.value = null
   expandedTrackId.value = null
+  descriptionExpanded.value = false
   errorMessage.value = ''
   redirectMessage.value = ''
   isCoverBroken.value = false
@@ -619,7 +621,20 @@ watch(
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
             <span v-if="tracks.length" class="track-count">{{ tracks.length }} 首</span>
           </div>
-          <p class="summary">{{ album?.description || '暂无专辑简介。' }}</p>
+          <div class="summary-section">
+            <button
+              type="button"
+              class="summary-toggle"
+              :aria-expanded="descriptionExpanded"
+              aria-controls="album-description"
+              data-testid="album-description-toggle"
+              @click="descriptionExpanded = !descriptionExpanded"
+            >
+              <span>简介</span>
+              <ChevronDown :size="16" aria-hidden="true" />
+            </button>
+            <p v-if="descriptionExpanded" id="album-description" class="summary">{{ album?.description || '暂无专辑简介。' }}</p>
+          </div>
           <div class="album-actions">
             <PButton
               variant="primary"
@@ -1010,8 +1025,33 @@ watch(
   margin-right: 0.75rem;
   color: var(--a-color-border-soft);
 }
+.summary-section {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 44rem;
+}
+.summary-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 3px;
+}
+.summary-toggle svg { transition: transform 0.18s ease; }
+.summary-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .summary {
-  display: -webkit-box;
   max-width: 44rem;
   overflow: hidden;
   color: var(--a-color-muted);
@@ -1019,8 +1059,6 @@ watch(
   line-height: 1.6;
   margin: 0;
   white-space: pre-wrap;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 
 .album-actions {

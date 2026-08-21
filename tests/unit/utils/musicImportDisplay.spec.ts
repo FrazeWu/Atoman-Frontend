@@ -47,7 +47,9 @@ describe("music import album display", () => {
 				}),
 			),
 		).toBe("Late Registration");
+	});
 
+	it("uses the archive filename while metadata is still unavailable", () => {
 		expect(
 			musicImportAlbumTitle(
 				importRecord({
@@ -57,7 +59,8 @@ describe("music import album display", () => {
 					],
 				}),
 			),
-		).toBe("未命名专辑");
+		).toBe("upload");
+		expect(musicImportAlbumTitle(importRecord())).toBe("待上传专辑");
 	});
 
 	it("counts repeated sessions for the same target album once", () => {

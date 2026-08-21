@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { parseBlob } from 'music-metadata-browser'
-import { ChevronDown, FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
+import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
@@ -72,7 +72,6 @@ const trackAudioInputRef = ref<HTMLInputElement | null>(null)
 const pendingAudioTrackId = ref<string | null>(null)
 const trackAudioUploading = ref(false)
 const trackAudioError = ref('')
-const bioExpanded = ref(false)
 const activeTrackUploads = new Map<string, AbortController>()
 
 onUnmounted(() => {
@@ -500,31 +499,14 @@ watch(
             </p>
           </div>
         </div>
-        <div
-          class="field-group album-details-step__bio-field"
-          :class="{ 'is-expanded': bioExpanded }"
-          data-testid="album-details-field"
-          data-field="bio"
-        >
-          <button
-            type="button"
-            class="album-details-step__bio-toggle"
-            :aria-expanded="bioExpanded"
-            aria-controls="album-details-description"
-            :title="bioExpanded ? '收起简介' : '展开简介'"
-            data-testid="album-details-bio-toggle"
-            @click="bioExpanded = !bioExpanded"
-          >
-            <span>简介</span>
-            <ChevronDown :size="18" aria-hidden="true" />
-          </button>
+        <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
           <PTextarea
-            v-if="bioExpanded"
             id="album-details-description"
             v-model="albumDetailsDraft.bio"
             data-testid="album-details-bio-input"
-            :rows="3"
+            :rows="5"
             :placeholder="detailsDescriptionPlaceholder"
+            label="简介"
             aria-label="简介"
           />
         </div>
@@ -748,7 +730,7 @@ watch(
   align-items: stretch;
 }
 
-/* 左侧发行信息，右侧简介按需展开 */
+/* 左侧发行信息，右侧简介 */
 .album-details-step__content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
@@ -794,37 +776,6 @@ watch(
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-sm);
-}
-
-.album-details-step__bio-toggle {
-  display: flex;
-  min-height: 44px;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
-  font: inherit;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
-.album-details-step__bio-toggle:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
-  outline-offset: 3px;
-}
-
-.album-details-step__bio-toggle svg {
-  flex: 0 0 auto;
-  transition: transform 0.18s ease;
-}
-
-.album-details-step__bio-field.is-expanded .album-details-step__bio-toggle svg {
-  transform: rotate(180deg);
 }
 
 .album-details-step__bio-field :deep(.p-field) {
@@ -1495,9 +1446,4 @@ watch(
   line-height: 1.3;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .album-details-step__bio-toggle svg {
-    transition: none;
-  }
-}
 </style>

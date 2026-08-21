@@ -216,6 +216,24 @@ describe("AlbumDrawer.vue", () => {
 		).toBe("false");
 	});
 
+	it("collapses album description by default", async () => {
+		getMusicAlbum.mockResolvedValueOnce({
+			id: "1",
+			title: "Test Album",
+			description: "Album notes",
+			entry_status: "open",
+			songs: [],
+		});
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		const toggle = wrapper.get('[data-testid="album-description-toggle"]');
+		expect(toggle.attributes("aria-expanded")).toBe("false");
+		expect(wrapper.find("#album-description").exists()).toBe(false);
+		await toggle.trigger("click");
+		expect(toggle.attributes("aria-expanded")).toBe("true");
+		expect(wrapper.get("#album-description").text()).toBe("Album notes");
+	});
 	it("renders every track returned by album details without pagination", async () => {
 		getMusicAlbum.mockResolvedValue({
 			id: "1",

@@ -103,23 +103,17 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("keeps the seed-step description collapsed until requested", async () => {
+	it("renders the seed-step description as a normal editable field", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
 		flow.draft.albumDetails.bio = "Seed description";
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 
-		const toggle = wrapper.get('[data-testid="album-seed-bio-toggle"]');
-		expect(toggle.attributes("aria-expanded")).toBe("false");
-		expect(
-			wrapper.find('[data-testid="album-details-bio-input"]').exists(),
-		).toBe(false);
-
-		await toggle.trigger("click");
-		expect(toggle.attributes("aria-expanded")).toBe("true");
-		expect(
-			wrapper.get('[data-testid="album-details-bio-input"]').element,
-		).toHaveProperty("value", "Seed description");
+		expect(wrapper.find('[data-testid="album-seed-bio-toggle"]').exists()).toBe(false);
+		expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveProperty(
+			"value",
+			"Seed description",
+		);
 	});
 
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {

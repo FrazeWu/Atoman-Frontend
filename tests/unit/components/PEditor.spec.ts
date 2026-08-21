@@ -326,6 +326,23 @@ describe('PEditor', () => {
     expect(wrapper.find('.cm-lineNumbers').exists()).toBe(false)
   })
 
+  it('keeps protected title spacing inside the measured live-preview line box', async () => {
+    const wrapper = await mountEditor({
+      modelValue: '# title\nbody',
+      mode: FUTURE_NORMAL_MODE,
+      protectFirstLine: true,
+      lineNumbers: true,
+      livePreview: true,
+    })
+    const codeMirrorStyles = Array.from(document.querySelectorAll('style'))
+      .map(style => style.textContent || '')
+      .join('\n')
+
+    expect(wrapper.attributes('data-live-preview')).toBe('true')
+    expect(codeMirrorStyles).toContain('padding-bottom: 0.75rem')
+    expect(codeMirrorStyles).not.toContain('margin-bottom: 0.75rem')
+  })
+
   it('preserves the full line when applying a line prefix from the middle', async () => {
     const wrapper = await mountEditor({
       modelValue: '# title\nabcdef',

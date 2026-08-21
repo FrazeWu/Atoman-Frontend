@@ -730,7 +730,7 @@ function initCodeMirror() {
           fontSize: '1.5rem',
           lineHeight: '1.35',
           fontWeight: '700',
-          marginBottom: '0.75rem',
+          paddingBottom: '0.75rem',
           display: 'block',
         },
       })

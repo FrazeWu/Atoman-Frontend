@@ -33,7 +33,7 @@ async function listFiles(directory: string): Promise<string[]> {
 
 function runWrangler(arguments_: string[]) {
   return new Promise<void>((resolve, reject) => {
-    const process_ = spawn('bunx', ['--bun', 'wrangler', ...arguments_], {
+    const process_ = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['wrangler', ...arguments_], {
       stdio: 'inherit',
     })
     process_.once('error', reject)

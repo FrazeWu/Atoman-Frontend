@@ -8,6 +8,7 @@ import { createSheetStack } from '@/composables/useSheetStack'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import SiteFooterSheet from './footer/SiteFooterSheet.vue'
+import SiteVisitStats from './SiteVisitStats.vue'
 
 type FooterSheetLayer = {
   key: FootbarPanel
@@ -60,6 +61,7 @@ function openPanel(panel: FootbarPanel, label: string) {
 
       <div class="site-footer-row site-footer-secondary">
         <span>© {{ copyrightYear }} 凹凸庵</span>
+        <SiteVisitStats />
         <div class="site-footer-meta">
           <button
             v-for="link in secondaryLinks"

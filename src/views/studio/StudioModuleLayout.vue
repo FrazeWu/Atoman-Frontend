@@ -38,7 +38,10 @@ const router = useRouter()
 const matchedRoute = inject(matchedRouteKey, undefined)
 const module = computed(() => (route.params.module ?? route.meta.studioModule) as StudioModule)
 const config = computed(() => studioModules[module.value])
-const overlayTitle = computed(() => String(route.meta.studioOverlayTitle || '编辑内容'))
+const overlayTitle = computed(() => {
+  const mode = route.meta.studioOverlayMode === 'new' ? '新建' : '编辑'
+  return `${mode}${config.value?.label || '内容'}`
+})
 
 function closeOverlay() {
   router.back()

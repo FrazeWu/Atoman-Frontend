@@ -6,6 +6,11 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole, isModeratorRole, isOwnerRole } from '@/utils/roles'
 
 const disabledTarget = { path: '/__disabled__' }
+const studioFeatureGates = {
+  blog: { module: 'blog', feature: 'post.create' },
+  podcast: { module: 'podcast', feature: 'podcast.publish' },
+  video: { module: 'video', feature: 'video.publish' },
+} as const
 const publicSystemPaths = new Set([
   '/login',
   '/register',
@@ -71,7 +76,12 @@ export function installRouteGuards(router: Router) {
       }
     }
 
-    const featureGate = to.meta.featureGate as { module: Parameters<typeof siteAccessStore.isFeatureEnabled>[0]; feature: Parameters<typeof siteAccessStore.isFeatureEnabled>[1] } | undefined
+    const configuredFeatureGate = to.meta.featureGate as { module: Parameters<typeof siteAccessStore.isFeatureEnabled>[0]; feature: Parameters<typeof siteAccessStore.isFeatureEnabled>[1] } | undefined
+    const studioModule = String(to.params.module)
+    const studioFeatureGate = to.meta.studioOverlay && studioModule in studioFeatureGates
+      ? studioFeatureGates[studioModule as keyof typeof studioFeatureGates]
+      : undefined
+    const featureGate = configuredFeatureGate ?? studioFeatureGate
     if (!isSettingRoute && !isPublicSystemRoute && featureGate && !siteAccessStore.isFeatureEnabled(featureGate.module, featureGate.feature)) {
       return disabledTarget
     }

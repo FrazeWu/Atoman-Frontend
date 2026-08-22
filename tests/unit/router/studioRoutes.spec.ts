@@ -28,13 +28,37 @@ describe('studio routes', () => {
       '/studio/:module(blog|podcast|video)/analytics',
       '/studio/:module(blog|podcast|video)/interactions',
       '/studio/:module(blog|podcast|video)/settings',
-      '/studio/blog/new',
-      '/studio/blog/:id/edit',
-      '/studio/podcast/new',
-      '/studio/podcast/:id/edit',
-      '/studio/video/new',
-      '/studio/video/:id/edit',
+      '/studio/:module(blog|podcast|video)/new',
+      '/studio/:module(blog|podcast|video)/:id/edit',
     ]))
+  })
+
+  it('keeps the module parent mounted while adding an editor overlay', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
+    await router.push('/studio/blog/content')
+    const moduleParent = router.currentRoute.value.matched[1]
+    const contentView = router.currentRoute.value.matched[2]?.components?.default
+
+    await router.push('/studio/blog/new')
+
+    expect(router.currentRoute.value.matched[1]).toBe(moduleParent)
+    expect(router.currentRoute.value.name).toBe('studio-content-new')
+    expect(router.currentRoute.value.matched[2]?.components?.default).toBe(contentView)
+    expect(router.currentRoute.value.matched[2]?.components?.overlay).toBeDefined()
+  })
+
+  it('resolves every editor URL through the shared module route', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
+    for (const path of [
+      '/studio/blog/new',
+      '/studio/blog/post-1/edit',
+      '/studio/podcast/new',
+      '/studio/podcast/episode-1/edit',
+      '/studio/video/new',
+      '/studio/video/video-1/edit',
+    ]) {
+      expect(router.resolve(path).name).toMatch(/^studio-content-(new|edit)$/)
+    }
   })
 
   it('removes every legacy creator route from the application', () => {

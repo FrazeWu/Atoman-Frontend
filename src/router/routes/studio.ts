@@ -1,5 +1,8 @@
 import type { RouteRecordRaw } from "vue-router";
 
+const studioContentView = () => import("@/views/studio/StudioContentView.vue");
+const studioEditorRouteView = () => import("@/views/studio/StudioEditorRouteView.vue");
+
 export const studioRoutes: RouteRecordRaw[] = [
 	{
 		path: "/studio",
@@ -23,108 +26,6 @@ export const studioRoutes: RouteRecordRaw[] = [
 				component: () => import("@/views/studio/StudioChannelView.vue"),
 			},
 			{
-				path: "blog",
-				component: () => import("@/views/studio/StudioModuleLayout.vue"),
-				meta: { studioModule: "blog" },
-				children: [
-					{ path: "", redirect: "/studio/blog/content" },
-					{
-						path: "new",
-						name: "studio-blog-new",
-						components: {
-							default: () => import("@/views/studio/StudioContentView.vue"),
-							overlay: () => import("@/views/blog/PostEditorView.vue"),
-						},
-						meta: {
-							studioOverlay: true,
-							studioOverlayTitle: "新建博客",
-							featureGate: { module: "blog", feature: "post.create" },
-						},
-					},
-					{
-						path: ":id/edit",
-						name: "studio-blog-edit",
-						components: {
-							default: () => import("@/views/studio/StudioContentView.vue"),
-							overlay: () => import("@/views/blog/PostEditorView.vue"),
-						},
-						meta: {
-							studioOverlay: true,
-							studioOverlayTitle: "编辑博客",
-							featureGate: { module: "blog", feature: "post.create" },
-						},
-					},
-				],
-			},
-			{
-				path: "podcast",
-				component: () => import("@/views/studio/StudioModuleLayout.vue"),
-				meta: { studioModule: "podcast" },
-				children: [
-					{ path: "", redirect: "/studio/podcast/content" },
-					{
-						path: "new",
-						name: "studio-podcast-new",
-						components: {
-							default: () => import("@/views/studio/StudioContentView.vue"),
-							overlay: () => import("@/views/podcast/PodcastEditorView.vue"),
-						},
-						meta: {
-							studioOverlay: true,
-							studioOverlayTitle: "新建播客",
-							featureGate: { module: "podcast", feature: "podcast.publish" },
-						},
-					},
-					{
-						path: ":id/edit",
-						name: "studio-podcast-edit",
-						components: {
-							default: () => import("@/views/studio/StudioContentView.vue"),
-							overlay: () => import("@/views/podcast/PodcastEditorView.vue"),
-						},
-						meta: {
-							studioOverlay: true,
-							studioOverlayTitle: "编辑播客",
-							featureGate: { module: "podcast", feature: "podcast.publish" },
-						},
-					},
-				],
-			},
-			{
-				path: "video",
-				component: () => import("@/views/studio/StudioModuleLayout.vue"),
-				meta: { studioModule: "video" },
-				children: [
-					{ path: "", redirect: "/studio/video/content" },
-					{
-						path: "new",
-						name: "studio-video-new",
-						components: {
-							default: () => import("@/views/studio/StudioContentView.vue"),
-							overlay: () => import("@/views/video/VideoEditorView.vue"),
-						},
-						meta: {
-							studioOverlay: true,
-							studioOverlayTitle: "新建视频",
-							featureGate: { module: "video", feature: "video.publish" },
-						},
-					},
-					{
-						path: ":id/edit",
-						name: "studio-video-edit",
-						components: {
-							default: () => import("@/views/studio/StudioContentView.vue"),
-							overlay: () => import("@/views/video/VideoEditorView.vue"),
-						},
-						meta: {
-							studioOverlay: true,
-							studioOverlayTitle: "编辑视频",
-							featureGate: { module: "video", feature: "video.publish" },
-						},
-					},
-				],
-			},
-			{
 				path: ":module(blog|podcast|video)",
 				component: () => import("@/views/studio/StudioModuleLayout.vue"),
 				children: [
@@ -133,9 +34,33 @@ export const studioRoutes: RouteRecordRaw[] = [
 						redirect: (to) => `/studio/${String(to.params.module)}/content`,
 					},
 					{
+						path: "new",
+						name: "studio-content-new",
+						components: {
+							default: studioContentView,
+							overlay: studioEditorRouteView,
+						},
+						meta: {
+							studioOverlay: true,
+							studioOverlayMode: "new",
+						},
+					},
+					{
+						path: ":id/edit",
+						name: "studio-content-edit",
+						components: {
+							default: studioContentView,
+							overlay: studioEditorRouteView,
+						},
+						meta: {
+							studioOverlay: true,
+							studioOverlayMode: "edit",
+						},
+					},
+					{
 						path: "content",
 						name: "studio-content",
-						component: () => import("@/views/studio/StudioContentView.vue"),
+						component: studioContentView,
 					},
 					{
 						path: "collections",

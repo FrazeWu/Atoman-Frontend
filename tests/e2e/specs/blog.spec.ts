@@ -47,7 +47,7 @@ test.describe("Blog", () => {
 		await page.goto("/posts");
 		await expect(page).toHaveURL(/\/posts$/);
 		await expect(
-			page.getByRole("heading", { name: "文章", exact: true }),
+			page.getByRole("heading", { name: "发现", exact: true }),
 		).toBeVisible();
 	});
 

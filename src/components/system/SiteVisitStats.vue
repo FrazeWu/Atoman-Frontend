@@ -71,14 +71,14 @@ onMounted(async () => {
 
 .site-visit-stats__metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px;
 }
 
 .site-visit-stats__metric {
   display: grid;
-  gap: 3px;
-  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 3px 8px;
 }
 
 .site-visit-stats__metric span {
@@ -86,11 +86,11 @@ onMounted(async () => {
 }
 
 .site-visit-stats__metric strong {
-  overflow: hidden;
   color: var(--a-color-fg);
   font-size: var(--a-text-base);
   font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
 }
 
 @media (max-width: 767px) {

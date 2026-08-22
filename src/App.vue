@@ -49,19 +49,20 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const hasActiveTrack = computed(() => Boolean(player.currentSong))
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
 
-const reportPageView = () => {
+const reportPageView = (sendAnalytics = true) => {
   if (isAuthRoute.value) return
   void apiRequest('/api/v1/site/visits', { method: 'POST', keepalive: true }).catch(() => {})
+  if (!sendAnalytics) return
   const ga = window.gtag
   if (typeof ga === 'function') {
     ga('event', 'page_view', { page_path: route.fullPath, page_location: window.location.href })
   }
 }
 
-watch(() => route.fullPath, reportPageView)
+watch(() => route.fullPath, () => reportPageView())
 
 onMounted(() => {
-  reportPageView()
+  reportPageView(false)
   if (localStorage.getItem('atoman_transition_relay')) {
     checkRelay()
   } else if (localStorage.getItem('atoman_transition_relay_basic')) {

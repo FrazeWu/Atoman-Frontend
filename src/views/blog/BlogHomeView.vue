@@ -39,26 +39,32 @@
       <main class="blog-home__stream">
 
         <!-- 主文章列表流 -->
-        <div v-if="loading && !posts.length" class="blog-home__skeleton-list">
+        <div v-if="isStreamLoading && !streamItems.length" class="blog-home__skeleton-list">
           <div v-for="i in 5" :key="i" class="a-skeleton" style="height: 8rem; border-radius: var(--a-radius-card);" />
         </div>
 
-        <PEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
+        <PEmpty v-else-if="!streamItems.length" title="暂无内容" description="还没有发布任何内容" />
 
         <div v-else class="blog-home__feed">
-          <BlogItemCard
-            v-for="post in posts"
-            :key="post.id"
-            :item="post"
-            type="post"
-            :bookmarked="isBookmarked(post)"
-            :in-reading-list="isReadingList(post)"
-            :starred="isStarred(post)"
-            @click="openPost(post)"
-            @toggle-bookmark="toggleBookmark(post)"
-            @toggle-reading-list="toggleReadingList(post)"
-            @toggle-star="toggleStar(post)"
-          />
+          <template v-for="streamItem in streamItems" :key="streamItem.key">
+            <BlogItemCard
+              v-if="streamItem.kind === 'post'"
+              :item="streamItem.post"
+              type="post"
+              :bookmarked="isBookmarked(streamItem.post)"
+              :in-reading-list="isReadingList(streamItem.post)"
+              :starred="isStarred(streamItem.post)"
+              @click="openPost(streamItem.post)"
+              @toggle-bookmark="toggleBookmark(streamItem.post)"
+              @toggle-reading-list="toggleReadingList(streamItem.post)"
+              @toggle-star="toggleStar(streamItem.post)"
+            />
+            <ShortNoteCard
+              v-else
+              :note="streamItem.note"
+              @delete="pendingDeleteNote = streamItem.note"
+            />
+          </template>
         </div>
 
         <PButton
@@ -117,6 +123,17 @@
       </aside>
     </div>
   </div>
+  <PConfirm
+    :show="pendingDeleteNote !== null"
+    title="删除短话"
+    message="确定删除这条短话吗？"
+    confirm-text="删除"
+    cancel-text="取消"
+    danger
+    :loading="deletingNote"
+    @confirm="deletePendingNote"
+    @cancel="pendingDeleteNote = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -131,18 +148,21 @@ import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 
-import { apiRequestResult } from '@/api/client'
+import { apiRequestEnvelope, apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { channelUrl } from '@/router/siteUrls'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { reportError } from '@/utils/logger'
+import type { Post, ShortNote } from '@/types'
 
 defineOptions({ name: 'BlogHomeView' })
 
@@ -182,8 +202,12 @@ interface RecommendationPayload {
   post?: BlogHomeListItem
 }
 
-const PAGE_SIZE = 20
+type BlogHomeStreamItem =
+  | { kind: 'post'; key: string; timestamp?: string; post: BlogHomeListItem }
+  | { kind: 'note'; key: string; timestamp?: string; note: ShortNote }
 
+
+const PAGE_SIZE = 20
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -192,6 +216,10 @@ const blogSheets = useBlogSheets()
 const api = useApi()
 
 const posts = ref<BlogHomeListItem[]>([])
+const shortNotes = ref<ShortNote[]>([])
+const notesLoading = ref(false)
+const pendingDeleteNote = ref<ShortNote | null>(null)
+const deletingNote = ref(false)
 const recommendedPosts = ref<Array<{
   id: string
   title: string
@@ -205,7 +233,7 @@ const loading = ref(true)
 const recommendationLoading = ref(false)
 const page = ref(1)
 const hasMore = ref(false)
-const typeFilter = ref('all')
+const typeFilter = ref<'all' | 'post' | 'note'>('all')
 const sortBy = ref('latest')
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
@@ -219,8 +247,9 @@ const formatDate = (dateStr?: string) => {
 }
 
 const typeOptions = [
-  { label: '全部文章', value: 'all' },
+  { label: '全部', value: 'all' },
   { label: '文章', value: 'post' },
+  { label: '短话', value: 'note' },
 ]
 
 const sortOptions = [
@@ -233,6 +262,30 @@ const recommendationOptions = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
+
+const isStreamLoading = computed(() => loading.value || notesLoading.value)
+const streamItems = computed<BlogHomeStreamItem[]>(() => {
+  const postItems: BlogHomeStreamItem[] = typeFilter.value === 'note'
+    ? []
+    : posts.value.map((post) => ({
+        kind: 'post',
+        key: `post-${post.id}`,
+        timestamp: post.created_at,
+        post,
+      }))
+  const noteItems: BlogHomeStreamItem[] = typeFilter.value === 'post'
+    ? []
+    : shortNotes.value.map((note) => ({
+        kind: 'note',
+        key: `note-${note.id}`,
+        timestamp: note.created_at,
+        note,
+      }))
+  return [...postItems, ...noteItems].sort((left, right) => (
+    new Date(right.timestamp || 0).getTime() - new Date(left.timestamp || 0).getTime()
+  ))
+})
+
 
 const isBookmarked = (item: BlogHomeListItem) => Boolean(feedStore.bookmarkedPostIds?.has(item.id))
 const isStarred = (item: BlogHomeListItem) => Boolean(feedStore.starredItemIds?.has(item.id))
@@ -255,8 +308,8 @@ const toggleReadingList = (item: BlogHomeListItem) => {
 }
 
 const selectType = (value: string) => {
-  typeFilter.value = value
-  void fetchPosts()
+  typeFilter.value = value === 'note' || value === 'post' ? value : 'all'
+  void Promise.all([fetchPosts(), fetchShortNotes()])
 }
 
 const selectSort = (value: string) => {
@@ -333,7 +386,52 @@ const fetchRecommendedPosts = async () => {
   }
 }
 
+const fetchShortNotes = async () => {
+  if (typeFilter.value === 'post') {
+    shortNotes.value = []
+    notesLoading.value = false
+    return true
+  }
+  notesLoading.value = true
+  try {
+    const query = new URLSearchParams({ page: '1', page_size: String(PAGE_SIZE) })
+    const response = await apiRequestEnvelope<ShortNote[], { has_more?: boolean }>(`${api.blog.shortNotes}?${query}`)
+    shortNotes.value = response.data
+    return true
+  } catch (error) {
+    reportError(error)
+    shortNotes.value = []
+    return false
+  } finally {
+    notesLoading.value = false
+  }
+}
+
+const deletePendingNote = async () => {
+  const note = pendingDeleteNote.value
+  if (!note || deletingNote.value || !authStore.token) return
+  deletingNote.value = true
+  try {
+    await apiRequestEnvelope(api.blog.shortNote(note.id), {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${authStore.token}` },
+    })
+    shortNotes.value = shortNotes.value.filter((item) => item.id !== note.id)
+    pendingDeleteNote.value = null
+  } catch (error) {
+    reportError(error)
+  } finally {
+    deletingNote.value = false
+  }
+}
+
 const fetchPosts = async (append = false) => {
+  if (typeFilter.value === 'note') {
+    posts.value = []
+    hasMore.value = false
+    loading.value = false
+    return true
+  }
   const requestSequence = ++postsRequestSequence
   const targetPage = append ? page.value + 1 : 1
   loading.value = true
@@ -407,9 +505,7 @@ const loadMore = () => {
 }
 
 onMounted(() => {
-  void fetchPosts()
-  void fetchRecommendedPosts()
-  void fetchChannels()
+  void Promise.all([fetchPosts(), fetchShortNotes(), fetchRecommendedPosts(), fetchChannels()])
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchStarredIds()
@@ -683,6 +779,35 @@ watch(activeQuery, () => {
   }
   .blog-home__rail {
     display: none;
+  }
+}
+@media (max-width: 720px) {
+  .blog-home__filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-right: -1rem;
+    padding-right: 1rem;
+    scrollbar-width: none;
+  }
+
+  .blog-home__filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .blog-home__filter-group {
+    flex: 0 0 auto;
+  }
+
+  .blog-home__filter-group--end {
+    margin-left: 0;
+  }
+
+  .blog-home__layout {
+    gap: 1rem;
+  }
+
+  .blog-home__stream {
+    gap: 1rem;
   }
 }
 </style>

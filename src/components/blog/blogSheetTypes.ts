@@ -1,5 +1,12 @@
 import type { BaseSheetLayer } from '@/composables/useSheetStack'
 
+export type BlogChannelLayer = BaseSheetLayer & {
+  kind: 'channel'
+  payload: {
+    channelId: string
+  }
+}
+
 export type BlogCollectionLayer = BaseSheetLayer & {
   kind: 'collection'
   payload: {
@@ -23,4 +30,4 @@ export type ShortNoteLayer = BaseSheetLayer & {
   }
 }
 
-export type BlogSheetLayer = BlogCollectionLayer | BlogPostLayer | ShortNoteLayer
+export type BlogSheetLayer = BlogChannelLayer | BlogCollectionLayer | BlogPostLayer | ShortNoteLayer

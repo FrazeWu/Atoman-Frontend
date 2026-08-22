@@ -28,9 +28,7 @@ describe("PSheet.vue", () => {
 		expect(source).toMatch(
 			/\.slide-right-enter-active[\s\S]*?transition:[\s\S]*?transform 320ms[\s\S]*?opacity 220ms/,
 		);
-		expect(source).toMatch(
-			/\.slide-right-enter-from,[\s\S]*?opacity:\s*0/,
-		);
+		expect(source).toMatch(/\.slide-right-enter-from,[\s\S]*?opacity:\s*0/);
 	});
 
 	it("renders body content and the vertical page rail", () => {

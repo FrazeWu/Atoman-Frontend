@@ -717,6 +717,10 @@ export interface FeedItem {
 	content_html?: string;
 	content_source?: "feed" | "page" | "summary" | "full_text";
 	reader_quality_score?: number;
+	read_count?: number;
+	bookmark_count?: number;
+	rating_score?: number;
+	rating_count?: number;
 	reader_quality_flags?: string[];
 	reader_version?: number;
 	full_text_html?: string;

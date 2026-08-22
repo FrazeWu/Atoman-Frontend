@@ -36,6 +36,7 @@ describe("runtime loading boundaries", () => {
 				`import ${layout} from '@/views/${layout.replace("Layout", "").toLowerCase()}/${layout}.vue'`,
 			);
 		}
+		const normalizedSource = source.replaceAll('"', "'");
 		for (const [moduleName, layout] of [
 			["blog", "BlogLayout"],
 			["feed", "FeedLayout"],
@@ -46,7 +47,7 @@ describe("runtime loading boundaries", () => {
 			["podcast", "PodcastLayout"],
 			["video", "VideoLayout"],
 		] as const) {
-			expect(source).toContain(
+			expect(normalizedSource).toContain(
 				`component: () => import('@/views/${moduleName}/${layout}.vue')`,
 			);
 		}

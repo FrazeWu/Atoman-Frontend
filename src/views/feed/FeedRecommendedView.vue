@@ -69,6 +69,9 @@ type RecommendationItem = {
   score_label?: string
   bookmark_count?: number
   read_count?: number
+  view_count?: number
+  rating_score?: number
+  rating_count?: number
   update_frequency_label?: string
   last_published_at?: string
   subscribed?: boolean
@@ -627,6 +630,23 @@ async function openDiscoverySearchSource(source: FeedExploreSource) {
 function openDiscoverySearchArticle(article: DiscoverySearchArticle) {
   discoverySearchOpen.value = false
   void router.push(article.targetPath)
+}
+
+async function subscribeExternalSource(source: FeedExploreSource) {
+  if (!authStore.isAuthenticated || source.subscribed || isRecommendationSourceSubscribeBusy(source.id)) return
+  sourceSubscribeBusyIds.value = [...sourceSubscribeBusyIds.value, source.id]
+  try {
+    const result = await feedStore.batchSubscribeSources([source.id])
+    if (!result || result.missingIds.includes(source.id)) {
+      errorMessage.value = '订阅失败，请重试'
+      return
+    }
+    externalSources.value = externalSources.value.map((item) => (
+      item.id === source.id ? { ...item, subscribed: true } : item
+    ))
+  } finally {
+    sourceSubscribeBusyIds.value = sourceSubscribeBusyIds.value.filter((id) => id !== source.id)
+  }
 }
 
 async function subscribeSelectedExternalSources() {
@@ -1248,7 +1268,15 @@ onBeforeUnmount(() => {
         <div v-else class="card-stack">
           <label v-for="source in externalSources" :key="source.id" class="external-source-row">
             <input v-if="authStore.isAuthenticated && !source.subscribed" v-model="selectedExternalSourceIds" type="checkbox" :value="source.id" />
-            <FeedSourceIdentityCard :source="source" :color="buildSourceColor(source.title)" :avatar-label="buildSourceAvatarLabel(source.title)" :display-url="source.rssUrl || ''" :show-subscribe="false" />
+            <FeedSourceIdentityCard
+              :source="source"
+              :color="buildSourceColor(source.title)"
+              :avatar-label="buildSourceAvatarLabel(source.title)"
+              :display-url="source.rssUrl || ''"
+              :show-subscribe="authStore.isAuthenticated"
+              :subscribe-busy="isRecommendationSourceSubscribeBusy(source.id)"
+              @subscribe="subscribeExternalSource(source)"
+            />
           </label>
         </div>
         <FeedTimelineFooter
@@ -1686,7 +1714,13 @@ onBeforeUnmount(() => {
 
 .card-stack {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 15rem));
+  justify-content: start;
+  gap: 0.85rem;
+}
+
+.recommend-grid--mixed .card-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .external-source-controls {
@@ -1695,6 +1729,20 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.75rem;
 }
+
+@media (max-width: 1100px) {
+  .card-stack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .card-stack,
+  .recommend-grid--mixed .card-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 
 .external-source-select-all {
   display: inline-flex;
@@ -1727,6 +1775,12 @@ onBeforeUnmount(() => {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.external-source-row .feed-source-card {
+  grid-column: 2;
+  min-width: 0;
 }
 
 .recommend-card {

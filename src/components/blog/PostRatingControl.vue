@@ -20,6 +20,7 @@
           @mouseenter="hoverScore = star * 2 - 1"
           @focus="hoverScore = star * 2 - 1"
           @click="emit('rate', star * 2 - 1)"
+          @keydown="handleKeydown($event, star * 2 - 1)"
         />
         <button
           type="button"
@@ -29,6 +30,7 @@
           @mouseenter="hoverScore = star * 2"
           @focus="hoverScore = star * 2"
           @click="emit('rate', star * 2)"
+          @keydown="handleKeydown($event, star * 2)"
         />
       </div>
       <button
@@ -79,9 +81,25 @@ const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? Mat
 const formattedScore = computed(() => props.ratingCount ? props.ratingScore.toFixed(1) : '—')
 
 function fillWidth(star: number) {
-  const remainder = activeScore.value - (star - 1) * 2
-  return Math.max(0, Math.min(2, remainder)) * 12
+  const score = Math.max(0, Math.min(10, activeScore.value))
+  return Math.max(0, Math.min(1, (score - (star - 1) * 2) / 2)) * 24
 }
+
+function handleKeydown(event: KeyboardEvent, score: number) {
+  const key = event.key
+  if (key === 'Home' || key === 'End' || key.startsWith('Arrow')) {
+    event.preventDefault()
+    const nextScore = key === 'Home'
+      ? 1
+      : key === 'End'
+        ? 10
+        : key === 'ArrowLeft' || key === 'ArrowDown'
+          ? Math.max(1, score - 1)
+          : Math.min(10, score + 1)
+    emit('rate', nextScore)
+  }
+}
+
 </script>
 
 <style scoped>

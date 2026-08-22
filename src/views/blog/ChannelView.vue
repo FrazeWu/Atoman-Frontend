@@ -65,7 +65,7 @@
                 compact
                 :active="activeCollectionId === col.id"
                 :show-subscribe="false"
-                @select="activeCollectionId = col.id"
+                @select="openCollectionSheet(col)"
               />
 
           </div>
@@ -273,8 +273,12 @@ const loadMorePosts = () => {
   void fetchPosts(channel.value, loadGeneration, postsPage.value + 1, true)
 }
 
+const openCollectionSheet = (collection: Collection) => {
+  if (!channel.value) return
+  blogSheets.openCollection(collection.id, collection.name, channel.value.id)
+}
+
 const openCollectionModal = (collection?: Collection) => {
-  editingCollection.value = collection || null
   collectionForm.value = { name: collection?.name || '', description: collection?.description || '' }
   collectionModalOpen.value = true
 }

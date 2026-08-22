@@ -5,18 +5,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // @ts-expect-error Isolated TypeScript diagnostics do not load the Vue SFC module resolver.
 import FeedArticleSheet from "@/components/feed/FeedArticleSheet.vue";
+import { useAuthStore } from "../../../../src/stores/auth";
 
 const mountedWrappers = new Set<VueWrapper>();
 let consoleWarn: ReturnType<typeof vi.spyOn>;
 let consoleError: ReturnType<typeof vi.spyOn>;
 
-const mountSheet = (options: MountingOptions<any>) => {
+const mountSheet = (
+	options: MountingOptions<any>,
+	configureAuth?: (store: ReturnType<typeof useAuthStore>) => void,
+) => {
 	const pinia = createPinia();
 	const router = createRouter({
 		history: createMemoryHistory(),
 		routes: [{ path: "/", component: { template: "<div />" } }],
 	});
 	setActivePinia(pinia);
+	configureAuth?.(useAuthStore());
 
 	const wrapper = mount(FeedArticleSheet, {
 		...options,
@@ -48,6 +53,51 @@ describe("FeedArticleSheet", () => {
 		expect(consoleError).not.toHaveBeenCalled();
 		vi.restoreAllMocks();
 	});
+
+	it("renders rating controls for blog posts opened from the feed sheet", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(JSON.stringify({ data: { rating_score: 8, rating_count: 2, viewer_rating: 8 } }), { status: 200 }),
+		)
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "post",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					post: {
+						id: "post-sheet-rating-1",
+						title: "可评分文章",
+						content: "正文",
+						created_at: "2026-06-20T00:00:00Z",
+						updated_at: "2026-06-20T00:00:00Z",
+						status: "published",
+						visibility: "public",
+						pinned: false,
+						user_id: "user-1",
+						rating_score: 7,
+						rating_count: 1,
+					},
+				},
+			},
+			global: {
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+				},
+			},
+		}, (authStore) => {
+			authStore.isAuthenticated = true
+			authStore.token = "token"
+		})
+
+		await wrapper.vm.$nextTick()
+		expect(wrapper.find('button[aria-label="1 分"]').exists()).toBe(true)
+		await wrapper.get('button[aria-label="8 分"]').trigger("click")
+		expect(fetchMock).toHaveBeenCalledWith(
+			expect.stringContaining("/blog/posts/post-sheet-rating-1/rating"),
+			expect.objectContaining({ method: "PUT" }),
+		)
+	})
 
 	it("sanitizes external feed HTML before rendering it", () => {
 		const wrapper = mountSheet({

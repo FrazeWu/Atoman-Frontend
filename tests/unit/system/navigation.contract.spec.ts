@@ -83,7 +83,9 @@ describe("application navigation contracts", () => {
 			routes: buildAppRoutes(),
 		});
 		const moduleTargets = Object.keys(moduleRooms).flatMap((module) =>
-			getMobilePrimaryTabs(module as keyof typeof moduleRooms).map((tab) => tab.href),
+			getMobilePrimaryTabs(module as keyof typeof moduleRooms).map(
+				(tab) => tab.href,
+			),
 		);
 		const switcherTargets = getMobileMoreItems().map((item) => item.href);
 		const targets = [...moduleTargets, ...switcherTargets];

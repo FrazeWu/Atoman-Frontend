@@ -39,17 +39,39 @@
           loading-text="订阅中..."
           @click="emit('subscribe-source')"
         />
-        <a
-          :href="modulePathUrl('blog', `/post/${article.post.id}`)"
-          class="read-original-link"
-          @click.prevent="handleReadMore(article.post); $emit('close')"
+        <PButton
+          v-if="article.post.id"
+          variant="secondary"
+          size="sm"
+          :disabled="!authStore.isAuthenticated"
+          @click="togglePostBookmark"
         >
-          ↗ 阅读原文
-        </a>
+          <Bookmark :size="15" aria-hidden="true" />
+          {{ postBookmarked ? '取消收藏' : '收藏' }}
+        </PButton>
+        <PButton
+          v-if="article.post.id"
+          variant="secondary"
+          size="sm"
+          :disabled="!authStore.isAuthenticated"
+          @click="togglePostReadingList"
+        >
+          <Clock :size="15" aria-hidden="true" />
+          {{ postInReadingList ? '取消稍后阅读' : '稍后阅读' }}
+        </PButton>
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
       <div class="prose-blog article-body" v-html="renderedContent"></div>
+      <PostRatingControl
+        :rating-score="article.post.rating_score"
+        :rating-count="article.post.rating_count"
+        :viewer-rating="article.post.viewer_rating"
+        :disabled="!authStore.isAuthenticated"
+        :loading="ratingLoading"
+        @rate="ratePost"
+        @clear="clearPostRating"
+      />
     </template>
     
     <template v-else-if="article && article.type === 'feed_item' && article.feed_item">
@@ -151,20 +173,25 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ExternalLink } from 'lucide-vue-next'
+import { Bookmark, Clock, ExternalLink } from 'lucide-vue-next'
+import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
 import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
-import { resolveMediaURL } from '@/utils/mediaUrl'
 import { hasFeedReaderImage } from '@/utils/feedReader'
+import { resolveMediaURL } from '@/utils/mediaUrl'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
+import { useApi } from '@/composables/useApi'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -183,15 +210,28 @@ const props = withDefaults(defineProps<{
 })
 
 const { renderMarkdown } = useMarkdownRenderer()
+const authStore = useAuthStore()
+const api = useApi()
+const feedStore = useFeedStore()
+const ratingLoading = ref(false)
 const feedCoverFailed = ref(false)
 const commentsOpen = ref(false)
 const commentCount = ref<number | undefined>(undefined)
 
+const postBookmarked = computed(() => {
+  const post = props.article?.type === 'post' ? props.article.post : null
+  return Boolean(post?.id && feedStore.bookmarkedPostIds.has(post.id))
+})
+const postInReadingList = computed(() => {
+  const post = props.article?.type === 'post' ? props.article.post : null
+  return Boolean(post?.id && feedStore.readingListItemIds.has(post.id))
+})
 const feedCoverUrl = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
   const rawURL = props.article.feed_item.image_url || props.article.feed_item.feed_source?.cover_url || ''
   return rawURL ? resolveMediaURL(rawURL) : ''
 })
+
 
 watch(() => props.article?.feed_item?.id, () => {
   feedCoverFailed.value = false
@@ -335,6 +375,59 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 onMounted(() => window.addEventListener('keydown', handleKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', handleKeydown))
+
+async function togglePostBookmark() {
+  const post = props.article?.type === 'post' ? props.article.post : null
+  if (!post || !authStore.isAuthenticated) return
+  await feedStore.togglePostBookmark(post.id)
+}
+
+async function togglePostReadingList() {
+  const post = props.article?.type === 'post' ? props.article.post : null
+  if (!post || !authStore.isAuthenticated) return
+  await feedStore.toggleReadingListItem(post.id)
+}
+
+async function ratePost(score: number) {
+  const post = props.article?.type === 'post' ? props.article.post : null
+  if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+      body: JSON.stringify({ score }),
+    })
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.rating_score = Number(summary.rating_score ?? post.rating_score ?? 0)
+    post.rating_count = Number(summary.rating_count ?? post.rating_count ?? 0)
+    post.viewer_rating = Number(summary.viewer_rating ?? score)
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+async function clearPostRating() {
+  const post = props.article?.type === 'post' ? props.article.post : null
+  if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.id), {
+      method: 'DELETE',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.rating_score = Number(summary.rating_score ?? 0)
+    post.rating_count = Number(summary.rating_count ?? 0)
+    post.viewer_rating = undefined
+  } finally {
+    ratingLoading.value = false
+  }
+}
 
 const emitPlayPodcast = () => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return

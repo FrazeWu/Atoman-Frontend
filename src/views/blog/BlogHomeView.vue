@@ -158,7 +158,6 @@ import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import { apiRequestEnvelope, apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import { channelUrl } from '@/router/siteUrls'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { reportError } from '@/utils/logger'
@@ -180,6 +179,10 @@ interface BlogHomeListItem {
   summary?: string
   cover_url?: string
   created_at?: string
+  view_count?: number
+  rating_score?: number
+  rating_count?: number
+  bookmarks_count?: number
   likes_count?: number
   comments_count?: number
   channel?: BlogChannel
@@ -199,6 +202,11 @@ interface RecommendationPayload {
   image_url?: string
   target_path?: string
   score_label?: string
+  view_count?: number
+  read_count?: number
+  rating_score?: number
+  rating_count?: number
+  bookmark_count?: number
   post?: BlogHomeListItem
 }
 
@@ -331,7 +339,7 @@ const openPost = (item: BlogHomeListItem) => {
 }
 
 const openChannel = (channel: BlogChannel) => {
-  void router.push(channelUrl(String(channel.slug || channel.id)))
+  blogSheets.openChannel(String(channel.id), channel.name)
 }
 
 const postIdFromTargetPath = (targetPath: string) => {
@@ -445,7 +453,7 @@ const fetchPosts = async (append = false) => {
     query.set('page_size', String(PAGE_SIZE))
     if (activeQuery.value) query.set('q', activeQuery.value)
     const endpoint = isPopular
-      ? `${api.url}/feed/recommend/articles?mode=hot&page=${targetPage}&page_size=${PAGE_SIZE}`
+      ? `${api.url}/feed/recommend/articles?${new URLSearchParams({ mode: 'hot', page: String(targetPage), page_size: String(PAGE_SIZE), ...(activeQuery.value ? { q: activeQuery.value } : {}) }).toString()}`
       : `${api.blog.posts}?${query.toString()}`
 
     const res = await apiRequestResult(endpoint, { headers })
@@ -464,8 +472,11 @@ const fetchPosts = async (append = false) => {
             title: item.title,
             summary: item.summary,
             cover_url: item.image_url,
+            view_count: item.view_count ?? item.read_count ?? 0,
+            rating_score: item.rating_score ?? 0,
+            rating_count: item.rating_count ?? 0,
+            bookmarks_count: item.bookmark_count ?? 0,
             likes_count: 0,
-            comments_count: 0,
             source,
             targetPath,
           }

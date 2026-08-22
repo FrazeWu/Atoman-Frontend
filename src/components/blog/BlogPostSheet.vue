@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
-import { Pencil } from 'lucide-vue-next'
+import { Bookmark, Clock, Pencil } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import PSheet from '@/components/ui/PSheet.vue'
@@ -65,6 +65,9 @@ async function loadPost() {
   }
 }
 
+const bookmarked = computed(() => Boolean(post.value?.id && feedStore.bookmarkedPostIds.has(post.value.id)))
+const inReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
+
 async function toggleChannelSubscription() {
   if (!post.value?.channel_id || !authStore.isAuthenticated || channelSubscriptionBusy.value) return
   channelSubscriptionBusy.value = true
@@ -115,6 +118,16 @@ async function clearRating() {
   } finally {
     ratingLoading.value = false
   }
+}
+
+async function toggleBookmark() {
+  if (!post.value || !authStore.isAuthenticated) return
+  await feedStore.togglePostBookmark(post.value.id)
+}
+
+async function toggleReadingList() {
+  if (!post.value || !authStore.isAuthenticated) return
+  await feedStore.toggleReadingListItem(post.value.id)
 }
 
 function editPost() {
@@ -175,15 +188,26 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
       <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <div class="prose-blog post-sheet-content" v-html="renderedContent" />
-      <PostRatingControl
-        :rating-score="post.rating_score"
-        :rating-count="post.rating_count"
-        :viewer-rating="post.viewer_rating"
-        :disabled="!authStore.isAuthenticated"
-        :loading="ratingLoading"
-        @rate="ratePost"
-        @clear="clearRating"
-      />
+      <div class="post-sheet-actions-row">
+        <PButton
+          variant="secondary"
+          size="sm"
+          :disabled="!authStore.isAuthenticated"
+          @click="toggleBookmark"
+        >
+          <Bookmark :size="15" aria-hidden="true" />
+          {{ bookmarked ? '取消收藏' : '收藏' }}
+        </PButton>
+        <PButton
+          variant="secondary"
+          size="sm"
+          :disabled="!authStore.isAuthenticated"
+          @click="toggleReadingList"
+        >
+          <Clock :size="15" aria-hidden="true" />
+          {{ inReadingList ? '取消稍后阅读' : '稍后阅读' }}
+        </PButton>
+      </div>
     </article>
   </PSheet>
 </template>
@@ -200,6 +224,13 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 .post-sheet-actions {
   justify-content: flex-end;
   margin-bottom: 1rem;
+}
+
+.post-sheet-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
 }
 
 .post-sheet-loading,

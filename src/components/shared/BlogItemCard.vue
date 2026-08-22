@@ -98,9 +98,13 @@
     </template>
 
     <template v-if="postItem" #footer>
-      <span><Eye :size="13" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
+      <span><Eye :size="13" aria-hidden="true" />阅读 {{ formatCount(postItem.view_count) }}</span>
       <span><Gauge :size="13" aria-hidden="true" />评分 {{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
-      <span><Bookmark :size="13" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
+      <span><Bookmark :size="13" aria-hidden="true" />收藏 {{ formatCount(postItem.bookmarks_count) }}</span>
+    </template>
+    <template v-else-if="feedItem" #footer>
+      <span><Eye :size="13" aria-hidden="true" />阅读 {{ formatCount(feedItem.read_count) }}</span>
+      <span><Bookmark :size="13" aria-hidden="true" />收藏 {{ formatCount(feedItem.bookmark_count) }}</span>
     </template>
   </PEntry>
 </template>

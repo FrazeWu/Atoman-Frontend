@@ -10,18 +10,25 @@ const stack = createSheetStack<BlogSheetLayer>({
 });
 
 export function useBlogSheets() {
+	const openChannel = (channelId: string, title: string) => {
+		stack.push({
+			key: `channel:${channelId}`,
+			kind: "channel",
+			title,
+			payload: { channelId },
+		});
+	};
 	const openCollection = (
 		collectionId: string,
 		title: string,
 		channelId: string,
-	) => {
+	) =>
 		stack.push({
 			key: `collection:${collectionId}`,
 			kind: "collection",
 			title,
 			payload: { collectionId, channelId },
 		});
-	};
 
 	const openPost = (postId: string, title: string, collectionId?: string) => {
 		stack.push({
@@ -54,6 +61,7 @@ export function useBlogSheets() {
 		layers: stack.layers,
 		renderLayers: stack.renderLayers,
 		top: stack.top,
+		openChannel,
 		openCollection,
 		openPost,
 		openShortNote,

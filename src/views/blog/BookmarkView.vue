@@ -8,9 +8,9 @@
       </div>
     </div>
 
-    <div style="display:flex;min-height:60vh;gap:2rem">
+    <div class="bookmark-layout" style="display:flex;min-height:60vh;gap:2rem">
       <!-- Left: Folder list -->
-      <div style="width:14rem;flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem">
+      <div class="bookmark-folders" style="width:14rem;flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem">
         <button
           @click="activeFolder = null"
           class="sidebar-item"
@@ -35,12 +35,12 @@
       </div>
 
       <!-- Right: Bookmarked posts -->
-      <div style="flex:1;padding:1.5rem">
+      <div class="bookmark-results" style="flex:1;padding:1.5rem">
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
-        <div v-else class="a-grid-2">
+        <div v-else class="bookmark-post-list">
           <BlogItemCard
             v-for="bm in filteredBookmarks"
             :key="bm.id"
@@ -233,6 +233,12 @@ watch(sortMode, () => {
 </script>
 
 <style scoped>
+.bookmark-post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
 .blog-entry-cover {
   width: 5.5rem;
   height: 5.5rem;
@@ -287,5 +293,28 @@ watch(sortMode, () => {
 }
 .a-cursor-pointer {
   cursor: pointer;
+}
+@media (max-width: 767px) {
+  .bookmark-layout {
+    display: block !important;
+    min-height: 0 !important;
+  }
+
+  .bookmark-folders {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .bookmark-folders .sidebar-item {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 8rem;
+  }
+
+  .bookmark-results {
+    padding: 1rem 0 !important;
+  }
 }
 </style>

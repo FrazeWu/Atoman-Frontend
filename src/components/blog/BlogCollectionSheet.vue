@@ -92,6 +92,10 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
   >
     <template #header>
       <div class="collection-sheet-header">
+        <div class="collection-sheet-visual">
+          <img v-if="collection?.cover_url" :src="collection.cover_url" :alt="collection.name" />
+          <span v-else aria-hidden="true">{{ (collection?.name || layer.title).slice(0, 1).toUpperCase() }}</span>
+        </div>
         <div class="collection-sheet-heading">
           <span class="a-label a-muted">{{ collection?.is_default ? '默认合集' : '合集' }}</span>
           <h2>{{ collection?.is_default ? '全部文章' : (collection?.name || layer.title) }}</h2>
@@ -155,9 +159,24 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
   width: 100%;
 }
 
-.collection-sheet-heading {
-  min-width: 0;
+.collection-sheet-visual {
+  display: grid;
+  flex: 0 0 9rem;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 2rem;
+  font-weight: 650;
 }
+
+.collection-sheet-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 
 .collection-sheet-heading h2 {
   margin: 0.25rem 0 0;

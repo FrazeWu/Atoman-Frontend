@@ -45,9 +45,14 @@
           <span class="music-sidebar-playlists__name">{{ playlist.name }}</span>
         </button>
         
-        <p v-if="!playlists.length && !isCreating" class="music-sidebar-playlists__empty">
-          {{ isAuthenticated ? '暂无歌单' : '请先登录' }}
-        </p>
+        <button
+          v-if="!playlists.length && !isCreating && !isAuthenticated"
+          type="button"
+          class="music-sidebar-playlists__login-button"
+          @click="requireLogin()"
+        >
+          登录
+        </button>
       </div>
 
       <div v-if="bookmarkedPlaylists.length" class="music-sidebar-playlists__items music-sidebar-playlists__items--bookmarked">
@@ -393,15 +398,27 @@ watch(
   color: var(--a-color-muted);
 }
 
-.music-sidebar-playlists__empty {
+.music-sidebar-playlists__login-button {
   margin: 0;
-  padding: 0.5rem;
-  color: var(--a-color-muted);
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  font: inherit;
   font-size: 0.75rem;
-  font-family: var(--a-font-sans);
   font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
+.music-sidebar-playlists__login-button:hover,
+.music-sidebar-playlists__login-button:focus-visible {
+  border-color: var(--a-color-text);
+  background: var(--a-color-bg);
+  outline: none;
+}
 /* Collapsed styling */
 .collapsed-icons {
   display: flex;

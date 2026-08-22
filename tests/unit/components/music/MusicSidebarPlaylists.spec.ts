@@ -117,14 +117,20 @@ describe("MusicSidebarPlaylists", () => {
 		expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled();
 	});
 
-	it("shows a login prompt for guests instead of an empty playlist state", async () => {
+	it("shows a login button for guests instead of an empty playlist state", async () => {
 		mocks.isAuthenticated = ref(false);
 		const wrapper = mount(MusicSidebarPlaylists, {
 			props: { collapsed: false },
 		});
 		await flushPromises();
 
-		expect(wrapper.get(".music-sidebar-playlists__empty").text()).toBe("请先登录");
+		const loginButton = wrapper.get(
+			".music-sidebar-playlists__login-button",
+		);
+		expect(loginButton.text()).toBe("登录");
+		expect(wrapper.find(".music-sidebar-playlists__empty").exists()).toBe(false);
+		await loginButton.trigger("click");
+		expect(mocks.requireLogin).toHaveBeenCalledTimes(1);
 	});
 
 	it("shows bookmarked playlists under my playlists", async () => {

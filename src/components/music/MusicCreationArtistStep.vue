@@ -730,8 +730,15 @@ defineExpose({
 }
 
 .artist-kind-card {
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: max-content max-content;
+  justify-content: start;
   align-items: center;
+}
+
+.artist-kind-card :deep(.p-segmented-control) {
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .artist-profile-grid {

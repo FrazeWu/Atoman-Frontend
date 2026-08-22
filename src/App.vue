@@ -28,7 +28,6 @@ import { usePlayerStore } from '@/stores/player'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
-import { getSiteVisitorId } from '@/utils/siteVisit'
 
 declare global {
   interface Window {
@@ -54,12 +53,7 @@ const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.valu
 
 const reportPageView = (sendAnalytics = true) => {
   if (isAuthRoute.value) return
-  void apiRequest(`${apiUrl}/site/visits`, {
-    method: 'POST',
-    keepalive: true,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ visitor_id: getSiteVisitorId() }),
-  }).catch(() => {})
+  void apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }).catch(() => {})
   if (!sendAnalytics) return
   const ga = window.gtag
   if (typeof ga === 'function') {

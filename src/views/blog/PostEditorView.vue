@@ -51,7 +51,6 @@
                     :mode="previewOpen ? 'split' : 'normal'"
                     :live-preview="contentMode === 'visual'"
                     :no-border="true"
-                    :protect-first-line="true"
                     :enable-embeds="true"
                     :enable-mentions="true"
                     :enable-collab="shouldEnableCollab"
@@ -637,7 +636,13 @@ onMounted(() => { void initializeEditor() })
 <style scoped>
 .editor-page {
   position: relative;
-  height: calc(100vh - 64px);
+  height: calc(
+    100dvh -
+    var(--a-topbar-height, 3.5rem) -
+    3.75rem -
+    clamp(2rem, 6vw, 4rem)
+  );
+  min-height: 0;
   background: var(--a-color-bg);
   overflow: hidden;
 }
@@ -847,7 +852,12 @@ onMounted(() => { void initializeEditor() })
 
 @media (max-width: 960px) {
   .editor-page {
-    height: calc(100dvh - 64px);
+    height: calc(
+      100dvh -
+      var(--a-topbar-height, 3.5rem) -
+      3.75rem -
+      clamp(2rem, 6vw, 4rem)
+    );
   }
 
   .editor-layout {

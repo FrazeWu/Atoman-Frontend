@@ -1,10 +1,11 @@
 <template>
   <section class="studio-dashboard">
-    <PPageHeader :title="title" mb="1.5rem">
+    <PPageHeader :title="title" sub="按内容模块查看创作状态与表现" mb="2rem">
       <template v-if="studio.dashboard" #action>
-        <span data-testid="dashboard-subscriber-count" style="color:var(--a-color-muted);font-size:0.875rem">
-          频道订阅 {{ formatNumber(studio.dashboard.channel_subscriber_count) }}
-        </span>
+        <div class="studio-dashboard__subscriber" data-testid="dashboard-subscriber-count">
+          <span>频道订阅</span>
+          <strong>{{ formatNumber(studio.dashboard.channel_subscriber_count) }}</strong>
+        </div>
       </template>
     </PPageHeader>
 
@@ -94,12 +95,24 @@ onMounted(load)
 
 <style scoped>
 .studio-dashboard { display: grid; gap: 0; }
-.studio-dashboard__header { min-height: 3rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; }
-.studio-dashboard__header h1 { margin: 0; font-size: 1.5rem; }
-.studio-dashboard__header p { margin: 0; color: var(--a-color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.studio-dashboard__subscriber {
+  min-width: 8.5rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+}
+.studio-dashboard__subscriber span { color: var(--a-color-muted); font-size: 0.75rem; }
+.studio-dashboard__subscriber strong { font-size: 1.125rem; font-variant-numeric: tabular-nums; }
 .studio-dashboard__sections { display: grid; }
 .studio-dashboard__retry-error { margin: 0 0 1rem; color: var(--a-color-danger); }
 .studio-dashboard__state { margin: 2rem 0; }
 .studio-dashboard__state button { min-height: 2.75rem; border: 1px solid var(--a-color-fg); background: var(--a-color-bg); color: var(--a-color-fg); padding: 0 1rem; cursor: pointer; }
-.studio-dashboard__state button:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 2px; }
+.studio-dashboard__state button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .studio-dashboard :deep(.p-page-header__action) { width: 100%; }
+  .studio-dashboard__subscriber { width: 100%; }
+}
 </style>

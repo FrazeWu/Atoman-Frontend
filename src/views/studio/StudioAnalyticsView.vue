@@ -1,7 +1,10 @@
 <template>
   <section class="studio-analytics">
     <header class="studio-analytics__header">
-      <h2>数据</h2>
+      <div>
+        <h2>数据概览</h2>
+        <p>观察内容触达、消费与回访表现。</p>
+      </div>
       <PSegmentedControl v-model="range" :options="rangeOptions" :disabled="loading" @change="changeRange" />
     </header>
 
@@ -9,7 +12,10 @@
     <p v-else-if="error" class="studio-analytics__message" role="alert">{{ error }}</p>
     <template v-else-if="analytics">
       <section class="studio-analytics__funnel" aria-labelledby="analytics-funnel-title">
-        <header><h3 id="analytics-funnel-title">消费漏斗</h3></header>
+        <header>
+          <h3 id="analytics-funnel-title">消费漏斗</h3>
+          <span>各阶段转化</span>
+        </header>
         <ol>
           <li v-for="(metric, index) in funnelMetrics" :key="metric">
             <span>{{ metricLabel(metric) }}</span>
@@ -106,7 +112,12 @@ const moduleMetrics: Record<StudioModule, string[]> = {
 const metricLabels: Record<string, string> = {
   impression: '曝光', open: '打开', engaged: '有效消费', view: '阅读', play: '播放', complete: '完成', comment: '评论', like: '点赞', bookmark: '收藏', share: '分享', follow: '新增关注',
 }
-const funnelMetrics = ['impression', 'open', 'engaged', 'complete']
+const funnelMetricsByModule: Record<StudioModule, string[]> = {
+  blog: ['impression', 'open', 'engaged', 'view'],
+  podcast: ['impression', 'open', 'engaged', 'complete'],
+  video: ['impression', 'open', 'engaged', 'complete'],
+}
+const funnelMetrics = computed(() => funnelMetricsByModule[module.value])
 const sourceLabels: Record<string, string> = { direct: '直接访问', home: '首页', recommendation: '推荐', subscription: '订阅', continue: '继续消费', notification: '通知', search: '搜索' }
 const visibleMetrics = computed(() => moduleMetrics[module.value])
 let chart: Chart | null = null
@@ -224,27 +235,31 @@ onBeforeUnmount(destroyChart)
 </script>
 
 <style scoped>
-.studio-analytics { display: grid; gap: 1rem; }
+.studio-analytics { display: grid; gap: 1.25rem; }
 .studio-analytics__header, .studio-analytics__section > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.studio-analytics__header > div { min-width: 0; }
+.studio-analytics__header p { margin: 0.25rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
 .studio-analytics h2, .studio-analytics h3, .studio-analytics__message { margin: 0; }
-.studio-analytics h2 { font-size: 1.125rem; }
+.studio-analytics h2 { font-size: 1.25rem; }
 .studio-analytics h3 { font-size: 0.95rem; }
 .studio-analytics__message { color: var(--a-color-muted); padding: 2rem 0; }
-.studio-analytics__funnel { border-block: 1px solid var(--a-color-border-soft); padding: 1rem 0; }
+.studio-analytics__funnel { padding: 1rem 1.125rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .studio-analytics__funnel header { margin-bottom: 0.75rem; }
+.studio-analytics__funnel header span { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__funnel ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0; padding: 0; list-style: none; }
 .studio-analytics__funnel li { min-width: 0; display: grid; gap: 0.25rem; padding: 0.5rem 1rem; border-right: 1px solid var(--a-color-border-soft); }
 .studio-analytics__funnel li:last-child { border-right: 0; }
 .studio-analytics__funnel span, .studio-analytics__funnel small { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__funnel strong { font-size: 1.375rem; font-variant-numeric: tabular-nums; }
-.studio-analytics__totals { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; border-block: 1px solid var(--a-color-border-soft); }
+.studio-analytics__totals { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); overflow: hidden; }
 .studio-analytics__totals div { min-width: 0; padding: 1rem; border-right: 1px solid var(--a-color-border-soft); }
+.studio-analytics__totals div:hover { background: var(--a-color-surface); }
 .studio-analytics__totals div:last-child { border-right: 0; }
 .studio-analytics__totals dt { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__totals dd { margin: 0.35rem 0 0; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .studio-analytics__grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); gap: 1.5rem; }
-.studio-analytics__section { min-width: 0; display: grid; align-content: start; gap: 1rem; }
-.studio-analytics__section > header { min-height: 2.5rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.studio-analytics__section { min-width: 0; display: grid; align-content: start; gap: 1rem; padding: 1rem 1.125rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
+.studio-analytics__section > header { min-height: 2.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .studio-analytics__section > header span { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__chart { width: 100%; min-width: 0; height: 20rem; overflow: hidden; }
 .studio-analytics__chart canvas { max-width: 100% !important; }
@@ -269,5 +284,6 @@ onBeforeUnmount(destroyChart)
 }
 @media (max-width: 520px) {
   .studio-analytics__header { align-items: flex-start; flex-direction: column; }
+  .studio-analytics__header > :deep(.p-segmented-control) { width: 100%; }
 }
 </style>

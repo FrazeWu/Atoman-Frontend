@@ -80,6 +80,28 @@ test.describe("Unified Studio", () => {
 					},
 				});
 			}
+			if (path === "/api/v1/studio/collections" && method === "GET") {
+				return fulfill({ data: collections });
+			}
+			if (path === "/api/v1/studio/collections" && method === "POST") {
+				const input = request.postDataJSON() as {
+					name: string;
+					description: string;
+				};
+				const created = {
+					id: "collection-research",
+					channel_id: "channel-1",
+					content_type: "blog",
+					name: input.name,
+					description: input.description,
+					cover_url: "",
+					is_default: false,
+					created_at: "2026-07-18T00:00:00Z",
+					updated_at: "2026-07-18T00:00:00Z",
+				};
+				collections = [...collections, created];
+				return fulfill({ data: created });
+			}
 			if (path === "/api/v1/studio/blog/collections" && method === "GET") {
 				return fulfill({ data: collections });
 			}
@@ -279,7 +301,9 @@ test.describe("Unified Studio", () => {
 		const editor = page.locator(".cm-content");
 		await expect(editor).toBeVisible();
 		await editor.click();
-		await page.keyboard.insertText("# Studio 草稿\n\n正文");
+		await page.keyboard.press("Control+Home");
+		await page.keyboard.press("End");
+		await page.keyboard.insertText("Studio 草稿\n\n正文");
 		await page.getByRole("button", { name: "存草稿" }).click();
 		await expect(page).toHaveURL(
 			/\/studio\/blog\/content\?collection_id=collection-research/,

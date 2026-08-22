@@ -1,8 +1,11 @@
 <template>
   <section class="studio-interactions">
     <header class="studio-interactions__header">
-      <h2>互动</h2>
-      <div class="studio-interactions__filters">
+      <div>
+        <h2>互动管理</h2>
+        <p>集中处理评论与回复。</p>
+      </div>
+      <div class="studio-interactions__filters" aria-label="互动筛选">
         <label>
           <input v-model="filters.unreplied" data-testid="unreplied-filter" type="checkbox" @change="changeFilters">
           未回复
@@ -22,6 +25,7 @@
         <header>
           <div>
             <strong>{{ item.author.display_name || item.author.username }}</strong>
+            <span v-if="item.pinned" class="studio-interactions__pinned"><Pin :size="13" aria-hidden="true" /> 已置顶</span>
             <time :datetime="item.created_at">{{ formatDate(item.created_at) }}</time>
           </div>
           <RouterLink :to="contentPath(item)">{{ item.content_title }}</RouterLink>
@@ -235,16 +239,21 @@ watch(module, () => {
 <style scoped>
 .studio-interactions { display: grid; gap: 1rem; }
 .studio-interactions__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.studio-interactions h2, .studio-interactions__message, .studio-interactions__item p, .studio-interactions__confirm { margin: 0; }
-.studio-interactions h2 { font-size: 1.125rem; }
-.studio-interactions__filters { display: flex; align-items: center; gap: 1rem; }
-.studio-interactions__filters label { min-height: 44px; display: inline-flex; align-items: center; gap: 0.45rem; color: var(--a-color-muted); font-size: 0.8rem; cursor: pointer; }
+  .studio-interactions__header > div:first-child { min-width: 0; }
+  .studio-interactions__header p { margin: 0.25rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
+  .studio-interactions h2, .studio-interactions__message, .studio-interactions__item p, .studio-interactions__confirm { margin: 0; }
+  .studio-interactions h2 { font-size: 1.25rem; }
+.studio-interactions__filters { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
+.studio-interactions__filters label { min-height: 2.5rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0 0.625rem; border-radius: var(--a-radius-control); color: var(--a-color-muted); font-size: 0.8rem; cursor: pointer; transition: background-color 0.18s ease, color 0.18s ease; }
+.studio-interactions__filters label:has(input:checked) { background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .studio-interactions__filters input { width: 1rem; height: 1rem; accent-color: var(--a-color-primary); }
-.studio-interactions__message { color: var(--a-color-muted); padding: 2rem 0; }
-.studio-interactions__list { display: grid; border-top: 1px solid var(--a-color-border-soft); }
-.studio-interactions__item { display: grid; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
+.studio-interactions__message { margin: 0; padding: 0.75rem 1rem; border: 1px solid var(--a-color-danger-border); border-radius: var(--a-radius-card); color: var(--a-color-danger); }
+.studio-interactions__list { display: grid; gap: 0.75rem; }
+.studio-interactions__item { display: grid; gap: 0.75rem; padding: 1rem 1.125rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+.studio-interactions__item:hover { border-color: var(--a-color-border); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
 .studio-interactions__item > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.studio-interactions__item > header div { display: flex; align-items: center; gap: 0.75rem; }
+.studio-interactions__item > header div { display: flex; align-items: center; flex-wrap: wrap; gap: 0.625rem; }
+.studio-interactions__pinned { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.4rem; border-radius: 999px; background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg)); color: var(--a-color-primary); font-size: 0.7rem; font-weight: 600; }
 .studio-interactions__item time, .studio-interactions__item > header a { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-interactions__item > header a { text-align: right; }
 .studio-interactions__item p { line-height: 1.6; }
@@ -253,11 +262,13 @@ watch(module, () => {
 .studio-interactions__reply { display: grid; gap: 0.5rem; max-width: 42rem; }
 .studio-interactions__reply > div { display: flex; justify-content: flex-end; gap: 0.5rem; }
 .studio-interactions__item footer { display: flex; align-items: center; gap: 0.5rem; }
-.studio-interactions__item footer button { min-height: 44px; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0 0.5rem; border: 0; background: transparent; color: var(--a-color-muted); cursor: pointer; }
-.studio-interactions__item footer button:hover { color: var(--a-color-text); }
+.studio-interactions__item footer button { min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease; }
+.studio-interactions__item footer button:hover { border-color: var(--a-color-border-soft); background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .studio-interactions__item footer button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 @media (max-width: 600px) {
   .studio-interactions__header, .studio-interactions__item > header { align-items: flex-start; flex-direction: column; }
+  .studio-interactions__filters { width: 100%; }
+  .studio-interactions__filters label { flex: 1; justify-content: center; }
   .studio-interactions__item > header a { text-align: left; }
 }
 </style>

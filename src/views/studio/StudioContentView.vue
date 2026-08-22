@@ -1,19 +1,28 @@
 <template>
   <section class="studio-content">
     <header class="studio-content__heading">
-      <h2>内容</h2>
-      <PButton
-		v-if="canCreate"
-        data-testid="create-content"
-        :to="createRoute"
-        size="sm"
-      >
-        <Plus :size="16" aria-hidden="true" />
-        {{ config.createLabel }}
-      </PButton>
+      <div>
+        <h2>内容</h2>
+        <p>查看、筛选并管理{{ config.itemLabel }}。</p>
+      </div>
+      <div class="studio-content__heading-meta">
+        <span v-if="studio.contentPagination[module]?.total !== undefined">
+          共 {{ studio.contentPagination[module]?.total ?? 0 }} 条
+        </span>
+        <PButton
+          v-if="canCreate"
+          data-testid="create-content"
+          :to="createRoute"
+          size="sm"
+        >
+          <Plus :size="16" aria-hidden="true" />
+          {{ config.createLabel }}
+        </PButton>
+      </div>
     </header>
 
     <form class="studio-content__filters" role="search" @submit.prevent="applySearch">
+      <div class="studio-content__filter-label">筛选</div>
       <div class="studio-content__search">
         <span class="sr-only">搜索{{ config.itemLabel }}</span>
         <Search :size="16" aria-hidden="true" />
@@ -62,9 +71,11 @@
 
     <p v-if="loading" class="studio-content__message">加载中...</p>
     <p v-else-if="error" class="studio-content__message" role="alert">{{ error }}</p>
-    <button v-if="selectedConflictIDs.size" type="button" :disabled="mutationBusy || !canResolveSelected" @click="resolveSelectedConflicts">确认所选合集（{{ selectedConflictIDs.size }}）</button>
+    <PButton v-if="selectedConflictIDs.size" class="studio-content__conflict-action" size="sm" :disabled="mutationBusy || !canResolveSelected" @click="resolveSelectedConflicts">
+      <Check :size="16" aria-hidden="true" />
+      确认所选合集（{{ selectedConflictIDs.size }}）
+    </PButton>
     <StudioContentTable
-      v-else
       :items="studio.contents[module]"
       :module="module"
       :pagination="studio.contentPagination[module]"
@@ -79,9 +90,16 @@
 	  @reprocess="reprocessVideo"
 	  @select-conflict="selectConflict"
 	  @candidate="selectCandidate"
-    />
+    >
+      <template #empty-action v-if="canCreate">
+        <RouterLink class="studio-content__empty-action" :to="createRoute">
+          <Plus :size="16" aria-hidden="true" />
+          {{ config.createLabel }}
+        </RouterLink>
+      </template>
+    </StudioContentTable>
 
-	<p v-if="actionMessage" class="studio-content__feedback" role="status">{{ actionMessage }}</p>
+	<p v-if="actionMessage" class="studio-content__feedback" role="status" aria-live="polite">{{ actionMessage }}</p>
 	<p v-if="actionError" class="studio-content__feedback studio-content__feedback--error" role="alert">{{ actionError }}</p>
 
 	<PConfirm
@@ -99,8 +117,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Plus, Search } from 'lucide-vue-next'
-import { useRoute, useRouter } from 'vue-router'
+import { Check, Plus, Search } from 'lucide-vue-next'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import StudioContentTable from '@/components/studio/StudioContentTable.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -324,11 +342,15 @@ watch(
 
 <style scoped>
 .studio-content { min-width: 0; max-width: 100%; display: grid; gap: 1rem; }
-.studio-content__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.studio-content h2, .studio-content__message { margin: 0; }
-.studio-content h2 { font-size: 1.125rem; }
-.studio-content__filters { display: grid; grid-template-columns: minmax(12rem, 1fr) repeat(3, minmax(9rem, auto)); gap: 0.625rem; align-items: center; }
-.studio-content__search { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); }
+.studio-content__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.studio-content__heading h2, .studio-content__heading p { margin: 0; }
+.studio-content__heading h2 { font-size: 1.25rem; }
+.studio-content__heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8125rem; }
+.studio-content__heading-meta { display: flex; align-items: center; gap: 0.75rem; }
+.studio-content__heading-meta > span { color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.studio-content__filters { position: relative; display: grid; grid-template-columns: minmax(12rem, 1fr) repeat(3, minmax(9rem, auto)); gap: 0.625rem; align-items: center; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
+.studio-content__filter-label { grid-column: 1 / -1; color: var(--a-color-muted); font-size: 0.75rem; font-weight: 600; }
+.studio-content__search { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); }
 .studio-content__search:focus-within { outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent); outline-offset: 1px; border-color: var(--a-color-primary); }
 .studio-content__search :deep(.p-field) { flex: 1; min-width: 0; }
 .studio-content__search :deep(.p-input) { min-width: 0; min-height: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--a-color-text); font: inherit; padding: 0; }
@@ -336,6 +358,10 @@ watch(
 .studio-content__filter-select { min-width: 0; }
 .studio-content__filter-select :deep(.p-field-label) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .studio-content__filter-select :deep(.p-select-trigger) { min-height: 44px; }
+.studio-content__conflict-action { justify-self: start; }
+.studio-content__conflict-action :deep(svg) { flex: 0 0 auto; }
+.studio-content__empty-action { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; padding: 0 0.875rem; border: 1px solid var(--a-color-primary); border-radius: var(--a-radius-control); background: var(--a-color-primary); color: var(--a-color-primary-contrast); text-decoration: none; }
+.studio-content__empty-action:hover { background: var(--a-color-primary-hover); }
 .studio-content__message { color: var(--a-color-muted); padding: 2rem 0; }
 .studio-content__feedback { margin: 0; color: var(--a-color-muted); }
 .studio-content__feedback--error { color: var(--a-color-danger); }
@@ -346,7 +372,9 @@ watch(
 }
 @media (max-width: 560px) {
   .studio-content__heading { align-items: flex-start; }
+  .studio-content__heading-meta { align-items: flex-end; flex-direction: column; gap: 0.5rem; }
   .studio-content__filters { grid-template-columns: 1fr; }
+  .studio-content__filter-label { grid-column: auto; }
   .studio-content__search { grid-column: auto; }
 }
 </style>

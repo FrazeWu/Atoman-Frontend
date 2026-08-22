@@ -2,8 +2,8 @@ import type { RouteRecordRaw } from 'vue-router'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { describe, expect, it } from 'vitest'
 
-import { buildAppRoutes } from '@/router/buildAppRoutes'
-import { studioRoutes } from '@/router/routes/studio'
+import { buildAppRoutes } from '../../../src/router/buildAppRoutes'
+import { studioRoutes } from '../../../src/router/routes/studio'
 
 function routePaths(routes: RouteRecordRaw[], parent = ''): string[] {
   return routes.flatMap((route) => {
@@ -24,6 +24,7 @@ describe('studio routes', () => {
       '/studio',
       '/studio/channel',
       '/studio/:module(blog|podcast|video)/content',
+      '/studio/:module(blog|podcast|video)/collections',
       '/studio/:module(blog|podcast|video)/analytics',
       '/studio/:module(blog|podcast|video)/interactions',
       '/studio/:module(blog|podcast|video)/settings',

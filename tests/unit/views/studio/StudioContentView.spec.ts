@@ -83,7 +83,7 @@ describe("StudioContentView", () => {
 			wrapper
 				.findAll(".studio-module__header nav a")
 				.map((link) => link.text()),
-		).toEqual(["内容", "数据", "互动", "设置"]);
+		).toEqual(["内容", "合集", "数据", "互动", "设置"]);
 		expect(store.loadContents).toHaveBeenCalledWith("blog", {
 			q: "research",
 			status: "draft",
@@ -146,7 +146,7 @@ describe("StudioContentView", () => {
 			wrapper
 				.find('.studio-module__header a[href="/studio/blog/collections"]')
 				.exists(),
-		).toBe(false);
+		).toBe(true);
 	});
 
 	it("loads contents and collections once when switching modules", async () => {

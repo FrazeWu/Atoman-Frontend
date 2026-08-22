@@ -1,11 +1,12 @@
 <template>
   <section class="studio-channels">
-    <header class="studio-channels__header">
-      <h1>频道设置</h1>
-      <PButton data-testid="new-channel" size="sm" @click="startCreate">
-        <Plus :size="16" aria-hidden="true" /> 新建频道
-      </PButton>
-    </header>
+    <PPageHeader title="频道管理" sub="管理内容发布使用的频道与地址。" mb="0">
+      <template #action>
+        <PButton data-testid="new-channel" size="sm" @click="startCreate">
+          <Plus :size="16" aria-hidden="true" /> 新建频道
+        </PButton>
+      </template>
+    </PPageHeader>
 
     <form v-if="editing" class="studio-channels__form" @submit.prevent="saveChannel">
       <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
@@ -57,7 +58,6 @@
         </div>
       </li>
     </ul>
-    <StudioDashboardView title="频道概况" />
   </section>
 
   <PModal v-model="deleteModalOpen" title="删除频道" size="sm">
@@ -78,10 +78,10 @@ import { apiDeleteJson, apiPatchJson, apiPostJson } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
-import StudioDashboardView from '@/views/studio/StudioDashboardView.vue'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioChannel } from '@/types'
 
@@ -190,18 +190,50 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.studio-channels { display: grid; gap: 1rem; max-width: 54rem; }
-.studio-channels__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.studio-channels h1, .studio-channels__error, .studio-channels__confirm { margin: 0; }
-.studio-channels h1 { font-size: 1.5rem; }
-.studio-channels__form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding: 1rem 0; border-block: 1px solid var(--a-color-border-soft); }
+.studio-channels { display: grid; gap: 1.25rem; max-width: 60rem; }
+.studio-channels__form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+}
 .studio-channels__form > :nth-child(n + 3) { grid-column: 1 / -1; }
-.studio-channels__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
-.studio-channels__error { color: var(--a-color-danger); }
-.studio-channels__list { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--a-color-border-soft); }
-.studio-channels__list li { min-height: 6rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.studio-channels__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; grid-column: 1 / -1; padding-top: 0.25rem; }
+.studio-channels__error { margin: 0; padding: 0.75rem 1rem; border: 1px solid var(--a-color-danger-border); border-radius: var(--a-radius-card); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-danger); }
+.studio-channels__confirm { margin: 0; }
+.studio-channels__list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.studio-channels__list li {
+  min-height: 6rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.studio-channels__list li:hover { border-color: var(--a-color-border); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
 .studio-channels__identity { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.6rem; align-items: center; }
-.studio-channels__identity > span { width: max-content; padding: 0.15rem 0.4rem; background: var(--a-color-surface-muted); color: var(--a-color-muted); font-size: 0.7rem; }
+.studio-channels__identity > span {
+  width: max-content;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
+  color: var(--a-color-primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
 .studio-channels__identity p, .studio-channels__identity small { grid-column: 1 / -1; margin: 0; color: var(--a-color-muted); }
 .studio-channels__identity p { font-size: 0.8rem; line-height: 1.4; }
 .studio-channels__identity small { font-size: 0.7rem; }
@@ -210,9 +242,10 @@ onMounted(() => {
 .studio-channels__actions > button:not(.p-button):hover { background: var(--a-color-surface-muted); }
 .studio-channels__actions > button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 @media (max-width: 640px) {
-  .studio-channels__form { grid-template-columns: 1fr; }
+  .studio-channels__form { grid-template-columns: 1fr; padding: 1rem; }
   .studio-channels__form > * { grid-column: auto !important; }
-  .studio-channels__list li { align-items: start; grid-template-columns: 1fr; padding: 1rem 0; }
-  .studio-channels__actions { justify-content: flex-end; }
+  .studio-channels__form-actions { grid-column: 1 / -1 !important; }
+  .studio-channels__list li { align-items: start; grid-template-columns: 1fr; padding: 1rem; }
+  .studio-channels__actions { justify-content: flex-end; width: 100%; }
 }
 </style>

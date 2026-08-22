@@ -1,6 +1,10 @@
 <template>
   <div class="studio-content-table">
-    <PEmpty v-if="items.length === 0" kicker="" :title="`暂无${config.itemLabel}`" />
+    <PEmpty v-if="items.length === 0" kicker="" :title="`暂无${config.itemLabel}`">
+      <template #action>
+        <slot name="empty-action" />
+      </template>
+    </PEmpty>
     <div v-else class="studio-content-table__scroll">
       <table>
         <thead>
@@ -225,18 +229,21 @@ function formatNumber(value: number) {
 
 <style scoped>
 .studio-content-table { min-width: 0; max-width: 100%; display: grid; gap: 1rem; }
-.studio-content-table__scroll { min-width: 0; width: 100%; max-width: 100%; overflow-x: auto; border-top: 1px solid var(--a-color-border-soft); }
+.studio-content-table__scroll { min-width: 0; width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 table { width: 100%; border-collapse: collapse; min-width: 1180px; }
 th, td { padding: 0.75rem 0.625rem; border-bottom: 1px solid var(--a-color-border-soft); text-align: left; vertical-align: middle; }
-th { color: var(--a-color-muted); font-size: 0.75rem; font-weight: 600; }
+th { background: var(--a-color-surface); color: var(--a-color-muted); font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 td { font-size: 0.875rem; }
-td:first-child { min-width: 14rem; }
+tbody tr:hover { background: var(--a-color-surface); }
+td:first-child { min-width: 3.5rem; }
 td strong, td span { display: block; }
 td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-content-table__collection-conflict { color: var(--a-color-danger); font-weight: 600; }
+.studio-content-table__collection-conflict select { min-height: 2.25rem; max-width: 100%; margin-top: 0.4rem; padding: 0 0.5rem; border: 1px solid var(--a-color-danger-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); font: inherit; }
+.studio-content-table__collection-conflict select:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .studio-content-table__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; }
-.studio-content-table__action, .studio-content-table__actions button { width: 34px; height: 34px; display: inline-grid; place-items: center; flex: 0 0 34px; border: 1px solid transparent; background: transparent; color: var(--a-color-text); cursor: pointer; }
-.studio-content-table__action:hover, .studio-content-table__actions button:hover { border-color: var(--a-color-border-soft); background: var(--a-color-surface-muted); }
+.studio-content-table__action, .studio-content-table__actions button { width: 40px; height: 40px; display: inline-grid; place-items: center; flex: 0 0 40px; border: 1px solid transparent; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-text); cursor: pointer; transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease; }
+.studio-content-table__action:hover, .studio-content-table__actions button:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); color: var(--a-color-primary); }
 .studio-content-table__action:focus-visible, .studio-content-table__actions button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .studio-content-table__pagination { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; color: var(--a-color-muted); font-size: 0.8rem; }
 .studio-content-table__pagination button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; }
@@ -244,7 +251,7 @@ td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-content-table__pagination button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 760px) {
-  .studio-content-table__scroll { overflow: visible; border-top: 0; }
+  .studio-content-table__scroll { overflow: visible; border: 0; background: transparent; }
   table, tbody { display: block; width: 100%; min-width: 0; }
   thead { display: none; }
   tbody { display: grid; gap: 0.75rem; }
@@ -252,8 +259,11 @@ td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.625rem 1rem;
-    padding: 0.875rem;
+    padding: 1rem;
     border: 1px solid var(--a-color-border-soft);
+    border-radius: var(--a-radius-card);
+    background: var(--a-color-bg);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
   }
   td { min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
   td:first-child, td:last-child { grid-column: 1 / -1; }

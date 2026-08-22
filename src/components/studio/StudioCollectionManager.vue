@@ -2,8 +2,8 @@
   <div data-testid="studio-collection-manager" class="studio-collections">
     <header class="studio-collections__heading">
       <div>
-        <h2>合集</h2>
-        <p>整理当前频道的内容。</p>
+        <h2>合集管理</h2>
+        <p>{{ studio.unifiedCollections.length }} 个合集</p>
       </div>
       <PButton data-testid="new-collection" size="sm" @click="startCreate">
         <Plus :size="16" aria-hidden="true" />
@@ -183,16 +183,17 @@ async function deleteCollection() {
 
 <style scoped>
 .studio-collections { display: grid; gap: 1rem; }
-.studio-collections__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.studio-collections__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .studio-collections__heading h2, .studio-collections__heading p { margin: 0; }
 .studio-collections__heading h2 { font-size: 1.125rem; }
-.studio-collections__heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8rem; }
-.studio-collections__form { display: grid; gap: 0.875rem; padding: 1rem 0; border-block: 1px solid var(--a-color-border-soft); }
+.studio-collections__heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.studio-collections__form { display: grid; gap: 0.875rem; padding: 1.25rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .studio-collections__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
 .studio-collections__error, .studio-collections__confirm { margin: 0; }
 .studio-collections__error { color: var(--a-color-danger); }
-.studio-collections__list { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--a-color-border-soft); }
-.studio-collections__list li { min-height: 72px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
+.studio-collections__list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.studio-collections__list li { min-height: 72px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding: 1rem 1.125rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+.studio-collections__list li:hover { border-color: var(--a-color-border); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
 .studio-collections__identity { min-width: 0; }
 .studio-collections__name { display: flex; align-items: center; gap: 0.5rem; }
 .studio-collections__name span { padding: 0.15rem 0.4rem; background: var(--a-color-surface-muted); color: var(--a-color-muted); font-size: 0.7rem; }
@@ -205,5 +206,7 @@ async function deleteCollection() {
 @media (max-width: 560px) {
   .studio-collections__heading { align-items: stretch; flex-direction: column; }
   .studio-collections__heading :deep(.p-button) { width: 100%; }
+  .studio-collections__list li { align-items: start; grid-template-columns: 1fr; padding: 1rem; }
+  .studio-collections__actions { justify-content: flex-end; width: 100%; }
 }
 </style>

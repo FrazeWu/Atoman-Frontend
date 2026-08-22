@@ -18,26 +18,25 @@
     </header>
 
     <div class="studio-frame">
-      <aside id="studio-primary-navigation" class="studio-sidebar" :class="{ 'is-open': mobileNavOpen }">
-        <nav data-testid="studio-primary-nav" aria-label="创作中心">
-          <RouterLink to="/studio/channel" active-class="is-active" @click="mobileNavOpen = false">
-            <RadioTower :size="18" aria-hidden="true" />
-            <span>频道管理</span>
-          </RouterLink>
-          <RouterLink to="/studio/blog" active-class="is-active" @click="mobileNavOpen = false">
-            <FileText :size="18" aria-hidden="true" />
-            <span>博客</span>
-          </RouterLink>
-          <RouterLink to="/studio/video" active-class="is-active" @click="mobileNavOpen = false">
-            <Video :size="18" aria-hidden="true" />
-            <span>视频</span>
-          </RouterLink>
-          <RouterLink to="/studio/podcast" active-class="is-active" @click="mobileNavOpen = false">
-            <Mic2 :size="18" aria-hidden="true" />
-            <span>播客</span>
-          </RouterLink>
-        </nav>
-      </aside>
+      <div id="studio-primary-navigation" data-testid="studio-primary-nav" class="studio-sidebar-shell" :class="{ 'is-open': mobileNavOpen }">
+        <PSidebar class="studio-sidebar" aria-label="创作中心">
+          <PSidebarItem to="/studio" exact :icon="LayoutDashboard" @click="mobileNavOpen = false">
+            概览
+          </PSidebarItem>
+          <PSidebarItem to="/studio/blog" :icon="FileText" @click="mobileNavOpen = false">
+            博客
+          </PSidebarItem>
+          <PSidebarItem to="/studio/podcast" :icon="Mic2" @click="mobileNavOpen = false">
+            播客
+          </PSidebarItem>
+          <PSidebarItem to="/studio/video" :icon="Video" @click="mobileNavOpen = false">
+            视频
+          </PSidebarItem>
+          <PSidebarItem to="/studio/channel" :icon="RadioTower" @click="mobileNavOpen = false">
+            频道管理
+          </PSidebarItem>
+        </PSidebar>
+      </div>
 
       <main class="studio-main" tabindex="-1">
         <p v-if="studio.loading && !studio.loaded" class="studio-state">加载中...</p>
@@ -50,13 +49,9 @@
           <RouterLink to="/studio/channel">创建频道</RouterLink>
         </section>
         <RouterView v-else v-slot="{ Component }">
-          <StudioRouteSheet
-            v-if="Component"
-            :title="sheetTitle"
-            @close="closeSheet"
-          >
+          <div v-if="Component" class="studio-route-surface">
             <component :is="Component" />
-          </StudioRouteSheet>
+          </div>
         </RouterView>
       </main>
     </div>
@@ -65,30 +60,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { FileText, Menu, Mic2, RadioTower, Video } from 'lucide-vue-next'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { FileText, LayoutDashboard, Menu, Mic2, RadioTower, Video } from 'lucide-vue-next'
 
+import PSidebar from '@/components/ui/PSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import StudioChannelSelector from '@/components/studio/StudioChannelSelector.vue'
-import StudioRouteSheet from '@/components/studio/StudioRouteSheet.vue'
-import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioModule } from '@/types'
 
 const studio = useStudioStore()
 const route = useRoute()
-const router = useRouter()
 const mobileNavOpen = ref(false)
 const isChannelRoute = computed(() => route.path.startsWith('/studio/channel'))
-const sheetTitle = computed(() => {
-  if (route.path === '/studio/channel/collections') return '合集管理'
-  if (isChannelRoute.value) return '频道管理'
-  const module = route.params.module as StudioModule | undefined
-  return module ? studioModules[module].label : '创作中心'
-})
-
-function closeSheet() {
-  void router.replace('/studio/channel')
-}
 
 onMounted(() => {
   void studio.loadState()
@@ -98,7 +81,7 @@ onMounted(() => {
 <style scoped>
 .studio-layout {
   min-height: calc(100dvh - var(--a-topbar-height, 3.5rem));
-  background: var(--a-color-bg);
+  background: var(--a-color-surface);
   color: var(--a-color-fg);
 }
 
@@ -132,38 +115,40 @@ onMounted(() => {
   min-height: calc(100dvh - 7.25rem);
 }
 
-.studio-sidebar {
+.studio-sidebar-shell {
+  min-width: 0;
   border-right: 1px solid var(--a-color-border-soft);
-  padding: 1rem 0.75rem;
 }
 
-.studio-sidebar nav {
-  display: grid;
-  gap: 0.25rem;
+.studio-sidebar {
+  width: 100%;
+  min-height: 100%;
+  height: auto;
+  position: static;
+  padding: 1rem 0.75rem;
+  overflow: visible;
+  background: transparent;
+}
+
+.studio-sidebar :deep(.p-sidebar-nav) {
   position: sticky;
   top: 4.5rem;
 }
 
-.studio-sidebar a {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--a-color-muted);
+.studio-sidebar :deep(.p-sidebar-item) {
+  width: 100%;
+}
+
+.studio-sidebar-shell .p-sidebar-item {
   text-decoration: none;
-  border-left: 2px solid transparent;
 }
 
-.studio-sidebar a:hover,
-.studio-sidebar a:focus-visible,
-.studio-sidebar a.is-active {
-  color: var(--a-color-fg);
-  background: var(--a-color-surface-muted);
-  border-left-color: currentColor;
+.studio-sidebar-shell .p-sidebar-item.active {
+  text-decoration: none;
 }
 
-.studio-sidebar a:focus-visible,
+
+.studio-sidebar :deep(.p-sidebar-item:focus-visible),
 .studio-menu-button:focus-visible,
 .studio-state button:focus-visible {
   outline: 2px solid var(--a-color-fg);
@@ -173,6 +158,13 @@ onMounted(() => {
 .studio-main {
   min-width: 0;
   padding: clamp(1rem, 3vw, 2rem);
+}
+
+.studio-route-surface {
+  width: 100%;
+  max-width: 78rem;
+  min-height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 7.25rem);
+  margin: 0 auto;
 }
 
 .studio-state,
@@ -193,22 +185,70 @@ onMounted(() => {
   cursor: pointer;
 }
 
+@media (min-width: 761px) and (max-width: 1023px) {
+  .studio-sidebar { width: 100%; }
+  .studio-sidebar :deep(.p-sidebar-nav) { position: static; }
+  .studio-sidebar :deep(.p-sidebar-item) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: initial;
+    gap: 0.6rem;
+    padding: 0 0.85rem;
+  }
+  .studio-sidebar :deep(.p-sidebar-item-label) {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: nowrap;
+    border: 0;
+  }
+  .studio-sidebar :deep(.p-sidebar-item-svg) {
+    inline-size: 1.375rem;
+    block-size: 1.375rem;
+  }
+}
+
 @media (max-width: 760px) {
   .studio-menu-button { display: inline-flex; }
   .studio-frame { display: block; }
-  .studio-sidebar {
+  .studio-sidebar-shell {
     display: none;
     border-right: 0;
     border-bottom: 1px solid var(--a-color-border-soft);
   }
-  .studio-sidebar.is-open {
-    position: relative;
-    z-index: calc(var(--a-z-player-sheet) + 1);
-    display: block;
+  .studio-sidebar-shell.is-open { display: block; }
+  .studio-sidebar {
+    display: flex;
+    width: 100%;
+    min-height: auto;
+    padding: 0.75rem;
   }
-  .studio-sidebar nav {
+  .studio-sidebar :deep(.p-sidebar-nav) {
     position: static;
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .studio-sidebar :deep(.p-sidebar-item) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: initial;
+    gap: 0.6rem;
+    padding: 0 0.75rem;
+  }
+  .studio-sidebar :deep(.p-sidebar-item-label) {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: nowrap;
+    border: 0;
   }
   .studio-main { padding: 1rem; }
 }

@@ -80,11 +80,13 @@ const discoverArtists = ref<MusicRecommendationItem[]>([])
 const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
 type DiscoverSection = 'album' | 'artist' | 'playlist'
 type DiscoverPagination = { page: number; page_size: number; total: number; has_more: boolean }
-const discoverPageSize = 6
+const discoverAlbumPageSize = 12
+const discoverArtistPageSize = 12
+const discoverPlaylistPageSize = 8
 const discoverSectionMeta = reactive<Record<DiscoverSection, DiscoverPagination>>({
-  album: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
-  artist: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
-  playlist: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
+  album: { page: 1, page_size: discoverAlbumPageSize, total: 0, has_more: false },
+  artist: { page: 1, page_size: discoverArtistPageSize, total: 0, has_more: false },
+  playlist: { page: 1, page_size: discoverPlaylistPageSize, total: 0, has_more: false },
 })
 const discoverSectionLoading = reactive<Record<DiscoverSection, boolean>>({
   album: false,
@@ -97,7 +99,7 @@ const searchLoading = ref(false)
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
 const albumItems = ref<MusicAlbumListItem[]>([])
-const albumMeta = ref({ page: 1, page_size: 12, total: 0, has_more: false })
+const albumMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
 let activeSearchRequestId = 0
 let albumSearchTimer: ReturnType<typeof setTimeout> | null = null
 let bookmarkRequestId = 0
@@ -321,7 +323,16 @@ function resetDiscoverSections() {
   discoverArtists.value = []
   discoverPlaylists.value = []
   for (const section of ['album', 'artist', 'playlist'] as const) {
-    discoverSectionMeta[section] = { page: 1, page_size: discoverPageSize, total: 0, has_more: false }
+    discoverSectionMeta[section] = {
+      page: 1,
+      page_size: section === 'album'
+        ? discoverAlbumPageSize
+        : section === 'artist'
+          ? discoverArtistPageSize
+          : discoverPlaylistPageSize,
+      total: 0,
+      has_more: false,
+    }
     discoverSectionLoading[section] = false
   }
 }
@@ -382,7 +393,7 @@ async function loadDiscoverSection(
   discoverSectionLoading[section] = true
   try {
     if (section === 'album') {
-      const response = await listMusicAlbums({ page: targetPage, page_size: discoverPageSize, sort: 'hot' })
+      const response = await listMusicAlbums({ page: targetPage, page_size: discoverAlbumPageSize, sort: 'hot' })
       if (!isCurrent()) return
       const albums = response.data.map((album) => ({ ...album, reason: '近期热门专辑' }))
       discoverAlbums.value = append ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
@@ -391,7 +402,7 @@ async function loadDiscoverSection(
     }
 
     if (section === 'artist') {
-      const response = await listRecommendedArtists('hot', { page: targetPage, page_size: discoverPageSize })
+      const response = await listRecommendedArtists('hot', { page: targetPage, page_size: discoverArtistPageSize })
       if (!isCurrent()) return
       const artists = response.data.map((artist) => ({ ...artist, reason: '近期热门艺人', section: 'artist' }))
       discoverArtists.value = append ? mergeDiscoverByID(discoverArtists.value, artists) : artists
@@ -399,13 +410,13 @@ async function loadDiscoverSection(
       return
     }
 
-    const response = await listPublicMusicPlaylists({ page: targetPage, page_size: discoverPageSize })
+    const response = await listPublicMusicPlaylists({ page: targetPage, page_size: discoverPlaylistPageSize })
     if (!isCurrent()) return
     const playlists = response.data.map((playlist) => ({ ...playlist, reason: '最新公开歌单', section: 'playlist' }))
     discoverPlaylists.value = append ? mergeDiscoverByID(discoverPlaylists.value, playlists) : playlists
     discoverSectionMeta.playlist = response.meta ?? {
       page: targetPage,
-      page_size: discoverPageSize,
+      page_size: discoverPlaylistPageSize,
       total: playlists.length,
       has_more: false,
     }
@@ -434,7 +445,7 @@ async function fetchAlbumIndex(nextPage = 1) {
     const response = await listMusicAlbums({
       ...(query ? { q: query } : {}),
       page: nextPage,
-      page_size: 12,
+      page_size: 24,
       sort: 'hot',
     })
     if (!request.isCurrent()) return

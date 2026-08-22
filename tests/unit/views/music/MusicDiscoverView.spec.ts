@@ -339,7 +339,7 @@ describe("Music DiscoverView.vue", () => {
 		expect(mocks.getMusicHome).not.toHaveBeenCalled();
 		expect(mocks.listMusicAlbums).toHaveBeenCalledWith({
 			page: 1,
-			page_size: 12,
+			page_size: 24,
 			sort: "hot",
 		});
 		expect(wrapper.find('[aria-label="专辑列表"]').exists()).toBe(true);
@@ -380,15 +380,15 @@ describe("Music DiscoverView.vue", () => {
 			mocks.listMusicAlbums
 				.mockResolvedValueOnce({
 					data: [{ id: "album-1", title: "First", artists: [] }],
-					meta: { page: 1, page_size: 12, total: 2, has_more: true },
+					meta: { page: 1, page_size: 24, total: 2, has_more: true },
 				})
 				.mockResolvedValueOnce({
 					data: [{ id: "album-2", title: "Second", artists: [] }],
-					meta: { page: 2, page_size: 12, total: 2, has_more: false },
+					meta: { page: 2, page_size: 24, total: 2, has_more: false },
 				})
 				.mockResolvedValueOnce({
 					data: [{ id: "album-3", title: "Search Result", artists: [] }],
-					meta: { page: 1, page_size: 12, total: 1, has_more: false },
+					meta: { page: 1, page_size: 24, total: 1, has_more: false },
 				});
 
 			const wrapper = mount(DiscoverView, { props: { contentMode: "albums" } });
@@ -400,7 +400,7 @@ describe("Music DiscoverView.vue", () => {
 			).toHaveLength(1);
 			expect(mocks.listMusicAlbums).toHaveBeenNthCalledWith(2, {
 				page: 2,
-				page_size: 12,
+				page_size: 24,
 				sort: "hot",
 			});
 
@@ -412,7 +412,7 @@ describe("Music DiscoverView.vue", () => {
 			expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({
 				q: "Search",
 				page: 1,
-				page_size: 12,
+				page_size: 24,
 				sort: "hot",
 			});
 			expect(wrapper.text()).toContain("Search Result");
@@ -506,16 +506,16 @@ describe("Music DiscoverView.vue", () => {
 		expect(mocks.getMusicHome).toHaveBeenCalledWith();
 		expect(mocks.listMusicAlbums).toHaveBeenCalledWith({
 			page: 1,
-			page_size: 6,
+			page_size: 12,
 			sort: "hot",
 		});
 		expect(mocks.listRecommendedArtists).toHaveBeenCalledWith("hot", {
 			page: 1,
-			page_size: 6,
+			page_size: 12,
 		});
 		expect(mocks.listPublicMusicPlaylists).toHaveBeenCalledWith({
 			page: 1,
-			page_size: 6,
+			page_size: 8,
 		});
 		expect(wrapper.find('[aria-label="发现分区"]').exists()).toBe(true);
 		expect(wrapper.find('[aria-label="为你推荐专辑"]').exists()).toBe(true);
@@ -586,7 +586,7 @@ describe("Music DiscoverView.vue", () => {
 				data: [
 					{ id: "album-1", title: "First", artists: [], entry_status: "open" },
 				],
-				meta: { page: 1, page_size: 6, total: 2, has_more: true },
+				meta: { page: 1, page_size: 12, total: 2, has_more: true },
 			})
 			.mockResolvedValueOnce({
 				data: [
@@ -597,7 +597,7 @@ describe("Music DiscoverView.vue", () => {
 						entry_status: "open",
 					},
 				],
-				meta: { page: 2, page_size: 6, total: 2, has_more: false },
+				meta: { page: 2, page_size: 12, total: 2, has_more: false },
 			});
 
 		const wrapper = mount(DiscoverView);
@@ -610,7 +610,7 @@ describe("Music DiscoverView.vue", () => {
 
 		expect(mocks.listMusicAlbums).toHaveBeenNthCalledWith(2, {
 			page: 2,
-			page_size: 6,
+			page_size: 12,
 			sort: "hot",
 		});
 		expect(mocks.listRecommendedArtists).toHaveBeenCalledTimes(1);
@@ -657,7 +657,7 @@ describe("Music DiscoverView.vue", () => {
 					target_path: "/music/artist/artist-new",
 				},
 			],
-			meta: { page: 1, page_size: 6, total: 1, has_more: false },
+			meta: { page: 1, page_size: 12, total: 1, has_more: false },
 		});
 		const pinia = createPinia();
 		setActivePinia(pinia);
@@ -875,7 +875,7 @@ describe("Music DiscoverView.vue", () => {
 	it("hides the playlist section when public playlists are empty", async () => {
 		mocks.listPublicMusicPlaylists.mockResolvedValueOnce({
 			data: [],
-			meta: { page: 1, page_size: 6, total: 0, has_more: false },
+			meta: { page: 1, page_size: 8, total: 0, has_more: false },
 		});
 		mocks.getMusicHome.mockResolvedValueOnce({
 			personalized: false,

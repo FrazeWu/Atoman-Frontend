@@ -56,7 +56,7 @@ describe('Music ArtistsView query sync', () => {
     mocks.listArtistBookmarks.mockReset()
     mocks.listMusicArtists.mockResolvedValue({
       data: [],
-      meta: { page: 1, page_size: 12, total: 0, has_more: false },
+      meta: { page: 1, page_size: 48, total: 0, has_more: false },
     })
     mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
   })
@@ -71,7 +71,7 @@ describe('Music ArtistsView query sync', () => {
 
     await flushPromises()
 
-    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 12 })
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 48 })
     expect((wrapper.find('[data-testid="music-search-input"]').element as HTMLInputElement).value).toBe('blur')
   })
 })

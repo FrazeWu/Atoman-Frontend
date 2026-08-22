@@ -20,6 +20,7 @@
 import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
+import { useApiUrl } from '@/composables/useApi'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
@@ -43,6 +44,7 @@ const player = usePlayerStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const { checkRelay } = useTransitionRelay()
+const apiUrl = useApiUrl()
 
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
@@ -51,7 +53,7 @@ const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.valu
 
 const reportPageView = (sendAnalytics = true) => {
   if (isAuthRoute.value) return
-  void apiRequest('/api/v1/site/visits', { method: 'POST', keepalive: true }).catch(() => {})
+  void apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }).catch(() => {})
   if (!sendAnalytics) return
   const ga = window.gtag
   if (typeof ga === 'function') {

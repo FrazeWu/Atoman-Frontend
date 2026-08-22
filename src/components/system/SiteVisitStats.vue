@@ -17,6 +17,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { apiRequestResult } from '@/api/client'
+import { useApiUrl } from '@/composables/useApi'
 
 type SiteVisitStats = {
   total: number
@@ -30,7 +31,7 @@ function formatCount(value: number) {
 }
 
 onMounted(async () => {
-  const response = await apiRequestResult<{ data?: SiteVisitStats }>('/api/v1/site/visits')
+  const response = await apiRequestResult(`${useApiUrl()}/site/visits`)
   if (response.ok && response.data?.data) stats.value = response.data.data
 })
 </script>

@@ -193,6 +193,47 @@ describe("player store", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
+	it("keeps queued prefetch requests alive when switching within the queue", async () => {
+		const pendingResponses: Array<(response: Response) => void> = [];
+		const fetchMock = vi.fn(
+			(_url: string, _options: RequestInit) =>
+				new Promise<Response>((resolve) => {
+					pendingResponses.push(resolve);
+				}),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		const player = usePlayerStore();
+		const firstSong = {
+			id: "first",
+			title: "First",
+			audio_url: "first.mp3",
+		} as any;
+		const secondSong = {
+			id: "second",
+			title: "Second",
+			audio_url: "second.mp3",
+		} as any;
+		const thirdSong = {
+			id: "third",
+			title: "Third",
+			audio_url: "third.mp3",
+		} as any;
+
+		player.playAlbum([firstSong, secondSong, thirdSong]);
+		audioInstances[0].emit("canplay");
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		const signals = fetchMock.mock.calls.map(
+			([, options]) => (options as RequestInit).signal as AbortSignal,
+		);
+
+		player.playQueuedSong(secondSong);
+
+		expect(signals.every((signal) => !signal.aborted)).toBe(true);
+		pendingResponses.forEach((resolve) => {
+			resolve(new Response(new Uint8Array(512 * 1024), { status: 206 }));
+		});
+	});
+
 	it("records a restored song after five seconds of resumed playback", async () => {
 		vi.useFakeTimers();
 		localStorage.setItem(

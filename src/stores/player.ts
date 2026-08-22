@@ -728,7 +728,6 @@ export const usePlayerStore = defineStore("player", () => {
 		saveMusicProgress(false, true);
 		resetListening(song);
 		currentSongStartCached = false;
-		resetAudioStartPrefetch();
 		const player = ensureAudio();
 		const normalizedSong = normalizePlaybackSong(song);
 		const generation = ++playGeneration;
@@ -812,12 +811,14 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 
 		currentAlbum.value = null;
+		resetAudioStartPrefetch();
 		queue.value = [song];
 		startSong(song);
 	};
 
 	const resumeSong = (song: Song, positionSeconds: number) => {
 		currentAlbum.value = null;
+		resetAudioStartPrefetch();
 		queue.value = [song];
 		startSong(song, Math.max(0, positionSeconds));
 	};
@@ -884,6 +885,7 @@ export const usePlayerStore = defineStore("player", () => {
 				? startIndex
 				: 0;
 
+		resetAudioStartPrefetch();
 		currentAlbum.value = albumSongs;
 		queue.value = [...albumSongs];
 

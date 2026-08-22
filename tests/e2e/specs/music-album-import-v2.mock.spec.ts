@@ -262,17 +262,25 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 	);
 	await page.getByRole("button", { name: "取消", exact: true }).click();
 
-	const titleFieldBox = await creationDialog
-		.locator('[data-field="name"]')
+	const basicFieldsBox = await creationDialog
+		.locator(".album-details-step__basic-fields")
 		.boundingBox();
 	const bioFieldBox = await creationDialog
 		.locator(".album-details-step__bio-field")
 		.boundingBox();
-	expect(titleFieldBox).not.toBeNull();
+	expect(basicFieldsBox).not.toBeNull();
 	expect(bioFieldBox).not.toBeNull();
-	expect(Math.abs((bioFieldBox?.y ?? 0) - (titleFieldBox?.y ?? 0))).toBeLessThan(2);
-	expect(bioFieldBox?.x ?? 0).toBeGreaterThan(titleFieldBox?.x ?? 0);
-
+	expect(Math.abs((bioFieldBox?.y ?? 0) - (basicFieldsBox?.y ?? 0))).toBeLessThan(2);
+	expect(Math.abs((bioFieldBox?.height ?? 0) - (basicFieldsBox?.height ?? 0))).toBeLessThan(2);
+	expect(bioFieldBox?.x ?? 0).toBeGreaterThan(basicFieldsBox?.x ?? 0);
+	expect(
+		(bioFieldBox?.width ?? 0) /
+			((basicFieldsBox?.width ?? 0) + (bioFieldBox?.width ?? 0)),
+	).toBeGreaterThan(0.63);
+	expect(
+		(bioFieldBox?.width ?? 0) /
+			((basicFieldsBox?.width ?? 0) + (bioFieldBox?.width ?? 0)),
+	).toBeLessThan(0.67);
 
 	const dateInput = creationDialog.getByTestId("album-details-date-input");
 	await dateInput.click();

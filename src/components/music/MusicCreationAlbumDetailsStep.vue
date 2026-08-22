@@ -457,46 +457,48 @@ watch(
       <!-- 专辑名、日期、类型与简介同一行 -->
       <div class="album-details-step__content-grid">
         <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
-          <!-- 专辑名称 -->
-          <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
-            <PInput
-              v-model="titleModel"
-              data-testid="album-details-title-input"
-              type="text"
-              placeholder="输入名称"
-              :label="requiredLabel(detailsTitleLabel)"
-              @blur="handleTitleBlur"
-            />
-          </div>
+          <div class="album-details-step__basic-fields">
+            <!-- 专辑名称 -->
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
+              <PInput
+                v-model="titleModel"
+                data-testid="album-details-title-input"
+                type="text"
+                placeholder="输入名称"
+                :label="requiredLabel(detailsTitleLabel)"
+                @blur="handleTitleBlur"
+              />
+            </div>
 
-          <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
-            <PMaskedDateInput
-              v-model="albumDetailsDraft.releaseDateParts"
-              :label="requiredLabel('日期')"
-              testId="album-details-date-input"
-            />
-          </div>
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
+              <PMaskedDateInput
+                v-model="albumDetailsDraft.releaseDateParts"
+                :label="requiredLabel('日期')"
+                testId="album-details-date-input"
+              />
+            </div>
 
-          <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
-            <PSelect
-              v-model="albumTypeSelection"
-              :label="requiredLabel('类型')"
-              :options="albumTypeOptions"
-            />
-            <PInput
-              v-if="albumTypeSelection === 'custom'"
-              v-model="customAlbumType"
-              label="自定义类型"
-              placeholder="输入专辑类型"
-            />
-            <input
-              v-model="albumDetailsDraft.type"
-              data-testid="album-details-type-input"
-              type="hidden"
-            />
-            <p v-if="standaloneHasMultipleTracks" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
-              单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
-            </p>
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
+              <PSelect
+                v-model="albumTypeSelection"
+                :label="requiredLabel('类型')"
+                :options="albumTypeOptions"
+              />
+              <PInput
+                v-if="albumTypeSelection === 'custom'"
+                v-model="customAlbumType"
+                label="自定义类型"
+                placeholder="输入专辑类型"
+              />
+              <input
+                v-model="albumDetailsDraft.type"
+                data-testid="album-details-type-input"
+                type="hidden"
+              />
+              <p v-if="standaloneHasMultipleTracks" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
+                单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
+              </p>
+            </div>
           </div>
 
           <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
@@ -741,14 +743,24 @@ watch(
 
 .album-details-step__header-main {
   display: grid;
-  grid-template-columns: minmax(12rem, 1.1fr) minmax(12rem, 1fr) minmax(10rem, 0.85fr) minmax(16rem, 1.4fr);
+  grid-template-columns: minmax(0, 35fr) minmax(0, 65fr);
   gap: 1.25rem;
+  align-items: stretch;
   min-width: 0;
   padding: 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-sm);
+}
+
+.album-details-step__basic-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  min-width: 0;
+  min-height: 100%;
+  align-items: stretch;
 }
 
 /* 日期与类型在右侧第三行 1:1 并排 */
@@ -772,6 +784,7 @@ watch(
   display: flex;
   width: 100%;
   min-width: 0;
+  min-height: 100%;
   flex-direction: column;
   padding: 0;
   border: 0;
@@ -874,6 +887,10 @@ watch(
     grid-template-columns: 1fr;
   }
 
+  .album-details-step__basic-fields {
+    grid-template-columns: 1fr;
+  }
+
   .album-details-step__cover-card {
     max-width: 15rem;
   }
@@ -897,6 +914,10 @@ watch(
   .album-details-step__upload-cover-grid,
   .album-details-step__content-grid,
   .album-details-step__header-main {
+    grid-template-columns: 1fr;
+  }
+
+  .album-details-step__basic-fields {
     grid-template-columns: 1fr;
   }
 }

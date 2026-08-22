@@ -43,15 +43,8 @@ onMounted(async () => {
 
 <style scoped>
 .site-visit-stats {
-  position: fixed;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: calc(
-    var(--a-player-height, 68px) +
-    var(--a-mobile-nav-reserved-height, 0px) +
-    var(--a-footer-reserved-height, 0px) +
-    max(16px, env(safe-area-inset-bottom))
-  );
-  z-index: 40;
+  position: static;
+  flex: 0 0 auto;
   width: 184px;
   padding: 9px 10px;
   border: 1px solid var(--a-color-border, #d9d9d9);
@@ -95,13 +88,6 @@ onMounted(async () => {
 
 @media (max-width: 767px) {
   .site-visit-stats {
-    right: max(12px, env(safe-area-inset-right));
-    bottom: calc(
-      var(--a-player-height, 68px) +
-      var(--a-mobile-nav-reserved-height, 0px) +
-      var(--a-footer-reserved-height, 0px) +
-      max(12px, env(safe-area-inset-bottom))
-    );
     width: 176px;
   }
 }

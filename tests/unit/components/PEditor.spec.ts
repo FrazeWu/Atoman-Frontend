@@ -10,6 +10,7 @@ const collabMockState = vi.hoisted(() => ({
 	initialText: "",
 	asyncText: "",
 	asyncMergedText: "",
+	neverSync: false,
 	urls: [] as string[],
 }));
 
@@ -60,6 +61,8 @@ vi.mock("y-websocket", () => {
 					text.insert(0, collabMockState.initialText);
 				}
 			}
+
+			if (collabMockState.neverSync) return;
 
 			window.setTimeout(() => {
 				const text = doc.getText("codemirror");
@@ -151,6 +154,7 @@ describe("PEditor", () => {
 		collabMockState.initialText = "";
 		collabMockState.asyncText = "";
 		collabMockState.asyncMergedText = "";
+		collabMockState.neverSync = false;
 		collabMockState.urls = [];
 		consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -493,6 +497,27 @@ describe("PEditor", () => {
 		await flushCollabSync();
 
 		expect(wrapper.find(".cm-content").text()).toContain("hello collab");
+	});
+
+	it("uses the local model when collab does not sync", async () => {
+		collabMockState.neverSync = true;
+		vi.useFakeTimers();
+
+		const wrapper = await mountEditor({
+			modelValue: "# 本地标题\n正文内容",
+			mode: FUTURE_NORMAL_MODE,
+			enableCollab: true,
+			collabRoomId: "room-1",
+			protectFirstLine: true,
+		});
+
+		await nextTick();
+		await vi.advanceTimersByTimeAsync(1500);
+		await nextTick();
+		vi.useRealTimers();
+
+		expect(wrapper.find(".cm-content").text()).toContain("本地标题");
+		expect(wrapper.find(".cm-content").text()).toContain("正文内容");
 	});
 
 	it("does not overwrite existing collab document content with modelValue", async () => {

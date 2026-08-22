@@ -49,7 +49,7 @@ export function useEditorCollaboration(options: CollaborationOptions) {
       options.onReady(text.toString())
     })
 
-    return { extension: yCollab(text, provider.awareness), document: text.toString() }
+    return { extension: yCollab(text, provider.awareness), document: options.initialValue() }
   }
 
   function replaceDocument(markdown: string) {

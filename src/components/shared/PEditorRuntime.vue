@@ -328,6 +328,8 @@ const livePreviewCompartment = new Compartment()
 const resourceReferenceCompartment = new Compartment()
 const contentAttributesCompartment = new Compartment()
 let cmView: EditorView | null = null
+let collabReady = false
+let collabFallbackTimer: ReturnType<typeof setTimeout> | null = null
 const {
   imageInputRef,
   isDragging,
@@ -347,7 +349,23 @@ const myName = computed(() => authStore.user?.display_name || authStore.user?.us
 const collaboration = useEditorCollaboration({
   userName: myName,
   initialValue: () => props.modelValue,
-  onReady: value => emit('collab-ready', value),
+  onReady: value => {
+    collabReady = true
+    if (collabFallbackTimer) {
+      clearTimeout(collabFallbackTimer)
+      collabFallbackTimer = null
+    }
+    if (cmView && cmView.state.doc.toString() !== value) {
+      cmView.dispatch({
+        changes: {
+          from: 0,
+          to: cmView.state.doc.length,
+          insert: value,
+        },
+      })
+    }
+    emit('collab-ready', value)
+  },
 })
 const collabPeers = collaboration.peers
 
@@ -414,11 +432,40 @@ function onPreviewScroll() {
   requestAnimationFrame(() => { syncingScroll = false })
 }
 
+function clearCollabFallbackTimer() {
+  if (!collabFallbackTimer) return
+  clearTimeout(collabFallbackTimer)
+  collabFallbackTimer = null
+}
+
+function seedCollabEditorFromModel() {
+  collabFallbackTimer = null
+  if (
+    collabReady ||
+    !cmView ||
+    !props.enableCollab ||
+    !props.collabRoomId ||
+    !props.modelValue ||
+    cmView.state.doc.length > 0
+  ) return
+
+  cmView.dispatch({
+    changes: { from: 0, to: 0, insert: props.modelValue },
+  })
+}
+
+function scheduleCollabFallback() {
+  clearCollabFallbackTimer()
+  collabReady = false
+  collabFallbackTimer = setTimeout(seedCollabEditorFromModel, 1500)
+}
+
 function teardownEditor() {
   if (mentionDebounce) {
     clearTimeout(mentionDebounce)
     mentionDebounce = null
   }
+  clearCollabFallbackTimer()
   collaboration.stop()
   cmView?.destroy()
   cmView = null
@@ -752,6 +799,7 @@ function initCodeMirror() {
       }),
       parent: cmContainerRef.value,
     })
+    scheduleCollabFallback()
     return
   }
 

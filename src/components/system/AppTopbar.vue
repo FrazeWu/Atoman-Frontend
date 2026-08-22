@@ -203,6 +203,20 @@ const toggleTheme = (event: MouseEvent) => {
   height: var(--a-topbar-height);
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + var(--a-sidebar-width, 0px) / 2);
+  bottom: 0;
+  width: 20px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: var(--a-color-fg);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.topbar.is-scrolled::after {
+  width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
+}
 :root.dark .topbar {
   background: rgba(11, 15, 25, 0.64);
   -webkit-backdrop-filter: blur(18px) saturate(180%);

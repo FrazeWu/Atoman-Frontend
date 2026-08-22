@@ -172,6 +172,41 @@ describe("Music ArtistsView.vue", () => {
 		expect(wrapper.text()).toContain("1994");
 	});
 
+	it("counts owned draft artists in the pagination total", async () => {
+		mocks.listRecommendedArtists.mockResolvedValueOnce({
+			data: [
+				{
+					id: "artist-published",
+					title: "Published Artist",
+					summary: "Published bio",
+				},
+			],
+			meta: { page: 1, page_size: 48, total: 11, has_more: false },
+		});
+		mocks.listMusicArtists.mockResolvedValueOnce({
+			data: [
+				{
+					id: "artist-draft",
+					name: "Draft Artist",
+					entry_status: "draft",
+				},
+			],
+			meta: { page: 1, page_size: 48, total: 1, has_more: false },
+		});
+
+		const pinia = createTestingPinia({ createSpy: vi.fn });
+		useAuthStore(pinia).isAuthenticated = true;
+		const wrapper = mount(ArtistsView, {
+			global: {
+				plugins: [pinia],
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(2);
+		expect(wrapper.text()).toContain("共 12 条");
+	});
+
 	it("opens artist drawers from artist cards", async () => {
 		const pinia = createTestingPinia({ createSpy: vi.fn });
 		const wrapper = mount(ArtistsView, {

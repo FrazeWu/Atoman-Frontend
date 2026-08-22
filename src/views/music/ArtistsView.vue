@@ -168,7 +168,7 @@ async function fetchArtists(page = 1) {
         : Promise.resolve(null),
     ])
     if (requestId !== activeRequestId) return
-    artistMeta.value = recommendedResponse.meta ?? {
+    const recommendedMeta = recommendedResponse.meta ?? {
       page,
       page_size: 48,
       total: recommendedResponse.data.length,
@@ -188,6 +188,13 @@ async function fetchArtists(page = 1) {
       entry_status: 'open' as const,
     }))
     const ownedDrafts = (ownedDraftResponse?.data ?? []).filter((artist) => artist.entry_status === 'draft')
+    const ownedDraftsToAdd = ownedDrafts.filter((draft) =>
+      !recommendedArtists.some((artist) => String(artist.id) === String(draft.id)),
+    )
+    artistMeta.value = {
+      ...recommendedMeta,
+      total: recommendedMeta.total + ownedDraftsToAdd.length,
+    }
     artists.value = page === 1
       ? [...ownedDrafts, ...recommendedArtists.filter((artist) =>
           !ownedDrafts.some((draft) => String(draft.id) === String(artist.id)),

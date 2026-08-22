@@ -88,6 +88,7 @@ import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 import { useAuthStore } from '@/stores/auth'
+import { useSiteAccessStore } from '@/stores/siteAccess'
 
 const props = withDefaults(defineProps<{
   label: string
@@ -98,8 +99,9 @@ const props = withDefaults(defineProps<{
 
 const show = ref(false)
 const authStore = useAuthStore()
+const siteAccessStore = useSiteAccessStore()
 const { navigateModuleWithShutter } = useAsyncNavigate()
-const items = computed(() => getMobileMoreItems())
+const items = computed(() => getMobileMoreItems().filter(item => siteAccessStore.isModuleVisible(item.module)))
 
 async function openModule(href: string) {
   show.value = false

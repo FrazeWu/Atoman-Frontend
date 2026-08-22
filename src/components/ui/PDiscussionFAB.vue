@@ -28,7 +28,7 @@ defineEmits(['click'])
   border-right: none;
   border-radius: var(--a-radius-none, 4px) 0 0 var(--a-radius-none, 4px);
   box-shadow: none;
-  z-index: 1005;
+  z-index: var(--a-z-navigation);
   cursor: pointer;
   display: flex;
   align-items: center;

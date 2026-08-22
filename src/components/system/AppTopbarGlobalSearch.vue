@@ -255,7 +255,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 500;
+  z-index: var(--a-z-global-overlay);
   width: 100%;
   min-height: 80px;
   max-width: calc(100vw - 20px);

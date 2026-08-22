@@ -123,15 +123,21 @@ function fillWidth(star: number) {
 
 .post-rating__star {
   position: relative;
-  width: 24px;
-  height: 24px;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
   color: var(--a-color-border);
 }
 
 .post-rating__star-outline,
 .post-rating__star-fill {
   position: absolute;
-  inset: 0;
+  top: 10px;
+  left: 10px;
+  width: 24px;
+  height: 24px;
 }
 
 .post-rating__star-fill {
@@ -145,7 +151,7 @@ function fillWidth(star: number) {
   top: 0;
   z-index: 1;
   width: 50%;
-  height: 100%;
+  height: 44px;
   padding: 0;
   border: 0;
   background: transparent;

@@ -245,7 +245,8 @@ describe("PostDetailView shared interactions", () => {
 		expect(mocks.interactions.liked.value).toBe(true);
 		expect(mocks.interactions.likeCount.value).toBe(7);
 		expect(mocks.interactions.fetchComments).not.toHaveBeenCalled();
-		expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(true);
+		expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(false);
+		expect(wrapper.text()).toContain('评分');
 		expect(wrapper.get('[role="note"]').text()).toContain("最近更新时间：");
 		expect(wrapper.get('[role="note"]').text()).toMatch(
 			/\d{4}年\d+月\d+日，距今已过去 \d+ 周，请注意信息有效性。/,
@@ -323,9 +324,7 @@ describe("PostDetailView shared interactions", () => {
 			.mocked(fetch)
 			.mock.calls.filter(([url]) => String(url).includes("/feed/events/read"));
 		expect(readEvents).toHaveLength(1);
-		expect(JSON.parse(String(readEvents[0][1]?.body))).toMatchObject({
-			source_id: "channel-b",
-		});
+		expect(String(readEvents[0]?.[1]?.body)).toContain('"source_id":"channel-b"');
 	});
 
 	it("切换文章时立即清空 A 的文章、收藏和嵌入状态", async () => {
@@ -568,31 +567,37 @@ describe("PostDetailView shared interactions", () => {
 		expect(bookmarkRequests).toBe(1);
 	});
 
-	it("收到取消点赞事件后调用交互 composable 并更新点赞状态", async () => {
+	it("文章详情使用评分而不是点赞", async () => {
 		const wrapper = await mountPostDetail();
-		const interactionBar = wrapper.findComponent(InteractionBarStub);
-
-		interactionBar.vm.$emit("unlike");
+		const ratingButton = wrapper.get('button[aria-label="7 分"]');
+		await ratingButton.trigger("click");
 		await flushPromises();
 
-		expect(mocks.interactions.unlike).toHaveBeenCalledTimes(1);
-		expect(interactionBar.props("liked")).toBe(false);
-		expect(interactionBar.props("likeCount")).toBe(6);
+		expect(mocks.interactions.like).not.toHaveBeenCalled();
+		expect(mocks.interactions.unlike).not.toHaveBeenCalled();
+		expect(
+			vi.mocked(fetch).mock.calls.some(([url, init]) => (
+				String(url).includes("/blog/posts/post-1/rating")
+				&& (init as RequestInit | undefined)?.method === "PUT"
+			)),
+		).toBe(true);
 	});
 
-	it("收到点赞事件后调用交互 composable 并更新点赞状态", async () => {
+	it("评分控件允许清除已有评分", async () => {
 		const wrapper = await mountPostDetail();
-		const interactionBar = wrapper.findComponent(InteractionBarStub);
-		mocks.interactions.liked.value = false;
-		mocks.interactions.likeCount.value = 6;
-		await wrapper.vm.$nextTick();
-
-		interactionBar.vm.$emit("like");
+		const ratingButton = wrapper.get('button[aria-label="7 分"]');
+		await ratingButton.trigger("click");
+		await flushPromises();
+		const clearButton = wrapper.get('button[aria-label="清除评分"]');
+		await clearButton.trigger("click");
 		await flushPromises();
 
-		expect(mocks.interactions.like).toHaveBeenCalledTimes(1);
-		expect(interactionBar.props("liked")).toBe(true);
-		expect(interactionBar.props("likeCount")).toBe(7);
+		expect(
+			vi.mocked(fetch).mock.calls.some(([url, init]) => (
+				String(url).includes("/blog/posts/post-1/rating")
+				&& (init as RequestInit | undefined)?.method === "DELETE"
+			)),
+		).toBe(true);
 	});
 
 	it("仅将文章作者或管理员的删除权限传给统一评论组件", async () => {

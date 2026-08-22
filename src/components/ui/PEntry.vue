@@ -127,11 +127,6 @@ defineEmits(['click'])
   gap: 0.25rem;
 }
 
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
-  background: var(--a-color-surface-muted);
-}
-
 /* 2. Read State Weakening (Disabled - items do not turn grey) */
 .p-entry.is-read {
   opacity: 1;

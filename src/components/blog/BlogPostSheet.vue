@@ -252,6 +252,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   opacity: 0.6;
 }
 
+.post-sheet-article h1 {
   margin: 1rem 0;
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   line-height: 1.2;

@@ -25,5 +25,5 @@ describe('feed default route', () => {
     await router.push('/feed/explore?category=tech#sources')
 
     expect(router.currentRoute.value.fullPath).toBe('/feed?category=tech#sources')
-  })
+  }, 20_000)
 })

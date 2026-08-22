@@ -7,6 +7,7 @@
     close-type="header"
     :show-backdrop="false"
     :teleport="false"
+    :focus-on-open="false"
     above-player
     @close="$emit('close')"
   >
@@ -22,20 +23,20 @@ defineEmits<{ close: [] }>()
 </script>
 
 <style scoped>
-:deep(.studio-route-sheet) {
-  position: relative;
-  inset: auto;
+:global(.studio-route-sheet.p-sheet-layer) {
+  position: relative !important;
+  inset: auto !important;
   min-height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 3.75rem);
   border: 0;
   box-shadow: none;
-  z-index: auto;
+  z-index: auto !important;
 }
 
-:deep(.studio-route-sheet .sheet-content) {
+:global(.studio-route-sheet .sheet-content) {
   padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
 }
 
-:deep(.studio-route-sheet .sheet-content-inner) {
+:global(.studio-route-sheet .sheet-content-inner) {
   width: 100%;
   max-width: none;
 }

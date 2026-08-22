@@ -127,6 +127,7 @@ const props = withDefaults(defineProps<{
   showBackdrop?: boolean
   abovePlayer?: boolean
   teleport?: boolean
+  focusOnOpen?: boolean
 }>(), {
   title: '',
   width: 'min(100%, 480px)',
@@ -141,6 +142,7 @@ const props = withDefaults(defineProps<{
   showBackdrop: true,
   abovePlayer: false,
   teleport: true,
+  focusOnOpen: true,
 })
 
 defineEmits(['close', 'activate'])
@@ -152,7 +154,7 @@ const closeButtonRef = ref<HTMLButtonElement | null>(null)
 watch(
   () => [props.show, props.isTopLayer] as const,
   async ([show, isTopLayer]) => {
-    if (!show || !isTopLayer) return
+    if (!show || !isTopLayer || !props.focusOnOpen) return
     await nextTick()
     if (closeButtonRef.value) {
       closeButtonRef.value.focus()

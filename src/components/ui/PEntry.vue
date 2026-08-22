@@ -227,6 +227,7 @@ defineEmits(['click'])
   z-index: 5;
 }
 
+.p-entry:focus-within .feed-entry-actions,
 .p-entry:hover .feed-entry-actions,
 .p-entry.force-show-actions .feed-entry-actions {
   opacity: 1;
@@ -240,5 +241,22 @@ defineEmits(['click'])
 :deep(.p-clip) {
   /* Inherit default styles, but ensure it's above the wash background */
   z-index: 2;
+}@media (max-width: 767px) {
+  .feed-entry-actions {
+    position: static;
+    transform: none;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0 0;
+    border-top: 1px solid var(--a-color-border-soft);
+    background: transparent;
+    opacity: 1;
+  }
+
+  :deep(.feed-entry-actions .p-clip) {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+  }
 }
+
 </style>

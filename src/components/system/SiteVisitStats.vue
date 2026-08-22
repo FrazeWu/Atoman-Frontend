@@ -55,7 +55,7 @@ onMounted(async () => {
     var(--a-footer-reserved-height, 0px) +
     max(12px, env(safe-area-inset-bottom))
   );
-  z-index: 40;
+  z-index: var(--a-z-dropdown);
   width: 160px;
   padding: 7px 8px;
   border: 1px solid var(--a-color-border, #d9d9d9);

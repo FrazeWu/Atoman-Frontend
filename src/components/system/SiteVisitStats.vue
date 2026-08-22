@@ -3,6 +3,10 @@
     <div class="site-visit-stats__heading">站点统计</div>
     <div class="site-visit-stats__metrics">
       <div class="site-visit-stats__metric">
+        <span>用户数</span>
+        <strong>{{ formatCount(stats.users) }}</strong>
+      </div>
+      <div class="site-visit-stats__metric">
         <span>总访问量</span>
         <strong>{{ formatCount(stats.total) }}</strong>
       </div>
@@ -20,6 +24,7 @@ import { apiRequestResult } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 
 type SiteVisitStats = {
+  users: number
   total: number
   today: number
 }
@@ -47,7 +52,7 @@ onMounted(async () => {
     max(16px, env(safe-area-inset-bottom))
   );
   z-index: 40;
-  width: 176px;
+  width: 220px;
   padding: 12px 14px;
   border: 1px solid var(--a-color-border, #d9d9d9);
   border-radius: 8px;
@@ -66,7 +71,7 @@ onMounted(async () => {
 
 .site-visit-stats__metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -97,7 +102,7 @@ onMounted(async () => {
       var(--a-footer-reserved-height, 0px) +
       max(12px, env(safe-area-inset-bottom))
     );
-    width: 160px;
+    width: 200px;
   }
 }
 </style>

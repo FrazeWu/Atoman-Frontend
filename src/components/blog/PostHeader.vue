@@ -128,6 +128,7 @@ function formatDate(value?: string) {
 
 .post-header__body {
   padding-top: 2rem;
+  padding-bottom: 0;
   transition: max-width 0.3s ease;
 }
 

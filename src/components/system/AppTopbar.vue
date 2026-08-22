@@ -42,14 +42,6 @@
 
       <div class="nav-right">
         <AppTopbarGlobalSearch v-if="!isAuthRoute" />
-        <PButton
-          v-if="showAuthControls"
-          data-test="topbar-add-subscription"
-          size="sm"
-          :label="showGlobalAddModal ? '取消添加' : '+ 订阅'"
-          :variant="showGlobalAddModal ? 'secondary' : 'primary'"
-          @click="toggleGlobalAddModal"
-        />
         <button
           type="button"
           class="theme-toggle-btn"
@@ -63,16 +55,6 @@
         <RouterLink v-else to="/login" class="a-btn a-btn--primary a-btn--sm">登录</RouterLink>
       </div>
     </div>
-    <SubscriptionAddSheet
-      v-if="showAuthControls"
-      :show="showGlobalAddModal"
-      :groups="feedStore.groups"
-      :submitting="addingGlobalSubscription"
-      :error="globalAddSubscriptionError"
-      :reset-key="globalAddSubscriptionResetKey"
-      @close="closeGlobalAddModal"
-      @submit="autoAddGlobalSubscription"
-    />
   </header>
 </template>
 
@@ -88,11 +70,6 @@ import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
-import { useFeedStore } from '@/stores/feed'
-import { useOnboardingStore } from '@/stores/onboarding'
-import type { AutoAddSubscriptionPayload } from '@/types'
-import PButton from '@/components/ui/PButton.vue'
-import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
 
 const { toggleSidebar } = useSidebar()
@@ -114,52 +91,8 @@ const handleBrandClick = () => {
 }
 
 const authStore = useAuthStore()
-const feedStore = useFeedStore()
-const onboardingStore = useOnboardingStore()
 const siteAccessStore = useSiteAccessStore()
 const showAuthControls = computed(() => authStore.isAuthenticated && !!authStore.user)
-const showGlobalAddModal = ref(false)
-const addingGlobalSubscription = ref(false)
-const globalAddSubscriptionError = ref('')
-const globalAddSubscriptionResetKey = ref(0)
-
-const closeGlobalAddModal = () => {
-  showGlobalAddModal.value = false
-  globalAddSubscriptionError.value = ''
-}
-
-const toggleGlobalAddModal = () => {
-  if (showGlobalAddModal.value) {
-    closeGlobalAddModal()
-    return
-  }
-  globalAddSubscriptionError.value = ''
-  showGlobalAddModal.value = true
-  void feedStore.fetchGroups()
-}
-
-const autoAddGlobalSubscription = async (payload: AutoAddSubscriptionPayload) => {
-  globalAddSubscriptionError.value = ''
-  addingGlobalSubscription.value = true
-  try {
-    const success = await feedStore.autoAddSubscription(payload)
-    if (!success) {
-      globalAddSubscriptionError.value = feedStore.error || '添加失败，请检查地址是否正确'
-      return
-    }
-    globalAddSubscriptionResetKey.value += 1
-    closeGlobalAddModal()
-    await Promise.all([
-      feedStore.fetchSubscriptions(),
-      feedStore.fetchGroups(),
-      onboardingStore.handleSubscriptionSuccess(),
-    ])
-  } catch (error) {
-    globalAddSubscriptionError.value = error instanceof Error ? error.message : '添加失败'
-  } finally {
-    addingGlobalSubscription.value = false
-  }
-}
 
 const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const siteContext = computed(() => {

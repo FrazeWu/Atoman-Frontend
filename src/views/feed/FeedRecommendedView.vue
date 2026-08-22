@@ -16,6 +16,7 @@ import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
@@ -23,6 +24,7 @@ import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
+import { useOnboardingStore } from '@/stores/onboarding'
 import { buildSourceAvatarLabel, buildSourceColor } from '@/utils/feedSourcePresentation'
 import {
   ALL_RECOMMENDATION_LANGUAGE,
@@ -31,7 +33,7 @@ import {
   recommendationLanguageOptions,
   type RecommendationLanguage,
 } from '@/utils/recommendationLanguage'
-import type { FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
+import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 type RecommendTarget = 'articles' | 'channels' | 'mixed'
@@ -86,6 +88,7 @@ const route = useRoute()
 const api = useApi()
 const feedStore = useFeedStore()
 const authStore = useAuthStore()
+const onboardingStore = useOnboardingStore()
 
 const starredIds = computed(() => feedStore.starredItemIds)
 const bookmarkedIds = computed(() => feedStore.bookmarkedPostIds)
@@ -155,6 +158,10 @@ let discoverySearchTimer: ReturnType<typeof setTimeout> | null = null
 let discoverySearchCloseTimer: ReturnType<typeof setTimeout> | null = null
 let discoverySearchController: AbortController | null = null
 let discoverySearchRequestId = 0
+const showAddModal = ref(false)
+const addingSubscription = ref(false)
+const addSubscriptionError = ref('')
+const addSubscriptionResetKey = ref(0)
 const filterOpen = ref(false)
 const filterDraftMode = ref<RecommendationMode>('hot')
 const filterDraftTarget = ref<RecommendTarget>('articles')
@@ -443,6 +450,40 @@ async function fetchExternalSources() {
     externalTotal.value = 0
     errorMessage.value = '订阅源加载失败'
   } finally { externalLoading.value = false }
+}
+
+async function addSubscription(payload: AutoAddSubscriptionPayload) {
+  addSubscriptionError.value = ''
+  addingSubscription.value = true
+  try {
+    const success = await feedStore.autoAddSubscription(payload)
+    if (!success) {
+      addSubscriptionError.value = feedStore.error || '添加失败，请检查地址是否正确'
+      return
+    }
+    addSubscriptionResetKey.value += 1
+    showAddModal.value = false
+    await Promise.all([
+      feedStore.fetchSubscriptions(),
+      feedStore.fetchGroups(),
+      onboardingStore.handleSubscriptionSuccess(),
+    ])
+  } catch (error) {
+    addSubscriptionError.value = error instanceof Error ? error.message : '添加失败'
+  } finally {
+    addingSubscription.value = false
+  }
+}
+
+function toggleAddModal() {
+  if (showAddModal.value) {
+    showAddModal.value = false
+    addSubscriptionError.value = ''
+    return
+  }
+  addSubscriptionError.value = ''
+  showAddModal.value = true
+  void feedStore.fetchGroups()
 }
 
 async function searchDiscovery(queryValue = discoverySearchQuery.value) {
@@ -1029,6 +1070,16 @@ onBeforeUnmount(() => {
       @open-article="openRecommendedArticle"
     />
 
+    <SubscriptionAddSheet
+      :show="showAddModal"
+      :groups="feedStore.groups"
+      :submitting="addingSubscription"
+      :error="addSubscriptionError"
+      :reset-key="addSubscriptionResetKey"
+      @close="toggleAddModal"
+      @submit="addSubscription"
+    />
+
     <PPageHeader
       title="发现"
       mb="1.25rem"
@@ -1037,20 +1088,22 @@ onBeforeUnmount(() => {
     </PPageHeader>
 
     <div class="discovery-search-row">
-      <SearchSurface
-        :query="discoverySearchQuery"
-        :open="discoverySearchOpen"
-        eyebrow="发现搜索"
-        placeholder="搜索订阅源和文章"
-        input-test-id="discovery-search-input"
-        dropdown-test-id="discovery-search-dropdown"
-        overlay-results
-        :loading="discoverySearchLoading"
-        @update:query="handleDiscoverySearchInput"
-        @focus="handleDiscoverySearchFocus"
-        @blur="handleDiscoverySearchBlur"
-        @submit="submitDiscoverySearch"
-      >
+      <div class="discovery-search-shell" :class="{ 'is-open': discoverySearchOpen }">
+        <SearchSurface
+          compact
+          eyebrow=""
+          :query="discoverySearchQuery"
+          :open="discoverySearchOpen"
+          placeholder="搜索订阅源和文章"
+          input-test-id="discovery-search-input"
+          dropdown-test-id="discovery-search-dropdown"
+          overlay-results
+          :loading="discoverySearchLoading"
+          @update:query="handleDiscoverySearchInput"
+          @focus="handleDiscoverySearchFocus"
+          @blur="handleDiscoverySearchBlur"
+          @submit="submitDiscoverySearch"
+        >
         <template #results>
           <p v-if="discoverySearchQuery.trim().length < 2" class="discovery-search-hint">输入至少 2 个字符</p>
           <p v-else-if="discoverySearchError" class="discovery-search-hint discovery-search-hint--error">{{ discoverySearchError }}</p>
@@ -1098,7 +1151,16 @@ onBeforeUnmount(() => {
             <p v-if="!discoverySearchSources.length && !discoverySearchArticles.length" class="discovery-search-hint">没有匹配的结果</p>
           </template>
         </template>
-      </SearchSurface>
+        </SearchSurface>
+      </div>
+      <PButton
+        v-if="authStore.isAuthenticated"
+        variant="primary"
+        class="discovery-search-side-action"
+        data-test="open-discovery-add-subscription"
+        :label="showAddModal ? '取消添加' : '+ 订阅'"
+        @click="toggleAddModal"
+      />
     </div>
 
     <div class="discovery-toolbar" data-test="feed-filter-wrap">
@@ -1377,8 +1439,28 @@ onBeforeUnmount(() => {
   margin-bottom: 0.25rem;
 }
 
-.discovery-search-row > :deep(.search-surface) {
+.discovery-search-shell {
+  position: relative;
   min-width: 0;
+  height: 2.75rem;
+}
+
+.discovery-search-shell.is-open {
+  z-index: 15;
+}
+
+.discovery-search-shell :deep(.search-surface),
+.discovery-search-shell :deep(.search-frame) {
+  width: 100%;
+  height: 100%;
+}
+
+.discovery-search-shell.is-open :deep(.search-frame) {
+  height: auto;
+}
+
+.discovery-search-side-action {
+  white-space: nowrap;
 }
 
 .discovery-search-result {

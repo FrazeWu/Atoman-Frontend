@@ -172,7 +172,7 @@ describe("FeedRecommendedView", () => {
 		expect(results[1].text()).toContain("AI 文章");
 		expect(
 			wrapper.find('[data-test="open-discovery-add-subscription"]').exists(),
-		).toBe(false);
+		).toBe(true);
 		expect(
 			fetchSpy.mock.calls.some(([input]) => {
 				const url = String(input);

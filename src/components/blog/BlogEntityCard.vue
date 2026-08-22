@@ -2,11 +2,24 @@
   <div class="blog-entity-card-shell">
     <article
       class="blog-entity-card"
-      :class="{ 'is-compact': compact }"
+      :class="{ 'is-compact': compact, 'is-active': active }"
     >
       <div class="blog-entity-card__visual">
         <img v-if="coverUrl" :src="coverUrl" :alt="title" loading="lazy" />
         <span v-else class="blog-entity-card__fallback" aria-hidden="true">{{ fallback }}</span>
+        <button
+          v-if="showSubscribe"
+          type="button"
+          class="blog-entity-card__subscribe"
+          :class="{ 'is-subscribed': subscribed }"
+          :disabled="subscribeLoading || subscribed"
+          :aria-label="subscribed ? '已订阅' : `订阅${kindLabel}`"
+          @click.stop="emit('toggle-subscribe')"
+        >
+          <Check v-if="subscribed" :size="14" aria-hidden="true" />
+          <Plus v-else :size="14" aria-hidden="true" />
+          {{ subscribed ? '已订阅' : '订阅' }}
+        </button>
       </div>
 
       <div class="blog-entity-card__body">
@@ -31,19 +44,6 @@
       :aria-label="`打开${kindLabel}${title}`"
       @click="emit('select')"
     />
-    <button
-      v-if="showSubscribe"
-      type="button"
-      class="blog-entity-card__subscribe"
-      :class="{ 'is-subscribed': subscribed }"
-      :disabled="subscribeLoading || subscribed"
-      :aria-label="subscribed ? '已订阅' : `订阅${kindLabel}`"
-      @click.stop="emit('toggle-subscribe')"
-    >
-      <Check v-if="subscribed" :size="14" aria-hidden="true" />
-      <Plus v-else :size="14" aria-hidden="true" />
-      {{ subscribed ? '已订阅' : '订阅' }}
-    </button>
   </div>
 </template>
 
@@ -65,6 +65,7 @@ const props = withDefaults(defineProps<{
   subscribeLoading?: boolean
   showSubscribe?: boolean
   compact?: boolean
+  active?: boolean
 }>(), {
   coverUrl: '',
   ownerName: '',
@@ -77,6 +78,7 @@ const props = withDefaults(defineProps<{
   subscribeLoading: false,
   showSubscribe: true,
   compact: false,
+  active: false,
 })
 
 const emit = defineEmits<{
@@ -113,6 +115,12 @@ const formattedUpdatedAt = computed(() => {
 
 .blog-entity-card-shell:hover .blog-entity-card,
 .blog-entity-card-shell:focus-within .blog-entity-card {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+}
+
+.blog-entity-card.is-active {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
   box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
@@ -163,8 +171,8 @@ const formattedUpdatedAt = computed(() => {
 
 .blog-entity-card__subscribe {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
+  top: 50%;
+  left: 50%;
   z-index: 2;
   display: inline-flex;
   align-items: center;
@@ -180,9 +188,18 @@ const formattedUpdatedAt = computed(() => {
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  opacity: 0.96;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
   transition: opacity 0.18s ease, box-shadow 0.18s ease;
 }
+
+.blog-entity-card-shell:hover .blog-entity-card__subscribe,
+.blog-entity-card-shell:focus-within .blog-entity-card__subscribe {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 
 .blog-entity-card__subscribe:hover:not(:disabled),
 .blog-entity-card__subscribe:focus-visible {

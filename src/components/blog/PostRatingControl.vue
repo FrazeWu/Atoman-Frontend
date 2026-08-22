@@ -8,20 +8,28 @@
 
     <div v-if="!disabled" class="post-rating__control" @mouseleave="hoverScore = null">
       <div v-for="star in 5" :key="star" class="post-rating__star">
+        <Star :size="24" class="post-rating__star-outline" aria-hidden="true" />
+        <span class="post-rating__star-fill" :style="{ width: `${fillWidth(star)}px` }" aria-hidden="true">
+          <Star :size="24" fill="currentColor" />
+        </span>
         <button
           type="button"
-          class="post-rating__star-button"
+          class="post-rating__half post-rating__half--left"
+          :aria-label="`${star * 2 - 1} 分`"
+          :disabled="loading"
+          @mouseenter="hoverScore = star * 2 - 1"
+          @focus="hoverScore = star * 2 - 1"
+          @click="emit('rate', star * 2 - 1)"
+        />
+        <button
+          type="button"
+          class="post-rating__half post-rating__half--right"
           :aria-label="`${star * 2} 分`"
           :disabled="loading"
-          @mousemove="previewScore(star, $event)"
+          @mouseenter="hoverScore = star * 2"
           @focus="hoverScore = star * 2"
-          @click="rateAt(star, $event)"
-        >
-          <Star :size="24" class="post-rating__star-outline" aria-hidden="true" />
-          <span class="post-rating__star-fill" :style="{ width: `${fillWidth(star)}%` }" aria-hidden="true">
-            <Star :size="24" fill="currentColor" />
-          </span>
-        </button>
+          @click="emit('rate', star * 2)"
+        />
       </div>
       <button
         v-if="viewerRating !== null && viewerRating !== undefined"
@@ -72,21 +80,7 @@ const formattedScore = computed(() => props.ratingCount ? props.ratingScore.toFi
 
 function fillWidth(star: number) {
   const remainder = activeScore.value - (star - 1) * 2
-  return Math.max(0, Math.min(2, remainder)) * 50
-}
-
-function scoreAt(star: number, event: MouseEvent) {
-  const target = event.currentTarget as HTMLElement
-  const rect = target.getBoundingClientRect()
-  return star * 2 - (event.clientX - rect.left < rect.width / 2 ? 1 : 0)
-}
-
-function previewScore(star: number, event: MouseEvent) {
-  hoverScore.value = scoreAt(star, event)
-}
-
-function rateAt(star: number, event: MouseEvent) {
-  emit('rate', scoreAt(star, event))
+  return Math.max(0, Math.min(2, remainder)) * 12
 }
 </script>
 
@@ -152,21 +146,22 @@ function rateAt(star: number, event: MouseEvent) {
   pointer-events: none;
 }
 
-.post-rating__star-button {
+.post-rating__half {
   position: absolute;
-  inset: 0;
+  top: 0;
   z-index: 1;
-  width: 100%;
-  height: 100%;
+  width: 50%;
+  height: 44px;
   padding: 0;
   border: 0;
-  border-radius: var(--a-radius-control);
   background: transparent;
-  color: inherit;
   cursor: pointer;
 }
 
-.post-rating__star-button:focus-visible,
+.post-rating__half--left { left: 0; }
+.post-rating__half--right { right: 0; }
+
+.post-rating__half:focus-visible,
 .post-rating__clear:focus-visible {
   outline: 2px solid var(--a-color-focus, var(--a-color-fg));
   outline-offset: 2px;

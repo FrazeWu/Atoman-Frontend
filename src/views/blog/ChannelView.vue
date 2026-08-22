@@ -55,14 +55,19 @@
             >
               全部内容 <span class="collection-count">{{ postsTotal }}</span>
             </PTab>
-            <PTab
-              v-for="col in collections"
-              :key="col.id"
-              :active="activeCollectionId === col.id"
-              @click="activeCollectionId = col.id"
-            >
-              <span class="a-clamp-1">{{ col.name }}</span>
-            </PTab>
+              <BlogEntityCard
+                v-for="col in collections"
+                :key="col.id"
+                kind="collection"
+                :title="col.name"
+                :cover-url="col.cover_url"
+                :description="col.description"
+                compact
+                :active="activeCollectionId === col.id"
+                :show-subscribe="false"
+                @select="activeCollectionId = col.id"
+              />
+
           </div>
         </aside>
 
@@ -124,7 +129,7 @@ import PToast from '@/components/ui/PToast.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PEntry from '@/components/ui/PEntry.vue'
-import BlogItemCard from '@/components/shared/BlogItemCard.vue'
+import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'

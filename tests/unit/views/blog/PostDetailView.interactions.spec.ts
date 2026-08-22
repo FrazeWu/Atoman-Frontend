@@ -246,7 +246,7 @@ describe("PostDetailView shared interactions", () => {
 		expect(mocks.interactions.likeCount.value).toBe(7);
 		expect(mocks.interactions.fetchComments).not.toHaveBeenCalled();
 		expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(false);
-		expect(wrapper.text()).toContain('评分');
+		expect(wrapper.text()).toContain("评分");
 		expect(wrapper.get('[role="note"]').text()).toContain("最近更新时间：");
 		expect(wrapper.get('[role="note"]').text()).toMatch(
 			/\d{4}年\d+月\d+日，距今已过去 \d+ 周，请注意信息有效性。/,
@@ -324,7 +324,9 @@ describe("PostDetailView shared interactions", () => {
 			.mocked(fetch)
 			.mock.calls.filter(([url]) => String(url).includes("/feed/events/read"));
 		expect(readEvents).toHaveLength(1);
-		expect(String(readEvents[0]?.[1]?.body)).toContain('"source_id":"channel-b"');
+		expect(String(readEvents[0]?.[1]?.body)).toContain(
+			'"source_id":"channel-b"',
+		);
 	});
 
 	it("切换文章时立即清空 A 的文章、收藏和嵌入状态", async () => {
@@ -576,10 +578,13 @@ describe("PostDetailView shared interactions", () => {
 		expect(mocks.interactions.like).not.toHaveBeenCalled();
 		expect(mocks.interactions.unlike).not.toHaveBeenCalled();
 		expect(
-			vi.mocked(fetch).mock.calls.some(([url, init]) => (
-				String(url).includes("/blog/posts/post-1/rating")
-				&& (init as RequestInit | undefined)?.method === "PUT"
-			)),
+			vi
+				.mocked(fetch)
+				.mock.calls.some(
+					([url, init]) =>
+						String(url).includes("/blog/posts/post-1/rating") &&
+						(init as RequestInit | undefined)?.method === "PUT",
+				),
 		).toBe(true);
 	});
 
@@ -593,10 +598,13 @@ describe("PostDetailView shared interactions", () => {
 		await flushPromises();
 
 		expect(
-			vi.mocked(fetch).mock.calls.some(([url, init]) => (
-				String(url).includes("/blog/posts/post-1/rating")
-				&& (init as RequestInit | undefined)?.method === "DELETE"
-			)),
+			vi
+				.mocked(fetch)
+				.mock.calls.some(
+					([url, init]) =>
+						String(url).includes("/blog/posts/post-1/rating") &&
+						(init as RequestInit | undefined)?.method === "DELETE",
+				),
 		).toBe(true);
 	});
 

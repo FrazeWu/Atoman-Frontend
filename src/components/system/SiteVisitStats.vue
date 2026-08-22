@@ -43,10 +43,17 @@ onMounted(async () => {
 
 <style scoped>
 .site-visit-stats {
-  position: static;
-  flex: 0 0 auto;
-  width: 184px;
-  padding: 9px 10px;
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: calc(
+    var(--a-player-height, 68px) +
+    var(--a-mobile-nav-reserved-height, 0px) +
+    var(--a-footer-reserved-height, 0px) +
+    max(12px, env(safe-area-inset-bottom))
+  );
+  z-index: 40;
+  width: 160px;
+  padding: 7px 8px;
   border: 1px solid var(--a-color-border, #d9d9d9);
   border-radius: 8px;
   background: var(--a-color-bg, #fff);
@@ -56,7 +63,7 @@ onMounted(async () => {
 }
 
 .site-visit-stats__heading {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--a-color-fg);
   font-size: var(--a-text-sm);
   font-weight: var(--a-font-weight-strong);
@@ -64,14 +71,14 @@ onMounted(async () => {
 
 .site-visit-stats__metrics {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .site-visit-stats__metric {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 3px 8px;
+  gap: 2px 5px;
 }
 
 .site-visit-stats__metric span {
@@ -80,7 +87,7 @@ onMounted(async () => {
 
 .site-visit-stats__metric strong {
   color: var(--a-color-fg);
-  font-size: var(--a-text-base);
+  font-size: var(--a-text-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: right;
@@ -88,7 +95,8 @@ onMounted(async () => {
 
 @media (max-width: 767px) {
   .site-visit-stats {
-    width: 176px;
+    left: max(12px, env(safe-area-inset-left));
+    width: 152px;
   }
 }
 </style>

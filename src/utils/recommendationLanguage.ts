@@ -55,14 +55,14 @@ export function normalizeRecommendationLanguage(
 export function detectDefaultRecommendationLanguage(
 	locales?: readonly string[],
 ): Exclude<RecommendationLanguage, "all"> {
-	let candidates: readonly string[] = []
+	let candidates: readonly string[] = [];
 	if (locales && locales.length > 0) {
-		candidates = locales
+		candidates = locales;
 	} else if (typeof navigator !== "undefined") {
 		if (navigator.languages && navigator.languages.length > 0) {
-			candidates = navigator.languages
+			candidates = navigator.languages;
 		} else {
-			candidates = [navigator.language]
+			candidates = [navigator.language];
 		}
 	}
 

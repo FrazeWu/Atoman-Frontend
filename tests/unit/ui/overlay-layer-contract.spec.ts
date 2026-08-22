@@ -18,15 +18,18 @@ const mobileNavSource = read("src/components/system/MobileBottomNav.vue");
 describe("overlay layer contract", () => {
 	it("defines one ordered semantic layer scale", () => {
 		expect(styleSource).toContain("--a-z-navigation: 100;");
-		expect(styleSource).toContain("--a-z-player: 200;");
-		expect(styleSource).toContain("--a-z-sheet-backdrop: 290;");
-		expect(styleSource).toContain("--a-z-sheet: 300;");
-		expect(styleSource).toContain("--a-z-player-lyrics: 400;");
-		expect(styleSource).toContain("--a-z-player-queue: 410;");
-		expect(styleSource).toContain("--a-z-player-sheet-backdrop: 490;");
-		expect(styleSource).toContain("--a-z-player-sheet: 500;");
-		expect(styleSource).toContain("--a-z-modal-backdrop: 700;");
-		expect(styleSource).toContain("--a-z-modal: 710;");
+		expect(styleSource).toContain("--a-z-sheet-backdrop: 300;");
+		expect(styleSource).toContain("--a-z-sheet: 310;");
+		expect(styleSource).toContain("--a-z-modal-backdrop: 500;");
+		expect(styleSource).toContain("--a-z-modal: 510;");
+		expect(styleSource).toContain("--a-z-global-overlay: 480;");
+		expect(styleSource).toContain("--a-z-player-lyrics: 700;");
+		expect(styleSource).toContain("--a-z-player-queue: 710;");
+		expect(styleSource).toContain("--a-z-player: 720;");
+		expect(styleSource).toContain("--a-z-player-sheet-backdrop: 730;");
+		expect(styleSource).toContain("--a-z-player-sheet: 740;");
+		expect(styleSource).toContain("--a-z-player-modal-backdrop: 750;");
+		expect(styleSource).toContain("--a-z-player-modal: 760;");
 		expect(styleSource).toContain("--a-z-lightbox: 800;");
 		expect(styleSource).toContain("--a-z-toast: 900;");
 

@@ -10,6 +10,6 @@ import SiteAboutContent from '@/components/system/footer/SiteAboutContent.vue'
 
 <style scoped>
 .site-info-page {
-  padding-top: 5rem;
+  padding-top: var(--a-page-start-space);
 }
 </style>

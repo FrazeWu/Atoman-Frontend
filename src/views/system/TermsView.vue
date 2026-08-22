@@ -10,6 +10,6 @@ import SitePolicyContent from '@/components/system/footer/SitePolicyContent.vue'
 
 <style scoped>
 .site-policy-page {
-  padding-top: 5rem;
+  padding-top: var(--a-page-start-space);
 }
 </style>

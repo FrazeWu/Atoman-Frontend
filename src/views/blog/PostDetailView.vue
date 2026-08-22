@@ -41,7 +41,7 @@
         />
 
         <!-- Interaction bar -->
-        <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 0;margin-bottom:3rem">
+        <div class="post-detail-toolbar">
           <InteractionBar
             :liked="interactions.liked.value"
             :like-count="interactions.likeCount.value"
@@ -67,7 +67,7 @@
             >
               {{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}
             </button>
-          <button class="a-toggle-btn" title="分享" @click="sharePost">
+            <button class="a-toggle-btn" title="分享" @click="sharePost">
               分享
             </button>
           </div>
@@ -75,8 +75,7 @@
             v-if="post.user?.username"
             :href="api.feed.rss(post.user.username)"
             target="_blank"
-            class="a-link"
-            style="margin-left:auto"
+            class="a-link post-detail-toolbar__rss"
           >
             RSS ↗
           </a>
@@ -547,10 +546,26 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 .prose-blog :deep(th), .prose-blog :deep(td) { border: 1px solid var(--a-color-border-soft); padding: 0.7rem 1.1rem; }
 .prose-blog :deep(th) { background: var(--a-color-surface-muted); color: var(--a-color-fg); font-weight: 600; text-align: left; }
 
+.post-detail-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  padding: 1.5rem 0;
+  margin-bottom: 3rem;
+}
+
+.post-detail-toolbar__rss {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .post-detail-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .post-detail-actions .a-toggle-btn {
@@ -563,6 +578,38 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 
 .post-detail-actions .a-toggle-btn:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+@media (max-width: 767px) {
+  .post-detail-toolbar {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .post-detail-toolbar :deep(.interaction-bar) {
+    flex: 1 1 auto;
+  }
+
+  .post-detail-toolbar__rss {
+    order: 2;
+    margin-left: auto;
+    padding-top: 0.35rem;
+  }
+
+  .post-detail-actions {
+    display: grid;
+    order: 3;
+    flex: 1 1 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .post-detail-actions .a-toggle-btn {
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.45rem 0.5rem !important;
+    white-space: normal;
+  }
 }
 
 /* KaTeX math rendering */

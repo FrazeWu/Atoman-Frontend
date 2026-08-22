@@ -671,9 +671,10 @@ function formatDate(value: string) {
 
 <style scoped>
 .debate-page {
-  width: min(100%, 1280px);
-  margin: 0 auto;
-  padding: 40px 32px 80px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 0 80px;
   color: var(--a-color-text);
 }
 
@@ -778,7 +779,7 @@ function formatDate(value: string) {
 }
 
 @media (max-width: 700px) {
-  .debate-page { padding: 24px 16px 64px; }
+  .debate-page { padding: 0 0 64px; }
   .debate-header { align-items: flex-start; flex-direction: column; gap: 20px; }
   .debate-header h1 { font-size: 26px; }
   .debate-header__actions { width: 100%; justify-content: flex-start; }

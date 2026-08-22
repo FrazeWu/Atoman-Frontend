@@ -117,11 +117,12 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			flow.draft.albumDetails.bio = "Existing description";
 
 			const wrapper = mount(MusicCreationAlbumDetailsStep);
-			expect(wrapper.find('[data-testid="album-details-bio-toggle"]').exists()).toBe(false);
-			expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveProperty(
-				"value",
-				"Existing description",
-			);
+			expect(
+				wrapper.find('[data-testid="album-details-bio-toggle"]').exists(),
+			).toBe(false);
+			expect(
+				wrapper.get('[data-testid="album-details-bio-input"]').element,
+			).toHaveProperty("value", "Existing description");
 		},
 	);
 
@@ -583,7 +584,9 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(
 			wrapper.get('[data-testid="album-details-type-input"]').element,
 		).toHaveValue("album");
-		expect(wrapper.find('[data-testid="album-details-bio-toggle"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="album-details-bio-toggle"]').exists(),
+		).toBe(false);
 		expect(
 			wrapper.get('[data-testid="album-details-bio-input"]').element,
 		).toHaveValue("second studio album");

@@ -4,6 +4,7 @@ import type { Router } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const registeredRouters = new WeakSet<Router>()
+const musicEntityRoutePattern = /^\/music\/(?:artist|album|song|playlist)\/[^/]+$/
 
 export function useMusicSheetRouteSync(router: Router) {
   const drawers = useMusicDrawers()
@@ -35,11 +36,15 @@ export function useMusicSheetRouteSync(router: Router) {
     })
 
     watch(() => router.currentRoute.value.path, (path) => {
-      const matchingLayer = [...drawers.layers.value].reverse().find(layer => layer.route === path)
+      const matchingLayer = drawers.layers.value.find(layer => layer.route === path)
       if (matchingLayer) {
         drawers.popToLayer(matchingLayer.key)
         return
       }
+
+      // Entity route views create the new layer after navigation. Keep the
+      // existing path mounted until that watcher has a chance to push it.
+      if (musicEntityRoutePattern.test(path)) return
 
       if (drawers.layers.value.some(layer => layer.route)) {
         drawers.closeAll()

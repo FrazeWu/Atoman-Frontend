@@ -565,9 +565,12 @@ describe("Music DiscoverView.vue", () => {
 
 	it("starts public discovery before personalized home resolves", async () => {
 		let resolveHome!: (value: Record<string, unknown>) => void;
-		mocks.getMusicHome.mockImplementationOnce(() => new Promise((resolve) => {
-			resolveHome = resolve;
-		}));
+		mocks.getMusicHome.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveHome = resolve;
+				}),
+		);
 
 		mount(DiscoverView);
 		await flushPromises();

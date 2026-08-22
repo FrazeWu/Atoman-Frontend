@@ -19,26 +19,10 @@
 
     <div class="studio-frame">
       <div id="studio-primary-navigation" data-testid="studio-primary-nav" class="studio-sidebar-shell" :class="{ 'is-open': mobileNavOpen }">
-        <PSidebar class="studio-sidebar" aria-label="创作中心">
-          <PSidebarItem to="/studio" exact :icon="LayoutDashboard" @click="mobileNavOpen = false">
-            概览
-          </PSidebarItem>
-          <PSidebarItem to="/studio/blog" :icon="FileText" @click="mobileNavOpen = false">
-            博客
-          </PSidebarItem>
-          <PSidebarItem to="/studio/podcast" :icon="Mic2" @click="mobileNavOpen = false">
-            播客
-          </PSidebarItem>
-          <PSidebarItem to="/studio/video" :icon="Video" @click="mobileNavOpen = false">
-            视频
-          </PSidebarItem>
-          <PSidebarItem to="/studio/channel" :icon="RadioTower" @click="mobileNavOpen = false">
-            频道管理
-          </PSidebarItem>
-        </PSidebar>
+        <AppSidebar module="studio" class="studio-sidebar" aria-label="创作中心" />
       </div>
 
-      <main class="studio-main" tabindex="-1">
+      <main class="a-main-content" tabindex="-1">
         <p v-if="studio.loading && !studio.loaded" class="studio-state">加载中...</p>
         <div v-else-if="studio.error && !studio.loaded" class="studio-state" role="alert">
           <p>{{ studio.error }}</p>
@@ -49,9 +33,7 @@
           <RouterLink to="/studio/channel">创建频道</RouterLink>
         </section>
         <RouterView v-else v-slot="{ Component }">
-          <div v-if="Component" class="studio-route-surface">
-            <component :is="Component" />
-          </div>
+          <component v-if="Component" :is="Component" />
         </RouterView>
       </main>
     </div>
@@ -59,12 +41,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { FileText, LayoutDashboard, Menu, Mic2, RadioTower, Video } from 'lucide-vue-next'
+import { Menu } from 'lucide-vue-next'
 
-import PSidebar from '@/components/ui/PSidebar.vue'
-import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+import AppSidebar from '@/components/system/AppSidebar.vue'
 import StudioChannelSelector from '@/components/studio/StudioChannelSelector.vue'
 import { useStudioStore } from '@/stores/studio'
 
@@ -76,13 +57,16 @@ const isChannelRoute = computed(() => route.path.startsWith('/studio/channel'))
 onMounted(() => {
   void studio.loadState()
 })
+
+watch(() => route.fullPath, () => {
+  mobileNavOpen.value = false
+})
 </script>
 
 <style scoped>
 .studio-layout {
+  --a-sidebar-width: 12rem;
   min-height: calc(100dvh - var(--a-topbar-height, 3.5rem));
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
 }
 
 .studio-header {
@@ -111,32 +95,13 @@ onMounted(() => {
 
 .studio-frame {
   display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr);
+  grid-template-columns: var(--a-sidebar-width) minmax(0, 1fr);
   min-height: calc(100dvh - 7.25rem);
 }
 
 .studio-sidebar-shell {
   min-width: 0;
   border-right: 1px solid var(--a-color-border-soft);
-}
-
-.studio-sidebar {
-  width: 100%;
-  min-height: 100%;
-  height: auto;
-  position: static;
-  padding: 1rem 0.75rem;
-  overflow: visible;
-  background: transparent;
-}
-
-.studio-sidebar :deep(.p-sidebar-nav) {
-  position: sticky;
-  top: 4.5rem;
-}
-
-.studio-sidebar :deep(.p-sidebar-item) {
-  width: 100%;
 }
 
 .studio-sidebar-shell .p-sidebar-item {
@@ -153,18 +118,6 @@ onMounted(() => {
 .studio-state button:focus-visible {
   outline: 2px solid var(--a-color-fg);
   outline-offset: 2px;
-}
-
-.studio-main {
-  min-width: 0;
-  padding: clamp(1rem, 3vw, 2rem);
-}
-
-.studio-route-surface {
-  width: 100%;
-  max-width: 78rem;
-  min-height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 7.25rem);
-  margin: 0 auto;
 }
 
 .studio-state,
@@ -186,33 +139,11 @@ onMounted(() => {
 }
 
 @media (min-width: 761px) and (max-width: 1023px) {
-  .studio-sidebar { width: 100%; }
-  .studio-sidebar :deep(.p-sidebar-nav) { position: static; }
-  .studio-sidebar :deep(.p-sidebar-item) {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    justify-content: initial;
-    gap: 0.6rem;
-    padding: 0 0.85rem;
-  }
-  .studio-sidebar :deep(.p-sidebar-item-label) {
-    position: static;
-    width: auto;
-    height: auto;
-    padding: 0;
-    margin: 0;
-    overflow: visible;
-    clip: auto;
-    white-space: nowrap;
-    border: 0;
-  }
-  .studio-sidebar :deep(.p-sidebar-item-svg) {
-    inline-size: 1.375rem;
-    block-size: 1.375rem;
-  }
+  .studio-layout { --a-sidebar-width: 4.5rem; }
 }
 
 @media (max-width: 760px) {
+  .studio-layout { --a-sidebar-width: 0; }
   .studio-menu-button { display: inline-flex; }
   .studio-frame { display: block; }
   .studio-sidebar-shell {
@@ -250,6 +181,5 @@ onMounted(() => {
     white-space: nowrap;
     border: 0;
   }
-  .studio-main { padding: 1rem; }
 }
 </style>

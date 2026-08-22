@@ -270,8 +270,12 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 		.boundingBox();
 	expect(basicFieldsBox).not.toBeNull();
 	expect(bioFieldBox).not.toBeNull();
-	expect(Math.abs((bioFieldBox?.y ?? 0) - (basicFieldsBox?.y ?? 0))).toBeLessThan(2);
-	expect(Math.abs((bioFieldBox?.height ?? 0) - (basicFieldsBox?.height ?? 0))).toBeLessThan(2);
+	expect(
+		Math.abs((bioFieldBox?.y ?? 0) - (basicFieldsBox?.y ?? 0)),
+	).toBeLessThan(2);
+	expect(
+		Math.abs((bioFieldBox?.height ?? 0) - (basicFieldsBox?.height ?? 0)),
+	).toBeLessThan(2);
 	expect(bioFieldBox?.x ?? 0).toBeGreaterThan(basicFieldsBox?.x ?? 0);
 	expect(
 		(bioFieldBox?.width ?? 0) /

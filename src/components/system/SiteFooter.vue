@@ -165,9 +165,14 @@ function openPanel(panel: FootbarPanel, label: string) {
 }
 
 .site-footer-secondary {
+  flex-wrap: wrap;
   margin-top: 0;
   color: var(--a-color-muted);
   font-size: var(--a-text-xs);
+}
+
+.site-footer-secondary :deep(.site-visit-stats) {
+  order: 2;
 }
 
 .site-footer-link--meta,
@@ -188,6 +193,11 @@ function openPanel(panel: FootbarPanel, label: string) {
 
   .site-footer-row {
     gap: var(--a-space-4);
+  }
+
+  .site-footer-secondary :deep(.site-visit-stats) {
+    order: 3;
+    flex-basis: 100%;
   }
 
   .site-footer-links,

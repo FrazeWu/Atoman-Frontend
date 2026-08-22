@@ -74,6 +74,7 @@
 	--a-letter-spacing-widest: 0;
 
 	--a-topbar-height: 56px;
+	--a-page-start-space: 2rem;
 	--a-player-height: 68px;
 	--a-mobile-player-height: 64px;
 	--a-player-reserved-height: 0px;
@@ -88,20 +89,20 @@
 	--a-z-dropdown: 40;
 	--a-z-popover: 45;
 	--a-z-navigation: 100;
-	--a-z-player: 200;
-	--a-z-sheet-backdrop: 290;
-	--a-z-sheet: 300;
-	--a-z-player-lyrics: 400;
-	--a-z-player-queue: 410;
-	--a-z-player-sheet-backdrop: 490;
-	--a-z-player-sheet: 500;
-	--a-z-global-overlay: 600;
-	--a-z-modal-backdrop: 700;
-	--a-z-modal: 710;
+	--a-z-sheet-backdrop: 300;
+	--a-z-sheet: 310;
+	--a-z-global-overlay: 480;
+	--a-z-modal-backdrop: 500;
+	--a-z-modal: 510;
+	--a-z-player-lyrics: 700;
+	--a-z-player-queue: 710;
+	--a-z-player: 720;
+	--a-z-player-sheet-backdrop: 730;
+	--a-z-player-sheet: 740;
+	--a-z-player-modal-backdrop: 750;
+	--a-z-player-modal: 760;
 	--a-z-lightbox: 800;
 	--a-z-toast: 900;
-	--a-z-player-modal-backdrop: var(--a-z-modal-backdrop);
-	--a-z-player-modal: var(--a-z-modal);
 	--a-sidebar-width: 0px;
 	--a-sidebar-collapsed-width: 4.5rem;
 }
@@ -142,22 +143,22 @@ body:has(.app-shell.has-sidebar) {
 .a-page {
 	max-width: 72rem;
 	margin: 0 auto;
-	padding: 3rem 2rem 12rem;
+	padding: var(--a-page-start-space) 2rem 12rem;
 }
 .a-page-md {
 	max-width: 48rem;
 	margin: 0 auto;
-	padding: 3rem 2rem 12rem;
+	padding: var(--a-page-start-space) 2rem 12rem;
 }
 .a-page-sm {
 	max-width: 32rem;
 	margin: 0 auto;
-	padding: 3rem 2rem 12rem;
+	padding: var(--a-page-start-space) 2rem 12rem;
 }
 .a-page-xl {
 	max-width: 80rem;
 	margin: 0 auto;
-	padding: 3rem 2rem 12rem;
+	padding: var(--a-page-start-space) 2rem 12rem;
 }
 
 /* ─── Typography ─────────────────────────────────────── */
@@ -1222,7 +1223,8 @@ body:has(.app-shell.has-sidebar) {
 	min-width: 0;
 	max-width: 80rem;
 	margin: 0 auto;
-	padding: 2.5rem 2rem calc(8rem + var(--a-mobile-nav-offset, 0px));
+	padding: var(--a-page-start-space) 2rem
+		calc(8rem + var(--a-mobile-nav-offset, 0px));
 }
 
 .mobile-bottom-nav {
@@ -1261,6 +1263,9 @@ body:has(.app-shell.has-sidebar) {
 }
 
 @media (max-width: 767px) {
+	:root {
+		--a-page-start-space: 1.5rem;
+	}
 	body:has(.app-shell.has-sidebar) {
 		--a-sidebar-width: 0px;
 		--a-mobile-nav-reserved-height: calc(
@@ -1308,7 +1313,8 @@ body:has(.app-shell.has-sidebar) {
 		);
 		overflow-y: visible;
 		max-width: none;
-		padding: 1.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
+		padding: var(--a-page-start-space) 1rem
+			calc(7rem + env(safe-area-inset-bottom));
 	}
 	.mobile-bottom-nav {
 		display: grid;

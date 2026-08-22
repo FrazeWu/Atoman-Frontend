@@ -8,7 +8,7 @@
     <PEmpty v-else-if="!collection" text="合集不存在或已被删除" />
 
     <template v-else>
-      <PPageHeader :title="collection.name" accent :sub="collection.description || ''" style="margin-bottom:2.5rem">
+      <PPageHeader :title="collection.name" accent :sub="collection.description || ''" mb="1.5rem">
         <template #action>
           <div class="ui-actions-row">
             <PClip

@@ -136,7 +136,7 @@ const router = useRouter()
 const studio = useStudioStore()
 const siteAccess = useSiteAccessStore()
 const lifecycle = useContentLifecycle()
-const module = computed(() => route.params.module as StudioModule)
+const module = computed(() => (route.params.module ?? route.meta.studioModule) as StudioModule)
 const config = computed(() => studioModules[module.value])
 const publishingFeature = { blog: 'post.create', podcast: 'podcast.publish', video: 'video.publish' } as const
 const canCreate = computed(() => siteAccess.isFeatureEnabled(module.value, publishingFeature[module.value]))

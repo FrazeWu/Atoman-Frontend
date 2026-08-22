@@ -206,10 +206,14 @@ describe("FeedRecommendedView", () => {
 
 		const input = wrapper.get('[data-testid="discovery-search-input"]');
 		await input.trigger("focus");
-		expect(wrapper.find('[data-testid="discovery-search-dropdown"]').exists()).toBe(true);
+		expect(
+			wrapper.find('[data-testid="discovery-search-dropdown"]').exists(),
+		).toBe(true);
 		await input.trigger("blur");
 		await new Promise((resolve) => setTimeout(resolve, 180));
-		expect(wrapper.find('[data-testid="discovery-search-dropdown"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="discovery-search-dropdown"]').exists(),
+		).toBe(false);
 	});
 
 	it("uses the shared segmented control size for category filters", () => {

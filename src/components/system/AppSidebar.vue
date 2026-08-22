@@ -125,14 +125,33 @@
       </PSidebarItem>
     </template>
 
-    <!-- 7. PODCAST MODULE SIDEBAR -->
+    <!-- 7. STUDIO MODULE SIDEBAR -->
+    <template v-else-if="currentModule === 'studio'">
+      <PSidebarItem to="/studio" :index="1" :icon="LayoutDashboard" exact>
+        概览
+      </PSidebarItem>
+      <PSidebarItem to="/studio/blog" :index="2" :icon="FileText">
+        博客
+      </PSidebarItem>
+      <PSidebarItem to="/studio/podcast" :index="3" :icon="Mic2">
+        播客
+      </PSidebarItem>
+      <PSidebarItem to="/studio/video" :index="4" :icon="Video">
+        视频
+      </PSidebarItem>
+      <PSidebarItem to="/studio/channel" :index="5" :icon="RadioTower">
+        频道管理
+      </PSidebarItem>
+    </template>
+
+    <!-- 8. PODCAST MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'podcast'">
       <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact>
         播客大厅
       </PSidebarItem>
     </template>
 
-    <!-- 8. VIDEO MODULE SIDEBAR -->
+    <!-- 9. VIDEO MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'video'">
       <PSidebarItem to="/videos" :index="1" :icon="Compass" exact>
         探索
@@ -172,7 +191,8 @@ import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } 
 import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Star, Disc3, Users, History,
-  MessageSquare, Folder, Archive, BookOpen, Clock, Mic
+  MessageSquare, Folder, Archive, BookOpen, Clock, Mic,
+  LayoutDashboard, FileText, Mic2, RadioTower, Video
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'

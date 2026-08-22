@@ -25,7 +25,7 @@ withDefaults(defineProps<{
   sub: '',
   kicker: '',
   accent: false,
-  mb: '2.5rem',
+  mb: '1.5rem',
 })
 </script>
 

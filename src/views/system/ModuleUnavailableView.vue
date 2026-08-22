@@ -19,6 +19,6 @@ import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 .unavailable-page {
   display: grid;
   gap: 2rem;
-  padding-top: 4rem;
+  padding-top: var(--a-page-start-space);
 }
 </style>

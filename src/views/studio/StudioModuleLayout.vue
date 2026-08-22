@@ -12,20 +12,37 @@
       </nav>
     </header>
     <RouterView />
+    <RouterView name="overlay" v-slot="{ Component }">
+      <StudioRouteSheet
+        v-if="Component"
+        :title="overlayTitle"
+        @close="closeOverlay"
+      >
+        <component :is="Component" />
+      </StudioRouteSheet>
+    </RouterView>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import { matchedRouteKey, RouterLink, RouterView, useRoute } from 'vue-router'
+import { matchedRouteKey, RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+
+import StudioRouteSheet from '@/components/studio/StudioRouteSheet.vue'
 
 import { studioModules } from '@/config/studioModules'
 import type { StudioModule } from '@/types'
 
 const route = useRoute()
+const router = useRouter()
 const matchedRoute = inject(matchedRouteKey, undefined)
-const module = computed(() => route.params.module as StudioModule)
+const module = computed(() => (route.params.module ?? route.meta.studioModule) as StudioModule)
 const config = computed(() => studioModules[module.value])
+const overlayTitle = computed(() => String(route.meta.studioOverlayTitle || '编辑内容'))
+
+function closeOverlay() {
+  router.back()
+}
 </script>
 
 <style scoped>

@@ -198,30 +198,69 @@ const handleImport = () => {
     padding: 0.4rem 0.75rem;
   }
 
-  .editor-topbar__title,
+  .editor-topbar__identity {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .editor-topbar__title {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .editor-topbar__save,
   .editor-topbar__publish {
     display: none;
   }
 
   .editor-topbar__actions {
+    flex: 0 1 auto;
+    min-width: 0;
     margin-left: auto;
   }
 }
 
 @media (max-width: 640px) {
   .editor-topbar {
-    gap: 0.25rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
     padding-inline: 0.5rem;
   }
 
-  .editor-topbar__status {
-    display: none;
+  .editor-topbar__identity {
+    width: 100%;
+  }
+
+  .editor-topbar__title {
+    max-width: none;
+    font-size: 0.82rem;
+  }
+
+  .editor-topbar__actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.15rem;
+    margin-left: 0;
+  }
+
+  .editor-topbar__actions > * {
+    flex-shrink: 0;
+  }
+
+  .editor-topbar :deep(.p-segmented-control) {
+    flex-shrink: 0;
   }
 
   .editor-topbar :deep(.p-segmented-control-item) {
     padding-inline: 0.5rem;
     font-size: 0.7rem;
+  }
+
+  .editor-topbar__status {
+    display: none;
   }
 }
 </style>

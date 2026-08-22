@@ -4,8 +4,8 @@
     :class="{ 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }"
     @click="$emit('click')"
   >
-    <div style="display:flex;gap:1.25rem;align-items:flex-start;position:relative;">
-      
+    <div class="p-entry__body">
+
       <!-- Left Badge / Image Area -->
       <div class="p-entry-visual">
         <slot name="visual">
@@ -74,6 +74,14 @@ defineEmits(['click'])
   outline: none;
 }
 
+.p-entry__body {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  position: relative;
+  min-width: 0;
+}
+
 .p-entry:hover {
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
@@ -131,12 +139,29 @@ defineEmits(['click'])
 .feed-entry-meta {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  min-width: 0;
   margin-bottom: 0.25rem;
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted-soft);
+}
+
+.feed-entry-meta > * {
+  min-width: 0;
+}
+
+:deep(.feed-entry-meta a) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.feed-entry-meta time) {
+  white-space: nowrap;
 }
 
 .p-entry-visual {

@@ -725,7 +725,7 @@ watch(
 /* 上传专辑与封面并排 */
 .album-details-step__upload-cover-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 18rem;
+  grid-template-columns: minmax(0, 1fr) 15rem;
   gap: 1.5rem;
   align-items: stretch;
 }
@@ -870,6 +870,10 @@ watch(
   .album-details-step__upload-cover-grid,
   .album-details-step__content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .album-details-step__cover-card {
+    max-width: 15rem;
   }
 }
 

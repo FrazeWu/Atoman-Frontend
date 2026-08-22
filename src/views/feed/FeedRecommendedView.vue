@@ -8,6 +8,7 @@ import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -54,8 +55,14 @@ type RecommendationItem = {
   description?: string
   content_type?: string
   language_code?: string
+  source_subscribed?: boolean
   image_url?: string
   target_path: string
+  source_id?: string
+  source_title?: string
+  source_type?: string
+  source_category?: string
+  source_path?: string
   score_label?: string
   bookmark_count?: number
   read_count?: number
@@ -129,27 +136,35 @@ const externalSearch = ref('')
 const externalPage = ref(1)
 const externalPageSize = 20
 const externalTotal = ref(0)
+const filterOpen = ref(false)
+const filterDraftMode = ref<RecommendationMode>('hot')
+const filterDraftTarget = ref<RecommendTarget>('articles')
+const filterDraftCategory = ref<FeedSourceFilterCategory>(ALL_CATEGORY)
+const filterDraftLanguage = ref<RecommendationLanguage>('en')
+const filterDraftTheme = ref(ALL_THEME)
+const sourceSubscribeBusyIds = ref<string[]>([])
+let skipFilterWatchers = false
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
-  { label: '热度', value: 'hot' },
+  { label: '热门', value: 'hot' },
   { label: '精选', value: 'featured' },
-  { label: '探索', value: 'discover' },
+  { label: '新发现', value: 'discover' },
 ]
 
 const targetOptions: Array<{ label: string; value: RecommendTarget }> = [
   { label: '文章', value: 'articles' },
   { label: '频道', value: 'channels' },
-  { label: '混合', value: 'mixed' },
+  { label: '综合', value: 'mixed' },
 ]
 
 const sourceScopeOptions: Array<{ label: string; value: SourceScope }> = [
-  { label: '站内', value: 'internal' },
-  { label: '站外', value: 'external' },
+  { label: '热门内容', value: 'internal' },
+  { label: '订阅源', value: 'external' },
 ]
 
 const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }> = [
   { label: '全部', value: ALL_CATEGORY },
-  { label: '文章', value: 'blog' },
+  { label: '博客', value: 'blog' },
   { label: '新闻', value: 'news' },
   { label: '社交', value: 'social' },
   { label: '视频', value: 'video' },
@@ -165,6 +180,43 @@ const themeOptions = computed(() => ([
 const currentThemeDescription = computed(() => {
   if (theme.value === ALL_THEME) return ''
   return themes.value.find((item) => item.id === theme.value)?.description ?? ''
+})
+
+const subscribedSourceIds = computed(() => new Set(
+  feedStore.subscriptions.flatMap((subscription) => [
+    subscription.feed_source_id,
+    subscription.feed_source?.source_id,
+  ]).filter((id): id is string => Boolean(id)),
+))
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (sourceScope.value === 'internal' && mode.value !== 'hot') count += 1
+  if (sourceScope.value === 'internal' && target.value !== 'articles') count += 1
+  if (category.value !== ALL_CATEGORY) count += 1
+  if (language.value !== defaultRecommendationLanguage()) count += 1
+  if (theme.value !== ALL_THEME) count += 1
+  return count
+})
+
+const filterSummary = computed(() => {
+  const values: string[] = []
+  if (sourceScope.value === 'internal' && mode.value !== 'hot') {
+    values.push(modeOptions.find((option) => option.value === mode.value)?.label ?? '')
+  }
+  if (sourceScope.value === 'internal' && target.value !== 'articles') {
+    values.push(targetOptions.find((option) => option.value === target.value)?.label ?? '')
+  }
+  if (category.value !== ALL_CATEGORY) {
+    values.push(categoryOptions.find((option) => option.value === category.value)?.label ?? '')
+  }
+  if (language.value !== defaultRecommendationLanguage()) {
+    values.push(recommendationLanguageOptions.find((option) => option.value === language.value)?.label ?? language.value)
+  }
+  if (theme.value !== ALL_THEME) {
+    values.push(themeOptions.value.find((option) => option.value === theme.value)?.label ?? '')
+  }
+  return values.filter(Boolean)
 })
 
 function normalizeMode(raw: unknown): RecommendationMode {
@@ -233,6 +285,46 @@ function syncQuery() {
       source_q: externalSearch.value || undefined,
       source_page: sourceScope.value === 'external' && externalPage.value > 1 ? String(externalPage.value) : undefined,
     },
+  })
+}
+
+function openFilterPanel() {
+  filterDraftMode.value = mode.value
+  filterDraftTarget.value = target.value
+  filterDraftCategory.value = category.value
+  filterDraftLanguage.value = language.value
+  filterDraftTheme.value = theme.value
+  filterOpen.value = true
+}
+
+function resetFilterDraft() {
+  filterDraftMode.value = 'hot'
+  filterDraftTarget.value = 'articles'
+  filterDraftCategory.value = ALL_CATEGORY
+  filterDraftLanguage.value = defaultRecommendationLanguage()
+  filterDraftTheme.value = ALL_THEME
+}
+
+function applyFilters() {
+  skipFilterWatchers = true
+  mode.value = filterDraftMode.value
+  target.value = filterDraftTarget.value
+  category.value = filterDraftCategory.value
+  language.value = filterDraftLanguage.value
+  theme.value = filterDraftTheme.value
+  page.value = 1
+  filterOpen.value = false
+  syncQuery()
+
+  if (sourceScope.value === 'internal') {
+    void fetchThemes()
+    void fetchRecommendations()
+  } else {
+    void fetchExternalSources()
+  }
+
+  void nextTick(() => {
+    skipFilterWatchers = false
   })
 }
 
@@ -571,6 +663,43 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
   }
 }
 
+function isRecommendationSourceSubscribed(item: RecommendationItem) {
+  return Boolean(item.source_subscribed || (item.source_id && subscribedSourceIds.value.has(item.source_id)))
+}
+
+function isRecommendationSourceSubscribeBusy(sourceId: string) {
+  return sourceSubscribeBusyIds.value.includes(sourceId)
+}
+
+async function subscribeRecommendationSource(item: RecommendationItem) {
+  const sourceId = item.source_id
+  if (!authStore.isAuthenticated || !sourceId || isRecommendationSourceSubscribed(item) || isRecommendationSourceSubscribeBusy(sourceId)) return
+
+  sourceSubscribeBusyIds.value = [...sourceSubscribeBusyIds.value, sourceId]
+  try {
+    if (item.source_type === 'internal_channel') {
+      const success = await feedStore.subscribeToChannel(sourceId)
+      if (!success) {
+        errorMessage.value = '订阅失败，请重试'
+        return
+      }
+    } else {
+      const result = await feedStore.batchSubscribeSources([sourceId])
+      if (!result || result.missingIds.includes(sourceId)) {
+        errorMessage.value = '订阅失败，请重试'
+        return
+      }
+    }
+    articles.value = articles.value.map((article) => (
+      article.source_id === sourceId
+        ? { ...article, source_subscribed: true }
+        : article
+    ))
+  } finally {
+    sourceSubscribeBusyIds.value = sourceSubscribeBusyIds.value.filter((id) => id !== sourceId)
+  }
+}
+
 const visibleChannels = computed(() => {
   return channels.value
 })
@@ -587,18 +716,25 @@ const changePage = (nextPage: number) => {
   page.value = nextPage
 }
 
+watch(filterDraftCategory, (nextCategory, previousCategory) => {
+  if (nextCategory !== previousCategory) filterDraftTheme.value = ALL_THEME
+})
+
 watch([mode, page, theme], () => {
+  if (skipFilterWatchers || sourceScope.value !== 'internal') return
   syncQuery()
   fetchRecommendations()
 })
 
 watch(language, () => {
+  if (skipFilterWatchers) return
   syncQuery()
+  if (!recommendationsMounted) return
   if (sourceScope.value === 'external') {
     if (externalPage.value === 1) void fetchExternalSources()
     else externalPage.value = 1
+    return
   }
-  if (!recommendationsMounted) return
   if (page.value === 1) {
     void fetchRecommendations()
   } else {
@@ -608,7 +744,14 @@ watch(language, () => {
 
 watch(sourceScope, () => {
   syncQuery()
-  if (sourceScope.value === 'external') void fetchExternalSources()
+  if (skipFilterWatchers || !recommendationsMounted) return
+  page.value = 1
+  if (sourceScope.value === 'external') {
+    void fetchExternalSources()
+  } else {
+    void fetchThemes()
+    void fetchRecommendations()
+  }
 })
 
 watch(externalSearch, () => {
@@ -627,32 +770,28 @@ watch(externalPage, () => {
 let recommendationsMounted = false
 
 watch(target, () => {
+  if (skipFilterWatchers) return
   syncQuery()
-  if (!recommendationsMounted) return
+  if (!recommendationsMounted || sourceScope.value !== 'internal') return
   if (page.value === 1) {
     fetchRecommendations()
   } else {
     page.value = 1
-  }
-})
-
-watch([mode], () => {
-  if (page.value === 1) {
-    fetchRecommendations()
-  } else {
-    page.value = 1
-  }
-  if (sourceScope.value === 'external') {
-    if (externalPage.value === 1) void fetchExternalSources()
-    else externalPage.value = 1
   }
 })
 
 watch(category, async (nextCategory, previousCategory) => {
+  if (skipFilterWatchers) return
   if (nextCategory !== previousCategory) {
     theme.value = ALL_THEME
   }
   syncQuery()
+  if (!recommendationsMounted) return
+  if (sourceScope.value === 'external') {
+    if (externalPage.value === 1) void fetchExternalSources()
+    else externalPage.value = 1
+    return
+  }
   await fetchThemes()
   if (page.value === 1) {
     fetchRecommendations()
@@ -672,10 +811,14 @@ onMounted(async () => {
   const sourcePage = Number(route.query.source_page)
   externalPage.value = Number.isInteger(sourcePage) && sourcePage > 0 ? sourcePage : 1
   syncQuery()
-  fetchThemes()
-  fetchRecommendations()
-  if (sourceScope.value === 'external') fetchExternalSources()
+  if (sourceScope.value === 'internal') {
+    fetchThemes()
+    fetchRecommendations()
+  } else {
+    fetchExternalSources()
+  }
   if (authStore.isAuthenticated) {
+    feedStore.fetchSubscriptions()
     feedStore.fetchStarredIds()
     feedStore.fetchReadingListIds()
     feedStore.fetchBookmarkedPostIds()
@@ -714,56 +857,60 @@ onMounted(async () => {
     />
 
     <PPageHeader
-      title="探索订阅源"
+      title="发现"
       mb="1.25rem"
     >
       <template #action><PButton variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
     </PPageHeader>
 
-    <div class="filters-wrap" data-test="feed-filter-wrap">
-      <div class="filter-group" aria-label="来源范围">
+    <div class="discovery-toolbar" data-test="feed-filter-wrap">
+      <div class="discovery-view-switch" aria-label="发现内容">
         <PSegmentedControl v-model="sourceScope" :options="sourceScopeOptions" />
       </div>
-      <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐模式">
-        <PSegmentedControl
-          v-model="mode"
-          :options="modeOptions"
-        />
+      <div class="discovery-toolbar__summary">
+        <strong>{{ sourceScope === 'internal' ? '热门内容' : '订阅源' }}</strong>
+        <span v-for="item in filterSummary" :key="item">· {{ item }}</span>
       </div>
-
-      <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐对象">
-        <PSegmentedControl
-          v-model="target"
-          :options="targetOptions"
-        />
-      </div>
-
-      <div class="filter-group" data-test="feed-filter-group" aria-label="内容类型筛选">
-        <PSegmentedControl
-          v-model="category"
-          :options="categoryOptions"
-        />
-      </div>
-
-      <div class="filter-group" data-test="feed-filter-group" aria-label="语言筛选">
-        <PSelect
-          v-model="language"
-          label="语言"
-          :options="recommendationLanguageOptions"
-          data-test="recommendation-language"
-        />
-      </div>
-
-      <div class="filter-group" data-test="feed-filter-group" aria-label="主题筛选">
-        <PSegmentedControl
-          v-model="theme"
-          :options="themeOptions"
-        />
-      </div>
+      <PButton
+        data-test="open-recommendation-filters"
+        variant="secondary"
+        :label="activeFilterCount ? `筛选 · ${activeFilterCount}` : '筛选'"
+        @click="openFilterPanel"
+      />
     </div>
 
+    <PSheet
+      :show="filterOpen"
+      title="筛选"
+      side="right"
+      close-type="bookmark"
+      @close="filterOpen = false"
+    >
+      <div class="recommend-filter-panel">
+
+        <div v-if="sourceScope === 'internal'" class="recommend-filter-panel__section">
+          <PSelect data-test="filter-mode" v-model="filterDraftMode" label="推荐方式" :options="modeOptions" />
+          <PSelect data-test="filter-target" v-model="filterDraftTarget" label="查看" :options="targetOptions" />
+        </div>
+
+        <div class="recommend-filter-panel__section">
+          <PSelect data-test="filter-category" v-model="filterDraftCategory" label="来源类型" :options="categoryOptions" />
+          <PSelect data-test="filter-language" v-model="filterDraftLanguage" label="语言" :options="recommendationLanguageOptions" />
+        </div>
+
+        <div v-if="sourceScope === 'internal'" class="recommend-filter-panel__section">
+          <PSelect data-test="filter-theme" v-model="filterDraftTheme" label="主题" :options="themeOptions" :disabled="themesLoading" />
+        </div>
+
+        <div class="recommend-filter-panel__actions">
+          <PButton data-test="reset-recommendation-filters" variant="ghost" label="重置" @click="resetFilterDraft" />
+          <PButton data-test="apply-recommendation-filters" label="应用筛选" @click="applyFilters" />
+        </div>
+      </div>
+    </PSheet>
+
     <p v-if="currentThemeDescription" class="state-line">{{ currentThemeDescription }}</p>
-    <p v-else-if="themesLoading" class="state-line">正在加载主题...</p>
+    <p v-else-if="themesLoading && sourceScope === 'internal'" class="state-line">正在加载主题...</p>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
 
@@ -783,7 +930,7 @@ onMounted(async () => {
 
       <div v-if="sourceScope === 'external'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
-        <div class="section-head"><p class="section-kicker">站外</p><h2>RSS 订阅源</h2></div>
+        <div class="section-head"><p class="section-kicker">订阅源</p><h2>RSS 订阅源</h2></div>
         <div class="external-source-controls">
           <label v-if="authStore.isAuthenticated" class="external-source-select-all">
             <input v-model="allExternalSourcesSelected" data-test="external-source-select-all" type="checkbox" :disabled="!externalSelectableSourceIds.length" />
@@ -812,8 +959,8 @@ onMounted(async () => {
     <div v-else-if="target === 'articles'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
         <div class="section-head">
-          <p class="section-kicker">文章</p>
-          <h2>推荐文章</h2>
+          <p class="section-kicker">热门内容</p>
+          <h2>热门文章</h2>
         </div>
 
         <PEmpty
@@ -831,10 +978,24 @@ onMounted(async () => {
             :type="item.target_path.includes('/posts/') ? 'post' : 'feed_item'"
             :starred="isStarred(item)"
             :in-reading-list="isReadingList(item)"
+            :source-title="item.source_title"
+            :source-path="item.source_path"
             @click="openTarget(item.target_path)"
             @toggle-star="toggleStar(item)"
             @toggle-reading-list="toggleReadingList(item)"
-          />
+          >
+            <template v-if="item.source_id && authStore.isAuthenticated" #source-action>
+              <PButton
+                data-test="article-source-subscribe"
+                variant="secondary"
+                size="sm"
+                :label="isRecommendationSourceSubscribed(item) ? '已订阅' : '订阅'"
+                :loading="isRecommendationSourceSubscribeBusy(item.source_id)"
+                :disabled="isRecommendationSourceSubscribed(item)"
+                @click.stop="subscribeRecommendationSource(item)"
+              />
+            </template>
+          </BlogItemCard>
         </div>
 
         <FeedTimelineFooter
@@ -970,41 +1131,69 @@ onMounted(async () => {
   padding-bottom: 6rem;
 }
 
-.filters-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  align-items: flex-start;
-}
-
-.filter-group {
-  display: flex;
+.discovery-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  min-width: 0;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.filter-group + .filter-group {
-  position: relative;
-}
-
-.filter-group + .filter-group::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 50%;
-  width: 1px;
-  height: 1.5rem;
-  background: var(--a-color-border-soft);
-  transform: translateY(-50%);
-}
-
-.filter-group :deep(.p-segmented-control) {
+.discovery-view-switch :deep(.p-segmented-control) {
   width: auto;
 }
 
+.discovery-toolbar__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
+
+.discovery-toolbar__summary strong {
+  color: var(--a-color-text);
+  font-weight: 600;
+}
+
+.recommend-filter-panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem 1rem 2rem;
+}
+
+.recommend-filter-panel__section {
+  display: grid;
+  gap: 1rem;
+}
+
+.recommend-filter-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
 @media (max-width: 720px) {
-  .filter-group + .filter-group::before {
-    display: none;
+  .discovery-toolbar {
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+  }
+
+  .discovery-view-switch {
+    grid-column: 1 / -1;
+  }
+
+  .discovery-view-switch :deep(.p-segmented-control) {
+    width: 100%;
+  }
+
+  .discovery-toolbar__summary {
+    min-height: 2.5rem;
   }
 }
 

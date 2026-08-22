@@ -4,9 +4,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import FeedRecommendedView from "@/views/feed/FeedRecommendedView.vue";
-import { useAuthStore } from "@/stores/auth";
-import { useFeedStore } from "@/stores/feed";
+// @ts-expect-error Vue SFC resolution is provided by vue-tsc and Vitest.
+import FeedRecommendedView from "../../../../src/views/feed/FeedRecommendedView.vue";
+import { useAuthStore } from "../../../../src/stores/auth";
+import { useFeedStore } from "../../../../src/stores/feed";
 
 const source = readFileSync(
 	resolve(__dirname, "../../../../src/views/feed/FeedRecommendedView.vue"),
@@ -44,6 +45,38 @@ const segmentedControlStub = {
   `,
 };
 
+const buttonStub = {
+	props: ["label", "disabled", "loading"],
+		template:
+			'<button class="p-button" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ loading ? "处理中..." : label }}</button>',
+};
+
+async function applyFilter(wrapper: any, field: string, optionLabel: string) {
+	await wrapper.get('[data-test="open-recommendation-filters"]').trigger("click");
+	await wrapper.get(`[data-test="${field}"] .p-select-trigger`).trigger("click");
+	const option = wrapper
+		.findAll(".p-select-option")
+		.find((candidate: any) => candidate.text() === optionLabel);
+	expect(option).toBeDefined();
+	await option!.trigger("click");
+	await wrapper.get('[data-test="apply-recommendation-filters"]').trigger("click");
+	await flushPromises();
+}
+
+async function applyFilterValue(wrapper: any, field: string, value: string) {
+	const draftKey: Record<string, string> = {
+		mode: "filterDraftMode",
+		target: "filterDraftTarget",
+		category: "filterDraftCategory",
+		theme: "filterDraftTheme",
+		language: "filterDraftLanguage",
+	};
+	wrapper.vm[draftKey[field]] = value;
+	await flushPromises();
+	wrapper.vm.applyFilters();
+	await flushPromises();
+}
+
 vi.mock("vue-router", () => ({
 	useRouter: () => ({ push: routerPush, replace: routerReplace }),
 	useRoute: () => ({ query: routeQuery }),
@@ -65,6 +98,89 @@ describe("FeedRecommendedView", () => {
 		expect(source).not.toContain(
 			".category-segmented-control :deep(.p-segmented-control-item)",
 		);
+	});
+
+	it("applies advanced filters from the compact filter panel", async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockImplementation(async (input) => {
+				const url = String(input);
+				if (url.includes("/feed/recommend/themes")) {
+					return new Response(JSON.stringify({ data: [] }), { status: 200 });
+				}
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			});
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		await applyFilter(wrapper, "filter-category", "新闻");
+
+		expect(fetchSpy).toHaveBeenLastCalledWith(
+			expect.stringContaining("category=news"),
+			publicRequestOptions,
+		);
+		expect(wrapper.text()).toContain("新闻");
+	});
+
+	it("subscribes the source directly from a popular article card", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(JSON.stringify({
+					data: [{
+						id: "popular-article",
+						title: "热门文章",
+						target_path: "/feed/item/popular-article",
+						source_id: "source-popular",
+						source_title: "热门来源",
+						source_type: "external_rss",
+						source_path: "/feed?source_id=source-popular",
+					}],
+				}), { status: 200 });
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const authStore = useAuthStore();
+		authStore.token = "token";
+		authStore.isAuthenticated = true;
+		const feedStore = useFeedStore();
+		const batchSubscribeSpy = vi
+			.spyOn(feedStore, "batchSubscribeSources")
+			.mockResolvedValue({ created: 1, reusedIds: [], missingIds: [] });
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		const subscribeButton = wrapper.get('[data-test="article-source-subscribe"]');
+		expect(subscribeButton.text()).toContain("订阅");
+		await subscribeButton.trigger("click");
+		await flushPromises();
+
+		expect(batchSubscribeSpy).toHaveBeenCalledWith(["source-popular"]);
+		expect(wrapper.get('[data-test="article-source-subscribe"]').text()).toContain("已订阅");
 	});
 
 	it("restores the external scope, searches paginated sources, selects all visible sources and subscribes them", async () => {
@@ -231,12 +347,7 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 
-		const channelTab = wrapper
-			.findAll(".segmented-option")
-			.find((tab) => tab.text() === "频道");
-		expect(channelTab).toBeDefined();
-		await channelTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "target", "channels");
 
 		const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]');
 		expect(subscribeButton.exists()).toBe(true);
@@ -307,12 +418,7 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 
-		const channelTab = wrapper
-			.findAll(".segmented-option")
-			.find((tab) => tab.text() === "频道");
-		expect(channelTab).toBeDefined();
-		await channelTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "target", "channels");
 
 		const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]');
 		expect(subscribeButton.exists()).toBe(true);
@@ -419,11 +525,7 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.text()).toContain("Article 1");
 		expect(wrapper.text()).not.toContain("Channel 1");
 
-		await wrapper
-			.findAll(".segmented-option")
-			.find((node) => node.text() === "频道")
-			?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "target", "channels");
 
 		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining("/api/v1/feed/recommend/channels?mode=hot"),
@@ -454,7 +556,7 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.text()).toContain("推荐内容加载失败");
 	});
 
-	it("renders five filter groups inside one compact wrap container", async () => {
+	it("renders a compact discovery toolbar with a single filter entry", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			const url = String(input);
 			if (url.includes("/feed/recommend/themes")) {
@@ -488,9 +590,8 @@ describe("FeedRecommendedView", () => {
 
 		const compactWrap = wrapper.find('[data-test="feed-filter-wrap"]');
 		expect(compactWrap.exists()).toBe(true);
-		expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(
-			5,
-		);
+		expect(compactWrap.find('[data-test="open-recommendation-filters"]').exists()).toBe(true);
+		expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(0);
 	});
 
 	it("restores route query and requests themes and recommendations with category and theme", async () => {
@@ -626,26 +727,8 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 
-		const articleButtons = wrapper
-			.findAll(".segmented-option")
-			.filter((tab) => tab.text() === "文章");
-		expect(articleButtons.length).toBeGreaterThan(1);
-		await articleButtons[1]?.trigger("click");
-		await flushPromises();
-
-		const aiThemeTab = wrapper
-			.findAll(".segmented-option")
-			.find((tab) => tab.text() === "AI");
-		expect(aiThemeTab).toBeDefined();
-		await aiThemeTab?.trigger("click");
-		await flushPromises();
-
-		const newsCategoryTab = wrapper
-			.findAll(".segmented-option")
-			.find((tab) => tab.text() === "新闻");
-		expect(newsCategoryTab).toBeDefined();
-		await newsCategoryTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "theme", "ai");
+		await applyFilterValue(wrapper, "category", "news");
 
 		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining("/api/v1/feed/recommend/themes?category=news"),
@@ -694,12 +777,7 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		expect(wrapper.text()).toContain("Article hot");
 
-		const featuredTab = wrapper
-			.findAll(".segmented-option")
-			.find((t) => t.text() === "精选");
-		expect(featuredTab).toBeDefined();
-		await featuredTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "mode", "featured");
 
 		expect(fetchSpy).toHaveBeenLastCalledWith(
 			expect.stringContaining("/api/v1/feed/recommend/articles?mode=featured"),
@@ -823,12 +901,7 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		expect(wrapper.text()).toContain("深入理解 SwiftUI 状态同步");
 
-		const articleCategoryButtons = wrapper
-			.findAll(".segmented-option")
-			.filter((tab) => tab.text() === "文章");
-		expect(articleCategoryButtons.length).toBeGreaterThan(1);
-		await articleCategoryButtons[1]?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "category", "blog");
 
 		expect(wrapper.text()).toContain("深入理解 SwiftUI 状态同步");
 		expect(wrapper.text()).not.toContain("当前没有推荐文章");
@@ -890,12 +963,7 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 
-		const mixedTab = wrapper
-			.findAll(".segmented-option")
-			.find((tab) => tab.text() === "混合");
-		expect(mixedTab).toBeDefined();
-		await mixedTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "target", "mixed");
 
 		expect(wrapper.text()).toContain("Article Mixed");
 		expect(wrapper.text()).toContain("Channel Mixed");
@@ -957,12 +1025,7 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		expect(wrapper.text()).toContain("Video encoding 深入笔记");
 
-		const videoTypeTab = wrapper
-			.findAll(".segmented-option")
-			.find((tab) => tab.text() === "视频");
-		expect(videoTypeTab).toBeDefined();
-		await videoTypeTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "category", "video");
 
 		expect(wrapper.text()).not.toContain("Video encoding 深入笔记");
 		expect(wrapper.text()).toContain("当前没有推荐文章");
@@ -1044,12 +1107,7 @@ describe("FeedRecommendedView", () => {
 		);
 		expect(wrapper.text()).toContain("Article Page 2");
 
-		const featuredButton = wrapper
-			.findAll(".segmented-option")
-			.find((node) => node.text() === "精选");
-		expect(featuredButton).toBeDefined();
-		await featuredButton?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "mode", "featured");
 
 		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining(
@@ -1193,12 +1251,7 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 
-		const channelTab = wrapper
-			.findAll(".segmented-option")
-			.find((node) => node.text() === "频道");
-		expect(channelTab).toBeDefined();
-		await channelTab?.trigger("click");
-		await flushPromises();
+		await applyFilterValue(wrapper, "target", "channels");
 
 		expect(wrapper.text()).toContain("热度 94");
 		expect(wrapper.text()).toContain("热度 81");

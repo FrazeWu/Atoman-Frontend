@@ -47,7 +47,8 @@
       <!-- Source title for feed item -->
       <template v-else-if="sourceTitle">
         <span class="blog-item-card__dot">·</span>
-        <span class="blog-item-card__source">{{ sourceTitle }}</span>
+        <a v-if="sourcePath" :href="sourcePath" class="blog-item-card__source blog-item-card__source-link" @click.stop>{{ sourceTitle }}</a>
+        <span v-else class="blog-item-card__source">{{ sourceTitle }}</span>
       </template>
 
       <!-- External type badge for feed item -->
@@ -77,6 +78,8 @@
           @toggle-reading-list="emit('toggle-reading-list')"
           @toggle-star="emit('toggle-star')"
         />
+
+        <slot v-if="sourceTitle" name="source-action" />
 
         <a
           v-if="cardType === 'feed_item' && feedItem?.link"
@@ -115,6 +118,8 @@ const props = withDefaults(defineProps<{
   starred?: boolean
   isRead?: boolean
   isPodcastPlaying?: boolean
+  sourceTitle?: string
+  sourcePath?: string
 }>(), {
   bookmarked: false,
   inReadingList: false,
@@ -186,8 +191,10 @@ const authorName = computed(() => {
 
 const sourceTitle = computed(() => {
   if (feedItem.value?.feed_source) return feedItem.value.feed_source.title || ''
-  return ''
+  return props.sourceTitle || ''
 })
+
+const sourcePath = computed(() => props.sourcePath || '')
 
 const externalBadge = computed(() => {
   if (feedItem.value?.feed_source?.source_type) {
@@ -273,6 +280,14 @@ function handleClick() {
 
 .blog-item-card__source {
   color: var(--a-color-muted);
+}
+
+.blog-item-card__source-link {
+  text-decoration: none;
+}
+
+.blog-item-card__source-link:hover {
+  color: var(--a-color-primary, #3b82f6);
 }
 
 .blog-item-card__time {

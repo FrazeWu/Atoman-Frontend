@@ -454,7 +454,7 @@ watch(
 
     <!-- 专辑创建表单布局 -->
     <div class="album-details-step__form">
-      <!-- 左侧基础信息，右侧简介 -->
+      <!-- 专辑名、日期、类型与简介同一行 -->
       <div class="album-details-step__content-grid">
         <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
           <!-- 专辑名称 -->
@@ -498,17 +498,18 @@ watch(
               单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
             </p>
           </div>
-        </div>
-        <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
-          <PTextarea
-            id="album-details-description"
-            v-model="albumDetailsDraft.bio"
-            data-testid="album-details-bio-input"
-            :rows="5"
-            :placeholder="detailsDescriptionPlaceholder"
-            label="简介"
-            aria-label="简介"
-          />
+
+          <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
+            <PTextarea
+              id="album-details-description"
+              v-model="albumDetailsDraft.bio"
+              data-testid="album-details-bio-input"
+              :rows="5"
+              :placeholder="detailsDescriptionPlaceholder"
+              label="简介"
+              aria-label="简介"
+            />
+          </div>
         </div>
       </div>
 
@@ -730,17 +731,17 @@ watch(
   align-items: stretch;
 }
 
-/* 左侧发行信息，右侧简介 */
+/* 专辑名、日期、类型与简介同一行 */
 .album-details-step__content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   align-items: start;
 }
 
 .album-details-step__header-main {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.1fr) minmax(12rem, 1fr) minmax(10rem, 0.85fr) minmax(16rem, 1.4fr);
   gap: 1.25rem;
   min-width: 0;
   padding: 1.25rem;
@@ -770,12 +771,13 @@ watch(
 .album-details-step__bio-field {
   display: flex;
   width: 100%;
+  min-width: 0;
   flex-direction: column;
-  padding: 1.25rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .album-details-step__bio-field :deep(.p-field) {
@@ -783,7 +785,6 @@ watch(
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  padding-top: 0.75rem;
 }
 
 .album-details-step__bio-field :deep(.p-textarea-wrapper) {
@@ -802,9 +803,9 @@ watch(
 .album-details-step__basic-field :deep(.p-date-input-container),
 .album-details-step__contributor-field :deep(.picker-search .p-field) {
   display: grid;
-  grid-template-columns: 4.75rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.45rem;
 }
 
 .album-details-step__basic-field :deep(.p-field-label),
@@ -868,7 +869,8 @@ watch(
 
 @container album-details (max-width: 62rem) {
   .album-details-step__upload-cover-grid,
-  .album-details-step__content-grid {
+  .album-details-step__content-grid,
+  .album-details-step__header-main {
     grid-template-columns: 1fr;
   }
 
@@ -893,7 +895,8 @@ watch(
 
 @media (max-width: 768px) {
   .album-details-step__upload-cover-grid,
-  .album-details-step__content-grid {
+  .album-details-step__content-grid,
+  .album-details-step__header-main {
     grid-template-columns: 1fr;
   }
 }

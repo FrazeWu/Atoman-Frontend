@@ -71,7 +71,7 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 	const requestPaths: string[] = [];
 	let importPolls = 0;
 
-	await page.setViewportSize({ width: 1000, height: 900 });
+	await page.setViewportSize({ width: 1440, height: 900 });
 
 	await page.route("**/api/v1/**", async (route) => {
 		const request = route.request();
@@ -262,20 +262,17 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 	);
 	await page.getByRole("button", { name: "取消", exact: true }).click();
 
-	const basicFieldsBox = await creationDialog
-		.locator(".album-details-step__header-main")
+	const titleFieldBox = await creationDialog
+		.locator('[data-field="name"]')
 		.boundingBox();
 	const bioFieldBox = await creationDialog
 		.locator(".album-details-step__bio-field")
 		.boundingBox();
-	expect(basicFieldsBox).not.toBeNull();
+	expect(titleFieldBox).not.toBeNull();
 	expect(bioFieldBox).not.toBeNull();
-	expect(
-		Math.abs((basicFieldsBox?.x ?? 0) - (bioFieldBox?.x ?? 0)),
-	).toBeLessThan(2);
-	expect(bioFieldBox?.y ?? 0).toBeGreaterThanOrEqual(
-		(basicFieldsBox?.y ?? 0) + (basicFieldsBox?.height ?? 0),
-	);
+	expect(Math.abs((bioFieldBox?.y ?? 0) - (titleFieldBox?.y ?? 0))).toBeLessThan(2);
+	expect(bioFieldBox?.x ?? 0).toBeGreaterThan(titleFieldBox?.x ?? 0);
+
 
 	const dateInput = creationDialog.getByTestId("album-details-date-input");
 	await dateInput.click();

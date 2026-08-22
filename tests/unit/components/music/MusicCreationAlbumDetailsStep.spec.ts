@@ -92,7 +92,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		expect(source).toContain("container: album-details / inline-size");
 		expect(source).toMatch(
-			/@container album-details \(max-width: 62rem\)[\s\S]*?\.album-details-step__content-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr;/,
+			/@container album-details \(max-width: 62rem\)[\s\S]*?\.album-details-step__header-main\s*\{[\s\S]*?grid-template-columns:\s*1fr;/,
 		);
 		expect(source).toMatch(
 			/\.album-details-step__basic-field :deep\(\.birth-date-field\)\s*\{[\s\S]*?min-inline-size:\s*11\.5rem;/,

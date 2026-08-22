@@ -84,6 +84,59 @@ describe("FeedArticleSheet", () => {
 		expect(html).not.toContain("onerror");
 	});
 
+	it("opens the article source and exposes a primary subscribe action", async () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				showSourceSubscribe: true,
+				source: {
+					type: "external_rss",
+					id: "source-article-1",
+					title: "示例订阅源",
+					rssUrl: "https://example.com/feed.xml",
+					subscribed: false,
+				},
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "feed-item-source-1",
+						feed_source_id: "source-article-1",
+						guid: "guid-source-1",
+						title: "来源文章",
+						link: "https://example.com/article",
+						summary: "<p>摘要</p>",
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				},
+			},
+			global: {
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+					PBadge: true,
+				},
+			},
+		});
+
+		await wrapper
+			.get('[data-test="feed-article-source-trigger"]')
+			.trigger("click");
+		await wrapper
+			.get('[data-test="feed-article-subscribe-source"]')
+			.trigger("click");
+
+		expect(
+			wrapper.get('[data-test="feed-article-source-trigger"]').text(),
+		).toContain("示例订阅源");
+		expect(
+			wrapper.get('[data-test="feed-article-subscribe-source"]').classes(),
+		).toContain("p-button--primary");
+		expect(wrapper.emitted("open-source")).toEqual([[]]);
+		expect(wrapper.emitted("subscribe-source")).toEqual([[]]);
+	});
+
 	it("marks external feed content as width constrained prose", () => {
 		const wrapper = mountSheet({
 			props: {
@@ -273,10 +326,12 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.get(".article-source-link").text()).toContain("在源站查看");
 	});
 
-	it("renders previous and next navigation controls when neighboring items exist", async () => {
+	it("does not render previous and next navigation controls", () => {
 		const wrapper = mountSheet({
 			props: {
 				show: true,
+				hasPrevious: true,
+				hasNext: true,
 				article: {
 					type: "feed_item",
 					published_at: "2026-06-20T00:00:00Z",
@@ -292,8 +347,6 @@ describe("FeedArticleSheet", () => {
 						fetched_at: "2026-06-20T00:00:00Z",
 					},
 				} as any,
-				hasPrevious: true,
-				hasNext: true,
 			},
 			global: {
 				stubs: {
@@ -303,11 +356,12 @@ describe("FeedArticleSheet", () => {
 			},
 		});
 
-		await wrapper.get('[data-test="feed-article-prev"]').trigger("click");
-		await wrapper.get('[data-test="feed-article-next"]').trigger("click");
-
-		expect(wrapper.emitted("previous")).toEqual([[]]);
-		expect(wrapper.emitted("next")).toEqual([[]]);
+		expect(wrapper.find('[data-test="feed-article-prev"]').exists()).toBe(
+			false,
+		);
+		expect(wrapper.find('[data-test="feed-article-next"]').exists()).toBe(
+			false,
+		);
 	});
 
 	it("opens comments in a nested sheet and supports keyboard article navigation", async () => {

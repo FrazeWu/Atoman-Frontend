@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
@@ -15,6 +15,7 @@ import PEntry from '@/components/ui/PEntry.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
+import SearchSurface from '@/components/search/SearchSurface.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
@@ -70,6 +71,14 @@ type RecommendationItem = {
   last_published_at?: string
   subscribed?: boolean
   recent_items?: Array<{ id: string; title: string }>
+}
+
+type DiscoverySearchArticle = {
+  id: string
+  title: string
+  summary: string
+  sourceTitle: string
+  targetPath: string
 }
 
 const router = useRouter()
@@ -136,6 +145,16 @@ const externalSearch = ref('')
 const externalPage = ref(1)
 const externalPageSize = 20
 const externalTotal = ref(0)
+const discoverySearchQuery = ref('')
+const discoverySearchOpen = ref(false)
+const discoverySearchLoading = ref(false)
+const discoverySearchError = ref('')
+const discoverySearchSources = ref<FeedExploreSource[]>([])
+const discoverySearchArticles = ref<DiscoverySearchArticle[]>([])
+let discoverySearchTimer: ReturnType<typeof setTimeout> | null = null
+let discoverySearchCloseTimer: ReturnType<typeof setTimeout> | null = null
+let discoverySearchController: AbortController | null = null
+let discoverySearchRequestId = 0
 const filterOpen = ref(false)
 const filterDraftMode = ref<RecommendationMode>('hot')
 const filterDraftTarget = ref<RecommendTarget>('articles')
@@ -424,6 +443,149 @@ async function fetchExternalSources() {
     externalTotal.value = 0
     errorMessage.value = '订阅源加载失败'
   } finally { externalLoading.value = false }
+}
+
+async function searchDiscovery(queryValue = discoverySearchQuery.value) {
+  discoverySearchController?.abort()
+  discoverySearchController = null
+  const query = queryValue.trim()
+  const requestId = ++discoverySearchRequestId
+  if (query.length < 2) {
+    discoverySearchSources.value = []
+    discoverySearchArticles.value = []
+    discoverySearchError.value = ''
+    discoverySearchLoading.value = false
+    return
+  }
+
+  discoverySearchLoading.value = true
+  discoverySearchError.value = ''
+  const controller = new AbortController()
+  discoverySearchController = controller
+  const sourceParams = new URLSearchParams({ page: '1', limit: '6', q: query })
+  const articleParams = new URLSearchParams({ page: '1', page_size: '6', q: query, sort: 'recent' })
+  if (category.value !== ALL_CATEGORY) {
+    sourceParams.set('category', category.value)
+    articleParams.set('category', category.value)
+  }
+  if (language.value !== ALL_RECOMMENDATION_LANGUAGE) {
+    sourceParams.set('language', language.value)
+    articleParams.set('language', language.value)
+  }
+  const options: RequestInit = {
+    signal: controller.signal,
+    ...(authStore.token ? { headers: { Authorization: `Bearer ${authStore.token}` } } : {}),
+  }
+  try {
+    const [sourceRes, articleRes] = await Promise.all([
+      apiRequestResult(`${api.url}/feed/explore/sources?${sourceParams}`, options),
+      apiRequestResult(`${api.url}/feed/explore?${articleParams}`, options),
+    ])
+    if (requestId !== discoverySearchRequestId) return
+
+    const sourcePayload = sourceRes.data
+    const articlePayload = articleRes.data
+    const searchArticles = Array.isArray(articlePayload?.data) ? articlePayload.data as TimelineItem[] : []
+    discoverySearchSources.value = sourceRes.ok && Array.isArray(sourcePayload?.data)
+      ? sourcePayload.data.map((item: ExploreSourcePayload) => normalizeExploreSource(item))
+      : []
+    discoverySearchArticles.value = articleRes.ok
+      ? searchArticles
+        .map((item: TimelineItem) => normalizeDiscoverySearchArticle(item))
+        .filter((item): item is DiscoverySearchArticle => Boolean(item))
+      : []
+    if (!sourceRes.ok && !articleRes.ok) discoverySearchError.value = '搜索失败，请稍后重试'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    if (requestId !== discoverySearchRequestId) return
+    reportError(error, 'Failed to search discovery content:')
+    discoverySearchSources.value = []
+    discoverySearchArticles.value = []
+    discoverySearchError.value = '搜索失败，请稍后重试'
+  } finally {
+    if (discoverySearchController === controller) discoverySearchController = null
+    if (requestId === discoverySearchRequestId) discoverySearchLoading.value = false
+  }
+}
+
+function normalizeDiscoverySearchArticle(item: TimelineItem): DiscoverySearchArticle | null {
+  if (item.type === 'post' && item.post) {
+    return {
+      id: item.post.id,
+      title: item.post.title,
+      summary: item.post.summary || '',
+      sourceTitle: item.post.channel?.name || '',
+      targetPath: `/posts/post/${item.post.id}`,
+    }
+  }
+  if (item.type === 'feed_item' && item.feed_item) {
+    return {
+      id: item.feed_item.id,
+      title: item.feed_item.title,
+      summary: item.feed_item.summary || '',
+      sourceTitle: item.feed_item.feed_source?.title || '',
+      targetPath: `/feed/item/${item.feed_item.id}`,
+    }
+  }
+  return null
+}
+
+function handleDiscoverySearchInput(value: string) {
+  discoverySearchQuery.value = value
+  discoverySearchOpen.value = true
+  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
+  if (discoverySearchTimer) clearTimeout(discoverySearchTimer)
+  if (value.trim().length < 2) {
+    void searchDiscovery(value)
+    return
+  }
+  discoverySearchTimer = setTimeout(() => {
+    void searchDiscovery(value)
+  }, 250)
+}
+
+function handleDiscoverySearchFocus() {
+  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
+  discoverySearchOpen.value = true
+}
+
+function handleDiscoverySearchBlur() {
+  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
+  discoverySearchCloseTimer = setTimeout(() => {
+    discoverySearchOpen.value = false
+  }, 150)
+}
+
+function submitDiscoverySearch() {
+  if (discoverySearchTimer) clearTimeout(discoverySearchTimer)
+  void searchDiscovery()
+}
+
+async function openDiscoverySearchSource(source: FeedExploreSource) {
+  discoverySearchOpen.value = false
+  let subscription = feedStore.subscriptions.find((entry) => (
+    entry.feed_source_id === source.id
+    || entry.feed_source?.source_id === source.id
+    || entry.feed_source?.id === source.id
+  ))
+  if (!subscription && source.subscribed && authStore.isAuthenticated) {
+    await feedStore.fetchSubscriptions()
+    subscription = feedStore.subscriptions.find((entry) => (
+      entry.feed_source_id === source.id
+      || entry.feed_source?.source_id === source.id
+      || entry.feed_source?.id === source.id
+    ))
+  }
+  if (subscription) {
+    void router.push({ path: '/feed/subscriptions', query: { source_id: subscription.id } })
+    return
+  }
+  void router.push({ path: '/feed', query: { scope: 'external', source_q: source.title } })
+}
+
+function openDiscoverySearchArticle(article: DiscoverySearchArticle) {
+  discoverySearchOpen.value = false
+  void router.push(article.targetPath)
 }
 
 async function subscribeSelectedExternalSources() {
@@ -826,6 +988,12 @@ onMounted(async () => {
   await nextTick()
   recommendationsMounted = true
 })
+onBeforeUnmount(() => {
+  if (discoverySearchTimer) clearTimeout(discoverySearchTimer)
+  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
+  discoverySearchController?.abort()
+})
+
 </script>
 
 <template>
@@ -833,10 +1001,15 @@ onMounted(async () => {
     <FeedArticleSheet
       :show="showChannelArticleSheet"
       :article="selectedChannelArticle"
+      :source="selectedChannelSource"
+      :show-source-subscribe="Boolean(authStore.isAuthenticated && selectedChannelSource?.type === 'internal_channel')"
+      :source-subscribe-busy="selectedChannelSource ? isChannelSubscribeBusy(selectedChannelSource.id) : false"
       :has-previous="selectedChannelArticleIndex > 0"
       :has-next="selectedChannelArticleIndex >= 0 && selectedChannelArticleIndex < channelArticles.length - 1"
       :index="showChannelSheet ? 1 : 0"
       @close="showChannelArticleSheet = false"
+      @open-source="returnToRecommendedChannel"
+      @subscribe-source="subscribeSelectedRecommendedChannel"
       @previous="openPreviousRecommendedArticle"
       @next="openNextRecommendedArticle"
     />
@@ -860,8 +1033,73 @@ onMounted(async () => {
       title="发现"
       mb="1.25rem"
     >
-      <template #action><PButton variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
+      <template #action><PButton variant="secondary" label="返回订阅" @click="openTarget('/feed/subscriptions')" /></template>
     </PPageHeader>
+
+    <div class="discovery-search-row">
+      <SearchSurface
+        :query="discoverySearchQuery"
+        :open="discoverySearchOpen"
+        eyebrow="发现搜索"
+        placeholder="搜索订阅源和文章"
+        input-test-id="discovery-search-input"
+        dropdown-test-id="discovery-search-dropdown"
+        overlay-results
+        :loading="discoverySearchLoading"
+        @update:query="handleDiscoverySearchInput"
+        @focus="handleDiscoverySearchFocus"
+        @blur="handleDiscoverySearchBlur"
+        @submit="submitDiscoverySearch"
+      >
+        <template #results>
+          <p v-if="discoverySearchQuery.trim().length < 2" class="discovery-search-hint">输入至少 2 个字符</p>
+          <p v-else-if="discoverySearchError" class="discovery-search-hint discovery-search-hint--error">{{ discoverySearchError }}</p>
+          <template v-else>
+            <section v-if="discoverySearchSources.length" class="discovery-search-group">
+              <div class="discovery-search-group__head">
+                <strong>订阅源</strong>
+                <span>{{ discoverySearchSources.length }}</span>
+              </div>
+              <button
+                v-for="source in discoverySearchSources"
+                :key="`source-${source.id}`"
+                type="button"
+                class="discovery-search-result"
+                @click="openDiscoverySearchSource(source)"
+              >
+                <span class="discovery-search-result__main">
+                  <strong>{{ source.title }}</strong>
+                  <small>{{ source.rssUrl || '订阅源' }}</small>
+                </span>
+                <span class="discovery-search-result__status">{{ source.subscribed ? '已订阅' : '订阅源' }}</span>
+              </button>
+            </section>
+
+            <section v-if="discoverySearchArticles.length" class="discovery-search-group">
+              <div class="discovery-search-group__head">
+                <strong>文章</strong>
+                <span>{{ discoverySearchArticles.length }}</span>
+              </div>
+              <button
+                v-for="article in discoverySearchArticles"
+                :key="`article-${article.id}`"
+                type="button"
+                class="discovery-search-result"
+                @click="openDiscoverySearchArticle(article)"
+              >
+                <span class="discovery-search-result__main">
+                  <strong>{{ article.title }}</strong>
+                  <small>{{ article.sourceTitle || article.summary || '文章' }}</small>
+                </span>
+                <span class="discovery-search-result__status">文章</span>
+              </button>
+            </section>
+
+            <p v-if="!discoverySearchSources.length && !discoverySearchArticles.length" class="discovery-search-hint">没有匹配的结果</p>
+          </template>
+        </template>
+      </SearchSurface>
+    </div>
 
     <div class="discovery-toolbar" data-test="feed-filter-wrap">
       <div class="discovery-view-switch" aria-label="发现内容">
@@ -936,7 +1174,7 @@ onMounted(async () => {
             <input v-model="allExternalSourcesSelected" data-test="external-source-select-all" type="checkbox" :disabled="!externalSelectableSourceIds.length" />
             <span>全选当前页</span>
           </label>
-          <input v-model="externalSearch" data-test="external-source-search" class="external-source-search" type="search" placeholder="搜索订阅源" />
+          <input v-model="externalSearch" data-test="external-source-search" class="external-source-search" type="search" placeholder="筛选当前列表" aria-label="筛选当前订阅源列表" />
           <PButton v-if="authStore.isAuthenticated && selectedExternalSourceIds.length" label="订阅选中来源" :loading="externalLoading" @click="subscribeSelectedExternalSources" />
         </div>
         <PEmpty v-if="!externalLoading && !externalSources.length" title="暂无订阅源" />
@@ -1131,6 +1369,102 @@ onMounted(async () => {
   padding-bottom: 6rem;
 }
 
+.discovery-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.discovery-search-row > :deep(.search-surface) {
+  min-width: 0;
+}
+
+.discovery-search-result {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: transparent;
+  color: var(--a-color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.discovery-search-result:hover,
+.discovery-search-result:focus-visible {
+  background: var(--a-color-surface-muted);
+}
+
+.discovery-search-result:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -2px;
+}
+
+.discovery-search-result__main {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.discovery-search-result__main strong,
+.discovery-search-result__main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-search-result__main strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.discovery-search-result__main small,
+.discovery-search-result__status {
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+}
+
+.discovery-search-result__status {
+  flex-shrink: 0;
+}
+
+.discovery-search-group + .discovery-search-group {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.discovery-search-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem 0.35rem;
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+}
+
+.discovery-search-group__head strong {
+  color: var(--a-color-text);
+  font-size: 0.75rem;
+}
+
+.discovery-search-hint {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.discovery-search-hint--error {
+  color: var(--a-color-error, #8a2f2f);
+}
+
 .discovery-toolbar {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -1179,6 +1513,14 @@ onMounted(async () => {
 }
 
 @media (max-width: 720px) {
+  .discovery-search-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .discovery-search-row :deep(.ui-action) {
+    min-height: 2.75rem;
+  }
+
   .discovery-toolbar {
     grid-template-columns: 1fr auto;
     gap: 0.75rem;

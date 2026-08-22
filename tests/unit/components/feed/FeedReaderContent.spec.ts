@@ -20,6 +20,20 @@ describe("FeedReaderContent", () => {
 		expect(wrapper.html()).not.toContain("style=");
 	});
 
+	it("resolves relative image URLs against the source article URL", async () => {
+		const wrapper = mount(FeedReaderContent, {
+			props: {
+				html: '<img src="/images/article-cover.jpg" alt="封面">',
+				baseUrl: "https://source.example/articles/42",
+			},
+		});
+		await nextTick();
+
+		expect(wrapper.get("img").attributes("src")).toBe(
+			"https://source.example/images/article-cover.jpg",
+		);
+	});
+
 	it("adds copy controls, wide media treatment, and a scrollable table wrapper", async () => {
 		const writeText = vi.fn().mockResolvedValue(undefined);
 		Object.defineProperty(navigator, "clipboard", {

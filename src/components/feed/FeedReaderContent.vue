@@ -13,6 +13,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   html: string
+  baseUrl?: string
 }>()
 
 const rootRef = ref<HTMLElement | null>(null)
@@ -27,6 +28,19 @@ const sanitizedHTML = computed(() => DOMPurify.sanitize(props.html || '', {
 
 const clearEnhancements = () => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
+}
+
+const resolveContentURL = (rawURL: string) => {
+  const value = rawURL.trim()
+  if (!value) return value
+
+  try {
+    const resolved = new URL(value, props.baseUrl || window.location.href)
+    if (resolved.protocol === 'http:' || resolved.protocol === 'https:') return resolved.href
+  } catch {
+    // Keep the original URL so the browser can report the normal image error.
+  }
+  return value
 }
 
 const enhanceContent = async () => {
@@ -54,6 +68,9 @@ const enhanceContent = async () => {
   })
 
   root.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
+    const src = image.getAttribute('src')
+    if (src) image.setAttribute('src', resolveContentURL(src))
+
     image.setAttribute('loading', 'lazy')
     image.setAttribute('decoding', 'async')
     const width = Number.parseInt(image.getAttribute('width') || '', 10)

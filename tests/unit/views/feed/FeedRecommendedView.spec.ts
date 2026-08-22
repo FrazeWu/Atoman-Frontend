@@ -47,19 +47,25 @@ const segmentedControlStub = {
 
 const buttonStub = {
 	props: ["label", "disabled", "loading"],
-		template:
-			'<button class="p-button" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ loading ? "处理中..." : label }}</button>',
+	template:
+		'<button class="p-button" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ loading ? "处理中..." : label }}</button>',
 };
 
 async function applyFilter(wrapper: any, field: string, optionLabel: string) {
-	await wrapper.get('[data-test="open-recommendation-filters"]').trigger("click");
-	await wrapper.get(`[data-test="${field}"] .p-select-trigger`).trigger("click");
+	await wrapper
+		.get('[data-test="open-recommendation-filters"]')
+		.trigger("click");
+	await wrapper
+		.get(`[data-test="${field}"] .p-select-trigger`)
+		.trigger("click");
 	const option = wrapper
 		.findAll(".p-select-option")
 		.find((candidate: any) => candidate.text() === optionLabel);
 	expect(option).toBeDefined();
 	await option!.trigger("click");
-	await wrapper.get('[data-test="apply-recommendation-filters"]').trigger("click");
+	await wrapper
+		.get('[data-test="apply-recommendation-filters"]')
+		.trigger("click");
 	await flushPromises();
 }
 
@@ -94,6 +100,118 @@ describe("FeedRecommendedView", () => {
 		setActivePinia(createPinia());
 	});
 
+	it("searches shared discovery results with sources before articles", async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockImplementation(async (input) => {
+				const url = String(input);
+				if (url.includes("/feed/explore/sources?")) {
+					return new Response(
+						JSON.stringify({
+							data: [
+								{
+									id: "source-search",
+									title: "AI 来源",
+									rss_url: "https://example.com/ai.xml",
+								},
+							],
+							meta: { total: 1 },
+						}),
+						{ status: 200 },
+					);
+				}
+				if (url.includes("/feed/explore?")) {
+					return new Response(
+						JSON.stringify({
+							data: [
+								{
+									type: "post",
+									published_at: "2026-06-20T00:00:00Z",
+									post: {
+										id: "article-search",
+										title: "AI 文章",
+										summary: "文章摘要",
+										channel: { name: "博客频道" },
+									},
+								},
+							],
+							meta: { total: 1 },
+						}),
+						{ status: 200 },
+					);
+				}
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			});
+		const authStore = useAuthStore();
+		authStore.token = "token";
+		authStore.isAuthenticated = true;
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		await wrapper.get('[data-testid="discovery-search-input"]').setValue("AI");
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		await flushPromises();
+
+		const results = wrapper.findAll(
+			'[data-testid="discovery-search-dropdown"] .discovery-search-result',
+		);
+		expect(results).toHaveLength(2);
+		expect(results[0].text()).toContain("AI 来源");
+		expect(results[1].text()).toContain("AI 文章");
+		expect(
+			wrapper.find('[data-test="open-discovery-add-subscription"]').exists(),
+		).toBe(false);
+		expect(
+			fetchSpy.mock.calls.some(([input]) => {
+				const url = String(input);
+				return url.includes("/feed/explore/sources?") && url.includes("q=AI");
+			}),
+		).toBe(true);
+		expect(
+			fetchSpy.mock.calls.some(([input]) => {
+				const url = String(input);
+				return url.includes("/feed/explore?") && url.includes("q=AI");
+			}),
+		).toBe(true);
+	});
+
+	it("closes the discovery dropdown after the search input blurs", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(JSON.stringify({ data: [] }), { status: 200 }),
+		);
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		const input = wrapper.get('[data-testid="discovery-search-input"]');
+		await input.trigger("focus");
+		expect(wrapper.find('[data-testid="discovery-search-dropdown"]').exists()).toBe(true);
+		await input.trigger("blur");
+		await new Promise((resolve) => setTimeout(resolve, 180));
+		expect(wrapper.find('[data-testid="discovery-search-dropdown"]').exists()).toBe(false);
+	});
+
 	it("uses the shared segmented control size for category filters", () => {
 		expect(source).not.toContain(
 			".category-segmented-control :deep(.p-segmented-control-item)",
@@ -114,7 +232,9 @@ describe("FeedRecommendedView", () => {
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
 				stubs: {
-					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
 					PSegmentedControl: segmentedControlStub,
 					PButton: buttonStub,
 					PEmpty: true,
@@ -139,17 +259,22 @@ describe("FeedRecommendedView", () => {
 				return new Response(JSON.stringify({ data: [] }), { status: 200 });
 			}
 			if (url.includes("/feed/recommend/articles")) {
-				return new Response(JSON.stringify({
-					data: [{
-						id: "popular-article",
-						title: "热门文章",
-						target_path: "/feed/item/popular-article",
-						source_id: "source-popular",
-						source_title: "热门来源",
-						source_type: "external_rss",
-						source_path: "/feed?source_id=source-popular",
-					}],
-				}), { status: 200 });
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "popular-article",
+								title: "热门文章",
+								target_path: "/feed/item/popular-article",
+								source_id: "source-popular",
+								source_title: "热门来源",
+								source_type: "external_rss",
+								source_path: "/feed?source_id=source-popular",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
 			}
 			return new Response(JSON.stringify({ data: [] }), { status: 200 });
 		});
@@ -165,7 +290,9 @@ describe("FeedRecommendedView", () => {
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
 				stubs: {
-					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
 					PSegmentedControl: segmentedControlStub,
 					PButton: buttonStub,
 					PEmpty: true,
@@ -174,13 +301,17 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
-		const subscribeButton = wrapper.get('[data-test="article-source-subscribe"]');
+		const subscribeButton = wrapper.get(
+			'[data-test="article-source-subscribe"]',
+		);
 		expect(subscribeButton.text()).toContain("订阅");
 		await subscribeButton.trigger("click");
 		await flushPromises();
 
 		expect(batchSubscribeSpy).toHaveBeenCalledWith(["source-popular"]);
-		expect(wrapper.get('[data-test="article-source-subscribe"]').text()).toContain("已订阅");
+		expect(
+			wrapper.get('[data-test="article-source-subscribe"]').text(),
+		).toContain("已订阅");
 	});
 
 	it("restores the external scope, searches paginated sources, selects all visible sources and subscribes them", async () => {
@@ -590,8 +721,12 @@ describe("FeedRecommendedView", () => {
 
 		const compactWrap = wrapper.find('[data-test="feed-filter-wrap"]');
 		expect(compactWrap.exists()).toBe(true);
-		expect(compactWrap.find('[data-test="open-recommendation-filters"]').exists()).toBe(true);
-		expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(0);
+		expect(
+			compactWrap.find('[data-test="open-recommendation-filters"]').exists(),
+		).toBe(true);
+		expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(
+			0,
+		);
 	});
 
 	it("restores route query and requests themes and recommendations with category and theme", async () => {
@@ -786,7 +921,7 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.text()).toContain("Article featured");
 	});
 
-	it("navigates to feed index when clicking back button", async () => {
+	it("navigates to subscriptions when clicking back button", async () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(
 			new Response(JSON.stringify({ data: [] }), { status: 200 }),
 		);
@@ -811,7 +946,7 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		const backBtn = wrapper.find(".p-button");
 		await backBtn.trigger("click");
-		expect(routerPush).toHaveBeenCalledWith("/feed");
+		expect(routerPush).toHaveBeenCalledWith("/feed/subscriptions");
 	});
 
 	it("navigates to target path when clicking an item card", async () => {

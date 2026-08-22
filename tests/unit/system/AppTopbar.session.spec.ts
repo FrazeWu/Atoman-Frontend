@@ -57,6 +57,7 @@ describe('AppTopbar session restoration', () => {
 
     expect(restoreSession).toHaveBeenCalledOnce()
     expect(wrapper.find('.user-btn').text()).toContain('alice')
+    expect(wrapper.find('[data-test="topbar-add-subscription"]').exists()).toBe(true)
     wrapper.unmount()
   })
 

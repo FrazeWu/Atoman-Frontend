@@ -44,6 +44,14 @@ export function useFeedArticleBrowser({
 		);
 	});
 	const showSourceSheet = ref(false);
+	const selectedArticleSource = computed<FeedArticleSource | null>(() => {
+		const article = selectedArticle.value;
+		if (!article) return null;
+		if (article.type === "post") return postSource(article);
+		if (article.type === "feed_item" && article.feed_item)
+			return feedItemSource(article.feed_item);
+		return null;
+	});
 	const selectedSource = ref<FeedArticleSource | null>(null);
 	const sourceArticles = ref<TimelineItem[]>([]);
 	const sourceArticlesLoading = ref(false);
@@ -82,7 +90,7 @@ export function useFeedArticleBrowser({
 				state: feedArticleRouteState({
 					article: item,
 					articles: visibleTimeline.value,
-					source: selectedSource.value,
+					source: selectedArticleSource.value,
 					sourceArticles: sourceArticles.value,
 				}),
 			});
@@ -254,6 +262,18 @@ export function useFeedArticleBrowser({
 		if (source) await openSourceSheet(source);
 	};
 
+	const openSelectedArticleSource = async () => {
+		const source = selectedArticleSource.value;
+		if (source) await openSourceSheet(source);
+	};
+
+	const subscribeSelectedArticleSource = async () => {
+		const source = selectedArticleSource.value;
+		if (!source) return;
+		selectedSource.value = source;
+		await subscribeSelectedSource();
+	};
+
 	const subscribeSelectedSource = async () => {
 		if (
 			!selectedSource.value ||
@@ -290,6 +310,9 @@ export function useFeedArticleBrowser({
 		showArticleSheet,
 		selectedArticle,
 		selectedArticleIndex,
+		selectedArticleSource,
+		openSelectedArticleSource,
+		subscribeSelectedArticleSource,
 		showSourceSheet,
 		selectedSource,
 		sourceArticles,

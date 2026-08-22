@@ -1,23 +1,34 @@
 <template>
   <FeedSourceArticlesSheet
-    v-if="routeState?.source"
-    :show="true"
-    :source="routeState.source"
-    :items="routeState.sourceArticles"
-    :stack-size="2"
-    :is-shifted="true"
-    :is-top-layer="false"
+    v-if="articleSource && sourceSheetVisible"
+    :show="sourceSheetVisible"
+    :source="articleSource"
+    :items="sourceArticles"
+    :loading="sourceArticlesLoading"
+    :subscribe-busy="sourceSubscribeBusy"
+    :show-subscribe="authStore.isAuthenticated"
+    :stack-size="articleSheetVisible ? 2 : 1"
+    :is-shifted="articleSheetVisible"
+    :is-top-layer="!articleSheetVisible"
     @close="close"
+    @activate="articleSheetVisible = true"
+    @subscribe="subscribeSource"
+    @open-article="openSourceArticle"
   />
 
   <FeedArticleSheet
     v-if="article"
-    :show="true"
+    :show="articleSheetVisible"
     :article="article"
+    :source="articleSource"
+    :show-source-subscribe="authStore.isAuthenticated"
+    :source-subscribe-busy="sourceSubscribeBusy"
     :is-podcast-playing="isPodcastPlaying"
     :has-previous="articleIndex > 0"
     :has-next="articleIndex >= 0 && articleIndex < (routeState?.articles.length ?? 0) - 1"
     @close="close"
+    @open-source="openArticleSource"
+    @subscribe-source="subscribeSource"
     @previous="openRelativeArticle(-1)"
     @next="openRelativeArticle(1)"
     @play-podcast="playPodcast"
@@ -45,7 +56,8 @@ import { useApi } from '@/composables/useApi'
 import { feedArticleRouteState, readFeedArticleRouteState, type FeedArticleRouteState } from '@/composables/feed/feedArticleRouteState'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
-import type { FeedItem, TimelineItem } from '@/types'
+import { useFeedStore } from '@/stores/feed'
+import type { FeedArticleSource, FeedItem, TimelineItem } from '@/types'
 import { reportError } from '@/utils/logger'
 
 const route = useRoute()
@@ -53,9 +65,15 @@ const router = useRouter()
 const api = useApi()
 const authStore = useAuthStore()
 const playerStore = usePlayerStore()
+const feedStore = useFeedStore()
 
 const loading = ref(false)
+const articleSheetVisible = ref(true)
+const sourceSheetVisible = ref(Boolean(readFeedArticleRouteState()?.source))
+const sourceArticlesLoading = ref(false)
+const sourceSubscribeBusy = ref(false)
 const routeState = ref<FeedArticleRouteState | null>(readFeedArticleRouteState())
+const sourceArticles = ref<TimelineItem[]>(routeState.value?.sourceArticles || [])
 const item = ref<FeedItem | null>(null)
 const article = computed<TimelineItem | null>(() => item.value ? ({
   type: 'feed_item',
@@ -68,6 +86,24 @@ const isPodcastPlaying = computed(() => (
   && playerStore.currentSong?.audio_url === item.value?.enclosure_url
   && playerStore.isPlaying
 ))
+
+const articleSource = computed<FeedArticleSource | null>(() => {
+  if (routeState.value?.source) return routeState.value.source
+  const feedItem = item.value
+  if (!feedItem?.feed_source_id) return null
+  const subscription = feedStore.subscriptions.find((entry) => (
+    entry.feed_source_id === feedItem.feed_source_id
+    || entry.feed_source?.id === feedItem.feed_source_id
+  ))
+  return {
+    type: 'external_rss',
+    id: feedItem.feed_source?.id || feedItem.feed_source_id,
+    title: feedItem.feed_source?.title || 'RSS',
+    rssUrl: feedItem.feed_source?.rss_url,
+    subscriptionId: subscription?.id,
+    subscribed: Boolean(subscription),
+  }
+})
 const articleIndex = computed(() => routeState.value?.articles.findIndex(
   (entry) => entry.type === 'feed_item' && entry.feed_item?.id === item.value?.id,
 ) ?? -1)
@@ -81,6 +117,66 @@ function openRelativeArticle(offset: -1 | 1) {
 
 function close() {
   void router.push('/feed')
+}
+
+async function fetchSourceArticles(source: FeedArticleSource) {
+  sourceArticlesLoading.value = true
+  try {
+    const params = new URLSearchParams({ limit: '100' })
+    if (source.subscriptionId) params.set('source_id', source.subscriptionId)
+    else params.set('feed_source_id', source.id)
+    const response = await apiRequestResult(`${api.url}/feed/timeline?${params}`, {
+      headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (response.ok) sourceArticles.value = response.data.data || []
+  } catch (error) {
+    reportError(error, 'Failed to fetch feed source articles')
+    sourceArticles.value = []
+  } finally {
+    sourceArticlesLoading.value = false
+  }
+}
+
+async function openArticleSource() {
+  const source = articleSource.value
+  if (!source) return
+  sourceSheetVisible.value = true
+  articleSheetVisible.value = false
+  if (!sourceArticles.value.length) await fetchSourceArticles(source)
+}
+
+async function subscribeSource() {
+  const source = articleSource.value
+  if (!source || source.subscribed || !authStore.isAuthenticated || sourceSubscribeBusy.value) return
+  if (source.type !== 'external_rss' || !source.rssUrl) return
+
+  sourceSubscribeBusy.value = true
+  try {
+    const success = await feedStore.subscribeToRSS(source.rssUrl, source.title)
+    if (!success) return
+    await feedStore.fetchSubscriptions()
+    routeState.value = routeState.value
+      ? { ...routeState.value, source: { ...source, subscribed: true } }
+      : routeState.value
+  } finally {
+    sourceSubscribeBusy.value = false
+  }
+}
+
+function openSourceArticle(next: TimelineItem) {
+  if (next.type !== 'feed_item' || !next.feed_item) return
+  const source = articleSource.value
+  const state: FeedArticleRouteState = {
+    article: next,
+    articles: routeState.value?.articles || sourceArticles.value,
+    source,
+    sourceArticles: sourceArticles.value,
+  }
+  item.value = next.feed_item
+  routeState.value = state
+  articleSheetVisible.value = true
+  sourceSheetVisible.value = true
+  void router.push({ path: `/feed/item/${next.feed_item.id}`, state: feedArticleRouteState(state) })
 }
 
 function playPodcast(feedItem: FeedItem) {
@@ -114,6 +210,9 @@ async function fetchItem(id: string) {
   const restored = readFeedArticleRouteState()
   if (restored?.article.type === 'feed_item' && restored.article.feed_item?.id === id) {
     routeState.value = restored
+    sourceArticles.value = restored.sourceArticles
+    sourceSheetVisible.value = Boolean(restored.source)
+    articleSheetVisible.value = true
     item.value = restored.article.feed_item
     loading.value = false
     return
@@ -131,6 +230,20 @@ async function fetchItem(id: string) {
     const nextItem = result.data as FeedItem | undefined
     if (!nextItem || String(route.params.id || '') !== id) return
     item.value = nextItem
+    const source = articleSource.value
+    routeState.value = {
+      article: {
+        type: 'feed_item',
+        feed_item: nextItem,
+        published_at: nextItem.published_at,
+        is_read: true,
+      },
+      articles: [],
+      source,
+      sourceArticles: [],
+    }
+    sourceSheetVisible.value = false
+    articleSheetVisible.value = true
     void reportReadEvent(nextItem)
   } catch (error) {
     reportError(error, 'Failed to fetch feed item')

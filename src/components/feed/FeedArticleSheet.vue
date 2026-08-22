@@ -13,6 +13,15 @@
   >
     <template v-if="article && article.type === 'post' && article.post">
       <div class="article-meta">
+        <button
+          v-if="source && articleSource"
+          type="button"
+          class="article-source-trigger"
+          data-test="feed-article-source-trigger"
+          @click="emit('open-source')"
+        >
+          {{ articleSource.title }}
+        </button>
         <a :href="userUrl(article.post.user?.username || '')" class="a-label a-muted" @click.stop>
           {{ article.post.user?.display_name || article.post.user?.username || '未知作者' }}
         </a>
@@ -20,27 +29,23 @@
       </div>
       <h1 class="article-title">{{ article.post.title }}</h1>
       <div class="article-subtitle-meta">
-        <a :href="modulePathUrl('blog', `/post/${article.post.id}`)" class="read-original-link" @click.prevent="handleReadMore(article.post); $emit('close')">
+        <PButton
+          v-if="showSourceSubscribe && articleSource"
+          data-test="feed-article-subscribe-source"
+          :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+          :variant="articleSource.subscribed ? 'secondary' : 'primary'"
+          :disabled="articleSource.subscribed"
+          :loading="sourceSubscribeBusy"
+          loading-text="订阅中..."
+          @click="emit('subscribe-source')"
+        />
+        <a
+          :href="modulePathUrl('blog', `/post/${article.post.id}`)"
+          class="read-original-link"
+          @click.prevent="handleReadMore(article.post); $emit('close')"
+        >
           ↗ 阅读原文
         </a>
-        <button
-          v-if="hasPrevious"
-          type="button"
-          class="read-original-link article-nav-link"
-          data-test="feed-article-prev"
-          @click="emit('previous')"
-        >
-          ← 上一篇
-        </button>
-        <button
-          v-if="hasNext"
-          type="button"
-          class="read-original-link article-nav-link"
-          data-test="feed-article-next"
-          @click="emit('next')"
-        >
-          下一篇 →
-        </button>
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
@@ -58,13 +63,32 @@
         <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
       </div>
       <div class="article-meta">
-        <span class="a-label a-muted">{{ article.feed_item.feed_source?.title || 'RSS' }}</span>
+        <button
+          v-if="source && articleSource"
+          type="button"
+          class="article-source-trigger"
+          data-test="feed-article-source-trigger"
+          @click="emit('open-source')"
+        >
+          {{ articleSource.title }}
+        </button>
+        <span v-else class="a-label a-muted">{{ feedSourceTitle || 'RSS' }}</span>
         <span v-if="article.feed_item.author">{{ article.feed_item.author }}</span>
         <span>{{ formatDate(article.feed_item.published_at) }}</span>
         <span v-if="feedWordCountLabel">{{ feedWordCountLabel }}</span>
       </div>
       <h1 class="article-title">{{ article.feed_item.title }}</h1>
       <div class="article-toolbar">
+        <PButton
+          v-if="showSourceSubscribe && articleSource"
+          data-test="feed-article-subscribe-source"
+          :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+          :variant="articleSource.subscribed ? 'secondary' : 'primary'"
+          :disabled="articleSource.subscribed"
+          :loading="sourceSubscribeBusy"
+          loading-text="订阅中..."
+          @click="emit('subscribe-source')"
+        />
         <a
           v-if="article.feed_item.link"
           :href="article.feed_item.link"
@@ -96,6 +120,7 @@
         <FeedReaderContent
           class="article-body article-body--external-feed"
           :html="feedBodyHtml"
+          :base-url="article.feed_item.link"
         />
         <FeedContentFeedback :item-id="article.feed_item.id" />
       </div>
@@ -107,14 +132,6 @@
     :count="commentCount"
     @click="commentsOpen = true"
   />
-  <div v-if="show" class="article-navigation" aria-label="文章导航">
-    <button type="button" :disabled="!hasPrevious" aria-label="上一篇" title="上一篇" data-test="feed-article-prev" @click="emit('previous')">
-      <ChevronLeft :size="20" aria-hidden="true" />
-    </button>
-    <button type="button" :disabled="!hasNext" aria-label="下一篇" title="下一篇" data-test="feed-article-next" @click="emit('next')">
-      <ChevronRight :size="20" aria-hidden="true" />
-    </button>
-  </div>
   <PSheet
     v-if="article?.type === 'feed_item' && article.feed_item"
     :show="commentsOpen"
@@ -134,10 +151,11 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-vue-next'
-import type { FeedItem, Post, TimelineItem } from '@/types'
+import { ExternalLink } from 'lucide-vue-next'
+import type { FeedArticleSource, FeedItem, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
 import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
@@ -148,14 +166,21 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { hasFeedReaderImage } from '@/utils/feedReader'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   article: TimelineItem | null
+  source?: FeedArticleSource | null
+  showSourceSubscribe?: boolean
+  sourceSubscribeBusy?: boolean
   isPodcastPlaying?: boolean
   index?: number
   hasPrevious?: boolean
   hasNext?: boolean
-}>()
+}>(), {
+  source: null,
+  showSourceSubscribe: false,
+  sourceSubscribeBusy: false,
+})
 
 const { renderMarkdown } = useMarkdownRenderer()
 const feedCoverFailed = ref(false)
@@ -183,6 +208,8 @@ const renderedContent = computed(() => {
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'open-source'): void
+  (e: 'subscribe-source'): void
   (e: 'play-podcast', feedItem: FeedItem): void
   (e: 'previous'): void
   (e: 'next'): void
@@ -204,9 +231,25 @@ const isPlayablePodcast = computed(() => {
   return Boolean(props.article.feed_item.enclosure_url)
 })
 
+const articleSource = computed<FeedArticleSource | null>(() => {
+  if (props.source) return props.source
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return null
+
+  const item = props.article.feed_item
+  const sourceID = item.feed_source?.id || item.feed_source_id
+  if (!sourceID) return null
+  return {
+    type: 'external_rss',
+    id: sourceID,
+    title: item.feed_source?.title || 'RSS',
+    rssUrl: item.feed_source?.rss_url,
+    subscribed: false,
+  }
+})
+
 const feedSourceTitle = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  return props.article.feed_item.feed_source?.title || ''
+  return articleSource.value?.title || ''
 })
 
 const feedContentSource = computed(() => {
@@ -337,6 +380,27 @@ const emitPlayPodcast = () => {
   line-height: 1.5;
 }
 
+.article-source-trigger {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.article-source-trigger:hover {
+  color: var(--a-color-text);
+  text-decoration: underline;
+}
+
+.article-source-trigger:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
 .article-title {
   max-width: 26ch;
   margin: 0 0 1.35rem;
@@ -379,40 +443,9 @@ const emitPlayPodcast = () => {
 }
 
 .article-source-link:focus-visible,
-.article-toolbar__button:focus-visible,
-.article-navigation button:focus-visible {
+.article-toolbar__button:focus-visible {
   outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
-}
-
-.article-navigation {
-  position: fixed;
-  right: min(816px, calc(100vw - 16px));
-  top: 50%;
-  z-index: calc(var(--a-z-sheet) + 1);
-  display: grid;
-  gap: 0.5rem;
-  transform: translateY(-50%);
-}
-
-.article-navigation button {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  cursor: pointer;
-}
-
-.article-navigation button:hover:not(:disabled) {
-  border-color: var(--a-color-text);
-}
-
-.article-navigation button:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
 }
 
 .article-summary {
@@ -462,21 +495,6 @@ const emitPlayPodcast = () => {
 
   .article-toolbar {
     margin-bottom: 2rem;
-  }
-
-  .article-navigation {
-    right: 1rem;
-    top: auto;
-    bottom: calc(1rem + env(safe-area-inset-bottom));
-    grid-template-columns: repeat(2, 44px);
-    transform: none;
-  }
-
-  .article-navigation button {
-    width: 44px;
-    height: 44px;
-    background: var(--a-color-text);
-    color: var(--a-color-bg);
   }
 }
 </style>

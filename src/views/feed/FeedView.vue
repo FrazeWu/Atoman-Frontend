@@ -95,11 +95,16 @@
     <FeedArticleSheet
       :show="showArticleSheet"
       :article="selectedArticle"
+      :source="selectedArticleSource"
+      :show-source-subscribe="authStore.isAuthenticated"
+      :source-subscribe-busy="sourceSubscribeBusy"
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"
       :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < visibleTimeline.length - 1"
       :index="showSourceSheet ? 1 : 0"
       @close="showArticleSheet = false"
+      @open-source="openSelectedArticleSource"
+      @subscribe-source="subscribeSelectedArticleSource"
       @play-podcast="playFeedItemFromSheet"
       @previous="openPreviousArticle"
       @next="openNextArticle"
@@ -536,6 +541,7 @@ const headerBottom = computed(() => {
 const {
   showArticleSheet,
   selectedArticle,
+  selectedArticleSource,
   selectedArticleIndex,
   showSourceSheet,
   selectedSource,
@@ -545,6 +551,8 @@ const {
   openArticleSheet,
   openPreviousArticle,
   openNextArticle,
+  openSelectedArticleSource,
+  subscribeSelectedArticleSource,
   openSourceArticle,
   postSource,
   feedItemSource,

@@ -334,6 +334,7 @@ export interface Post {
 	title: string;
 	content: string;
 	summary?: string;
+	language_code?: string;
 	cover_url?: string;
 	status: "draft" | "published" | "scheduled";
 	visibility: "public" | "followers" | "private";

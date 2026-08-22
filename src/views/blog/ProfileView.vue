@@ -304,7 +304,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Camera, LinkIcon, LoaderCircle, Pencil, Plus, Undo2 } from 'lucide-vue-next'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -388,6 +388,7 @@ const following = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const resolvedChannelSlug = ref('')
+let profileLoadSequence = 0
 
 // ── Inline edit ───────────────────────────────────────────
 const editingField = ref<EditableField | null>(null)
@@ -529,11 +530,12 @@ const contentItems = computed<ContentItem[]>(() => {
 const itemKey = (item: ContentItem) =>
   item.type === 'post' ? `post-${item.data.id}` : `note-${item.data.id}`
 
-async function loadContent(page: number) {
+async function loadContent(page: number, generation = profileLoadSequence) {
   if (!profile.value) return
+  const profileID = profile.value.uuid
   loadingContent.value = true
   const params = new URLSearchParams({
-    user_id: profile.value.uuid,
+    user_id: profileID,
     page: String(page),
     page_size: String(PAGE_SIZE),
   })
@@ -543,11 +545,11 @@ async function loadContent(page: number) {
       apiRequestResult(`${api.blog.shortNotes}?${params}`),
     ])
 
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
     if (postsRes.ok) {
       const body = postsRes.data
       allPosts.value = body.data || []
       const meta = body.meta || {}
-      // Use posts total as approximation; will be combined below
       contentMeta.value = {
         page,
         page_size: PAGE_SIZE,
@@ -559,7 +561,6 @@ async function loadContent(page: number) {
     if (notesRes.ok) {
       const body = notesRes.data
       allNotes.value = body.data || []
-      // Merge total from notes
       const meta = body.meta || {}
       contentMeta.value = {
         ...contentMeta.value,
@@ -568,7 +569,7 @@ async function loadContent(page: number) {
       }
     }
   } finally {
-    loadingContent.value = false
+    if (generation === profileLoadSequence && profile.value?.uuid === profileID) loadingContent.value = false
   }
 }
 
@@ -589,46 +590,56 @@ const resolvedUsername = ref('')
 const username = computed(() => resolvedUsername.value || (route.params.username as string) || '')
 const isSelf = computed(() => authStore.user?.username === profile.value?.username)
 
-const resolveEntityContext = async () => {
+const resolveEntityContext = async (generation = profileLoadSequence) => {
   if (siteContext.value.type !== 'entity') return
   const res = await apiRequestResult(api.site.resolve(siteContext.value.handle))
+  if (generation !== profileLoadSequence) return
   if (!res.ok) { resolvedUsername.value = siteContext.value.handle; return }
   const payload = await Promise.resolve(res.data)
+  if (generation !== profileLoadSequence) return
   const data = payload.data || {}
   if (data.type === 'channel' && data.slug) { resolvedChannelSlug.value = data.slug; return }
   if (data.type === 'user' && data.username) { resolvedUsername.value = data.username; return }
   resolvedUsername.value = siteContext.value.handle
 }
 
-const fetchProfile = async () => {
+const fetchProfile = async (generation = profileLoadSequence) => {
   const handle = String(route.params.handle || username.value || '')
   if (!handle) { loading.value = false; return }
   try {
     const res = await apiRequestResult(api.users.profile(handle))
+    if (generation !== profileLoadSequence) return
     if (res.ok) {
       profile.value = (await Promise.resolve(res.data)).data || null
-      void refreshAvatarRestoreAvailability()
+      if (generation === profileLoadSequence) void refreshAvatarRestoreAvailability()
     }
-  } finally { loading.value = false }
+  } finally {
+    if (generation === profileLoadSequence) loading.value = false
+  }
 }
 
-const fetchChannels = async () => {
+const fetchChannels = async (generation = profileLoadSequence) => {
   if (!profile.value) return
+  const profileID = profile.value.uuid
   try {
-    const res = await apiRequestResult(`${api.blog.channels}?user_id=${profile.value.uuid}`)
+    const res = await apiRequestResult(`${api.blog.channels}?user_id=${profileID}`)
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
     if (res.ok) channels.value = (await Promise.resolve(res.data)).data || []
   } catch (e) { reportError(e) }
 }
 
-const fetchFollowingState = async () => {
+const fetchFollowingState = async (generation = profileLoadSequence) => {
   if (!profile.value || !authStore.isAuthenticated || isSelf.value) return
+  const profileID = profile.value.uuid
   try {
     const res = await apiRequestResult(api.users.following(authStore.user?.uuid || ''), {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
     if (res.ok) {
       const list = (await Promise.resolve(res.data)).data || []
-      following.value = list.some((u: { uuid?: string }) => u.uuid === profile.value?.uuid)
+      if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
+      following.value = list.some((u: { uuid?: string }) => u.uuid === profileID)
     }
   } catch (e) { reportError(e) }
 }
@@ -649,21 +660,37 @@ const toggleFollow = async () => {
   } catch (e) { reportError(e) }
 }
 
-onMounted(async () => {
-  await resolveEntityContext()
-  if (resolvedChannelSlug.value) return
-  await fetchProfile()
-  if (!profile.value) return
+const loadProfilePage = async () => {
+  const generation = ++profileLoadSequence
+  resolvedUsername.value = ''
+  resolvedChannelSlug.value = ''
+  profile.value = null
+  channels.value = []
+  allPosts.value = []
+  allNotes.value = []
+  contentPage.value = 1
+  contentMeta.value = { page: 1, page_size: PAGE_SIZE, total: 0, has_more: false }
+  following.value = false
+  loading.value = true
+  loadingContent.value = true
+
+  await resolveEntityContext(generation)
+  if (generation !== profileLoadSequence || resolvedChannelSlug.value) return
+  await fetchProfile(generation)
+  if (generation !== profileLoadSequence || !profile.value) return
   void Promise.all([
-    fetchFollowingState(),
-    fetchChannels(),
-    loadContent(1),
+    fetchFollowingState(generation),
+    fetchChannels(generation),
+    loadContent(1, generation),
   ])
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
-})
+}
+
+watch(() => route.fullPath, () => { void loadProfilePage() })
+onMounted(() => { void loadProfilePage() })
 </script>
 
 <style scoped>

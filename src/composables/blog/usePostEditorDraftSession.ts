@@ -573,6 +573,8 @@ export function usePostEditorDraftSession({
 		event.returnValue = "";
 	};
 	const startDraftSession = async () => {
+		clearServerSyncTimer()
+		clearCollabStartupTimer()
 		draftWatchEnabled.value = true;
 		if (isEdit.value) {
 			editorSessionState.value = "awaiting-collab";

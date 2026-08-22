@@ -45,6 +45,7 @@
                 />
                 <div class="editor-body">
                   <PEditor
+                    :key="collabRoomId || 'new'"
                     ref="editorRef"
                     v-model="editorBody"
                     :mode="previewOpen ? 'split' : 'normal'"
@@ -607,13 +608,30 @@ watch(() => form.value.title, (nv, ov) => {
 
 watch(() => currentChannelId.value, loadChannelCollections)
 
-// ── 初始化 ───────────────────────────────────────────────
-onMounted(async () => {
+const resetEditorStateForRoute = () => {
+  form.value = { title: '', content: '', summary: '', cover_url: '', visibility: 'public' }
+  contentSource.value = 'empty'
+  loadedPostUpdatedAt.value = 0
+  scheduledAt.value = ''
+  savedPostId.value = null
+  error.value = ''
+  selectedCollectionIds.value = []
+  existingCollectionIds.value = []
+  channelCollections.value = []
+  contentReady.value = !isEdit.value
+}
+
+const initializeEditor = async () => {
+  resetEditorStateForRoute()
   await studio.loadState()
   await loadPost()
+  if (!isEdit.value) contentReady.value = true
   await loadChannelCollections()
   await startDraftSession()
-})
+}
+
+watch(() => route.params.id, () => { void initializeEditor() })
+onMounted(() => { void initializeEditor() })
 </script>
 
 <style scoped>
@@ -833,8 +851,16 @@ onMounted(async () => {
   }
 
   .editor-layout {
-    display: block;
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
     overflow: visible;
+  }
+
+  .col-center {
+    flex: 1;
+    min-height: 0;
   }
 
   .editor-mobile-publish-actions {

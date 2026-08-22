@@ -833,6 +833,17 @@ describe("PEditor", () => {
 		).toBe("辩题正文");
 	});
 
+	it("在启用时显示空格和制表符标记", async () => {
+		const wrapper = await mountEditor({
+			modelValue: "正文  \t尾部",
+			mode: FUTURE_NORMAL_MODE,
+			showWhitespace: true,
+		});
+
+		expect(wrapper.find(".cm-highlightSpace").exists()).toBe(true);
+		expect(wrapper.find(".cm-highlightTab").exists()).toBe(true);
+	});
+
 	it("opens root suggestions from the reference tool", async () => {
 		vi.mocked(fetch).mockImplementation(() => new Promise<Response>(() => {}));
 		const wrapper = await mountEditor({

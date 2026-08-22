@@ -42,7 +42,7 @@
         </div>
 
         <PButton
-          v-if="source"
+          v-if="source && showSubscribe"
           :label="source.subscribed ? '已订阅' : '订阅'"
           :variant="source.subscribed ? 'secondary' : 'primary'"
           :disabled="source.subscribed || subscribeBusy"
@@ -121,6 +121,7 @@ const props = withDefaults(defineProps<{
   items: TimelineItem[]
   loading?: boolean
   subscribeBusy?: boolean
+  showSubscribe?: boolean
   layerIndex?: number
   stackSize?: number
   isShifted?: boolean
@@ -128,6 +129,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   loading: false,
   subscribeBusy: false,
+  showSubscribe: true,
   layerIndex: 0,
   stackSize: 1,
   isShifted: false,

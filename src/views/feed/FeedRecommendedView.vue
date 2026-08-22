@@ -507,6 +507,7 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
     title: item.title,
     rssUrl: item.target_path,
     category: normalizeItemCategory(item),
+    language_code: item.language_code,
     subscriptionCount: item.bookmark_count ?? 0,
     recentItemCount: item.recent_items?.length ?? 0,
     lastPublishedAt: item.last_published_at,
@@ -701,6 +702,7 @@ onMounted(async () => {
       :source="selectedChannelSource"
       :items="channelArticles"
       :loading="channelArticlesLoading"
+      :show-subscribe="Boolean(authStore.isAuthenticated && selectedChannelSource?.type === 'internal_channel')"
       :subscribe-busy="selectedChannelSource ? isChannelSubscribeBusy(selectedChannelSource.id) : false"
       :stack-size="showChannelArticleSheet ? 2 : 1"
       :is-shifted="showChannelArticleSheet"

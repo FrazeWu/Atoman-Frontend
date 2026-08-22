@@ -97,7 +97,10 @@
       @dragleave="onDragLeave"
       @drop.prevent="onDrop"
     >
-      <div :class="effectiveMode === 'split' ? 'sv-pane sv-source' : null">
+      <div
+        class="cm-source-pane"
+        :class="effectiveMode === 'split' ? 'sv-pane sv-source' : null"
+      >
         <div ref="cmContainerRef" class="cm-container" data-testid="markdown-source" />
       </div>
       <div
@@ -1352,6 +1355,13 @@ onBeforeUnmount(() => {
 .sv-source {
   border-right: 1px solid var(--a-color-border-soft);
   display: flex;
+  flex-direction: column;
+}
+
+.cm-source-pane {
+  display: flex;
+  min-height: 0;
+  flex: 1;
   flex-direction: column;
 }
 

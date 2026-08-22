@@ -31,9 +31,9 @@
         @toggle-academic="isAcademic = $event"
       />
 
-      <BlogPostUpdateNotice :updated-at="post.updated_at" />
-
       <div :class="isAcademic ? 'a-page' : 'a-page-md'">
+        <BlogPostUpdateNotice :updated-at="post.updated_at" />
+
         <!-- Markdown content -->
         <div 
           class="prose-blog" 
@@ -42,17 +42,28 @@
           v-html="renderedContent" 
         />
 
-        <!-- Interaction bar -->
+        <!-- Rating and interaction bar -->
+        <PostRatingControl
+          :rating-score="post.rating_score"
+          :rating-count="post.rating_count"
+          :viewer-rating="post.viewer_rating"
+          :disabled="!authStore.isAuthenticated"
+          :loading="ratingLoading"
+          @rate="ratePost"
+          @clear="clearPostRating"
+        />
         <div class="post-detail-toolbar">
-          <InteractionBar
-            :liked="interactions.liked.value"
-            :like-count="interactions.likeCount.value"
-            :comment-count="interactions.commentCount.value"
-            :disabled="!authStore.isAuthenticated"
-            @like="interactions.like"
-            @unlike="interactions.unlike"
-          />
           <div class="post-detail-actions">
+            <button
+              v-if="post.channel_id && authStore.isAuthenticated"
+              class="a-toggle-btn"
+              :class="{ 'a-toggle-btn-active': channelSubscribed }"
+              :disabled="channelSubscriptionBusy"
+              @click="toggleChannelSubscription"
+            >
+              {{ channelSubscribed ? '已订阅频道' : '订阅频道' }}
+            </button>
+            <RouterLink v-else-if="post.channel_id" to="/login" class="a-toggle-btn">登录后订阅频道</RouterLink>
             <button
               class="a-toggle-btn"
               :class="{ 'a-toggle-btn-active': bookmarked }"
@@ -99,9 +110,9 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PostHeader from '@/components/blog/PostHeader.vue'
+import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
@@ -152,7 +163,9 @@ const isAcademic = ref(false)
 const loading = ref(true)
 const errorStatus = ref<number | null>(null)
 const bookmarked = ref(false)
-const showUnbookmarkConfirm = ref(false)
+const ratingLoading = ref(false)
+const channelSubscribed = ref(false)
+const channelSubscriptionBusy = ref(false)
 const postEmbeds = ref<Record<string, EmbedData>>({})
 const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
@@ -186,8 +199,6 @@ const startReadingTracking = (contentID: string, source: string) => {
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const isInReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
 const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
-
-const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 
 const normalizeTitleText = (text: string) => text.trim().replace(/\s+/g, ' ')
 
@@ -231,7 +242,9 @@ const fetchPost = async () => {
   post.value = null
   isAcademic.value = false
   bookmarked.value = false
-  showUnbookmarkConfirm.value = false
+  channelSubscribed.value = false
+  channelSubscriptionBusy.value = false
+  ratingLoading.value = false
   postEmbeds.value = {}
   musicEmbeds.value = {}
   videoEmbeds.value = {}
@@ -258,6 +271,12 @@ const fetchPost = async () => {
       interactions.liked.value = detail.liked ?? detail.is_liked ?? false
       interactions.likeCount.value = detail.likes_count ?? detail.like_count ?? 0
       interactions.commentCount.value = detail.comments_count ?? detail.comment_count ?? 0
+
+      if (authStore.isAuthenticated && detail.channel_id) {
+        void feedStore.isSubscribedToChannel(detail.channel_id).then((subscribed) => {
+          if (isCurrentLoad()) channelSubscribed.value = subscribed
+        })
+      }
 
       const description = detail.summary?.trim()
         || detail.content.replace(/[#*`>~_\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160)
@@ -360,6 +379,58 @@ const toggleBookmark = async () => {
 const toggleReadingList = async () => {
   if (!post.value) return
   await feedStore.toggleReadingListItem(post.value.id)
+}
+
+const ratePost = async (score: number) => {
+  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ score }),
+    })
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
+    post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
+    post.value.viewer_rating = Number(summary.viewer_rating ?? score)
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+const clearPostRating = async () => {
+  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.value.rating_score = Number(summary.rating_score ?? 0)
+    post.value.rating_count = Number(summary.rating_count ?? 0)
+    post.value.viewer_rating = undefined
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+const toggleChannelSubscription = async () => {
+  if (!post.value?.channel_id || !authStore.isAuthenticated || channelSubscriptionBusy.value) return
+  channelSubscriptionBusy.value = true
+  try {
+    const success = channelSubscribed.value
+      ? await feedStore.unsubscribeFromChannel(post.value.channel_id)
+      : await feedStore.subscribeToChannel(post.value.channel_id)
+    if (success) channelSubscribed.value = !channelSubscribed.value
+  } finally {
+    channelSubscriptionBusy.value = false
+  }
 }
 
 const sharePost = async () => {
@@ -490,7 +561,6 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 
 <style scoped>
 .prose-blog :deep(h1),
-.prose-blog :deep(h2),
 .prose-blog :deep(h3),
 .prose-blog :deep(h4) {
   font-weight: 500;

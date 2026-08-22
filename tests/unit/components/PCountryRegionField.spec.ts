@@ -1,15 +1,22 @@
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 
+// @ts-expect-error Vue SFC modules are resolved by the Vitest Vite plugin.
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
+
+const mountField = (modelValue: string) => mount(PCountryRegionField, {
+  props: {
+    modelValue,
+    label: '地区',
+  },
+  global: {
+    stubs: { Teleport: true },
+  },
+})
 
 describe('PCountryRegionField', () => {
   it('shows common countries before a continent is selected', async () => {
-    const wrapper = mount(PCountryRegionField, {
-      props: {
-        modelValue: '',
-        label: '地区',
-      },
-    })
+    const wrapper = mountField('')
 
     await wrapper.get('[data-test="artist-nationality-trigger"]').trigger('click')
 
@@ -21,12 +28,7 @@ describe('PCountryRegionField', () => {
   })
 
   it('selects a country from the chosen continent and emits only the chinese country name', async () => {
-    const wrapper = mount(PCountryRegionField, {
-      props: {
-        modelValue: '',
-        label: '地区',
-      },
-    })
+    const wrapper = mountField('')
 
     await wrapper.get('[data-test="artist-nationality-trigger"]').trigger('click')
     expect(wrapper.get('[data-test="artist-nationality-dialog"]').text()).toContain('选择洲')
@@ -42,12 +44,7 @@ describe('PCountryRegionField', () => {
   })
 
   it('shows the localized current country and highlights its continent and country when reopening the dialog', async () => {
-    const wrapper = mount(PCountryRegionField, {
-      props: {
-        modelValue: ' Japan ',
-        label: '地区',
-      },
-    })
+    const wrapper = mountField(' Japan ')
 
     expect(wrapper.get('[data-test="artist-nationality-trigger"]').text()).toContain('日本')
 

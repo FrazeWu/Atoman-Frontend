@@ -12,9 +12,24 @@
     @keydown.enter.prevent="emit('select', source)"
     @keydown.space.prevent="emit('select', source)"
   >
-    <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
-      <img v-if="imageUrl" :src="imageUrl" :alt="source.title" class="feed-source-card__avatar-image" />
-      <template v-else>{{ avatarLabel }}</template>
+    <div class="feed-source-card__visual">
+      <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
+        <img v-if="imageUrl" :src="imageUrl" :alt="source.title" class="feed-source-card__avatar-image" />
+        <template v-else>{{ avatarLabel }}</template>
+      </div>
+      <button
+        v-if="showSubscribe"
+        type="button"
+        class="feed-source-card__subscribe"
+        :class="{ 'is-subscribed': source.subscribed }"
+        :disabled="source.subscribed || subscribeBusy"
+        data-test="feed-source-subscribe"
+        @click.stop="emit('subscribe', source)"
+      >
+        <Check v-if="source.subscribed" :size="14" aria-hidden="true" />
+        <Plus v-else :size="14" aria-hidden="true" />
+        {{ subscribeButtonLabel }}
+      </button>
     </div>
 
     <div class="feed-source-card__main">
@@ -24,18 +39,6 @@
           <h3 data-test="feed-source-title">{{ source.title }}</h3>
           <p v-if="displayUrl" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
         </div>
-
-        <button
-          v-if="showSubscribe"
-          type="button"
-          class="feed-source-card__subscribe"
-          :class="{ 'is-subscribed': source.subscribed }"
-          :disabled="source.subscribed || subscribeBusy"
-          data-test="feed-source-subscribe"
-          @click.stop="emit('subscribe', source)"
-        >
-          {{ subscribeButtonLabel }}
-        </button>
       </div>
 
       <p v-if="summaryText" class="feed-source-card__summary">
@@ -47,7 +50,7 @@
       </p>
 
       <ul v-if="showPreviews && source.recentItems.length" class="feed-source-card__previews">
-        <li v-for="item in source.recentItems.slice(0, 3)" :key="item.id" data-test="feed-source-preview-title">
+        <li v-for="item in source.recentItems.slice(0, 2)" :key="item.id" data-test="feed-source-preview-title">
           {{ item.title }}
         </li>
       </ul>
@@ -70,6 +73,7 @@ defineOptions({
   inheritAttrs: false,
 })
 
+import { Check, Plus } from 'lucide-vue-next'
 import { computed, useAttrs } from 'vue'
 
 import type { FeedExploreSource } from '@/types'
@@ -133,45 +137,43 @@ const compactCount = (value: number) => {
 
 <style scoped>
 .feed-source-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  display: grid;
-  grid-template-columns: 4.25rem minmax(0, 1fr);
-  gap: 1.1rem;
-  align-items: start;
-  padding: 1.15rem 1.25rem;
+  overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
-  border-radius: var(--a-radius-card);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
 .feed-source-card:hover,
 .feed-source-card:focus-visible {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
 }
 
-.feed-source-card__meta {
-  font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0;
+.feed-source-card__visual {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--a-color-surface-muted);
 }
 
 .feed-source-card__avatar {
   display: grid;
   place-items: center;
-  width: 4.25rem;
-  height: 4.25rem;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--feed-source-color) 18%, white);
-  color: color-mix(in srgb, var(--feed-source-color) 72%, black);
-  font-size: 1.35rem;
-  font-weight: 500;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 22%, white);
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
+  color: color-mix(in srgb, var(--feed-source-color) 72%, var(--a-color-fg));
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 600;
   overflow: hidden;
 }
 
@@ -184,14 +186,13 @@ const compactCount = (value: number) => {
 .feed-source-card__main {
   display: grid;
   min-width: 0;
-  gap: 0.75rem;
+  gap: 0.65rem;
+  padding: 1rem;
 }
 
 .feed-source-card__topline {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
-  align-items: start;
+  min-width: 0;
 }
 
 .feed-source-card__copy {
@@ -202,55 +203,85 @@ const compactCount = (value: number) => {
   margin: 0 0 0.3rem;
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .feed-source-card__copy h3 {
+  display: -webkit-box;
   margin: 0;
-  font-size: 1.02rem;
-  font-weight: 500;
+  overflow: hidden;
+  color: var(--a-color-fg);
+  font-size: 1rem;
+  font-weight: 600;
   line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.feed-source-card__url,
+.feed-source-card__summary {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .feed-source-card__url {
-  margin: 0.3rem 0 0;
-  color: var(--a-color-muted);
-  font-size: 0.84rem;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-source-card__summary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .feed-source-card__subscribe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 5.5rem;
-  min-height: 2rem;
-  padding: 0.35rem 0.8rem;
+  gap: 0.3rem;
+  min-width: 5.75rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.8rem;
   border: 1px solid var(--a-color-border);
-  color: var(--a-color-fg);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
+  color: var(--a-color-fg);
   font-family: var(--a-font-sans);
-  font-size: 0.74rem;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.feed-source-card:hover .feed-source-card__subscribe,
+.feed-source-card:focus-within .feed-source-card__subscribe {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.feed-source-card__subscribe:hover:not(:disabled) {
+  box-shadow: var(--a-shadow-sm);
+  transform: translate(-50%, -50%) translateY(-1px);
 }
 
 .feed-source-card__subscribe.is-subscribed,
 .feed-source-card__subscribe:disabled {
-  color: var(--a-color-muted);
-  background: var(--a-color-bg);
+  color: var(--a-color-success);
+  border-color: color-mix(in srgb, var(--a-color-success) 45%, var(--a-color-border-soft));
   cursor: default;
-}
-
-.feed-source-card__summary {
-  margin: 0;
-  color: var(--a-color-muted);
-  font-size: 0.88rem;
-  line-height: 1.55;
 }
 
 .feed-source-card__previews {
@@ -258,91 +289,77 @@ const compactCount = (value: number) => {
   gap: 0.3rem;
   margin: 0;
   padding: 0;
-  list-style: none;
   color: var(--a-color-fg);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   line-height: 1.45;
+  list-style: none;
 }
 
 .feed-source-card__previews li {
   position: relative;
   min-width: 0;
-  padding-left: 1rem;
   overflow: hidden;
+  padding-left: 0.85rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .feed-source-card__previews li::before {
-  content: "";
   position: absolute;
+  top: 0.65em;
   left: 0.1rem;
-  top: 0.72em;
   width: 0.25rem;
   height: 0.25rem;
-  border-radius: 4px;
+  border-radius: 50%;
   background: var(--a-color-muted-soft);
+  content: "";
 }
 
 .feed-source-card__meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, max-content));
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.35rem 0.85rem;
   color: var(--a-color-muted-soft);
+  font-family: var(--a-font-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
 }
 
 .feed-source-card.is-compact {
-  padding: 1rem 1.1rem;
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border-radius: var(--a-radius-control);
+}
+
+.feed-source-card.is-compact .feed-source-card__visual {
+  aspect-ratio: 1;
+  border-radius: var(--a-radius-control);
 }
 
 .feed-source-card.is-compact .feed-source-card__main {
-  gap: 0.4rem;
+  gap: 0.35rem;
+  padding: 0;
 }
 
-.feed-source-card.is-compact .feed-source-card__copy h3 {
-  font-size: 0.98rem;
+.feed-source-card.is-compact .feed-source-card__subscribe {
+  min-width: 4.5rem;
+  min-height: 2rem;
+  font-size: 0.7rem;
 }
 
 .feed-source-card.is-recommend {
   border-radius: 0;
-  background: var(--a-color-bg);
+  background: transparent;
   box-shadow: none;
 }
 
-.feed-source-card.is-recommend .feed-source-card__avatar {
-  border-radius: 0;
-  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text-secondary);
-}
-
 @media (max-width: 640px) {
-  .feed-source-card {
-    grid-template-columns: 3.25rem minmax(0, 1fr);
-    gap: 0.85rem;
-    padding: 1rem;
-  }
-
-  .feed-source-card__avatar {
-    width: 3.25rem;
-    height: 3.25rem;
-    font-size: 1.05rem;
-  }
-
-  .feed-source-card__topline {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.65rem;
-  }
-
   .feed-source-card__subscribe {
-    width: fit-content;
-    min-width: 4.5rem;
-  }
-
-  .feed-source-card__meta {
-    grid-template-columns: 1fr;
-    gap: 0.35rem;
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 </style>

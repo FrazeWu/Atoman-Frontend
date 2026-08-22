@@ -138,11 +138,11 @@ watch(() => route.fullPath, () => {
   cursor: pointer;
 }
 
-@media (min-width: 761px) and (max-width: 1023px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .studio-layout { --a-sidebar-width: 4.5rem; }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .studio-layout { --a-sidebar-width: 0; }
   .studio-menu-button { display: inline-flex; }
   .studio-frame { display: block; }

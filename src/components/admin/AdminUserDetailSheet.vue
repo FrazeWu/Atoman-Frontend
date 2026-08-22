@@ -176,6 +176,7 @@
       :message="pendingRevoke?.type === 'all' ? '确认退出该用户的全部设备？' : '确认退出这个登录设备？'"
       confirm-text="确认退出"
       danger
+      above-player
       :loading="revoking"
       @confirm="confirmRevoke"
       @cancel="pendingRevoke = null"

@@ -1,6 +1,6 @@
 <template>
   <div class="a-page blog-home">
-    <PPageHeader title="文章" accent>
+    <PPageHeader title="发现" accent>
       <template #action>
         <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
       </template>
@@ -15,6 +15,13 @@
           v-model="typeFilter"
           :options="typeOptions"
           @change="selectType"
+        />
+      </div>
+      <div class="blog-home__filter-group">
+        <PSegmentedControl
+          v-model="recommendationMode"
+          :options="recommendationOptions"
+          @change="selectRecommendationMode"
         />
       </div>
       <div class="blog-home__filter-group blog-home__filter-group--end">
@@ -75,17 +82,17 @@
             <h2>热门频道</h2>
           </div>
           <div class="blog-home__rail-list">
-            <a
+            <BlogEntityCard
               v-for="ch in channels.slice(0, 5)"
               :key="ch.id"
-              :href="channelUrl(String(ch.slug || ch.id))"
-              class="blog-home__channel-item"
-            >
-              <div class="blog-home__channel-info">
-                <strong class="blog-home__channel-name">《{{ ch.name }}》</strong>
-                <span v-if="ch.description" class="blog-home__channel-desc">{{ ch.description }}</span>
-              </div>
-            </a>
+              kind="channel"
+              :title="ch.name"
+              :cover-url="ch.cover_url"
+              :description="ch.description"
+              compact
+              :show-subscribe="false"
+              @select="openChannel(ch)"
+            />
           </div>
         </section>
 
@@ -119,6 +126,7 @@ import { Bookmark, Clock, Flame, Sparkles, Star } from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
+import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -143,6 +151,7 @@ interface BlogChannel {
   name: string
   slug?: string
   description?: string
+  cover_url?: string
 }
 
 interface BlogHomeListItem {
@@ -266,6 +275,10 @@ const openPost = (item: BlogHomeListItem) => {
     return
   }
   void router.push(item.targetPath)
+}
+
+const openChannel = (channel: BlogChannel) => {
+  void router.push(channelUrl(String(channel.slug || channel.id)))
 }
 
 const postIdFromTargetPath = (targetPath: string) => {

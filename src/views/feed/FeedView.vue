@@ -166,6 +166,7 @@
             @click="openArticleSheet(item, index)"
             :title="item.post.title"
             :summary="item.post.summary"
+            class="content-stream-entry"
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center;flex-shrink:0;min-width:40px">
@@ -188,7 +189,29 @@
               <span v-else class="a-label a-muted">未知频道</span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
             </template>
-
+            <template #footer>
+              <span class="feed-post-stat"><Eye :size="13" aria-hidden="true" />{{ item.post.view_count || 0 }}</span>
+              <span class="feed-post-stat"><Gauge :size="13" aria-hidden="true" />评分 {{ item.post.rating_score ? `${item.post.rating_score.toFixed(1)} (${item.post.rating_count || 0})` : '— (0)' }}</span>
+              <span class="feed-post-stat"><Bookmark :size="13" aria-hidden="true" />{{ item.post.bookmarks_count || 0 }}</span>
+            </template>
+            <template #actions>
+              <PClip
+                v-if="authStore.isAuthenticated"
+                :active="feedStore.bookmarkedPostIds.has(item.post.id)"
+                :title="feedStore.bookmarkedPostIds.has(item.post.id) ? '取消收藏' : '收藏'"
+                @click="feedStore.togglePostBookmark(item.post.id)"
+              >
+                <Bookmark :size="14" :fill="feedStore.bookmarkedPostIds.has(item.post.id) ? 'currentColor' : 'none'" />
+              </PClip>
+              <PClip
+                v-if="authStore.isAuthenticated"
+                :active="readingListIds.has(item.post.id)"
+                :title="readingListIds.has(item.post.id) ? '移除稍后阅读' : '稍后阅读'"
+                @click="toggleReadingList(item.post.id)"
+              >
+                <Clock :size="14" />
+              </PClip>
+            </template>
           </PEntry>
 
           <PEntry
@@ -199,6 +222,7 @@
             @click="openArticleSheet(item, index)"
             :title="item.feed_item.title"
             :summary="stripHtml(item.feed_item.summary || '')"
+            class="content-stream-entry"
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center;flex-shrink:0;min-width:40px">
@@ -333,7 +357,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown, Star, Clock, Bookmark } from 'lucide-vue-next'
+import { ChevronDown, Eye, Gauge, Star, Clock, Bookmark } from 'lucide-vue-next'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()
@@ -618,6 +642,7 @@ const handleKeyDownGlobal = (e: KeyboardEvent) => {
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
+    void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchStarredIds()
     void feedStore.fetchReadingListIds()
     if (hasExternalRSSSubscription.value && onboardingStore.isVisible) {
@@ -705,7 +730,7 @@ onUnmounted(() => {
 .feed-header-sticky {
   position: sticky;
   top: 56px;
-  z-index: 1100;
+  z-index: var(--a-z-navigation);
   background: var(--a-color-bg);
   margin-top: -3rem;
   padding-top: 3rem;

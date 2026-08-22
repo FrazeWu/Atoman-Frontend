@@ -82,14 +82,12 @@ describe("application navigation contracts", () => {
 			history: createMemoryHistory(),
 			routes: buildAppRoutes(),
 		});
-		const targets = [
-			...getMobilePrimaryTabs().map((tab) => tab.href),
-			...getMobileMoreItems().map((item) => item.href),
-		].filter((target): target is string => Boolean(target));
+		const moduleTargets = Object.keys(moduleRooms).flatMap((module) =>
+			getMobilePrimaryTabs(module as keyof typeof moduleRooms).map((tab) => tab.href),
+		);
+		const switcherTargets = getMobileMoreItems().map((item) => item.href);
+		const targets = [...moduleTargets, ...switcherTargets];
 
-		expect(
-			getMobilePrimaryTabs().find((tab) => tab.key === "create")?.href,
-		).toBe("/studio");
 		for (const target of targets) {
 			const matched = router.resolve(target).matched;
 			expect(matched.length, target).toBeGreaterThan(0);

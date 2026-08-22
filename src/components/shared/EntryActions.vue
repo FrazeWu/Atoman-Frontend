@@ -41,6 +41,7 @@
 
     <!-- 3. 星标推荐按钮 -->
     <PClip
+      v-if="showStar"
       :active="starred"
       :disabled="disabled"
       :title="starred ? '取消星标' : '星标推荐'"
@@ -71,6 +72,7 @@ const props = withDefaults(defineProps<{
   inReadingList?: boolean
   starred?: boolean
   showLabels?: boolean
+  showStar?: boolean
   size?: 'sm' | 'md'
   disabled?: boolean
 }>(), {
@@ -78,6 +80,7 @@ const props = withDefaults(defineProps<{
   inReadingList: false,
   starred: false,
   showLabels: true,
+  showStar: true,
   size: 'sm',
   disabled: false,
 })

@@ -7,11 +7,13 @@ import { useRouter } from 'vue-router'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import type { Post } from '@/types'
 import type { BlogPostLayer } from '@/components/blog/blogSheetTypes'
 
@@ -35,6 +37,10 @@ const loading = ref(false)
 const errorMessage = ref('')
 const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
+const feedStore = useFeedStore()
+const channelSubscribed = ref(false)
+const channelSubscriptionBusy = ref(false)
+const ratingLoading = ref(false)
 
 async function loadPost() {
   loading.value = true
@@ -46,11 +52,68 @@ async function loadPost() {
     if (!res.ok) throw new Error('load failed')
     const payload = await Promise.resolve(res.data)
     post.value = payload.data || payload
+    if (authStore.isAuthenticated && post.value?.channel_id) {
+      channelSubscribed.value = await feedStore.isSubscribedToChannel(post.value.channel_id)
+    } else {
+      channelSubscribed.value = false
+    }
   } catch {
     post.value = null
     errorMessage.value = '文章加载失败，请重试'
   } finally {
     loading.value = false
+  }
+}
+
+async function toggleChannelSubscription() {
+  if (!post.value?.channel_id || !authStore.isAuthenticated || channelSubscriptionBusy.value) return
+  channelSubscriptionBusy.value = true
+  try {
+    const success = channelSubscribed.value
+      ? await feedStore.unsubscribeFromChannel(post.value.channel_id)
+      : await feedStore.subscribeToChannel(post.value.channel_id)
+    if (success) channelSubscribed.value = !channelSubscribed.value
+  } finally {
+    channelSubscriptionBusy.value = false
+  }
+}
+
+async function ratePost(score: number) {
+  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+      body: JSON.stringify({ score }),
+    })
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
+    post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
+    post.value.viewer_rating = Number(summary.viewer_rating ?? score)
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+async function clearRating() {
+  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+      method: 'DELETE',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.value.rating_score = Number(summary.rating_score ?? 0)
+    post.value.rating_count = Number(summary.rating_count ?? 0)
+    post.value.viewer_rating = undefined
+  } finally {
+    ratingLoading.value = false
   }
 }
 
@@ -96,11 +159,31 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       <div class="post-sheet-meta">
         <span>{{ post.user?.display_name || post.user?.username || '未知作者' }}</span>
         <span>{{ new Date(post.created_at).toLocaleDateString('zh-CN') }}</span>
+        <button
+          v-if="post.channel_id && authStore.isAuthenticated"
+          type="button"
+          class="post-sheet-subscribe"
+          :class="{ 'is-subscribed': channelSubscribed }"
+          :disabled="channelSubscriptionBusy"
+          @click="toggleChannelSubscription"
+        >
+          {{ channelSubscribed ? '已订阅频道' : '订阅频道' }}
+        </button>
+        <RouterLink v-else-if="post.channel_id" to="/login" class="post-sheet-subscribe">登录后订阅频道</RouterLink>
       </div>
       <h1>{{ post.title }}</h1>
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
       <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <div class="prose-blog post-sheet-content" v-html="renderedContent" />
+      <PostRatingControl
+        :rating-score="post.rating_score"
+        :rating-count="post.rating_count"
+        :viewer-rating="post.viewer_rating"
+        :disabled="!authStore.isAuthenticated"
+        :loading="ratingLoading"
+        @rate="ratePost"
+        @clear="clearRating"
+      />
     </article>
   </PSheet>
 </template>
@@ -148,7 +231,27 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   font-size: 0.8rem;
 }
 
-.post-sheet-article h1 {
+.post-sheet-subscribe {
+  margin-left: auto;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: transparent;
+  color: var(--a-color-fg);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.post-sheet-subscribe.is-subscribed {
+  color: var(--a-color-success);
+  border-color: color-mix(in srgb, var(--a-color-success) 45%, var(--a-color-border-soft));
+}
+
+.post-sheet-subscribe:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
   margin: 1rem 0;
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   line-height: 1.2;

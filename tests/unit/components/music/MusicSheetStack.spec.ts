@@ -2,7 +2,9 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+// @ts-expect-error Vitest resolves Vue SFC aliases through Vite, outside the src-only tsconfig.
 import MusicSheetStack from '@/components/music/MusicSheetStack.vue'
+// @ts-expect-error Vitest resolves Vue/TypeScript aliases through Vite, outside the src-only tsconfig.
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 describe('MusicSheetStack', () => {

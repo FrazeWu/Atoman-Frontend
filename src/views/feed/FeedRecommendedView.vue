@@ -1164,8 +1164,13 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="discovery-toolbar" data-test="feed-filter-wrap">
-      <div class="discovery-view-switch" aria-label="发现内容">
+      <div class="discovery-toolbar__controls">
         <PSegmentedControl v-model="sourceScope" :options="sourceScopeOptions" />
+        <template v-if="sourceScope === 'internal'">
+          <PSegmentedControl v-model="target" :options="targetOptions" />
+          <PSegmentedControl v-model="mode" :options="modeOptions" />
+        </template>
+        <PSelect v-model="language" :options="recommendationLanguageOptions" placeholder="语言" />
       </div>
       <div class="discovery-toolbar__summary">
         <strong>{{ sourceScope === 'internal' ? '热门内容' : '订阅源' }}</strong>
@@ -1277,11 +1282,13 @@ onBeforeUnmount(() => {
             :item="item"
             :type="item.target_path.includes('/posts/') ? 'post' : 'feed_item'"
             :starred="isStarred(item)"
+            :bookmarked="isStarred(item)"
             :in-reading-list="isReadingList(item)"
             :source-title="item.source_title"
             :source-path="item.source_path"
             @click="openTarget(item.target_path)"
             @toggle-star="toggleStar(item)"
+            @toggle-bookmark="toggleStar(item)"
             @toggle-reading-list="toggleReadingList(item)"
           >
             <template v-if="item.source_id && authStore.isAuthenticated" #source-action>
@@ -1556,9 +1563,22 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.discovery-view-switch :deep(.p-segmented-control) {
-  width: auto;
+.discovery-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
+
+.discovery-toolbar__controls :deep(.p-select-root) {
+  min-width: 6.5rem;
+}
+
+.discovery-toolbar__controls :deep(.p-field) {
+  margin: 0;
+}
+
 
 .discovery-toolbar__summary {
   display: flex;
@@ -1616,9 +1636,10 @@ onBeforeUnmount(() => {
     width: 100%;
   }
 
-  .discovery-toolbar__summary {
-    min-height: 2.5rem;
+  .discovery-toolbar__controls {
+    grid-column: 1 / -1;
   }
+
 }
 
 .state-line {

@@ -41,42 +41,17 @@
         </div>
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
         <div v-else class="a-grid-2">
-          <PEntry
+          <BlogItemCard
             v-for="bm in filteredBookmarks"
             :key="bm.id"
-            :title="bm.post?.title"
-            :summary="bm.post?.summary"
+            :item="bm.post"
+            type="post"
+            :bookmarked="true"
+            :in-reading-list="readingListIds.has(bm.post?.id || '')"
             @click="bm.post && blogSheets.openPost(bm.post.id, bm.post.title)"
-            class="a-cursor-pointer"
-          >
-            <template #visual>
-              <img
-                v-if="bm.post?.cover_url"
-                :src="bm.post?.cover_url"
-                class="blog-entry-cover"
-              />
-              <PAvatar
-                v-else
-                :src="bm.post?.user?.avatar_url"
-                :name="bm.post?.user?.display_name || bm.post?.user?.username"
-                size="sm"
-              />
-            </template>
-
-            <template #meta>
-              <a :href="userUrl(bm.post?.user?.username || '')" class="a-muted" @click.stop>{{ bm.post?.user?.display_name || bm.post?.user?.username }}</a>
-              <span>{{ formatDate(bm.post?.created_at || '') }}</span>
-            </template>
-
-            <template #actions>
-              <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
-                  <span>♥ {{ bm.post?.likes_count || 0 }}</span>
-                  <span>💬 {{ bm.post?.comments_count || 0 }}</span>
-                </div>
-              </div>
-            </template>
-          </PEntry>
+            @toggle-bookmark="removeBookmark(bm)"
+            @toggle-reading-list="bm.post && toggleReadingList(bm.post.id)"
+          />
         </div>
       </div>
     </div>
@@ -114,14 +89,14 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
-import PEntry from '@/components/ui/PEntry.vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
@@ -130,11 +105,25 @@ import type { Bookmark, BookmarkFolder } from '@/types'
 type BookmarkSortMode = 'latest' | 'popular'
 
 const authStore = useAuthStore()
+const feedStore = useFeedStore()
 const api = useApi()
 const blogSheets = useBlogSheets()
 
 const folders = ref<BookmarkFolder[]>([])
 const bookmarks = ref<Bookmark[]>([])
+const readingListIds = computed(() => feedStore.readingListItemIds)
+
+const removeBookmark = async (bookmark: Bookmark) => {
+  const res = await apiRequestResult(api.blog.bookmark(bookmark.id), {
+    method: 'DELETE',
+    headers: authHeader.value,
+  })
+  if (res.ok) bookmarks.value = bookmarks.value.filter((item) => item.id !== bookmark.id)
+}
+
+const toggleReadingList = (postId: string) => {
+  void feedStore.toggleReadingListItem(postId)
+}
 const activeFolder = ref<string | null>(null)
 const loadingPosts = ref(true)
 const showNewFolder = ref(false)
@@ -233,7 +222,10 @@ const confirmDeleteFolder = async () => {
   }
 }
 
-onMounted(fetchAll)
+onMounted(() => {
+  void fetchAll()
+  if (authStore.isAuthenticated) void feedStore.fetchReadingListIds()
+})
 
 watch(sortMode, () => {
   void fetchAll()

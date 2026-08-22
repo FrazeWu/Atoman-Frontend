@@ -48,58 +48,18 @@
 
         <div v-else>
           <p v-if="loadError" class="a-error" role="alert">{{ loadError }}</p>
-          <PEntry
+          <BlogItemCard
             v-for="(post, index) in posts"
             :key="post.id"
-            :title="post.title"
-            :summary="post.summary"
+            :item="post"
+            type="post"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+            :bookmarked="starredIds.has(post.id)"
+            :in-reading-list="readingListIds.has(post.id)"
             @click="blogSheets.openPost(post.id, post.title)"
-          >
-            <template #visual>
-              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PBadge type="blog">文章</PBadge>
-                <img
-                  v-if="post.cover_url"
-                  :src="post.cover_url"
-                  class="blog-entry-cover"
-                  style="margin-top:0.25rem"
-                />
-                <PAvatar
-                  v-else
-                  :src="post.user?.avatar_url"
-                  :name="post.user?.display_name || post.user?.username"
-                  size="sm"
-                  style="margin-top:0.25rem"
-                />
-              </div>
-            </template>
-
-            <template #meta>
-              <span>《{{ post.channel?.name || '未分类' }}》</span>
-              <span>{{ post.user?.display_name || post.user?.username }}</span>
-              <span>{{ formatDate(post.created_at) }}</span>
-            </template>
-
-            <template #actions>
-              <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
-                  <span>♥ {{ post.likes_count || 0 }}</span>
-                  <span>💬 {{ post.comments_count || 0 }}</span>
-                </div>
-                <PClip
-                  :active="starredIds.has(post.id)"
-                  :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
-                  @click="toggleStar(post.id)"
-                />
-                <PClip
-                  :active="readingListIds.has(post.id)"
-                  :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
-                  @click="toggleReadingList(post.id)"
-                />
-              </div>
-            </template>
-          </PEntry>
+            @toggle-bookmark="toggleStar(post.id)"
+            @toggle-reading-list="toggleReadingList(post.id)"
+          />
         </div>
 
         <!-- Load more -->
@@ -118,10 +78,7 @@
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import PEntry from '@/components/ui/PEntry.vue'
-import PClip from '@/components/ui/PClip.vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
-import PBadge from '@/components/ui/PBadge.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -138,7 +95,7 @@ import ContentNotificationMode from '@/components/content/ContentNotificationMod
 
 // Included components from BlogHomeView as requested, even if not used directly in template
 // to maintain consistency and fulfill requirement
-const _components = { PBadge, PTab }
+const _components = { PTab }
 
 const blogSheets = useBlogSheets()
 const authStore = useAuthStore()

@@ -80,6 +80,7 @@
     message="确定删除这条规则吗？"
     confirm-text="删除"
     danger
+    :above-player="props.abovePlayer"
     :loading="props.busy"
     @confirm="confirmDeleteRule"
     @cancel="deletePending = null"
@@ -116,6 +117,7 @@ const props = withDefaults(defineProps<{
   subscriptionRules: FeedSubscriptionRule[]
   ruleApplySummary: ApplySubscriptionRulesSummary | null
   busy?: boolean
+  abovePlayer?: boolean
 }>(), {
   subscriptions: () => [],
 })

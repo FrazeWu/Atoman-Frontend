@@ -1,6 +1,6 @@
 <template>
-  <div class="mobile-bottom-nav">
-    <nav class="mobile-bottom-nav__bar" aria-label="移动主导航">
+  <div v-if="tabs.length > 0" class="mobile-bottom-nav">
+    <nav class="mobile-bottom-nav__bar" aria-label="当前模块导航">
       <a
         v-for="tab in tabs"
         :key="tab.key"
@@ -11,67 +11,56 @@
         data-testid="mobile-bottom-nav-tab"
         @click="onTabClick(tab, $event)"
       >
+        <component :is="tab.icon" :size="18" aria-hidden="true" />
         <span class="mobile-bottom-nav__tab-copy">{{ tab.label }}</span>
       </a>
     </nav>
-
-    <MobileMoreSheet :show="isMoreOpen" @close="closeMore" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import MobileMoreSheet from '@/components/system/MobileMoreSheet.vue'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
-import { useModuleNav } from '@/composables/useSubdomainNav'
-import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { resolveSiteContext } from '@/router/siteContext'
+
 
 defineOptions({
   name: 'MobileBottomNav',
 })
 
-const { navigateTo } = useModuleNav()
-const { navigateModuleWithShutter } = useAsyncNavigate()
 const route = useRoute()
+const router = useRouter()
 
-const tabs = computed(() => getMobilePrimaryTabs())
-const isMoreOpen = ref(false)
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
   const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
   return resolveSiteContext(window.location.hostname, search, route.path)
 })
 
-const closeMore = () => {
-  isMoreOpen.value = false
-}
+const currentModule = computed(() => siteContext.value.type === 'module' ? siteContext.value.module : undefined)
+const tabs = computed(() => getMobilePrimaryTabs(currentModule.value))
 
 const isTabActive = (tab: MobilePrimaryTab) => {
-  if (tab.key === 'more') return isMoreOpen.value
-  return siteContext.value.type === 'module' && siteContext.value.module === tab.module
+  if (siteContext.value.type !== 'module' || siteContext.value.module !== tab.module) return false
+  const currentPath = route.path.replace(/\/$/, '') || '/'
+  const targetPath = router.resolve(tab.href).path.replace(/\/$/, '') || '/'
+  if (currentPath === targetPath) return true
+
+  const homeKeys = new Set(['discover', 'topics', 'timeline'])
+  const homePath = tab.module === 'blog'
+    ? '/posts'
+    : tab.module === 'podcast'
+      ? '/podcasts'
+      : tab.module === 'video'
+        ? '/videos'
+        : `/${tab.module}`
+  return homeKeys.has(tab.key) && currentPath === homePath
 }
 
-const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
-  if (tab.key === 'more') {
-    event.preventDefault()
-    isMoreOpen.value = true
-    return
-  }
-
-  closeMore()
-
-  if (tab.key === 'create' && tab.href) {
-    event.preventDefault()
-    void navigateModuleWithShutter(tab.href)
-    return
-  }
-
-  if (tab.module) {
-    event.preventDefault()
-    navigateTo(tab.module)
-  }
+const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
+  event.preventDefault()
+  await router.push(tab.href)
 }
 </script>
 
@@ -89,16 +78,17 @@ const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--a-color-border-soft);
-  background: color-mix(in srgb, var(--a-color-bg) 94%, white 6%);
-  backdrop-filter: blur(18px);
+  background: var(--a-color-bg);
 }
 
 .mobile-bottom-nav__tab {
   display: flex;
   min-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.9rem 0.5rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  gap: 0.25rem;
+  padding: 0.55rem 0.35rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
   color: var(--a-color-muted);
   text-decoration: none;
   transition: color 0.2s ease, background-color 0.2s ease;
@@ -110,11 +100,16 @@ const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
 }
 
 .mobile-bottom-nav__tab-copy {
-  font-size: 0.78rem;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 @media (min-width: 768px) {
   .mobile-bottom-nav__bar {
     display: none;

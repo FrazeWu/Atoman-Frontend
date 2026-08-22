@@ -1159,6 +1159,7 @@ async function completeCreation() {
   </PSheet>
 
   <PConfirm
+    above-player
     :show="closePending"
     title="关闭创建流程"
     message="确认关闭？未保存的内容将丢失。"

@@ -1,7 +1,8 @@
 import type { RouteRecordRaw } from "vue-router";
 
 const studioContentView = () => import("@/views/studio/StudioContentView.vue");
-const studioEditorRouteView = () => import("@/views/studio/StudioEditorRouteView.vue");
+const studioEditorRouteView = () =>
+	import("@/views/studio/StudioEditorRouteView.vue");
 
 export const studioRoutes: RouteRecordRaw[] = [
 	{

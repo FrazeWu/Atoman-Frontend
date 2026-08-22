@@ -69,6 +69,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         },
         { path: 'bookmarks', component: () => import('@/views/music/LibraryView.vue'), meta: { requiresAuth: true } },
         { path: 'history', component: () => import('@/views/music/HistoryView.vue'), meta: { requiresAuth: true } },
+        { path: 'me', component: () => import('@/views/music/MusicProfileView.vue'), meta: { requiresAuth: true } },
         { path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: { requiresAuth: true } },
         {
           path: 'artist/new',
@@ -122,6 +123,8 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/forum/ForumHomeView.vue') },
+        { path: 'categories', component: () => import('@/views/forum/ForumCategoriesView.vue') },
+        { path: 'me', component: () => import('@/views/forum/ForumMyView.vue'), meta: { requiresAuth: true } },
         { path: 'search', component: () => import('@/views/forum/ForumSearchView.vue') },
         { path: 'new', component: () => import('@/views/forum/ForumNewTopicView.vue'), meta: { requiresAuth: true, featureGate: { module: 'forum', feature: 'topic.create' } } },
         { path: 'topic/:id', component: () => import('@/views/forum/ForumTopicView.vue') },
@@ -136,6 +139,8 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/debate/DebateHomeView.vue') },
+        { path: 'search', component: () => import('@/views/debate/DebateSearchView.vue') },
+        { path: 'me', component: () => import('@/views/debate/DebateMyView.vue'), meta: { requiresAuth: true } },
         { path: 'rules', component: () => import('@/views/debate/DebateRulesView.vue') },
         { path: ':id', component: () => import('@/views/debate/DebateTopicView.vue') },
       ],
@@ -149,6 +154,8 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       children: [
         { path: '', component: () => import('@/views/timeline/TimelineHomeView.vue') },
         { path: 'persons', component: () => import('@/views/timeline/PersonListView.vue') },
+        { path: 'search', component: () => import('@/views/timeline/TimelineSearchView.vue') },
+        { path: 'me', component: () => import('@/views/timeline/TimelineMyView.vue'), meta: { requiresAuth: true } },
         { path: 'person/:id', component: () => import('@/views/timeline/PersonMapView.vue') },
       ],
     },
@@ -162,6 +169,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: '', component: () => import('../../views/podcast/PodcastHomeView.vue') },
         { path: 'subscriptions', component: () => import('@/views/podcast/PodcastSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'favorites', component: () => import('@/views/podcast/PodcastFavoritesView.vue'), meta: { requiresAuth: true } },
+        { path: 'me', component: () => import('@/views/podcast/PodcastProfileView.vue'), meta: { requiresAuth: true } },
         { path: 'show/:channelSlug', component: () => import('@/views/podcast/PodcastShowView.vue') },
         { path: 'episode/:id', component: () => import('@/views/podcast/PodcastEpisodeView.vue') },
       ],
@@ -174,6 +182,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/video/VideoHomeView.vue') },
+        { path: 'search', component: () => import('@/views/video/VideoSearchView.vue') },
         { path: 'subscriptions', component: () => import('@/views/video/VideoSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'favorites', component: () => import('@/views/video/VideoFavoritesView.vue'), meta: { requiresAuth: true } },
         { path: 'collections/:id', component: () => import('@/views/video/VideoCollectionView.vue') },

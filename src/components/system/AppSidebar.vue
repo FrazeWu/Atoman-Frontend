@@ -251,7 +251,7 @@ const currentModule = computed(() => {
 
 // 2. Feed Navigation Items & Logic
 const feedNavItems = [
-  { to: moduleUrl('feed'), label: '探索', icon: Compass, exact: true },
+  { to: moduleUrl('feed'), label: '发现', icon: Compass, exact: true },
   { to: modulePathUrl('feed', '/subscriptions'), label: '订阅', icon: Rss },
   { to: modulePathUrl('feed', '/reading-list'), label: '稍后阅读', icon: Bookmark },
   { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Star },
@@ -316,7 +316,7 @@ const openManageSheet = () => {
 
 // 3. Blog Navigation Items
 const blogNavItems = [
-  { to: '/posts', label: '探索', icon: Compass, exact: true },
+  { to: '/posts', label: '发现', icon: Compass, exact: true },
   { to: '/posts/notes', label: '短话', icon: MessageSquare },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },

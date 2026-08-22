@@ -1903,6 +1903,7 @@ describe("MusicCreationFlowDrawer", () => {
 
 		const confirm = wrapper.getComponent({ name: "PConfirm" });
 		expect(confirm.props("show")).toBe(true);
+		expect(confirm.props("abovePlayer")).toBe(true);
 		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
 
 		confirm.vm.$emit("cancel");

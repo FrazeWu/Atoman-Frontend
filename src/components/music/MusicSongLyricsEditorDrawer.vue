@@ -122,6 +122,7 @@ function cancelAnnotationConflict() {
     @save="handleSave"
   />
   <PConfirm
+    above-player
     :show="conflictingAnnotationIds.length > 0"
     title="部分注释需要重新定位"
     message="保存后，这些注释会进入待重新绑定状态。"

@@ -139,6 +139,22 @@ body:has(.app-shell.has-sidebar) {
 	}
 }
 
+body:has(.studio-layout) {
+	--a-sidebar-width: 12rem;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+	body:has(.studio-layout) {
+		--a-sidebar-width: 4.5rem;
+	}
+}
+
+@media (max-width: 767px) {
+	body:has(.studio-layout) {
+		--a-sidebar-width: 0px;
+	}
+}
+
 /* ─── Layout ─────────────────────────────────────────── */
 .a-page {
 	max-width: 72rem;

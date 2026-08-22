@@ -225,58 +225,16 @@
               @delete="removeNote"
             />
 
-            <!-- Blog post: entry card -->
-            <PEntry
+            <BlogItemCard
               v-else-if="item.type === 'post'"
-              :title="item.data.title"
-              :summary="item.data.summary"
-              class="profile-content__entry a-cursor-pointer"
+              :item="item.data"
+              type="post"
+              :bookmarked="starredIds.has(item.data.id)"
+              :in-reading-list="readingListIds.has(item.data.id)"
               @click="blogSheets.openPost(item.data.id, item.data.title)"
-            >
-              <template #visual>
-                <div class="profile-content__visual">
-                  <PBadge type="blog">文章</PBadge>
-                  <img
-                    v-if="item.data.cover_url"
-                    :src="item.data.cover_url"
-                    class="profile-content__cover"
-                  />
-                  <PAvatar
-                    v-else
-                    :src="item.data.user?.avatar_url"
-                    :name="item.data.user?.display_name || item.data.user?.username"
-                    size="sm"
-                    style="margin-top: 0.25rem"
-                  />
-                </div>
-              </template>
-
-              <template #meta>
-                <a v-if="item.data.channel" :href="channelUrl(item.data.channel.slug || item.data.channel.id)" class="a-muted" @click.stop>
-                  《{{ item.data.channel.name }}》
-                </a>
-                <span>{{ formatDate(item.data.created_at) }}</span>
-              </template>
-
-              <template #actions>
-                <div class="profile-content__actions">
-                  <div class="profile-content__stats">
-                    <span>♥ {{ item.data.likes_count || 0 }}</span>
-                    <span>💬 {{ item.data.comments_count || 0 }}</span>
-                  </div>
-                  <PClip
-                    :active="starredIds.has(item.data.id)"
-                    :label="starredIds.has(item.data.id) ? '取消收藏' : '收藏'"
-                    @click="toggleStar(item.data.id)"
-                  />
-                  <PClip
-                    :active="readingListIds.has(item.data.id)"
-                    :label="readingListIds.has(item.data.id) ? '取消稍后阅读' : '稍后阅读'"
-                    @click="toggleReadingList(item.data.id)"
-                  />
-                </div>
-              </template>
-            </PEntry>
+              @toggle-bookmark="toggleStar(item.data.id)"
+              @toggle-reading-list="toggleReadingList(item.data.id)"
+            />
           </template>
         </div>
 
@@ -307,13 +265,10 @@ import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Camera, LinkIcon, LoaderCircle, Pencil, Plus, Undo2 } from 'lucide-vue-next'
-import PEntry from '@/components/ui/PEntry.vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
-import PBadge from '@/components/ui/PBadge.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
-import PClip from '@/components/ui/PClip.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { apiRequestEnvelope } from '@/api/client'

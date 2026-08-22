@@ -344,6 +344,9 @@ export interface Post {
 	published_at?: string;
 	scheduled_at?: string;
 	view_count?: number;
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number;
 	liked?: boolean;
 	bookmarks_count?: number;
 	channel_followers_count?: number;

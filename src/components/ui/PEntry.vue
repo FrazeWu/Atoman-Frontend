@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="p-entry"
-    :class="{ 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }"
-    @click="$emit('click')"
-  >
+  <div class="p-entry" :class="{ 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }" @click="$emit('click')">
     <div class="p-entry__body">
 
       <!-- Left Badge / Image Area -->
@@ -32,6 +28,10 @@
         <p v-if="summary || $slots.summary" class="feed-entry-summary a-clamp-2">
           <slot name="summary">{{ summary }}</slot>
         </p>
+
+        <div v-if="$slots.footer" class="feed-entry-footer">
+          <slot name="footer" />
+        </div>
 
         <!-- Actions Row (Hover revealed) -->
         <div v-if="$slots.actions" class="feed-entry-actions" @click.stop>
@@ -87,8 +87,46 @@ defineEmits(['click'])
   box-shadow: var(--a-shadow-sm);
 }
 
-.p-entry.is-open,
-.p-entry.is-focused {
+.p-entry.content-stream-entry {
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.55rem;
+  border-radius: var(--a-radius-card);
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.p-entry.content-stream-entry:hover,
+.p-entry.content-stream-entry:focus-within,
+.p-entry.content-stream-entry.is-focused {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+}
+
+.p-entry.content-stream-entry.is-read {
+  background: var(--a-color-bg);
+}
+
+.p-entry.content-stream-entry.is-read:hover,
+.p-entry.content-stream-entry.is-read:focus-within {
+  background: var(--a-color-surface-muted);
+}
+
+.feed-entry-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.85rem;
+  margin-top: 0.55rem;
+  color: var(--a-color-muted-soft);
+  font-size: 0.72rem;
+}
+
+:deep(.feed-entry-footer > *) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
   background: var(--a-color-surface-muted);

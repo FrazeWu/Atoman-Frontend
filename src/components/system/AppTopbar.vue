@@ -27,6 +27,24 @@
         </a>
       </div>
 
+      <button
+        v-if="showMobileBack"
+        type="button"
+        class="mobile-back-btn"
+        aria-label="返回上一页"
+        title="返回上一页"
+        data-testid="mobile-back-button"
+        @click="goBack"
+      >
+        <ArrowLeft :size="18" aria-hidden="true" />
+      </button>
+
+      <MobileModuleSwitcher
+        v-if="!isAuthRoute"
+        :label="mobileModuleLabel"
+        :current-module="mobileModule"
+      />
+
       <nav v-if="!isAuthRoute" class="nav">
         <a
           v-for="room in navRooms"
@@ -61,7 +79,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
-import { Menu, Sun, Moon } from 'lucide-vue-next'
+import { Menu, Sun, Moon, ArrowLeft } from 'lucide-vue-next'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { useSheetStore } from '@/stores/sheet'
@@ -71,6 +89,7 @@ import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } fr
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
+import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 
 const { toggleSidebar } = useSidebar()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
@@ -102,6 +121,26 @@ const siteContext = computed(() => {
 })
 
 const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.value)
+
+const mobileModule = computed<ModuleRoomKey | null>(() => (
+  siteContext.value.type === 'module' ? siteContext.value.module : null
+))
+const mobileModuleLabel = computed(() => {
+  if (mobileModule.value) return moduleRooms[mobileModule.value].name
+  if (route.path.startsWith('/studio')) return 'Studio'
+  return '模块'
+})
+
+const detailRoutePattern = /^\/(?:feed\/item\/|music\/(?:artist|album|song|playlist)\/|forum\/topic\/|debate\/(?!search(?:\/|$)|me(?:\/|$)|rules(?:\/|$))[^/]+|timeline\/person\/|podcasts\/(?:show|episode)\/|videos\/(?:watch|collections)\/|posts\/(?:post|notes)\/)/
+const showMobileBack = computed(() => !isAuthRoute.value && detailRoutePattern.test(route.path))
+
+const goBack = () => {
+  if (window.history.length > 1 && window.history.state?.back) {
+    router.back()
+    return
+  }
+  if (mobileModule.value) void router.push(moduleUrl(mobileModule.value))
+}
 
 const isDark = ref(false)
 const isScrolled = ref(false)
@@ -395,28 +434,42 @@ const toggleTheme = (event: MouseEvent) => {
   }
 }
 
+.mobile-back-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+}
+
+.mobile-back-btn:hover,
+.mobile-back-btn:focus-visible {
+  background: var(--a-color-surface-muted);
+}
+
 @media (max-width: 720px) {
+  .mobile-back-btn {
+    display: inline-flex;
+  }
+
   .topbar-inner {
+
     padding: 0 1rem 0 0;
     gap: 0;
   }
 
   .brand-link {
-    min-width: unset;
-    padding: 0 1rem;
+    display: none;
   }
 
-  .logo-block {
-    width: 100%;
-  }
-
-  .logo-meta {
-    flex-wrap: wrap;
-    gap: 0.25rem 0.5rem;
-  }
-
-  .logo-notice {
-    white-space: normal;
+  .mobile-module-switcher {
+    display: inline-flex;
   }
 
   .nav {

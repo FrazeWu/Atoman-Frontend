@@ -276,6 +276,7 @@
         :subscription-rules="subscriptionRules"
         :rule-apply-summary="ruleApplySummary"
         :busy="busy"
+        :above-player="true"
         @create-rule="$emit('create-rule')"
         @edit-rule="$emit('edit-rule', $event)"
         @save-rule="$emit('save-rule', $event)"
@@ -343,6 +344,7 @@
         : '确定删除这个订阅源吗？'"
     confirm-text="删除"
     danger
+    above-player
     :loading="props.busy"
     @confirm="confirmDelete"
     @cancel="deletePending = null"

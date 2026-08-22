@@ -36,8 +36,12 @@ function formatCount(value: number) {
 }
 
 onMounted(async () => {
-  const response = await apiRequestResult(`${useApiUrl()}/site/visits`)
-  if (response.ok && response.data?.data) stats.value = response.data.data
+  try {
+    const response = await apiRequestResult(`${useApiUrl()}/site/visits`)
+    if (response.ok && response.data?.data) stats.value = response.data.data
+  } catch {
+    stats.value = null
+  }
 })
 </script>
 

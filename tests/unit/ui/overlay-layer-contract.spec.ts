@@ -14,6 +14,13 @@ const lyricEditorSource = read(
 );
 const topbarSource = read("src/components/system/AppTopbar.vue");
 const mobileNavSource = read("src/components/system/MobileBottomNav.vue");
+const feedSource = read("src/views/feed/FeedView.vue");
+const countryFieldSource = read("src/components/ui/PCountryRegionField.vue");
+const adminUserDetailSource = read("src/components/admin/AdminUserDetailSheet.vue");
+const subscriptionManageSource = read("src/components/feed/SubscriptionManageSheet.vue");
+const subscriptionRulesSource = read("src/components/feed/SubscriptionRulesPanel.vue");
+const musicCreationSource = read("src/components/music/MusicCreationFlowDrawer.vue");
+const songLyricsEditorSource = read("src/components/music/MusicSongLyricsEditorDrawer.vue");
 
 describe("overlay layer contract", () => {
 	it("defines one ordered semantic layer scale", () => {
@@ -39,8 +46,18 @@ describe("overlay layer contract", () => {
 		expect(lyricsSource).toContain("z-index: var(--a-z-player-lyrics);");
 		expect(topbarSource).toContain("z-index: var(--a-z-navigation);");
 		expect(mobileNavSource).toContain("z-index: var(--a-z-navigation);");
+		expect(feedSource).toContain("z-index: var(--a-z-navigation);");
+		expect(feedSource).not.toContain("z-index: 1100;");
+		expect(countryFieldSource).toContain("import PModal from './PModal.vue'");
+		expect(countryFieldSource).toMatch(/<PModal[\s\S]*above-player/);
+		expect(countryFieldSource).not.toContain("country-field-dialog-backdrop");
 		expect(lyricEditorSource).toContain("above-player");
 		expect(lyricsSource).toMatch(/<PConfirm[\s\S]*above-player/);
+		expect(adminUserDetailSource).toMatch(/<PConfirm[\s\S]*pendingRevoke[\s\S]*above-player/);
+		expect(subscriptionManageSource).toMatch(/<PConfirm[\s\S]*deletePending[\s\S]*above-player/);
+		expect(subscriptionRulesSource).toContain(':above-player="props.abovePlayer"');
+		expect(musicCreationSource).toMatch(/<PConfirm[\s\S]*above-player/);
+		expect(songLyricsEditorSource).toMatch(/<PConfirm[\s\S]*above-player/);
 		expect(sheetSource).toMatch(
 			/\.p-sheet-root--above-player \.p-sheet-backdrop\s*\{[^}]*z-index: var\(--a-z-player-sheet-backdrop\);/,
 		);
@@ -73,6 +90,7 @@ describe("overlay layer contract", () => {
 		);
 		expect(sheetSource).toContain("bottom: var(--a-content-bottom-offset);");
 		expect(styleSource).toContain("body:has(.app-shell.has-sidebar)");
+		expect(styleSource).toContain("body:has(.studio-layout)");
 		expect(styleSource).toMatch(
 			/body:has\(\.app-shell\.has-sidebar\) \{[^}]*--a-content-bottom-offset:/s,
 		);

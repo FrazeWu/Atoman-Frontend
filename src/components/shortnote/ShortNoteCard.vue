@@ -156,14 +156,16 @@ function formatDate(value: string) {
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.55rem;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.short-note-card:hover {
+.short-note-card:hover,
+.short-note-card:focus-within {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
 }
 
 .short-note-card__header {

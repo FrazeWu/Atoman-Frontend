@@ -11,8 +11,9 @@
     v-else
     :title="displayTitle"
     :summary="displaySummary"
-    class="blog-item-card"
+    class="blog-item-card content-stream-entry"
     :class="[`is-type-${cardType}`, { 'is-read': isRead }]"
+    :is-focused="isFocused"
     @click="handleClick"
   >
     <!-- Visual / Cover / Avatar -->
@@ -74,6 +75,8 @@
           :bookmarked="bookmarked"
           :in-reading-list="inReadingList"
           :starred="starred"
+          :show-star="cardType === 'feed_item'"
+          :show-labels="false"
           @toggle-bookmark="emit('toggle-bookmark')"
           @toggle-reading-list="emit('toggle-reading-list')"
           @toggle-star="emit('toggle-star')"
@@ -93,11 +96,18 @@
         </a>
       </slot>
     </template>
+
+    <template v-if="postItem" #footer>
+      <span><Eye :size="13" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
+      <span><Gauge :size="13" aria-hidden="true" />评分 {{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
+      <span><Bookmark :size="13" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
+    </template>
   </PEntry>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { Bookmark, Eye, Gauge } from 'lucide-vue-next'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -117,6 +127,7 @@ const props = withDefaults(defineProps<{
   inReadingList?: boolean
   starred?: boolean
   isRead?: boolean
+  isFocused?: boolean
   isPodcastPlaying?: boolean
   sourceTitle?: string
   sourcePath?: string
@@ -125,6 +136,7 @@ const props = withDefaults(defineProps<{
   inReadingList: false,
   starred: false,
   isRead: false,
+  isFocused: false,
   isPodcastPlaying: false,
 })
 
@@ -220,23 +232,37 @@ function stripHtml(html: string): string {
 function handleClick() {
   emit('click')
 }
+
+function formatCount(value?: number) {
+  if (value === undefined || value === null) return '0'
+  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K`
+  return String(value)
+}
+
+function formatRating(score?: number, count?: number) {
+  if (!count) return '— (0)'
+  return `${Number(score || 0).toFixed(1)} (${count})`
+}
+
 </script>
 
 <style scoped>
 .blog-item-card__visual {
-  width: 6.5rem;
-  height: 6.5rem;
-  border-radius: 10px;
+  width: 7rem;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border-radius: var(--a-radius-control);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .blog-item-card:hover .blog-item-card__visual {
-  border-color: color-mix(in srgb, var(--a-color-primary, #3b82f6) 40%, var(--a-color-border-soft));
-  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.14);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .blog-item-card__cover {
@@ -292,6 +318,12 @@ function handleClick() {
 
 .blog-item-card__time {
   color: var(--a-color-muted-soft);
+}
+
+@media (max-width: 640px) {
+  .blog-item-card__visual {
+    width: 5.5rem;
+  }
 }
 
 .blog-item-card__external-link {

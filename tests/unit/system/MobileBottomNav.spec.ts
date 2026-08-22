@@ -1,7 +1,7 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { flushPromises } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 // @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
 import MobileBottomNav from '../../../src/components/system/MobileBottomNav.vue'
 import {
@@ -10,202 +10,85 @@ import {
   type MobileMoreItem,
   type MobilePrimaryTab,
 } from '../../../src/composables/useResponsiveShell'
-import { moduleUrl } from '../../../src/composables/useSubdomainNav'
-import { useAuthStore } from '../../../src/stores/auth'
 
-const { navigateModuleWithShutter } = vi.hoisted(() => ({
-  navigateModuleWithShutter: vi.fn(),
-}))
-
-vi.mock('@/composables/useAsyncNavigate', () => ({
-  useAsyncNavigate: () => ({
-    navigateModuleWithShutter,
-  }),
-}))
+const makeRouter = () => createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    { path: '/music', component: { template: '<div />' } },
+    { path: '/music/discover', component: { template: '<div />' } },
+    { path: '/music/songs', component: { template: '<div />' } },
+    { path: '/music/bookmarks', component: { template: '<div />' } },
+    { path: '/music/me', component: { template: '<div />' } },
+  ],
+})
 
 describe('useResponsiveShell', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    navigateModuleWithShutter.mockReset()
+  it('returns the stable tabs for each module context', () => {
+    expect(getMobilePrimaryTabs('music').map((tab: MobilePrimaryTab) => tab.label)).toEqual(['发现', '搜索', '资料库', '我的'])
+    expect(getMobilePrimaryTabs('forum').map((tab: MobilePrimaryTab) => tab.label)).toEqual(['话题', '分类', '搜索', '我的'])
+    expect(getMobilePrimaryTabs('debate').map((tab: MobilePrimaryTab) => tab.label)).toEqual(['辩题', '搜索', '我的'])
+    expect(getMobilePrimaryTabs('timeline').map((tab: MobilePrimaryTab) => tab.label)).toEqual(['时间轴', '人物', '搜索', '我的'])
+    expect(getMobilePrimaryTabs('podcast').map((tab: MobilePrimaryTab) => tab.label)).toEqual(['发现', '播放列表', '订阅', '我的'])
+    expect(getMobilePrimaryTabs('video').map((tab: MobilePrimaryTab) => tab.label)).toEqual(['发现', '搜索', '订阅', '收藏'])
   })
 
-  it('returns four fixed primary mobile tabs', () => {
-    const tabs = getMobilePrimaryTabs()
-
-    expect(tabs.map((tab: MobilePrimaryTab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
-    expect(tabs.map((tab: MobilePrimaryTab) => tab.label)).toEqual(['首页', '订阅', '创作', '更多'])
-    expect(tabs[0]?.href).toBe(moduleUrl('blog'))
-    expect(tabs[1]?.href).toBe(moduleUrl('feed'))
-    expect(tabs[2]?.href).toBe('/studio')
-    expect(tabs[3]?.href).toBeUndefined()
-  })
-
-  it('moves low-frequency modules into the more sheet', () => {
+  it('keeps all modules in the module switcher collection', () => {
     const items = getMobileMoreItems()
-
-    expect(items.map((item: MobileMoreItem) => item.module)).toContain('forum')
-    expect(items.map((item: MobileMoreItem) => item.module)).toContain('timeline')
-    expect(items.map((item: MobileMoreItem) => item.module)).not.toContain('feed')
+    const modules = items.map((item: MobileMoreItem) => item.module)
+    expect(modules).toEqual(['feed', 'blog', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
   })
 
-  it('returns defensive copies for tab and more-sheet collections', () => {
-    const firstTabs = getMobilePrimaryTabs()
-    const secondTabs = getMobilePrimaryTabs()
-    const firstMoreItems = getMobileMoreItems()
-    const secondMoreItems = getMobileMoreItems()
+  it('returns defensive copies for tab and switcher collections', () => {
+    const firstTabs = getMobilePrimaryTabs('music')
+    const secondTabs = getMobilePrimaryTabs('music')
+    const firstItems = getMobileMoreItems()
+    const secondItems = getMobileMoreItems()
 
     expect(firstTabs).not.toBe(secondTabs)
     expect(firstTabs[0]).not.toBe(secondTabs[0])
-    expect(firstMoreItems).not.toBe(secondMoreItems)
-    expect(firstMoreItems[0]).not.toBe(secondMoreItems[0])
+    expect(firstItems).not.toBe(secondItems)
+    expect(firstItems[0]).not.toBe(secondItems[0])
 
     firstTabs[0]!.label = 'changed'
-    firstMoreItems[0]!.label = 'changed'
-
-    expect(secondTabs[0]?.label).toBe('首页')
-    expect(secondMoreItems[0]?.label).toBe('音乐')
+    firstItems[0]!.label = 'changed'
+    expect(secondTabs[0]?.label).toBe('发现')
+    expect(secondItems[0]?.label).toBe('订阅')
   })
 
-  it('leaves the portal unselected and reacts to module route changes', async () => {
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/', component: { template: '<div />' } },
-        { path: '/feed', component: { template: '<div />' } },
-      ],
-    })
-
-    await router.push('/')
+  it('renders only the current module tabs and marks the active route', async () => {
+    const router = makeRouter()
+    await router.push('/music')
     await router.isReady()
+    const wrapper = mount(MobileBottomNav, { global: { plugins: [router] } })
 
-    const wrapper = mount(MobileBottomNav, {
-      global: {
-        plugins: [router],
-      },
-    })
+    expect(wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]').map((tab) => tab.text())).toEqual(['发现', '搜索', '资料库', '我的'])
+    expect(wrapper.get('[data-tab-key="discover"]').classes()).toContain('is-active')
 
-    const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
-
-    expect(tabs).toHaveLength(4)
-    expect(tabs.map((tab) => tab.text())).toEqual(['首页', '订阅', '创作', '更多'])
-    expect(wrapper.find('.mobile-bottom-nav__tab.is-active').exists()).toBe(false)
-
-    await router.push('/feed')
+    await router.push('/music/songs')
     await wrapper.vm.$nextTick()
-    expect(wrapper.get('[data-tab-key="feed"]').classes()).toContain('is-active')
-
-    await router.push('/')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('.mobile-bottom-nav__tab.is-active').exists()).toBe(false)
+    expect(wrapper.get('[data-tab-key="search"]').classes()).toContain('is-active')
   })
 
-  it('opens and closes the more sheet from the more tab', async () => {
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/', component: { template: '<div />' } },
-      ],
-    })
-
-    await router.push('/')
+  it('navigates to a module tab target without opening a global more menu', async () => {
+    const router = makeRouter()
+    await router.push('/music')
     await router.isReady()
+    const wrapper = mount(MobileBottomNav, { global: { plugins: [router] } })
 
-    const wrapper = mount(MobileBottomNav, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(false)
-
-    await wrapper.get('[data-tab-key="more"]').trigger('click')
-
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('论坛')
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('时间线')
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('关于')
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('联系我们')
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('问题反馈')
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('使用条款')
-    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('隐私政策')
-    expect(wrapper.findAll('.sheet-close-btn-floating')).toHaveLength(1)
-    expect(wrapper.find('[data-testid="mobile-more-sheet-close"]').exists()).toBe(false)
-
-    await wrapper.get('.sheet-close-btn-floating').trigger('click')
-
+    await wrapper.get('[data-tab-key="library"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/music/bookmarks')
     expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(false)
   })
 
-  it('opens existing footer content from the more sheet', async () => {
+  it('does not render module tabs for the portal context', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [
-        { path: '/', component: { template: '<div />' } },
-      ],
+      routes: [{ path: '/', component: { template: '<div />' } }],
     })
-
     await router.push('/')
     await router.isReady()
-
-    const wrapper = mount(MobileBottomNav, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    await wrapper.get('[data-tab-key="more"]').trigger('click')
-    await wrapper.get('[data-footer-panel="about"]').trigger('click')
-    await wrapper.vm.$nextTick()
-
-    const sheet = wrapper.get('.site-footer-sheet')
-    expect(sheet.text()).toContain('我们希望打造一个纯粹、求真的网络空间。')
-    expect(sheet.find('h1, h2').exists()).toBe(false)
-  })
-
-  it('shows account settings and logout in the mobile more sheet', async () => {
-	const router = createRouter({
-	  history: createMemoryHistory(),
-	  routes: [
-		{ path: '/', component: { template: '<div />' } },
-		{ path: '/login', component: { template: '<div />' } },
-		{ path: '/users/:handle/settings', component: { template: '<div />' } },
-	  ],
-	})
-	await router.push('/')
-	const pinia = createPinia()
-	setActivePinia(pinia)
-	const auth = useAuthStore()
-	auth.user = { username: 'alice', email: 'alice@example.com', role: 'user' }
-	auth.isAuthenticated = true
-	const logout = vi.spyOn(auth, 'logout').mockResolvedValue()
-	const wrapper = mount(MobileBottomNav, { global: { plugins: [pinia, router] } })
-	await wrapper.get('[data-tab-key="more"]').trigger('click')
-	expect(wrapper.get('[data-testid="mobile-account-settings"]').attributes('href')).toBe('/users/alice/settings')
-	await wrapper.get('[data-testid="mobile-account-logout"]').trigger('click')
-	await flushPromises()
-	expect(logout).toHaveBeenCalled()
-	expect(router.currentRoute.value.path).toBe('/login')
-  })
-
-  it('uses shutter navigation for the create tab target', async () => {
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/', component: { template: '<div />' } },
-      ],
-    })
-
-    await router.push('/')
-    await router.isReady()
-
-    const wrapper = mount(MobileBottomNav, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    await wrapper.get('[data-tab-key="create"]').trigger('click')
-
-    expect(navigateModuleWithShutter).toHaveBeenCalledTimes(1)
-    expect(navigateModuleWithShutter).toHaveBeenCalledWith('/studio')
+    const wrapper = mount(MobileBottomNav, { global: { plugins: [router] } })
+    expect(wrapper.find('[data-testid="mobile-bottom-nav-tab"]').exists()).toBe(false)
   })
 })

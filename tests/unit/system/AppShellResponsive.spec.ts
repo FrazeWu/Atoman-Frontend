@@ -218,7 +218,9 @@ describe("shared responsive shell CSS", () => {
 		expect(styleSource).toMatch(
 			/\.p-sidebar\s*\{[\s\S]*?height:\s*calc\(\s*100dvh\s*-[\s\S]*?overflow-y:\s*auto;/,
 		);
-		expect(mainContentBlock).toContain("padding: 2.5rem 2rem");
+   expect(mainContentBlock).toContain(
+      "padding: var(--a-page-start-space) 2rem",
+    );
 		expect(mainContentBlock).not.toContain("position: sticky;");
 		expect(mainContentBlock).not.toContain("height: calc(100dvh");
 		expect(mainContentBlock).not.toContain("overflow-y: auto;");

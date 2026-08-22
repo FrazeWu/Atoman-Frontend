@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { allCountries } from 'country-region-data'
+import PModal from './PModal.vue'
 
 type ContinentCode = 'AF' | 'AN' | 'AS' | 'EU' | 'NA' | 'OC' | 'SA'
 
@@ -419,23 +420,15 @@ function chooseCountry(country: CountryOption) {
       <span class="country-field-trigger-meta">{{ panelOpen ? '收起' : '选择' }}</span>
     </button>
 
-    <div
-      v-if="panelOpen"
-      data-test="artist-nationality-dialog"
-      class="country-field-dialog-backdrop"
-      @click.self="closePanel"
+    <PModal
+      :show="panelOpen"
+      title="国籍选择"
+      size="lg"
+      above-player
+      @close="closePanel"
     >
-      <div class="country-field-dialog">
-        <div class="country-field-dialog-header">
-          <div>
-            <p class="country-field-dialog-kicker">国籍选择</p>
-            <h3 class="country-field-dialog-title">先选洲，再选国家或地区</h3>
-          </div>
-
-          <button type="button" class="country-field-dialog-close" @click="closePanel">
-            关闭
-          </button>
-        </div>
+      <div data-test="artist-nationality-dialog" class="country-field-dialog">
+        <p class="country-field-dialog-title">先选洲，再选国家或地区</p>
 
         <div class="country-field-dialog-grid">
           <section class="country-field-dialog-section">
@@ -478,7 +471,7 @@ function chooseCountry(country: CountryOption) {
           </section>
         </div>
       </div>
-    </div>
+    </PModal>
   </div>
 </template>
 
@@ -537,63 +530,17 @@ function chooseCountry(country: CountryOption) {
   letter-spacing: 0;
 }
 
-.country-field-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  background: rgba(16, 18, 20, 0.24);
-}
-
 .country-field-dialog {
-  width: min(56rem, 100%);
-  max-height: min(44rem, calc(100vh - 3rem));
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1.4rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: #fff;
-  border-radius: var(--a-radius-modal);
-  box-shadow: var(--a-shadow-modal);
-}
-
-.country-field-dialog-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.country-field-dialog-kicker {
-  margin: 0 0 0.25rem;
-  color: var(--a-color-muted);
-  font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .country-field-dialog-title {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--a-color-text);
-}
-
-.country-field-dialog-close {
-  border: 1px solid var(--a-color-border-soft);
-  background: #fff;
-  color: var(--a-color-muted);
-  font: inherit;
-  padding: 0.45rem 0.8rem;
-  cursor: pointer;
-  border-radius: var(--a-radius-control);
+  color: var(--a-color-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .country-field-dialog-grid {
@@ -659,15 +606,6 @@ function chooseCountry(country: CountryOption) {
 }
 
 @media (max-width: 720px) {
-  .country-field-dialog-backdrop {
-    padding: 0.75rem;
-  }
-
-  .country-field-dialog {
-    max-height: calc(100vh - 1.5rem);
-    padding: 1rem;
-  }
-
   .country-field-dialog-grid {
     grid-template-columns: 1fr;
     min-height: auto;

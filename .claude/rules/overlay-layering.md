@@ -34,6 +34,7 @@ A local z-index is allowed only for controls inside an already-owned component s
 - Do not implement page-level overlays with ad hoc fixed elements, custom teleport targets, or custom z-index tokens.
 - A normal overlay must not cover the player.
 - `above-player` is an explicit exception. Add it only when the overlay must remain usable above the player, and keep the decision visible at the call site.
+- A teleported `PModal` or `PConfirm` inside an `above-player` Sheet must also receive `above-player`; Vue nesting does not inherit page-level z-index across the Teleport boundary. Reusable child components should expose this as an explicit prop.
 - `PSheet` and drawers use a solid background. Do not add backdrop blur, translucent panel backgrounds, or color-mixing backgrounds to the panel.
 - A sheet backdrop is a pointer-capture layer. It may be visually transparent, but it still blocks interaction outside the active sheet.
 - Only the top sheet may own the active backdrop and close on `Esc`. Lower sheet layers remain mounted, are inert, and can be activated through the sheet rail.

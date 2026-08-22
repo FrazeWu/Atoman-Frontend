@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+// @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
 import AppTopbar from '@/components/system/AppTopbar.vue'
 
 const makeRouter = async () => {
@@ -12,6 +13,7 @@ const makeRouter = async () => {
       { path: '/', component: { template: '<div />' } },
       { path: '/feed', component: { template: '<div />' } },
       { path: '/music', component: { template: '<div />' } },
+      { path: '/music/song/:id', component: { template: '<div />' } },
       { path: '/studio/video/content', component: { template: '<div />' } },
       { path: '/login', component: { template: '<div />' } },
     ],
@@ -60,6 +62,23 @@ describe('AppTopbar route reactivity', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('shows a mobile detail back action while retaining the module context', async () => {
+    const router = await makeRouter()
+    await router.push('/music/song/track-1')
+    const wrapper = mount(AppTopbar, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('[data-testid="mobile-back-button"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="mobile-module-switcher"]').text()).toContain('音乐')
+
+    await wrapper.get('[data-testid="mobile-back-button"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/music')
   })
 
   it('does not activate subscriptions inside Studio', async () => {

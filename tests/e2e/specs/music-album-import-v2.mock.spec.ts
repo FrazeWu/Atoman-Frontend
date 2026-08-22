@@ -286,6 +286,31 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 			((basicFieldsBox?.width ?? 0) + (bioFieldBox?.width ?? 0)),
 	).toBeLessThan(0.67);
 
+	const basicFieldMetrics = await creationDialog
+		.locator(".album-details-step__basic-field")
+		.evaluateAll((fields) =>
+			fields.map((field) => {
+				const input = field.querySelector<HTMLElement>(
+					".p-input, .birth-date-input, .p-select-root",
+				);
+				const label = field.querySelector<HTMLElement>(
+					".p-field-label, .field-label",
+				);
+				return {
+					field: field.getAttribute("data-field"),
+					overflows: field.scrollWidth > field.clientWidth + 1,
+					inputRight: input?.getBoundingClientRect().right ?? 0,
+					fieldRight: field.getBoundingClientRect().right,
+					labelHeight: label?.getBoundingClientRect().height ?? 0,
+				};
+			}),
+		);
+		expect(basicFieldMetrics.every((field) => !field.overflows)).toBe(true);
+		expect(
+			basicFieldMetrics.every((field) => field.inputRight <= field.fieldRight + 1),
+		).toBe(true);
+		expect(Math.max(...basicFieldMetrics.map((field) => field.labelHeight))).toBeLessThanOrEqual(24);
+
 	const dateInput = creationDialog.getByTestId("album-details-date-input");
 	await dateInput.click();
 	await dateInput.press("Control+A");

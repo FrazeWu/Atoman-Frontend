@@ -141,7 +141,7 @@ describe("Music ArtistsView.vue", () => {
 					bio: "Artist bio",
 				},
 			],
-			meta: { page: 1, page_size: 48, total: 1, has_more: false },
+			meta: { page: 1, page_size: 12, total: 1, has_more: false },
 		});
 		mocks.listArtistBookmarks.mockResolvedValue({ data: [] });
 	});
@@ -161,7 +161,7 @@ describe("Music ArtistsView.vue", () => {
 
 		expect(mocks.listRecommendedArtists).toHaveBeenCalledWith("hot", {
 			page: 1,
-			page_size: 48,
+			page_size: 12,
 		});
 		expect(mocks.listArtistBookmarks).not.toHaveBeenCalled();
 		expect(mocks.getMusicArtist).not.toHaveBeenCalled();
@@ -233,7 +233,7 @@ describe("Music ArtistsView.vue", () => {
 		expect(mocks.listMusicArtists).toHaveBeenCalledWith({
 			q: "kanye",
 			page: 1,
-			page_size: 48,
+			page_size: 12,
 		});
 		expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1);
 		expect(wrapper.text()).toContain("Ye");

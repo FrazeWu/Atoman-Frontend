@@ -63,7 +63,7 @@ let activeRequestId = 0
 let searchTimer: ReturnType<typeof setTimeout> | undefined
 
 const starredArtistIds = ref<string[]>([])
-const artistMeta = ref({ page: 1, page_size: 48, total: 0, has_more: false })
+const artistMeta = ref({ page: 1, page_size: 12, total: 0, has_more: false })
 const { applyRouteSelection } = useMusicRouteSelection({
   openAlbum,
   closeAlbum,
@@ -139,11 +139,11 @@ async function fetchArtists(page = 1) {
     const query = searchQuery.value.trim()
     if (query) {
       searchLoading.value = true
-      const response = await listMusicArtists({ q: query, page: 1, page_size: 48 })
+      const response = await listMusicArtists({ q: query, page: 1, page_size: 12 })
       if (requestId !== activeRequestId) return
       artists.value = response.data
       searchResults.value = response.data
-      artistMeta.value = response.meta ?? { page: 1, page_size: 48, total: response.data.length, has_more: false }
+      artistMeta.value = response.meta ?? { page: 1, page_size: 12, total: response.data.length, has_more: false }
       return
     }
 
@@ -152,25 +152,25 @@ async function fetchArtists(page = 1) {
     if (requestId !== activeRequestId) return
 
     if (activeTab.value === 'subscribed') {
-      const response = await listMusicLibrary<MusicArtistBookmark>('artist', { page, page_size: 48 })
+      const response = await listMusicLibrary<MusicArtistBookmark>('artist', { page, page_size: 12 })
       if (requestId !== activeRequestId) return
       artists.value = response.data
         .map((bookmark) => bookmark.artist)
         .filter((artist): artist is MusicArtistListItem => Boolean(artist))
-      artistMeta.value = response.meta ?? { page, page_size: 48, total: response.data.length, has_more: false }
+      artistMeta.value = response.meta ?? { page, page_size: 12, total: response.data.length, has_more: false }
       return
     }
 
     const [recommendedResponse, ownedDraftResponse] = await Promise.all([
-      listRecommendedArtists(recommendationMode.value, { page, page_size: 48 }),
+      listRecommendedArtists(recommendationMode.value, { page, page_size: 12 }),
       authStore.isAuthenticated && page === 1
-        ? listMusicArtists({ page: 1, page_size: 48 })
+        ? listMusicArtists({ page: 1, page_size: 12 })
         : Promise.resolve(null),
     ])
     if (requestId !== activeRequestId) return
     artistMeta.value = recommendedResponse.meta ?? {
       page,
-      page_size: 48,
+      page_size: 12,
       total: recommendedResponse.data.length,
       has_more: false,
     }

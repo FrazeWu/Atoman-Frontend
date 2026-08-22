@@ -80,7 +80,7 @@ const discoverArtists = ref<MusicRecommendationItem[]>([])
 const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
 type DiscoverSection = 'album' | 'artist' | 'playlist'
 type DiscoverPagination = { page: number; page_size: number; total: number; has_more: boolean }
-const discoverPageSize = 8
+const discoverPageSize = 6
 const discoverSectionMeta = reactive<Record<DiscoverSection, DiscoverPagination>>({
   album: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
   artist: { page: 1, page_size: discoverPageSize, total: 0, has_more: false },
@@ -97,7 +97,7 @@ const searchLoading = ref(false)
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
 const albumItems = ref<MusicAlbumListItem[]>([])
-const albumMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
+const albumMeta = ref({ page: 1, page_size: 12, total: 0, has_more: false })
 let activeSearchRequestId = 0
 let albumSearchTimer: ReturnType<typeof setTimeout> | null = null
 let bookmarkRequestId = 0
@@ -434,7 +434,7 @@ async function fetchAlbumIndex(nextPage = 1) {
     const response = await listMusicAlbums({
       ...(query ? { q: query } : {}),
       page: nextPage,
-      page_size: 24,
+      page_size: 12,
       sort: 'hot',
     })
     if (!request.isCurrent()) return

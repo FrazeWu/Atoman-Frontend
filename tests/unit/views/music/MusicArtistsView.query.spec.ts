@@ -2,6 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { computed } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import ArtistsView from '@/views/music/ArtistsView.vue'
 
 vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<div />' } }))
@@ -55,7 +56,7 @@ describe('Music ArtistsView query sync', () => {
     mocks.listArtistBookmarks.mockReset()
     mocks.listMusicArtists.mockResolvedValue({
       data: [],
-      meta: { page: 1, page_size: 48, total: 0, has_more: false },
+      meta: { page: 1, page_size: 12, total: 0, has_more: false },
     })
     mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
   })
@@ -70,7 +71,7 @@ describe('Music ArtistsView query sync', () => {
 
     await flushPromises()
 
-    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 48 })
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 12 })
     expect((wrapper.find('[data-testid="music-search-input"]').element as HTMLInputElement).value).toBe('blur')
   })
 })

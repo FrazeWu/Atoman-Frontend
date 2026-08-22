@@ -45,8 +45,8 @@ onMounted(async () => {
 .site-visit-stats {
   position: static;
   flex: 0 0 auto;
-  width: 220px;
-  padding: 12px 14px;
+  width: 184px;
+  padding: 9px 10px;
   border: 1px solid var(--a-color-border, #d9d9d9);
   border-radius: 8px;
   background: var(--a-color-bg, #fff);
@@ -56,7 +56,7 @@ onMounted(async () => {
 }
 
 .site-visit-stats__heading {
-  margin-bottom: 9px;
+  margin-bottom: 6px;
   color: var(--a-color-fg);
   font-size: var(--a-text-sm);
   font-weight: var(--a-font-weight-strong);
@@ -65,7 +65,7 @@ onMounted(async () => {
 .site-visit-stats__metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 6px;
 }
 
 .site-visit-stats__metric {
@@ -88,7 +88,7 @@ onMounted(async () => {
 
 @media (max-width: 767px) {
   .site-visit-stats {
-    width: 200px;
+  width: 176px;
   }
 }
 </style>

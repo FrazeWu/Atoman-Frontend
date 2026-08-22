@@ -1,6 +1,6 @@
 <template>
-  <aside v-if="stats" class="site-visit-stats" aria-label="站点访问统计" aria-live="polite">
-    <div class="site-visit-stats__heading">站点访问</div>
+  <aside v-if="stats" class="site-visit-stats" aria-label="用户数统计" aria-live="polite">
+    <div class="site-visit-stats__heading">用户数统计</div>
     <div class="site-visit-stats__metrics">
       <div class="site-visit-stats__metric">
         <span>总访问量</span>

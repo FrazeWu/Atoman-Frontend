@@ -326,10 +326,11 @@ async function toggleTrackFavorite(songId: string) {
   }
 }
 
-async function addTrackToPlaylist(playlistId: string, songId: string) {
+async function addTrackToPlaylist(playlistId: string, songId: string, close?: () => void) {
   if (!requireLogin()) return
   try {
     await addSongToPlaylist(playlistId, songId)
+    close?.()
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
   } catch (err) {
@@ -724,41 +725,43 @@ watch(
                   <Plus :size="12" />
                 </button>
               </template>
-              <div class="track-add-menu">
-                <div class="track-add-menu-header">添加到歌单</div>
-                <div v-if="playlistsLoading && !playlists.length" class="track-add-menu-empty">正在加载歌单...</div>
-                <div v-else-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
-                <button
-                  v-for="p in playlists"
-                  :key="p.id"
-                  type="button"
-                  class="track-add-menu-item"
-                  @click="addTrackToPlaylist(String(p.id), track.id)"
-                >
-                  {{ p.name }}
-                </button>
-                <div v-if="playlists.length || playlistsLoading" class="track-add-menu-pagination">
+              <template #default="{ close }">
+                <div class="track-add-menu">
+                  <div class="track-add-menu-header">添加到歌单</div>
+                  <div v-if="playlistsLoading && !playlists.length" class="track-add-menu-empty">正在加载歌单...</div>
+                  <div v-else-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
                   <button
+                    v-for="p in playlists"
+                    :key="p.id"
                     type="button"
-                    class="track-add-menu-page-btn"
-                    :disabled="playlistsLoading || playlistPage <= 1"
-                    aria-label="上一页歌单"
-                    @click.stop="changePlaylistPage(-1)"
+                    class="track-add-menu-item"
+                    @click="addTrackToPlaylist(String(p.id), track.id, close)"
                   >
-                    <ChevronLeft :size="14" aria-hidden="true" />
+                    {{ p.name }}
                   </button>
-                  <span>第 {{ playlistPage }} 页</span>
-                  <button
-                    type="button"
-                    class="track-add-menu-page-btn"
-                    :disabled="playlistsLoading || !playlistHasMore"
-                    aria-label="下一页歌单"
-                    @click.stop="changePlaylistPage(1)"
-                  >
-                    <ChevronRight :size="14" aria-hidden="true" />
-                  </button>
+                  <div v-if="playlists.length || playlistsLoading" class="track-add-menu-pagination">
+                    <button
+                      type="button"
+                      class="track-add-menu-page-btn"
+                      :disabled="playlistsLoading || playlistPage <= 1"
+                      aria-label="上一页歌单"
+                      @click.stop="changePlaylistPage(-1)"
+                    >
+                      <ChevronLeft :size="14" aria-hidden="true" />
+                    </button>
+                    <span>第 {{ playlistPage }} 页</span>
+                    <button
+                      type="button"
+                      class="track-add-menu-page-btn"
+                      :disabled="playlistsLoading || !playlistHasMore"
+                      aria-label="下一页歌单"
+                      @click.stop="changePlaylistPage(1)"
+                    >
+                      <ChevronRight :size="14" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </template>
             </PDropdown>
             <button
               type="button"

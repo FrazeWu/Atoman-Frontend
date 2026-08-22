@@ -122,26 +122,29 @@
                 <Plus :size="16" />
               </button>
             </template>
-            <div class="track-add-menu">
-              <div class="track-add-menu-header">添加到歌单</div>
-              <div v-if="!playlists.length" class="track-add-menu-empty">
-                暂无歌单
+            <template #default="{ close }">
+              <div class="track-add-menu">
+                <div class="track-add-menu-header">添加到歌单</div>
+                <div v-if="!playlists.length" class="track-add-menu-empty">
+                  暂无歌单
+                </div>
+                <button
+                  v-for="p in playlists"
+                  :key="p.id"
+                  type="button"
+                  class="track-add-menu-item"
+                  @click="
+                    addTrackToPlaylist(
+                      String(p.id),
+                      String(player.currentSong.id),
+                      close,
+                    )
+                  "
+                >
+                  {{ p.name }}
+                </button>
               </div>
-              <button
-                v-for="p in playlists"
-                :key="p.id"
-                type="button"
-                class="track-add-menu-item"
-                @click="
-                  addTrackToPlaylist(
-                    String(p.id),
-                    String(player.currentSong.id),
-                  )
-                "
-              >
-                {{ p.name }}
-              </button>
-            </div>
+            </template>
           </PDropdown>
 
           <button
@@ -500,10 +503,11 @@ async function toggleTrackFavorite(songId: string) {
 }
 
 
-async function addTrackToPlaylist(playlistId: string, songId: string) {
+async function addTrackToPlaylist(playlistId: string, songId: string, close?: () => void) {
   if (!requireLogin()) return;
   try {
     await addSongToPlaylist(playlistId, songId);
+    close?.();
     toastMessage.value = "已成功添加到歌单";
     toastVisible.value = true;
   } catch (err) {

@@ -142,11 +142,12 @@ async function toggleFavorite() {
   }
 }
 
-async function addToPlaylist(playlistId: string) {
+async function addToPlaylist(playlistId: string, close?: () => void) {
   if (!detail.value || !requireLogin()) return
   actionBusy.value = 'playlist'
   try {
     await addSongToPlaylist(playlistId, String(detail.value.song.id))
+    close?.()
     showToast('已添加到歌单')
   } catch (cause) {
     reportError(cause, '添加歌曲到歌单失败')
@@ -327,10 +328,12 @@ watch(
               <template #trigger>
                 <PButton variant="secondary" @click="preparePlaylistMenu"><Plus :size="16" aria-hidden="true" />添加到歌单</PButton>
               </template>
-              <div class="song-detail__playlist-menu">
-                <p v-if="!playlists.length">暂无歌单</p>
-                <button v-for="playlist in playlists" :key="playlist.id" type="button" @click="addToPlaylist(String(playlist.id))">{{ playlist.name }}</button>
-              </div>
+              <template #default="{ close }">
+                <div class="song-detail__playlist-menu">
+                  <p v-if="!playlists.length">暂无歌单</p>
+                  <button v-for="playlist in playlists" :key="playlist.id" type="button" @click="addToPlaylist(String(playlist.id), close)">{{ playlist.name }}</button>
+                </div>
+              </template>
             </PDropdown>
             <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" />下一首</PButton>
             <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" />加入队列</PButton>

@@ -24,6 +24,7 @@ const {
 	openMusicCreationFlow,
 	openAlbum,
 	openArtist,
+	refreshPlaylists,
 	getMusicAlbum,
 	playAlbum,
 	togglePlay,
@@ -43,6 +44,7 @@ const {
 	openMusicCreationFlow: vi.fn(),
 	openAlbum: vi.fn(),
 	openArtist: vi.fn(),
+	refreshPlaylists: vi.fn(),
 	getMusicAlbum: vi.fn(),
 	playAlbum: vi.fn(),
 	togglePlay: vi.fn(),
@@ -71,6 +73,7 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		openMusicCreationFlow,
 		openAlbum,
 		openArtist,
+		refreshPlaylists,
 	}),
 }));
 
@@ -108,6 +111,7 @@ describe("AlbumDrawer.vue", () => {
 		openMusicCreationFlow.mockReset();
 		openAlbum.mockReset();
 		openArtist.mockReset();
+		refreshPlaylists.mockReset();
 		getMusicAlbum.mockReset();
 		playAlbum.mockReset();
 		togglePlay.mockReset();
@@ -116,6 +120,7 @@ describe("AlbumDrawer.vue", () => {
 		listAlbumBookmarks.mockReset();
 		listAlbumContributors.mockReset();
 		listMusicPlaylists.mockReset();
+		addMusicPlaylistSong.mockReset();
 		createAlbumBookmark.mockReset();
 		deleteAlbumBookmark.mockReset();
 		requireLogin.mockReset();
@@ -555,6 +560,24 @@ describe("AlbumDrawer.vue", () => {
 		expect(listMusicPlaylists).toHaveBeenCalledWith({ page: 2, page_size: 20 });
 		expect(wrapper.text()).toContain("第二歌单");
 		expect(wrapper.text()).not.toContain("第一歌单");
+	});
+
+	it("closes the add-to-playlist menu after a successful add", async () => {
+		listMusicPlaylists.mockResolvedValue(
+			paginated([{ id: "playlist-1", name: "第一歌单" }], 1) as never,
+		);
+		addMusicPlaylistSong.mockResolvedValue({});
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+		await wrapper.get(".track-add-btn").trigger("click");
+		expect(wrapper.find(".track-add-menu").exists()).toBe(true);
+
+		await wrapper.get(".track-add-menu-item").trigger("click");
+		await flushPromises();
+
+		expect(addMusicPlaylistSong).toHaveBeenCalledWith("playlist-1", "101");
+		expect(wrapper.find(".track-add-menu").exists()).toBe(false);
 	});
 
 	it("keeps the album visible when an extra request fails", async () => {

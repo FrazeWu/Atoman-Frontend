@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -98,6 +99,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       </div>
       <h1>{{ post.title }}</h1>
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
+      <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <div class="prose-blog post-sheet-content" v-html="renderedContent" />
     </article>
   </PSheet>

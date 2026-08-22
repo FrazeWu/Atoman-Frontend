@@ -28,6 +28,7 @@ describe('BlogPostSheet', () => {
       title: '文章一',
       content: '正文',
       created_at: '2026-07-12T00:00:00Z',
+      updated_at: '2026-07-13T00:00:00Z',
     })))
   })
 
@@ -65,6 +66,10 @@ describe('BlogPostSheet', () => {
     })
     await flushPromises()
 
+    expect(wrapper.get('[role="note"]').text()).toContain('最近更新时间：')
+    expect(wrapper.get('[role="note"]').text()).toMatch(
+      /\d{4}年\d+月\d+日，距今已过去 \d+ 周，请注意信息有效性。/,
+    )
     await wrapper.get('button').trigger('click')
     await flushPromises()
 

@@ -31,6 +31,8 @@
         @toggle-academic="isAcademic = $event"
       />
 
+      <BlogPostUpdateNotice :updated-at="post.updated_at" />
+
       <div :class="isAcademic ? 'a-page' : 'a-page-md'">
         <!-- Markdown content -->
         <div 
@@ -100,6 +102,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PostHeader from '@/components/blog/PostHeader.vue'
+import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'

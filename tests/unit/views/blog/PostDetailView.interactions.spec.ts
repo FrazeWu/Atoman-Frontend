@@ -246,6 +246,10 @@ describe("PostDetailView shared interactions", () => {
 		expect(mocks.interactions.likeCount.value).toBe(7);
 		expect(mocks.interactions.fetchComments).not.toHaveBeenCalled();
 		expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(true);
+		expect(wrapper.get('[role="note"]').text()).toContain("最近更新时间：");
+		expect(wrapper.get('[role="note"]').text()).toMatch(
+			/\d{4}年\d+月\d+日，距今已过去 \d+ 周，请注意信息有效性。/,
+		);
 		expect(wrapper.get('a[href="/studio/blog/post-1/edit"]').text()).toBe(
 			"编辑",
 		);

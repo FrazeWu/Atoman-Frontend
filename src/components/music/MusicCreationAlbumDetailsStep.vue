@@ -756,7 +756,7 @@ watch(
 
 .album-details-step__basic-fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.9fr) minmax(7rem, 1.3fr) minmax(0, 0.9fr);
   gap: 1.25rem;
   min-width: 0;
   min-height: 100%;
@@ -817,7 +817,8 @@ watch(
 .album-details-step__contributor-field :deep(.picker-search .p-field) {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
+  align-items: start;
+  align-content: start;
   gap: 0.45rem;
 }
 
@@ -843,7 +844,13 @@ watch(
 }
 
 .album-details-step__basic-field :deep(.birth-date-field) {
-  min-inline-size: 11.5rem;
+  min-inline-size: 0;
+}
+
+.album-details-step__basic-field :deep(.birth-date-input) {
+  min-width: 0;
+  padding-inline: 0.45rem 1.9rem;
+  font-size: 0.82rem;
 }
 
 .album-details-step__basic-field :deep(.field-label-row) {

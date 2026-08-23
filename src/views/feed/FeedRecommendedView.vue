@@ -1048,7 +1048,7 @@ onMounted(() => {
 .topic-pill {
   padding: 0.3rem 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   font-size: 0.78rem;
@@ -1120,7 +1120,7 @@ onMounted(() => {
 
 .stream-column__title-group h2 {
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 650;
   margin: 0;
   color: var(--a-color-fg);
 }
@@ -1132,7 +1132,7 @@ onMounted(() => {
 
 .section-badge {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 650;
   padding: 0.15em 0.5em;
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
@@ -1188,7 +1188,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   padding: 0.1em 0.45em;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   font-size: 0.65rem;
   font-weight: 600;
   line-height: 1.5;

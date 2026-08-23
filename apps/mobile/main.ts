@@ -9,6 +9,7 @@ import '../../src/assets/editor.css'
 import '../../src/assets/feed-reader.css'
 
 installStaleViteChunkRecovery()
+document.documentElement.dataset.atomanApp = 'mobile'
 
 const app = createApp(MobileApp)
 app.config.errorHandler = (error, _instance, info) => {

@@ -185,7 +185,7 @@
             class="mobile-player-view__action"
             :aria-label="isPodcast ? '打开节目说明' : '打开歌词'"
             :title="isPodcast ? '打开节目说明' : '打开歌词'"
-            @click="player.toggleLyrics"
+            @click="openLyrics"
           >
             <FileText :size="20" aria-hidden="true" />
             <span>{{ isPodcast ? '说明' : '歌词' }}</span>
@@ -247,22 +247,11 @@
       <p>从音乐发现页选择一首歌曲开始播放。</p>
       <RouterLink to="/music" class="mobile-player-view__back-link">返回音乐</RouterLink>
     </section>
-
-    <MusicLyricsPanel
-      v-if="player.showLyrics && player.currentSong"
-      :song-id="String(player.currentSong.id)"
-      :song-title="player.currentSong.title"
-      :artist-text="artistText"
-      :current-time-seconds="player.currentTime"
-      @close="player.toggleLyrics"
-      @seek="player.seek"
-    />
-    <PToast v-model="toastVisible" :message="toastMessage" type="success" />
-  </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Clock3,
   FileText,
@@ -285,15 +274,12 @@ import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import { usePodcastPlayerActions } from '@/composables/usePodcastPlayerActions'
 import AudioWaveformProgress from '@/components/music/AudioWaveformProgress.vue'
-import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
-import PToast from '@/components/ui/PToast.vue'
 
 const player = usePlayerStore()
+const router = useRouter()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
-const toastVisible = ref(false)
-const toastMessage = ref('')
 const feedback = ref('')
 
 const artistText = computed(() => player.currentSong?.artist || '未知艺术家')
@@ -315,8 +301,11 @@ const modeLabel = computed(() => {
 })
 
 function showToast(message: string) {
-  toastMessage.value = message
-  toastVisible.value = true
+  feedback.value = message
+}
+
+function openLyrics() {
+  if (player.currentSong) void router.push('/music/lyrics')
 }
 
 const { addPodcastBookmark, addPodcastListenLater } = usePodcastPlayerActions(showToast)

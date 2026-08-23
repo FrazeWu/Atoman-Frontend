@@ -176,8 +176,33 @@
       </aside>
     </div>
 
+    <section
+      v-if="isMobileViewport && mobilePage && mobileAnnotationOpen"
+      class="music-lyrics-panel__mobile-annotations"
+      aria-label="歌词解析"
+    >
+      <MusicAnnotationWorkspace
+        :annotations="visibleAnnotations"
+        :can-write="isAuthenticated"
+        :current-user-ids="currentUserIds"
+        :total-count="activeAnnotationCount"
+        :selection-mode="annotationSelectionMode"
+        :editor-visible="annotationEditorVisible"
+        :selected-text="annotationSelectedText"
+        :initial-body="annotationInitialBody"
+        :editor-mode="annotationEditorMode"
+        @create="startAnnotationSelection"
+        @vote="handleVoteAnnotation"
+        @edit="handleEditAnnotation"
+        @delete="handleDeleteAnnotation"
+        @rebind="handleRebindAnnotation"
+        @save="handleSaveAnnotation"
+        @cancel="handleCancelAnnotation"
+        @confirm-rebind="handleConfirmRebind"
+      />
+    </section>
     <PSheet
-      v-if="isMobileViewport"
+      v-else-if="isMobileViewport"
       :show="mobileAnnotationOpen"
       side="bottom"
       title="歌词解析"
@@ -209,6 +234,7 @@
 
     <MusicLyricEditorDrawer
       v-if="isAuthenticated"
+      :presentation="mobilePage ? 'page' : 'sheet'"
       :show="isLyricEditorOpen"
       :song-title="songTitle"
       :content="lyrics?.content ?? ''"
@@ -272,12 +298,14 @@ const props = defineProps<{
   currentTimeSeconds: number
   focusAnnotationId?: string
   startRebind?: boolean
-}>()
+  presentation?: 'sheet' | 'page'
 
 const emit = defineEmits<{
   close: []
   seek: [timeSeconds: number]
 }>()
+
+const mobilePage = computed(() => props.presentation === 'page')
 
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()

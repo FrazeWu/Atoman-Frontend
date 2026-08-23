@@ -1,5 +1,5 @@
 <template>
-  <header class="mobile-app-topbar">
+  <header class="mobile-app-topbar" :class="{ 'is-large-title': isLargeTitle, 'is-scrolled': isScrolled }">
     <button
       v-if="showMobileBack"
       type="button"
@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ArrowLeft } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
@@ -37,6 +37,8 @@ const availableModuleSet = new Set<ModuleRoomKey>(availableModules)
 const desktopAppUrl = desktopAppBaseUrl()
 const route = useRoute()
 const router = useRouter()
+const isScrolled = ref(false)
+const isLargeTitle = computed(() => !isScrolled.value && ['/feed', '/posts', '/music'].includes(route.path))
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, '', route.path))
 const isBlogContextRoute = computed(() => /^\/(?:post\/|posts\/(?:post\/|channel\/|notes(?:\/|$))|channel\/|collection\/|channels\/|users\/)/.test(route.path))
@@ -47,16 +49,28 @@ const mobileModule = computed<ModuleRoomKey | null>(() => {
   return isBlogContextRoute.value ? 'blog' : null
 })
 const mobileModuleLabel = computed(() => {
+  if (route.path === '/modules') return '模块'
   if (route.path.startsWith('/inbox')) return '私信'
   if (route.path.startsWith('/studio')) return 'Studio'
   if (mobileModule.value === 'blog') return '博客'
-  if (mobileModule.value === 'feed') return '订阅'
+  if (mobileModule.value === 'feed') return 'Feed'
   if (mobileModule.value === 'music') return '音乐'
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|artist\/|album\/|song\/|playlist\/))/.test(route.path))
+const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|artist\/|album\/|song\/|playlist\/))/.test(route.path)))
+
+function updateScrollState() {
+  isScrolled.value = window.scrollY > 8
+}
+
+onMounted(() => window.addEventListener('scroll', updateScrollState, { passive: true }))
+onUnmounted(() => window.removeEventListener('scroll', updateScrollState))
 
 const goBack = () => {
+  if (route.path === '/modules') {
+    void router.push('/feed')
+    return
+  }
   if (window.history.length > 1 && window.history.state?.back) {
     router.back()
     return
@@ -76,7 +90,22 @@ const goBack = () => {
   gap: 0.25rem;
   padding: 0 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface);
+}
+
+.mobile-app-topbar.is-large-title {
+  min-height: 5.25rem;
+  align-items: flex-end;
+  padding-bottom: 0.75rem;
+}
+
+.mobile-app-topbar.is-large-title .mobile-module-switcher {
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+
+.mobile-app-topbar.is-scrolled {
+  background: var(--a-color-surface);
 }
 
 .mobile-app-topbar__back {

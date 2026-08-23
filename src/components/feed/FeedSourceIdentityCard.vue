@@ -163,7 +163,7 @@ const compactCount = (value: number) => {
 .feed-source-card:focus-visible {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 3px 0 0 var(--a-color-text), 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--a-shadow-sm);
 }
 
 /* 头部 */
@@ -183,7 +183,7 @@ const compactCount = (value: number) => {
   display: grid;
   place-items: center;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 650;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -221,7 +221,7 @@ const compactCount = (value: number) => {
   display: inline-flex;
   align-items: center;
   padding: 0.1em 0.45em;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   font-size: 0.65rem;
   font-weight: 600;
   background: var(--a-color-surface-muted);
@@ -270,7 +270,7 @@ const compactCount = (value: number) => {
 
 .feed-source-card__sub-btn:hover:not(:disabled) {
   background: var(--a-color-surface-muted);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .feed-source-card__sub-btn.is-subscribed,
@@ -287,7 +287,7 @@ const compactCount = (value: number) => {
   padding: 0.4rem 0.65rem;
   list-style: none;
   background: var(--a-color-surface-muted);
-  border-radius: calc(var(--a-radius-control) - 2px);
+  border-radius: var(--a-radius-control);
   display: grid;
   gap: 0.25rem;
 }
@@ -303,7 +303,7 @@ const compactCount = (value: number) => {
 
 .preview-bullet {
   color: var(--a-color-muted-soft);
-  font-weight: bold;
+  font-weight: 600;
   flex-shrink: 0;
 }
 

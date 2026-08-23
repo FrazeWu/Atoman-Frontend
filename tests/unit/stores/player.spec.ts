@@ -363,6 +363,21 @@ describe("player store", () => {
 		expect(player.currentSong?.id).toBe("song-uuid-2");
 	});
 
+	it("does not overwrite a completed song when advancing automatically", () => {
+		const player = usePlayerStore();
+		const firstSong = { id: "ended-1", title: "Ended 1", audio_url: "ended-1.mp3" } as any;
+		const secondSong = { id: "ended-2", title: "Ended 2", audio_url: "ended-2.mp3" } as any;
+
+		player.playAlbum([firstSong, secondSong]);
+		audioInstances[0].emit("ended");
+
+		const firstSongProgress = mocks.saveMusicPlaybackProgress.mock.calls
+			.filter(([payload]) => payload.song_id === "ended-1")
+			.map(([payload]) => payload.completed);
+		expect(firstSongProgress).toEqual([true]);
+		expect(player.currentSong?.id).toBe("ended-2");
+	});
+
 	it("keeps music and podcast items with the same raw id distinct", () => {
 		const player = usePlayerStore();
 		const musicSong = {

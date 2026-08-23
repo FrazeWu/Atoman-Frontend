@@ -904,7 +904,7 @@ onUnmounted(() => {
 .filter-toggle-btn.active {
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .feed-loading,
@@ -1017,7 +1017,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   padding: 0.1em 0.45em;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.02em;

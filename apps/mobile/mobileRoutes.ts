@@ -23,6 +23,10 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		meta: { authLayout: true },
 	},
 	{
+		path: "/modules",
+		component: () => import("./MobileModuleDirectoryView.vue"),
+	},
+	{
 		path: "/inbox",
 		component: () => import("@/views/feed/InboxPage.vue"),
 		meta: requiresAuth,

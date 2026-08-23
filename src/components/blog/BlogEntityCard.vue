@@ -165,7 +165,7 @@ const formattedUpdatedAt = computed(() => {
 .blog-entity-card__fallback {
   color: var(--a-color-fg);
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .blog-entity-card__info {
@@ -179,12 +179,13 @@ const formattedUpdatedAt = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .blog-entity-card__title {
   margin: 0;
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 650;
   line-height: 1.35;
   color: var(--a-color-fg);
   overflow: hidden;
@@ -194,11 +195,11 @@ const formattedUpdatedAt = computed(() => {
 
 .blog-entity-card__badge {
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-muted);
   background: var(--a-color-surface-muted);
   padding: 0.1em 0.4em;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   flex-shrink: 0;
 }
 
@@ -269,7 +270,7 @@ const formattedUpdatedAt = computed(() => {
 
 .preview-bullet {
   color: var(--a-color-muted-soft);
-  font-weight: 700;
+  font-weight: 600;
   flex-shrink: 0;
 }
 

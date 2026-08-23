@@ -13,7 +13,7 @@
       <div class="search-main">
         <slot name="input">
           <div class="search-input-wrapper">
-            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
@@ -28,6 +28,16 @@
               @blur="$emit('blur')"
               @keydown.enter="$emit('submit')"
             >
+            <button
+              v-if="query"
+              type="button"
+              class="search-clear-btn"
+              aria-label="清空搜索词"
+              title="清空"
+              @click="$emit('update:query', '')"
+            >
+              ✕
+            </button>
           </div>
         </slot>
 
@@ -131,21 +141,23 @@ function handleInput(event: Event) {
   width: 100%;
   min-width: min(100%, 24rem);
   position: relative;
-  border: var(--a-border);
-  background: color-mix(in srgb, var(--a-color-bg) 94%, #f3eee5 6%);
-  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
-  padding: 0.6rem 0.8rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
+  box-shadow: var(--a-shadow-sm);
+  padding: 0.65rem 0.85rem;
   display: grid;
-  align-items: center; /* 确保垂直居中 */
+  align-items: center;
   gap: 0.4rem;
   overflow: hidden;
   box-sizing: border-box;
   height: 100%;
-  transition:
-    width 0.6s cubic-bezier(0.2, 1, 0.2, 1),
-    padding 0.6s cubic-bezier(0.2, 1, 0.2, 1),
-    box-shadow 0.6s cubic-bezier(0.2, 1, 0.2, 1),
-    gap 0.6s cubic-bezier(0.2, 1, 0.2, 1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-frame:focus-within {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-md);
 }
 
 .search-frame.is-open:not(.is-overlay-results) {
@@ -153,7 +165,7 @@ function handleInput(event: Event) {
 }
 
 .search-frame.is-compact {
-  padding: 0 1rem; /* 内部完全靠 flex 垂直居中，高度由外部容器指定 */
+  padding: 0 0.85rem;
   gap: 0.35rem;
 }
 
@@ -163,7 +175,7 @@ function handleInput(event: Event) {
 }
 
 .search-frame.is-compact .search-input {
-  font-size: 0.98rem;
+  font-size: 0.95rem;
 }
 
 .search-main {
@@ -175,14 +187,15 @@ function handleInput(event: Event) {
 }
 
 .search-btn {
-  border: none;
-  background: transparent;
-  color: var(--a-color-text);
+  border: 1px solid var(--a-color-text);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   cursor: pointer;
-  font-family: var(--a-font-sans);
+  font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 800;
-  padding: 0 0.5rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
   white-space: nowrap;
   transition: all 0.15s ease;
   display: flex;
@@ -191,7 +204,7 @@ function handleInput(event: Event) {
 }
 
 .search-btn:hover {
-  color: var(--a-color-muted);
+  opacity: 0.9;
 }
 
 .search-frame__head {
@@ -204,8 +217,8 @@ function handleInput(event: Event) {
 .search-frame__eyebrow,
 .search-frame__status {
   font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -222,16 +235,7 @@ function handleInput(event: Event) {
   display: flex;
   align-items: center;
   width: 100%;
-  border-bottom: 1px solid transparent;
-  transition: border-bottom-color 0.2s ease;
-}
-
-.search-input-wrapper:focus-within {
-  border-bottom-color: var(--a-color-accent-confirm);
-}
-
-.search-input-wrapper:focus-within .search-icon {
-  color: var(--a-color-text);
+  flex: 1;
 }
 
 .search-icon {
@@ -242,14 +246,18 @@ function handleInput(event: Event) {
   margin-right: 0.5rem;
 }
 
+.search-frame:focus-within .search-icon {
+  color: var(--a-color-primary);
+}
+
 .search-input {
   width: 100%;
   flex: 1;
   border: 0;
   background: transparent;
-  color: var(--a-color-text);
+  color: var(--a-color-fg);
   padding: 0.35rem 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -262,15 +270,27 @@ function handleInput(event: Event) {
   outline: none;
 }
 
+.search-clear-btn {
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+.search-clear-btn:hover {
+  color: var(--a-color-fg);
+}
 
 .search-dropdown {
   margin-top: 0.25rem;
   padding: 0.75rem 0 0;
-  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 10%, transparent);
+  border-top: 1px solid var(--a-color-border-soft);
   background: transparent;
   max-height: 420px;
   overflow-y: auto;
-  animation: searchSurfaceReveal 0.6s cubic-bezier(0.2, 1, 0.2, 1);
 }
 
 .search-frame.is-overlay-results {
@@ -283,14 +303,14 @@ function handleInput(event: Event) {
 
 .search-frame.is-overlay-results .search-dropdown {
   position: absolute;
-  top: calc(100% - 1px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
   margin-top: 0;
-  background: color-mix(in srgb, var(--a-color-bg) 94%, #f3eee5 6%);
-  border: var(--a-border);
-  border-top: 0;
-  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-dropdown);
   z-index: 80;
 }
 
@@ -299,14 +319,13 @@ function handleInput(event: Event) {
   padding: 0.75rem 1.05rem;
   color: var(--a-color-muted);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .search-actions {
   display: inline-flex;
   align-items: stretch;
   justify-self: end;
-  padding-top: 0.35rem;
   white-space: nowrap;
 }
 
@@ -324,17 +343,6 @@ function handleInput(event: Event) {
   box-shadow: none;
 }
 
-@keyframes searchSurfaceReveal {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (max-width: 720px) {
   .search-frame {
     min-width: 100%;
@@ -344,17 +352,16 @@ function handleInput(event: Event) {
     gap: 0.75rem;
   }
 
-
   .search-actions {
     justify-self: stretch;
-    padding-top: 0.75rem;
-    border-top: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--a-color-border-soft);
   }
 }
 
 .search-dropdown-slide-enter-active,
 .search-dropdown-slide-leave-active {
-  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  transition: max-height 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
   overflow: hidden;
 }
 

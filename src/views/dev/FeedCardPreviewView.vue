@@ -715,7 +715,7 @@ const mockChannels = ref([
 
 .showcase-box {
   background: var(--a-color-surface-muted);
-  border: 1px dashed var(--a-color-border);
+  border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
   padding: 0.85rem;
 }

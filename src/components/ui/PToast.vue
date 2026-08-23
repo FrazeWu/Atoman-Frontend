@@ -22,6 +22,9 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
+
+const isMobile = isStandaloneMobileApp()
 
 const props = withDefaults(defineProps<{
   modelValue?: boolean
@@ -94,6 +97,21 @@ onUnmounted(clearTimer)
   border: 1px solid var(--a-color-border);
   box-shadow: var(--a-shadow-dropdown);
   transition: top 0.3s ease;
+}
+
+.p-toast.p-toast--inline {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 1rem 0;
+  transform: none;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.p-toast.p-toast--inline .p-toast-content {
+  display: inline-flex;
 }
 
 .p-toast-dot {

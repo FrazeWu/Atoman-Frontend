@@ -233,7 +233,7 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 	});
 
 	await page.goto("/music/artist/artist-e2e-1");
-	await page.getByRole("button", { name: "添加专辑/歌曲" }).click();
+	await page.getByRole("button", { name: "创建专辑/歌曲" }).click();
 	const creationDialog = page.getByRole("dialog", { name: "创建音乐条目" });
 	const filesInput = creationDialog.getByTestId("album-import-files-input");
 	await expect(filesInput).toBeAttached();

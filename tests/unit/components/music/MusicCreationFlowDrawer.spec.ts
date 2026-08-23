@@ -383,7 +383,7 @@ describe("MusicCreationFlowDrawer", () => {
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		expect(wrapper.get('[data-testid="artist-next-button"]').text()).toBe(
-			"创建新专辑",
+			"创建专辑/歌曲",
 		);
 		await wrapper
 			.get('[data-testid="artist-link-album-button"]')
@@ -475,7 +475,7 @@ describe("MusicCreationFlowDrawer", () => {
 		});
 	});
 
-	it("创建艺术家失败时保留当前表单", async () => {
+	it("关联现有专辑时创建艺术家失败会保留当前表单", async () => {
 		const baseFlow = createFlowState();
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "artist",
@@ -500,7 +500,9 @@ describe("MusicCreationFlowDrawer", () => {
 		);
 
 		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await wrapper
+			.get('[data-testid="artist-link-album-button"]')
+			.trigger("click");
 		await flushPromises();
 
 		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
@@ -509,12 +511,16 @@ describe("MusicCreationFlowDrawer", () => {
 		).toContain("创建艺术家失败");
 	});
 
-	it("完全未知的出生日期可以满足必填并提交", async () => {
+	it("创建专辑/歌曲无需等待艺术家接口并保留未知日期", async () => {
 		const baseFlow = createFlowState();
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "artist",
 			draft: {
 				...baseFlow.draft,
+				albumDetails: {
+					...baseFlow.draft.albumDetails,
+					contributors: [],
+				},
 				artist: {
 					...baseFlow.draft.artist,
 					id: null,
@@ -532,21 +538,21 @@ describe("MusicCreationFlowDrawer", () => {
 				},
 			},
 		});
-		createMusicArtistMock.mockResolvedValue({
-			id: "artist-unknown-date",
-			name: "Unknown Date Artist",
-		} as never);
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
-		await flushPromises();
+		await nextTick();
 
-		expect(createMusicArtistMock).toHaveBeenCalledWith(
+		expect(createMusicArtistMock).not.toHaveBeenCalled();
+		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(
+			drawerMocks.state.value.creationFlow?.draft.albumDetails.contributors[0],
+		).toEqual(
 			expect.objectContaining({
-				birth_date: "----/--/--",
+				artistId: null,
+				name: "Unknown Date Artist",
 			}),
 		);
-		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumDetails");
 		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
 		expect(drawerMocks.openArtist).not.toHaveBeenCalled();
 		expect(drawerMocks.openNestedAction).not.toHaveBeenCalled();

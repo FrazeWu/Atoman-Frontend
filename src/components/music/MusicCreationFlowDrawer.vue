@@ -12,7 +12,7 @@ import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
 import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'
-import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
+import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, primaryAlbumRole, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
 import { normalizeMusicImportSource } from '@/utils/musicImportSource'
@@ -292,7 +292,7 @@ function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
 
 const stepCopy: Record<CreationStepKey, { cta: string }> = {
   artist: {
-    cta: '创建新专辑',
+    cta: '创建专辑/歌曲',
   },
   albumImport: {
     cta: '继续',
@@ -790,6 +790,43 @@ function confirmClose() {
   closeCurrentCreationFlow()
 }
 
+function ensurePrimaryArtistContributor(flow: NonNullable<typeof creationFlow.value>) {
+  const artist = flow.draft.artist
+  const primaryName = artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
+    || artist.stageNames.find((item) => item.name.trim())?.name.trim()
+    || artist.legalName.trim()
+  if (!primaryName) return
+
+  const existing = flow.draft.albumDetails.contributors.find((contributor) => (
+    artist.id
+      ? contributor.artistId === artist.id
+      : !contributor.artistId && contributor.name.trim() === primaryName
+  ))
+  if (existing) {
+    existing.name = primaryName
+    existing.avatarUrl = artist.avatarUrl
+    existing.kind = artist.kind
+    existing.locked = !!artist.id
+    if (!existing.roles.some((role) => role.role === 'primary')) {
+      existing.roles.unshift(primaryAlbumRole(`role-${artist.id || 'new-artist'}-primary`))
+    }
+    return
+  }
+
+  flow.draft.albumDetails.contributors = [
+    {
+      id: `contributor-${artist.id || 'new-artist'}`,
+      artistId: artist.id,
+      name: primaryName,
+      avatarUrl: artist.avatarUrl,
+      kind: artist.kind,
+      locked: !!artist.id,
+      roles: [primaryAlbumRole(`role-${artist.id || 'new-artist'}-primary`)],
+    },
+    ...flow.draft.albumDetails.contributors,
+  ]
+}
+
 async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_album' = 'create_album') {
   const flow = creationFlow.value
   if (!flow) return
@@ -801,7 +838,7 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
   if (flow.step === 'artist') {
     flow.submitting = true
     try {
-      if (!flow.draft.artist.id) {
+      if (artistNextAction === 'link_album' && !flow.draft.artist.id) {
         const artist = await musicApi.createMusicArtist(buildCreateArtistInput(flow))
         if (!artist.id?.trim()) throw new Error('创建艺术家草稿失败')
         flow.draft.artist.id = artist.id
@@ -826,6 +863,7 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         })
         return
       }
+      ensurePrimaryArtistContributor(flow)
       setMusicCreationStep('albumDetails')
     } catch (error) {
       flow.errorMessage = error instanceof Error ? error.message : '创建艺术家草稿失败'

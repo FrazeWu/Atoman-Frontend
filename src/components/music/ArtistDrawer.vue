@@ -547,7 +547,7 @@ watch([releaseType, albumSortMode], () => {
           data-testid="artist-create-album-action"
           @click="createAlbum"
         >
-          添加专辑/歌曲
+          创建专辑/歌曲
         </PButton>
 		<PButton
 			variant="secondary"
@@ -668,7 +668,7 @@ watch([releaseType, albumSortMode], () => {
       <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="!loading && !releaseLoading && releaseErrorMessage" class="state-line state-line--error">{{ releaseErrorMessage }}</p>
       <p v-else-if="!loading && !releaseLoading && artist && !(releaseType === 'album' ? sortedAlbums.length : artistSongs.length)" class="state-line">
-        {{ releaseType === 'album' ? '暂无专辑，可以添加专辑/歌曲。' : '暂无歌曲。' }}
+        {{ releaseType === 'album' ? '暂无专辑，可以创建专辑/歌曲。' : '暂无歌曲。' }}
       </p>
 
       <template v-if="!loading && !releaseLoading && artist && releaseType === 'album'">

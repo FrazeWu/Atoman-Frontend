@@ -742,7 +742,7 @@ describe("MusicCreationFlowDrawer", () => {
 		).toBe("保存");
 		expect(
 			drawerMocks.state.value.creationFlow?.draft.albumDetails.source,
-		).toBe("");
+		).toBe("https://example.test/album");
 		if (!drawerMocks.state.value.creationFlow)
 			throw new Error("creation flow missing");
 		drawerMocks.state.value.creationFlow.draft.albumDetails.source =

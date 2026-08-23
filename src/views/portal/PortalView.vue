@@ -66,14 +66,16 @@
                   class="content-stream-entry portal-hot__recommendation-card"
                   :class="{ 'has-image': item.image_url }"
                 >
-                  <!-- 缩略图（有图时展示） -->
-                  <template v-if="item.image_url" #visual>
+                  <!-- 缩略图（有图且未加载失败时展示） -->
+                  <template v-if="item.image_url && !failedImageKeys.has(item.id)" #visual>
                     <div class="portal-hot__recommendation-image portal-hot__thumb">
                       <img
                         :src="item.image_url"
                         :alt="item.title"
+                        referrerpolicy="no-referrer"
                         :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
                         :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                        @error="handleImageError(item.id)"
                       >
                       <div class="portal-hot__image-overlay" />
                     </div>
@@ -307,6 +309,11 @@ const siteAccessStore = useSiteAccessStore()
 const loading = ref(true)
 const error = ref('')
 const hotContent = ref<PortalHotResponse>({ featured: [], sections: [] })
+const failedImageKeys = ref<Set<string>>(new Set())
+
+function handleImageError(id: string) {
+  failedImageKeys.value.add(id)
+}
 
 const visibleRooms = computed(() => (
   moduleNavOrder

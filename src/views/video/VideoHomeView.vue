@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getVideoRecommendations, listVideos } from '@/api/video'
 import { computed, ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
@@ -10,8 +11,14 @@ import PaginationBar from '@/components/ui/PaginationBar.vue'
 import type { Video } from '@/types'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import type { ReferenceTarget } from '@/api/references'
+import { modulePathUrl } from '@/router/siteUrls'
 
 const videos = ref<Video[]>([])
+const router = useRouter()
+const videoSearchTypes = ['video'] as const
+const videoSearchQuery = ref('')
 const recommendedVideos = ref<Video[]>([])
 const loading = ref(false)
 const recommendationLoading = ref(false)
@@ -32,6 +39,10 @@ type RecommendedVideoPayload = {
 }
 let fetchVideosSeq = 0
 let fetchRecommendationsSeq = 0
+
+function openVideoSearchTarget(target: ReferenceTarget) {
+  void router.push(modulePathUrl('video', target.path))
+}
 
 async function fetchVideos() {
   const seq = ++fetchVideosSeq
@@ -83,7 +94,20 @@ watch(sort, fetchVideos)
 
 <template>
   <div class="vh-wrap">
-    <PPageHeader title="视频" mb="1.25rem" />
+    <PPageHeader title="视频" mb="1.25rem">
+      <template #action>
+        <div class="vh-search">
+          <ModuleSearch
+            v-model="videoSearchQuery"
+            :target-types="videoSearchTypes"
+            placeholder="搜索视频"
+            input-test-id="video-module-search-input"
+            dropdown-test-id="video-module-search-dropdown"
+            @select="openVideoSearchTarget"
+          />
+        </div>
+      </template>
+    </PPageHeader>
 
     <ContentContinueSection module="video" />
 
@@ -175,6 +199,10 @@ watch(sort, fetchVideos)
   padding: 0 1.5rem 6rem;
 }
 
+.vh-search {
+  width: min(22rem, 38vw);
+}
+
 .vh-recommendations {
   margin-bottom: 2rem;
 }
@@ -246,6 +274,12 @@ watch(sort, fetchVideos)
   display: grid;
   grid-template-columns: repeat(1, 1fr);
   gap: 3rem 1.5rem;
+}
+
+@media (max-width: 720px) {
+  .vh-search {
+    width: 100%;
+  }
 }
 
 @media (min-width: 520px) {

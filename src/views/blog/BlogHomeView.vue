@@ -358,7 +358,7 @@ const selectRecommendationMode = (value: string) => {
 }
 
 const submitBlogSearch = (value: string) => {
-  void router.replace({ path: '/', query: value ? { q: value } : {} })
+  void router.replace({ path: route.path, query: value ? { q: value } : {} })
 }
 
 const openBlogSearchTarget = (target: ReferenceTarget) => {

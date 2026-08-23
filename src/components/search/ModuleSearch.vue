@@ -29,6 +29,7 @@
         </button>
       </div>
       <p v-else-if="error" class="module-search__message">搜索失败，请稍后再试。</p>
+      <p v-else class="module-search__message">没有匹配的结果</p>
     </template>
   </SearchSurface>
 </template>
@@ -102,21 +103,22 @@ function cancelRequest() {
 async function search(value: string) {
   const trimmed = value.trim()
   const currentRequestId = ++requestId
-  controller = new AbortController()
+  const requestController = new AbortController()
+  controller = requestController
   loading.value = true
   error.value = false
   try {
-    const targets = await referenceApi.search(props.targetTypes, trimmed, props.limit, controller.signal)
+    const targets = await referenceApi.search(props.targetTypes, trimmed, props.limit, requestController.signal)
     if (currentRequestId !== requestId) return
     results.value = targets.filter((target) => target.available)
   } catch {
-    if (currentRequestId !== requestId || controller.signal.aborted) return
+    if (currentRequestId !== requestId || requestController.signal.aborted) return
     results.value = []
     error.value = true
   } finally {
     if (currentRequestId === requestId) {
       loading.value = false
-      controller = null
+      if (controller === requestController) controller = null
     }
   }
 }
@@ -149,7 +151,13 @@ function handleBlur() {
 
 function handleSubmit() {
   const trimmed = query.value.trim()
-  if (trimmed) emit('submit', trimmed)
+  if (!trimmed) return
+  open.value = true
+  if (trimmed.length >= 2) {
+    cancelRequest()
+    void search(trimmed)
+  }
+  emit('submit', trimmed)
 }
 
 function selectTarget(target: ReferenceTarget) {

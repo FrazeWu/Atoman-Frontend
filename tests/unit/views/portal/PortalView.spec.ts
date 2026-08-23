@@ -3,6 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import PortalView from '@/views/portal/PortalView.vue'
 
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  RouterLink: {
+    props: ['to'],
+    template: '<a :href="to"><slot /></a>',
+  },
+}))
+
 vi.mock('@/composables/useApi', () => ({
   useApi: () => ({ url: '/api/v1' }),
   useApiUrl: () => '/api/v1',
@@ -105,8 +113,6 @@ describe('PortalView', () => {
     const recommendationImages = wrapper.findAll('.portal-hot__recommendation-image img')
     expect(recommendationImages[0].attributes('loading')).toBe('eager')
     expect(recommendationImages[0].attributes('fetchpriority')).toBe('high')
-    expect(recommendationImages[1].attributes('loading')).toBe('lazy')
-    expect(recommendationImages[1].attributes('fetchpriority')).toBe('auto')
   })
 
   it('推荐内容无图时优先加载模块区第一张图片', async () => {

@@ -14,7 +14,7 @@
     </button>
 
     <!-- 全局 Command Palette 居中沉浸浮层 -->
-    <Teleport to="body">
+    <Teleport to="body" :disabled="isTest">
       <Transition name="palette-fade">
         <div
           v-if="showSearch"
@@ -58,7 +58,7 @@
                 <X :size="14" aria-hidden="true" />
               </button>
               <button
-                class="palette-close-badge"
+                class="palette-close-badge search-close-btn"
                 type="button"
                 aria-label="关闭搜索"
                 title="按 ESC 关闭"
@@ -172,6 +172,8 @@ const searchDraft = ref('')
 const activeFilter = ref<'all' | 'blog' | 'feed' | 'music'>('all')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const searchPanelRef = ref<HTMLElement | null>(null)
+
+const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 

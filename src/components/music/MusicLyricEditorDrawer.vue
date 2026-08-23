@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Clock, Download, FileUp, Languages, Minus, Plus, Sparkles } from 'lucide-vue-next'
+import { ChevronLeft, Clock, Download, FileUp, Languages, Minus, Plus, Sparkles } from 'lucide-vue-next'
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -33,6 +33,7 @@ const props = withDefaults(defineProps<{
   version?: number
   translationLanguage?: string
   defaultEditSummary?: string
+  presentation?: 'sheet' | 'page'
 }>(), {
   content: '',
   translation: '',
@@ -44,6 +45,7 @@ const props = withDefaults(defineProps<{
   version: 0,
   translationLanguage: '',
   defaultEditSummary: '',
+  presentation: 'sheet',
 })
 
 const emit = defineEmits<{
@@ -392,15 +394,24 @@ function handleSave() {
 </script>
 
 <template>
-  <PSheet
+  <component
+    :is="presentation === 'page' ? 'section' : PSheet"
     :show="show"
     aria-label="编辑歌词"
     content-max-width="72rem"
     close-type="header"
     above-player
-    @close="emit('close')"
     panel-class="lyric-editor-drawer"
+    class="music-lyric-editor-drawer"
+    @close="emit('close')"
   >
+    <header v-if="presentation === 'page'" class="music-lyric-editor-drawer__page-header">
+      <button type="button" class="music-lyric-editor-drawer__back" aria-label="返回播放器" @click="emit('close')">
+        <ChevronLeft :size="20" aria-hidden="true" />
+        <span>返回</span>
+      </button>
+      <h1>编辑歌词</h1>
+    </header>
     <div class="music-lyric-editor-drawer__body">
       <div class="music-lyric-editor-drawer__toolbar">
         <PSegmentedControl
@@ -647,8 +658,7 @@ function handleSave() {
         </PButton>
       </div>
     </div>
-
-  </PSheet>
+  </component>
 </template>
 
 <style scoped>

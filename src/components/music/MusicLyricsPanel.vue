@@ -299,6 +299,7 @@ const props = defineProps<{
   focusAnnotationId?: string
   startRebind?: boolean
   presentation?: 'sheet' | 'page'
+}>()
 
 const emit = defineEmits<{
   close: []

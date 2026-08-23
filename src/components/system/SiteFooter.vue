@@ -35,52 +35,54 @@ function openPanel(panel: FootbarPanel, label: string) {
 <template>
   <footer class="site-footer">
     <div class="site-footer-inner">
-      <div class="site-footer-row site-footer-primary">
-        <RouterLink v-if="isAdmin" to="/site/setting" class="site-footer-brand">凹凸庵</RouterLink>
-        <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
-        <nav class="site-footer-links" aria-label="站点信息">
-          <button
-            v-for="link in primaryLinks"
-            :key="link.panel"
-            class="site-footer-link"
-            type="button"
-            :data-footer-panel="link.panel"
-            @click="openPanel(link.panel, link.label)"
-          >{{ link.label }}</button>
-        </nav>
-      </div>
+      <div class="site-footer-grid">
+        <div class="site-footer-column site-footer-primary">
+          <RouterLink v-if="isAdmin" to="/site/setting" class="site-footer-brand">凹凸庵</RouterLink>
+          <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
+        </div>
 
-      <div class="site-footer-center">
-        <nav class="site-footer-related" aria-label="相关链接">
-          <span class="site-footer-section-label">相关链接</span>
-          <div class="site-footer-related-grid">
-            <a
-              v-for="link in relatedLinks"
-              :key="link.href"
-              class="site-footer-link site-footer-link--related"
-              :data-footer-related-link="link.label"
-              :data-footer-action="link.action"
-              :href="link.href"
-              target="_blank"
-              rel="noopener noreferrer"
-            >{{ link.label }}</a>
+        <div class="site-footer-column site-footer-center">
+          <nav class="site-footer-related" aria-label="相关链接">
+            <span class="site-footer-section-label">相关链接</span>
+            <div class="site-footer-related-grid">
+              <a
+                v-for="link in relatedLinks"
+                :key="link.href"
+                class="site-footer-link site-footer-link--related"
+                :data-footer-related-link="link.label"
+                :data-footer-action="link.action"
+                :href="link.href"
+                target="_blank"
+                rel="noopener noreferrer"
+              >{{ link.label }}</a>
+            </div>
+          </nav>
+        </div>
+
+        <div class="site-footer-column site-footer-secondary">
+          <nav class="site-footer-links" aria-label="站点信息">
+            <button
+              v-for="link in primaryLinks"
+              :key="link.panel"
+              class="site-footer-link"
+              type="button"
+              :data-footer-panel="link.panel"
+              @click="openPanel(link.panel, link.label)"
+            >{{ link.label }}</button>
+          </nav>
+          <div class="site-footer-meta">
+            <button
+              v-for="link in secondaryLinks"
+              :key="link.panel"
+              class="site-footer-link site-footer-link--meta"
+              type="button"
+              :data-footer-panel="link.panel"
+              @click="openPanel(link.panel, link.label)"
+            >{{ link.label }}</button>
+            <span class="site-footer-version" aria-label="当前版本">{{ appVersion }}</span>
           </div>
-        </nav>
-      </div>
-
-      <div class="site-footer-row site-footer-secondary">
-        <span>© {{ copyrightYear }} 凹凸庵</span>
-        <SiteVisitStats />
-        <div class="site-footer-meta">
-          <button
-            v-for="link in secondaryLinks"
-            :key="link.panel"
-            class="site-footer-link site-footer-link--meta"
-            type="button"
-            :data-footer-panel="link.panel"
-            @click="openPanel(link.panel, link.label)"
-          >{{ link.label }}</button>
-          <span class="site-footer-version" aria-label="当前版本">{{ appVersion }}</span>
+          <span class="site-footer-copyright">© {{ copyrightYear }} 凹凸庵</span>
+          <SiteVisitStats />
         </div>
       </div>
     </div>
@@ -96,29 +98,45 @@ function openPanel(panel: FootbarPanel, label: string) {
 }
 
 .site-footer-inner {
-  display: flex;
+  display: block;
   height: 100%;
-  flex-direction: column;
   max-width: 1152px;
   margin: 0 auto;
   padding: 0 var(--a-space-6);
 }
 
-.site-footer-row {
-  display: flex;
-  flex: 1;
+.site-footer-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.9fr) minmax(0, 2fr) minmax(260px, 1.1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: var(--a-space-5);
-  min-height: 44px;
+  gap: var(--a-space-8);
+  min-height: 176px;
+  padding-block: var(--a-space-7);
+}
+
+.site-footer-column {
+  min-width: 0;
+}
+
+.site-footer-primary {
+  display: flex;
+  align-items: center;
+}
+
+.site-footer-secondary {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: var(--a-space-1);
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+  text-align: right;
 }
 
 .site-footer-center {
   display: grid;
-  min-height: 44px;
+  min-width: 0;
   justify-items: center;
-  gap: var(--a-space-1);
-  padding-block: var(--a-space-2);
 }
 
 .site-footer-related {
@@ -166,8 +184,17 @@ function openPanel(panel: FootbarPanel, label: string) {
 .site-footer-meta {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  gap: var(--a-space-4);
+  gap: var(--a-space-3);
+}
+
+.site-footer-meta {
+  color: var(--a-color-muted);
+}
+
+.site-footer-copyright {
+  min-height: 20px;
 }
 
 .site-footer-link {
@@ -195,17 +222,6 @@ function openPanel(panel: FootbarPanel, label: string) {
   outline-offset: 2px;
 }
 
-.site-footer-secondary {
-  flex-wrap: wrap;
-  margin-top: 0;
-  color: var(--a-color-muted);
-  font-size: var(--a-text-xs);
-}
-
-.site-footer-secondary :deep(.site-visit-stats) {
-  order: 2;
-}
-
 .site-footer-link--related {
   min-width: 0;
   text-align: center;
@@ -228,22 +244,24 @@ function openPanel(panel: FootbarPanel, label: string) {
     padding: 0 var(--a-space-5) env(safe-area-inset-bottom, 0px);
   }
 
-  .site-footer-row {
-    gap: var(--a-space-4);
+  .site-footer-grid {
+    grid-template-columns: 1fr;
+    gap: var(--a-space-5);
+    min-height: 0;
+    padding-block: var(--a-space-6);
   }
 
-  .site-footer-secondary :deep(.site-visit-stats) {
-    order: 3;
-    flex-basis: 100%;
+  .site-footer-primary {
+    justify-content: center;
   }
 
-  .site-footer-center {
+  .site-footer-center,
+  .site-footer-secondary {
     padding-left: calc(152px + var(--a-space-3));
   }
 
   .site-footer-links,
   .site-footer-meta {
-    justify-content: flex-end;
     gap: var(--a-space-3);
   }
 
@@ -257,6 +275,7 @@ function openPanel(panel: FootbarPanel, label: string) {
     white-space: nowrap;
   }
 }
+
 @media (max-width: 380px) {
   .site-footer-related-grid {
     grid-template-columns: 1fr;

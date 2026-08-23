@@ -6,7 +6,7 @@ type RelatedLink = {
 
 export const relatedLinks: readonly RelatedLink[] = [
   {
-    label: '镜像加速',
+    label: 'Docker 镜像加速',
     href: 'https://mirror.atoman.org/',
     action: 'docker-proxy',
   },

@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe("SiteFooter", () => {
-	it("renders the confirmed two-level footbar content", () => {
+	it("renders the confirmed three-column footer content", () => {
 		const wrapper = mountFooter();
 
 		expect(footbarLinks.map((link: { label: string }) => link.label)).toEqual([
@@ -48,15 +48,12 @@ describe("SiteFooter", () => {
 			"使用条款",
 			"隐私政策",
 		]);
-		expect(wrapper.get(".site-footer-primary").text()).toContain("凹凸庵");
-		expect(wrapper.get(".site-footer-primary").text()).toContain("关于");
-		expect(wrapper.get(".site-footer-primary").text()).toContain("联系我们");
-		expect(wrapper.get(".site-footer-primary").text()).toContain("问题反馈");
-		expect(wrapper.get(".site-footer-primary").text()).not.toContain(
-			"镜像加速",
-		);
+		expect(wrapper.get(".site-footer-primary").text()).toBe("凹凸庵");
+		expect(wrapper.get(".site-footer-secondary").text()).toContain("关于");
+		expect(wrapper.get(".site-footer-secondary").text()).toContain("联系我们");
+		expect(wrapper.get(".site-footer-secondary").text()).toContain("问题反馈");
 		expect(relatedLinks.map((link) => link.label)).toEqual([
-			"镜像加速",
+			"Docker 镜像加速",
 			"阮一峰的网络日志",
 			"少数派",
 			"小众软件",
@@ -65,7 +62,9 @@ describe("SiteFooter", () => {
 			"码农周刊",
 			"COOLSHELL",
 		]);
-		expect(wrapper.get(".site-footer-center").text()).toContain("镜像加速");
+		expect(wrapper.get(".site-footer-center").text()).toContain(
+			"Docker 镜像加速",
+		);
 		expect(wrapper.get(".site-footer-related").text()).toContain("相关链接");
 		expect(wrapper.get(".site-footer-related-grid").element).toBeTruthy();
 		expect(wrapper.findAll("[data-footer-related-link]")).toHaveLength(
@@ -110,11 +109,14 @@ describe("SiteFooter", () => {
 		);
 	});
 
-	it("uses the confirmed compact two-row layout", () => {
+	it("uses the confirmed three-column layout", () => {
 		expect(footerSource).toContain("height: 100%");
 		expect(footerSource).toContain("padding: 0 var(--a-space-6)");
-		expect(footerSource).toContain("flex: 1");
-		expect(footerSource).toContain("min-height: 44px");
+		expect(footerSource).toContain("display: grid");
+		expect(footerSource).toContain(
+			"grid-template-columns: minmax(140px, 0.9fr) minmax(0, 2fr) minmax(260px, 1.1fr)",
+		);
+		expect(footerSource).toContain("align-items: center");
 	});
 
 	it("keeps footer sheets within the viewport above fixed bottom UI", () => {

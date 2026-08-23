@@ -5,6 +5,7 @@ import PortalView from '@/views/portal/PortalView.vue'
 
 vi.mock('@/composables/useApi', () => ({
   useApi: () => ({ url: '/api/v1' }),
+  useApiUrl: () => '/api/v1',
 }))
 
 vi.mock('@/stores/siteAccess', () => ({

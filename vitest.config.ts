@@ -36,6 +36,14 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+			"@atoman/module-config": path.resolve(
+				__dirname,
+				"./packages/module-config/src/index.ts",
+			),
+			"@atoman/api-client": path.resolve(
+				__dirname,
+				"./packages/api-client/src/index.ts",
+			),
 		},
 	},
 	test: {
@@ -46,6 +54,14 @@ export default defineConfig({
 				resolve: {
 					alias: {
 						"@": path.resolve(__dirname, "./src"),
+						"@atoman/module-config": path.resolve(
+							__dirname,
+							"./packages/module-config/src/index.ts",
+						),
+						"@atoman/api-client": path.resolve(
+							__dirname,
+							"./packages/api-client/src/index.ts",
+						),
 					},
 				},
 				test: {
@@ -62,6 +78,14 @@ export default defineConfig({
 				resolve: {
 					alias: {
 						"@": path.resolve(__dirname, "./src"),
+						"@atoman/module-config": path.resolve(
+							__dirname,
+							"./packages/module-config/src/index.ts",
+						),
+						"@atoman/api-client": path.resolve(
+							__dirname,
+							"./packages/api-client/src/index.ts",
+						),
 					},
 				},
 				test: {
@@ -82,6 +106,14 @@ export default defineConfig({
 				resolve: {
 					alias: {
 						"@": path.resolve(__dirname, "./src"),
+						"@atoman/module-config": path.resolve(
+							__dirname,
+							"./packages/module-config/src/index.ts",
+						),
+						"@atoman/api-client": path.resolve(
+							__dirname,
+							"./packages/api-client/src/index.ts",
+						),
 					},
 				},
 				test: {

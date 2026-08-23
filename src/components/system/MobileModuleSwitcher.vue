@@ -39,40 +39,68 @@
       <section class="mobile-module-sheet__section mobile-module-sheet__section--bordered">
         <p class="mobile-module-sheet__eyebrow">个人</p>
         <nav class="mobile-module-sheet__account" aria-label="个人入口">
-          <RouterLink
+          <component
             v-if="authStore.user"
-            :to="`/users/${authStore.user.username}`"
+            :is="props.desktopBaseUrl ? 'a' : RouterLink"
+            :to="props.desktopBaseUrl ? undefined : `/users/${authStore.user.username}`"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
             <UserRound :size="18" aria-hidden="true" />
             <span>个人资料</span>
-          </RouterLink>
-          <RouterLink to="/inbox?tab=notifications" class="mobile-module-sheet__account-link" @click="show = false">
+          </component>
+          <component
+            :is="props.desktopBaseUrl ? 'a' : RouterLink"
+            :href="desktopHref('/inbox?tab=notifications')"
+            :to="props.desktopBaseUrl ? undefined : '/inbox?tab=notifications'"
+            class="mobile-module-sheet__account-link"
+            @click="show = false"
+          >
             <Bell :size="18" aria-hidden="true" />
             <span>通知</span>
-          </RouterLink>
-          <RouterLink to="/inbox?tab=dm" class="mobile-module-sheet__account-link" @click="show = false">
+          </component>
+          <component
+            :is="props.desktopBaseUrl ? 'a' : RouterLink"
+            :href="desktopHref('/inbox?tab=dm')"
+            :to="props.desktopBaseUrl ? undefined : '/inbox?tab=dm'"
+            class="mobile-module-sheet__account-link"
+            @click="show = false"
+          >
             <MessageCircle :size="18" aria-hidden="true" />
             <span>私信</span>
-          </RouterLink>
-          <RouterLink to="/studio" class="mobile-module-sheet__account-link" @click="show = false">
+          </component>
+          <component
+            :is="props.desktopBaseUrl ? 'a' : RouterLink"
+            :href="desktopHref('/studio')"
+            :to="props.desktopBaseUrl ? undefined : '/studio'"
+            class="mobile-module-sheet__account-link"
+            @click="show = false"
+          >
             <PenLine :size="18" aria-hidden="true" />
             <span>Studio</span>
-          </RouterLink>
-          <RouterLink
+          </component>
+          <component
             v-if="authStore.user"
-            :to="`/users/${authStore.user.username}/settings`"
+            :is="props.desktopBaseUrl ? 'a' : RouterLink"
+            :href="desktopHref(`/users/${authStore.user.username}/settings`)"
+            :to="props.desktopBaseUrl ? undefined : `/users/${authStore.user.username}/settings`"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
             <Settings :size="18" aria-hidden="true" />
             <span>设置</span>
-          </RouterLink>
-          <RouterLink v-else to="/login" class="mobile-module-sheet__account-link" @click="show = false">
+          </component>
+          <component
+            v-else
+            :is="props.desktopBaseUrl ? 'a' : RouterLink"
+            :href="desktopHref('/login')"
+            :to="props.desktopBaseUrl ? undefined : '/login'"
+            class="mobile-module-sheet__account-link"
+            @click="show = false"
+          >
             <LogIn :size="18" aria-hidden="true" />
             <span>登录</span>
-          </RouterLink>
+          </component>
         </nav>
       </section>
     </div>
@@ -93,15 +121,27 @@ import { useSiteAccessStore } from '@/stores/siteAccess'
 const props = withDefaults(defineProps<{
   label: string
   currentModule?: ModuleRoomKey | null
+  availableModules?: ModuleRoomKey[]
+  desktopBaseUrl?: string
 }>(), {
   currentModule: null,
+  availableModules: undefined,
+  desktopBaseUrl: '',
 })
 
 const show = ref(false)
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const { navigateModuleWithShutter } = useAsyncNavigate()
-const items = computed(() => getMobileMoreItems().filter(item => siteAccessStore.isModuleVisible(item.module)))
+const items = computed(() => getMobileMoreItems().filter(item => (
+  siteAccessStore.isModuleVisible(item.module)
+  && (!props.availableModules || props.availableModules.includes(item.module))
+)))
+
+function desktopHref(path: string) {
+  if (!props.desktopBaseUrl) return undefined
+  return `${props.desktopBaseUrl.replace(/\/$/, '')}${path}`
+}
 
 async function openModule(href: string) {
   show.value = false

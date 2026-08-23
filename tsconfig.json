@@ -2,7 +2,12 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "apps/mobile/**/*.ts",
+    "apps/mobile/**/*.vue",
+    "packages/module-config/src/**/*.ts",
+    "packages/api-client/src/**/*.ts",
+    "vite.mobile.config.ts"
   ],
   "exclude": [
     "dist",
@@ -30,6 +35,15 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@mobile/*": [
+        "./apps/mobile/*"
+      ],
+      "@atoman/module-config": [
+        "./packages/module-config/src/index.ts"
+      ],
+      "@atoman/api-client": [
+        "./packages/api-client/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,

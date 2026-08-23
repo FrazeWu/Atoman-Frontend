@@ -233,7 +233,7 @@
     </PSheet>
 
     <MusicLyricEditorDrawer
-      v-if="isAuthenticated"
+      v-if="isAuthenticated && (presentation === 'sheet' || isLyricEditorOpen)"
       :presentation="mobilePage ? 'page' : 'sheet'"
       :show="isLyricEditorOpen"
       :song-title="songTitle"

@@ -57,7 +57,7 @@ const mobileModuleLabel = computed(() => {
   if (mobileModule.value === 'music') return '音乐'
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|artist\/|album\/|song\/|playlist\/))/.test(route.path)))
+const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|lyrics|artist\/|album\/|song\/|playlist\/))/.test(route.path)))
 
 function updateScrollState() {
   isScrolled.value = window.scrollY > 8

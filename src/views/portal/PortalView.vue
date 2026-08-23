@@ -2,14 +2,14 @@
   <main class="portal-hot">
     <!-- Hero Banner -->
     <header class="portal-hot__hero">
-      <div class="portal-hot__hero-glow"></div>
+      <div class="portal-hot__hero-glow" />
       <div class="portal-hot__hero-content">
         <div class="portal-hot__hero-badge">
-          <span class="portal-hot__badge-dot"></span>
+          <span class="portal-hot__badge-dot" />
           <span>ATOMAN</span>
         </div>
         <h1 class="portal-hot__hero-title">
-          3 分钟建立你的<br />
+          3 分钟建立你的<br>
           <span class="portal-hot__hero-gradient">高质量内容订阅流</span>
         </h1>
         <p class="portal-hot__hero-subtitle">
@@ -43,48 +43,54 @@
         </template>
 
         <template v-if="hasContent">
-          <!-- 核心推荐 (Featured) -->
+          <!-- 核心推荐 (Featured Spotlight) -->
           <section v-if="recommendationItems.length" class="portal-hot__recommendations" aria-label="推荐内容">
             <div class="portal-hot__section-header">
               <div>
                 <p class="portal-hot__kicker">SPOTLIGHT</p>
                 <h2>焦点精选</h2>
               </div>
-              <span class="portal-hot__header-line"></span>
+              <span class="portal-hot__header-line" />
             </div>
             <div class="portal-hot__recommendation-grid">
               <RouterLink
                 v-for="item in recommendationItems"
                 :key="`${item.module}-${item.id}`"
                 :to="item.target_path"
-                class="portal-hot__recommendation-card"
-                :class="{ 'has-image': item.image_url }"
+                class="portal-hot__recommendation-card-link"
               >
-                <div v-if="item.image_url" class="portal-hot__recommendation-image">
-                  <img
-                    :src="item.image_url"
-                    :alt="item.title"
-                    :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
-                    :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
-                  />
-                  <div class="portal-hot__image-overlay"></div>
-                </div>
-                <div class="portal-hot__recommendation-body">
-                  <div class="portal-hot__meta-row">
+                <PEntry
+                  :title="item.title"
+                  :summary="item.summary"
+                  class="portal-hot__recommendation-card"
+                  :class="{ 'has-image': item.image_url }"
+                >
+                  <template v-if="item.image_url" #visual>
+                    <div class="portal-hot__recommendation-image">
+                      <img
+                        :src="item.image_url"
+                        :alt="item.title"
+                        :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
+                        :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                      >
+                      <div class="portal-hot__image-overlay" />
+                    </div>
+                  </template>
+
+                  <template #meta>
                     <span class="portal-hot__tag">{{ moduleLabel(item.module) }}</span>
                     <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
-                  </div>
-                  <h2>{{ item.title }}</h2>
-                  <p v-if="item.summary">{{ item.summary }}</p>
-                  <div class="portal-hot__card-footer">
-                    <span class="portal-hot__read-more">阅读更多 &rarr;</span>
-                  </div>
-                </div>
+                  </template>
+
+                  <template #footer>
+                    <span class="portal-hot__read-more">阅读更多 ›</span>
+                  </template>
+                </PEntry>
               </RouterLink>
             </div>
           </section>
 
-          <!-- 分模块热门内容 -->
+          <!-- 分模块热门内容 (Sections) -->
           <section class="portal-hot__sections" aria-label="模块热门内容">
             <article
               v-for="section in displaySections"
@@ -99,34 +105,42 @@
                 <RouterLink :to="moduleHomePath(section.module)" class="portal-hot__module-link">
                   <span>查看全部</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                    <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </RouterLink>
               </div>
 
-              <div class="portal-hot__grid">
+              <!-- 使用标准流式容器 .feed-timeline-box 包裹 PEntry 卡片 -->
+              <div class="feed-timeline-box">
                 <RouterLink
                   v-for="item in section.items"
                   :key="`${section.module}-${item.id}`"
                   :to="item.target_path"
-                  class="portal-hot__card"
+                  class="portal-hot__card-link"
                 >
-                  <div v-if="item.image_url" class="portal-hot__thumb">
-                    <img
-                      :src="item.image_url"
-                      :alt="item.title"
-                      :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
-                      :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
-                    />
-                    <div class="portal-hot__thumb-overlay"></div>
-                  </div>
-                  <div class="portal-hot__card-body">
-                    <div class="portal-hot__card-meta">
-                      <span>{{ item.score_label }}</span>
-                    </div>
-                    <strong>{{ item.title }}</strong>
-                    <p v-if="item.summary">{{ item.summary }}</p>
-                  </div>
+                  <PEntry
+                    :title="item.title"
+                    :summary="item.summary"
+                    class="content-stream-entry portal-hot__card"
+                  >
+                    <template v-if="item.image_url" #visual>
+                      <div class="portal-hot__thumb">
+                        <img
+                          :src="item.image_url"
+                          :alt="item.title"
+                          :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
+                          :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                        >
+                        <div class="portal-hot__thumb-overlay" />
+                      </div>
+                    </template>
+
+                    <template #meta>
+                      <span class="portal-hot__tag">{{ moduleLabel(section.module) }}</span>
+                      <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
+                      <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
+                    </template>
+                  </PEntry>
                 </RouterLink>
               </div>
             </article>
@@ -164,15 +178,16 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { apiRequestResult } from '@/api/client'
 
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { useApi } from '@/composables/useApi'
+import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 
@@ -281,6 +296,15 @@ function isPriorityImage(item: PortalHotItem) {
   return `${item.module}:${item.id}` === priorityImageKey.value
 }
 
+function formatDate(dateStr?: string) {
+  if (!dateStr) return ''
+  try {
+    return new Date(dateStr).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+  } catch {
+    return ''
+  }
+}
+
 onMounted(loadHotContent)
 </script>
 
@@ -329,7 +353,7 @@ onMounted(loadHotContent)
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   font-size: 11px;
@@ -385,7 +409,7 @@ onMounted(loadHotContent)
   color: var(--a-color-text);
   text-decoration: none;
   border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   transition: all 0.2s ease;
 }
@@ -444,146 +468,91 @@ onMounted(loadHotContent)
   gap: 20px;
 }
 
-.portal-hot__recommendation-card,
-.portal-hot__card,
-.portal-hot__module-link,
-.portal-hot__fallback-links a {
-  color: inherit;
+.portal-hot__recommendation-card-link,
+.portal-hot__card-link {
+  display: block;
   text-decoration: none;
+  color: inherit;
 }
 
 .portal-hot__recommendation-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  min-height: 180px;
-  border-radius: var(--a-radius-card, 6px);
+  margin-bottom: 0 !important;
+  height: 100%;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  transition: transform 0.25s ease, border-color 0.25s ease;
-  overflow: hidden;
+  border-radius: var(--a-radius-card);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .portal-hot__recommendation-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--a-color-primary) 40%, var(--a-color-border));
-}
-
-.portal-hot__recommendation-card.has-image {
-  grid-template-columns: 180px minmax(0, 1fr);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+  transform: translateY(-2px);
 }
 
 .portal-hot__recommendation-image {
   position: relative;
-  background: var(--a-color-surface-muted);
+  width: 140px;
+  height: 96px;
+  border-radius: var(--a-radius-control);
   overflow: hidden;
+  background: var(--a-color-surface-muted);
+  flex-shrink: 0;
 }
 
-.portal-hot__recommendation-image img,
-.portal-hot__thumb img {
-  display: block;
+.portal-hot__recommendation-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
-}
-
-.portal-hot__recommendation-card:hover .portal-hot__recommendation-image img,
-.portal-hot__card:hover .portal-hot__thumb img {
-  transform: scale(1.05);
 }
 
 .portal-hot__image-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, 0.2) 100%);
-}
-
-.portal-hot__recommendation-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-  padding: 20px;
-}
-
-.portal-hot__meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.15) 100%);
 }
 
 .portal-hot__tag {
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text-secondary);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: var(--a-radius-control);
+  font-size: 0.65rem;
   font-weight: 600;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
 }
 
 .portal-hot__score {
-  font-size: 11px;
-  color: var(--a-color-muted);
-  font-weight: 500;
-}
-
-.portal-hot__recommendation-body h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
+  font-size: 0.68rem;
+  color: var(--a-color-primary);
   font-weight: 600;
-  line-height: 1.35;
-  color: var(--a-color-text);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
 }
 
-.portal-hot__recommendation-body > p {
-  display: -webkit-box;
-  margin: 0 0 12px;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: var(--a-color-text-secondary);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.portal-hot__card-footer {
-  margin-top: auto;
+.portal-hot__date {
+  font-size: 0.7rem;
+  color: var(--a-color-muted-soft);
 }
 
 .portal-hot__read-more {
-  font-size: 12px;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--a-color-primary);
-  transition: opacity 0.2s ease;
 }
 
-.portal-hot__recommendation-card:hover .portal-hot__read-more {
-  opacity: 0.8;
-}
-
-/* ─── Module Sections ─────────────────────────────────── */
+/* ─── Sections ─────────────────────────────────────────── */
 .portal-hot__sections {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 48px;
-}
-
-.portal-hot__section {
-  display: grid;
-  gap: 18px;
 }
 
 .portal-hot__section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 14px;
+  padding-bottom: 12px;
 }
 
 .portal-hot__section-title-group {
@@ -593,18 +562,21 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__section-badge {
-  padding: 4px 10px;
-  border-radius: 4px;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
-  color: var(--a-color-text);
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2em 0.6em;
+  border-radius: var(--a-radius-control);
+  font-size: 0.7rem;
+  font-weight: 650;
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .portal-hot__section-head h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   color: var(--a-color-text);
 }
@@ -612,153 +584,100 @@ onMounted(loadHotContent)
 .portal-hot__module-link {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  color: var(--a-color-muted);
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  transition: color 0.2s ease;
+  color: var(--a-color-text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 .portal-hot__module-link:hover {
-  color: var(--a-color-primary);
+  color: var(--a-color-text);
 }
 
-.portal-hot__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-}
-
-.portal-hot__card {
-  display: flex;
-  flex-direction: column;
-  min-height: 200px;
-  border-radius: var(--a-radius-card, 6px);
+/* 标准流式容器 */
+.feed-timeline-box {
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
   overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-.portal-hot__card:hover {
-  transform: translateY(-2px);
-  border-color: var(--a-color-border);
+  background: var(--a-color-bg);
 }
 
 .portal-hot__thumb {
   position: relative;
-  aspect-ratio: 16 / 9;
+  width: 90px;
+  height: 64px;
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
   background: var(--a-color-surface-muted);
-  overflow: hidden;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  flex-shrink: 0;
 }
 
-.portal-hot__card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  flex: 1;
+.portal-hot__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.portal-hot__card-meta span {
-  color: var(--a-color-muted);
-  font-size: 11px;
-  font-weight: 600;
+.portal-hot__thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.1) 100%);
 }
 
-.portal-hot__card-body strong {
-  color: var(--a-color-text);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.portal-hot__card-body p {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: var(--a-color-text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* ─── Bottom Navigation Strip ─────────────────────────── */
+/* ─── Module Strip ─────────────────────────────────────── */
 .portal-hot__module-strip {
+  margin-top: 48px;
+  padding: 16px 24px;
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 48px;
-  padding: 24px;
-  border-radius: var(--a-radius-card, 6px);
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
-}
-
-.portal-hot__module-strip span {
-  color: var(--a-color-muted);
   font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
+  color: var(--a-color-text-secondary);
 }
 
 .portal-hot__strip-links {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 8px;
 }
 
 .portal-hot__strip-links a {
-  padding: 6px 12px;
-  border-radius: 4px;
+  color: var(--a-color-text);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  color: var(--a-color-text);
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .portal-hot__strip-links a:hover {
-  border-color: var(--a-color-primary);
-  color: var(--a-color-primary);
-}
-
-/* ─── Empty & Loading States ──────────────────────────── */
-.portal-hot__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 16px;
-  padding: 64px 24px;
-  border-radius: var(--a-radius-card, 6px);
-  border: 1px solid var(--a-color-border);
+  border-color: var(--a-color-text);
   background: var(--a-color-surface);
 }
 
-.portal-hot__empty-icon {
-  font-size: 36px;
+/* ─── Empty State ──────────────────────────────────────── */
+.portal-hot__empty {
+  padding: 64px 24px;
+  text-align: center;
 }
 
 .portal-hot__empty h2 {
-  margin: 0;
+  margin: 0 0 12px;
   font-size: 24px;
+  font-weight: 500;
   color: var(--a-color-text);
 }
 
 .portal-hot__empty p {
+  margin: 0 auto 24px;
   max-width: 480px;
-  margin: 0;
   color: var(--a-color-text-secondary);
   font-size: 14px;
   line-height: 1.6;
@@ -768,75 +687,34 @@ onMounted(loadHotContent)
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
 }
 
 .portal-hot__fallback-links a {
-  border: 1px solid var(--a-color-border);
-  border-radius: 4px;
-  padding: 6px 14px;
-  color: var(--a-color-text);
+  padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
+  color: var(--a-color-text);
+  text-decoration: none;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .portal-hot__fallback-links a:hover {
   border-color: var(--a-color-text);
+  background: var(--a-color-surface);
 }
 
-.portal-hot__card-skeleton {
-  min-height: 180px;
-  border-radius: var(--a-radius-card, 6px);
-  background: var(--a-color-surface-muted);
-}
-
-/* ─── Responsive Adjustments ──────────────────────────── */
-@media (max-width: 860px) {
-  .portal-hot__hero {
-    padding: 48px 16px 40px;
-  }
-
-  .portal-hot__hero-title {
-    font-size: 32px;
-  }
-
+@media (max-width: 768px) {
   .portal-hot__recommendation-grid,
   .portal-hot__loading-grid {
     grid-template-columns: 1fr;
   }
 
-  .portal-hot__recommendation-card.has-image {
-    grid-template-columns: 140px minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .portal-hot__container {
-    padding: 32px 16px 0;
-  }
-
   .portal-hot__hero-title {
-    font-size: 26px;
-  }
-
-  .portal-hot__hero-subtitle {
-    font-size: 14px;
-  }
-
-  .portal-hot__recommendation-card.has-image {
-    grid-template-columns: 1fr;
-  }
-
-  .portal-hot__recommendation-image {
-    aspect-ratio: 16 / 9;
-  }
-
-  .portal-hot__module-strip {
-    flex-direction: column;
-    align-items: flex-start;
+    font-size: 32px;
   }
 }
 </style>

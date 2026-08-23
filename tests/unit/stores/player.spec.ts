@@ -365,8 +365,16 @@ describe("player store", () => {
 
 	it("does not overwrite a completed song when advancing automatically", () => {
 		const player = usePlayerStore();
-		const firstSong = { id: "ended-1", title: "Ended 1", audio_url: "ended-1.mp3" } as any;
-		const secondSong = { id: "ended-2", title: "Ended 2", audio_url: "ended-2.mp3" } as any;
+		const firstSong = {
+			id: "ended-1",
+			title: "Ended 1",
+			audio_url: "ended-1.mp3",
+		} as any;
+		const secondSong = {
+			id: "ended-2",
+			title: "Ended 2",
+			audio_url: "ended-2.mp3",
+		} as any;
 
 		player.playAlbum([firstSong, secondSong]);
 		audioInstances[0].emit("ended");

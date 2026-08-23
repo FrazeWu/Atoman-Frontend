@@ -157,6 +157,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				meta: requiresAuth,
 			},
 			{ path: "player", component: () => import("./MobilePlayerView.vue") },
+			{ path: "lyrics", component: () => import("./MobileLyricsView.vue") },
 			{
 				path: "artist/:artistId",
 				component: () => import("@/views/music/MusicArtistRouteView.vue"),

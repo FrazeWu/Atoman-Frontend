@@ -970,4 +970,30 @@ function handleSave() {
   background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-dark, #334155) !important;
 }
+.music-lyric-editor-drawer__page-header {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.music-lyric-editor-drawer__page-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.music-lyric-editor-drawer__back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-primary);
+  font: inherit;
+}
+
 </style>

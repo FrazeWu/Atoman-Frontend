@@ -275,16 +275,22 @@ describe("ArtistDrawer.vue", () => {
 		expect(wrapper.text()).toContain("----");
 		expect(wrapper.text()).toContain("3:35");
 		expect(
-			wrapper.get('[data-testid="artist-track-play-song-4"]').attributes("disabled"),
+			wrapper
+				.get('[data-testid="artist-track-play-song-4"]')
+				.attributes("disabled"),
 		).toBeDefined();
 
-		await wrapper.get('[data-testid="artist-track-play-song-3"]').trigger("click");
+		await wrapper
+			.get('[data-testid="artist-track-play-song-3"]')
+			.trigger("click");
 		expect(playerMocks.playAlbum).toHaveBeenCalledWith(
 			[expect.objectContaining({ id: "song-3", title: "New Single" })],
 			0,
 		);
 
-		await wrapper.get('[data-testid="artist-track-title-song-3"]').trigger("click");
+		await wrapper
+			.get('[data-testid="artist-track-title-song-3"]')
+			.trigger("click");
 		expect(musicDrawerMocks.openSong).toHaveBeenCalledWith("song-3");
 	});
 
@@ -317,8 +323,12 @@ describe("ArtistDrawer.vue", () => {
 		expect(listMusicSongs).toHaveBeenCalledTimes(songCalls + 1);
 		expect(listArtistContributors).toHaveBeenCalledTimes(contributorCalls);
 		expect(listArtistBookmarks).toHaveBeenCalledTimes(bookmarkCalls);
-		expect(wrapper.find('[data-testid="artist-loading-skeleton"]').exists()).toBe(false);
-		expect(wrapper.find('[data-testid="artist-release-loading-skeleton"]').exists()).toBe(true);
+		expect(
+			wrapper.find('[data-testid="artist-loading-skeleton"]').exists(),
+		).toBe(false);
+		expect(
+			wrapper.find('[data-testid="artist-release-loading-skeleton"]').exists(),
+		).toBe(true);
 
 		resolveSongs(songResponse);
 		await vi.dynamicImportSettled();

@@ -13,6 +13,7 @@
         "@codemirror/theme-one-dark": "^6.1.3",
         "@codemirror/view": "^6.42.1",
         "@dagrejs/dagre": "^3.0.0",
+        "@lezer/highlight": "^1.2.3",
         "@tailwindcss/vite": "^4.2.2",
         "@vue-flow/background": "^1.3.2",
         "@vue-flow/controls": "^1.1.3",
@@ -63,6 +64,12 @@
         "@rollup/rollup-darwin-x64": "4.60.4",
       },
     },
+    "packages/api-client": {
+      "name": "@atoman/api-client",
+    },
+    "packages/module-config": {
+      "name": "@atoman/module-config",
+    },
   },
   "packages": {
     "@adobe/css-tools": ["@adobe/css-tools@4.5.0", "", {}, "sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q=="],
@@ -74,6 +81,10 @@
     "@asamuzakjp/generational-cache": ["@asamuzakjp/generational-cache@1.0.1", "", {}, "sha512-wajfB8KqzMCN2KGNFdLkReeHncd0AslUSrvHVvvYWuU8ghncRJoA50kT3zP9MVL0+9g4/67H+cdvBskj9THPzg=="],
 
     "@asamuzakjp/nwsapi": ["@asamuzakjp/nwsapi@2.3.9", "", {}, "sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q=="],
+
+    "@atoman/api-client": ["@atoman/api-client@workspace:packages/api-client"],
+
+    "@atoman/module-config": ["@atoman/module-config@workspace:packages/module-config"],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 

@@ -17,6 +17,15 @@
       :desktop-base-url="desktopAppUrl"
       native-personal-routes
     />
+    <RouterLink
+      v-if="isMusicRoute && route.path !== '/music/player'"
+      to="/music/player"
+      class="mobile-app-topbar__player"
+      aria-label="打开播放器"
+      title="打开播放器"
+    >
+      <PlayCircle :size="19" aria-hidden="true" />
+    </RouterLink>
     <span v-else-if="!isAuthRoute" class="mobile-app-topbar__title">{{ mobileModuleLabel }}</span>
     <RouterLink v-else to="/feed" class="mobile-app-topbar__brand">ATOMAN</RouterLink>
   </header>
@@ -24,7 +33,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, PlayCircle } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 import { moduleUrl } from '@/router/siteUrls'
@@ -47,6 +56,7 @@ const mobileModule = computed<ModuleRoomKey | null>(() => {
   }
   return isBlogContextRoute.value ? 'blog' : null
 })
+const isMusicRoute = computed(() => /^\/music(?:\/|$)/.test(route.path))
 const mobileModuleLabel = computed(() => {
   if (route.path === '/modules') return '模块'
   if (route.path.startsWith('/inbox')) return '私信'
@@ -101,6 +111,23 @@ const goBack = () => {
 
 .mobile-app-topbar__back:hover,
 .mobile-app-topbar__back:focus-visible {
+  background: var(--a-color-surface-muted);
+}
+
+.mobile-app-topbar__player {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  color: var(--a-color-fg);
+  text-decoration: none;
+}
+
+.mobile-app-topbar__player:hover,
+.mobile-app-topbar__player:focus-visible {
   background: var(--a-color-surface-muted);
 }
 

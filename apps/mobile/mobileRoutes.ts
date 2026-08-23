@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from "vue-router";
+import { studioRoutes } from "@/router/routes/studio";
 
 const requiresAuth = { requiresAuth: true };
 
@@ -20,6 +21,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		path: "/forgot-password",
 		component: () => import("@/views/auth/ForgotPasswordView.vue"),
 		meta: { authLayout: true },
+	},
+	{
+		path: "/inbox",
+		component: () => import("@/views/feed/InboxPage.vue"),
+		meta: requiresAuth,
 	},
 	{
 		path: "/feed",
@@ -57,6 +63,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/posts/notes",
 		component: () => import("@/views/blog/ShortNoteTimelineView.vue"),
+	},
+	{
+		path: "/posts/notes/:id/edit",
+		component: () => import("@/views/blog/ShortNoteComposerView.vue"),
+		meta: requiresAuth,
 	},
 	{
 		path: "/posts/notes/:id",
@@ -160,6 +171,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 		],
 	},
+	...studioRoutes,
 	{
 		path: "/:pathMatch(.*)*",
 		component: () => import("@/views/system/NotFoundView.vue"),

@@ -30,13 +30,13 @@
             >
               📖 极简单栏
             </button>
-            <a
+            <RouterLink
               v-if="isOwner"
-              :href="desktopAppPath(`/studio/blog/${post.id}/edit`)"
+              :to="`/studio/blog/${post.id}/edit`"
               class="a-btn a-btn--sm a-btn--primary post-header__mode-btn"
             >
               编辑
-            </a>
+            </RouterLink>
           </div>
         </template>
 
@@ -56,13 +56,13 @@
             >
               🔬 学术双栏
             </button>
-            <a
+            <RouterLink
               v-if="isOwner"
-              :href="desktopAppPath(`/studio/blog/${post.id}/edit`)"
+              :to="`/studio/blog/${post.id}/edit`"
               class="a-btn a-btn--sm a-btn--primary post-header__mode-btn"
             >
               编辑
-            </a>
+            </RouterLink>
           </div>
         </template>
       </div>
@@ -80,7 +80,6 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { userUrl } from '@/composables/useSubdomainNav'
-import { desktopAppPath } from '@/utils/desktopAppUrl'
 import type { Post } from '@/types'
 
 const props = defineProps<{

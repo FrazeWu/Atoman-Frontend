@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { createMemoryHistory, createRouter } from "vue-router";
+import { createMemoryHistory, createRouter, RouterLink } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
 import MobileModuleSwitcher from "../../../src/components/system/MobileModuleSwitcher.vue";
@@ -92,6 +92,43 @@ describe("MobileModuleSwitcher", () => {
 		expect(
 			wrapper.get('[data-testid="mobile-module-sheet"]').text(),
 		).not.toContain("视频");
+	});
+
+	it("keeps personal entries on native routes for the standalone mobile shell", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: "/music", component: { template: "<div />" } },
+				{ path: "/inbox", component: { template: "<div />" } },
+				{ path: "/studio", component: { template: "<div />" } },
+			],
+		});
+		await router.push("/music");
+		await router.isReady();
+
+		const wrapper = mount(MobileModuleSwitcher, {
+			props: {
+				label: "音乐",
+				currentModule: "music",
+				desktopBaseUrl: "https://desktop.example",
+				nativePersonalRoutes: true,
+			},
+			global: {
+				plugins: [router],
+				stubs: {
+					PSheet: {
+						props: ["show"],
+						template: '<div v-if="show"><slot /></div>',
+					},
+				},
+			},
+		});
+
+		await wrapper.get('[data-testid="mobile-module-switcher"]').trigger("click");
+		const destinations = wrapper.findAllComponents(RouterLink).map((link) => link.props("to"));
+		expect(destinations).toContain("/inbox?tab=notifications");
+		expect(destinations).toContain("/inbox?tab=dm");
+		expect(destinations).toContain("/studio");
 	});
 
 	it("uses the shutter navigation when selecting another module", async () => {

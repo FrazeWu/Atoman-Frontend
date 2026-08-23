@@ -41,8 +41,9 @@
         <nav class="mobile-module-sheet__account" aria-label="个人入口">
           <component
             v-if="authStore.user"
-            :is="props.desktopBaseUrl ? 'a' : RouterLink"
-            :to="props.desktopBaseUrl ? undefined : `/users/${authStore.user.username}`"
+            :is="useInternalPersonalRoutes ? RouterLink : 'a'"
+            :to="useInternalPersonalRoutes ? `/users/${authStore.user.username}` : undefined"
+            :href="useInternalPersonalRoutes ? undefined : desktopHref(`/users/${authStore.user.username}`)"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
@@ -50,9 +51,9 @@
             <span>个人资料</span>
           </component>
           <component
-            :is="props.desktopBaseUrl ? 'a' : RouterLink"
-            :href="desktopHref('/inbox?tab=notifications')"
-            :to="props.desktopBaseUrl ? undefined : '/inbox?tab=notifications'"
+            :is="useInternalPersonalRoutes ? RouterLink : 'a'"
+            :href="useInternalPersonalRoutes ? undefined : desktopHref('/inbox?tab=notifications')"
+            :to="useInternalPersonalRoutes ? '/inbox?tab=notifications' : undefined"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
@@ -60,9 +61,9 @@
             <span>通知</span>
           </component>
           <component
-            :is="props.desktopBaseUrl ? 'a' : RouterLink"
-            :href="desktopHref('/inbox?tab=dm')"
-            :to="props.desktopBaseUrl ? undefined : '/inbox?tab=dm'"
+            :is="useInternalPersonalRoutes ? RouterLink : 'a'"
+            :href="useInternalPersonalRoutes ? undefined : desktopHref('/inbox?tab=dm')"
+            :to="useInternalPersonalRoutes ? '/inbox?tab=dm' : undefined"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
@@ -70,9 +71,9 @@
             <span>私信</span>
           </component>
           <component
-            :is="props.desktopBaseUrl ? 'a' : RouterLink"
-            :href="desktopHref('/studio')"
-            :to="props.desktopBaseUrl ? undefined : '/studio'"
+            :is="useInternalPersonalRoutes ? RouterLink : 'a'"
+            :href="useInternalPersonalRoutes ? undefined : desktopHref('/studio')"
+            :to="useInternalPersonalRoutes ? '/studio' : undefined"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
@@ -92,9 +93,9 @@
           </component>
           <component
             v-else
-            :is="props.desktopBaseUrl ? 'a' : RouterLink"
-            :href="desktopHref('/login')"
-            :to="props.desktopBaseUrl ? undefined : '/login'"
+            :is="useInternalPersonalRoutes ? RouterLink : 'a'"
+            :href="useInternalPersonalRoutes ? undefined : desktopHref('/login')"
+            :to="useInternalPersonalRoutes ? '/login' : undefined"
             class="mobile-module-sheet__account-link"
             @click="show = false"
           >
@@ -123,16 +124,19 @@ const props = withDefaults(defineProps<{
   currentModule?: ModuleRoomKey | null
   availableModules?: ModuleRoomKey[]
   desktopBaseUrl?: string
+  nativePersonalRoutes?: boolean
 }>(), {
   currentModule: null,
   availableModules: undefined,
   desktopBaseUrl: '',
+  nativePersonalRoutes: false,
 })
 
 const show = ref(false)
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const { navigateModuleWithShutter } = useAsyncNavigate()
+const useInternalPersonalRoutes = computed(() => props.nativePersonalRoutes || !props.desktopBaseUrl)
 const items = computed(() => getMobileMoreItems().filter(item => (
   siteAccessStore.isModuleVisible(item.module)
   && (!props.availableModules || props.availableModules.includes(item.module))

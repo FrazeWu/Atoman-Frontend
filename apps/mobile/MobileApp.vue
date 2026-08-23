@@ -3,12 +3,12 @@
     <MobileTopbar />
     <main
       class="app-main mobile-app-main"
-      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--player': showMiniPlayer, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
+      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--player': showMiniPlayer, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
     >
       <RouterView />
     </main>
     <BlogSheetStack v-if="!isAuthRoute" />
-    <MobileBottomNav v-if="!isAuthRoute" />
+    <MobileBottomNav v-if="showMobileBottomNav" />
     <MobileAudioPlayer v-if="showMiniPlayer" />
   </div>
 </template>
@@ -36,6 +36,7 @@ const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const isPlayerRoute = computed(() => route.path === '/music/player')
 const showMiniPlayer = computed(() => Boolean(player.currentSong) && !isAuthRoute.value && !isPlayerRoute.value)
+const showMobileBottomNav = computed(() => !isAuthRoute.value && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio'))
 
 const reportPageView = () => {
   if (isAuthRoute.value) return

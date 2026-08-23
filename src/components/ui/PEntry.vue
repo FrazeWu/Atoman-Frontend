@@ -88,10 +88,11 @@ defineEmits(['click'])
 }
 
 .p-entry.content-stream-entry {
-  padding: 0.6rem 0.75rem;
+  position: relative;
+  padding: 0.6rem 0.75rem 0.6rem 0.85rem;
   margin-bottom: 0;
   border-radius: 0;
-  border-left: 3px solid #10b981;
+  border-left: none;
   border-right: none;
   border-top: none;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
@@ -100,34 +101,51 @@ defineEmits(['click'])
   transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
+.p-entry.content-stream-entry::before {
+  content: '';
+  position: absolute;
+  left: 2.5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 14px;
+  border-radius: 999px;
+  background-color: #10b981;
+  opacity: 1;
+  transition: background-color 0.18s ease, opacity 0.18s ease;
+  pointer-events: none;
+}
+
 .p-entry.content-stream-entry:last-child {
   border-bottom: none;
 }
 
 .p-entry.content-stream-entry:hover,
 .p-entry.content-stream-entry:focus-within,
-.p-entry.content-stream-entry.is-focused {
-  border-left-color: var(--a-color-text);
+.p-entry.content-stream-entry.is-focused,
+.p-entry.content-stream-entry.is-open {
   border-bottom-color: color-mix(in srgb, var(--a-color-text) 6%, transparent);
   background: var(--a-color-surface-muted);
   box-shadow: none;
 }
 
-.p-entry.content-stream-entry.is-read {
-  border-left-color: transparent;
-  background: transparent;
+.p-entry.content-stream-entry:hover::before,
+.p-entry.content-stream-entry:focus-within::before,
+.p-entry.content-stream-entry.is-focused::before,
+.p-entry.content-stream-entry.is-open::before {
+  background-color: var(--a-color-text);
+  opacity: 1;
 }
 
-.p-entry.content-stream-entry.is-read:hover,
-.p-entry.content-stream-entry.is-read:focus-within {
-  border-left-color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
+.p-entry.content-stream-entry.is-read::before {
+  background-color: transparent;
+  opacity: 0;
 }
 
-.p-entry.content-stream-entry.is-open {
-  border-left-color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-  box-shadow: none;
+.p-entry.content-stream-entry.is-read:hover::before,
+.p-entry.content-stream-entry.is-read:focus-within::before {
+  background-color: var(--a-color-text);
+  opacity: 1;
 }
 
 .feed-entry-footer {

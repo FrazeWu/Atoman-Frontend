@@ -25,6 +25,11 @@ describe("mobile app route boundary", () => {
 	it("keeps the pilot module routes available for deep links", () => {
 		expect(routePaths()).toEqual(
 			expect.arrayContaining([
+				"/inbox",
+				"/studio",
+				"/studio/:module(blog|podcast|video)/content",
+				"/studio/:module(blog|podcast|video)/:id/edit",
+				"/posts/notes/:id/edit",
 				"/feed",
 				"/feed/subscriptions",
 				"/feed/reading-list",
@@ -51,8 +56,13 @@ describe("mobile app route boundary", () => {
 		);
 	});
 
+	it("keeps Studio and personal routes outside the bottom-navigation modules", () => {
+		expect(MOBILE_MODULES).not.toContain("studio");
+		expect(routePaths()).toContain("/studio");
+		expect(routePaths()).toContain("/inbox");
+	});
+
 	it("does not advertise modules that are not in the pilot", () => {
 		expect(routePaths()).not.toContain("/forum");
-		expect(routePaths()).not.toContain("/studio");
 	});
 });

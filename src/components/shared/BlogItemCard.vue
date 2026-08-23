@@ -6,7 +6,7 @@
     @delete="emit('delete-note', shortNoteItem)"
   />
 
-  <!-- 2. BLOG POST / FEED ITEM TYPE (PEntry unified wrapper) -->
+  <!-- 2. BLOG POST / FEED ITEM TYPE (PEntry unified wrapper - 方案 1 极简流式行) -->
   <PEntry
     v-else
     :title="displayTitle"
@@ -16,26 +16,12 @@
     :is-focused="isFocused"
     @click="handleClick"
   >
-    <!-- Visual / Cover / Avatar -->
-    <template #visual>
-      <div class="blog-item-card__visual" :class="{ 'is-fallback': !coverUrl || coverImageFailed }">
-        <img v-if="coverUrl && !coverImageFailed" :src="coverUrl" :alt="displayTitle" class="blog-item-card__cover" loading="lazy" @error="coverImageFailed = true" />
-        <PAvatar
-          v-else
-          :src="avatarUrl"
-          :name="authorName || sourceTitle || displayTitle"
-          size="sm"
-        />
-      </div>
-    </template>
-
-    <!-- Meta row -->
+    <!-- Meta row (单行集中一体化 Meta) -->
     <template #meta>
       <span v-if="authorName" class="blog-item-card__author">{{ authorName }}</span>
 
       <!-- Channel tag for blog post -->
       <template v-if="postItem?.channel">
-        <span class="blog-item-card__dot">·</span>
         <a
           :href="channelUrl(postItem.channel.slug || postItem.channel.id)"
           class="blog-item-card__channel"
@@ -47,18 +33,29 @@
 
       <!-- Source title for feed item -->
       <template v-else-if="sourceTitle">
-        <span class="blog-item-card__dot">·</span>
         <a v-if="sourcePath" :href="sourcePath" class="blog-item-card__source blog-item-card__source-link" @click.stop>{{ sourceTitle }}</a>
         <span v-else class="blog-item-card__source">{{ sourceTitle }}</span>
       </template>
 
-      <!-- External type badge for feed item -->
-      <PBadge v-if="cardType === 'feed_item'" type="external" no-dot style="margin-left: 0.25rem;">
-        {{ externalBadge }}
-      </PBadge>
+      <!-- 统计指标：阅读、评分、收藏 -->
+      <span v-if="postItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
+      <span v-else-if="feedItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(feedItem.read_count) }}</span>
 
-      <span class="blog-item-card__dot">·</span>
+      <span v-if="postItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
+
+      <span v-if="postItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
+      <span v-else-if="feedItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(feedItem.bookmark_count) }}</span>
+
+      <!-- 日期 -->
       <time class="blog-item-card__time">{{ formattedDate }}</time>
+
+      <!-- 彩色类型胶囊 -->
+      <span
+        class="feed-type-tag"
+        :class="cardType === 'post' ? 'feed-type-tag--blog' : 'feed-type-tag--rss'"
+      >
+        {{ cardType === 'post' ? '博客' : externalBadge }}
+      </span>
     </template>
 
     <!-- Actions slot / EntryActions -->
@@ -96,31 +93,18 @@
         </a>
       </slot>
     </template>
-
-    <template v-if="postItem" #footer>
-      <span><Eye :size="13" aria-hidden="true" />阅读 {{ formatCount(postItem.view_count) }}</span>
-      <span><Gauge :size="13" aria-hidden="true" />评分 {{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
-      <span><Bookmark :size="13" aria-hidden="true" />收藏 {{ formatCount(postItem.bookmarks_count) }}</span>
-    </template>
-    <template v-else-if="feedItem" #footer>
-      <span><Eye :size="13" aria-hidden="true" />阅读 {{ formatCount(feedItem.read_count) }}</span>
-      <span><Bookmark :size="13" aria-hidden="true" />收藏 {{ formatCount(feedItem.bookmark_count) }}</span>
-    </template>
   </PEntry>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { Bookmark, Eye, Gauge } from 'lucide-vue-next'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
-import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
 import { channelUrl } from '@/router/siteUrls'
-import { resolveMediaURL } from '@/utils/mediaUrl'
 
 export type BlogItemType = 'post' | 'short_note' | 'feed_item'
 
@@ -168,8 +152,6 @@ const feedItem = computed<FeedItem | null>(() => {
   return (props.item.feed_item || props.item) as FeedItem
 })
 
-const coverImageFailed = ref(false)
-
 const displayTitle = computed(() => {
   if (postItem.value) return postItem.value.title
   if (feedItem.value) return feedItem.value.title
@@ -180,23 +162,6 @@ const displayTitle = computed(() => {
 const displaySummary = computed(() => {
   if (postItem.value) return postItem.value.summary || ''
   if (feedItem.value) return stripHtml(feedItem.value.summary || feedItem.value.content || '')
-  return ''
-})
-
-const coverUrl = computed(() => {
-  if (postItem.value?.cover_url) return resolveMediaURL(postItem.value.cover_url)
-  if (feedItem.value?.image_url) return resolveMediaURL(feedItem.value.image_url)
-  if (feedItem.value?.feed_source?.cover_url) return resolveMediaURL(feedItem.value.feed_source.cover_url)
-  return ''
-})
-
-watch(coverUrl, () => {
-  coverImageFailed.value = false
-})
-
-const avatarUrl = computed(() => {
-  if (postItem.value?.user?.avatar_url) return resolveMediaURL(postItem.value.user.avatar_url)
-  if (feedItem.value?.feed_source?.cover_url) return resolveMediaURL(feedItem.value.feed_source.cover_url)
   return ''
 })
 
@@ -222,11 +187,8 @@ const externalBadge = computed(() => {
 const formattedDate = computed(() => {
   const dateStr = postItem.value?.created_at || feedItem.value?.published_at || props.item.created_at || ''
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const date = new Date(dateStr)
+  return `${date.getMonth() + 1}月${date.getDate()}日`
 })
 
 function stripHtml(html: string): string {
@@ -245,56 +207,15 @@ function formatCount(value?: number) {
 }
 
 function formatRating(score?: number, count?: number) {
-  if (!count) return '— (0)'
+  if (!count) return '—'
   return `${Number(score || 0).toFixed(1)} (${count})`
 }
-
 </script>
 
 <style scoped>
-.blog-item-card__visual {
-  width: 7rem;
-  aspect-ratio: 4 / 3;
-  height: auto;
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-  border: 1px solid var(--a-color-border-soft);
-  flex-shrink: 0;
-  box-shadow: none;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.blog-item-card:hover .blog-item-card__visual {
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
-}
-
-.blog-item-card__cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.blog-item-card:hover .blog-item-card__cover {
-  transform: scale(1.05);
-}
-
-.blog-item-card__visual.is-fallback :deep(.p-avatar) {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  border-radius: 0;
-}
-
 .blog-item-card__author {
   font-weight: 600;
   color: var(--a-color-fg);
-}
-
-.blog-item-card__dot {
-  color: var(--a-color-muted-soft);
-  margin: 0 0.25rem;
 }
 
 .blog-item-card__channel {
@@ -324,10 +245,31 @@ function formatRating(score?: number, count?: number) {
   color: var(--a-color-muted-soft);
 }
 
-@media (max-width: 640px) {
-  .blog-item-card__visual {
-    width: 5.5rem;
-  }
+.feed-meta-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--a-color-muted-soft);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.feed-type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.feed-type-tag--blog {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #16a34a;
+}
+.feed-type-tag--rss {
+  background: color-mix(in srgb, #2563eb 12%, transparent);
+  color: #2563eb;
 }
 
 .blog-item-card__external-link {

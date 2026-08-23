@@ -12,6 +12,6 @@ The mobile app uses port `5174` by default and proxies `/api` and `/uploads` to 
 
 ## Current pilot
 
-The pilot owns Feed and Blog routes. The app reuses the existing API client, Pinia stores, auth flow, route guards, and content views. Other modules remain in the desktop application until their mobile routes are migrated.
+The pilot owns Feed, Blog, Music, Inbox, author profiles, and the core Blog Studio routes. The app reuses the existing API client, Pinia stores, auth flow, route guards, and content views. Account settings and unsupported Studio modules still fall back to the desktop application.
 
-Set `VITE_DESKTOP_APP_URL` in production so account, notification, message, and Studio links fall back to the desktop application. The default production fallback is `https://www.atoman.org`.
+Set `VITE_DESKTOP_APP_URL` in production for account settings and other desktop fallback links. The default production fallback is `https://www.atoman.org`.

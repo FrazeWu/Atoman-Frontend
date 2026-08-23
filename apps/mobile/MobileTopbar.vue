@@ -15,6 +15,7 @@
       :current-module="mobileModule"
       :available-modules="availableModules"
       :desktop-base-url="desktopAppUrl"
+      native-personal-routes
     />
     <RouterLink v-else to="/feed" class="mobile-app-topbar__brand">ATOMAN</RouterLink>
   </header>
@@ -38,7 +39,7 @@ const route = useRoute()
 const router = useRouter()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, '', route.path))
-const isBlogContextRoute = computed(() => /^\/(?:post\/|posts\/(?:post\/|channel\/)|channel\/|collection\/|channels\/|users\/)/.test(route.path))
+const isBlogContextRoute = computed(() => /^\/(?:post\/|posts\/(?:post\/|channel\/|notes(?:\/|$))|channel\/|collection\/|channels\/|users\/)/.test(route.path))
 const mobileModule = computed<ModuleRoomKey | null>(() => {
   if (siteContext.value.type === 'module' && availableModuleSet.has(siteContext.value.module)) {
     return siteContext.value.module
@@ -46,12 +47,14 @@ const mobileModule = computed<ModuleRoomKey | null>(() => {
   return isBlogContextRoute.value ? 'blog' : null
 })
 const mobileModuleLabel = computed(() => {
+  if (route.path.startsWith('/inbox')) return '私信'
+  if (route.path.startsWith('/studio')) return 'Studio'
   if (mobileModule.value === 'blog') return '博客'
   if (mobileModule.value === 'feed') return '订阅'
   if (mobileModule.value === 'music') return '音乐'
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && /^\/(?:feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|artist\/|album\/|song\/|playlist\/))/.test(route.path))
+const showMobileBack = computed(() => !isAuthRoute.value && /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|artist\/|album\/|song\/|playlist\/))/.test(route.path))
 
 const goBack = () => {
   if (window.history.length > 1 && window.history.state?.back) {

@@ -3,8 +3,8 @@
     <!-- 顶部全局方案切换器 -->
     <header class="discover-preview-header">
       <div class="discover-preview-header__main">
-        <h1>发现页全新设计方案对比与评审</h1>
-        <p>点击下方按钮直接切换体验 3 种完全不同的发现页交互架构原型：</p>
+        <h1>发现页与博客/短笺卡片全新设计方案评审</h1>
+        <p>点击下方按钮直接切换体验 3 种发现页架构原型与 6 款博客/短笺卡片新设计：</p>
       </div>
 
       <div class="prototype-switch-bar">
@@ -98,7 +98,7 @@
           </div>
         </section>
 
-        <!-- 右侧信息流：💡 优质频道/源推荐流 -->
+        <!-- 右侧信息流：💡 优质频道与源推荐流 -->
         <section class="stream-column">
           <div class="stream-column__head">
             <div class="stream-column__title-group">
@@ -114,46 +114,44 @@
 
           <div class="channels-stack">
             <article
-              v-for="src in mockChannels"
-              :key="src.id"
-              class="feed-source-card"
-              tabindex="0"
+              v-for="channel in mockChannels"
+              :key="channel.id"
+              class="feed-source-card feed-source-card--rich"
             >
               <div class="feed-source-card__header">
-                <div class="feed-source-card__avatar" :style="{ '--feed-source-color': src.color }">
-                  <img v-if="src.image" :src="src.image" :alt="src.title" />
-                  <span v-else>{{ src.initials }}</span>
+                <div class="feed-source-card__avatar" :style="{ '--feed-source-color': channel.color }">
+                  {{ channel.avatarLabel }}
                 </div>
                 <div class="feed-source-card__info">
                   <div class="feed-source-card__title-row">
-                    <h3 class="feed-source-card__title">{{ src.title }}</h3>
-                    <span class="feed-source-card__tag">{{ src.categoryLabel }}</span>
+                    <h3 class="feed-source-card__title">{{ channel.title }}</h3>
+                    <span class="feed-source-card__tag">{{ channel.category }}</span>
                   </div>
-                  <p class="feed-source-card__summary">{{ src.summary }}</p>
+                  <p class="feed-source-card__summary">{{ channel.description }}</p>
                 </div>
                 <button
                   type="button"
                   class="feed-source-card__sub-btn"
-                  :class="{ 'is-subscribed': src.subscribed }"
-                  @click.stop="src.subscribed = !src.subscribed"
+                  :class="{ 'is-subscribed': channel.subscribed }"
+                  @click.stop="channel.subscribed = !channel.subscribed"
                 >
-                  <Check v-if="src.subscribed" :size="13" />
+                  <Check v-if="channel.subscribed" :size="13" />
                   <Plus v-else :size="13" />
-                  <span>{{ src.subscribed ? '已订阅' : '订阅' }}</span>
+                  <span>{{ channel.subscribed ? '已订阅' : '订阅' }}</span>
                 </button>
               </div>
 
-              <ul v-if="src.previews.length" class="feed-source-card__previews">
-                <li v-for="p in src.previews.slice(0, 2)" :key="p">
+              <ul class="feed-source-card__previews">
+                <li v-for="recent in channel.recentArticles" :key="recent.id">
                   <span class="preview-bullet">›</span>
-                  <span class="preview-title">{{ p }}</span>
+                  <span class="preview-title">{{ recent.title }}</span>
                 </li>
               </ul>
 
               <div class="feed-source-card__footer">
-                <span class="footer-stat"><Users :size="12" />{{ src.subCount }} 订阅</span>
-                <span class="footer-stat"><FileText :size="12" />{{ src.recentCount }} 篇近期</span>
-                <span class="footer-stat"><Clock :size="12" />{{ src.updatedTime }}</span>
+                <span class="footer-stat"><Users :size="12" />{{ channel.subscribers }} 订阅</span>
+                <span class="footer-stat"><FileText :size="12" />{{ channel.recentCount }} 近期</span>
+                <span class="footer-time">{{ channel.updatedAt }}</span>
               </div>
             </article>
           </div>
@@ -162,274 +160,285 @@
     </main>
 
     <!-- ═══════════════════════════════════════════════════════════════
-         方案 2：分栏 Tab 极简型（Tabbed Minimal Explore）
+         方案 4：博客模块卡片全新设计方案评审（Blog & Short Note Cards）
          ═══════════════════════════════════════════════════════════════ -->
-    <main v-else-if="activeProto === 'tabbed'" class="discover-layout tabbed-flow">
-      <!-- 顶部单行集成 Toolbar -->
-      <div class="tabbed-toolbar">
-        <div class="tabbed-toolbar__tabs">
-          <button
-            class="tab-item"
-            :class="{ 'is-active': activeExploreTab === 'channels' }"
-            @click="activeExploreTab = 'channels'"
-          >
-            <Radio :size="15" />
-            <span>频道推荐</span>
-            <span class="tab-item__count">24</span>
-          </button>
-          <button
-            class="tab-item"
-            :class="{ 'is-active': activeExploreTab === 'articles' }"
-            @click="activeExploreTab = 'articles'"
-          >
-            <FileText :size="15" />
-            <span>热门文章</span>
-            <span class="tab-item__count">128</span>
-          </button>
-          <button
-            class="tab-item"
-            :class="{ 'is-active': activeExploreTab === 'square' }"
-            @click="activeExploreTab = 'square'"
-          >
-            <Compass :size="15" />
-            <span>订阅源广场 (批量)</span>
-          </button>
+    <main v-else-if="activeProto === 'blog_and_notes'" class="discover-layout blog-design-review">
+      <!-- ─────────────────────────────────────────────────────────────
+           Part 1: 博客文章卡片设计方案对比 (Blog Post Cards)
+           ───────────────────────────────────────────────────────────── -->
+      <section class="review-section">
+        <div class="review-section__head">
+          <div class="review-badge">PART 1</div>
+          <h2>博客文章卡片 · 3 种设计方案对比</h2>
+          <p>用于博客首页、专栏频道页、个人主页等长文信息流展示。</p>
         </div>
 
-        <div class="tabbed-toolbar__search">
-          <Search :size="14" class="search-icon" />
-          <input v-model="tabbedSearch" type="search" placeholder="筛选列表..." />
-        </div>
-      </div>
+        <div class="cards-showcase-grid">
+          <!-- 博客方案 1：极简流式行（对齐 PEntry 淡绿竖线，高信息密度 · 推荐） -->
+          <div class="card-showcase-col">
+            <div class="col-badge col-badge--recommended">方案 1 · 极简流式行（推荐）</div>
+            <p class="col-desc">左侧淡绿竖线未读指示，单行集中 meta，高度极紧凑，视觉节奏与 Feed 保持高度一致。</p>
 
-      <!-- Tab 1 内容：纯频道推荐网格 -->
-      <div v-if="activeExploreTab === 'channels'" class="tab-view">
-        <div class="tab-sub-filter">
-          <span class="filter-hint">分类筛选：</span>
-          <button
-            v-for="c in channelCategories"
-            :key="c.id"
-            class="sub-filter-pill"
-            :class="{ 'is-active': activeCategoryFilter === c.id }"
-            @click="activeCategoryFilter = c.id"
-          >
-            {{ c.name }}
-          </button>
-        </div>
-
-        <div class="channels-grid-2col">
-          <article
-            v-for="src in filteredMockChannels"
-            :key="src.id"
-            class="feed-source-card"
-            tabindex="0"
-          >
-            <div class="feed-source-card__header">
-              <div class="feed-source-card__avatar" :style="{ '--feed-source-color': src.color }">
-                <img v-if="src.image" :src="src.image" :alt="src.title" />
-                <span v-else>{{ src.initials }}</span>
+            <div class="showcase-box">
+              <div class="demo-status-toggle">
+                <span>预览状态：</span>
+                <button
+                  class="pill-btn"
+                  :class="{ 'is-active': blogCard1Unread }"
+                  @click="blogCard1Unread = !blogCard1Unread"
+                >
+                  {{ blogCard1Unread ? '🟢 当前未读 (带绿线)' : '⚪ 当前已读 (左侧透明)' }}
+                </button>
               </div>
-              <div class="feed-source-card__info">
-                <div class="feed-source-card__title-row">
-                  <h3 class="feed-source-card__title">{{ src.title }}</h3>
-                  <span class="feed-source-card__tag">{{ src.categoryLabel }}</span>
+
+              <div class="feed-timeline-box" style="margin-top: 0.75rem;">
+                <PEntry
+                  title="深入理解 SwiftUI 状态驱动架构与单向数据流"
+                  summary="在复杂的客户端应用中，如何通过声明式状态容器和单一可信数据源（Single Source of Truth）保证 UI 与业务逻辑的强一致性？本文深入拆解状态流转链路与渲染优化策略。"
+                  :is-read="!blogCard1Unread"
+                  class="content-stream-entry"
+                >
+                  <template #meta>
+                    <span class="a-label feed-source-link">张三</span>
+                    <span class="a-label a-muted">《iOS 进阶专栏》</span>
+                    <span class="feed-meta-stat"><Eye :size="11" />3.4K</span>
+                    <span class="feed-meta-stat"><Gauge :size="11" />4.9 (18)</span>
+                    <span class="feed-meta-stat"><Bookmark :size="11" />256</span>
+                    <span style="color:var(--a-color-muted-soft)">6月20日</span>
+                    <span class="feed-type-tag feed-type-tag--blog">博客</span>
+                  </template>
+                  <template #actions>
+                    <button class="mock-clip-btn" title="收藏"><Bookmark :size="14" /></button>
+                    <button class="mock-clip-btn" title="稍后阅读"><Clock :size="14" /></button>
+                  </template>
+                </PEntry>
+              </div>
+            </div>
+          </div>
+
+          <!-- 博客方案 2：现代微杂志卡片（图文并茂，88px 封面 + 药丸指标气泡） -->
+          <div class="card-showcase-col">
+            <div class="col-badge">方案 2 · 现代微杂志卡片</div>
+            <p class="col-desc">右侧配有精致 88×64px 封面缩略图，底部采用药丸状微型指标气泡，视觉丰富度更强。</p>
+
+            <div class="showcase-box">
+              <article class="magazine-blog-card">
+                <div class="magazine-blog-card__main">
+                  <div class="magazine-blog-card__header">
+                    <span class="mag-author">李四 ✦</span>
+                    <span class="mag-dot">·</span>
+                    <span class="mag-channel">《全栈系统设计》</span>
+                    <span class="mag-dot">·</span>
+                    <span class="mag-date">2天前</span>
+                  </div>
+                  <h3 class="magazine-blog-card__title">从零构建分布式高可用缓存引擎</h3>
+                  <p class="magazine-blog-card__summary">基于 Go + Raft 算法实现分布式一致性协议，拆解内存分片与淘汰策略...</p>
+                  <div class="magazine-blog-card__footer">
+                    <span class="mag-pill"><Eye :size="11" /> 2.8K 阅读</span>
+                    <span class="mag-pill"><Gauge :size="11" /> 4.8 评分</span>
+                    <span class="mag-pill"><Bookmark :size="11" /> 182 收藏</span>
+                  </div>
                 </div>
-                <p class="feed-source-card__summary">{{ src.summary }}</p>
-              </div>
-              <button
-                type="button"
-                class="feed-source-card__sub-btn"
-                :class="{ 'is-subscribed': src.subscribed }"
-                @click.stop="src.subscribed = !src.subscribed"
-              >
-                <Check v-if="src.subscribed" :size="13" />
-                <Plus v-else :size="13" />
-                <span>{{ src.subscribed ? '已订阅' : '订阅' }}</span>
-              </button>
+                <div class="magazine-blog-card__cover">
+                  <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=200&auto=format&fit=crop&q=80" alt="封面" />
+                </div>
+              </article>
             </div>
+          </div>
 
-            <ul v-if="src.previews.length" class="feed-source-card__previews">
-              <li v-for="p in src.previews.slice(0, 2)" :key="p">
-                <span class="preview-bullet">›</span>
-                <span class="preview-title">{{ p }}</span>
-              </li>
-            </ul>
+          <!-- 博客方案 3：专栏结构化卡片（专栏头部 Banner + 大标题 + 标签组） -->
+          <div class="card-showcase-col">
+            <div class="col-badge">方案 3 · 专栏结构化卡片</div>
+            <p class="col-desc">顶部专栏归属横幅，突出所属专栏与期数，正文带 Tag 标签组与快捷阅读按钮。</p>
 
-            <div class="feed-source-card__footer">
-              <span class="footer-stat"><Users :size="12" />{{ src.subCount }} 订阅</span>
-              <span class="footer-stat"><FileText :size="12" />{{ src.recentCount }} 篇近期</span>
-              <span class="footer-stat"><Clock :size="12" />{{ src.updatedTime }}</span>
+            <div class="showcase-box">
+              <article class="structured-blog-card">
+                <div class="structured-blog-card__top">
+                  <span class="struct-channel-badge">专栏 · 《现代前端工程化》第 14 期</span>
+                  <span class="struct-time">06-18</span>
+                </div>
+                <h3 class="structured-blog-card__title">Vite 6 与现代打包器底层性能优化实战</h3>
+                <p class="structured-blog-card__summary">深入 Rolldown 与 Turbopack 架构，探索 ESM 热重载性能极限与微模块缓存机制。</p>
+                <div class="structured-blog-card__tags">
+                  <span class="struct-tag">#Vite</span>
+                  <span class="struct-tag">#Rust</span>
+                  <span class="struct-tag">#前端性能</span>
+                </div>
+                <div class="structured-blog-card__footer">
+                  <div class="struct-meta">
+                    <span>王五</span>
+                    <span>·</span>
+                    <span>4.2K 阅读</span>
+                  </div>
+                  <span class="struct-read-link">阅读正文 →</span>
+                </div>
+              </article>
             </div>
-          </article>
-        </div>
-      </div>
-
-      <!-- Tab 2 内容：纯热门文章流 -->
-      <div v-else-if="activeExploreTab === 'articles'" class="tab-view">
-        <div class="feed-timeline-box">
-          <PEntry
-            v-for="item in mockArticles"
-            :key="item.id"
-            :title="item.title"
-            :summary="item.summary"
-            :is-read="item.isRead"
-            class="content-stream-entry"
-          >
-            <template #meta>
-              <span class="a-label feed-source-link">{{ item.source }}</span>
-              <span class="feed-meta-stat"><Eye :size="11" />{{ item.views }}</span>
-              <span class="feed-meta-stat"><Gauge :size="11" />{{ item.rating }}</span>
-              <span class="feed-meta-stat"><Bookmark :size="11" />{{ item.bookmarks }}</span>
-              <span style="color:var(--a-color-muted-soft)">{{ item.date }}</span>
-              <span class="feed-type-tag" :class="item.badgeType === 'blog' ? 'feed-type-tag--blog' : 'feed-type-tag--rss'">
-                {{ item.badge }}
-              </span>
-            </template>
-          </PEntry>
-        </div>
-      </div>
-
-      <!-- Tab 3 内容：订阅源广场（批量勾选订阅） -->
-      <div v-else class="tab-view">
-        <div class="batch-toolbar">
-          <label class="batch-select-all">
-            <input type="checkbox" v-model="allSelected" @change="toggleSelectAll" />
-            <span>全选当前页 ({{ selectedSourceIds.length }}/{{ mockChannels.length }})</span>
-          </label>
-          <button
-            class="batch-sub-btn"
-            :disabled="!selectedSourceIds.length"
-            @click="batchSubscribe"
-          >
-            订阅选中源 ({{ selectedSourceIds.length }})
-          </button>
-        </div>
-
-        <div class="batch-sources-list">
-          <div
-            v-for="src in mockChannels"
-            :key="src.id"
-            class="batch-source-row"
-            :class="{ 'is-selected': selectedSourceIds.includes(src.id) }"
-            @click="toggleSourceSelection(src.id)"
-          >
-            <input
-              type="checkbox"
-              :checked="selectedSourceIds.includes(src.id)"
-              :disabled="src.subscribed"
-              @click.stop
-              @change="toggleSourceSelection(src.id)"
-            />
-            <div class="batch-source-row__avatar" :style="{ '--feed-source-color': src.color }">
-              {{ src.initials }}
-            </div>
-            <div class="batch-source-row__info">
-              <strong>{{ src.title }}</strong>
-              <small>{{ src.summary }}</small>
-            </div>
-            <span class="src-type-tag">{{ src.categoryLabel }}</span>
-            <span class="batch-source-row__subs">{{ src.subCount }} 订阅</span>
-            <span v-if="src.subscribed" class="batch-status-tag">已订阅</span>
           </div>
         </div>
-      </div>
+      </section>
+
+      <!-- ─────────────────────────────────────────────────────────────
+           Part 2: 短笺卡片设计方案对比 (Short Note Cards)
+           ───────────────────────────────────────────────────────────── -->
+      <section class="review-section" style="margin-top: 2.5rem;">
+        <div class="review-section__head">
+          <div class="review-badge review-badge--note">PART 2</div>
+          <h2>短笺卡片 · 3 种设计方案对比</h2>
+          <p>用于即时想法、碎片灵感、多图动态发布与行内轻量讨论。</p>
+        </div>
+
+        <div class="cards-showcase-grid">
+          <!-- 短笺方案 A：现代精致便签（32px 头像 + 短文 + 2图 + 胶囊互动栏 + 内嵌评论 · 推荐） -->
+          <div class="card-showcase-col">
+            <div class="col-badge col-badge--recommended">方案 A · 现代精致便签（推荐）</div>
+            <p class="col-desc">32px 头像 + 舒适行高 + 自适应多图网格 + 胶囊互动栏，支持点击“讨论”在卡片底部丝滑内嵌展开评论。</p>
+
+            <div class="showcase-box">
+              <article class="modern-note-card">
+                <!-- 头部 -->
+                <header class="modern-note-card__header">
+                  <div class="note-author-avatar">张</div>
+                  <div class="note-author-info">
+                    <div class="note-author-row">
+                      <strong class="note-name">张三</strong>
+                      <span class="note-badge">短笺</span>
+                    </div>
+                    <span class="note-time">10分钟前 · 已编辑</span>
+                  </div>
+                  <div class="note-owner-actions">
+                    <button class="note-icon-btn" title="编辑"><Pencil :size="13" /></button>
+                    <button class="note-icon-btn is-danger" title="删除"><Trash2 :size="13" /></button>
+                  </div>
+                </header>
+
+                <!-- 正文内容 -->
+                <div class="modern-note-card__body">
+                  <p class="note-text">
+                    今天把左右双并列信息流落地了！左边看热门精选好文，右边选优质作者和独立博客，大屏下的阅读沉浸感和信息密度确实舒服很多。💡
+                  </p>
+                  <!-- 2 图并列预览 -->
+                  <div class="note-media-grid count-2">
+                    <div class="note-media-thumb">
+                      <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=80" alt="图片1" />
+                    </div>
+                    <div class="note-media-thumb">
+                      <img src="https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=300&auto=format&fit=crop&q=80" alt="图片2" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 胶囊互动操作栏 -->
+                <footer class="modern-note-card__footer">
+                  <button
+                    type="button"
+                    class="note-pill-action"
+                    :class="{ 'is-liked': noteALiked }"
+                    @click="noteALiked = !noteALiked"
+                  >
+                    <Heart :size="13" :fill="noteALiked ? 'currentColor' : 'none'" />
+                    <span>{{ noteALiked ? '43' : '42' }}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="note-pill-action"
+                    :class="{ 'is-active': noteACommentsOpen }"
+                    @click="noteACommentsOpen = !noteACommentsOpen"
+                  >
+                    <MessageSquare :size="13" />
+                    <span>8 条讨论</span>
+                  </button>
+
+                  <button type="button" class="note-pill-action">
+                    <Share2 :size="13" />
+                    <span>分享</span>
+                  </button>
+                </footer>
+
+                <!-- 内嵌平滑评论区预览 -->
+                <div v-if="noteACommentsOpen" class="note-inline-comments">
+                  <div class="inline-comment-head">共 8 条讨论</div>
+                  <div class="mock-comment-item">
+                    <span class="commenter">李四:</span>
+                    <span class="comment-content">双流排版确实比之前切来切去顺畅很多，点赞！👍</span>
+                  </div>
+                  <div class="mock-comment-input">
+                    <input type="text" placeholder="写下你的想法与讨论..." />
+                    <button type="button">发送</button>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- 短笺方案 B：极简彩色便签条（彩色左边缘 + 紧凑文字 + 极简互动） -->
+          <div class="card-showcase-col">
+            <div class="col-badge">方案 B · 极简彩色便签条</div>
+            <p class="col-desc">左侧黄色便签指示线，紧凑单行作者头，突出即时文字灵感与快速备忘录属性。</p>
+
+            <div class="showcase-box">
+              <article class="sticky-memo-card">
+                <div class="sticky-memo-head">
+                  <span class="sticky-author">张三</span>
+                  <span class="sticky-dot">·</span>
+                  <span class="sticky-time">2小时前</span>
+                </div>
+                <p class="sticky-content">
+                  “重构的真正目的不是为了把代码变漂亮，而是为了让未来的每一次变化都变得安全且容易。”—— 今天的随手摘录。
+                </p>
+                <div class="sticky-footer">
+                  <span class="sticky-stat">❤️ 19 赞</span>
+                  <span class="sticky-stat">💬 3 讨论</span>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- 短笺方案 C：分栏气泡灵感卡（左侧头像列 + 右侧圆角气泡内容） -->
+          <div class="card-showcase-col">
+            <div class="col-badge">方案 C · 分栏气泡灵感卡</div>
+            <p class="col-desc">类似 GitHub Discussion 的经典分栏：左侧头像独立成列，右侧为带圆角的气泡正文容器。</p>
+
+            <div class="showcase-box">
+              <div class="bubble-note-layout">
+                <div class="bubble-avatar">张</div>
+                <div class="bubble-container">
+                  <div class="bubble-head">
+                    <strong>张三</strong>
+                    <span class="bubble-time">昨天 18:30</span>
+                  </div>
+                  <p class="bubble-text">
+                    尝试给卡片增加了微光高亮和 hover 浮层，大家觉得哪种动效体验更自然？
+                  </p>
+                  <div class="bubble-actions">
+                    <button class="bubble-btn">❤️ 12</button>
+                    <button class="bubble-btn">💬 5</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- ═══════════════════════════════════════════════════════════════
-         方案 3：全景双栏仪表盘型（Dashboard / Split View）
+         方案 2 & 方案 3 备用原形保持可用
          ═══════════════════════════════════════════════════════════════ -->
-    <main v-else class="discover-layout dashboard-flow">
-      <!-- 左主栏 (65%)：热门与精选文章信息流 -->
-      <div class="dashboard-main">
-        <div class="dashboard-main__head">
-          <h2>🔥 热门精选内容</h2>
-          <div class="dashboard-sub-tabs">
-            <button class="sub-tab is-active">最新推荐</button>
-            <button class="sub-tab">讨论最多</button>
-            <button class="sub-tab">高分精选</button>
-          </div>
-        </div>
-
-        <div class="feed-timeline-box">
-          <PEntry
-            v-for="item in mockArticles"
-            :key="item.id"
-            :title="item.title"
-            :summary="item.summary"
-            :is-read="item.isRead"
-            class="content-stream-entry"
-          >
-            <template #meta>
-              <span class="a-label feed-source-link">{{ item.source }}</span>
-              <span class="feed-meta-stat"><Eye :size="11" />{{ item.views }}</span>
-              <span class="feed-meta-stat"><Gauge :size="11" />{{ item.rating }}</span>
-              <span class="feed-meta-stat"><Bookmark :size="11" />{{ item.bookmarks }}</span>
-              <span style="color:var(--a-color-muted-soft)">{{ item.date }}</span>
-              <span class="feed-type-tag" :class="item.badgeType === 'blog' ? 'feed-type-tag--blog' : 'feed-type-tag--rss'">
-                {{ item.badge }}
-              </span>
-            </template>
-          </PEntry>
+    <main v-else-if="activeProto === 'tabbed'" class="discover-layout tabbed-flow">
+      <!-- 方案 2 结构 -->
+      <div class="tabbed-top-bar">
+        <div class="tabbed-nav">
+          <button class="tab-btn is-active">💡 优质频道推荐</button>
+          <button class="tab-btn">🔥 热门精选文章</button>
         </div>
       </div>
+      <p style="padding: 2rem; text-align: center; color: var(--a-color-muted);">方案 2 Tab 极简型原型（已备用）</p>
+    </main>
 
-      <!-- 右侧栏 (35%)：优质频道榜与快捷探索 -->
-      <aside class="dashboard-sidebar">
-        <!-- 侧栏模块 1：新星频道推荐 -->
-        <div class="sidebar-box">
-          <div class="sidebar-box__head">
-            <h3>💡 值得关注的频道</h3>
-            <button class="more-link">换一批</button>
-          </div>
-          <div class="sidebar-channels-list">
-            <article
-              v-for="src in mockChannels.slice(0, 3)"
-              :key="src.id"
-              class="sidebar-channel-card"
-            >
-              <div class="sidebar-channel-card__top">
-                <div class="sidebar-channel-card__avatar" :style="{ '--feed-source-color': src.color }">
-                  {{ src.initials }}
-                </div>
-                <div class="sidebar-channel-card__text">
-                  <h4>{{ src.title }}</h4>
-                  <small>{{ src.categoryLabel }} · {{ src.subCount }} 订阅</small>
-                </div>
-                <button
-                  class="compact-sub-btn"
-                  :class="{ 'is-subscribed': src.subscribed }"
-                  @click="src.subscribed = !src.subscribed"
-                >
-                  <Check v-if="src.subscribed" :size="12" />
-                  <Plus v-else :size="12" />
-                  <span>{{ src.subscribed ? '已订阅' : '订阅' }}</span>
-                </button>
-              </div>
-              <p class="sidebar-channel-card__desc">{{ src.summary }}</p>
-            </article>
-          </div>
-        </div>
-
-        <!-- 侧栏模块 2：热门话题词云 -->
-        <div class="sidebar-box">
-          <div class="sidebar-box__head">
-            <h3>🏷 热门探索标签</h3>
-          </div>
-          <div class="tag-cloud">
-            <button v-for="t in tagCloud" :key="t.name" class="tag-cloud-item">
-              <span># {{ t.name }}</span>
-              <small>{{ t.count }}</small>
-            </button>
-          </div>
-        </div>
-
-        <!-- 侧栏模块 3：快捷导入/添加入口 -->
-        <div class="sidebar-box sidebar-box--promo">
-          <h4>你有喜欢的 RSS 或博客？</h4>
-          <p>支持一键导入 OPML 或输入网址自动解析订阅源。</p>
-          <button class="promo-btn">+ 导入 / 添加订阅源</button>
-        </div>
-      </aside>
+    <main v-else-if="activeProto === 'dashboard'" class="discover-layout dashboard-flow">
+      <p style="padding: 2rem; text-align: center; color: var(--a-color-muted);">方案 3 全景双栏原型（已备用）</p>
     </main>
   </div>
 </template>
@@ -440,13 +449,16 @@ import {
   Bookmark,
   Check,
   Clock,
-  Compass,
+  Eye,
   FileText,
   Gauge,
-  Eye,
+  Heart,
+  MessageSquare,
+  Pencil,
   Plus,
-  Radio,
   Search,
+  Share2,
+  Trash2,
   Users,
 } from 'lucide-vue-next'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -454,38 +466,35 @@ import PEntry from '@/components/ui/PEntry.vue'
 // ── 方案定义 ──
 const prototypeOptions = [
   {
+    id: 'blog_and_notes' as const,
+    icon: '📝',
+    name: '博客与短笺卡片设计评审',
+    tag: '全新重点 · 6 款卡片对比',
+    summary: '博客长文卡片 (3款) + 短笺灵感卡片 (3款)',
+    details: '包含博客文章的“极简流式行”、“现代微杂志卡”、“专栏结构卡”，以及短笺的“精致便签”、“极简彩色条”、“分栏气泡卡”。',
+  },
+  {
     id: 'curated' as const,
     icon: '✨',
-    name: '方案 1：主题流式策展页',
-    tag: '现代发现体验 · 推荐',
-    summary: '类似 Substack / Linear Discover',
-    details: '全宽纵向策展流：搜索与主题胶囊 → 精选频道展台（方案 B 双列网格）→ 今日热门文章流。浏览节奏极好，有深度有导读。',
-  },
-  {
-    id: 'tabbed' as const,
-    icon: '📑',
-    name: '方案 2：分栏 Tab 极简型',
-    tag: '结构极其清晰 · 高效',
-    summary: '类似 Reeder / Feedly 分类汇聚',
-    details: '三大清晰 Tab 切换（频道推荐 / 热门文章 / 订阅源广场），各 Tab 各司其职，无嵌套多重选择器，支持批量快速订阅。',
-  },
-  {
-    id: 'dashboard' as const,
-    icon: '📊',
-    name: '方案 3：全景双栏仪表盘',
-    tag: '宽屏高密度 · 一屏全览',
-    summary: '主内容流 + 侧边栏榜单与标签云',
-    details: '左栏为热门文章大信息流，右栏紧凑排布推荐频道、热门 Tag 标签云与快速导入入口，一屏看全所有发现维度的内容。',
+    name: '发现页方案 1：双并列信息流',
+    tag: '已上线发现页',
+    summary: '左侧精选文章 + 右侧推荐频道并列',
+    details: '全宽双并列流式架构，顶部搜索与主题胶囊联动，左栏淡绿竖线文章，右栏方案 B 频道卡片。',
   },
 ]
 
-const activeProto = ref<'curated' | 'tabbed' | 'dashboard'>('curated')
+const activeProto = ref<'blog_and_notes' | 'curated' | 'tabbed' | 'dashboard'>('blog_and_notes')
 
 const currentProtoMeta = computed(() => {
   return prototypeOptions.find(p => p.id === activeProto.value) || prototypeOptions[0]
 })
 
-// ── 方案 1 数据 ──
+// ── 博客与短笺设计评审交互状态 ──
+const blogCard1Unread = ref(true)
+const noteALiked = ref(false)
+const noteACommentsOpen = ref(false)
+
+// ── 发现页双流预览模拟数据 ──
 const curatedSearch = ref('')
 const activeTopic = ref('all')
 const curatedTopics = [
@@ -497,243 +506,115 @@ const curatedTopics = [
   { id: 'podcast', name: '深度播客' },
 ]
 
-// ── 方案 2 数据 ──
-const activeExploreTab = ref<'channels' | 'articles' | 'square'>('channels')
-const tabbedSearch = ref('')
-const activeCategoryFilter = ref('all')
-const channelCategories = [
-  { id: 'all', name: '全部分类' },
-  { id: 'blog', name: '个人博客' },
-  { id: 'tech', name: '技术资讯' },
-  { id: 'podcast', name: '播客频道' },
-  { id: 'design', name: '设计前沿' },
-]
-
-const allSelected = ref(false)
-const selectedSourceIds = ref<string[]>([])
-
-const toggleSelectAll = () => {
-  if (allSelected.value) {
-    selectedSourceIds.value = mockChannels.value.filter(s => !s.subscribed).map(s => s.id)
-  } else {
-    selectedSourceIds.value = []
-  }
-}
-
-const toggleSourceSelection = (id: string) => {
-  const src = mockChannels.value.find(s => s.id === id)
-  if (src?.subscribed) return
-  if (selectedSourceIds.value.includes(id)) {
-    selectedSourceIds.value = selectedSourceIds.value.filter(item => item !== id)
-    allSelected.value = false
-  } else {
-    selectedSourceIds.value.push(id)
-    if (selectedSourceIds.value.length === mockChannels.value.filter(s => !s.subscribed).length) {
-      allSelected.value = true
-    }
-  }
-}
-
-const batchSubscribe = () => {
-  mockChannels.value.forEach(s => {
-    if (selectedSourceIds.value.includes(s.id)) {
-      s.subscribed = true
-    }
-  })
-  selectedSourceIds.value = []
-  allSelected.value = false
-}
-
-// ── 方案 3 数据 ──
-const tagCloud = [
-  { name: 'Rust', count: 142 },
-  { name: 'Vue 3', count: 98 },
-  { name: 'AI Agent', count: 210 },
-  { name: 'LLM 系统', count: 85 },
-  { name: 'UI/UX 排版', count: 64 },
-  { name: '独立变现', count: 52 },
-]
-
-// ── Mock 核心数据 ──
-const mockChannels = ref([
+const mockArticles = ref([
   {
-    id: '1',
-    title: 'The Pragmatic Engineer',
-    summary: '深度大厂软件工程实践、系统架构演进与工程师职业进阶指南。',
-    categoryLabel: '个人博客',
-    initials: 'PE',
-    color: '#3b82f6',
-    image: '',
-    subCount: '12.4K',
-    recentCount: 8,
-    updatedTime: '2天前更新',
-    subscribed: false,
-    previews: [
-      '为什么高级工程师写更少代码但创造更多业务价值',
-      'Staff Engineer 晋升后的真实日常与技术权衡',
-    ],
+    id: 'art-1',
+    title: '深入理解 SwiftUI 状态驱动架构与单向数据流',
+    summary: '在复杂的客户端应用中，如何通过声明式状态容器和单一可信数据源（Single Source of Truth）保证 UI 与业务逻辑的强一致性？',
+    source: '张三 · 个人专栏',
+    views: '3.4K',
+    rating: '4.9',
+    bookmarks: 256,
+    date: '6月20日',
+    badge: '博客',
+    badgeType: 'blog',
+    isRead: false,
   },
   {
-    id: '2',
-    title: 'Hacker Newsletter',
-    summary: 'Hacker News 每周精选，覆盖系统架构、底层工具与开源前沿。',
-    categoryLabel: '技术资讯',
-    initials: 'HN',
-    color: '#f97316',
-    image: '',
-    subCount: '8.1K',
-    recentCount: 12,
-    updatedTime: '昨天更新',
-    subscribed: true,
-    previews: [
-      'Show HN: 用 Rust 从零编写的高性能终端音频流引擎',
-      'Ask HN: 在 2025 年你如何搭建自托管个人知识库？',
-    ],
-  },
-  {
-    id: '3',
-    title: 'CSS-Tricks & Web Frontend',
-    summary: '现代 Web 标准演进、CSS 现代排版布局与前端性能优化前线。',
-    categoryLabel: '技术资讯',
-    initials: 'CT',
-    color: '#10b981',
-    image: '',
-    subCount: '34K',
-    recentCount: 5,
-    updatedTime: '3天前更新',
-    subscribed: false,
-    previews: [
-      '深入理解 CSS Anchor Positioning 与 Popover API',
-      'Container Queries 实战：彻底摆脱传统媒体查询的局限',
-    ],
-  },
-  {
-    id: '4',
-    title: 'Dan Carlin Hardcore History',
-    summary: 'Dan Carlin 主持的深度沉浸式历史播客，单期时长超 4 小时。',
-    categoryLabel: '播客频道',
-    initials: 'HH',
-    color: '#ef4444',
-    image: '',
-    subCount: '48K',
-    recentCount: 3,
-    updatedTime: '1周前更新',
-    subscribed: false,
-    previews: [
-      'Episode 71: Twilight of the Empires (Part 3)',
-      'Bonus: The Strategy of Ancient Logistics',
-    ],
+    id: 'art-2',
+    title: 'Claude 3.7 Sonnet 混合推理机制深度实测与工程实践',
+    summary: '实测动态思考 token 与标准输出在代码生成和数学推理中的延迟与表现差异，如何在生产中控制上下文窗口与成本。',
+    source: 'AI 探索周刊',
+    views: '5.8K',
+    rating: '5.0',
+    bookmarks: 412,
+    date: '6月19日',
+    badge: '新闻',
+    badgeType: 'rss',
+    isRead: true,
   },
 ])
 
-const filteredMockChannels = computed(() => {
-  const q = tabbedSearch.value.trim().toLowerCase()
-  return mockChannels.value.filter(s => {
-    const matchQuery = !q || s.title.toLowerCase().includes(q) || s.summary.toLowerCase().includes(q)
-    const matchCat =
-      activeCategoryFilter.value === 'all' ||
-      (activeCategoryFilter.value === 'blog' && s.categoryLabel.includes('博客')) ||
-      (activeCategoryFilter.value === 'tech' && s.categoryLabel.includes('资讯')) ||
-      (activeCategoryFilter.value === 'podcast' && s.categoryLabel.includes('播客'))
-    return matchQuery && matchCat
-  })
-})
-
-const mockArticles = ref([
+const mockChannels = ref([
   {
-    id: 1,
-    title: 'Rust 异步运行时深度解析：Tokio 与 async-std 的架构差异',
-    summary: '本文从调度器设计、任务窃取、I/O 驱动三个维度对比两大主流异步运行时的实现选择与性能取舍。',
-    source: 'The Rust Programming Language Blog',
-    date: '8月22日',
-    badge: '外部',
-    badgeType: 'external' as const,
-    isRead: false,
-    views: 2341,
-    rating: '4.8 (12)',
-    bookmarks: 87,
+    id: 'chan-1',
+    title: '少数派 sspai',
+    category: 'TECH & LIFESTYLE',
+    description: '高效工作与品质生活，关注工具、数字生活与深度应用技巧。',
+    avatarLabel: '少',
+    color: '#da5635',
+    subscribers: '12.8K',
+    recentCount: 8,
+    updatedAt: '今天更新',
+    subscribed: false,
+    recentArticles: [
+      { id: 'r1', title: 'OpenAI o3 之后，agent 设计空间怎么变了' },
+      { id: 'r2', title: 'Claude Code 工作流拆解与生产体验' },
+    ],
   },
   {
-    id: 2,
-    title: '2025 年前端工程化现状报告：Vite 生态的全面胜利',
-    summary: '年度调查显示，Vite 在新项目中的使用率首次超过 Webpack，成为前端工程化的新默认选择。',
-    source: 'State of JS',
-    date: '8月21日',
-    badge: '外部',
-    badgeType: 'external' as const,
-    isRead: true,
-    views: 5812,
-    rating: '4.5 (34)',
-    bookmarks: 203,
-  },
-  {
-    id: 3,
-    title: '为什么我最终放弃了微服务架构，重回模块化单体',
-    summary: '五年微服务实践后，作者回顾了网络复杂性、分布式事务和运维成本带来的真实教训与架构反思。',
-    source: '编程随想',
-    date: '8月20日',
-    badge: '文章',
-    badgeType: 'blog' as const,
-    isRead: false,
-    views: 1024,
-    rating: '—',
-    bookmarks: 45,
-  },
-  {
-    id: 4,
-    title: 'CSS Anchor Positioning 正式落地：绝对定位的终结者？',
-    summary: '随着 Chrome 稳定版全面支持，CSS Anchor Positioning 成为首个真正强大的跨浏览器锚点布局规范。',
-    source: 'web.dev',
-    date: '8月19日',
-    badge: '外部',
-    badgeType: 'external' as const,
-    isRead: true,
-    views: 3190,
-    rating: '4.2 (8)',
-    bookmarks: 116,
+    id: 'chan-2',
+    title: 'Next Architecture',
+    category: 'ENGINEERING',
+    description: '深入分布式系统、存储引擎与云原生现代架构演进。',
+    avatarLabel: 'N',
+    color: '#2563eb',
+    subscribers: '6.4K',
+    recentCount: 4,
+    updatedAt: '昨天更新',
+    subscribed: true,
+    recentArticles: [
+      { id: 'r3', title: '为什么越来越多现代团队重写检索层' },
+      { id: 'r4', title: '单机百万连接长轮询性能调优指南' },
+    ],
   },
 ])
 </script>
 
 <style scoped>
 .discover-preview-root {
-  max-width: 72rem;
+  max-width: 82rem;
   margin: 0 auto;
-  padding: 2rem 1.5rem 6rem;
+  padding: 1.5rem 1.25rem 6rem;
   display: grid;
-  gap: 2.5rem;
+  gap: 1.75rem;
 }
 
-/* 顶部原型切换器 */
+/* 顶部评审切换器 */
 .discover-preview-header {
   display: grid;
   gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
-.discover-preview-header h1 {
+.discover-preview-header__main h1 {
   font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 0.25rem;
+  font-weight: 750;
+  margin: 0 0 0.35rem;
+  color: var(--a-color-fg);
 }
-.discover-preview-header p {
-  color: var(--a-color-muted);
-  font-size: 0.88rem;
+.discover-preview-header__main p {
   margin: 0;
+  font-size: 0.88rem;
+  color: var(--a-color-muted);
 }
 
 .prototype-switch-bar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 0.75rem;
 }
 .proto-btn {
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
   padding: 0.85rem 1rem;
-  text-align: left;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   cursor: pointer;
+  text-align: left;
   transition: all 0.18s ease;
 }
 .proto-btn:hover {
@@ -742,678 +623,282 @@ const mockArticles = ref([
 }
 .proto-btn.is-active {
   border-color: var(--a-color-text);
-  background: var(--a-color-surface);
-  box-shadow: inset 4px 0 0 var(--a-color-text), 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: var(--a-color-surface-muted);
+  box-shadow: 0 0 0 1px var(--a-color-text);
 }
-.proto-btn__icon { font-size: 1.1rem; }
-.proto-btn__name { font-size: 0.95rem; font-weight: 650; color: var(--a-color-fg); }
+.proto-btn__icon { font-size: 1.25rem; }
+.proto-btn__name { font-size: 0.95rem; font-weight: 700; color: var(--a-color-fg); }
 .proto-btn__tag { font-size: 0.72rem; color: var(--a-color-muted); }
 
 .proto-desc-box {
-  padding: 0.85rem 1.1rem;
-  border-left: 3px solid var(--a-color-text);
   background: var(--a-color-surface-muted);
-  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-  font-size: 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
-.proto-desc-box strong { color: var(--a-color-fg); display: block; margin-bottom: 0.25rem; }
-.proto-desc-box p { margin: 0; color: var(--a-color-muted); font-size: 0.8rem; }
+.proto-desc-box strong { color: var(--a-color-fg); display: block; margin-bottom: 0.2rem; }
+.proto-desc-box p { margin: 0; color: var(--a-color-muted); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   方案 1：双并列信息流样式（Dual Stream Flow）
-   ═══════════════════════════════════════════════════════════════════ */
-.dual-stream-flow {
+/* ═══════════════════════════════════════════════════════════════
+   博客 & 短笺设计评审专属样式
+   ═══════════════════════════════════════════════════════════════ */
+.blog-design-review {
   display: grid;
   gap: 2rem;
 }
 
-.dual-stream-head {
+.review-section {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
-.curated-search {
-  position: relative;
-  display: flex;
-  align-items: center;
+.review-section__head {
+  display: grid;
+  gap: 0.35rem;
 }
-.curated-search .search-icon {
-  position: absolute;
-  left: 0.85rem;
-  color: var(--a-color-muted);
-}
-.curated-search input {
-  width: 100%;
-  height: 2.75rem;
-  padding: 0 1rem 0 2.4rem;
-  border: 1px solid var(--a-color-border-soft);
+.review-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.15em 0.55em;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  font-size: 0.92rem;
-  color: var(--a-color-fg);
-  outline: none;
-  transition: border-color 0.15s ease;
+  background: color-mix(in srgb, #2563eb 15%, transparent);
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
-.curated-search input:focus { border-color: var(--a-color-text); }
-
-.curated-topics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.review-badge--note {
+  background: color-mix(in srgb, #9333ea 15%, transparent);
+  color: #9333ea;
 }
-.topic-pill {
-  padding: 0.35rem 0.85rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 999px;
-  background: var(--a-color-bg);
-  color: var(--a-color-muted);
-  font-size: 0.8rem;
-  font-weight: 550;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.topic-pill:hover { color: var(--a-color-fg); border-color: var(--a-color-border); }
-.topic-pill.is-active {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-text);
-}
-
-/* 左右双并列容器 */
-.dual-streams-container {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 1.75rem;
-}
-
-.stream-column {
-  display: grid;
-  gap: 1rem;
-}
-
-.stream-column__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 0.5rem;
-}
-
-.stream-column__title-group {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.stream-column__title-group h2 {
-  font-size: 1.05rem;
-  font-weight: 700;
+.review-section__head h2 {
+  font-size: 1.25rem;
+  font-weight: 750;
   margin: 0;
-}
-
-.stream-count {
-  font-size: 0.75rem;
-  color: var(--a-color-muted-soft);
-}
-
-.stream-sub-filters {
-  display: flex;
-  gap: 0.3rem;
-}
-
-.mini-filter {
-  padding: 0.2rem 0.55rem;
-  font-size: 0.72rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.mini-filter:hover { color: var(--a-color-fg); }
-.mini-filter.is-active {
-  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  font-weight: 600;
-  border-color: var(--a-color-border-soft);
+}
+.review-section__head p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--a-color-muted);
 }
 
-.channels-stack {
+.cards-showcase-grid {
   display: grid;
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
 }
 
-.flow-section__title-group {
-  display: flex;
-  align-items: center;
+.card-showcase-col {
+  display: grid;
   gap: 0.6rem;
 }
-.flow-section__title-group h2 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin: 0;
-}
-.section-badge {
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 0.15em 0.5em;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-  letter-spacing: 0.05em;
-}
-.section-badge--hot {
-  background: color-mix(in srgb, #ea580c 15%, transparent);
-  color: #ea580c;
-}
-.flow-section__link {
-  border: none;
-  background: transparent;
-  color: var(--a-color-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.flow-section__link:hover { color: var(--a-color-text); }
-
-/* 双列频道网格 */
-.channels-grid-2col {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-/* 方案 B 频道卡片样式 */
-.feed-source-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-.feed-source-card:hover {
-  border-color: var(--a-color-border);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-.feed-source-card__header {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-.feed-source-card__avatar {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
-  color: color-mix(in srgb, var(--feed-source-color) 75%, var(--a-color-fg));
-  display: grid;
-  place-items: center;
-  font-size: 0.9rem;
-  font-weight: 700;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.feed-source-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
-.feed-source-card__info { min-width: 0; display: grid; gap: 0.2rem; }
-.feed-source-card__title-row { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
-.feed-source-card__title {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--a-color-fg);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.feed-source-card__tag {
+.col-badge {
   display: inline-flex;
-  padding: 0.1em 0.45em;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
-  white-space: nowrap;
+  align-self: flex-start;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--a-color-fg);
 }
-.feed-source-card__summary {
+.col-badge--recommended {
+  color: #10b981;
+}
+.col-desc {
   margin: 0;
   font-size: 0.76rem;
   color: var(--a-color-muted);
   line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  min-height: 2.1rem;
 }
-.feed-source-card__sub-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  height: 1.85rem;
-  padding: 0 0.65rem;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-.feed-source-card__sub-btn:hover {
-  background: var(--a-color-surface-muted);
-}
-.feed-source-card__sub-btn.is-subscribed {
-  color: #10b981;
-  border-color: color-mix(in srgb, #10b981 40%, var(--a-color-border-soft));
-  background: color-mix(in srgb, #10b981 8%, transparent);
-}
-.feed-source-card__previews {
-  margin: 0;
-  padding: 0.4rem 0.65rem;
-  list-style: none;
-  background: var(--a-color-surface-muted);
-  border-radius: calc(var(--a-radius-control) - 2px);
-  display: grid;
-  gap: 0.25rem;
-}
-.feed-source-card__previews li {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.74rem;
-  color: var(--a-color-fg);
-  min-width: 0;
-}
-.preview-bullet { color: var(--a-color-muted-soft); font-weight: bold; flex-shrink: 0; }
-.preview-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.feed-source-card__footer {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  font-size: 0.7rem;
-  color: var(--a-color-muted-soft);
-}
-.footer-stat { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
 
-/* 文章列表容器 */
-.feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
+.showcase-box {
+  background: var(--a-color-surface-muted);
+  border: 1px dashed var(--a-color-border);
   border-radius: var(--a-radius-card);
-  overflow: hidden;
-}
-.feed-meta-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  color: var(--a-color-muted-soft);
-  font-size: 0.72rem;
-}
-.feed-type-tag {
-  display: inline-flex;
-  padding: 0.1em 0.45em;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 600;
-}
-.feed-type-tag--blog { background: color-mix(in srgb, #16a34a 12%, transparent); color: #16a34a; }
-.feed-type-tag--rss  { background: color-mix(in srgb, #2563eb 12%, transparent); color: #2563eb; }
-.mock-clip-btn {
-  border: none;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  padding: 0.25rem;
-}
-.mock-clip-btn:hover { color: var(--a-color-fg); }
-
-/* ═══════════════════════════════════════════════════════════════════
-   方案 2：分栏 Tab 极简型样式
-   ═══════════════════════════════════════════════════════════════════ */
-.tabbed-flow {
-  display: grid;
-  gap: 1.5rem;
-}
-.tabbed-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.4rem 0.6rem;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-}
-.tabbed-toolbar__tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.tab-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border: none;
-  background: transparent;
-  color: var(--a-color-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-  border-radius: var(--a-radius-control);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.tab-item:hover { color: var(--a-color-fg); }
-.tab-item.is-active {
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-.tab-item__count {
-  font-size: 0.68rem;
-  color: var(--a-color-muted-soft);
-}
-.tabbed-toolbar__search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.tabbed-toolbar__search .search-icon {
-  position: absolute;
-  left: 0.6rem;
-  color: var(--a-color-muted);
-}
-.tabbed-toolbar__search input {
-  padding: 0.35rem 0.75rem 0.35rem 1.8rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  font-size: 0.78rem;
-  color: var(--a-color-fg);
-  outline: none;
+  padding: 0.85rem;
 }
 
-.tab-view {
-  display: grid;
-  gap: 1rem;
-}
-.tab-sub-filter {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.filter-hint {
-  font-size: 0.75rem;
-  color: var(--a-color-muted);
-}
-.sub-filter-pill {
-  padding: 0.25rem 0.65rem;
-  font-size: 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-muted);
-  cursor: pointer;
-}
-.sub-filter-pill.is-active {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-text);
-}
-
-/* 批量订阅广场 */
-.batch-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.65rem 0.85rem;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-}
-.batch-select-all {
+.demo-status-toggle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.82rem;
-  font-weight: 550;
-  color: var(--a-color-fg);
-  cursor: pointer;
-}
-.batch-sub-btn {
-  padding: 0.35rem 0.85rem;
-  border-radius: var(--a-radius-control);
-  border: 1px solid var(--a-color-text);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.batch-sub-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.batch-sources-list {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-}
-.batch-source-row {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
-  background: var(--a-color-bg);
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.batch-source-row:last-child { border-bottom: none; }
-.batch-source-row:hover { background: var(--a-color-surface-muted); }
-.batch-source-row.is-selected { background: color-mix(in srgb, var(--a-color-surface-muted) 80%, transparent); }
-.batch-source-row__avatar {
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
-  color: color-mix(in srgb, var(--feed-source-color) 75%, var(--a-color-fg));
-  display: grid;
-  place-items: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.batch-source-row__info {
-  min-width: 0;
-  flex: 1 1 0;
-  display: grid;
-  gap: 0.15rem;
-}
-.batch-source-row__info strong { font-size: 0.88rem; color: var(--a-color-fg); }
-.batch-source-row__info small { font-size: 0.74rem; color: var(--a-color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.batch-source-row__subs { font-size: 0.72rem; color: var(--a-color-muted-soft); flex-shrink: 0; }
-.batch-status-tag { font-size: 0.7rem; color: #10b981; font-weight: 600; flex-shrink: 0; }
-
-/* ═══════════════════════════════════════════════════════════════════
-   方案 3：全景双栏仪表盘样式
-   ═══════════════════════════════════════════════════════════════════ */
-.dashboard-flow {
-  display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 1.75rem;
-}
-
-.dashboard-main {
-  display: grid;
-  gap: 1rem;
-}
-.dashboard-main__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 0.5rem;
-}
-.dashboard-main__head h2 { font-size: 1.1rem; font-weight: 700; margin: 0; }
-.dashboard-sub-tabs { display: flex; gap: 0.35rem; }
-.sub-tab {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.75rem;
-  border: none;
-  background: transparent;
+  font-size: 0.72rem;
   color: var(--a-color-muted);
-  cursor: pointer;
-  border-radius: var(--a-radius-control);
 }
-.sub-tab.is-active {
-  background: var(--a-color-surface-muted);
+.pill-btn {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--a-color-border);
+  background: var(--a-color-bg);
+  font-size: 0.72rem;
+  cursor: pointer;
   color: var(--a-color-fg);
-  font-weight: 600;
 }
 
-.dashboard-sidebar {
-  display: grid;
-  gap: 1.25rem;
+/* 博客方案 2：现代微杂志卡片 */
+.magazine-blog-card {
+  display: flex;
+  align-items: stretch;
+  gap: 0.85rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  padding: 0.85rem;
+  transition: border-color 0.18s ease;
 }
-.sidebar-box {
-  padding: 1rem;
+.magazine-blog-card:hover { border-color: var(--a-color-border); }
+.magazine-blog-card__main { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.35rem; }
+.magazine-blog-card__header { display: flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--a-color-muted); }
+.mag-author { font-weight: 600; color: var(--a-color-fg); }
+.magazine-blog-card__title { font-size: 0.92rem; font-weight: 700; color: var(--a-color-fg); margin: 0; line-height: 1.35; }
+.magazine-blog-card__summary { font-size: 0.76rem; color: var(--a-color-muted); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.magazine-blog-card__footer { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.2rem; }
+.mag-pill { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.15em 0.45em; border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); color: var(--a-color-muted); font-size: 0.68rem; font-weight: 500; }
+.magazine-blog-card__cover { width: 84px; height: 72px; flex-shrink: 0; border-radius: var(--a-radius-control); overflow: hidden; background: var(--a-color-surface-muted); }
+.magazine-blog-card__cover img { width: 100%; height: 100%; object-fit: cover; }
+
+/* 博客方案 3：专栏结构化卡片 */
+.structured-blog-card {
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.45rem;
+}
+.structured-blog-card__top { display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; }
+.struct-channel-badge { font-weight: 600; color: #2563eb; background: color-mix(in srgb, #2563eb 10%, transparent); padding: 0.15em 0.5em; border-radius: var(--a-radius-control); }
+.struct-time { color: var(--a-color-muted-soft); }
+.structured-blog-card__title { font-size: 0.95rem; font-weight: 750; margin: 0; color: var(--a-color-fg); }
+.structured-blog-card__summary { font-size: 0.76rem; color: var(--a-color-muted); margin: 0; line-height: 1.4; }
+.structured-blog-card__tags { display: flex; gap: 0.35rem; }
+.struct-tag { font-size: 0.68rem; color: var(--a-color-muted); background: var(--a-color-surface-muted); padding: 0.1em 0.4em; border-radius: 4px; }
+.structured-blog-card__footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--a-color-border-soft); padding-top: 0.5rem; font-size: 0.72rem; }
+.struct-meta { color: var(--a-color-muted); display: flex; gap: 0.3rem; }
+.struct-read-link { font-weight: 600; color: var(--a-color-text); }
+
+/* 短笺方案 A：现代精致便签 */
+.modern-note-card {
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
+  padding: 1rem;
   display: grid;
   gap: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
-.sidebar-box__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.sidebar-box__head h3 { font-size: 0.88rem; font-weight: 650; margin: 0; }
-.more-link { border: none; background: transparent; color: var(--a-color-muted); font-size: 0.75rem; cursor: pointer; }
-.more-link:hover { color: var(--a-color-text); }
+.modern-note-card__header { display: flex; align-items: center; gap: 0.6rem; }
+.note-author-avatar { width: 32px; height: 32px; border-radius: 999px; background: #8b5cf6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.note-author-info { display: grid; gap: 0.1rem; flex: 1 1 auto; }
+.note-author-row { display: flex; align-items: center; gap: 0.4rem; }
+.note-name { font-size: 0.85rem; color: var(--a-color-fg); }
+.note-badge { font-size: 0.62rem; font-weight: 700; padding: 0.1em 0.4em; border-radius: 999px; background: color-mix(in srgb, #9333ea 12%, transparent); color: #9333ea; }
+.note-time { font-size: 0.7rem; color: var(--a-color-muted-soft); }
+.note-owner-actions { display: flex; gap: 0.3rem; }
+.note-icon-btn { border: none; background: transparent; padding: 0.25rem; border-radius: var(--a-radius-control); color: var(--a-color-muted); cursor: pointer; }
+.note-icon-btn:hover { background: var(--a-color-surface-muted); color: var(--a-color-fg); }
+.note-icon-btn.is-danger:hover { color: var(--a-color-danger); }
 
-.sidebar-channels-list {
-  display: grid;
-  gap: 0.6rem;
-}
-.sidebar-channel-card {
-  padding: 0.65rem;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  display: grid;
-  gap: 0.35rem;
-}
-.sidebar-channel-card__top {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.sidebar-channel-card__avatar {
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
-  color: color-mix(in srgb, var(--feed-source-color) 75%, var(--a-color-fg));
-  display: grid;
-  place-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.sidebar-channel-card__text {
-  min-width: 0;
-  flex: 1 1 0;
-  display: grid;
-}
-.sidebar-channel-card__text h4 {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--a-color-fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sidebar-channel-card__text small { font-size: 0.68rem; color: var(--a-color-muted-soft); }
-.compact-sub-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-control);
+.modern-note-card__body { display: grid; gap: 0.6rem; }
+.note-text { margin: 0; font-size: 0.86rem; line-height: 1.6; color: var(--a-color-fg); }
+.note-media-grid { display: grid; gap: 0.45rem; }
+.note-media-grid.count-2 { grid-template-columns: 1fr 1fr; }
+.note-media-thumb { height: 110px; border-radius: var(--a-radius-control); overflow: hidden; background: var(--a-color-surface-muted); }
+.note-media-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.modern-note-card__footer { display: flex; align-items: center; gap: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--a-color-border-soft); }
+.note-pill-action { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); font-size: 0.72rem; color: var(--a-color-muted); cursor: pointer; transition: all 0.15s ease; }
+.note-pill-action:hover { border-color: var(--a-color-border); color: var(--a-color-fg); background: var(--a-color-surface-muted); }
+.note-pill-action.is-liked { border-color: #ef4444; color: #ef4444; background: color-mix(in srgb, #ef4444 8%, transparent); }
+.note-pill-action.is-active { border-color: var(--a-color-text); color: var(--a-color-fg); background: var(--a-color-surface-muted); }
+
+/* 行内评论折叠区 */
+.note-inline-comments { background: var(--a-color-surface-muted); border-radius: var(--a-radius-control); padding: 0.65rem; display: grid; gap: 0.45rem; font-size: 0.75rem; }
+.inline-comment-head { font-size: 0.7rem; font-weight: 700; color: var(--a-color-muted); }
+.mock-comment-item { display: flex; gap: 0.3rem; color: var(--a-color-fg); }
+.commenter { font-weight: 600; color: var(--a-color-text); flex-shrink: 0; }
+.mock-comment-input { display: flex; gap: 0.4rem; margin-top: 0.2rem; }
+.mock-comment-input input { flex: 1 1 auto; padding: 0.25rem 0.5rem; font-size: 0.72rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: inherit; }
+.mock-comment-input button { padding: 0.25rem 0.6rem; font-size: 0.72rem; border-radius: var(--a-radius-control); border: 1px solid var(--a-color-text); background: var(--a-color-text); color: var(--a-color-bg); cursor: pointer; }
+
+/* 短笺方案 B：极简便签条 */
+.sticky-memo-card {
   background: var(--a-color-bg);
-  font-size: 0.68rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.compact-sub-btn.is-subscribed {
-  color: #10b981;
-  border-color: color-mix(in srgb, #10b981 40%, var(--a-color-border-soft));
-  background: color-mix(in srgb, #10b981 8%, transparent);
-}
-.sidebar-channel-card__desc {
-  margin: 0;
-  font-size: 0.72rem;
-  color: var(--a-color-muted);
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* 标签云 */
-.tag-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-.tag-cloud-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.55rem;
-  border-radius: 999px;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  font-size: 0.72rem;
-  cursor: pointer;
-}
-.tag-cloud-item small { color: var(--a-color-muted-soft); }
-.tag-cloud-item:hover { border-color: var(--a-color-text); }
-
-/* Promo 盒子 */
-.sidebar-box--promo {
-  background: var(--a-color-surface-muted);
-  border-color: var(--a-color-border);
-}
-.sidebar-box--promo h4 { margin: 0; font-size: 0.85rem; font-weight: 650; }
-.sidebar-box--promo p { margin: 0; font-size: 0.75rem; color: var(--a-color-muted); }
-.promo-btn {
-  padding: 0.45rem 0.85rem;
+  border-left: 4px solid #f59e0b;
   border-radius: var(--a-radius-control);
-  border: 1px solid var(--a-color-text);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.45rem;
 }
+.sticky-memo-head { font-size: 0.72rem; color: var(--a-color-muted); }
+.sticky-author { font-weight: 600; color: var(--a-color-fg); }
+.sticky-content { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--a-color-fg); font-style: italic; }
+.sticky-footer { display: flex; gap: 0.75rem; font-size: 0.7rem; color: var(--a-color-muted-soft); padding-top: 0.2rem; }
 
-@media (max-width: 960px) {
-  .prototype-switch-bar { grid-template-columns: 1fr; }
-  .dashboard-flow { grid-template-columns: 1fr; }
-  .channels-grid-2col { grid-template-columns: 1fr; }
+/* 短笺方案 C：分栏气泡灵感卡 */
+.bubble-note-layout { display: flex; gap: 0.65rem; }
+.bubble-avatar { width: 30px; height: 30px; border-radius: 999px; background: #06b6d4; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; }
+.bubble-container { flex: 1 1 auto; background: var(--a-color-bg); border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); padding: 0.75rem; display: grid; gap: 0.4rem; }
+.bubble-head { display: flex; justify-content: space-between; font-size: 0.74rem; }
+.bubble-time { color: var(--a-color-muted-soft); }
+.bubble-text { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--a-color-fg); }
+.bubble-actions { display: flex; gap: 0.5rem; }
+.bubble-btn { border: none; background: transparent; padding: 0.15rem 0.35rem; font-size: 0.7rem; color: var(--a-color-muted); cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════════
+   方案 1 双并列流通用样式
+   ═══════════════════════════════════════════════════════════════ */
+.dual-stream-flow { display: grid; gap: 1.5rem; }
+.dual-stream-head { display: grid; gap: 0.75rem; }
+.curated-search { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 0.85rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); }
+.curated-search input { flex: 1 1 auto; border: none; background: transparent; font-size: 0.85rem; color: inherit; outline: none; }
+.curated-topics { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.topic-pill { padding: 0.3rem 0.75rem; border-radius: 999px; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); font-size: 0.76rem; font-weight: 550; color: var(--a-color-muted); cursor: pointer; }
+.topic-pill.is-active { background: var(--a-color-text); color: var(--a-color-bg); border-color: var(--a-color-text); }
+
+.dual-streams-container { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.stream-column { display: grid; gap: 0.85rem; min-width: 0; }
+.stream-column__head { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 0.45rem; }
+.stream-column__title-group { display: flex; align-items: center; gap: 0.5rem; }
+.stream-column__title-group h2 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.stream-count { font-size: 0.72rem; color: var(--a-color-muted-soft); }
+.section-badge { font-size: 0.62rem; font-weight: 800; padding: 0.15em 0.45em; border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); }
+.section-badge--hot { background: color-mix(in srgb, #ea580c 15%, transparent); color: #ea580c; }
+.stream-sub-filters { display: flex; gap: 0.3rem; }
+.mini-filter { padding: 0.2rem 0.55rem; font-size: 0.72rem; border: 1px solid transparent; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; }
+.mini-filter.is-active { background: var(--a-color-surface-muted); color: var(--a-color-fg); font-weight: 600; border-color: var(--a-color-border-soft); }
+
+.feed-timeline-box { border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); overflow: hidden; background: var(--a-color-bg); }
+.feed-meta-stat { display: inline-flex; align-items: center; gap: 0.2rem; color: var(--a-color-muted-soft); font-size: 0.72rem; }
+.feed-type-tag { display: inline-flex; padding: 0.1em 0.45em; border-radius: 999px; font-size: 0.65rem; font-weight: 600; }
+.feed-type-tag--blog { background: color-mix(in srgb, #16a34a 12%, transparent); color: #16a34a; }
+.feed-type-tag--rss { background: color-mix(in srgb, #2563eb 12%, transparent); color: #2563eb; }
+.mock-clip-btn { border: none; background: transparent; padding: 0.2rem; color: var(--a-color-muted); cursor: pointer; }
+
+/* 频道卡片样式 */
+.channels-stack { display: grid; gap: 0.75rem; }
+.feed-source-card { display: flex; flex-direction: column; gap: 0.65rem; padding: 0.85rem 0.95rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); }
+.feed-source-card__header { display: flex; align-items: flex-start; gap: 0.75rem; }
+.feed-source-card__avatar { width: 40px; height: 40px; border-radius: var(--a-radius-control); background: var(--feed-source-color, var(--a-color-surface-muted)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem; flex-shrink: 0; }
+.feed-source-card__info { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.2rem; }
+.feed-source-card__title-row { display: flex; align-items: center; gap: 0.45rem; }
+.feed-source-card__title { font-size: 0.92rem; font-weight: 700; margin: 0; }
+.feed-source-card__tag { font-size: 0.62rem; font-weight: 700; color: var(--a-color-muted); background: var(--a-color-surface-muted); padding: 0.1em 0.4em; border-radius: 4px; }
+.feed-source-card__summary { margin: 0; font-size: 0.78rem; color: var(--a-color-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.feed-source-card__sub-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.35rem 0.75rem; border-radius: var(--a-radius-control); border: 1px solid var(--a-color-text); background: var(--a-color-text); color: var(--a-color-bg); font-size: 0.75rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+.feed-source-card__sub-btn.is-subscribed { border-color: var(--a-color-border); background: var(--a-color-surface-muted); color: var(--a-color-muted); }
+.feed-source-card__previews { margin: 0; padding: 0.45rem 0.65rem; list-style: none; display: grid; gap: 0.25rem; background: var(--a-color-surface-muted); border-radius: var(--a-radius-control); font-size: 0.74rem; }
+.feed-source-card__previews li { display: flex; align-items: center; gap: 0.35rem; color: var(--a-color-fg); }
+.preview-bullet { color: var(--a-color-muted-soft); font-weight: 700; }
+.feed-source-card__footer { display: flex; align-items: center; gap: 0.75rem; font-size: 0.7rem; color: var(--a-color-muted-soft); }
+.footer-stat { display: inline-flex; align-items: center; gap: 0.25rem; }
+.footer-time { margin-left: auto; }
+
+@media (max-width: 880px) {
+  .cards-showcase-grid { grid-template-columns: 1fr; }
+  .dual-streams-container { grid-template-columns: 1fr; }
 }
 </style>

@@ -40,7 +40,7 @@ const siteContext = computed(() => {
 
 const currentModule = computed(() => {
   if (siteContext.value.type === 'module') return siteContext.value.module
-  if (/^\/(?:post\/|posts\/(?:post\/|channel\/)|channel\/|collection\/|channels\/|users\/)/.test(route.path)) return 'blog'
+  if (/^\/(?:post\/|posts\/(?:post\/|channel\/|notes(?:\/|$))|channel\/|collection\/|channels\/|users\/)/.test(route.path)) return 'blog'
   return undefined
 })
 const tabs = computed(() => getMobilePrimaryTabs(currentModule.value))

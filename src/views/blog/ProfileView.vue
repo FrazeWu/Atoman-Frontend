@@ -88,7 +88,7 @@
               <PButton
                 v-if="authStore.isAuthenticated && !isSelf"
                 data-testid="message-user"
-                :href="desktopAppPath(`/inbox?tab=dm&target_type=user&target_id=${profile.uuid}`)"
+                :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'user', target_id: profile.uuid } }"
                 size="sm"
                 variant="secondary"
               >私信</PButton>

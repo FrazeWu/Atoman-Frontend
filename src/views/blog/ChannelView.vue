@@ -19,7 +19,7 @@
             >
               {{ channelSubscribeLoading ? '处理中...' : (channelSubscribed ? '已订阅' : '订阅') }}
             </PClip>
-            <PButton v-if="authStore.isAuthenticated && !isOwner" data-testid="message-channel" :href="desktopAppPath(`/inbox?tab=dm&target_type=channel&target_id=${channel.id}`)" size="sm" variant="secondary">私信</PButton>
+            <PButton v-if="authStore.isAuthenticated && !isOwner" data-testid="message-channel" :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'channel', target_id: channel.id } }" size="sm" variant="secondary">私信</PButton>
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
           </div>
         </template>
@@ -138,7 +138,6 @@ import PTab from '@/components/ui/PTab.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import { desktopAppPath } from '@/utils/desktopAppUrl'
 
 const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()

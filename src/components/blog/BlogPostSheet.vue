@@ -11,7 +11,6 @@ import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import { desktopAppPath } from '@/utils/desktopAppUrl'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -137,13 +136,7 @@ function editPost() {
   if (post.value.channel_id) query.set('channel', post.value.channel_id)
   if (props.layer.payload.collectionId) query.set('collection', props.layer.payload.collectionId)
   const suffix = query.size ? `?${query.toString()}` : ''
-  const path = `/studio/blog/${post.value.id}/edit${suffix}`
-  const url = desktopAppPath(path)
-  if (url === path) {
-    void router.push(path)
-  } else {
-    window.location.assign(url)
-  }
+  void router.push(`/studio/blog/${post.value.id}/edit${suffix}`)
 }
 
 watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true })

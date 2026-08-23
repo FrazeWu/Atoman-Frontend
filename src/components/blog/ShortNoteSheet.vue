@@ -12,7 +12,6 @@ import PSheet from '@/components/ui/PSheet.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import { desktopAppPath } from '@/utils/desktopAppUrl'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useInteractions } from '@/composables/useInteractions'
 import { useAuthStore } from '@/stores/auth'
@@ -117,14 +116,8 @@ async function confirmRemove() {
 
 function editNote() {
   if (!note.value) return
-  const path = `/posts/notes/${note.value.id}/edit`
-  const url = desktopAppPath(path)
   sheets.closeLayer(props.layer.key)
-  if (url === path) {
-    void router.push(path)
-  } else {
-    window.location.assign(url)
-  }
+  void router.push(`/posts/notes/${note.value.id}/edit`)
 }
 
 function formatDate(value?: string) {

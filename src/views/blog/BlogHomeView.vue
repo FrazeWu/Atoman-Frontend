@@ -43,9 +43,9 @@
           <div v-for="i in 5" :key="i" class="a-skeleton" style="height: 8rem; border-radius: var(--a-radius-card);" />
         </div>
 
-        <PEmpty v-else-if="!streamItems.length" title="暂无内容" description="还没有发布任何内容" />
+        <PEmpty v-else-if="streamError && !streamItems.length" title="内容加载失败" :description="streamError" />
 
-        <div v-else class="blog-home__feed">
+        <div v-else-if="streamItems.length" class="blog-home__feed">
           <template v-for="streamItem in streamItems" :key="streamItem.key">
             <BlogItemCard
               v-if="streamItem.kind === 'post'"
@@ -66,6 +66,10 @@
             />
           </template>
         </div>
+
+        <p v-if="streamError && streamItems.length" class="a-error" role="alert">{{ streamError }}</p>
+
+        <PEmpty v-if="!isStreamLoading && !streamError && !streamItems.length" title="暂无内容" description="还没有发布任何内容" />
 
         <PButton
           v-if="hasMore"
@@ -225,6 +229,8 @@ const api = useApi()
 
 const posts = ref<BlogHomeListItem[]>([])
 const shortNotes = ref<ShortNote[]>([])
+const postsError = ref(false)
+const notesError = ref(false)
 const notesLoading = ref(false)
 const pendingDeleteNote = ref<ShortNote | null>(null)
 const deletingNote = ref(false)
@@ -293,7 +299,12 @@ const streamItems = computed<BlogHomeStreamItem[]>(() => {
     new Date(right.timestamp || 0).getTime() - new Date(left.timestamp || 0).getTime()
   ))
 })
-
+const streamError = computed(() => {
+  const errors: string[] = []
+  if (typeFilter.value !== 'note' && postsError.value) errors.push('文章加载失败')
+  if (typeFilter.value !== 'post' && notesError.value) errors.push('短笺加载失败')
+  return errors.join('，')
+})
 
 const isBookmarked = (item: BlogHomeListItem) => Boolean(feedStore.bookmarkedPostIds?.has(item.id))
 const isStarred = (item: BlogHomeListItem) => Boolean(feedStore.starredItemIds?.has(item.id))
@@ -397,10 +408,12 @@ const fetchRecommendedPosts = async () => {
 const fetchShortNotes = async () => {
   if (typeFilter.value === 'post') {
     shortNotes.value = []
+    notesError.value = false
     notesLoading.value = false
     return true
   }
   notesLoading.value = true
+  notesError.value = false
   try {
     const query = new URLSearchParams({ page: '1', page_size: String(PAGE_SIZE) })
     const response = await apiRequestEnvelope<ShortNote[], { has_more?: boolean }>(`${api.blog.shortNotes}?${query}`)
@@ -409,6 +422,7 @@ const fetchShortNotes = async () => {
   } catch (error) {
     reportError(error)
     shortNotes.value = []
+    notesError.value = true
     return false
   } finally {
     notesLoading.value = false
@@ -436,6 +450,7 @@ const deletePendingNote = async () => {
 const fetchPosts = async (append = false) => {
   if (typeFilter.value === 'note') {
     posts.value = []
+    postsError.value = false
     hasMore.value = false
     loading.value = false
     return true
@@ -443,6 +458,7 @@ const fetchPosts = async (append = false) => {
   const requestSequence = ++postsRequestSequence
   const targetPage = append ? page.value + 1 : 1
   loading.value = true
+  postsError.value = false
   try {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
@@ -501,10 +517,13 @@ const fetchPosts = async (append = false) => {
         ? Boolean(d.meta?.has_more)
         : typeof d.meta?.has_more === 'boolean' ? d.meta.has_more : rawData.length === PAGE_SIZE
       page.value = targetPage
+      postsError.value = false
       return true
     }
+    postsError.value = true
   } catch (e) {
     reportError(e)
+    postsError.value = true
   } finally {
     if (requestSequence === postsRequestSequence) loading.value = false
   }

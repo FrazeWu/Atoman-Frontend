@@ -305,11 +305,15 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 				};
 			}),
 		);
-		expect(basicFieldMetrics.every((field) => !field.overflows)).toBe(true);
-		expect(
-			basicFieldMetrics.every((field) => field.inputRight <= field.fieldRight + 1),
-		).toBe(true);
-		expect(Math.max(...basicFieldMetrics.map((field) => field.labelHeight))).toBeLessThanOrEqual(24);
+	expect(basicFieldMetrics.every((field) => !field.overflows)).toBe(true);
+	expect(
+		basicFieldMetrics.every(
+			(field) => field.inputRight <= field.fieldRight + 1,
+		),
+	).toBe(true);
+	expect(
+		Math.max(...basicFieldMetrics.map((field) => field.labelHeight)),
+	).toBeLessThanOrEqual(24);
 
 	const dateInput = creationDialog.getByTestId("album-details-date-input");
 	await dateInput.click();

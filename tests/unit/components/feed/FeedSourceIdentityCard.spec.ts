@@ -36,7 +36,7 @@ describe('FeedSourceIdentityCard', () => {
     expect(wrapper.get('[data-test="feed-source-title"]').text()).toBe('少数派')
     expect(wrapper.get('[data-test="feed-source-url"]').text()).toBe('sspai.com/feed')
     expect(wrapper.get('[data-test="feed-source-count"]').text()).toContain('128 订阅')
-    expect(wrapper.text()).toContain('6 篇近期内容')
+    expect(wrapper.text()).toContain('6 近期')
     expect(wrapper.text()).toContain('近期文章')
     expect(wrapper.text()).toMatch(/6.*20/)
 

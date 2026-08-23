@@ -406,7 +406,6 @@ export interface BlogDraft {
 	allow_comments?: boolean;
 	channel_id?: string;
 	collection_id?: string;
-	collection_ids: string[];
 	created_at: string;
 	updated_at: string;
 }

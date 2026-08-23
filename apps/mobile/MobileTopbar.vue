@@ -26,29 +26,32 @@ import { ArrowLeft } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 import { moduleUrl } from '@/router/siteUrls'
+import { desktopAppBaseUrl } from '@/utils/desktopAppUrl'
 import { resolveSiteContext } from '@/router/siteContext'
 import type { ModuleRoomKey } from '@atoman/module-config'
 import { MOBILE_MODULES } from './mobileRoutes'
 
 const availableModules: ModuleRoomKey[] = [...MOBILE_MODULES]
 const availableModuleSet = new Set<ModuleRoomKey>(availableModules)
-const desktopAppUrl = import.meta.env.VITE_DESKTOP_APP_URL?.trim()
-  || (import.meta.env.PROD ? 'https://www.atoman.org' : '')
+const desktopAppUrl = desktopAppBaseUrl()
 const route = useRoute()
 const router = useRouter()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, '', route.path))
-const mobileModule = computed<ModuleRoomKey | null>(() => (
-  siteContext.value.type === 'module' && availableModuleSet.has(siteContext.value.module)
-    ? siteContext.value.module
-    : null
-))
+const isBlogContextRoute = computed(() => /^\/(?:post\/|posts\/(?:post\/|channel\/)|channel\/|collection\/|channels\/|users\/)/.test(route.path))
+const mobileModule = computed<ModuleRoomKey | null>(() => {
+  if (siteContext.value.type === 'module' && availableModuleSet.has(siteContext.value.module)) {
+    return siteContext.value.module
+  }
+  return isBlogContextRoute.value ? 'blog' : null
+})
 const mobileModuleLabel = computed(() => {
   if (mobileModule.value === 'blog') return '博客'
   if (mobileModule.value === 'feed') return '订阅'
+  if (mobileModule.value === 'music') return '音乐'
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && /^\/(?:feed\/item\/|post\/|channel\/|collection\/|posts\/notes\/[^/]+)/.test(route.path))
+const showMobileBack = computed(() => !isAuthRoute.value && /^\/(?:feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|artist\/|album\/|song\/|playlist\/))/.test(route.path))
 
 const goBack = () => {
   if (window.history.length > 1 && window.history.state?.back) {

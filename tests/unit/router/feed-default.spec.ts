@@ -20,6 +20,8 @@ describe("feed default route", () => {
 		expect(lazyImportPath(defaultRoute?.component)).toContain(
 			"FeedRecommendedView.vue",
 		);
+		expect(subscriptionRoute?.meta).toMatchObject({ requiresAuth: true });
+
 		expect(lazyImportPath(subscriptionRoute?.component)).toContain(
 			"FeedView.vue",
 		);

@@ -321,9 +321,10 @@ const state = ref<DrawerState>({
 
 function syncActiveCreationFlow() {
 	const activeLayer = sheetStack.top.value;
-	state.value.creationFlow = activeLayer?.kind === "creation"
-		? state.value.creationFlows[activeLayer.key] ?? null
-		: null;
+	state.value.creationFlow =
+		activeLayer?.kind === "creation"
+			? (state.value.creationFlows[activeLayer.key] ?? null)
+			: null;
 }
 
 const sheetStack = createSheetStack<MusicSheetLayer>({
@@ -362,20 +363,26 @@ watch(
 
 export function useMusicDrawers() {
 	const returnToLayer = (key: string) => {
-		const index = sheetStack.layers.value.findIndex((layer) => layer.key === key);
+		const index = sheetStack.layers.value.findIndex(
+			(layer) => layer.key === key,
+		);
 		if (index < 0) return;
 		for (const layer of sheetStack.layers.value.slice(index + 1)) {
-			if (layer.kind === "creation") delete state.value.creationFlows[layer.key];
+			if (layer.kind === "creation")
+				delete state.value.creationFlows[layer.key];
 		}
 		sheetStack.popTo(key);
 		syncActiveCreationFlow();
 	};
 
 	const closeLayerAndAbove = (key: string) => {
-		const index = sheetStack.layers.value.findIndex((layer) => layer.key === key);
+		const index = sheetStack.layers.value.findIndex(
+			(layer) => layer.key === key,
+		);
 		if (index < 0) return;
 		for (const layer of sheetStack.layers.value.slice(index)) {
-			if (layer.kind === "creation") delete state.value.creationFlows[layer.key];
+			if (layer.kind === "creation")
+				delete state.value.creationFlows[layer.key];
 		}
 		sheetStack.popTo(key);
 		sheetStack.pop();
@@ -515,11 +522,12 @@ export function useMusicDrawers() {
 		sheetStack.push({
 			key,
 			kind: "creation",
-			title: seed.startStep === "artist"
-				? "创建艺术家"
-				: seed.entity === "song"
-					? "创建歌曲"
-					: "创建专辑",
+			title:
+				seed.startStep === "artist"
+					? "创建艺术家"
+					: seed.entity === "song"
+						? "创建歌曲"
+						: "创建专辑",
 			payload: seed,
 		});
 		syncActiveCreationFlow();

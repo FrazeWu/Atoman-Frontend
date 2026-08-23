@@ -38,7 +38,11 @@ const siteContext = computed(() => {
   return resolveSiteContext(window.location.hostname, search, route.path)
 })
 
-const currentModule = computed(() => siteContext.value.type === 'module' ? siteContext.value.module : undefined)
+const currentModule = computed(() => {
+  if (siteContext.value.type === 'module') return siteContext.value.module
+  if (/^\/(?:post\/|posts\/(?:post\/|channel\/)|channel\/|collection\/|channels\/|users\/)/.test(route.path)) return 'blog'
+  return undefined
+})
 const tabs = computed(() => getMobilePrimaryTabs(currentModule.value))
 
 const isTabActive = (tab: MobilePrimaryTab) => {

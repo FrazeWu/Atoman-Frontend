@@ -61,6 +61,7 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     { path: '/dev/album-creation', component: () => import('@/views/dev/AlbumCreationShowcaseView.vue') },
     { path: '/dev/blog-template', component: () => import('@/views/dev/BlogTemplateView.vue'), meta: { hasSidebar: true } },
     { path: '/dev/blog-explore-template', component: () => import('@/views/dev/BlogExploreTemplateView.vue'), meta: { hasSidebar: true } },
+    { path: '/dev/feed-card-preview', component: () => import('@/views/dev/FeedCardPreviewView.vue') },
     {
       path: '/dev/comment-style/github',
       component: () => import('@/views/dev/CommentStylePreviewView.vue'),

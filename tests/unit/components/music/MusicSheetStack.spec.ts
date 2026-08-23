@@ -65,23 +65,20 @@ describe("MusicSheetStack", () => {
 		const childKey = drawers.layers.value.at(-1)?.key;
 		expect(
 			drawers.layers.value.map((layer: MusicSheetLayer) => layer.key),
-		).toEqual([
-			parentKey,
-			childKey,
-		]);
+		).toEqual([parentKey, childKey]);
 		expect(drawers.state.value.creationFlow?.parentKey).toBe(parentKey);
-		expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0].name).toBe(
-			"Draft Artist",
-		);
+		expect(
+			drawers.state.value.creationFlow?.draft.artist.stageNames[0].name,
+		).toBe("Draft Artist");
 
 		drawers.closeMusicCreationFlow(childKey);
 		expect(
 			drawers.layers.value.map((layer: MusicSheetLayer) => layer.key),
 		).toEqual([parentKey]);
 		expect(drawers.state.value.creationFlow).toBe(parentFlow);
-		expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0].name).toBe(
-			"Draft Artist",
-		);
+		expect(
+			drawers.state.value.creationFlow?.draft.artist.stageNames[0].name,
+		).toBe("Draft Artist");
 	});
 
 	it("keeps the new top sheet mounted while the lower path switches", async () => {

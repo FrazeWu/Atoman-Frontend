@@ -154,6 +154,8 @@
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
 
+      <p v-else-if="timelineError" class="state-line state-line--error" role="alert">{{ timelineError }}</p>
+
       <PEmpty v-else-if="!visibleTimeline.length" class="a-empty" :text="emptyTimelineText" />
 
       <div v-else class="feed-timeline">
@@ -168,12 +170,6 @@
             :summary="item.post.summary"
             class="content-stream-entry"
           >
-            <template #visual>
-              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center;flex-shrink:0;min-width:40px">
-                <PBadge type="blog" no-dot>文章</PBadge>
-                <span v-if="!item.is_read" class="unread-dot" />
-              </div>
-            </template>
             <template #meta>
               <button
                 v-if="postSource(item)"
@@ -187,12 +183,11 @@
                 {{ postSource(item)!.title }}
               </button>
               <span v-else class="a-label a-muted">未知频道</span>
+              <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.post.view_count || 0 }}</span>
+              <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.post.rating_score ? `${item.post.rating_score.toFixed(1)} (${item.post.rating_count || 0})` : '—' }}</span>
+              <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.post.bookmarks_count || 0 }}</span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
-            </template>
-            <template #footer>
-              <span class="feed-post-stat"><Eye :size="13" aria-hidden="true" />{{ item.post.view_count || 0 }}</span>
-              <span class="feed-post-stat"><Gauge :size="13" aria-hidden="true" />评分 {{ item.post.rating_score ? `${item.post.rating_score.toFixed(1)} (${item.post.rating_count || 0})` : '— (0)' }}</span>
-              <span class="feed-post-stat"><Bookmark :size="13" aria-hidden="true" />{{ item.post.bookmarks_count || 0 }}</span>
+              <span class="feed-type-tag feed-type-tag--blog">文章</span>
             </template>
             <template #actions>
               <PClip
@@ -224,14 +219,6 @@
             :summary="stripHtml(item.feed_item.summary || '')"
             class="content-stream-entry"
           >
-            <template #visual>
-              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center;flex-shrink:0;min-width:40px">
-                <PBadge type="external" no-dot>外部</PBadge>
-                <PBadge type="external" no-dot>{{ getExternalBadge(item.feed_item) }}</PBadge>
-                <span v-if="!item.is_read" class="unread-dot" />
-              </div>
-            </template>
-
             <template #meta>
               <button
                 v-if="feedItemSource(item.feed_item)"
@@ -272,6 +259,14 @@
                   {{ (item.feed_item.duplicate_sources || []).join(' · ') }}
                 </span>
               </span>
+              <span
+                class="feed-type-tag"
+                :class="{
+                  'feed-type-tag--podcast': getExternalBadge(item.feed_item) === '播客',
+                  'feed-type-tag--video':   getExternalBadge(item.feed_item) === '视频',
+                  'feed-type-tag--rss':     getExternalBadge(item.feed_item) === '文章',
+                }"
+              >{{ getExternalBadge(item.feed_item) }}</span>
             </template>
 
             <template #actions>
@@ -403,6 +398,7 @@ const {
   pageLimit,
   unreadOnly,
   loadingTimeline,
+  timelineError,
   markingAllRead,
   hasNewTimelineContent,
   allRead,
@@ -1005,6 +1001,53 @@ onUnmounted(() => {
 .feed-source-trigger:focus-visible {
   outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
+}
+
+.feed-meta-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--a-color-muted-soft);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* 类型标签 */
+.feed-type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.feed-type-tag--blog {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #16a34a;
+}
+
+.feed-type-tag--rss {
+  background: color-mix(in srgb, #2563eb 12%, transparent);
+  color: #2563eb;
+}
+
+.feed-type-tag--podcast {
+  background: color-mix(in srgb, #7c3aed 12%, transparent);
+  color: #7c3aed;
+}
+
+.feed-type-tag--video {
+  background: color-mix(in srgb, #ea580c 12%, transparent);
+  color: #ea580c;
+}
+
+/* 流式列表中 visual 列只显示未读点，无需固定宽度 */
+.feed-timeline :deep(.p-entry-visual) {
+  min-width: 0;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 720px) {

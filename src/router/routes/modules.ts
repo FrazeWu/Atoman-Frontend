@@ -188,6 +188,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{
 					path: "subscriptions",
 					component: () => import("@/views/feed/FeedView.vue"),
+					meta: { requiresAuth: true },
 				},
 				{
 					path: "explore",

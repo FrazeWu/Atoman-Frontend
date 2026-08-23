@@ -93,20 +93,11 @@ export function usePostEditorPublication({
 				: "";
 			loadedPostUpdatedAt.value = parseDraftTimestamp(post.updated_at);
 			contentSource.value = "manual";
-			const legacyCollection =
-				post.collections?.find(
-					(collection: { is_default?: boolean }) => !collection.is_default,
-				) || post.collections?.[0];
-			const contentChannelId =
-				post.channel_id ||
-				post.collection?.channel_id ||
-				legacyCollection?.channel_id;
+			const contentChannelId = post.channel_id;
 			if (contentChannelId && studio.currentChannel?.id !== contentChannelId) {
 				await studio.selectChannel(contentChannelId);
 			}
-			const collectionId = String(
-				post.collection_id || post.collection?.id || legacyCollection?.id || "",
-			);
+			const collectionId = String(post.collection_id || "");
 			existingCollectionIds.value = collectionId ? [collectionId] : [];
 			selectedCollectionIds.value = [...existingCollectionIds.value];
 		} catch (cause) {

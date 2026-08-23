@@ -63,7 +63,7 @@ async function loadCollection() {
     collection.value = collectionRes.data.data
     const published = (publishedRes.data.data || []) as Post[]
     const drafts = ((draftsRes.data.data || []) as Post[]).filter(post =>
-      post.collections?.some(item => item.id === collectionId.value),
+      post.collection_id === collectionId.value || post.collection?.id === collectionId.value,
     )
     posts.value = Array.from(new Map([...published, ...drafts].map(post => [post.id, post])).values())
       .sort((left, right) => sortTime(right) - sortTime(left))

@@ -30,7 +30,7 @@ describe('BlogCollectionSheet', () => {
         return response([{ id: 'post-1', title: '已发布文章', status: 'published', updated_at: '2026-07-12T00:00:00Z' }])
       }
       if (url.endsWith('/blog/posts/drafts')) {
-        return response([{ id: 'draft-1', title: '草稿文章', status: 'draft', updated_at: '2026-07-13T00:00:00Z', collections: [{ id: 'collection-1' }] }])
+        return response([{ id: 'draft-1', title: '草稿文章', status: 'draft', updated_at: '2026-07-13T00:00:00Z', collection_id: 'collection-1' }])
       }
       throw new Error(`unexpected fetch: ${url}`)
     }))

@@ -60,6 +60,7 @@ export function useFeedTimelineController({
   const pageLimit = 20
   const unreadOnly = ref(false)
   const loadingTimeline = ref(false)
+  const timelineError = ref('')
   const markingAllRead = ref(false)
   const timelineUpdatesCursor = ref('')
   const hasNewTimelineContent = ref(false)
@@ -206,6 +207,7 @@ export function useFeedTimelineController({
   const fetchTimeline = async () => {
     const requestSequence = ++timelineRequestSequence
     loadingTimeline.value = true
+    timelineError.value = ''
     try {
       if (!authStore.isAuthenticated) {
         timeline.value = []
@@ -225,7 +227,10 @@ export function useFeedTimelineController({
       })
       const response = await apiRequestResult(`${apiURL}/feed/timeline?${params}`, { headers: authHeaders() })
       if (requestSequence !== timelineRequestSequence) return
-      if (!response.ok) return
+      if (!response.ok) {
+        timelineError.value = '订阅内容加载失败，请稍后重试'
+        return
+      }
 
       const data = response.data
       if (requestSequence !== timelineRequestSequence) return
@@ -259,6 +264,9 @@ export function useFeedTimelineController({
       }
     } catch (error) {
       reportError(error)
+      if (requestSequence === timelineRequestSequence) {
+        timelineError.value = '订阅内容加载失败，请稍后重试'
+      }
     } finally {
       if (requestSequence === timelineRequestSequence) loadingTimeline.value = false
     }
@@ -345,6 +353,7 @@ export function useFeedTimelineController({
     pageLimit,
     unreadOnly,
     loadingTimeline,
+    timelineError,
     markingAllRead,
     hasNewTimelineContent,
     allRead,

@@ -36,9 +36,11 @@
         </button>
       </div>
 
-      <PEmpty v-else-if="!items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。" />
+      <PEmpty v-if="!loading && errorMessage" title="收藏加载失败" :description="errorMessage" />
 
-    <div v-else class="feed-timeline">
+      <PEmpty v-if="!loading && !errorMessage && !items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。" />
+
+    <div v-if="!loading && !errorMessage && items.length" class="feed-timeline">
       <template v-for="(item, index) in items" :key="item.id">
         <PEntry
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
@@ -165,6 +167,7 @@ const normalizePage = (value: unknown) => {
 }
 
 const loading = ref(true)
+const errorMessage = ref('')
 const items = ref<StarredFeedItem[]>([])
 const totalItems = ref(0)
 const page = ref(1)
@@ -320,6 +323,7 @@ const fetchStarred = async () => {
   const requestId = ++starredRequestSeq
   const groupId = activeStarGroupId.value
   loading.value = true
+  errorMessage.value = ''
   try {
     const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
     if (groupId) params.set('group_id', groupId)
@@ -344,8 +348,13 @@ const fetchStarred = async () => {
       items.value = newItems
       feedStore.syncStarredPageIds(previousIds, nextIds)
       totalItems.value = total
+    } else {
+      errorMessage.value = '收藏加载失败，请稍后重试'
     }
   } catch (e) {
+    if (requestId === starredRequestSeq) {
+      errorMessage.value = '收藏加载失败，请稍后重试'
+    }
     reportError(e, 'Failed to fetch starred items')
   } finally {
     if (requestId === starredRequestSeq) {

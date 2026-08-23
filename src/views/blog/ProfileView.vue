@@ -88,13 +88,13 @@
               <PButton
                 v-if="authStore.isAuthenticated && !isSelf"
                 data-testid="message-user"
-                :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'user', target_id: profile.uuid } }"
+                :href="desktopAppPath(`/inbox?tab=dm&target_type=user&target_id=${profile.uuid}`)"
                 size="sm"
                 variant="secondary"
               >私信</PButton>
               <PButton
                 v-if="isSelf"
-                :to="`/users/${profile.username}/settings`"
+                :href="desktopAppPath(`/users/${profile.username}/settings`)"
                 size="sm"
                 variant="secondary"
               >设置</PButton>
@@ -280,6 +280,7 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { desktopAppPath } from '@/utils/desktopAppUrl'
 import {
   getUserAvatarRestoreAvailability,
   restoreUserAvatar,

@@ -15,11 +15,21 @@
       <RouterLink to="/posts" class="a-link">← 返回文章</RouterLink>
     </div>
 
+    <!-- Load error -->
+    <div v-else-if="errorStatus && errorStatus !== 403" class="a-page-md" style="padding-top:6rem;text-align:center">
+      <p style="font-size:1.2rem;font-weight:600;margin-bottom:0.75rem">文章暂时无法加载</p>
+      <p class="a-muted" style="margin-bottom:1.5rem">请稍后重试，或返回文章列表。</p>
+      <div style="display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap">
+        <button type="button" class="a-btn a-btn--primary" @click="fetchPost">重试</button>
+        <RouterLink to="/posts" class="a-link">返回文章</RouterLink>
+      </div>
+    </div>
+
     <!-- Draft (only visible to owner) -->
     <div v-else-if="errorStatus === 403" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight: 500;color:var(--a-color-disabled-border);margin-bottom:1rem">草稿</p>
       <p class="a-muted" style="margin-bottom:1.5rem">该文章尚未发布，请登录后查看或编辑</p>
-      <RouterLink :to="`/studio/blog/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+      <a :href="desktopAppPath(`/studio/blog/${postId}/edit`)" class="a-link">去编辑 →</a>
     </div>
 
     <!-- Post content -->
@@ -122,6 +132,7 @@ import { applyResolvedReferences } from '@/composables/useReferenceRendering'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useInteractions } from '@/composables/useInteractions'
 import { isAdminRole } from '@/utils/roles'
+import { desktopAppPath } from '@/utils/desktopAppUrl'
 import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 import { useFeedStore } from '@/stores/feed'

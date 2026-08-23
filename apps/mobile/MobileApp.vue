@@ -3,12 +3,13 @@
     <MobileTopbar />
     <main
       class="app-main mobile-app-main"
-      :class="{ 'app-main--auth': isAuthRoute, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
+      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--player': showMiniPlayer, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
     >
       <RouterView />
     </main>
     <BlogSheetStack v-if="!isAuthRoute" />
     <MobileBottomNav v-if="!isAuthRoute" />
+    <MobileAudioPlayer v-if="showMiniPlayer" />
   </div>
 </template>
 
@@ -19,17 +20,22 @@ import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
+import { usePlayerStore } from '@/stores/player'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import MobileTopbar from './MobileTopbar.vue'
 
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
+const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
 const route = useRoute()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
+const player = usePlayerStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
+const isPlayerRoute = computed(() => route.path === '/music/player')
+const showMiniPlayer = computed(() => Boolean(player.currentSong) && !isAuthRoute.value && !isPlayerRoute.value)
 
 const reportPageView = () => {
   if (isAuthRoute.value) return
@@ -56,9 +62,17 @@ body {
   overflow-x: hidden;
 }
 
+.mobile-app-shell {
+  --mobile-app-player-height: 76px;
+}
+
 .mobile-app-main {
   min-width: 0;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-app-main--player {
+  padding-bottom: calc(5.5rem + var(--mobile-app-player-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-app-main .a-page,

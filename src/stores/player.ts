@@ -94,6 +94,8 @@ export const usePlayerStore = defineStore("player", () => {
 	const volume = ref(1);
 	const currentTime = ref(0);
 	const duration = ref(0);
+	const isLoading = ref(false);
+	const playbackError = ref("");
 	const songLibraryLoading = ref(false);
 	const songLibraryBootstrapped = ref(false);
 	const songLibraryLoaded = ref(false);
@@ -483,6 +485,7 @@ export const usePlayerStore = defineStore("player", () => {
 		saveMusicSession(true);
 		player.pause();
 		isPlaying.value = false;
+		isLoading.value = false;
 		pauseListening();
 		if ("mediaSession" in navigator) {
 			navigator.mediaSession.playbackState = "paused";
@@ -494,7 +497,28 @@ export const usePlayerStore = defineStore("player", () => {
 
 		const nextAudio = new Audio();
 		nextAudio.preload = "auto";
+		nextAudio.addEventListener("loadstart", () => {
+			isLoading.value = true;
+			playbackError.value = "";
+		});
+		nextAudio.addEventListener("waiting", () => {
+			if (isPlaying.value) isLoading.value = true;
+		});
+		nextAudio.addEventListener("playing", () => {
+			isLoading.value = false;
+			playbackError.value = "";
+		});
+		nextAudio.addEventListener("error", () => {
+			isLoading.value = false;
+			isPlaying.value = false;
+			playbackError.value = "音频加载失败，请重试";
+			pauseListening();
+			if ("mediaSession" in navigator) {
+				navigator.mediaSession.playbackState = "paused";
+			}
+		});
 		nextAudio.addEventListener("canplay", () => {
+			isLoading.value = false;
 			if (!currentSong.value) return;
 			currentSongStartCached = true;
 			prefetchQueueAudioStarts();
@@ -588,6 +612,8 @@ export const usePlayerStore = defineStore("player", () => {
 		player: HTMLAudioElement,
 		generation = ++playGeneration,
 	) => {
+		isLoading.value = true;
+		playbackError.value = "";
 		player.volume = volume.value;
 		player
 			.play()
@@ -602,6 +628,8 @@ export const usePlayerStore = defineStore("player", () => {
 			})
 			.catch(() => {
 				if (generation !== playGeneration || player !== audio) return;
+				isLoading.value = false;
+				playbackError.value = "无法播放此音频，请重试";
 				isPlaying.value = false;
 				pauseListening();
 				if ("mediaSession" in navigator) {
@@ -732,6 +760,8 @@ export const usePlayerStore = defineStore("player", () => {
 		const normalizedSong = normalizePlaybackSong(song);
 		const generation = ++playGeneration;
 		currentSong.value = normalizedSong;
+		playbackError.value = "";
+		isLoading.value = true;
 		player.src = normalizedSong.audio_url;
 		player.volume = volume.value;
 		const savedProgress =
@@ -1093,6 +1123,30 @@ export const usePlayerStore = defineStore("player", () => {
 		seek(newTime);
 	};
 
+	const retryPlayback = () => {
+		if (!currentSong.value) return;
+		const player = ensureAudio();
+		const resumePosition = currentTime.value;
+		playbackError.value = "";
+		isLoading.value = true;
+		player.pause();
+		player.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
+		player.load();
+		if (resumePosition > 0) {
+			const restorePosition = () => {
+				try {
+					player.currentTime = resumePosition;
+				} catch {
+					// Metadata may still be unavailable.
+				}
+			};
+			player.addEventListener("loadedmetadata", restorePosition, {
+				once: true,
+			});
+		}
+		attemptPlay(player);
+	};
+
 	const toggleLyrics = () => {
 		showLyrics.value = !showLyrics.value;
 	};
@@ -1115,6 +1169,8 @@ export const usePlayerStore = defineStore("player", () => {
 		volume,
 		currentTime,
 		duration,
+		isLoading,
+		playbackError,
 		songLibraryLoading,
 		songLibraryBootstrapped,
 		queue,
@@ -1141,6 +1197,7 @@ export const usePlayerStore = defineStore("player", () => {
 		setVolume,
 		seek,
 		skip,
+		retryPlayback,
 		showLyrics,
 		toggleLyrics,
 		showQueue,

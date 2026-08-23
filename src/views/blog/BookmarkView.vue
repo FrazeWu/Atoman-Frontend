@@ -39,6 +39,7 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
+        <PEmpty v-else-if="loadError" title="收藏加载失败" :description="loadError" />
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
         <div v-else class="bookmark-post-list">
           <BlogItemCard
@@ -126,6 +127,7 @@ const toggleReadingList = (postId: string) => {
 }
 const activeFolder = ref<string | null>(null)
 const loadingPosts = ref(true)
+const loadError = ref('')
 const showNewFolder = ref(false)
 const newFolderName = ref('')
 const showDeleteConfirm = ref(false)
@@ -154,18 +156,23 @@ const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` 
 const fetchAll = async () => {
   const requestSequence = ++fetchAllSequence
   loadingPosts.value = true
+  loadError.value = ''
   try {
     const [fRes, bRes] = await Promise.all([
       apiRequestResult(api.blog.bookmarkFolders, { headers: authHeader.value }),
       apiRequestResult(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
     ])
-    if (requestSequence !== fetchAllSequence || !fRes.ok || !bRes.ok) return false
+    if (requestSequence !== fetchAllSequence || !fRes.ok || !bRes.ok) {
+      loadError.value = '收藏加载失败，请稍后重试'
+      return false
+    }
     const [foldersData, bookmarksData] = [fRes.data, bRes.data]
     if (requestSequence !== fetchAllSequence) return false
     folders.value = foldersData.data || []
     bookmarks.value = bookmarksData.data || []
     return true
   } catch (e) {
+    loadError.value = '收藏加载失败，请稍后重试'
     reportError(e)
   } finally {
     if (requestSequence === fetchAllSequence) loadingPosts.value = false

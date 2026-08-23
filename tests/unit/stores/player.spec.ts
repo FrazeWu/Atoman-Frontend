@@ -33,6 +33,7 @@ class MockAudio {
 	preload = "";
 	private readonly listeners = new Map<string, EventListener[]>();
 	play = vi.fn(() => audioPlayImplementation());
+	load = vi.fn();
 	pause = vi.fn();
 	addEventListener = vi.fn((type: string, listener: EventListener) => {
 		const listeners = this.listeners.get(type) ?? [];
@@ -692,6 +693,26 @@ describe("player store", () => {
 		expect(player.isPlaying).toBe(false);
 	});
 
+	it("exposes playback errors and retries the current audio", async () => {
+		const player = usePlayerStore();
+		player.playSong({
+			id: "broken",
+			title: "Broken",
+			audio_url: "broken.mp3",
+		} as any);
+		audioInstances[0].emit("error");
+
+		expect(player.isPlaying).toBe(false);
+		expect(player.isLoading).toBe(false);
+		expect(player.playbackError).toBe("音频加载失败，请重试");
+
+		player.retryPlayback();
+
+		expect(audioInstances[0].load).toHaveBeenCalledOnce();
+		expect(player.playbackError).toBe("");
+		expect(player.isLoading).toBe(true);
+	});
+
 	it("keeps togglePlay paused when audio play fails", async () => {
 		const player = usePlayerStore();
 		const song = {
@@ -749,7 +770,11 @@ describe("player store", () => {
 		});
 
 		const player = usePlayerStore();
-		player.playSong({ id: "media-song", title: "Media Song", audio_url: "media.mp3" } as any);
+		player.playSong({
+			id: "media-song",
+			title: "Media Song",
+			audio_url: "media.mp3",
+		} as any);
 		await audioInstances[0].play.mock.results[0]?.value;
 
 		handlers.get("pause")?.();

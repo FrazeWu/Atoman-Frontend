@@ -3,7 +3,7 @@
     <div class="p-entry__body">
 
       <!-- Left Badge / Image Area -->
-      <div class="p-entry-visual">
+      <div v-if="$slots.visual || badge" class="p-entry-visual">
         <slot name="visual">
           <span v-if="badge" class="a-badge-fill">{{ badge }}</span>
         </slot>
@@ -88,27 +88,46 @@ defineEmits(['click'])
 }
 
 .p-entry.content-stream-entry {
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.55rem;
-  border-radius: var(--a-radius-card);
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0;
+  border-radius: 0;
+  border-left: 3px solid #10b981;
+  border-right: none;
+  border-top: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  box-shadow: none;
+  background: transparent;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.p-entry.content-stream-entry:last-child {
+  border-bottom: none;
 }
 
 .p-entry.content-stream-entry:hover,
 .p-entry.content-stream-entry:focus-within,
 .p-entry.content-stream-entry.is-focused {
-  border-color: var(--a-color-border);
+  border-left-color: var(--a-color-text);
+  border-bottom-color: color-mix(in srgb, var(--a-color-text) 6%, transparent);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .p-entry.content-stream-entry.is-read {
-  background: var(--a-color-bg);
+  border-left-color: transparent;
+  background: transparent;
 }
 
 .p-entry.content-stream-entry.is-read:hover,
 .p-entry.content-stream-entry.is-read:focus-within {
+  border-left-color: var(--a-color-text);
   background: var(--a-color-surface-muted);
+}
+
+.p-entry.content-stream-entry.is-open {
+  border-left-color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+  box-shadow: none;
 }
 
 .feed-entry-footer {
@@ -199,7 +218,7 @@ defineEmits(['click'])
 
 .p-entry-visual {
   flex-shrink: 0;
-  margin-top: 1.1rem;
+  margin-top: 0.35rem;
 }
 
 .feed-entry-summary {
@@ -235,6 +254,14 @@ defineEmits(['click'])
 
 .p-entry.is-open .feed-entry-actions {
   background: linear-gradient(to right, transparent, var(--a-color-surface) 40%);
+}
+
+.p-entry.content-stream-entry .feed-entry-actions {
+  background: linear-gradient(to right, transparent, var(--a-color-surface-muted) 40%);
+}
+
+.p-entry.content-stream-entry.is-open .feed-entry-actions {
+  background: linear-gradient(to right, transparent, var(--a-color-surface-muted) 40%);
 }
 
 /* Ensure actions stand out */

@@ -12,58 +12,63 @@
     @keydown.enter.prevent="emit('select', source)"
     @keydown.space.prevent="emit('select', source)"
   >
-    <div class="feed-source-card__visual">
+    <!-- 头部：头像 + 标题/描述 + 常驻订阅按钮 -->
+    <div class="feed-source-card__header">
       <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
         <img v-if="imageUrl" :src="imageUrl" :alt="source.title" class="feed-source-card__avatar-image" />
         <template v-else>{{ avatarLabel }}</template>
       </div>
+
+      <div class="feed-source-card__info">
+        <div class="feed-source-card__title-row">
+          <h3 data-test="feed-source-title" class="feed-source-card__title">{{ source.title }}</h3>
+          <span v-if="eyebrow" class="feed-source-card__tag" data-test="feed-source-eyebrow">{{ eyebrow }}</span>
+        </div>
+        <p v-if="displayUrl && !summaryText" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
+        <p v-if="summaryText" class="feed-source-card__summary">{{ summaryText }}</p>
+        <p v-else-if="source.description" class="feed-source-card__summary">{{ source.description }}</p>
+      </div>
+
       <button
         v-if="showSubscribe"
         type="button"
-        class="feed-source-card__subscribe"
+        class="feed-source-card__sub-btn"
         :class="{ 'is-subscribed': source.subscribed }"
         :disabled="source.subscribed || subscribeBusy"
         data-test="feed-source-subscribe"
         @click.stop="emit('subscribe', source)"
       >
-        <Check v-if="source.subscribed" :size="14" aria-hidden="true" />
-        <Plus v-else :size="14" aria-hidden="true" />
-        {{ subscribeButtonLabel }}
+        <Check v-if="source.subscribed" :size="13" aria-hidden="true" />
+        <Plus v-else :size="13" aria-hidden="true" />
+        <span>{{ subscribeButtonLabel }}</span>
       </button>
     </div>
 
-    <div class="feed-source-card__main">
-      <div class="feed-source-card__topline">
-        <div class="feed-source-card__copy">
-          <p v-if="eyebrow" class="feed-source-card__eyebrow" data-test="feed-source-eyebrow">{{ eyebrow }}</p>
-          <h3 data-test="feed-source-title">{{ source.title }}</h3>
-          <p v-if="displayUrl" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
-        </div>
-      </div>
+    <!-- 中部：最近 2 篇精选文章预览盒子 -->
+    <ul v-if="showPreviews && source.recentItems && source.recentItems.length" class="feed-source-card__previews">
+      <li v-for="item in source.recentItems.slice(0, 2)" :key="item.id" data-test="feed-source-preview-title">
+        <span class="preview-bullet" aria-hidden="true">›</span>
+        <span class="preview-title">{{ item.title }}</span>
+      </li>
+    </ul>
 
-      <p v-if="summaryText" class="feed-source-card__summary">
-        {{ summaryText }}
-      </p>
-
-      <p v-else class="feed-source-card__summary">
-        {{ source.subscriptionCount }} 位订阅 · {{ source.recentItemCount }} 篇近期内容 · {{ formattedLastUpdated }}
-      </p>
-
-      <ul v-if="showPreviews && source.recentItems.length" class="feed-source-card__previews">
-        <li v-for="item in source.recentItems.slice(0, 2)" :key="item.id" data-test="feed-source-preview-title">
-          {{ item.title }}
-        </li>
-      </ul>
-
-      <div v-if="metadataText || showMeta" class="feed-source-card__meta">
-        <span v-if="metadataText">{{ metadataText }}</span>
-      </div>
-
-      <div v-if="showMeta && !metadataText" class="feed-source-card__meta">
-        <span data-test="feed-source-count">{{ compactCount(source.subscriptionCount) }} 订阅</span>
-        <span>{{ source.recentItemCount }} 近期</span>
-        <span>{{ formattedLastUpdated }}</span>
-      </div>
+    <!-- 底部：数据指标与时间 -->
+    <div v-if="showMeta" class="feed-source-card__footer">
+      <span v-if="metadataText">{{ metadataText }}</span>
+      <template v-else>
+        <span data-test="feed-source-count" class="footer-stat">
+          <Users :size="12" aria-hidden="true" />
+          {{ compactCount(source.subscriptionCount) }} 订阅
+        </span>
+        <span v-if="source.recentItemCount" class="footer-stat">
+          <FileText :size="12" aria-hidden="true" />
+          {{ source.recentItemCount }} 近期
+        </span>
+        <span v-if="formattedLastUpdated" class="footer-stat">
+          <Clock :size="12" aria-hidden="true" />
+          {{ formattedLastUpdated }}
+        </span>
+      </template>
     </div>
   </article>
 </template>
@@ -73,16 +78,15 @@ defineOptions({
   inheritAttrs: false,
 })
 
-import { Check, Plus } from 'lucide-vue-next'
 import { computed, useAttrs } from 'vue'
-
+import { Check, Clock, FileText, Plus, Users } from 'lucide-vue-next'
 import type { FeedExploreSource } from '@/types'
 
 const props = withDefaults(defineProps<{
   source: FeedExploreSource
   color: string
   avatarLabel: string
-  displayUrl: string
+  displayUrl?: string
   subscribeBusy?: boolean
   imageUrl?: string
   eyebrow?: string
@@ -94,6 +98,7 @@ const props = withDefaults(defineProps<{
   compact?: boolean
   variant?: 'default' | 'recommend'
 }>(), {
+  displayUrl: '',
   imageUrl: undefined,
   eyebrow: '',
   summaryText: '',
@@ -118,20 +123,20 @@ const rootAttrs = computed(() => ({
 }))
 
 const formattedLastUpdated = computed(() => {
-  if (!props.source.lastPublishedAt) return '暂无更新时间'
-  return new Date(props.source.lastPublishedAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+  if (!props.source.lastPublishedAt) return ''
+  return new Date(props.source.lastPublishedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) + '更新'
 })
 
 const subscribeButtonLabel = computed(() => {
   if (props.source.subscribed) return '已订阅'
-  if (props.subscribeBusy) return '订阅中'
+  if (props.subscribeBusy) return '处理中'
   return '订阅'
 })
 
 const compactCount = (value: number) => {
   if (value >= 10000) return `${Math.round(value / 1000) / 10}万`
   if (value >= 1000) return `${Math.round(value / 100) / 10}K`
-  return String(value)
+  return String(value || 0)
 }
 </script>
 
@@ -140,41 +145,47 @@ const compactCount = (value: number) => {
   position: relative;
   display: flex;
   flex-direction: column;
+  gap: 0.65rem;
   width: 100%;
+  padding: 0.85rem 0.95rem;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+  outline: none;
 }
 
 .feed-source-card:hover,
 .feed-source-card:focus-visible {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  box-shadow: inset 3px 0 0 var(--a-color-text), 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.feed-source-card__visual {
-  position: relative;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: var(--a-color-surface-muted);
+/* 头部 */
+.feed-source-card__header {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .feed-source-card__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
+  color: color-mix(in srgb, var(--feed-source-color) 75%, var(--a-color-fg));
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
-  background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
-  color: color-mix(in srgb, var(--feed-source-color) 72%, var(--a-color-fg));
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .feed-source-card__avatar-image {
@@ -183,183 +194,153 @@ const compactCount = (value: number) => {
   object-fit: cover;
 }
 
-.feed-source-card__main {
+.feed-source-card__info {
+  min-width: 0;
   display: grid;
-  min-width: 0;
-  gap: 0.65rem;
-  padding: 1rem;
+  gap: 0.2rem;
 }
 
-.feed-source-card__topline {
-  display: grid;
-  min-width: 0;
-}
-
-.feed-source-card__copy {
+.feed-source-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   min-width: 0;
 }
 
-.feed-source-card__eyebrow {
-  margin: 0 0 0.3rem;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.feed-source-card__copy h3 {
-  display: -webkit-box;
+.feed-source-card__title {
   margin: 0;
-  overflow: hidden;
+  font-size: 0.92rem;
+  font-weight: 600;
   color: var(--a-color-fg);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.feed-source-card__url,
-.feed-source-card__summary {
-  margin: 0;
+.feed-source-card__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .feed-source-card__url {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--a-color-muted-soft);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .feed-source-card__summary {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--a-color-muted);
+  line-height: 1.4;
   display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.feed-source-card__subscribe {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
+/* 常驻订阅按钮 */
+.feed-source-card__sub-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  min-width: 5.75rem;
-  min-height: 2.25rem;
-  padding: 0.4rem 0.8rem;
+  gap: 0.25rem;
+  height: 1.85rem;
+  padding: 0 0.65rem;
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
-  font-family: var(--a-font-sans);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  transition: opacity 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
-.feed-source-card:hover .feed-source-card__subscribe,
-.feed-source-card:focus-within .feed-source-card__subscribe {
-  opacity: 1;
-  pointer-events: auto;
+.feed-source-card__sub-btn:hover:not(:disabled) {
+  background: var(--a-color-surface-muted);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-.feed-source-card__subscribe:hover:not(:disabled) {
-  box-shadow: var(--a-shadow-sm);
-  transform: translate(-50%, -50%) translateY(-1px);
-}
-
-.feed-source-card__subscribe.is-subscribed,
-.feed-source-card__subscribe:disabled {
-  color: var(--a-color-success);
-  border-color: color-mix(in srgb, var(--a-color-success) 45%, var(--a-color-border-soft));
+.feed-source-card__sub-btn.is-subscribed,
+.feed-source-card__sub-btn:disabled {
+  color: #10b981;
+  border-color: color-mix(in srgb, #10b981 40%, var(--a-color-border-soft));
+  background: color-mix(in srgb, #10b981 8%, transparent);
   cursor: default;
 }
 
+/* 预览文章列表 */
 .feed-source-card__previews {
-  display: grid;
-  gap: 0.3rem;
   margin: 0;
-  padding: 0;
-  color: var(--a-color-fg);
-  font-size: 0.8rem;
-  line-height: 1.45;
+  padding: 0.4rem 0.65rem;
   list-style: none;
+  background: var(--a-color-surface-muted);
+  border-radius: calc(var(--a-radius-control) - 2px);
+  display: grid;
+  gap: 0.25rem;
 }
 
 .feed-source-card__previews li {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--a-color-fg);
   min-width: 0;
+}
+
+.preview-bullet {
+  color: var(--a-color-muted-soft);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.preview-title {
   overflow: hidden;
-  padding-left: 0.85rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.feed-source-card__previews li::before {
-  position: absolute;
-  top: 0.65em;
-  left: 0.1rem;
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 50%;
-  background: var(--a-color-muted-soft);
-  content: "";
-}
-
-.feed-source-card__meta {
+/* 底部数据 */
+.feed-source-card__footer {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.85rem;
+  gap: 0.85rem;
+  font-size: 0.7rem;
   color: var(--a-color-muted-soft);
-  font-family: var(--a-font-sans);
-  font-size: 0.7rem;
-  font-weight: 500;
+  padding-top: 0.1rem;
 }
 
+.footer-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* 紧凑变体适配 */
 .feed-source-card.is-compact {
-  display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr);
-  gap: 0.75rem;
-  padding: 0.7rem;
-  border-radius: var(--a-radius-control);
+  padding: 0.75rem 0.85rem;
 }
-
-.feed-source-card.is-compact .feed-source-card__visual {
-  aspect-ratio: 1;
-  border-radius: var(--a-radius-control);
-}
-
-.feed-source-card.is-compact .feed-source-card__main {
-  gap: 0.35rem;
-  padding: 0;
-}
-
-.feed-source-card.is-compact .feed-source-card__subscribe {
-  min-width: 4.5rem;
-  min-height: 2rem;
-  font-size: 0.7rem;
-}
-
-.feed-source-card.is-recommend {
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+.feed-source-card.is-compact .feed-source-card__summary {
+  -webkit-line-clamp: 1;
 }
 
 @media (max-width: 640px) {
-  .feed-source-card__subscribe {
-    opacity: 1;
-    pointer-events: auto;
+  .feed-source-card__header {
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
   }
 }
 </style>

@@ -14,6 +14,7 @@ import { useApi } from "@/composables/useApi";
 import { useAutoSave } from "@/composables/useAutoSave";
 import { useAuthStore } from "@/stores/auth";
 import type { BlogDraft, Collection } from "@/types";
+import { normalizeBlogCollectionSelection } from "@/utils/blogCollectionSelection";
 import { reportError } from "@/utils/logger";
 
 export type SaveTarget = "draft" | "published";
@@ -33,7 +34,6 @@ export interface EditorDraftPayload extends PostEditorDraftForm {
 	source_post_id?: string;
 	channel_id?: string;
 	collection_id?: string;
-	collection_ids: string[];
 }
 
 type DraftSyncState = "idle" | "syncing" | "synced" | "error";
@@ -114,7 +114,7 @@ export function usePostEditorDraftSession({
 				payload.summary.trim() ||
 				payload.cover_url.trim() ||
 				payload.channel_id ||
-				payload.collection_ids.length,
+				payload.collection_id,
 		);
 
 	const {
@@ -277,11 +277,6 @@ export function usePostEditorDraftSession({
 		visibility: draft.visibility || "public",
 		channel_id: draft.channel_id,
 		collection_id: draft.collection_id,
-		collection_ids: draft.collection_ids?.length
-			? draft.collection_ids
-			: draft.collection_id
-				? [draft.collection_id]
-				: [],
 	});
 	const setPendingDraftCandidate = (candidate: DraftCandidate | null) => {
 		pendingDraftCandidate.value = candidate;
@@ -361,14 +356,10 @@ export function usePostEditorDraftSession({
 
 		serverDraftState.value = "syncing";
 		try {
-			const { collection_ids: _collectionIds, ...serverPayload } = payload;
 			const res = await apiRequestResult(api.blog.draft, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json", ...authHeaders() },
-				body: JSON.stringify({
-					...serverPayload,
-					collection_id: payload.collection_id || payload.collection_ids.at(-1),
-				}),
+				body: JSON.stringify(payload),
 			});
 			if (!res.ok) throw new Error("Failed to sync draft");
 			const data = res.data;
@@ -412,8 +403,11 @@ export function usePostEditorDraftSession({
 			const allowed = new Set(
 				channelCollections.value.map((collection) => collection.id),
 			);
-			selectedCollectionIds.value = payload.collection_ids.filter(
-				(collectionId) => allowed.has(collectionId),
+			selectedCollectionIds.value = normalizeBlogCollectionSelection(
+				channelCollections.value,
+				payload.collection_id && allowed.has(payload.collection_id)
+					? payload.collection_id
+					: null,
 			);
 			if (!selectedCollectionIds.value.length) ensureDefaultSelection();
 			await nextTick();

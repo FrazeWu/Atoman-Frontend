@@ -476,4 +476,34 @@ describe("FeedStarredView", () => {
 		]);
 		expect(fetchSubscriptions).not.toHaveBeenCalled();
 	});
+	it("shows a load error instead of an empty state when starred items fail", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(JSON.stringify({ error: "failed" }), { status: 500 }),
+		);
+
+		const wrapper = mount(FeedStarredView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PEmpty: {
+						props: ["title", "description"],
+						template: '<div>{{ title }} {{ description }}</div>',
+					},
+					PEntry: true,
+					PBadge: true,
+					PClip: true,
+					PButton: true,
+					PShortcutHints: true,
+					FeedArticleSheet: true,
+					FeedTimelineFooter: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		expect(wrapper.text()).toContain("收藏加载失败");
+		expect(wrapper.text()).not.toContain("暂无收藏文章");
+	});
 });

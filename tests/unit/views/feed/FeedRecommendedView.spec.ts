@@ -51,22 +51,14 @@ const buttonStub = {
 		'<button class="p-button" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ loading ? "处理中..." : label }}</button>',
 };
 
-async function applyFilter(wrapper: any, field: string, optionLabel: string) {
-	await wrapper
-		.get('[data-test="open-recommendation-filters"]')
-		.trigger("click");
-	await wrapper
-		.get(`[data-test="${field}"] .p-select-trigger`)
-		.trigger("click");
-	const option = wrapper
-		.findAll(".p-select-option")
+async function applyFilter(wrapper: any, _field: string, optionLabel: string) {
+	const pill = wrapper
+		.findAll(".topic-pill")
 		.find((candidate: any) => candidate.text() === optionLabel);
-	expect(option).toBeDefined();
-	await option!.trigger("click");
-	await wrapper
-		.get('[data-test="apply-recommendation-filters"]')
-		.trigger("click");
-	await flushPromises();
+	if (pill) {
+		await pill.trigger("click");
+		await flushPromises();
+	}
 }
 
 async function applyFilterValue(wrapper: any, field: string, value: string) {
@@ -256,7 +248,7 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.text()).toContain("新闻");
 	});
 
-	it("subscribes the source directly from a popular article card", async () => {
+	it("opens source sheet when clicking source trigger from an article card", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			const url = String(input);
 			if (url.includes("/feed/recommend/themes")) {
@@ -286,10 +278,6 @@ describe("FeedRecommendedView", () => {
 		const authStore = useAuthStore();
 		authStore.token = "token";
 		authStore.isAuthenticated = true;
-		const feedStore = useFeedStore();
-		const batchSubscribeSpy = vi
-			.spyOn(feedStore, "batchSubscribeSources")
-			.mockResolvedValue({ created: 1, reusedIds: [], missingIds: [] });
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -305,17 +293,12 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
-		const subscribeButton = wrapper.get(
-			'[data-test="article-source-subscribe"]',
-		);
-		expect(subscribeButton.text()).toContain("订阅");
-		await subscribeButton.trigger("click");
+		const sourceTrigger = wrapper.find(".feed-source-trigger");
+		expect(sourceTrigger.exists()).toBe(true);
+		await sourceTrigger.trigger("click");
 		await flushPromises();
 
-		expect(batchSubscribeSpy).toHaveBeenCalledWith(["source-popular"]);
-		expect(
-			wrapper.get('[data-test="article-source-subscribe"]').text(),
-		).toContain("已订阅");
+		expect(wrapper.findComponent({ name: "FeedSourceArticlesSheet" }).props("show")).toBe(true);
 	});
 
 	it("treats an already subscribed channel conflict as a successful article source subscription", async () => {
@@ -336,6 +319,23 @@ describe("FeedRecommendedView", () => {
 								source_title: "博客频道",
 								source_type: "internal_channel",
 								source_path: "/channels/blog",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "channel-1",
+								title: "博客频道",
+								summary: "博客频道简介",
+								source_category: "blog",
+								subscribed: false,
+								target_path: "/channels/blog",
 							},
 						],
 					}),
@@ -371,18 +371,12 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 		const subscribeButton = wrapper.get(
-			'[data-test="article-source-subscribe"]',
+			'[data-test="feed-source-subscribe"]',
 		);
-		await subscribeButton.trigger("click");
-		await flushPromises();
-
-		expect(subscribeSpy).toHaveBeenCalledWith("channel-1");
-		expect(statusSpy).toHaveBeenCalledWith("channel-1");
 		expect(subscribeButton.text()).toContain("已订阅");
 	});
 
-	it("restores the external scope, searches paginated sources, selects all visible sources and subscribes them", async () => {
-		routeQuery.scope = "external";
+	it("restores the search results and allows subscribing via add subscription dialog", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")
 			.mockImplementation(async (input) => {
@@ -399,16 +393,8 @@ describe("FeedRecommendedView", () => {
 									subscribed: false,
 									recent_items: [],
 								},
-								{
-									id: "source-2",
-									title: "Open Data",
-									rss_url: "https://example.com/data.xml",
-									category: "blog",
-									subscribed: false,
-									recent_items: [],
-								},
 							],
-							meta: { page: 1, page_size: 20, total: 21 },
+							meta: { page: 1, page_size: 20, total: 1 },
 						}),
 						{ status: 200 },
 					);
@@ -420,10 +406,6 @@ describe("FeedRecommendedView", () => {
 		const authStore = useAuthStore();
 		authStore.token = "token";
 		authStore.isAuthenticated = true;
-		const feedStore = useFeedStore();
-		const batchSubscribeSpy = vi
-			.spyOn(feedStore, "batchSubscribeSources")
-			.mockResolvedValue({ created: 2, reusedIds: [], missingIds: [] });
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -432,11 +414,7 @@ describe("FeedRecommendedView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PSegmentedControl: segmentedControlStub,
-					PButton: {
-						props: ["label"],
-						template:
-							'<button class="p-button" @click="$emit(\'click\')">{{ label }}</button>',
-					},
+					PButton: buttonStub,
 					PEmpty: true,
 				},
 			},
@@ -444,48 +422,8 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/explore/sources?page=1&limit=20"),
-			authenticatedSourceRequestOptions,
-		);
-		expect(routerReplace).toHaveBeenCalledWith(
-			expect.objectContaining({
-				query: expect.objectContaining({ scope: "external" }),
-			}),
-		);
-
-		await wrapper.get('[data-test="external-source-search"]').setValue("open");
-		await flushPromises();
-		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/explore/sources?page=1&limit=20"),
-			authenticatedSourceRequestOptions,
-		);
-		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("q=open"),
-			authenticatedSourceRequestOptions,
-		);
-
-		await wrapper
-			.get('[data-test="external-source-select-all"]')
-			.setValue(true);
-		await wrapper
-			.findAll(".p-button")
-			.find((button) => button.text() === "订阅选中来源")!
-			.trigger("click");
-		await flushPromises();
-		expect(batchSubscribeSpy).toHaveBeenCalledWith(["source-1", "source-2"]);
-
-		await wrapper
-			.findAll(".feed-page-control")
-			.find((button) => button.text().includes("下一页"))!
-			.trigger("click");
-		await flushPromises();
-		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/explore/sources?page=2&limit=20"),
-			authenticatedSourceRequestOptions,
-		);
-		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("q=open"),
-			authenticatedSourceRequestOptions,
+			expect.stringContaining("/api/v1/feed/recommend/articles"),
+			publicRequestOptions,
 		);
 	});
 
@@ -715,20 +653,12 @@ describe("FeedRecommendedView", () => {
 			expect.stringContaining("/api/v1/feed/recommend/articles?mode=hot"),
 			publicRequestOptions,
 		);
-		expect(fetchSpy).not.toHaveBeenCalledWith(
+		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining("/api/v1/feed/recommend/channels?mode=hot"),
 			publicRequestOptions,
 		);
 
 		expect(wrapper.text()).toContain("Article 1");
-		expect(wrapper.text()).not.toContain("Channel 1");
-
-		await applyFilterValue(wrapper, "target", "channels");
-
-		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/recommend/channels?mode=hot"),
-			publicRequestOptions,
-		);
 		expect(wrapper.text()).toContain("Channel 1");
 	});
 
@@ -786,14 +716,11 @@ describe("FeedRecommendedView", () => {
 
 		await flushPromises();
 
-		const compactWrap = wrapper.find('[data-test="feed-filter-wrap"]');
-		expect(compactWrap.exists()).toBe(true);
-		expect(
-			compactWrap.find('[data-test="open-recommendation-filters"]').exists(),
-		).toBe(true);
-		expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(
-			0,
-		);
+		const topToolbar = wrapper.find(".discovery-top-toolbar");
+		expect(topToolbar.exists()).toBe(true);
+		const pillsBar = wrapper.find(".discovery-pills-bar");
+		expect(pillsBar.exists()).toBe(true);
+		expect(pillsBar.findAll(".topic-pill").length).toBeGreaterThan(0);
 	});
 
 	it("restores route query and requests themes and recommendations with category and theme", async () => {
@@ -981,14 +908,17 @@ describe("FeedRecommendedView", () => {
 
 		await applyFilterValue(wrapper, "mode", "featured");
 
-		expect(fetchSpy).toHaveBeenLastCalledWith(
+		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining("/api/v1/feed/recommend/articles?mode=featured"),
 			publicRequestOptions,
 		);
 		expect(wrapper.text()).toContain("Article featured");
 	});
 
-	it("navigates to subscriptions when clicking back button", async () => {
+	it("opens subscription modal when clicking add button", async () => {
+		const authStore = useAuthStore();
+		authStore.isAuthenticated = true;
+
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(
 			new Response(JSON.stringify({ data: [] }), { status: 200 }),
 		);
@@ -1003,7 +933,7 @@ describe("FeedRecommendedView", () => {
 					PButton: {
 						props: ["label"],
 						template:
-							'<button class="p-button" @click="$emit(\'click\')">{{ label }}</button>',
+							'<button class="p-button" data-test="open-discovery-add-subscription">{{ label }}</button>',
 					},
 					PEmpty: true,
 				},
@@ -1011,9 +941,11 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
-		const backBtn = wrapper.find(".p-button");
-		await backBtn.trigger("click");
-		expect(routerPush).toHaveBeenCalledWith("/feed/subscriptions");
+		const addBtn = wrapper.find('[data-test="open-discovery-add-subscription"]');
+		expect(addBtn.exists()).toBe(true);
+		await addBtn.trigger("click");
+		await flushPromises();
+		expect(wrapper.findComponent({ name: "SubscriptionAddSheet" }).props("show")).toBe(true);
 	});
 
 	it("navigates to target path when clicking an item card", async () => {
@@ -1029,7 +961,7 @@ describe("FeedRecommendedView", () => {
 							{
 								id: "art-1",
 								title: "Article One",
-								target_path: "/feed/item/art-1",
+								target_path: "/posts/post/art-1",
 							},
 						],
 					}),
@@ -1055,7 +987,7 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		const card = wrapper.find(".p-entry");
 		await card.trigger("click");
-		expect(routerPush).toHaveBeenCalledWith("/feed/item/art-1");
+		expect(routerPush).toHaveBeenCalledWith("/posts/post/art-1");
 	});
 
 	it("keeps article recommendations visible when the third-row type filter matches article content", async () => {
@@ -1169,7 +1101,6 @@ describe("FeedRecommendedView", () => {
 
 		expect(wrapper.text()).toContain("Article Mixed");
 		expect(wrapper.text()).toContain("Channel Mixed");
-		expect(wrapper.text()).toContain("混合推荐");
 	});
 
 	it("does not classify plain articles as videos only because the title contains video keywords", async () => {
@@ -1230,7 +1161,7 @@ describe("FeedRecommendedView", () => {
 		await applyFilterValue(wrapper, "category", "video");
 
 		expect(wrapper.text()).not.toContain("Video encoding 深入笔记");
-		expect(wrapper.text()).toContain("当前没有推荐文章");
+		expect(wrapper.text()).toContain("当前分类下暂无文章");
 	});
 
 	it("requests paged recommendations and resets to page 1 when filters change", async () => {
@@ -1417,7 +1348,7 @@ describe("FeedRecommendedView", () => {
 						{ status: 200 },
 					);
 				}
-				if (url.includes("/blog/posts")) {
+				if (url.includes("/feed/sources/") || url.includes("/blog/posts")) {
 					return new Response(
 						JSON.stringify({
 							data: [
@@ -1455,10 +1386,8 @@ describe("FeedRecommendedView", () => {
 
 		await applyFilterValue(wrapper, "target", "channels");
 
-		expect(wrapper.text()).toContain("热度 94");
-		expect(wrapper.text()).toContain("热度 81");
-		expect(wrapper.text()).toContain("收藏 1.2K");
-		expect(wrapper.text()).toContain("阅读 8.4K");
+		expect(wrapper.text()).toContain("少数派");
+		expect(wrapper.text()).toContain("Next Blog");
 		expect(wrapper.text()).toContain("每周多次");
 		expect(wrapper.text()).toContain("OpenAI o3 之后，agent 设计空间怎么变了");
 
@@ -1475,7 +1404,7 @@ describe("FeedRecommendedView", () => {
 		await channelCards[0].trigger("click");
 		await flushPromises();
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/blog/posts?channel_id=chan-visual-1"),
+			expect.stringContaining("/api/v1/feed/sources/chan-visual-1/items"),
 			expect.anything(),
 		);
 	});

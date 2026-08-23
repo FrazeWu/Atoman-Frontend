@@ -2,10 +2,13 @@ import { mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { appVersion } from "@/config/appVersion";
-import { footbarLinks } from "@/config/moduleRooms";
-import SiteFooter from "@/components/system/SiteFooter.vue";
-import router from "@/router";
+import { appVersion } from "../../../src/config/appVersion";
+import { relatedLinks } from "../../../src/config/relatedLinks";
+import { footbarLinks } from "../../../src/config/moduleRooms";
+// Vue SFC types are provided by Vite during the test run.
+// @ts-expect-error The standalone test-file language service does not load Vite's Vue shim.
+import SiteFooter from "../../../src/components/system/SiteFooter.vue";
+import router from "../../../src/router";
 
 const footerSource = readFileSync(
 	resolve(__dirname, "../../../src/components/system/SiteFooter.vue"),
@@ -29,7 +32,7 @@ const mountFooter = () => {
 };
 
 afterEach(() => {
-	document.body.innerHTML = "";
+	document.body.replaceChildren();
 	Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
 	vi.restoreAllMocks();
 });
@@ -38,7 +41,7 @@ describe("SiteFooter", () => {
 	it("renders the confirmed two-level footbar content", () => {
 		const wrapper = mountFooter();
 
-		expect(footbarLinks.map((link) => link.label)).toEqual([
+		expect(footbarLinks.map((link: { label: string }) => link.label)).toEqual([
 			"关于",
 			"联系我们",
 			"问题反馈",
@@ -52,7 +55,30 @@ describe("SiteFooter", () => {
 		expect(wrapper.get(".site-footer-primary").text()).not.toContain(
 			"镜像加速",
 		);
+		expect(relatedLinks.map((link) => link.label)).toEqual([
+			"镜像加速",
+			"阮一峰的网络日志",
+			"少数派",
+			"小众软件",
+			"Matrix67",
+			"稀土掘金",
+			"码农周刊",
+			"COOLSHELL",
+		]);
 		expect(wrapper.get(".site-footer-center").text()).toContain("镜像加速");
+		expect(wrapper.get(".site-footer-related").text()).toContain("相关链接");
+		expect(wrapper.get(".site-footer-related-grid").element).toBeTruthy();
+		expect(wrapper.findAll("[data-footer-related-link]")).toHaveLength(
+			relatedLinks.length,
+		);
+		for (const link of relatedLinks) {
+			const renderedLink = wrapper.get(
+				`[data-footer-related-link="${link.label}"]`,
+			);
+			expect(renderedLink.attributes("href")).toBe(link.href);
+			expect(renderedLink.attributes("target")).toBe("_blank");
+			expect(renderedLink.attributes("rel")).toBe("noopener noreferrer");
+		}
 		expect(
 			wrapper.get('[data-footer-action="docker-proxy"]').attributes("href"),
 		).toBe("https://mirror.atoman.org/");

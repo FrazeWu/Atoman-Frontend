@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { getActivePinia } from 'pinia'
 import { RouterLink } from 'vue-router'
 import { appVersion } from '@/config/appVersion'
+import { relatedLinks } from '@/config/relatedLinks'
 import { footbarLinks, type FootbarPanel } from '@/config/moduleRooms'
 import { createSheetStack } from '@/composables/useSheetStack'
 import { useAuthStore } from '@/stores/auth'
@@ -50,13 +51,21 @@ function openPanel(panel: FootbarPanel, label: string) {
       </div>
 
       <div class="site-footer-center">
-        <a
-          class="site-footer-link"
-          href="https://mirror.atoman.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-footer-action="docker-proxy"
-        >镜像加速</a>
+        <nav class="site-footer-related" aria-label="相关链接">
+          <span class="site-footer-section-label">相关链接</span>
+          <div class="site-footer-related-grid">
+            <a
+              v-for="link in relatedLinks"
+              :key="link.href"
+              class="site-footer-link site-footer-link--related"
+              :data-footer-related-link="link.label"
+              :data-footer-action="link.action"
+              :href="link.href"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ link.label }}</a>
+          </div>
+        </nav>
       </div>
 
       <div class="site-footer-row site-footer-secondary">
@@ -105,10 +114,31 @@ function openPanel(panel: FootbarPanel, label: string) {
 }
 
 .site-footer-center {
-  display: flex;
+  display: grid;
   min-height: 44px;
-  align-items: center;
-  justify-content: center;
+  justify-items: center;
+  gap: var(--a-space-1);
+  padding-block: var(--a-space-2);
+}
+
+.site-footer-related {
+  width: min(100%, 760px);
+}
+
+.site-footer-related-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 var(--a-space-4);
+}
+
+.site-footer-section-label {
+  display: block;
+  min-height: 28px;
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+  font-weight: var(--a-font-weight-strong);
+  line-height: 28px;
+  text-align: center;
 }
 
 .site-footer-brand {
@@ -150,6 +180,7 @@ function openPanel(panel: FootbarPanel, label: string) {
   font: inherit;
   font-size: var(--a-text-sm);
   font-weight: var(--a-font-weight-strong);
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -173,6 +204,12 @@ function openPanel(panel: FootbarPanel, label: string) {
 
 .site-footer-secondary :deep(.site-visit-stats) {
   order: 2;
+}
+
+.site-footer-link--related {
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .site-footer-link--meta,
@@ -200,10 +237,29 @@ function openPanel(panel: FootbarPanel, label: string) {
     flex-basis: 100%;
   }
 
+  .site-footer-center {
+    padding-left: calc(152px + var(--a-space-3));
+  }
+
   .site-footer-links,
   .site-footer-meta {
     justify-content: flex-end;
     gap: var(--a-space-3);
+  }
+
+  .site-footer-related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--a-space-3);
+  }
+
+  .site-footer-link--related {
+    font-size: var(--a-text-xs);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 380px) {
+  .site-footer-related-grid {
+    grid-template-columns: 1fr;
   }
 }
 

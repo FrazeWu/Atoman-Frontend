@@ -281,7 +281,6 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 }
 
 .source-sheet-hero {
-  --hero-wash: color-mix(in srgb, var(--feed-source-color) 14%, white);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -290,9 +289,9 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   padding: 1rem 1.1rem;
   border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-border-soft));
   border-radius: 4px;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--feed-source-color) 34%, white) 0%, transparent 46%),
-    linear-gradient(135deg, color-mix(in srgb, var(--feed-source-color) 16%, white) 0%, var(--hero-wash) 100%);
+  width: min(100%, 32rem);
+  aspect-ratio: 4 / 3;
+  background: var(--a-color-bg);
 }
 
 .source-sheet-heading {
@@ -328,7 +327,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   min-height: 2rem;
   padding: 0.2rem 0.72rem;
   border-radius: 0px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--a-color-bg);
   color: color-mix(in srgb, var(--feed-source-color) 72%, black);
   font-family: var(--a-font-sans);
   font-size: 0.68rem;

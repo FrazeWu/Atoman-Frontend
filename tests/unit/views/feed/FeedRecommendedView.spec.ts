@@ -272,6 +272,19 @@ describe("FeedRecommendedView", () => {
 					{ status: 200 },
 				);
 			}
+			if (url.includes("/feed/timeline?")) {
+				return new Response(
+					JSON.stringify({
+						data: [{
+							type: "feed_item",
+							feed_item: { id: "source-item-1", title: "来源文章" },
+							published_at: "2026-06-17T00:00:00Z",
+							is_read: false,
+						}],
+					}),
+					{ status: 200 },
+				);
+			}
 			return new Response(JSON.stringify({ data: [] }), { status: 200 });
 		});
 
@@ -298,7 +311,14 @@ describe("FeedRecommendedView", () => {
 		await sourceTrigger.trigger("click");
 		await flushPromises();
 
-		expect(wrapper.findComponent({ name: "FeedSourceArticlesSheet" }).props("show")).toBe(true);
+		const sourceSheet = wrapper.findComponent({ name: "FeedSourceArticlesSheet" });
+		expect(sourceSheet.props("show")).toBe(true);
+		expect(sourceSheet.props("items")).toEqual([
+			expect.objectContaining({
+				type: "feed_item",
+				feed_item: expect.objectContaining({ title: "来源文章" }),
+			}),
+		]);
 	});
 
 	it("treats an already subscribed channel conflict as a successful article source subscription", async () => {
@@ -1326,7 +1346,7 @@ describe("FeedRecommendedView", () => {
 										{ id: "recent-2", title: "Claude Code 工作流拆解" },
 									],
 									image_url: "https://example.com/channel-cover.jpg",
-									target_path: "/feed/channel/chan-visual-1",
+									target_path: "/channels/chan-visual-1",
 									score_label: "热度 94",
 								},
 								{
@@ -1340,7 +1360,7 @@ describe("FeedRecommendedView", () => {
 									recent_items: [
 										{ id: "recent-3", title: "为什么越来越多团队重写检索层" },
 									],
-									target_path: "/feed/channel/chan-visual-2",
+									target_path: "/channels/chan-visual-2",
 									score_label: "热度 81",
 								},
 							],
@@ -1404,7 +1424,7 @@ describe("FeedRecommendedView", () => {
 		await channelCards[0].trigger("click");
 		await flushPromises();
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/sources/chan-visual-1/items"),
+			expect.stringContaining("/api/v1/blog/posts?"),
 			expect.anything(),
 		);
 	});

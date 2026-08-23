@@ -3,12 +3,14 @@ import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import FeedView from '@/views/feed/FeedView.vue'
-import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFeedRecommendations.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useFeedStore } from '@/stores/feed'
-import { useOnboardingStore } from '@/stores/onboarding'
-import { usePlayerStore } from '@/stores/player'
+// @ts-expect-error Vue SFC resolution is provided by vue-tsc and Vitest.
+import FeedView from '../../../../src/views/feed/FeedView.vue'
+// @ts-expect-error Vue SFC resolution is provided by vue-tsc and Vitest.
+import OnboardingFeedRecommendations from '../../../../src/components/onboarding/OnboardingFeedRecommendations.vue'
+import { useAuthStore } from '../../../../src/stores/auth'
+import { useFeedStore } from '../../../../src/stores/feed'
+import { useOnboardingStore } from '../../../../src/stores/onboarding'
+import { usePlayerStore } from '../../../../src/stores/player'
 
 const PButtonStub = {
   props: ['label', 'disabled', 'loading', 'loadingText'],
@@ -345,7 +347,7 @@ describe('FeedView', () => {
     await flushPromises()
 
     const summary = wrapper.get('[data-test="feed-duplicate-summary"]')
-    expect(summary.get('[data-test="feed-duplicate-toggle"]').exists()).toBe(true)
+    expect(summary.find('[data-test="feed-duplicate-toggle"]').exists()).toBe(true)
     await summary.get('[data-test="feed-duplicate-toggle"]').trigger('click')
     expect(summary.get('[data-test="feed-duplicate-sources"]').text()).toContain('Source B')
   })
@@ -471,7 +473,7 @@ describe('FeedView', () => {
     onboardingStore.recommendations = recommendations
     vi.spyOn(onboardingStore, 'loadRecommendations').mockResolvedValue(undefined)
     const completeSpy = vi.spyOn(onboardingStore, 'complete').mockResolvedValue(true)
-    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToRSS').mockImplementation(async (url) => url.includes('one'))
+    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToRSS').mockImplementation(async (url: string) => url.includes('one'))
 
     const wrapper = mount(FeedView, {
       global: {
@@ -768,7 +770,7 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('内部文章')
   })
 
-  it('shows RSS source names for external subscription items and opens the source article sheet', async () => {
+  it('loads public source articles for an unsubscribed external feed item', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
       data: [
         {
@@ -798,23 +800,7 @@ describe('FeedView', () => {
     }), { status: 200 }))
 
     const feedStore = useFeedStore()
-    feedStore.subscriptions = [
-      {
-        id: 'sub-rss-1',
-        user_id: 'viewer-1',
-        feed_source_id: 'source-rss-1',
-        title: 'Example RSS',
-        feed_source: {
-          id: 'source-rss-1',
-          source_type: 'external_rss',
-          rss_url: 'https://example.com/feed.xml',
-          hash: 'external-rss:example',
-          title: 'Example RSS',
-          created_at: '2026-01-01T00:00:00Z',
-        },
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ]
+    feedStore.subscriptions = []
 
     const wrapper = mount(FeedView, {
       global: {
@@ -857,6 +843,9 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('Example RSS')
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('外部条目')
+    expect(vi.mocked(globalThis.fetch).mock.calls.some(([input]) => (
+      String(input).includes('/feed/timeline?limit=100&feed_source_id=source-rss-1')
+    ))).toBe(true)
   })
 
   it('shows current source context and returns to all subscriptions', async () => {
@@ -1292,7 +1281,7 @@ describe('FeedView', () => {
 
   it('auto-marks sources as read from subscription flags instead of local automation rules', async () => {
     const fetchMock = vi.mocked(globalThis.fetch)
-    fetchMock.mockImplementation(async (input, init) => {
+    fetchMock.mockImplementation(async (input, _init) => {
       const url = String(input)
       if (url.includes('/feed/timeline/mark-read')) {
         return new Response(null, { status: 204 })

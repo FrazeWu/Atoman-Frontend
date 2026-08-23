@@ -6,6 +6,7 @@ import {
   type MusicAlbumImport,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicCreationFlow } from './musicCreationFlowContext'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -16,7 +17,8 @@ import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumU
 const { state, setMusicCreationStep } = useMusicDrawers()
 const coverInputRef = ref<HTMLInputElement | null>(null)
 
-const creationFlow = computed(() => state.value.creationFlow)
+const creationFlowFallback = computed(() => state.value.creationFlow)
+const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])

@@ -4,6 +4,7 @@ import { parseBlob } from 'music-metadata-browser'
 import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor'
 import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
@@ -21,7 +22,8 @@ import { parsePartialDateParts, serializePartialDate } from '@/components/music/
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
-const creationFlow = computed(() => state.value.creationFlow)
+const creationFlowFallback = computed(() => state.value.creationFlow)
+const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const isSongEdit = computed(() => isEditMode.value && creationFlow.value?.entity === 'song')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
@@ -297,6 +299,10 @@ function syncLockedNewArtistContributor() {
 }
 
 function goBack() {
+  if (creationFlow.value?.parentKey) {
+    closeMusicCreationFlow()
+    return
+  }
   setMusicCreationStep('artist')
 }
 

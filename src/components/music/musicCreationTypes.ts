@@ -179,6 +179,7 @@ export interface MusicCreationFlowState {
 	mode?: "create" | "edit";
 	entity?: "artist" | "album" | "song";
 	targetId?: string | null;
+	parentKey?: string;
 	loading?: boolean;
 	step: MusicCreationFlowStep;
 	draft: MusicCreationDraft;

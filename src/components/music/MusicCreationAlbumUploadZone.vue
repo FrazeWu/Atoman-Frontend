@@ -2,12 +2,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { SUPPORTED_ARCHIVE_ACCEPT, SUPPORTED_AUDIO_ACCEPT } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { useAlbumImportUpload } from '@/composables/useAlbumImportUpload'
 import PButton from '@/components/ui/PButton.vue'
 import { ExternalLink } from 'lucide-vue-next'
 
 const { state } = useMusicDrawers()
-const creationFlow = computed(() => state.value.creationFlow)
+const creationFlowFallback = computed(() => state.value.creationFlow)
+const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport)
 
 const {

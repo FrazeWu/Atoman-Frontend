@@ -123,13 +123,20 @@ const drawerMocks = {
 	state: ref({
 		artistId: null as string | null,
 		creationFlow: null as MusicCreationFlowState | null,
+		creationFlows: {} as Record<string, MusicCreationFlowState>,
 	}),
+	openMusicCreationFlow: vi.fn(),
 	closeMusicCreationFlow: vi.fn(),
 	refreshArtist: vi.fn(),
 	refreshAlbum: vi.fn(),
 	refreshSong: vi.fn(),
 	openArtist: vi.fn(),
 	openNestedAction: vi.fn(),
+	isLayerActive: vi.fn(),
+	isLayerShifted: vi.fn(),
+	isTopLayer: vi.fn(),
+	returnToLayer: vi.fn(),
+	isMainShifted: computed(() => false),
 	setMusicCreationStep: vi.fn(),
 	routerPush: vi.fn(),
 	routerReplace: vi.fn(),
@@ -181,6 +188,7 @@ vi.mock("@/components/music/MusicCreationArtistStep.vue", () => ({
 vi.mock("@/composables/useMusicDrawers", () => ({
 	useMusicDrawers: () => ({
 		state: drawerMocks.state,
+		openMusicCreationFlow: drawerMocks.openMusicCreationFlow,
 		closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
 		refreshArtist: drawerMocks.refreshArtist,
 		refreshAlbum: drawerMocks.refreshAlbum,
@@ -188,6 +196,10 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		openArtist: drawerMocks.openArtist,
 		openNestedAction: drawerMocks.openNestedAction,
 		setMusicCreationStep: drawerMocks.setMusicCreationStep,
+		isLayerActive: drawerMocks.isLayerActive,
+		isLayerShifted: drawerMocks.isLayerShifted,
+		isTopLayer: drawerMocks.isTopLayer,
+		returnToLayer: drawerMocks.returnToLayer,
 		isMainShifted: computed(() => false),
 		isCreationFlowOpen: computed(
 			() => drawerMocks.state.value.creationFlow !== null,
@@ -236,6 +248,7 @@ describe("MusicCreationFlowDrawer", () => {
 			importId: "import-1",
 			status: "queued",
 		} as never);
+		drawerMocks.openMusicCreationFlow.mockReset();
 		drawerMocks.closeMusicCreationFlow.mockReset();
 		drawerMocks.closeMusicCreationFlow.mockImplementation(() => {
 			drawerMocks.state.value.creationFlow = null;
@@ -257,6 +270,14 @@ describe("MusicCreationFlowDrawer", () => {
 				}
 			},
 		);
+		drawerMocks.isLayerActive.mockReset();
+		drawerMocks.isLayerShifted.mockReset();
+		drawerMocks.isTopLayer.mockReset();
+		drawerMocks.returnToLayer.mockReset();
+		drawerMocks.isLayerActive.mockReturnValue(true);
+		drawerMocks.isLayerShifted.mockReturnValue(false);
+		drawerMocks.isTopLayer.mockReturnValue(true);
+		drawerMocks.state.value.creationFlows = {};
 		drawerMocks.state.value.artistId = null;
 		drawerMocks.state.value.creationFlow = createFlowState();
 	});
@@ -556,6 +577,65 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
 		expect(drawerMocks.openArtist).not.toHaveBeenCalled();
 		expect(drawerMocks.openNestedAction).not.toHaveBeenCalled();
+	});
+
+	it("opens a nested album creation sheet from the artist creation layer", async () => {
+		const parentKey = "creation:create:album:new";
+		const parentFlow = createFlowState({
+			step: "artist",
+			draft: {
+				...createFlowState().draft,
+				artist: {
+					...createFlowState().draft.artist,
+					id: null,
+					avatarUrl: "https://img.test/artist.jpg",
+					legalName: "Stacked Artist",
+					nationality: "中国",
+					birthDateParts: { year: "1990", month: "01", day: "01" },
+					source: "https://example.test/artist",
+					stageNames: [
+						{
+							...createFlowState().draft.artist.stageNames[0],
+							name: "Stacked Artist",
+						},
+					],
+				},
+			},
+		});
+		const childFlow = createFlowState({
+			step: "albumDetails",
+			parentKey,
+		});
+		drawerMocks.state.value.creationFlow = parentFlow;
+		drawerMocks.state.value.creationFlows[parentKey] = parentFlow;
+		drawerMocks.openMusicCreationFlow.mockImplementation((_seed, options) => {
+			if (options?.artistDraft) childFlow.draft.artist = options.artistDraft;
+			return childFlow;
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer, {
+			props: {
+				layer: {
+					key: parentKey,
+					kind: "creation",
+					title: "创建音乐条目",
+					payload: { startStep: "artist" },
+				},
+			},
+		});
+
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+
+		expect(drawerMocks.openMusicCreationFlow).toHaveBeenCalledWith(
+			expect.objectContaining({
+				startStep: "albumDetails",
+				parentKey,
+			}),
+			expect.objectContaining({ artistDraft: parentFlow.draft.artist }),
+		);
+		expect(childFlow.draft.albumDetails.contributors[0]).toEqual(
+			expect.objectContaining({ name: "Stacked Artist", artistId: null }),
+		);
 	});
 
 	it("修改艺术家复用创建表单并提交完整修订", async () => {

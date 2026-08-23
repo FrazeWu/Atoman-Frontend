@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
+import type { MusicSheetLayer } from "../../../../src/components/music/musicSheetTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // @ts-expect-error Vitest resolves Vue SFC aliases through Vite, outside the src-only tsconfig.
@@ -40,6 +41,47 @@ describe("MusicSheetStack", () => {
 			["artist:artist-1", "artist:artist-2"],
 		);
 		expect(wrapper.get(".album-layer").text()).toBe("album:album-3");
+	});
+
+	it("keeps artist creation beneath a nested album creation flow", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ startStep: "artist" });
+		const parentKey = drawers.layers.value.at(-1)?.key;
+		const parentFlow = drawers.state.value.creationFlow;
+		expect(parentKey).toBeDefined();
+		expect(parentFlow).not.toBeNull();
+		if (!parentKey || !parentFlow) return;
+
+		parentFlow.draft.artist.stageNames[0].name = "Draft Artist";
+		drawers.openMusicCreationFlow(
+			{
+				artistName: "Draft Artist",
+				startStep: "albumDetails",
+				parentKey,
+			},
+			{ artistDraft: parentFlow.draft.artist },
+		);
+
+		const childKey = drawers.layers.value.at(-1)?.key;
+		expect(
+			drawers.layers.value.map((layer: MusicSheetLayer) => layer.key),
+		).toEqual([
+			parentKey,
+			childKey,
+		]);
+		expect(drawers.state.value.creationFlow?.parentKey).toBe(parentKey);
+		expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0].name).toBe(
+			"Draft Artist",
+		);
+
+		drawers.closeMusicCreationFlow(childKey);
+		expect(
+			drawers.layers.value.map((layer: MusicSheetLayer) => layer.key),
+		).toEqual([parentKey]);
+		expect(drawers.state.value.creationFlow).toBe(parentFlow);
+		expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0].name).toBe(
+			"Draft Artist",
+		);
 	});
 
 	it("keeps the new top sheet mounted while the lower path switches", async () => {

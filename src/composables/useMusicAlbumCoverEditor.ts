@@ -1,10 +1,12 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicCreationFlow } from '@/components/music/musicCreationFlowContext'
 
 export function useMusicAlbumCoverEditor() {
   const { state } = useMusicDrawers()
-  const creationFlow = computed(() => state.value.creationFlow)
+  const creationFlowFallback = computed(() => state.value.creationFlow)
+  const creationFlow = useMusicCreationFlow(creationFlowFallback)
   const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
   const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
   const coverInputRef = ref<HTMLInputElement | null>(null)

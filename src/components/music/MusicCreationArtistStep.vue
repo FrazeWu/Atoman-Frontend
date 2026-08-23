@@ -9,11 +9,13 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 import { createMusicArtist, listMusicArtists, uploadMusicAsset, type MusicArtistListItem } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 
 const { state } = useMusicDrawers()
 
-const creationFlow = computed(() => state.value.creationFlow)
+const creationFlowFallback = computed(() => state.value.creationFlow)
+const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
 const isGroup = computed(() => artistDraft.value?.kind === 'group')
 const avatarUploading = ref(false)

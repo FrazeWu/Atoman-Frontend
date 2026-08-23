@@ -25,6 +25,7 @@ import {
 import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
 import { parsePartialDateParts } from "@/components/music/birthDateMask";
 import type { MusicCreationFlowState } from "@/components/music/musicCreationTypes";
+import { useMusicCreationFlow } from "@/components/music/musicCreationFlowContext";
 
 type AlbumImportUploadState = {
 	uploading: Ref<boolean>;
@@ -66,7 +67,8 @@ function uploadStateFor(flow: MusicCreationFlowState) {
 export function useAlbumImportUpload() {
 	const { state, setMusicCreationStep } = useMusicDrawers();
 
-	const creationFlow = computed(() => state.value.creationFlow);
+	const creationFlowFallback = computed(() => state.value.creationFlow);
+	const creationFlow = useMusicCreationFlow(creationFlowFallback);
 	const albumImportDraft = computed(
 		() => creationFlow.value?.draft.albumImport ?? null,
 	);

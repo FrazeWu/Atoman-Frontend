@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -12,6 +12,7 @@ import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
 import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'
+import { musicCreationFlowKey } from './musicCreationFlowContext'
 import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, primaryAlbumRole, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
@@ -29,6 +30,7 @@ const {
   refreshAlbum,
   refreshSong,
   openNestedAction,
+  openMusicCreationFlow,
   isLayerActive,
   isLayerShifted,
   isTopLayer,
@@ -41,14 +43,20 @@ let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingImportAutosave: { importId: string; input: musicApi.MusicAlbumImportCommitInput } | null = null
 let importAutosaveDrain: Promise<void> | null = null
 
-const creationFlow = computed(() => state.value.creationFlow)
+const creationFlow = computed(() => props.layer
+  ? state.value.creationFlows?.[props.layer.key] ?? null
+  : state.value.creationFlow)
+provide(musicCreationFlowKey, creationFlow)
 const isEditFlow = computed(() => creationFlow.value?.mode === 'edit')
 const isArtistEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'artist')
 const isAlbumEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'album')
 const isSongEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'song')
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : creationFlow.value !== null)
 const sheetTitle = computed(() => {
-  if (!isEditFlow.value) return '创建音乐条目'
+  if (!isEditFlow.value) {
+    if (creationFlow.value?.step === 'artist') return '创建艺术家'
+    return ['single', 'leak'].includes(creationFlow.value?.draft.albumDetails.type ?? '') ? '创建歌曲' : '创建专辑'
+  }
   if (isArtistEdit.value) return '编辑艺术家'
   return isSongEdit.value ? '编辑歌曲' : '编辑专辑'
 })
@@ -863,6 +871,21 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         })
         return
       }
+      if (artistNextAction === 'create_album' && props.layer) {
+        const primaryName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
+          || flow.draft.artist.stageNames.find((item) => item.name.trim())?.name.trim()
+          || flow.draft.artist.legalName.trim()
+        const childFlow = openMusicCreationFlow({
+          artistId: flow.draft.artist.id,
+          artistName: primaryName,
+          artistLegalName: flow.draft.artist.legalName,
+          artistSource: flow.draft.artist.source,
+          startStep: 'albumDetails',
+          parentKey: props.layer.key,
+        }, { artistDraft: flow.draft.artist })
+        ensurePrimaryArtistContributor(childFlow)
+        return
+      }
       ensurePrimaryArtistContributor(flow)
       setMusicCreationStep('albumDetails')
     } catch (error) {
@@ -912,7 +935,11 @@ function goBackStep() {
   if (creationFlow.value.step === 'preview') {
     setMusicCreationStep('albumDetails')
   } else if (creationFlow.value.step === 'albumDetails') {
-    setMusicCreationStep('artist')
+    if (creationFlow.value.parentKey) {
+      closeCurrentCreationFlow()
+    } else {
+      setMusicCreationStep('artist')
+    }
   }
 }
 

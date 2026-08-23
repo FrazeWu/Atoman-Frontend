@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
 import { ExternalLink } from 'lucide-vue-next'
 
 const { state } = useMusicDrawers()
-const albumDetails = computed(() => state.value.creationFlow?.draft.albumDetails ?? null)
-const albumImport = computed(() => state.value.creationFlow?.draft.albumImport ?? null)
-const tracks = computed(() => state.value.creationFlow?.draft.tracks ?? [])
-const contributors = computed(() => state.value.creationFlow?.draft.albumDetails.contributors ?? [])
+const creationFlowFallback = computed(() => state.value.creationFlow)
+const creationFlow = useMusicCreationFlow(creationFlowFallback)
+const albumDetails = computed(() => creationFlow.value?.draft.albumDetails ?? null)
+const albumImport = computed(() => creationFlow.value?.draft.albumImport ?? null)
+const tracks = computed(() => creationFlow.value?.draft.tracks ?? [])
+const contributors = computed(() => creationFlow.value?.draft.albumDetails.contributors ?? [])
 const coverUrl = computed(() => (
   albumDetails.value?.coverUrl
   || albumImport.value?.coverUrl

@@ -41,6 +41,7 @@ interface DrawerState {
 	nestedPayload: unknown;
 	musicEditor: MusicEditorState | null;
 	creationFlow: MusicCreationFlowState | null;
+	creationFlows: Record<string, MusicCreationFlowState>;
 }
 
 function createEmptyDateParts() {
@@ -315,7 +316,15 @@ const state = ref<DrawerState>({
 	nestedPayload: null,
 	musicEditor: null,
 	creationFlow: null,
+	creationFlows: {},
 });
+
+function syncActiveCreationFlow() {
+	const activeLayer = sheetStack.top.value;
+	state.value.creationFlow = activeLayer?.kind === "creation"
+		? state.value.creationFlows[activeLayer.key] ?? null
+		: null;
+}
 
 const sheetStack = createSheetStack<MusicSheetLayer>({
 	maxLayers: 3,
@@ -346,20 +355,31 @@ watch(
 		state.value.nestedPayload =
 			action?.kind === "action" ? action.payload.data : null;
 		state.value.musicEditor = editor?.kind === "editor" ? editor.payload : null;
+		syncActiveCreationFlow();
 	},
 	{ flush: "sync" },
 );
 
 export function useMusicDrawers() {
 	const returnToLayer = (key: string) => {
-		if (sheetStack.layers.value.some((layer) => layer.key === key))
-			sheetStack.popTo(key);
+		const index = sheetStack.layers.value.findIndex((layer) => layer.key === key);
+		if (index < 0) return;
+		for (const layer of sheetStack.layers.value.slice(index + 1)) {
+			if (layer.kind === "creation") delete state.value.creationFlows[layer.key];
+		}
+		sheetStack.popTo(key);
+		syncActiveCreationFlow();
 	};
 
 	const closeLayerAndAbove = (key: string) => {
-		if (!sheetStack.layers.value.some((layer) => layer.key === key)) return;
+		const index = sheetStack.layers.value.findIndex((layer) => layer.key === key);
+		if (index < 0) return;
+		for (const layer of sheetStack.layers.value.slice(index)) {
+			if (layer.kind === "creation") delete state.value.creationFlows[layer.key];
+		}
 		sheetStack.popTo(key);
 		sheetStack.pop();
+		syncActiveCreationFlow();
 	};
 
 	const openArtist = (id: string) => {
@@ -465,14 +485,18 @@ export function useMusicDrawers() {
 		if (targetKey) closeLayerAndAbove(targetKey);
 	};
 
-	const openMusicCreationFlow = (seed: MusicCreationFlowSeed = {}) => {
+	const openMusicCreationFlow = (
+		seed: MusicCreationFlowSeed = {},
+		options: { artistDraft?: MusicCreationDraft["artist"] } = {},
+	) => {
 		let targetId = seed.artistId ?? null;
 		if (seed.entity === "album") targetId = seed.albumId ?? null;
 		if (seed.entity === "song") targetId = seed.songId ?? null;
-		state.value.creationFlow = {
+		const flow: MusicCreationFlowState = {
 			mode: seed.mode ?? "create",
 			entity: seed.entity,
 			targetId,
+			parentKey: seed.parentKey,
 			loading: false,
 			step: seed.startStep ?? "albumImport",
 			draft: createEmptyDraft(seed),
@@ -483,12 +507,23 @@ export function useMusicDrawers() {
 			submitting: false,
 			errorMessage: "",
 		};
+		if (options.artistDraft) flow.draft.artist = options.artistDraft;
+
+		const baseKey = `creation:${seed.mode ?? "create"}:${seed.entity ?? "album"}:${seed.songId ?? seed.albumId ?? seed.artistId ?? "new"}`;
+		const key = seed.parentKey ? `${baseKey}:child:${seed.parentKey}` : baseKey;
+		state.value.creationFlows[key] = flow;
 		sheetStack.push({
-			key: `creation:${seed.mode ?? "create"}:${seed.entity ?? "album"}:${seed.songId ?? seed.albumId ?? seed.artistId ?? "new"}`,
+			key,
 			kind: "creation",
-			title: "创建音乐条目",
+			title: seed.startStep === "artist"
+				? "创建艺术家"
+				: seed.entity === "song"
+					? "创建歌曲"
+					: "创建专辑",
 			payload: seed,
 		});
+		syncActiveCreationFlow();
+		return flow;
 	};
 
 	const resumeMusicCreationFlow = (
@@ -626,12 +661,17 @@ export function useMusicDrawers() {
 	};
 
 	const closeMusicCreationFlow = (keyOrEvent?: string | Event) => {
-		state.value.creationFlow = null;
 		const key = typeof keyOrEvent === "string" ? keyOrEvent : undefined;
 		const targetKey =
 			key ??
-			sheetStack.layers.value.find((layer) => layer.kind === "creation")?.key;
-		if (targetKey) closeLayerAndAbove(targetKey);
+			[...sheetStack.layers.value]
+				.reverse()
+				.find((layer) => layer.kind === "creation")?.key;
+		if (targetKey) {
+			closeLayerAndAbove(targetKey);
+			return;
+		}
+		state.value.creationFlow = null;
 	};
 
 	const closeAll = () => {
@@ -648,6 +688,7 @@ export function useMusicDrawers() {
 		state.value.nestedPayload = null;
 		state.value.musicEditor = null;
 		state.value.creationFlow = null;
+		state.value.creationFlows = {};
 	};
 
 	const isMainShifted = computed(

@@ -3,10 +3,12 @@ import type { MusicSongLyrics } from "@/api/musicV1";
 import type { UploadAsset } from "@/api/types";
 import type { MusicCreationLyricsDraft } from "@/components/music/musicCreationTypes";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
+import { useMusicCreationFlow } from "@/components/music/musicCreationFlowContext";
 
 export function useMusicAlbumTrackEditor() {
 	const { state } = useMusicDrawers();
-	const creationFlow = computed(() => state.value.creationFlow);
+	const creationFlowFallback = computed(() => state.value.creationFlow);
+	const creationFlow = useMusicCreationFlow(creationFlowFallback);
 	const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? []);
 	const draggedTrackId = ref<string | null>(null);
 	const dragOverInsertionIndex = ref<number | null>(null);

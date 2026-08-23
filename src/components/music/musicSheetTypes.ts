@@ -33,6 +33,7 @@ export interface MusicCreationFlowSeed {
 	artistLegalName?: string;
 	artistSource?: string;
 	startStep?: MusicCreationFlowStep;
+	parentKey?: string;
 }
 
 export type MusicSheetLayer =

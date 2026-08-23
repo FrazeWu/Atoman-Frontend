@@ -670,7 +670,7 @@ export async function uploadMusicAlbumArchiveMultipart(
 	const multipart = await startMusicAlbumImportMultipart(importId, {
 		fileName: file.name,
 		fileSize: file.size,
-		contentType: file.type || "application/zip",
+		contentType: file.type || "application/octet-stream",
 	});
 	const completedParts = new Set(
 		multipart.completedParts.map((part) => part.partNumber),

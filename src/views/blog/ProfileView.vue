@@ -216,7 +216,7 @@
 
         <PEmpty v-else-if="!contentItems.length" title="暂无内容" description="该用户还没有发布内容" />
 
-        <div v-else class="profile-content__list">
+        <div v-else class="profile-content__list feed-timeline-box">
           <template v-for="item in contentItems" :key="itemKey(item)">
             <!-- Short note: card with lightbox and sheet support -->
             <ShortNoteCard
@@ -1092,7 +1092,16 @@ onMounted(() => { void loadProfilePage() })
 
 .profile-note-bubble__time { color: var(--a-color-muted); }
 
-.profile-note-bubble__stat { font-weight: 500; }
+.profile-content__list.feed-timeline-box {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+  background: var(--a-color-bg);
+}
+
+.profile-content__list :deep(.sticky-memo-card) {
+  margin: 0.5rem;
+}
 
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 640px) {

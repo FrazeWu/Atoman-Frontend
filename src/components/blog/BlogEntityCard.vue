@@ -4,11 +4,24 @@
       class="blog-entity-card"
       :class="{ 'is-compact': compact, 'is-active': active }"
     >
-      <div class="blog-entity-card__visual">
-        <img v-if="coverUrl" :src="coverUrl" :alt="title" loading="lazy" />
-        <span v-else class="blog-entity-card__fallback" aria-hidden="true">{{ fallback }}</span>
+      <!-- 头部：40px 图标/封面 + 标题/身份 + 常驻订阅按钮 -->
+      <header class="blog-entity-card__header">
+        <div class="blog-entity-card__visual">
+          <img v-if="coverUrl" :src="coverUrl" :alt="title" loading="lazy" />
+          <span v-else class="blog-entity-card__fallback" aria-hidden="true">{{ fallback }}</span>
+        </div>
+
+        <div class="blog-entity-card__info">
+          <div class="blog-entity-card__title-row">
+            <h3 class="blog-entity-card__title">{{ title }}</h3>
+            <span class="blog-entity-card__badge">{{ kindLabel }}</span>
+          </div>
+          <p v-if="ownerName" class="blog-entity-card__owner">{{ ownerName }}</p>
+          <p v-if="description && !compact" class="blog-entity-card__description">{{ description }}</p>
+        </div>
+
         <button
-          v-if="showSubscribe"
+          v-if="showSubscribe && !compact"
           type="button"
           class="blog-entity-card__subscribe"
           :class="{ 'is-subscribed': subscribed }"
@@ -16,26 +29,26 @@
           :aria-label="subscribed ? '已订阅' : `订阅${kindLabel}`"
           @click.stop="emit('toggle-subscribe')"
         >
-          <Check v-if="subscribed" :size="14" aria-hidden="true" />
-          <Plus v-else :size="14" aria-hidden="true" />
-          {{ subscribed ? '已订阅' : '订阅' }}
+          <Check v-if="subscribed" :size="13" aria-hidden="true" />
+          <Plus v-else :size="13" aria-hidden="true" />
+          <span>{{ subscribed ? '已订阅' : '订阅' }}</span>
         </button>
-      </div>
+      </header>
 
-      <div class="blog-entity-card__body">
-        <p class="blog-entity-card__eyebrow">{{ kindLabel }}</p>
-        <h3>{{ title }}</h3>
-        <p v-if="ownerName" class="blog-entity-card__owner">{{ ownerName }}</p>
-        <p v-if="description" class="blog-entity-card__description">{{ description }}</p>
-        <div class="blog-entity-card__meta">
-          <span v-if="itemCount !== undefined">{{ itemCount }} 篇文章</span>
-          <span v-if="subscriberCount !== undefined">{{ subscriberCount }} 位订阅</span>
-          <span v-if="updatedAt">{{ formattedUpdatedAt }}</span>
-        </div>
-        <ul v-if="recentItems.length" class="blog-entity-card__recent">
-          <li v-for="item in recentItems.slice(0, 2)" :key="item.id">{{ item.title }}</li>
-        </ul>
-      </div>
+      <!-- 导读：最近精选文章预览盒子 (仅在非 compact 时展示) -->
+      <ul v-if="!compact && recentItems.length" class="blog-entity-card__previews">
+        <li v-for="item in recentItems.slice(0, 2)" :key="item.id">
+          <span class="preview-bullet">›</span>
+          <span class="preview-title">{{ item.title }}</span>
+        </li>
+      </ul>
+
+      <!-- 底部指标栏 -->
+      <footer class="blog-entity-card__footer">
+        <span v-if="itemCount !== undefined" class="footer-stat">{{ itemCount }} 篇文章</span>
+        <span v-if="subscriberCount !== undefined" class="footer-stat">{{ subscriberCount }} 订阅</span>
+        <span v-if="updatedAt" class="footer-time">{{ formattedUpdatedAt }}</span>
+      </footer>
     </article>
 
     <button
@@ -91,7 +104,7 @@ const fallback = computed(() => props.title.trim().slice(0, 1).toUpperCase() || 
 const formattedUpdatedAt = computed(() => {
   if (!props.updatedAt) return ''
   const date = new Date(props.updatedAt)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+  return Number.isNaN(date.getTime()) ? '' : `${date.getMonth() + 1}月${date.getDate()}日更新`
 })
 </script>
 
@@ -99,58 +112,194 @@ const formattedUpdatedAt = computed(() => {
 .blog-entity-card-shell {
   position: relative;
   min-width: 0;
+  width: 100%;
 }
 
 .blog-entity-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: inherit;
   transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .blog-entity-card-shell:hover .blog-entity-card,
-.blog-entity-card-shell:focus-within .blog-entity-card {
-  border-color: var(--a-color-border);
-  background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
-}
-
+.blog-entity-card-shell:focus-within .blog-entity-card,
 .blog-entity-card.is-active {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.blog-entity-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .blog-entity-card__visual {
-  position: relative;
-  aspect-ratio: 4 / 3;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--a-radius-control);
   overflow: hidden;
   background: var(--a-color-surface-muted);
-}
-
-.blog-entity-card__visual img,
-.blog-entity-card__fallback {
+  border: 1px solid var(--a-color-border-soft);
+  flex-shrink: 0;
   display: grid;
-  width: 100%;
-  height: 100%;
   place-items: center;
 }
 
 .blog-entity-card__visual img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
 .blog-entity-card__fallback {
-  color: var(--a-color-muted);
-  font-size: 2rem;
-  font-weight: 650;
+  color: var(--a-color-fg);
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
+.blog-entity-card__info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.blog-entity-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.blog-entity-card__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--a-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-entity-card__badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--a-color-muted);
+  background: var(--a-color-surface-muted);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.blog-entity-card__owner {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--a-color-muted);
+}
+
+.blog-entity-card__description {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--a-color-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blog-entity-card__subscribe {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--a-color-text);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.blog-entity-card__subscribe.is-subscribed,
+.blog-entity-card__subscribe:disabled {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  cursor: default;
+}
+
+/* 导读预览小盒子 */
+.blog-entity-card__previews {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-control);
+  font-size: 0.74rem;
+}
+
+.blog-entity-card__previews li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--a-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-bullet {
+  color: var(--a-color-muted-soft);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.preview-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 底部指标栏 */
+.blog-entity-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--a-color-muted-soft);
+  padding-top: 0.1rem;
+}
+
+.footer-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.footer-time {
+  margin-left: auto;
+}
+
+/* 遮罩点击链接 */
 .blog-entity-card__open {
   position: absolute;
   inset: 0;
@@ -159,172 +308,31 @@ const formattedUpdatedAt = computed(() => {
   height: 100%;
   padding: 0;
   border: 0;
-  border-radius: var(--a-radius-card);
+  border-radius: var(--a-radius-control);
   background: transparent;
   cursor: pointer;
 }
 
-.blog-entity-card__open:focus-visible {
-  outline: 2px solid var(--a-color-fg);
-  outline-offset: 2px;
-}
-
-.blog-entity-card__subscribe {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  min-width: 5.75rem;
-  min-height: 2.75rem;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  transition: opacity 0.18s ease, box-shadow 0.18s ease;
-}
-
-.blog-entity-card-shell:hover .blog-entity-card__subscribe,
-.blog-entity-card-shell:focus-within .blog-entity-card__subscribe {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-
-.blog-entity-card__subscribe:hover:not(:disabled),
-.blog-entity-card__subscribe:focus-visible {
-  opacity: 1;
-  box-shadow: var(--a-shadow-sm);
-}
-
-.blog-entity-card__subscribe.is-subscribed,
-.blog-entity-card__subscribe:disabled {
-  color: var(--a-color-success);
-  border-color: color-mix(in srgb, var(--a-color-success) 45%, var(--a-color-border-soft));
-  cursor: default;
-}
-
-.blog-entity-card__body {
-  display: grid;
-  gap: 0.4rem;
-  min-width: 0;
-  padding: 0.9rem 1rem 1rem;
-}
-
-.blog-entity-card__eyebrow,
-.blog-entity-card__owner,
-.blog-entity-card__description,
-.blog-entity-card__meta {
-  margin: 0;
-}
-
-.blog-entity-card__eyebrow {
-  color: var(--a-color-muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.blog-entity-card h3 {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  font-size: 1rem;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.blog-entity-card__owner,
-.blog-entity-card__description {
-  overflow: hidden;
-  color: var(--a-color-muted);
-  font-size: 0.8rem;
-  line-height: 1.45;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.blog-entity-card__description {
-  display: -webkit-box;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.blog-entity-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.8rem;
-  color: var(--a-color-muted-soft);
-  font-size: 0.7rem;
-}
-
-.blog-entity-card__recent {
-  display: grid;
-  gap: 0.25rem;
-  margin: 0.1rem 0 0;
-  padding: 0;
-  color: var(--a-color-fg);
-  font-size: 0.78rem;
-  list-style: none;
-}
-
-.blog-entity-card__recent li {
-  overflow: hidden;
-  padding-left: 0.8rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.blog-entity-card__recent li::before {
-  position: absolute;
-  margin-left: -0.7rem;
-  margin-top: 0.48em;
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 50%;
-  background: var(--a-color-muted-soft);
-  content: "";
-}
-
+/* 侧栏紧凑模式 */
 .blog-entity-card.is-compact {
-  display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr);
-  gap: 0.75rem;
-  padding: 0.7rem;
-  border-radius: var(--a-radius-control);
+  gap: 0.45rem;
+  padding: 0.65rem 0.8rem;
 }
 
 .blog-entity-card.is-compact .blog-entity-card__visual {
-  aspect-ratio: 1;
-  border-radius: var(--a-radius-control);
+  width: 32px;
+  height: 32px;
 }
 
-.blog-entity-card.is-compact .blog-entity-card__body {
-  gap: 0.25rem;
-  padding: 0;
+.blog-entity-card.is-compact .blog-entity-card__fallback {
+  font-size: 0.85rem;
 }
 
-.blog-entity-card.is-compact .blog-entity-card__description,
-.blog-entity-card.is-compact .blog-entity-card__recent,
-.blog-entity-card.is-compact .blog-entity-card__subscribe {
-  display: none;
+.blog-entity-card.is-compact .blog-entity-card__title {
+  font-size: 0.84rem;
 }
 
-@media (max-width: 640px) {
-  .blog-entity-card__subscribe {
-    opacity: 1;
-    pointer-events: auto;
-  }
+.blog-entity-card.is-compact .blog-entity-card__footer {
+  font-size: 0.68rem;
 }
 </style>

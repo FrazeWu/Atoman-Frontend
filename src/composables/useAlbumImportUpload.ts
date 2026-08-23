@@ -532,7 +532,7 @@ export function useAlbumImportUpload() {
 					uploadTasks.slice(index, index + 3).map((task) => task()),
 				);
 			}
-
+			if (!isCurrent()) return
 			const completed = await completeMusicAlbumImportSession(session.importId);
 			if (isCurrent() && draft.importId === session.importId) {
 				refreshWhenFilesUploaded(flow, completed, session.importId);
@@ -652,10 +652,11 @@ export function useAlbumImportUpload() {
 		const flow = creationFlow.value;
 		const draft = flow?.draft.albumImport;
 		if (!flow || !draft?.importId) return;
-		const uploadState = uploadStateFor(flow);
-		beginUploadOperation(uploadState);
+		const generation = beginUploadOperation(uploadState);
+		const isCurrent = () => generation === uploadState.operationGeneration;
 		try {
 			await cancelMusicAlbumImportSession(draft.importId);
+			if (!isCurrent()) return;
 			stopPollingFor(flow);
 			draft.status = "canceled";
 			uploadState.uploading.value = false;

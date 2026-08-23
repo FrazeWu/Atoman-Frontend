@@ -1,12 +1,13 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:12rem">
-    <div class="a-section-header" style="margin-bottom:2rem">
-      <h1 class="a-title a-accent-l">收藏</h1>
-      <div style="display:flex;align-items:center;gap:0.75rem">
-        <PSegmentedControl v-model="sortMode" :options="sortOptions" />
-        <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
-      </div>
-    </div>
+    <PPageHeader title="收藏" accent>
+      <template #action>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <PSegmentedControl v-model="sortMode" :options="sortOptions" />
+          <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
+        </div>
+      </template>
+    </PPageHeader>
 
     <div class="bookmark-layout" style="display:flex;min-height:60vh;gap:2rem">
       <!-- Left: Folder list -->
@@ -35,13 +36,13 @@
       </div>
 
       <!-- Right: Bookmarked posts -->
-      <div class="bookmark-results" style="flex:1;padding:1.5rem">
+      <div class="bookmark-results" style="flex:1;padding:0">
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
         <PEmpty v-else-if="loadError" title="收藏加载失败" :description="loadError" />
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
-        <div v-else class="bookmark-post-list">
+        <div v-else class="bookmark-post-list feed-timeline-box">
           <BlogItemCard
             v-for="bm in filteredBookmarks"
             :key="bm.id"
@@ -92,6 +93,7 @@ import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -285,6 +287,13 @@ watch(sortMode, () => {
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
   font-weight: 650;
+}
+
+.bookmark-post-list.feed-timeline-box {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+  background: var(--a-color-bg);
 }
 .delete-btn {
   font-size: 0.75rem;

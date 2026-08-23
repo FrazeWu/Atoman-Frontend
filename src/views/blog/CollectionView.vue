@@ -43,7 +43,7 @@
         </div>
 
         <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
-        <div v-else class="post-list">
+        <div v-else class="post-list feed-timeline-box">
           <BlogItemCard
             v-for="post in posts"
             :key="post.id"
@@ -382,6 +382,13 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 1.5rem;
+}
+
+.post-list.feed-timeline-box {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+  background: var(--a-color-bg);
 }
 
 .collection-meta-card {

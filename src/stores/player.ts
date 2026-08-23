@@ -751,9 +751,9 @@ export const usePlayerStore = defineStore("player", () => {
 		return songsRequest;
 	};
 
-	const startSong = (song: Song, startAt?: number) => {
+	const startSong = (song: Song, startAt?: number, persistPrevious = true) => {
 		savePodcastProgress();
-		saveMusicProgress(false, true);
+		if (persistPrevious) saveMusicProgress(false, true);
 		resetListening(song);
 		currentSongStartCached = false;
 		const player = ensureAudio();
@@ -975,7 +975,7 @@ export const usePlayerStore = defineStore("player", () => {
 			return;
 		}
 
-		startSong(list[nextIndex]);
+		startSong(list[nextIndex], undefined, false);
 	};
 
 	const playPrevious = () => {

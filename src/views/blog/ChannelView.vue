@@ -31,12 +31,12 @@
           <p class="a-label a-muted" style="margin-bottom:.4rem">作者</p>
           <a
             :href="userUrl(channel.user?.username || '')"
-            style="font-weight: 500;font-size:1rem;text-decoration:none;color:#000"
+            style="font-weight: 600; font-size: 1rem; text-decoration: none; color: var(--a-color-fg);"
           >{{ channel.user?.display_name || channel.user?.username || '未知作者' }}</a>
         </div>
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">更新时间</p>
-          <p style="font-weight: 500;margin:0">{{ formatDate(channel.updated_at) }}</p>
+          <p style="font-weight: 500; margin: 0; color: var(--a-color-fg);">{{ formatDate(channel.updated_at) }}</p>
         </div>
       </PSurface>
 
@@ -55,26 +55,25 @@
             >
               全部内容 <span class="collection-count">{{ postsTotal }}</span>
             </PTab>
-              <BlogEntityCard
-                v-for="col in collections"
-                :key="col.id"
-                kind="collection"
-                :title="col.name"
-                :cover-url="col.cover_url"
-                :description="col.description"
-                compact
-                :active="activeCollectionId === col.id"
-                :show-subscribe="false"
-                @select="openCollectionSheet(col)"
-              />
-
+            <BlogEntityCard
+              v-for="col in collections"
+              :key="col.id"
+              kind="collection"
+              :title="col.name"
+              :cover-url="col.cover_url"
+              :description="col.description"
+              compact
+              :active="activeCollectionId === col.id"
+              :show-subscribe="false"
+              @select="openCollectionSheet(col)"
+            />
           </div>
         </aside>
 
         <!-- Right: posts -->
         <main class="post-main">
           <PEmpty v-if="!postsLoading && !filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
-          <div v-else class="post-list">
+          <div v-else class="post-list feed-timeline-box">
             <BlogItemCard
               v-for="post in filteredPosts"
               :key="post.id"
@@ -397,6 +396,13 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 
 .post-main { flex: 1; min-width: 0; }
 .post-load-more { display: flex; justify-content: center; margin-top: 1.5rem; }
+
+.post-list.feed-timeline-box {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+  background: var(--a-color-bg);
+}
 
 .collection-list {
   display: flex;

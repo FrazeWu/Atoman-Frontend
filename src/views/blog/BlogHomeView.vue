@@ -45,7 +45,7 @@
 
         <PEmpty v-else-if="streamError && !streamItems.length" title="内容加载失败" :description="streamError" />
 
-        <div v-else-if="streamItems.length" class="blog-home__feed">
+        <div v-else-if="streamItems.length" class="blog-home__feed feed-timeline-box">
           <template v-for="streamItem in streamItems" :key="streamItem.key">
             <BlogItemCard
               v-if="streamItem.kind === 'post'"
@@ -668,19 +668,15 @@ watch(activeQuery, () => {
   color: var(--a-color-muted);
 }
 
-.blog-home__post-visual {
-  width: 6.5rem;
-  height: 6.5rem;
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
+.blog-home__feed.feed-timeline-box {
   border: 1px solid var(--a-color-border-soft);
-  flex-shrink: 0;
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+  background: var(--a-color-bg);
 }
 
-.blog-home__post-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.blog-home__feed :deep(.sticky-memo-card) {
+  margin: 0.5rem;
 }
 
 /* 侧轨 */

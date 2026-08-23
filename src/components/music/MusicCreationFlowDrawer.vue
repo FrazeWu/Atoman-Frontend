@@ -40,8 +40,9 @@ const router = useRouter()
 const toastVisible = ref(false)
 const toastMessage = ref('')
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
-let pendingImportAutosave: { importId: string; input: musicApi.MusicAlbumImportCommitInput } | null = null
+let pendingImportAutosave: { importId: string; input: musicApi.MusicAlbumImportCommitInput; generation: number } | null = null
 let importAutosaveDrain: Promise<void> | null = null
+let importAutosaveGeneration = 0
 
 const creationFlow = computed(() => props.layer
   ? state.value.creationFlows?.[props.layer.key] ?? null
@@ -63,7 +64,19 @@ const sheetTitle = computed(() => {
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
-const closeCurrentCreationFlow = () => closeMusicCreationFlow(props.layer?.key)
+function invalidateImportAutosave() {
+  importAutosaveGeneration += 1
+  if (importAutosaveTimer) {
+    clearTimeout(importAutosaveTimer)
+    importAutosaveTimer = null
+  }
+  pendingImportAutosave = null
+}
+
+const closeCurrentCreationFlow = () => {
+  invalidateImportAutosave()
+  closeMusicCreationFlow(props.layer?.key)
+}
 const loadedEditKey = ref('')
 const closePending = ref(false)
 
@@ -665,11 +678,12 @@ function flushImportAutosave() {
   if (importAutosaveDrain) return importAutosaveDrain
   importAutosaveDrain = (async () => {
     while (pendingImportAutosave) {
-      const pending = pendingImportAutosave
-      pendingImportAutosave = null
+      const pendingGeneration = pending.generation
+      if (pendingGeneration !== importAutosaveGeneration) continue
       try {
         const committed = await musicApi.commitMusicAlbumImport(pending.importId, pending.input)
         const flow = creationFlow.value
+        if (pendingGeneration !== importAutosaveGeneration) continue
         if (flow?.draft.albumImport.importId === pending.importId) {
           flow.draft.albumImport.status = committed.status
           flow.draft.albumImport.errorMessage = committed.errorMessage ?? ''
@@ -695,7 +709,7 @@ function scheduleImportAutosave() {
     const currentFlow = creationFlow.value
     const importId = currentFlow?.draft.albumImport.importId?.trim()
     if (!currentFlow || !importId || currentFlow.submitting || !canAutosaveImportDetails(currentFlow)) return
-    pendingImportAutosave = { importId, input: buildCommitInput(currentFlow) }
+    pendingImportAutosave = { importId, input: buildCommitInput(currentFlow), generation: importAutosaveGeneration }
     void flushImportAutosave()
   }, 600)
 }
@@ -795,6 +809,7 @@ function requestClose() {
 
 function confirmClose() {
   closePending.value = false
+  invalidateImportAutosave()
   closeCurrentCreationFlow()
 }
 

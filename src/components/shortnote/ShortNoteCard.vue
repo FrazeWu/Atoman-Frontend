@@ -1,5 +1,10 @@
 <template>
-  <article :id="`note-${note.id}`" class="sticky-memo-card">
+  <article
+    :id="`note-${note.id}`"
+    class="sticky-memo-card"
+    :class="{ 'is-read': isRead }"
+    @mouseenter="handleMouseEnter"
+  >
     <!-- 1. 紧凑单行头部：作者 + 相对时间 + 短笺标签 + 作者微操作 -->
     <header class="sticky-memo-head">
       <div class="sticky-memo-head__main">
@@ -105,10 +110,17 @@ const props = defineProps<{ note: ShortNote }>()
 defineEmits<{ delete: [note: ShortNote] }>()
 
 const authStore = useAuthStore()
-const { getNoteState, updateNoteState } = useShortNoteSync()
+const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNoteSync()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
+const isRead = computed(() => isNoteRead(props.note.id))
+
+function handleMouseEnter() {
+  if (!isRead.value) {
+    markNoteAsRead(props.note.id)
+  }
+}
 
 const showLightbox = ref(false)
 const lightboxIndex = ref(0)
@@ -173,10 +185,32 @@ function formatDate(value: string) {
   padding: 0.95rem 1.15rem;
   margin-bottom: 0.65rem;
   border: 1px solid var(--a-color-border-soft);
-  border-left: 3.5px solid #f59e0b;
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  overflow: hidden;
+}
+
+/* 绿色未读指示短竖线 */
+.sticky-memo-card::before {
+  content: '';
+  position: absolute;
+  left: 2.5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 14px;
+  border-radius: 999px;
+  background-color: #10b981;
+  opacity: 1;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* 已读状态隐藏绿色短线 */
+.sticky-memo-card.is-read::before {
+  opacity: 0;
+  background-color: transparent;
 }
 
 .sticky-memo-card:hover,
@@ -184,6 +218,20 @@ function formatDate(value: string) {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
   box-shadow: var(--a-shadow-sm);
+}
+
+/* Hover 状态：显示完整贯穿黑线 */
+.sticky-memo-card:hover::before,
+.sticky-memo-card:focus-within::before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2.5px;
+  height: 100%;
+  transform: none;
+  border-radius: 0;
+  background-color: var(--a-color-text);
+  opacity: 1;
 }
 
 /* 头部 */

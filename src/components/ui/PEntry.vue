@@ -112,7 +112,7 @@ defineEmits(['click'])
   border-radius: 999px;
   background-color: #10b981;
   opacity: 1;
-  transition: background-color 0.18s ease, opacity 0.18s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
@@ -129,10 +129,18 @@ defineEmits(['click'])
   box-shadow: none;
 }
 
+/* Hover / Focus 悬浮状态：显示完整贯穿黑线 */
 .p-entry.content-stream-entry:hover::before,
 .p-entry.content-stream-entry:focus-within::before,
 .p-entry.content-stream-entry.is-focused::before,
 .p-entry.content-stream-entry.is-open::before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2.5px;
+  height: 100%;
+  transform: none;
+  border-radius: 0;
   background-color: var(--a-color-text);
   opacity: 1;
 }
@@ -143,7 +151,16 @@ defineEmits(['click'])
 }
 
 .p-entry.content-stream-entry.is-read:hover::before,
-.p-entry.content-stream-entry.is-read:focus-within::before {
+.p-entry.content-stream-entry.is-read:focus-within::before,
+.p-entry.content-stream-entry.is-read.is-focused::before,
+.p-entry.content-stream-entry.is-read.is-open::before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2.5px;
+  height: 100%;
+  transform: none;
+  border-radius: 0;
   background-color: var(--a-color-text);
   opacity: 1;
 }

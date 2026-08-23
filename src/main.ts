@@ -8,12 +8,15 @@ import router from './router'
 import { reportError } from './utils/logger'
 import { installStaleViteChunkRecovery, recoverStaleViteChunk } from './utils/staleViteChunkRecovery'
 
-installStaleViteChunkRecovery()
-
-const app = createApp(App)
-app.config.errorHandler = (error, _instance, info) => {
-  reportError(error, `Vue: ${info}`)
+const isMobileRuntime = () => {
+  const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  return mobileUserAgent || window.matchMedia?.('(max-width: 767px)').matches === true
 }
+
+const mobileRuntime = isMobileRuntime()
+
+installStaleViteChunkRecovery()
+document.documentElement.dataset.atomanApp = mobileRuntime ? 'mobile' : 'desktop'
 
 window.addEventListener('error', (event) => {
   if (recoverStaleViteChunk(event.error || event.message)) return
@@ -23,11 +26,28 @@ window.addEventListener('unhandledrejection', (event) => {
   if (recoverStaleViteChunk(event.reason)) return
   reportError(event.reason, '未处理 Promise 异常')
 })
-router.onError((error) => {
-  if (recoverStaleViteChunk(error)) return
-  reportError(error, '路由加载失败')
-})
 
-app.use(createPinia())
-app.use(router)
-app.mount('#app')
+const bootstrap = async () => {
+  const mobileModules = mobileRuntime
+    ? await Promise.all([import('../apps/mobile/MobileApp.vue'), import('../apps/mobile/router')])
+    : null
+  const rootComponent = mobileModules?.[0].default ?? App
+  const appRouter = mobileModules?.[1].default ?? router
+
+  const app = createApp(rootComponent)
+  app.config.errorHandler = (error, _instance, info) => {
+    reportError(error, `${mobileRuntime ? 'Vue mobile' : 'Vue'}: ${info}`)
+  }
+  appRouter.onError((error) => {
+    if (recoverStaleViteChunk(error)) return
+    reportError(error, `${mobileRuntime ? '移动端' : ''}路由加载失败`)
+  })
+
+  app.use(createPinia())
+  app.use(appRouter)
+  app.mount('#app')
+}
+
+void bootstrap().catch((error) => {
+  reportError(error, '应用启动失败')
+})

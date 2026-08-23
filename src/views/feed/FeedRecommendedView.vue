@@ -344,7 +344,7 @@ import {
   recommendationLanguageOptions,
   type RecommendationLanguage,
 } from '@/utils/recommendationLanguage'
-import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, TimelineItem } from '@/types'
+import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 
@@ -721,15 +721,16 @@ function openArticle(item: RecommendationItem) {
 }
 
 function openArticleSource(item: RecommendationItem) {
+  const isInternalChannel = item.source_type === 'internal_channel' || item.target_path?.startsWith('/channels/')
   selectedChannelSource.value = {
     id: item.source_id || item.id,
     title: item.source_title || item.title,
-    type: item.source_type === 'internal' ? 'internal_channel' : 'external_rss',
+    type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
   }
   showChannelSheet.value = true
   if (selectedChannelSource.value) {
-    void fetchChannelArticles(selectedChannelSource.value.id)
+    void fetchChannelArticles(selectedChannelSource.value)
   }
 }
 
@@ -737,16 +738,37 @@ function openRecommendedChannel(item: RecommendationItem) {
   openArticleSource(item)
 }
 
-async function fetchChannelArticles(sourceId: string) {
+async function fetchChannelArticles(source: FeedArticleSource) {
   channelArticlesLoading.value = true
   const reqId = ++channelArticleRequestId.value
   try {
-    const res = await apiRequestResult(`${api.url}/feed/sources/${sourceId}/items?limit=20`)
+    const params = new URLSearchParams({ page: '1', page_size: '20' })
+    let url: string
+    if (source.type === 'internal_channel') {
+      params.set('channel_id', source.id)
+      url = `${api.blog.posts}?${params}`
+    } else {
+      params.set('feed_source_id', source.id)
+      url = `${api.url}/feed/timeline?${params}`
+    }
+    const res = await apiRequestResult(url)
     if (reqId !== channelArticleRequestId.value) return
     const payload = res.data
-    channelArticles.value = res.ok && Array.isArray(payload?.data)
-      ? payload.data.map((raw: unknown) => ({ type: 'feed_item', feed_item: raw, is_read: false, published_at: '' } as unknown as TimelineItem))
-      : []
+    if (!res.ok || !Array.isArray(payload?.data)) {
+      channelArticles.value = []
+    } else if (source.type === 'internal_channel') {
+      channelArticles.value = payload.data.map((raw: unknown) => {
+        const post = raw as Post
+        return {
+          type: 'post',
+          post,
+          is_read: false,
+          published_at: post.published_at || post.created_at,
+        } as TimelineItem
+      })
+    } else {
+      channelArticles.value = payload.data
+    }
   } catch {
     channelArticles.value = []
   } finally {
@@ -866,7 +888,7 @@ function openDiscoverySearchSource(source: FeedExploreSource) {
   showChannelSheet.value = true
   discoverySearchOpen.value = false
   if (selectedChannelSource.value) {
-    void fetchChannelArticles(source.id)
+    void fetchChannelArticles(selectedChannelSource.value)
   }
 }
 

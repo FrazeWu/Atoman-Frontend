@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getPodcastRecommendations, listPodcastEpisodes } from '@/api/podcast'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Headphones, Play } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
@@ -11,6 +12,9 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import type { ReferenceTarget } from '@/api/references'
+import { modulePathUrl } from '@/router/siteUrls'
 
 type RecommendedEpisode = {
   id: string
@@ -33,7 +37,10 @@ type RecommendedEpisodePayload = {
 }
 
 const player = usePlayerStore()
+const router = useRouter()
 
+const podcastSearchTypes = ['podcast', 'episode'] as const
+const podcastSearchQuery = ref('')
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(false)
 const recommendedEpisodes = ref<RecommendedEpisode[]>([])
@@ -44,6 +51,10 @@ const recommendationOptions = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
+
+function openPodcastSearchTarget(target: ReferenceTarget) {
+  void router.push(modulePathUrl('podcast', target.path))
+}
 
 async function loadEpisodes() {
   loading.value = true
@@ -101,7 +112,20 @@ function playEpisode(ep: PodcastEpisode) {
 
 <template>
   <div class="a-page-lg ph-page">
-    <PPageHeader title="播客" mb="1.5rem" />
+    <PPageHeader title="播客" mb="1.5rem">
+      <template #action>
+        <div class="ph-search">
+          <ModuleSearch
+            v-model="podcastSearchQuery"
+            :target-types="podcastSearchTypes"
+            placeholder="搜索播客或单集"
+            input-test-id="podcast-module-search-input"
+            dropdown-test-id="podcast-module-search-dropdown"
+            @select="openPodcastSearchTarget"
+          />
+        </div>
+      </template>
+    </PPageHeader>
 
     <ContentContinueSection module="podcast" />
 
@@ -214,6 +238,10 @@ function playEpisode(ep: PodcastEpisode) {
 <style scoped>
 .ph-page {
   padding-bottom: 5rem;
+}
+
+.ph-search {
+  width: min(22rem, 38vw);
 }
 
 .ph-recommendations,
@@ -416,6 +444,10 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 @media (max-width: 760px) {
+  .ph-search {
+    width: 100%;
+  }
+
   .ph-section-header {
     align-items: stretch;
     flex-direction: column;

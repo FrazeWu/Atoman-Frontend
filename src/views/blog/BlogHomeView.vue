@@ -10,6 +10,17 @@
 
     <!-- 筛选控制栏 -->
     <div class="blog-home__filters" aria-label="文章筛选">
+      <div class="blog-home__filter-group blog-home__filter-group--search">
+        <ModuleSearch
+          v-model="blogSearchQuery"
+          :target-types="blogSearchTypes"
+          placeholder="搜索文章、短笺或频道"
+          input-test-id="blog-module-search-input"
+          dropdown-test-id="blog-module-search-dropdown"
+          @submit="submitBlogSearch"
+          @select="openBlogSearchTarget"
+        />
+      </div>
       <div class="blog-home__filter-group">
         <PSegmentedControl
           v-model="typeFilter"
@@ -146,6 +157,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Clock, Flame, Sparkles, Star } from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
@@ -165,6 +177,8 @@ import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { reportError } from '@/utils/logger'
+import type { ReferenceTarget } from '@/api/references'
+import { modulePathUrl } from '@/router/siteUrls'
 import type { Post, ShortNote } from '@/types'
 
 defineOptions({ name: 'BlogHomeView' })
@@ -250,7 +264,9 @@ const hasMore = ref(false)
 const typeFilter = ref<'all' | 'post' | 'note'>('all')
 const sortBy = ref('latest')
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
+const blogSearchTypes = ['post', 'short_note', 'channel', 'collection'] as const
 const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
+const blogSearchQuery = ref(activeQuery.value)
 let postsRequestSequence = 0
 
 const formatDate = (dateStr?: string) => {
@@ -339,6 +355,14 @@ const selectSort = (value: string) => {
 const selectRecommendationMode = (value: string) => {
   recommendationMode.value = value as 'hot' | 'featured' | 'discover'
   void fetchRecommendedPosts()
+}
+
+const submitBlogSearch = (value: string) => {
+  void router.replace({ path: '/', query: value ? { q: value } : {} })
+}
+
+const openBlogSearchTarget = (target: ReferenceTarget) => {
+  void router.push(modulePathUrl('blog', target.path))
 }
 
 const openPost = (item: BlogHomeListItem) => {
@@ -547,7 +571,8 @@ onUnmounted(() => {
   postsRequestSequence += 1
 })
 
-watch(activeQuery, () => {
+watch(activeQuery, (value) => {
+  if (value !== blogSearchQuery.value) blogSearchQuery.value = value
   if (sortBy.value !== 'popular') {
     void fetchPosts()
   }
@@ -568,6 +593,12 @@ watch(activeQuery, () => {
   margin-bottom: 1.5rem;
 }
 
+.blog-home__filter-group--search {
+  flex: 1 1 20rem;
+  min-width: min(100%, 18rem);
+}
+
+
 .blog-home__filter-group {
   display: flex;
   gap: 0.5rem;
@@ -577,6 +608,11 @@ watch(activeQuery, () => {
 .blog-home__filter-group--end {
   margin-left: auto;
 }
+
+.blog-home__filter-group--search :deep(.search-surface) {
+  min-width: 100%;
+}
+
 
 /* 生产 Stream + Rail 布局 */
 .blog-home__layout {

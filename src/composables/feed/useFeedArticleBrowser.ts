@@ -12,7 +12,6 @@ import type {
 	Subscription,
 	TimelineItem,
 } from "@/types";
-import { buildFeedTimelineQuery } from "@/utils/feedTimelineQuery";
 import { looksLikeUrl } from "@/utils/feedTitles";
 import { reportError } from "@/utils/logger";
 
@@ -231,17 +230,16 @@ export function useFeedArticleBrowser({
 		`查看 ${source.title} 的所有文章`;
 
 	const fetchSourceArticles = async (source: FeedArticleSource) => {
-		if (!source.subscriptionId) {
+		const sourceID = source.subscriptionId || source.id;
+		if (!sourceID) {
 			sourceArticles.value = [];
 			return;
 		}
 
 		sourceArticlesLoading.value = true;
 		try {
-			const params = buildFeedTimelineQuery({
-				limit: 100,
-				sourceId: source.subscriptionId,
-			});
+			const params = new URLSearchParams({ limit: "100" });
+			params.set(source.subscriptionId ? "source_id" : "feed_source_id", sourceID);
 			const headers: HeadersInit = authStore.isAuthenticated
 				? { Authorization: `Bearer ${authStore.token}` }
 				: {};

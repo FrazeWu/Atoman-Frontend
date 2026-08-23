@@ -733,7 +733,7 @@ watch(
   align-items: stretch;
 }
 
-/* 专辑名、日期、类型与简介同一行 */
+/* 基本信息与简介布局 */
 .album-details-step__content-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -754,9 +754,10 @@ watch(
   box-shadow: var(--a-shadow-sm);
 }
 
+/* 专辑名、日期、类型纵向排列 */
 .album-details-step__basic-fields {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(7rem, 1.3fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   min-width: 0;
   min-height: 100%;

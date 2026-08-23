@@ -95,7 +95,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			/@container album-details \(max-width: 62rem\)[\s\S]*?\.album-details-step__header-main\s*\{[\s\S]*?grid-template-columns:\s*1fr;/,
 		);
 		expect(source).toMatch(
-			/\.album-details-step__basic-fields\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 0\.9fr\) minmax\(7rem, 1\.3fr\) minmax\(0, 0\.9fr\);/,
+			/\.album-details-step__basic-fields\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\);/,
 		);
 		expect(source).toMatch(
 			/\.album-details-step__basic-field :deep\(\.birth-date-field\)\s*\{[\s\S]*?min-inline-size:\s*0;/,

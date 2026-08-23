@@ -11,7 +11,7 @@
         data-testid="mobile-bottom-nav-tab"
         @click="onTabClick(tab, $event)"
       >
-        <component :is="tab.icon" :size="18" aria-hidden="true" />
+        <component :is="tab.icon" :size="20" aria-hidden="true" />
         <span class="mobile-bottom-nav__tab-copy">{{ tab.label }}</span>
       </a>
     </nav>
@@ -82,7 +82,8 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface);
+  box-shadow: none;
 }
 
 .mobile-bottom-nav__tab {
@@ -99,8 +100,8 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
 }
 
 .mobile-bottom-nav__tab.is-active {
-  color: var(--a-color-fg);
-  background: var(--a-color-surface-muted);
+  color: var(--a-color-primary);
+  background: transparent;
 }
 
 .mobile-bottom-nav__tab-copy {

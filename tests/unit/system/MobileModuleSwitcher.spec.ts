@@ -1,162 +1,69 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { mount } from "@vue/test-utils";
+import { createMemoryHistory, createRouter } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
-import { createMemoryHistory, createRouter, RouterLink } from "vue-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+// @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
+import MobileModuleDirectoryView from "../../../apps/mobile/MobileModuleDirectoryView.vue";
 // @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
 import MobileModuleSwitcher from "../../../src/components/system/MobileModuleSwitcher.vue";
-import { useSiteAccessStore } from "../../../src/stores/siteAccess";
 
-const { navigateModuleWithShutter } = vi.hoisted(() => ({
-	navigateModuleWithShutter: vi.fn(),
-}));
-
-vi.mock("@/composables/useAsyncNavigate", () => ({
-	useAsyncNavigate: () => ({ navigateModuleWithShutter }),
-}));
+function createTestRouter() {
+	return createRouter({
+		history: createMemoryHistory(),
+		routes: [
+			{ path: "/modules", component: { template: "<div />" } },
+			{ path: "/feed", component: { template: "<div />" } },
+			{ path: "/posts", component: { template: "<div />" } },
+			{ path: "/music", component: { template: "<div />" } },
+			{ path: "/inbox", component: { template: "<div />" } },
+			{ path: "/studio", component: { template: "<div />" } },
+			{ path: "/login", component: { template: "<div />" } },
+		],
+	});
+}
 
 describe("MobileModuleSwitcher", () => {
 	beforeEach(() => {
 		setActivePinia(createPinia());
-		navigateModuleWithShutter.mockReset();
 	});
 
-	it("shows the current module and all module entries in a sheet", async () => {
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: [{ path: "/music", component: { template: "<div />" } }],
-		});
+	it("uses a native route instead of opening a module sheet", async () => {
+		const router = createTestRouter();
 		await router.push("/music");
 		await router.isReady();
 
 		const wrapper = mount(MobileModuleSwitcher, {
 			props: { label: "音乐", currentModule: "music" },
-			global: {
-				plugins: [router],
-				stubs: {
-					PSheet: {
-						props: ["show"],
-						template: '<div v-if="show"><slot /></div>',
-					},
-				},
-			},
+			global: { plugins: [router] },
 		});
 
-		expect(
-			wrapper.get('[data-testid="mobile-module-switcher"]').text(),
-		).toContain("音乐");
+		const link = wrapper.get('[data-testid="mobile-module-switcher"]');
+		expect(link.element.tagName).toBe("A");
+		expect(link.attributes("href")).toBe("/modules");
 		expect(wrapper.find('[data-testid="mobile-module-sheet"]').exists()).toBe(
 			false,
 		);
+	});
 
-		await wrapper
-			.get('[data-testid="mobile-module-switcher"]')
-			.trigger("click");
-		expect(wrapper.get('[data-testid="mobile-module-sheet"]').text()).toContain(
-			"论坛",
+	it("renders mobile modules and personal entries as grouped page links", async () => {
+		const router = createTestRouter();
+		await router.push("/modules");
+		await router.isReady();
+
+		const wrapper = mount(MobileModuleDirectoryView, {
+			global: { plugins: [router] },
+		});
+
+		expect(wrapper.text()).toContain("订阅");
+		expect(wrapper.text()).toContain("博客");
+		expect(wrapper.text()).toContain("音乐");
+		expect(wrapper.text()).toContain("通知");
+		expect(wrapper.text()).toContain("私信");
+		expect(wrapper.text()).toContain("Studio");
+		expect(wrapper.findAll('a[href="/inbox?tab=notifications"]').length).toBe(
+			1,
 		);
-		expect(wrapper.get('[data-testid="mobile-module-sheet"]').text()).toContain(
-			"Studio",
-		);
-		expect(
-			wrapper.get(".mobile-module-sheet__item.is-current").text(),
-		).toContain("音乐");
-	});
-
-	it("hides disabled modules from the module sheet", async () => {
-		const siteAccessStore = useSiteAccessStore();
-		siteAccessStore.access.modules.video.enabled = false;
-
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: [{ path: "/music", component: { template: "<div />" } }],
-		});
-		await router.push("/music");
-		await router.isReady();
-
-		const wrapper = mount(MobileModuleSwitcher, {
-			props: { label: "音乐", currentModule: "music" },
-			global: {
-				plugins: [router],
-				stubs: {
-					PSheet: {
-						props: ["show"],
-						template: '<div v-if="show"><slot /></div>',
-					},
-				},
-			},
-		});
-
-		await wrapper
-			.get('[data-testid="mobile-module-switcher"]')
-			.trigger("click");
-		expect(
-			wrapper.get('[data-testid="mobile-module-sheet"]').text(),
-		).not.toContain("视频");
-	});
-
-	it("keeps personal entries on native routes for the standalone mobile shell", async () => {
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: [
-				{ path: "/music", component: { template: "<div />" } },
-				{ path: "/inbox", component: { template: "<div />" } },
-				{ path: "/studio", component: { template: "<div />" } },
-			],
-		});
-		await router.push("/music");
-		await router.isReady();
-
-		const wrapper = mount(MobileModuleSwitcher, {
-			props: {
-				label: "音乐",
-				currentModule: "music",
-				desktopBaseUrl: "https://desktop.example",
-				nativePersonalRoutes: true,
-			},
-			global: {
-				plugins: [router],
-				stubs: {
-					PSheet: {
-						props: ["show"],
-						template: '<div v-if="show"><slot /></div>',
-					},
-				},
-			},
-		});
-
-		await wrapper.get('[data-testid="mobile-module-switcher"]').trigger("click");
-		const destinations = wrapper.findAllComponents(RouterLink).map((link) => link.props("to"));
-		expect(destinations).toContain("/inbox?tab=notifications");
-		expect(destinations).toContain("/inbox?tab=dm");
-		expect(destinations).toContain("/studio");
-	});
-
-	it("uses the shutter navigation when selecting another module", async () => {
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: [{ path: "/music", component: { template: "<div />" } }],
-		});
-		await router.push("/music");
-		await router.isReady();
-
-		const wrapper = mount(MobileModuleSwitcher, {
-			props: { label: "音乐", currentModule: "music" },
-			global: {
-				plugins: [router],
-				stubs: {
-					PSheet: {
-						props: ["show"],
-						template: '<div v-if="show"><slot /></div>',
-					},
-				},
-			},
-		});
-
-		await wrapper
-			.get('[data-testid="mobile-module-switcher"]')
-			.trigger("click");
-		await wrapper.get(".mobile-module-sheet__item").trigger("click");
-		await flushPromises();
-		expect(navigateModuleWithShutter).toHaveBeenCalledWith("/feed");
+		expect(wrapper.findAll('a[href="/inbox?tab=dm"]').length).toBe(1);
+		expect(wrapper.findAll('a[href="/studio"]').length).toBe(1);
 	});
 });

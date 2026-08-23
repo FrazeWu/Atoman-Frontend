@@ -28,7 +28,7 @@ const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
-const showMobileBottomNav = computed(() => !isAuthRoute.value && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio'))
+const showMobileBottomNav = computed(() => !isAuthRoute.value && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio'))
 
 const reportPageView = () => {
   if (isAuthRoute.value) return
@@ -57,6 +57,32 @@ body {
 
 .mobile-app-shell {
   --mobile-app-player-height: 76px;
+  --a-color-bg: #f2f2f7;
+  --a-color-fg: #1c1c1e;
+  --a-color-text: #1c1c1e;
+  --a-color-text-secondary: #3a3a3c;
+  --a-color-surface: #ffffff;
+  --a-color-surface-muted: #e5e5ea;
+  --a-color-border: #c6c6c8;
+  --a-color-border-soft: #d1d1d6;
+  --a-color-muted: #8e8e93;
+  --a-color-muted-soft: #aeaeb2;
+  --a-color-primary: #007aff;
+  --a-color-primary-hover: #006ee6;
+  --a-color-primary-pressed: #005ecb;
+  --a-color-primary-contrast: #ffffff;
+  --a-radius-base: 8px;
+  --a-radius-control: 8px;
+  --a-radius-card: 8px;
+  --a-shadow-button: none;
+  --a-shadow-dropdown: none;
+  --a-shadow-modal: none;
+  --a-shadow-sm: none;
+  --a-shadow-md: none;
+  --a-shadow-lg: none;
+  --a-shadow-hover: none;
+  --a-shadow-active: none;
+  --a-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .mobile-app-main {
@@ -66,6 +92,22 @@ body {
 
 .mobile-app-main--no-bottom-nav {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-app-shell .p-dropdown-panel {
+  position: static;
+  min-width: 0;
+  margin-top: 0.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 8px;
+  box-shadow: none;
+  background: var(--a-color-surface);
+}
+
+.mobile-app-shell .p-dropdown-panel .p-dropdown-item {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 .mobile-app-main .a-page,

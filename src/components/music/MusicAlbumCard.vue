@@ -7,7 +7,8 @@
           :src="coverUrl"
           :alt="album.title"
           class="cover-image"
-          loading="lazy"
+          :loading="priority ? 'eager' : 'lazy'"
+          :fetchpriority="priority ? 'high' : 'auto'"
         />
         <span v-else class="cover-placeholder">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
@@ -124,9 +125,11 @@ const props = withDefaults(defineProps<{
   showBookmark?: boolean
   playCount?: number | string
   listenerCount?: number | string
+  priority?: boolean
 }>(), {
   isBookmarked: false,
   showBookmark: true,
+  priority: false,
 })
 
 const statusBadgeText = computed(() => {

@@ -1,3 +1,5 @@
+import { useRouter } from "vue-router";
+import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import { ref, computed, watch } from "vue";
 import type {
 	MusicAlbumImport,
@@ -362,6 +364,8 @@ watch(
 );
 
 export function useMusicDrawers() {
+	const router = useRouter();
+	const mobile = isStandaloneMobileApp();
 	const returnToLayer = (key: string) => {
 		const index = sheetStack.layers.value.findIndex(
 			(layer) => layer.key === key,
@@ -390,6 +394,13 @@ export function useMusicDrawers() {
 	};
 
 	const openArtist = (id: string) => {
+		const target = `/music/artist/${encodeURIComponent(id)}`;
+		if (mobile) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push(artistLayer(id));
+			else void router.push(target);
+			return;
+		}
 		sheetStack.push(artistLayer(id));
 	};
 	const closeArtist = (
@@ -402,6 +413,13 @@ export function useMusicDrawers() {
 	};
 
 	const openAlbum = (id: string) => {
+		const target = `/music/album/${encodeURIComponent(id)}`;
+		if (mobile) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push(albumLayer(id));
+			else void router.push(target);
+			return;
+		}
 		sheetStack.push(albumLayer(id));
 	};
 	const closeAlbum = (
@@ -417,6 +435,13 @@ export function useMusicDrawers() {
 	};
 
 	const openSong = (id: string) => {
+		const target = `/music/song/${encodeURIComponent(id)}`;
+		if (mobile) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push(songLayer(id));
+			else void router.push(target);
+			return;
+		}
 		sheetStack.push(songLayer(id));
 	};
 	const closeSong = (
@@ -426,6 +451,19 @@ export function useMusicDrawers() {
 	) => closeLayerAndAbove(key);
 
 	const openPlaylist = (id: string) => {
+		const target = `/music/playlist/${encodeURIComponent(id)}`;
+		if (mobile) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push({
+					key: `playlist:${id}`,
+					kind: "playlist",
+					title: "歌单详情",
+					route: target,
+					payload: { playlistId: id },
+				});
+			else void router.push(target);
+			return;
+		}
 		sheetStack.push({
 			key: `playlist:${id}`,
 			kind: "playlist",

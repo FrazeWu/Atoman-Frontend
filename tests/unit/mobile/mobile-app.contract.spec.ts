@@ -25,12 +25,14 @@ describe("mobile app route boundary", () => {
 	it("keeps the pilot module routes available for deep links", () => {
 		expect(routePaths()).toEqual(
 			expect.arrayContaining([
+				"/modules",
 				"/inbox",
 				"/studio",
 				"/studio/:module(blog|podcast|video)/content",
 				"/studio/:module(blog|podcast|video)/:id/edit",
 				"/posts/notes/:id/edit",
 				"/feed",
+				"/feed/sources",
 				"/feed/subscriptions",
 				"/feed/reading-list",
 				"/feed/starred",
@@ -50,6 +52,7 @@ describe("mobile app route boundary", () => {
 				"/collection/:id",
 				"/music",
 				"/music/player",
+				"/music/lyrics",
 				"/music/bookmarks",
 				"/music/me",
 			]),

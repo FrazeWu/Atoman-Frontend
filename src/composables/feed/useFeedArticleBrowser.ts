@@ -1,5 +1,6 @@
 import { computed, ref, type ComputedRef, type Ref } from "vue";
 import { useRouter } from "vue-router";
+import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import { apiRequestResult } from "@/api/client";
 import { useApiUrl } from "@/composables/useApi";
 import { feedArticleRouteState } from "@/composables/feed/feedArticleRouteState";
@@ -34,6 +35,7 @@ export function useFeedArticleBrowser({
 	const feedStore = useFeedStore();
 	const apiURL = useApiUrl();
 	const router = useRouter();
+	const mobile = isStandaloneMobileApp();
 
 	const showArticleSheet = ref(false);
 	const selectedArticle = ref<TimelineItem | null>(null);
@@ -99,6 +101,13 @@ export function useFeedArticleBrowser({
 		}
 
 		selectedArticle.value = item;
+		if (mobile && item.post?.id) {
+			void router.push(
+				`/posts/post/${encodeURIComponent(String(item.post.id))}`,
+			);
+			markReadOnOpen(item);
+			return;
+		}
 		showArticleSheet.value = true;
 		markReadOnOpen(item);
 	};
@@ -123,6 +132,13 @@ export function useFeedArticleBrowser({
 
 	const openSourceArticle = (item: TimelineItem) => {
 		selectedArticle.value = item;
+		if (mobile && item.feed_item?.id) {
+			void router.push(
+				`/feed/item/${encodeURIComponent(String(item.feed_item.id))}`,
+			);
+			markReadOnOpen(item);
+			return;
+		}
 		showArticleSheet.value = true;
 		markReadOnOpen(item);
 	};
@@ -245,6 +261,14 @@ export function useFeedArticleBrowser({
 	};
 
 	const openSourceSheet = async (source: FeedArticleSource) => {
+		if (mobile) {
+			const sourceID = source.subscriptionId || source.id;
+			await router.push({
+				path: "/feed/sources",
+				query: { source_id: sourceID },
+			});
+			return;
+		}
 		selectedSource.value = withSubscriptionState(source);
 		sourceArticles.value = [];
 		showSourceSheet.value = true;

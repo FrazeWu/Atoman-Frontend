@@ -3,7 +3,16 @@
     <AppSidebar module="feed" />
     <main class="a-main-content">
       <header v-if="authStore.isAuthenticated" class="module-mobile-header">
+        <RouterLink
+          v-if="isMobileApp"
+          to="/feed/sources"
+          class="module-mobile-header__action a-font-meta"
+          data-testid="feed-mobile-sources-trigger"
+        >
+          来源
+        </RouterLink>
         <button
+          v-else
           type="button"
           class="module-mobile-header__action a-font-meta"
           data-testid="feed-mobile-sources-trigger"
@@ -15,7 +24,7 @@
       <router-view />
     </main>
     <FeedMobileSourcesSheet
-      v-if="authStore.isAuthenticated"
+      v-if="authStore.isAuthenticated && !isMobileApp"
       :show="mobileSourcesOpen"
       :subscriptions="subscriptions"
       :groups="groups"
@@ -39,6 +48,7 @@ import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
 import { moduleUrl } from '@/router/siteUrls'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import type { TimelineItem } from '@/types'
 import { findSubscriptionByTimelineItem } from '@/utils/feedSubscriptions'
 
@@ -46,6 +56,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
+const isMobileApp = isStandaloneMobileApp()
 
 // Setup global area switching (H/L)
 useKeyboardLayout()

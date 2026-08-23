@@ -1,5 +1,25 @@
 <template>
-  <Teleport to="body" :disabled="isTest || !teleport">
+  <section
+    v-if="isMobile && show"
+    class="p-sheet-mobile-page"
+    :class="panelClass"
+    role="region"
+    :aria-label="railTitle"
+  >
+    <header v-if="title || slots.header" class="p-sheet-mobile-page__header">
+      <button type="button" class="p-sheet-mobile-page__back" :aria-label="closeLabel" @click="$emit('close')">
+        <ChevronLeft :size="20" aria-hidden="true" />
+        <span>返回</span>
+      </button>
+      <h1 v-if="title">{{ title }}</h1>
+      <slot name="header" />
+    </header>
+    <div class="p-sheet-mobile-page__content">
+      <slot />
+    </div>
+  </section>
+
+  <Teleport v-else to="body" :disabled="isTest || !teleport">
     <div class="p-sheet-root" :class="{ 'p-sheet-root--above-player': abovePlayer }">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade" appear>
@@ -101,10 +121,13 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, provide, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
-import { X } from 'lucide-vue-next'
+import { X, ChevronLeft } from 'lucide-vue-next'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { useSheetStore } from '@/stores/sheet'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
+
+const isMobile = isStandaloneMobileApp()
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -253,6 +276,45 @@ const sheetStyle = computed(() => {
 
 .p-sheet-panel.is-shifted .sheet-content {
   pointer-events: none;
+}
+
+.p-sheet-mobile-page {
+  display: block;
+  min-width: 0;
+  padding: 1rem 0 2rem;
+  background: var(--a-color-bg);
+}
+
+.p-sheet-mobile-page__header {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.p-sheet-mobile-page__header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.p-sheet-mobile-page__back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.p-sheet-mobile-page__content {
+  min-width: 0;
 }
 
 .p-sheet-layer {

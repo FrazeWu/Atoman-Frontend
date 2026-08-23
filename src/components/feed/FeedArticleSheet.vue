@@ -1,5 +1,6 @@
 <template>
-  <PSheet
+  <component
+    :is="presentation === 'page' ? 'article' : PSheet"
     :show="show"
     :title="sheetTitle"
     width="min(100%, 800px)"
@@ -8,6 +9,7 @@
     :is-shifted="commentsOpen"
     :is-top-layer="!commentsOpen"
     :index="index"
+    :class="{ 'feed-article-page': presentation === 'page' }"
     @close="$emit('close')"
     @activate="commentsOpen = false"
   >
@@ -147,15 +149,32 @@
         <FeedContentFeedback :item-id="article.feed_item.id" />
       </div>
     </template>
-  </PSheet>
+  </component>
 
   <PDiscussionFAB
-    v-if="article?.type === 'feed_item' && article.feed_item && show"
+    v-if="article?.type === 'feed_item' && article.feed_item && show && presentation !== 'page'"
     :count="commentCount"
     @click="commentsOpen = true"
   />
+  <button
+    v-if="article?.type === 'feed_item' && article.feed_item && show && presentation === 'page'"
+    type="button"
+    class="article-comments-link"
+    @click="commentsOpen = true"
+  >
+    评论<span v-if="commentCount !== undefined"> · {{ commentCount }}</span>
+  </button>
+  <section
+    v-if="article?.type === 'feed_item' && article.feed_item && presentation === 'page' && commentsOpen"
+    class="article-comments-section"
+  >
+    <CommentSection
+      :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
+      @count-change="commentCount = $event"
+    />
+  </section>
   <PSheet
-    v-if="article?.type === 'feed_item' && article.feed_item"
+    v-else-if="article?.type === 'feed_item' && article.feed_item"
     :show="commentsOpen"
     title="评论"
     width="min(100%, 48rem)"
@@ -203,10 +222,12 @@ const props = withDefaults(defineProps<{
   index?: number
   hasPrevious?: boolean
   hasNext?: boolean
+  presentation?: 'sheet' | 'page'
 }>(), {
   source: null,
   showSourceSubscribe: false,
   sourceSubscribeBusy: false,
+  presentation: 'sheet',
 })
 
 const { renderMarkdown } = useMarkdownRenderer()
@@ -436,6 +457,33 @@ const emitPlayPodcast = () => {
 </script>
 
 <style scoped>
+.feed-article-page {
+  display: block;
+  min-width: 0;
+  padding: 1rem 0 2rem;
+}
+
+.article-comments-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.article-comments-section {
+  margin: 1rem 0 2rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
+}
+
 .article-cover {
   width: 100%;
   height: 280px;

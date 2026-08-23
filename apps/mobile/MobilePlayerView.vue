@@ -247,6 +247,7 @@
       <p>从音乐发现页选择一首歌曲开始播放。</p>
       <RouterLink to="/music" class="mobile-player-view__back-link">返回音乐</RouterLink>
     </section>
+  </main>
 </template>
 
 <script setup lang="ts">

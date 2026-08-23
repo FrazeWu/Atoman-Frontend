@@ -1,4 +1,6 @@
+import { useRouter } from "vue-router";
 import { createSheetStack } from "@/composables/useSheetStack";
+import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import type { BlogSheetLayer } from "@/components/blog/blogSheetTypes";
 
 const stack = createSheetStack<BlogSheetLayer>({
@@ -10,7 +12,13 @@ const stack = createSheetStack<BlogSheetLayer>({
 });
 
 export function useBlogSheets() {
+	const mobile = isStandaloneMobileApp();
+	const router = mobile ? useRouter() : null;
 	const openChannel = (channelId: string, title: string) => {
+		if (mobile) {
+			void router?.push(`/channel/${encodeURIComponent(channelId)}`);
+			return;
+		}
 		stack.push({
 			key: `channel:${channelId}`,
 			kind: "channel",
@@ -22,15 +30,24 @@ export function useBlogSheets() {
 		collectionId: string,
 		title: string,
 		channelId: string,
-	) =>
+	) => {
+		if (mobile) {
+			void router?.push(`/collection/${encodeURIComponent(collectionId)}`);
+			return;
+		}
 		stack.push({
 			key: `collection:${collectionId}`,
 			kind: "collection",
 			title,
 			payload: { collectionId, channelId },
 		});
+	};
 
 	const openPost = (postId: string, title: string, collectionId?: string) => {
+		if (mobile) {
+			void router?.push(`/posts/post/${encodeURIComponent(postId)}`);
+			return;
+		}
 		stack.push({
 			key: `post:${postId}`,
 			kind: "post",
@@ -41,6 +58,10 @@ export function useBlogSheets() {
 	};
 
 	const openShortNote = (noteId: string, title?: string) => {
+		if (mobile) {
+			void router?.push(`/posts/notes/${encodeURIComponent(noteId)}`);
+			return;
+		}
 		stack.push({
 			key: `short_note:${noteId}`,
 			kind: "short_note",

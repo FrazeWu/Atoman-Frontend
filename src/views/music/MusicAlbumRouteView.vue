@@ -4,11 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import AlbumsView from '@/views/music/AlbumsView.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { getMusicAlbum } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum } from '@/utils/musicMedia'
 
-defineOptions({ name: 'MusicAlbumRouteView' })
+const isMobileApp = isStandaloneMobileApp()
 
 const route = useRoute()
 const { openAlbum } = useMusicDrawers()
@@ -41,5 +42,5 @@ watch(
 </script>
 
 <template>
-  <AlbumsView />
+  <AlbumsView v-if="!isMobileApp" />
 </template>

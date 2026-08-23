@@ -1,6 +1,6 @@
 <template>
   <FeedSourceArticlesSheet
-    v-if="articleSource && sourceSheetVisible"
+    v-if="!isMobileApp && articleSource && sourceSheetVisible"
     :show="sourceSheetVisible"
     :source="articleSource"
     :items="sourceArticles"
@@ -18,6 +18,7 @@
 
   <FeedArticleSheet
     v-if="article"
+    :presentation="isMobileApp ? 'page' : 'sheet'"
     :show="articleSheetVisible"
     :article="article"
     :source="articleSource"
@@ -59,6 +60,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
 import type { FeedArticleSource, FeedItem, TimelineItem } from '@/types'
 import { reportError } from '@/utils/logger'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,6 +68,7 @@ const api = useApi()
 const authStore = useAuthStore()
 const playerStore = usePlayerStore()
 const feedStore = useFeedStore()
+const isMobileApp = isStandaloneMobileApp()
 
 const loading = ref(false)
 const articleSheetVisible = ref(true)
@@ -140,6 +143,10 @@ async function fetchSourceArticles(source: FeedArticleSource) {
 async function openArticleSource() {
   const source = articleSource.value
   if (!source) return
+  if (isMobileApp) {
+    await router.push({ path: '/feed/sources', query: { source_id: source.subscriptionId || source.id } })
+    return
+  }
   sourceSheetVisible.value = true
   articleSheetVisible.value = false
   if (!sourceArticles.value.length) await fetchSourceArticles(source)

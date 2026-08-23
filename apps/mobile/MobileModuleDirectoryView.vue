@@ -1,12 +1,5 @@
 <template>
   <main class="mobile-module-directory a-page">
-    <header class="mobile-module-directory__header">
-      <RouterLink to="/feed" class="mobile-module-directory__back" aria-label="返回">
-        <ChevronLeft :size="20" aria-hidden="true" />
-      </RouterLink>
-      <h1>模块</h1>
-    </header>
-
     <section class="mobile-module-directory__section" aria-labelledby="mobile-modules-title">
       <h2 id="mobile-modules-title">模块</h2>
       <nav class="mobile-module-directory__list" aria-label="模块">
@@ -65,7 +58,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { Bell, Check, ChevronLeft, ChevronRight, ExternalLink, LogIn, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
+import { Bell, Check, ChevronRight, ExternalLink, LogIn, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -91,29 +84,6 @@ const currentModule = computed(() => {
   min-height: calc(100dvh - var(--a-topbar-height));
   padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));
   background: var(--a-color-bg);
-}
-
-.mobile-module-directory__header {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.mobile-module-directory__header h1 {
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.mobile-module-directory__back {
-  display: inline-grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  color: var(--a-color-primary);
-  text-decoration: none;
 }
 
 .mobile-module-directory__section {

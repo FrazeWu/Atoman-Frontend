@@ -5,6 +5,10 @@ const internalImportErrorSources = new Set([
 	"音频上传失败，请重试",
 ]);
 
+export function normalizeMusicImportSource(value?: string | null) {
+	const normalized = value?.trim() ?? "";
+	return internalImportErrorSources.has(normalized) ? "" : normalized;
+}
 export function isMusicBrainzSource(value?: string | null) {
 	const normalized = value?.trim() ?? ""
 	if (!normalized) return false

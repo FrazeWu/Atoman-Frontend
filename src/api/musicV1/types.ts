@@ -578,6 +578,7 @@ export type MusicSongListItem = {
 		title: string;
 		cover_url?: string;
 		album_type?: string;
+		sources?: MusicSource[];
 		release_date?: string;
 		release_date_precision?: string;
 		year?: number;

@@ -22,7 +22,11 @@ import { createSheetStack } from "@/composables/useSheetStack";
 import { primaryAlbumRole } from "@/utils/musicAlbumCredits";
 import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
 import { parsePartialDateParts } from "@/components/music/birthDateMask";
-import { normalizeMusicImportSource } from "@/utils/musicImportSource";
+import {
+	hasMusicBrainzSource,
+	isMusicBrainzSource,
+	normalizeMusicImportSource,
+} from "@/utils/musicImportSource";
 
 export type {
 	MusicEditorEntity,
@@ -145,6 +149,9 @@ function restoreCommittedAlbumImportDraft(
 	flow.draft.albumDetails.source =
 		normalizeMusicImportSource(request.album_source) ||
 		normalizeMusicImportSource(flow.draft.albumDetails.source);
+	flow.draft.albumDetails.musicBrainzMatched =
+		isMusicBrainzSource(request.album_source) ||
+		hasMusicBrainzSource(request.album_sources);
 	if (request.artists?.length) {
 		flow.draft.albumDetails.contributors = request.artists.map(
 			(contributor, index) => ({
@@ -597,6 +604,11 @@ export function useMusicDrawers() {
 		});
 		const flow = state.value.creationFlow;
 		if (!flow) return;
+		flow.draft.albumDetails.musicBrainzMatched =
+			isMusicBrainzSource(snapshot.metadataSourceUrl) ||
+			isMusicBrainzSource(snapshot.albumSource) ||
+			isMusicBrainzSource(snapshot.commitRequest?.album_source) ||
+			hasMusicBrainzSource(snapshot.commitRequest?.album_sources);
 		flow.draft.albumImport = {
 			importId: snapshot.importId,
 			inputMode: snapshot.inputMode,

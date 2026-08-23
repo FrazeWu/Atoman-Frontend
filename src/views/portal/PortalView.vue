@@ -78,10 +78,6 @@
                       <div class="portal-hot__image-overlay" />
                     </div>
                   </template>
-                  <!-- 无图时展示未读短竖 -->
-                  <template v-else #visual>
-                    <span class="portal-stream-unread-bar" aria-hidden="true" />
-                  </template>
 
                   <template #meta>
                     <span
@@ -143,7 +139,9 @@
                       image_url: item.image_url,
                       cover_url: item.image_url,
                       target_path: item.target_path,
-                      play_count: Math.round(item.score || 0)
+                      play_count: Math.round(item.score || 0),
+                      year: extractYear(item.published_at),
+                      release_date: item.published_at
                     }"
                     :priority="isPriorityImage(item)"
                     :show-bookmark="false"
@@ -218,10 +216,6 @@
                     :summary="item.summary"
                     class="content-stream-entry portal-hot__card"
                   >
-                    <template #visual>
-                      <span class="portal-stream-unread-bar" aria-hidden="true" />
-                    </template>
-
                     <template #meta>
                       <span class="portal-hot__tag">{{ moduleLabel(section.module) }}</span>
                       <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
@@ -394,6 +388,17 @@ function formatDate(dateStr?: string) {
     return new Date(dateStr).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
   } catch {
     return ''
+  }
+}
+
+function extractYear(dateStr?: string): number | undefined {
+  if (!dateStr) return undefined
+  try {
+    const d = new Date(dateStr)
+    const y = d.getFullYear()
+    return isNaN(y) ? undefined : y
+  } catch {
+    return undefined
   }
 }
 

@@ -165,6 +165,7 @@ export interface MusicCreationAlbumDetailsDraft {
 	releaseYear: string;
 	bio: string;
 	source: string;
+	musicBrainzMatched?: boolean;
 }
 
 export interface MusicCreationDraft {

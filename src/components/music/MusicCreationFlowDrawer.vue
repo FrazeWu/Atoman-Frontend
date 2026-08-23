@@ -16,7 +16,7 @@ import { musicCreationFlowKey } from './musicCreationFlowContext'
 import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasValidAlbumContributors, primaryAlbumRole, songContributorsFromCredits } from '@/utils/musicAlbumCredits'
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
-import { normalizeMusicImportSource } from '@/utils/musicImportSource'
+import { hasMusicBrainzSource, normalizeMusicImportSource } from '@/utils/musicImportSource'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -203,6 +203,7 @@ async function loadEditDraft() {
         releaseYear: song.release_date?.slice(0, 4) || '',
         bio: song.description ?? '',
         source: normalizeMusicImportSource(firstSourceValue(song.sources)),
+        musicBrainzMatched: hasMusicBrainzSource(song.sources) || hasMusicBrainzSource(song.album?.sources),
       }
       flow.draft.tracks = [{
         id: `edit-track-${song.id}`,
@@ -231,7 +232,8 @@ async function loadEditDraft() {
       type: album.album_type?.trim() || 'album',
       releaseYear: album.release_date?.slice(0, 4) || '',
       bio: album.description ?? '',
-      source: '',
+      source: firstSourceValue(album.sources),
+      musicBrainzMatched: hasMusicBrainzSource(album.sources),
     }
     flow.draft.tracks = (album.songs ?? [])
       .filter((song) => song.status !== 'closed')

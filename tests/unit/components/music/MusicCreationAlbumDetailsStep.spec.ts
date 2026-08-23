@@ -129,6 +129,31 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		},
 	);
 
+	it("shows a cautious-edit notice only for MusicBrainz-matched edit flows", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({
+			mode: "edit",
+			entity: "album",
+			albumId: "album-matched",
+			startStep: "albumDetails",
+		});
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumDetails.musicBrainzMatched = true;
+
+		const matchedWrapper = mount(MusicCreationAlbumDetailsStep);
+		expect(matchedWrapper.get('[data-testid="musicbrainz-edit-notice"]').text()).toContain(
+			"已通过 MusicBrainz 匹配",
+		);
+		matchedWrapper.unmount();
+
+		drawers.closeAll();
+		drawers.openMusicCreationFlow({ startStep: "albumDetails" });
+		const createWrapper = mount(MusicCreationAlbumDetailsStep);
+		expect(createWrapper.find('[data-testid="musicbrainz-edit-notice"]').exists()).toBe(false);
+		createWrapper.unmount();
+	});
+
 	it("keeps text editing separate from drag sorting", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

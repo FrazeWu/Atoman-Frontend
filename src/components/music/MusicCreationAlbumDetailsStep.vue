@@ -15,6 +15,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
+import MusicBrainzEditNotice from '@/components/music/MusicBrainzEditNotice.vue'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
@@ -33,6 +34,7 @@ const detailsTitleLabel = computed(() => standaloneTypeSelected.value ? '歌曲�
 const detailsDescriptionPlaceholder = computed(() => standaloneTypeSelected.value ? '补充歌曲简介...' : '补充专辑简介...')
 const showsTrackList = computed(() => !standaloneTypeSelected.value || (creationFlow.value?.draft.tracks.length ?? 0) !== 1 || isEditMode.value)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
+const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
 const {
   coverInputRef,
   coverUploading,
@@ -374,6 +376,8 @@ watch(
         <div class="progress-bar" />
       </div>
     </section>
+
+    <MusicBrainzEditNotice v-if="musicBrainzMatched" data-testid="musicbrainz-edit-notice" />
 
     <!-- 导入进度与封面并排 -->
     <div class="album-details-step__upload-cover-grid">

@@ -13,6 +13,7 @@ import {
   type MusicStandaloneSongType,
 } from "@/api/musicV1";
 import MusicCreationContributorPicker from "@/components/music/MusicCreationContributorPicker.vue";
+import MusicBrainzEditNotice from "@/components/music/MusicBrainzEditNotice.vue";
 import PMaskedDateInput from "@/components/ui/PMaskedDateInput.vue";
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
@@ -33,6 +34,7 @@ import type {
   MusicCreationAlbumContributorDraft,
   MusicCreationDatePartsDraft,
 } from "./musicCreationTypes";
+import { hasMusicBrainzSource } from "@/utils/musicImportSource";
 import type { MusicSheetLayer } from "./musicSheetTypes";
 
 type EditorLayer = Extract<MusicSheetLayer, { kind: "editor" }>;
@@ -91,6 +93,7 @@ const songLoading = ref(false);
 const songSubmitting = ref(false);
 const songErrorMessage = ref("");
 const standaloneSong = ref(false);
+const musicBrainzMatched = ref(false);
 const parentAlbum = ref<{ id: string; title: string } | null>(null);
 const coverInput = ref<HTMLInputElement | null>(null);
 const audioInput = ref<HTMLInputElement | null>(null);
@@ -146,6 +149,7 @@ function resetSongState() {
   songSubmitting.value = false;
   songErrorMessage.value = "";
   standaloneSong.value = false;
+  musicBrainzMatched.value = false;
   parentAlbum.value = null;
   songDraft.title = "";
   songDraft.description = "";
@@ -191,6 +195,9 @@ async function loadSong(songId: string) {
     standaloneSong.value =
       detail.song.release_type === "single" ||
       detail.song.release_type === "leak";
+    musicBrainzMatched.value =
+      hasMusicBrainzSource(detail.song.sources) ||
+      hasMusicBrainzSource(detail.song.album?.sources);
     parentAlbum.value = detail.song.album?.id
       ? { id: String(detail.song.album.id), title: detail.song.album.title }
       : null;
@@ -426,6 +433,11 @@ async function handleSongEditSubmit() {
             <Disc3 :size="16" aria-hidden="true" />编辑整张专辑
           </PButton>
         </div>
+
+        <MusicBrainzEditNotice
+          v-if="musicBrainzMatched"
+          data-testid="musicbrainz-edit-notice"
+        />
 
         <div class="song-editor__layout">
           <section class="song-editor__cover-field">

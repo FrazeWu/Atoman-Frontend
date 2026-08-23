@@ -173,6 +173,32 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		expect(mocks.refreshSong).toHaveBeenCalled();
 	});
 
+	it("shows a MusicBrainz warning when the song or parent album was matched", async () => {
+		mocks.getMusicSongDetail.mockResolvedValueOnce({
+			song: {
+				id: "song-1",
+				title: "Matched Song",
+				album: {
+					id: "album-1",
+					title: "Matched Album",
+					sources: [{ type: "url", url: "https://musicbrainz.org/release/release-id" }],
+				},
+			},
+			artists: [],
+			playable: true,
+		});
+		drawerState.value.musicEditor = {
+			entity: "song",
+			mode: "edit",
+			id: "song-1",
+		};
+
+		const wrapper = mountDrawer();
+		await flushPromises();
+
+		expect(wrapper.find('[data-testid="musicbrainz-edit-notice"]').exists()).toBe(true);
+	});
+
 	it("renders an album track description as a normal editable field", async () => {
 		mocks.getMusicSongDetail.mockResolvedValueOnce({
 			song: {

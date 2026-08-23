@@ -89,10 +89,10 @@ onUnmounted(clearTimer)
   transform: translateX(-50%);
   border-radius: var(--a-radius-none, 4px);
   padding: 8px 14px;
-  background: #ffffff;
+  background: var(--a-color-surface);
   color: var(--a-color-text);
   border: 1px solid var(--a-color-border);
-  box-shadow: none;
+  box-shadow: var(--a-shadow-dropdown);
   transition: top 0.3s ease;
 }
 

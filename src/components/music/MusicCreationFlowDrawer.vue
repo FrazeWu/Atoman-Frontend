@@ -678,13 +678,15 @@ function flushImportAutosave() {
   if (importAutosaveDrain) return importAutosaveDrain
   importAutosaveDrain = (async () => {
     while (pendingImportAutosave) {
+      const pending = pendingImportAutosave
+      pendingImportAutosave = null
       const pendingGeneration = pending.generation
       if (pendingGeneration !== importAutosaveGeneration) continue
       try {
         const committed = await musicApi.commitMusicAlbumImport(pending.importId, pending.input)
         const flow = creationFlow.value
         if (pendingGeneration !== importAutosaveGeneration) continue
-        if (flow?.draft.albumImport.importId === pending.importId) {
+        if (flow && flow.draft.albumImport.importId === pending.importId) {
           flow.draft.albumImport.status = committed.status
           flow.draft.albumImport.errorMessage = committed.errorMessage ?? ''
           await finishAutomaticallyCommittedImport(flow, committed)

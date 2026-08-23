@@ -8,6 +8,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
@@ -62,7 +63,8 @@ const artistRequests = useRequestGeneration()
 const releaseRequests = useRequestGeneration()
 const contributors = ref<MusicContributor[]>([])
 const contributorTotal = ref(0)
-const artistAlbumPageSize = 100
+const artistAlbumPageSize = 24
+const releaseMeta = ref({ page: 1, page_size: artistAlbumPageSize, total: 0, has_more: false })
 
 const artistAliases = computed(() => (
   artist.value?.aliases
@@ -209,55 +211,13 @@ function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision
   return `${start} - ${end}`
 }
 
-async function listAllArtistAlbums(targetArtistId: string, sortMode: AlbumSortMode, isCurrentLoad: () => boolean) {
-  const allAlbums: MusicAlbumListItem[] = []
-  let page = 1
-  let hasMore = true
-
-  while (hasMore) {
-    const response = await listMusicAlbums({
-      artist_id: targetArtistId,
-      sort: albumSortQuery(sortMode),
-      page,
-      page_size: artistAlbumPageSize,
-    })
-    if (!isCurrentLoad()) return null
-    allAlbums.push(...response.data)
-    hasMore = response.meta.has_more
-    page += 1
-  }
-
-  return allAlbums
-}
-
-async function listAllArtistSongs(targetArtistId: string, sortMode: AlbumSortMode, isCurrentLoad: () => boolean) {
-  const allSongs: MusicSongListItem[] = []
-  let page = 1
-  let hasMore = true
-
-  while (hasMore) {
-    const response = await listMusicSongs({
-      artist_id: targetArtistId,
-      release_type: 'single,leak',
-      sort: albumSortQuery(sortMode),
-      page,
-      page_size: artistAlbumPageSize,
-    })
-    if (!isCurrentLoad()) return null
-    allSongs.push(...response.data)
-    hasMore = response.meta.has_more
-    page += 1
-  }
-
-  return allSongs
-}
-
-async function loadArtistReleases(targetArtistId: string | null) {
+async function loadArtistReleases(targetArtistId: string | null, page = 1) {
   const { isCurrent } = releaseRequests.beginRequest()
   if (!targetArtistId) {
     if (isCurrent()) {
       releaseLoading.value = false
       releaseErrorMessage.value = ''
+      releaseMeta.value = { page: 1, page_size: artistAlbumPageSize, total: 0, has_more: false }
     }
     return
   }
@@ -267,19 +227,14 @@ async function loadArtistReleases(targetArtistId: string | null) {
   const isCurrentLoad = () => isCurrent() && artistId.value === targetArtistId
   releaseLoading.value = true
   releaseErrorMessage.value = ''
-  if (requestedType === 'album') albums.value = []
-  else songs.value = []
-
   try {
-    if (requestedType === 'album') {
-      const allAlbums = await listAllArtistAlbums(targetArtistId, requestedSort, isCurrentLoad)
-      if (!isCurrentLoad() || !allAlbums) return
-      albums.value = allAlbums
-    } else {
-      const allSongs = await listAllArtistSongs(targetArtistId, requestedSort, isCurrentLoad)
-      if (!isCurrentLoad() || !allSongs) return
-      songs.value = allSongs
-    }
+    const response = requestedType === 'album'
+      ? await listMusicAlbums({ artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
+      : await listMusicSongs({ artist_id: targetArtistId, release_type: 'single,leak', sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
+    if (!isCurrentLoad()) return
+    releaseMeta.value = response.meta
+    if (requestedType === 'album') albums.value = response.data
+    else songs.value = response.data
   } catch (error) {
     if (!isCurrentLoad()) return
     releaseErrorMessage.value = requestedType === 'album' ? '专辑列表加载失败' : '歌曲列表加载失败'
@@ -287,6 +242,11 @@ async function loadArtistReleases(targetArtistId: string | null) {
   } finally {
     if (isCurrentLoad()) releaseLoading.value = false
   }
+}
+
+function changeReleasePage(page: number) {
+  if (page < 1) return
+  void loadArtistReleases(artistId.value, page)
 }
 
 async function loadArtist(targetArtistId: string | null) {
@@ -302,6 +262,7 @@ async function loadArtist(targetArtistId: string | null) {
       contributors.value = []
       contributorTotal.value = 0
       releaseErrorMessage.value = ''
+      releaseMeta.value = { page: 1, page_size: artistAlbumPageSize, total: 0, has_more: false }
       lastLoadKey.value = null
     }
     return
@@ -439,7 +400,7 @@ watch(
 )
 
 watch([releaseType, albumSortMode], () => {
-  void loadArtistReleases(artistId.value)
+  void loadArtistReleases(artistId.value, 1)
 })
 </script>
 
@@ -742,6 +703,12 @@ watch([releaseType, albumSortMode], () => {
           </div>
         </div>
       </div>
+      <PaginationBar
+        v-if="!loading && !releaseLoading && artist && releaseMeta.total > 0"
+        :meta="releaseMeta"
+        :loading="releaseLoading"
+        @change="changeReleasePage"
+      />
       <MusicContributorsBlock
         v-if="!loading && artist"
         :contributors="contributors"

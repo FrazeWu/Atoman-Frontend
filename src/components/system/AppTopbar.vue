@@ -256,10 +256,12 @@ const toggleTheme = (event: MouseEvent) => {
 .topbar.is-scrolled::after {
   width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
 }
-:root.dark .topbar {
-  background: rgba(11, 15, 25, 0.64);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
+:root.dark .topbar,
+html.dark .topbar {
+  background: rgba(9, 10, 15, 0.75);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  backdrop-filter: blur(20px) saturate(190%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .topbar:has(.topbar-search-wrap.is-open),
 .topbar:has(.dropdown-wrap .dropdown) {
@@ -269,8 +271,9 @@ const toggleTheme = (event: MouseEvent) => {
 .topbar--auth {
   background: rgba(255, 255, 255, 0.58);
 }
-:root.dark .topbar--auth {
-  background: rgba(11, 15, 25, 0.64);
+:root.dark .topbar--auth,
+html.dark .topbar--auth {
+  background: rgba(9, 10, 15, 0.75);
 }
 .topbar-inner {
   padding: 0 2rem 0 0;

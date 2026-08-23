@@ -313,5 +313,5 @@ onBeforeUnmount(() => {
 .album-link__selected-head button { border: 0; background: transparent; color: var(--a-color-muted); cursor: pointer; }
 .album-link__actions { display: flex; justify-content: flex-end; gap: 0.7rem; }
 .album-link__error { color: var(--a-color-accent-destructive); }
-:global(.album-credit-link-drawer) { background: #ffffff !important; }
+:global(.album-credit-link-drawer) { background: var(--a-color-bg) !important; }
 </style>

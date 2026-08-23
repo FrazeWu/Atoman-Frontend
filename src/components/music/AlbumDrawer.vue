@@ -296,14 +296,15 @@ function changePlaylistPage(delta: number) {
   void loadPlaylists(nextPage)
 }
 
-async function loadFavorites(songIds: string[]) {
+async function loadFavorites(songIds: string[], isCurrentLoad: () => boolean) {
   if (!isAuthenticated.value) {
-    favoriteSongIds.value = new Set()
+    if (isCurrentLoad()) favoriteSongIds.value = new Set()
     return
   }
   try {
-    await loadFavoriteSongs(songIds)
+    await loadFavoriteSongs(songIds, isCurrentLoad)
   } catch (err) {
+    if (!isCurrentLoad()) return
     if (err instanceof ApiErrorResponseError && err.status === 401) {
       favoriteSongIds.value = new Set()
       return
@@ -413,7 +414,7 @@ async function loadAlbumExtras(
 
   const bookmarkTask = loadAlbumBookmarkState(targetAlbumId, isCurrentLoad)
   const playlistTask = playlistsLoaded.value ? Promise.resolve() : loadPlaylists()
-  const favoriteTask = loadFavorites((albumResponse.songs || []).map(song => String(song.id)))
+  const favoriteTask = loadFavorites((albumResponse.songs || []).map(song => String(song.id)), isCurrentLoad)
   await Promise.all([contributorTask, bookmarkTask, playlistTask, favoriteTask])
 }
 
@@ -837,7 +838,7 @@ watch(
 
 <style scoped>
 :global(.album-drawer) {
-  background: #ffffff !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }

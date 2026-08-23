@@ -258,7 +258,7 @@ const sheetStyle = computed(() => {
 .p-sheet-layer {
   position: fixed;
   bottom: var(--a-content-bottom-offset);
-  background: #ffffff;
+  background: var(--a-color-bg);
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--a-color-border-soft);
@@ -319,7 +319,7 @@ const sheetStyle = computed(() => {
   width: 32px;
   flex-direction: column;
   align-items: center;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .sheet-layer-controls {

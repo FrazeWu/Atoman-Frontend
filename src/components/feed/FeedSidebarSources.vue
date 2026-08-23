@@ -217,8 +217,8 @@ function toggleGroup(groupId: string) {
   display: grid;
   gap: 0.9rem;
   padding: 0.95rem 0.85rem;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 
 .feed-sidebar-sources.is-collapsed {

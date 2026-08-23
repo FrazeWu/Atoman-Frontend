@@ -255,7 +255,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   flex-direction: column;
   padding: 0.25rem;
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-surface);
   border: 1px solid var(--a-color-border-soft);
   box-shadow: var(--a-shadow-dropdown);
 }

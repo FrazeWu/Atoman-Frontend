@@ -587,11 +587,10 @@ export function useAlbumImportUpload() {
 					fileId,
 					generation,
 				);
-				refreshWhenFilesUploaded(
-					flow,
-					await getMusicAlbumImport(importId),
-					importId,
-				);
+				if (!isCurrent()) return
+				const latest = await getMusicAlbumImport(importId)
+				if (!isCurrent()) return
+				refreshWhenFilesUploaded(flow, latest, importId);
 			} else if (!needsUpload) {
 				startPollingFor(flow, importId);
 			}
@@ -633,11 +632,10 @@ export function useAlbumImportUpload() {
 				fileId,
 				generation,
 			);
-			refreshWhenFilesUploaded(
-				flow,
-				await getMusicAlbumImport(importId),
-				importId,
-			);
+			if (!isCurrent()) return
+			const latest = await getMusicAlbumImport(importId)
+			if (!isCurrent()) return
+			refreshWhenFilesUploaded(flow, latest, importId);
 		} catch (error) {
 			if (isCurrent()) {
 				uploadState.errorMessage.value =
@@ -652,6 +650,7 @@ export function useAlbumImportUpload() {
 		const flow = creationFlow.value;
 		const draft = flow?.draft.albumImport;
 		if (!flow || !draft?.importId) return;
+		const uploadState = uploadStateFor(flow);
 		const generation = beginUploadOperation(uploadState);
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		try {

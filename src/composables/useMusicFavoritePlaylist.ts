@@ -27,15 +27,16 @@ export function useMusicFavoritePlaylist() {
 		return favoritePlaylistId.value
 	}
 
-  async function loadFavoriteSongs(songIds: string[] = []) {
+  async function loadFavoriteSongs(songIds: string[] = [], isCurrent: () => boolean = () => true) {
     const uniqueIds = [...new Set(songIds.filter(Boolean))]
 		if (!uniqueIds.length) {
-			favoriteSongIds.value = new Set()
+			if (isCurrent()) favoriteSongIds.value = new Set()
 			return favoriteSongIds.value
 		}
 		const playlistId = await requireFavoritePlaylistId()
-		favoriteSongIds.value = new Set(await getMusicPlaylistSongStatus(playlistId, uniqueIds))
-    return favoriteSongIds.value
+		const loadedIds = new Set(await getMusicPlaylistSongStatus(playlistId, uniqueIds))
+		if (isCurrent()) favoriteSongIds.value = loadedIds
+    return loadedIds
   }
 
   function setSongFavorite(songId: string, isFavorite: boolean) {

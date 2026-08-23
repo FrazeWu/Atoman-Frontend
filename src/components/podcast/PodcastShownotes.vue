@@ -50,18 +50,19 @@ const lines = computed(() => parsePodcastTimeline(props.text || ''))
 
 .shownote-time {
   flex: 0 0 auto;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 6px;
   padding: 0.125rem 0.375rem;
-  color: #111827;
-  background: #ffffff;
+  color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
+  transition: border-color 0.15s ease;
 }
 
 .shownote-time:hover {
-  border-color: #111827;
+  border-color: var(--a-color-border);
 }
 
 .shownote-text {

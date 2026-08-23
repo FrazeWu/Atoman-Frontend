@@ -225,8 +225,9 @@ async function loadDetail(targetSongId: unknown) {
         favoriteSongIds.value = new Set()
         return
       }
-      await loadFavoriteSongs([String(detail.value.song.id)])
+      await loadFavoriteSongs([String(detail.value.song.id)], request.isCurrent)
     } catch (cause) {
+      if (!request.isCurrent()) return
       reportError(cause, '加载最爱状态失败')
       favoriteSongIds.value = new Set()
     }

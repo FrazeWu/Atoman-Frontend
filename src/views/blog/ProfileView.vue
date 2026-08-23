@@ -249,8 +249,8 @@
   </div>
   <PConfirm
     :show="deletePending !== null"
-    title="删除短话"
-    message="确定删除这条短话吗？"
+    title="删除短笺"
+    message="确定删除这条短笺吗？"
     confirm-text="删除"
     danger
     :loading="deleting"

@@ -97,7 +97,7 @@
               </div>
             </section>
 
-            <!-- 探索文章与短话混合流 -->
+            <!-- 探索文章与短笺混合流 -->
             <section class="explore-template__section">
               <div class="explore-template__section-header">
                 <h2>最新探索发现</h2>
@@ -202,7 +202,7 @@
               <div class="explore-template__guide-content">
                 <Sparkles :size="18" class="explore-template__guide-icon" />
                 <h3>探索创作灵感</h3>
-                <p>发布你独特的探索见解，优质文章与短话将获得更多推荐关注。</p>
+                <p>发布你独特的探索见解，优质文章与短笺将获得更多推荐关注。</p>
               </div>
             </section>
           </aside>
@@ -226,7 +226,7 @@ const activeNav = ref('/posts')
 
 const navItems: { to: string; label: string; icon: any; badge?: string; badgeType?: string }[] = [
   { to: '/posts', label: '探索', icon: Compass },
-  { to: '/posts/notes', label: '短话', icon: MessageSquare },
+  { to: '/posts/notes', label: '短笺', icon: MessageSquare },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },
 ]
@@ -314,7 +314,7 @@ const exploreFeed = ref([
 ])
 
 const hotTopics = [
-  { id: 't1', name: '短话页设计重构规范', discussionCount: 128, heat: '9.8k' },
+  { id: 't1', name: '短笺页设计重构规范', discussionCount: 128, heat: '9.8k' },
   { id: 't2', name: 'Vue 3.5 响应式机制', discussionCount: 94, heat: '7.2k' },
   { id: 't3', name: 'Go 架构最佳实践', discussionCount: 65, heat: '5.1k' },
 ]

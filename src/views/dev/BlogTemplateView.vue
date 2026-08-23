@@ -211,7 +211,7 @@ const heroPost = ref({
 const posts = ref([
   {
     id: 'post-1',
-    title: '短话模式下的卡片化交互与呼吸感设计范式',
+    title: '短笺模式下的卡片化交互与呼吸感设计范式',
     summary: '分析卡片边框、浅阴影以及动态多图网格排版如何在移动端与桌面端实现一致的排版体验。',
     channel: 'UI/UX 思考',
     author: 'Alex Chen',
@@ -260,7 +260,7 @@ const hotChannels = [
 ]
 
 const weeklyMustRead = [
-  { id: 'mr-1', title: '短话模式下的卡片化交互与呼吸感设计范式', likes: 128, comments: 45 },
+  { id: 'mr-1', title: '短笺模式下的卡片化交互与呼吸感设计范式', likes: 128, comments: 45 },
   { id: 'mr-2', title: 'Vue 3.5 响应式系统进阶：浅层响应与性能优化', likes: 98, comments: 32 },
   { id: 'mr-3', title: 'Cloudflare Pages 与 Serverless 边缘架构实践', likes: 76, comments: 19 },
 ]

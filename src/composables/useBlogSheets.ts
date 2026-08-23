@@ -44,7 +44,7 @@ export function useBlogSheets() {
 		stack.push({
 			key: `short_note:${noteId}`,
 			kind: "short_note",
-			title: title || "短话",
+			title: title || "短笺",
 			route: `/posts/notes/${noteId}`,
 			payload: { noteId },
 		});

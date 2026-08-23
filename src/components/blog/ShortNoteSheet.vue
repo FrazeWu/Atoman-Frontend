@@ -69,7 +69,7 @@ async function loadNote() {
     }
   } catch {
     note.value = null
-    errorMessage.value = '短话不存在或暂时无法加载'
+    errorMessage.value = '短笺不存在或暂时无法加载'
   } finally {
     loading.value = false
   }
@@ -136,7 +136,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
 <template>
   <PSheet
     :show="sheets.isActive(layer.key)"
-    :title="layer.title || '短话'"
+    :title="layer.title || '短笺'"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
@@ -147,7 +147,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
     @close="sheets.closeLayer(layer.key)"
     @activate="sheets.returnToLayer(layer.key)"
   >
-    <div v-if="loading" class="short-note-sheet-loading" aria-label="正在加载短话">
+    <div v-if="loading" class="short-note-sheet-loading" aria-label="正在加载短笺">
       <div class="a-skeleton short-note-sheet-skeleton" />
     </div>
     <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage" />
@@ -166,8 +166,8 @@ watch(noteId, () => void loadNote(), { immediate: true })
             <button
               type="button"
               class="short-note-sheet-action-btn"
-              aria-label="编辑短话"
-              title="编辑短话"
+              aria-label="编辑短笺"
+              title="编辑短笺"
               @click="editNote"
             >
               <Pencil :size="15" />
@@ -175,8 +175,8 @@ watch(noteId, () => void loadNote(), { immediate: true })
             <button
               type="button"
               class="short-note-sheet-action-btn is-danger"
-              aria-label="删除短话"
-              title="删除短话"
+              aria-label="删除短笺"
+              title="删除短笺"
               @click="remove"
             >
               <Trash2 :size="15" />
@@ -197,7 +197,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
             class="short-note-sheet-media-item"
             @click.stop.prevent="openLightbox(idx)"
           >
-            <img :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
+            <img :src="resolveMediaURL(item.url)" alt="短笺图片" loading="lazy" />
           </div>
         </div>
 
@@ -231,8 +231,8 @@ watch(noteId, () => void loadNote(), { immediate: true })
 
   <PConfirm
     :show="deletePending"
-    title="删除短话"
-    message="确定删除这条短话吗？"
+    title="删除短笺"
+    message="确定删除这条短笺吗？"
     confirm-text="删除"
     danger
     :loading="deleting"

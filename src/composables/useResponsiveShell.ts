@@ -53,7 +53,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 	]),
 	blog: tabs("blog", [
 		["discover", "发现", "/", Compass],
-		["notes", "短话", "/notes", MessageSquare],
+		["notes", "短笺", "/notes", MessageSquare],
 		["subscriptions", "订阅", "/subscriptions", Rss],
 		["bookmarks", "收藏", "/bookmarks", Bookmark],
 	]),

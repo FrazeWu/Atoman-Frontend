@@ -3,7 +3,7 @@
     <div class="short-note-composer__field">
       <PTextarea
         v-model="content"
-        aria-label="短话内容"
+        aria-label="短笺内容"
         :rows="compact ? 3 : 5"
         :maxlength="500"
         placeholder="写点什么..."

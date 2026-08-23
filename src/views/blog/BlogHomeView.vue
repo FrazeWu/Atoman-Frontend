@@ -125,8 +125,8 @@
   </div>
   <PConfirm
     :show="pendingDeleteNote !== null"
-    title="删除短话"
-    message="确定删除这条短话吗？"
+    title="删除短笺"
+    message="确定删除这条短笺吗？"
     confirm-text="删除"
     cancel-text="取消"
     danger
@@ -257,7 +257,7 @@ const formatDate = (dateStr?: string) => {
 const typeOptions = [
   { label: '全部', value: 'all' },
   { label: '文章', value: 'post' },
-  { label: '短话', value: 'note' },
+  { label: '短笺', value: 'note' },
 ]
 
 const sortOptions = [

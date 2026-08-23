@@ -13,16 +13,16 @@
         <RouterLink
           :to="`/posts/notes/${note.id}/edit`"
           class="short-note-card__action-btn"
-          aria-label="编辑短话"
-          title="编辑短话"
+          aria-label="编辑短笺"
+          title="编辑短笺"
         >
           <Pencil :size="15" />
         </RouterLink>
         <button
           type="button"
           class="short-note-card__action-btn is-danger"
-          aria-label="删除短话"
-          title="删除短话"
+          aria-label="删除短笺"
+          title="删除短笺"
           @click="$emit('delete', note)"
         >
           <Trash2 :size="15" />
@@ -44,7 +44,7 @@
           class="short-note-card__media-item"
           @click.stop.prevent="openLightbox(idx)"
         >
-          <img :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
+          <img :src="resolveMediaURL(item.url)" alt="短笺图片" loading="lazy" />
         </div>
       </div>
     </div>

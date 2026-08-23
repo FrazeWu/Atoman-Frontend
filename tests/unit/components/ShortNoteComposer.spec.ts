@@ -30,10 +30,10 @@ describe('ShortNoteComposer', () => {
   it('emits trimmed content when submitted', async () => {
     const wrapper = mount(ShortNoteComposer, { global: { plugins: [createPinia()] } })
 
-    await wrapper.get('textarea').setValue('  一条短话  ')
+    await wrapper.get('textarea').setValue('  一条短笺  ')
     await wrapper.get('form').trigger('submit')
 
-    expect(wrapper.emitted('submit')).toEqual([[{ content: '一条短话', media_urls: [] }]])
+    expect(wrapper.emitted('submit')).toEqual([[{ content: '一条短笺', media_urls: [] }]])
   })
 
   it('enables drag sorting when multiple images are present', () => {

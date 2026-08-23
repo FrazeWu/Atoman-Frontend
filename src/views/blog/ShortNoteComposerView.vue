@@ -3,9 +3,9 @@
     <div class="short-note-composer-view__header">
       <RouterLink to="/posts/notes" class="short-note-composer-view__back-link">
         <ChevronLeft :size="16" />
-        <span>返回短话</span>
+        <span>返回短笺</span>
       </RouterLink>
-      <PPageHeader :title="isEdit ? '编辑短话' : '写短话'" class="short-note-composer-view__title" />
+      <PPageHeader :title="isEdit ? '编辑短笺' : '写短笺'" class="short-note-composer-view__title" />
     </div>
 
     <div v-if="loading" class="a-skeleton short-note-composer-view__skeleton" />
@@ -59,10 +59,10 @@ async function load() {
     if (sequence !== loadSequence) return
     note.value = loaded
     if (note.value.user_id !== authStore.user?.uuid) {
-      error.value = '你无权编辑这条短话'
+      error.value = '你无权编辑这条短笺'
     }
   } catch {
-    if (sequence === loadSequence) error.value = '短话不存在或暂时无法加载'
+    if (sequence === loadSequence) error.value = '短笺不存在或暂时无法加载'
   } finally {
     if (sequence === loadSequence) loading.value = false
   }

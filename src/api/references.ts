@@ -2,7 +2,7 @@ import { apiGet, apiPostJson } from './client'
 import { useApiUrl } from '@/composables/useApi'
 
 export type ReferenceResourceType =
-  | 'post' | 'thread' | 'debate' | 'feed' | 'article'
+  | 'post' | 'short_note' | 'thread' | 'debate' | 'feed' | 'article'
   | 'artist' | 'album' | 'song' | 'playlist' | 'podcast'
   | 'episode' | 'video' | 'person' | 'event' | 'channel'
   | 'collection' | 'comment'

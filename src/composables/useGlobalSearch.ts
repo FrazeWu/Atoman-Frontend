@@ -32,6 +32,7 @@ const previewDelay = 250
 const globalTargetTypes: readonly ReferenceTargetType[] = [
   'user',
   'post',
+  'short_note',
   'collection',
   'thread',
   'debate',
@@ -64,6 +65,7 @@ const sectionOrder: readonly GlobalSearchSectionType[] = [
 const targetLabels: Record<ReferenceTargetType, string> = {
   user: '用户',
   post: '文章',
+  short_note: '短笺',
   thread: '主题',
   debate: '辩题',
   feed: '订阅源',

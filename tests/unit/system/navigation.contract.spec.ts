@@ -128,9 +128,9 @@ describe("application navigation contracts", () => {
 	it("keeps the short-note entry and route under posts", async () => {
 		const source = readSource("src/components/system/AppSidebar.vue");
 
-		expect(source).not.toContain("label: '写短话'");
+		expect(source).not.toContain("label: '写短笺'");
 		expect(source).toContain(
-			"{ to: '/posts/notes', label: '短话', icon: MessageSquare }",
+			"{ to: '/posts/notes', label: '短笺', icon: MessageSquare }",
 		);
 
 		const router = createRouter({

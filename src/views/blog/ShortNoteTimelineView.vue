@@ -1,13 +1,13 @@
 <template>
   <div class="a-page short-note-timeline">
-    <PPageHeader title="短话" />
+    <PPageHeader title="短笺" />
     <div class="short-note-timeline__layout">
       <main class="short-note-timeline__stream">
         <ShortNoteComposer v-if="authStore.isAuthenticated" :key="composerKey" compact :submitting="publishing" @submit="publish" />
         <div v-if="loading && !notes.length" class="short-note-timeline__loading">
           <div v-for="index in 3" :key="index" class="a-skeleton short-note-timeline__skeleton" />
         </div>
-        <PEmpty v-else-if="!notes.length" title="还没有短话" description="写下第一条短话。" />
+        <PEmpty v-else-if="!notes.length" title="还没有短笺" description="写下第一条短笺。" />
         <div v-else class="short-note-timeline__feed">
           <ShortNoteCard v-for="note in notes" :key="note.id" :note="note" @delete="remove" />
         </div>
@@ -17,11 +17,11 @@
         </div>
       </main>
 
-      <aside class="short-note-timeline__rail" aria-label="短话推荐">
+      <aside class="short-note-timeline__rail" aria-label="短笺推荐">
         <section class="short-note-timeline__rail-section">
           <div class="short-note-timeline__rail-header">
             <Flame :size="16" class="short-note-timeline__rail-icon is-hot" />
-            <h2>热门短话</h2>
+            <h2>热门短笺</h2>
           </div>
           <div class="short-note-timeline__rail-list">
             <div v-for="note in hotNotes" :key="note.id" class="short-note-timeline__rail-note" @click="openNoteSheet(note)">
@@ -51,8 +51,8 @@
   </div>
   <PConfirm
     :show="deletePending !== null"
-    title="删除短话"
-    message="确定删除这条短话吗？"
+    title="删除短笺"
+    message="确定删除这条短笺吗？"
     confirm-text="删除"
     danger
     :loading="deleting"
@@ -119,7 +119,7 @@ async function load(reset = false, requestedPage?: number) {
     hasMore.value = Boolean(response.meta?.has_more)
     return true
   } catch {
-    error.value = '短话加载失败，请重试'
+    error.value = '短笺加载失败，请重试'
     return false
   } finally {
     loading.value = false

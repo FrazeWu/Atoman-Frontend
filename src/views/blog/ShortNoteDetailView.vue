@@ -3,7 +3,7 @@
     <div class="short-note-detail__header">
       <RouterLink to="/posts/notes" class="short-note-detail__back-link">
         <ChevronLeft :size="16" />
-        <span>返回短话</span>
+        <span>返回短笺</span>
       </RouterLink>
     </div>
 
@@ -18,8 +18,8 @@
   </div>
   <PConfirm
     :show="deletePending !== null"
-    title="删除短话"
-    message="确定删除这条短话吗？"
+    title="删除短笺"
+    message="确定删除这条短笺吗？"
     confirm-text="删除"
     danger
     :loading="deleting"
@@ -61,7 +61,7 @@ async function load() {
     if (sequence === loadSequence) note.value = loaded
   }
   catch {
-    if (sequence === loadSequence) error.value = '短话不存在或暂时无法加载'
+    if (sequence === loadSequence) error.value = '短笺不存在或暂时无法加载'
   }
   finally {
     if (sequence === loadSequence) loading.value = false

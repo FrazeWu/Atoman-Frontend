@@ -173,7 +173,7 @@ const coverImageFailed = ref(false)
 const displayTitle = computed(() => {
   if (postItem.value) return postItem.value.title
   if (feedItem.value) return feedItem.value.title
-  if (shortNoteItem.value) return shortNoteItem.value.content?.slice(0, 30) || '短话'
+  if (shortNoteItem.value) return shortNoteItem.value.content?.slice(0, 30) || '短笺'
   return props.item.title || ''
 })
 

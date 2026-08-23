@@ -16,7 +16,7 @@ describe('ShortNoteTimelineView', () => {
   it('uses loaded notes for a desktop-only secondary rail', () => {
     expect(source).toContain('class="short-note-timeline__layout"')
     expect(source).toContain('class="short-note-timeline__rail"')
-    expect(source).toContain('热门短话')
+    expect(source).toContain('热门短笺')
     expect(source).toContain('最新动态')
     expect(source).toContain('const hotNotes = computed')
     expect(source).toContain('@media (max-width: 1024px)')

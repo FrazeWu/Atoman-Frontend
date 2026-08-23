@@ -317,7 +317,7 @@ const openManageSheet = () => {
 // 3. Blog Navigation Items
 const blogNavItems = [
   { to: '/posts', label: '发现', icon: Compass, exact: true },
-  { to: '/posts/notes', label: '短话', icon: MessageSquare },
+  { to: '/posts/notes', label: '短笺', icon: MessageSquare },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },
 ]

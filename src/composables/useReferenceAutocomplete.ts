@@ -2,6 +2,7 @@ import { referenceApi, type ReferenceResourceType, type ReferenceTarget } from '
 
 export const referenceResourceTypes: Array<{ type: ReferenceResourceType; label: string }> = [
   { type: 'post', label: '文章' },
+  { type: 'short_note', label: '短笺' },
   { type: 'thread', label: '论坛主题' },
   { type: 'debate', label: '辩题' },
   { type: 'feed', label: '订阅源' },

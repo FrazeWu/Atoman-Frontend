@@ -10,7 +10,7 @@ const rarMocks = vi.hoisted(() => ({
 	createExtractorFromData: vi.fn(),
 }));
 
-vi.mock("node-unrar-js/esm", () => rarMocks);
+vi.mock("node-unrar-js/esm/index.esm.js", () => rarMocks);
 vi.mock("node-unrar-js/esm/js/unrar.wasm?url", () => ({
 	default: "/assets/unrar.wasm",
 }));

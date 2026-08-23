@@ -146,7 +146,7 @@ async function readRarAlbumImportPreview(
 	if (file.size > maxRarPreviewBytes) return { title, tracks: [] };
 
 	const [{ createExtractorFromData }, wasmModule] = await Promise.all([
-		import("node-unrar-js/esm"),
+		import("node-unrar-js/esm/index.esm.js"),
 		import("node-unrar-js/esm/js/unrar.wasm?url"),
 	]);
 	const response = await fetch(wasmModule.default);

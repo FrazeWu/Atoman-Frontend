@@ -901,7 +901,11 @@ async function subscribeRecommendationSource(item: RecommendationItem) {
   sourceSubscribeBusyIds.value = [...sourceSubscribeBusyIds.value, sourceId]
   try {
     if (item.source_type === 'internal_channel') {
-      const success = await feedStore.subscribeToChannel(sourceId)
+      let success = await feedStore.subscribeToChannel(sourceId)
+      if (!success) {
+        // A fast click can race the initial subscription fetch and receive a 409 for an existing subscription.
+        success = await feedStore.isSubscribedToChannel(sourceId)
+      }
       if (!success) {
         errorMessage.value = '订阅失败，请重试'
         return

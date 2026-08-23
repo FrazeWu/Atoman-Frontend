@@ -318,6 +318,69 @@ describe("FeedRecommendedView", () => {
 		).toContain("已订阅");
 	});
 
+	it("treats an already subscribed channel conflict as a successful article source subscription", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "channel-article",
+								title: "频道文章",
+								target_path: "/feed/item/channel-article",
+								source_id: "channel-1",
+								source_title: "博客频道",
+								source_type: "internal_channel",
+								source_path: "/channels/blog",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const authStore = useAuthStore();
+		authStore.token = "token";
+		authStore.isAuthenticated = true;
+		const feedStore = useFeedStore();
+		const subscribeSpy = vi
+			.spyOn(feedStore, "subscribeToChannel")
+			.mockResolvedValue(false);
+		const statusSpy = vi
+			.spyOn(feedStore, "isSubscribedToChannel")
+			.mockResolvedValue(true);
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		const subscribeButton = wrapper.get(
+			'[data-test="article-source-subscribe"]',
+		);
+		await subscribeButton.trigger("click");
+		await flushPromises();
+
+		expect(subscribeSpy).toHaveBeenCalledWith("channel-1");
+		expect(statusSpy).toHaveBeenCalledWith("channel-1");
+		expect(subscribeButton.text()).toContain("已订阅");
+	});
+
 	it("restores the external scope, searches paginated sources, selects all visible sources and subscribes them", async () => {
 		routeQuery.scope = "external";
 		const fetchSpy = vi

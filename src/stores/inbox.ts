@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useWebSocketUrl } from '@/composables/useApi'
 import { normalizeDMRealtimeEvent } from '@/api/dm'
+import { useDMStore } from '@/stores/dm'
 import { registerSessionReset } from '@/stores/sessionReset'
 
 export const useInboxStore = defineStore('inbox', () => {
@@ -36,7 +37,6 @@ export const useInboxStore = defineStore('inbox', () => {
     polling.value = true
     pollingTimer = window.setInterval(async () => {
       await notificationStore.fetchUnreadCounts()
-      const { useDMStore } = await import('@/stores/dm')
       await useDMStore().reconcileFromServer()
     }, 60000)
   }
@@ -91,7 +91,6 @@ export const useInboxStore = defineStore('inbox', () => {
       reconnectAttempt = 0
       stopPolling()
       void (async () => {
-        const { useDMStore } = await import('@/stores/dm')
         if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         await Promise.all([useDMStore().reconcileFromServer(), notificationStore.fetchUnreadCounts()])
       })().catch(() => {
@@ -131,7 +130,6 @@ export const useInboxStore = defineStore('inbox', () => {
       }
       const dmEvent = normalizeDMRealtimeEvent(message)
       if (dmEvent) {
-        const { useDMStore } = await import('@/stores/dm')
         if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         const dmStore = useDMStore()
         dmStore.receiveEvent(dmEvent)

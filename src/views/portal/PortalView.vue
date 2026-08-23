@@ -110,56 +110,49 @@
                 </RouterLink>
               </div>
 
-              <!-- 🎵 音乐专区：采用现代黑胶专辑卡片网格 -->
+              <!-- 🎵 音乐专区：采用大号信息丰富的黑胶专辑卡片网格 -->
               <div v-if="section.module === 'music'" class="portal-hot__music-grid">
-                <div
+                <RouterLink
                   v-for="item in section.items"
                   :key="item.id"
-                  class="portal-hot__thumb-wrap"
+                  :to="item.target_path"
+                  class="portal-music-card portal-hot__thumb-wrap"
                   :class="{ 'portal-hot__thumb': item.image_url }"
                 >
-                  <MusicAlbumCard
-                    :album="{
-                      id: item.id,
-                      title: item.title,
-                      summary: item.summary,
-                      image_url: item.image_url,
-                      cover_url: item.image_url,
-                      target_path: item.target_path,
-                      play_count: item.score
-                    }"
-                    :priority="isPriorityImage(item)"
-                    :show-bookmark="false"
-                    @click="router.push(item.target_path)"
-                  />
-                </div>
+                  <div class="portal-music-card__cover-wrap">
+                    <img
+                      v-if="item.image_url"
+                      :src="item.image_url"
+                      :alt="item.title"
+                      class="portal-music-card__cover"
+                      :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
+                      :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                    >
+                    <div v-else class="portal-music-card__cover-placeholder">
+                      <Music :size="36" class="placeholder-icon" aria-hidden="true" />
+                    </div>
+                    <!-- 悬浮播放按钮遮罩 -->
+                    <div class="portal-music-card__play-overlay">
+                      <div class="portal-music-card__play-btn">
+                        <Play :size="18" fill="currentColor" aria-hidden="true" />
+                      </div>
+                    </div>
+                    <!-- 右上角热度角标 -->
+                    <span v-if="item.score_label" class="portal-music-card__score-badge">
+                      {{ item.score_label }}
+                    </span>
+                  </div>
+
+                  <div class="portal-music-card__info">
+                    <h3 class="portal-music-card__title" :title="item.title">{{ item.title }}</h3>
+                    <p class="portal-music-card__artist" :title="item.summary || '未知艺人'">
+                      {{ item.summary || '未知艺人' }}
+                    </p>
+                  </div>
+                </RouterLink>
               </div>
 
-              <!-- 📡 订阅专区：采用现代 40px 方形彩色图标与统计的 FeedSourceIdentityCard 网格 -->
-              <div v-else-if="section.module === 'feed'" class="portal-hot__feed-grid">
-                <FeedSourceIdentityCard
-                  v-for="item in section.items"
-                  :key="item.id"
-                  :source="{
-                    id: item.id,
-                    title: item.title,
-                    description: item.summary,
-                    category: 'blog',
-                    subscriptionCount: Math.round(item.score || 0),
-                    recentItemCount: 0,
-                    recentItems: [],
-                    subscribed: false
-                  }"
-                  :color="buildSourceColor(item.title || item.id)"
-                  :avatar-label="buildSourceAvatarLabel(item.title)"
-                  :image-url="item.image_url"
-                  :eyebrow="item.score_label || 'RSS 订阅'"
-                  :show-subscribe="false"
-                  @select="router.push(item.target_path)"
-                />
-              </div>
-
-              <!-- 📰 博客专区及其他流式模块：采用规范的 .feed-timeline-box + PEntry 流式卡片 -->
+              <!-- 📡 订阅专区与 📰 博客专区及其他流式模块：全部采用标准流式容器 .feed-timeline-box + PEntry 流式卡片 -->
               <div v-else class="feed-timeline-box">
                 <RouterLink
                   v-for="item in section.items"
@@ -172,20 +165,22 @@
                     :summary="item.summary"
                     class="content-stream-entry portal-hot__card"
                   >
-                    <template v-if="item.image_url" #visual>
-                      <div class="portal-hot__thumb">
-                        <img
-                          :src="item.image_url"
-                          :alt="item.title"
-                          :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
-                          :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
-                        >
-                        <div class="portal-hot__thumb-overlay" />
-                      </div>
+                    <!-- 左侧未读居中小短竖线 -->
+                    <template #visual>
+                      <span class="portal-stream-unread-bar" aria-hidden="true" />
                     </template>
 
                     <template #meta>
-                      <span class="portal-hot__tag">{{ moduleLabel(section.module) }}</span>
+                      <span
+                        class="portal-hot__tag"
+                        :class="{
+                          'portal-hot__tag--feed': section.module === 'feed',
+                          'portal-hot__tag--blog': section.module === 'blog',
+                          'portal-hot__tag--video': section.module === 'video'
+                        }"
+                      >
+                        {{ moduleLabel(section.module) }}
+                      </span>
                       <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
                       <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
                     </template>
@@ -228,15 +223,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
+import { Music, Play } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
-import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 import { useApi } from '@/composables/useApi'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
@@ -266,7 +260,6 @@ interface PortalHotResponse {
   sections: PortalHotSection[]
 }
 
-const router = useRouter()
 const api = useApi()
 const siteAccessStore = useSiteAccessStore()
 
@@ -355,21 +348,6 @@ function formatDate(dateStr?: string) {
   } catch {
     return ''
   }
-}
-
-function buildSourceColor(seed: string) {
-  const palette = ['#e11d48', '#ea580c', '#d97706', '#16a34a', '#0891b2', '#2563eb', '#7c3aed', '#c026d3']
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i)
-    hash |= 0
-  }
-  return palette[Math.abs(hash) % palette.length]
-}
-
-function buildSourceAvatarLabel(title: string) {
-  if (!title) return '源'
-  return title.slice(0, 2).toUpperCase()
 }
 
 onMounted(loadHotContent)
@@ -589,6 +567,21 @@ onMounted(loadHotContent)
   color: var(--a-color-muted);
 }
 
+.portal-hot__tag--feed {
+  background: color-mix(in srgb, #2563eb 12%, transparent);
+  color: #2563eb;
+}
+
+.portal-hot__tag--blog {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #16a34a;
+}
+
+.portal-hot__tag--video {
+  background: color-mix(in srgb, #ea580c 12%, transparent);
+  color: #ea580c;
+}
+
 .portal-hot__score {
   font-size: 0.68rem;
   color: var(--a-color-primary);
@@ -663,21 +656,139 @@ onMounted(loadHotContent)
   color: var(--a-color-text);
 }
 
-/* 🎵 音乐专区黑胶专辑卡片网格 */
+/* 🎵 音乐专区大号精致卡片网格 */
 .portal-hot__music-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
 }
 
-/* 📡 订阅专区 FeedSourceIdentityCard 网格 */
-.portal-hot__feed-grid {
+.portal-music-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--a-radius-card);
+  padding: 0.65rem;
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.portal-music-card:hover {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+  transform: translateY(-2px);
+}
+
+.portal-music-card__cover-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
+  background: var(--a-color-surface-muted);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.portal-music-card__cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.portal-music-card:hover .portal-music-card__cover {
+  transform: scale(1.04);
+}
+
+.portal-music-card__cover-placeholder {
+  width: 100%;
+  height: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1rem;
+  place-items: center;
+  color: var(--a-color-muted);
 }
 
-/* 📰 标准流式容器 */
+.placeholder-icon {
+  opacity: 0.3;
+}
+
+.portal-music-card__play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.portal-music-card:hover .portal-music-card__play-overlay {
+  opacity: 1;
+}
+
+.portal-music-card__play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--a-color-primary);
+  color: var(--a-color-primary-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--a-shadow-card);
+  transform: scale(0.9);
+  transition: transform 0.2s ease;
+}
+
+.portal-music-card:hover .portal-music-card__play-btn {
+  transform: scale(1);
+}
+
+.portal-music-card__score-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 0.15em 0.5em;
+  font-size: 0.68rem;
+  font-weight: 650;
+  border-radius: var(--a-radius-control);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.portal-music-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.portal-music-card__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--a-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-music-card__artist {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--a-color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 📰 标准流式容器与条目 */
 .feed-timeline-box {
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
@@ -685,26 +796,15 @@ onMounted(loadHotContent)
   background: var(--a-color-bg);
 }
 
-.portal-hot__thumb {
-  position: relative;
-  width: 90px;
-  height: 64px;
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-  background: var(--a-color-surface-muted);
+/* 居中未读小短竖线 */
+.portal-stream-unread-bar {
+  display: block;
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+  background: #10b981;
+  margin-top: 0.2rem;
   flex-shrink: 0;
-}
-
-.portal-hot__thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.portal-hot__thumb-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.1) 100%);
 }
 
 /* ─── Module Strip ─────────────────────────────────────── */
@@ -790,8 +890,7 @@ onMounted(loadHotContent)
 
 @media (max-width: 768px) {
   .portal-hot__recommendation-grid,
-  .portal-hot__loading-grid,
-  .portal-hot__feed-grid {
+  .portal-hot__loading-grid {
     grid-template-columns: 1fr;
   }
 

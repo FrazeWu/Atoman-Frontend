@@ -327,7 +327,7 @@ const albumYear = computed(() => {
 
 /* 卡片 Hover 状态：黑胶唱片向右抽出并旋转 */
 .music-album-card:hover .vinyl-disc {
-  transform: translateX(24%) rotate(24deg);
+  transform: translateX(36%) rotate(18deg);
   box-shadow: var(--a-shadow-lg);
 }
 

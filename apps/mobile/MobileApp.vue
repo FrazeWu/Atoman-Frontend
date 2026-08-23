@@ -3,10 +3,11 @@
     <MobileTopbar />
     <main
       class="app-main mobile-app-main"
-      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
+      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'mobile-app-main--with-player': showMobilePlayer, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
     >
       <RouterView />
     </main>
+    <MobileAudioPlayer v-if="showMobilePlayer" />
     <MobileBottomNav v-if="showMobileBottomNav" />
   </div>
 </template>
@@ -15,9 +16,11 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
+import MobileAudioPlayer from './MobileAudioPlayer.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
+import { usePlayerStore } from '@/stores/player'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import MobileTopbar from './MobileTopbar.vue'
@@ -26,9 +29,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
+const player = usePlayerStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const showMobileBottomNav = computed(() => !isAuthRoute.value && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio'))
+const showMobilePlayer = computed(() => Boolean(player.currentSong) && showMobileBottomNav.value && route.path !== '/music/player')
 
 const reportPageView = () => {
   if (isAuthRoute.value) return
@@ -92,6 +97,10 @@ body {
 
 .mobile-app-main--no-bottom-nav {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-app-main--with-player {
+  padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-app-shell .p-dropdown-panel {

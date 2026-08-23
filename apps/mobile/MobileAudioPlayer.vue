@@ -90,8 +90,8 @@ function openPlayer() {
   min-height: var(--mobile-app-player-height, 76px);
   padding: 0.5rem 0.75rem 0.75rem;
   border-top: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+  background: var(--a-color-surface);
+  box-shadow: none;
 }
 
 .mobile-mini-player__track {

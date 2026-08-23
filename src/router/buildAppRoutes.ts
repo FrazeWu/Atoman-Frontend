@@ -58,6 +58,7 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
     { path: '/dev/showcase', component: () => import('@/views/dev/InteractionShowcaseView.vue') },
+    { path: '/dev/music-card', component: () => import('@/views/dev/MusicCardShowcaseView.vue') },
     { path: '/dev/album-creation', component: () => import('@/views/dev/AlbumCreationShowcaseView.vue') },
     { path: '/dev/blog-template', component: () => import('@/views/dev/BlogTemplateView.vue'), meta: { hasSidebar: true } },
     { path: '/dev/blog-explore-template', component: () => import('@/views/dev/BlogExploreTemplateView.vue'), meta: { hasSidebar: true } },

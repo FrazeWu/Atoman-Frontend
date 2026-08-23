@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, provide, ref, watch } from 'vue'
+import { computed, onUnmounted, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -79,6 +79,7 @@ const closeCurrentCreationFlow = () => {
 }
 const loadedEditKey = ref('')
 const closePending = ref(false)
+onUnmounted(invalidateImportAutosave)
 
 function parseStageNames(raw: string | undefined, fallbackName: string) {
   try {
@@ -811,7 +812,6 @@ function requestClose() {
 
 function confirmClose() {
   closePending.value = false
-  invalidateImportAutosave()
   closeCurrentCreationFlow()
 }
 

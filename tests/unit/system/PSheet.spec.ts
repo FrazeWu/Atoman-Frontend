@@ -26,9 +26,9 @@ describe("PSheet.vue", () => {
 			/\.p-sheet-panel\s*\{[\s\S]*?transition:[^;]*left 200ms ease/,
 		);
 		expect(source).toMatch(
-			/\.slide-right-enter-active[\s\S]*?transition:[\s\S]*?transform 320ms[\s\S]*?opacity 220ms/,
+			/\.slide-right-enter-active[\s\S]*?transition:[\s\S]*?transform 360ms/,
 		);
-		expect(source).toMatch(/\.slide-right-enter-from,[\s\S]*?opacity:\s*0/);
+		expect(source).toMatch(/\.slide-right-enter-from,[\s\S]*?transform:\s*translateX\(100%\)/);
 	});
 
 	it("renders body content and the vertical page rail", () => {

@@ -514,46 +514,39 @@ const sheetStyle = computed(() => {
 
 .slide-right-enter-active,
 .slide-left-enter-active {
-  transition:
-    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms ease-out;
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .slide-right-leave-active,
 .slide-left-leave-active {
-  transition:
-    transform 220ms cubic-bezier(0.4, 0, 1, 1),
-    opacity 180ms ease-in;
+  transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
+  will-change: transform;
 }
 
 .slide-right-enter-from,
 .slide-right-leave-to {
   transform: translateX(100%);
-  opacity: 0;
 }
 
 .slide-left-enter-from,
 .slide-left-leave-to {
   transform: translateX(-100%);
-  opacity: 0;
 }
 
 .slide-up-enter-active {
-  transition:
-    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms ease-out;
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .slide-up-leave-active {
-  transition:
-    transform 220ms cubic-bezier(0.4, 0, 1, 1),
-    opacity 180ms ease-in;
+  transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
+  will-change: transform;
 }
 
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
-  opacity: 0;
 }
 
 @media (max-width: 767px) {

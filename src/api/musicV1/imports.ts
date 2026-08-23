@@ -642,7 +642,8 @@ export function uploadMusicAlbumImportFilePart(
 				settle(() => reject(new Error(`上传分片失败 (${xhr.status})`)));
 				return;
 			}
-			const etag = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
+			const etag =
+				xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
 			if (!etag) {
 				settle(() => reject(new Error("上传分片失败")));
 				return;

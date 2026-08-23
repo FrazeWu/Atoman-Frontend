@@ -532,7 +532,7 @@ export function useAlbumImportUpload() {
 					uploadTasks.slice(index, index + 3).map((task) => task()),
 				);
 			}
-			if (!isCurrent()) return
+			if (!isCurrent()) return;
 			const completed = await completeMusicAlbumImportSession(session.importId);
 			if (isCurrent() && draft.importId === session.importId) {
 				refreshWhenFilesUploaded(flow, completed, session.importId);
@@ -587,9 +587,9 @@ export function useAlbumImportUpload() {
 					fileId,
 					generation,
 				);
-				if (!isCurrent()) return
-				const latest = await getMusicAlbumImport(importId)
-				if (!isCurrent()) return
+				if (!isCurrent()) return;
+				const latest = await getMusicAlbumImport(importId);
+				if (!isCurrent()) return;
 				refreshWhenFilesUploaded(flow, latest, importId);
 			} else if (!needsUpload) {
 				startPollingFor(flow, importId);
@@ -632,9 +632,9 @@ export function useAlbumImportUpload() {
 				fileId,
 				generation,
 			);
-			if (!isCurrent()) return
-			const latest = await getMusicAlbumImport(importId)
-			if (!isCurrent()) return
+			if (!isCurrent()) return;
+			const latest = await getMusicAlbumImport(importId);
+			if (!isCurrent()) return;
 			refreshWhenFilesUploaded(flow, latest, importId);
 		} catch (error) {
 			if (isCurrent()) {

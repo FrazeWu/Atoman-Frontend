@@ -251,7 +251,7 @@ describe("ArtistDrawer.vue", () => {
 					entry_status: "open",
 				},
 			],
-			meta: { page: 1, page_size: 100, total: 2, has_more: false },
+			meta: { page: 1, page_size: 24, total: 2, has_more: false },
 		});
 
 		await wrapper
@@ -264,7 +264,7 @@ describe("ArtistDrawer.vue", () => {
 			release_type: "single,leak",
 			sort: "-release_date",
 			page: 1,
-			page_size: 100,
+			page_size: 24,
 		});
 		expect(wrapper.findAll(".artist-track")).toHaveLength(2);
 		expect(wrapper.text()).toContain("New Single");
@@ -505,36 +505,26 @@ describe("ArtistDrawer.vue", () => {
 		wrapper.unmount();
 	});
 
-	it("loads all artist album pages without rendering pagination", async () => {
-		listMusicAlbums
-			.mockResolvedValueOnce({
-				data: [{ id: "album-1", title: "First Batch", entry_status: "open" }],
-				meta: { page: 1, page_size: 100, total: 101, has_more: true },
-			})
-			.mockResolvedValueOnce({
-				data: [{ id: "album-2", title: "Final Batch", entry_status: "open" }],
-				meta: { page: 2, page_size: 100, total: 101, has_more: false },
-			});
+	it("loads the first artist album page and renders pagination", async () => {
+		listMusicAlbums.mockResolvedValueOnce({
+			data: [{ id: "album-1", title: "First Batch", entry_status: "open" }],
+			meta: { page: 1, page_size: 24, total: 101, has_more: true },
+		});
 
 		const wrapper = mount(ArtistDrawer);
 		await vi.dynamicImportSettled();
 
-		expect(listMusicAlbums).toHaveBeenNthCalledWith(1, {
+		expect(listMusicAlbums).toHaveBeenCalledTimes(1);
+		expect(listMusicAlbums).toHaveBeenCalledWith({
 			artist_id: "1",
 			sort: "-release_date",
 			page: 1,
-			page_size: 100,
-		});
-		expect(listMusicAlbums).toHaveBeenNthCalledWith(2, {
-			artist_id: "1",
-			sort: "-release_date",
-			page: 2,
-			page_size: 100,
+			page_size: 24,
 		});
 		expect(wrapper.text()).toContain("First Batch");
-		expect(wrapper.text()).toContain("Final Batch");
+		expect(wrapper.text()).not.toContain("Final Batch");
 		expect(wrapper.findComponent({ name: "PaginationBar" }).exists()).toBe(
-			false,
+			true,
 		);
 	});
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp } from 'lucide-vue-next'
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 import {
   BIRTH_DATE_SLOT_POSITIONS,
   formatPartialDateInput,
@@ -28,7 +29,6 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 const internalValue = ref('yyyy/mm/dd')
 const showPopover = ref(false)
-const showHelp = ref(false)
 
 const defaultHelpText = computed(() => props.helpText || (
   props.presentWhenEmpty
@@ -218,12 +218,6 @@ function handleSelect() {
 
 function togglePopover() {
   showPopover.value = !showPopover.value
-  showHelp.value = false
-}
-
-function toggleHelp() {
-  showHelp.value = !showHelp.value
-  showPopover.value = false
 }
 
 function closePopover() {
@@ -287,7 +281,6 @@ const calendarDays = computed(() => {
 function handleClickOutside(event: MouseEvent) {
   if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
     showPopover.value = false
-    showHelp.value = false
   }
 }
 
@@ -301,20 +294,15 @@ onUnmounted(() => window.removeEventListener('click', handleClickOutside))
       <label class="field-label">
         {{ label }}{{ required ? '*' : '' }}
       </label>
-      <button
-        type="button"
-        class="date-help-trigger"
+      <PHelpTooltip
+        :text="defaultHelpText"
         :aria-label="`${label}填写说明`"
-        :aria-expanded="showHelp"
-        :data-testid="testId ? `${testId}-help-btn` : undefined"
-        @click.stop="toggleHelp"
-      >
-        <CircleHelp :size="15" aria-hidden="true" />
-      </button>
-    </div>
-
-    <div v-if="showHelp" class="date-help-popover" role="status" @click.stop>
-      {{ defaultHelpText }}
+        :trigger-test-id="testId ? `${testId}-help-btn` : undefined"
+        trigger="both"
+        placement="bottom-start"
+        size="sm"
+        @open="closePopover"
+      />
     </div>
 
     <div class="birth-date-field">
@@ -344,7 +332,7 @@ onUnmounted(() => window.removeEventListener('click', handleClickOutside))
 		:data-test="testId ? `${testId}-picker-btn` : undefined"
         aria-label="选择日期"
         :aria-expanded="showPopover"
-        @click.stop="togglePopover"
+        @click="togglePopover"
       >
         <CalendarDays :size="16" />
       </button>
@@ -421,42 +409,6 @@ onUnmounted(() => window.removeEventListener('click', handleClickOutside))
   display: flex;
   align-items: center;
   gap: 0.3rem;
-}
-
-.date-help-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-}
-
-.date-help-trigger:hover,
-.date-help-trigger:focus-visible {
-  color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-}
-
-.date-help-popover {
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  left: 0;
-  z-index: 121;
-  max-width: min(22rem, calc(100vw - 2rem));
-  padding: 0.55rem 0.65rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  box-shadow: var(--a-shadow-md);
-  font-size: 0.78rem;
-  line-height: 1.45;
 }
 
 .birth-date-field {

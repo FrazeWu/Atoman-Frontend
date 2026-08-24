@@ -75,68 +75,58 @@
       </RouterLink>
 
       <!-- 评分标准建议问号图标与悬浮浮层 -->
-      <div
-        class="post-rating__help-wrap"
-        tabindex="0"
-        role="tooltip"
-        aria-label="评分标准建议"
+      <PHelpTooltip
+        title="评分参考标准"
+        kicker="6 分及格线"
+        placement="top-end"
+        aria-label="查看评分参考标准"
       >
-        <button type="button" class="post-rating__help-btn" aria-label="查看评分参考标准">
-          <HelpCircle :size="14" aria-hidden="true" />
-        </button>
-
-        <!-- 悬浮弹出的评分指南卡片 -->
-        <div class="post-rating__guidelines-popover">
-          <header class="guidelines-head">
-            <strong>评分参考标准</strong>
-            <span class="guidelines-kicker">6 分及格线</span>
-          </header>
-          <ul class="guidelines-list">
-            <li class="guidelines-item">
-              <span class="score-badge is-top">9 - 10</span>
-              <div class="score-desc">
-                <strong>力荐</strong>
-                <span>卓越之作，深度与启发性兼备</span>
-              </div>
-            </li>
-            <li class="guidelines-item">
-              <span class="score-badge is-high">7 - 8</span>
-              <div class="score-desc">
-                <strong>推荐</strong>
-                <span>内容扎实，值得完整阅读</span>
-              </div>
-            </li>
-            <li class="guidelines-item">
-              <span class="score-badge is-pass">5 - 6</span>
-              <div class="score-desc">
-                <strong>及格 / 还行</strong>
-                <span>达到合格基准，内容基本完整</span>
-              </div>
-            </li>
-            <li class="guidelines-item">
-              <span class="score-badge is-low">3 - 4</span>
-              <div class="score-desc">
-                <strong>一般</strong>
-                <span>内容偏单薄，存在明显不足</span>
-              </div>
-            </li>
-            <li class="guidelines-item">
-              <span class="score-badge is-bad">1 - 2</span>
-              <div class="score-desc">
-                <strong>较差</strong>
-                <span>质量欠佳，缺乏参考价值</span>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
+        <ul class="guidelines-list">
+          <li class="guidelines-item">
+            <span class="score-badge is-top">9 - 10</span>
+            <div class="score-desc">
+              <strong>力荐</strong>
+              <span>卓越之作，深度与启发性兼备</span>
+            </div>
+          </li>
+          <li class="guidelines-item">
+            <span class="score-badge is-high">7 - 8</span>
+            <div class="score-desc">
+              <strong>推荐</strong>
+              <span>内容扎实，值得完整阅读</span>
+            </div>
+          </li>
+          <li class="guidelines-item">
+            <span class="score-badge is-pass">5 - 6</span>
+            <div class="score-desc">
+              <strong>及格 / 还行</strong>
+              <span>达到合格基准，内容基本完整</span>
+            </div>
+          </li>
+          <li class="guidelines-item">
+            <span class="score-badge is-low">3 - 4</span>
+            <div class="score-desc">
+              <strong>一般</strong>
+              <span>内容偏单薄，存在明显不足</span>
+            </div>
+          </li>
+          <li class="guidelines-item">
+            <span class="score-badge is-bad">1 - 2</span>
+            <div class="score-desc">
+              <strong>较差</strong>
+              <span>质量欠佳，缺乏参考价值</span>
+            </div>
+          </li>
+        </ul>
+      </PHelpTooltip>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Star, X, HelpCircle } from 'lucide-vue-next'
+import { Star, X } from 'lucide-vue-next'
+import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 
 const props = withDefaults(defineProps<{
   ratingScore?: number
@@ -304,8 +294,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 .post-rating__half--right { right: 0; }
 
 .post-rating__half:focus-visible,
-.post-rating__clear:focus-visible,
-.post-rating__help-btn:focus-visible {
+.post-rating__clear:focus-visible {
   outline: 2px solid var(--a-color-fg);
   outline-offset: 2px;
 }
@@ -357,83 +346,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   text-decoration: underline;
 }
 
-/* 帮助提示图标与 Popover 浮层 */
-.post-rating__help-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.post-rating__help-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: help;
-  padding: 0;
-  border-radius: 50%;
-  transition: color 0.15s ease;
-}
-
-.post-rating__help-btn:hover {
-  color: var(--a-color-fg);
-}
-
-.post-rating__guidelines-popover {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  width: 260px;
-  padding: 0.85rem;
-  background: color-mix(in srgb, var(--a-color-bg) 92%, transparent);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-md);
-  z-index: 100;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(6px);
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-}
-
-.post-rating__help-wrap:hover .post-rating__guidelines-popover,
-.post-rating__help-wrap:focus-within .post-rating__guidelines-popover {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.guidelines-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-
-.guidelines-head strong {
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: var(--a-color-fg);
-}
-
-.guidelines-kicker {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #d97706;
-  background: color-mix(in srgb, #f59e0b 12%, transparent);
-  padding: 0.1em 0.45em;
-  border-radius: var(--a-radius-pill, 999px);
-}
-
+/* 评分指南内部条目样式（承载于 PHelpTooltip 中） */
 .guidelines-list {
   display: grid;
   gap: 0.45rem;

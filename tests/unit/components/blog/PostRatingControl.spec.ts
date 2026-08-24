@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 
 describe('PostRatingControl.vue', () => {
-  it('renders rating summary correctly', () => {
+  it('renders rating summary and the unified help trigger', () => {
     const wrapper = mount(PostRatingControl, {
       props: {
         ratingScore: 7.8,
@@ -13,8 +13,8 @@ describe('PostRatingControl.vue', () => {
 
     expect(wrapper.text()).toContain('7.8')
     expect(wrapper.text()).toContain('(15)')
-    expect(wrapper.find('.post-rating__guidelines-popover').exists()).toBe(true)
-    expect(wrapper.text()).toContain('6 分及格线')
+    expect(wrapper.find('.p-help-tooltip__trigger').attributes('aria-label')).toBe('查看评分参考标准')
+    expect(wrapper.find('.p-help-tooltip__popover').exists()).toBe(false)
   })
 
   it('shows hover score dynamically when hovering on half stars', async () => {
@@ -69,9 +69,12 @@ describe('PostRatingControl.vue', () => {
     expect(wrapper.emitted('clear')).toBeTruthy()
   })
 
-  it('contains rating guidelines with 6-point pass baseline', () => {
+  it('shows rating guidelines with a 6-point pass baseline', async () => {
     const wrapper = mount(PostRatingControl)
-    const popover = wrapper.find('.post-rating__guidelines-popover')
+    await wrapper.get('.p-help-tooltip__trigger').trigger('click')
+
+    const popover = wrapper.get('.p-help-tooltip__popover')
+    expect(popover.text()).toContain('6 分及格线')
     expect(popover.text()).toContain('力荐')
     expect(popover.text()).toContain('推荐')
     expect(popover.text()).toContain('及格 / 还行')

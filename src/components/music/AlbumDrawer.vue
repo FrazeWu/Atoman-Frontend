@@ -238,12 +238,6 @@ function isTrackPlaying(track: AlbumTrack) {
   return player.isPlaying && !!current && String(current.source_id || current.id) === String(track.id)
 }
 
-const isCurrentAlbumPlaying = computed(() => {
-  if (!player.isPlaying || !player.currentSong) return false
-  const currentId = String(player.currentSong.source_id || player.currentSong.id)
-  return playableSongs.value.some((song) => String(song.id) === currentId)
-})
-
 function playTrack(track: AlbumTrack) {
   if (!canPlayTrack(track)) return
   if (isTrackPlaying(track)) {
@@ -599,38 +593,15 @@ watch(
 
       <div v-if="!loading && album" class="album-meta-row">
         <div class="album-cover">
-          <div class="album-cover-jacket">
-            <!-- 实体黑胶唱片碟片 (播放中或 hover 时滑出并旋转) -->
-            <div
-              class="album-vinyl-disc"
-              :class="{ 'is-playing': isCurrentAlbumPlaying }"
-              aria-hidden="true"
+          <div class="album-cover-frame">
+            <img
+              v-if="coverUrl && !isCoverBroken"
+              :src="coverUrl"
+              :alt="`${album?.title || '专辑'}封面`"
+              class="album-cover-img"
+              @error="handleCoverError"
             >
-              <div class="album-vinyl-grooves" />
-              <div class="album-vinyl-sheen" />
-              <div class="album-vinyl-center">
-                <div class="album-vinyl-label">
-                  <img
-                    v-if="coverUrl && !isCoverBroken"
-                    :src="coverUrl"
-                    alt=""
-                    class="album-vinyl-label-img"
-                  />
-                </div>
-                <div class="album-vinyl-hole" />
-              </div>
-            </div>
-
-            <div class="album-cover-frame">
-              <img
-                v-if="coverUrl && !isCoverBroken"
-                :src="coverUrl"
-                :alt="`${album?.title || '专辑'}封面`"
-                class="album-cover-img"
-                @error="handleCoverError"
-              />
-              <span v-else class="album-cover-empty">暂无封面</span>
-            </div>
+            <span v-else class="album-cover-empty">暂无封面</span>
           </div>
         </div>
         <div class="album-info">
@@ -886,118 +857,6 @@ watch(
   width: 220px;
   height: 220px;
   flex-shrink: 0;
-  position: relative;
-  overflow: visible;
-}
-
-.album-cover-jacket {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.album-vinyl-disc {
-  position: absolute;
-  top: 3%;
-  right: 0;
-  width: 94%;
-  height: 94%;
-  border-radius: 50%;
-  background: #09090b;
-  box-shadow: var(--a-shadow-md);
-  z-index: 1;
-  transform: translateX(0) rotate(0deg);
-  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.album-cover-jacket:hover .album-vinyl-disc {
-  transform: translateX(28%) rotate(24deg);
-  box-shadow: var(--a-shadow-lg);
-}
-
-.album-vinyl-disc.is-playing {
-  transform: translateX(32%) rotate(0deg);
-  animation: album-vinyl-spin 20s linear infinite;
-  box-shadow: var(--a-shadow-lg);
-}
-
-@keyframes album-vinyl-spin {
-  from { transform: translateX(32%) rotate(0deg); }
-  to { transform: translateX(32%) rotate(360deg); }
-}
-
-.album-vinyl-grooves {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: repeating-radial-gradient(
-    circle,
-    #18181b 0px,
-    #18181b 2px,
-    #09090b 3px,
-    #09090b 4px
-  );
-  opacity: 0.94;
-}
-
-.album-vinyl-sheen {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 45deg,
-    rgba(255, 255, 255, 0.15) 0deg,
-    transparent 60deg,
-    rgba(255, 255, 255, 0.15) 120deg,
-    transparent 180deg,
-    rgba(255, 255, 255, 0.15) 240deg,
-    transparent 300deg,
-    rgba(255, 255, 255, 0.15) 360deg
-  );
-  mix-blend-mode: overlay;
-  pointer-events: none;
-}
-
-.album-vinyl-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 34%;
-  height: 34%;
-  border-radius: 50%;
-  background: #27272a;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.album-vinyl-label {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-.album-vinyl-label-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.85;
-}
-
-.album-vinyl-hole {
-  position: absolute;
-  width: 16%;
-  height: 16%;
-  border-radius: 50%;
-  background: var(--a-color-bg, #000);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 2;
 }
 
 .album-cover-frame {

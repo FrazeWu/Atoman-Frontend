@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures/base'
 
 test.describe('Music', () => {
   test('browse albums', async ({ page }) => {
-    await page.goto('/music')
+    await page.goto('/music/albums')
     await expect(page.getByRole('heading', { name: '专辑' })).toBeVisible()
   })
 
@@ -29,7 +29,7 @@ test.describe('Music', () => {
     await page.waitForTimeout(3000)
 
     const card = page.locator('[data-testid="album-card"]').first()
-    if (await card.isVisible().catch(() => false)) {
+    if (await card.isVisible()) {
       await card.click()
       await page.waitForTimeout(2000)
       await expect(page).toHaveURL(/\/music(?:\?|\?.*&)album=/)
@@ -41,7 +41,7 @@ test.describe('Music', () => {
     await page.waitForTimeout(3000)
 
     const playBtn = page.getByRole('button', { name: '▶ 播放' }).first()
-    if (await playBtn.isVisible().catch(() => false)) {
+    if (await playBtn.isVisible()) {
       await playBtn.click()
       await page.waitForTimeout(1000)
       await expect(page.locator('body')).toBeVisible()
@@ -67,12 +67,13 @@ test.describe('Music', () => {
 
   test('music form pages render core controls', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/music/artist/new?name=test_artist')
-    await expect(authenticatedPage.getByRole('heading', { name: '新建艺术家' })).toBeVisible()
+    const creationDialog = authenticatedPage.getByRole('dialog', { name: '创建艺术家' })
+    await expect(creationDialog).toBeVisible()
     const url = new URL(authenticatedPage.url())
     expect(url.pathname).toBe('/music')
     expect(url.searchParams.get('editor')).toBe('artist-create')
     expect(url.searchParams.get('name')).toBe('test_artist')
-    await expect(authenticatedPage.getByPlaceholder('例如：Kanye West')).toHaveValue('test_artist')
-    await expect(authenticatedPage.getByRole('button', { name: '创建艺术家' })).toBeVisible()
+    await expect(creationDialog.getByRole('textbox', { name: '主艺名*' })).toHaveValue('test_artist')
+    await expect(creationDialog.getByRole('button', { name: '创建专辑/歌曲' })).toBeVisible()
   })
 })

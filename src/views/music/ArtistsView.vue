@@ -161,13 +161,35 @@ async function fetchArtists(page = 1) {
       return
     }
 
-    const [recommendedResponse, ownedDraftResponse] = await Promise.all([
+    const [recommendedResult, ownedDraftResult] = await Promise.allSettled([
       listRecommendedArtists(recommendationMode.value, { page, page_size: 48 }),
       authStore.isAuthenticated && page === 1
         ? listMusicArtists({ page: 1, page_size: 48 })
         : Promise.resolve(null),
     ])
     if (requestId !== activeRequestId) return
+
+    if (recommendedResult.status === 'rejected') {
+      reportError(recommendedResult.reason, 'Failed to fetch recommended music artists:')
+      const fallbackResponse = await listMusicArtists({ page, page_size: 48 })
+      if (requestId !== activeRequestId) return
+      artists.value = fallbackResponse.data
+      artistMeta.value = fallbackResponse.meta ?? {
+        page,
+        page_size: 48,
+        total: fallbackResponse.data.length,
+        has_more: false,
+      }
+      return
+    }
+
+    const recommendedResponse = recommendedResult.value
+    const ownedDraftResponse = ownedDraftResult.status === 'fulfilled'
+      ? ownedDraftResult.value
+      : null
+    if (ownedDraftResult.status === 'rejected') {
+      reportError(ownedDraftResult.reason, 'Failed to fetch owned artist drafts:')
+    }
     const recommendedMeta = recommendedResponse.meta ?? {
       page,
       page_size: 48,

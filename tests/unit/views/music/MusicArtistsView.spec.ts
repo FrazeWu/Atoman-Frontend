@@ -172,6 +172,42 @@ describe("Music ArtistsView.vue", () => {
 		expect(wrapper.text()).toContain("1994");
 	});
 
+	it("falls back to the public artist list when recommendations fail", async () => {
+		mocks.listRecommendedArtists.mockRejectedValueOnce(new Error("recommendations unavailable"));
+
+		const pinia = createTestingPinia({ createSpy: vi.fn });
+		const wrapper = mount(ArtistsView, {
+			global: {
+				plugins: [pinia],
+			},
+		});
+		await flushPromises();
+
+		expect(mocks.listMusicArtists).toHaveBeenCalledWith({
+			page: 1,
+			page_size: 48,
+		});
+		expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1);
+		expect(wrapper.text()).toContain("Hot Artist");
+		expect(wrapper.text()).not.toContain("艺术家列表加载失败");
+	});
+
+	it("keeps recommendations visible when owned artist drafts fail", async () => {
+		mocks.listMusicArtists.mockRejectedValueOnce(new Error("drafts unavailable"));
+
+		const pinia = createTestingPinia({ createSpy: vi.fn });
+		useAuthStore(pinia).isAuthenticated = true;
+		const wrapper = mount(ArtistsView, {
+			global: {
+				plugins: [pinia],
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1);
+		expect(wrapper.text()).toContain("Hot Artist");
+		expect(wrapper.text()).not.toContain("艺术家列表加载失败");
+	});
 	it("counts owned draft artists in the pagination total", async () => {
 		mocks.listRecommendedArtists.mockResolvedValueOnce({
 			data: [

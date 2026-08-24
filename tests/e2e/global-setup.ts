@@ -10,7 +10,8 @@ async function globalSetup(config: FullConfig) {
 		(config.projects[0]?.use as { baseURL?: string } | undefined)?.baseURL ||
 			"http://localhost:5173",
 	);
-	const loginURL = new URL("/api/v1/auth/login", baseURL).toString();
+	const apiBaseURL = process.env.E2E_API_BASE_URL || baseURL;
+	const loginURL = new URL("/api/v1/auth/login", apiBaseURL).toString();
 	const context = await request.newContext({ baseURL });
 	try {
 		const response = await context.post(loginURL, {

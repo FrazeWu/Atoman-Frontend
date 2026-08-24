@@ -18,6 +18,7 @@ const makeRouter = () =>
 			{ path: "/music", component: { template: "<div />" } },
 			{ path: "/music/discover", component: { template: "<div />" } },
 			{ path: "/music/songs", component: { template: "<div />" } },
+			{ path: "/music/playlists", component: { template: "<div />" } },
 			{ path: "/music/bookmarks", component: { template: "<div />" } },
 			{ path: "/music/me", component: { template: "<div />" } },
 		],
@@ -27,7 +28,7 @@ describe("useResponsiveShell", () => {
 	it("returns the stable tabs for each module context", () => {
 		expect(
 			getMobilePrimaryTabs("music").map((tab: MobilePrimaryTab) => tab.label),
-		).toEqual(["发现", "搜索", "资料库", "我的"]);
+		).toEqual(["发现", "搜索", "歌单", "我的"]);
 		expect(
 			getMobilePrimaryTabs("forum").map((tab: MobilePrimaryTab) => tab.label),
 		).toEqual(["话题", "分类", "搜索", "我的"]);
@@ -89,7 +90,7 @@ describe("useResponsiveShell", () => {
 			wrapper
 				.findAll('[data-testid="mobile-bottom-nav-tab"]')
 				.map((tab) => tab.text()),
-		).toEqual(["发现", "搜索", "资料库", "我的"]);
+		).toEqual(["发现", "搜索", "歌单", "我的"]);
 		expect(wrapper.get('[data-tab-key="discover"]').classes()).toContain(
 			"is-active",
 		);
@@ -109,7 +110,7 @@ describe("useResponsiveShell", () => {
 
 		await wrapper.get('[data-tab-key="library"]').trigger("click");
 		await flushPromises();
-		expect(router.currentRoute.value.path).toBe("/music/bookmarks");
+		expect(router.currentRoute.value.path).toBe("/music/playlists");
 		expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(
 			false,
 		);

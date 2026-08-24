@@ -4,7 +4,6 @@ import {
 	Compass,
 	Folder,
 	Heart,
-	Library,
 	ListMusic,
 	MessageSquare,
 	Radio,
@@ -60,7 +59,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 	music: tabs("music", [
 		["discover", "发现", "/discover", Compass],
 		["search", "搜索", "/songs", Search],
-		["library", "资料库", "/bookmarks", Library],
+		["library", "歌单", "/playlists", ListMusic],
 		["me", "我的", "/me", UserRound],
 	]),
 	forum: tabs("forum", [

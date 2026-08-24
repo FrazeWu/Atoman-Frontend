@@ -53,6 +53,7 @@ describe("mobile app route boundary", () => {
 				"/music",
 				"/music/player",
 				"/music/lyrics",
+				"/music/playlists",
 				"/music/bookmarks",
 				"/music/me",
 			]),

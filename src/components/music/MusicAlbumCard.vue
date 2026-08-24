@@ -1,82 +1,67 @@
 <template>
   <article class="music-album-card">
-    <div class="album-jacket-wrap">
-      <!-- 实体黑胶唱片碟片 (悬浮时从右侧滑出) -->
-      <div class="vinyl-disc" aria-hidden="true">
-        <div class="vinyl-grooves" />
-        <div class="vinyl-sheen" />
-        <div class="vinyl-center">
-          <div
-            class="vinyl-label"
-            :style="coverUrl ? { backgroundImage: `url(${coverUrl})` } : {}"
-          />
-          <div class="vinyl-hole" />
-        </div>
-      </div>
-
-      <div class="cover-frame">
-        <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
-          <img
-            v-if="coverUrl"
-            :src="coverUrl"
-            :alt="album.title"
-            class="cover-image"
-            :loading="priority ? 'eager' : 'lazy'"
-            :fetchpriority="priority ? 'high' : 'auto'"
-          />
-          <span v-else class="cover-placeholder">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
-            </svg>
-          </span>
-        </button>
-
-        <!-- Status Tag Badge for Draft / Importing Albums -->
-        <span v-if="statusBadgeText" class="status-tag" :data-status="album.status || album.entry_status">
-          {{ statusBadgeText }}
-        </span>
-
-        <!-- Bookmark Button on Top Right -->
-        <button
-          v-if="showBookmark"
-          type="button"
-          class="bookmark-btn"
-          :class="{ 'is-bookmarked': isBookmarked }"
-          @click="emit('toggle-bookmark')"
-          :aria-label="isBookmarked ? '取消收藏' : '收藏'"
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            :fill="isBookmarked ? 'currentColor' : 'none'"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+    <div class="cover-frame">
+      <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
+        <img
+          v-if="coverUrl"
+          :src="coverUrl"
+          :alt="album.title"
+          class="cover-image"
+          :loading="priority ? 'eager' : 'lazy'"
+          :fetchpriority="priority ? 'high' : 'auto'"
+        />
+        <span v-else class="cover-placeholder">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
           </svg>
-        </button>
+        </span>
+      </button>
 
-        <div class="stats-overlay">
-          <div class="stats-row">
-            <div class="stat-item">
-              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-              </svg>
-              <span class="stat-val">{{ formattedPlayCount }}</span>
-            </div>
-            <div class="stat-item">
-              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              <span class="stat-val">{{ formattedListeners }}</span>
-            </div>
+      <!-- Status Tag Badge for Draft / Importing Albums -->
+      <span v-if="statusBadgeText" class="status-tag" :data-status="album.status || album.entry_status">
+        {{ statusBadgeText }}
+      </span>
+
+      <!-- Bookmark Button on Top Right -->
+      <button
+        v-if="showBookmark"
+        type="button"
+        class="bookmark-btn"
+        :class="{ 'is-bookmarked': isBookmarked }"
+        @click="emit('toggle-bookmark')"
+        :aria-label="isBookmarked ? '取消收藏' : '收藏'"
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          :fill="isBookmarked ? 'currentColor' : 'none'"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+
+      <div class="stats-overlay">
+        <div class="stats-row">
+          <div class="stat-item">
+            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+            </svg>
+            <span class="stat-val">{{ formattedPlayCount }}</span>
+          </div>
+          <div class="stat-item">
+            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span class="stat-val">{{ formattedListeners }}</span>
           </div>
         </div>
       </div>
@@ -226,120 +211,14 @@ const albumYear = computed(() => {
   width: 100%;
 }
 
-.album-jacket-wrap {
+.cover-frame {
   position: relative;
   aspect-ratio: 1 / 1;
   width: 100%;
-}
-
-/* 实体黑胶唱片碟片 */
-.vinyl-disc {
-  position: absolute;
-  top: 3%;
-  right: 0;
-  width: 94%;
-  height: 94%;
-  border-radius: 50%;
-  background: #09090b;
-  box-shadow: var(--a-shadow-md);
-  z-index: 1;
-  transform: translateX(0) rotate(0deg);
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/* 同心圆黑胶凹槽声轨 */
-.vinyl-grooves {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: repeating-radial-gradient(
-    circle,
-    #18181b 0px,
-    #18181b 2px,
-    #09090b 3px,
-    #09090b 4px
-  );
-  opacity: 0.92;
-}
-
-/* 45度真实黑胶微光柱反光 */
-.vinyl-sheen {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 45deg,
-    rgba(255, 255, 255, 0.15) 0deg,
-    transparent 60deg,
-    rgba(255, 255, 255, 0.15) 120deg,
-    transparent 180deg,
-    rgba(255, 255, 255, 0.15) 240deg,
-    transparent 300deg,
-    rgba(255, 255, 255, 0.15) 360deg
-  );
-  mix-blend-mode: overlay;
-  pointer-events: none;
-}
-
-/* 唱片中心纸质标签与中心小孔 */
-.vinyl-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 34%;
-  height: 34%;
-  border-radius: 50%;
-  background: #27272a;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8);
-}
-
-.vinyl-label {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-.vinyl-label-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.85;
-}
-
-.vinyl-hole {
-  position: absolute;
-  width: 16%;
-  height: 16%;
-  border-radius: 50%;
-  background: var(--a-color-bg, #000);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 2;
-}
-
-/* 卡片 Hover 状态：黑胶唱片向右抽出并旋转 */
-.music-album-card:hover .vinyl-disc {
-  transform: translateX(36%) rotate(18deg);
-  box-shadow: var(--a-shadow-lg);
-}
-
-.cover-frame {
-  position: relative;
-  width: 100%;
-  height: 100%;
   background: var(--a-color-surface-muted, #f4f4f5);
   border-radius: var(--a-radius-card);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
-  z-index: 2;
   box-shadow: var(--a-shadow-sm);
   transition: border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
 }

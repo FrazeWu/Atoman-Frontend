@@ -1,14 +1,14 @@
 <template>
   <div class="showcase-page">
     <header class="showcase-header">
-      <h1 class="showcase-title">黑胶质感专辑卡片独立展示 (MusicAlbumCard)</h1>
-      <p class="showcase-desc">实体黑胶封套设计 · 同心圆声轨 · 45° 动态光泽 · 光标悬浮黑胶碟片抽出动效</p>
+      <h1 class="showcase-title">专辑卡片标准展示 (MusicAlbumCard)</h1>
+      <p class="showcase-desc">标准 1:1 方形黑胶封套 · 严谨网格对齐 · 优雅微浮起交互</p>
     </header>
 
     <div class="showcase-grid">
-      <!-- 1. 经典专辑 (静止态) -->
+      <!-- 1. Donda -->
       <section class="showcase-section">
-        <h2 class="section-badge">1. 静止态展示</h2>
+        <h2 class="section-badge">1. 暗色极简封面</h2>
         <div class="card-container">
           <MusicAlbumCard
             :album="{
@@ -26,12 +26,11 @@
         </div>
       </section>
 
-      <!-- 2. Graduation (彩色封套与抽出黑胶) -->
+      <!-- 2. Graduation -->
       <section class="showcase-section">
-        <h2 class="section-badge">2. Graduation (彩色高饱和封面)</h2>
+        <h2 class="section-badge">2. 高饱和彩色封套</h2>
         <div class="card-container">
           <MusicAlbumCard
-            id="card-hover-demo"
             :album="{
               id: 'album-grad',
               title: 'Graduation',
@@ -47,9 +46,9 @@
         </div>
       </section>
 
-      <!-- 3. 蒲公英 (浅色封面与黑胶对比) -->
+      <!-- 3. 蒲公英 -->
       <section class="showcase-section">
-        <h2 class="section-badge">3. 蒲公英 (浅色写实封面)</h2>
+        <h2 class="section-badge">3. 浅色写实封面</h2>
         <div class="card-container">
           <MusicAlbumCard
             :album="{
@@ -67,18 +66,18 @@
         </div>
       </section>
 
-      <!-- 4. 强制抽出态演示 (模拟 Hover 状态) -->
+      <!-- 4. 顽石点头 -->
       <section class="showcase-section">
-        <h2 class="section-badge">4. 黑胶抽出细节特写 (Hover 展开态)</h2>
-        <div class="card-container force-hover">
+        <h2 class="section-badge">4. 实体质感封套</h2>
+        <div class="card-container">
           <MusicAlbumCard
             :album="{
-              id: 'album-yandhi',
-              title: 'Yandhi (黑胶特写演示)',
-              summary: 'Ye',
+              id: 'album-wsdt',
+              title: '顽石点头',
+              summary: '杰子',
               image_url: 'https://assets.atoman.org/music/albums/019ff11a-b59c-7d46-890a-4ca9aa0708b6/cover.jpg',
               cover_url: 'https://assets.atoman.org/music/albums/019ff11a-b59c-7d46-890a-4ca9aa0708b6/cover.jpg',
-              year: 2018,
+              year: 2022,
               play_count: 9940,
               bookmark_count: 3100
             }"
@@ -110,7 +109,7 @@ import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 
 .showcase-title {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: var(--a-font-weight-strong, 700);
   color: var(--a-color-fg);
   margin-bottom: 0.5rem;
 }
@@ -122,8 +121,8 @@ import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 
 .showcase-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 3.5rem 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
   align-items: start;
 }
 
@@ -143,18 +142,5 @@ import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 
 .card-container {
   width: 100%;
-  max-width: 260px;
-}
-
-/* 强制呈现黑胶滑出状态以便视觉评估 */
-.card-container.force-hover :deep(.vinyl-disc) {
-  transform: translateX(36%) rotate(18deg) !important;
-  box-shadow: var(--a-shadow-lg) !important;
-}
-
-.card-container.force-hover :deep(.cover-frame) {
-  transform: translateY(-2px) !important;
-  border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft)) !important;
-  box-shadow: var(--a-shadow-md) !important;
 }
 </style>

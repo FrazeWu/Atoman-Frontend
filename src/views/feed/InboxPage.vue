@@ -56,6 +56,22 @@
           </div>
         </div>
 
+        <PSheet
+          v-if="mobileConversationOpen"
+          :show="mobileConversationOpen"
+          side="bottom"
+          title="私信"
+          close-type="header"
+          :height="'calc(100dvh - var(--a-content-bottom-offset))'"
+          panel-class="inbox-mobile-conversation-sheet"
+          above-player
+          @close="closeMobileConversation"
+        >
+          <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
+            <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
+          </DMConversationPane>
+        </PSheet>
+
         <section class="inbox-detail">
           <template v-if="activeTab !== 'dm'">
             <div v-if="selectedNotification" class="detail-card">
@@ -80,7 +96,7 @@
           </template>
 
           <template v-else>
-            <div v-if="dmStore.activeConversation || dmStore.activeTarget" class="detail-card detail-card-dm" :class="{ 'detail-card-dm--mobile': mobileConversationOpen }">
+            <div v-if="!mobileConversationOpen && (dmStore.activeConversation || dmStore.activeTarget)" class="detail-card detail-card-dm">
               <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
                 <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
               </DMConversationPane>
@@ -101,6 +117,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import { useInboxStore } from '@/stores/inbox'
 import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
@@ -743,8 +760,17 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   }
 }
 
-.dm-list-workspace { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); }
-.detail-card-dm { height:calc(100vh - 15rem); min-height:32rem; padding:0; }
-@media (max-width: 767px) { .dm-list-workspace--hidden { display:none; }.inbox-detail:has(.detail-card-dm--mobile) { display:block; position:fixed; inset:0; z-index:30; background:var(--a-color-bg); }.detail-card-dm--mobile { display:block; height:100dvh; min-height:0; border:0; }.detail-card-dm--mobile :deep(.dm-conversation-pane) { height:100%; } }
+@media (max-width: 767px) {
+  .dm-list-workspace--hidden { display: none; }
+}
+
+:global(.inbox-mobile-conversation-sheet .sheet-content) {
+  min-height: 0;
+  padding: 0;
+}
+
+:global(.inbox-mobile-conversation-sheet .dm-conversation-pane) {
+  height: 100%;
+}
 
 </style>

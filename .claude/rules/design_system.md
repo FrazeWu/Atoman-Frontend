@@ -40,6 +40,7 @@ From low to high:
 - Above-player modal panel: `760`
 - Lightbox: `800`
 - Toast: `900`
+- Global menu and search: `950`
 
 A local z-index is allowed only for controls inside an already-owned component stacking context. It must not create a second page-level overlay system.
 

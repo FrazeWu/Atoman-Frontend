@@ -13,8 +13,15 @@ const lyricEditorSource = read(
 	"src/components/music/MusicLyricEditorDrawer.vue",
 );
 const topbarSource = read("src/components/system/AppTopbar.vue");
+const topbarAuthSource = read(
+	"src/components/system/AppTopbarAuthControls.vue",
+);
+const globalSearchSource = read(
+	"src/components/system/AppTopbarGlobalSearch.vue",
+);
 const mobileNavSource = read("src/components/system/MobileBottomNav.vue");
 const feedSource = read("src/views/feed/FeedView.vue");
+const inboxSource = read("src/views/feed/InboxPage.vue");
 const countryFieldSource = read("src/components/ui/PCountryRegionField.vue");
 const adminUserDetailSource = read(
 	"src/components/admin/AdminUserDetailSheet.vue",
@@ -49,13 +56,19 @@ describe("overlay layer contract", () => {
 		expect(styleSource).toContain("--a-z-player-modal: 760;");
 		expect(styleSource).toContain("--a-z-lightbox: 800;");
 		expect(styleSource).toContain("--a-z-toast: 900;");
+		expect(styleSource).toContain("--a-z-global-menu: 950;");
 
 		expect(sheetSource).toContain("z-index: var(--a-z-sheet);");
 		expect(playerSource).toContain("z-index: var(--a-z-player-lyrics);");
 		expect(playerQueueSource).toContain("z-index: var(--a-z-player-queue);");
 		expect(lyricsSource).toContain("z-index: var(--a-z-player-lyrics);");
 		expect(topbarSource).toContain("z-index: var(--a-z-navigation);");
+		expect(topbarSource).toContain("z-index: var(--a-z-global-menu);");
+		expect(topbarAuthSource).toContain("z-index: var(--a-z-global-menu);");
+		expect(globalSearchSource).toContain("z-index: var(--a-z-global-menu);");
 		expect(mobileNavSource).toContain("z-index: var(--a-z-navigation);");
+		expect(inboxSource).toMatch(/<PSheet[\s\S]*above-player/);
+		expect(inboxSource).not.toContain("z-index: 30;");
 		expect(feedSource).toContain("z-index: var(--a-z-navigation);");
 		expect(feedSource).not.toContain("z-index: 1100;");
 		expect(countryFieldSource).toContain("import PModal from './PModal.vue'");

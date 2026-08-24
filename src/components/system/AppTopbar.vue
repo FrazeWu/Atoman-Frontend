@@ -265,7 +265,7 @@ html.dark .topbar {
 }
 .topbar:has(.topbar-search-wrap.is-open),
 .topbar:has(.dropdown-wrap .dropdown) {
-  z-index: var(--a-z-global-overlay);
+  z-index: var(--a-z-global-menu);
 }
 
 .topbar--auth {

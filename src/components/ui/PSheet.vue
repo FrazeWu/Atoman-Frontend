@@ -37,6 +37,7 @@
           :aria-label="railTitle"
           :data-layer-index="effectiveLayerIndex"
           tabindex="-1"
+          @click="handlePanelBackgroundClick"
           @keydown.esc="isTopLayer && $emit('close')"
         >
           <div v-if="showLayerRail" class="sheet-layer-rail">
@@ -93,6 +94,7 @@
           </button>
 
           <div
+            ref="sheetContentRef"
             class="sheet-content hide-scrollbar"
             :class="{
               'sheet-content--compact': !hasHeader,
@@ -168,10 +170,11 @@ const props = withDefaults(defineProps<{
   focusOnOpen: true,
 })
 
-defineEmits(['close', 'activate'])
+const emit = defineEmits(['close', 'activate'])
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
+const sheetContentRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLButtonElement | null>(null)
 
 watch(
@@ -203,6 +206,14 @@ const railTitle = computed(() => props.title || props.ariaLabel || '页面')
 const closeLabel = computed(() => props.isTopLayer
   ? `关闭${railTitle.value}`
   : `关闭${railTitle.value}及上方页面`)
+
+const handlePanelBackgroundClick = (event: MouseEvent) => {
+  if (props.side !== 'right' || !props.isTopLayer) return
+  const target = event.target
+  if (target === panelRef.value || target === sheetContentRef.value) {
+    emit('close')
+  }
+}
 
 const transitionName = computed(() => {
   if (props.side === 'left') return 'slide-left'

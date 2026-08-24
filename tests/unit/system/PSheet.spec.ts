@@ -213,6 +213,25 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted()).toHaveProperty("close");
 	});
 
+	it("emits close when the top right sheet background is clicked", async () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, side: "right" },
+		});
+
+		await wrapper.get(".sheet-content").trigger("click");
+		expect(wrapper.emitted("close")).toHaveLength(1);
+	});
+
+	it("does not close a right sheet when its content is clicked", async () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, side: "right", contentMaxWidth: "40rem" },
+			slots: { default: '<button class="sheet-action">保存</button>' },
+		});
+
+		await wrapper.get(".sheet-action").trigger("click");
+		expect(wrapper.emitted("close")).toBeUndefined();
+	});
+
 	it("emits close event from the page rail for right sheets", async () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, closeType: "header" },

@@ -294,7 +294,7 @@ const logout = async () => {
   border: var(--a-border);
   border-radius: var(--a-radius-none);
   box-shadow: var(--a-shadow-dropdown);
-  z-index: var(--a-z-global-overlay);
+  z-index: var(--a-z-global-menu);
   min-width: 140px;
 }
 

@@ -140,6 +140,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		const wrapper = mountDrawer();
 		await flushPromises();
 
+		await wrapper.get('[data-testid="song-editor-source"]').setValue("修正歌曲资料");
 		wrapper
 			.findAllComponents({ name: "PInput" })[0]
 			?.vm.$emit("update:modelValue", "Updated Song");
@@ -156,6 +157,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 				title: "Updated Song",
 				description: "",
 				sources: [],
+				reason: "修正歌曲资料",
 				artist_credits: [
 					{
 						artist_id: "artist-1",
@@ -255,6 +257,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		expect(wrapper.text()).not.toContain("歌词");
 		expect(wrapper.text()).not.toContain("碟号");
 		expect(wrapper.text()).not.toContain("曲序");
+		await wrapper.get('[data-testid="song-editor-source"]').setValue("修正独立歌曲资料");
 		await wrapper
 			.findAll("button")
 			.find((button) => button.text() === "保存歌曲")
@@ -269,6 +272,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 				release_type: "single",
 				release_date: "2025-01-02",
 				sources: [{ type: "url", url: "https://example.test/song" }],
+				reason: "修正独立歌曲资料",
 			}),
 		);
 	});
@@ -296,6 +300,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		};
 		const wrapper = mountDrawer();
 		await flushPromises();
+		await wrapper.get('[data-testid="song-editor-source"]').setValue("转换为专辑");
 		wrapper
 			.findComponent({ name: "PSelect" })
 			.vm.$emit("update:modelValue", "album");
@@ -313,6 +318,8 @@ describe("MusicEntityEditorDrawer.vue", () => {
 				title: "Standalone Song",
 				release_type: "album",
 				cover_url: "https://assets.example.test/song.jpg",
+				sources: [{ type: "url", url: "https://example.test/song" }],
+				reason: "转换为专辑",
 			}),
 		);
 		expect(mocks.submitSongRevision).not.toHaveBeenCalled();
@@ -330,6 +337,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		};
 		const wrapper = mountDrawer();
 		await flushPromises();
+		await wrapper.get('[data-testid="song-editor-source"]').setValue("替换音频资料");
 
 		const audioFile = new File(["audio"], "replacement.mp3", {
 			type: "audio/mpeg",

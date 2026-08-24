@@ -107,6 +107,7 @@ const songDraft = reactive({
     day: "",
   } as MusicCreationDatePartsDraft,
   source: "",
+  existingSources: [] as MusicSource[],
   coverUrl: "",
   coverFile: null as File | null,
   audioFile: null as File | null,
@@ -156,6 +157,7 @@ function resetSongState() {
   songDraft.releaseType = "single";
   songDraft.releaseDateParts = { year: "", month: "", day: "" };
   songDraft.source = "";
+  songDraft.existingSources = [];
   songDraft.coverUrl = "";
   songDraft.coverFile = null;
   songDraft.audioFile = null;
@@ -173,20 +175,6 @@ onBeforeUnmount(() => {
   audioUploadController?.abort();
   revokeSongCoverPreview();
 });
-
-function musicSourceValue(sources?: MusicSource[]) {
-  const source = sources?.find(
-    (item) => item.url?.trim() || item.title?.trim(),
-  );
-  return source?.url?.trim() || source?.title?.trim() || "";
-}
-
-function buildSource(value: string): MusicSource {
-  const normalized = value.trim();
-  return /^https?:\/\//i.test(normalized)
-    ? { type: "url", url: normalized }
-    : { type: "text", title: normalized };
-}
 
 async function loadSong(songId: string) {
   songLoading.value = true;
@@ -207,7 +195,8 @@ async function loadSong(songId: string) {
     songDraft.releaseDateParts = parsePartialDateParts(
       detail.song.release_date ?? "",
     );
-    songDraft.source = musicSourceValue(detail.song.sources);
+    songDraft.source = "";
+    songDraft.existingSources = detail.song.sources ?? [];
     songDraft.coverUrl =
       detail.song.cover_url ?? detail.song.album?.cover_url ?? "";
     const contributors = new Map<string, MusicCreationAlbumContributorDraft>();
@@ -277,11 +266,11 @@ function openParentAlbumEditor() {
 function validateSongDraft() {
   if (!songDraft.title.trim()) return "请填写歌曲名";
   if (!hasValidTrackContributors()) return "请补全创作者身份";
+  if (!songDraft.source.trim()) return "请填写修改原因";
   if (standaloneSong.value) {
     if (!songDraft.coverUrl.trim()) return "请上传歌曲封面";
     if (!serializePartialDate(songDraft.releaseDateParts))
       return "请填写发行日期";
-    if (!songDraft.source.trim()) return "请填写资料来源";
     if (
       ["single", "leak"].includes(songDraft.releaseType) &&
       !hasValidAlbumContributors(songDraft.contributors)
@@ -330,9 +319,7 @@ async function handleSongEditSubmit() {
     const artistCredits = albumArtistCreditsFromContributors(
       songDraft.contributors,
     );
-    const sources = songDraft.source.trim()
-      ? [buildSource(songDraft.source)]
-      : [];
+    const revisionSources = songDraft.existingSources;
     const releaseDate = serializePartialDate(songDraft.releaseDateParts);
 
     if (convertingToAlbum.value) {
@@ -343,7 +330,8 @@ async function handleSongEditSubmit() {
         release_type: songDraft.releaseType,
         cover_url: coverAsset?.url ?? songDraft.coverUrl,
         artist_credits: artistCredits,
-        sources,
+        sources: revisionSources,
+        reason: songDraft.source.trim(),
       });
       metadataSaved = true;
       convertedToAlbum = true;
@@ -371,8 +359,8 @@ async function handleSongEditSubmit() {
         : {}),
       ...(coverAsset ? { cover: coverAsset } : {}),
       artist_credits: artistCredits,
-      sources,
-      reason: "编辑歌曲",
+      sources: revisionSources,
+      reason: songDraft.source.trim(),
     });
     metadataSaved = true;
     if (audioAsset?.id) {
@@ -509,8 +497,8 @@ async function handleSongEditSubmit() {
 
         <PInput
           v-model="songDraft.source"
-          :label="standaloneSong ? '资料来源' : '歌曲来源（选填）'"
-          placeholder="输入来源链接或说明"
+          label="修改原因*"
+          placeholder="填写本次修改原因"
           data-testid="song-editor-source"
         />
 

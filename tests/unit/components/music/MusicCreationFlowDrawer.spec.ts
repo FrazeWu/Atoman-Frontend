@@ -954,7 +954,10 @@ describe("MusicCreationFlowDrawer", () => {
 		const flow = drawerMocks.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
 		flow.draft.albumDetails.type = "single";
-		flow.draft.albumDetails.source = "https://example.test/song";
+		flow.draft.albumDetails.existingSources = [
+			{ type: "url", url: "https://example.test/song" },
+		];
+		flow.draft.albumDetails.source = "转换为独立歌曲";
 		await nextTick();
 		await wrapper
 			.get('[data-testid="music-creation-finish-button"]')
@@ -968,6 +971,7 @@ describe("MusicCreationFlowDrawer", () => {
 				release_type: "single",
 				cover_url: "https://img.test/album.jpg",
 				sources: [{ type: "url", url: "https://example.test/song" }],
+				reason: "转换为独立歌曲",
 			}),
 		);
 		expect(submitAlbumRevisionMock).not.toHaveBeenCalled();

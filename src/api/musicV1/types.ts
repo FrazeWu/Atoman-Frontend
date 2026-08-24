@@ -892,6 +892,7 @@ export type MusicReleaseConversionInput = {
 	cover_url: string;
 	artist_credits: MusicAlbumArtistCreditInput[];
 	sources: MusicSource[];
+	reason: string;
 };
 
 export type MusicReleaseConversionResult = {

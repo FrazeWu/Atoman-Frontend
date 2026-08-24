@@ -1018,9 +1018,6 @@ async function completeCreation() {
       const releaseType = details.type.trim().toLowerCase()
       const artistCredits = albumArtistCreditsFromContributors(details.contributors)
       const revisionSources = details.existingSources ?? []
-      const conversionSources = details.source.trim()
-        ? [buildSource(details.source)]
-        : revisionSources
       const releaseDate = formatDateFromParts(details.releaseDateParts)
       const coverURL = details.coverAsset?.url ?? details.coverUrl.trim()
 
@@ -1052,7 +1049,8 @@ async function completeCreation() {
         release_type: releaseType,
         cover_url: coverURL,
         artist_credits: artistCredits,
-        sources: conversionSources,
+        sources: revisionSources,
+        reason: details.source.trim(),
       })
       if (track.audioAssetId) {
         await musicApi.queueMusicSongAudioReplacement(track.songId, { asset_id: track.audioAssetId })
@@ -1083,9 +1081,8 @@ async function completeCreation() {
           release_type: details.type.trim().toLowerCase(),
           cover_url: details.coverAsset?.url ?? details.coverUrl.trim(),
           artist_credits: albumArtistCreditsFromContributors(details.contributors),
-          sources: details.source.trim()
-            ? [buildSource(details.source)]
-            : details.existingSources ?? [],
+          sources: details.existingSources ?? [],
+          reason: details.source.trim(),
         })
         if (tracks[0].audioAssetId) {
           await musicApi.queueMusicSongAudioReplacement(tracks[0].songId, { asset_id: tracks[0].audioAssetId })

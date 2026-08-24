@@ -483,12 +483,34 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__control--secondary {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  margin: 0 auto;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 50%;
   color: var(--a-color-muted);
   font-size: 0.7rem;
 }
 
+.mobile-player-view__control--secondary svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
 .mobile-player-view__control--secondary span {
-  margin-left: -0.35rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: translate(-50%, -50%);
 }
 
 .mobile-player-view__control--primary {

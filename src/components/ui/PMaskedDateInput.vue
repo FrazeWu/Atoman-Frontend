@@ -1,20 +1,27 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp } from 'lucide-vue-next'
-import { formatPartialDateInput, parsePartialDateParts, type PartialDateParts } from '@/components/music/birthDateMask'
+import {
+  BIRTH_DATE_SLOT_POSITIONS,
+  formatPartialDateInput,
+  isPartialDateValid,
+  normalizePartialDateParts,
+  parsePartialDateParts,
+  type PartialDateParts,
+} from '@/components/music/birthDateMask'
 
 const props = defineProps<{
-  modelValue: { year: string; month: string; day: string }
+  modelValue: PartialDateParts
   label?: string
   required?: boolean
   testId?: string
   placeholder?: string
-	helpText?: string
-	presentWhenEmpty?: boolean
+  helpText?: string
+  presentWhenEmpty?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: { year: string; month: string; day: string }): void
+  (e: 'update:modelValue', value: PartialDateParts): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -24,176 +31,268 @@ const showPopover = ref(false)
 const showHelp = ref(false)
 
 const defaultHelpText = computed(() => props.helpText || (
-		props.presentWhenEmpty
-			? '日期不确定时可输入 --，完全未知可填 ----/--/--；不填表示至今。'
-			: '日期不确定时可输入 --，完全未知可填 ----/--/--。'
-	))
+  props.presentWhenEmpty
+    ? '日期不确定时可输入 --，完全未知可填 ----/--/--；不填表示至今。'
+    : '日期不确定时可输入 --，完全未知可填 ----/--/--。'
+))
+const normalizedModel = computed(() => normalizePartialDateParts(props.modelValue))
+const hasInvalidDate = computed(() => !isPartialDateValid(normalizedModel.value))
 
 const now = new Date()
 const currentYear = now.getFullYear()
 const popoverYear = ref(currentYear)
-const popoverMonth = ref(now.getMonth() + 1) // 1-12
-
-// 年份快速选择选项 (1940 ~ 2035)
-const yearOptions = Array.from({ length: 96 }, (_, i) => 2035 - i)
-const monthOptions = Array.from({ length: 12 }, (_, i) => ({
-  label: `${i + 1}月`,
-  value: i + 1,
+const popoverMonth = ref(now.getMonth() + 1)
+const yearOptions = Array.from({ length: 96 }, (_, index) => 2035 - index)
+const monthOptions = Array.from({ length: 12 }, (_, index) => ({
+  label: `${index + 1}月`,
+  value: index + 1,
 }))
 
-function syncFromModel(val: PartialDateParts) {
-	const parts = parsePartialDateParts(`${val.year}/${val.month}/${val.day}`)
-	internalValue.value = formatPartialDateInput(parts)
+const dateSegments = [
+  { key: 'year', start: 0, length: 4 },
+  { key: 'month', start: 5, length: 2 },
+  { key: 'day', start: 8, length: 2 },
+] as const
 
-	if (parts.year && !isNaN(Number(parts.year))) {
-		popoverYear.value = Number(parts.year)
-	}
-	if (parts.month !== '--' && Number(parts.month) >= 1 && Number(parts.month) <= 12) {
-		popoverMonth.value = Number(parts.month)
+type DatePartKey = (typeof dateSegments)[number]['key']
+
+function syncPopoverFromParts(parts: PartialDateParts) {
+  if (/^\d{1,4}$/.test(parts.year)) popoverYear.value = Number(parts.year)
+  if (/^\d{1,2}$/.test(parts.month)) {
+    const month = Number(parts.month)
+    if (month >= 1 && month <= 12) popoverMonth.value = month
   }
+}
+
+function syncFromModel(value: PartialDateParts) {
+  const parts = normalizePartialDateParts(value)
+  internalValue.value = formatPartialDateInput(parts)
+  syncPopoverFromParts(parts)
 }
 
 watch(
   () => props.modelValue,
-  (newVal) => {
-    syncFromModel(newVal)
-  },
-  { immediate: true, deep: true }
+  (value) => syncFromModel(value),
+  { immediate: true, deep: true },
 )
 
-function handleInput(event: Event) {
-	const input = event.target as HTMLInputElement
-	const parts = parsePartialDateParts(input.value)
-	internalValue.value = formatPartialDateInput(parts)
-	input.value = internalValue.value
-	const cursor = parts.year.length < 4
-		? parts.year.length
-		: !parts.month ? 5
-			: parts.month !== '--' && parts.month.length < 2 ? 5 + parts.month.length
-				: !parts.day ? 8
-					: parts.day !== '--' && parts.day.length < 2 ? 8 + parts.day.length : 10
-	input.setSelectionRange(cursor, cursor)
-	emit('update:modelValue', parts)
+function partAtPosition(position: number) {
+  return dateSegments.find(
+    (segment) => position >= segment.start && position < segment.start + segment.length,
+  )
 }
 
-function dateSlotAt(cursor: number): number | null {
-	for (let index = Math.max(0, cursor); index < internalValue.value.length; index += 1) {
-		if (index !== 4 && index !== 7) return index
-	}
-	return null
+function nextEditablePosition(position: number) {
+  return BIRTH_DATE_SLOT_POSITIONS.find((slot) => slot >= position) ?? internalValue.value.length
+}
+
+function previousEditablePosition(position: number) {
+  return [...BIRTH_DATE_SLOT_POSITIONS].reverse().find((slot) => slot <= position) ?? null
+}
+
+function setCaret(input: HTMLInputElement, position: number) {
+  input.setSelectionRange(position, position)
+}
+
+function cursorAfterParts(parts: PartialDateParts) {
+  if (parts.year === '----') return internalValue.value.length
+  if (parts.year.length < 4) return parts.year.length
+  if (!parts.month) return 5
+  if (parts.month !== '--' && parts.month.length < 2) return 5 + parts.month.length
+  if (!parts.day) return 8
+  if (parts.day !== '--' && parts.day.length < 2) return 8 + parts.day.length
+  return internalValue.value.length
+}
+
+function commitParts(parts: PartialDateParts) {
+  const normalized = normalizePartialDateParts(parts)
+  internalValue.value = formatPartialDateInput(normalized)
+  emit('update:modelValue', normalized)
+  syncPopoverFromParts(normalized)
+  return normalized
+}
+
+function handleInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const parts = commitParts(parsePartialDateParts(input.value))
+  input.value = internalValue.value
+  setCaret(input, cursorAfterParts(parts))
+}
+
+function handleDigit(event: KeyboardEvent) {
+  const input = event.target as HTMLInputElement
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? start
+  const display = internalValue.value
+  const nextValue = start === 0 && end >= display.length
+    ? event.key
+    : `${display.slice(0, start)}${event.key}${display.slice(end)}`
+
+  event.preventDefault()
+  commitParts(parsePartialDateParts(nextValue))
+  input.value = internalValue.value
+  const nextPosition = nextEditablePosition(start + 1)
+  setCaret(input, nextPosition)
+}
+
+function clearPart(parts: PartialDateParts, key: DatePartKey) {
+  parts[key] = ''
+  if (key === 'year') {
+    parts.month = ''
+    parts.day = ''
+  } else if (key === 'month') {
+    parts.day = ''
+  }
+}
+
+function removeDigit(parts: PartialDateParts, key: DatePartKey, offset: number) {
+  const value = parts[key]
+  if (!value || /^-+$/.test(value)) {
+    clearPart(parts, key)
+    return
+  }
+
+  const digits = value.replace(/\D/g, '').split('')
+  if (offset < digits.length) digits.splice(offset, 1)
+  parts[key] = digits.join('')
+  if (key === 'year' && parts.year.length < 4) {
+    parts.month = ''
+    parts.day = ''
+  } else if (key === 'month' && !parts.month) {
+    parts.day = ''
+  }
+}
+
+function clearSelectedParts(parts: PartialDateParts, start: number, end: number) {
+  for (const segment of dateSegments) {
+    const segmentEnd = segment.start + segment.length
+    if (start < segmentEnd && end > segment.start) clearPart(parts, segment.key)
+  }
+}
+
+function handleErase(event: KeyboardEvent, backward: boolean) {
+  const input = event.target as HTMLInputElement
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? start
+  const target = end > start
+    ? null
+    : backward
+      ? previousEditablePosition(start - 1)
+      : nextEditablePosition(start)
+
+  if (target === null && end <= start) return
+  event.preventDefault()
+
+  const parts = normalizePartialDateParts(parsePartialDateParts(internalValue.value))
+  if (target === null) {
+    clearSelectedParts(parts, start, end)
+    commitParts(parts)
+    input.value = internalValue.value
+    setCaret(input, start)
+    return
+  }
+
+  const segment = partAtPosition(target)
+  if (!segment) return
+  removeDigit(parts, segment.key, target - segment.start)
+  commitParts(parts)
+  input.value = internalValue.value
+  setCaret(input, backward ? target : nextEditablePosition(target + 1))
 }
 
 function handleKeydown(event: KeyboardEvent) {
-	if (!/^[0-9]$/.test(event.key) || event.metaKey || event.ctrlKey || event.altKey) return
-	const input = event.target as HTMLInputElement
-	const cursor = input.selectionStart ?? 0
-	const slot = dateSlotAt(cursor)
-	if (slot === null) return
-
-	event.preventDefault()
-	const nextValue = `${internalValue.value.slice(0, slot)}${event.key}${internalValue.value.slice(slot + 1)}`
-	const parts = parsePartialDateParts(nextValue)
-	internalValue.value = formatPartialDateInput(parts)
-	input.value = internalValue.value
-	const nextSlot = dateSlotAt(slot + 1) ?? internalValue.value.length
-	input.setSelectionRange(nextSlot, nextSlot)
-	emit('update:modelValue', parts)
+  if (/^[0-9]$/.test(event.key) && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    handleDigit(event)
+    return
+  }
+  if (event.key === 'Backspace') {
+    handleErase(event, true)
+    return
+  }
+  if (event.key === 'Delete') handleErase(event, false)
 }
 
 function handleSelect() {
-	if (internalValue.value === 'yyyy/mm/dd') inputRef.value?.select()
+  if (internalValue.value === 'yyyy/mm/dd') inputRef.value?.select()
 }
 
 function togglePopover() {
-	showPopover.value = !showPopover.value
-	showHelp.value = false
+  showPopover.value = !showPopover.value
+  showHelp.value = false
 }
 
 function toggleHelp() {
-	showHelp.value = !showHelp.value
-	showPopover.value = false
+  showHelp.value = !showHelp.value
+  showPopover.value = false
 }
 
 function closePopover() {
   showPopover.value = false
 }
 
-// 快速按月份导航
 function changeMonth(delta: number) {
-  let m = popoverMonth.value + delta
-  let y = popoverYear.value
-  if (m < 1) {
-    m = 12
-    y -= 1
-  } else if (m > 12) {
-    m = 1
-    y += 1
+  let month = popoverMonth.value + delta
+  let year = popoverYear.value
+  if (month < 1) {
+    month = 12
+    year -= 1
+  } else if (month > 12) {
+    month = 1
+    year += 1
   }
-  popoverMonth.value = m
-  popoverYear.value = y
+  popoverMonth.value = month
+  popoverYear.value = year
 }
 
-// 快捷点击天
-function selectCalendarDay(d: number) {
-  const yStr = String(popoverYear.value)
-  const mStr = String(popoverMonth.value).padStart(2, '0')
-  const dStr = String(d).padStart(2, '0')
-
-	internalValue.value = `${yStr}/${mStr}/${dStr}`
-  emit('update:modelValue', { year: yStr, month: mStr, day: dStr })
+function selectCalendarDay(day: number) {
+  const parts = {
+    year: String(popoverYear.value),
+    month: String(popoverMonth.value).padStart(2, '0'),
+    day: String(day).padStart(2, '0'),
+  }
+  commitParts(parts)
   showPopover.value = false
 }
 
-// 填充快捷“今天”
 function selectToday() {
-  const t = new Date()
-  const yStr = String(t.getFullYear())
-  const mStr = String(t.getMonth() + 1).padStart(2, '0')
-  const dStr = String(t.getDate()).padStart(2, '0')
-
-	internalValue.value = `${yStr}/${mStr}/${dStr}`
-  emit('update:modelValue', { year: yStr, month: mStr, day: dStr })
+  const today = new Date()
+  commitParts({
+    year: String(today.getFullYear()),
+    month: String(today.getMonth() + 1).padStart(2, '0'),
+    day: String(today.getDate()).padStart(2, '0'),
+  })
   showPopover.value = false
 }
 
-// 计算当前选择年月的日历面板天数
 const calendarDays = computed(() => {
-  const y = popoverYear.value
-  const m = popoverMonth.value - 1
-  const firstDayOfWeek = new Date(y, m, 1).getDay()
-  const daysInMonth = new Date(y, m + 1, 0).getDate()
-
+  const year = popoverYear.value
+  const month = popoverMonth.value - 1
+  const firstDayOfWeek = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
   const days: Array<{ day: number | null; isSelected?: boolean; key: string }> = []
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    days.push({ day: null, key: `empty-${i}` })
+
+  for (let index = 0; index < firstDayOfWeek; index += 1) {
+    days.push({ day: null, key: `empty-${index}` })
   }
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let day = 1; day <= daysInMonth; day += 1) {
     const isSelected =
-      Number(props.modelValue.year) === y &&
-      Number(props.modelValue.month) === popoverMonth.value &&
-      Number(props.modelValue.day) === d
-    days.push({ day: d, isSelected, key: `day-${d}` })
+      Number(normalizedModel.value.year) === year &&
+      Number(normalizedModel.value.month) === popoverMonth.value &&
+      Number(normalizedModel.value.day) === day
+    days.push({ day, isSelected, key: `day-${day}` })
   }
   return days
 })
 
-// 点击外部关闭 Popover
-function handleClickOutside(e: MouseEvent) {
-	if (containerRef.value && !containerRef.value.contains(e.target as Node)) {
-		showPopover.value = false
-		showHelp.value = false
+function handleClickOutside(event: MouseEvent) {
+  if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
+    showPopover.value = false
+    showHelp.value = false
   }
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('click', handleClickOutside)
-}
-
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('click', handleClickOutside)
-  }
-})
+onMounted(() => window.addEventListener('click', handleClickOutside))
+onUnmounted(() => window.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
@@ -227,7 +326,12 @@ onUnmounted(() => {
         type="text"
         inputmode="text"
         class="birth-date-input"
+        :class="{ 'birth-date-input--invalid': hasInvalidDate }"
         :placeholder="placeholder || 'yyyy/mm/dd'"
+        :aria-label="label"
+        :aria-invalid="hasInvalidDate"
+        :aria-required="required || undefined"
+        autocomplete="off"
         @input="handleInput"
         @keydown="handleKeydown"
         @click="handleSelect"
@@ -239,6 +343,7 @@ onUnmounted(() => {
         :data-testid="testId ? `${testId}-picker-btn` : undefined"
 		:data-test="testId ? `${testId}-picker-btn` : undefined"
         aria-label="选择日期"
+        :aria-expanded="showPopover"
         @click.stop="togglePopover"
       >
         <CalendarDays :size="16" />
@@ -381,6 +486,11 @@ onUnmounted(() => {
   outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
   outline-offset: 1px;
   border-color: var(--a-color-primary);
+}
+
+.birth-date-input--invalid,
+.birth-date-input--invalid:focus {
+  border-color: var(--a-color-danger);
 }
 
 .birth-date-trigger {

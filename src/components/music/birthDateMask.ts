@@ -6,16 +6,167 @@ export interface PartialDateParts {
 	day: string;
 }
 
+type DatePartKey = keyof PartialDateParts;
+
+const DATE_PART_LIMITS = {
+	year: 4,
+	month: 2,
+	day: 2,
+} satisfies Record<DatePartKey, number>;
+
+const DATE_PART_PLACEHOLDERS = {
+	year: "yyyy",
+	month: "mm",
+	day: "dd",
+} satisfies Record<DatePartKey, string>;
+
+function emptyPartialDateParts(): PartialDateParts {
+	return { year: "", month: "", day: "" };
+}
+
+function digitsOnly(value: string, limit: number) {
+	return value.replace(/\D/g, "").slice(0, limit);
+}
+
+function parseDatePart(value: string, part: DatePartKey) {
+	const normalized = value.trim().toLowerCase();
+	if (!normalized) return "";
+
+	const limit = DATE_PART_LIMITS[part];
+	const unknownMarker = "-".repeat(limit);
+	const placeholder = DATE_PART_PLACEHOLDERS[part][0];
+	const compact = normalized.replaceAll(placeholder, "");
+	if (compact === unknownMarker) return unknownMarker;
+
+	const digits = digitsOnly(compact, limit);
+	if (digits) return digits;
+
+	// Preserve a partially typed unknown year so the mask can finish ----.
+	if (part === "year" && /^-+$/.test(compact)) {
+		return compact.slice(0, limit);
+	}
+
+	return "";
+}
+
+function splitDateInput(value: string) {
+	if (value.includes("/")) return value.split("/");
+
+	const hyphenated = value.match(/^([^-/]+)-([^-/]+)-([^-/]+)$/);
+	if (hyphenated) return hyphenated.slice(1);
+
+	return [value];
+}
+
+export function normalizePartialDateParts(parts: PartialDateParts): PartialDateParts {
+	const year = parseDatePart(parts.year, "year");
+	if (year === "----") return { year, month: "--", day: "--" };
+
+	const month = parseDatePart(parts.month, "month");
+	if (month === "--") return { year, month, day: "--" };
+	if (!month) return { year, month: "", day: "" };
+
+	return {
+		year,
+		month,
+		day: parseDatePart(parts.day, "day"),
+	};
+}
+
 export function getBirthDateDigits(value: string) {
 	return value.replace(/\D/g, "").slice(0, 8);
 }
 
+export function parsePartialDateParts(value: string): PartialDateParts {
+	const trimmed = value.trim();
+	if (!trimmed) return emptyPartialDateParts();
+
+	const segments = splitDateInput(trimmed);
+	if (segments.length === 1 && /^\d{1,8}$/.test(trimmed)) {
+		const digits = getBirthDateDigits(trimmed);
+		return normalizePartialDateParts({
+			year: digits.slice(0, 4),
+			month: digits.slice(4, 6),
+			day: digits.slice(6, 8),
+		});
+	}
+
+	return normalizePartialDateParts({
+		year: segments[0] ?? "",
+		month: segments[1] ?? "",
+		day: segments[2] ?? "",
+	});
+}
+
+function formatDatePart(value: string, part: DatePartKey) {
+	const normalized = value.trim();
+	const limit = DATE_PART_LIMITS[part];
+	const placeholder = DATE_PART_PLACEHOLDERS[part];
+	const unknownMarker = "-".repeat(limit);
+
+	if (normalized === unknownMarker) return unknownMarker;
+	if (/^-+$/.test(normalized)) {
+		return `${normalized.slice(0, limit)}${placeholder.slice(normalized.length)}`;
+	}
+
+	const digits = digitsOnly(normalized, limit);
+	return digits ? `${digits}${placeholder.slice(digits.length)}` : placeholder;
+}
+
+export function formatPartialDateInput(parts: PartialDateParts) {
+	const normalized = normalizePartialDateParts(parts);
+	return [
+		formatDatePart(normalized.year, "year"),
+		formatDatePart(normalized.month, "month"),
+		formatDatePart(normalized.day, "day"),
+	].join("/");
+}
+
+function isValidDatePart(value: string, min: number, max: number) {
+	if (!/^\d{2}$/.test(value)) return true;
+	const number = Number(value);
+	return number >= min && number <= max;
+}
+
+function isLeapYear(year: number) {
+	return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function daysInMonth(year: number, month: number) {
+	if (month === 2) return isLeapYear(year) ? 29 : 28;
+	return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+export function isPartialDateValid(parts: PartialDateParts) {
+	const normalized = normalizePartialDateParts(parts);
+	if (normalized.year === "----" || !/^\d{4}$/.test(normalized.year)) return true;
+	if (!normalized.month || normalized.month === "--" || normalized.month.length < 2) return true;
+	if (!isValidDatePart(normalized.month, 1, 12)) return false;
+	if (!normalized.day || normalized.day === "--" || normalized.day.length < 2) return true;
+	if (!isValidDatePart(normalized.day, 1, 31)) return false;
+
+	return daysInMonth(Number(normalized.year), Number(normalized.month)) >= Number(normalized.day);
+}
+
+export function serializePartialDate(parts?: PartialDateParts) {
+	const normalized = normalizePartialDateParts(parts ?? emptyPartialDateParts());
+	const year = normalized.year.trim();
+	if (year === "----") return "----/--/--";
+	if (!/^\d{4}$/.test(year) || !isPartialDateValid(normalized)) return "";
+
+	const month = normalized.month.trim();
+	if (!month || month === "--") return `${year}/--/--`;
+	if (!/^\d{2}$/.test(month) || !isValidDatePart(month, 1, 12)) return "";
+
+	const day = normalized.day.trim();
+	if (!day || day === "--") return `${year}/${month}/--`;
+	if (!/^\d{2}$/.test(day) || !isValidDatePart(day, 1, 31)) return "";
+
+	return `${year}-${month}-${day}`;
+}
+
 export function formatBirthDateInput(value: string) {
-	const digits = getBirthDateDigits(value);
-	const year = digits.slice(0, 4) || "yyyy";
-	const month = digits.slice(4, 6) || "mm";
-	const day = digits.slice(6, 8) || "dd";
-	return `${year}/${month}/${day}`;
+	return formatPartialDateInput(parsePartialDateParts(value));
 }
 
 export function getBirthDateCursorIndex(digitCount: number) {
@@ -24,70 +175,10 @@ export function getBirthDateCursorIndex(digitCount: number) {
 	return BIRTH_DATE_SLOT_POSITIONS[safeDigitCount];
 }
 
-export function parsePartialDateParts(value: string): PartialDateParts {
-	const trimmed = value.trim();
-	if (!trimmed) return { year: "", month: "", day: "" };
-	const unknownYearMatch = trimmed.match(
-		/^(-{1,4})y*(?:\/(?:mm|--)?(?:\/(?:dd|--)?)?)?$/,
-	);
-	if (unknownYearMatch) {
-		const year = unknownYearMatch[1];
-		return year === "----"
-			? { year, month: "--", day: "--" }
-			: { year, month: "", day: "" };
-	}
-
-	if (/^\d{1,8}$/.test(trimmed)) {
-		return {
-			year: trimmed.slice(0, 4),
-			month: trimmed.slice(4, 6),
-			day: trimmed.slice(6, 8),
-		};
-	}
-
-	const separator = trimmed.includes("/") ? "/" : "-";
-	const [rawYear = "", rawMonth = "", rawDay = ""] = trimmed.split(separator);
-	const year = rawYear.replace(/\D/g, "").slice(0, 4);
-	const month =
-		rawMonth === ""
-			? ""
-			: rawMonth.includes("-")
-				? "--"
-				: rawMonth.replace(/\D/g, "").slice(0, 2);
-	const day =
-		month === "--"
-			? "--"
-			: rawDay === ""
-				? ""
-				: rawDay.includes("-")
-					? "--"
-					: rawDay.replace(/\D/g, "").slice(0, 2);
-	return { year, month, day };
-}
-
-export function formatPartialDateInput(parts: PartialDateParts) {
-	if (!parts.year && !parts.month && !parts.day) return "yyyy/mm/dd";
-	const year = parts.year === "----" ? "----" : `${parts.year}${"yyyy".slice(parts.year.length)}`;
-	const month = parts.month === "--" ? "--" : `${parts.month}${"mm".slice(parts.month.length)}`;
-	const day = parts.day === "--" ? "--" : `${parts.day}${"dd".slice(parts.day.length)}`;
-	return `${year}/${month}/${day}`;
-}
-
-export function serializePartialDate(parts?: PartialDateParts) {
-	const year = parts?.year.trim() ?? "";
-	if (year === "----") return "----/--/--";
-	if (year.length !== 4) return "";
-
-	const month = parts?.month.trim() || "--";
-	const day = month === "--" ? "--" : parts?.day.trim() || "--";
-	if (month === "--") return `${year}/--/--`;
-	if (day === "--") return `${year}/${month.padStart(2, "0")}/--`;
-	return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-}
-
 export function formatStoredPartialDate(value?: string, precision?: string) {
 	if (precision === "unknown") return "----/--/--";
 	if (!value) return "";
+
 	const date = value.split("T")[0];
 	const [year = "", month = "", day = ""] = date.split("-");
 	if (precision === "year") return `${year}/--/--`;

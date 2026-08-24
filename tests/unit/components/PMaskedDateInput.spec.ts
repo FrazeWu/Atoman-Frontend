@@ -199,6 +199,71 @@ describe("PMaskedDateInput", () => {
 		expect(element.selectionStart).toBe(10);
 	});
 
+	it("edits an unknown month and day into a complete date", async () => {
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: { year: "2015", month: "--", day: "--" },
+			},
+		});
+		const input = wrapper.find('input[type="text"]');
+		const element = input.element as HTMLInputElement;
+
+		element.setSelectionRange(5, 5);
+		await input.trigger("keydown", { key: "0" });
+		await input.trigger("keydown", { key: "7" });
+		expect(element.value).toBe("2015/07/--");
+
+		element.setSelectionRange(8, 8);
+		await input.trigger("keydown", { key: "0" });
+		await input.trigger("keydown", { key: "2" });
+		expect(element.value).toBe("2015/07/02");
+		expect(element.getAttribute("aria-invalid")).toBe("false");
+	});
+
+	it("accepts a pasted complete date over a partial date", async () => {
+		const model = ref({ year: "2015", month: "--", day: "--" });
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: model.value,
+				"onUpdate:modelValue": (value: { year: string; month: string; day: string }) => {
+					model.value = value;
+				},
+			},
+		});
+
+		await wrapper.find('input[type="text"]').setValue("2011/07/02");
+		expect(model.value).toEqual({ year: "2011", month: "07", day: "02" });
+	});
+
+	it("clears a selected date segment without corrupting the mask", async () => {
+		const model = ref({ year: "2026", month: "08", day: "07" });
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: model.value,
+				"onUpdate:modelValue": (value: { year: string; month: string; day: string }) => {
+					model.value = value;
+				},
+			},
+		});
+		const input = wrapper.find('input[type="text"]');
+		const element = input.element as HTMLInputElement;
+		element.setSelectionRange(5, 7);
+
+		await input.trigger("keydown", { key: "Backspace" });
+		expect(element.value).toBe("2026/mm/dd");
+		expect(model.value).toEqual({ year: "2026", month: "", day: "" });
+	});
+
+	it("marks a complete calendar date invalid when the day does not exist", () => {
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: { year: "2023", month: "02", day: "29" },
+			},
+		});
+
+		expect(wrapper.get('input[type="text"]').attributes("aria-invalid")).toBe("true");
+	});
+
 	it("shows field help and explains that an empty end date means present", async () => {
 		const wrapper = mount(PMaskedDateInput, {
 			props: {

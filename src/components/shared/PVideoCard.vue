@@ -52,7 +52,15 @@ const avatarLetter = () =>
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="video.title">
         <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
-        <span class="vc-play-count"><Play :size="12" aria-hidden="true" />{{ fmtViews(video.view_count) }}</span>
+
+        <!-- 悬浮微渐变与居中播放徽标 -->
+        <div class="vc-play-overlay">
+          <span class="vc-play-badge">
+            <Play :size="18" fill="currentColor" aria-hidden="true" />
+          </span>
+        </div>
+
+        <span class="vc-play-count"><Play :size="11" aria-hidden="true" />{{ fmtViews(video.view_count) }}</span>
         <span v-if="video.duration_sec" class="vc-duration">{{ fmtDuration(video.duration_sec) }}</span>
       </RouterLink>
       <button
@@ -97,18 +105,26 @@ const avatarLetter = () =>
 .vc-thumb {
   position: relative;
   aspect-ratio: 16/9;
-  background: var(--a-color-surface);
-  border-radius: 4px;
+  background: var(--a-color-surface-muted, #18181b);
+  border-radius: var(--a-radius-card);
   overflow: hidden;
-  box-shadow: none;
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: var(--a-shadow-sm);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
 }
-.vc-thumb-link { display: block; width: 100%; height: 100%; color: inherit; }
-.vc-card:hover .vc-img { transform: scale(1.02); }
+
+.vc-card:hover .vc-thumb {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft));
+}
+
+.vc-thumb-link { display: block; width: 100%; height: 100%; color: inherit; position: relative; }
+.vc-card:hover .vc-img { transform: scale(1.04); }
 .vc-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
   display: block;
 }
 .vc-thumb-placeholder {
@@ -120,23 +136,56 @@ const avatarLetter = () =>
   color: var(--a-color-muted);
 }
 
+.vc-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.vc-play-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transform: scale(0.9);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vc-card:hover .vc-play-overlay {
+  opacity: 1;
+}
+
+.vc-card:hover .vc-play-badge {
+  transform: scale(1);
+}
+
 .vc-watch-later {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 2;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   opacity: 0;
-  border: 1px solid var(--a-color-border);
-  border-radius: 4px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-pill, 999px);
   background: var(--a-color-bg);
-  box-shadow: none;
   color: var(--a-color-fg);
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, background-color 0.15s ease;
 }
 
 .vc-card:hover .vc-watch-later,
@@ -152,24 +201,26 @@ const avatarLetter = () =>
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(4px);
   color: #fff;
   font-size: 11px;
   font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 0px; /* Straight corner */
+  padding: 2px 7px;
+  border-radius: var(--a-radius-control);
 }
 
 .vc-duration {
   position: absolute;
   bottom: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(4px);
   color: #fff;
   font-size: 11px;
   font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 0px; /* Straight corner */
+  padding: 2px 7px;
+  border-radius: var(--a-radius-control);
   z-index: 1;
 }
 

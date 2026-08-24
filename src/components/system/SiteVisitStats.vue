@@ -1,21 +1,20 @@
 <template>
-  <aside v-if="stats" class="site-visit-stats" aria-label="站点统计" aria-live="polite">
-    <div class="site-visit-stats__heading">站点统计</div>
-    <div class="site-visit-stats__metrics">
-      <div class="site-visit-stats__metric">
-        <span>用户数</span>
-        <strong>{{ formatCount(stats.users) }}</strong>
-      </div>
-      <div class="site-visit-stats__metric">
-        <span>总访问量</span>
-        <strong>{{ formatCount(stats.total) }}</strong>
-      </div>
-      <div class="site-visit-stats__metric">
-        <span>今日访问</span>
-        <strong>{{ formatCount(stats.today) }}</strong>
-      </div>
-    </div>
-  </aside>
+  <div v-if="stats" class="site-visit-stats" aria-label="站点统计">
+    <span class="site-visit-stats__item">
+      <span class="site-visit-stats__label">用户</span>
+      <strong class="site-visit-stats__value">{{ formatCount(stats.users) }}</strong>
+    </span>
+    <span class="site-visit-stats__divider">·</span>
+    <span class="site-visit-stats__item">
+      <span class="site-visit-stats__label">总访问</span>
+      <strong class="site-visit-stats__value">{{ formatCount(stats.total) }}</strong>
+    </span>
+    <span class="site-visit-stats__divider">·</span>
+    <span class="site-visit-stats__item">
+      <span class="site-visit-stats__label">今日</span>
+      <strong class="site-visit-stats__value">{{ formatCount(stats.today) }}</strong>
+    </span>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -47,60 +46,32 @@ onMounted(async () => {
 
 <style scoped>
 .site-visit-stats {
-  position: fixed;
-  left: max(16px, env(safe-area-inset-left));
-  bottom: calc(
-    var(--a-player-height, 68px) +
-    var(--a-mobile-nav-reserved-height, 0px) +
-    var(--a-footer-reserved-height, 0px) +
-    max(12px, env(safe-area-inset-bottom))
-  );
-  z-index: var(--a-z-dropdown);
-  width: 160px;
-  padding: 7px 8px;
-  border: 1px solid var(--a-color-border, #d9d9d9);
-  border-radius: 8px;
-  background: var(--a-color-bg, #fff);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--a-color-muted);
-  font-size: var(--a-text-xs);
+  font-size: var(--a-text-xs, 0.75rem);
+  line-height: 1.4;
+  margin-top: 0.25rem;
 }
 
-.site-visit-stats__heading {
-  margin-bottom: 4px;
-  color: var(--a-color-fg);
-  font-size: var(--a-text-sm);
-  font-weight: var(--a-font-weight-strong);
-}
-
-.site-visit-stats__metrics {
-  display: grid;
-  gap: 2px;
-}
-
-.site-visit-stats__metric {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+.site-visit-stats__item {
+  display: inline-flex;
   align-items: baseline;
-  gap: 2px 5px;
+  gap: 0.2rem;
 }
 
-.site-visit-stats__metric span {
-  white-space: nowrap;
+.site-visit-stats__label {
+  color: var(--a-color-muted-soft, #a1a1aa);
 }
 
-.site-visit-stats__metric strong {
-  color: var(--a-color-fg);
-  font-size: var(--a-text-sm);
+.site-visit-stats__value {
+  color: var(--a-color-fg, #18181b);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-align: right;
+  font-weight: 500;
 }
 
-@media (max-width: 767px) {
-  .site-visit-stats {
-    left: max(12px, env(safe-area-inset-left));
-    width: 152px;
-  }
+.site-visit-stats__divider {
+  color: var(--a-color-border-soft, #e4e4e7);
 }
 </style>

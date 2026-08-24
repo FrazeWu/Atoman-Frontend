@@ -212,6 +212,29 @@
                     type="feed_item"
                   />
 
+                  <div v-else-if="section.module === 'debate'" class="content-stream-entry portal-hot__debate-card">
+                    <div class="portal-hot__debate-meta">
+                      <span class="portal-hot__tag portal-hot__tag--debate">辩论</span>
+                      <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
+                      <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
+                    </div>
+                    <h3 class="portal-hot__debate-title">{{ item.title }}</h3>
+                    <p v-if="item.summary" class="portal-hot__debate-summary">{{ item.summary }}</p>
+                    
+                    <!-- 双色立场对比条 -->
+                    <div class="portal-hot__stance-wrap" aria-hidden="true">
+                      <div class="portal-hot__stance-bar">
+                        <div class="portal-hot__stance-pro" />
+                        <div class="portal-hot__stance-con" />
+                      </div>
+                      <div class="portal-hot__stance-info">
+                        <span class="portal-hot__stance-badge portal-hot__stance-badge--pro">正方观点</span>
+                        <span class="portal-hot__stance-action">参与讨论 ›</span>
+                        <span class="portal-hot__stance-badge portal-hot__stance-badge--con">反方观点</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <PEntry
                     v-else
                     :title="item.title"
@@ -423,7 +446,7 @@ onMounted(loadHotContent)
 .portal-hot__hero {
   position: relative;
   overflow: hidden;
-  padding: 72px 24px 64px;
+  padding: 44px 24px 36px;
   background: linear-gradient(180deg, var(--a-color-surface) 0%, var(--a-color-bg) 100%);
   border-bottom: 1px solid var(--a-color-border-soft);
   text-align: center;
@@ -449,14 +472,14 @@ onMounted(loadHotContent)
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .portal-hot__hero-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
+  padding: 4px 12px;
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
@@ -475,9 +498,9 @@ onMounted(loadHotContent)
 
 .portal-hot__hero-title {
   margin: 0;
-  font-size: 44px;
+  font-size: 32px;
   font-weight: 500;
-  line-height: 1.15;
+  line-height: 1.2;
   letter-spacing: -0.02em;
   color: var(--a-color-text);
 }
@@ -490,17 +513,99 @@ onMounted(loadHotContent)
 
 .portal-hot__hero-subtitle {
   margin: 0;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--a-color-text-secondary);
-  max-width: 580px;
+  max-width: 540px;
 }
 
 .portal-hot__hero-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ─── 辩题专属卡片 ──────────────────────────────────── */
+.portal-hot__debate-card {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.portal-hot__debate-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.portal-hot__tag--debate {
+  background: color-mix(in srgb, #6366f1 10%, transparent);
+  color: #6366f1;
+}
+
+.portal-hot__debate-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--a-color-fg);
+  line-height: 1.4;
+}
+
+.portal-hot__debate-summary {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--a-color-muted);
+  line-height: 1.5;
+}
+
+.portal-hot__stance-wrap {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.portal-hot__stance-bar {
+  display: flex;
+  height: 6px;
+  width: 100%;
+  border-radius: var(--a-radius-pill, 999px);
+  overflow: hidden;
+  background: var(--a-color-surface-muted);
+}
+
+.portal-hot__stance-pro {
+  width: 58%;
+  background: #3b82f6;
+}
+
+.portal-hot__stance-con {
+  width: 42%;
+  background: #ef4444;
+}
+
+.portal-hot__stance-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.portal-hot__stance-badge--pro {
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.portal-hot__stance-badge--con {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.portal-hot__stance-action {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
 }
 
 .portal-hot__secondary-btn {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { BarChart3, Clock3, Settings, Star } from 'lucide-vue-next'
+import { BarChart3, Clock3, RefreshCw, Settings, Star } from 'lucide-vue-next'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,
@@ -78,7 +78,22 @@ watch(isAuthenticated, (authenticated) => {
 
 <template>
   <div class="a-page-md music-profile-view">
-    <PPageHeader title="我的" mb="1.25rem" />
+    <PPageHeader title="我的" mb="1.25rem">
+      <template #action>
+        <button
+          v-if="isAuthenticated"
+          type="button"
+          class="music-profile__refresh"
+          aria-label="刷新音乐个人页"
+          data-testid="music-profile-refresh"
+          title="刷新音乐个人页"
+          :disabled="loading"
+          @click="loadOverview"
+        >
+          <RefreshCw :size="18" :class="{ 'is-spinning': loading }" aria-hidden="true" />
+        </button>
+      </template>
+    </PPageHeader>
 
     <PEmpty
       v-if="!isAuthenticated"
@@ -157,6 +172,41 @@ watch(isAuthenticated, (authenticated) => {
 .music-profile-view {
   min-height: 100%;
   padding-bottom: 3rem;
+}
+
+.music-profile__refresh {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+}
+
+.music-profile__refresh:hover,
+.music-profile__refresh:focus-visible {
+  background: var(--a-color-surface-muted);
+}
+
+.music-profile__refresh:disabled {
+  color: var(--a-color-muted);
+  cursor: default;
+}
+
+.music-profile__refresh .is-spinning {
+  animation: music-profile-spin 0.9s linear infinite;
+}
+
+@keyframes music-profile-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-profile__refresh .is-spinning { animation: none; }
 }
 
 .music-profile__stats {

@@ -5,6 +5,7 @@ import type {
 	MusicAlbumImportStage,
 	MusicAlbumImportStatus,
 	MusicEntryStatus,
+	MusicSource,
 } from "@/api/musicV1";
 import type { MusicAlbumArtistRole } from "@/api/musicV1";
 
@@ -89,6 +90,7 @@ export interface MusicCreationArtistDraft {
 	birthDate: string;
 	bio: string;
 	source: string;
+	existingSources?: MusicSource[];
 }
 
 export interface MusicCreationAlbumImportDraft {
@@ -165,6 +167,7 @@ export interface MusicCreationAlbumDetailsDraft {
 	releaseYear: string;
 	bio: string;
 	source: string;
+	existingSources?: MusicSource[];
 	musicBrainzMatched?: boolean;
 }
 

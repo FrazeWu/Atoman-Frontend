@@ -233,6 +233,7 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
 			birthDate: "",
 			bio: "",
 			source: seed?.artistSource?.trim() ?? "",
+			existingSources: [],
 		},
 		albumImport: {
 			importId: null,
@@ -268,6 +269,7 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
 			releaseYear: "",
 			bio: "",
 			source: "",
+			existingSources: [],
 		},
 		tracks: [],
 	};

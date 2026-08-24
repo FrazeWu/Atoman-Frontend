@@ -35,6 +35,8 @@ const detailsDescriptionPlaceholder = computed(() => standaloneTypeSelected.valu
 const showsTrackList = computed(() => !standaloneTypeSelected.value || (creationFlow.value?.draft.tracks.length ?? 0) !== 1 || isEditMode.value)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
+const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
+const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
   coverInputRef,
   coverUploading,
@@ -683,8 +685,8 @@ watch(
           v-model="albumDetailsDraft.source"
           data-testid="album-details-source-input"
           :rows="2"
-          placeholder="填写信息来源或修改原因"
-          :label="requiredLabel('信息来源/修改原因')"
+          :placeholder="sourceFieldPlaceholder"
+          :label="sourceFieldLabel"
         />
       </div>
     </div>

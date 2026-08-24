@@ -667,9 +667,10 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(
 			wrapper.get('[data-testid="music-creation-finish-button"]').text(),
 		).toBe("保存");
-		expect(drawerMocks.state.value.creationFlow?.draft.artist.source).toBe(
-			"https://example.test/jean",
-		);
+		expect(drawerMocks.state.value.creationFlow?.draft.artist.source).toBe("");
+		expect(drawerMocks.state.value.creationFlow?.draft.artist.existingSources).toEqual([
+			{ type: "url", url: "https://example.test/jean" },
+		]);
 		expect(drawerMocks.state.value.creationFlow?.draft.artist.nationality).toBe(
 			"US",
 		);
@@ -691,6 +692,8 @@ describe("MusicCreationFlowDrawer", () => {
 				legal_name: "Tsidi Ibrahim",
 				artist_form: "person",
 				birth_date: "1976-11-26",
+				reason: "修正艺人资料",
+				sources: [{ type: "url", url: "https://example.test/jean" }],
 			}),
 		);
 		expect(drawerMocks.refreshArtist).toHaveBeenCalled();
@@ -742,7 +745,10 @@ describe("MusicCreationFlowDrawer", () => {
 		).toBe("保存");
 		expect(
 			drawerMocks.state.value.creationFlow?.draft.albumDetails.source,
-		).toBe("https://example.test/album");
+		).toBe("");
+		expect(
+			drawerMocks.state.value.creationFlow?.draft.albumDetails.existingSources,
+		).toEqual([{ type: "url", url: "https://example.test/album" }]);
 		if (!drawerMocks.state.value.creationFlow)
 			throw new Error("creation flow missing");
 		drawerMocks.state.value.creationFlow.draft.albumDetails.source =
@@ -757,6 +763,8 @@ describe("MusicCreationFlowDrawer", () => {
 			expect.objectContaining({
 				title: "Attack of the Attacking Things",
 				release_date: "2002-01-01",
+				reason: "修正专辑资料",
+				sources: [{ type: "url", url: "https://example.test/album" }],
 			}),
 		);
 		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
@@ -804,7 +812,7 @@ describe("MusicCreationFlowDrawer", () => {
 			title: "Standalone Song",
 			bio: "Optional description",
 			type: "single",
-			source: "https://example.test/song",
+			source: "",
 		});
 		expect(flow.draft.tracks).toEqual([
 			expect.objectContaining({
@@ -814,7 +822,7 @@ describe("MusicCreationFlowDrawer", () => {
 				sequence: 1,
 			}),
 		]);
-
+		flow.draft.albumDetails.source = "修正歌曲资料";
 		await wrapper
 			.get('[data-testid="music-creation-finish-button"]')
 			.trigger("click");
@@ -828,6 +836,7 @@ describe("MusicCreationFlowDrawer", () => {
 				release_type: "single",
 				release_date: "2025-01-02",
 				sources: [{ type: "url", url: "https://example.test/song" }],
+				reason: "修正歌曲资料",
 				artist_credits: [
 					{
 						artist_id: "artist-1",
@@ -882,6 +891,7 @@ describe("MusicCreationFlowDrawer", () => {
 		const flow = drawerMocks.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
 		flow.draft.albumDetails.type = "album";
+		flow.draft.albumDetails.source = "转换为专辑";
 		await nextTick();
 		await wrapper
 			.get('[data-testid="music-creation-finish-button"]')

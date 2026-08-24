@@ -115,11 +115,6 @@ function formatStoredArtistDate(value?: string, precision?: string, fallbackYear
   return fallbackYear && fallbackYear > 0 ? `${fallbackYear}/--/--` : ''
 }
 
-function firstSourceValue(sources?: Array<{ url?: string; title?: string }>) {
-  const source = sources?.find((item) => item.url?.trim() || item.title?.trim())
-  return source?.url?.trim() || source?.title?.trim() || ''
-}
-
 function contributorsFromSongDetail(detail: musicApi.MusicSongDetail) {
   const contributors = new Map<string, MusicCreationAlbumContributorDraft>()
   for (const credit of detail.artists) {
@@ -177,7 +172,8 @@ async function loadEditDraft() {
         activeEndDateParts: parsePartialDateParts(formatStoredPartialDate(artist.active_end_date, artist.active_end_date_precision)),
         birthDate: formatStoredArtistDate(artist.birth_date, artist.birth_date_precision, artist.birth_year),
         bio: artist.bio ?? '',
-        source: firstSourceValue(artist.sources),
+        source: '',
+        existingSources: artist.sources ?? [],
       }
       return
     }
@@ -202,7 +198,8 @@ async function loadEditDraft() {
         type: song.release_type,
         releaseYear: song.release_date?.slice(0, 4) || '',
         bio: song.description ?? '',
-        source: normalizeMusicImportSource(firstSourceValue(song.sources)),
+        source: '',
+        existingSources: song.sources ?? [],
         musicBrainzMatched: hasMusicBrainzSource(song.sources) || hasMusicBrainzSource(song.album?.sources),
       }
       flow.draft.tracks = [{
@@ -232,7 +229,8 @@ async function loadEditDraft() {
       type: album.album_type?.trim() || 'album',
       releaseYear: album.release_date?.slice(0, 4) || '',
       bio: album.description ?? '',
-      source: firstSourceValue(album.sources),
+      source: '',
+      existingSources: album.sources ?? [],
       musicBrainzMatched: hasMusicBrainzSource(album.sources),
     }
     flow.draft.tracks = (album.songs ?? [])
@@ -264,6 +262,11 @@ async function loadEditDraft() {
 }
 
 watch(() => [creationFlow.value?.mode, creationFlow.value?.entity, creationFlow.value?.targetId], () => {
+  const flow = creationFlow.value
+  if (!flow?.mode || !flow.entity || !flow.targetId?.trim()) {
+    loadedEditKey.value = ''
+    return
+  }
   void loadEditDraft()
 }, { immediate: true })
 
@@ -999,8 +1002,8 @@ async function completeCreation() {
         active_start_date: formatArtistDate(artist.activeStartDateParts),
         active_end_date: formatArtistDate(artist.activeEndDateParts),
         members: buildArtistMembers(flow),
-        reason: '编辑艺术家',
-        sources: artist.source.trim() ? [buildSource(artist.source)] : [],
+        reason: artist.source.trim(),
+        sources: artist.existingSources ?? [],
       })
       refreshArtist()
       closeCurrentCreationFlow()
@@ -1014,7 +1017,10 @@ async function completeCreation() {
       if (!track?.songId) throw new Error('歌曲资料不完整，请重新打开编辑器')
       const releaseType = details.type.trim().toLowerCase()
       const artistCredits = albumArtistCreditsFromContributors(details.contributors)
-      const sources = details.source.trim() ? [buildSource(details.source)] : []
+      const revisionSources = details.existingSources ?? []
+      const conversionSources = details.source.trim()
+        ? [buildSource(details.source)]
+        : revisionSources
       const releaseDate = formatDateFromParts(details.releaseDateParts)
       const coverURL = details.coverAsset?.url ?? details.coverUrl.trim()
 
@@ -1026,8 +1032,8 @@ async function completeCreation() {
           release_date: releaseDate,
           ...(details.coverAsset ? { cover: details.coverAsset } : {}),
           artist_credits: artistCredits,
-          sources,
-          reason: '编辑歌曲',
+          sources: revisionSources,
+          reason: details.source.trim(),
         })
         if (track.audioAssetId) {
           await musicApi.queueMusicSongAudioReplacement(track.songId, { asset_id: track.audioAssetId })
@@ -1046,7 +1052,7 @@ async function completeCreation() {
         release_type: releaseType,
         cover_url: coverURL,
         artist_credits: artistCredits,
-        sources,
+        sources: conversionSources,
       })
       if (track.audioAssetId) {
         await musicApi.queueMusicSongAudioReplacement(track.songId, { asset_id: track.audioAssetId })
@@ -1077,7 +1083,9 @@ async function completeCreation() {
           release_type: details.type.trim().toLowerCase(),
           cover_url: details.coverAsset?.url ?? details.coverUrl.trim(),
           artist_credits: albumArtistCreditsFromContributors(details.contributors),
-          sources: details.source.trim() ? [buildSource(details.source)] : [],
+          sources: details.source.trim()
+            ? [buildSource(details.source)]
+            : details.existingSources ?? [],
         })
         if (tracks[0].audioAssetId) {
           await musicApi.queueMusicSongAudioReplacement(tracks[0].songId, { asset_id: tracks[0].audioAssetId })
@@ -1106,8 +1114,8 @@ async function completeCreation() {
           artist_credits: albumArtistCreditsFromContributors(track.contributors ?? details.contributors),
           removed: false,
         })),
-        reason: '编辑专辑与曲目',
-        sources: details.source.trim() ? [buildSource(details.source)] : [],
+        reason: details.source.trim(),
+        sources: details.existingSources ?? [],
       })
       for (const track of tracks) {
         if (track.songId && track.audioAssetId) {

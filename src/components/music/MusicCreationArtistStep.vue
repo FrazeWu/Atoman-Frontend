@@ -18,6 +18,9 @@ const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
 const isGroup = computed(() => artistDraft.value?.kind === 'group')
+const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
+const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '来源*')
+const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写来源')
 const avatarUploading = ref(false)
 const avatarErrorMessage = ref('')
 const stageNameErrorMessage = ref('')
@@ -603,8 +606,8 @@ defineExpose({
               v-model="artistDraft.source"
               data-testid="artist-source-input"
               :rows="4"
-              placeholder="填写来源"
-              :label="requiredLabel('来源')"
+              :placeholder="sourceFieldPlaceholder"
+              :label="sourceFieldLabel"
             />
           </div>
           <p

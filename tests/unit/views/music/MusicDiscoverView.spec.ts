@@ -838,6 +838,42 @@ describe("Music DiscoverView.vue", () => {
 		expect(mocks.openAlbum).toHaveBeenCalledWith("album-3");
 	});
 
+	it("counts continue listening within the recent playback display limit", async () => {
+		mocks.getMusicHome.mockResolvedValueOnce({
+			personalized: true,
+			continue_listening: {
+				position_seconds: 12,
+				song: {
+					id: "song-continue",
+					title: "Continue Song",
+					audio_url: "/uploads/continue.mp3",
+				},
+			},
+			recently_played: Array.from({ length: 8 }, (_, index) => ({
+				id: `history-${index + 1}`,
+				song: {
+					id: `song-${index + 1}`,
+					title: `Recent Song ${index + 1}`,
+					audio_url: `/uploads/recent-${index + 1}.mp3`,
+				},
+			})),
+			for_you: [],
+			sections: [],
+			discover: [],
+			discover_has_more: false,
+			discover_meta: { page: 1, page_size: 24, total: 0, has_more: false },
+		});
+
+		const wrapper = mount(DiscoverView);
+		await flushPromises();
+
+		expect(wrapper.findAll(".recently-played-item")).toHaveLength(8);
+		expect(wrapper.findAll('[data-testid="continue-song-play"]')).toHaveLength(1);
+		expect(wrapper.findAll('[data-testid="recent-song-play"]')).toHaveLength(7);
+		expect(wrapper.text()).toContain("Recent Song 7");
+		expect(wrapper.text()).not.toContain("Recent Song 8");
+	});
+
 	it("does not repeat personalized albums in the public discover section", async () => {
 		mocks.getMusicHome.mockResolvedValueOnce({
 			personalized: true,

@@ -132,15 +132,18 @@ const personalizedAlbumIds = computed(() => new Set(
 const filteredDiscoverAlbums = computed(() => discoverAlbums.value.filter(
   album => !personalizedAlbumIds.value.has(String(album.id)),
 ))
+const recentPlaybackDisplayLimit = 8
 const recentPlaybackItems = computed(() => {
   const continueProgress = musicHome.value?.continue_listening
   const continueSong = continueProgress?.song
   const recentItems = musicHome.value?.personalized ? (musicHome.value.recently_played ?? []) : []
+  const recentHistoryLimit = Math.max(0, recentPlaybackDisplayLimit - (continueSong ? 1 : 0))
 
   return [
     ...(continueSong ? [{ id: `continue-${continueSong.id}`, song: continueSong, isContinue: true, positionSeconds: continueProgress.position_seconds }] : []),
     ...recentItems
       .filter(item => String(item.song.id) !== String(continueSong?.id ?? ''))
+      .slice(0, recentHistoryLimit)
       .map(item => ({ ...item, isContinue: false, positionSeconds: undefined })),
   ]
 })

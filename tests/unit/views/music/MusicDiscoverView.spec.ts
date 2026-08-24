@@ -744,6 +744,7 @@ describe("Music DiscoverView.vue", () => {
 
 	it("shows personalized albums in one batch and cycles through the remaining recommendations", async () => {
 		mocks.getMusicHome.mockResolvedValueOnce({
+			request_id: "00000000-0000-0000-0000-000000000002",
 			personalized: true,
 			recently_played: [],
 			for_you: Array.from({ length: 8 }, (_, index) => ({
@@ -770,6 +771,19 @@ describe("Music DiscoverView.vue", () => {
 		).toHaveLength(6);
 		expect(wrapper.text()).toContain("Recommended Album 1");
 		expect(wrapper.text()).not.toContain("Recommended Album 7");
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				request_id: "00000000-0000-0000-0000-000000000002",
+				events: expect.arrayContaining([
+					expect.objectContaining({ event: "impression", entity_id: "album-1" }),
+					expect.objectContaining({ event: "impression", entity_id: "album-6" }),
+				]),
+			}),
+		);
+		expect(mocks.recordMusicRecommendationEvents.mock.calls[0]?.[0].events)
+			.not.toEqual(expect.arrayContaining([
+				expect.objectContaining({ entity_id: "album-7" }),
+			]));
 
 		await wrapper.get('[data-testid="for-you-next-batch"]').trigger("click");
 
@@ -777,11 +791,18 @@ describe("Music DiscoverView.vue", () => {
 			wrapper.findAll('[data-testid="personalized-album-card"]'),
 		).toHaveLength(2);
 		expect(wrapper.text()).toContain("Recommended Album 7");
-		expect(wrapper.text()).not.toContain("Recommended Album 1");
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				events: expect.arrayContaining([
+					expect.objectContaining({ event: "impression", entity_id: "album-7" }),
+					expect.objectContaining({ event: "impression", entity_id: "album-8" }),
+			]),
+		}),
+	);
 
 		await wrapper.get('[data-testid="for-you-next-batch"]').trigger("click");
-
 		expect(wrapper.text()).toContain("Recommended Album 1");
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledTimes(2);
 	});
 
 	it("merges continue listening into the recent playback section", async () => {

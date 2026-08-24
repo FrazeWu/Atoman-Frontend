@@ -41,7 +41,11 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { getMountedPinia } from '@/utils/pinia'
-import { getMusicRecommendationAlbumContext, rememberMusicRecommendationAlbum } from '@/utils/musicRecommendationAttribution'
+import {
+  claimMusicRecommendationImpression,
+  getMusicRecommendationAlbumContext,
+  rememberMusicRecommendationAlbum,
+} from '@/utils/musicRecommendationAttribution'
 
 const props = withDefaults(defineProps<{
   pageTitle?: string
@@ -270,6 +274,32 @@ async function handleTogglePlaylistBookmark(playlistId: string) {
   }
 }
 
+function recordPersonalizedAlbumImpressions(
+  albums: MusicAlbumListItem[],
+  requestId: string,
+  startIndex: number,
+) {
+  const events = albums
+    .slice(startIndex, startIndex + forYouBatchSize)
+    .flatMap((album, index) => {
+      const context = getMusicRecommendationAlbumContext(String(album.id))
+      if (!context || !claimMusicRecommendationImpression(requestId, String(album.id))) return []
+      return [{
+        event: 'impression' as const,
+        entity_type: 'album' as const,
+        entity_id: String(album.id),
+        position: startIndex + index + 1,
+        reason: context.reason,
+      }]
+    })
+  if (!events.length) return
+  void recordMusicRecommendationEvents({
+    request_id: requestId,
+    surface: 'music_home',
+    events,
+  }).catch((error) => reportError(error, 'Failed to record music recommendation impressions:'))
+}
+
 async function fetchPersonalizedHome() {
   const request = personalizationRequests.beginRequest()
   const currentBookmarkRequestId = ++bookmarkRequestId
@@ -289,29 +319,15 @@ async function fetchPersonalizedHome() {
     forYouBatchIndex.value = 0
     const requestId = response.request_id?.trim()
     if (requestId) {
-      const events = response.for_you.map((album, index) => {
-        const context = {
-          request_id: requestId,
-          surface: 'music_home' as const,
-          position: index + 1,
-          reason: album.reason,
-        }
-        rememberMusicRecommendationAlbum(String(album.id), context)
-        return {
-          event: 'impression' as const,
-          entity_type: 'album' as const,
-          entity_id: String(album.id),
-          position: context.position,
-          reason: context.reason,
-        }
-      })
-      if (events.length) {
-        void recordMusicRecommendationEvents({
+      response.for_you.forEach((album, index) => {
+        rememberMusicRecommendationAlbum(String(album.id), {
           request_id: requestId,
           surface: 'music_home',
-          events,
-        }).catch((error) => reportError(error, 'Failed to record music recommendation impressions:'))
-      }
+          position: index + 1,
+          reason: album.reason,
+        })
+      })
+      recordPersonalizedAlbumImpressions(response.for_you, requestId, 0)
     }
     void fetchAlbumBookmarks(currentBookmarkRequestId)
     void fetchArtistBookmarks(currentBookmarkRequestId)
@@ -346,7 +362,10 @@ async function fetchMusicHome() {
 function showNextPersonalizedAlbums() {
   const batchCount = Math.ceil(personalizedAlbums.value.length / forYouBatchSize)
   if (batchCount < 2) return
-  forYouBatchIndex.value = (forYouBatchIndex.value + 1) % batchCount
+  const nextIndex = (forYouBatchIndex.value + 1) % batchCount
+  forYouBatchIndex.value = nextIndex
+  const requestId = musicHome.value?.request_id?.trim()
+  if (requestId) recordPersonalizedAlbumImpressions(personalizedAlbums.value, requestId, nextIndex * forYouBatchSize)
 }
 
 function resetDiscoverSections() {

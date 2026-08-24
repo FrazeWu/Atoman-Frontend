@@ -86,8 +86,8 @@ describe("MusicPlaylistsView", () => {
 		expect(wrapper.get("#bookmarked-playlists-title").text()).toContain("我收藏的");
 		expect(wrapper.text()).toContain("我的夜行歌单");
 		expect(wrapper.text()).toContain("通勤收藏");
-		expect(wrapper.text()).not.toContain("最爱");
-		expect(wrapper.findAll('[data-testid="owned-playlist-card"]')).toHaveLength(1);
+		expect(wrapper.text()).toContain("最爱");
+		expect(wrapper.findAll('[data-testid="owned-playlist-card"]')).toHaveLength(2);
 		expect(wrapper.findAll('[data-testid="bookmarked-playlist-card"]')).toHaveLength(1);
 	});
 });

@@ -36,7 +36,7 @@ async function loadPlaylists() {
       listMusicPlaylists({ page: 1, page_size: 100 }),
       listPlaylistBookmarks({ page: 1, page_size: 100 }),
     ])
-    ownedPlaylists.value = ownedResponse.data.filter(playlist => playlist.kind !== 'favorite' && playlist.kind !== 'later')
+    ownedPlaylists.value = ownedResponse.data.filter(playlist => playlist.kind !== 'later')
     bookmarkedPlaylists.value = bookmarkedResponse.data
       .map(bookmark => bookmark.playlist)
       .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))

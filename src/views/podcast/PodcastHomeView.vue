@@ -285,6 +285,7 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-recommendation-card {
+  position: relative;
   display: grid;
   grid-template-columns: 6.5rem minmax(0, 1fr);
   min-height: 7rem;
@@ -297,10 +298,29 @@ function playEpisode(ep: PodcastEpisode) {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.ph-recommendation-card::before,
+.ph-episode-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5px;
+  background: var(--a-color-text);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
 .ph-recommendation-card:hover {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
   box-shadow: var(--a-shadow-sm);
+  transform: translateY(-2px);
+}
+
+.ph-recommendation-card:hover::before,
+.ph-episode-row:hover::before {
+  opacity: 1;
 }
 
 .ph-recommendation-card:focus-visible {
@@ -370,6 +390,8 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-episode-row {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 5rem minmax(0, 1fr) 40px;
   gap: 1rem;
@@ -386,6 +408,7 @@ function playEpisode(ep: PodcastEpisode) {
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
   background: var(--a-color-surface-muted);
+  transform: translateY(-1px);
 }
 
 .ph-episode-cover {

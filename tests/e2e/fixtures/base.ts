@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test'
+import { test as base, expect, type Page, devices } from '@playwright/test'
 import { ADMIN_USERNAME, ADMIN_PASSWORD } from '../helpers/auth'
 
 const AUTH_FILE_ADMIN = './tests/e2e/.auth/admin.json'
@@ -6,6 +6,7 @@ const defaultBaseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173
 
 type Fixtures = {
   authenticatedPage: Page
+  authenticatedMobilePage: Page
   adminPage: Page
 }
 
@@ -21,6 +22,16 @@ export const test = base.extend<Fixtures>({
   },
   adminPage: async ({ browser, baseURL }, use) => {
     const context = await browser.newContext({ baseURL: baseURL || defaultBaseURL, storageState: AUTH_FILE_ADMIN })
+    const page = await context.newPage()
+    await use(page)
+    await context.close()
+  },
+  authenticatedMobilePage: async ({ browser, baseURL }, use) => {
+    const context = await browser.newContext({
+      baseURL: baseURL || defaultBaseURL,
+      storageState: AUTH_FILE_ADMIN,
+      ...devices['iPhone 13'],
+    })
     const page = await context.newPage()
     await use(page)
     await context.close()

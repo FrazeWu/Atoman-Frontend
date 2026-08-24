@@ -51,6 +51,13 @@ export interface Album {
 	updated_at?: string;
 }
 
+export type MusicRecommendationContext = {
+  request_id: string
+  surface: 'music_home'
+  position: number
+  reason?: string
+}
+
 export interface Song {
 	id: number | string;
 	source_type?: "music" | "podcast_episode" | "feed_podcast";
@@ -73,6 +80,7 @@ export interface Song {
 	status: "open" | "closed" | "pending" | "approved" | "rejected";
 	uploaded_by?: number;
 	artists?: Artist[];
+	recommendation_context?: MusicRecommendationContext;
 }
 
 export type RepeatMode = "none" | "one" | "all";
@@ -272,11 +280,18 @@ export interface StudioAnalyticsSourceMetric {
 	count: number;
 }
 
+export interface StudioAnalyticsPeriod {
+	from: string;
+	to: string;
+	totals: Record<string, number>;
+}
+
 export interface StudioAnalytics {
 	range: 7 | 28 | 90;
 	from: string;
 	to: string;
 	totals: Record<string, number>;
+	previous_period: StudioAnalyticsPeriod;
 	trend: StudioAnalyticsPoint[];
 	top: StudioAnalyticsContentMetric[];
 	sources?: StudioAnalyticsSourceMetric[];

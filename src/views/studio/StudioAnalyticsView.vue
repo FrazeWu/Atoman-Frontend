@@ -29,6 +29,7 @@
         <div v-for="metric in visibleMetrics" :key="metric">
           <dt>{{ metricLabel(metric) }}</dt>
           <dd>{{ formatNumber(analytics.totals[metric] || 0) }}</dd>
+          <small>{{ comparisonLabel(metric) }}</small>
         </div>
       </dl>
 
@@ -36,7 +37,12 @@
         <section class="studio-analytics__section">
           <header>
             <h3>趋势</h3>
-            <span>最近 {{ analytics.range }} 天</span>
+            <PSelect
+              v-model="selectedMetric"
+              data-testid="analytics-metric"
+              label="指标"
+              :options="metricOptions"
+            />
           </header>
           <div v-if="analytics.trend.length" class="studio-analytics__chart">
             <canvas ref="trendCanvas" aria-label="内容数据趋势图" role="img" />
@@ -48,8 +54,10 @@
           <header><h3>内容排行</h3></header>
           <ol v-if="analytics.top.length" class="studio-analytics__ranking">
             <li v-for="item in analytics.top" :key="item.id">
-              <strong>{{ item.title }}</strong>
-              <span>{{ rankingSummary(item.metrics) }}</span>
+              <RouterLink :to="contentEditPath(item.id)">
+                <strong>{{ item.title }}</strong>
+                <span>{{ rankingSummary(item.metrics) }}</span>
+              </RouterLink>
             </li>
           </ol>
           <PEmpty v-else kicker="" title="暂无排行数据" />
@@ -84,9 +92,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioModule } from '@/types'
@@ -109,6 +118,12 @@ const moduleMetrics: Record<StudioModule, string[]> = {
   podcast: ['play', 'complete', 'comment', 'bookmark', 'share'],
   video: ['play', 'comment', 'like', 'bookmark', 'share'],
 }
+const selectedMetric = ref(moduleMetrics[module.value][0])
+const selectedMetricKey = computed(() => selectedMetric.value || moduleMetrics[module.value][0])
+const metricOptions = computed(() => moduleMetrics[module.value].map(value => ({
+  label: metricLabels[value] || value,
+  value,
+})))
 const metricLabels: Record<string, string> = {
   impression: '曝光', open: '打开', engaged: '有效消费', view: '阅读', play: '播放', complete: '完成', comment: '评论', like: '点赞', bookmark: '收藏', share: '分享', follow: '新增关注',
 }
@@ -147,6 +162,19 @@ function rankingSummary(metrics: Record<string, number>) {
     .join(' · ')
 }
 
+function contentEditPath(id: string) {
+  return `/studio/${module.value}/${id}/edit`
+}
+
+function comparisonLabel(metric: string) {
+  const current = analytics.value?.totals[metric] || 0
+  const previous = analytics.value?.previous_period.totals[metric] || 0
+  if (!previous) return current ? `较上一周期新增 ${formatNumber(current)}` : '较上一周期持平'
+  const change = Math.round(((current - previous) / previous) * 100)
+  if (!change) return '较上一周期持平'
+  return `较上一周期${change > 0 ? '增长' : '下降'} ${Math.abs(change)}%`
+}
+
 function chartColors() {
   const styles = getComputedStyle(document.documentElement)
   return {
@@ -166,7 +194,7 @@ function renderChart() {
   destroyChart()
   if (!trendCanvas.value || !analytics.value?.trend.length) return
   const colors = chartColors()
-  const primaryMetric = visibleMetrics.value[0]
+  const primaryMetric = selectedMetricKey.value
   chart = new Chart(trendCanvas.value, {
     type: 'line',
     data: {
@@ -229,8 +257,12 @@ onMounted(async () => {
   }
 })
 
-watch(module, () => void loadAnalytics())
+watch(module, () => {
+  selectedMetric.value = moduleMetrics[module.value][0]
+  void loadAnalytics()
+})
 watch(analytics, () => nextTick(renderChart))
+watch(selectedMetricKey, () => nextTick(renderChart))
 onBeforeUnmount(destroyChart)
 </script>
 
@@ -257,15 +289,20 @@ onBeforeUnmount(destroyChart)
 .studio-analytics__totals div:last-child { border-right: 0; }
 .studio-analytics__totals dt { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__totals dd { margin: 0.35rem 0 0; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.studio-analytics__totals small { display: block; min-height: 1.1rem; margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.7rem; line-height: 1.35; }
 .studio-analytics__grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); gap: 1.5rem; }
 .studio-analytics__section { min-width: 0; display: grid; align-content: start; gap: 1rem; padding: 1rem 1.125rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .studio-analytics__section > header { min-height: 2.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.studio-analytics__section > header :deep(.p-select) { width: min(12rem, 52vw); }
 .studio-analytics__section > header span { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__chart { width: 100%; min-width: 0; height: 20rem; overflow: hidden; }
 .studio-analytics__chart canvas { max-width: 100% !important; }
 .studio-analytics__ranking { display: grid; margin: 0; padding: 0; list-style: none; counter-reset: ranking; }
 .studio-analytics__ranking li { counter-increment: ranking; display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: 0.25rem 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
-.studio-analytics__ranking li::before { content: counter(ranking); grid-row: 1 / 3; color: var(--a-color-muted); font-variant-numeric: tabular-nums; }
+.studio-analytics__ranking li::before { content: counter(ranking); grid-row: 1; color: var(--a-color-muted); font-variant-numeric: tabular-nums; }
+.studio-analytics__ranking a { grid-column: 2; display: grid; gap: 0.25rem; color: var(--a-color-text); text-decoration: none; }
+.studio-analytics__ranking a:hover { color: var(--a-color-primary); }
+.studio-analytics__ranking a:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .studio-analytics__ranking span { color: var(--a-color-muted); font-size: 0.75rem; line-height: 1.4; }
 .studio-analytics__sources { margin: 0; padding: 0; list-style: none; }
 .studio-analytics__sources li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--a-color-border-soft); }

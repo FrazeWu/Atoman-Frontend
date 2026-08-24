@@ -24,6 +24,7 @@ import {
   listRecommendedArtists,
   listPublicMusicPlaylists,
   getMusicHome,
+  recordMusicRecommendationEvents,
   type MusicHome,
   type MusicSongListItem,
   type MusicAlbumListItem,
@@ -40,6 +41,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { getMountedPinia } from '@/utils/pinia'
+import { getMusicRecommendationAlbumContext, rememberMusicRecommendationAlbum } from '@/utils/musicRecommendationAttribution'
 
 const props = withDefaults(defineProps<{
   pageTitle?: string
@@ -285,6 +287,32 @@ async function fetchPersonalizedHome() {
     if (!request.isCurrent()) return
     musicHome.value = response
     forYouBatchIndex.value = 0
+    const requestId = response.request_id?.trim()
+    if (requestId) {
+      const events = response.for_you.map((album, index) => {
+        const context = {
+          request_id: requestId,
+          surface: 'music_home' as const,
+          position: index + 1,
+          reason: album.reason,
+        }
+        rememberMusicRecommendationAlbum(String(album.id), context)
+        return {
+          event: 'impression' as const,
+          entity_type: 'album' as const,
+          entity_id: String(album.id),
+          position: context.position,
+          reason: context.reason,
+        }
+      })
+      if (events.length) {
+        void recordMusicRecommendationEvents({
+          request_id: requestId,
+          surface: 'music_home',
+          events,
+        }).catch((error) => reportError(error, 'Failed to record music recommendation impressions:'))
+      }
+    }
     void fetchAlbumBookmarks(currentBookmarkRequestId)
     void fetchArtistBookmarks(currentBookmarkRequestId)
     void fetchPlaylistBookmarks(currentBookmarkRequestId)
@@ -531,6 +559,24 @@ function playlistCardItem(item: MusicPlaylistSummary) {
   }
 }
 
+function openPersonalizedAlbum(album: MusicAlbumListItem, position: number) {
+  const context = getMusicRecommendationAlbumContext(String(album.id))
+  if (context) {
+    void recordMusicRecommendationEvents({
+      request_id: context.request_id,
+      surface: 'music_home',
+      events: [{
+        event: 'click',
+        entity_type: 'album',
+        entity_id: String(album.id),
+        position,
+        reason: context.reason,
+      }],
+    }).catch((error) => reportError(error, 'Failed to record music recommendation click:'))
+  }
+  openAlbum(String(album.id))
+}
+
 function openDiscoverAlbum(album: MusicAlbumListItem) {
   openAlbum(String(album.id))
 }
@@ -730,13 +776,13 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           ><RefreshCw :size="14" aria-hidden="true" /><span>换一批</span></PButton>
         </header>
         <div class="discover-layout discover-layout--albums for-you-layout" aria-label="为你推荐专辑">
-          <div v-for="album in visiblePersonalizedAlbums" :key="album.id" class="discover-result">
+          <div v-for="(album, index) in visiblePersonalizedAlbums" :key="album.id" class="discover-result">
             <MusicAlbumCard
               class="discover-layout__item"
               :album="album"
               :is-bookmarked="starredAlbumIds.includes(String(album.id))"
               data-testid="personalized-album-card"
-              @click="openAlbum(String(album.id))"
+              @click="openPersonalizedAlbum(album, forYouBatchIndex * forYouBatchSize + index + 1)"
               @click-artist="openArtist"
               @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
             />

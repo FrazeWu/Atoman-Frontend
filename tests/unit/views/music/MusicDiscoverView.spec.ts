@@ -4,9 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "../../../../src/stores/auth";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import DiscoverView from "../../../../src/views/music/DiscoverView.vue";
+import { clearMusicRecommendationAttribution } from "../../../../src/utils/musicRecommendationAttribution";
 
 const mocks = vi.hoisted(() => ({
 	getMusicHome: vi.fn(),
+	recordMusicRecommendationEvents: vi.fn(),
 	listMusicAlbumImports: vi.fn(),
 	listMusicAlbums: vi.fn(),
 	listMusicArtists: vi.fn(),
@@ -34,6 +36,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/api/musicV1", () => ({
 	getMusicHome: mocks.getMusicHome,
+	recordMusicRecommendationEvents: mocks.recordMusicRecommendationEvents,
 	listMusicAlbumImports: mocks.listMusicAlbumImports,
 	listMusicAlbums: mocks.listMusicAlbums,
 	listMusicArtists: mocks.listMusicArtists,
@@ -93,7 +96,10 @@ describe("Music DiscoverView.vue", () => {
 	});
 
 	beforeEach(() => {
+		clearMusicRecommendationAttribution();
 		mocks.getMusicHome.mockReset();
+		mocks.recordMusicRecommendationEvents.mockReset();
+		mocks.recordMusicRecommendationEvents.mockResolvedValue(undefined);
 		mocks.listMusicAlbumImports.mockReset();
 		mocks.listMusicAlbums.mockReset();
 		mocks.listMusicArtists.mockReset();
@@ -127,6 +133,7 @@ describe("Music DiscoverView.vue", () => {
 		auth.token = "test-token";
 
 		mocks.getMusicHome.mockResolvedValue({
+			request_id: "00000000-0000-0000-0000-000000000001",
 			personalized: true,
 			recently_played: [
 				{
@@ -704,9 +711,17 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.text()).not.toContain("Graduation");
 		expect(wrapper.find("button button").exists()).toBe(false);
 
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
+			request_id: "00000000-0000-0000-0000-000000000001",
+			events: [expect.objectContaining({ event: "impression", entity_id: "album-2" })],
+		}));
+
 		await wrapper
 			.get('[aria-label="打开专辑 Late Registration"]')
 			.trigger("click");
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
+			events: [expect.objectContaining({ event: "click", entity_id: "album-2" })],
+		}));
 		expect(mocks.openAlbum).toHaveBeenCalledWith("album-2");
 
 		await wrapper.get('[aria-label="打开艺人 Ye"]').trigger("click");

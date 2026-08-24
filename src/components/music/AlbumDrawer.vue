@@ -32,6 +32,7 @@ import {
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, compareAlbumTracks, formatAlbumTypeLabel, resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
+import { getMusicRecommendationAlbumContext } from '@/utils/musicRecommendationAttribution'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/musicAlbumCredits'
 
@@ -162,7 +163,13 @@ const releaseYear = computed(() => {
 })
 const tracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
-const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
+const playableSongs = computed(() => {
+  if (!album.value) return []
+  const songs = buildPlayableSongsFromAlbum(album.value)
+  const context = getMusicRecommendationAlbumContext(String(album.value.id))
+  if (!context) return songs
+  return songs.map((song) => ({ ...song, recommendation_context: context }))
+})
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
 const discussionCount = computed(() => {
   const currentAlbum = album.value as (MusicAlbumListItem & {

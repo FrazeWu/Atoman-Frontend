@@ -7,6 +7,7 @@ import type { Song } from "../../../src/types";
 
 const mocks = vi.hoisted(() => ({
 	recordMusicSongPlay: vi.fn(),
+	recordMusicRecommendationEvents: vi.fn(),
 	getMusicPlaybackProgress: vi.fn(),
 	getMusicPlaybackSession: vi.fn(),
 	saveMusicPlaybackProgress: vi.fn(),
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/api/musicV1", () => ({
 	recordMusicSongPlay: mocks.recordMusicSongPlay,
+	recordMusicRecommendationEvents: mocks.recordMusicRecommendationEvents,
 	getMusicPlaybackProgress: mocks.getMusicPlaybackProgress,
 	getMusicPlaybackSession: mocks.getMusicPlaybackSession,
 	saveMusicPlaybackProgress: mocks.saveMusicPlaybackProgress,
@@ -72,6 +74,8 @@ describe("player store", () => {
 		audioPlayImplementation = () => Promise.resolve();
 		mocks.recordMusicSongPlay.mockReset();
 		mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true });
+		mocks.recordMusicRecommendationEvents.mockReset();
+		mocks.recordMusicRecommendationEvents.mockResolvedValue(undefined);
 		mocks.getMusicPlaybackProgress.mockReset();
 		mocks.getMusicPlaybackProgress.mockResolvedValue(null);
 		mocks.getMusicPlaybackSession.mockReset();
@@ -104,6 +108,41 @@ describe("player store", () => {
 
 		await vi.advanceTimersByTimeAsync(5000);
 		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
+		vi.useRealTimers();
+	});
+
+	it("records recommendation playback lifecycle for attributed songs", async () => {
+		vi.useFakeTimers();
+		const player = usePlayerStore();
+		const song = {
+			id: "recommended-song",
+			title: "Recommended Song",
+			audio_url: "recommended.mp3",
+			recommendation_context: {
+				request_id: "00000000-0000-0000-0000-000000000001",
+				surface: "music_home",
+				position: 2,
+				reason: "结合你的音乐记录",
+			},
+		} as any;
+
+		player.playSong(song);
+		await audioInstances[0].play.mock.results[0]?.value;
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
+			request_id: song.recommendation_context.request_id,
+			events: [expect.objectContaining({ event: "play_start", entity_id: "recommended-song" })],
+		}));
+
+		audioInstances[0].emit("ended");
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
+			events: [expect.objectContaining({ event: "play_complete", entity_id: "recommended-song" })],
+		}));
+
+		player.playNext();
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
+			events: [expect.objectContaining({ event: "skip", entity_id: "recommended-song" })],
+		}));
 		vi.useRealTimers();
 	});
 

@@ -71,8 +71,8 @@
       <section class="studio-dashboard__actions" aria-labelledby="studio-action-title">
         <header class="studio-dashboard__section-heading">
           <div>
-            <h2 id="studio-action-title">待处理</h2>
-            <p>优先处理会影响发布和互动的事项。</p>
+            <h2 id="studio-action-title">工作队列</h2>
+            <p>安排发布并处理影响交付和互动的事项。</p>
           </div>
         </header>
         <p v-if="!actionItems.length" class="studio-dashboard__empty">暂无待处理事项</p>
@@ -84,7 +84,7 @@
                 <strong>{{ actionText(item) }}</strong>
                 <small>{{ moduleLabels[item.module] }}</small>
               </span>
-              <em :class="`studio-dashboard__priority studio-dashboard__priority--${item.priority}`">{{ priorityLabel(item.priority) }}</em>
+              <em :class="`studio-dashboard__priority studio-dashboard__priority--${item.priority}`">{{ actionBadge(item) }}</em>
             </RouterLink>
           </li>
         </ul>
@@ -212,19 +212,21 @@ const priorityOrder = { critical: 0, attention: 1, routine: 2 } as const
 
 function issuePriority(code: string): DashboardAction['priority'] {
   if (['processing_failed', 'external_unplayable', 'missing_audio'].includes(code)) return 'critical'
-  if (code === 'unreplied_comment') return 'attention'
+  if (['unreplied_comment', 'stale_draft'].includes(code)) return 'attention'
   return 'routine'
 }
 
 function actionRoute(item: DashboardAction) {
   if (item.code === 'unreplied_comment') return `/studio/${item.module}/interactions?unreplied=true`
+  if (item.code === 'scheduled') return `/studio/${item.module}/content?status=scheduled`
   return `/studio/${item.module}/content?issue=${item.code}`
 }
 
 function actionText(item: DashboardAction) {
   const nouns = { blog: '篇', podcast: '个单集', video: '个视频' } as const
   const labels: Record<string, string> = {
-    draft: `${item.count} ${nouns[item.module]}草稿待完善`,
+    stale_draft: `${item.count} ${nouns[item.module]}草稿超过 7 天未更新`,
+    scheduled: `${item.count} ${nouns[item.module]}已安排发布`,
     missing_cover: `${item.count} 条内容缺少封面`,
     missing_collection: `${item.count} 条内容未加入合集`,
     missing_audio: `${item.count} 个单集缺少音频`,
@@ -235,8 +237,13 @@ function actionText(item: DashboardAction) {
   return labels[item.code] ?? `${item.count} 条内容需要处理`
 }
 
+function actionBadge(item: DashboardAction) {
+  if (item.code === 'scheduled') return '已安排'
+  return priorityLabel(item.priority)
+}
+
 function priorityLabel(priority: DashboardAction['priority']) {
-  return { critical: '优先处理', attention: '待回复', routine: '待完善' }[priority]
+  return { critical: '优先处理', attention: '需处理', routine: '待完善' }[priority]
 }
 
 function statusLabel(status: StudioContentItem['status']) {

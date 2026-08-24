@@ -7,6 +7,7 @@ import { useApi } from "@/composables/useApi";
 import {
 	getMusicPlaybackProgress,
 	getMusicPlaybackSession,
+	recordMusicRecommendationEvents,
 	recordMusicSongPlay,
 	saveMusicPlaybackProgress,
 	saveMusicPlaybackSession,
@@ -377,12 +378,34 @@ export const usePlayerStore = defineStore("player", () => {
 		clearListeningTimer();
 	};
 
+	const reportRecommendationEvent = (
+		song: Song | null,
+		event: "play_start" | "play_complete" | "skip",
+	) => {
+		const context = song?.recommendation_context;
+		if (!authStore.isAuthenticated || !song || !context) return;
+		void recordMusicRecommendationEvents({
+			request_id: context.request_id,
+			surface: context.surface,
+			events: [{
+				event,
+				entity_type: "song",
+				entity_id: String(song.id),
+				position: context.position,
+				reason: context.reason,
+			}],
+		}).catch((error) => {
+			reportError(error, "Failed to record music recommendation playback event:");
+		});
+	};
+
 	const reportCurrentPlay = () => {
 		const songId = currentSong.value?.id ? String(currentSong.value.id) : null;
 		if (!songId || songId !== listeningSongId || playReported) return;
 		playReported = true;
 		listeningStartedAt = null;
 		listeningTimer = null;
+		reportRecommendationEvent(currentSong.value, "play_start");
 		void recordMusicSongPlay(songId).catch((error) => {
 			reportError(error, "Failed to record music play:");
 		});
@@ -550,7 +573,8 @@ export const usePlayerStore = defineStore("player", () => {
 			savePodcastProgress(true);
 			saveMusicProgress(true, true);
 			saveMusicSession(true);
-			playNext();
+			reportRecommendationEvent(currentSong.value, "play_complete");
+			advanceToNextSong(true);
 		});
 		nextAudio.volume = volume.value;
 
@@ -949,7 +973,8 @@ export const usePlayerStore = defineStore("player", () => {
 		return queue.value.length > 0 ? queue.value : songs.value;
 	};
 
-	const playNext = () => {
+	const advanceToNextSong = (completed = false) => {
+		if (!completed) reportRecommendationEvent(currentSong.value, "skip");
 		const list = getActiveList();
 		if (!currentSong.value || list.length === 0) return;
 
@@ -978,7 +1003,10 @@ export const usePlayerStore = defineStore("player", () => {
 		startSong(list[nextIndex], undefined, false);
 	};
 
+	const playNext = () => advanceToNextSong(false);
+
 	const playPrevious = () => {
+		reportRecommendationEvent(currentSong.value, "skip");
 		const list = getActiveList();
 		if (!currentSong.value || list.length === 0) return;
 

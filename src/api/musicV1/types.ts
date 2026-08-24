@@ -661,7 +661,29 @@ export type SaveMusicPlaybackSessionInput = {
 	reported_at: string;
 };
 
+export type MusicRecommendationEventName =
+	| 'impression'
+	| 'click'
+	| 'play_start'
+	| 'play_complete'
+	| 'skip'
+
+export type MusicRecommendationEventInput = {
+	event: MusicRecommendationEventName
+	entity_type: 'album' | 'song'
+	entity_id: string
+	position?: number
+	reason?: string
+}
+
+export type MusicRecommendationEventsInput = {
+	request_id: string
+	surface: 'music_home'
+	events: MusicRecommendationEventInput[]
+}
+
 export type MusicHome = {
+	request_id?: string
 	personalized: boolean;
 	continue_listening?: MusicPlaybackProgress;
 	recently_played: MusicListeningHistory[];

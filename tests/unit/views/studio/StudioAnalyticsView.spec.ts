@@ -3,8 +3,8 @@ import { createTestingPinia } from '@pinia/testing'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { describe, expect, it, vi } from 'vitest'
 
-import StudioAnalyticsView from '@/views/studio/StudioAnalyticsView.vue'
-import { useStudioStore } from '@/stores/studio'
+import StudioAnalyticsView from '../../../../src/views/studio/StudioAnalyticsView.vue'
+import { useStudioStore } from '../../../../src/stores/studio'
 
 const chartMocks = vi.hoisted(() => ({ create: vi.fn(), destroy: vi.fn() }))
 
@@ -37,6 +37,11 @@ describe('StudioAnalyticsView', () => {
       from: '2026-06-21T00:00:00Z',
       to: '2026-07-18T00:00:00Z',
       totals: { impression: 200, open: 120, engaged: 80, complete: 40, view: 120, comment: 8 },
+      previous_period: {
+        from: '2026-05-24T00:00:00Z',
+        to: '2026-06-21T00:00:00Z',
+        totals: { impression: 100, open: 80, engaged: 40, complete: 20, view: 80, comment: 4 },
+      },
       trend: [{ date: '2026-07-18', metrics: { view: 12, comment: 2 } }],
       top: [{ id: 'post-1', title: '研究记录', metrics: { view: 80, comment: 6 } }],
       sources: [{ source: 'home', count: 160 }, { source: 'notification', count: 40 }],
@@ -54,7 +59,17 @@ describe('StudioAnalyticsView', () => {
     expect(wrapper.text()).toContain('通知')
     expect(wrapper.text()).toContain('回访率')
     expect(wrapper.text()).toContain('50%')
+    expect(wrapper.text()).toContain('较上一周期增长 50%')
+    expect(wrapper.find('.studio-analytics__ranking a').attributes('href')).toBe('/studio/blog/post-1/edit')
     expect(chartMocks.create).toHaveBeenCalledOnce()
+
+    await wrapper.get('[data-testid="analytics-metric"] .p-select-trigger').trigger('click')
+    await wrapper.findAll('.p-select-option').find(option => option.text() === '评论')!.trigger('click')
+    await flushPromises()
+    const chartConfig = chartMocks.create.mock.calls[chartMocks.create.mock.calls.length - 1][1] as {
+      data: { datasets: Array<{ label: string }> }
+    }
+    expect(chartConfig.data.datasets[0].label).toBe('评论')
 
     await wrapper.find('[data-testid="mode-7"]').trigger('click')
     await wrapper.find('[data-testid="mode-90"]').trigger('click')

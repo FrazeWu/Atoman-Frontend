@@ -44,6 +44,7 @@ import type {
 	MusicPlaylistDetail,
 	MusicPlaylistSummary,
 	MusicRecommendationItem,
+	MusicRecommendationEventsInput,
 	MusicRecommendationMode,
 	MusicRevisionSummary,
 	MusicRevisionPage,
@@ -577,6 +578,12 @@ export async function listMusicLibrary<T>(
 		`${musicV1Endpoints.library()}${queryString({ kind, ...filters })}`,
 	);
 	return listResponseWithPaginationFallback(response, filters);
+}
+
+export async function recordMusicRecommendationEvents(
+	input: MusicRecommendationEventsInput,
+): Promise<void> {
+	await apiPostJson<void>(musicV1Endpoints.recommendationEvents(), input)
 }
 
 export async function getMusicHome(): Promise<MusicHome> {

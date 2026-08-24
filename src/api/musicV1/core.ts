@@ -131,6 +131,7 @@ export const musicV1Endpoints = {
 	playbackSession: () => `${apiV1Base()}/music/playback-session`,
 	history: () => `${apiV1Base()}/music/history`,
 	home: () => `${apiV1Base()}/music/home`,
+	recommendationEvents: () => `${apiV1Base()}/music/recommendation-events`,
 	albumRevisions: (albumId: string) =>
 		`${apiV1Base()}/albums/${albumId}/revisions`,
 	albumContributors: (albumId: string) =>

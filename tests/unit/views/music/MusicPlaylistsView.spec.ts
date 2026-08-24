@@ -135,7 +135,9 @@ describe("MusicPlaylistsView", () => {
 		mocks.listMusicPlaylists
 			.mockRejectedValueOnce(new Error("playlists unavailable"))
 			.mockResolvedValueOnce({
-				data: [{ id: "owned-1", name: "恢复后的歌单", kind: "user", song_count: 1 }],
+				data: [
+					{ id: "owned-1", name: "恢复后的歌单", kind: "user", song_count: 1 },
+				],
 			});
 		mocks.listPlaylistBookmarks.mockResolvedValue({ data: [] });
 
@@ -154,20 +156,31 @@ describe("MusicPlaylistsView", () => {
 	it("removes a bookmarked playlist and updates the list", async () => {
 		mocks.listMusicPlaylists.mockResolvedValue({ data: [] });
 		mocks.listPlaylistBookmarks.mockResolvedValue({
-			data: [{
-				id: "bookmark-1",
-				playlist_id: "saved-1",
-				playlist: { id: "saved-1", name: "待取消收藏", kind: "user", song_count: 2 },
-			}],
+			data: [
+				{
+					id: "bookmark-1",
+					playlist_id: "saved-1",
+					playlist: {
+						id: "saved-1",
+						name: "待取消收藏",
+						kind: "user",
+						song_count: 2,
+					},
+				},
+			],
 		});
 		mocks.deletePlaylistBookmark.mockResolvedValue({});
 
 		const wrapper = mountView();
 		await flushPromises();
-		await wrapper.get('[data-testid="bookmarked-playlist-card"]').trigger("contextmenu");
+		await wrapper
+			.get('[data-testid="bookmarked-playlist-card"]')
+			.trigger("contextmenu");
 		await flushPromises();
 
 		expect(mocks.deletePlaylistBookmark).toHaveBeenCalledWith("saved-1");
-		expect(wrapper.find('[data-testid="bookmarked-playlist-card"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="bookmarked-playlist-card"]').exists(),
+		).toBe(false);
 	});
 });

@@ -61,15 +61,83 @@ const updateCategory = (value: string) => emit('update:category', value)
 </script>
 
 <style scoped>
-.tl-toolbar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: flex-end; padding: 1.1rem 1.15rem 1.2rem; border: none; border-radius: var(--a-radius-card); background: var(--a-color-surface); }
-.filter-label { font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0; color: var(--a-color-muted); }
-.tl-filter-group { display: flex; flex-direction: column; gap: 4px; }
-.tl-toolbar-batch { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.tl-toolbar-batch-count { font-size: 0.72rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0; color: var(--a-color-muted); }
-.tl-mode-switch { display: inline-flex; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); }
-.tl-mode-btn { border: none; border-right: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: var(--a-color-fg); cursor: pointer; padding: 0.6rem 1.05rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0; }
-.tl-mode-btn:last-child { border-right: none; }
-.tl-mode-btn-active, .tl-mode-btn:hover { background: var(--a-color-fg); color: var(--a-color-bg); }
-.tl-action-btn { border-color: var(--a-color-border-soft); font-size: 0.72rem; font-weight: 500; text-transform: uppercase; }
-.tl-action-btn-secondary { color: var(--a-color-fg); }
+.tl-toolbar {
+  display: flex;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface-muted);
+}
+
+.filter-label {
+  font-size: 0.72rem;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--a-color-muted);
+}
+
+.tl-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tl-toolbar-batch {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tl-toolbar-batch-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--a-color-muted);
+}
+
+.tl-mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-pill, 999px);
+  background: var(--a-color-bg);
+  padding: 2px;
+  overflow: hidden;
+}
+
+.tl-mode-btn {
+  border: none;
+  border-radius: var(--a-radius-pill, 999px);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.tl-mode-btn:hover {
+  color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
+}
+
+.tl-mode-btn.tl-mode-btn-active {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+}
+
+.tl-action-btn {
+  border-color: var(--a-color-border-soft);
+  font-size: 0.72rem;
+  font-weight: 550;
+}
+
+.tl-action-btn-secondary {
+  color: var(--a-color-fg);
+}
 </style>

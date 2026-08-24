@@ -5,9 +5,12 @@
     :class="{ 'is-read': isRead }"
     @mouseenter="handleMouseEnter"
   >
-    <!-- 1. 紧凑单行头部：作者 + 相对时间 + 短笺标签 + 作者微操作 -->
+    <!-- 1. 紧凑单行头部：作者头像 + 作者 + 相对时间 + 短笺标签 + 作者微操作 -->
     <header class="sticky-memo-head">
       <div class="sticky-memo-head__main">
+        <div class="sticky-author-avatar" aria-hidden="true">
+          {{ author.charAt(0).toUpperCase() }}
+        </div>
         <span class="sticky-author">{{ author }}</span>
         <span class="sticky-dot" aria-hidden="true">·</span>
         <span class="sticky-time">{{ formatDate(note.created_at) }}</span>
@@ -249,6 +252,21 @@ function formatDate(value: string) {
   color: var(--a-color-muted);
 }
 
+.sticky-author-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .sticky-author {
   font-weight: 650;
   color: var(--a-color-fg);
@@ -272,7 +290,7 @@ function formatDate(value: string) {
   font-size: 0.62rem;
   font-weight: 700;
   padding: 0.1em 0.45em;
-  border-radius: 999px;
+  border-radius: var(--a-radius-pill, 999px);
   background: color-mix(in srgb, #f59e0b 12%, transparent);
   color: #d97706;
 }
@@ -361,28 +379,30 @@ function formatDate(value: string) {
 .sticky-memo-footer {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   padding-top: 0.35rem;
 }
 
 .sticky-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--a-radius-pill, 999px);
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   font-size: 0.72rem;
+  font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sticky-pill-btn:hover {
   border-color: var(--a-color-border);
   color: var(--a-color-fg);
   background: var(--a-color-surface-muted);
+  transform: translateY(-1px);
 }
 
 .sticky-pill-btn.is-liked {

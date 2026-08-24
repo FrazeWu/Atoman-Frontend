@@ -220,6 +220,17 @@ export interface StudioContentItem {
 	updated_at: string;
 }
 
+export interface StudioCollectionContentItem {
+	content_id: string;
+	id: string;
+	module: StudioModule;
+	title: string;
+	cover_url: string;
+	status: StudioContentStatus;
+	updated_at: string;
+	position: number;
+}
+
 export interface StudioContentIssue {
 	code: string;
 	count: number;
@@ -377,9 +388,9 @@ export interface ShortNote {
 	updated_at: string;
 }
 
-export interface BlogPostVersion {
+export interface BlogContentVersion {
 	id: string;
-	post_id: string;
+	content_id: string;
 	version: number;
 	editor_id: string;
 	title: string;
@@ -387,7 +398,7 @@ export interface BlogPostVersion {
 	summary?: string;
 	cover_url?: string;
 	visibility: "public" | "followers" | "private";
-	collection_id: string;
+	content_collection_id: string;
 	published_at?: string;
 	created_at: string;
 	updated_at: string;
@@ -397,7 +408,7 @@ export interface BlogDraft {
 	id: string;
 	user_id: string;
 	context_key: string;
-	source_post_id?: string;
+	source_content_id?: string;
 	title: string;
 	content: string;
 	summary?: string;
@@ -808,11 +819,12 @@ export interface BookmarkFolder {
 export interface Bookmark {
 	id: string;
 	user_id: string;
-	post_id: string;
-	post?: Post;
+	content_id: string;
+	content?: Post;
 	bookmark_folder_id?: string;
 	bookmark_folder?: BookmarkFolder;
 	created_at: string;
+	updated_at: string;
 }
 
 // ===== Orbit Types =====
@@ -1355,4 +1367,12 @@ export interface Video {
 	collections?: Collection[];
 	created_at: string;
 	updated_at: string;
+}
+
+export interface BlogPostVersion {
+	version: number;
+	title: string;
+	summary?: string;
+	content?: string;
+	created_at: string;
 }

@@ -7,7 +7,7 @@
       </template>
     </PPageHeader>
 
-    <!-- Filters -->
+    <!-- Filters Toolbar -->
     <div class="debate-filters">
       <PSelect
         v-model="filterStatus"
@@ -19,7 +19,7 @@
       <PInput
         v-model="filterTag"
         @keyup.enter="loadDebates"
-        placeholder="标签筛选"
+        placeholder="标签筛选..."
         class="debate-filter-tag"
       />
 
@@ -46,55 +46,68 @@
 
       <!-- Debate List -->
       <div v-else class="debate-list">
-      <PEntry
-        v-for="debate in debates"
-        :key="debate.id"
-        @click="goToDebate(debate.id)"
-      >
-        <!-- Tags / Status badge -->
-        <template #meta>
-          <span
-            v-if="debate.conclusion_type === 'yes' || debate.conclusion_type === 'no'"
-            class="debate-conclusion-stamp"
-            :class="`debate-conclusion-stamp--${debate.conclusion_type}`"
-          >
-            结论 · {{ conclusionLabels[debate.conclusion_type] }}
-          </span>
-          <span
-            class="a-badge debate-status"
-            :class="{ 'debate-status--archived': debate.status === 'archived' }"
-          >
-            {{ statusLabels[debate.status] }}
-          </span>
-          <span v-for="tag in debate.tags" :key="tag" class="a-badge">#{{ tag }}</span>
-          <span class="mx-2">·</span>
-          <span>由 {{ debate.user?.username || '匿名' }} 发起</span>
-          <span class="mx-2">·</span>
-          <span>{{ formatDate(debate.created_at) }}</span>
-        </template>
+        <article
+          v-for="debate in debates"
+          :key="debate.id"
+          class="debate-card"
+          @click="goToDebate(debate.id)"
+        >
+          <!-- 头部元数据 -->
+          <header class="debate-card__header">
+            <div class="debate-card__meta">
+              <span
+                v-if="debate.conclusion_type === 'yes' || debate.conclusion_type === 'no'"
+                class="debate-conclusion-stamp"
+                :class="`debate-conclusion-stamp--${debate.conclusion_type}`"
+              >
+                结论 · {{ conclusionLabels[debate.conclusion_type] }}
+              </span>
+              <span
+                class="debate-status-badge"
+                :class="{ 'is-archived': debate.status === 'archived' }"
+              >
+                {{ statusLabels[debate.status] }}
+              </span>
+              <span v-for="tag in debate.tags" :key="tag" class="debate-tag">#{{ tag }}</span>
+              <span class="debate-dot" aria-hidden="true">·</span>
+              <span class="debate-author">由 {{ debate.user?.username || '匿名' }} 发起</span>
+              <span class="debate-dot" aria-hidden="true">·</span>
+              <span class="debate-time">{{ formatDate(debate.created_at) }}</span>
+            </div>
+          </header>
 
-        <!-- Title -->
-        <template #title>
-          <RouterLink
-            :to="`/debate/${debate.id}`"
-            class="debate-title-link"
-            @click.stop
-          >{{ debate.title }}</RouterLink>
-        </template>
+          <!-- 辩题标题 -->
+          <h2 class="debate-card__title">
+            <RouterLink
+              :to="`/debate/${debate.id}`"
+              class="debate-title-link"
+              @click.stop
+            >{{ debate.title }}</RouterLink>
+          </h2>
 
-        <!-- Description -->
-        <template #summary>
-          {{ debate.description }}
-        </template>
-
-        <!-- Stats -->
-        <template #actions>
-          <div style="display:flex;align-items:center;gap:1rem;font-size:0.72rem;color:var(--a-color-muted);font-weight: 500">
-            <span>浏览 {{ debate.view_count || 0 }}</span>
+          <!-- 正反立场进度条与观点导引 -->
+          <div class="debate-card__stance-box">
+            <div class="stance-bar" aria-label="正反双方立场支持比例">
+              <div class="stance-bar__pro" style="width: 58%" title="支持方 58%" />
+              <div class="stance-bar__con" style="width: 42%" title="反对方 42%" />
+            </div>
+            <div class="stance-labels">
+              <span class="stance-label stance-label--pro">支持观点 (58%)</span>
+              <span class="stance-action">参与讨论 ›</span>
+              <span class="stance-label stance-label--con">反对方 (42%)</span>
+            </div>
           </div>
-        </template>
-      </PEntry>
-    </div>
+
+          <!-- 底部统计 -->
+          <footer class="debate-card__footer">
+            <div class="debate-card__stats">
+              <span>浏览 {{ debate.view_count || 0 }}</span>
+              <span class="debate-dot" aria-hidden="true">·</span>
+              <span>论点 12</span>
+            </div>
+          </footer>
+        </article>
+      </div>
     </PContentProgress>
 
     <!-- Load More -->
@@ -267,44 +280,202 @@ onMounted(async () => {
 <style scoped>
 .debate-filters {
   display: flex;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
+
 .debate-filter-status {
-  max-width: 200px;
+  max-width: 180px;
 }
+
 .debate-filter-tag {
-  max-width: 300px;
+  max-width: 260px;
 }
+
+.debate-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.debate-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.35rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.debate-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5px;
+  background: var(--a-color-text);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.debate-card:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  transform: translateY(-2px);
+}
+
+.debate-card:hover::before {
+  opacity: 1;
+}
+
+.debate-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+  flex-wrap: wrap;
+}
+
+.debate-dot {
+  color: var(--a-color-muted-soft);
+}
+
+.debate-status-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15em 0.5em;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.debate-status-badge.is-archived {
+  opacity: 0.7;
+}
+
+.debate-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 8%, transparent);
+  padding: 0.15em 0.5em;
+  border-radius: var(--a-radius-control);
+}
+
+.debate-card__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--a-color-fg);
+}
+
+.debate-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 正反立场对比条 */
+.debate-card__stance-box {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.stance-bar {
+  display: flex;
+  height: 6px;
+  border-radius: var(--a-radius-pill, 999px);
+  overflow: hidden;
+  background: var(--a-color-border-soft);
+  gap: 2px;
+}
+
+.stance-bar__pro {
+  background: #3b82f6;
+  border-radius: var(--a-radius-pill, 999px) 0 0 var(--a-radius-pill, 999px);
+  transition: width 0.3s ease;
+}
+
+.stance-bar__con {
+  background: #ef4444;
+  border-radius: 0 var(--a-radius-pill, 999px) var(--a-radius-pill, 999px) 0;
+  transition: width 0.3s ease;
+}
+
+.stance-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.stance-label--pro {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.stance-label--con {
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.stance-action {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--a-color-muted);
+  letter-spacing: 0.02em;
+}
+
+.debate-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--a-color-muted);
+}
+
+.debate-card__stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .debate-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1.5rem;
 }
+
 .debate-conclusion-stamp {
-  padding: 4px 8px;
+  padding: 0.15em 0.5em;
   border-radius: var(--a-radius-control);
-  font-size: 10px;
+  font-size: 0.68rem;
   font-weight: 600;
 }
+
 .debate-conclusion-stamp--yes {
   background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
   color: var(--a-color-primary);
 }
+
 .debate-conclusion-stamp--no {
   border: 1px solid var(--a-color-border);
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
 }
-.debate-title-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.debate-title-link:hover {
-  text-decoration: underline;
-}
-
 </style>

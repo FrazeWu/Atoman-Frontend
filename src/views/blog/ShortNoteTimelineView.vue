@@ -243,6 +243,7 @@ onMounted(() => void load())
 }
 
 .short-note-timeline__rail-note {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -251,7 +252,20 @@ onMounted(() => void load())
   text-decoration: none;
   border-bottom: 1px solid var(--a-color-border-soft);
   cursor: pointer;
-  transition: background 0.15s ease;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.short-note-timeline__rail-note::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--a-color-text);
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 .short-note-timeline__rail-note:last-child {
@@ -260,6 +274,10 @@ onMounted(() => void load())
 
 .short-note-timeline__rail-note:hover {
   background: var(--a-color-surface-muted);
+}
+
+.short-note-timeline__rail-note:hover::before {
+  opacity: 1;
 }
 
 .short-note-timeline__rail-title {

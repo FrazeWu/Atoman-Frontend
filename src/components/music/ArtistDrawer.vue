@@ -153,13 +153,13 @@ const playableArtistSongs = computed<Song[]>(() => {
       id: song.id,
       title: song.title,
       artist: song.artists?.map((item) => item.name).join(', ') || displayName.value || '未知艺术家',
-      album: song.title,
-      album_id: '',
-      year: Number(releaseDate.slice(0, 4)) || 0,
+      album: song.album?.title || '',
+      album_id: song.album?.id || song.album_id || '',
+      year: Number((song.album?.release_date || releaseDate).slice(0, 4)) || 0,
       release_date: releaseDate,
       lyrics: song.lyrics || '',
       audio_url: audioUrl,
-      cover_url: song.cover_url?.trim() || '',
+      cover_url: song.cover_url?.trim() || song.album?.cover_url?.trim() || '',
       track_number: song.track_number,
       disc_number: song.disc_number,
       status: (song.status as Song['status'] | undefined) || 'open',
@@ -205,6 +205,21 @@ function formatArtistSongDuration(seconds?: number) {
   return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 }
 
+function formatSongArtists(song: MusicSongListItem) {
+  const credits = [...(song.artist_credits ?? [])]
+    .filter((credit) => credit.artist?.name.trim())
+    .sort((left, right) => left.position - right.position)
+  const uniqueNames = (items: typeof credits) => [...new Set(items.map((credit) => credit.artist?.name.trim()).filter(Boolean))] as string[]
+  const primaryCredits = credits.filter((credit) => credit.role === 'primary')
+  const primaryIDs = new Set(primaryCredits.map((credit) => credit.artist_id))
+  const featuredCredits = credits.filter((credit) => credit.role === 'featured' && !primaryIDs.has(credit.artist_id))
+  if (primaryCredits.length && featuredCredits.length) {
+    return `${uniqueNames(primaryCredits).join(' / ')} feat. ${uniqueNames(featuredCredits).join('、')}`
+  }
+  const names = song.artists?.map((artist) => artist.name.trim()).filter(Boolean) ?? []
+  return names.join(' / ') || displayName.value || '未知艺术家'
+}
+
 function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision?: string, leavePrecision?: string) {
   const start = formatStoredPartialDate(joinDate, joinPrecision) || '未知'
   const end = formatStoredPartialDate(leaveDate, leavePrecision) || '至今'
@@ -228,13 +243,17 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
   releaseLoading.value = true
   releaseErrorMessage.value = ''
   try {
-    const response = requestedType === 'album'
-      ? await listMusicAlbums({ artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
-      : await listMusicSongs({ artist_id: targetArtistId, release_type: 'single,leak', sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
-    if (!isCurrentLoad()) return
-    releaseMeta.value = response.meta
-    if (requestedType === 'album') albums.value = response.data
-    else songs.value = response.data
+    if (requestedType === 'album') {
+      const response = await listMusicAlbums({ artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
+      if (!isCurrentLoad()) return
+      releaseMeta.value = response.meta
+      albums.value = response.data
+    } else {
+      const response = await listMusicSongs({ artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
+      if (!isCurrentLoad()) return
+      releaseMeta.value = response.meta
+      songs.value = response.data
+    }
   } catch (error) {
     if (!isCurrentLoad()) return
     releaseErrorMessage.value = requestedType === 'album' ? '专辑列表加载失败' : '歌曲列表加载失败'
@@ -684,18 +703,33 @@ watch([releaseType, albumSortMode], () => {
             <Pause v-if="isArtistSongPlaying(song)" class="track-play-icon" :size="14" fill="currentColor" />
             <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
-          <button
-            type="button"
-            class="track-title artist-track-title"
-            :title="song.title"
-            :data-testid="`artist-track-title-${song.id}`"
-            @click="openArtistSong(song)"
-          >
-            {{ song.title }}
-          </button>
+          <div class="artist-track-info">
+            <button
+              type="button"
+              class="track-title artist-track-title"
+              :title="song.title"
+              :data-testid="`artist-track-title-${song.id}`"
+              @click="openArtistSong(song)"
+            >
+              {{ song.title }}
+            </button>
+            <div class="artist-track-artists">{{ formatSongArtists(song) }}</div>
+            <div v-if="song.album" class="artist-track-album-line">
+              <span>收录于</span>
+              <button
+                type="button"
+                class="artist-track-album"
+                :data-testid="`artist-track-album-${song.id}`"
+                @click.stop="openAlbum(song.album.id)"
+              >
+                {{ song.album.title }}
+              </button>
+              <span v-if="song.track_number">· 第 {{ song.track_number }} 首</span>
+            </div>
+          </div>
           <div class="track-meta">
             <span v-if="!canPlayArtistSong(song)" class="track-unavailable">无音频</span>
-            <span class="artist-track-type">{{ formatAlbumTypeLabel(song.release_type) }}</span>
+            <span class="artist-track-type">{{ song.album ? '专辑曲目' : formatAlbumTypeLabel(song.release_type) }}</span>
             <span class="artist-track-date">{{ formatAlbumReleaseDate(song) }}</span>
             <span v-if="formatArtistSongDuration(song.duration_sec)" class="track-time">
               {{ formatArtistSongDuration(song.duration_sec) }}
@@ -1056,6 +1090,47 @@ watch([releaseType, albumSortMode], () => {
   cursor: pointer;
 }
 .artist-track-title:hover { text-decoration: underline; }
+.artist-track-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 0.1rem;
+}
+.artist-track-title {
+  width: 100%;
+}
+.artist-track-artists,
+.artist-track-album-line {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.artist-track-album-line {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.artist-track-album {
+  max-width: 16rem;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.artist-track-album:hover {
+  color: var(--a-color-text);
+  text-decoration: underline;
+}
 .track-meta {
   display: flex;
   align-items: center;

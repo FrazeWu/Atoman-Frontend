@@ -156,6 +156,15 @@ export type MusicAlbumArtistCredit = {
 	position: number;
 };
 
+export type MusicSongArtistCredit = {
+	song_id: string;
+	artist_id: string;
+	artist?: MusicArtistListItem;
+	role: MusicAlbumArtistRole;
+	custom_role?: string;
+	position: number;
+};
+
 export type MusicAlbumImportCommitInput = {
 	artist_id?: string;
 	artist: {
@@ -504,14 +513,7 @@ export type MusicAlbumListItem = {
 		playback_bitrate_kbps?: number;
 		playback_sample_rate_hz?: number;
 		playback_channels?: number;
-		artist_credits?: Array<{
-			song_id: string;
-			artist_id: string;
-			artist?: MusicArtistListItem;
-			role: MusicAlbumArtistRole;
-			custom_role?: string;
-			position: number;
-		}>;
+		artist_credits?: MusicSongArtistCredit[];
 	}>;
 	entry_status: MusicEntryStatus;
 	lifecycle_status?: MusicLifecycleStatus;
@@ -573,6 +575,7 @@ export type MusicSongListItem = {
 	edit_status?: MusicEditStatus;
 	entry_status: MusicEntryStatus;
 	artists?: Array<{ id: string; name: string }>;
+	artist_credits?: MusicSongArtistCredit[];
 	album?: {
 		id: string;
 		title: string;

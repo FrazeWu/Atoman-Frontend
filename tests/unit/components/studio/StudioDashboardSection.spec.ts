@@ -7,25 +7,12 @@ import type { StudioDashboardSection as DashboardSection } from '@/types'
 const RouterLink = { props: ['to'], template: '<a :href="to"><slot /></a>' }
 
 describe('StudioDashboardSection', () => {
-  it('shows independent metrics three recent items actionable issues and module routes', () => {
+  it('shows production and native engagement metrics with module routes', () => {
     const section: DashboardSection = {
       module: 'blog',
-      metrics: { view: 108, comment: 7, like: 6, bookmark: 5, share: 4 },
-      recent: Array.from({ length: 4 }, (_, index) => ({
-        id: `post-${index + 1}`,
-        module: 'blog' as const,
-        channel_id: 'channel-1',
-        title: `文章 ${index + 1}`,
-        summary: '',
-        cover_url: '',
-        status: 'published' as const,
-        visibility: 'public' as const,
-        collections: [],
-        view_count: index,
-        created_at: '2026-07-18T00:00:00Z',
-        updated_at: '2026-07-18T00:00:00Z',
-      })),
-      issues: [{ code: 'missing_cover', count: 2 }, { code: 'draft', count: 3 }],
+      metrics: { contents: 12, published: 9, drafts: 3, view: 108 },
+      recent: [],
+      issues: [],
     }
 
     const wrapper = mount(StudioDashboardSection, {
@@ -33,12 +20,24 @@ describe('StudioDashboardSection', () => {
       global: { stubs: { RouterLink } },
     })
 
-    expect(wrapper.findAll('[data-testid="dashboard-recent-item"]')).toHaveLength(3)
-    expect(wrapper.text()).toContain('2 条缺少封面')
-    expect(wrapper.text()).toContain('3 篇草稿')
-    expect(wrapper.find('a[href="/studio/blog/new"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/studio/blog/content"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/studio/blog/analytics"]').exists()).toBe(true)
+    expect(wrapper.find('[data-metric="contents"]').text()).toContain('12')
+    expect(wrapper.find('[data-metric="published"]').text()).toContain('9')
+    expect(wrapper.find('[data-metric="drafts"]').text()).toContain('3')
     expect(wrapper.find('[data-metric="view"]').text()).toContain('108')
-    expect(wrapper.find('[data-metric="comment"]').text()).toContain('7')
+  })
+
+  it('keeps the module card actionable when its data fails to load', async () => {
+    const wrapper = mount(StudioDashboardSection, {
+      props: {
+        section: { module: 'video', metrics: {}, recent: [], issues: [], error: '视频加载失败' },
+      },
+      global: { stubs: { RouterLink } },
+    })
+
+    expect(wrapper.text()).toContain('视频加载失败')
+    await wrapper.find('[data-testid="retry-dashboard-section"]').trigger('click')
+    expect(wrapper.emitted('retry')).toHaveLength(1)
   })
 })

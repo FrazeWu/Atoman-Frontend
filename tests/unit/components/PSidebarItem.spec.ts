@@ -81,4 +81,13 @@ describe('PSidebarItem', () => {
     expect(wrapper.find('.p-sidebar-item-num').exists()).toBe(false)
     expect(iconIndex).toBeLessThan(labelIndex)
   })
+  it('applies an explicit active state to a routed item', () => {
+    const wrapper = mount(PSidebarItem, {
+      props: { to: '/studio/manage/channel', active: true },
+      slots: { default: '管理' },
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+
+    expect(wrapper.classes()).toContain('active')
+  })
 })

@@ -31,10 +31,21 @@ Atoman 的 Web 客户端，提供内容创作、订阅阅读、社区讨论和�
 ```bash
 cp .env.example .env.dev
 bun install
+# 仅在需要浏览器或视觉验证时启动；完成后关闭。
 bun run dev
 ```
 
-常用检查：
+内存受限环境默认使用串行检查；`type-check` 已复用增量缓存并保留 2 GB V8 堆，避免大项目检查 OOM：
+
+```bash
+# type-check -> 受影响的单元测试 -> production build，任务不会重叠运行。
+bun run check:serial
+
+# 仅运行受影响测试，避免完整 Vitest worker 池。
+bun run test:unit:changed
+```
+
+完整单元测试和独立构建仅在发布前或跨模块变更后运行：
 
 ```bash
 bun run type-check

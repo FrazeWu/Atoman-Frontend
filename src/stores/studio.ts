@@ -15,6 +15,7 @@ import type {
 	StudioAnalytics,
 	StudioChannel,
 	StudioCollection,
+	StudioCollectionContentItem,
 	StudioCollectionInput,
 	StudioContentFilters,
 	StudioContentItem,
@@ -64,6 +65,8 @@ export const useStudioStore = defineStore("studio", () => {
 	);
 	const collections = ref(emptyModuleRecord<StudioCollection[]>(() => []));
 	const unifiedCollections = ref<StudioCollection[]>([]);
+	const unifiedCollectionContents = ref<StudioCollectionContentItem[]>([]);
+	const unifiedCollectionContentsCollectionID = ref("");
 	const analytics = ref(emptyModuleRecord<StudioAnalytics | null>(() => null));
 	const interactions = ref(
 		emptyModuleRecord<StudioInteractionItem[]>(() => []),
@@ -79,6 +82,8 @@ export const useStudioStore = defineStore("studio", () => {
 	let activeReload: (() => Promise<void>) | null = null;
 	let channelSelectionRequestVersion = 0;
 	let dashboardRequestVersion = 0;
+	let unifiedCollectionsRequestVersion = 0;
+	let unifiedCollectionContentsRequestVersion = 0;
 	const contentsRequestVersion = emptyModuleRecord(() => 0);
 	const collectionsRequestVersion = emptyModuleRecord(() => 0);
 	const analyticsRequestVersion = emptyModuleRecord(() => 0);
@@ -96,6 +101,8 @@ export const useStudioStore = defineStore("studio", () => {
 
 	function clearResourceCaches() {
 		dashboardRequestVersion += 1;
+		unifiedCollectionsRequestVersion += 1;
+		unifiedCollectionContentsRequestVersion += 1;
 		for (const module of Object.keys(
 			contentsRequestVersion,
 		) as StudioModule[]) {
@@ -110,6 +117,9 @@ export const useStudioStore = defineStore("studio", () => {
 		contents.value = emptyModuleRecord(() => []);
 		contentPagination.value = emptyModuleRecord(() => null);
 		collections.value = emptyModuleRecord(() => []);
+		unifiedCollections.value = [];
+		unifiedCollectionContents.value = [];
+		unifiedCollectionContentsCollectionID.value = "";
 		analytics.value = emptyModuleRecord(() => null);
 		interactions.value = emptyModuleRecord(() => []);
 		interactionPagination.value = emptyModuleRecord(() => null);
@@ -232,11 +242,53 @@ export const useStudioStore = defineStore("studio", () => {
 		contentPagination.value[module] = response.meta ?? null;
 	}
 
-	async function loadUnifiedCollections() {
+	async function loadUnifiedCollections(track = true) {
+		if (track) activeReload = () => loadUnifiedCollections(false);
+		const requestVersion = ++unifiedCollectionsRequestVersion;
 		const requestChannelID = channelID();
-		unifiedCollections.value = await apiGet<StudioCollection[]>(
+		const response = await apiGet<StudioCollection[]>(
 			appendQuery(api.unifiedCollections, { channel_id: requestChannelID }),
 		);
+		if (
+			unifiedCollectionsRequestVersion !== requestVersion ||
+			currentChannel.value?.id !== requestChannelID
+		)
+			return;
+		unifiedCollections.value = response;
+	}
+
+	async function loadUnifiedCollectionContents(collectionID: string, track = true) {
+		if (track) {
+			activeReload = async () => {
+				await loadUnifiedCollections(false);
+				if (unifiedCollections.value.some((collection) => collection.id === collectionID)) {
+					await loadUnifiedCollectionContents(collectionID, false);
+				}
+			};
+		}
+		const requestVersion = ++unifiedCollectionContentsRequestVersion;
+		const requestChannelID = channelID();
+		const response = await apiGet<StudioCollectionContentItem[]>(
+			api.unifiedCollectionContents(collectionID),
+		);
+		if (
+			unifiedCollectionContentsRequestVersion !== requestVersion ||
+			currentChannel.value?.id !== requestChannelID
+		)
+			return;
+		unifiedCollectionContents.value = response;
+		unifiedCollectionContentsCollectionID.value = collectionID;
+	}
+
+	async function reorderUnifiedCollectionContents(
+		collectionID: string,
+		contentIDs: string[],
+	) {
+		await apiPutJson<{ reordered: boolean }>(
+			api.reorderUnifiedCollectionContents(collectionID),
+			{ content_ids: contentIDs },
+		);
+		await loadUnifiedCollectionContents(collectionID, false);
 	}
 
 	async function createUnifiedCollection(input: StudioCollectionInput) {
@@ -244,7 +296,7 @@ export const useStudioStore = defineStore("studio", () => {
 			...input,
 			channel_id: channelID(),
 		});
-		await loadUnifiedCollections();
+		await loadUnifiedCollections(false);
 	}
 
 	async function updateUnifiedCollection(
@@ -252,12 +304,16 @@ export const useStudioStore = defineStore("studio", () => {
 		input: StudioCollectionInput,
 	) {
 		await apiPatchJson<StudioCollection>(api.unifiedCollection(id), input);
-		await loadUnifiedCollections();
+		await loadUnifiedCollections(false);
 	}
 
 	async function deleteUnifiedCollection(id: string) {
 		await apiDeleteJson(api.unifiedCollection(id));
-		await loadUnifiedCollections();
+		await loadUnifiedCollections(false);
+		if (unifiedCollectionContentsCollectionID.value === id) {
+			unifiedCollectionContents.value = [];
+			unifiedCollectionContentsCollectionID.value = "";
+		}
 	}
 
 	async function loadCollections(module: StudioModule, track = true) {
@@ -477,6 +533,8 @@ export const useStudioStore = defineStore("studio", () => {
 		contentPagination,
 		collections,
 		unifiedCollections,
+		unifiedCollectionContents,
+		unifiedCollectionContentsCollectionID,
 		analytics,
 		interactions,
 		interactionPagination,
@@ -488,6 +546,8 @@ export const useStudioStore = defineStore("studio", () => {
 		loadContents,
 		loadCollections,
 		loadUnifiedCollections,
+		loadUnifiedCollectionContents,
+		reorderUnifiedCollectionContents,
 		createUnifiedCollection,
 		updateUnifiedCollection,
 		deleteUnifiedCollection,

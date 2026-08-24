@@ -10,6 +10,7 @@ const PModal = {
 	props: ["modelValue"],
 	template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
 };
+const RouterLink = { props: ["to"], template: '<a :href="to"><slot /></a>' };
 
 describe("StudioCollectionManager", () => {
 	it("creates renames and deletes unified collections", async () => {
@@ -30,7 +31,7 @@ describe("StudioCollectionManager", () => {
 		];
 		const wrapper = mount(StudioCollectionManager, {
 			props: { module: "blog" },
-			global: { plugins: [pinia], stubs: { PModal } },
+			global: { plugins: [pinia], stubs: { PModal, RouterLink } },
 		});
 
 		await wrapper.find('[data-testid="new-collection"]').trigger("click");
@@ -38,11 +39,15 @@ describe("StudioCollectionManager", () => {
 		await wrapper
 			.find('[data-testid="collection-description"]')
 			.setValue("新描述");
+		await wrapper
+			.find('[data-testid="collection-cover-url"]')
+			.setValue("https://example.com/cover.jpg");
 		await wrapper.find('[data-testid="save-collection"]').trigger("click");
 		await flushPromises();
 		expect(store.createUnifiedCollection).toHaveBeenCalledWith({
 			name: "新合集",
 			description: "新描述",
+			cover_url: "https://example.com/cover.jpg",
 		});
 
 		await wrapper
@@ -54,6 +59,7 @@ describe("StudioCollectionManager", () => {
 		expect(store.updateUnifiedCollection).toHaveBeenCalledWith("collection-1", {
 			name: "新名称",
 			description: "旧描述",
+			cover_url: "",
 		});
 
 		await wrapper
@@ -84,7 +90,7 @@ describe("StudioCollectionManager", () => {
 		];
 
 		const wrapper = mount(StudioCollectionManager, {
-			global: { plugins: [pinia], stubs: { PModal } },
+			global: { plugins: [pinia], stubs: { PModal, RouterLink } },
 		});
 
 		expect(wrapper.text()).toContain("默认合集");
@@ -113,7 +119,7 @@ describe("StudioCollectionManager", () => {
 		];
 		const wrapper = mount(StudioCollectionManager, {
 			props: { module: "blog" },
-			global: { plugins: [pinia], stubs: { PModal } },
+			global: { plugins: [pinia], stubs: { PModal, RouterLink } },
 		});
 
 		await wrapper

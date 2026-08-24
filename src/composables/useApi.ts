@@ -177,6 +177,10 @@ export function useApi() {
 			unifiedContents: `${apiUrl}/studio/contents`,
 			unifiedCollections: `${apiUrl}/studio/collections`,
 			unifiedCollection: (id: string) => `${apiUrl}/studio/collections/${id}`,
+			unifiedCollectionContents: (id: string) =>
+				`${apiUrl}/studio/collections/${id}/contents`,
+			reorderUnifiedCollectionContents: (id: string) =>
+				`${apiUrl}/studio/collections/${id}/contents/order`,
 			collections: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/collections`,
 			collection: (module: "blog" | "podcast" | "video", id: string) =>

@@ -31,7 +31,7 @@ export interface PostEditorDraftForm {
 
 export interface EditorDraftPayload extends PostEditorDraftForm {
 	context_key: string;
-	source_post_id?: string;
+	source_content_id?: string;
 	channel_id?: string;
 	collection_id?: string;
 }
@@ -269,7 +269,7 @@ export function usePostEditorDraftSession({
 
 	const blogDraftToPayload = (draft: BlogDraft): EditorDraftPayload => ({
 		context_key: draft.context_key,
-		source_post_id: draft.source_post_id,
+		source_content_id: draft.source_content_id,
 		title: draft.title || "",
 		content: draft.content || "",
 		summary: draft.summary || "",

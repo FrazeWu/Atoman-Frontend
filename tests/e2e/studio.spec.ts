@@ -66,6 +66,9 @@ test.describe("Unified Studio", () => {
 						sections: ["blog", "podcast", "video"].map((module) => ({
 							module,
 							metrics: {
+								contents: 3,
+								published: 2,
+								drafts: 1,
 								view: 12,
 								play: 12,
 								complete: 8,
@@ -244,7 +247,7 @@ test.describe("Unified Studio", () => {
 		await page.getByRole("link", { name: "创作", exact: true }).click();
 		await expect(page).toHaveURL(/\/studio$/);
 		await expect(
-			page.getByRole("heading", { name: "创作工作台" }),
+			page.getByRole("heading", { name: "概览" }),
 		).toBeVisible();
 		await expect(
 			page.locator('[data-testid="studio-dashboard-section"]'),
@@ -256,8 +259,8 @@ test.describe("Unified Studio", () => {
 			page.locator('[data-module="blog"] [data-metric="view"]'),
 		).toContainText("12");
 		await expect(
-			page.locator('[data-module="podcast"] [data-metric="complete"]'),
-		).toContainText("8");
+			page.locator('[data-module="podcast"] [data-metric="play"]'),
+		).toContainText("12");
 
 		const blogSection = page.locator(
 			'[data-testid="studio-dashboard-section"][data-module="blog"]',
@@ -274,8 +277,11 @@ test.describe("Unified Studio", () => {
 		await expect(page.getByRole("status")).toContainText("已转为草稿");
 		await expect(page.getByRole("button", { name: "分享" })).toBeVisible();
 
+		const studioNav = page.getByTestId("studio-primary-nav");
+		await studioNav.getByRole("link", { name: "管理", exact: true }).click();
+		await expect(page).toHaveURL(/\/studio\/manage\/channel$/);
 		await page.getByRole("link", { name: "合集", exact: true }).click();
-		await expect(page).toHaveURL(/\/studio\/blog\/collections$/);
+		await expect(page).toHaveURL(/\/studio\/manage\/collections$/);
 		await page.getByTestId("new-collection").click();
 		await page.getByTestId("collection-name").fill("研究");
 		await page.getByTestId("collection-description").fill("研究笔记");
@@ -286,7 +292,8 @@ test.describe("Unified Studio", () => {
 				.getByText("研究", { exact: true }),
 		).toBeVisible();
 
-		await page.getByRole("link", { name: "内容", exact: true }).click();
+		await studioNav.getByRole("link", { name: "博客", exact: true }).click();
+		await expect(page).toHaveURL(/\/studio\/blog\/content$/);
 		const collectionFilter = page.getByTestId("collection-filter");
 		await collectionFilter.getByRole("button").click();
 		await collectionFilter
@@ -310,7 +317,6 @@ test.describe("Unified Studio", () => {
 		);
 		await expect(page.getByTestId("collection-filter")).toContainText("研究");
 
-		const studioNav = page.getByTestId("studio-primary-nav");
 		await studioNav.getByRole("link", { name: "播客", exact: true }).click();
 		await expect(page).toHaveURL(/\/studio\/podcast\/content/);
 		await expect(

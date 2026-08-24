@@ -119,6 +119,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					meta: { requiresAuth: true },
 				},
 				{
+					path: "playlists",
+					component: () => import("@/views/music/LibraryView.vue"),
+					meta: { requiresAuth: true },
+				},
+				{
 					path: "bookmarks",
 					component: () => import("@/views/music/LibraryView.vue"),
 					meta: { requiresAuth: true },
@@ -167,8 +172,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "album/:albumId/edit",
-					redirect: (to) =>
-						`/music?editor=album-edit&album=${to.params.albumId}`,
+					redirect: (to) => `/music?editor=album-edit&album=${to.params.albumId}`,
 					meta: { requiresAuth: true },
 				},
 			],
@@ -336,8 +340,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "subscriptions",
-					component: () =>
-						import("@/views/podcast/PodcastSubscriptionsView.vue"),
+					component: () => import("@/views/podcast/PodcastSubscriptionsView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{

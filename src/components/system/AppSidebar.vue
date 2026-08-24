@@ -130,17 +130,22 @@
       <PSidebarItem to="/studio" :index="1" :icon="LayoutDashboard" exact>
         概览
       </PSidebarItem>
-      <PSidebarItem to="/studio/blog" :index="2" :icon="FileText">
+      <PSidebarItem
+        to="/studio/manage/channel"
+        :index="2"
+        :icon="Settings2"
+        :active="Boolean(route && route.path.startsWith('/studio/manage'))"
+      >
+        管理
+      </PSidebarItem>
+      <PSidebarItem to="/studio/blog" :index="3" :icon="FileText">
         博客
       </PSidebarItem>
-      <PSidebarItem to="/studio/podcast" :index="3" :icon="Mic2">
+      <PSidebarItem to="/studio/podcast" :index="4" :icon="Mic2">
         播客
       </PSidebarItem>
-      <PSidebarItem to="/studio/video" :index="4" :icon="Video">
+      <PSidebarItem to="/studio/video" :index="5" :icon="Video">
         视频
-      </PSidebarItem>
-      <PSidebarItem to="/studio/channel" :index="5" :icon="RadioTower">
-        频道管理
       </PSidebarItem>
     </template>
 
@@ -192,7 +197,7 @@ import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Star, Disc3, Users, History,
   MessageSquare, Folder, Archive, BookOpen, Clock, Mic,
-  LayoutDashboard, FileText, Mic2, RadioTower, Video
+  LayoutDashboard, FileText, Mic2, Settings2, Video
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'

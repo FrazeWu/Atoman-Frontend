@@ -45,7 +45,7 @@ describe("StudioLayout", () => {
 			wrapper
 				.findAll('[data-testid="studio-primary-nav"] a')
 				.map((link) => link.text()),
-		).toEqual(["概览", "博客", "播客", "视频", "频道管理"]);
+		).toEqual(["概览", "管理", "博客", "播客", "视频"]);
 	});
 
 	it("keeps channel settings reachable before the first channel exists", async () => {

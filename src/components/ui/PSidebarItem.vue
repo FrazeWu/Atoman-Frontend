@@ -3,7 +3,7 @@
     v-if="to"
     :to="to"
     class="p-sidebar-item"
-    :class="{ 'is-focused': isFocused }"
+    :class="{ active, 'is-focused': isFocused }"
     active-class="active"
     :exact-active-class="exact ? 'active' : ''"
   >

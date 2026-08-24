@@ -225,7 +225,11 @@ describe("PMaskedDateInput", () => {
 		const wrapper = mount(PMaskedDateInput, {
 			props: {
 				modelValue: model.value,
-				"onUpdate:modelValue": (value: { year: string; month: string; day: string }) => {
+				"onUpdate:modelValue": (value: {
+					year: string;
+					month: string;
+					day: string;
+				}) => {
 					model.value = value;
 				},
 			},
@@ -240,7 +244,11 @@ describe("PMaskedDateInput", () => {
 		const wrapper = mount(PMaskedDateInput, {
 			props: {
 				modelValue: model.value,
-				"onUpdate:modelValue": (value: { year: string; month: string; day: string }) => {
+				"onUpdate:modelValue": (value: {
+					year: string;
+					month: string;
+					day: string;
+				}) => {
 					model.value = value;
 				},
 			},
@@ -261,7 +269,9 @@ describe("PMaskedDateInput", () => {
 			},
 		});
 
-		expect(wrapper.get('input[type="text"]').attributes("aria-invalid")).toBe("true");
+		expect(wrapper.get('input[type="text"]').attributes("aria-invalid")).toBe(
+			"true",
+		);
 	});
 
 	it("shows field help and explains that an empty end date means present", async () => {

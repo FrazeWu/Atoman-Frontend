@@ -28,9 +28,9 @@
           <p>{{ studio.error }}</p>
           <button type="button" @click="studio.loadState(true)">重试</button>
         </div>
-        <section v-else-if="studio.loaded && !studio.currentChannel && !isChannelRoute" class="studio-empty">
+        <section v-else-if="studio.loaded && !studio.currentChannel && !isManagementRoute" class="studio-empty">
           <h1>还没有频道</h1>
-          <RouterLink to="/studio/channel">创建频道</RouterLink>
+          <RouterLink to="/studio/manage/channel">创建频道</RouterLink>
         </section>
         <RouterView v-else v-slot="{ Component }">
           <component v-if="Component" :is="Component" />
@@ -52,7 +52,9 @@ import { useStudioStore } from '@/stores/studio'
 const studio = useStudioStore()
 const route = useRoute()
 const mobileNavOpen = ref(false)
-const isChannelRoute = computed(() => route.path.startsWith('/studio/channel'))
+const isManagementRoute = computed(() => (
+  route.path.startsWith('/studio/manage') || route.path.startsWith('/studio/channel')
+))
 
 onMounted(() => {
   void studio.loadState()

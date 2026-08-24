@@ -416,7 +416,7 @@ const {
 const draftContextKey = computed(() => isEdit.value ? `blog:post:${String(route.params.id || '')}` : 'blog:new')
 const draftPayload = computed<EditorDraftPayload>(() => ({
   context_key: draftContextKey.value,
-  source_post_id: isEdit.value ? String(route.params.id || '') : undefined,
+  source_content_id: isEdit.value ? String(route.params.id || '') : undefined,
   title: form.value.title,
   content: form.value.content,
   summary: form.value.summary,

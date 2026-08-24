@@ -188,9 +188,9 @@ export function createFeedMembershipState() {
       if (res.ok) {
         const data = res.data
         if (generation !== sessionGeneration) return
-        const bookmarks = (data.data || []) as Array<{ post_id?: unknown }>
+        const bookmarks = (data.data || []) as Array<{ content_id?: unknown }>
         const ids = bookmarks
-          .map((bookmark) => typeof bookmark.post_id === 'string' ? bookmark.post_id : '')
+          .map((bookmark) => typeof bookmark.content_id === 'string' ? bookmark.content_id : '')
           .filter(Boolean)
         bookmarkedPostIds.value = new Set(ids)
       }
@@ -210,7 +210,7 @@ export function createFeedMembershipState() {
         })
         if (!res.ok) return null
         const data = res.data
-        const bookmark = (data.data || []).find((item: { post_id?: unknown }) => item.post_id === postId) as { id?: string } | undefined
+        const bookmark = (data.data || []).find((item: { content_id?: unknown }) => item.content_id === postId) as { id?: string } | undefined
         if (!bookmark?.id) return null
         const deleteRes = await apiRequestResult(`${api.url}/blog/bookmarks/${bookmark.id}`, {
           method: 'DELETE',
@@ -226,7 +226,7 @@ export function createFeedMembershipState() {
       const res = await apiRequestResult(`${api.url}/blog/bookmarks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({ post_id: postId }),
+        body: JSON.stringify({ content_id: postId }),
       })
       if (res.ok && generation === sessionGeneration) {
         const newSet = new Set(bookmarkedPostIds.value)

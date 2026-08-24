@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { describe, expect, it } from 'vitest'
+// @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
+// @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
 import type { ShortNote } from '@/types'
 
 describe('ShortNoteCard', () => {

@@ -27,7 +27,8 @@ vi.mock("@/components/music", () => ({
 		inheritAttrs: false,
 		props: ["playlist"],
 		emits: ["click", "toggle-bookmark"],
-		template: '<button v-bind="$attrs" @click="$emit(\'click\')" @contextmenu.prevent="$emit(\'toggle-bookmark\')">{{ playlist.title }}</button>',
+		template:
+			'<button v-bind="$attrs" @click="$emit(\'click\')" @contextmenu.prevent="$emit(\'toggle-bookmark\')">{{ playlist.title }}</button>',
 	},
 }));
 
@@ -74,7 +75,16 @@ describe("MusicPlaylistsView", () => {
 		});
 		mocks.listPlaylistBookmarks.mockResolvedValue({
 			data: [
-				{ id: "bookmark-1", playlist_id: "saved-1", playlist: { id: "saved-1", name: "通勤收藏", kind: "user", song_count: 5 } },
+				{
+					id: "bookmark-1",
+					playlist_id: "saved-1",
+					playlist: {
+						id: "saved-1",
+						name: "通勤收藏",
+						kind: "user",
+						song_count: 5,
+					},
+				},
 			],
 		});
 
@@ -83,11 +93,17 @@ describe("MusicPlaylistsView", () => {
 
 		expect(wrapper.get("h1").text()).toBe("歌单");
 		expect(wrapper.get("#owned-playlists-title").text()).toContain("我创建的");
-		expect(wrapper.get("#bookmarked-playlists-title").text()).toContain("我收藏的");
+		expect(wrapper.get("#bookmarked-playlists-title").text()).toContain(
+			"我收藏的",
+		);
 		expect(wrapper.text()).toContain("我的夜行歌单");
 		expect(wrapper.text()).toContain("通勤收藏");
 		expect(wrapper.text()).toContain("最爱");
-		expect(wrapper.findAll('[data-testid="owned-playlist-card"]')).toHaveLength(2);
-		expect(wrapper.findAll('[data-testid="bookmarked-playlist-card"]')).toHaveLength(1);
+		expect(wrapper.findAll('[data-testid="owned-playlist-card"]')).toHaveLength(
+			2,
+		);
+		expect(
+			wrapper.findAll('[data-testid="bookmarked-playlist-card"]'),
+		).toHaveLength(1);
 	});
 });

@@ -146,7 +146,12 @@ watch(sort, fetchVideos)
         <div v-else class="vh-grid vh-grid--recommendation">
           <PVideoCard v-for="video in recommendedVideos" :key="video.id" :video="video" />
         </div>
-        <PaginationBar :meta="recommendationMeta" :loading="recommendationLoading" @change="changeRecommendationPage" />
+        <PaginationBar
+          v-if="recommendationMeta.total > recommendationMeta.page_size"
+          :meta="recommendationMeta"
+          :loading="recommendationLoading"
+          @change="changeRecommendationPage"
+        />
       </PContentProgress>
     </section>
 
@@ -252,20 +257,27 @@ watch(sort, fetchVideos)
 
 .vh-chip {
   flex-shrink: 0;
-  padding: 0.4rem 1rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  border: none;
-  border-radius: 0px;
-  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-pill, 999px);
+  background: var(--a-color-bg);
   cursor: pointer;
-  color: var(--a-color-fg);
-  transition: background 0.12s;
+  color: var(--a-color-muted);
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
-.vh-chip:hover { background: var(--a-color-border); }
+
+.vh-chip:hover {
+  border-color: var(--a-color-border);
+  color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
+}
+
 .vh-chip--active {
-  background: var(--a-color-fg);
+  border-color: var(--a-color-text);
+  background: var(--a-color-text);
   color: var(--a-color-bg);
 }
 
@@ -273,7 +285,7 @@ watch(sort, fetchVideos)
 .vh-grid {
   display: grid;
   grid-template-columns: repeat(1, 1fr);
-  gap: 3rem 1.5rem;
+  gap: 2rem 1.25rem;
 }
 
 @media (max-width: 720px) {

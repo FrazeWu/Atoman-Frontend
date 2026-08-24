@@ -557,6 +557,56 @@ describe('studio store', () => {
     expect(store.collections.podcast).toEqual([{ id: 'channel-b-collection' }])
   })
 
+  it('reloads unified collections after switching channels and ignores the old response', async () => {
+    const channelAResponse = deferred<Response>()
+    const channelBResponse = deferred<Response>()
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(ok({ current_channel: channelA, channels: [channelA, channelB] }))
+      .mockReturnValueOnce(channelAResponse.promise)
+      .mockResolvedValueOnce(ok({ current_channel: channelB, channels: [channelA, channelB] }))
+      .mockReturnValueOnce(channelBResponse.promise)
+
+    const store = useStudioStore()
+    await store.loadState()
+    const channelALoad = store.loadUnifiedCollections()
+    const channelSwitch = store.selectChannel(channelB.id)
+    await vi.waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(4))
+
+    expect(String(vi.mocked(fetch).mock.calls[3]?.[0])).toContain('/studio/collections?channel_id=channel-b')
+    channelBResponse.resolve(ok([{ id: 'channel-b-collection' }]))
+    await channelSwitch
+    channelAResponse.resolve(ok([{ id: 'channel-a-stale-collection' }]))
+    await channelALoad
+
+    expect(store.currentChannel?.id).toBe(channelB.id)
+    expect(store.unifiedCollections).toEqual([{ id: 'channel-b-collection' }])
+  })
+
+  it('does not restore a collection detail that is outside the newly selected channel', async () => {
+    const channelAContents = deferred<Response>()
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(ok({ current_channel: channelA, channels: [channelA, channelB] }))
+      .mockResolvedValueOnce(ok([{ id: 'collection-a' }]))
+      .mockReturnValueOnce(channelAContents.promise)
+      .mockResolvedValueOnce(ok({ current_channel: channelB, channels: [channelA, channelB] }))
+      .mockResolvedValueOnce(ok([]))
+
+    const store = useStudioStore()
+    await store.loadState()
+    await store.loadUnifiedCollections()
+    const channelALoad = store.loadUnifiedCollectionContents('collection-a')
+    const channelSwitch = store.selectChannel(channelB.id)
+    await vi.waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(5))
+
+    expect(String(vi.mocked(fetch).mock.calls[4]?.[0])).toContain('/studio/collections?channel_id=channel-b')
+    await channelSwitch
+    channelAContents.resolve(ok([{ content_id: 'content-a', id: 'post-a' }]))
+    await channelALoad
+
+    expect(store.unifiedCollections).toEqual([])
+    expect(store.unifiedCollectionContents).toEqual([])
+  })
+
   it.each(['create', 'update', 'delete'] as const)(
     'does not replace the active content reload after a collection %s mutation',
     async (action) => {

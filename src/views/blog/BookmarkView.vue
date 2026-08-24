@@ -46,13 +46,13 @@
           <BlogItemCard
             v-for="bm in filteredBookmarks"
             :key="bm.id"
-            :item="bm.post"
+            :item="bm.content"
             type="post"
             :bookmarked="true"
-            :in-reading-list="readingListIds.has(bm.post?.id || '')"
-            @click="bm.post && blogSheets.openPost(bm.post.id, bm.post.title)"
+            :in-reading-list="readingListIds.has(bm.content?.id || '')"
+            @click="bm.content && blogSheets.openPost(bm.content.id, bm.content.title)"
             @toggle-bookmark="removeBookmark(bm)"
-            @toggle-reading-list="bm.post && toggleReadingList(bm.post.id)"
+            @toggle-reading-list="bm.content && toggleReadingList(bm.content.id)"
           />
         </div>
       </div>
@@ -149,8 +149,8 @@ const formatDate = (dateStr: string) => {
 }
 
 const filteredBookmarks = computed(() => {
-  if (activeFolder.value === null) return bookmarks.value.filter(b => b.post)
-  return bookmarks.value.filter(b => b.bookmark_folder_id === activeFolder.value && b.post)
+  if (activeFolder.value === null) return bookmarks.value.filter(b => b.content)
+  return bookmarks.value.filter(b => b.bookmark_folder_id === activeFolder.value && b.content)
 })
 
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))

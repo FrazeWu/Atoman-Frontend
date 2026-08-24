@@ -1,12 +1,23 @@
 <template>
-  <div ref="rootRef" class="p-dropdown-root">
-    <div @click="toggleOpen">
+  <div ref="rootRef" class="p-dropdown-root" @keydown.esc="close">
+    <div v-if="$slots.trigger" @click="toggleOpen">
       <slot name="trigger" :open="open">{{ label }}</slot>
     </div>
+    <button
+      v-else
+      type="button"
+      class="p-dropdown-trigger"
+      aria-haspopup="menu"
+      :aria-expanded="open"
+      @click="toggleOpen"
+    >
+      {{ label }}
+    </button>
     <div
       v-if="open"
       class="p-dropdown-panel"
       :class="position === 'left' ? 'p-dropdown-panel--left' : 'p-dropdown-panel--right'"
+      role="menu"
     >
       <slot :close="close" />
     </div>

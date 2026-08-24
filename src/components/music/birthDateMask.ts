@@ -58,7 +58,9 @@ function splitDateInput(value: string) {
 	return [value];
 }
 
-export function normalizePartialDateParts(parts: PartialDateParts): PartialDateParts {
+export function normalizePartialDateParts(
+	parts: PartialDateParts,
+): PartialDateParts {
 	const year = parseDatePart(parts.year, "year");
 	if (year === "----") return { year, month: "--", day: "--" };
 
@@ -139,17 +141,29 @@ function daysInMonth(year: number, month: number) {
 
 export function isPartialDateValid(parts: PartialDateParts) {
 	const normalized = normalizePartialDateParts(parts);
-	if (normalized.year === "----" || !/^\d{4}$/.test(normalized.year)) return true;
-	if (!normalized.month || normalized.month === "--" || normalized.month.length < 2) return true;
+	if (normalized.year === "----" || !/^\d{4}$/.test(normalized.year))
+		return true;
+	if (
+		!normalized.month ||
+		normalized.month === "--" ||
+		normalized.month.length < 2
+	)
+		return true;
 	if (!isValidDatePart(normalized.month, 1, 12)) return false;
-	if (!normalized.day || normalized.day === "--" || normalized.day.length < 2) return true;
+	if (!normalized.day || normalized.day === "--" || normalized.day.length < 2)
+		return true;
 	if (!isValidDatePart(normalized.day, 1, 31)) return false;
 
-	return daysInMonth(Number(normalized.year), Number(normalized.month)) >= Number(normalized.day);
+	return (
+		daysInMonth(Number(normalized.year), Number(normalized.month)) >=
+		Number(normalized.day)
+	);
 }
 
 export function serializePartialDate(parts?: PartialDateParts) {
-	const normalized = normalizePartialDateParts(parts ?? emptyPartialDateParts());
+	const normalized = normalizePartialDateParts(
+		parts ?? emptyPartialDateParts(),
+	);
 	const year = normalized.year.trim();
 	if (year === "----") return "----/--/--";
 	if (!/^\d{4}$/.test(year) || !isPartialDateValid(normalized)) return "";

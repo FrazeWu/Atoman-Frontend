@@ -23,6 +23,10 @@ describe("studio routes", () => {
 		expect(paths).toEqual(
 			expect.arrayContaining([
 				"/studio",
+				"/studio/manage",
+				"/studio/manage/channel",
+				"/studio/manage/collections",
+				"/studio/manage/collections/:id",
 				"/studio/channel",
 				"/studio/:module(blog|podcast|video)/content",
 				"/studio/:module(blog|podcast|video)/collections",
@@ -34,6 +38,20 @@ describe("studio routes", () => {
 			]),
 		);
 	});
+
+	it("redirects channel and module collection legacy URLs into management", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: buildAppRoutes(),
+		});
+		await router.push("/studio/channel/collections?source=legacy#collections");
+		expect(router.currentRoute.value.path).toBe("/studio/manage/collections");
+		expect(router.currentRoute.value.query.source).toBe("legacy");
+		expect(router.currentRoute.value.hash).toBe("#collections");
+		await router.push("/studio/blog/collections");
+		expect(router.currentRoute.value.path).toBe("/studio/manage/collections");
+	});
+
 
 	it("keeps the module parent mounted while adding an editor overlay", async () => {
 		const router = createRouter({

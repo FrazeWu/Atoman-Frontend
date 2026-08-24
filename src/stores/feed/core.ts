@@ -280,8 +280,9 @@ export const createFeedCoreState = () => {
 		targetType: string,
 		targetId: string,
 		title?: string,
-	) => {
+	): Promise<boolean> => {
 		const authStore = useAuthStore();
+		if (!authStore.isAuthenticated) return false;
 		try {
 			const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
 				method: "POST",
@@ -295,9 +296,12 @@ export const createFeedCoreState = () => {
 					title,
 				}),
 			});
-			if (res.ok) await fetchSubscriptions();
+			if (!res.ok) return false;
+			await fetchSubscriptions();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to subscribe");
+			return false;
 		}
 	};
 

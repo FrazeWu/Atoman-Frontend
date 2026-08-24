@@ -97,7 +97,11 @@ export const createFeedSourcesState = ({
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			return isCurrentSession(generation) && res.ok;
+			if (isCurrentSession(generation) && res.ok) return true;
+			if (method === "POST" && res.status === 409 && isAlreadySubscribedPayload(res.data)) {
+				return isCurrentSession(generation);
+			}
+			return false;
 		} catch (e) {
 			reportError(
 				e,

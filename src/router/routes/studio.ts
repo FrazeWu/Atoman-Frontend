@@ -1,8 +1,13 @@
-import type { RouteRecordRaw } from "vue-router";
+import type { RouteLocation, RouteLocationRaw, RouteRecordRaw } from "vue-router";
 
 const studioContentView = () => import("@/views/studio/StudioContentView.vue");
 const studioEditorRouteView = () =>
 	import("@/views/studio/StudioEditorRouteView.vue");
+const manageCollectionsRedirect = (to: RouteLocation): RouteLocationRaw => ({
+	path: "/studio/manage/collections",
+	query: to.query,
+	hash: to.hash,
+});
 
 export const studioRoutes: RouteRecordRaw[] = [
 	{
@@ -16,15 +21,41 @@ export const studioRoutes: RouteRecordRaw[] = [
 				component: () => import("@/views/studio/StudioDashboardView.vue"),
 			},
 			{
+				path: "manage",
+				component: () => import("@/views/studio/StudioManagementLayout.vue"),
+				children: [
+					{
+						path: "",
+						redirect: "/studio/manage/channel",
+					},
+					{
+						path: "channel",
+						name: "studio-manage-channel",
+						component: () => import("@/views/studio/StudioChannelView.vue"),
+					},
+					{
+						path: "collections",
+						name: "studio-manage-collections",
+						component: () =>
+							import("@/views/studio/StudioUnifiedCollectionsView.vue"),
+					},
+					{
+						path: "collections/:id",
+						name: "studio-manage-collection",
+						component: () =>
+							import("@/views/studio/StudioUnifiedCollectionDetailView.vue"),
+					},
+				],
+			},
+			{
 				path: "channel/collections",
 				name: "studio-channel-collections",
-				component: () =>
-					import("@/views/studio/StudioUnifiedCollectionsView.vue"),
+				redirect: manageCollectionsRedirect,
 			},
 			{
 				path: "channel",
 				name: "studio-channel",
-				component: () => import("@/views/studio/StudioChannelView.vue"),
+				redirect: "/studio/manage/channel",
 			},
 			{
 				path: ":module(blog|podcast|video)",
@@ -66,8 +97,7 @@ export const studioRoutes: RouteRecordRaw[] = [
 					{
 						path: "collections",
 						name: "studio-module-collections",
-						component: () =>
-							import("@/views/studio/StudioUnifiedCollectionsView.vue"),
+						redirect: manageCollectionsRedirect,
 					},
 					{
 						path: "imports",

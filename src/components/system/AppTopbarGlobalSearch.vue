@@ -336,26 +336,21 @@ onBeforeUnmount(() => {
 .palette-overlay {
   position: fixed;
   inset: 0;
-  z-index: var(--a-z-modal);
+  z-index: var(--a-z-global-menu);
+  background: color-mix(in srgb, #000 45%, transparent);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: clamp(3rem, 10vh, 7rem);
-  padding-left: 1rem;
-  padding-right: 1rem;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  padding: calc(var(--a-topbar-height) + 2.5rem) 1rem 2rem;
 }
 
 .palette-modal {
   width: 100%;
   max-width: 640px;
-  max-height: calc(85vh - 5rem);
-  display: flex;
-  flex-direction: column;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border);
+  background: color-mix(in srgb, var(--a-color-bg) 88%, transparent);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-modal);
   overflow: hidden;
@@ -368,7 +363,7 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   padding: 0.85rem 1.15rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  background: transparent;
 }
 
 .palette-search-icon {
@@ -527,25 +522,43 @@ onBeforeUnmount(() => {
 .guide-shortcuts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .guide-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  padding: 0.75rem 0.85rem;
+  padding: 0.75rem 0.85rem 0.75rem 1rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   cursor: pointer;
-  transition: all 0.15s ease;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.guide-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5px;
+  background: var(--a-color-text);
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 .guide-item:hover {
-  border-color: var(--a-color-primary);
+  border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+}
+
+.guide-item:hover::before {
+  opacity: 1;
 }
 
 .guide-tag {

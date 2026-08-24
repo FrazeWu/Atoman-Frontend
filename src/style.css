@@ -103,6 +103,7 @@
 	--a-z-player-modal: 760;
 	--a-z-lightbox: 800;
 	--a-z-toast: 900;
+	--a-z-global-menu: 950;
 	--a-sidebar-width: 0px;
 	--a-sidebar-collapsed-width: 4.5rem;
 }
@@ -1136,19 +1137,6 @@ body:has(.studio-layout) {
 	display: flex;
 	flex-direction: column;
 	z-index: 20;
-}
-
-.a-sidebar::after,
-.p-sidebar::after {
-	content: "";
-	position: absolute;
-	right: 0;
-	top: 50%;
-	width: 1px;
-	height: 16px;
-	transform: translateY(-50%);
-	background: var(--a-color-fg);
-	pointer-events: none;
 }
 
 .a-sidebar::-webkit-scrollbar,

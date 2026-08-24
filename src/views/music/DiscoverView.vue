@@ -806,14 +806,15 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
           </div>
         </div>
-        <PButton
-          v-if="discoverSectionMeta.album.has_more"
-          variant="secondary"
-          :loading="discoverSectionLoading.album"
-          loading-text="加载中..."
-          data-testid="discover-albums-load-more"
-          @click="loadMoreDiscoverSection('album')"
-        >加载更多</PButton>
+        <div v-if="discoverSectionMeta.album.has_more" class="discover-load-more-wrap">
+          <PButton
+            variant="secondary"
+            :loading="discoverSectionLoading.album"
+            loading-text="加载中..."
+            data-testid="discover-albums-load-more"
+            @click="loadMoreDiscoverSection('album')"
+          >加载更多</PButton>
+        </div>
       </section>
 
       <section v-if="discoverPlaylists.length" class="discover-section">
@@ -833,14 +834,15 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
           </div>
         </div>
-        <PButton
-          v-if="discoverSectionMeta.playlist.has_more"
-          variant="secondary"
-          :loading="discoverSectionLoading.playlist"
-          loading-text="加载中..."
-          data-testid="discover-playlists-load-more"
-          @click="loadMoreDiscoverSection('playlist')"
-        >加载更多</PButton>
+        <div v-if="discoverSectionMeta.playlist.has_more" class="discover-load-more-wrap">
+          <PButton
+            variant="secondary"
+            :loading="discoverSectionLoading.playlist"
+            loading-text="加载中..."
+            data-testid="discover-playlists-load-more"
+            @click="loadMoreDiscoverSection('playlist')"
+          >加载更多</PButton>
+        </div>
       </section>
 
       <section v-if="discoverArtists.length" class="discover-section">
@@ -860,14 +862,15 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
           </div>
         </div>
-        <PButton
-          v-if="discoverSectionMeta.artist.has_more"
-          variant="secondary"
-          :loading="discoverSectionLoading.artist"
-          loading-text="加载中..."
-          data-testid="discover-artists-load-more"
-          @click="loadMoreDiscoverSection('artist')"
-        >加载更多</PButton>
+        <div v-if="discoverSectionMeta.artist.has_more" class="discover-load-more-wrap">
+          <PButton
+            variant="secondary"
+            :loading="discoverSectionLoading.artist"
+            loading-text="加载中..."
+            data-testid="discover-artists-load-more"
+            @click="loadMoreDiscoverSection('artist')"
+          >加载更多</PButton>
+        </div>
       </section>
     </div>
     </PContentProgress>
@@ -1171,7 +1174,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   display: grid;
   gap: 0.85rem;
 }
-.discover-section > .p-button { justify-self: start; }
+
+.discover-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
 
 .discover-section__header {
   display: flex;

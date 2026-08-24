@@ -51,6 +51,7 @@
           class="music-sidebar-playlists__login-button"
           @click="requireLogin()"
         >
+          <LogIn :size="14" aria-hidden="true" />
           登录
         </button>
       </div>
@@ -117,7 +118,7 @@ import { reportError } from '@/utils/logger'
 import { ref, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useRoute, useRouter } from 'vue-router'
-import { Bookmark, Heart, ListMusic, Plus } from 'lucide-vue-next'
+import { Bookmark, Heart, ListMusic, LogIn, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -399,24 +400,28 @@ watch(
 }
 
 .music-sidebar-playlists__login-button {
-  margin: 0;
-  padding: 0.45rem 0.5rem;
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.65rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
   font: inherit;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
   cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  transition: all 0.18s ease;
 }
 
 .music-sidebar-playlists__login-button:hover,
 .music-sidebar-playlists__login-button:focus-visible {
-  border-color: var(--a-color-text);
-  background: var(--a-color-bg);
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
   outline: none;
 }
 /* Collapsed styling */

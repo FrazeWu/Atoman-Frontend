@@ -147,7 +147,8 @@ watch(() => route.fullPath, () => {
 @media (max-width: 767px) {
   .studio-layout { --a-sidebar-width: 0; }
   .studio-menu-button { display: inline-flex; }
-  .studio-frame { display: block; }
+  .studio-frame { display: block; min-height: 0; }
+  .studio-frame > .a-main-content { min-height: 0; }
   .studio-sidebar-shell {
     display: none;
     border-right: 0;
@@ -158,6 +159,9 @@ watch(() => route.fullPath, () => {
     display: flex;
     width: 100%;
     min-height: auto;
+    height: auto;
+    position: static;
+    overflow: visible;
     padding: 0.75rem;
   }
   .studio-sidebar :deep(.p-sidebar-nav) {

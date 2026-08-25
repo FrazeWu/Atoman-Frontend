@@ -180,6 +180,23 @@ describe('VideoEditorView', () => {
     expect(uploads).toHaveLength(2)
   })
 
+  it('does not submit a completed local import until the creator explicitly publishes', async () => {
+    const { wrapper, router } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+
+    await fileInput.trigger('change')
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoUploaded).toBe(true))
+    await new Promise(resolve => setTimeout(resolve, 20))
+    await flushPromises()
+
+    const submitCalls = vi.mocked(fetch).mock.calls.filter(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')
+    expect(submitCalls).toHaveLength(0)
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/new')
+  })
+
   it('does not continue to publish while the selected video is still uploading', async () => {
     autoCompleteUpload = false
     const { wrapper } = await setup('/studio/video/new')

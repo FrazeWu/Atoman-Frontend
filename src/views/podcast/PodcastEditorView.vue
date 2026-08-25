@@ -131,7 +131,7 @@ function isVideoFile(file: File) {
 }
 
 async function extractAudioFromVideo(file: File): Promise<File> {
-  if (!MediaRecorder.isTypeSupported('audio/webm')) {
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported('audio/webm')) {
     throw new Error('当前浏览器不支持从视频提取音频')
   }
 
@@ -160,7 +160,19 @@ async function extractAudioFromVideo(file: File): Promise<File> {
     video.src = objectUrl
 
     video.addEventListener('loadedmetadata', async () => {
-      const stream = (video as HTMLVideoElement & { captureStream: () => MediaStream }).captureStream()
+      const captureStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream
+      if (typeof captureStream !== 'function') {
+        fail('当前浏览器不支持从视频提取音频')
+        return
+      }
+
+      let stream: MediaStream
+      try {
+        stream = captureStream.call(video)
+      } catch {
+        fail('当前浏览器不支持从视频提取音频')
+        return
+      }
       const audioTracks = stream.getAudioTracks()
       if (audioTracks.length === 0) {
         fail('这个视频没有可提取的音轨')

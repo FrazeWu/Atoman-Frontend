@@ -42,6 +42,9 @@ const mountTable = (module: StudioModule, content = item(module)) =>
 describe("StudioContentTable", () => {
 	it("renders blog metrics and emits lifecycle actions", async () => {
 		const wrapper = mountTable("blog");
+		expect(wrapper.get("tbody td:first-child").classes()).toContain(
+			"is-empty-selection",
+		);
 
 		for (const label of ["阅读", "评论", "点赞", "收藏", "分享", "发布时间"]) {
 			expect(wrapper.findAll("th").some((cell) => cell.text() === label)).toBe(
@@ -95,6 +98,9 @@ describe("StudioContentTable", () => {
 			],
 		};
 		const wrapper = mountTable("video", conflicted);
+		expect(wrapper.get("tbody td:first-child").classes()).not.toContain(
+			"is-empty-selection",
+		);
 		expect(wrapper.text()).toContain("待确认：默认合集、专题合集");
 	});
 

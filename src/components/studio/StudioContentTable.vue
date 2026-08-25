@@ -24,7 +24,7 @@
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
-            <td data-label="选择"><input v-if="item.collection_conflict" type="checkbox" :aria-label="`选择${item.title || config.itemLabel}`" @change="emit('selectConflict', item, ($event.target as HTMLInputElement).checked)" /></td>
+            <td data-label="选择" :class="{ 'is-empty-selection': !item.collection_conflict }"><input v-if="item.collection_conflict" type="checkbox" :aria-label="`选择${item.title || config.itemLabel}`" @change="emit('selectConflict', item, ($event.target as HTMLInputElement).checked)" /></td>
             <td data-label="标题">
               <strong>{{ item.title || `未命名${config.itemLabel}` }}</strong>
               <span v-if="item.processing_status && item.processing_status !== 'ready'">{{ item.processing_status }}</span>
@@ -267,6 +267,7 @@ td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
   }
   td { min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
   td:first-child, td:last-child { grid-column: 1 / -1; }
+  td.is-empty-selection { display: none; }
   td::before {
     content: attr(data-label);
     display: block;

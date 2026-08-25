@@ -304,6 +304,9 @@ test.describe("Unified Studio", () => {
 		await expect(page).toHaveURL(
 			/\/studio\/blog\/new\?collection=collection-research/,
 		);
+		const editorSheet = page.locator(".studio-route-sheet");
+		await expect(editorSheet).toBeVisible();
+		await expect(editorSheet.getByRole("button", { name: "返回" })).toBeVisible();
 
 		const editor = page.locator(".cm-content");
 		await expect(editor).toBeVisible();
@@ -355,6 +358,13 @@ test.describe("Unified Studio", () => {
 		);
 		expect(pageOverflow).toBe(false);
 		await page.getByRole("button", { name: "打开创作中心导航" }).click();
+		const studioFrameTop = await page.locator(".studio-frame").evaluate(
+			(element) => element.getBoundingClientRect().top,
+		);
+		const mainContentTop = await page.locator(".studio-frame > .a-main-content").evaluate(
+			(element) => element.getBoundingClientRect().top,
+		);
+		expect(mainContentTop - studioFrameTop).toBeLessThan(240);
 		await page.screenshot({
 			path: testInfo.outputPath("studio-mobile.png"),
 			fullPage: true,

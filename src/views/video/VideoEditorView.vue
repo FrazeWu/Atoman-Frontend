@@ -63,7 +63,6 @@ const coverUploading = ref(false)
 const generatedCoverPreview = ref('')
 const generatedCoverBlob = ref<Blob | null>(null)
 const generatedCoverReady = ref(false)
-const autoPublishing = ref(false)
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = ref({
@@ -263,20 +262,6 @@ function validate(_status: 'draft' | 'published'): boolean {
   return validateMedia() && validateInformation()
 }
 
-async function autoPublishAfterUpload() {
-  if (isEdit.value || form.value.storage_type !== 'local' || !videoUploaded.value || !videoImportId.value || autoPublishing.value) return
-  if (!validateInformation()) return
-  autoPublishing.value = true
-  try {
-    await submitVideoImport(videoImportId.value, buildImportPayload(), 'published', null, authStore.token ?? undefined)
-    await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
-  } catch (err) {
-    errorMsg.value = errorMessage(err, '自动发布失败，请重试')
-  } finally {
-    autoPublishing.value = false
-  }
-}
-
 function buildPayload(status: 'draft' | 'published') {
   return {
     channel_id: form.value.channel_id || null,
@@ -316,7 +301,6 @@ function scheduleImportAutosave() {
 }
 
 watch([form, selectedCollectionId, videoImportId], scheduleImportAutosave, { deep: true })
-watch([videoUploaded, () => form.value.title, selectedCollectionId], () => { void autoPublishAfterUpload() }, { deep: true })
 onBeforeUnmount(() => {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
 })
@@ -591,7 +575,7 @@ async function schedulePublish() {
                 <div class="ve-progress-bar" :style="{ width: videoUploadProgress + '%' }" />
               </div>
 
-              <p v-if="urlError || videoImportState?.error" class="ve-field-error">{{ urlError || videoImportState?.error }}</p>
+              <p v-if="urlError || videoImportState?.error" class="ve-field-error" role="alert">{{ urlError || videoImportState?.error }}</p>
             </template>
           </div>
 

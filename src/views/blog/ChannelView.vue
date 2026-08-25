@@ -517,10 +517,10 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 .post-load-more { display: flex; justify-content: center; margin-top: 1.5rem; }
 
 .post-list.feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .collection-list {

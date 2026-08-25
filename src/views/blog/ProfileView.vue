@@ -1110,14 +1110,14 @@ onMounted(() => { void loadProfilePage() })
 .profile-note-bubble__time { color: var(--a-color-muted); }
 
 .profile-content__list.feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .profile-content__list :deep(.sticky-memo-card) {
-  margin: 0.5rem;
+  margin: 0;
 }
 
 /* ── Responsive ──────────────────────────────── */

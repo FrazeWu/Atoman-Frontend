@@ -22,6 +22,7 @@ interface PostEditorPublicationOptions {
 	loadedPostUpdatedAt: Ref<number>;
 	saving: Ref<SaveTarget | null>;
 	savedPostId: Ref<string | null>;
+	markdownImportID: Ref<string | null>;
 	scheduling: Ref<boolean>;
 	scheduledAt: Ref<string>;
 	error: Ref<string>;
@@ -49,6 +50,7 @@ export function usePostEditorPublication({
 	loadedPostUpdatedAt,
 	saving,
 	savedPostId,
+	markdownImportID,
 	scheduling,
 	scheduledAt,
 	error,
@@ -171,6 +173,24 @@ export function usePostEditorPublication({
 			const data = response.data;
 			const savedPost = data.data || data;
 			savedPostId.value = String(savedPost.id);
+			if (!isEdit.value && markdownImportID.value) {
+				const confirmResponse = await apiRequestResult(
+					api.blog.markdownImportConfirm(markdownImportID.value),
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${authStore.token}`,
+						},
+						body: JSON.stringify({ content_id: savedPostId.value }),
+					},
+				);
+				if (confirmResponse.ok) {
+					markdownImportID.value = null;
+				} else {
+					error.value = "文章已保存，但导入记录确认失败";
+				}
+			}
 			await clearAllDrafts();
 			allowNextRouteLeave();
 			if (!redirect) return savedPostId.value;

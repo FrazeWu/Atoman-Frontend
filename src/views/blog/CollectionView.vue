@@ -404,10 +404,10 @@ onMounted(() => {
 }
 
 .post-list.feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .collection-meta-card {

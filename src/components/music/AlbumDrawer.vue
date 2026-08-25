@@ -796,6 +796,18 @@ watch(
             <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
           <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
+          <SongRatingControl
+            class="track-rating"
+            size="compact"
+            :song-title="track.title"
+            :rating-score="track.rating_score"
+            :rating-count="track.rating_count"
+            :viewer-rating="track.viewer_rating"
+            :disabled="!isAuthenticated"
+            :loading="ratingSongID === String(track.id)"
+            @rate="rateTrack(track, $event)"
+            @clear="clearTrackRating(track)"
+          />
           <div class="track-meta">
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
@@ -1355,7 +1367,14 @@ watch(
   word-break: break-word;
 }
 .track-title:hover { text-decoration: underline; }
+.track-rating {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+}
 .track-meta {
+  grid-column: 3;
+  grid-row: 1 / span 2;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -1513,10 +1532,15 @@ watch(
   }
 
   .track-meta {
-    gap: 0.5rem;
+    grid-column: 2 / -1;
+    grid-row: 3;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .track-rating {
     grid-column: 2 / -1;
     grid-row: 2;
-    justify-content: flex-end;
   }
 
   .album-skeleton-track-play {

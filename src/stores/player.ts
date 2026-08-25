@@ -1,7 +1,7 @@
 import { reportError } from "@/utils/logger";
 import { apiRequestResult } from "@/api/client";
-import { defineStore } from "pinia";
-import { ref, watch } from "vue";
+import { defineStore, getActivePinia } from "pinia";
+import { onScopeDispose, ref, watch } from "vue";
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
 import { useApi } from "@/composables/useApi";
 import {
@@ -21,6 +21,7 @@ import {
 	useContentLifecycle,
 } from "@/composables/useContentLifecycle";
 import { useAuthStore } from "@/stores/auth";
+import { registerSessionReset } from "@/stores/sessionReset";
 import { useAudioPlayerSync } from "@/composables/useAudioPlayerSync";
 
 const api = useApi();
@@ -193,6 +194,7 @@ export const usePlayerStore = defineStore("player", () => {
 	let musicProgressRestored = false;
 	let musicSessionLastSavedAt = 0;
 	let musicSessionRestored = false;
+	let musicAccountGeneration = 0;
 
 	const isMusicSong = (song: Song) =>
 		!song.source_type || song.source_type === "music";
@@ -274,9 +276,17 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const restoreMusicSession = async () => {
 		if (!authStore.isAuthenticated || musicSessionRestored) return false;
+		const generation = musicAccountGeneration;
+		const userID = authStore.user?.uuid;
 		musicSessionRestored = true;
 		try {
 			const session = await getMusicPlaybackSession();
+			if (
+				generation !== musicAccountGeneration ||
+				!authStore.isAuthenticated ||
+				authStore.user?.uuid !== userID
+			)
+				return false;
 			if (!session?.queue?.length) return false;
 			const restoredQueue = session.queue
 				.filter((song) => Boolean(song.audio_url))
@@ -300,9 +310,17 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const restoreMusicProgress = async () => {
 		if (!authStore.isAuthenticated || musicProgressRestored) return;
+		const generation = musicAccountGeneration;
+		const userID = authStore.user?.uuid;
 		musicProgressRestored = true;
 		try {
 			const progress = await getMusicPlaybackProgress();
+			if (
+				generation !== musicAccountGeneration ||
+				!authStore.isAuthenticated ||
+				authStore.user?.uuid !== userID
+			)
+				return;
 			if (!progress?.song?.audio_url || progress.completed) return;
 			const source = progress.song;
 			const song = musicSongFromAPI(source);
@@ -318,7 +336,9 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const restoreMusicPlayback = async () => {
+		const generation = musicAccountGeneration;
 		if (await restoreMusicSession()) return;
+		if (generation !== musicAccountGeneration) return;
 		await restoreMusicProgress();
 	};
 
@@ -330,8 +350,8 @@ export const usePlayerStore = defineStore("player", () => {
 	}
 
 	watch(
-		() => authStore.isAuthenticated,
-		(isAuthenticated) => {
+		[() => authStore.isAuthenticated, () => authStore.user?.uuid],
+		([isAuthenticated]) => {
 			if (isAuthenticated) void restoreMusicPlayback();
 			else {
 				musicProgressRestored = false;
@@ -435,6 +455,66 @@ export const usePlayerStore = defineStore("player", () => {
 		audioStartPrefetchController = null;
 		audioStartPrefetchKey = null;
 	};
+
+	const resetPlaybackForSession = () => {
+		musicAccountGeneration += 1;
+		playGeneration += 1;
+		resetAudioStartPrefetch();
+		const previousAudio = audio;
+		audio = null;
+		if (previousAudio) {
+			previousAudio.pause();
+			previousAudio.removeAttribute("src");
+			previousAudio.load();
+		}
+		clearListeningTimer();
+		listeningStartedAt = null;
+		listenedMs = 0;
+		listeningSongId = null;
+		playReported = false;
+		podcastTracker = null;
+		currentSongStartCached = false;
+		prefetchedAudioStartUrls.clear();
+		songsRequest = null;
+		musicProgressLastSavedAt = 0;
+		musicProgressRestored = false;
+		musicSessionLastSavedAt = 0;
+		musicSessionRestored = false;
+		songs.value = [];
+		queue.value = [];
+		shuffledQueue.value = [];
+		currentAlbum.value = null;
+		currentSong.value = null;
+		currentTime.value = 0;
+		duration.value = 0;
+		isPlaying.value = false;
+		isLoading.value = false;
+		playbackError.value = "";
+		songLibraryLoading.value = false;
+		songLibraryBootstrapped.value = false;
+		songLibraryLoaded.value = false;
+		showLyrics.value = false;
+		showQueue.value = false;
+		isShuffled.value = false;
+		repeatMode.value = "all";
+		playbackMode.value = "loop";
+		try {
+			localStorage.removeItem("playbackState");
+		} catch (error) {
+			reportError(error, "Failed to clear playback state:");
+		}
+	};
+
+	const pinia = getActivePinia();
+	if (!pinia) throw new Error("播放器状态必须在 Pinia 实例中创建");
+	const unregisterSessionReset = registerSessionReset(
+		pinia,
+		resetPlaybackForSession,
+	);
+	onScopeDispose(() => {
+		resetPlaybackForSession();
+		unregisterSessionReset();
+	});
 
 	function prefetchQueueAudioStarts() {
 		const current = currentSong.value;
@@ -749,10 +829,12 @@ export const usePlayerStore = defineStore("player", () => {
 		if (songsRequest) return songsRequest;
 		if (songLibraryLoaded.value && !force) return;
 
+		const requestGeneration = musicAccountGeneration;
 		songLibraryLoading.value = true;
 		songsRequest = (async () => {
 			try {
 				const response = await apiRequestResult<Song[]>(`${api.url}/songs`);
+				if (requestGeneration !== musicAccountGeneration) return;
 				if (!response.ok) {
 					songLibraryLoaded.value = false;
 					return;
@@ -763,9 +845,11 @@ export const usePlayerStore = defineStore("player", () => {
 				songLibraryLoaded.value = true;
 				syncCurrentSongFromLibrary(library);
 			} catch (error) {
+				if (requestGeneration !== musicAccountGeneration) return;
 				songLibraryLoaded.value = false;
 				reportError(error, "Failed to fetch songs:");
 			} finally {
+				if (requestGeneration !== musicAccountGeneration) return;
 				songLibraryBootstrapped.value = true;
 				songLibraryLoading.value = false;
 				songsRequest = null;

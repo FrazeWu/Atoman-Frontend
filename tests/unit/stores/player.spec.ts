@@ -1,4 +1,5 @@
-import { createPinia, setActivePinia } from "pinia";
+import { createPinia, getActivePinia, setActivePinia } from "pinia";
+import { clearSessionStores } from "@/stores/sessionReset";
 import { nextTick } from "vue";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { usePlayerStore } from "../../../src/stores/player";
@@ -37,6 +38,9 @@ class MockAudio {
 	play = vi.fn(() => audioPlayImplementation());
 	load = vi.fn();
 	pause = vi.fn();
+	removeAttribute = vi.fn((name: string) => {
+		if (name === "src") this.src = "";
+	});
 	addEventListener = vi.fn((type: string, listener: EventListener) => {
 		const listeners = this.listeners.get(type) ?? [];
 		listeners.push(listener);
@@ -656,6 +660,40 @@ describe("player store", () => {
 		expect(restoredPlayer.currentSong?.id).toBe("song-1");
 	});
 
+	it("clears old playback state and restores the new account session", async () => {
+		localStorage.clear();
+		const auth = useAuthStore();
+		const player = usePlayerStore();
+		auth.user = { uuid: "user-a", username: "user-a", email: "a@example.com" } as any;
+		await nextTick();
+
+		player.playSong({
+			id: "old-account-song",
+			title: "Old Account Song",
+			audio_url: "old-account.mp3",
+		} as any);
+		await nextTick();
+		expect(player.currentSong?.id).toBe("old-account-song");
+		expect(localStorage.getItem("playbackState")).not.toBeNull();
+
+		const pinia = getActivePinia();
+		if (!pinia) throw new Error("missing active pinia");
+		clearSessionStores(pinia);
+		expect(player.currentSong).toBeNull();
+		expect(player.queue).toEqual([]);
+		expect(audioInstances[0].pause).toHaveBeenCalled();
+		expect(audioInstances[0].removeAttribute).toHaveBeenCalledWith("src");
+		expect(localStorage.getItem("playbackState")).toBeNull();
+
+		mocks.getMusicPlaybackSession.mockResolvedValueOnce({
+			queue: [{ id: "new-account-song", title: "New Account Song", audio_url: "new-account.mp3" }],
+			current_song_id: "new-account-song",
+			position_seconds: 8,
+			playback_mode: "loop",
+		});
+		auth.user = { uuid: "user-b", username: "user-b", email: "b@example.com" } as any;
+		await vi.waitFor(() => expect(player.currentSong?.id).toBe("new-account-song"));
+	});
 	it("ignores a stale play rejection after switching songs", async () => {
 		let rejectFirst!: (reason?: unknown) => void;
 		let resolveSecond!: () => void;

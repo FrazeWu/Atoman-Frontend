@@ -163,7 +163,7 @@ const feedStore = useFeedStore()
 const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
 const api = useApi()
-const { renderMarkdown } = useMarkdownRenderer()
+const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
 const { setPageMeta, restorePageMeta } = usePageMeta()
 const interactions = useInteractions('blog', 'post', postId)
 const lifecycle = useContentLifecycle()
@@ -233,6 +233,8 @@ const stripLeadingDuplicateHeading = (content: string, title: string) => {
 }
 
 const renderedContent = computed(() => {
+  // Re-render after the lazily loaded KaTeX and code-highlight extensions are ready.
+  void markdownRuntimeState.value
   const content = post.value?.content ?? ''
   const title = post.value?.title ?? ''
   const referencedContent = applyResolvedReferences(content, post.value?.references)

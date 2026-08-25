@@ -230,7 +230,7 @@ const props = withDefaults(defineProps<{
   presentation: 'sheet',
 })
 
-const { renderMarkdown } = useMarkdownRenderer()
+const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
 const authStore = useAuthStore()
 const api = useApi()
 const feedStore = useFeedStore()
@@ -261,6 +261,8 @@ watch(() => props.article?.feed_item?.id, () => {
 })
 
 const renderedContent = computed(() => {
+  // Re-render after the lazily loaded KaTeX and code-highlight extensions are ready.
+  void markdownRuntimeState.value
   if (props.article?.type === 'post' && props.article.post?.content) {
     return renderMarkdown(props.article.post.content)
   }

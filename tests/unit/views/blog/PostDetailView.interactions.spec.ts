@@ -20,6 +20,9 @@ const mocks = vi.hoisted(() => ({
 		onProgress: (progress: number) => void;
 	}>,
 	createContentConsumptionTracker: vi.fn(),
+	markdownRuntimeState: undefined as ReturnType<typeof ref> | undefined,
+	renderMarkdown: vi.fn((content: string) => content),
+	markdownHtml: "",
 	interactions: {
 		comments: { value: [] },
 		likeCount: { value: 0 },
@@ -55,7 +58,10 @@ vi.mock("@/composables/useContentLifecycle", () => ({
 }));
 
 vi.mock("@/composables/useMarkdownRenderer", () => ({
-	useMarkdownRenderer: () => ({ renderMarkdown: (content: string) => content }),
+	useMarkdownRenderer: () => ({
+		renderMarkdown: mocks.renderMarkdown,
+		runtimeState: mocks.markdownRuntimeState,
+	}),
 }));
 
 const InteractionBarStub = defineComponent({
@@ -160,6 +166,8 @@ describe("PostDetailView shared interactions", () => {
 
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		mocks.markdownRuntimeState = ref("ready");
+		mocks.renderMarkdown.mockImplementation((content: string) => content);
 		mocks.useInteractions.mockReturnValue(mocks.interactions);
 		mocks.interactions.like.mockReset();
 		mocks.interactions.unlike.mockReset();
@@ -694,5 +702,20 @@ describe("PostDetailView shared interactions", () => {
 		expect(clipboardWriteText).toHaveBeenCalledWith(
 			`${window.location.origin}/posts/post/post-1`,
 		);
+	});
+
+	it("在数学运行时就绪后重新渲染文章内容", async () => {
+		mocks.markdownRuntimeState = ref("idle");
+		mocks.markdownHtml = "$(U)$";
+		mocks.renderMarkdown.mockImplementation(() => mocks.markdownHtml);
+
+		const wrapper = await mountPostDetail();
+		expect(wrapper.find(".katex").exists()).toBe(false);
+
+		mocks.markdownHtml = '<span class="katex">(U)</span>';
+		mocks.markdownRuntimeState.value = "ready";
+		await wrapper.vm.$nextTick();
+
+		expect(wrapper.find(".katex").exists()).toBe(true);
 	});
 });

@@ -14,9 +14,24 @@ describe('ShortNoteCard', () => {
     created_at: new Date().toISOString(),
     media: [],
     likes_count: 3,
+    dislikes_count: 5,
+    vote_score: -2,
     comments_count: 1,
     liked: false,
   }
+
+  it('首行显示点赞与评论总数，而非净投票分数', () => {
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: mockNote },
+      global: {
+        plugins: [createPinia()],
+        stubs: { RouterLink: true, CommentSection: true, PImageLightbox: true },
+      },
+    })
+
+    const headerStats = wrapper.findAll('.sticky-stat').map((stat) => stat.text())
+    expect(headerStats).toEqual(['3', '1'])
+  })
 
   it('未读时初始渲染，光标扫过 (mouseenter) 时自动标记为已读', async () => {
     const pinia = createPinia()

@@ -16,7 +16,7 @@
         />
         <span class="sticky-author">{{ author }}</span>
         <span v-if="note.user?.username" class="sticky-handle">@{{ note.user.username }}</span>
-        <span class="sticky-stat"><Heart :size="11" aria-hidden="true" />{{ voteScore }}</span>
+        <span class="sticky-stat"><Heart :size="11" aria-hidden="true" />{{ interactions.likeCount.value || 0 }}</span>
         <span class="sticky-stat"><MessageSquare :size="11" aria-hidden="true" />{{ interactions.commentCount.value || 0 }}</span>
         <span class="sticky-time">{{ formatDate(note.created_at) }}</span>
         <span class="sticky-badge">短笺</span>
@@ -122,7 +122,6 @@ const authStore = useAuthStore()
 const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNoteSync()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
-const voteScore = computed(() => props.note.vote_score ?? (props.note.likes_count - (props.note.dislikes_count || 0)))
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
 const isRead = computed(() => isNoteRead(props.note.id))
 

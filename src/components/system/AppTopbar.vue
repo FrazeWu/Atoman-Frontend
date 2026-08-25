@@ -240,12 +240,22 @@ const toggleTheme = (event: MouseEvent) => {
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   backdrop-filter: blur(18px) saturate(180%);
   height: var(--a-topbar-height);
-  border-bottom: 1px solid var(--a-color-border-soft);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.topbar.is-scrolled {
-  border-bottom-color: var(--a-color-border);
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + var(--a-sidebar-width, 0px) / 2);
+  bottom: 0;
+  width: 20px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: var(--a-color-fg);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar.is-scrolled::after {
+  width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
 }
 
 :root.dark .topbar,
@@ -253,7 +263,6 @@ html.dark .topbar {
   background: rgba(9, 10, 15, 0.75);
   -webkit-backdrop-filter: blur(20px) saturate(190%);
   backdrop-filter: blur(20px) saturate(190%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .topbar:has(.topbar-search-wrap.is-open),
 .topbar:has(.dropdown-wrap .dropdown) {

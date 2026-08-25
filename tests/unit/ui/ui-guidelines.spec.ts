@@ -15,16 +15,15 @@ describe("UI 准则", () => {
 		expect(source).toMatch(/\.nav-link-name\s*\{[\s\S]*?white-space:\s*nowrap/);
 	});
 
-	it("桌面应用框架保留顶部和侧栏刻痕", () => {
+	it("桌面应用框架使用轻量顶部边界与侧栏刻痕", () => {
 		const topbar = read("src/components/system/AppTopbar.vue");
 		const globalStyle = read("src/style.css");
 
 		expect(topbar).toMatch(
-			/\.topbar::after\s*\{[\s\S]*?left:\s*calc\(50%\s*\+\s*var\(--a-sidebar-width,\s*0px\)\s*\/\s*2\)[\s\S]*?width:\s*20px[\s\S]*?height:\s*1px/,
+			/\.topbar\s*\{[\s\S]*?border-bottom:\s*1px\s+solid\s+var\(--a-color-border-soft\)/,
 		);
-		expect(topbar).toMatch(
-			/\.topbar\.is-scrolled::after\s*\{[\s\S]*?width:\s*calc\(\(100%\s*-\s*var\(--a-sidebar-width,\s*0px\)\)\s*\*\s*0\.75\)/,
-		);
+		expect(topbar).not.toMatch(/\.topbar(?:::after|\.is-scrolled::after)/);
+		expect(topbar).not.toMatch(/\.topbar\.is-scrolled\s*\{[^}]*box-shadow\s*:/);
 		expect(globalStyle).toMatch(
 			/\.a-sidebar::after,\s*\.p-sidebar::after\s*\{[\s\S]*?right:\s*0[\s\S]*?width:\s*1px[\s\S]*?height:\s*16px/,
 		);
@@ -55,12 +54,10 @@ describe("UI 准则", () => {
 	});
 
 	it("空状态和管理界面不暴露英文内部文案", () => {
-		expect(read("src/components/ui/PEmpty.vue")).toContain(
-			"kicker: '暂无内容'",
+		expect(read("src/components/ui/PEmpty.vue")).toContain("kicker: '暂无内容'");
+		expect(read("src/components/music/MusicSidebarPlaylists.vue")).not.toContain(
+			"PLAYLISTS",
 		);
-		expect(
-			read("src/components/music/MusicSidebarPlaylists.vue"),
-		).not.toContain("PLAYLISTS");
 		expect(read("src/views/forum/ForumLayout.vue")).not.toMatch(
 			/CATEGORIES|TAGS/,
 		);
@@ -139,9 +136,7 @@ describe("UI 准则", () => {
 	});
 
 	it("Studio 图标按钮具有可访问名称且页面不嵌套装饰卡片", () => {
-		const collections = read(
-			"src/components/studio/StudioCollectionManager.vue",
-		);
+		const collections = read("src/components/studio/StudioCollectionManager.vue");
 		const channels = read("src/views/studio/StudioChannelView.vue");
 
 		expect(collections).toMatch(/:aria-label="`编辑\$\{collection\.name\}`"/);

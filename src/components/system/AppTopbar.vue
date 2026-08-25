@@ -241,27 +241,10 @@ const toggleTheme = (event: MouseEvent) => {
   backdrop-filter: blur(18px) saturate(180%);
   height: var(--a-topbar-height);
   border-bottom: 1px solid var(--a-color-border-soft);
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.topbar::after {
-  content: '';
-  position: absolute;
-  left: calc(50% + var(--a-sidebar-width, 0px) / 2);
-  bottom: 0;
-  width: 20px;
-  height: 1px;
-  transform: translateX(-50%);
-  background: var(--a-color-fg);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.topbar.is-scrolled::after {
-  width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .topbar.is-scrolled {
-  box-shadow: var(--a-shadow-sm);
   border-bottom-color: var(--a-color-border);
 }
 

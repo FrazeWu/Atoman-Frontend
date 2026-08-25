@@ -93,7 +93,7 @@ describe("AppTopbar route reactivity", () => {
 		expect(activeNavText(wrapper)).toEqual([]);
 	});
 
-	it("expands the bottom line after the main content scrolls", async () => {
+	it("updates the topbar scroll state after main content scrolls", async () => {
 		const router = await makeRouter();
 		const wrapper = mount(AppTopbar, {
 			global: {

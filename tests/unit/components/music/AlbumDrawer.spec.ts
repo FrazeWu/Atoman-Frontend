@@ -219,6 +219,15 @@ describe("AlbumDrawer.vue", () => {
 		).toBe("false");
 	});
 
+	it("keeps track ratings with the other track metadata", async () => {
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		const track = wrapper.get(".track");
+		expect(track.get(".track-meta").find(".track-rating").exists()).toBe(true);
+		expect(track.findAll(".track-rating")).toHaveLength(1);
+	});
+
 	it("shows a short album description without a collapse control", async () => {
 		getMusicAlbum.mockResolvedValueOnce({
 			id: "1",

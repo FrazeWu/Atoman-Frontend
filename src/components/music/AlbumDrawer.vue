@@ -29,6 +29,8 @@ import {
   listMusicPlaylists,
   deleteMusicSongRating,
   setMusicSongRating,
+  deleteMusicAlbumRating,
+  setMusicAlbumRating,
   type MusicContributor,
   type MusicAlbumListItem,
   type MusicPlaylistSummary,
@@ -71,6 +73,7 @@ const playlistHasMore = ref(false)
 const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const ratingAlbumLoading = ref(false)
 const ratingSongID = ref<string | null>(null)
 const expandedTrackId = ref<string | null>(null)
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
@@ -321,6 +324,77 @@ async function loadFavorites(songIds: string[], isCurrentLoad: () => boolean) {
       return
     }
     reportError(err, 'Failed to load favorites in AlbumDrawer:')
+  }
+}
+
+function applyAlbumRating(summary: { rating_score: number; rating_count: number; viewer_rating?: number | null }) {
+  if (!album.value) return
+  album.value.rating_score = Number(summary.rating_score ?? 0)
+  album.value.rating_count = Number(summary.rating_count ?? 0)
+  album.value.viewer_rating = summary.viewer_rating ?? null
+}
+
+async function rateAlbum(score: number) {
+  if (!album.value || !requireLogin() || ratingAlbumLoading.value) return
+  ratingAlbumLoading.value = true
+  try {
+    applyAlbumRating(await setMusicAlbumRating(String(album.value.id), score))
+  } catch (err) {
+    reportError(err, 'Failed to rate album')
+    toastMessage.value = '评分失败'
+    toastVisible.value = true
+  } finally {
+    ratingAlbumLoading.value = false
+  }
+}
+
+async function clearAlbumRating() {
+  if (!album.value || !requireLogin() || ratingAlbumLoading.value) return
+  ratingAlbumLoading.value = true
+  try {
+    applyAlbumRating(await deleteMusicAlbumRating(String(album.value.id)))
+  } catch (err) {
+    reportError(err, 'Failed to clear album rating')
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  } finally {
+    ratingAlbumLoading.value = false
+  }
+}
+
+function applyTrackRating(songId: string, summary: { rating_score: number; rating_count: number; viewer_rating?: number | null }) {
+  const track = album.value?.songs?.find((item) => String(item.id) === songId)
+  if (!track) return
+  track.rating_score = Number(summary.rating_score ?? 0)
+  track.rating_count = Number(summary.rating_count ?? 0)
+  track.viewer_rating = summary.viewer_rating ?? null
+}
+
+async function rateTrack(track: AlbumTrack, score: number) {
+  if (!requireLogin() || ratingSongID.value) return
+  ratingSongID.value = String(track.id)
+  try {
+    applyTrackRating(String(track.id), await setMusicSongRating(String(track.id), score))
+  } catch (err) {
+    reportError(err, 'Failed to rate song')
+    toastMessage.value = '评分失败'
+    toastVisible.value = true
+  } finally {
+    ratingSongID.value = null
+  }
+}
+
+async function clearTrackRating(track: AlbumTrack) {
+  if (!requireLogin() || ratingSongID.value) return
+  ratingSongID.value = String(track.id)
+  try {
+    applyTrackRating(String(track.id), await deleteMusicSongRating(String(track.id)))
+  } catch (err) {
+    reportError(err, 'Failed to clear song rating')
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  } finally {
+    ratingSongID.value = null
   }
 }
 
@@ -640,6 +714,16 @@ watch(
             empty-text="暂无专辑简介。"
             content-id="album-description"
             test-id="album-description-toggle"
+          />
+          <SongRatingControl
+            :song-title="album.title"
+            :rating-score="album.rating_score"
+            :rating-count="album.rating_count"
+            :viewer-rating="album.viewer_rating"
+            :disabled="!isAuthenticated"
+            :loading="ratingAlbumLoading"
+            @rate="rateAlbum"
+            @clear="clearAlbumRating"
           />
           <div class="album-actions">
             <PButton

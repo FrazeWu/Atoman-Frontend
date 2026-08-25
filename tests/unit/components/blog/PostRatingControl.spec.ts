@@ -3,20 +3,29 @@ import { mount } from "@vue/test-utils";
 import PostRatingControl from "@/components/blog/PostRatingControl.vue";
 
 describe("PostRatingControl.vue", () => {
-  it("renders rating summary and the unified help trigger", () => {
+  it("emphasizes the weighted score once sufficient evidence exists", () => {
     const wrapper = mount(PostRatingControl, {
       props: {
-        ratingScore: 7.8,
-        ratingCount: 15,
+        weightedRatingScore: 8.6,
+        weightedRatingCount: 55,
+        weightedRatingActive: true,
       },
     });
 
-    expect(wrapper.text()).toContain("3.9 / 5");
-    expect(wrapper.text()).toContain("(15)");
-    expect(
-      wrapper.find(".p-help-tooltip__trigger").attributes("aria-label"),
-    ).toBe("查看评分参考标准");
-    expect(wrapper.find(".p-help-tooltip__popover").exists()).toBe(false);
+    expect(wrapper.text()).toContain("加权分");
+    expect(wrapper.get(".post-rating__score-num").text()).toBe("4.3");
+    expect(wrapper.text()).toContain("55 人");
+    expect(wrapper.findAll(".post-rating__star-fill")[0].attributes("style")).toContain("width: 0px");
+  });
+
+  it("shows insufficient evidence below the weighted-rating threshold", () => {
+    const wrapper = mount(PostRatingControl, {
+      props: { weightedRatingCount: 4 },
+    });
+
+    expect(wrapper.text()).toContain("依据不足");
+    expect(wrapper.text()).toContain("4 人");
+    expect(wrapper.find(".post-rating__score-num").exists()).toBe(false);
   });
 
   it("shows hover score dynamically when hovering on half stars", async () => {
@@ -64,21 +73,12 @@ describe("PostRatingControl.vue", () => {
     expect(wrapper.emitted("rate")![0]).toEqual([5]);
   });
 
-  it("emits clear event when clicking clear button", async () => {
+  it("does not render a separate clear control", () => {
     const wrapper = mount(PostRatingControl, {
-      props: {
-        ratingScore: 8.0,
-        ratingCount: 1,
-        viewerRating: 8,
-      },
+      props: { viewerRating: 8 },
     });
 
-    expect(wrapper.text()).toContain("我的评分 4.0 星");
-    const clearBtn = wrapper.find(".post-rating__clear");
-    expect(clearBtn.exists()).toBe(true);
-
-    await clearBtn.trigger("click");
-    expect(wrapper.emitted("clear")).toBeTruthy();
+    expect(wrapper.find(".post-rating__clear").exists()).toBe(false);
   });
 
   it("announces a failed rating next to the control", () => {

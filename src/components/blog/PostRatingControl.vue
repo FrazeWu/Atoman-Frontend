@@ -2,9 +2,12 @@
   <section class="post-rating" :class="`post-rating--${size}`" aria-label="文章评分">
     <!-- 综合评分与统计 -->
     <div class="post-rating__summary">
-      <span class="post-rating__label">评分</span>
-      <strong class="post-rating__score-num">{{ formattedScore }}</strong>
-      <span class="post-rating__count">({{ ratingCount }})</span>
+      <template v-if="weightedRatingActive && weightedRatingScore !== null && weightedRatingScore !== undefined">
+        <span class="post-rating__label">加权分</span>
+        <strong class="post-rating__score-num">{{ formatStarScore(weightedRatingScore) }}</strong>
+      </template>
+      <span v-else class="post-rating__insufficient">依据不足</span>
+      <span class="post-rating__count">（{{ weightedRatingCount }} 人）</span>
     </div>
 
     <!-- 交互打分星星区域（只读或交互态） -->
@@ -46,20 +49,7 @@
           />
         </template>
       </div>
-
-      <!-- 清除按钮 -->
-      <button
-        v-if="!disabled && viewerRating !== null && viewerRating !== undefined"
-        type="button"
-        class="post-rating__clear"
-        :disabled="loading"
-        aria-label="清除评分"
-        title="清除评分"
-        @click="emit('clear')"
-      >
-        <X :size="14" aria-hidden="true" />
-      </button>
-    </div>
+      </div>
 
     <label v-if="!disabled" class="post-rating__slider">
       <span class="sr-only">选择 0.5 至 5 星评分</span>
@@ -142,13 +132,15 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Star, X } from 'lucide-vue-next'
+import { Star } from 'lucide-vue-next'
 import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 
 const props = withDefaults(defineProps<{
   ratingScore?: number
   ratingCount?: number
-  viewerRating?: number | null
+  weightedRatingScore?: number | null
+  weightedRatingCount?: number
+  weightedRatingActive?: boolean
   disabled?: boolean
   loading?: boolean
   errorMessage?: string
@@ -157,6 +149,9 @@ const props = withDefaults(defineProps<{
   ratingScore: 0,
   ratingCount: 0,
   viewerRating: null,
+  weightedRatingScore: null,
+  weightedRatingCount: 0,
+  weightedRatingActive: false,
   disabled: false,
   loading: false,
   errorMessage: '',
@@ -165,14 +160,12 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   rate: [score: number]
-  clear: []
 }>()
 
 const hoverScore = ref<number | null>(null)
 const lastRatedStar = ref<number | null>(null)
 
-const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? Math.round(props.ratingScore * 2) / 2)
-const formattedScore = computed(() => props.ratingCount ? `${formatStarScore(props.ratingScore)} / 5` : '—')
+const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? 0)
 
 const starIconSize = computed(() => props.size === 'sm' ? 18 : 22)
 
@@ -240,10 +233,16 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .post-rating__score-num {
-  color: var(--a-color-fg);
-  font-size: 1.05rem;
-  font-weight: 650;
-  min-width: 1.8rem;
+  color: #b45309;
+  font-size: 1.3rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.post-rating__insufficient {
+  color: var(--a-color-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .post-rating__count {

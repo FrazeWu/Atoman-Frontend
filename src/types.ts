@@ -417,6 +417,9 @@ export interface Post {
 	rating_score?: number;
 	rating_count?: number;
 	viewer_rating?: number;
+	weighted_rating_score?: number | null;
+	weighted_rating_count?: number;
+	weighted_rating_active?: boolean;
 	liked?: boolean;
 	bookmarks_count?: number;
 	channel_followers_count?: number;

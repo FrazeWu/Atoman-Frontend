@@ -57,11 +57,13 @@
           :rating-score="post.rating_score"
           :rating-count="post.rating_count"
           :viewer-rating="post.viewer_rating"
+          :weighted-rating-score="post.weighted_rating_score"
+          :weighted-rating-count="post.weighted_rating_count"
+          :weighted-rating-active="post.weighted_rating_active"
           :disabled="!authStore.isAuthenticated"
           :loading="ratingLoading"
           :error-message="ratingError"
           @rate="ratePost"
-          @clear="clearPostRating"
         />
         <div class="post-detail-toolbar">
           <div class="post-detail-actions">

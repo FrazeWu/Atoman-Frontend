@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 背景遮罩 (点击可快速关闭队列) -->
-    <div class="queue-backdrop" @click="player.toggleQueue" />
+    <div class="queue-backdrop" aria-hidden="true" @click="player.toggleQueue" />
 
     <div class="queue-panel">
       <div class="queue-header">
@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
@@ -170,6 +170,14 @@ function dropQueueItem(insertionIndex: number, event: DragEvent) {
   const targetIndex = sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex
   moveQueueItem(sourceIndex, targetIndex)
 }
+
+function handleQueueKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || event.defaultPrevented) return
+  player.toggleQueue()
+}
+
+onMounted(() => window.addEventListener('keydown', handleQueueKeydown))
+onUnmounted(() => window.removeEventListener('keydown', handleQueueKeydown))
 </script>
 
 <style scoped>

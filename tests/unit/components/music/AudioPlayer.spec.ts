@@ -11,6 +11,11 @@ import { usePlayerStore } from "@/stores/player";
 const musicApi = vi.hoisted(() => ({
 	listMusicPlaylists: vi.fn(),
 	recordMusicSongPlay: vi.fn(),
+	getMusicPlaybackProgress: vi.fn(),
+	getMusicPlaybackSession: vi.fn(),
+	saveMusicPlaybackProgress: vi.fn(),
+	saveMusicPlaybackSession: vi.fn(),
+	recordMusicRecommendationEvents: vi.fn(),
 }));
 
 const transportApi = vi.hoisted(() => ({
@@ -39,6 +44,11 @@ vi.mock("@/composables/useApi", () => ({
 vi.mock("@/api/musicV1", () => ({
 	listMusicPlaylists: musicApi.listMusicPlaylists,
 	recordMusicSongPlay: musicApi.recordMusicSongPlay,
+	getMusicPlaybackProgress: musicApi.getMusicPlaybackProgress,
+	getMusicPlaybackSession: musicApi.getMusicPlaybackSession,
+	saveMusicPlaybackProgress: musicApi.saveMusicPlaybackProgress,
+	saveMusicPlaybackSession: musicApi.saveMusicPlaybackSession,
+	recordMusicRecommendationEvents: musicApi.recordMusicRecommendationEvents,
 }));
 
 vi.mock("@/api/transport", () => ({
@@ -73,6 +83,11 @@ describe("AudioPlayer", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		musicApi.listMusicPlaylists.mockResolvedValue({ data: [] });
 		musicApi.recordMusicSongPlay.mockResolvedValue(undefined);
+		musicApi.getMusicPlaybackProgress.mockResolvedValue(null);
+		musicApi.getMusicPlaybackSession.mockResolvedValue(null);
+		musicApi.saveMusicPlaybackProgress.mockResolvedValue({});
+		musicApi.saveMusicPlaybackSession.mockResolvedValue({});
+		musicApi.recordMusicRecommendationEvents.mockResolvedValue(undefined);
 		transportApi.apiFetch.mockResolvedValue(
 			new Response(null, { status: 201 }),
 		);
@@ -349,7 +364,7 @@ describe("AudioPlayer", () => {
 		expect(playerEl.classes()).toContain("player");
 	});
 
-	it("renders text labels for the main playback controls", () => {
+	it("renders icon controls with accessible labels", () => {
 		const player = usePlayerStore();
 		player.currentSong = {
 			id: "song-1",
@@ -372,6 +387,10 @@ describe("AudioPlayer", () => {
 		const playBtn = wrapper.find(".main-play-btn");
 		expect(playBtn.exists()).toBe(true);
 		expect(playBtn.classes()).toContain("main-play-btn");
-		expect(wrapper.get(".ctrl-row").text()).toContain("-5S上一首播放下一首+5S");
+		expect(wrapper.get('[aria-label="播放"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="上一首"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="下一首"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="后退 5 秒"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="前进 5 秒"] svg').exists()).toBe(true);
 	});
 });

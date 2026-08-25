@@ -199,6 +199,17 @@ async function fetchPlaylistBookmarks(requestId = bookmarkRequestId) {
   }
 }
 
+function updateAlbumBookmarkCount(albumId: string, delta: number) {
+  const update = <T extends { id: string; bookmark_count?: number }>(items: T[]) => items.map((item) => {
+    if (String(item.id) !== albumId) return item
+    return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) + delta) }
+  })
+  discoverAlbums.value = update(discoverAlbums.value)
+  if (musicHome.value) {
+    musicHome.value = { ...musicHome.value, for_you: update(musicHome.value.for_you) }
+  }
+}
+
 async function handleToggleAlbumBookmark(albumId: string) {
   if (!requireLogin()) return
   const isCurrentlyBookmarked = starredAlbumIds.value.includes(albumId)
@@ -206,19 +217,13 @@ async function handleToggleAlbumBookmark(albumId: string) {
     if (isCurrentlyBookmarked) {
       await deleteAlbumBookmark(albumId)
       starredAlbumIds.value = starredAlbumIds.value.filter(id => id !== albumId)
-      discoverAlbums.value = discoverAlbums.value.map((item) => {
-        if (String(item.id) !== albumId) return item
-        return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
-      })
+      updateAlbumBookmarkCount(albumId, -1)
       return
     }
 
     await createAlbumBookmark(albumId)
     starredAlbumIds.value.push(albumId)
-    discoverAlbums.value = discoverAlbums.value.map((item) => {
-      if (String(item.id) !== albumId) return item
-      return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
-    })
+    updateAlbumBookmarkCount(albumId, 1)
   } catch (e) {
     reportError(e, 'Failed to toggle album bookmark:')
   }

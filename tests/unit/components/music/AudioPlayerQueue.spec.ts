@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Song } from "../../../../src/types";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
@@ -10,6 +10,17 @@ import { usePlayerStore } from "../../../../src/stores/player";
 describe("AudioPlayerQueue.vue", () => {
 	beforeEach(() => {
 		setActivePinia(createPinia());
+	});
+
+	it("closes when Escape is pressed", async () => {
+		const player = usePlayerStore();
+		const toggleQueue = vi.spyOn(player, "toggleQueue");
+		const wrapper = mount(AudioPlayerQueue);
+
+		window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+		expect(toggleQueue).toHaveBeenCalledOnce();
+		wrapper.unmount();
 	});
 
 	it("inserts a dragged song into a gap instead of dropping on a song row", async () => {

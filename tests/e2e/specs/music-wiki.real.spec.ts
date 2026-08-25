@@ -111,6 +111,74 @@ test.describe("Music Wiki Real", () => {
     }
   });
 
+  test("authenticated user can create, reload, and delete a private playlist", async ({
+    authenticatedMusicPage,
+  }) => {
+    const playlistName = `E2E playlist ${Date.now()}`;
+    let playlistUrl = "";
+
+    try {
+      await authenticatedMusicPage.goto("/music");
+      const createButton = authenticatedMusicPage.locator(
+        '.music-sidebar-playlists:not(.is-collapsed) button[title="新建歌单"]',
+      );
+      await expect(createButton).toBeVisible();
+      await createButton.click();
+
+      const nameInput = authenticatedMusicPage.getByPlaceholder("输入歌单名称...");
+      await expect(nameInput).toBeVisible();
+      await nameInput.fill(playlistName);
+      await nameInput.press("Enter");
+      await expect(authenticatedMusicPage).toHaveURL(/\/music\/playlist\/[^/]+$/);
+      playlistUrl = authenticatedMusicPage.url();
+      await expect(
+        authenticatedMusicPage.locator('[data-testid="playlist-edit-button"]'),
+      ).toBeVisible();
+      await expect(authenticatedMusicPage.locator(".playlist-title")).toHaveText(
+        playlistName,
+      );
+
+      await authenticatedMusicPage.reload();
+      await expect(authenticatedMusicPage.locator(".playlist-title")).toHaveText(
+        playlistName,
+      );
+
+      await authenticatedMusicPage.goto("/music");
+      await expect(
+        authenticatedMusicPage
+          .locator(".music-sidebar-playlists__item")
+          .filter({ hasText: playlistName }),
+      ).toBeVisible();
+    } finally {
+      if (playlistUrl) {
+        try {
+          await authenticatedMusicPage.goto(playlistUrl);
+          const editButton = authenticatedMusicPage.locator(
+            '[data-testid="playlist-edit-button"]',
+          );
+          if (await editButton.count()) {
+            await editButton.click();
+            const deleteButton = authenticatedMusicPage.locator(
+              '[data-testid="playlist-delete-button"]',
+            );
+            await expect(deleteButton).toBeVisible();
+            await deleteButton.click();
+            const confirmation = authenticatedMusicPage.getByRole("dialog", {
+              name: "删除歌单",
+            });
+            await expect(confirmation).toBeVisible();
+            await confirmation
+              .getByRole("button", { name: "删除", exact: true })
+              .click();
+            await expect(authenticatedMusicPage).not.toHaveURL(/\/music\/playlist\//);
+          }
+        } catch {
+          // Preserve the original assertion failure while still attempting cleanup.
+        }
+      }
+    }
+  });
+
   test("authenticated user can traverse the core music surfaces on mobile", async ({
     authenticatedMusicMobilePage,
   }) => {
@@ -131,6 +199,7 @@ test.describe("Music Wiki Real", () => {
       ).not.toBeVisible();
     }
   });
+
 
   test("authenticated user can open the music contribute flow against real backend", async ({
     authenticatedMusicPage,

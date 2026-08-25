@@ -75,4 +75,64 @@ test.describe("Music player real browser", () => {
       authenticatedMusicPage.locator(".main-play-btn[aria-label='播放']"),
     ).toBeVisible();
   });
+
+  test("records a played song in listening history after the threshold", async ({
+    authenticatedMusicPage,
+  }) => {
+    let historyEndpoint = "";
+    const captureHistoryRequest = (request: { method(): string; url(): string }) => {
+      if (
+        request.method() === "GET" &&
+        /\/music\/history(?:\?|$)/.test(request.url())
+      ) {
+        historyEndpoint = request.url().split("?")[0];
+      }
+    };
+    authenticatedMusicPage.on("request", captureHistoryRequest);
+
+    try {
+      await authenticatedMusicPage.goto("/music/history");
+      await expect(
+        authenticatedMusicPage.getByRole("heading", { name: "播放历史" }),
+      ).toBeVisible();
+      await expect.poll(() => historyEndpoint).not.toBe("");
+
+      const clearResponse = await authenticatedMusicPage.request.delete(
+        historyEndpoint,
+      );
+      expect(clearResponse.ok()).toBe(true);
+
+      await authenticatedMusicPage.goto("/music");
+      const firstAlbum = authenticatedMusicPage
+        .locator('[data-testid="personalized-album-card"], [data-testid="discover-album-card"]')
+        .first();
+      await expect(firstAlbum).toBeVisible();
+      await firstAlbum.click();
+      await authenticatedMusicPage
+        .locator('[data-testid="album-play-action"]')
+        .click();
+      await expect(authenticatedMusicPage.locator(".player-title")).toBeVisible();
+      const title = (
+        await authenticatedMusicPage.locator(".player-title").textContent()
+      )?.trim();
+      expect(title).toBeTruthy();
+
+      await authenticatedMusicPage.waitForTimeout(5500);
+      await authenticatedMusicPage.goto("/music/history");
+      await expect(
+        authenticatedMusicPage
+          .locator('[data-testid="history-row"]')
+          .filter({ hasText: title! }),
+      ).toBeVisible();
+    } finally {
+      if (historyEndpoint) {
+        try {
+          await authenticatedMusicPage.request.delete(historyEndpoint);
+        } catch {
+          // Preserve the original assertion failure while attempting cleanup.
+        }
+      }
+      authenticatedMusicPage.off("request", captureHistoryRequest);
+    }
+  });
 });

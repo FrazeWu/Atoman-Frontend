@@ -798,7 +798,6 @@ watch(
           <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
           <div class="track-meta">
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
-            <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
             <SongRatingControl
               size="compact"
               :song-title="track.title"
@@ -810,6 +809,7 @@ watch(
               @rate="rateTrack(track, $event)"
               @clear="clearTrackRating(track)"
             />
+            <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
 
             <button
               type="button"

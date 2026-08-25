@@ -259,9 +259,7 @@ describe("PostDetailView shared interactions", () => {
 		expect(wrapper.get('[role="note"]').text()).toMatch(
 			/\d{4}年\d+月\d+日，距今已过去 \d+ 周，请注意信息有效性。/,
 		);
-		expect(wrapper.get('a[href="/studio/blog/post-1/edit"]').text()).toBe(
-			"编辑",
-		);
+		expect(wrapper.get('a[href="/studio/blog/post-1/edit"]').text()).toBe("编辑");
 		expect(wrapper.find('[data-test="unified-comment-section"]').exists()).toBe(
 			true,
 		);
@@ -332,9 +330,7 @@ describe("PostDetailView shared interactions", () => {
 			.mocked(fetch)
 			.mock.calls.filter(([url]) => String(url).includes("/feed/events/read"));
 		expect(readEvents).toHaveLength(1);
-		expect(String(readEvents[0]?.[1]?.body)).toContain(
-			'"source_id":"channel-b"',
-		);
+		expect(String(readEvents[0]?.[1]?.body)).toContain('"source_id":"channel-b"');
 	});
 
 	it("切换文章时立即清空 A 的文章、收藏和嵌入状态", async () => {
@@ -395,13 +391,9 @@ describe("PostDetailView shared interactions", () => {
 			vi.fn((input) => {
 				const url = String(input);
 				if (url.includes("/blog/posts/post-1"))
-					return Promise.resolve(
-						response({ data: postDetail("post-1", "文章 A") }),
-					);
+					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
 				if (url.includes("/blog/posts/post-2"))
-					return Promise.resolve(
-						response({ data: postDetail("post-2", "文章 B") }),
-					);
+					return Promise.resolve(response({ data: postDetail("post-2", "文章 B") }));
 				if (url.includes("/blog/bookmarks"))
 					return Promise.resolve(response({ data: [] }));
 				return Promise.resolve(response({ data: [] }));
@@ -436,13 +428,9 @@ describe("PostDetailView shared interactions", () => {
 			vi.fn((input) => {
 				const url = String(input);
 				if (url.includes("/blog/posts/post-1"))
-					return Promise.resolve(
-						response({ data: postDetail("post-1", "文章 A") }),
-					);
+					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
 				if (url.includes("/blog/posts/post-2"))
-					return Promise.resolve(
-						response({ data: postDetail("post-2", "文章 B") }),
-					);
+					return Promise.resolve(response({ data: postDetail("post-2", "文章 B") }));
 				if (url.includes("/blog/bookmarks"))
 					return Promise.resolve(response({ data: [] }));
 				return Promise.resolve(response({ data: [] }));
@@ -451,9 +439,9 @@ describe("PostDetailView shared interactions", () => {
 
 		const { wrapper, router } = await mountPostDetailWithRouter();
 		const feedStore = useFeedStore();
-		vi.spyOn(feedStore, "togglePostBookmark").mockReturnValue(
-			bookmarkToggle.promise,
-		);
+		vi
+			.spyOn(feedStore, "togglePostBookmark")
+			.mockReturnValue(bookmarkToggle.promise);
 		const bookmarkButton = wrapper
 			.findAll("button")
 			.find((button) => button.text() === "收藏");
@@ -476,7 +464,8 @@ describe("PostDetailView shared interactions", () => {
 		const secondToggle = deferred<boolean | null>();
 		const wrapper = await mountPostDetail();
 		const feedStore = useFeedStore();
-		vi.spyOn(feedStore, "togglePostBookmark")
+		vi
+			.spyOn(feedStore, "togglePostBookmark")
 			.mockReturnValueOnce(firstToggle.promise)
 			.mockReturnValueOnce(secondToggle.promise);
 		const bookmarkButton = wrapper
@@ -501,11 +490,8 @@ describe("PostDetailView shared interactions", () => {
 			vi.fn((input) => {
 				const url = String(input);
 				if (url.includes("/blog/posts/post-1"))
-					return Promise.resolve(
-						response({ data: postDetail("post-1", "文章 A") }),
-					);
-				if (url.includes("/blog/bookmarks"))
-					return initialBookmarkState.promise;
+					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
+				if (url.includes("/blog/bookmarks")) return initialBookmarkState.promise;
 				return Promise.resolve(response({ data: [] }));
 			}),
 		);
@@ -579,7 +565,7 @@ describe("PostDetailView shared interactions", () => {
 
 	it("文章详情使用评分而不是点赞", async () => {
 		const wrapper = await mountPostDetail();
-		const ratingButton = wrapper.get('button[aria-label="7 分"]');
+		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');
 		await ratingButton.trigger("click");
 		await flushPromises();
 
@@ -598,7 +584,7 @@ describe("PostDetailView shared interactions", () => {
 
 	it("评分控件允许清除已有评分", async () => {
 		const wrapper = await mountPostDetail();
-		const ratingButton = wrapper.get('button[aria-label="7 分"]');
+		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');
 		await ratingButton.trigger("click");
 		await flushPromises();
 		const clearButton = wrapper.get('button[aria-label="清除评分"]');

@@ -52,11 +52,11 @@ export interface Album {
 }
 
 export type MusicRecommendationContext = {
-  request_id: string
-  surface: 'music_home'
-  position: number
-  reason?: string
-}
+	request_id: string;
+	surface: "music_home";
+	position: number;
+	reason?: string;
+};
 
 export interface Song {
 	id: number | string;
@@ -440,6 +440,9 @@ export interface ShortNote {
 	content: string;
 	media: ShortNoteMedia[];
 	likes_count: number;
+	dislikes_count?: number;
+	vote_score?: number;
+	viewer_vote?: "up" | "down" | "none";
 	comments_count: number;
 	liked: boolean;
 	edited: boolean;
@@ -784,6 +787,7 @@ export interface FeedItem {
 	image_caption?: string;
 	content?: string;
 	content_html?: string;
+	feed_content_html?: string;
 	content_source?: "feed" | "page" | "summary" | "full_text";
 	reader_quality_score?: number;
 	read_count?: number;
@@ -812,6 +816,29 @@ export interface FeedItem {
 	duplicate_sources?: string[];
 	duplicate_item_ids?: string[];
 	is_starred?: boolean;
+}
+
+export type FeedReaderVariant = "rss" | "full_text" | "summary";
+
+export interface FeedReaderContent {
+	html: string;
+}
+
+export interface FeedReaderFullText {
+	status: NonNullable<FeedItem["full_text_status"]>;
+	html?: string;
+	word_count?: number;
+}
+
+export interface FeedItemReader {
+	default_variant: FeedReaderVariant;
+	rss: FeedReaderContent | null;
+	full_text: FeedReaderFullText;
+}
+
+export interface FeedItemDetail {
+	item: FeedItem;
+	reader: FeedItemReader;
 }
 
 export interface StarredFeedItem {

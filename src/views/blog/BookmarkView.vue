@@ -245,7 +245,7 @@ watch(sortMode, () => {
 .bookmark-post-list {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0;
 }
 
 .blog-entry-cover {
@@ -290,10 +290,10 @@ watch(sortMode, () => {
 }
 
 .bookmark-post-list.feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 .delete-btn {
   font-size: 0.75rem;

@@ -43,11 +43,14 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import type { FeedReaderVariant } from '@/types'
+
 
 type FeedbackKind = 'missing' | 'layout' | 'image' | 'noise'
 
 const props = defineProps<{
   itemId: string
+  variant: FeedReaderVariant
 }>()
 
 const api = useApi()
@@ -59,7 +62,7 @@ const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
 let requestGeneration = 0
 
-watch(() => props.itemId, () => {
+watch([() => props.itemId, () => props.variant], () => {
   requestGeneration++
   pending.value = false
   submittedKinds.value = new Set()
@@ -86,7 +89,7 @@ const submitFeedback = async (kind: FeedbackKind, close: () => void) => {
         'Content-Type': 'application/json',
         ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}),
       },
-      body: JSON.stringify({ kind }),
+      body: JSON.stringify({ kind, variant: props.variant }),
     })
     if (!response.ok) throw new Error('feedback request failed')
     if (generation !== requestGeneration || itemId !== props.itemId) return

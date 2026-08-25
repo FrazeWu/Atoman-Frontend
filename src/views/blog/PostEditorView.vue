@@ -2,6 +2,11 @@
   <div class="editor-page">
     <div class="editor-shell">
       <div v-if="error" class="editor-error a-error">{{ error }}</div>
+      <section v-if="markdownImportDiagnostics.length" class="import-diagnostics" aria-label="导入提示">
+        <p v-for="diagnostic in markdownImportDiagnostics" :key="`${diagnostic.code}-${diagnostic.line}`">
+          {{ diagnostic.line ? `第 ${diagnostic.line} 行：` : '' }}{{ diagnostic.message }}
+        </p>
+      </section>
 
       <div
         class="editor-layout"
@@ -14,10 +19,12 @@
               :draft-status="draftStatus"
               :content-source="contentSource"
               :saving="saving"
+              :exporting="exporting"
               :content-mode="contentMode"
               :preview-open="previewOpen"
               :sidebar-open="sidebarPanelOpen || mobilePanel === 'sidebar'"
               @import-file="handleFileUpload"
+              @export-markdown="handleMarkdownExport"
               @go-back="goBack"
               @toggle-sidebar="toggleSidebarPanel"
               @toggle-preview="togglePreview"
@@ -256,6 +263,9 @@ const previewOpen = ref(false)
 const mobilePanel = ref<'sidebar' | null>(null)
 const sidebarPanelOpen = ref(false)
 const contentMode = ref<'markdown' | 'visual'>('markdown')
+const exporting = ref(false)
+const markdownImportID = ref<string | null>(null)
+const markdownImportDiagnostics = ref<Array<{ code: string; line: number; message: string }>>([])
 
 const executeFormattingCommand = (command: PostEditorCommand) => {
   editorRef.value?.executeCommand(command)
@@ -489,6 +499,7 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   loadedPostUpdatedAt,
   saving,
   savedPostId,
+  markdownImportID,
   scheduling,
   scheduledAt,
   error,
@@ -576,26 +587,49 @@ const handleFileUpload = async (event: Event) => {
   if (!file) return
   uploading.value = true
   try {
-    const text = await file.text()
-    const lines = text.split('\n')
-    let title = ''
-    let content = text
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('# ')) { title = trimmed.slice(2).trim(); break }
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await apiRequestResult(api.blog.markdownImport, {
+      method: 'POST',
+      headers: authHeaders.value,
+      body: formData,
+    })
+    const data = await Promise.resolve(res.data).catch(() => null)
+    if (!res.ok || !data) {
+      throw new Error(data?.error || '导入 Markdown 失败')
     }
-    if (title) {
-      const idx = text.split('\n').findIndex(l => l.trim().startsWith('# '))
-      if (idx !== -1) content = text.split('\n').slice(idx + 1).join('\n').trim()
-    }
-    form.value.title = title || file.name.replace(/\.(md|markdown|txt)$/i, '')
-    form.value.content = content
+    form.value.title = data.title || file.name.replace(/\.(md|markdown|txt)$/i, '')
+    form.value.summary = data.summary || ''
+    form.value.content = data.content || ''
+    markdownImportID.value = data.import_id || null
+    markdownImportDiagnostics.value = Array.isArray(data.diagnostics) ? data.diagnostics : []
     contentSource.value = 'imported'
   } catch (e) {
     error.value = '读取文件失败'
   } finally {
     uploading.value = false
     target.value = ''
+  }
+}
+
+const handleMarkdownExport = async () => {
+  const contentID = String(route.params.id || '')
+  if (!contentID || exporting.value) return
+  exporting.value = true
+  try {
+    const response = await fetch(api.blog.postExport(contentID), { headers: authHeaders.value })
+    if (!response.ok) throw new Error('导出 Markdown 失败')
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `blog-${contentID}.zip`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    error.value = '导出 Markdown 失败'
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -612,6 +646,8 @@ const resetEditorStateForRoute = () => {
   loadedPostUpdatedAt.value = 0
   scheduledAt.value = ''
   savedPostId.value = null
+  markdownImportID.value = null
+  markdownImportDiagnostics.value = []
   error.value = ''
   selectedCollectionIds.value = []
   existingCollectionIds.value = []
@@ -633,6 +669,24 @@ onMounted(() => { void initializeEditor() })
 </script>
 
 <style scoped>
+.import-diagnostics {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: var(--a-border);
+  border-left: 3px solid var(--a-color-warning, #b7791f);
+  background: var(--a-color-surface, var(--a-color-bg));
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.import-diagnostics p {
+  margin: 0;
+}
+
+.import-diagnostics p + p {
+  margin-top: 0.3rem;
+}
+
 .editor-page {
   position: relative;
   height: calc(

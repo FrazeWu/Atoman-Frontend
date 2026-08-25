@@ -41,9 +41,7 @@ const mountSheet = (
 describe("FeedArticleSheet", () => {
 	beforeEach(() => {
 		consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-		consoleError = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => undefined);
+		consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 	});
 
 	afterEach(() => {
@@ -56,48 +54,56 @@ describe("FeedArticleSheet", () => {
 
 	it("renders rating controls for blog posts opened from the feed sheet", async () => {
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(JSON.stringify({ data: { rating_score: 8, rating_count: 2, viewer_rating: 8 } }), { status: 200 }),
-		)
-		const wrapper = mountSheet({
-			props: {
-				show: true,
-				article: {
-					type: "post",
-					published_at: "2026-06-20T00:00:00Z",
-					is_read: false,
-					post: {
-						id: "post-sheet-rating-1",
-						title: "可评分文章",
-						content: "正文",
-						created_at: "2026-06-20T00:00:00Z",
-						updated_at: "2026-06-20T00:00:00Z",
-						status: "published",
-						visibility: "public",
-						pinned: false,
-						user_id: "user-1",
-						rating_score: 7,
-						rating_count: 1,
+			new Response(
+				JSON.stringify({
+					data: { rating_score: 8, rating_count: 2, viewer_rating: 8 },
+				}),
+				{ status: 200 },
+			),
+		);
+		const wrapper = mountSheet(
+			{
+				props: {
+					show: true,
+					article: {
+						type: "post",
+						published_at: "2026-06-20T00:00:00Z",
+						is_read: false,
+						post: {
+							id: "post-sheet-rating-1",
+							title: "可评分文章",
+							content: "正文",
+							created_at: "2026-06-20T00:00:00Z",
+							updated_at: "2026-06-20T00:00:00Z",
+							status: "published",
+							visibility: "public",
+							pinned: false,
+							user_id: "user-1",
+							rating_score: 7,
+							rating_count: 1,
+						},
+					},
+				},
+				global: {
+					stubs: {
+						PSheet: { template: "<section><slot /></section>" },
 					},
 				},
 			},
-			global: {
-				stubs: {
-					PSheet: { template: "<section><slot /></section>" },
-				},
+			(authStore) => {
+				authStore.isAuthenticated = true;
+				authStore.token = "token";
 			},
-		}, (authStore) => {
-			authStore.isAuthenticated = true
-			authStore.token = "token"
-		})
+		);
 
-		await wrapper.vm.$nextTick()
-		expect(wrapper.find('button[aria-label="1 分"]').exists()).toBe(true)
-		await wrapper.get('button[aria-label="8 分"]').trigger("click")
+		await wrapper.vm.$nextTick();
+		expect(wrapper.find('button[aria-label="0.5 星"]').exists()).toBe(true);
+		await wrapper.get('button[aria-label="4.0 星"]').trigger("click");
 		expect(fetchMock).toHaveBeenCalledWith(
 			expect.stringContaining("/blog/posts/post-sheet-rating-1/rating"),
 			expect.objectContaining({ method: "PUT" }),
-		)
-	})
+		);
+	});
 
 	it("sanitizes external feed HTML before rendering it", () => {
 		const wrapper = mountSheet({
@@ -291,9 +297,7 @@ describe("FeedArticleSheet", () => {
 			},
 		});
 
-		expect(wrapper.find('[data-test="feed-article-play"]').exists()).toBe(
-			false,
-		);
+		expect(wrapper.find('[data-test="feed-article-play"]').exists()).toBe(false);
 	});
 
 	it("shows the playing label when the current podcast is already playing", () => {
@@ -336,6 +340,15 @@ describe("FeedArticleSheet", () => {
 		const wrapper = mountSheet({
 			props: {
 				show: true,
+				reader: {
+					default_variant: "full_text",
+					rss: { html: "<p>RSS 正文</p>" },
+					full_text: {
+						status: "success",
+						html: "<p>抓取正文</p>",
+						word_count: 1280,
+					},
+				},
 				article: {
 					type: "feed_item",
 					published_at: "2026-06-20T00:00:00Z",
@@ -371,7 +384,7 @@ describe("FeedArticleSheet", () => {
 		});
 
 		expect(wrapper.text()).toContain("Longform Weekly");
-		expect(wrapper.text()).toContain("网页正文");
+		expect(wrapper.text()).toContain("已展示抓取的全文");
 		expect(wrapper.text()).toContain("约 1,280 字，4 分钟阅读");
 		expect(wrapper.get(".article-source-link").text()).toContain("在源站查看");
 	});
@@ -406,12 +419,8 @@ describe("FeedArticleSheet", () => {
 			},
 		});
 
-		expect(wrapper.find('[data-test="feed-article-prev"]').exists()).toBe(
-			false,
-		);
-		expect(wrapper.find('[data-test="feed-article-next"]').exists()).toBe(
-			false,
-		);
+		expect(wrapper.find('[data-test="feed-article-prev"]').exists()).toBe(false);
+		expect(wrapper.find('[data-test="feed-article-next"]').exists()).toBe(false);
 	});
 
 	it("opens comments in a nested sheet and supports keyboard article navigation", async () => {
@@ -467,10 +476,15 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.emitted("previous")).toEqual([[]]);
 	});
 
-	it("explains whether the reader is showing full text or only a summary", () => {
+	it("explains whether the reader is showing full text or only a summary", async () => {
 		const fullTextWrapper = mountSheet({
 			props: {
 				show: true,
+				reader: {
+					default_variant: "full_text",
+					rss: { html: "<p>RSS 正文</p>" },
+					full_text: { status: "success", html: "<p>全文</p>", word_count: 2 },
+				},
 				article: {
 					type: "feed_item",
 					published_at: "2026-06-20T00:00:00Z",
@@ -482,6 +496,7 @@ describe("FeedArticleSheet", () => {
 						title: "全文文章",
 						link: "https://example.com/full",
 						summary: "<p>摘要</p>",
+						feed_content_html: "<p>RSS 正文</p>",
 						full_text_html: "<p>全文</p>",
 						full_text_status: "success",
 						content_source: "full_text",
@@ -527,8 +542,27 @@ describe("FeedArticleSheet", () => {
 			},
 		});
 
-		expect(fullTextWrapper.text()).toContain("已展示网页正文");
-		expect(summaryWrapper.text()).toContain("当前仅展示摘要");
+		expect(fullTextWrapper.text()).toContain("已展示抓取的全文");
+		expect(fullTextWrapper.html()).toContain("全文");
+		expect(
+			fullTextWrapper
+				.get('[data-test="feed-content-mode-full-text"]')
+				.attributes("aria-checked"),
+		).toBe("true");
+		await fullTextWrapper
+			.get('[data-test="feed-content-mode-rss"]')
+			.trigger("click");
+		expect(fullTextWrapper.text()).toContain("已展示 RSS 正文");
+		expect(fullTextWrapper.html()).toContain("RSS 正文");
+		expect(
+			fullTextWrapper
+				.get('[data-test="feed-content-mode-rss"]')
+				.attributes("aria-checked"),
+		).toBe("true");
+		expect(summaryWrapper.text()).toContain("当前仅展示 RSS 摘要");
+		expect(
+			summaryWrapper.find('[data-test="feed-content-mode-rss"]').exists(),
+		).toBe(false);
 		expect(summaryWrapper.text()).not.toContain("fetch timeout");
 	});
 

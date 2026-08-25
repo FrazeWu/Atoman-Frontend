@@ -49,6 +49,10 @@
               <Upload :size="16" aria-hidden="true" />
               {{ contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown' }}
             </button>
+            <button v-if="isEdit" type="button" class="editor-topbar__menu-item" :disabled="exporting" @click="$emit('export-markdown'); close()">
+              <Download :size="16" aria-hidden="true" />
+              导出 Markdown
+            </button>
             <button v-if="isEdit" type="button" class="editor-topbar__menu-item" @click="$emit('open-version-history'); close()">
               <History :size="16" aria-hidden="true" />
               版本历史
@@ -70,7 +74,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ArrowLeft, Ellipsis, Eye, EyeOff, History, PanelRight, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Download, Ellipsis, Eye, EyeOff, History, PanelRight, Upload } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -82,6 +86,7 @@ defineProps<{
   draftStatus: { text: string; tone: 'ok' | 'warn' | 'muted' }
   contentSource: 'empty' | 'imported' | 'manual'
   saving: SaveTarget | null
+  exporting: boolean
   contentMode: 'markdown' | 'visual'
   previewOpen?: boolean
   sidebarOpen?: boolean
@@ -93,6 +98,7 @@ defineEmits<{
   (e: 'toggle-preview'): void
   (e: 'update:content-mode', value: 'markdown' | 'visual'): void
   (e: 'import-file', event: Event): void
+  (e: 'export-markdown'): void
   (e: 'open-version-history'): void
   (e: 'save-draft'): void
   (e: 'save-published'): void

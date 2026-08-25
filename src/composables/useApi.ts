@@ -73,8 +73,7 @@ export function useApi() {
 			forum: {
 				categories: `${apiUrl}/forum/categories`,
 				moderators: `${apiUrl}/forum/moderation/moderators`,
-				moderator: (id: string) =>
-					`${apiUrl}/forum/moderation/moderators/${id}`,
+				moderator: (id: string) => `${apiUrl}/forum/moderation/moderators/${id}`,
 				reports: `${apiUrl}/forum/moderation/reports`,
 				resolveReport: (id: string) =>
 					`${apiUrl}/forum/moderation/reports/${id}/resolve`,
@@ -92,8 +91,7 @@ export function useApi() {
 			},
 		},
 		music: {
-			albumRevisions: (id: number | string) =>
-				`${apiUrl}/albums/${id}/revisions`,
+			albumRevisions: (id: number | string) => `${apiUrl}/albums/${id}/revisions`,
 			albumRevision: (id: number | string, version: number | string) =>
 				`${apiUrl}/albums/${id}/revisions/${version}`,
 			albumRevisionDiff: (id: number | string) =>
@@ -133,14 +131,13 @@ export function useApi() {
 			posts: `${apiUrl}/blog/posts`,
 			post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,
 			postRating: (id: number | string) => `${apiUrl}/blog/posts/${id}/rating`,
-			postPublish: (id: number | string) =>
-				`${apiUrl}/blog/posts/${id}/publish`,
+			postPublish: (id: number | string) => `${apiUrl}/blog/posts/${id}/publish`,
 			postUnpublish: (id: number | string) =>
 				`${apiUrl}/blog/posts/${id}/unpublish`,
 			postPin: (id: number | string) => `${apiUrl}/blog/posts/${id}/pin`,
 			postUnpin: (id: number | string) => `${apiUrl}/blog/posts/${id}/unpin`,
-			postVersions: (id: number | string) =>
-				`${apiUrl}/blog/posts/${id}/versions`,
+			postVersions: (id: number | string) => `${apiUrl}/blog/posts/${id}/versions`,
+			postExport: (id: number | string) => `${apiUrl}/blog/posts/${id}/export`,
 			postVersionRestore: (id: number | string, version: number) =>
 				`${apiUrl}/blog/posts/${id}/versions/${version}/restore`,
 			draft: `${apiUrl}/blog/drafts`,
@@ -148,11 +145,15 @@ export function useApi() {
 			collectionPostOrder: (id: number | string) =>
 				`${apiUrl}/blog/collections/${id}/posts/order`,
 			uploadImage: `${apiUrl}/blog/upload-image`,
+			markdownImport: `${apiUrl}/blog/imports/markdown`,
+			markdownImportDetails: (id: number | string) =>
+				`${apiUrl}/blog/imports/markdown/${id}`,
+			markdownImportConfirm: (id: number | string) =>
+				`${apiUrl}/blog/imports/markdown/${id}/confirm`,
 
 			shortNotes: `${apiUrl}/short-notes`,
 			shortNote: (id: number | string) => `${apiUrl}/short-notes/${id}`,
-			shortNoteLike: (id: number | string) =>
-				`${apiUrl}/short-notes/${id}/like`,
+			shortNoteLike: (id: number | string) => `${apiUrl}/short-notes/${id}/like`,
 
 			comments: (id: number | string) =>
 				`${apiUrl}/discussions/blog_post/${encodeURIComponent(id)}/comments`,

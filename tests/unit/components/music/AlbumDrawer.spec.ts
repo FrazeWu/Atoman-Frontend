@@ -199,9 +199,9 @@ describe("AlbumDrawer.vue", () => {
 				.get('[data-testid="album-loading-skeleton"]')
 				.attributes("aria-busy"),
 		).toBe("true");
-		expect(
-			wrapper.find(".album-loading-skeleton .album-meta-row").exists(),
-		).toBe(true);
+		expect(wrapper.find(".album-loading-skeleton .album-meta-row").exists()).toBe(
+			true,
+		);
 		expect(wrapper.findAll(".album-skeleton-track")).toHaveLength(5);
 		expect(wrapper.text()).not.toContain("正在加载专辑...");
 		wrapper.unmount();
@@ -215,9 +215,7 @@ describe("AlbumDrawer.vue", () => {
 		).toBe(false);
 		expect(wrapper.findAll(".track-specification")).toHaveLength(0);
 		expect(
-			wrapper
-				.get('[data-testid="track-details-101"]')
-				.attributes("aria-expanded"),
+			wrapper.get('[data-testid="track-details-101"]').attributes("aria-expanded"),
 		).toBe("false");
 	});
 
@@ -233,7 +231,9 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		expect(wrapper.get("#album-description").text()).toBe("Album notes");
-		expect(wrapper.find('[data-testid="album-description-toggle"]').exists()).toBe(false);
+		expect(
+			wrapper.find('[data-testid="album-description-toggle"]').exists(),
+		).toBe(false);
 	});
 	it("renders every track returned by album details without pagination", async () => {
 		getMusicAlbum.mockResolvedValue({
@@ -253,9 +253,7 @@ describe("AlbumDrawer.vue", () => {
 
 		expect(wrapper.findAll(".track")).toHaveLength(21);
 		expect(wrapper.text()).toContain("21 首");
-		expect(wrapper.findComponent({ name: "PaginationBar" }).exists()).toBe(
-			false,
-		);
+		expect(wrapper.findComponent({ name: "PaginationBar" }).exists()).toBe(false);
 	});
 
 	it("opens album history from the contributors block", async () => {
@@ -457,9 +455,7 @@ describe("AlbumDrawer.vue", () => {
 		const wrapper = mount(AlbumDrawer, {});
 
 		await flushPromises();
-		await wrapper
-			.get('[data-testid="track-play-019f-song-b"]')
-			.trigger("click");
+		await wrapper.get('[data-testid="track-play-019f-song-b"]').trigger("click");
 
 		expect(playAlbum).toHaveBeenCalledWith(
 			[
@@ -520,9 +516,9 @@ describe("AlbumDrawer.vue", () => {
 			page: 2,
 			page_size: 100,
 		});
-		expect(
-			wrapper.get('[data-testid="album-bookmark-toggle"]').text(),
-		).toContain("已订阅");
+		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain(
+			"已订阅",
+		);
 	});
 
 	it("paginates playlists in the add-to-playlist menu", async () => {
@@ -580,9 +576,7 @@ describe("AlbumDrawer.vue", () => {
 		listAlbumContributors.mockRejectedValueOnce(
 			new Error("contributors unavailable"),
 		);
-		listAlbumBookmarks.mockRejectedValueOnce(
-			new Error("bookmarks unavailable"),
-		);
+		listAlbumBookmarks.mockRejectedValueOnce(new Error("bookmarks unavailable"));
 
 		const wrapper = mount(AlbumDrawer);
 		await flushPromises();
@@ -765,9 +759,9 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		expect(createAlbumBookmark).toHaveBeenCalledWith("1");
-		expect(
-			wrapper.get('[data-testid="album-bookmark-toggle"]').text(),
-		).toContain("已订阅");
+		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain(
+			"已订阅",
+		);
 	});
 
 	it("keeps the latest album visible when an earlier request finishes later", async () => {
@@ -852,9 +846,9 @@ describe("AlbumDrawer.vue", () => {
 		});
 
 		expect(wrapper.text()).not.toContain("Song A");
-		expect(
-			wrapper.find('[data-testid="album-loading-skeleton"]').exists(),
-		).toBe(true);
+		expect(wrapper.find('[data-testid="album-loading-skeleton"]').exists()).toBe(
+			true,
+		);
 		expect(wrapper.findAll(".album-skeleton-track")).toHaveLength(5);
 		resolveSecond({
 			id: "album-b",
@@ -909,9 +903,7 @@ describe("AlbumDrawer.vue", () => {
 		});
 		await flushPromises();
 		expect(
-			wrapper
-				.get('[data-testid="album-bookmark-toggle"]')
-				.attributes("disabled"),
+			wrapper.get('[data-testid="album-bookmark-toggle"]').attributes("disabled"),
 		).toBeUndefined();
 		resolveBookmark();
 		await flushPromises();

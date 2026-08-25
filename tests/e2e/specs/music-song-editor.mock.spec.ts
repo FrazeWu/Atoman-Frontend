@@ -62,10 +62,7 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 			});
 			return;
 		}
-		if (
-			request.method() === "GET" &&
-			path === "/api/v1/music/songs/song-e2e-1"
-		) {
+		if (request.method() === "GET" && path === "/api/v1/music/songs/song-e2e-1") {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
@@ -130,7 +127,9 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 		songDialog.getByRole("heading", { name: "Standalone Song" }),
 	).toBeVisible();
 	const detailDescription = songDialog.locator("#song-description");
-	const detailDescriptionToggle = songDialog.getByTestId("song-description-toggle");
+	const detailDescriptionToggle = songDialog.getByTestId(
+		"song-description-toggle",
+	);
 	await expect(detailDescription).toHaveText(songDescription);
 	await expect
 		.poll(() =>
@@ -139,7 +138,10 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 			),
 		)
 		.toBe(true);
-	await expect(detailDescriptionToggle).toHaveAttribute("aria-expanded", "false");
+	await expect(detailDescriptionToggle).toHaveAttribute(
+		"aria-expanded",
+		"false",
+	);
 	await detailDescriptionToggle.click();
 	await expect(detailDescriptionToggle).toHaveAttribute("aria-expanded", "true");
 	await expect(detailDescription).toHaveText(songDescription);

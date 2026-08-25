@@ -1,5 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("vue-router", () => ({
+	useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
 import MusicCreationArtistStep from "@/components/music/MusicCreationArtistStep.vue";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { uploadMusicAsset } from "@/api/musicV1";
@@ -122,9 +126,7 @@ describe("MusicCreationArtistStep.vue", () => {
 		await wrapper
 			.get('[data-testid="artist-add-stage-name-button"]')
 			.trigger("click");
-		await wrapper
-			.get('[data-testid="artist-stage-name-input-1"]')
-			.setValue("Ye");
+		await wrapper.get('[data-testid="artist-stage-name-input-1"]').setValue("Ye");
 		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
 
 		expect(
@@ -140,9 +142,7 @@ describe("MusicCreationArtistStep.vue", () => {
 		expect(wrapper.find('[data-testid="artist-birth-input"]').exists()).toBe(
 			true,
 		);
-		await wrapper
-			.get('[data-testid="artist-birth-input"]')
-			.setValue("20010608");
+		await wrapper.get('[data-testid="artist-birth-input"]').setValue("20010608");
 		await flushPromises();
 
 		expect(
@@ -151,13 +151,13 @@ describe("MusicCreationArtistStep.vue", () => {
 					.element as HTMLInputElement
 			).value,
 		).toBe("2001/06/08");
-		expect(
-			drawers.state.value.creationFlow?.draft.artist.birthDateParts,
-		).toEqual({
-			year: "2001",
-			month: "06",
-			day: "08",
-		});
+		expect(drawers.state.value.creationFlow?.draft.artist.birthDateParts).toEqual(
+			{
+				year: "2001",
+				month: "06",
+				day: "08",
+			},
+		);
 		expect(drawers.state.value.creationFlow?.draft.artist.birthDate).toBe(
 			"2001-06-08",
 		);
@@ -190,9 +190,9 @@ describe("MusicCreationArtistStep.vue", () => {
 		expect(
 			basicFields.find('[data-testid="artist-nationality-input"]').exists(),
 		).toBe(true);
-		expect(
-			basicFields.find('[data-testid="artist-birth-input"]').exists(),
-		).toBe(true);
+		expect(basicFields.find('[data-testid="artist-birth-input"]').exists()).toBe(
+			true,
+		);
 		expect(basicFields.findAll(".single-line-field")).toHaveLength(4);
 		expect(
 			wrapper
@@ -336,18 +336,18 @@ describe("MusicCreationArtistStep.vue", () => {
 		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
 
 		expect(drawers.state.value.creationFlow?.draft.artist.kind).toBe("group");
-		expect(
-			wrapper.find('[data-testid="artist-legal-name-input"]').exists(),
-		).toBe(false);
+		expect(wrapper.find('[data-testid="artist-legal-name-input"]').exists()).toBe(
+			false,
+		);
 		expect(
 			wrapper.find('[data-testid="artist-nationality-input"]').exists(),
 		).toBe(false);
 		expect(
 			wrapper.find('[data-testid="artist-add-stage-name-button"]').exists(),
 		).toBe(false);
-		expect(
-			wrapper.get('[data-testid="artist-members-error"]').text(),
-		).toContain("组合至少需要 2 名成员");
+		expect(wrapper.get('[data-testid="artist-members-error"]').text()).toContain(
+			"组合至少需要 2 名成员",
+		);
 		expect(drawers.state.value.creationFlow?.step).toBe("artist");
 	});
 
@@ -470,9 +470,9 @@ describe("MusicCreationArtistStep.vue", () => {
 			.setValue("Oliver");
 		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
 
-		expect(
-			wrapper.get('[data-testid="artist-members-error"]').text(),
-		).toContain("请为每位成员填写加入时间");
+		expect(wrapper.get('[data-testid="artist-members-error"]').text()).toContain(
+			"请为每位成员填写加入时间",
+		);
 		expect(drawers.state.value.creationFlow?.step).toBe("artist");
 
 		await wrapper
@@ -516,9 +516,9 @@ describe("MusicCreationArtistStep.vue", () => {
 
 		await wrapper.get('[data-testid="artist-avatar-input"]').trigger("change");
 
-		expect(
-			wrapper.find('[data-testid="music-square-crop-sheet"]').exists(),
-		).toBe(true);
+		expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(
+			true,
+		);
 		expect(vi.mocked(uploadMusicAsset)).not.toHaveBeenCalled();
 		expect(drawers.state.value.creationFlow?.draft.artist.avatarUrl).toBe("");
 
@@ -526,13 +526,11 @@ describe("MusicCreationArtistStep.vue", () => {
 			.get('[data-testid="music-square-crop-confirm"]')
 			.trigger("click");
 
+		expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(
+			false,
+		);
 		expect(
-			wrapper.find('[data-testid="music-square-crop-sheet"]').exists(),
-		).toBe(false);
-		expect(
-			wrapper
-				.get('[data-testid="artist-avatar-preview-image"]')
-				.attributes("src"),
+			wrapper.get('[data-testid="artist-avatar-preview-image"]').attributes("src"),
 		).toBe("blob:artist-avatar-preview");
 		expect(
 			wrapper.get('[data-testid="artist-avatar-preview"]').classes(),

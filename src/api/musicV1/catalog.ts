@@ -359,12 +359,9 @@ export async function listPublicMusicPlaylists(
 }
 
 export async function listMusicStarred(): Promise<MusicStarredItem[]> {
-	const [artistBookmarks, albumBookmarks, playlistBookmarks] =
-		await Promise.all([
-			listArtistBookmarks(),
-			listAlbumBookmarks(),
-			listPlaylistBookmarks(),
-		]);
+	const [artistBookmarks, albumBookmarks, playlistBookmarks] = await Promise.all(
+		[listArtistBookmarks(), listAlbumBookmarks(), listPlaylistBookmarks()],
+	);
 
 	const [artists, albums] = await Promise.all([
 		Promise.all(
@@ -388,14 +385,12 @@ export async function listMusicStarred(): Promise<MusicStarredItem[]> {
 				artist: artists[index],
 			}),
 		),
-		...albumBookmarks.data.map(
-			(bookmark: MusicAlbumBookmark, index: number) => ({
-				id: bookmark.id,
-				kind: "album" as const,
-				starred_at: bookmark.created_at,
-				album: albums[index],
-			}),
-		),
+		...albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
+			id: bookmark.id,
+			kind: "album" as const,
+			starred_at: bookmark.created_at,
+			album: albums[index],
+		})),
 		...playlistBookmarks.data.map((bookmark: MusicPlaylistBookmark) => ({
 			id: bookmark.id,
 			kind: "playlist" as const,
@@ -580,9 +575,7 @@ export async function saveMusicPlaybackProgress(
 }
 
 export async function getMusicPlaybackSession(): Promise<MusicPlaybackSession | null> {
-	return apiGet<MusicPlaybackSession | null>(
-		musicV1Endpoints.playbackSession(),
-	);
+	return apiGet<MusicPlaybackSession | null>(musicV1Endpoints.playbackSession());
 }
 
 export async function saveMusicPlaybackSession(
@@ -597,10 +590,9 @@ export async function saveMusicPlaybackSession(
 export async function listMusicListeningHistory(
 	filters: Pick<MusicListFilters, "page" | "page_size"> = {},
 ): Promise<MusicListResponse<MusicListeningHistory>> {
-	const response = await apiGetEnvelope<
-		MusicListeningHistory[],
-		PaginationMeta
-	>(`${musicV1Endpoints.history()}${queryString(filters)}`);
+	const response = await apiGetEnvelope<MusicListeningHistory[], PaginationMeta>(
+		`${musicV1Endpoints.history()}${queryString(filters)}`,
+	);
 	return listResponseWithPaginationFallback(response, filters);
 }
 
@@ -621,7 +613,7 @@ export async function listMusicLibrary<T>(
 export async function recordMusicRecommendationEvents(
 	input: MusicRecommendationEventsInput,
 ): Promise<void> {
-	await apiPostJson<void>(musicV1Endpoints.recommendationEvents(), input)
+	await apiPostJson<void>(musicV1Endpoints.recommendationEvents(), input);
 }
 
 export async function getMusicHome(): Promise<MusicHome> {
@@ -647,10 +639,7 @@ export async function updateMusicSongLyrics(
 	songId: string,
 	input: UpdateMusicSongLyricsInput,
 ): Promise<MusicSongLyrics> {
-	return apiPutJson<MusicSongLyrics>(
-		musicV1Endpoints.songLyrics(songId),
-		input,
-	);
+	return apiPutJson<MusicSongLyrics>(musicV1Endpoints.songLyrics(songId), input);
 }
 
 export async function createMusicLyricsAnnotation(
@@ -797,9 +786,7 @@ export function listAlbumContributors(
 export function listArtistContributors(
 	artistId: string,
 ): Promise<MusicContributorList> {
-	return listRevisionContributors(
-		musicV1Endpoints.artistContributors(artistId),
-	);
+	return listRevisionContributors(musicV1Endpoints.artistContributors(artistId));
 }
 
 export async function getSongRevision(

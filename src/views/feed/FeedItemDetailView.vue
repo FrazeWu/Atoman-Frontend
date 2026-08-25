@@ -21,6 +21,7 @@
     :presentation="isMobileApp ? 'page' : 'sheet'"
     :show="articleSheetVisible"
     :article="article"
+    :reader="reader"
     :source="articleSource"
     :show-source-subscribe="authStore.isAuthenticated"
     :source-subscribe-busy="sourceSubscribeBusy"
@@ -58,7 +59,7 @@ import { feedArticleRouteState, readFeedArticleRouteState, type FeedArticleRoute
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
-import type { FeedArticleSource, FeedItem, TimelineItem } from '@/types'
+import type { FeedArticleSource, FeedItem, FeedItemDetail, FeedItemReader, TimelineItem } from '@/types'
 import { reportError } from '@/utils/logger'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
@@ -78,6 +79,7 @@ const sourceSubscribeBusy = ref(false)
 const routeState = ref<FeedArticleRouteState | null>(readFeedArticleRouteState())
 const sourceArticles = ref<TimelineItem[]>(routeState.value?.sourceArticles || [])
 const item = ref<FeedItem | null>(null)
+const reader = ref<FeedItemReader | null>(null)
 const article = computed<TimelineItem | null>(() => item.value ? ({
   type: 'feed_item',
   feed_item: item.value,
@@ -215,18 +217,24 @@ async function reportReadEvent(feedItem: FeedItem) {
 
 async function fetchItem(id: string) {
   const restored = readFeedArticleRouteState()
-  if (restored?.article.type === 'feed_item' && restored.article.feed_item?.id === id) {
+  const restoredItem = restored?.article.type === 'feed_item' && restored.article.feed_item?.id === id
+    ? restored.article.feed_item
+    : null
+  reader.value = null
+
+  if (restoredItem && restored) {
     routeState.value = restored
-    sourceArticles.value = restored.sourceArticles
-    sourceSheetVisible.value = Boolean(restored.source)
+    sourceArticles.value = restored?.sourceArticles ?? []
+    sourceSheetVisible.value = Boolean(restored?.source)
     articleSheetVisible.value = true
-    item.value = restored.article.feed_item
+    item.value = restoredItem
     loading.value = false
-    return
+  } else {
+    routeState.value = null
+    loading.value = true
+    item.value = null
   }
-  routeState.value = null
-  loading.value = true
-  item.value = null
+
   try {
     const response = await apiRequestResult(`${api.url}/feed/items/${id}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
@@ -234,23 +242,37 @@ async function fetchItem(id: string) {
     if (!response.ok) return
 
     const result = await Promise.resolve(response.data)
-    const nextItem = result.data as FeedItem | undefined
-    if (!nextItem || String(route.params.id || '') !== id) return
+    const detail = result.data as FeedItemDetail | undefined
+    const nextItem = detail?.item
+    if (!nextItem || !detail?.reader || String(route.params.id || '') !== id) return
     item.value = nextItem
-    const source = articleSource.value
-    routeState.value = {
-      article: {
-        type: 'feed_item',
-        feed_item: nextItem,
-        published_at: nextItem.published_at,
-        is_read: true,
-      },
-      articles: [],
-      source,
-      sourceArticles: [],
+    reader.value = detail.reader
+    if (restoredItem && routeState.value) {
+      routeState.value = {
+        ...routeState.value,
+        article: {
+          type: 'feed_item',
+          feed_item: nextItem,
+          published_at: nextItem.published_at,
+          is_read: true,
+        },
+      }
+    } else {
+      const source = articleSource.value
+      routeState.value = {
+        article: {
+          type: 'feed_item',
+          feed_item: nextItem,
+          published_at: nextItem.published_at,
+          is_read: true,
+        },
+        articles: [],
+        source,
+        sourceArticles: [],
+      }
+      sourceSheetVisible.value = false
+      articleSheetVisible.value = true
     }
-    sourceSheetVisible.value = false
-    articleSheetVisible.value = true
     void reportReadEvent(nextItem)
   } catch (error) {
     reportError(error, 'Failed to fetch feed item')

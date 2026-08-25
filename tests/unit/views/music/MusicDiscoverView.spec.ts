@@ -276,8 +276,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -285,9 +284,7 @@ describe("Music DiscoverView.vue", () => {
 		await flushPromises();
 		expect(wrapper.text()).toContain("近期热门专辑");
 
-		expect(wrapper.get('[data-testid="page-header-title"]').text()).toBe(
-			"发现",
-		);
+		expect(wrapper.get('[data-testid="page-header-title"]').text()).toBe("发现");
 	});
 
 	it("uses the external page title when provided", async () => {
@@ -308,17 +305,14 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
 		});
 		await flushPromises();
 
-		expect(wrapper.get('[data-testid="page-header-title"]').text()).toBe(
-			"专辑",
-		);
+		expect(wrapper.get('[data-testid="page-header-title"]').text()).toBe("专辑");
 	});
 
 	it("renders album-only content when used in albums mode", async () => {
@@ -335,8 +329,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -353,9 +346,9 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(
 			1,
 		);
-		expect(
-			wrapper.findAll('[data-testid="discover-artist-card"]'),
-		).toHaveLength(0);
+		expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(
+			0,
+		);
 		expect(
 			wrapper.findAll('[data-testid="discover-playlist-card"]'),
 		).toHaveLength(0);
@@ -402,9 +395,9 @@ describe("Music DiscoverView.vue", () => {
 			await flushPromises();
 			await wrapper.get('button[title="下一页"]').trigger("click");
 			await flushPromises();
-			expect(
-				wrapper.findAll('[data-testid="discover-album-card"]'),
-			).toHaveLength(1);
+			expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(
+				1,
+			);
 			expect(mocks.listMusicAlbums).toHaveBeenNthCalledWith(2, {
 				page: 2,
 				page_size: 24,
@@ -446,8 +439,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -502,8 +494,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -532,9 +523,9 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(
 			1,
 		);
-		expect(
-			wrapper.findAll('[data-testid="discover-artist-card"]'),
-		).toHaveLength(1);
+		expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(
+			1,
+		);
 		expect(
 			wrapper.findAll('[data-testid="discover-playlist-card"]'),
 		).toHaveLength(1);
@@ -544,9 +535,7 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.text()).toContain("42");
 		expect(wrapper.text()).toContain("7");
 		expect(
-			wrapper
-				.get('[data-testid="discover-playlist-card"] img')
-				.attributes("src"),
+			wrapper.get('[data-testid="discover-playlist-card"] img').attributes("src"),
 		).toBe("/uploads/late-night.jpg");
 
 		const sections = wrapper
@@ -628,9 +617,9 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(
 			2,
 		);
-		expect(
-			wrapper.findAll('[data-testid="discover-artist-card"]'),
-		).toHaveLength(1);
+		expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(
+			1,
+		);
 		expect(
 			wrapper.findAll('[data-testid="discover-playlist-card"]'),
 		).toHaveLength(1);
@@ -711,17 +700,23 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.text()).not.toContain("Graduation");
 		expect(wrapper.find("button button").exists()).toBe(false);
 
-		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
-			request_id: "00000000-0000-0000-0000-000000000001",
-			events: [expect.objectContaining({ event: "impression", entity_id: "album-2" })],
-		}));
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				request_id: "00000000-0000-0000-0000-000000000001",
+				events: [
+					expect.objectContaining({ event: "impression", entity_id: "album-2" }),
+				],
+			}),
+		);
 
 		await wrapper
 			.get('[aria-label="打开专辑 Late Registration"]')
 			.trigger("click");
-		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
-			events: [expect.objectContaining({ event: "click", entity_id: "album-2" })],
-		}));
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				events: [expect.objectContaining({ event: "click", entity_id: "album-2" })],
+			}),
+		);
 		expect(mocks.openAlbum).toHaveBeenCalledWith("album-2");
 
 		await wrapper.get('[aria-label="打开艺人 Ye"]').trigger("click");
@@ -991,8 +986,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -1018,17 +1012,14 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
 		});
 		await flushPromises();
 
-		await wrapper
-			.get('[data-testid="discover-playlist-card"]')
-			.trigger("click");
+		await wrapper.get('[data-testid="discover-playlist-card"]').trigger("click");
 
 		expect(mocks.push).toHaveBeenCalledWith("/music/playlist/playlist-1");
 		expect(mocks.openPlaylist).not.toHaveBeenCalled();
@@ -1044,8 +1035,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -1072,8 +1062,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -1102,8 +1091,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -1139,8 +1127,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},
@@ -1171,8 +1158,7 @@ describe("Music DiscoverView.vue", () => {
 					},
 					RouterLink: {
 						props: ["to"],
-						template:
-							"<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
+						template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 					},
 				},
 			},

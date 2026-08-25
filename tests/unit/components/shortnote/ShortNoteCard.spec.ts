@@ -20,7 +20,7 @@ describe('ShortNoteCard', () => {
     liked: false,
   }
 
-  it('首行显示点赞与评论总数，而非净投票分数', () => {
+  it('首行显示点赞数与赞踩总数的比例', () => {
     const wrapper = mount(ShortNoteCard, {
       props: { note: mockNote },
       global: {
@@ -30,7 +30,7 @@ describe('ShortNoteCard', () => {
     })
 
     const headerStats = wrapper.findAll('.sticky-stat').map((stat) => stat.text())
-    expect(headerStats).toEqual(['3', '1'])
+    expect(headerStats).toEqual(['3/8'])
   })
 
   it('未读时初始渲染，光标扫过 (mouseenter) 时自动标记为已读', async () => {

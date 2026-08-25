@@ -170,7 +170,17 @@
             :summary="item.post.summary"
             class="content-stream-entry"
           >
+            <template #visual>
+              <PAvatar
+                :src="item.post.user?.avatar_url"
+                :name="item.post.user?.display_name || item.post.user?.username || '作者'"
+                :alt="`${item.post.user?.display_name || item.post.user?.username || '作者'} 的头像`"
+                size="xs"
+              />
+            </template>
             <template #meta>
+              <span class="a-label">{{ item.post.user?.display_name || item.post.user?.username || '作者' }}</span>
+              <span v-if="item.post.user?.username" class="a-label a-muted">@{{ item.post.user.username }}</span>
               <button
                 v-if="postSource(item)"
                 type="button"
@@ -183,9 +193,11 @@
                 {{ postSource(item)!.title }}
               </button>
               <span v-else class="a-label a-muted">未知频道</span>
-              <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.post.view_count || 0 }}</span>
-              <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.post.rating_score ? `${item.post.rating_score.toFixed(1)} (${item.post.rating_count || 0})` : '—' }}</span>
-              <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.post.bookmarks_count || 0 }}</span>
+              <span class="feed-entry-stats">
+                <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.post.view_count || 0 }}</span>
+                <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.post.rating_score ? `${item.post.rating_score.toFixed(1)} (${item.post.rating_count || 0})` : '—' }}</span>
+                <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.post.bookmarks_count || 0 }}</span>
+              </span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
               <span class="feed-type-tag feed-type-tag--blog">文章</span>
             </template>
@@ -219,6 +231,14 @@
             :summary="stripHtml(item.feed_item.summary || '')"
             class="content-stream-entry"
           >
+            <template #visual>
+              <PAvatar
+                :src="item.feed_item.feed_source?.cover_url || item.feed_item.image_url"
+                :name="feedItemSource(item.feed_item)?.title || 'RSS'"
+                :alt="`${feedItemSource(item.feed_item)?.title || 'RSS'} 的网站图标`"
+                size="xs"
+              />
+            </template>
             <template #meta>
               <button
                 v-if="feedItemSource(item.feed_item)"
@@ -232,6 +252,11 @@
                 {{ feedItemSource(item.feed_item)!.title }}
               </button>
               <span v-else class="a-label a-muted">RSS</span>
+              <span class="feed-entry-stats">
+                <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.feed_item.read_count || 0 }}</span>
+                <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.feed_item.rating_score ? `${item.feed_item.rating_score.toFixed(1)} (${item.feed_item.rating_count || 0})` : '—' }}</span>
+                <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.feed_item.bookmark_count || 0 }}</span>
+              </span>
               <span v-if="item.feed_item.duration" style="color:var(--a-color-muted-soft);font-weight: 500">
                 时长: {{ item.feed_item.duration }}
               </span>
@@ -272,30 +297,40 @@
             <template #actions>
               <PClip
                 v-if="item.feed_item.enclosure_url"
-                :label="isPodcastPlaying(item.feed_item) ? '■ 播放中' : '▶ 播放播客'"
+                :title="isPodcastPlaying(item.feed_item) ? '停止播放' : '播放播客'"
+                :aria-label="isPodcastPlaying(item.feed_item) ? '停止播放' : '播放播客'"
                 @click="playPodcast(item.feed_item, $event)"
-              />
+              >
+                <Square v-if="isPodcastPlaying(item.feed_item)" :size="14" aria-hidden="true" />
+                <Play v-else :size="14" aria-hidden="true" />
+              </PClip>
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="starredIds.has(item.feed_item.id)"
                 :title="starredIds.has(item.feed_item.id) ? '取消收藏' : '收藏'"
+                :aria-label="starredIds.has(item.feed_item.id) ? '取消收藏' : '收藏'"
                 @click="toggleStar(item.feed_item.id)"
               >
-                <Star :size="14" :fill="starredIds.has(item.feed_item.id) ? 'currentColor' : 'none'" />
-                <span style="margin-left: 0.25rem;">{{ starredIds.has(item.feed_item.id) ? '已收藏' : '收藏' }}</span>
+                <Star :size="14" :fill="starredIds.has(item.feed_item.id) ? 'currentColor' : 'none'" aria-hidden="true" />
               </PClip>
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.feed_item.id)"
                 :title="readingListIds.has(item.feed_item.id) ? '移除稍后阅读' : '稍后阅读'"
+                :aria-label="readingListIds.has(item.feed_item.id) ? '移除稍后阅读' : '稍后阅读'"
                 @click="toggleReadingList(item.feed_item.id)"
               >
-                <Clock :size="14" />
-                <span style="margin-left: 0.25rem;">{{ readingListIds.has(item.feed_item.id) ? '已加入稍后阅读' : '稍后阅读' }}</span>
+                <Clock :size="14" aria-hidden="true" />
               </PClip>
-              <div style="flex:1"></div>
-              <a :href="item.feed_item.link" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
-                ↗ 原文
+              <a
+                :href="item.feed_item.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="feed-item-external-link"
+                title="打开原文"
+                aria-label="打开原文"
+              >
+                <ExternalLink :size="14" aria-hidden="true" />
               </a>
             </template>
           </PEntry>
@@ -324,6 +359,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PField from '@/components/ui/PField.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PEntry from '@/components/ui/PEntry.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 
 const sourceTypeFilterOptions: Array<{ label: string; value: FeedSourceTypeFilter; test: string }> = [
@@ -352,7 +388,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown, Eye, Gauge, Star, Clock, Bookmark } from 'lucide-vue-next'
+import { ChevronDown, Eye, Gauge, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()

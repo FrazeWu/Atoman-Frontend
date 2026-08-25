@@ -46,9 +46,9 @@ const feedViewStubs = {
   PPress: { props: ['label'], template: '<button type="button">{{ label }}</button>' },
   PBadge: { template: '<span><slot /></span>' },
   PClip: {
-    props: ['label'],
+    props: ['label', 'title', 'ariaLabel'],
     emits: ['click'],
-    template: '<button type="button" class="p-clip-stub" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+    template: '<button type="button" class="p-clip-stub" :title="title" :aria-label="ariaLabel" @click="$emit(\'click\')">{{ label }}<slot /></button>',
   },
   PShortcutHints: true,
   SubscriptionAddSheet: true,
@@ -329,8 +329,8 @@ describe('FeedView', () => {
     await flushPromises()
     expect(markRead).toHaveBeenCalledWith(['cluster-primary', 'cluster-copy'])
 
-    await wrapper.findAll('.p-clip-stub').find((button) => button.text() === '收藏')!.trigger('click')
-    await wrapper.findAll('.p-clip-stub').find((button) => button.text() === '稍后阅读')!.trigger('click')
+    await wrapper.get('.p-clip-stub[aria-label="收藏"]').trigger('click')
+    await wrapper.get('.p-clip-stub[aria-label="稍后阅读"]').trigger('click')
     expect(toggleStar).toHaveBeenCalledWith('cluster-primary')
     expect(toggleReadingList).toHaveBeenCalledWith('cluster-primary')
   })
@@ -754,7 +754,7 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(wrapper.find('.feed-entry-meta').text()).toContain('思想频道')
-    expect(wrapper.find('.feed-entry-meta').text()).not.toContain('Alice')
+    expect(wrapper.find('.feed-entry-meta').text()).toContain('Alice')
 
     const trigger = wrapper.get('[data-test="feed-source-trigger"]')
     expect(trigger.element.tagName).toBe('BUTTON')

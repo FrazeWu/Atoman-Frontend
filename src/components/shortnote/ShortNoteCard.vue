@@ -8,14 +8,19 @@
     <!-- 1. 紧凑单行头部：作者头像 + 作者 + 相对时间 + 短笺标签 + 作者微操作 -->
     <header class="sticky-memo-head">
       <div class="sticky-memo-head__main">
-        <div class="sticky-author-avatar" aria-hidden="true">
-          {{ author.charAt(0).toUpperCase() }}
-        </div>
+        <PAvatar
+          :src="note.user?.avatar_url"
+          :name="author"
+          :alt="`${author} 的头像`"
+          size="xs"
+        />
         <span class="sticky-author">{{ author }}</span>
-        <span class="sticky-dot" aria-hidden="true">·</span>
+        <span v-if="note.user?.username" class="sticky-handle">@{{ note.user.username }}</span>
+        <span class="sticky-stat"><Heart :size="11" aria-hidden="true" />{{ voteScore }}</span>
+        <span class="sticky-stat"><MessageSquare :size="11" aria-hidden="true" />{{ interactions.commentCount.value || 0 }}</span>
         <span class="sticky-time">{{ formatDate(note.created_at) }}</span>
-        <span v-if="note.edited" class="sticky-edited">· 已编辑</span>
         <span class="sticky-badge">短笺</span>
+        <span v-if="note.edited" class="sticky-edited">已编辑</span>
       </div>
 
       <div v-if="isOwner" class="sticky-owner-actions">
@@ -102,6 +107,7 @@ import { computed, ref, watch, watchEffect } from 'vue'
 import { Heart, MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import CommentSection from '@/components/comment/CommentSection.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
@@ -116,6 +122,7 @@ const authStore = useAuthStore()
 const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNoteSync()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
+const voteScore = computed(() => props.note.vote_score ?? (props.note.likes_count - (props.note.dislikes_count || 0)))
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
 const isRead = computed(() => isNoteRead(props.note.id))
 
@@ -186,12 +193,17 @@ function formatDate(value: string) {
   display: grid;
   gap: 0.65rem;
   padding: 0.95rem 1.15rem;
-  margin-bottom: 0.65rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  margin-bottom: 0;
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
+  background: transparent;
   transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.sticky-memo-card:last-child {
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 /* 绿色未读指示短竖线 */
@@ -249,6 +261,8 @@ function formatDate(value: string) {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  min-width: 0;
+  flex-wrap: wrap;
   color: var(--a-color-muted);
 }
 
@@ -270,6 +284,19 @@ function formatDate(value: string) {
 .sticky-author {
   font-weight: 650;
   color: var(--a-color-fg);
+}
+
+.sticky-handle,
+.sticky-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  color: var(--a-color-muted-soft);
+  font-size: 0.72rem;
+}
+
+.sticky-handle {
+  white-space: nowrap;
 }
 
 .sticky-dot {

@@ -28,18 +28,22 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 	}),
 }));
 
+type TestImportStatus =
+	| "pending_upload"
+	| "uploaded"
+	| "extracting"
+	| "ready"
+	| "needs_attention"
+	| "committed"
+	| "canceled";
+
 function importRecord(
-	status:
-		| "pending_upload"
-		| "uploaded"
-		| "extracting"
-		| "ready"
-		| "needs_attention",
+	status: TestImportStatus,
 	importId = "import-1",
 ) {
 	return {
 		importId,
-		targetAlbumId: "",
+		targetAlbumId: status === "committed" ? "album-1" : "",
 		albumTitle: "Album",
 		status,
 		archiveName: "album.zip",
@@ -60,14 +64,7 @@ function importRecord(
 	};
 }
 
-function response(
-	status:
-		| "pending_upload"
-		| "uploaded"
-		| "extracting"
-		| "ready"
-		| "needs_attention",
-) {
+function response(status: TestImportStatus) {
 	return {
 		data: [importRecord(status)],
 		meta: { page: 1, page_size: 50, total: 1, has_more: false },
@@ -239,6 +236,42 @@ describe("Music ImportsView", () => {
 			page: 2,
 			page_size: 50,
 		});
+		wrapper.unmount();
+	});
+
+	it("keeps every status tab selected with its own import details", async () => {
+		mocks.listMusicAlbumImports.mockResolvedValue({
+			data: [
+				{ ...importRecord("uploaded", "import-progress"), albumTitle: "进行中的导入" },
+				{ ...importRecord("needs_attention", "import-attention"), albumTitle: "需要处理的导入" },
+				{ ...importRecord("committed", "import-published"), albumTitle: "已发布的导入" },
+				{ ...importRecord("canceled", "import-canceled"), albumTitle: "已取消的导入" },
+			],
+			meta: { page: 1, page_size: 50, total: 4, has_more: false },
+		});
+		const wrapper = mount(ImportsView);
+		await flushPromises();
+
+		const cases = [
+			{ label: "进行中", title: "进行中的导入", action: "继续导入" },
+			{ label: "需处理", title: "需要处理的导入", action: "处理问题" },
+			{ label: "已发布", title: "已发布的导入", action: "修复资料" },
+			{ label: "已取消", title: "已取消的导入", action: "删除记录" },
+		];
+
+		for (const testCase of cases) {
+			const tab = wrapper
+				.findAll<HTMLElement>('[role="tab"]')
+				.find((button) => button.text().startsWith(testCase.label));
+			expect(tab).toBeDefined();
+			await tab!.trigger("click");
+			await flushPromises();
+
+			expect(tab!.attributes("aria-selected")).toBe("true");
+			expect(wrapper.find(".music-imports-view__detail h2").text()).toContain(testCase.title);
+			expect(wrapper.findAll(".music-imports-view__item--selected")).toHaveLength(1);
+			expect(wrapper.find(".music-imports-view__detail").text()).toContain(testCase.action);
+		}
 		wrapper.unmount();
 	});
 

@@ -401,10 +401,10 @@ function continueImport() {
     </p>
 
     <div v-else class="music-imports-view__layout">
+      <div class="music-imports-view__search">
+        <PInput v-model="searchQuery" placeholder="搜索标题或文件名…" />
+      </div>
       <section class="music-imports-view__list" aria-label="导入记录">
-        <div class="music-imports-view__search">
-          <PInput v-model="searchQuery" placeholder="搜索标题或文件名…" />
-        </div>
         <div class="music-imports-view__filters" role="tablist" aria-label="导入状态">
           <button v-for="group in [{ key: 'in_progress', label: '进行中' }, { key: 'needs_attention', label: '需处理' }, { key: 'published', label: '已发布' }, { key: 'canceled', label: '已取消' }]" :key="group.key" type="button" :class="{ 'music-imports-view__filter--active': activeGroup === group.key }" :aria-selected="activeGroup === group.key" role="tab" @click="activeGroup = group.key as 'in_progress' | 'needs_attention' | 'published' | 'canceled'">
             {{ group.label }} {{ importGroups[group.key as keyof typeof importGroups].length }}
@@ -582,10 +582,12 @@ function continueImport() {
 <style scoped>
 .music-imports-view {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   max-width: 72rem;
   margin: 0 auto;
   padding: 1.5rem;
+  container-type: inline-size;
 }
 .music-imports-view__header {
   display: flex;
@@ -608,18 +610,28 @@ function continueImport() {
   color: var(--a-color-accent-destructive);
 }
 .music-imports-view__layout {
+  min-width: 0;
+  width: 100%;
   display: grid;
-  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
-  gap: 1.25rem;
+  grid-template-areas:
+    "search search"
+    "list detail";
+  grid-template-columns: minmax(17rem, 0.9fr) minmax(0, 1.4fr);
+  align-items: start;
+  gap: 0.75rem 1.25rem;
+}
+.music-imports-view__search {
+  grid-area: search;
+  min-width: 0;
+  margin-bottom: 0.25rem;
 }
 .music-imports-view__list {
+  grid-area: list;
   min-width: 0;
+  width: 100%;
   display: grid;
   align-content: start;
   gap: 0.6rem;
-}
-.music-imports-view__search {
-  margin-bottom: 0.25rem;
 }
 .music-imports-view__filters {
   display: flex;
@@ -643,7 +655,11 @@ function continueImport() {
   font-weight: 600 !important;
 }
 .music-imports-view__item {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.4rem;
   padding: 0.85rem;
   text-align: left;
@@ -663,6 +679,7 @@ function continueImport() {
 }
 .item-header {
   display: flex;
+  min-width: 0;
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
@@ -670,6 +687,7 @@ function continueImport() {
 .item-header strong {
   font-size: 0.9rem;
   font-weight: 600;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -711,7 +729,8 @@ function continueImport() {
   flex-wrap: wrap;
 }
 .archive-name {
-  max-width: 10rem;
+  min-width: 0;
+  max-width: min(100%, 20rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -720,7 +739,10 @@ function continueImport() {
   margin-left: auto;
 }
 .music-imports-view__detail {
+  grid-area: detail;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: 9rem minmax(0, 1fr);
   align-content: start;
@@ -818,6 +840,11 @@ function continueImport() {
   font-size: 0.85rem;
   word-break: break-all;
 }
+.file-title,
+.meta-archive,
+.detail-tracks-list li {
+  overflow-wrap: anywhere;
+}
 .file-err {
   color: var(--a-color-accent-destructive);
   font-size: 0.75rem;
@@ -850,16 +877,25 @@ function continueImport() {
   gap: 0.35rem;
 }
 
-@media (max-width: 1023px) {
-  .music-imports-view {
-    padding: 1rem;
+@container (max-width: 60rem) {
+  .music-imports-view__layout {
+    grid-template-areas:
+      "search"
+      "list"
+      "detail";
+    grid-template-columns: minmax(0, 1fr);
   }
-  .music-imports-view__layout,
   .music-imports-view__detail {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .cover-wrapper {
     width: min(100%, 10rem);
+  }
+}
+
+@media (max-width: 1023px) {
+  .music-imports-view {
+    padding: 1rem;
   }
 }
 </style>

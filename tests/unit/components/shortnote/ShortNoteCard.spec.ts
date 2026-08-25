@@ -13,14 +13,14 @@ describe('ShortNoteCard', () => {
     content: '这是一条灵感短笺测试内容',
     created_at: new Date().toISOString(),
     media: [],
-    likes_count: 3,
-    dislikes_count: 5,
-    vote_score: -2,
+    likes_count: 5,
+    dislikes_count: 2,
+    vote_score: 3,
     comments_count: 1,
     liked: false,
   }
 
-  it('首行显示点赞数与赞踩总数的比例', () => {
+  it('首行显示一位小数的点赞率与赞踩总数', () => {
     const wrapper = mount(ShortNoteCard, {
       props: { note: mockNote },
       global: {
@@ -30,7 +30,7 @@ describe('ShortNoteCard', () => {
     })
 
     const headerStats = wrapper.findAll('.sticky-stat').map((stat) => stat.text())
-    expect(headerStats).toEqual(['3/8'])
+    expect(headerStats).toEqual(['71.4(7)'])
   })
 
   it('未读时初始渲染，光标扫过 (mouseenter) 时自动标记为已读', async () => {

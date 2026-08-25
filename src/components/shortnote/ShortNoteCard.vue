@@ -18,10 +18,10 @@
         <span v-if="note.user?.username" class="sticky-handle">@{{ note.user.username }}</span>
         <span
           class="sticky-stat"
-          :aria-label="`点赞 ${interactions.likeCount.value || 0}，赞踩总数 ${voteTotal}`"
-          title="点赞数 / 赞踩总数"
+          :aria-label="`点赞率 ${likeRate}，赞踩总数 ${voteTotal}`"
+          title="点赞率（赞踩总数）"
         >
-          <Heart :size="11" aria-hidden="true" />{{ interactions.likeCount.value || 0 }}/{{ voteTotal }}
+          <Heart :size="11" aria-hidden="true" />{{ likeRate }}({{ voteTotal }})
         </span>
         <span class="sticky-time">{{ formatDate(note.created_at) }}</span>
         <span class="sticky-badge">短笺</span>
@@ -128,6 +128,9 @@ const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNo
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const voteTotal = computed(() => (interactions.likeCount.value || 0) + (props.note.dislikes_count || 0))
+const likeRate = computed(() => (
+  voteTotal.value === 0 ? '0.0' : (((interactions.likeCount.value || 0) / voteTotal.value) * 100).toFixed(1)
+))
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
 const isRead = computed(() => isNoteRead(props.note.id))
 

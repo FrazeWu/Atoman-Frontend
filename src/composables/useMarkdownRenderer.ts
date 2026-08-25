@@ -123,6 +123,7 @@ async function ensureMarkdownRuntime(): Promise<void> {
           markedKatex({
             throwOnError: false,
             displayMode: false,
+            nonStandard: true,
           }),
         );
 

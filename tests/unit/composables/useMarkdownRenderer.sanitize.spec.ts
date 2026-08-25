@@ -39,6 +39,8 @@ describe("useMarkdownRenderer sanitize", () => {
       "",
       "这是正文与 `Quality`。",
       "",
+      "- 用户集合为 $(U)$；",
+      "",
       "\\[",
       "Q_u = 50",
       "\\]",
@@ -56,6 +58,8 @@ describe("useMarkdownRenderer sanitize", () => {
     const html = renderMarkdown(source);
     expect(html).toContain('<h2 id="摘要">摘要</h2>');
     expect(html).toContain("<p>这是正文与 <code>Quality</code>。</p>");
+    expect(html).toContain('<span class="katex">');
+    expect(html).not.toContain("$(U)$");
     expect(html).not.toMatch(/^<pre>/);
   });
 

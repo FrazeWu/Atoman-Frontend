@@ -20,6 +20,18 @@ describe("SongRatingControl.vue", () => {
     expect(wrapper.emitted("rate")).toEqual([[4]]);
   });
 
+  it("fills aggregate stars to the exact half-star width", () => {
+    const wrapper = mount(SongRatingControl, {
+      props: {
+        songTitle: "示例歌曲",
+        ratingScore: 3.5,
+        ratingCount: 2,
+      },
+    });
+
+    expect(wrapper.findAll(".song-rating__star-fill")[3].attributes("style")).toContain("width: 9px");
+  });
+
   it("shows the current score and emits clear for an authenticated viewer", async () => {
     const wrapper = mount(SongRatingControl, {
       props: {

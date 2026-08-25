@@ -61,6 +61,22 @@
       </button>
     </div>
 
+    <label v-if="!disabled" class="post-rating__slider">
+      <span class="sr-only">选择 0.5 至 5 星评分</span>
+      <input
+        type="range"
+        min="1"
+        max="10"
+        step="1"
+        :value="activeScore"
+        :disabled="loading"
+        aria-label="选择 0.5 至 5 星评分"
+        @input="hoverScore = Number(($event.target as HTMLInputElement).value)"
+        @change="handleRate(Number(($event.target as HTMLInputElement).value), Math.ceil(Number(($event.target as HTMLInputElement).value) / 2))"
+      >
+      <output aria-live="polite">{{ formatStarScore(activeScore) }} 星</output>
+    </label>
+
     <!-- 动态分值提示与评分标准说明 -->
     <div class="post-rating__meta-box">
       <!-- 分数展示 -->
@@ -70,6 +86,7 @@
       <span v-else-if="viewerRating !== null && viewerRating !== undefined" class="post-rating__mine">
         我的评分 {{ formatStarScore(viewerRating) }} 星
       </span>
+      <span v-if="errorMessage" class="post-rating__error" role="alert">{{ errorMessage }}</span>
       <RouterLink v-else-if="disabled" to="/login" class="post-rating__login">
         登录后评分
       </RouterLink>
@@ -134,6 +151,7 @@ const props = withDefaults(defineProps<{
   viewerRating?: number | null
   disabled?: boolean
   loading?: boolean
+  errorMessage?: string
   size?: 'sm' | 'md'
 }>(), {
   ratingScore: 0,
@@ -141,6 +159,7 @@ const props = withDefaults(defineProps<{
   viewerRating: null,
   disabled: false,
   loading: false,
+  errorMessage: '',
   size: 'md',
 })
 
@@ -233,14 +252,14 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .post-rating__control {
-  gap: 0.1rem;
+  gap: 0.2rem;
 }
 
 .post-rating__star {
   position: relative;
   display: inline-flex;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
   color: var(--a-color-border-soft);
@@ -248,8 +267,8 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .post-rating--sm .post-rating__star {
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
 }
 
 .post-rating__star.is-animating {
@@ -265,15 +284,15 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 .post-rating__star-outline,
 .post-rating__star-fill {
   position: absolute;
-  top: 5px;
-  left: 5px;
+  top: 11px;
+  left: 11px;
   pointer-events: none;
 }
 
 .post-rating--sm .post-rating__star-outline,
 .post-rating--sm .post-rating__star-fill {
-  top: 4px;
-  left: 4px;
+  top: 11px;
+  left: 11px;
 }
 
 .post-rating__star-fill {
@@ -338,16 +357,71 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   border-radius: var(--a-radius-pill, 999px);
 }
 
-.post-rating__mine {
+.post-rating__mine,
+.post-rating__error {
   color: var(--a-color-muted);
   font-size: 0.78rem;
   font-weight: 500;
+}
+
+.post-rating__error {
+  color: var(--a-color-danger, #b91c1c);
 }
 
 .post-rating__login {
   color: var(--a-color-fg);
   font-size: 0.78rem;
   text-decoration: underline;
+}
+
+.post-rating__slider {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.post-rating__slider .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.post-rating__slider input {
+  flex: 1;
+  min-width: 0;
+  accent-color: #d97706;
+}
+
+.post-rating__slider output {
+  min-width: 3.2rem;
+  color: var(--a-color-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse) {
+  .post-rating__slider {
+    display: inline-flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-rating__star,
+  .post-rating__clear {
+    transition: none;
+  }
+
+  .post-rating__star.is-animating {
+    animation: none;
+  }
 }
 
 /* 评分指南内部条目样式（承载于 PHelpTooltip 中） */

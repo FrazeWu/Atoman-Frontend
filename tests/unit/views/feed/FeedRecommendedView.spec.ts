@@ -1010,6 +1010,46 @@ describe("FeedRecommendedView", () => {
 		expect(routerPush).toHaveBeenCalledWith("/posts/post/art-1");
 	});
 
+	it("loads external recommendations through their item detail route", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "external-article",
+								title: "External article",
+								target_path: "/feed/item/external-article",
+								source_type: "external_rss",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PSegmentedControl: true,
+					PButton: true,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		await wrapper.find(".p-entry").trigger("click");
+		expect(routerPush).toHaveBeenCalledWith("/feed/item/external-article");
+	});
+
 	it("keeps article recommendations visible when the third-row type filter matches article content", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			const url = String(input);

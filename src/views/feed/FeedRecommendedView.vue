@@ -722,24 +722,7 @@ function openArticle(item: RecommendationItem) {
     router.push(item.target_path)
     return
   }
-  selectedChannelArticle.value = {
-    type: 'feed_item',
-    is_read: false,
-    published_at: item.last_published_at || new Date().toISOString(),
-    feed_item: {
-      id: item.id,
-      title: item.title,
-      summary: item.summary,
-      published_at: item.last_published_at || new Date().toISOString(),
-      link: item.target_path,
-      feed_source: {
-        id: item.source_id || '',
-        title: item.source_title || '',
-        category: (item.source_category as FeedSourceCategory) || 'blog',
-      },
-    },
-  } as unknown as TimelineItem
-  showChannelArticleSheet.value = true
+  void router.push(`/feed/item/${encodeURIComponent(item.id)}`)
 }
 
 function openArticleSource(item: RecommendationItem) {

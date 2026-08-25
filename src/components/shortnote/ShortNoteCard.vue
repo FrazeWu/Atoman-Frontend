@@ -203,15 +203,10 @@ function formatDate(value: string) {
   padding: 0.95rem 1.15rem;
   margin-bottom: 0;
   border: 0;
-  border-top: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   background: transparent;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
   overflow: visible;
-}
-
-.sticky-memo-card:last-child {
-  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 /* 绿色未读指示短竖线 */
@@ -238,7 +233,6 @@ function formatDate(value: string) {
 
 .sticky-memo-card:hover,
 .sticky-memo-card:focus-within {
-  border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
   box-shadow: var(--a-shadow-sm);
 }

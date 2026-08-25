@@ -91,14 +91,11 @@ defineEmits(['click'])
   position: relative;
   padding: 0.875rem 1rem;
   margin-bottom: 0;
+  border: 0;
   border-radius: 0;
-  border-left: none;
-  border-right: none;
-  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
-  border-bottom: none;
   box-shadow: none;
   background: transparent;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .p-entry.content-stream-entry::before {
@@ -116,15 +113,10 @@ defineEmits(['click'])
   pointer-events: none;
 }
 
-.p-entry.content-stream-entry:last-child {
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
-}
-
 .p-entry.content-stream-entry:hover,
 .p-entry.content-stream-entry:focus-within,
 .p-entry.content-stream-entry.is-focused,
 .p-entry.content-stream-entry.is-open {
-  border-bottom-color: color-mix(in srgb, var(--a-color-text) 6%, transparent);
   background: var(--a-color-surface-muted);
   box-shadow: var(--a-shadow-sm);
 }

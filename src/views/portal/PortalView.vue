@@ -820,10 +820,10 @@ onMounted(loadHotContent)
 
 /* 📰 标准流式容器与条目 */
 .feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 /* 居中未读小短竖线 */

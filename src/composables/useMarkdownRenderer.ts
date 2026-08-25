@@ -64,7 +64,7 @@ renderer.heading = ({ text, depth }) => {
 marked.use({ renderer });
 
 function shouldLoadMarkdownRuntime(content: string): boolean {
-  return /```|~~~|\$\$|(^|[^\\])\$[^$\n]+\$/m.test(content);
+  return /```|~~~|\$\$|\\\(|\\\[|(^|[^\\])\$[^$\n]+\$/m.test(content);
 }
 
 async function ensureMarkdownRuntime(): Promise<void> {
@@ -276,6 +276,62 @@ function preprocessDirectives(
   return next;
 }
 
+function normalizeLatexMathDelimiters(content: string): string {
+  const output: string[] = [];
+  const prose: string[] = [];
+  let fenceCharacter = "";
+  let fenceLength = 0;
+
+  const flushProse = () => {
+    if (!prose.length) return;
+    output.push(
+      prose
+        .join("\n")
+        .replace(
+          /(?<!\$)\\\[\s*\n?([\s\S]*?)\n?\s*\\\](?!\$)/g,
+          (_match, formula: string) => `$$\n${formula.trim()}\n$$`,
+        )
+        .replace(
+          /(?<!\$)\\\(([^\n]*?)\\\)(?!\$)/g,
+          (_match, formula: string) => `$${formula.trim()}$`,
+        ),
+    );
+    prose.length = 0;
+  };
+
+  for (const line of content.split("\n")) {
+    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fenceMatch) {
+      const marker = fenceMatch[1];
+      const markerCharacter = marker?.[0];
+      if (!marker || !markerCharacter) {
+        prose.push(line);
+        continue;
+      }
+
+      if (!fenceCharacter) {
+        flushProse();
+        fenceCharacter = markerCharacter;
+        fenceLength = marker.length;
+      } else if (
+        markerCharacter === fenceCharacter &&
+        marker.length >= fenceLength
+      ) {
+        fenceCharacter = "";
+        fenceLength = 0;
+      }
+      output.push(line);
+      continue;
+    }
+
+    if (fenceCharacter) output.push(line);
+    else prose.push(line);
+  }
+
+  flushProse();
+  return output.join("\n");
+}
+
 function disambiguateSingleMarkerLines(content: string): string {
   const lines = content.split("\n");
   let fenceCharacter = "";
@@ -364,7 +420,9 @@ export function useMarkdownRenderer() {
 
     try {
       const html = marked(
-        disambiguateSingleMarkerLines(preprocessDirectives(content, options)),
+        disambiguateSingleMarkerLines(
+          normalizeLatexMathDelimiters(preprocessDirectives(content, options)),
+        ),
       ) as string;
       return decorateOutboundLinks(html);
     } catch {

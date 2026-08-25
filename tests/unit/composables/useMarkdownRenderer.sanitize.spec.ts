@@ -40,13 +40,14 @@ describe("useMarkdownRenderer sanitize", () => {
       "这是正文与 `Quality`。",
       "",
       "- 用户集合为 $(U)$；",
+      "- 线性项为 \\(R_t\\)。",
       "",
       "\\[",
       "Q_u = 50",
       "\\]",
       "",
       "```text",
-      "示例",
+      "\\(kept\\)",
       "```",
     ].join("\n");
 
@@ -60,6 +61,11 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).toContain("<p>这是正文与 <code>Quality</code>。</p>");
     expect(html).toContain('<span class="katex">');
     expect(html).not.toContain("$(U)$");
+    expect(html).not.toContain("\\(R_t\\)");
+    expect(html).not.toContain("\\[");
+    expect(html).toContain(
+      '<code class="hljs language-text">\\(kept\\)\n</code>',
+    );
     expect(html).not.toMatch(/^<pre>/);
   });
 

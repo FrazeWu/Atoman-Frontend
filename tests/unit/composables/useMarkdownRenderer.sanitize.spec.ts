@@ -41,6 +41,7 @@ describe("useMarkdownRenderer sanitize", () => {
       "",
       "- 用户集合为 $(U)$；",
       "- 线性项为 \\(R_t\\)。",
+      "- 集合为 $\\(A\\)$。",
       "",
       "\\[",
       "Q_u = 50",
@@ -62,6 +63,7 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).toContain('<span class="katex">');
     expect(html).not.toContain("$(U)$");
     expect(html).not.toContain("\\(R_t\\)");
+    expect(html).not.toContain("\\(A\\)");
     expect(html).not.toContain("\\[");
     expect(html).toContain(
       '<code class="hljs language-text">\\(kept\\)\n</code>',

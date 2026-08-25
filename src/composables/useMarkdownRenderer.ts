@@ -288,6 +288,10 @@ function normalizeLatexMathDelimiters(content: string): string {
       prose
         .join("\n")
         .replace(
+          /\$\\\(([^\n]*?)\\\)\$/g,
+          (_match, formula: string) => `$${formula.trim()}$`,
+        )
+        .replace(
           /(?<!\$)\\\[\s*\n?([\s\S]*?)\n?\s*\\\](?!\$)/g,
           (_match, formula: string) => `$$\n${formula.trim()}\n$$`,
         )

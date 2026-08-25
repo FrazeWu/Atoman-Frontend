@@ -6,7 +6,6 @@
         :key="star"
         type="button"
         class="song-rating__star"
-        :class="{ 'is-filled': star <= activeScore }"
         :disabled="disabled || loading"
         :aria-label="`${songTitle} ${star} 星`"
         @mouseenter="hoverScore = star"
@@ -14,7 +13,14 @@
         @blur="hoverScore = null"
         @click="emit('rate', star)"
       >
-        <Star :size="iconSize" :fill="star <= activeScore ? 'currentColor' : 'none'" aria-hidden="true" />
+        <Star :size="iconSize" class="song-rating__star-outline" aria-hidden="true" />
+        <span
+          class="song-rating__star-fill"
+          :style="{ width: `${fillWidth(star)}px`, left: `calc(50% - ${iconSize / 2}px)` }"
+          aria-hidden="true"
+        >
+          <Star :size="iconSize" fill="currentColor" />
+        </span>
       </button>
     </div>
     <span v-if="ratingCount" class="song-rating__summary">{{ ratingScore.toFixed(1) }} · {{ ratingCount }}</span>
@@ -61,16 +67,24 @@ const emit = defineEmits<{
 }>()
 
 const hoverScore = ref<number | null>(null)
-const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? Math.round(props.ratingScore))
+const activeScore = computed(() => {
+  const score = hoverScore.value ?? props.viewerRating ?? props.ratingScore
+  return Math.max(0, Math.min(5, score))
+})
 const iconSize = computed(() => props.size === 'compact' ? 14 : 18)
+
+function fillWidth(star: number) {
+  return Math.max(0, Math.min(1, activeScore.value - (star - 1))) * iconSize.value
+}
 </script>
 
 <style scoped>
 .song-rating { display: inline-flex; align-items: center; min-height: 2.25rem; gap: 0.35rem; color: var(--a-color-muted); font-size: var(--a-text-sm); }
 .song-rating__stars { display: inline-flex; align-items: center; }
-.song-rating__star { display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: transparent; color: var(--a-color-border); cursor: pointer; transition: color 0.15s ease, transform 0.15s ease; }
+.song-rating__star { position: relative; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: transparent; color: var(--a-color-border); cursor: pointer; transition: color 0.15s ease, transform 0.15s ease; }
 .song-rating--compact .song-rating__star { width: 1.5rem; height: 1.75rem; }
-.song-rating__star.is-filled { color: #d97706; }
+.song-rating__star-outline { position: absolute; top: 50%; left: 50%; pointer-events: none; transform: translate(-50%, -50%); }
+.song-rating__star-fill { position: absolute; top: 50%; overflow: hidden; color: #d97706; pointer-events: none; transform: translateY(-50%); }
 .song-rating__star:hover:not(:disabled), .song-rating__star:focus-visible { color: #b45309; transform: scale(1.08); }
 .song-rating__star:disabled { cursor: default; }
 .song-rating__star:focus-visible, .song-rating__clear:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 2px; }

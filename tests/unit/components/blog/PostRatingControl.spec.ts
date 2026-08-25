@@ -38,6 +38,16 @@ describe("PostRatingControl.vue", () => {
     expect(wrapper.find(".post-rating__dynamic-score").exists()).toBe(false);
   });
 
+  it("emits a one-point rating from the half-star range control", async () => {
+    const wrapper = mount(PostRatingControl)
+    const slider = wrapper.get<HTMLInputElement>(".post-rating__slider input")
+
+    await slider.setValue("1")
+
+    expect(wrapper.emitted("rate")).toEqual([[1]])
+    expect(wrapper.get(".post-rating__slider output").text()).toBe("0.5 星")
+  })
+
   it("emits rate event when clicking on a star half", async () => {
     const wrapper = mount(PostRatingControl, {
       props: {
@@ -69,6 +79,15 @@ describe("PostRatingControl.vue", () => {
 
     await clearBtn.trigger("click");
     expect(wrapper.emitted("clear")).toBeTruthy();
+  });
+
+  it("announces a failed rating next to the control", () => {
+    const wrapper = mount(PostRatingControl, {
+      props: { errorMessage: "评分未保存，请重试" },
+    });
+
+    expect(wrapper.get(".post-rating__error").attributes("role")).toBe("alert");
+    expect(wrapper.text()).toContain("评分未保存，请重试");
   });
 
   it("shows rating guidelines with a three-star pass baseline", async () => {

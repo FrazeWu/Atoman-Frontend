@@ -62,36 +62,52 @@ test.describe("Music Wiki Real", () => {
   test("authenticated user can persist an album bookmark through the music profile", async ({
     authenticatedMusicPage,
   }) => {
-    await authenticatedMusicPage.goto("/music");
-    const firstAlbum = authenticatedMusicPage
-      .locator('[data-testid="personalized-album-card"], [data-testid="discover-album-card"]')
-      .first();
-    await expect(firstAlbum).toBeVisible();
-    const albumTitle = (
-      await firstAlbum.locator(".album-title-btn").textContent()
-    )?.trim();
-    expect(albumTitle).toBeTruthy();
+    let albumTitle = "";
+    let createdBookmark = false;
 
-    await firstAlbum.click();
-    const bookmark = authenticatedMusicPage.locator(
-      '[data-testid="album-bookmark-toggle"]',
-    );
-    await expect(bookmark).toBeVisible();
-    const wasBookmarked = (await bookmark.textContent())?.includes("已订阅") ?? false;
-    if (!wasBookmarked) {
-      await bookmark.click();
-      await expect(bookmark).toHaveText("已订阅");
-    }
+    try {
+      await authenticatedMusicPage.goto("/music");
+      const firstAlbum = authenticatedMusicPage
+        .locator('[data-testid="personalized-album-card"], [data-testid="discover-album-card"]')
+        .first();
+      await expect(firstAlbum).toBeVisible();
+      albumTitle = (
+        await firstAlbum.locator(".album-title-btn").textContent()
+      )?.trim() ?? "";
+      expect(albumTitle).toBeTruthy();
 
-    await authenticatedMusicPage.goto("/music/me");
-    const profileAlbum = authenticatedMusicPage
-      .locator(".music-album-card")
-      .filter({ hasText: albumTitle! });
-    await expect(profileAlbum).toBeVisible();
+      await firstAlbum.click();
+      const bookmark = authenticatedMusicPage.locator(
+        '[data-testid="album-bookmark-toggle"]',
+      );
+      await expect(bookmark).toBeVisible();
+      const wasBookmarked = (await bookmark.textContent())?.includes("已订阅") ?? false;
+      if (!wasBookmarked) {
+        await bookmark.click();
+        createdBookmark = true;
+        await expect(bookmark).toHaveText("已订阅");
+      }
 
-    if (!wasBookmarked) {
-      await profileAlbum.getByRole("button", { name: "取消收藏" }).click();
-      await expect(profileAlbum).toHaveCount(0);
+      await authenticatedMusicPage.goto("/music/me");
+      const profileAlbum = authenticatedMusicPage
+        .locator(".music-album-card")
+        .filter({ hasText: albumTitle });
+      await expect(profileAlbum).toBeVisible();
+    } finally {
+      if (createdBookmark && albumTitle) {
+        try {
+          await authenticatedMusicPage.goto("/music/me");
+          const profileAlbum = authenticatedMusicPage
+            .locator(".music-album-card")
+            .filter({ hasText: albumTitle });
+          const removeBookmark = profileAlbum.getByRole("button", { name: "取消收藏" });
+          if (await removeBookmark.count()) {
+            await removeBookmark.click();
+          }
+        } catch {
+          // Preserve the original assertion failure while still attempting cleanup.
+        }
+      }
     }
   });
 

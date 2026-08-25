@@ -1,5 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
+    <PToast v-model="toastVisible" :message="toastMessage" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />
       <div class="a-skeleton" style="height:2rem;width:50%" />
@@ -18,6 +19,12 @@
             >
               {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
             </PClip>
+            <PClip
+              data-testid="collection-rss"
+              label="RSS"
+              title="复制 RSS 订阅地址"
+              @click="copyCollectionRssLink"
+            />
             <PLink :href="`/posts/channel/${channelId}`" label="返回频道" />
           </div>
         </template>
@@ -102,6 +109,7 @@ import PEntry from '@/components/ui/PEntry.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PToast from '@/components/ui/PToast.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PReject from '@/components/ui/PReject.vue'
@@ -141,10 +149,13 @@ const form = ref({ name: '', description: '' })
 const saving = ref(false)
 const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
+const toastVisible = ref(false)
+const toastMessage = ref('')
 let collectionRequestId = 0
 let postsRequestId = 0
 
 const collectionId = computed(() => props.id || (typeof route.params.id === 'string' ? route.params.id : ''))
+const collectionRssUrl = computed(() => collectionId.value ? api.rss.collection(collectionId.value) : '')
 const channelId = computed(() => collection.value?.channel_id || '')
 const authHeader = computed<Record<string, string>>(() => {
   const headers: Record<string, string> = {}
@@ -154,6 +165,14 @@ const authHeader = computed<Record<string, string>>(() => {
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
+
+function copyCollectionRssLink() {
+  if (!collectionRssUrl.value) return
+  void navigator.clipboard.writeText(collectionRssUrl.value).then(() => {
+    toastMessage.value = '已复制 RSS 链接'
+    toastVisible.value = true
+  })
+}
 
 const toggleStar = (id: string) => {
   void feedStore.togglePostBookmark(id)

@@ -49,6 +49,11 @@ export function useApiWebSocketUrl(path: string) {
 
 export function useApi() {
 	const apiUrl = useApiUrl();
+	const publicRSSURL = (path: string) => {
+		const value = `${apiUrl}${path}`;
+		if (/^https?:\/\//.test(value) || typeof window === "undefined") return value;
+		return new URL(value, window.location.origin).toString();
+	};
 	const discussionTarget = (kind: string, resourceId: string) =>
 		`${apiUrl}/discussions/${encodeURIComponent(kind)}/${encodeURIComponent(resourceId)}`;
 
@@ -122,8 +127,6 @@ export function useApi() {
 			channelBySlug: (slug: string) => `${apiUrl}/blog/channels/slug/${slug}`,
 			channelCollectionsBySlug: (slug: string) =>
 				`${apiUrl}/blog/channels/slug/${slug}/collections`,
-			channelArticleRssBySlug: (slug: string) =>
-				`${apiUrl}/blog/channels/slug/${slug}/rss/article`,
 			collections: `${apiUrl}/blog/collections`,
 			collection: (id: number | string) => `${apiUrl}/blog/collections/${id}`,
 
@@ -328,7 +331,15 @@ export function useApi() {
 			sourceTimeline: `${apiUrl}/feed/timeline`,
 			explore: `${apiUrl}/feed/explore`,
 			exploreSources: `${apiUrl}/feed/explore/sources`,
-			rss: (username: string) => `${apiUrl}/feed/rss/${username}`,
+		},
+
+		rss: {
+			user: (username: string) =>
+				publicRSSURL(`/rss/users/${encodeURIComponent(username)}.xml`),
+			channel: (slug: string) =>
+				publicRSSURL(`/rss/channels/${encodeURIComponent(slug)}.xml`),
+			collection: (id: string) =>
+				publicRSSURL(`/rss/collections/${encodeURIComponent(id)}.xml`),
 		},
 
 		notifications: {

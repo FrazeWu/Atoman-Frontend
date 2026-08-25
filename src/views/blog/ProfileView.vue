@@ -92,6 +92,13 @@
                 size="sm"
                 variant="secondary"
               >私信</PButton>
+              <PClip
+                v-if="userRssUrl"
+                data-testid="user-rss"
+                label="RSS"
+                title="复制 RSS 订阅地址"
+                @click="copyUserRssLink"
+              />
               <PButton
                 v-if="isSelf"
                 :href="desktopAppPath(`/users/${profile.username}/settings`)"
@@ -268,6 +275,7 @@ import { Camera, LinkIcon, LoaderCircle, Pencil, Plus, Undo2 } from 'lucide-vue-
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PClip from '@/components/ui/PClip.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PToast from '@/components/ui/PToast.vue'
@@ -339,6 +347,7 @@ async function confirmRemoveNote() {
 // ── Profile data ──────────────────────────────────────────
 const profile = ref<UserProfile | null>(null)
 const channels = ref<Channel[]>([])
+const userRssUrl = computed(() => profile.value?.username ? api.rss.user(profile.value.username) : '')
 const loading = ref(true)
 const following = ref(false)
 const toastVisible = ref(false)
@@ -356,6 +365,14 @@ const uploadingAvatar = ref(false)
 const restoringAvatar = ref(false)
 const canRestoreAvatar = ref(false)
 const avatarChangeStarted = ref(false)
+
+function copyUserRssLink() {
+  if (!userRssUrl.value) return
+  void navigator.clipboard.writeText(userRssUrl.value).then(() => {
+    toastMessage.value = '已复制 RSS 链接'
+    toastVisible.value = true
+  })
+}
 
 function startEdit(field: EditableField) {
   editingField.value = field

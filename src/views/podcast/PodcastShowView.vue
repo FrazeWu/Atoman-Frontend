@@ -3,13 +3,11 @@ import { addPodcastShowBookmark, getPodcastShowEpisodes } from '@/api/podcast'
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode, Channel } from '@/types'
-import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 
-const api = useApi()
 const authStore = useAuthStore()
 const player = usePlayerStore()
 const route = useRoute()
@@ -73,7 +71,6 @@ async function subscribeShow() {
         <p v-if="channel.description" class="ps-desc">{{ channel.description }}</p>
         <div class="ps-actions">
           <PButton size="sm" @click="subscribeShow">订阅节目</PButton>
-          <a :href="`${api.url}/channels/${channel.slug}/rss/podcast`" class="ps-rss" target="_blank">RSS 订阅源</a>
         </div>
         <p v-if="actionMessage" class="ps-message">{{ actionMessage }}</p>
       </div>
@@ -101,8 +98,6 @@ async function subscribeShow() {
 .ps-name { font-size: 1.5rem; font-weight: 600; color: var(--a-color-fg); margin: 0; }
 .ps-desc { font-size: 0.875rem; color: var(--a-color-muted); margin-top: 0.35rem; line-height: 1.5; }
 .ps-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; }
-.ps-rss { font-size: 0.8rem; color: var(--a-color-muted); text-decoration: none; }
-.ps-rss:hover { text-decoration: underline; }
 .ps-message { margin: 0.5rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
 .ps-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
 .ps-ep { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }

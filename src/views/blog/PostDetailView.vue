@@ -96,7 +96,7 @@
           </div>
           <a
             v-if="post.user?.username"
-            :href="api.feed.rss(post.user.username)"
+            :href="api.rss.user(post.user.username)"
             target="_blank"
             class="a-link post-detail-toolbar__rss"
           >

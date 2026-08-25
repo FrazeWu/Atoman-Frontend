@@ -190,7 +190,7 @@ const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` 
 const isOwner = computed(() => !!channel.value && channel.value.user_id === authStore.user?.uuid)
 const channelRssUrl = computed(() => {
   if (!channel.value?.slug) return ''
-  return api.blog.channelArticleRssBySlug(channel.value.slug)
+  return api.rss.channel(channel.value.slug)
 })
 
 const filteredPosts = computed(() => channelPosts.value)

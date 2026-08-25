@@ -1,5 +1,6 @@
 <template>
   <section class="studio-collection-detail">
+    <PToast v-model="toastVisible" :message="toastMessage" />
     <PPageHeader :title="collection?.name || '合集'" :sub="collection?.description || '管理合集成员与展示顺序。'" mb="0">
       <template #action>
         <div class="studio-collection-detail__header-actions">
@@ -7,6 +8,12 @@
             <Plus :size="16" aria-hidden="true" />
             添加内容
           </PButton>
+          <PClip
+            data-testid="studio-collection-rss"
+            label="RSS"
+            title="复制 RSS 订阅地址"
+            @click="copyCollectionRssLink"
+          />
           <RouterLink class="studio-collection-detail__back" to="/studio/manage/collections">
             <ArrowLeft :size="16" aria-hidden="true" />
             返回合集
@@ -122,14 +129,18 @@ import { ArrowLeft, ChevronDown, ChevronUp, FileText, Mic2, Plus, Search, Trash2
 import { RouterLink, useRoute } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'
+import PClip from '@/components/ui/PClip.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PToast from '@/components/ui/PToast.vue'
+import { useApi } from '@/composables/useApi'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioCollectionContentItem, StudioContentStatus } from '@/types'
 
 const route = useRoute()
+const api = useApi()
 const studio = useStudioStore()
 const loading = ref(true)
 const error = ref('')
@@ -140,9 +151,12 @@ const candidateSearch = ref('')
 const candidateLoading = ref(false)
 const candidateSavingID = ref('')
 const candidateError = ref('')
+const toastVisible = ref(false)
+const toastMessage = ref('')
 const pendingRemoval = ref<StudioCollectionContentItem | null>(null)
 const removing = ref(false)
 const collectionID = computed(() => String(route.params.id || ''))
+const collectionRssUrl = computed(() => collectionID.value ? api.rss.collection(collectionID.value) : '')
 const collection = computed(() => studio.unifiedCollections.find(item => item.id === collectionID.value))
 const items = computed(() => (
   studio.unifiedCollectionContentsCollectionID === collectionID.value
@@ -157,6 +171,14 @@ const removalModalOpen = computed({
 const moduleIcons = { blog: FileText, podcast: Mic2, video: Video }
 const moduleLabels = { blog: '博客', podcast: '播客', video: '视频' } as const
 const itemLabels = { blog: '文章', podcast: '单集', video: '视频' } as const
+
+function copyCollectionRssLink() {
+  if (!collectionRssUrl.value) return
+  void navigator.clipboard.writeText(collectionRssUrl.value).then(() => {
+    toastMessage.value = '已复制 RSS 链接'
+    toastVisible.value = true
+  })
+}
 
 async function load() {
   loading.value = true

@@ -4,9 +4,20 @@ import { ADMIN_USERNAME, ADMIN_PASSWORD } from '../helpers/auth'
 const AUTH_FILE_ADMIN = './tests/e2e/.auth/admin.json'
 const defaultBaseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173'
 
+function musicAuthFile() {
+  if (process.env.MUSIC_WIKI_ISOLATED_ACCOUNT !== '1') return AUTH_FILE_ADMIN
+  const file = process.env.MUSIC_WIKI_AUTH_FILE?.trim()
+  if (!file) {
+    throw new Error('MUSIC_WIKI_ISOLATED_ACCOUNT=1 requires MUSIC_WIKI_AUTH_FILE')
+  }
+  return file
+}
+
 type Fixtures = {
   authenticatedPage: Page
   authenticatedMobilePage: Page
+  authenticatedMusicPage: Page
+  authenticatedMusicMobilePage: Page
   adminPage: Page
 }
 
@@ -16,6 +27,25 @@ export const test = base.extend<Fixtures>({
   },
   authenticatedPage: async ({ browser, baseURL }, use) => {
     const context = await browser.newContext({ baseURL: baseURL || defaultBaseURL, storageState: AUTH_FILE_ADMIN })
+    const page = await context.newPage()
+    await use(page)
+    await context.close()
+  },
+  authenticatedMusicPage: async ({ browser, baseURL }, use) => {
+    const context = await browser.newContext({
+      baseURL: baseURL || defaultBaseURL,
+      storageState: musicAuthFile(),
+    })
+    const page = await context.newPage()
+    await use(page)
+    await context.close()
+  },
+  authenticatedMusicMobilePage: async ({ browser, baseURL }, use) => {
+    const context = await browser.newContext({
+      baseURL: baseURL || defaultBaseURL,
+      storageState: musicAuthFile(),
+      ...devices['iPhone 13'],
+    })
     const page = await context.newPage()
     await use(page)
     await context.close()

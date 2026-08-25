@@ -2,16 +2,17 @@ import { test, expect } from "../fixtures/base";
 
 const hasIsolatedMusicFixture =
   process.env.MUSIC_WIKI_REAL_E2E === "1" &&
-  process.env.MUSIC_WIKI_ISOLATED_ACCOUNT === "1";
+  process.env.MUSIC_WIKI_ISOLATED_ACCOUNT === "1" &&
+  Boolean(process.env.MUSIC_WIKI_AUTH_FILE);
 
 test.describe("Music Wiki Real", () => {
   test.skip(
     !hasIsolatedMusicFixture,
-    "requires MUSIC_WIKI_REAL_E2E=1 and an isolated music test account",
+    "requires MUSIC_WIKI_REAL_E2E=1, MUSIC_WIKI_AUTH_FILE and an isolated music test account",
   );
 
   test("authenticated user can traverse the core music surfaces", async ({
-    authenticatedPage,
+    authenticatedMusicPage,
   }) => {
     const surfaces = [
       { path: "/music", heading: "发现" },
@@ -20,38 +21,82 @@ test.describe("Music Wiki Real", () => {
       { path: "/music/history", heading: "播放历史" },
     ];
 
-    await authenticatedPage.goto("/music");
+    await authenticatedMusicPage.goto("/music");
     await expect(
-      authenticatedPage.getByRole("heading", { name: "发现" }),
+      authenticatedMusicPage.getByRole("heading", { name: "发现" }),
     ).toBeVisible();
-    const firstAlbum = authenticatedPage
+    const firstAlbum = authenticatedMusicPage
       .locator('[data-testid="personalized-album-card"], [data-testid="discover-album-card"]')
       .first();
     await expect(firstAlbum).toBeVisible();
     await firstAlbum.click();
 
-    await expect(authenticatedPage.locator('[data-testid="album-play-action"]')).toBeVisible();
-    await expect(authenticatedPage.locator('[data-testid="album-play-action"]')).toBeEnabled();
-    await authenticatedPage.locator('[data-testid="album-play-action"]').click();
-    await expect(authenticatedPage.locator(".player-title")).toBeVisible();
+    await expect(
+      authenticatedMusicPage.locator('[data-testid="album-play-action"]'),
+    ).toBeVisible();
+    await expect(
+      authenticatedMusicPage.locator('[data-testid="album-play-action"]'),
+    ).toBeEnabled();
+    await authenticatedMusicPage
+      .locator('[data-testid="album-play-action"]')
+      .click();
+    await expect(authenticatedMusicPage.locator(".player-title")).toBeVisible();
 
-    const firstTrack = authenticatedPage.locator(".track-title").first();
+    const firstTrack = authenticatedMusicPage.locator(".track-title").first();
     await expect(firstTrack).toBeVisible();
     await firstTrack.click();
-    await expect(authenticatedPage).toHaveURL(/\/music\/song\//);
-    await authenticatedPage.goBack();
+    await expect(authenticatedMusicPage).toHaveURL(/\/music\/song\//);
+    await authenticatedMusicPage.goBack();
 
     for (const surface of surfaces.slice(1)) {
-      await authenticatedPage.goto(surface.path);
+      await authenticatedMusicPage.goto(surface.path);
       await expect(
-        authenticatedPage.getByRole("heading", { name: surface.heading }),
+        authenticatedMusicPage.getByRole("heading", { name: surface.heading }),
       ).toBeVisible();
-      await expect(authenticatedPage.getByText("页面不存在")).not.toBeVisible();
+      await expect(
+        authenticatedMusicPage.getByText("页面不存在"),
+      ).not.toBeVisible();
+    }
+  });
+
+  test("authenticated user can persist an album bookmark through the music profile", async ({
+    authenticatedMusicPage,
+  }) => {
+    await authenticatedMusicPage.goto("/music");
+    const firstAlbum = authenticatedMusicPage
+      .locator('[data-testid="personalized-album-card"], [data-testid="discover-album-card"]')
+      .first();
+    await expect(firstAlbum).toBeVisible();
+    const albumTitle = (
+      await firstAlbum.locator(".album-title-btn").textContent()
+    )?.trim();
+    expect(albumTitle).toBeTruthy();
+
+    await firstAlbum.click();
+    const bookmark = authenticatedMusicPage.locator(
+      '[data-testid="album-bookmark-toggle"]',
+    );
+    await expect(bookmark).toBeVisible();
+    const wasBookmarked = (await bookmark.textContent())?.includes("已订阅") ?? false;
+    if (!wasBookmarked) {
+      await bookmark.click();
+      await expect(bookmark).toHaveText("已订阅");
+    }
+
+    await authenticatedMusicPage.goto("/music/me");
+    const profileAlbum = authenticatedMusicPage
+      .locator(".music-album-card")
+      .filter({ hasText: albumTitle! });
+    await expect(profileAlbum).toBeVisible();
+
+    if (!wasBookmarked) {
+      await profileAlbum.getByRole("button", { name: "取消收藏" }).click();
+      await expect(profileAlbum).toHaveCount(0);
     }
   });
 
   test("authenticated user can traverse the core music surfaces on mobile", async ({
-    authenticatedMobilePage,
+    authenticatedMusicMobilePage,
   }) => {
     for (const surface of [
       { path: "/music", heading: "发现" },
@@ -59,22 +104,26 @@ test.describe("Music Wiki Real", () => {
       { path: "/music/playlists", heading: "歌单" },
       { path: "/music/history", heading: "播放历史" },
     ]) {
-      await authenticatedMobilePage.goto(surface.path);
+      await authenticatedMusicMobilePage.goto(surface.path);
       await expect(
-        authenticatedMobilePage.getByRole("heading", { name: surface.heading }),
+        authenticatedMusicMobilePage.getByRole("heading", {
+          name: surface.heading,
+        }),
       ).toBeVisible();
-      await expect(authenticatedMobilePage.getByText("页面不存在")).not.toBeVisible();
+      await expect(
+        authenticatedMusicMobilePage.getByText("页面不存在"),
+      ).not.toBeVisible();
     }
   });
 
   test("authenticated user can open the music contribute flow against real backend", async ({
-    authenticatedPage,
+    authenticatedMusicPage,
   }) => {
-    await authenticatedPage.goto("/artist/new");
+    await authenticatedMusicPage.goto("/artist/new");
 
-    await expect(authenticatedPage.getByText("添加/补全艺术家")).toBeVisible();
+    await expect(authenticatedMusicPage.getByText("添加/补全艺术家")).toBeVisible();
     await expect(
-      authenticatedPage.getByRole("button", { name: "创建艺术家" }),
+      authenticatedMusicPage.getByRole("button", { name: "创建艺术家" }),
     ).toBeVisible();
   });
 });

@@ -12,6 +12,7 @@ import {
 import type { MusicAlbumBookmark, MusicArtistBookmark } from '@/api/musicV1/types'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useAuthStore } from '@/stores/auth'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -25,11 +26,13 @@ const favoriteCount = ref(0)
 const recentCount = ref(0)
 const albumBookmarks = ref<MusicAlbumBookmark[]>([])
 const artistBookmarks = ref<MusicArtistBookmark[]>([])
+const overviewRequests = useRequestGeneration()
 
 const isAuthenticated = computed(() => authStore.isAuthenticated && Boolean(authStore.user))
 
 async function loadOverview() {
   if (!isAuthenticated.value) return
+  const request = overviewRequests.beginRequest()
   loading.value = true
   error.value = ''
   try {
@@ -39,15 +42,16 @@ async function loadOverview() {
       listArtistBookmarks({ page: 1, page_size: 100 }),
       getMusicHome(),
     ])
+    if (!request.isCurrent()) return
     albumBookmarks.value = albums.data
     artistBookmarks.value = artists.data
     listenedCount.value = history.meta.total
     favoriteCount.value = (albums.meta?.total ?? albums.data.length) + (artists.meta?.total ?? artists.data.length)
     recentCount.value = home.recently_played.length
   } catch {
-    error.value = '统计加载失败，请重试'
+    if (request.isCurrent()) error.value = '统计加载失败，请重试'
   } finally {
-    loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 
@@ -71,9 +75,14 @@ async function removeArtistBookmark(artistId: string) {
   }
 }
 
-watch(isAuthenticated, (authenticated) => {
-  if (authenticated) void loadOverview()
-}, { immediate: true })
+watch(
+  () => [isAuthenticated.value, authStore.user?.id ?? authStore.user?.username ?? ''] as const,
+  ([authenticated]) => {
+    overviewRequests.beginRequest()
+    if (authenticated) void loadOverview()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

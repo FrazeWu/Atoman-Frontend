@@ -239,6 +239,30 @@ export interface StudioCollectionContentItem {
 	position: number;
 }
 
+export interface StudioCollectionContentCandidate {
+	content_id: string;
+	id: string;
+	module: StudioModule;
+	title: string;
+	cover_url: string;
+	status: StudioContentStatus;
+	current_collection_id?: string;
+	current_collection_name?: string;
+}
+
+export interface StudioCalendarPreflightIssue {
+	code: string;
+}
+
+export interface StudioCalendarItem {
+	content_id: string;
+	id: string;
+	module: StudioModule;
+	title: string;
+	scheduled_at: string;
+	preflight: StudioCalendarPreflightIssue[];
+}
+
 export interface StudioContentIssue {
 	code: string;
 	count: number;
@@ -286,6 +310,11 @@ export interface StudioAnalyticsPeriod {
 	totals: Record<string, number>;
 }
 
+export interface StudioAnalyticsFilters {
+	collection_id: string;
+	content_id: string;
+}
+
 export interface StudioAnalytics {
 	range: 7 | 28 | 90;
 	from: string;
@@ -303,8 +332,12 @@ export interface StudioAnalytics {
 }
 
 export interface StudioInteractionFilters {
+	q: string;
+	content_id: string;
 	unreplied: boolean;
 	anchored: boolean;
+	handled: "" | "pending" | "handled";
+	priority: "" | "normal" | "high";
 	page: number;
 }
 
@@ -331,8 +364,19 @@ export interface StudioInteractionItem {
 	reply_count: number;
 	replied: boolean;
 	pinned: boolean;
+	handled: boolean;
+	priority: "normal" | "high";
 	time_anchors: StudioTimeAnchor[];
 	created_at: string;
+}
+
+export interface StudioReplyTemplate {
+	id: string;
+	channel_id: string;
+	name: string;
+	content: string;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface StudioSettingsInput {

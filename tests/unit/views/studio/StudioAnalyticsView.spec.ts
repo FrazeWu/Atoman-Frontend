@@ -51,7 +51,7 @@ describe('StudioAnalyticsView', () => {
     const wrapper = mount(StudioAnalyticsView, { global: { plugins: [pinia, router] } })
     await flushPromises()
 
-    expect(store.loadAnalytics).toHaveBeenCalledWith('blog', 28)
+    expect(store.loadAnalytics).toHaveBeenCalledWith('blog', 28, { collection_id: '', content_id: '' })
     expect(wrapper.text()).toContain('120')
     expect(wrapper.text()).toContain('研究记录')
     expect(wrapper.text()).toContain('有效消费')
@@ -73,7 +73,7 @@ describe('StudioAnalyticsView', () => {
 
     await wrapper.find('[data-testid="mode-7"]').trigger('click')
     await wrapper.find('[data-testid="mode-90"]').trigger('click')
-    expect(store.loadAnalytics).toHaveBeenCalledWith('blog', 7)
-    expect(store.loadAnalytics).toHaveBeenCalledWith('blog', 90)
+    expect(store.loadAnalytics).toHaveBeenCalledWith('blog', 7, { collection_id: '', content_id: '' })
+    expect(store.loadAnalytics).toHaveBeenCalledWith('blog', 90, { collection_id: '', content_id: '' })
   })
 })

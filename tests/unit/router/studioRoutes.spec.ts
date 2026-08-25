@@ -25,6 +25,7 @@ describe("studio routes", () => {
 				"/studio",
 				"/studio/manage",
 				"/studio/manage/channel",
+				"/studio/manage/calendar",
 				"/studio/manage/collections",
 				"/studio/manage/collections/:id",
 				"/studio/channel",
@@ -52,7 +53,6 @@ describe("studio routes", () => {
 		expect(router.currentRoute.value.path).toBe("/studio/manage/collections");
 	});
 
-
 	it("keeps the module parent mounted while adding an editor overlay", async () => {
 		const router = createRouter({
 			history: createMemoryHistory(),
@@ -60,8 +60,7 @@ describe("studio routes", () => {
 		});
 		await router.push("/studio/blog/content");
 		const moduleParent = router.currentRoute.value.matched[1];
-		const contentView =
-			router.currentRoute.value.matched[2]?.components?.default;
+		const contentView = router.currentRoute.value.matched[2]?.components?.default;
 
 		await router.push("/studio/blog/new");
 

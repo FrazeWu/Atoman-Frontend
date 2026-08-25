@@ -13,8 +13,11 @@ import { useApi } from "@/composables/useApi";
 import { useAuthStore } from "@/stores/auth";
 import type {
 	StudioAnalytics,
+	StudioAnalyticsFilters,
+	StudioCalendarItem,
 	StudioChannel,
 	StudioCollection,
+	StudioCollectionContentCandidate,
 	StudioCollectionContentItem,
 	StudioCollectionInput,
 	StudioContentFilters,
@@ -24,6 +27,7 @@ import type {
 	StudioInteractionItem,
 	StudioModule,
 	StudioPagination,
+	StudioReplyTemplate,
 	StudioSettings,
 	StudioSettingsInput,
 	StudioState,
@@ -59,6 +63,7 @@ export const useStudioStore = defineStore("studio", () => {
 	const loaded = ref(false);
 	const loading = ref(false);
 	const dashboard = ref<StudioDashboard | null>(null);
+	const calendarItems = ref<StudioCalendarItem[]>([]);
 	const contents = ref(emptyModuleRecord<StudioContentItem[]>(() => []));
 	const contentPagination = ref(
 		emptyModuleRecord<StudioPagination | null>(() => null),
@@ -67,10 +72,12 @@ export const useStudioStore = defineStore("studio", () => {
 	const unifiedCollections = ref<StudioCollection[]>([]);
 	const unifiedCollectionContents = ref<StudioCollectionContentItem[]>([]);
 	const unifiedCollectionContentsCollectionID = ref("");
-	const analytics = ref(emptyModuleRecord<StudioAnalytics | null>(() => null));
-	const interactions = ref(
-		emptyModuleRecord<StudioInteractionItem[]>(() => []),
+	const unifiedCollectionCandidates = ref<StudioCollectionContentCandidate[]>(
+		[],
 	);
+	const replyTemplates = ref<StudioReplyTemplate[]>([]);
+	const analytics = ref(emptyModuleRecord<StudioAnalytics | null>(() => null));
+	const interactions = ref(emptyModuleRecord<StudioInteractionItem[]>(() => []));
 	const interactionPagination = ref(
 		emptyModuleRecord<StudioPagination | null>(() => null),
 	);
@@ -82,8 +89,11 @@ export const useStudioStore = defineStore("studio", () => {
 	let activeReload: (() => Promise<void>) | null = null;
 	let channelSelectionRequestVersion = 0;
 	let dashboardRequestVersion = 0;
+	let calendarRequestVersion = 0;
 	let unifiedCollectionsRequestVersion = 0;
 	let unifiedCollectionContentsRequestVersion = 0;
+	let unifiedCollectionCandidatesRequestVersion = 0;
+	let replyTemplatesRequestVersion = 0;
 	const contentsRequestVersion = emptyModuleRecord(() => 0);
 	const collectionsRequestVersion = emptyModuleRecord(() => 0);
 	const analyticsRequestVersion = emptyModuleRecord(() => 0);
@@ -101,11 +111,12 @@ export const useStudioStore = defineStore("studio", () => {
 
 	function clearResourceCaches() {
 		dashboardRequestVersion += 1;
+		calendarRequestVersion += 1;
 		unifiedCollectionsRequestVersion += 1;
 		unifiedCollectionContentsRequestVersion += 1;
-		for (const module of Object.keys(
-			contentsRequestVersion,
-		) as StudioModule[]) {
+		unifiedCollectionCandidatesRequestVersion += 1;
+		replyTemplatesRequestVersion += 1;
+		for (const module of Object.keys(contentsRequestVersion) as StudioModule[]) {
 			contentsRequestVersion[module] += 1;
 			collectionsRequestVersion[module] += 1;
 			analyticsRequestVersion[module] += 1;
@@ -114,12 +125,15 @@ export const useStudioStore = defineStore("studio", () => {
 			settingsSaveRequestVersion[module] += 1;
 		}
 		dashboard.value = null;
+		calendarItems.value = [];
 		contents.value = emptyModuleRecord(() => []);
 		contentPagination.value = emptyModuleRecord(() => null);
 		collections.value = emptyModuleRecord(() => []);
 		unifiedCollections.value = [];
 		unifiedCollectionContents.value = [];
 		unifiedCollectionContentsCollectionID.value = "";
+		unifiedCollectionCandidates.value = [];
+		replyTemplates.value = [];
 		analytics.value = emptyModuleRecord(() => null);
 		interactions.value = emptyModuleRecord(() => []);
 		interactionPagination.value = emptyModuleRecord(() => null);
@@ -162,16 +176,12 @@ export const useStudioStore = defineStore("studio", () => {
 			})
 			.catch((cause) => {
 				if (stateRequestVersion === requestVersion) {
-					error.value =
-						cause instanceof Error ? cause.message : "加载创作频道失败";
+					error.value = cause instanceof Error ? cause.message : "加载创作频道失败";
 				}
 				throw cause;
 			})
 			.finally(() => {
-				if (
-					stateRequestVersion !== requestVersion ||
-					loadStatePromise !== request
-				)
+				if (stateRequestVersion !== requestVersion || loadStatePromise !== request)
 					return;
 				loading.value = false;
 				loadStatePromise = null;
@@ -210,6 +220,21 @@ export const useStudioStore = defineStore("studio", () => {
 		dashboard.value = response;
 	}
 
+	async function loadCalendar(from: string, to: string, track = true) {
+		if (track) activeReload = () => loadCalendar(from, to, false);
+		const requestVersion = ++calendarRequestVersion;
+		const requestChannelID = channelID();
+		const response = await apiGet<StudioCalendarItem[]>(
+			appendQuery(api.calendar, { channel_id: requestChannelID, from, to }),
+		);
+		if (
+			calendarRequestVersion !== requestVersion ||
+			currentChannel.value?.id !== requestChannelID
+		)
+			return;
+		calendarItems.value = response;
+	}
+
 	async function loadContents(
 		module: StudioModule,
 		filters: StudioContentFilters,
@@ -219,10 +244,7 @@ export const useStudioStore = defineStore("studio", () => {
 		if (track) activeReload = () => loadContents(module, snapshot, false);
 		const requestVersion = ++contentsRequestVersion[module];
 		const requestChannelID = channelID();
-		const response = await apiGetEnvelope<
-			StudioContentItem[],
-			StudioPagination
-		>(
+		const response = await apiGetEnvelope<StudioContentItem[], StudioPagination>(
 			appendQuery(api.contents(module), {
 				channel_id: requestChannelID,
 				q: filters.q.trim(),
@@ -257,11 +279,18 @@ export const useStudioStore = defineStore("studio", () => {
 		unifiedCollections.value = response;
 	}
 
-	async function loadUnifiedCollectionContents(collectionID: string, track = true) {
+	async function loadUnifiedCollectionContents(
+		collectionID: string,
+		track = true,
+	) {
 		if (track) {
 			activeReload = async () => {
 				await loadUnifiedCollections(false);
-				if (unifiedCollections.value.some((collection) => collection.id === collectionID)) {
+				if (
+					unifiedCollections.value.some(
+						(collection) => collection.id === collectionID,
+					)
+				) {
 					await loadUnifiedCollectionContents(collectionID, false);
 				}
 			};
@@ -278,6 +307,79 @@ export const useStudioStore = defineStore("studio", () => {
 			return;
 		unifiedCollectionContents.value = response;
 		unifiedCollectionContentsCollectionID.value = collectionID;
+	}
+
+	async function loadUnifiedCollectionCandidates(
+		collectionID: string,
+		search = "",
+	) {
+		const requestVersion = ++unifiedCollectionCandidatesRequestVersion;
+		const requestChannelID = channelID();
+		const response = await apiGet<StudioCollectionContentCandidate[]>(
+			appendQuery(api.unifiedCollectionCandidates(collectionID), {
+				q: search.trim(),
+			}),
+		);
+		if (
+			unifiedCollectionCandidatesRequestVersion !== requestVersion ||
+			currentChannel.value?.id !== requestChannelID
+		)
+			return;
+		unifiedCollectionCandidates.value = response;
+	}
+
+	async function addUnifiedCollectionContent(
+		collectionID: string,
+		contentID: string,
+	) {
+		await apiPutJson<{ moved: boolean }>(
+			api.unifiedCollectionContent(collectionID, contentID),
+			{},
+		);
+		await Promise.all([
+			loadUnifiedCollectionContents(collectionID, false),
+			loadUnifiedCollections(false),
+		]);
+	}
+
+	async function removeUnifiedCollectionContent(
+		collectionID: string,
+		contentID: string,
+	) {
+		await apiDeleteJson<{ removed: boolean }>(
+			api.unifiedCollectionContent(collectionID, contentID),
+		);
+		await Promise.all([
+			loadUnifiedCollectionContents(collectionID, false),
+			loadUnifiedCollections(false),
+		]);
+	}
+
+	async function loadReplyTemplates() {
+		const requestVersion = ++replyTemplatesRequestVersion;
+		const requestChannelID = channelID();
+		const response = await apiGet<StudioReplyTemplate[]>(
+			appendQuery(api.replyTemplates, { channel_id: requestChannelID }),
+		);
+		if (
+			replyTemplatesRequestVersion !== requestVersion ||
+			currentChannel.value?.id !== requestChannelID
+		)
+			return;
+		replyTemplates.value = response;
+	}
+
+	async function createReplyTemplate(input: { name: string; content: string }) {
+		await apiPostJson<StudioReplyTemplate>(api.replyTemplates, {
+			...input,
+			channel_id: channelID(),
+		});
+		await loadReplyTemplates();
+	}
+
+	async function deleteReplyTemplate(id: string) {
+		await apiDeleteJson<{ deleted: boolean }>(api.replyTemplate(id));
+		await loadReplyTemplates();
 	}
 
 	async function reorderUnifiedCollectionContents(
@@ -391,15 +493,29 @@ export const useStudioStore = defineStore("studio", () => {
 	async function loadAnalytics(
 		module: StudioModule,
 		range: 7 | 28 | 90,
+		filtersOrTrack: StudioAnalyticsFilters | boolean = {
+			collection_id: "",
+			content_id: "",
+		},
 		track = true,
 	) {
-		if (track) activeReload = () => loadAnalytics(module, range, false);
+		const filters =
+			typeof filtersOrTrack === "boolean"
+				? { collection_id: "", content_id: "" }
+				: filtersOrTrack;
+		const shouldTrack =
+			typeof filtersOrTrack === "boolean" ? filtersOrTrack : track;
+		const snapshot = { ...filters };
+		if (shouldTrack)
+			activeReload = () => loadAnalytics(module, range, snapshot, false);
 		const requestVersion = ++analyticsRequestVersion[module];
 		const requestChannelID = channelID();
 		const response = await apiGet<StudioAnalytics>(
 			appendQuery(api.analytics(module), {
 				channel_id: requestChannelID,
 				range,
+				collection_id: snapshot.collection_id,
+				content_id: snapshot.content_id,
 			}),
 		);
 		if (
@@ -425,8 +541,15 @@ export const useStudioStore = defineStore("studio", () => {
 		>(
 			appendQuery(api.interactions(module), {
 				channel_id: requestChannelID,
+				q: snapshot.q?.trim() ?? "",
+				content_id: snapshot.content_id ?? "",
 				unreplied: snapshot.unreplied,
 				anchored: snapshot.anchored,
+				handled:
+					snapshot.handled === "" || snapshot.handled === undefined
+						? undefined
+						: snapshot.handled === "handled",
+				priority: snapshot.priority ?? "",
 				page: snapshot.page,
 			}),
 		);
@@ -437,6 +560,30 @@ export const useStudioStore = defineStore("studio", () => {
 			return;
 		interactions.value[module] = response.data ?? [];
 		interactionPagination.value[module] = response.meta ?? null;
+	}
+
+	async function updateInteractionState(
+		module: StudioModule,
+		commentID: string,
+		input: { handled?: boolean; priority?: "normal" | "high" },
+	) {
+		await apiPutJson<{ updated: boolean }>(
+			appendQuery(api.interactionState(module, commentID), {
+				channel_id: channelID(),
+			}),
+			input,
+		);
+	}
+
+	async function setInteractionsHandled(
+		module: StudioModule,
+		commentIDs: string[],
+		handled: boolean,
+	) {
+		await apiPutJson<{ updated: boolean }>(
+			appendQuery(api.interactionStates(module), { channel_id: channelID() }),
+			{ comment_ids: commentIDs, handled },
+		);
 	}
 
 	async function loadSettings(module: StudioModule, track = true) {
@@ -454,10 +601,7 @@ export const useStudioStore = defineStore("studio", () => {
 		settings.value[module] = response;
 	}
 
-	async function saveSettings(
-		module: StudioModule,
-		input: StudioSettingsInput,
-	) {
+	async function saveSettings(module: StudioModule, input: StudioSettingsInput) {
 		const requestVersion = ++settingsSaveRequestVersion[module];
 		const requestChannelID = channelID();
 		const response = await apiPatchJson<StudioSettings>(api.settings(module), {
@@ -529,12 +673,15 @@ export const useStudioStore = defineStore("studio", () => {
 		loading,
 		hasChannel,
 		dashboard,
+		calendarItems,
 		contents,
 		contentPagination,
 		collections,
 		unifiedCollections,
 		unifiedCollectionContents,
 		unifiedCollectionContentsCollectionID,
+		unifiedCollectionCandidates,
+		replyTemplates,
 		analytics,
 		interactions,
 		interactionPagination,
@@ -543,11 +690,18 @@ export const useStudioStore = defineStore("studio", () => {
 		loadState,
 		selectChannel,
 		loadDashboard,
+		loadCalendar,
 		loadContents,
 		loadCollections,
 		loadUnifiedCollections,
 		loadUnifiedCollectionContents,
+		loadUnifiedCollectionCandidates,
+		addUnifiedCollectionContent,
+		removeUnifiedCollectionContent,
 		reorderUnifiedCollectionContents,
+		loadReplyTemplates,
+		createReplyTemplate,
+		deleteReplyTemplate,
 		createUnifiedCollection,
 		updateUnifiedCollection,
 		deleteUnifiedCollection,
@@ -559,6 +713,8 @@ export const useStudioStore = defineStore("studio", () => {
 		resolveCollectionConflicts,
 		loadAnalytics,
 		loadInteractions,
+		updateInteractionState,
+		setInteractionsHandled,
 		loadSettings,
 		saveSettings,
 		updateContentStatus,

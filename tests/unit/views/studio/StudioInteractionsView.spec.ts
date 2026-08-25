@@ -36,7 +36,9 @@ describe('StudioInteractionsView', () => {
     const wrapper = mount(StudioInteractionsView, { global: { plugins: [pinia, router] } })
     await flushPromises()
 
-    expect(store.loadInteractions).toHaveBeenCalledWith('podcast', { unreplied: true, anchored: false, page: 1 })
+    expect(store.loadInteractions).toHaveBeenCalledWith('podcast', {
+      q: '', content_id: '', unreplied: true, anchored: false, handled: '', priority: '', page: 1,
+    })
     expect((wrapper.get('[data-testid="unreplied-filter"]').element as HTMLInputElement).checked).toBe(true)
   })
 
@@ -54,7 +56,7 @@ describe('StudioInteractionsView', () => {
     store.interactions.podcast = [{
       id: 'comment-1', content_id: 'episode-1', content_title: '第一集', target_kind: 'podcast_episode',
       author: { id: 'user-1', username: 'alice', display_name: 'Alice', avatar_url: '' },
-      content: '02:30 的观点很好', reply_count: 0, replied: false, pinned: false,
+      content: '02:30 的观点很好', reply_count: 0, replied: false, pinned: false, handled: false, priority: 'normal',
       time_anchors: [{ start: 0, end: 5, seconds: 150 }], created_at: '2026-07-18T00:00:00Z',
     }]
 
@@ -63,13 +65,17 @@ describe('StudioInteractionsView', () => {
     })
     await flushPromises()
 
-    expect(store.loadInteractions).toHaveBeenCalledWith('podcast', { unreplied: false, anchored: false, page: 1 })
+    expect(store.loadInteractions).toHaveBeenCalledWith('podcast', {
+      q: '', content_id: '', unreplied: false, anchored: false, handled: '', priority: '', page: 1,
+    })
 	expect(wrapper.get('a[href="/podcasts/episode/episode-1"]').exists()).toBe(true)
 
     await wrapper.find('[data-testid="unreplied-filter"]').setValue(true)
     await wrapper.find('[data-testid="anchored-filter"]').setValue(true)
     await flushPromises()
-    expect(store.loadInteractions).toHaveBeenLastCalledWith('podcast', { unreplied: true, anchored: true, page: 1 })
+    expect(store.loadInteractions).toHaveBeenLastCalledWith('podcast', {
+      q: '', content_id: '', unreplied: true, anchored: true, handled: '', priority: '', page: 1,
+    })
 
     await wrapper.find('[data-testid="reply-comment-1"]').trigger('click')
     await wrapper.find('[data-testid="reply-input-comment-1"]').setValue('谢谢反馈')
@@ -79,6 +85,7 @@ describe('StudioInteractionsView', () => {
       { kind: 'podcast_episode', resourceId: 'episode-1' },
       { content: '谢谢反馈', reply_to_id: 'comment-1', mentions: [], attachment_ids: [] },
     )
+    expect(store.updateInteractionState).toHaveBeenCalledWith('podcast', 'comment-1', { handled: true })
 
     await wrapper.find('[data-testid="pin-comment-1"]').trigger('click')
     expect(commentMocks.mark).toHaveBeenCalledWith({ kind: 'podcast_episode', resourceId: 'episode-1' }, 'comment-1')

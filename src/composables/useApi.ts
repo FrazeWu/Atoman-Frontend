@@ -172,6 +172,7 @@ export function useApi() {
 			channels: `${apiUrl}/studio/channels`,
 			channel: (id: string) => `${apiUrl}/studio/channels/${id}`,
 			dashboard: `${apiUrl}/studio/dashboard`,
+			calendar: `${apiUrl}/studio/calendar`,
 			contents: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/contents`,
 			unifiedContents: `${apiUrl}/studio/contents`,
@@ -179,6 +180,10 @@ export function useApi() {
 			unifiedCollection: (id: string) => `${apiUrl}/studio/collections/${id}`,
 			unifiedCollectionContents: (id: string) =>
 				`${apiUrl}/studio/collections/${id}/contents`,
+			unifiedCollectionCandidates: (id: string) =>
+				`${apiUrl}/studio/collections/${id}/candidates`,
+			unifiedCollectionContent: (id: string, contentId: string) =>
+				`${apiUrl}/studio/collections/${id}/contents/${contentId}`,
 			reorderUnifiedCollectionContents: (id: string) =>
 				`${apiUrl}/studio/collections/${id}/contents/order`,
 			collections: (module: "blog" | "podcast" | "video") =>
@@ -199,6 +204,12 @@ export function useApi() {
 				`${apiUrl}/studio/${module}/analytics`,
 			interactions: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/interactions`,
+			interactionStates: (module: "blog" | "podcast" | "video") =>
+				`${apiUrl}/studio/${module}/interactions/states`,
+			interactionState: (module: "blog" | "podcast" | "video", id: string) =>
+				`${apiUrl}/studio/${module}/interactions/${id}/state`,
+			replyTemplates: `${apiUrl}/studio/reply-templates`,
+			replyTemplate: (id: string) => `${apiUrl}/studio/reply-templates/${id}`,
 			settings: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/settings`,
 			share: (module: "blog" | "podcast" | "video", id: string) =>

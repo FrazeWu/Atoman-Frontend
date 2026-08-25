@@ -1,4 +1,8 @@
-import type { RouteLocation, RouteLocationRaw, RouteRecordRaw } from "vue-router";
+import type {
+	RouteLocation,
+	RouteLocationRaw,
+	RouteRecordRaw,
+} from "vue-router";
 
 const studioContentView = () => import("@/views/studio/StudioContentView.vue");
 const studioEditorRouteView = () =>
@@ -32,6 +36,11 @@ export const studioRoutes: RouteRecordRaw[] = [
 						path: "channel",
 						name: "studio-manage-channel",
 						component: () => import("@/views/studio/StudioChannelView.vue"),
+					},
+					{
+						path: "calendar",
+						name: "studio-manage-calendar",
+						component: () => import("@/views/studio/StudioCalendarView.vue"),
 					},
 					{
 						path: "collections",
@@ -112,8 +121,7 @@ export const studioRoutes: RouteRecordRaw[] = [
 					{
 						path: "interactions",
 						name: "studio-interactions",
-						component: () =>
-							import("@/views/studio/StudioInteractionsView.vue"),
+						component: () => import("@/views/studio/StudioInteractionsView.vue"),
 					},
 					{
 						path: "settings",

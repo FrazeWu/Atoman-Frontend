@@ -7,6 +7,13 @@
       </div>
       <PSegmentedControl v-model="range" :options="rangeOptions" :disabled="loading" @change="changeRange" />
     </header>
+    <form class="studio-analytics__filters" aria-label="数据筛选" @submit.prevent="changeFilters">
+      <PSelect v-model="filters.collection_id" label="合集" :options="collectionOptions" @update:model-value="changeFilters" />
+      <PSelect v-model="filters.content_id" label="内容" :options="contentOptions" @update:model-value="changeFilters" />
+      <PButton type="submit" variant="secondary" aria-label="应用筛选" title="应用筛选">
+        <Search :size="17" aria-hidden="true" />
+      </PButton>
+    </form>
 
     <p v-if="loading" class="studio-analytics__message">加载中...</p>
     <p v-else-if="error" class="studio-analytics__message" role="alert">{{ error }}</p>
@@ -90,24 +97,35 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
+import { Search } from 'lucide-vue-next'
 import { useRoute, RouterLink } from 'vue-router'
 
+import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioModule } from '@/types'
+import type { StudioAnalyticsFilters, StudioModule } from '@/types'
 
 const route = useRoute()
 const studio = useStudioStore()
 const module = computed(() => route.params.module as StudioModule)
 const range = ref<7 | 28 | 90>(28)
+const filters = reactive<StudioAnalyticsFilters>({ collection_id: '', content_id: '' })
 const loading = ref(true)
 const error = ref('')
 const trendCanvas = ref<HTMLCanvasElement | null>(null)
 const analytics = computed(() => studio.analytics[module.value])
+const collectionOptions = computed(() => [
+  { label: '全部合集', value: '' },
+  ...studio.unifiedCollections.map(collection => ({ label: collection.name, value: collection.id })),
+])
+const contentOptions = computed(() => [
+  { label: '全部内容', value: '' },
+  ...studio.contents[module.value].map(content => ({ label: content.title || '未命名内容', value: content.id })),
+])
 const rangeOptions: Array<{ label: string; value: 7 | 28 | 90 }> = [
   { label: '7 天', value: 7 },
   { label: '28 天', value: 28 },
@@ -228,7 +246,7 @@ async function loadAnalytics() {
   error.value = ''
   let loaded = false
   try {
-    await studio.loadAnalytics(module.value, range.value)
+    await studio.loadAnalytics(module.value, range.value, filters)
     loaded = true
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败'
@@ -247,10 +265,18 @@ async function changeRange(value: 7 | 28 | 90) {
   await loadAnalytics()
 }
 
+function changeFilters() {
+  void loadAnalytics()
+}
+
 onMounted(async () => {
   try {
     await studio.loadState()
-    await loadAnalytics()
+    await Promise.all([
+      loadAnalytics(),
+      studio.loadUnifiedCollections(false),
+      studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
+    ])
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败'
     loading.value = false
@@ -259,7 +285,11 @@ onMounted(async () => {
 
 watch(module, () => {
   selectedMetric.value = moduleMetrics[module.value][0]
-  void loadAnalytics()
+  filters.content_id = ''
+  void Promise.all([
+    loadAnalytics(),
+    studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
+  ])
 })
 watch(analytics, () => nextTick(renderChart))
 watch(selectedMetricKey, () => nextTick(renderChart))
@@ -269,6 +299,8 @@ onBeforeUnmount(destroyChart)
 <style scoped>
 .studio-analytics { display: grid; gap: 1.25rem; }
 .studio-analytics__header, .studio-analytics__section > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.studio-analytics__filters { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 1fr) auto; gap: 0.5rem; align-items: end; max-width: 44rem; }
+.studio-analytics__filters :deep(.p-button) { width: 2.75rem; min-height: 2.75rem; padding: 0; }
 .studio-analytics__header > div { min-width: 0; }
 .studio-analytics__header p { margin: 0.25rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
 .studio-analytics h2, .studio-analytics h3, .studio-analytics__message { margin: 0; }
@@ -321,6 +353,7 @@ onBeforeUnmount(destroyChart)
 }
 @media (max-width: 520px) {
   .studio-analytics__header { align-items: flex-start; flex-direction: column; }
-  .studio-analytics__header > :deep(.p-segmented-control) { width: 100%; }
+  .studio-analytics__header > :deep(.p-segmented-control), .studio-analytics__filters { width: 100%; }
+  .studio-analytics__filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
 }
 </style>

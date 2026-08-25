@@ -13,6 +13,8 @@ import PToast from '@/components/ui/PToast.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
+import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
+import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import { ChevronDown, ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pause, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -25,6 +27,8 @@ import {
   listAlbumBookmarks,
   listAlbumContributors,
   listMusicPlaylists,
+  deleteMusicSongRating,
+  setMusicSongRating,
   type MusicContributor,
   type MusicAlbumListItem,
   type MusicPlaylistSummary,
@@ -67,8 +71,8 @@ const playlistHasMore = ref(false)
 const playlistsLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const ratingSongID = ref<string | null>(null)
 const expandedTrackId = ref<string | null>(null)
-const descriptionExpanded = ref(false)
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const {
   favoriteSongIds,
@@ -358,7 +362,6 @@ async function loadAlbum(albumId: string | null) {
   favoriteSongIds.value = new Set()
   lyricTrack.value = null
   expandedTrackId.value = null
-  descriptionExpanded.value = false
   errorMessage.value = ''
   redirectMessage.value = ''
   isCoverBroken.value = false
@@ -632,20 +635,12 @@ watch(
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
             <span v-if="tracks.length" class="track-count">{{ tracks.length }} 首</span>
           </div>
-          <div class="summary-section">
-            <button
-              type="button"
-              class="summary-toggle"
-              :aria-expanded="descriptionExpanded"
-              aria-controls="album-description"
-              data-testid="album-description-toggle"
-              @click="descriptionExpanded = !descriptionExpanded"
-            >
-              <span>简介</span>
-              <ChevronDown :size="16" aria-hidden="true" />
-            </button>
-            <p v-if="descriptionExpanded" id="album-description" class="summary">{{ album?.description || '暂无专辑简介。' }}</p>
-          </div>
+          <MusicDescriptionPreview
+            :description="album?.description"
+            empty-text="暂无专辑简介。"
+            content-id="album-description"
+            test-id="album-description-toggle"
+          />
           <div class="album-actions">
             <PButton
               variant="primary"
@@ -711,6 +706,17 @@ watch(
           <div class="track-meta">
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
+            <SongRatingControl
+              size="compact"
+              :song-title="track.title"
+              :rating-score="track.rating_score"
+              :rating-count="track.rating_count"
+              :viewer-rating="track.viewer_rating"
+              :disabled="!isAuthenticated"
+              :loading="ratingSongID === String(track.id)"
+              @rate="rateTrack(track, $event)"
+              @clear="clearTrackRating(track)"
+            />
 
             <button
               type="button"
@@ -1047,41 +1053,6 @@ watch(
   content: "•";
   margin-right: 0.75rem;
   color: var(--a-color-border-soft);
-}
-.summary-section {
-  display: grid;
-  gap: 0.55rem;
-  max-width: 44rem;
-}
-.summary-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-.summary-toggle:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
-  outline-offset: 3px;
-}
-.summary-toggle svg { transition: transform 0.18s ease; }
-.summary-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-.summary {
-  max-width: 44rem;
-  overflow: hidden;
-  color: var(--a-color-muted);
-  font-size: 0.875rem;
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
 }
 
 .album-actions {

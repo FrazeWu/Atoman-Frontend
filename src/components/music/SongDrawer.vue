@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
-import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
+import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
+import { addMusicSongToLater, deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
+import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
+import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
@@ -54,6 +56,7 @@ const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
 const actionBusy = ref('')
+const ratingLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const detailRequests = useRequestGeneration()
@@ -65,7 +68,6 @@ const {
   currentLine: currentLyricLine,
 } = useMusicLyrics()
 const lyricsEditorOpen = ref(false)
-const descriptionExpanded = ref(false)
 const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
 
 const sheetTitle = computed(() => detail.value?.song.title ? `歌曲 · ${detail.value.song.title}` : (props.layer?.title ?? '歌曲'))
@@ -120,6 +122,39 @@ const effectiveSources = computed(() => detail.value?.song.effective_sources ?? 
 function showToast(message: string) {
   toastMessage.value = message
   toastVisible.value = true
+}
+
+function applyRating(summary: { rating_score: number; rating_count: number; viewer_rating?: number | null }) {
+  if (!detail.value) return
+  detail.value.song.rating_score = Number(summary.rating_score ?? 0)
+  detail.value.song.rating_count = Number(summary.rating_count ?? 0)
+  detail.value.song.viewer_rating = summary.viewer_rating ?? null
+}
+
+async function rateSong(score: number) {
+  if (!detail.value || !requireLogin() || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    applyRating(await setMusicSongRating(String(detail.value.song.id), score))
+  } catch (cause) {
+    reportError(cause, '更新歌曲评分失败')
+    showToast('评分失败')
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+async function clearSongRating() {
+  if (!detail.value || !requireLogin() || ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    applyRating(await deleteMusicSongRating(String(detail.value.song.id)))
+  } catch (cause) {
+    reportError(cause, '清除歌曲评分失败')
+    showToast('操作失败')
+  } finally {
+    ratingLoading.value = false
+  }
 }
 
 function queueSong(playNext: boolean) {
@@ -248,7 +283,6 @@ watch(
   [songId, () => state.value.songRefreshToken],
   ([targetSongId]) => {
     lyricsEditorOpen.value = false
-    descriptionExpanded.value = false
     lyricsDisplayMode.value = 'original'
     void loadDetail(targetSongId)
     if (typeof targetSongId === 'string' && targetSongId) void loadLyrics(targetSongId)
@@ -290,6 +324,16 @@ watch(
           <p v-else class="song-detail__album">{{ standaloneReleaseLabel }}</p>
           <h1>{{ detail.song.title }}</h1>
           <p v-if="formattedReleaseDate" class="song-detail__release-date">{{ formattedReleaseDate }}</p>
+          <SongRatingControl
+            :song-title="detail.song.title"
+            :rating-score="detail.song.rating_score"
+            :rating-count="detail.song.rating_count"
+            :viewer-rating="detail.song.viewer_rating"
+            :disabled="!authStore.isAuthenticated"
+            :loading="ratingLoading"
+            @rate="rateSong"
+            @clear="clearSongRating"
+          />
           <MusicEntryStateControl
             entity-type="song"
             :entity-id="String(detail.song.id)"
@@ -301,20 +345,13 @@ watch(
             <span>{{ roleLabels[role] || role }}</span>
             <button v-for="artist in artists" :key="artist.id" type="button" class="song-detail__entity-link" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
           </div>
-          <div v-if="detail.song.description" class="song-detail__description-section">
-            <button
-              type="button"
-              class="song-detail__description-toggle"
-              :aria-expanded="descriptionExpanded"
-              aria-controls="song-description"
-              data-testid="song-description-toggle"
-              @click="descriptionExpanded = !descriptionExpanded"
-            >
-              <span>简介</span>
-              <ChevronDown :size="16" aria-hidden="true" />
-            </button>
-            <p v-if="descriptionExpanded" id="song-description" class="song-detail__description">{{ detail.song.description }}</p>
-          </div>
+          <MusicDescriptionPreview
+            v-if="detail.song.description"
+            :description="detail.song.description"
+            content-id="song-description"
+            test-id="song-description-toggle"
+            max-width="42rem"
+          />
           <div v-if="effectiveSources.length" class="song-detail__sources">
             <span>来源</span>
             <template v-for="(source, index) in effectiveSources" :key="`${source.url || source.title}-${index}`">
@@ -417,14 +454,8 @@ watch(
 .song-detail__content { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; }
 .song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--a-color-bg-subtle); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
-.song-detail__main h1, .song-detail__album, .song-detail__release-date, .song-detail__description { margin: 0; }
+.song-detail__main h1, .song-detail__album, .song-detail__release-date { margin: 0; }
 .song-detail__album, .song-detail__release-date, .song-detail__artists span, .song-detail__state { color: var(--a-color-muted); }
-.song-detail__description-section { display: grid; width: 100%; max-width: 42rem; gap: 0.55rem; }
-.song-detail__description-toggle { display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-color-muted); font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
-.song-detail__description-toggle:focus-visible { outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent); outline-offset: 3px; }
-.song-detail__description-toggle svg { transition: transform 0.18s ease; }
-.song-detail__description-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-.song-detail__description { max-width: 42rem; color: var(--a-color-muted); line-height: 1.6; white-space: pre-wrap; }
 .song-detail__sources { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--a-color-muted); font-size: 0.85rem; }
 .song-detail__sources a { color: inherit; overflow-wrap: anywhere; }
 .song-detail__artists { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }

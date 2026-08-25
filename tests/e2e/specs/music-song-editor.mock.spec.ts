@@ -4,11 +4,16 @@ function envelope(data: unknown) {
 	return JSON.stringify({ data });
 }
 
+const songDescription = Array.from(
+	{ length: 80 },
+	() => "Optional song description",
+).join(" ");
+
 const songDetail = {
 	song: {
 		id: "song-e2e-1",
 		title: "Standalone Song",
-		description: "Optional song description",
+		description: songDescription,
 		release_type: "single",
 		release_date: "2025-01-02",
 		release_date_precision: "day",
@@ -124,14 +129,20 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 	await expect(
 		songDialog.getByRole("heading", { name: "Standalone Song" }),
 	).toBeVisible();
+	const detailDescription = songDialog.locator("#song-description");
 	const detailDescriptionToggle = songDialog.getByTestId("song-description-toggle");
+	await expect(detailDescription).toHaveText(songDescription);
+	await expect
+		.poll(() =>
+			detailDescription.evaluate(
+				(element) => element.scrollHeight > element.clientHeight + 1,
+			),
+		)
+		.toBe(true);
 	await expect(detailDescriptionToggle).toHaveAttribute("aria-expanded", "false");
-	await expect(songDialog.locator("#song-description")).toHaveCount(0);
 	await detailDescriptionToggle.click();
 	await expect(detailDescriptionToggle).toHaveAttribute("aria-expanded", "true");
-	await expect(songDialog.locator("#song-description")).toHaveText(
-		"Optional song description",
-	);
+	await expect(detailDescription).toHaveText(songDescription);
 
 	await songDialog
 		.locator(".song-detail__actions")
@@ -153,7 +164,7 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 	);
 	expect(await editor.getByTestId("album-details-bio-toggle").count()).toBe(0);
 	await expect(editor.getByTestId("album-details-bio-input")).toHaveValue(
-		"Optional song description",
+		songDescription,
 	);
 	await expect(editor.locator('textarea[aria-label="歌词"]')).toHaveCount(0);
 	await expect(editor.getByText("碟号", { exact: true })).toHaveCount(0);
@@ -176,7 +187,7 @@ test("独立歌曲复用发行编辑器并通过歌曲修订保存", async ({ pa
 	const changes = revisionBodies[0]?.changes ?? {};
 	expect(changes).toMatchObject({
 		title: "Standalone Song",
-		description: "Optional song description",
+		description: songDescription,
 		release_type: "single",
 		release_date: "2025-01-02",
 		sources: [{ type: "url", url: "https://example.test/song-source" }],

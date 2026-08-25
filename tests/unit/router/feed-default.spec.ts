@@ -13,6 +13,7 @@ describe("feed default route", () => {
 		const root = moduleRoutes.feed.find((route) => route.path === "/");
 		const children = root?.children || [];
 		const defaultRoute = children.find((route) => route.path === "");
+		const sourceRoute = children.find((route) => route.path === "sources");
 		const subscriptionRoute = children.find(
 			(route) => route.path === "subscriptions",
 		);
@@ -26,10 +27,17 @@ describe("feed default route", () => {
 			"FeedView.vue",
 		);
 
+		expect(sourceRoute?.meta).toMatchObject({ requiresAuth: true });
+
 		const router = createRouter({
 			history: createMemoryHistory(),
 			routes: buildAppRoutes(),
 		});
+		await router.push("/feed?source_id=source-1");
+		expect(router.currentRoute.value.fullPath).toBe(
+			"/feed/subscriptions?source_id=source-1",
+		);
+
 		await router.push("/feed/explore?category=tech#sources");
 
 		expect(router.currentRoute.value.fullPath).toBe(

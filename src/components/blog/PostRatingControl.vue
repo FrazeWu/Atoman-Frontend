@@ -27,7 +27,7 @@
           <button
             type="button"
             class="post-rating__half post-rating__half--left"
-            :aria-label="`${star * 2 - 1} 分`"
+            :aria-label="`${formatStarScore(star * 2 - 1)} 星`"
             :disabled="loading"
             @mouseenter="hoverScore = star * 2 - 1"
             @focus="hoverScore = star * 2 - 1"
@@ -37,7 +37,7 @@
           <button
             type="button"
             class="post-rating__half post-rating__half--right"
-            :aria-label="`${star * 2} 分`"
+            :aria-label="`${formatStarScore(star * 2)} 星`"
             :disabled="loading"
             @mouseenter="hoverScore = star * 2"
             @focus="hoverScore = star * 2"
@@ -65,10 +65,10 @@
     <div class="post-rating__meta-box">
       <!-- 分数展示 -->
       <span v-if="hoverScore !== null" class="post-rating__dynamic-score">
-        {{ hoverScore }} 分
+        {{ formatStarScore(hoverScore) }} 星
       </span>
       <span v-else-if="viewerRating !== null && viewerRating !== undefined" class="post-rating__mine">
-        我的评分 {{ viewerRating }}
+        我的评分 {{ formatStarScore(viewerRating) }} 星
       </span>
       <RouterLink v-else-if="disabled" to="/login" class="post-rating__login">
         登录后评分
@@ -76,42 +76,42 @@
 
       <!-- 评分标准建议问号图标与悬浮浮层 -->
       <PHelpTooltip
-        title="评分参考标准"
-        kicker="6 分及格线"
+        title="评分参考"
+        kicker="3 星为合格"
         placement="top-end"
         aria-label="查看评分参考标准"
       >
         <ul class="guidelines-list">
           <li class="guidelines-item">
-            <span class="score-badge is-top">9 - 10</span>
+            <span class="score-badge is-top">4.5 - 5</span>
             <div class="score-desc">
               <strong>力荐</strong>
               <span>卓越之作，深度与启发性兼备</span>
             </div>
           </li>
           <li class="guidelines-item">
-            <span class="score-badge is-high">7 - 8</span>
+            <span class="score-badge is-high">3.5 - 4</span>
             <div class="score-desc">
               <strong>推荐</strong>
               <span>内容扎实，值得完整阅读</span>
             </div>
           </li>
           <li class="guidelines-item">
-            <span class="score-badge is-pass">5 - 6</span>
+            <span class="score-badge is-pass">2.5 - 3</span>
             <div class="score-desc">
               <strong>及格 / 还行</strong>
               <span>达到合格基准，内容基本完整</span>
             </div>
           </li>
           <li class="guidelines-item">
-            <span class="score-badge is-low">3 - 4</span>
+            <span class="score-badge is-low">1.5 - 2</span>
             <div class="score-desc">
               <strong>一般</strong>
               <span>内容偏单薄，存在明显不足</span>
             </div>
           </li>
           <li class="guidelines-item">
-            <span class="score-badge is-bad">1 - 2</span>
+            <span class="score-badge is-bad">0.5 - 1</span>
             <div class="score-desc">
               <strong>较差</strong>
               <span>质量欠佳，缺乏参考价值</span>
@@ -153,9 +153,13 @@ const hoverScore = ref<number | null>(null)
 const lastRatedStar = ref<number | null>(null)
 
 const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? Math.round(props.ratingScore * 2) / 2)
-const formattedScore = computed(() => props.ratingCount ? props.ratingScore.toFixed(1) : '—')
+const formattedScore = computed(() => props.ratingCount ? `${formatStarScore(props.ratingScore)} / 5` : '—')
 
 const starIconSize = computed(() => props.size === 'sm' ? 18 : 22)
+
+function formatStarScore(score: number) {
+  return (score / 2).toFixed(1)
+}
 
 function fillWidth(star: number) {
   const score = Math.max(0, Math.min(10, activeScore.value))

@@ -65,6 +65,8 @@ export const musicV1Endpoints = {
 	search: () => `${apiV1Base()}/music/search`,
 	searchInteractions: () => `${apiV1Base()}/music/search/interactions`,
 	songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,
+	albumRating: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}/rating`,
+	songRating: (songId: string) => `${apiV1Base()}/music/songs/${songId}/rating`,
 	songAudioReplacements: (songId: string) =>
 		`${apiV1Base()}/music/songs/${songId}/audio-replacements`,
 	songToAlbumConversion: (songId: string) =>

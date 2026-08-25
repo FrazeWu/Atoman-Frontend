@@ -51,6 +51,8 @@ import type {
 	MusicSearchResults,
 	MusicSearchKind,
 	MusicSongDetail,
+	MusicSongRatingSummary,
+	MusicAlbumRatingSummary,
 	MusicSongListItem,
 	MusicSongLyrics,
 	MusicSongLyricsVersion,
@@ -114,6 +116,42 @@ export async function getMusicSongDetail(
 	songId: string,
 ): Promise<MusicSongDetail> {
 	return apiGet<MusicSongDetail>(musicV1Endpoints.songDetail(songId));
+}
+
+export async function setMusicAlbumRating(
+	albumId: string,
+	score: number,
+): Promise<MusicAlbumRatingSummary> {
+	return apiPutJson<MusicAlbumRatingSummary>(
+		musicV1Endpoints.albumRating(albumId),
+		{ score },
+	);
+}
+
+export async function deleteMusicAlbumRating(
+	albumId: string,
+): Promise<MusicAlbumRatingSummary> {
+	return apiDeleteJson<MusicAlbumRatingSummary>(
+		musicV1Endpoints.albumRating(albumId),
+	);
+}
+
+export async function setMusicSongRating(
+	songId: string,
+	score: number,
+): Promise<MusicSongRatingSummary> {
+	return apiPutJson<MusicSongRatingSummary>(
+		musicV1Endpoints.songRating(songId),
+		{ score },
+	);
+}
+
+export async function deleteMusicSongRating(
+	songId: string,
+): Promise<MusicSongRatingSummary> {
+	return apiDeleteJson<MusicSongRatingSummary>(
+		musicV1Endpoints.songRating(songId),
+	);
 }
 
 export async function queueMusicSongAudioReplacement(

@@ -486,6 +486,9 @@ export type MusicAlbumListItem = {
 	hot_score?: number;
 	play_count?: number;
 	bookmark_count?: number;
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number | null;
 	songs?: Array<{
 		id: string;
 		title: string;
@@ -514,6 +517,9 @@ export type MusicAlbumListItem = {
 		playback_sample_rate_hz?: number;
 		playback_channels?: number;
 		artist_credits?: MusicSongArtistCredit[];
+		rating_score?: number;
+		rating_count?: number;
+		viewer_rating?: number | null;
 	}>;
 	entry_status: MusicEntryStatus;
 	lifecycle_status?: MusicLifecycleStatus;
@@ -553,6 +559,18 @@ export type MusicAlbumMergePreview = {
 	}>;
 };
 
+export type MusicSongRatingSummary = {
+	rating_score: number;
+	rating_count: number;
+	viewer_rating?: number | null;
+};
+
+export type MusicAlbumRatingSummary = {
+	rating_score: number;
+	rating_count: number;
+	viewer_rating?: number | null;
+};
+
 export type MusicSongListItem = {
 	id: string;
 	title: string;
@@ -576,6 +594,9 @@ export type MusicSongListItem = {
 	entry_status: MusicEntryStatus;
 	artists?: Array<{ id: string; name: string }>;
 	artist_credits?: MusicSongArtistCredit[];
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number | null;
 	album?: {
 		id: string;
 		title: string;

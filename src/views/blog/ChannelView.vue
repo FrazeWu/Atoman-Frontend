@@ -8,37 +8,60 @@
     <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
 
     <template v-else>
-      <!-- Channel header -->
-      <PPageHeader :title="channel.name" accent :sub="channel.description">
-        <template #action>
-          <div class="ui-actions-row">
-            <PClip
-              v-if="authStore.isAuthenticated && !isOwner"
-              :disabled="channelSubscribeLoading"
-              @click="toggleChannelSubscribe"
-            >
-              {{ channelSubscribeLoading ? '处理中...' : (channelSubscribed ? '已订阅' : '订阅') }}
-            </PClip>
-            <PButton v-if="authStore.isAuthenticated && !isOwner" data-testid="message-channel" :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'channel', target_id: channel.id } }" size="sm" variant="secondary">私信</PButton>
-            <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
-          </div>
-        </template>
-      </PPageHeader>
+      <section class="channel-identity-card" aria-labelledby="channel-title">
+        <div class="channel-identity-card__cover" aria-hidden="true">
+          <img v-if="channel.cover_url" :src="channel.cover_url" alt="" />
+          <span v-else>{{ channel.name.slice(0, 1).toUpperCase() }}</span>
+        </div>
 
-      <!-- Author info -->
-      <PSurface class="channel-meta-card" :layer="1">
-        <div>
-          <p class="a-label a-muted" style="margin-bottom:.4rem">作者</p>
-          <a
-            :href="userUrl(channel.user?.username || '')"
-            style="font-weight: 600; font-size: 1rem; text-decoration: none; color: var(--a-color-fg);"
-          >{{ channel.user?.display_name || channel.user?.username || '未知作者' }}</a>
+        <div class="channel-identity-card__content">
+          <p class="channel-identity-card__eyebrow">博客频道</p>
+          <h1 id="channel-title" class="channel-identity-card__title">{{ channel.name }}</h1>
+          <p v-if="channel.description" class="channel-identity-card__description">{{ channel.description }}</p>
+          <div class="channel-identity-card__author">
+            <PAvatar
+              :src="channel.user?.avatar_url"
+              :name="channel.user?.display_name || channel.user?.username || '未知作者'"
+              :alt="`${channel.user?.display_name || channel.user?.username || '未知作者'} 的头像`"
+              size="xs"
+            />
+            <a
+              v-if="channel.user?.username"
+              :href="userUrl(channel.user.username)"
+              class="channel-identity-card__author-link"
+            >
+              {{ channel.user.display_name || channel.user.username }}
+              <span>@{{ channel.user.username }}</span>
+            </a>
+            <span v-else class="channel-identity-card__author-link">未知作者</span>
+          </div>
+          <div class="channel-identity-card__stats" aria-label="频道统计">
+            <span><FileText :size="14" aria-hidden="true" />{{ postsTotal }} 篇文章</span>
+            <span><FolderKanban :size="14" aria-hidden="true" />{{ collections.length }} 个合集</span>
+            <span><CalendarDays :size="14" aria-hidden="true" />{{ formatDate(channel.updated_at) }} 更新</span>
+          </div>
         </div>
-        <div>
-          <p class="a-label a-muted" style="margin-bottom:.4rem">更新时间</p>
-          <p style="font-weight: 500; margin: 0; color: var(--a-color-fg);">{{ formatDate(channel.updated_at) }}</p>
+
+        <div class="channel-identity-card__actions">
+          <PButton
+            v-if="authStore.isAuthenticated && !isOwner"
+            variant="primary"
+            :disabled="channelSubscribeLoading"
+            :loading="channelSubscribeLoading"
+            :label="channelSubscribed ? '已订阅' : '订阅频道'"
+            @click="toggleChannelSubscribe"
+          />
+          <PButton
+            v-if="authStore.isAuthenticated && !isOwner"
+            data-testid="message-channel"
+            :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'channel', target_id: channel.id } }"
+            size="sm"
+            variant="secondary"
+            label="私信"
+          />
+          <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
         </div>
-      </PSurface>
+      </section>
 
       <!-- Two-column layout: left collections, right posts -->
       <div class="channel-body">
@@ -114,9 +137,9 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { FileText, FolderKanban, CalendarDays } from 'lucide-vue-next'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -125,14 +148,10 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
-import PCard from '@/components/ui/PCard.vue'
-import PSurface from '@/components/ui/PSurface.vue'
-import PContentCard from '@/components/ui/PContentCard.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PLink from '@/components/ui/PLink.vue'
 import PTab from '@/components/ui/PTab.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
@@ -380,6 +399,106 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 </script>
 
 <style scoped>
+.channel-identity-card {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: stretch;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+}
+
+.channel-identity-card__cover {
+  aspect-ratio: 4 / 3;
+  min-height: 7rem;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  font-size: 2rem;
+  font-weight: 650;
+}
+
+.channel-identity-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.channel-identity-card__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.channel-identity-card__eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.channel-identity-card__title {
+  margin: 0;
+  color: var(--a-color-fg);
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.channel-identity-card__description {
+  margin: 0.45rem 0 0;
+  color: var(--a-color-muted);
+  line-height: 1.55;
+}
+
+.channel-identity-card__author,
+.channel-identity-card__stats,
+.channel-identity-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.channel-identity-card__author { margin-top: 0.7rem; }
+
+.channel-identity-card__author-link {
+  color: var(--a-color-fg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.channel-identity-card__author-link span {
+  color: var(--a-color-muted);
+  font-weight: 400;
+}
+
+.channel-identity-card__stats {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.76rem;
+}
+
+.channel-identity-card__stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.channel-identity-card__actions {
+  align-content: flex-start;
+  justify-content: flex-end;
+}
+
 .channel-body {
   display: flex;
   gap: 2rem;
@@ -447,6 +566,16 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 }
 
 @media (max-width: 768px) {
+  .channel-identity-card {
+    grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+  .channel-identity-card__title { font-size: 1.15rem; }
+  .channel-identity-card__description { font-size: 0.88rem; }
+  .channel-identity-card__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
   .channel-body { flex-direction: column; align-items: stretch; }
   .collection-sidebar, .post-main { width: 100%; }
   .collection-sidebar { position: static; }

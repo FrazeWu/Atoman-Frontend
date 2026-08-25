@@ -16,7 +16,15 @@
             <h3 class="blog-entity-card__title">{{ title }}</h3>
             <span class="blog-entity-card__badge">{{ kindLabel }}</span>
           </div>
-          <p v-if="ownerName" class="blog-entity-card__owner">{{ ownerName }}</p>
+          <div v-if="ownerName" class="blog-entity-card__owner">
+            <PAvatar
+              :src="ownerAvatar"
+              :name="ownerName"
+              :alt="`${ownerName} 的头像`"
+              size="xs"
+            />
+            <span>{{ ownerName }}</span>
+          </div>
           <p v-if="description && !compact" class="blog-entity-card__description">{{ description }}</p>
         </div>
 
@@ -63,12 +71,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Check, Plus } from 'lucide-vue-next'
+import PAvatar from '@/components/ui/PAvatar.vue'
 
 const props = withDefaults(defineProps<{
   kind: 'channel' | 'collection'
   title: string
   coverUrl?: string
   ownerName?: string
+  ownerAvatar?: string
   description?: string
   itemCount?: number
   subscriberCount?: number
@@ -82,6 +92,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   coverUrl: '',
   ownerName: '',
+  ownerAvatar: '',
   description: '',
   itemCount: undefined,
   subscriberCount: undefined,
@@ -204,9 +215,18 @@ const formattedUpdatedAt = computed(() => {
 }
 
 .blog-entity-card__owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
-  font-size: 0.76rem;
   color: var(--a-color-muted);
+  font-size: 0.76rem;
+}
+
+.blog-entity-card__owner :deep(.p-avatar) {
+  width: 1.15rem;
+  height: 1.15rem;
+  font-size: 0.6rem;
 }
 
 .blog-entity-card__description {

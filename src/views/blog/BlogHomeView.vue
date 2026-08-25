@@ -41,6 +41,13 @@
           :options="sortOptions"
           @change="selectSort"
         />
+        <PButton
+          v-if="typeFilter !== 'note'"
+          variant="primary"
+          label="换一批"
+          :loading="loading"
+          @click="refreshStreamBatch"
+        />
       </div>
     </div>
 
@@ -122,6 +129,12 @@
           <div class="blog-home__rail-header">
             <Sparkles :size="16" class="blog-home__rail-icon is-sparkles" />
             <h2>精选推荐文章</h2>
+            <PButton
+              variant="primary"
+              label="换一批"
+              :loading="recommendationLoading"
+              @click="refreshRecommendationBatch"
+            />
           </div>
           <div class="blog-home__rail-list">
             <div
@@ -217,6 +230,7 @@ interface RecommendationPayload {
   id: string
   title: string
   summary?: string
+  description?: string
   image_url?: string
   target_path?: string
   score_label?: string
@@ -259,6 +273,7 @@ const recommendedPosts = ref<Array<{
 const channels = ref<BlogChannel[]>([])
 const loading = ref(true)
 const recommendationLoading = ref(false)
+const recommendationPage = ref(1)
 const page = ref(1)
 const hasMore = ref(false)
 const typeFilter = ref<'all' | 'post' | 'note'>('all')
@@ -354,6 +369,7 @@ const selectSort = (value: string) => {
 
 const selectRecommendationMode = (value: string) => {
   recommendationMode.value = value as 'hot' | 'featured' | 'discover'
+  recommendationPage.value = 1
   void fetchRecommendedPosts()
 }
 
@@ -402,13 +418,18 @@ const fetchChannels = async () => {
   }
 }
 
+const refreshRecommendationBatch = () => {
+  recommendationPage.value += 1
+  void fetchRecommendedPosts()
+}
+
 const fetchRecommendedPosts = async () => {
   recommendationLoading.value = true
   try {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const res = await apiRequestResult(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=1&page_size=20`, { headers })
+    const res = await apiRequestResult(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=${recommendationPage.value}&page_size=20`, { headers })
     if (!res.ok) return
     const data = await Promise.resolve(res.data) as { data?: RecommendationPayload[] }
     recommendedPosts.value = Array.isArray(data.data)
@@ -471,7 +492,7 @@ const deletePendingNote = async () => {
   }
 }
 
-const fetchPosts = async (append = false) => {
+const fetchPosts = async (append = false, requestedPage?: number) => {
   if (typeFilter.value === 'note') {
     posts.value = []
     postsError.value = false
@@ -480,7 +501,7 @@ const fetchPosts = async (append = false) => {
     return true
   }
   const requestSequence = ++postsRequestSequence
-  const targetPage = append ? page.value + 1 : 1
+  const targetPage = requestedPage ?? (append ? page.value + 1 : 1)
   loading.value = true
   postsError.value = false
   try {
@@ -510,7 +531,7 @@ const fetchPosts = async (append = false) => {
           return {
             id: targetPostId || item.id,
             title: item.title,
-            summary: item.summary,
+            summary: item.summary || item.description,
             cover_url: item.image_url,
             view_count: item.view_count ?? item.read_count ?? 0,
             rating_score: item.rating_score ?? 0,
@@ -552,6 +573,10 @@ const fetchPosts = async (append = false) => {
     if (requestSequence === postsRequestSequence) loading.value = false
   }
   return false
+}
+
+const refreshStreamBatch = () => {
+  void fetchPosts(false, hasMore.value ? page.value + 1 : 1)
 }
 
 const loadMore = () => {
@@ -668,7 +693,7 @@ watch(activeQuery, (value) => {
 .blog-home__feed {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0;
 }
 
 .blog-home__entry-card {
@@ -705,14 +730,14 @@ watch(activeQuery, (value) => {
 }
 
 .blog-home__feed.feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .blog-home__feed :deep(.sticky-memo-card) {
-  margin: 0.5rem;
+  margin: 0;
 }
 
 /* 侧轨 */

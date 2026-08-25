@@ -175,6 +175,12 @@
             </div>
             <div class="stream-sub-filters">
               <PSegmentedControl v-model="mode" :options="modeOptions" />
+              <PButton
+                variant="primary"
+                label="换一批"
+                :loading="loading"
+                @click="refreshRecommendationBatch"
+              />
             </div>
           </div>
 
@@ -205,9 +211,11 @@
                 </button>
                 <span v-else class="a-label a-muted">精选</span>
 
-                <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.view_count || 0 }}</span>
-                <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.rating_score ? `${item.rating_score.toFixed(1)} (${item.rating_count || 0})` : '—' }}</span>
-                <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.bookmark_count || 0 }}</span>
+                <span class="feed-entry-stats">
+                  <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.view_count || 0 }}</span>
+                  <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.rating_score ? `${item.rating_score.toFixed(1)} (${item.rating_count || 0})` : '—' }}</span>
+                  <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.bookmark_count || 0 }}</span>
+                </span>
                 <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.last_published_at) }}</span>
                 <span
                   class="feed-type-tag"
@@ -457,7 +465,12 @@ const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
-const page = ref(1)
+function normalizePage(value: unknown) {
+  const pageValue = Number.parseInt(String(value || '1'), 10)
+  return Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
+}
+
+const page = ref(normalizePage(route.query.page))
 const pageSize = 20
 const totalArticles = ref(0)
 const totalChannels = ref(0)
@@ -543,6 +556,7 @@ function syncQuery() {
       category: category.value,
       theme: theme.value,
       language: language.value,
+      page: String(page.value),
     },
   })
 }
@@ -636,8 +650,16 @@ async function fetchRecommendations() {
   }
 }
 
+function refreshRecommendationBatch() {
+  const totalPages = Math.max(1, Math.ceil(totalArticles.value / pageSize))
+  page.value = page.value >= totalPages ? 1 : page.value + 1
+  syncQuery()
+  void fetchRecommendations()
+}
+
 function handlePageChange(newPage: number) {
   page.value = newPage
+  syncQuery()
   void fetchRecommendations()
 }
 

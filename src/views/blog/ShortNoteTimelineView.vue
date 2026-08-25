@@ -12,7 +12,7 @@
           <ShortNoteCard v-for="note in notes" :key="note.id" :note="note" @delete="remove" />
         </div>
         <p v-if="error" class="short-note-timeline__error" role="alert">{{ error }}</p>
-        <div v-if="hasMore" class="short-note-timeline__more">
+        <div v-if="hasMore" ref="loadMoreSentinel" class="short-note-timeline__more">
           <PButton outline :loading="loading" @click="loadMore">加载更多</PButton>
         </div>
       </main>
@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Flame, Heart, MessageSquare, Sparkles } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
@@ -90,6 +90,8 @@ const publishing = ref(false)
 const composerKey = ref(0)
 const deletePending = ref<ShortNote | null>(null)
 const deleting = ref(false)
+const loadMoreSentinel = ref<HTMLElement | null>(null)
+let loadMoreObserver: IntersectionObserver | null = null
 const hotNotes = computed(() => [...notes.value]
   .sort((left, right) => (right.likes_count + right.comments_count) - (left.likes_count + left.comments_count))
   .slice(0, 4))
@@ -129,6 +131,15 @@ function loadMore() {
   if (loading.value || !hasMore.value) return
   void load(false, page.value + 1)
 }
+
+function observeLoadMoreSentinel(target: HTMLElement | null) {
+  loadMoreObserver?.disconnect()
+  if (!target || typeof IntersectionObserver === 'undefined') return
+  loadMoreObserver = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) loadMore()
+  }, { rootMargin: '320px 0px' })
+  loadMoreObserver.observe(target)
+}
 async function publish(payload: { content: string; media_urls: string[] }) {
   if (publishing.value) return
   publishing.value = true
@@ -166,6 +177,8 @@ async function confirmRemove() {
   }
 }
 onMounted(() => void load())
+watch(loadMoreSentinel, observeLoadMoreSentinel)
+onBeforeUnmount(() => loadMoreObserver?.disconnect())
 </script>
 
 <style scoped>

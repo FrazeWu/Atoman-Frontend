@@ -9,7 +9,7 @@
     @close="emit('close')"
   >
     <header v-if="presentation === 'page'" class="feed-mobile-sources-sheet__header">
-      <RouterLink to="/feed" aria-label="返回 Feed"><ChevronLeft :size="20" aria-hidden="true" /></RouterLink>
+      <RouterLink to="/feed/subscriptions" aria-label="返回订阅"><ChevronLeft :size="20" aria-hidden="true" /></RouterLink>
       <h1>来源</h1>
     </header>
     <div class="feed-mobile-sources-sheet" data-testid="feed-mobile-sources-sheet">

@@ -27,7 +27,7 @@ describe('site URL builders', () => {
 
   it('does not duplicate an existing module path prefix', () => {
     expect(modulePathUrl('video', '/videos/watch/video-1')).toBe('/videos/watch/video-1')
-    expect(modulePathUrl('feed', '/feed?source_id=source-1')).toBe('/feed?source_id=source-1')
+    expect(modulePathUrl('feed', '/feed/sources?source_id=source-1')).toBe('/feed/sources?source_id=source-1')
     expect(modulePathUrl('timeline', '/timeline#event-1')).toBe('/timeline#event-1')
   })
 

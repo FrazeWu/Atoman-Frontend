@@ -90,7 +90,7 @@ describe('FeedLayout', () => {
   })
 
   it('renders nav rows with Ionicon SVG icons and sidebar sources', async () => {
-    const { wrapper } = await mountLayout('/feed?source_id=sub-1')
+    const { wrapper } = await mountLayout('/feed/subscriptions?source_id=sub-1')
 
     expect(wrapper.findAll('.p-sidebar-item')).toHaveLength(4)
     expect(wrapper.findAll('.p-sidebar-item-icon svg')).toHaveLength(4)

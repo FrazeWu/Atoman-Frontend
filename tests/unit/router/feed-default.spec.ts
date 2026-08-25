@@ -33,8 +33,10 @@ describe("feed default route", () => {
 			history: createMemoryHistory(),
 			routes: buildAppRoutes(),
 		});
-		await router.push("/feed?source_id=source-1");
-		expect(router.currentRoute.value.fullPath).toBe("/feed?source_id=source-1");
+		await router.push("/feed/sources?source_id=source-1");
+		expect(router.currentRoute.value.fullPath).toBe(
+			"/feed/sources?source_id=source-1",
+		);
 
 		await router.push("/feed/explore?category=tech#sources");
 

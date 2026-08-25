@@ -192,7 +192,7 @@
           />
 
           <div v-else class="feed-timeline-box">
-            <PEntry
+            <PContentCard
               v-for="item in articles"
               :key="item.id"
               :title="item.title"
@@ -243,7 +243,7 @@
                   <Clock :size="14" />
                 </PClip>
               </template>
-            </PEntry>
+            </PContentCard>
           </div>
 
           <FeedTimelineFooter
@@ -332,7 +332,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import PClip from '@/components/ui/PClip.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'

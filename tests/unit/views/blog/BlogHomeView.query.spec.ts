@@ -36,7 +36,7 @@ describe('BlogHomeView query search', () => {
           PButton: true,
           PClip: true,
           PEmpty: true,
-          PEntry: true,
+          PContentCard: true,
           PPageHeader: true,
           PSegmentedControl: true,
         },

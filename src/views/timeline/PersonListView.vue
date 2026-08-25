@@ -32,7 +32,7 @@
 
       <!-- List -->
       <div v-else class="person-list">
-      <PEntry
+      <PContentCard
         v-for="person in persons"
         :key="person.id"
         @click="router.push(`/timeline/person/${person.id}`)"
@@ -72,7 +72,7 @@
             </template>
           </div>
         </template>
-      </PEntry>
+      </PContentCard>
     </div>
     </PContentProgress>
 
@@ -151,7 +151,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import type { TimelinePerson } from '@/types'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 
 const store = useTimelineStore()
 const authStore = useAuthStore()

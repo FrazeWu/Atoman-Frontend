@@ -42,7 +42,7 @@
 
     <div v-if="!loading && !errorMessage && items.length" class="feed-timeline">
       <template v-for="(item, index) in items" :key="item.id">
-        <PEntry
+        <PContentCard
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle?.feed_item?.id === item.id"
           :is-read="false"
@@ -103,7 +103,7 @@
               ↗ 原文
             </a>
           </template>
-        </PEntry>
+        </PContentCard>
       </template>
 
       <FeedTimelineFooter
@@ -137,7 +137,7 @@ import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'

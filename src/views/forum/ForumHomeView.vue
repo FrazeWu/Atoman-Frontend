@@ -57,7 +57,7 @@
 
         <!-- Topic rows -->
         <div v-else ref="topicListRef" class="topic-list">
-        <PEntry
+        <PContentCard
           v-for="(topic, index) in forumStore.topics"
           :key="topic.id"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
@@ -109,7 +109,7 @@
               </span>
             </div>
           </template>
-        </PEntry>
+        </PContentCard>
       </div>
       </PContentProgress>
 
@@ -151,7 +151,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useUIStore } from '@/stores/ui'

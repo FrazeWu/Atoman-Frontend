@@ -24,7 +24,7 @@ vi.mock("vue-router", () => ({
 const stubs = {
 	PBadge: true,
 	PEmpty: true,
-	PEntry: {
+	PContentCard: {
 		props: ["title", "summary"],
 		template: '<article><slot name="visual" /><slot name="meta" /></article>',
 	},

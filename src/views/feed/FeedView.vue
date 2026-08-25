@@ -160,7 +160,7 @@
 
       <div v-else class="feed-timeline">
         <template v-for="(item, index) in visibleTimeline" :key="itemKey(item)">
-          <PEntry
+          <PContentCard
             v-if="item.type === 'post' && item.post"
             :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
             :is-read="item.is_read"
@@ -219,9 +219,9 @@
                 <Clock :size="14" />
               </PClip>
             </template>
-          </PEntry>
+          </PContentCard>
 
-          <PEntry
+          <PContentCard
             v-else-if="item.type === 'feed_item' && item.feed_item"
             :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
             :is-read="item.is_read"
@@ -333,7 +333,7 @@
                 <ExternalLink :size="14" aria-hidden="true" />
               </a>
             </template>
-          </PEntry>
+          </PContentCard>
         </template>
 
         <FeedTimelineFooter
@@ -358,7 +358,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PField from '@/components/ui/PField.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 

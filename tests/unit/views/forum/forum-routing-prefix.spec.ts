@@ -104,7 +104,7 @@ const mountWithRouter = async (
         },
         PTextarea: { template: '<textarea />' },
         PModal: { template: '<div><slot /></div>' },
-        PEntry: {
+        PContentCard: {
           emits: ['click'],
           template: '<article class="p-entry" @click="$emit(\'click\')"><slot name="meta" /><slot name="title" /><slot name="actions" /></article>',
         },

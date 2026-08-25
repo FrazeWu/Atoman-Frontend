@@ -6,8 +6,8 @@
     @delete="emit('delete-note', shortNoteItem)"
   />
 
-  <!-- 2. BLOG POST / FEED ITEM TYPE (PEntry unified wrapper - 方案 1 极简流式行) -->
-  <PEntry
+  <!-- 2. BLOG POST / FEED ITEM TYPE (PContentCard unified wrapper - 方案 1 极简流式行) -->
+  <PContentCard
     v-else
     :title="displayTitle"
     :summary="displaySummary"
@@ -113,7 +113,7 @@
         </a>
       </slot>
     </template>
-  </PEntry>
+  </PContentCard>
 </template>
 
 <script setup lang="ts">
@@ -123,7 +123,7 @@ import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
 import { channelUrl } from '@/router/siteUrls'
 

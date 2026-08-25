@@ -27,7 +27,7 @@ function mountView() {
         PPageHeader: { template: '<header><slot name="action" /></header>' },
         PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
         PContentProgress: { template: '<div><slot /></div>' },
-        PEntry: { template: '<article><slot /><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
+        PContentCard: { template: '<article><slot /><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
         PSelect: {
           props: ['options'],
           template: '<select data-test="status-filter" :data-options="options.map(option => option.value).join(\',\')" />',

@@ -33,7 +33,7 @@ async function mountSubscriptionsView() {
         PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
         PButton: { props: ['to'], template: '<button><slot /></button>' },
         PEmpty: { props: ['title'], template: '<div>{{ title }}</div>' },
-        PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><p>{{ summary }}</p><slot name="actions" /></article>' },
+        PContentCard: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><p>{{ summary }}</p><slot name="actions" /></article>' },
         PBadge: { template: '<span><slot /></span>' },
         PAvatar: { template: '<span />' },
         PClip: { props: ['label'], template: '<button>{{ label }}</button>' },

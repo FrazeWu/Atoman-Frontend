@@ -72,7 +72,7 @@
           </div>
 
           <div class="feed-timeline-box">
-            <PEntry
+            <PContentCard
               v-for="item in mockArticles"
               :key="item.id"
               :title="item.title"
@@ -94,7 +94,7 @@
                 <button class="mock-clip-btn" title="收藏"><Bookmark :size="14" /></button>
                 <button class="mock-clip-btn" title="稍后阅读"><Clock :size="14" /></button>
               </template>
-            </PEntry>
+            </PContentCard>
           </div>
         </section>
 
@@ -174,7 +174,7 @@
         </div>
 
         <div class="cards-showcase-grid">
-          <!-- 博客方案 1：极简流式行（对齐 PEntry 淡绿竖线，高信息密度 · 推荐） -->
+          <!-- 博客方案 1：极简流式行（对齐 PContentCard 淡绿竖线，高信息密度 · 推荐） -->
           <div class="card-showcase-col">
             <div class="col-badge col-badge--recommended">方案 1 · 极简流式行（推荐）</div>
             <p class="col-desc">左侧淡绿竖线未读指示，单行集中 meta，高度极紧凑，视觉节奏与 Feed 保持高度一致。</p>
@@ -192,7 +192,7 @@
               </div>
 
               <div class="feed-timeline-box" style="margin-top: 0.75rem;">
-                <PEntry
+                <PContentCard
                   title="深入理解 SwiftUI 状态驱动架构与单向数据流"
                   summary="在复杂的客户端应用中，如何通过声明式状态容器和单一可信数据源（Single Source of Truth）保证 UI 与业务逻辑的强一致性？本文深入拆解状态流转链路与渲染优化策略。"
                   :is-read="!blogCard1Unread"
@@ -211,7 +211,7 @@
                     <button class="mock-clip-btn" title="收藏"><Bookmark :size="14" /></button>
                     <button class="mock-clip-btn" title="稍后阅读"><Clock :size="14" /></button>
                   </template>
-                </PEntry>
+                </PContentCard>
               </div>
             </div>
           </div>
@@ -461,7 +461,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-vue-next'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 
 // ── 方案定义 ──
 const prototypeOptions = [

@@ -91,7 +91,7 @@ describe("FeedStarredView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -167,7 +167,7 @@ describe("FeedStarredView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -221,7 +221,7 @@ describe("FeedStarredView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: true,
+					PContentCard: true,
 					PBadge: true,
 					PClip: true,
 					PPress: {
@@ -289,7 +289,7 @@ describe("FeedStarredView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -389,7 +389,7 @@ describe("FeedStarredView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -452,7 +452,7 @@ describe("FeedStarredView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -491,7 +491,7 @@ describe("FeedStarredView", () => {
 						props: ["title", "description"],
 						template: '<div>{{ title }} {{ description }}</div>',
 					},
-					PEntry: true,
+					PContentCard: true,
 					PBadge: true,
 					PClip: true,
 					PButton: true,

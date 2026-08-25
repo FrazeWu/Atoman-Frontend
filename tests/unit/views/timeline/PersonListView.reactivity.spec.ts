@@ -20,7 +20,7 @@ const stubs = {
   PModal: { template: '<div><slot /><slot name="footer" /></div>' },
   PConfirm: { template: '<div />' },
   PEmpty: { props: ['text'], template: '<div class="empty">{{ text }}</div>' },
-  PEntry: { template: '<article><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
+  PContentCard: { template: '<article><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
 }
 
 describe('PersonListView timeline store reactivity', () => {

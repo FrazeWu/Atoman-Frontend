@@ -84,7 +84,7 @@ describe("FeedReadingListView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -139,7 +139,7 @@ describe("FeedReadingListView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -216,7 +216,7 @@ describe("FeedReadingListView", () => {
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ item?.title }}</h3></article>',
 					},
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -306,7 +306,7 @@ describe("FeedReadingListView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
@@ -367,7 +367,7 @@ describe("FeedReadingListView", () => {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',

@@ -82,7 +82,7 @@ const mountView = async () => {
         PSelect: true,
         PTextarea: true,
         PModal: true,
-        PEntry: { template: '<article><slot name="title" /></article>' },
+        PContentCard: { template: '<article><slot name="title" /></article>' },
       },
     },
   })
@@ -373,7 +373,7 @@ describe('ForumHomeView pagination', () => {
           PSelect: true,
           PTextarea: true,
           PModal: true,
-          PEntry: { template: '<article><slot name="title" /></article>' },
+          PContentCard: { template: '<article><slot name="title" /></article>' },
         },
       },
     })
@@ -421,7 +421,7 @@ describe('ForumHomeView pagination', () => {
           PSelect: true,
           PTextarea: true,
           PModal: true,
-          PEntry: { template: '<article><slot name="title" /></article>' },
+          PContentCard: { template: '<article><slot name="title" /></article>' },
         },
       },
     })

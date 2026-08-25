@@ -1223,7 +1223,7 @@ describe("FeedRecommendedView", () => {
 					},
 					PButton: true,
 					PEmpty: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article class="p-entry">{{ title }} {{ summary }}</article>',

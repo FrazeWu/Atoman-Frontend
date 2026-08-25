@@ -160,7 +160,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { moduleRooms } from '@/config/moduleRooms'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 
 const router = useRouter()
 const debateStore = useDebateStore()

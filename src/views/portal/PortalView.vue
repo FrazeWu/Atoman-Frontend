@@ -60,7 +60,7 @@
                 :to="item.target_path"
                 class="portal-hot__recommendation-card-link"
               >
-                <PEntry
+                <PContentCard
                   :title="item.title"
                   :summary="item.summary"
                   class="content-stream-entry portal-hot__recommendation-card"
@@ -100,7 +100,7 @@
                   <template #footer>
                     <span class="portal-hot__read-more">阅读更多 ›</span>
                   </template>
-                </PEntry>
+                </PContentCard>
               </RouterLink>
             </div>
           </section>
@@ -174,7 +174,7 @@
                 </div>
               </div>
 
-              <!-- 📰 热门文章 (Blog) 与 📡 订阅热读 (Feed) 及讨论：采用标准 .feed-timeline-box + BlogItemCard / PEntry 流式卡片 -->
+              <!-- 📰 热门文章 (Blog) 与 📡 订阅热读 (Feed) 及讨论：采用标准 .feed-timeline-box + BlogItemCard / PContentCard 流式卡片 -->
               <div v-else class="feed-timeline-box">
                 <RouterLink
                   v-for="item in section.items"
@@ -235,7 +235,7 @@
                     </div>
                   </div>
 
-                  <PEntry
+                  <PContentCard
                     v-else
                     :title="item.title"
                     :summary="item.summary"
@@ -246,7 +246,7 @@
                       <span v-if="item.score_label" class="portal-hot__score">{{ item.score_label }}</span>
                       <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
                     </template>
-                  </PEntry>
+                  </PContentCard>
                 </RouterLink>
               </div>
             </article>
@@ -292,7 +292,7 @@ import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApi } from '@/composables/useApi'

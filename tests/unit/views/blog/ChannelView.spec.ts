@@ -640,7 +640,7 @@ describe("ChannelView", () => {
 					PTab: true,
 					PPress: true,
 					PLink: true,
-					PEntry: {
+					PContentCard: {
 						props: ["title", "summary"],
 						template:
 							'<article><h3>{{ title }}</h3><div @click.stop><slot name="actions" /></div></article>',

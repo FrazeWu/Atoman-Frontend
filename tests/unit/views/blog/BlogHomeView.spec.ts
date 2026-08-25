@@ -59,7 +59,7 @@ const mountBlogHome = () => mount(BlogHomeView, {
       PButton: { template: '<button><slot /></button>' },
       PClip: clipStub,
       PEmpty: true,
-      PEntry: entryStub,
+      PContentCard: entryStub,
       PPageHeader: true,
       PSegmentedControl: segmentedControlStub,
     },

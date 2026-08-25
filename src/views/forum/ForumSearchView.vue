@@ -29,7 +29,7 @@
       <PEmpty v-if="forumStore.searchResults.length === 0 && searchQuery" title="未找到相关话题" description="尝试更换关键词或在其它分类中查找。" />
 
       <div v-if="forumStore.searchResults.length > 0" class="search-results-list">
-        <PEntry
+        <PContentCard
           v-for="topic in forumStore.searchResults"
           :key="topic.id"
           @click="router.push(`/forum/topic/${topic.id}`)"
@@ -64,7 +64,7 @@
               <span>点赞 {{ topic.like_count }}</span>
             </div>
           </template>
-        </PEntry>
+        </PContentCard>
       </div>
 
       <!-- Load more -->
@@ -82,7 +82,7 @@ import { useForumStore } from '@/stores/forum'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PEntry from '@/components/ui/PEntry.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import PInput from '@/components/ui/PInput.vue'
 
 const route = useRoute()

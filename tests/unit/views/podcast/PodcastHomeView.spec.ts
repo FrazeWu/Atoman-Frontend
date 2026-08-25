@@ -34,7 +34,7 @@ describe('PodcastHomeView', () => {
       global: {
         stubs: {
           PBadge: true,
-          PEntry: {
+          PContentCard: {
             props: ['title', 'summary'],
             template: '<article class="podcast-entry">{{ title }}</article>',
           },

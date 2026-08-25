@@ -15,6 +15,21 @@ describe("UI 准则", () => {
 		expect(source).toMatch(/\.nav-link-name\s*\{[\s\S]*?white-space:\s*nowrap/);
 	});
 
+	it("桌面应用框架保留顶部和侧栏刻痕", () => {
+		const topbar = read("src/components/system/AppTopbar.vue");
+		const globalStyle = read("src/style.css");
+
+		expect(topbar).toMatch(
+			/\.topbar::after\s*\{[\s\S]*?left:\s*calc\(50%\s*\+\s*var\(--a-sidebar-width,\s*0px\)\s*\/\s*2\)[\s\S]*?width:\s*20px[\s\S]*?height:\s*1px/,
+		);
+		expect(topbar).toMatch(
+			/\.topbar\.is-scrolled::after\s*\{[\s\S]*?width:\s*calc\(\(100%\s*-\s*var\(--a-sidebar-width,\s*0px\)\)\s*\*\s*0\.75\)/,
+		);
+		expect(globalStyle).toMatch(
+			/\.a-sidebar::after,\s*\.p-sidebar::after\s*\{[\s\S]*?right:\s*0[\s\S]*?width:\s*1px[\s\S]*?height:\s*16px/,
+		);
+	});
+
 	it("共享标题使用固定字号且全站字距归零", () => {
 		const pageHeader = read("src/components/ui/PPageHeader.vue");
 		const sectionHeader = read("src/components/ui/PSectionHeader.vue");

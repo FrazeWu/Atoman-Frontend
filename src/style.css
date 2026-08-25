@@ -1139,6 +1139,19 @@ body:has(.studio-layout) {
 	z-index: 20;
 }
 
+.a-sidebar::after,
+.p-sidebar::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	top: 50%;
+	width: 1px;
+	height: 16px;
+	transform: translateY(-50%);
+	background: var(--a-color-fg);
+	pointer-events: none;
+}
+
 .a-sidebar::-webkit-scrollbar,
 .p-sidebar::-webkit-scrollbar {
 	width: 4px;

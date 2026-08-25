@@ -18,8 +18,8 @@
         </div>
 
         <!-- Title -->
-        <h3 
-          class="feed-entry-title a-clamp-1"
+        <h3
+          class="feed-entry-title"
         >
           <slot name="title">{{ title }}</slot>
         </h3>
@@ -89,16 +89,16 @@ defineEmits(['click'])
 
 .p-entry.content-stream-entry {
   position: relative;
-  padding: 0.6rem 0.75rem 0.6rem 0.85rem;
+  padding: 0.875rem 1rem;
   margin-bottom: 0;
   border-radius: 0;
   border-left: none;
   border-right: none;
-  border-top: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-bottom: none;
   box-shadow: none;
   background: transparent;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .p-entry.content-stream-entry::before {
@@ -117,7 +117,7 @@ defineEmits(['click'])
 }
 
 .p-entry.content-stream-entry:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
 }
 
 .p-entry.content-stream-entry:hover,
@@ -126,7 +126,7 @@ defineEmits(['click'])
 .p-entry.content-stream-entry.is-open {
   border-bottom-color: color-mix(in srgb, var(--a-color-text) 6%, transparent);
   background: var(--a-color-surface-muted);
-  box-shadow: none;
+  box-shadow: var(--a-shadow-sm);
 }
 
 /* Hover / Focus 悬浮状态：显示完整贯穿黑线 */
@@ -192,7 +192,7 @@ defineEmits(['click'])
 /* Underline logic: trigger only on specific element hover */
 .feed-entry-title {
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -254,6 +254,33 @@ defineEmits(['click'])
 .p-entry-visual {
   flex-shrink: 0;
   margin-top: 0.35rem;
+}
+
+/* Statistics are secondary during scanning and become available on intent. */
+.p-entry.content-stream-entry :deep(.feed-entry-stats) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  min-width: 0;
+}
+
+@media (hover: hover) and (min-width: 768px) {
+  .p-entry.content-stream-entry :deep(.feed-entry-stats) {
+    display: none;
+  }
+
+  .p-entry.content-stream-entry:hover :deep(.feed-entry-stats),
+  .p-entry.content-stream-entry:focus-within :deep(.feed-entry-stats),
+  .p-entry.content-stream-entry.is-focused :deep(.feed-entry-stats),
+  .p-entry.content-stream-entry.is-open :deep(.feed-entry-stats) {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 767px) {
+  .p-entry.content-stream-entry :deep(.feed-entry-stats) {
+    display: none;
+  }
 }
 
 .feed-entry-summary {

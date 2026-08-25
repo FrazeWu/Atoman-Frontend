@@ -1,6 +1,7 @@
 import { expect, test } from "../fixtures/base";
 
-const longTitle = "比过苏轼！华云龙无敌了！华云龙KLE LinboiRivch 罗可Lorkin《泪忘书》如果有来生我下次，我还会接过你的球棒的 001";
+const longTitle =
+	"比过苏轼！华云龙无敌了！华云龙KLE LinboiRivch 罗可Lorkin《泪忘书》如果有来生我下次，我还会接过你的球棒的 001";
 
 type ImportStatus = "uploaded" | "needs_attention" | "committed" | "canceled";
 
@@ -25,7 +26,8 @@ function importRecord(status: ImportStatus, importId: string, title: string) {
 			},
 		],
 		lastSyncedAt: "2026-08-24T17:21:00Z",
-		errorMessage: status === "needs_attention" ? "at least one source is required" : "",
+		errorMessage:
+			status === "needs_attention" ? "at least one source is required" : "",
 		inputMode: "archive",
 		stage: status === "needs_attention" ? "ready" : "completed",
 		progress: { current: 1, total: 1 },
@@ -101,19 +103,30 @@ test("导入中心在四个状态分组中保持列表和详情边界", async ({
 		{ label: "已发布", title: `${longTitle} 已发布`, action: "修复资料" },
 		{ label: "已取消", title: `${longTitle} 已取消`, action: "删除记录" },
 	]) {
-		const tab = page.getByRole("tab", { name: new RegExp(`^${testCase.label} 1$`) });
+		const tab = page.getByRole("tab", {
+			name: new RegExp(`^${testCase.label} 1$`),
+		});
 		await tab.click();
 		await expect(tab).toHaveAttribute("aria-selected", "true");
-		await expect(detail.getByRole("heading", { name: testCase.title })).toBeVisible();
-		await expect(detail.getByRole("button", { name: testCase.action })).toBeVisible();
+		await expect(
+			detail.getByRole("heading", { name: testCase.title }),
+		).toBeVisible();
+		await expect(
+			detail.getByRole("button", { name: testCase.action }),
+		).toBeVisible();
 		await expect
 			.poll(() =>
-				layout.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+				layout.evaluate(
+					(element) => element.scrollWidth <= element.clientWidth + 1,
+				),
 			)
 			.toBe(true);
 	}
 
-	const [listBox, detailBox] = await Promise.all([list.boundingBox(), detail.boundingBox()]);
+	const [listBox, detailBox] = await Promise.all([
+		list.boundingBox(),
+		detail.boundingBox(),
+	]);
 	expect(listBox).not.toBeNull();
 	expect(detailBox).not.toBeNull();
 	expect(listBox!.x + listBox!.width).toBeLessThanOrEqual(detailBox!.x + 1);
@@ -149,5 +162,7 @@ test("导入中心在四个状态分组中保持列表和详情边界", async ({
 	]);
 	expect(mobileListBox).not.toBeNull();
 	expect(mobileDetailBox).not.toBeNull();
-	expect(mobileDetailBox!.y).toBeGreaterThanOrEqual(mobileListBox!.y + mobileListBox!.height - 1);
+	expect(mobileDetailBox!.y).toBeGreaterThanOrEqual(
+		mobileListBox!.y + mobileListBox!.height - 1,
+	);
 });

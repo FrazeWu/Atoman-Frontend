@@ -16,9 +16,27 @@
     :is-focused="isFocused"
     @click="handleClick"
   >
+    <template #visual>
+      <PAvatar
+        v-if="cardType === 'post'"
+        :src="postItem?.user?.avatar_url"
+        :name="authorName"
+        :alt="`${authorName} 的头像`"
+        size="xs"
+      />
+      <PAvatar
+        v-else
+        :src="feedItem?.feed_source?.cover_url"
+        :name="sourceTitle"
+        :alt="`${sourceTitle} 的网站图标`"
+        size="xs"
+      />
+    </template>
+
     <!-- Meta row (单行集中一体化 Meta) -->
     <template #meta>
       <span v-if="authorName" class="blog-item-card__author">{{ authorName }}</span>
+      <span v-if="authorUsername" class="blog-item-card__handle">@{{ authorUsername }}</span>
 
       <!-- Channel tag for blog post -->
       <template v-if="postItem?.channel">
@@ -38,13 +56,15 @@
       </template>
 
       <!-- 统计指标：阅读、评分、收藏 -->
-      <span v-if="postItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
-      <span v-else-if="feedItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(feedItem.read_count) }}</span>
+      <span class="feed-entry-stats">
+        <span v-if="postItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
+        <span v-else-if="feedItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(feedItem.read_count) }}</span>
 
-      <span v-if="postItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
+        <span v-if="postItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
 
-      <span v-if="postItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
-      <span v-else-if="feedItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(feedItem.bookmark_count) }}</span>
+        <span v-if="postItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
+        <span v-else-if="feedItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(feedItem.bookmark_count) }}</span>
+      </span>
 
       <!-- 日期 -->
       <time class="blog-item-card__time">{{ formattedDate }}</time>
@@ -101,6 +121,7 @@ import { computed } from 'vue'
 import { Bookmark, Eye, Gauge } from 'lucide-vue-next'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
@@ -160,7 +181,7 @@ const displayTitle = computed(() => {
 })
 
 const displaySummary = computed(() => {
-  if (postItem.value) return postItem.value.summary || ''
+  if (postItem.value) return postItem.value.summary?.trim() || markdownExcerpt(postItem.value.content || '')
   if (feedItem.value) return stripHtml(feedItem.value.summary || feedItem.value.content || '')
   return ''
 })
@@ -169,6 +190,8 @@ const authorName = computed(() => {
   if (postItem.value?.user) return postItem.value.user.display_name || postItem.value.user.username || ''
   return ''
 })
+
+const authorUsername = computed(() => postItem.value?.user?.username || '')
 
 const sourceTitle = computed(() => {
   if (feedItem.value?.feed_source) return feedItem.value.feed_source.title || ''
@@ -195,6 +218,20 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>?/gm, '').trim()
 }
 
+function markdownExcerpt(content: string): string {
+  const summarySection = content.match(/(?:^|\n)#{1,6}\s*(?:摘要|概述|abstract)\s*\n+([\s\S]*)/i)
+  const excerptSource = summarySection?.[1] || content
+
+  return stripHtml(excerptSource)
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/[>*_`~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function handleClick() {
   emit('click')
 }
@@ -216,6 +253,11 @@ function formatRating(score?: number, count?: number) {
 .blog-item-card__author {
   font-weight: 600;
   color: var(--a-color-fg);
+}
+
+.blog-item-card__handle {
+  color: var(--a-color-muted-soft);
+  font-size: 0.72rem;
 }
 
 .blog-item-card__channel {

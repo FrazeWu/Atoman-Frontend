@@ -559,7 +559,7 @@ export type MusicAlbumMergePreview = {
 	}>;
 };
 
-export type MusicSongRatingSummary = {
+	export type MusicSongRatingSummary = {
 	rating_score: number;
 	rating_count: number;
 	viewer_rating?: number | null;
@@ -683,28 +683,28 @@ export type SaveMusicPlaybackSessionInput = {
 };
 
 export type MusicRecommendationEventName =
-	| 'impression'
-	| 'click'
-	| 'play_start'
-	| 'play_complete'
-	| 'skip'
+	| "impression"
+	| "click"
+	| "play_start"
+	| "play_complete"
+	| "skip";
 
 export type MusicRecommendationEventInput = {
-	event: MusicRecommendationEventName
-	entity_type: 'album' | 'song'
-	entity_id: string
-	position?: number
-	reason?: string
-}
+	event: MusicRecommendationEventName;
+	entity_type: "album" | "song";
+	entity_id: string;
+	position?: number;
+	reason?: string;
+};
 
 export type MusicRecommendationEventsInput = {
-	request_id: string
-	surface: 'music_home'
-	events: MusicRecommendationEventInput[]
-}
+	request_id: string;
+	surface: "music_home";
+	events: MusicRecommendationEventInput[];
+};
 
 export type MusicHome = {
-	request_id?: string
+	request_id?: string;
 	personalized: boolean;
 	continue_listening?: MusicPlaybackProgress;
 	recently_played: MusicListeningHistory[];

@@ -12,7 +12,7 @@ test-results/
 .playwright-mcp/
 .codegraph/
 .superpowers/
-$TMPDIR/
+tests/e2e/.auth/music-isolated.json
 /topbar-default.png
 .claude/
 .gstack/

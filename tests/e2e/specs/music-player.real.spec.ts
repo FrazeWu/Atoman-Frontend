@@ -79,6 +79,32 @@ test.describe("Music player real browser", () => {
   test("records a played song in listening history after the threshold", async ({
     authenticatedMusicPage,
   }) => {
+    await authenticatedMusicPage.addInitScript(() => {
+      const NativeAudio = window.Audio;
+      const instances: HTMLAudioElement[] = [];
+      const browserWindow = window as typeof window & {
+        __atomanAudioInstances?: HTMLAudioElement[];
+      };
+      browserWindow.__atomanAudioInstances = instances;
+
+      browserWindow.Audio = function testAudio(src?: string) {
+        const audio = new NativeAudio(src);
+        const mutableAudio = audio as HTMLAudioElement & {
+          play: () => Promise<void>;
+          pause: () => void;
+        };
+        mutableAudio.play = () => {
+          audio.dispatchEvent(new Event("playing"));
+          return Promise.resolve();
+        };
+        mutableAudio.pause = () => {
+          audio.dispatchEvent(new Event("pause"));
+        };
+        instances.push(audio);
+        return audio;
+      } as unknown as typeof Audio;
+    });
+
     let historyEndpoint = "";
     const captureHistoryRequest = (request: { method(): string; url(): string }) => {
       if (
@@ -97,10 +123,21 @@ test.describe("Music player real browser", () => {
       ).toBeVisible();
       await expect.poll(() => historyEndpoint).not.toBe("");
 
-      const clearResponse = await authenticatedMusicPage.request.delete(
-        historyEndpoint,
-      );
-      expect(clearResponse.ok()).toBe(true);
+      const clearResponse = await authenticatedMusicPage.evaluate(async (endpoint) => {
+        const sessionResponse = await fetch("/api/v1/auth/session", {
+          credentials: "include",
+        });
+        const session = (await sessionResponse.json()) as { csrf_token?: string };
+        const response = await fetch(endpoint, {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "X-CSRF-Token": session.csrf_token ?? "",
+          },
+        });
+        return { status: response.status, body: await response.text() };
+      }, historyEndpoint);
+      expect(clearResponse.status).toBe(204);
 
       await authenticatedMusicPage.goto("/music");
       const firstAlbum = authenticatedMusicPage
@@ -127,7 +164,19 @@ test.describe("Music player real browser", () => {
     } finally {
       if (historyEndpoint) {
         try {
-          await authenticatedMusicPage.request.delete(historyEndpoint);
+          await authenticatedMusicPage.evaluate(async (endpoint) => {
+            const sessionResponse = await fetch("/api/v1/auth/session", {
+              credentials: "include",
+            });
+            const session = (await sessionResponse.json()) as { csrf_token?: string };
+            await fetch(endpoint, {
+              method: "DELETE",
+              credentials: "include",
+              headers: {
+                "X-CSRF-Token": session.csrf_token ?? "",
+              },
+            });
+          }, historyEndpoint);
         } catch {
           // Preserve the original assertion failure while attempting cleanup.
         }

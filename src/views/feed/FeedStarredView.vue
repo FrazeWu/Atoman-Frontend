@@ -46,7 +46,7 @@
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle?.feed_item?.id === item.id"
           :is-read="false"
-          :force-show-actions="true"
+          class="content-stream-entry"
           @click="openArticleSheet(item, index)"
           :title="item.title"
           :summary="stripHtml(item.summary || '')"
@@ -222,7 +222,6 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
     feed_source_id: item.feed_source_id || '',
     guid: item.guid || '',
     fetched_at: item.fetched_at || '',
-    content_html: item.full_text_html,
   }
   const article: TimelineItem = {
     type: 'feed_item',
@@ -240,7 +239,6 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
         feed_source_id: entry.feed_source_id || '',
         guid: entry.guid || '',
         fetched_at: entry.fetched_at || '',
-        content_html: entry.full_text_html,
       },
       published_at: entry.published_at,
       is_read: entry.is_read === true,
@@ -307,7 +305,6 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
       feed_source_id: item.feed_source_id || '',
       guid: item.guid || '',
       fetched_at: item.fetched_at || '',
-      content_html: item.full_text_html,
     } as FeedItem,
     published_at: item.published_at,
     is_read: true,

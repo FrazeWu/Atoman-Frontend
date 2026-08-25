@@ -135,6 +135,13 @@
       </div>
       
       <div class="article-body-wrap">
+        <PSegmentedControl
+          v-if="showFeedContentModeSwitch"
+          v-model="feedContentMode"
+          class="article-content-switcher"
+          aria-label="正文来源"
+          :options="feedContentModeOptions"
+        />
         <PBadge v-if="feedContentStateLabel" :type="feedContentSource === 'summary' ? 'external' : 'internal'">
           {{ feedContentStateLabel }}
         </PBadge>
@@ -146,7 +153,7 @@
           :html="feedBodyHtml"
           :base-url="article.feed_item.link"
         />
-        <FeedContentFeedback :item-id="article.feed_item.id" />
+        <FeedContentFeedback :item-id="article.feed_item.id" :variant="feedContentVariant" />
       </div>
     </template>
   </component>
@@ -194,10 +201,11 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Bookmark, Clock, ExternalLink } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
-import type { FeedArticleSource, FeedItem, Post, TimelineItem } from '@/types'
+import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
@@ -215,6 +223,7 @@ import { useApi } from '@/composables/useApi'
 const props = withDefaults(defineProps<{
   show: boolean
   article: TimelineItem | null
+  reader?: FeedItemReader | null
   source?: FeedArticleSource | null
   showSourceSubscribe?: boolean
   sourceSubscribeBusy?: boolean
@@ -224,6 +233,7 @@ const props = withDefaults(defineProps<{
   hasNext?: boolean
   presentation?: 'sheet' | 'page'
 }>(), {
+  reader: null,
   source: null,
   showSourceSubscribe: false,
   sourceSubscribeBusy: false,
@@ -238,6 +248,12 @@ const ratingLoading = ref(false)
 const feedCoverFailed = ref(false)
 const commentsOpen = ref(false)
 const commentCount = ref<number | undefined>(undefined)
+type FeedContentMode = 'rss' | 'full_text'
+const feedContentMode = ref<FeedContentMode>(defaultFeedContentMode(props.reader))
+const feedContentModeOptions: Array<{ label: string; value: FeedContentMode; test: string }> = [
+  { label: 'RSS', value: 'rss', test: 'feed-content-mode-rss' },
+  { label: '全文', value: 'full_text', test: 'feed-content-mode-full-text' },
+]
 
 const postBookmarked = computed(() => {
   const post = props.article?.type === 'post' ? props.article.post : null
@@ -254,10 +270,11 @@ const feedCoverUrl = computed(() => {
 })
 
 
-watch(() => props.article?.feed_item?.id, () => {
+watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant], () => {
   feedCoverFailed.value = false
   commentsOpen.value = false
   commentCount.value = undefined
+  feedContentMode.value = defaultFeedContentMode(props.reader)
 })
 
 const renderedContent = computed(() => {
@@ -315,20 +332,52 @@ const feedSourceTitle = computed(() => {
   return articleSource.value?.title || ''
 })
 
-const feedContentSource = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return 'summary'
-  if (props.article.feed_item.content_source) return props.article.feed_item.content_source
-  if (props.article.feed_item.full_text_status === 'success') return 'page'
-  return 'summary'
+const rssBodyHtml = computed(() => props.reader?.rss?.html.trim() || '')
+
+const fullTextBodyHtml = computed(() => {
+  if (props.reader?.full_text.status !== 'success') return ''
+  return props.reader.full_text.html?.trim() || ''
 })
 
-const feedContentStateLabel = computed(() => {
-  switch (feedContentSource.value) {
+const hasReader = computed(() => Boolean(props.reader))
+const hasRSSContent = computed(() => Boolean(rssBodyHtml.value))
+const hasFullTextContent = computed(() => Boolean(fullTextBodyHtml.value))
+const showFeedContentModeSwitch = computed(() => hasReader.value && hasRSSContent.value && hasFullTextContent.value)
+
+function defaultFeedContentMode(reader?: FeedItemReader | null): FeedContentMode {
+  if (reader?.default_variant === 'full_text' && reader.full_text.status === 'success' && reader.full_text.html?.trim()) {
+    return 'full_text'
+  }
+  return 'rss'
+}
+
+const feedContentVariant = computed<FeedReaderVariant>(() => {
+  if (hasReader.value) {
+    if (feedContentMode.value === 'full_text' && hasFullTextContent.value) return 'full_text'
+    if (hasRSSContent.value) return 'rss'
+    if (hasFullTextContent.value) return 'full_text'
+    return 'summary'
+  }
+
+  switch (props.article?.type === 'feed_item' ? props.article.feed_item?.content_source : undefined) {
+    case 'feed':
+      return 'rss'
     case 'page':
     case 'full_text':
-      return '网页正文'
-    case 'feed':
-      return '订阅正文'
+      return 'full_text'
+    default:
+      return 'summary'
+  }
+})
+
+const feedContentSource = feedContentVariant
+
+const feedContentStateLabel = computed(() => {
+  switch (feedContentVariant.value) {
+    case 'full_text':
+      return '全文'
+    case 'rss':
+      return 'RSS 正文'
     default:
       return '摘要'
   }
@@ -337,7 +386,9 @@ const feedContentStateLabel = computed(() => {
 const feedWordCountLabel = computed(() => {
   const html = feedBodyHtml.value
   const plainTextLength = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length
-  const wordCount = props.article?.type === 'feed_item' ? props.article.feed_item?.full_text_word_count : 0
+  const fullTextWordCount = props.reader?.full_text.word_count
+    ?? (props.article?.type === 'feed_item' ? props.article.feed_item?.full_text_word_count : 0)
+  const wordCount = feedContentVariant.value === 'full_text' ? fullTextWordCount : 0
   const count = wordCount || plainTextLength
   if (!count) return ''
   return `约 ${count.toLocaleString('zh-CN')} 字，${Math.max(1, Math.ceil(count / 400))} 分钟阅读`
@@ -345,26 +396,21 @@ const feedWordCountLabel = computed(() => {
 
 const feedBodyHtml = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  return (
-    props.article.feed_item.content_html
-    || props.article.feed_item.full_text_html
-    || props.article.feed_item.content
-    || props.article.feed_item.summary
-    || ''
-  )
+  if (hasReader.value) {
+    if (feedContentVariant.value === 'full_text') return fullTextBodyHtml.value
+    if (feedContentVariant.value === 'rss') return rssBodyHtml.value
+    return props.article.feed_item.summary || ''
+  }
+  return props.article.feed_item.content_html || props.article.feed_item.content || props.article.feed_item.summary || ''
 })
 
 const showFeedCover = computed(() => Boolean(feedCoverUrl.value) && !hasFeedReaderImage(feedBodyHtml.value))
 
 const feedContentStateDescription = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  if (feedContentSource.value === 'page' || feedContentSource.value === 'full_text') {
-    return '已展示网页正文'
-  }
-  if (feedContentSource.value === 'feed') {
-    return '已展示订阅源提供的正文'
-  }
-  return props.article.feed_item.summary ? '当前仅展示摘要' : ''
+  if (feedContentVariant.value === 'full_text') return '已展示抓取的全文'
+  if (feedContentVariant.value === 'rss') return '已展示 RSS 正文'
+  return props.article.feed_item.summary ? '当前仅展示 RSS 摘要' : ''
 })
 
 const { navigateWithShutter } = useAsyncNavigate()
@@ -616,6 +662,10 @@ const emitPlayPodcast = () => {
   gap: 1rem;
   max-width: 100%;
   min-width: 0;
+}
+
+.article-content-switcher {
+  width: fit-content;
 }
 
 .article-content-note {

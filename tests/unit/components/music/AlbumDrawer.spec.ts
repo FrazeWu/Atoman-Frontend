@@ -221,7 +221,7 @@ describe("AlbumDrawer.vue", () => {
 		).toBe("false");
 	});
 
-	it("collapses album description by default", async () => {
+	it("shows a short album description without a collapse control", async () => {
 		getMusicAlbum.mockResolvedValueOnce({
 			id: "1",
 			title: "Test Album",
@@ -232,12 +232,8 @@ describe("AlbumDrawer.vue", () => {
 		const wrapper = mount(AlbumDrawer);
 		await flushPromises();
 
-		const toggle = wrapper.get('[data-testid="album-description-toggle"]');
-		expect(toggle.attributes("aria-expanded")).toBe("false");
-		expect(wrapper.find("#album-description").exists()).toBe(false);
-		await toggle.trigger("click");
-		expect(toggle.attributes("aria-expanded")).toBe("true");
 		expect(wrapper.get("#album-description").text()).toBe("Album notes");
+		expect(wrapper.find('[data-testid="album-description-toggle"]').exists()).toBe(false);
 	});
 	it("renders every track returned by album details without pagination", async () => {
 		getMusicAlbum.mockResolvedValue({

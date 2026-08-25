@@ -116,10 +116,8 @@
               kind="channel"
               :title="ch.name"
               :cover-url="ch.cover_url"
-              :owner-name="ch.user?.display_name || ch.user?.username"
-              :owner-avatar="ch.user?.avatar_url"
               :description="ch.description"
-              :updated-at="ch.updated_at"
+              compact
               :show-subscribe="false"
               @select="openChannel(ch)"
             />
@@ -204,12 +202,6 @@ interface BlogChannel {
   slug?: string
   description?: string
   cover_url?: string
-  updated_at?: string
-  user?: {
-    username?: string
-    display_name?: string
-    avatar_url?: string
-  }
 }
 
 interface BlogHomeListItem {

@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 
@@ -50,6 +50,8 @@ describe('FeedSourceArticlesSheet', () => {
     expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('E')
     expect(wrapper.get('[data-test="feed-source-title"]').text()).toContain('Example RSS')
     expect(wrapper.get('[data-test="feed-source-url"]').text()).toContain('https://example.com/feed.xml')
+    expect(wrapper.text()).toContain('RSS 源')
+    expect(wrapper.find('.source-sheet-hero').exists()).toBe(false)
     expect(wrapper.text()).toContain('Example RSS')
     expect(wrapper.text()).toContain('外部文章')
 

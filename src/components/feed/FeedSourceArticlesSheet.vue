@@ -16,11 +16,6 @@
         class="source-sheet-header"
         :style="{ '--feed-source-color': sourceColor }"
       >
-        <div class="source-sheet-hero">
-          <span class="source-sheet-kicker">{{ sourceTypeLabel }}</span>
-          <span v-if="sourceUrl" class="source-sheet-url" data-test="feed-source-url">{{ sourceUrl }}</span>
-        </div>
-
         <div class="source-sheet-heading">
           <div
             class="source-sheet-avatar"
@@ -33,23 +28,25 @@
           <div class="source-sheet-copy">
             <h2 data-test="feed-source-title">{{ sourceTitle }}</h2>
             <div class="source-sheet-meta">
+              <span class="source-sheet-type">{{ sourceTypeLabel }}</span>
+              <span v-if="sourceUrl" class="source-sheet-url" data-test="feed-source-url">{{ sourceUrl }}</span>
               <span v-if="sourceHealthLabel">{{ sourceHealthLabel }}</span>
               <span v-if="sourceItemCountLabel">{{ sourceItemCountLabel }}</span>
               <span v-if="sourceCadenceLabel">{{ sourceCadenceLabel }}</span>
               <span v-if="sourceCheckedAtLabel">{{ sourceCheckedAtLabel }}</span>
             </div>
           </div>
-        </div>
 
-        <PButton
-          v-if="source && showSubscribe"
-          :label="source.subscribed ? '已订阅' : '订阅'"
-          :variant="source.subscribed ? 'secondary' : 'primary'"
-          :disabled="source.subscribed || subscribeBusy"
-          :loading="subscribeBusy"
-          loading-text="处理中..."
-          @click="$emit('subscribe')"
-        />
+          <PButton
+            v-if="source && showSubscribe"
+            :label="source.subscribed ? '已订阅' : '订阅'"
+            :variant="source.subscribed ? 'secondary' : 'primary'"
+            :disabled="source.subscribed || subscribeBusy"
+            :loading="subscribeBusy"
+            loading-text="处理中..."
+            @click="$emit('subscribe')"
+          />
+        </div>
       </div>
     </template>
 
@@ -276,22 +273,8 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 .source-sheet-header {
   display: grid;
   width: 100%;
-  gap: 1rem;
+  gap: 0.5rem;
   padding: 0.35rem 0 0.25rem;
-}
-
-.source-sheet-hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-border-soft));
-  border-radius: 4px;
-  width: min(100%, 32rem);
-  aspect-ratio: 4 / 3;
-  background: var(--a-color-bg);
 }
 
 .source-sheet-heading {
@@ -321,26 +304,19 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 24%, white);
 }
 
-.source-sheet-kicker {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  padding: 0.2rem 0.72rem;
-  border-radius: 0px;
-  background: var(--a-color-bg);
-  color: color-mix(in srgb, var(--feed-source-color) 72%, black);
-  font-family: var(--a-font-sans);
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0;
+.source-sheet-type {
+  color: color-mix(in srgb, var(--feed-source-color) 72%, var(--a-color-fg));
+  font-weight: 600;
 }
 
 .source-sheet-url {
-  color: var(--a-color-fg);
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
+  max-width: min(100%, 28rem);
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: inherit;
+  font-weight: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .source-sheet-copy h2 {
@@ -448,7 +424,6 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
     gap: 0.85rem;
   }
 
-  .source-sheet-hero,
   .source-sheet-heading {
     align-items: flex-start;
     justify-content: flex-start;

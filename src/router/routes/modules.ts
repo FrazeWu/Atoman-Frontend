@@ -187,16 +187,6 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				// Exploration is the public feed landing; subscriptions remain available explicitly.
 				{
 					path: "",
-					beforeEnter: (to) => {
-						if (typeof to.query.source_id === "string" && to.query.source_id.trim()) {
-							return {
-								path: "/feed/subscriptions",
-								query: to.query,
-								hash: to.hash,
-							};
-						}
-						return true;
-					},
 					component: () => import("@/views/feed/FeedRecommendedView.vue"),
 				},
 				{

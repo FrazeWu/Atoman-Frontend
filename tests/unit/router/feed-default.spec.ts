@@ -34,9 +34,7 @@ describe("feed default route", () => {
 			routes: buildAppRoutes(),
 		});
 		await router.push("/feed?source_id=source-1");
-		expect(router.currentRoute.value.fullPath).toBe(
-			"/feed/subscriptions?source_id=source-1",
-		);
+		expect(router.currentRoute.value.fullPath).toBe("/feed?source_id=source-1");
 
 		await router.push("/feed/explore?category=tech#sources");
 

@@ -801,18 +801,6 @@ watch(
               @clear="clearTrackRating(track)"
             />
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
-            <SongRatingControl
-              size="compact"
-              :song-title="track.title"
-              :rating-score="track.rating_score"
-              :rating-count="track.rating_count"
-              :viewer-rating="track.viewer_rating"
-              :disabled="!isAuthenticated"
-              :loading="ratingSongID === String(track.id)"
-              @rate="rateTrack(track, $event)"
-              @clear="clearTrackRating(track)"
-            />
-
             <button
               type="button"
               class="track-fav-btn"

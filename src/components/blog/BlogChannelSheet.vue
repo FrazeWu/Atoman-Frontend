@@ -93,7 +93,11 @@ watch(channelId, () => void loadChannel(), { immediate: true })
       <div class="a-skeleton channel-sheet-visual-skeleton" />
       <div v-for="index in 5" :key="index" class="a-skeleton channel-sheet-line-skeleton" />
     </div>
-    <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage" />
+    <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage">
+      <template #action>
+        <PButton variant="secondary" size="sm" @click="loadChannel">重试</PButton>
+      </template>
+    </PEmpty>
     <article v-else-if="channel" class="channel-sheet">
       <div class="channel-sheet-visual">
         <img v-if="channel.cover_url" :src="channel.cover_url" :alt="channel.name" />

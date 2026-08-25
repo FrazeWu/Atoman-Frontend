@@ -371,6 +371,9 @@ function copyUserRssLink() {
   void navigator.clipboard.writeText(userRssUrl.value).then(() => {
     toastMessage.value = '已复制 RSS 链接'
     toastVisible.value = true
+  }).catch(() => {
+    toastMessage.value = '复制失败，请手动复制 RSS 链接'
+    toastVisible.value = true
   })
 }
 

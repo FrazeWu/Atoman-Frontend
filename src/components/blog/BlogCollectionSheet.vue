@@ -3,8 +3,9 @@ import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
 
 import PSheet from '@/components/ui/PSheet.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useAuthStore } from '@/stores/auth'
@@ -30,11 +31,11 @@ const loading = ref(false)
 const errorMessage = ref('')
 const filter = ref<'all' | 'published' | 'draft'>('all')
 
-const filterOptions = [
+const filterOptions = computed(() => [
   { label: '全部', value: 'all' },
   { label: '已发布', value: 'published' },
-  { label: '草稿', value: 'draft' },
-]
+  ...(authStore.isAuthenticated ? [{ label: '草稿', value: 'draft' }] : []),
+])
 
 const collectionId = computed(() => props.layer.payload.collectionId)
 const channelId = computed(() => collection.value?.channel_id || props.layer.payload.channelId)
@@ -53,18 +54,23 @@ async function loadCollection() {
   errorMessage.value = ''
   try {
     const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
-    const [collectionRes, publishedRes, draftsRes] = await Promise.all([
+    const [collectionRes, publishedRes] = await Promise.all([
       apiRequestResult(api.blog.collection(collectionId.value), { headers }),
       apiRequestResult(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),
-      apiRequestResult(api.blog.drafts, { headers }),
     ])
-    if (!collectionRes.ok || !publishedRes.ok || !draftsRes.ok) throw new Error('load failed')
+    if (!collectionRes.ok || !publishedRes.ok) throw new Error('load failed')
 
     collection.value = collectionRes.data.data
     const published = (publishedRes.data.data || []) as Post[]
-    const drafts = ((draftsRes.data.data || []) as Post[]).filter(post =>
-      post.collection_id === collectionId.value || post.collection?.id === collectionId.value,
-    )
+    let drafts: Post[] = []
+    if (authStore.isAuthenticated) {
+      const draftsRes = await apiRequestResult(api.blog.drafts, { headers })
+      if (draftsRes.ok) {
+        drafts = ((draftsRes.data.data || []) as Post[]).filter(post =>
+          post.collection_id === collectionId.value || post.collection?.id === collectionId.value,
+        )
+      }
+    }
     posts.value = Array.from(new Map([...published, ...drafts].map(post => [post.id, post])).values())
       .sort((left, right) => sortTime(right) - sortTime(left))
   } catch {
@@ -116,7 +122,11 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
       <div v-if="loading" class="collection-sheet-loading" aria-label="正在加载合集">
         <div v-for="index in 4" :key="index" class="a-skeleton" />
       </div>
-      <PEmpty v-else-if="errorMessage" kicker="" title="加载失败" :description="errorMessage" />
+      <PEmpty v-else-if="errorMessage" kicker="" title="加载失败" :description="errorMessage">
+        <template #action>
+          <PButton variant="secondary" size="sm" @click="loadCollection">重试</PButton>
+        </template>
+      </PEmpty>
       <PEmpty v-else-if="visiblePosts.length === 0" kicker="" title="暂无文章" description="可以从当前合集开始写作" />
       <div v-else class="collection-post-list">
         <article

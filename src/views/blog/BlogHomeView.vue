@@ -68,7 +68,8 @@
             <BlogItemCard
               v-if="streamItem.kind === 'post'"
               :item="streamItem.post"
-              type="post"
+              :type="streamItem.post.source === 'feed' ? 'feed_item' : 'post'"
+              :source-title="streamItem.post.sourceTitle"
               :bookmarked="isBookmarked(streamItem.post)"
               :in-reading-list="isReadingList(streamItem.post)"
               :starred="isStarred(streamItem.post)"
@@ -231,6 +232,7 @@ interface BlogHomeListItem {
     avatar_url?: string
   }
   source: 'post' | 'feed'
+  sourceTitle?: string
   targetPath: string
 }
 
@@ -241,6 +243,7 @@ interface RecommendationPayload {
   description?: string
   image_url?: string
   target_path?: string
+  source_title?: string
   score_label?: string
   view_count?: number
   read_count?: number
@@ -547,6 +550,7 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
             bookmarks_count: item.bookmark_count ?? 0,
             likes_count: 0,
             source,
+            sourceTitle: item.source_title,
             targetPath,
           }
         }

@@ -28,7 +28,8 @@
               class="a-btn a-btn--sm a-btn--secondary post-header__mode-btn"
               @click="$emit('toggleAcademic', false)"
             >
-              📖 极简单栏
+              <BookOpen :size="14" aria-hidden="true" />
+              <span>极简单栏</span>
             </button>
             <RouterLink
               v-if="isOwner"
@@ -54,7 +55,8 @@
               class="a-btn a-btn--sm a-btn--secondary post-header__mode-btn"
               @click="$emit('toggleAcademic', true)"
             >
-              🔬 学术双栏
+              <PanelRight :size="14" aria-hidden="true" />
+              <span>学术双栏</span>
             </button>
             <RouterLink
               v-if="isOwner"
@@ -78,6 +80,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { BookOpen, PanelRight } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { userUrl } from '@/composables/useSubdomainNav'
 import type { Post } from '@/types'

@@ -24,13 +24,19 @@
             <h2>热门短笺</h2>
           </div>
           <div class="short-note-timeline__rail-list">
-            <div v-for="note in hotNotes" :key="note.id" class="short-note-timeline__rail-note" @click="openNoteSheet(note)">
+          <button
+            v-for="note in hotNotes"
+            :key="note.id"
+            type="button"
+            class="short-note-timeline__rail-note"
+            @click="openNoteSheet(note)"
+          >
               <strong class="short-note-timeline__rail-title">{{ noteTitle(note) }}</strong>
               <div class="short-note-timeline__rail-stats">
                 <span><Heart :size="12" /> {{ note.likes_count }}</span>
                 <span><MessageSquare :size="12" /> {{ note.comments_count }}</span>
               </div>
-            </div>
+            </button>
           </div>
         </section>
 
@@ -40,10 +46,16 @@
             <h2>最新动态</h2>
           </div>
           <div class="short-note-timeline__rail-list">
-            <div v-for="note in latestNotes" :key="note.id" class="short-note-timeline__rail-note" @click="openNoteSheet(note)">
+            <button
+              v-for="note in latestNotes"
+              :key="note.id"
+              type="button"
+              class="short-note-timeline__rail-note"
+              @click="openNoteSheet(note)"
+            >
               <strong class="short-note-timeline__rail-author">{{ note.user?.display_name || note.user?.username || '匿名用户' }}</strong>
               <span class="short-note-timeline__rail-preview">{{ noteTitle(note) }}</span>
-            </div>
+            </button>
           </div>
         </section>
       </aside>
@@ -64,7 +76,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Flame, Heart, MessageSquare, Sparkles } from 'lucide-vue-next'
-import { RouterLink } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -102,10 +113,7 @@ function noteTitle(note: ShortNote) {
 }
 
 function openNoteSheet(note: ShortNote) {
-  const el = document.getElementById(`note-${note.id}`)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  blogSheets.openShortNote(note.id, noteTitle(note))
 }
 
 async function load(reset = false, requestedPage?: number) {
@@ -258,12 +266,16 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 .short-note-timeline__rail-note {
   position: relative;
   display: flex;
+  width: 100%;
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.85rem 1rem;
+  border: 0;
   color: inherit;
+  text-align: left;
   text-decoration: none;
   border-bottom: 1px solid var(--a-color-border-soft);
+  background: transparent;
   cursor: pointer;
   overflow: hidden;
   transition: all 0.15s ease;
@@ -285,8 +297,14 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   border-bottom: 0;
 }
 
-.short-note-timeline__rail-note:hover {
+.short-note-timeline__rail-note:hover,
+.short-note-timeline__rail-note:focus-visible {
   background: var(--a-color-surface-muted);
+  outline: none;
+}
+
+.short-note-timeline__rail-note:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--a-color-primary);
 }
 
 .short-note-timeline__rail-note:hover::before {

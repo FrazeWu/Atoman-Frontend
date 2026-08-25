@@ -160,7 +160,11 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       <div class="a-skeleton post-sheet-title-skeleton" />
       <div v-for="index in 6" :key="index" class="a-skeleton post-sheet-line-skeleton" />
     </div>
-    <PEmpty v-else-if="errorMessage" kicker="" title="加载失败" :description="errorMessage" />
+    <PEmpty v-else-if="errorMessage" kicker="" title="加载失败" :description="errorMessage">
+      <template #action>
+        <PButton variant="secondary" size="sm" @click="loadPost">重试</PButton>
+      </template>
+    </PEmpty>
     <article v-else-if="post" class="post-sheet-article">
       <div v-if="isOwner" class="post-sheet-actions">
         <PButton variant="secondary" size="sm" @click="editPost">

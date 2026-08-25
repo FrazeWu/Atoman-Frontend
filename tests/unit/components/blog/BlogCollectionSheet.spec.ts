@@ -51,6 +51,21 @@ describe('BlogCollectionSheet', () => {
     },
   })
 
+  it('loads published posts for public viewers without requesting private drafts', async () => {
+    const auth = useAuthStore()
+    auth.token = ''
+    auth.isAuthenticated = false
+
+    const wrapper = mountSheet()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('已发布文章')
+    expect(wrapper.text()).not.toContain('草稿文章')
+    expect(wrapper.find('[data-test="filter-draft"]').exists()).toBe(false)
+    const requestedUrls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([input]) => String(input))
+    expect(requestedUrls.some(url => url.endsWith('/blog/posts/drafts'))).toBe(false)
+  })
+
   it('shows published posts and drafts together by default', async () => {
     const wrapper = mountSheet()
     await flushPromises()

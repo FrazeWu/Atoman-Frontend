@@ -216,7 +216,7 @@ const filteredPosts = computed(() => channelPosts.value)
 
 const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
 const summarize = (content: string) =>
-  content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\[\]()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
+  content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\x5b\x5d()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
 
 const fetchChannel = async (param: string, slug: boolean, generation: number) => {
   try {
@@ -347,9 +347,15 @@ const toggleChannelSubscribe = async () => {
 
 const copyRssLink = async () => {
   if (!channelRssUrl.value) return
-  await navigator.clipboard.writeText(channelRssUrl.value)
-  toastMessage.value = '已复制 RSS 链接'
-  toastVisible.value = true
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(channelRssUrl.value)
+    toastMessage.value = '已复制 RSS 链接'
+  } catch {
+    toastMessage.value = '复制失败，请手动复制 RSS 链接'
+  } finally {
+    toastVisible.value = true
+  }
 }
 
 const loadChannel = async () => {

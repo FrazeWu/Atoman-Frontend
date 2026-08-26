@@ -486,4 +486,9 @@ onBeforeUnmount(() => {
   justify-self: center;
   margin-top: 1rem;
 }
+@media (max-width: 720px) {
+  .songs-view {
+    padding-inline: 1rem;
+  }
+}
 </style>

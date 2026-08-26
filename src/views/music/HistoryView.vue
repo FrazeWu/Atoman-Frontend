@@ -470,6 +470,7 @@ watch(
 
 @media (max-width: 600px) {
   .music-history-view {
+    padding-inline: 1rem;
     padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   }
 

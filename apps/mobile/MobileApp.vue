@@ -56,11 +56,21 @@ body,
   min-height: 100%;
 }
 
+html {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
 body {
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .mobile-app-shell {
+  min-width: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   --mobile-app-player-height: 76px;
   --a-color-bg: #f2f2f7;
   --a-color-fg: #1c1c1e;
@@ -92,6 +102,8 @@ body {
 
 .mobile-app-main {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 

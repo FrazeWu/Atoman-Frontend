@@ -1345,6 +1345,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 @media (max-width: 720px) {
+  .music-explore-view {
+    padding-inline: 1rem;
+  }
+
   .toolbar-row,
   .toolbar-left {
     flex-direction: column;

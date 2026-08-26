@@ -365,6 +365,10 @@ onUnmounted(() => clearTimeout(queryTimer))
 }
 
 @media (max-width: 720px) {
+  .music-library {
+    padding-inline: 1rem;
+  }
+
   .music-library__toolbar { align-items: stretch; flex-direction: column; }
   .music-library__cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 }

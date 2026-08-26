@@ -144,19 +144,6 @@ async function rateSong(score: number) {
   }
 }
 
-async function clearSongRating() {
-  if (!detail.value || !requireLogin() || ratingLoading.value) return
-  ratingLoading.value = true
-  try {
-    applyRating(await deleteMusicSongRating(String(detail.value.song.id)))
-  } catch (cause) {
-    reportError(cause, '清除歌曲评分失败')
-    showToast('操作失败')
-  } finally {
-    ratingLoading.value = false
-  }
-}
-
 function queueSong(playNext: boolean) {
   if (!detail.value?.playable) return
   player.addToQueue(playable(detail.value.song), playNext)
@@ -332,7 +319,6 @@ watch(
             :disabled="!authStore.isAuthenticated"
             :loading="ratingLoading"
             @rate="rateSong"
-            @clear="clearSongRating"
           />
           <MusicEntryStateControl
             entity-type="song"

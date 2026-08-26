@@ -3,7 +3,7 @@ import { mount } from "@vue/test-utils";
 import SongRatingControl from "@/components/music/SongRatingControl.vue";
 
 describe("SongRatingControl.vue", () => {
-  it("renders the five-star aggregate and emits the selected score", async () => {
+  it("renders the public score separately and emits the selected personal score", async () => {
     const wrapper = mount(SongRatingControl, {
       props: {
         songTitle: "示例歌曲",
@@ -12,29 +12,31 @@ describe("SongRatingControl.vue", () => {
       },
     });
 
-    expect(wrapper.text()).toContain("3.5 · 12");
+    expect(wrapper.text()).toContain("评分3.5（12 人）");
     const stars = wrapper.findAll(".song-rating__star");
     expect(stars).toHaveLength(5);
+    expect(wrapper.findAll(".song-rating__star-fill")[0].attributes("style")).toContain("width: 0px");
 
     await stars[3].trigger("click");
     expect(wrapper.emitted("rate")).toEqual([[4]]);
   });
 
-  it("fills aggregate stars to the exact half-star width", () => {
+  it("fills only the viewer's personal rating", () => {
     const wrapper = mount(SongRatingControl, {
       props: {
         songTitle: "示例歌曲",
         ratingScore: 3.5,
         ratingCount: 2,
+        viewerRating: 4,
       },
     });
 
     expect(
       wrapper.findAll(".song-rating__star-fill")[3].attributes("style"),
-    ).toContain("width: 9px");
+    ).toContain("width: 18px");
   });
 
-  it("shows the current score and emits clear for an authenticated viewer", async () => {
+  it("does not render a clear control", () => {
     const wrapper = mount(SongRatingControl, {
       props: {
         songTitle: "示例歌曲",
@@ -42,8 +44,6 @@ describe("SongRatingControl.vue", () => {
       },
     });
 
-    expect(wrapper.find(".song-rating__clear").exists()).toBe(true);
-    await wrapper.find(".song-rating__clear").trigger("click");
-    expect(wrapper.emitted("clear")).toHaveLength(1);
+    expect(wrapper.find(".song-rating__clear").exists()).toBe(false);
   });
 });

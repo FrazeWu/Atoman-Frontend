@@ -268,6 +268,7 @@ const sheetStyle = computed(() => {
       'max-width': 'none',
       top: layerTop.value,
       left: `calc(var(--a-sidebar-width) + ${layerInset.value}px)`,
+      right: 0,
       'z-index': layerZIndex.value,
     }
   }

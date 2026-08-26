@@ -300,6 +300,7 @@
 
     <!-- 文章详情阅读抽屉 -->
     <FeedArticleSheet
+      :index="showChannelSheet ? 1 : 0"
       :show="showChannelArticleSheet"
       :article="selectedChannelArticle"
       @close="closeChannelArticleSheet"
@@ -309,6 +310,7 @@
 
     <!-- 频道文章列表抽屉 -->
     <FeedSourceArticlesSheet
+      :layer-index="0"
       :show="showChannelSheet"
       :source="selectedChannelSource"
       :items="channelArticles"

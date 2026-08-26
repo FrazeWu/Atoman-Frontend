@@ -503,13 +503,13 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const pauseCurrentAudio = (player: HTMLAudioElement) => {
 		playGeneration += 1;
-		savePodcastProgress();
-		saveMusicProgress(false, true);
-		saveMusicSession(true);
 		player.pause();
 		isPlaying.value = false;
 		isLoading.value = false;
 		pauseListening();
+		savePodcastProgress();
+		saveMusicProgress(false, true);
+		saveMusicSession(true);
 		if ("mediaSession" in navigator) {
 			navigator.mediaSession.playbackState = "paused";
 		}
@@ -529,7 +529,16 @@ export const usePlayerStore = defineStore("player", () => {
 		});
 		nextAudio.addEventListener("playing", () => {
 			isLoading.value = false;
+			isPlaying.value = true;
 			playbackError.value = "";
+		});
+		nextAudio.addEventListener("pause", () => {
+			isPlaying.value = false;
+			isLoading.value = false;
+			pauseListening();
+			if ("mediaSession" in navigator) {
+				navigator.mediaSession.playbackState = "paused";
+			}
 		});
 		nextAudio.addEventListener("error", () => {
 			isLoading.value = false;
@@ -637,13 +646,13 @@ export const usePlayerStore = defineStore("player", () => {
 		generation = ++playGeneration,
 	) => {
 		isLoading.value = true;
+		isPlaying.value = true;
 		playbackError.value = "";
 		player.volume = volume.value;
 		player
 			.play()
 			.then(() => {
 				if (generation !== playGeneration || player !== audio) return;
-				isPlaying.value = true;
 				broadcastPlayRequest();
 				resumeListening();
 				if ("mediaSession" in navigator) {
@@ -1144,11 +1153,14 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const skip = (seconds: number) => {
 		if (!audio) return;
-		const newTime = Math.max(
-			0,
-			Math.min(audio.currentTime + seconds, duration.value),
-		);
-		seek(newTime);
+		const audioDuration = Number.isFinite(audio.duration) && audio.duration > 0
+			? audio.duration
+			: duration.value;
+		const targetTime = audio.currentTime + seconds;
+		const newTime = audioDuration > 0
+			? Math.min(targetTime, audioDuration)
+			: targetTime;
+		seek(Math.max(0, newTime));
 	};
 
 	const retryPlayback = () => {

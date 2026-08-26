@@ -353,6 +353,21 @@ describe("player store", () => {
 		expect(player.currentTime).toBe(0);
 	});
 
+	it("supports five-second skips before audio metadata is available", () => {
+		const player = usePlayerStore();
+		player.playSong({
+			id: "metadata-pending",
+			title: "Metadata Pending",
+			audio_url: "metadata-pending.mp3",
+		} as any);
+		audioInstances[0].duration = 0;
+		player.duration = 0;
+
+		player.skip(5);
+
+		expect(player.currentTime).toBe(5);
+		expect(audioInstances[0].currentTime).toBe(5);
+	});
 	it("keeps next and previous on the selected single song after an old queue exists", () => {
 		const player = usePlayerStore();
 		const firstQueuedSong = {
@@ -796,6 +811,28 @@ describe("player store", () => {
 		expect(player.isPlaying).toBe(false);
 	});
 
+	it("pauses immediately while an audio play request is still pending", async () => {
+		let resolvePlay!: () => void;
+		audioPlayImplementation = () => new Promise<void>((resolve) => {
+			resolvePlay = resolve;
+		});
+		const player = usePlayerStore();
+		player.playSong({
+			id: "pending-play",
+			title: "Pending Play",
+			audio_url: "pending-play.mp3",
+		} as any);
+
+		expect(player.isPlaying).toBe(true);
+		player.togglePlay();
+
+		expect(audioInstances[0].pause).toHaveBeenCalledOnce();
+		expect(player.isPlaying).toBe(false);
+
+		resolvePlay();
+		await Promise.resolve();
+		expect(player.isPlaying).toBe(false);
+	});
 	it("keeps repeat-one next paused when audio play fails", async () => {
 		const player = usePlayerStore();
 		const song = {

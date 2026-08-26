@@ -7,7 +7,7 @@ import BlogItemCard from "../../../src/components/shared/BlogItemCard.vue";
 const entryStub = {
   props: ["summary"],
   template:
-    '<article><p data-test="summary">{{ summary }}</p><slot name="meta" /><slot name="actions" /></article>',
+    '<article><slot name="visual" /><p data-test="summary">{{ summary }}</p><slot name="meta" /><slot name="actions" /></article>',
 };
 
 const post = {
@@ -58,6 +58,34 @@ describe("BlogItemCard", () => {
 
     expect(wrapper.get('[data-test="summary"]').text()).toBe(
       "Heading A readable summary for the article.",
+    );
+  });
+
+  it("uses the feed item image when an RSS source has no cover", () => {
+    const wrapper = mount(BlogItemCard, {
+      props: {
+        item: {
+          id: "feed-image-1",
+          title: "RSS article",
+          summary: "A summary",
+          image_url: "https://example.com/article-image.png",
+          feed_source: { id: "source-1", title: "RSS source", source_type: "external_rss" },
+        },
+        type: "feed_item",
+      },
+      global: {
+        stubs: {
+          PContentCard: entryStub,
+          PAvatar: {
+            props: ["src"],
+            template: '<span data-test="avatar" :data-src="src" />',
+          },
+        },
+      },
+    });
+
+    expect(wrapper.get('[data-test="avatar"]').attributes("data-src")).toBe(
+      "https://example.com/article-image.png",
     );
   });
 

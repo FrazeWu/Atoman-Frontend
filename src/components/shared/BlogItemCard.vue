@@ -27,7 +27,7 @@
       />
       <PAvatar
         v-else
-        :src="feedItem?.feed_source?.cover_url"
+        :src="feedItem?.feed_source?.cover_url || feedItem?.image_url"
         :name="sourceTitle"
         :alt="`${sourceTitle} 的网站图标`"
         size="xs"

@@ -235,6 +235,7 @@ export type MusicAlbumImportError = {
 export type MusicAlbumImportMultipartPart = {
 	partNumber: number;
 	etag: string;
+	size?: number;
 };
 
 export type CreateMusicAlbumImportInput = {
@@ -291,6 +292,8 @@ export type MusicAlbumImportFile = {
 	role: string;
 	detectedFormat: string;
 	size: number;
+	partSize?: number;
+	completedParts?: MusicAlbumImportMultipartPart[];
 	uploadStatus: MusicAlbumImportFileUploadStatus;
 	processingStatus: MusicAlbumImportFileProcessingStatus;
 	discNumber: number;

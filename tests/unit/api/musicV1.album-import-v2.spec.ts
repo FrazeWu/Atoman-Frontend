@@ -59,6 +59,41 @@ describe('album import v2 API', () => {
     expect(progress).toHaveBeenCalledWith({ loaded: 4, total: 8 })
   })
 
+  it('turns a stalled raw part upload into a retryable timeout', async () => {
+    class FakeXMLHttpRequest {
+      static current: FakeXMLHttpRequest
+      status = 200
+      timeout = 0
+      open = vi.fn()
+      send = vi.fn()
+      abort = vi.fn()
+      getResponseHeader = vi.fn(() => 'etag-1')
+      private listeners = new Map<string, () => void>()
+      upload = { addEventListener: vi.fn() }
+
+      constructor() {
+        FakeXMLHttpRequest.current = this
+      }
+
+      addEventListener(event: string, listener: () => void) {
+        this.listeners.set(event, listener)
+      }
+
+      emit(event: string) {
+        this.listeners.get(event)?.()
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
+
+    const result = uploadMusicAlbumImportFilePart('https://upload.test/part-1', new Blob(['data']), {
+      timeoutMs: 123,
+    })
+    const xhr = FakeXMLHttpRequest.current
+    expect(xhr.timeout).toBe(123)
+    xhr.emit('timeout')
+
+    await expect(result).rejects.toThrow('上传分片超时，请重试')
+  })
   it('normalizes nullable import arrays before consumers receive a snapshot', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: {

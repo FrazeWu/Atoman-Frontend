@@ -29,6 +29,18 @@ it('shares envelope and API error semantics through the package client', async (
     .rejects.toMatchObject({ status: 404, code: 'post.missing' })
 })
 
+it('forwards an abort signal for JSON POST requests', async () => {
+  const requests: RequestInit[] = []
+  const client = createApiClient(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push(init ?? {})
+    return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })
+  })
+  const signal = new AbortController().signal
+
+  await expect(client.apiPostJson<{ ok: boolean }>('/api/v1/uploads', {}, { signal }))
+    .resolves.toEqual({ ok: true })
+  expect(requests[0].signal).toBe(signal)
+})
 it('sends custom request options and returns the response envelope', async () => {
   vi.stubGlobal('fetch', vi.fn())
   const fetchMock = vi.mocked(fetch)

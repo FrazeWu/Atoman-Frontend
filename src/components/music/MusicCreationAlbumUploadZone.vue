@@ -66,6 +66,11 @@ const processingRetryFile = computed(() => {
   if (!draft || !['failed', 'needs_attention'].includes(draft.status) || draft.stage === 'ready') return null
   return draft.files.find((file) => file.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(file.role)) ?? null
 })
+const stalledUploadFile = computed(() => {
+  const draft = albumImportDraft.value
+  if (uploading.value || !errorMessage.value || !draft) return null
+  return draft.files.find((file) => file.uploadStatus === 'uploading') ?? null
+})
 const processingErrorMessage = computed(() => {
   if (errorMessage.value) return errorMessage.value
   const message = albumImportDraft.value?.errorMessage?.trim() || ''
@@ -238,6 +243,18 @@ function formatUploadSpeed(bytesPerSecond: number) {
               @click="handleDeleteFile(f.fileId)"
             >
               移除
+            </button>
+          </template>
+          <template v-else-if="stalledUploadFile?.fileId === f.fileId">
+            <span class="import-file-error">{{ errorMessage }}</span>
+            <button
+              type="button"
+              class="import-file-action"
+              data-testid="album-import-upload-retry"
+              :disabled="uploading"
+              @click="handleRetryFile(f.fileId)"
+            >
+              继续上传
             </button>
           </template>
           <template v-else-if="fileProgress.get(f.fileId) !== undefined">

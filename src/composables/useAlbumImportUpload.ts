@@ -15,6 +15,7 @@ import {
 	deleteMusicAlbumImportFile,
 	cancelMusicAlbumImportSession,
 	type MusicAlbumImport,
+	type MusicAlbumImportFile,
 	type MusicAlbumImportInputMode,
 } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
@@ -40,6 +41,54 @@ type AlbumImportUploadState = {
 };
 
 const FILE_PART_SIZE = 16 * 1024 * 1024;
+const ALBUM_IMPORT_CONTROL_TIMEOUT_MS = 30_000;
+const ALBUM_IMPORT_PART_TIMEOUT_MS = 5 * 60 * 1000;
+
+async function withUploadRequestTimeout<T>(
+	parentSignal: AbortSignal,
+	timeoutMs: number,
+	timeoutMessage: string,
+	request: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+	if (parentSignal.aborted) throw new Error("上传已取消");
+
+	const requestController = new AbortController();
+	let timedOut = false;
+	const abortRequest = () => requestController.abort();
+	parentSignal.addEventListener("abort", abortRequest, { once: true });
+	const timer = setTimeout(() => {
+		timedOut = true;
+		requestController.abort();
+	}, timeoutMs);
+
+	try {
+		return await request(requestController.signal);
+	} catch (error) {
+		if (timedOut && !parentSignal.aborted) throw new Error(timeoutMessage);
+		if (parentSignal.aborted) throw new Error("上传已取消");
+		throw error;
+	} finally {
+		clearTimeout(timer);
+		parentSignal.removeEventListener("abort", abortRequest);
+	}
+}
+
+function mergeUploadedImportFile(
+	draft: MusicCreationFlowState["draft"]["albumImport"],
+	updated: MusicAlbumImportFile,
+) {
+	draft.files = draft.files.map((file) =>
+		file.fileId === updated.fileId
+			? {
+					...file,
+					...updated,
+					partSize: updated.partSize ?? file.partSize,
+					completedParts: updated.completedParts ?? file.completedParts,
+				}
+			: file,
+	);
+}
+
 const uploadStates = new WeakMap<
 	MusicCreationFlowState,
 	AlbumImportUploadState
@@ -262,6 +311,24 @@ export function useAlbumImportUpload() {
 		return ++uploadState.operationGeneration;
 	}
 
+	async function completeUploadSession(
+		uploadState: AlbumImportUploadState,
+		importId: string,
+	): Promise<MusicAlbumImport> {
+		const controller = new AbortController();
+		uploadState.abortControllers.add(controller);
+		try {
+			return await withUploadRequestTimeout(
+				controller.signal,
+				ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
+				"提交上传会话超时，请重试",
+				(signal) => completeMusicAlbumImportSession(importId, { signal }),
+			);
+		} finally {
+			uploadState.abortControllers.delete(controller);
+		}
+	}
+
 	async function uploadSingleFileMultipart(
 		uploadState: AlbumImportUploadState,
 		draft: MusicCreationFlowState["draft"]["albumImport"],
@@ -269,78 +336,164 @@ export function useAlbumImportUpload() {
 		file: File,
 		fileId: string,
 		generation: number,
+		fileRecord?: MusicAlbumImportFile,
 	): Promise<void> {
 		const isCurrent = () => generation === uploadState.operationGeneration;
-		const totalParts = Math.ceil(file.size / FILE_PART_SIZE);
+		const partSize =
+			fileRecord?.partSize && fileRecord.partSize > 0
+				? fileRecord.partSize
+				: FILE_PART_SIZE;
+		const totalParts = Math.ceil(file.size / partSize);
+		const completedPartNumbers = new Set(
+			(fileRecord?.completedParts ?? [])
+				.map((part) => part.partNumber)
+				.filter((partNumber) => partNumber > 0 && partNumber <= totalParts),
+		);
+		const bytesForPart = (partNumber: number) =>
+			Math.min(partSize, file.size - (partNumber - 1) * partSize);
+		let completedFileBytes = [...completedPartNumbers].reduce(
+			(total, partNumber) => total + bytesForPart(partNumber),
+			0,
+		);
+		const otherFileBytes = Math.max(
+			0,
+			draft.totalBytesLoaded - completedFileBytes,
+		);
+		let activePartBytes = 0;
+
+		const reportProgress = () => {
+			if (!isCurrent()) return;
+			const fileBytesLoaded = Math.min(
+				completedFileBytes + activePartBytes,
+				file.size,
+			);
+			const nextTotalBytesLoaded = otherFileBytes + fileBytesLoaded;
+			draft.totalBytesLoaded =
+				draft.totalBytesTotal > 0
+					? Math.min(nextTotalBytesLoaded, draft.totalBytesTotal)
+					: nextTotalBytesLoaded;
+			uploadState.fileProgress.value = new Map(
+				uploadState.fileProgress.value,
+			).set(
+				fileId,
+				file.size > 0
+					? Math.round((fileBytesLoaded / file.size) * 100)
+					: 0,
+			);
+			const elapsedSeconds = Math.max(
+				(Date.now() - uploadState.uploadStartedAt) / 1000,
+				0.001,
+			);
+			draft.uploadSpeed = draft.totalBytesLoaded / elapsedSeconds;
+		};
+
+		reportProgress();
 		for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
 			if (!isCurrent()) return;
-			const start = (partNumber - 1) * FILE_PART_SIZE;
-			const end = Math.min(start + FILE_PART_SIZE, file.size);
+			if (completedPartNumbers.has(partNumber)) continue;
+
+			const start = (partNumber - 1) * partSize;
+			const end = Math.min(start + partSize, file.size);
 			const chunk = file.slice(start, end);
-			const partSize = end - start;
+			const currentPartSize = end - start;
+			let lastError: unknown;
 
-			const upload = await createMusicAlbumImportFilePartUpload(
-				importId,
-				fileId,
-				partNumber,
-				partSize,
-			);
-			const controller = new AbortController();
-			uploadState.abortControllers.add(controller);
-			let partBytesLoaded = 0;
-			const reportPartProgress = (loaded: number) => {
-				if (!isCurrent()) return;
-				const nextPartBytesLoaded = Math.min(
-					Math.max(loaded, partBytesLoaded),
-					partSize,
-				);
-				const delta = nextPartBytesLoaded - partBytesLoaded;
-				if (delta <= 0) return;
-				partBytesLoaded = nextPartBytesLoaded;
-				const nextTotalBytesLoaded = draft.totalBytesLoaded + delta;
-				draft.totalBytesLoaded =
-					draft.totalBytesTotal > 0
-						? Math.min(nextTotalBytesLoaded, draft.totalBytesTotal)
-						: nextTotalBytesLoaded;
-				uploadState.fileProgress.value = new Map(
-					uploadState.fileProgress.value,
-				).set(
-					fileId,
-					Math.round(((start + nextPartBytesLoaded) / file.size) * 100),
-				);
-				const elapsedSeconds = Math.max(
-					(Date.now() - uploadState.uploadStartedAt) / 1000,
-					0.001,
-				);
-				draft.uploadSpeed = draft.totalBytesLoaded / elapsedSeconds;
-			};
-			let etag: string;
-			try {
-				etag = await uploadMusicAlbumImportFilePart(upload.uploadUrl, chunk, {
-					signal: controller.signal,
-					onProgress: (progress) => reportPartProgress(progress.loaded),
-				});
-			} finally {
-				uploadState.abortControllers.delete(controller);
+			for (let attempt = 0; attempt < 3; attempt += 1) {
+				const controller = new AbortController();
+				uploadState.abortControllers.add(controller);
+				let partBytesLoaded = 0;
+				const reportPartProgress = (loaded: number) => {
+					if (!isCurrent()) return;
+					const nextPartBytesLoaded = Math.min(
+						Math.max(loaded, partBytesLoaded),
+						currentPartSize,
+					);
+					partBytesLoaded = nextPartBytesLoaded;
+					activePartBytes = nextPartBytesLoaded;
+					reportProgress();
+				};
+
+				try {
+					const upload = await withUploadRequestTimeout(
+						controller.signal,
+						ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
+						"获取上传地址超时，请重试",
+						(signal) =>
+							createMusicAlbumImportFilePartUpload(
+									importId,
+									fileId,
+									partNumber,
+									currentPartSize,
+									{ signal },
+								),
+					);
+					if (!isCurrent()) return;
+
+					const etag = await uploadMusicAlbumImportFilePart(
+						upload.uploadUrl,
+						chunk,
+						{
+							signal: controller.signal,
+							timeoutMs: ALBUM_IMPORT_PART_TIMEOUT_MS,
+							onProgress: (progress) => reportPartProgress(progress.loaded),
+						},
+					);
+					if (!isCurrent()) return;
+
+					const completedFile = await withUploadRequestTimeout(
+						controller.signal,
+						ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
+						"保存分片进度超时，请重试",
+						(signal) =>
+							completeMusicAlbumImportFilePart(
+									importId,
+									fileId,
+									partNumber,
+									etag,
+									currentPartSize,
+									{ signal },
+								),
+					);
+					if (!isCurrent()) return;
+
+					completedPartNumbers.add(partNumber);
+					completedFileBytes += currentPartSize;
+					activePartBytes = 0;
+					mergeUploadedImportFile(draft, completedFile);
+					reportProgress();
+					lastError = undefined;
+					break;
+				} catch (error) {
+					lastError = error;
+					activePartBytes = 0;
+					reportProgress();
+					if (!isCurrent() || attempt === 2) throw error;
+				} finally {
+					uploadState.abortControllers.delete(controller);
+				}
 			}
-			if (!isCurrent()) return;
-			reportPartProgress(partSize);
 
-			await completeMusicAlbumImportFilePart(
-				importId,
-				fileId,
-				partNumber,
-				etag,
-				partSize,
-			);
-			if (!isCurrent()) return;
+			if (lastError) throw lastError;
 		}
 		if (!isCurrent()) return;
-		await completeMusicAlbumImportFile(importId, fileId);
-		if (!isCurrent()) return;
-		uploadState.fileProgress.value = new Map(
-			uploadState.fileProgress.value,
-		).set(fileId, 100);
+
+		const controller = new AbortController();
+		uploadState.abortControllers.add(controller);
+		try {
+			const completedFile = await withUploadRequestTimeout(
+				controller.signal,
+				ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
+				"确认文件上传超时，请重试",
+				(signal) => completeMusicAlbumImportFile(importId, fileId, { signal }),
+			);
+			if (!isCurrent()) return;
+			mergeUploadedImportFile(draft, completedFile);
+			uploadState.fileProgress.value = new Map(
+				uploadState.fileProgress.value,
+			).set(fileId, 100);
+		} finally {
+			uploadState.abortControllers.delete(controller);
+		}
 	}
 
 	function startPollingWhenProcessing(
@@ -524,6 +677,7 @@ export function useAlbumImportUpload() {
 						file,
 						registeredFile.fileId,
 						generation,
+						registeredFile,
 					);
 				},
 			);
@@ -533,7 +687,10 @@ export function useAlbumImportUpload() {
 				);
 			}
 			if (!isCurrent()) return;
-			const completed = await completeMusicAlbumImportSession(session.importId);
+			const completed = await completeUploadSession(
+				uploadState,
+				session.importId,
+			);
 			if (isCurrent() && draft.importId === session.importId) {
 				refreshWhenFilesUploaded(flow, completed, session.importId);
 			}
@@ -560,10 +717,10 @@ export function useAlbumImportUpload() {
 		const draft = flow?.draft.albumImport;
 		if (!flow || !draft?.importId) return;
 		const uploadState = uploadStateFor(flow);
-		const needsUpload =
-			draft.files.find((file) => file.fileId === fileId)?.uploadStatus ===
-			"failed";
+		const fileRecord = draft.files.find((file) => file.fileId === fileId);
+		const needsUpload = fileRecord?.uploadStatus === "failed";
 		const file = uploadState.selectedFiles.get(fileId);
+		const canResumeUpload = fileRecord?.uploadStatus === "uploading" && !!file;
 		if (needsUpload && !file) {
 			uploadState.errorMessage.value = "请替换文件后重新上传";
 			return;
@@ -575,10 +732,24 @@ export function useAlbumImportUpload() {
 		uploadState.uploading.value = true;
 		uploadState.errorMessage.value = "";
 		try {
-			const snapshot = await retryMusicAlbumImportFile(importId, fileId);
-			if (!isCurrent() || !applyImportSnapshotToFlow(flow, snapshot, importId))
-				return;
-			if (needsUpload && file) {
+			let uploadRecord = fileRecord;
+			if (!canResumeUpload) {
+				const snapshot = await retryMusicAlbumImportFile(importId, fileId);
+				if (
+					!isCurrent() ||
+					!applyImportSnapshotToFlow(flow, snapshot, importId)
+				)
+					return;
+				uploadRecord = snapshot.files.find((file) => file.fileId === fileId);
+			}
+
+			if (needsUpload || canResumeUpload) {
+				if (!file || !uploadRecord) return;
+				if (canResumeUpload) {
+					draft.status = "uploading";
+					draft.stage = "upload";
+					draft.errorMessage = "";
+				}
 				await uploadSingleFileMultipart(
 					uploadState,
 					draft,
@@ -586,12 +757,26 @@ export function useAlbumImportUpload() {
 					file,
 					fileId,
 					generation,
+					uploadRecord,
 				);
 				if (!isCurrent()) return;
 				const latest = await getMusicAlbumImport(importId);
 				if (!isCurrent()) return;
-				refreshWhenFilesUploaded(flow, latest, importId);
-			} else if (!needsUpload) {
+				if (
+					latest.status === "uploading" &&
+					latest.files.length > 0 &&
+					latest.files.every((item) => item.uploadStatus === "uploaded")
+				) {
+					const completed = await completeUploadSession(
+						uploadState,
+						importId,
+					);
+					if (!isCurrent()) return;
+					refreshWhenFilesUploaded(flow, completed, importId);
+				} else {
+					refreshWhenFilesUploaded(flow, latest, importId);
+				}
+			} else {
 				startPollingFor(flow, importId);
 			}
 		} catch (error) {
@@ -631,6 +816,7 @@ export function useAlbumImportUpload() {
 				file,
 				fileId,
 				generation,
+				draft.files.find((item) => item.fileId === fileId),
 			);
 			if (!isCurrent()) return;
 			const latest = await getMusicAlbumImport(importId);

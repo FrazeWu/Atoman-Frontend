@@ -212,6 +212,11 @@ describe("FeedRecommendedView", () => {
 		);
 	});
 
+	it("keeps discovery streams borderless", () => {
+		expect(source).toContain(".feed-timeline-box {\n  border: 0;");
+		expect(source).toContain(".channels-stack :deep(.feed-source-card) {\n  border: 0;");
+	});
+
 	it("applies advanced filters from the compact filter panel", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")

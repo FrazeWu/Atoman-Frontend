@@ -1201,12 +1201,12 @@ onMounted(() => {
   align-items: center;
 }
 
-/* 文章流容器 */
+/* 文章流容器：文章条目自身提供分隔线，不再包裹卡片边框 */
 .feed-timeline-box {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-  background: var(--a-color-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .feed-source-trigger {
@@ -1254,10 +1254,21 @@ onMounted(() => {
   color: #2563eb;
 }
 
-/* 频道流容器 */
+/* 频道流容器：与文章流保持无外框的信息流样式 */
 .channels-stack {
   display: grid;
-  gap: 0.75rem;
+  gap: 0;
+}
+
+.channels-stack :deep(.feed-source-card) {
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.channels-stack :deep(.feed-source-card:first-child) {
+  border-top: 0;
 }
 
 @media (max-width: 880px) {

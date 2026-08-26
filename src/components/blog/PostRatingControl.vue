@@ -52,7 +52,7 @@
       </div>
 
       <button
-        v-if="!disabled && viewerRating !== null && viewerRating !== undefined"
+        v-if="!disabled && props.viewerRating !== null && props.viewerRating !== undefined"
         type="button"
         class="post-rating__clear"
         :disabled="loading"
@@ -85,8 +85,8 @@
       <span v-if="hoverScore !== null" class="post-rating__dynamic-score">
         {{ formatStarScore(hoverScore) }} 星
       </span>
-      <span v-else-if="viewerRating !== null && viewerRating !== undefined" class="post-rating__mine">
-        我的评分 {{ formatStarScore(viewerRating) }} 星
+      <span v-else-if="props.viewerRating !== null && props.viewerRating !== undefined" class="post-rating__mine">
+        我的评分 {{ formatStarScore(props.viewerRating) }} 星
       </span>
       <span v-if="errorMessage" class="post-rating__error" role="alert">{{ errorMessage }}</span>
       <RouterLink v-else-if="disabled" to="/login" class="post-rating__login">

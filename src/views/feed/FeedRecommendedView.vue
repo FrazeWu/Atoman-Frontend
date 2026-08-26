@@ -12,7 +12,7 @@
       <div class="discovery-search-box">
         <SearchSurface
           :query="discoverySearchQuery"
-          eyebrow="探索"
+          eyebrow=""
           placeholder="搜索全网文章、专栏、RSS 订阅源与播客..."
           :open="discoverySearchOpen"
           :loading="discoverySearchLoading"

@@ -1030,7 +1030,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(drawers.state.value.creationFlow).toBeNull();
 	});
 
-	it("在上传中也展示详情表单，并在顶部显示导入进度", () => {
+	it("在上传中仍展示详情表单和上传速度", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
 		drawers.setMusicCreationStep("albumDetails");
@@ -1045,15 +1045,10 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
-		expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain(
-			"graduation.zip",
-		);
-		expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain(
-			"上传进度 37%",
-		);
-		expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain(
-			"128 KB/s",
-		);
+		const importStatus = wrapper.get('[data-testid="album-import-status"]');
+		expect(importStatus.text()).toContain("graduation.zip");
+		expect(importStatus.text()).not.toContain("上传进度 37%");
+		expect(importStatus.text()).toContain("128 KB/s");
 		expect(
 			wrapper.get('[data-testid="album-details-title-input"]').exists(),
 		).toBe(true);

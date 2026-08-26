@@ -317,6 +317,7 @@
       :loading="channelArticlesLoading"
       @close="closeChannelSheet"
       @open-article="openChannelArticleFromSheet"
+      @subscribe="subscribeSelectedChannel"
     />
   </div>
 </template>
@@ -386,6 +387,7 @@ type RecommendationItem = {
   source_type?: string
   source_category?: string
   source_path?: string
+  rss_url?: string
   score_label?: string
   bookmark_count?: number
   read_count?: number
@@ -631,7 +633,12 @@ async function fetchRecommendations() {
 
     if (authStore.isAuthenticated && channels.value.length) {
       const subscribedStates = await Promise.all(
-        channels.value.map((item) => feedStore.isSubscribedToChannel(item.id)),
+        channels.value.map((item) => item.source_type === 'external_rss'
+          ? Promise.resolve(feedStore.subscriptions.some((subscription) => (
+            subscription.feed_source_id === (item.source_id || item.id)
+            || subscription.feed_source?.id === (item.source_id || item.id)
+          )))
+          : feedStore.isSubscribedToChannel(item.id)),
       )
       channels.value = channels.value.map((item, index) => ({
         ...item,
@@ -676,6 +683,7 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
   return {
     id: item.source_id || item.id,
     title: item.title,
+    rssUrl: item.rss_url,
     category: (item.source_category as FeedSourceCategory) || 'blog',
     subscriptionCount: item.bookmark_count ?? item.read_count ?? 0,
     recentItemCount: item.recent_items?.length ?? 0,
@@ -709,13 +717,27 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
   if (item.subscribed) return
   subscribingChannelIds.value.push(item.id)
   try {
-    await feedStore.subscribeToChannel(item.id)
-    item.subscribed = true
+    const success = item.source_type === 'external_rss'
+      ? await feedStore.subscribeToRSS(item.rss_url || '', item.title)
+      : await feedStore.subscribeToChannel(item.id)
+    if (success) item.subscribed = true
   } catch (error) {
     reportError(error, 'Failed to subscribe channel:')
   } finally {
     subscribingChannelIds.value = subscribingChannelIds.value.filter((id) => id !== item.id)
   }
+}
+
+async function subscribeSelectedChannel() {
+  const source = selectedChannelSource.value
+  if (!source || source.subscribed) return
+  if (source.type === 'external_rss') {
+    const success = await feedStore.subscribeToRSS(source.rssUrl || '', source.title)
+    if (success) source.subscribed = true
+    return
+  }
+  const success = await feedStore.subscribeToChannel(source.id)
+  if (success) source.subscribed = true
 }
 
 // ── 交互事件处理 ──
@@ -732,6 +754,7 @@ function openArticleSource(item: RecommendationItem) {
   selectedChannelSource.value = {
     id: item.source_id || item.id,
     title: item.source_title || item.title,
+    rssUrl: item.rss_url,
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
   }

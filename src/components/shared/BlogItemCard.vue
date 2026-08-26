@@ -13,6 +13,7 @@
     :summary="displaySummary"
     class="blog-item-card content-stream-entry"
     :class="[`is-type-${cardType}`, { 'is-read': isRead }]"
+    :is-open="isOpen"
     :is-focused="isFocused"
     @click="handleClick"
   >
@@ -38,22 +39,30 @@
       <span v-if="authorName" class="blog-item-card__author">{{ authorName }}</span>
       <span v-if="authorUsername" class="blog-item-card__handle">@{{ authorUsername }}</span>
 
-      <!-- Channel tag for blog post -->
-      <template v-if="postItem?.channel">
+      <!-- Source title for blog post or feed item -->
+      <template v-if="postItem?.channel || sourceTitle">
+        <button
+          v-if="sourceInteractive && sourceTitle"
+          type="button"
+          class="blog-item-card__source blog-item-card__source-button"
+          data-test="feed-source-trigger"
+          :title="`查看 ${sourceTitle} 的所有文章`"
+          :aria-label="`查看 ${sourceTitle} 的所有文章`"
+          @click.stop="emit('open-source')"
+        >{{ sourceTitle }}</button>
         <a
+          v-else-if="postItem?.channel"
           :href="channelUrl(postItem.channel.slug || postItem.channel.id)"
           class="blog-item-card__channel"
           @click.stop
         >
           《{{ postItem.channel.name }}》
         </a>
-      </template>
-
-      <!-- Source title for feed item -->
-      <template v-else-if="sourceTitle">
-        <a v-if="sourcePath" :href="sourcePath" class="blog-item-card__source blog-item-card__source-link" @click.stop>{{ sourceTitle }}</a>
+        <a v-else-if="sourcePath" :href="sourcePath" class="blog-item-card__source blog-item-card__source-link" @click.stop>{{ sourceTitle }}</a>
         <span v-else class="blog-item-card__source">{{ sourceTitle }}</span>
       </template>
+
+      <slot name="meta-extra" />
 
       <!-- 统计指标：阅读、评分、收藏 -->
       <span class="feed-entry-stats">
@@ -61,6 +70,7 @@
         <span v-else-if="feedItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(feedItem.read_count) }}</span>
 
         <span v-if="postItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
+        <span v-else-if="feedItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(feedItem.rating_score, feedItem.rating_count) }}</span>
 
         <span v-if="postItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
         <span v-else-if="feedItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(feedItem.bookmark_count) }}</span>
@@ -74,7 +84,7 @@
         class="feed-type-tag"
         :class="cardType === 'post' ? 'feed-type-tag--blog' : 'feed-type-tag--rss'"
       >
-        {{ cardType === 'post' ? '博客' : externalBadge }}
+        {{ cardType === 'post' ? '博客' : typeLabel || externalBadge }}
       </span>
     </template>
 
@@ -136,17 +146,23 @@ const props = withDefaults(defineProps<{
   inReadingList?: boolean
   starred?: boolean
   isRead?: boolean
+  isOpen?: boolean
   isFocused?: boolean
   isPodcastPlaying?: boolean
   sourceTitle?: string
   sourcePath?: string
+  sourceInteractive?: boolean
+  typeLabel?: string
 }>(), {
   bookmarked: false,
   inReadingList: false,
   starred: false,
   isRead: false,
+  isOpen: false,
   isFocused: false,
   isPodcastPlaying: false,
+  sourceInteractive: false,
+  typeLabel: '',
 })
 
 const emit = defineEmits<{
@@ -155,6 +171,7 @@ const emit = defineEmits<{
   'toggle-bookmark': []
   'toggle-reading-list': []
   'toggle-star': []
+  'open-source': []
   'play-podcast': [item: FeedItem]
 }>()
 
@@ -194,8 +211,9 @@ const authorName = computed(() => {
 const authorUsername = computed(() => postItem.value?.user?.username || '')
 
 const sourceTitle = computed(() => {
+  if (props.sourceTitle) return props.sourceTitle
   if (feedItem.value?.feed_source) return feedItem.value.feed_source.title || ''
-  return props.sourceTitle || ''
+  return ''
 })
 
 const sourcePath = computed(() => props.sourcePath || '')
@@ -273,6 +291,28 @@ function formatRating(score?: number, count?: number) {
 
 .blog-item-card__source {
   color: var(--a-color-muted);
+}
+
+.blog-item-card__source-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.blog-item-card__source-button:hover,
+.blog-item-card__source-button:focus-visible {
+  color: var(--a-color-primary, #3b82f6);
+  text-decoration: underline;
+}
+
+.blog-item-card__source-button:focus-visible {
+  outline: 2px solid var(--a-color-focus, var(--a-color-text));
+  outline-offset: 2px;
 }
 
 .blog-item-card__source-link {

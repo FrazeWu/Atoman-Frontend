@@ -60,4 +60,26 @@ describe("BlogItemCard", () => {
       "Heading A readable summary for the article.",
     );
   });
+
+  it("uses an interactive custom source title for subscription items", async () => {
+    const wrapper = mount(BlogItemCard, {
+      props: {
+        item: {
+          id: "feed-1",
+          title: "A subscribed article",
+          summary: "A summary",
+          published_at: "2026-08-25T00:00:00Z",
+          feed_source: { id: "source-1", title: "Raw source title", source_type: "external_rss" },
+        },
+        type: "feed_item",
+        sourceTitle: "我的订阅名称",
+        sourceInteractive: true,
+      },
+      global: { stubs: { PContentCard: entryStub } },
+    });
+
+    expect(wrapper.get('[data-test="feed-source-trigger"]').text()).toBe("我的订阅名称");
+    await wrapper.get('[data-test="feed-source-trigger"]').trigger("click");
+    expect(wrapper.emitted("open-source")).toHaveLength(1);
+  });
 });

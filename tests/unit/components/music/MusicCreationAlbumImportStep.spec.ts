@@ -569,7 +569,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		await vi.waitFor(() => {
 			expect(wrapper.get(".import-file-progress").text()).toBe("50%");
-			expect(wrapper.get(".progress-panel").text()).toContain("上传进度 50%");
+			expect(wrapper.find(".progress-panel").exists()).toBe(false);
 		});
 		expect(
 			useMusicDrawers().state.value.creationFlow?.draft.albumImport

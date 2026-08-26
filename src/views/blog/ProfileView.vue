@@ -366,15 +366,17 @@ const restoringAvatar = ref(false)
 const canRestoreAvatar = ref(false)
 const avatarChangeStarted = ref(false)
 
-function copyUserRssLink() {
+async function copyUserRssLink() {
   if (!userRssUrl.value) return
-  void navigator.clipboard.writeText(userRssUrl.value).then(() => {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(userRssUrl.value)
     toastMessage.value = '已复制 RSS 链接'
-    toastVisible.value = true
-  }).catch(() => {
+  } catch {
     toastMessage.value = '复制失败，请手动复制 RSS 链接'
+  } finally {
     toastVisible.value = true
-  })
+  }
 }
 
 function startEdit(field: EditableField) {

@@ -1,5 +1,6 @@
 <template>
   <div style="padding-bottom:12rem">
+    <PToast v-model="shareToastVisible" :message="shareToastMessage" :type="shareToastType" />
     <!-- Loading -->
     <div v-if="loading" class="a-page-md" style="padding-top:4rem">
       <div class="a-skeleton" style="height:3rem;width:75%;margin-bottom:1rem" />
@@ -67,6 +68,7 @@
           <div class="post-detail-actions">
             <button
               v-if="post.channel_id && authStore.isAuthenticated"
+              type="button"
               class="a-toggle-btn"
               :class="{ 'a-toggle-btn-active': channelSubscribed }"
               :disabled="channelSubscriptionBusy"
@@ -76,6 +78,7 @@
             </button>
             <RouterLink v-else-if="post.channel_id" to="/login" class="a-toggle-btn">登录后订阅频道</RouterLink>
             <button
+              type="button"
               class="a-toggle-btn"
               :class="{ 'a-toggle-btn-active': bookmarked }"
               :disabled="!authStore.isAuthenticated"
@@ -84,6 +87,7 @@
               {{ bookmarked ? '取消收藏' : '收藏' }}
             </button>
             <button
+              type="button"
               class="a-toggle-btn"
               :class="{ 'a-toggle-btn-active': isInReadingList }"
               :disabled="!authStore.isAuthenticated"
@@ -91,7 +95,7 @@
             >
               {{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}
             </button>
-            <button class="a-toggle-btn" title="分享" @click="sharePost">
+            <button type="button" class="a-toggle-btn" title="分享" @click="sharePost">
               分享
             </button>
           </div>
@@ -125,6 +129,7 @@ import CommentSection from '@/components/comment/CommentSection.vue'
 import PostHeader from '@/components/blog/PostHeader.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
+import PToast from '@/components/ui/PToast.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
@@ -181,6 +186,9 @@ const channelSubscriptionBusy = ref(false)
 const postEmbeds = ref<Record<string, EmbedData>>({})
 const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
+const shareToastVisible = ref(false)
+const shareToastMessage = ref('')
+const shareToastType = ref<'success' | 'warning'>('success')
 let loadSeq = 0
 let bookmarkOperationSeq = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
@@ -462,6 +470,13 @@ const toggleChannelSubscription = async () => {
   }
 }
 
+const showShareFeedback = (message: string, type: 'success' | 'warning' = 'success') => {
+  shareToastVisible.value = false
+  shareToastMessage.value = message
+  shareToastType.value = type
+  window.setTimeout(() => { shareToastVisible.value = true }, 0)
+}
+
 const sharePost = async () => {
   if (!post.value) return
   const url = `${window.location.origin}/posts/post/${encodeURIComponent(post.value.id)}`
@@ -470,12 +485,19 @@ const sharePost = async () => {
   if (share) {
     try {
       await share({ title, text: post.value.summary || '', url })
+      showShareFeedback('已分享')
       return
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
     }
   }
-  await navigator.clipboard?.writeText(url)
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(url)
+    showShareFeedback('链接已复制')
+  } catch {
+    showShareFeedback('分享失败，请手动复制链接', 'warning')
+  }
 }
 
 const extractEmbedIds = (content: string, kind: 'post' | 'music' | 'video') => {

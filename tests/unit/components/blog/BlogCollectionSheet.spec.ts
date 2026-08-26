@@ -61,6 +61,7 @@ describe('BlogCollectionSheet', () => {
 
     expect(wrapper.text()).toContain('已发布文章')
     expect(wrapper.text()).not.toContain('草稿文章')
+    expect(wrapper.text()).not.toContain('篇草稿')
     expect(wrapper.find('[data-test="filter-draft"]').exists()).toBe(false)
     const requestedUrls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([input]) => String(input))
     expect(requestedUrls.some(url => url.endsWith('/blog/posts/drafts'))).toBe(false)

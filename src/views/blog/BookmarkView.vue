@@ -40,7 +40,11 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
-        <PEmpty v-else-if="loadError" title="收藏加载失败" :description="loadError" />
+        <PEmpty v-else-if="loadError" title="收藏加载失败" :description="loadError">
+          <template #action>
+            <PButton variant="secondary" size="sm" @click="fetchAll">重试</PButton>
+          </template>
+        </PEmpty>
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
         <div v-else class="bookmark-post-list feed-timeline-box">
           <BlogItemCard

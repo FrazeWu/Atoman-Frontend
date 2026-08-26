@@ -39,14 +39,14 @@ describe("PostRatingControl.vue", () => {
   });
 
   it("emits a one-point rating from the half-star range control", async () => {
-    const wrapper = mount(PostRatingControl)
-    const slider = wrapper.get<HTMLInputElement>(".post-rating__slider input")
+    const wrapper = mount(PostRatingControl);
+    const slider = wrapper.get<HTMLInputElement>(".post-rating__slider input");
 
-    await slider.setValue("1")
+    await slider.setValue("1");
 
-    expect(wrapper.emitted("rate")).toEqual([[1]])
-    expect(wrapper.get(".post-rating__slider output").text()).toBe("0.5 星")
-  })
+    expect(wrapper.emitted("rate")).toEqual([[1]]);
+    expect(wrapper.get(".post-rating__slider output").text()).toBe("0.5 星");
+  });
 
   it("emits rate event when clicking on a star half", async () => {
     const wrapper = mount(PostRatingControl, {

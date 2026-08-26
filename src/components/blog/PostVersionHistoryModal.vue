@@ -1,7 +1,10 @@
 <template>
   <PModal title="版本历史" size="md" @close="$emit('close')">
     <p v-if="loading" class="version-history__state">正在加载</p>
-    <p v-else-if="error" class="version-history__state" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="version-history__error" role="alert">
+      <p class="version-history__state">{{ error }}</p>
+      <PButton type="button" size="sm" variant="secondary" @click="loadVersions">重试</PButton>
+    </div>
     <PEmpty v-else-if="!versions.length" title="暂无版本" />
     <ol v-else class="version-history__list">
       <li v-for="version in versions" :key="version.version" class="version-history__item">
@@ -91,6 +94,7 @@ onMounted(() => { void loadVersions() })
 
 <style scoped>
 .version-history__state { color: var(--a-color-muted); margin: 0; }
+.version-history__error { display: grid; justify-items: start; gap: 0.75rem; }
 .version-history__list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .version-history__item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
 .version-history__item:last-child { border-bottom: 0; }

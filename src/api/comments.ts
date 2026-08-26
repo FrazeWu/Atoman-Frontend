@@ -103,7 +103,9 @@ export interface UploadCommentAsset { id: string; url: string; key: string; cont
 
 export const commentEndpoints = useApi().comments
 
-function withQuery(url: string, values: object) {
+type CommentQueryOptions = CommentListOptions | ReplyListOptions | ReportListOptions
+
+function withQuery(url: string, values: CommentQueryOptions) {
   const query = new URLSearchParams()
   Object.entries(values as Record<string, string | number | undefined>).forEach(([key, value]) => {
     if (value !== undefined && value !== '') query.set(key, String(value))

@@ -1,8 +1,8 @@
 <template>
   <section class="song-rating" :class="`song-rating--${size}`" :aria-label="`${songTitle} 评分`">
+    <span class="song-rating__prefix">评分：</span>
     <div class="song-rating__summary">
       <template v-if="ratingCount >= publicRatingThreshold">
-        <span class="song-rating__label">评分</span>
         <strong class="song-rating__score">{{ ratingScore.toFixed(1) }}</strong>
       </template>
       <span v-else class="song-rating__insufficient">依据不足</span>
@@ -76,13 +76,14 @@ function fillWidth(star: number) {
 
 <style scoped>
 .song-rating { display: inline-flex; align-items: center; min-height: 2.25rem; gap: 0.35rem; color: var(--a-color-muted); font-size: var(--a-text-sm); }
+.song-rating__prefix { color: var(--a-color-muted); font-weight: 600; white-space: nowrap; }
 .song-rating__summary { display: inline-flex; align-items: baseline; gap: 0.2rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.song-rating__label, .song-rating__insufficient, .song-rating__count { color: var(--a-color-muted); }
+.song-rating__insufficient, .song-rating__count { color: var(--a-color-muted); }
 .song-rating__score { color: #b45309; font-size: 1.15rem; font-weight: 750; line-height: 1; }
 .song-rating__stars { display: inline-flex; align-items: center; }
 .song-rating__star { position: relative; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: transparent; color: var(--a-color-border); cursor: pointer; transition: color 0.15s ease, transform 0.15s ease; }
 .song-rating--compact { gap: 0.15rem; }
-.song-rating--compact .song-rating__label { display: none; }
+.song-rating--compact .song-rating__prefix { display: none; }
 .song-rating--compact .song-rating__score { font-size: var(--a-text-sm); }
 .song-rating--compact .song-rating__star { width: 1.5rem; height: 1.75rem; }
 .song-rating__star-outline { position: absolute; top: 50%; left: 50%; pointer-events: none; transform: translate(-50%, -50%); }

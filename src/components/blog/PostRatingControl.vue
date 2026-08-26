@@ -1,5 +1,6 @@
 <template>
   <section class="post-rating" :class="`post-rating--${size}`" aria-label="文章评分">
+    <span class="post-rating__prefix">评分：</span>
     <!-- 综合评分与统计 -->
     <div class="post-rating__summary">
       <template v-if="weightedRatingActive && weightedRatingScore !== null && weightedRatingScore !== undefined">
@@ -238,6 +239,11 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 .post-rating__meta-box {
   display: inline-flex;
   align-items: center;
+}
+
+.post-rating__prefix {
+  color: var(--a-color-muted);
+  font-weight: 600;
 }
 
 .post-rating__summary {

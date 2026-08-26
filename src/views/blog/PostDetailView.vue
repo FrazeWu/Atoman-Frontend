@@ -118,6 +118,7 @@
           :can-delete="canDeleteAllComments"
           @count-change="interactions.commentCount.value = $event"
         />
+        <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
       </div>
     </article>
   </div>
@@ -127,11 +128,12 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PostHeader from '@/components/blog/PostHeader.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
+import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
@@ -166,6 +168,7 @@ const props = defineProps<{
 }>()
 
 const route = useRoute()
+const router = useRouter()
 const sheetStore = useSheetStore()
 const feedStore = useFeedStore()
 
@@ -189,11 +192,13 @@ const channelSubscriptionBusy = ref(false)
 const postEmbeds = ref<Record<string, EmbedData>>({})
 const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
+const relatedPosts = ref<BlogRelatedPost[]>([])
 const shareToastVisible = ref(false)
 const shareToastMessage = ref('')
 const shareToastType = ref<'success' | 'warning'>('success')
 let loadSeq = 0
 let bookmarkOperationSeq = 0
+let relatedRequestSequence = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
 
 const readingSource = () => typeof route.query.source === 'string' ? route.query.source : 'direct'
@@ -271,6 +276,8 @@ const fetchPost = async () => {
   channelSubscriptionBusy.value = false
   ratingLoading.value = false
   ratingError.value = ''
+  relatedPosts.value = []
+  relatedRequestSequence += 1
   postEmbeds.value = {}
   musicEmbeds.value = {}
   videoEmbeds.value = {}
@@ -294,6 +301,7 @@ const fetchPost = async () => {
       const detail = (d.data || d) as PostDetailResponse
       post.value = detail
       startReadingTracking(detail.id, readingSource())
+      void fetchRelatedPosts(detail.id)
       interactions.liked.value = detail.liked ?? detail.is_liked ?? false
       interactions.likeCount.value = detail.likes_count ?? detail.like_count ?? 0
       interactions.commentCount.value = detail.comments_count ?? detail.comment_count ?? 0
@@ -371,6 +379,37 @@ const fetchPost = async () => {
 watch(postId, () => {
   fetchPost()
 })
+
+const fetchRelatedPosts = async (contentID: string) => {
+  const requestSequence = ++relatedRequestSequence
+  try {
+    const headers: Record<string, string> = {}
+    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
+    const res = await apiRequestResult(`${api.blog.relatedPosts(contentID)}?limit=6`, { headers })
+    if (requestSequence !== relatedRequestSequence || contentID !== postId.value || !res.ok) return
+    const payload = await Promise.resolve(res.data) as unknown
+    const items = Array.isArray(payload)
+      ? payload
+      : payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)
+        ? (payload as { data: unknown[] }).data
+        : []
+    relatedPosts.value = items.filter((item): item is BlogRelatedPost => {
+      if (!item || typeof item !== 'object') return false
+      const candidate = item as Partial<BlogRelatedPost>
+      return typeof candidate.id === 'string'
+        && typeof candidate.title === 'string'
+        && typeof candidate.target_path === 'string'
+    })
+  } catch (error) {
+    if (requestSequence !== relatedRequestSequence || contentID !== postId.value) return
+    reportError(error)
+    relatedPosts.value = []
+  }
+}
+
+const openRelatedPost = (item: BlogRelatedPost) => {
+  void router.push({ path: item.target_path, query: { source: 'related' } })
+}
 
 const fetchBookmarkState = async (postId: string): Promise<boolean | null> => {
   try {

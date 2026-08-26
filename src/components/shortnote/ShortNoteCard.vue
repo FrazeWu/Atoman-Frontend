@@ -208,7 +208,7 @@ function formatDate(value: string) {
   position: relative;
   display: grid;
   gap: 0.65rem;
-  padding: 0.95rem 1.15rem;
+  padding: 0.95rem 1rem;
   margin-bottom: 0;
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);
@@ -366,6 +366,11 @@ function formatDate(value: string) {
 }
 
 /* 正文 */
+.sticky-memo-body,
+.sticky-memo-footer {
+  margin-left: 2.5rem;
+}
+
 .sticky-memo-body {
   display: grid;
   gap: 0.55rem;
@@ -461,7 +466,7 @@ function formatDate(value: string) {
 
 /* 行内评论区 */
 .sticky-inline-comments {
-  margin-top: 0.5rem;
+  margin: 0.5rem 0 0 2.5rem;
   padding: 0.75rem;
   background: var(--a-color-surface-muted);
   border-radius: var(--a-radius-control);

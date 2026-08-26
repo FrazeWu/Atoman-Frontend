@@ -250,7 +250,7 @@ defineEmits(['click'])
 
 .p-entry-visual {
   flex-shrink: 0;
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 
 /* Statistics are secondary during scanning and become available on intent. */

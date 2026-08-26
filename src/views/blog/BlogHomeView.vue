@@ -36,11 +36,6 @@
         />
       </div>
       <div class="blog-home__filter-group blog-home__filter-group--end">
-        <PSegmentedControl
-          v-model="sortBy"
-          :options="sortOptions"
-          @change="selectSort"
-        />
         <PButton
           v-if="typeFilter !== 'note'"
           variant="primary"
@@ -308,11 +303,6 @@ const typeOptions = [
   { label: '短笺', value: 'note' },
 ]
 
-const sortOptions = [
-  { label: '最新', value: 'latest' },
-  { label: '最热', value: 'popular' },
-]
-
 const recommendationOptions = [
   { label: '热度', value: 'hot' },
   { label: '精选', value: 'featured' },
@@ -371,11 +361,6 @@ const toggleReadingList = (item: BlogHomeListItem) => {
 const selectType = (value: string) => {
   typeFilter.value = value === 'note' || value === 'post' ? value : 'all'
   void Promise.all([fetchPosts(), fetchShortNotes()])
-}
-
-const selectSort = (value: string) => {
-  sortBy.value = value
-  void fetchPosts()
 }
 
 const selectRecommendationMode = (value: string) => {

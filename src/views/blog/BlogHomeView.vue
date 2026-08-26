@@ -28,7 +28,7 @@
           @change="selectType"
         />
       </div>
-      <div v-if="typeFilter !== 'note'" class="blog-home__filter-group">
+      <div class="blog-home__filter-group">
         <PSegmentedControl
           v-model="recommendationMode"
           :options="recommendationOptions"
@@ -97,7 +97,7 @@
         </PButton>
       </main>
 
-      <!-- 右侧发现辅助栏 -->
+      <!-- 右侧智能推荐 Sticky Rail -->
       <aside class="blog-home__rail" aria-label="侧边推荐">
         <!-- 热门频道卡片 -->
         <section v-if="channels.length" class="blog-home__rail-section">
@@ -121,6 +121,32 @@
             />
           </div>
         </section>
+
+        <!-- 推荐精选必读 -->
+        <section v-if="recommendedPosts.length > 3" class="blog-home__rail-section">
+          <div class="blog-home__rail-header">
+            <Sparkles :size="16" class="blog-home__rail-icon is-sparkles" />
+            <h2>精选推荐文章</h2>
+            <PButton
+              variant="primary"
+              label="换一批"
+              :loading="recommendationLoading"
+              @click="refreshRecommendationBatch"
+            />
+          </div>
+          <div class="blog-home__rail-list">
+            <div
+              v-for="item in recommendedPosts.slice(3, 8)"
+              :key="item.id"
+              class="blog-home__rail-note"
+              @click="openRecommendedPost(item)"
+            >
+              <strong class="blog-home__rail-title">{{ item.title }}</strong>
+              <p v-if="item.summary" class="blog-home__rail-summary">{{ item.summary }}</p>
+              <span v-if="item.score_label" class="blog-home__rail-sub">{{ item.score_label }}</span>
+            </div>
+          </div>
+        </section>
       </aside>
     </div>
   </div>
@@ -140,15 +166,19 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Flame } from 'lucide-vue-next'
+import { Bookmark, Clock, Flame, Sparkles, Star } from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import ModuleSearch from '@/components/search/ModuleSearch.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
+import EntryActions from '@/components/shared/EntryActions.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PClip from '@/components/ui/PClip.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PContentCard from '@/components/ui/PContentCard.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
@@ -156,7 +186,6 @@ import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import { apiRequestEnvelope, apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { reportError } from '@/utils/logger'
@@ -208,6 +237,7 @@ interface RecommendationPayload {
   title: string
   summary?: string
   description?: string
+  excerpt?: string
   image_url?: string
   target_path?: string
   source_title?: string
@@ -217,13 +247,6 @@ interface RecommendationPayload {
   rating_score?: number
   rating_count?: number
   bookmark_count?: number
-  bookmarks_count?: number
-  likes_count?: number
-  comments_count?: number
-  created_at?: string
-  published_at?: string
-  user?: BlogHomeListItem['user']
-  channel?: BlogChannel
   post?: BlogHomeListItem
 }
 
@@ -238,7 +261,6 @@ const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const blogSheets = useBlogSheets()
-const lifecycle = useContentLifecycle()
 const api = useApi()
 
 const posts = ref<BlogHomeListItem[]>([])
@@ -248,40 +270,33 @@ const notesError = ref(false)
 const notesLoading = ref(false)
 const pendingDeleteNote = ref<ShortNote | null>(null)
 const deletingNote = ref(false)
+const recommendedPosts = ref<Array<{
+  id: string
+  title: string
+  summary: string
+  image_url: string
+  targetPath: string
+  score_label: string
+}>>([])
 const channels = ref<BlogChannel[]>([])
 const loading = ref(true)
+const recommendationLoading = ref(false)
+const recommendationPage = ref(1)
 const page = ref(1)
 const hasMore = ref(false)
-const queryValue = (value: unknown) => Array.isArray(value) ? value[0] : value
-const normalizeTypeFilter = (value: unknown): 'all' | 'post' | 'note' => (
-  queryValue(value) === 'post' || queryValue(value) === 'note' ? queryValue(value) as 'post' | 'note' : 'all'
-)
-const normalizeRecommendationMode = (value: unknown): 'hot' | 'featured' | 'discover' => (
-  queryValue(value) === 'featured' || queryValue(value) === 'discover' ? queryValue(value) as 'featured' | 'discover' : 'hot'
-)
-const typeFilter = ref(normalizeTypeFilter(route.query.type))
-const recommendationMode = ref(normalizeRecommendationMode(route.query.mode))
+const typeFilter = ref<'all' | 'post' | 'note'>('all')
+const sortBy = ref('latest')
+const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const blogSearchTypes = ['post', 'short_note', 'channel', 'collection'] as const
-const activeQuery = computed(() => {
-  const value = queryValue(route.query.q)
-  return typeof value === 'string' ? value.trim() : ''
-})
+const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
 const blogSearchQuery = ref(activeQuery.value)
 let postsRequestSequence = 0
-const recordedImpressions = new Set<string>()
 
-const recordPostImpressions = (items: BlogHomeListItem[]) => {
-  for (const item of items) {
-    const key = `${recommendationMode.value}:${item.id}`
-    if (recordedImpressions.has(key)) continue
-    recordedImpressions.add(key)
-    void lifecycle.recordEvent({
-      module: 'blog',
-      content_id: item.id,
-      event: 'impression',
-      source: `blog_home:${recommendationMode.value}`,
-    }).catch(() => undefined)
-  }
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 const typeOptions = [
@@ -347,28 +362,17 @@ const toggleReadingList = (item: BlogHomeListItem) => {
 
 const selectType = (value: string) => {
   typeFilter.value = value === 'note' || value === 'post' ? value : 'all'
-  void syncHomeQuery()
   void Promise.all([fetchPosts(), fetchShortNotes()])
 }
 
 const selectRecommendationMode = (value: string) => {
-  recommendationMode.value = value === 'featured' || value === 'discover' ? value : 'hot'
-  void syncHomeQuery()
-  void fetchPosts()
+  recommendationMode.value = value as 'hot' | 'featured' | 'discover'
+  recommendationPage.value = 1
+  void fetchRecommendedPosts()
 }
-
-const homeQuery = (search = activeQuery.value) => {
-  const query: Record<string, string> = {}
-  if (search) query.q = search
-  if (typeFilter.value !== 'all') query.type = typeFilter.value
-  if (typeFilter.value !== 'note' && recommendationMode.value !== 'hot') query.mode = recommendationMode.value
-  return query
-}
-
-const syncHomeQuery = () => router.replace({ path: route.path, query: homeQuery() })
 
 const submitBlogSearch = (value: string) => {
-  void router.replace({ path: route.path, query: homeQuery(value.trim()) })
+  void router.replace({ path: route.path, query: value ? { q: value } : {} })
 }
 
 const openBlogSearchTarget = (target: ReferenceTarget) => {
@@ -387,6 +391,20 @@ const openChannel = (channel: BlogChannel) => {
   blogSheets.openChannel(String(channel.id), channel.name)
 }
 
+const postIdFromTargetPath = (targetPath: string) => {
+  const match = targetPath.match(/^\/posts\/post\/([^/?#]+)/)
+  return match?.[1]
+}
+
+const openRecommendedPost = (item: { id: string; title: string; targetPath: string }) => {
+  const postId = postIdFromTargetPath(item.targetPath)
+  if (postId) {
+    blogSheets.openPost(postId, item.title)
+    return
+  }
+  void router.push(item.targetPath)
+}
+
 const fetchChannels = async () => {
   try {
     const res = await apiRequestResult(api.blog.channels)
@@ -395,6 +413,38 @@ const fetchChannels = async () => {
     channels.value = Array.isArray(d.data) ? d.data : []
   } catch (error) {
     reportError(error)
+  }
+}
+
+const refreshRecommendationBatch = () => {
+  recommendationPage.value += 1
+  void fetchRecommendedPosts()
+}
+
+const fetchRecommendedPosts = async () => {
+  recommendationLoading.value = true
+  try {
+    const headers: Record<string, string> = {}
+    if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+
+    const res = await apiRequestResult(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=${recommendationPage.value}&page_size=20`, { headers })
+    if (!res.ok) return
+    const data = await Promise.resolve(res.data) as { data?: RecommendationPayload[] }
+    recommendedPosts.value = Array.isArray(data.data)
+      ? data.data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.summary?.trim() || item.description?.trim() || item.excerpt?.trim() || '',
+          image_url: item.image_url ?? '',
+          targetPath: item.target_path || `/posts/post/${item.id}`,
+          score_label: item.score_label ?? '',
+        }))
+      : []
+  } catch (error) {
+    reportError(error)
+    recommendedPosts.value = []
+  } finally {
+    recommendationLoading.value = false
   }
 }
 
@@ -456,13 +506,14 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const query = new URLSearchParams({
-      mode: recommendationMode.value,
-      page: String(targetPage),
-      page_size: String(PAGE_SIZE),
-      ...(activeQuery.value ? { q: activeQuery.value } : {}),
-    })
-    const endpoint = `${api.blog.recommendPosts}?${query.toString()}`
+    const isPopular = sortBy.value === 'popular'
+    const query = new URLSearchParams()
+    query.set('page', String(targetPage))
+    query.set('page_size', String(PAGE_SIZE))
+    if (activeQuery.value) query.set('q', activeQuery.value)
+    const endpoint = isPopular
+      ? `${api.url}/feed/recommend/articles?${new URLSearchParams({ mode: 'hot', page: String(targetPage), page_size: String(PAGE_SIZE), ...(activeQuery.value ? { q: activeQuery.value } : {}) }).toString()}`
+      : `${api.blog.posts}?${query.toString()}`
 
     const res = await apiRequestResult(endpoint, { headers })
     if (requestSequence !== postsRequestSequence) return false
@@ -471,24 +522,34 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
       if (requestSequence !== postsRequestSequence) return false
       const rawData = d.data || []
       const extractedPosts = rawData.map((item): BlogHomeListItem | null => {
-        if (!item?.id) return null
-        return {
-          id: item.id,
-          title: item.title,
-          summary: item.summary || item.description,
-          cover_url: item.image_url,
-          created_at: item.published_at || item.created_at,
-          view_count: item.view_count ?? item.read_count ?? 0,
-          rating_score: item.rating_score ?? 0,
-          rating_count: item.rating_count ?? 0,
-          bookmarks_count: item.bookmarks_count ?? item.bookmark_count ?? 0,
-          likes_count: item.likes_count ?? 0,
-          comments_count: item.comments_count ?? 0,
-          user: item.user,
-          channel: item.channel,
-          source: 'post',
-          targetPath: item.target_path || `/posts/post/${item.id}`,
+        if (isPopular) {
+          const targetPath = item.target_path || `/feed/item/${item.id}`
+          const targetPostId = postIdFromTargetPath(targetPath)
+          const source = targetPostId ? 'post' : 'feed'
+          return {
+            id: targetPostId || item.id,
+            title: item.title,
+            summary: item.summary || item.description || item.excerpt || undefined,
+            view_count: item.view_count ?? item.read_count ?? 0,
+            rating_score: item.rating_score ?? 0,
+            rating_count: item.rating_count ?? 0,
+            bookmarks_count: item.bookmark_count ?? 0,
+            likes_count: 0,
+            source,
+            sourceTitle: item.source_title,
+            targetPath,
+          }
         }
+        const post = item.post || item
+        if (post?.id) {
+          return {
+            ...post,
+            summary: post.summary?.trim() || item.summary?.trim() || item.description?.trim() || item.excerpt?.trim() || undefined,
+            source: 'post',
+            targetPath: `/posts/post/${post.id}`,
+          }
+        }
+        return null
       }).filter((item): item is BlogHomeListItem => item !== null)
 
       if (append) {
@@ -496,8 +557,9 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
       } else {
         posts.value = extractedPosts
       }
-      recordPostImpressions(extractedPosts)
-      hasMore.value = typeof d.meta?.has_more === 'boolean' ? d.meta.has_more : rawData.length === PAGE_SIZE
+      hasMore.value = isPopular
+        ? Boolean(d.meta?.has_more)
+        : typeof d.meta?.has_more === 'boolean' ? d.meta.has_more : rawData.length === PAGE_SIZE
       page.value = targetPage
       postsError.value = false
       return true
@@ -521,7 +583,7 @@ const loadMore = () => {
 }
 
 onMounted(() => {
-  void Promise.all([fetchPosts(), fetchShortNotes(), fetchChannels()])
+  void Promise.all([fetchPosts(), fetchShortNotes(), fetchRecommendedPosts(), fetchChannels()])
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchStarredIds()
@@ -535,16 +597,9 @@ onUnmounted(() => {
 
 watch(activeQuery, (value) => {
   if (value !== blogSearchQuery.value) blogSearchQuery.value = value
-  void fetchPosts()
-})
-
-watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => {
-  const nextType = normalizeTypeFilter(rawType)
-  const nextMode = normalizeRecommendationMode(rawMode)
-  if (nextType === typeFilter.value && nextMode === recommendationMode.value) return
-  typeFilter.value = nextType
-  recommendationMode.value = nextMode
-  void Promise.all([fetchPosts(), fetchShortNotes()])
+  if (sortBy.value !== 'popular') {
+    void fetchPosts()
+  }
 })
 </script>
 
@@ -595,6 +650,37 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.blog-home__recommendations {
+  margin-bottom: 1.5rem;
+}
+
+.blog-home__recommendation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.blog-home__recommendation-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.blog-home__recommendation-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--a-color-muted);
+}
+
+.blog-home__recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .blog-home__skeleton-list {
@@ -689,6 +775,10 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   color: var(--a-color-warning);
 }
 
+.blog-home__rail-icon.is-sparkles {
+  color: var(--a-color-primary);
+}
+
 .blog-home__rail-list {
   display: flex;
   flex-direction: column;
@@ -732,6 +822,52 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.blog-home__rail-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.blog-home__rail-note:last-child {
+  border-bottom: 0;
+}
+
+.blog-home__rail-note:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.blog-home__rail-title {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  font-weight: 550;
+  color: var(--a-color-fg);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blog-home__rail-summary {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.blog-home__rail-sub {
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
 }
 
 @media (max-width: 1024px) {

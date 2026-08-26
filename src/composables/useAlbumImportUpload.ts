@@ -372,13 +372,9 @@ export function useAlbumImportUpload() {
 				draft.totalBytesTotal > 0
 					? Math.min(nextTotalBytesLoaded, draft.totalBytesTotal)
 					: nextTotalBytesLoaded;
-			uploadState.fileProgress.value = new Map(
-				uploadState.fileProgress.value,
-			).set(
+			uploadState.fileProgress.value = new Map(uploadState.fileProgress.value).set(
 				fileId,
-				file.size > 0
-					? Math.round((fileBytesLoaded / file.size) * 100)
-					: 0,
+				file.size > 0 ? Math.round((fileBytesLoaded / file.size) * 100) : 0,
 			);
 			const elapsedSeconds = Math.max(
 				(Date.now() - uploadState.uploadStartedAt) / 1000,
@@ -420,12 +416,12 @@ export function useAlbumImportUpload() {
 						"获取上传地址超时，请重试",
 						(signal) =>
 							createMusicAlbumImportFilePartUpload(
-									importId,
-									fileId,
-									partNumber,
-									currentPartSize,
-									{ signal },
-								),
+								importId,
+								fileId,
+								partNumber,
+								currentPartSize,
+								{ signal },
+							),
 					);
 					if (!isCurrent()) return;
 
@@ -446,13 +442,13 @@ export function useAlbumImportUpload() {
 						"保存分片进度超时，请重试",
 						(signal) =>
 							completeMusicAlbumImportFilePart(
-									importId,
-									fileId,
-									partNumber,
-									etag,
-									currentPartSize,
-									{ signal },
-								),
+								importId,
+								fileId,
+								partNumber,
+								etag,
+								currentPartSize,
+								{ signal },
+							),
 					);
 					if (!isCurrent()) return;
 
@@ -488,9 +484,10 @@ export function useAlbumImportUpload() {
 			);
 			if (!isCurrent()) return;
 			mergeUploadedImportFile(draft, completedFile);
-			uploadState.fileProgress.value = new Map(
-				uploadState.fileProgress.value,
-			).set(fileId, 100);
+			uploadState.fileProgress.value = new Map(uploadState.fileProgress.value).set(
+				fileId,
+				100,
+			);
 		} finally {
 			uploadState.abortControllers.delete(controller);
 		}
@@ -543,9 +540,7 @@ export function useAlbumImportUpload() {
 		}
 
 		const hasRelativePaths = files.some((file) =>
-			Boolean(
-				(file as File & { webkitRelativePath?: string }).webkitRelativePath,
-			),
+			Boolean((file as File & { webkitRelativePath?: string }).webkitRelativePath),
 		);
 		const isArchive =
 			files.length === 1 &&
@@ -687,10 +682,7 @@ export function useAlbumImportUpload() {
 				);
 			}
 			if (!isCurrent()) return;
-			const completed = await completeUploadSession(
-				uploadState,
-				session.importId,
-			);
+			const completed = await completeUploadSession(uploadState, session.importId);
 			if (isCurrent() && draft.importId === session.importId) {
 				refreshWhenFilesUploaded(flow, completed, session.importId);
 			}
@@ -720,7 +712,8 @@ export function useAlbumImportUpload() {
 		const fileRecord = draft.files.find((file) => file.fileId === fileId);
 		const needsUpload = fileRecord?.uploadStatus === "failed";
 		const file = uploadState.selectedFiles.get(fileId);
-		const canResumeUpload = fileRecord?.uploadStatus === "uploading" && !!file;
+		const canResumeUpload =
+			fileRecord?.uploadStatus === "uploading" && Boolean(file);
 		if (needsUpload && !file) {
 			uploadState.errorMessage.value = "请替换文件后重新上传";
 			return;
@@ -735,10 +728,7 @@ export function useAlbumImportUpload() {
 			let uploadRecord = fileRecord;
 			if (!canResumeUpload) {
 				const snapshot = await retryMusicAlbumImportFile(importId, fileId);
-				if (
-					!isCurrent() ||
-					!applyImportSnapshotToFlow(flow, snapshot, importId)
-				)
+				if (!isCurrent() || !applyImportSnapshotToFlow(flow, snapshot, importId))
 					return;
 				uploadRecord = snapshot.files.find((file) => file.fileId === fileId);
 			}
@@ -767,10 +757,7 @@ export function useAlbumImportUpload() {
 					latest.files.length > 0 &&
 					latest.files.every((item) => item.uploadStatus === "uploaded")
 				) {
-					const completed = await completeUploadSession(
-						uploadState,
-						importId,
-					);
+					const completed = await completeUploadSession(uploadState, importId);
 					if (!isCurrent()) return;
 					refreshWhenFilesUploaded(flow, completed, importId);
 				} else {

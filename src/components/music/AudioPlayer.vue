@@ -76,8 +76,8 @@
       <!-- Center: Controls -->
       <div ref="playerControlsRef" class="player-controls-hub">
         <div class="ctrl-row">
-          <button type="button" class="skip-btn" aria-label="后退 5 秒" title="后退 5 秒" data-hint="后退 5S (←)" @click="player.skip(-5)"><Rewind :size="16" aria-hidden="true" /></button>
-          <button type="button" class="nav-btn" aria-label="上一首" title="上一首" data-hint="上一首 (Alt+←)" @click="player.playPrevious()"><SkipBack :size="18" aria-hidden="true" /></button>
+          <button type="button" class="skip-btn" aria-label="后退 5 秒" title="后退 5 秒" data-hint="后退 5S (←)" @click="player.skip(-5)">-5S</button>
+          <button type="button" class="nav-btn" aria-label="上一首" title="上一首" data-hint="上一首 (Alt+←)" @click="player.playPrevious()">上一首</button>
           <button
             type="button"
             class="main-play-btn"
@@ -86,11 +86,10 @@
             :data-hint="player.isPlaying ? '暂停 (Space)' : '播放 (Space)'"
             @click="player.togglePlay()"
           >
-            <Pause v-if="player.isPlaying" :size="18" aria-hidden="true" />
-            <Play v-else :size="18" aria-hidden="true" />
+            {{ player.isPlaying ? '暂停' : '播放' }}
           </button>
-          <button type="button" class="nav-btn" aria-label="下一首" title="下一首" data-hint="下一首 (Alt+→)" @click="player.playNext()"><SkipForward :size="18" aria-hidden="true" /></button>
-          <button type="button" class="skip-btn" aria-label="前进 5 秒" title="前进 5 秒" data-hint="前进 5S (→)" @click="player.skip(5)"><FastForward :size="16" aria-hidden="true" /></button>
+          <button type="button" class="nav-btn" aria-label="下一首" title="下一首" data-hint="下一首 (Alt+→)" @click="player.playNext()">下一首</button>
+          <button type="button" class="skip-btn" aria-label="前进 5 秒" title="前进 5 秒" data-hint="前进 5S (→)" @click="player.skip(5)">+5S</button>
 
           <button
             v-if="player.currentSong && !isPodcast"
@@ -317,12 +316,6 @@ import {
   Repeat,
   Shuffle,
   List,
-  Rewind,
-  FastForward,
-  SkipBack,
-  SkipForward,
-  Play,
-  Pause,
   Volume2,
   Volume1,
   Volume,
@@ -895,7 +888,7 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   transition:
     transform 0.1s,
     background-color 0.15s;

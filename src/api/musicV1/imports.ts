@@ -60,30 +60,28 @@ function normalizeMusicAlbumImportMultipart(
 
 function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
 	return {
-		...(draft.title !== undefined ? { title: draft.title } : {}),
-		...(draft.artist_ids !== undefined ? { artist_ids: draft.artist_ids } : {}),
-		...(draft.artist_credits !== undefined
-			? { artist_credits: draft.artist_credits }
-			: {}),
-		...(draft.release_date !== undefined
-			? { release_date: draft.release_date }
-			: {}),
+		...(draft.title === undefined ? {} : { title: draft.title }),
+		...(draft.artist_ids === undefined ? {} : { artist_ids: draft.artist_ids }),
+		...(draft.artist_credits === undefined
+			? {}
+			: { artist_credits: draft.artist_credits }),
+		...(draft.release_date === undefined
+			? {}
+			: { release_date: draft.release_date }),
 		...(draft.cover
 			? { cover_url: draft.cover.url, cover_key: draft.cover.key }
 			: {}),
-		...(draft.description !== undefined
-			? { description: draft.description }
-			: {}),
-		...(draft.album_type !== undefined ? { album_type: draft.album_type } : {}),
+		...(draft.description === undefined
+			? {}
+			: { description: draft.description }),
+		...(draft.album_type === undefined ? {} : { album_type: draft.album_type }),
 		...("tracks" in draft &&
 		Array.isArray(
-			(draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] })
-				.tracks,
+			(draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] }).tracks,
 		)
 			? {
-					tracks: (
-						draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] }
-					).tracks,
+					tracks: (draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] })
+						.tracks,
 				}
 			: {}),
 	};
@@ -93,36 +91,36 @@ function artistPayloadFromDraft(
 	draft: ArtistEditDraft,
 ): Record<string, unknown> {
 	return {
-		...(draft.name !== undefined ? { name: draft.name } : {}),
-		...(draft.disambiguation !== undefined
-			? { disambiguation: draft.disambiguation }
-			: {}),
-		...(draft.legal_name !== undefined ? { legal_name: draft.legal_name } : {}),
-		...(draft.stage_names_json !== undefined
-			? { stage_names_json: draft.stage_names_json }
-			: {}),
-		...(draft.bio !== undefined ? { bio: draft.bio } : {}),
-		...(draft.image_url !== undefined ? { image_url: draft.image_url } : {}),
-		...(draft.nationality !== undefined
-			? { nationality: draft.nationality }
-			: {}),
-		...(draft.birth_place !== undefined
-			? { birth_place: draft.birth_place }
-			: {}),
-		...(draft.birth_date !== undefined ? { birth_date: draft.birth_date } : {}),
-		...(draft.birth_year !== undefined ? { birth_year: draft.birth_year } : {}),
-		...(draft.death_year !== undefined ? { death_year: draft.death_year } : {}),
-		...(draft.artist_form !== undefined
-			? { artist_form: draft.artist_form }
-			: {}),
-		...(draft.active_start_date !== undefined
-			? { active_start_date: draft.active_start_date }
-			: {}),
-		...(draft.active_end_date !== undefined
-			? { active_end_date: draft.active_end_date }
-			: {}),
-		...(draft.members !== undefined ? { members: draft.members } : {}),
-		...(draft.sources !== undefined ? { sources: draft.sources } : {}),
+		...(draft.name === undefined ? {} : { name: draft.name }),
+		...(draft.disambiguation === undefined
+			? {}
+			: { disambiguation: draft.disambiguation }),
+		...(draft.legal_name === undefined ? {} : { legal_name: draft.legal_name }),
+		...(draft.stage_names_json === undefined
+			? {}
+			: { stage_names_json: draft.stage_names_json }),
+		...(draft.bio === undefined ? {} : { bio: draft.bio }),
+		...(draft.image_url === undefined ? {} : { image_url: draft.image_url }),
+		...(draft.nationality === undefined
+			? {}
+			: { nationality: draft.nationality }),
+		...(draft.birth_place === undefined
+			? {}
+			: { birth_place: draft.birth_place }),
+		...(draft.birth_date === undefined ? {} : { birth_date: draft.birth_date }),
+		...(draft.birth_year === undefined ? {} : { birth_year: draft.birth_year }),
+		...(draft.death_year === undefined ? {} : { death_year: draft.death_year }),
+		...(draft.artist_form === undefined
+			? {}
+			: { artist_form: draft.artist_form }),
+		...(draft.active_start_date === undefined
+			? {}
+			: { active_start_date: draft.active_start_date }),
+		...(draft.active_end_date === undefined
+			? {}
+			: { active_end_date: draft.active_end_date }),
+		...(draft.members === undefined ? {} : { members: draft.members }),
+		...(draft.sources === undefined ? {} : { sources: draft.sources }),
 	};
 }
 
@@ -163,21 +161,21 @@ export function submitSongRevision(
 		{
 			base_revision: 0,
 			changes: {
-				...(draft.title !== undefined ? { title: draft.title } : {}),
-				...(draft.description !== undefined
-					? { description: draft.description }
-					: {}),
-				...(draft.release_type !== undefined
-					? { release_type: draft.release_type }
-					: {}),
-				...(draft.release_date !== undefined
-					? { release_date: draft.release_date }
-					: {}),
-				...(draft.sources !== undefined ? { sources: draft.sources } : {}),
+				...(draft.title === undefined ? {} : { title: draft.title }),
+				...(draft.description === undefined
+					? {}
+					: { description: draft.description }),
+				...(draft.release_type === undefined
+					? {}
+					: { release_type: draft.release_type }),
+				...(draft.release_date === undefined
+					? {}
+					: { release_date: draft.release_date }),
+				...(draft.sources === undefined ? {} : { sources: draft.sources }),
 				...(draft.cover ? { cover_url: draft.cover.url } : {}),
-				...(draft.artist_credits !== undefined
-					? { artist_credits: draft.artist_credits }
-					: {}),
+				...(draft.artist_credits === undefined
+					? {}
+					: { artist_credits: draft.artist_credits }),
 			},
 			edit_summary: draft.reason,
 		},
@@ -338,8 +336,7 @@ async function uploadMusicAudioResumable(
 				while (next < missing.length) {
 					const partNumber = missing[next];
 					next += 1;
-					if (partNumber !== undefined)
-						await retry(() => uploadPart(partNumber), 2);
+					if (partNumber !== undefined) await retry(() => uploadPart(partNumber), 2);
 				}
 				return undefined;
 			}),
@@ -437,9 +434,7 @@ export async function uploadMusicAssetWithProgress(
 export async function uploadMusicAudioBatch(
 	files: File[],
 ): Promise<UploadAsset[]> {
-	return Promise.all(
-		files.map((file) => uploadMusicAsset(file, "music.audio")),
-	);
+	return Promise.all(files.map((file) => uploadMusicAsset(file, "music.audio")));
 }
 
 export async function createMusicAlbumImport(
@@ -650,8 +645,7 @@ export function uploadMusicAlbumImportFilePart(
 				settle(() => reject(new Error(`上传分片失败 (${xhr.status})`)));
 				return;
 			}
-			const etag =
-				xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
+			const etag = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
 			if (!etag) {
 				settle(() => reject(new Error("上传分片失败")));
 				return;
@@ -884,9 +878,7 @@ export async function completeMusicAlbumImportSession(
 export async function cancelMusicAlbumImportSession(
 	importId: string,
 ): Promise<void> {
-	await apiDeleteJson<void>(
-		musicV1Endpoints.albumImportSessionCancel(importId),
-	);
+	await apiDeleteJson<void>(musicV1Endpoints.albumImportSessionCancel(importId));
 }
 
 export async function deleteMusicAlbumImportRecord(

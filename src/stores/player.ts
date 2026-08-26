@@ -262,8 +262,7 @@ export const usePlayerStore = defineStore("player", () => {
 			id: source.id,
 			title: source.title,
 			artist:
-				source.artists?.map((artist) => artist.name).join(" / ") ||
-				"未知艺术家",
+				source.artists?.map((artist) => artist.name).join(" / ") || "未知艺术家",
 			album: source.album?.title || "",
 			album_id: source.album?.id || "",
 			audio_url: source.audio_url || "",
@@ -380,9 +379,8 @@ export const usePlayerStore = defineStore("player", () => {
 	let listenedMs = 0;
 	let listeningSongId: string | null = null;
 	let playReported = false;
-	let podcastTracker: ReturnType<
-		typeof createContentConsumptionTracker
-	> | null = null;
+	let podcastTracker: ReturnType<typeof createContentConsumptionTracker> | null =
+		null;
 
 	const clearListeningTimer = () => {
 		if (listeningTimer === null) return;
@@ -407,13 +405,15 @@ export const usePlayerStore = defineStore("player", () => {
 		void recordMusicRecommendationEvents({
 			request_id: context.request_id,
 			surface: context.surface,
-			events: [{
-				event,
-				entity_type: "song",
-				entity_id: String(song.id),
-				position: context.position,
-				reason: context.reason,
-			}],
+			events: [
+				{
+					event,
+					entity_type: "song",
+					entity_id: String(song.id),
+					position: context.position,
+					reason: context.reason,
+				},
+			],
 		}).catch((error) => {
 			reportError(error, "Failed to record music recommendation playback event:");
 		});
@@ -444,9 +444,7 @@ export const usePlayerStore = defineStore("player", () => {
 		pauseListening();
 		listenedMs = 0;
 		listeningSongId =
-			!song.source_type || song.source_type === "music"
-				? String(song.id)
-				: null;
+			!song.source_type || song.source_type === "music" ? String(song.id) : null;
 		playReported = false;
 	};
 
@@ -538,8 +536,7 @@ export const usePlayerStore = defineStore("player", () => {
 			...new Set(
 				queue.value
 					.filter(
-						(song) =>
-							playbackItemKey(song) !== currentKey && Boolean(song.audio_url),
+						(song) => playbackItemKey(song) !== currentKey && Boolean(song.audio_url),
 					)
 					.map((song) => resolvePlaybackAudioUrl(song.audio_url))
 					.filter((url) => !prefetchedAudioStartUrls.has(url)),
@@ -886,8 +883,7 @@ export const usePlayerStore = defineStore("player", () => {
 				? readPodcastProgress(song.source_id)
 				: null;
 		currentTime.value =
-			startAt ??
-			(savedProgress?.completed ? 0 : savedProgress?.position_sec || 0);
+			startAt ?? (savedProgress?.completed ? 0 : savedProgress?.position_sec || 0);
 		const resumePosition = currentTime.value;
 		const applyResumePosition = () => {
 			if (generation !== playGeneration || audio !== player) return;
@@ -924,8 +920,7 @@ export const usePlayerStore = defineStore("player", () => {
 							event,
 							position_sec: Math.floor(currentTime.value),
 							duration_sec: Math.floor(duration.value),
-							progress:
-								duration.value > 0 ? currentTime.value / duration.value : 0,
+							progress: duration.value > 0 ? currentTime.value / duration.value : 0,
 						})
 						.catch(() => undefined);
 				},
@@ -1118,8 +1113,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const toggleRepeat = () => {
 		const modes: RepeatMode[] = ["none", "all", "one"];
-		const nextMode =
-			modes[(modes.indexOf(repeatMode.value) + 1) % modes.length];
+		const nextMode = modes[(modes.indexOf(repeatMode.value) + 1) % modes.length];
 		repeatMode.value = nextMode;
 	};
 
@@ -1186,9 +1180,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const setQueueFromCurrentItems = (items: TimelineItem[]) => {
 		const podcastSongs: Song[] = items
-			.filter(
-				(item) => item.type === "feed_item" && item.feed_item?.enclosure_url,
-			)
+			.filter((item) => item.type === "feed_item" && item.feed_item?.enclosure_url)
 			.map((item) => createPodcastSong(item.feed_item))
 			.filter((song): song is Song => Boolean(song));
 		queue.value = podcastSongs;
@@ -1237,13 +1229,13 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const skip = (seconds: number) => {
 		if (!audio) return;
-		const audioDuration = Number.isFinite(audio.duration) && audio.duration > 0
-			? audio.duration
-			: duration.value;
+		const audioDuration =
+			Number.isFinite(audio.duration) && audio.duration > 0
+				? audio.duration
+				: duration.value;
 		const targetTime = audio.currentTime + seconds;
-		const newTime = audioDuration > 0
-			? Math.min(targetTime, audioDuration)
-			: targetTime;
+		const newTime =
+			audioDuration > 0 ? Math.min(targetTime, audioDuration) : targetTime;
 		seek(Math.max(0, newTime));
 	};
 

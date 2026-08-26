@@ -70,18 +70,18 @@ function mockUploadTransport() {
 		partNumber: 1,
 		uploadUrl: "https://upload.test/part-1",
 	});
-	vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockImplementation(
-		async (_uploadUrl, body, options = {}) => {
+	vi
+		.spyOn(musicApi, "uploadMusicAlbumImportFilePart")
+		.mockImplementation(async (_uploadUrl, body, options = {}) => {
 			options.onProgress?.({ loaded: body.size, total: body.size });
 			return "etag-1";
-		},
-	);
-	vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
-		importFile(),
-	);
-	vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue(
-		importFile(),
-	);
+		});
+	vi
+		.spyOn(musicApi, "completeMusicAlbumImportFilePart")
+		.mockResolvedValue(importFile());
+	vi
+		.spyOn(musicApi, "completeMusicAlbumImportFile")
+		.mockResolvedValue(importFile());
 }
 
 describe("MusicCreationAlbumImportStep.vue", () => {
@@ -109,11 +109,12 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		flow.draft.albumDetails.bio = "Seed description";
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 
-		expect(wrapper.find('[data-testid="album-seed-bio-toggle"]').exists()).toBe(false);
-		expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveProperty(
-			"value",
-			"Seed description",
+		expect(wrapper.find('[data-testid="album-seed-bio-toggle"]').exists()).toBe(
+			false,
 		);
+		expect(
+			wrapper.get('[data-testid="album-details-bio-input"]').element,
+		).toHaveProperty("value", "Seed description");
 	});
 
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {
@@ -140,9 +141,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const archive = new File(["zip"], "graduation.zip", {
 			type: "application/zip",
 		});
-		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
-			snapshot({ inputMode: "archive" }),
-		);
+		vi
+			.spyOn(musicApi, "createMusicAlbumImport")
+			.mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
 			snapshot({
 				inputMode: "archive",
@@ -165,9 +166,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			}),
 		);
 		mockUploadTransport();
-		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
-			snapshot({ status: "queued", inputMode: "archive" }),
-		);
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockResolvedValue(snapshot({ status: "queued", inputMode: "archive" }));
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
@@ -215,9 +216,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"import-1",
 			expect.objectContaining({ signal: expect.any(Object) }),
 		);
-		expect(useMusicDrawers().state.value.creationFlow?.step).toBe(
-			"albumDetails",
-		);
+		expect(useMusicDrawers().state.value.creationFlow?.step).toBe("albumDetails");
 	});
 
 	it("关闭创建抽屉后继续完成已开始的上传", async () => {
@@ -237,13 +236,10 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			errorMessage: "",
 		};
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
-		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
-			snapshot({ files: [fileRecord] }),
-		);
-		vi.spyOn(
-			musicApi,
-			"createMusicAlbumImportFilePartUpload",
-		).mockResolvedValue({
+		vi
+			.spyOn(musicApi, "registerMusicAlbumImportFiles")
+			.mockResolvedValue(snapshot({ files: [fileRecord] }));
+		vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload").mockResolvedValue({
 			partNumber: 1,
 			uploadUrl: "https://upload.test/part-1",
 		});
@@ -315,33 +311,35 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			fileName: secondFile.name,
 			size: secondFile.size,
 		};
-		vi.spyOn(musicApi, "createMusicAlbumImport")
+		vi
+			.spyOn(musicApi, "createMusicAlbumImport")
 			.mockResolvedValueOnce(snapshot({ importId: "import-1" }))
 			.mockResolvedValueOnce(snapshot({ importId: "import-2" }));
-		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockImplementation(
-			async (importId: string) =>
+		vi
+			.spyOn(musicApi, "registerMusicAlbumImportFiles")
+			.mockImplementation(async (importId: string) =>
 				snapshot({
 					importId,
 					files: [importId === "import-1" ? firstRecord : secondRecord],
 				}),
-		);
-		vi.spyOn(
-			musicApi,
-			"createMusicAlbumImportFilePartUpload",
-		).mockImplementation(async (importId: string) => ({
-			partNumber: 1,
-			uploadUrl: `https://upload.test/${importId}`,
-		}));
-		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
-			firstRecord,
-		);
+			);
+		vi
+			.spyOn(musicApi, "createMusicAlbumImportFilePartUpload")
+			.mockImplementation(async (importId: string) => ({
+				partNumber: 1,
+				uploadUrl: `https://upload.test/${importId}`,
+			}));
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportFilePart")
+			.mockResolvedValue(firstRecord);
 		const completeFile = vi
 			.spyOn(musicApi, "completeMusicAlbumImportFile")
 			.mockResolvedValue({ ...firstRecord, uploadStatus: "uploaded" });
-		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockImplementation(
-			async (importId: string) =>
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockImplementation(async (importId: string) =>
 				snapshot({ importId, status: "queued", stage: "queued" }),
-		);
+			);
 
 		let resolveFirstUpload!: (etag: string) => void;
 		const firstUpload = new Promise<string>((resolve) => {
@@ -475,16 +473,16 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			{ type: "application/zip" },
 		);
 
-		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
-			snapshot({ inputMode: "archive" }),
-		);
-		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
-			snapshot({ files: [] }),
-		);
+		vi
+			.spyOn(musicApi, "createMusicAlbumImport")
+			.mockResolvedValue(snapshot({ inputMode: "archive" }));
+		vi
+			.spyOn(musicApi, "registerMusicAlbumImportFiles")
+			.mockResolvedValue(snapshot({ files: [] }));
 		mockUploadTransport();
-		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
-			snapshot({ status: "queued" }),
-		);
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockResolvedValue(snapshot({ status: "queued" }));
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
@@ -494,9 +492,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.waitFor(() => {
 			const draft = useMusicDrawers().state.value.creationFlow?.draft;
 			expect(draft?.albumDetails.title).toBe("Day Cycle");
-			expect(
-				draft?.tracks.map((track: { title: string }) => track.title),
-			).toEqual(["Dawn", "Dusk"]);
+			expect(draft?.tracks.map((track: { title: string }) => track.title)).toEqual(
+				["Dawn", "Dusk"],
+			);
 		});
 		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledTimes(1);
 	});
@@ -505,13 +503,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const audio = new File(["audio"], "01-song.mp3", { type: "audio/mpeg" });
 		const cover = new File(["cover"], "cover.jpg", { type: "image/jpeg" });
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
-		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
-			snapshot({ files: [] }),
-		);
+		vi
+			.spyOn(musicApi, "registerMusicAlbumImportFiles")
+			.mockResolvedValue(snapshot({ files: [] }));
 		mockUploadTransport();
-		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
-			snapshot({ status: "queued" }),
-		);
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockResolvedValue(snapshot({ status: "queued" }));
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [audio, cover]);
@@ -550,28 +548,25 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			size: audio.size,
 		});
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot());
-		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
-			snapshot({ files: [fileRecord] }),
-		);
-		vi.spyOn(
-			musicApi,
-			"createMusicAlbumImportFilePartUpload",
-		).mockResolvedValue({
+		vi
+			.spyOn(musicApi, "registerMusicAlbumImportFiles")
+			.mockResolvedValue(snapshot({ files: [fileRecord] }));
+		vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload").mockResolvedValue({
 			partNumber: 1,
 			uploadUrl: "https://upload.test/part-1",
 		});
 		let resolveUpload!: (etag: string) => void;
-		vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockImplementation(
-			(_uploadUrl, body, options = {}) => {
+		vi
+			.spyOn(musicApi, "uploadMusicAlbumImportFilePart")
+			.mockImplementation((_uploadUrl, body, options = {}) => {
 				options.onProgress?.({ loaded: body.size / 2, total: body.size });
 				return new Promise<string>((resolve) => {
 					resolveUpload = resolve;
 				});
-			},
-		);
-		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(
-			fileRecord,
-		);
+			});
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportFilePart")
+			.mockResolvedValue(fileRecord);
 		vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue({
 			...fileRecord,
 			uploadStatus: "uploaded",
@@ -586,7 +581,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		await vi.waitFor(() => {
 			expect(wrapper.get(".import-file-progress").text()).toBe("50%");
-			expect(wrapper.find(".progress-panel").exists()).toBe(false);
+			expect(wrapper.get(".progress-panel").text()).toContain("上传进度 50%");
 		});
 		expect(
 			useMusicDrawers().state.value.creationFlow?.draft.albumImport
@@ -620,9 +615,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await flushPromises();
 
 		expect(
-			wrapper
-				.get('[data-testid="album-import-cover-preview"]')
-				.attributes("src"),
+			wrapper.get('[data-testid="album-import-cover-preview"]').attributes("src"),
 		).toBe("https://img.example/imported-cover.jpg");
 		expect(
 			wrapper
@@ -739,9 +732,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const archive = new File(["zip"], "stages.zip", {
 			type: "application/zip",
 		});
-		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
-			snapshot({ inputMode: "archive" }),
-		);
+		vi
+			.spyOn(musicApi, "createMusicAlbumImport")
+			.mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
 			snapshot({
 				files: [
@@ -763,9 +756,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			}),
 		);
 		mockUploadTransport();
-		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
-			snapshot({ status: "queued", stage: "queued" }),
-		);
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockResolvedValue(snapshot({ status: "queued", stage: "queued" }));
 		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValueOnce(
 			snapshot({
 				status: "extracting",
@@ -781,9 +774,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.advanceTimersByTimeAsync(2000);
 
 		expect(musicApi.getMusicAlbumImport).toHaveBeenCalled();
-		expect(
-			useMusicDrawers().state.value.creationFlow?.draft.albumImport,
-		).toEqual(
+		expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport).toEqual(
 			expect.objectContaining({
 				status: "extracting",
 				stage: "extracting",
@@ -813,9 +804,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			title: "",
 			errorMessage: "网络错误",
 		};
-		vi.spyOn(musicApi, "retryMusicAlbumImportFile").mockResolvedValue(
-			snapshot({ status: "uploading", files: [fileRecord] }),
-		);
+		vi
+			.spyOn(musicApi, "retryMusicAlbumImportFile")
+			.mockResolvedValue(snapshot({ status: "uploading", files: [fileRecord] }));
 		vi.spyOn(musicApi, "replaceMusicAlbumImportFile").mockResolvedValue(
 			importFile({
 				...fileRecord,
@@ -823,12 +814,12 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				relativePath: "fixed.mp3",
 			}),
 		);
-		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
-			snapshot({ inputMode: "files" }),
-		);
-		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
-			snapshot({ files: [fileRecord] }),
-		);
+		vi
+			.spyOn(musicApi, "createMusicAlbumImport")
+			.mockResolvedValue(snapshot({ inputMode: "files" }));
+		vi
+			.spyOn(musicApi, "registerMusicAlbumImportFiles")
+			.mockResolvedValue(snapshot({ files: [fileRecord] }));
 		mockUploadTransport();
 		vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue({
 			...fileRecord,
@@ -934,18 +925,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			uploadStatus: "pending",
 			completedParts: [],
 		});
-		const partOne = {
-			partNumber: 1,
-			etag: "etag-1",
-			size: partSize,
-		};
-		const partTwo = {
-			partNumber: 2,
-			etag: "etag-2",
-			size: 1,
-		};
+		const partOne = { partNumber: 1, etag: "etag-1", size: partSize };
+		const partTwo = { partNumber: 2, etag: "etag-2", size: 1 };
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
-			snapshot({ inputMode: "archive", progress: { current: 0, total: archive.size } }),
+			snapshot({
+				inputMode: "archive",
+				progress: { current: 0, total: archive.size },
+			}),
 		);
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
 			snapshot({
@@ -961,23 +947,23 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				uploadUrl: `https://upload.test/part-${partNumber}`,
 			}));
 		let uploadCalls = 0;
-		vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockImplementation(
-			async (_url, body, options = {}) => {
+		vi
+			.spyOn(musicApi, "uploadMusicAlbumImportFilePart")
+			.mockImplementation(async (_url, body, options = {}) => {
 				uploadCalls += 1;
 				options.onProgress?.({ loaded: body.size, total: body.size });
 				if (uploadCalls >= 2 && uploadCalls <= 4) {
 					throw new Error("连接中断");
 				}
 				return uploadCalls === 1 ? "etag-1" : "etag-2";
-			},
-		);
-		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockImplementation(
-			async (_importId, _fileId, partNumber) => ({
+			});
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportFilePart")
+			.mockImplementation(async (_importId, _fileId, partNumber) => ({
 				...fileRecord,
 				uploadStatus: "uploading",
 				completedParts: partNumber === 1 ? [partOne] : [partOne, partTwo],
-			}),
-		);
+			}));
 		vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue({
 			...fileRecord,
 			uploadStatus: "uploaded",
@@ -997,21 +983,27 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				],
 			}),
 		);
-		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
-			snapshot({ status: "queued", stage: "queued", files: [fileRecord] }),
-		);
-		vi.spyOn(musicApi, "retryMusicAlbumImportFile").mockRejectedValue(
-			new Error("不应重建上传会话"),
-		);
+		vi
+			.spyOn(musicApi, "completeMusicAlbumImportSession")
+			.mockResolvedValue(
+				snapshot({ status: "queued", stage: "queued", files: [fileRecord] }),
+			);
+		vi
+			.spyOn(musicApi, "retryMusicAlbumImportFile")
+			.mockRejectedValue(new Error("不应重建上传会话"));
 
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
 		await vi.waitFor(() =>
-			expect(wrapper.find('[data-testid="album-import-upload-retry"]').exists()).toBe(true),
+			expect(
+				wrapper.find('[data-testid="album-import-upload-retry"]').exists(),
+			).toBe(true),
 		);
 
-		await wrapper.get('[data-testid="album-import-upload-retry"]').trigger("click");
+		await wrapper
+			.get('[data-testid="album-import-upload-retry"]')
+			.trigger("click");
 		await vi.waitFor(() =>
 			expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalled(),
 		);
@@ -1043,10 +1035,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				files: [fileRecord],
 			}),
 		);
-		const createPart = vi.spyOn(
-			musicApi,
-			"createMusicAlbumImportFilePartUpload",
-		);
+		const createPart = vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload");
 		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(
 			snapshot({
 				status: "ready",

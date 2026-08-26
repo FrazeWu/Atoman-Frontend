@@ -1,389 +1,419 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { mount } from "@vue/test-utils";
+import { describe, expect, it } from "vitest";
 
-import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
-import type { Subscription, SubscriptionGroup } from '@/types'
+import FeedSidebarSources from "@/components/feed/FeedSidebarSources.vue";
+import type { Subscription, SubscriptionGroup } from "@/types";
 
 const groups: SubscriptionGroup[] = [
   {
-    id: 'g-tech',
-    user_id: 'user-1',
-    name: '科技生活',
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
+    id: "g-tech",
+    user_id: "user-1",
+    name: "科技生活",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
   },
   {
-    id: 'g-culture',
-    user_id: 'user-1',
-    name: '文化生活',
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
+    id: "g-culture",
+    user_id: "user-1",
+    name: "文化生活",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
   },
-]
+];
 
 const subscriptions: Subscription[] = [
   {
-    id: 'sub-1',
-    user_id: 'user-1',
-    feed_source_id: 'source-1',
-    title: '少数派',
-    subscription_group_id: 'g-tech',
-    created_at: '2026-01-01T00:00:00Z',
+    id: "sub-1",
+    user_id: "user-1",
+    feed_source_id: "source-1",
+    title: "少数派",
+    subscription_group_id: "g-tech",
+    created_at: "2026-01-01T00:00:00Z",
   },
   {
-    id: 'sub-2',
-    user_id: 'user-1',
-    feed_source_id: 'source-2',
-    title: '英格兰周报',
-    subscription_group_id: 'g-culture',
-    created_at: '2026-01-01T00:00:00Z',
+    id: "sub-2",
+    user_id: "user-1",
+    feed_source_id: "source-2",
+    title: "英格兰周报",
+    subscription_group_id: "g-culture",
+    created_at: "2026-01-01T00:00:00Z",
   },
   {
-    id: 'sub-3',
-    user_id: 'user-1',
-    feed_source_id: 'source-3',
+    id: "sub-3",
+    user_id: "user-1",
+    feed_source_id: "source-3",
     feed_source: {
-      id: 'source-3',
-      source_type: 'external_rss',
-      rss_url: 'https://example.com/rss.xml',
-      hash: 'source-3-hash',
-      title: '未分类来源',
-      created_at: '2026-01-01T00:00:00Z',
+      id: "source-3",
+      source_type: "external_rss",
+      rss_url: "https://example.com/rss.xml",
+      hash: "source-3-hash",
+      title: "未分类来源",
+      created_at: "2026-01-01T00:00:00Z",
     },
-    created_at: '2026-01-01T00:00:00Z',
+    created_at: "2026-01-01T00:00:00Z",
   },
-]
+];
 
-describe('FeedSidebarSources', () => {
-  it('renders grouped and unassigned sources with active state', () => {
+describe("FeedSidebarSources", () => {
+  it("renders grouped and unassigned sources with active state", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
-        activeSourceId: 'sub-2',
+        activeSourceId: "sub-2",
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('订阅源类别 / SOURCES')
-    expect(wrapper.text()).toContain('科技生活')
-    expect(wrapper.text()).toContain('文化生活')
-    expect(wrapper.text()).toContain('少数派')
-    expect(wrapper.text()).toContain('英格兰周报')
-    expect(wrapper.text()).toContain('未分类来源')
-    expect(wrapper.text()).toContain('未分类')
-    expect(wrapper.get('[data-source-id="sub-2"]').classes()).toContain('is-active')
-    expect(wrapper.find('.feed-sidebar-sources__count').exists()).toBe(false)
-  })
+    expect(wrapper.text()).toContain("订阅源类别 / SOURCES");
+    expect(wrapper.text()).toContain("科技生活");
+    expect(wrapper.text()).toContain("文化生活");
+    expect(wrapper.text()).toContain("少数派");
+    expect(wrapper.text()).toContain("英格兰周报");
+    expect(wrapper.text()).toContain("未分类来源");
+    expect(wrapper.text()).toContain("未分类");
+    expect(wrapper.get('[data-source-id="sub-2"]').classes()).toContain(
+      "is-active",
+    );
+    expect(wrapper.find(".feed-sidebar-sources__count").exists()).toBe(false);
+  });
 
-  it('falls back to feed source title when subscription title is missing', () => {
+  it("falls back to feed source title when subscription title is missing", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
-            id: 'sub-with-source-title',
-            user_id: 'user-1',
-            feed_source_id: 'source-with-title',
+            id: "sub-with-source-title",
+            user_id: "user-1",
+            feed_source_id: "source-with-title",
             feed_source: {
-              id: 'source-with-title',
-              source_type: 'external_rss',
-              rss_url: 'https://example.com/feed.xml',
-              hash: 'source-with-title-hash',
-              title: '源标题',
-              created_at: '2026-01-01T00:00:00Z',
+              id: "source-with-title",
+              source_type: "external_rss",
+              rss_url: "https://example.com/feed.xml",
+              hash: "source-with-title-hash",
+              title: "源标题",
+              created_at: "2026-01-01T00:00:00Z",
             },
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: "2026-01-01T00:00:00Z",
           },
         ],
         groups: [],
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('源标题')
-    expect(wrapper.text()).not.toContain('未命名订阅')
-  })
+    expect(wrapper.text()).toContain("源标题");
+    expect(wrapper.text()).not.toContain("未命名订阅");
+  });
 
-  it('falls back to feed source title when subscription title is just the rss url', () => {
+  it("falls back to feed source title when subscription title is just the rss url", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
-            id: 'sub-with-url-title',
-            user_id: 'user-1',
-            feed_source_id: 'source-with-url-title',
-            title: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+            id: "sub-with-url-title",
+            user_id: "user-1",
+            feed_source_id: "source-with-url-title",
+            title:
+              "https://feeds.acast.com/public/shows/68004395b4ef799a7a410371",
             feed_source: {
-              id: 'source-with-url-title',
-              source_type: 'external_rss',
-              rss_url: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
-              hash: 'source-with-url-title-hash',
-              title: 'Acast Show Name',
-              created_at: '2026-01-01T00:00:00Z',
+              id: "source-with-url-title",
+              source_type: "external_rss",
+              rss_url:
+                "https://feeds.acast.com/public/shows/68004395b4ef799a7a410371",
+              hash: "source-with-url-title-hash",
+              title: "Acast Show Name",
+              created_at: "2026-01-01T00:00:00Z",
             },
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: "2026-01-01T00:00:00Z",
           },
         ],
         groups: [],
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('Acast Show Name')
-    expect(wrapper.text()).not.toContain('https://feeds.acast.com/public/shows/68004395b4ef799a7a410371')
-  })
+    expect(wrapper.text()).toContain("Acast Show Name");
+    expect(wrapper.text()).not.toContain(
+      "https://feeds.acast.com/public/shows/68004395b4ef799a7a410371",
+    );
+  });
 
-  it('renders subscriptions with missing groups under unassigned group', () => {
+  it("renders subscriptions with missing groups under unassigned group", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
-            id: 'sub-missing-group',
-            user_id: 'user-1',
-            feed_source_id: 'source-missing-group',
-            title: '孤立订阅源',
-            subscription_group_id: 'g-missing',
-            created_at: '2026-01-01T00:00:00Z',
+            id: "sub-missing-group",
+            user_id: "user-1",
+            feed_source_id: "source-missing-group",
+            title: "孤立订阅源",
+            subscription_group_id: "g-missing",
+            created_at: "2026-01-01T00:00:00Z",
           },
         ],
         groups: [],
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('未分类')
-    expect(wrapper.text()).toContain('孤立订阅源')
-  })
+    expect(wrapper.text()).toContain("未分类");
+    expect(wrapper.text()).toContain("孤立订阅源");
+  });
 
-  it('labels internal account and channel sources after their names', () => {
+  it("labels internal account and channel sources after their names", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
-            id: 'sub-account',
-            user_id: 'user-1',
-            feed_source_id: 'source-account',
-            title: 'admin',
+            id: "sub-account",
+            user_id: "user-1",
+            feed_source_id: "source-account",
+            title: "admin",
             feed_source: {
-              id: 'source-account',
-              source_type: 'internal_user',
-              source_id: 'user-1',
-              title: 'admin',
-              created_at: '2026-01-01T00:00:00Z',
+              id: "source-account",
+              source_type: "internal_user",
+              source_id: "user-1",
+              title: "admin",
+              created_at: "2026-01-01T00:00:00Z",
             },
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: "2026-01-01T00:00:00Z",
           },
           {
-            id: 'sub-channel',
-            user_id: 'user-1',
-            feed_source_id: 'source-channel',
-            title: 'admin',
+            id: "sub-channel",
+            user_id: "user-1",
+            feed_source_id: "source-channel",
+            title: "admin",
             feed_source: {
-              id: 'source-channel',
-              source_type: 'internal_channel',
-              source_id: 'channel-1',
-              title: 'admin',
-              created_at: '2026-01-01T00:00:00Z',
+              id: "source-channel",
+              source_type: "internal_channel",
+              source_id: "channel-1",
+              title: "admin",
+              created_at: "2026-01-01T00:00:00Z",
             },
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: "2026-01-01T00:00:00Z",
           },
         ],
         groups: [],
       },
-    })
+    });
 
-    const badges = wrapper.findAll('.feed-sidebar-sources__badge').map((node) => node.text())
-    const names = wrapper.findAll('.feed-sidebar-sources__name').map((node) => node.text())
-    expect(badges).toEqual(['账号', '频道'])
-    expect(names).toEqual(['admin', 'admin'])
-  })
+    const badges = wrapper
+      .findAll(".feed-sidebar-sources__badge")
+      .map((node) => node.text());
+    const names = wrapper
+      .findAll(".feed-sidebar-sources__name")
+      .map((node) => node.text());
+    expect(badges).toEqual(["账号", "频道"]);
+    expect(names).toEqual(["admin", "admin"]);
+  });
 
-  it('uses RSS and podcast badges while preserving names and unread counts', () => {
+  it("uses RSS and podcast badges while preserving names and unread counts", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
-            id: 'sub-rss',
-            user_id: 'user-1',
-            feed_source_id: 'source-rss',
-            title: '少数派',
+            id: "sub-rss",
+            user_id: "user-1",
+            feed_source_id: "source-rss",
+            title: "少数派",
             feed_source: {
-              id: 'source-rss',
-              source_type: 'external_rss',
-              rss_url: 'https://example.com/feed.xml',
-              hash: 'source-rss-hash',
-              title: '少数派',
-              created_at: '2026-01-01T00:00:00Z',
+              id: "source-rss",
+              source_type: "external_rss",
+              rss_url: "https://example.com/feed.xml",
+              hash: "source-rss-hash",
+              title: "少数派",
+              created_at: "2026-01-01T00:00:00Z",
             },
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: "2026-01-01T00:00:00Z",
           },
           {
-            id: 'sub-podcast',
-            user_id: 'user-1',
-            feed_source_id: 'source-podcast',
-            title: '科技播客',
+            id: "sub-podcast",
+            user_id: "user-1",
+            feed_source_id: "source-podcast",
+            title: "科技播客",
             feed_source: {
-              id: 'source-podcast',
-              source_type: 'external_rss',
-              rss_url: 'https://example.com/podcast.xml',
-              hash: 'source-podcast-hash',
-              title: '科技播客',
-              created_at: '2026-01-01T00:00:00Z',
+              id: "source-podcast",
+              source_type: "external_rss",
+              rss_url: "https://example.com/podcast.xml",
+              hash: "source-podcast-hash",
+              title: "科技播客",
+              created_at: "2026-01-01T00:00:00Z",
             },
             unread_count: 18,
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: "2026-01-01T00:00:00Z",
           },
         ],
         groups: [],
-        unreadCounts: { 'sub-rss': 2 },
+        unreadCounts: { "sub-rss": 2 },
       },
-    })
+    });
 
-    expect(wrapper.findAll('.feed-sidebar-sources__badge').map((node) => node.text())).toEqual(['RSS', '播客'])
-    expect(wrapper.findAll('.feed-sidebar-sources__name').map((node) => node.text())).toEqual(['少数派', '科技播客'])
-    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-rss"]').text()).toBe('2')
-    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-podcast"]').text()).toBe('18')
-  })
+    expect(
+      wrapper
+        .findAll(".feed-sidebar-sources__badge")
+        .map((node) => node.text()),
+    ).toEqual(["RSS", "播客"]);
+    expect(
+      wrapper.findAll(".feed-sidebar-sources__name").map((node) => node.text()),
+    ).toEqual(["少数派", "科技播客"]);
+    expect(
+      wrapper.get('[data-test="feed-sidebar-unread-count-sub-rss"]').text(),
+    ).toBe("2");
+    expect(
+      wrapper.get('[data-test="feed-sidebar-unread-count-sub-podcast"]').text(),
+    ).toBe("18");
+  });
 
-  it('renders empty state when subscriptions are empty', () => {
+  it("renders empty state when subscriptions are empty", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [],
         groups,
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('暂无订阅源')
-    expect(wrapper.find('.feed-sidebar-sources__groups').exists()).toBe(false)
-  })
+    expect(wrapper.text()).toContain("暂无订阅源");
+    expect(wrapper.find(".feed-sidebar-sources__groups").exists()).toBe(false);
+  });
 
-  it('filters sources by title and rss url', async () => {
+  it("filters sources by title and rss url", async () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
       },
-    })
+    });
 
-    await wrapper.get('[data-test="feed-sidebar-source-search"]').setValue('rss.xml')
+    await wrapper
+      .get('[data-test="feed-sidebar-source-search"]')
+      .setValue("rss.xml");
 
-    expect(wrapper.text()).toContain('未分类来源')
-    expect(wrapper.text()).not.toContain('少数派')
-    expect(wrapper.text()).not.toContain('英格兰周报')
-  })
+    expect(wrapper.text()).toContain("未分类来源");
+    expect(wrapper.text()).not.toContain("少数派");
+    expect(wrapper.text()).not.toContain("英格兰周报");
+  });
 
-  it('toggles source groups without removing the group heading', async () => {
+  it("toggles source groups without removing the group heading", async () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
       },
-    })
-    const groupTitle = wrapper.get('[data-test="feed-sidebar-group-g-tech"]')
+    });
+    const groupTitle = wrapper.get('[data-test="feed-sidebar-group-g-tech"]');
 
-    expect(groupTitle.attributes('aria-expanded')).toBe('true')
-    expect(groupTitle.text()).toBe('科技生活')
+    expect(groupTitle.attributes("aria-expanded")).toBe("true");
+    expect(groupTitle.text()).toBe("科技生活");
 
-    await groupTitle.trigger('click')
+    await groupTitle.trigger("click");
 
-    expect(groupTitle.attributes('aria-expanded')).toBe('false')
-    expect(wrapper.text()).toContain('科技生活')
-    expect(wrapper.text()).not.toContain('少数派')
-    expect(wrapper.text()).toContain('英格兰周报')
-  })
+    expect(groupTitle.attributes("aria-expanded")).toBe("false");
+    expect(wrapper.text()).toContain("科技生活");
+    expect(wrapper.text()).not.toContain("少数派");
+    expect(wrapper.text()).toContain("英格兰周报");
+  });
 
-  it('shows source health state when subscription health is not healthy', () => {
+  it("shows source health state when subscription health is not healthy", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
             ...subscriptions[0],
-            health_status: 'error',
+            health_status: "error",
           },
         ],
         groups,
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('异常')
-  })
+    expect(wrapper.text()).toContain("异常");
+  });
 
-  it('shows unread counts and can filter to unread sources', async () => {
+  it("shows unread counts and can filter to unread sources", async () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
         unreadCounts: {
-          'sub-1': 2,
-          'sub-2': 0,
+          "sub-1": 2,
+          "sub-2": 0,
         },
       },
-    })
+    });
 
-    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text()).toBe('2')
-    expect(wrapper.text()).toContain('英格兰周报')
+    expect(
+      wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text(),
+    ).toBe("2");
+    expect(wrapper.text()).toContain("英格兰周报");
 
-    await wrapper.get('[data-test="feed-sidebar-unread-only"]').trigger('click')
+    await wrapper
+      .get('[data-test="feed-sidebar-unread-only"]')
+      .trigger("click");
 
-    expect(wrapper.text()).toContain('少数派')
-    expect(wrapper.text()).not.toContain('英格兰周报')
-  })
+    expect(wrapper.text()).toContain("少数派");
+    expect(wrapper.text()).not.toContain("英格兰周报");
+  });
 
-  it('classifies lowercase newsletter subscriptions as RSS', () => {
+  it("classifies lowercase newsletter subscriptions as RSS", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
           {
-            id: 'sub-newsletter',
-            user_id: 'user-1',
-            feed_source_id: 'source-newsletter',
-            title: 'frontend newsletter',
-            created_at: '2026-01-01T00:00:00Z',
+            id: "sub-newsletter",
+            user_id: "user-1",
+            feed_source_id: "source-newsletter",
+            title: "frontend newsletter",
+            created_at: "2026-01-01T00:00:00Z",
           },
         ],
         groups: [],
       },
-    })
+    });
 
-    expect(wrapper.get('.feed-sidebar-sources__badge').text()).toBe('RSS')
-  })
+    expect(wrapper.get(".feed-sidebar-sources__badge").text()).toBe("RSS");
+  });
 
-  it('emits source selection and manage events', async () => {
+  it("emits source selection and manage events", async () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
-        activeSourceId: 'sub-2',
+        activeSourceId: "sub-2",
       },
-    })
+    });
 
-    await wrapper.get('[data-source-id="sub-1"]').trigger('click')
-    await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger('click')
+    await wrapper.get('[data-source-id="sub-1"]').trigger("click");
+    await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger("click");
 
-    expect(wrapper.emitted('select-source')).toEqual([['sub-1']])
-    expect(wrapper.emitted('manage')).toEqual([[]])
-  })
+    expect(wrapper.emitted("select-source")).toEqual([["sub-1"]]);
+    expect(wrapper.emitted("manage")).toEqual([[]]);
+  });
 
-  it('emits select all when the all sources entry is clicked', async () => {
+  it("emits select all when the all sources entry is clicked", async () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
-        activeSourceId: 'sub-2',
+        activeSourceId: "sub-2",
       },
-    })
+    });
 
-    await wrapper.get('[data-test="feed-sidebar-all-sources"]').trigger('click')
+    await wrapper
+      .get('[data-test="feed-sidebar-all-sources"]')
+      .trigger("click");
 
-    expect(wrapper.emitted('select-all')).toEqual([[]])
-  })
+    expect(wrapper.emitted("select-all")).toEqual([[]]);
+  });
 
-  it('hides source content when collapsed', () => {
+  it("hides source content when collapsed", () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions,
         groups,
         collapsed: true,
       },
-    })
+    });
 
-    expect(wrapper.get('.feed-sidebar-sources').classes()).toContain('is-collapsed')
-    expect(wrapper.text()).not.toContain('少数派')
-  })
-})
+    expect(wrapper.get(".feed-sidebar-sources").classes()).toContain(
+      "is-collapsed",
+    );
+    expect(wrapper.text()).not.toContain("少数派");
+  });
+});

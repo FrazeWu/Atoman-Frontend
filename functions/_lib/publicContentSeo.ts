@@ -49,9 +49,7 @@ function plainText(value: unknown, fallback: string): string {
 		.replace(/\s+/g, " ")
 		.trim();
 	if (!normalized) return fallback;
-	return normalized.length > 160
-		? `${normalized.slice(0, 157)}...`
-		: normalized;
+	return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }
 
 function date(value: unknown): string | undefined {
@@ -61,19 +59,45 @@ function date(value: unknown): string | undefined {
 		: undefined;
 }
 
-function unwrap(payload: unknown): unknown {
-	const envelope = record(payload);
-	return envelope && "data" in envelope ? envelope.data : payload;
+type JsonValue =
+	| null
+	| boolean
+	| number
+	| string
+	| JsonValue[]
+	| { [key: string]: JsonValue };
+
+function parseJsonValue(value: unknown): JsonValue {
+	if (
+		value === null ||
+		typeof value === "boolean" ||
+		typeof value === "number" ||
+		typeof value === "string"
+	)
+		return value;
+	if (Array.isArray(value)) return value.map(parseJsonValue);
+	if (typeof value === "object") {
+		const object: { [key: string]: JsonValue } = {};
+		for (const [key, entry] of Object.entries(value))
+			object[key] = parseJsonValue(entry);
+		return object;
+	}
+	throw new Error("Expected a JSON value");
 }
 
-async function getJson(url: string, fetcher: Fetcher): Promise<unknown> {
+function unwrap(payload: JsonValue): JsonValue {
+	const envelope = record(payload);
+	return envelope && "data" in envelope ? (envelope.data as JsonValue) : payload;
+}
+
+async function getJson(url: string, fetcher: Fetcher): Promise<JsonValue> {
 	const response = await fetcher(url, {
 		headers: { Accept: "application/json" },
 	});
 	if ([401, 403, 404].includes(response.status)) return null;
 	if (!response.ok)
 		throw new Error(`Public SEO source returned ${response.status}`);
-	return unwrap(await response.json());
+	return unwrap(parseJsonValue(await response.json()));
 }
 
 function names(values: unknown): string[] {
@@ -95,10 +119,7 @@ function content(
 
 async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 	const artist = record(
-		await getJson(
-			`${apiBase}/music/artists/${encodeURIComponent(id)}`,
-			fetcher,
-		),
+		await getJson(`${apiBase}/music/artists/${encodeURIComponent(id)}`, fetcher),
 	);
 	if (!artist || !text(artist.id) || !text(artist.name)) return undefined;
 	const name = text(artist.display_name) || text(artist.name);
@@ -214,10 +235,7 @@ async function loadForumTopic(apiBase: string, id: string, fetcher: Fetcher) {
 
 async function loadDebate(apiBase: string, id: string, fetcher: Fetcher) {
 	const debate = record(
-		await getJson(
-			`${apiBase}/debate/topics/${encodeURIComponent(id)}`,
-			fetcher,
-		),
+		await getJson(`${apiBase}/debate/topics/${encodeURIComponent(id)}`, fetcher),
 	);
 	if (!debate || !text(debate.id) || !text(debate.title)) return undefined;
 	const title = text(debate.title);
@@ -330,8 +348,7 @@ async function loadPodcastShow(
 }
 
 function duration(value: unknown): string | undefined {
-	const seconds =
-		typeof value === "number" ? Math.max(0, Math.floor(value)) : 0;
+	const seconds = typeof value === "number" ? Math.max(0, Math.floor(value)) : 0;
 	return seconds ? `PT${seconds}S` : undefined;
 }
 
@@ -420,6 +437,11 @@ async function loadVideoCollection(
 		text(collection.cover_url) || text(videos[0].thumbnail_url) || undefined,
 		date(collection.updated_at),
 	);
+}
+
+export function isAggregatedFeedItemPath(pathname: string) {
+	const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+	return /^\/feed\/item\/[^/]+$/.test(path);
 }
 
 export async function resolvePublicContentSeo(
@@ -519,6 +541,15 @@ export function buildUnresolvedPublicContentHtml(html: string) {
 	);
 }
 
+export function buildAggregatedContentHtml(html: string) {
+	const cleanHtml = buildUnresolvedPublicContentHtml(html);
+	if (/name=["']robots["']/i.test(cleanHtml)) return cleanHtml;
+	return cleanHtml.replace(
+		/<\/head>/i,
+		'    <meta name="robots" content="noindex, follow">\n  </head>',
+	);
+}
+
 export function buildMissingPublicContentHtml(html: string) {
 	const cleanHtml = buildUnresolvedPublicContentHtml(html);
 	if (/name=["']robots["']/i.test(cleanHtml)) return cleanHtml;
@@ -528,7 +559,7 @@ export function buildMissingPublicContentHtml(html: string) {
 	);
 }
 
-function list(payload: unknown): Record<string, unknown>[] {
+function list(payload: JsonValue): Record<string, unknown>[] {
 	return array(unwrap(payload))
 		.map(record)
 		.filter((value): value is Record<string, unknown> => Boolean(value));
@@ -540,7 +571,7 @@ async function fetchList(apiBase: string, path: string, fetcher: Fetcher) {
 	});
 	if (!response.ok)
 		throw new Error(`Public sitemap source unavailable: ${path}`);
-	return list(await response.json());
+	return list(parseJsonValue(await response.json()));
 }
 
 export async function collectPublicSitemapItems(
@@ -557,8 +588,7 @@ export async function collectPublicSitemapItems(
 	]);
 	const fulfilled = (index: number) =>
 		sources[index].status === "fulfilled"
-			? (sources[index] as PromiseFulfilledResult<Record<string, unknown>[]>)
-					.value
+			? (sources[index] as PromiseFulfilledResult<Record<string, unknown>[]>).value
 			: [];
 	const artists = fulfilled(0);
 	const albums = fulfilled(1);

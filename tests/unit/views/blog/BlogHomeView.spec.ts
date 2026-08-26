@@ -1,25 +1,26 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import BlogHomeView from '@/views/blog/BlogHomeView.vue'
+import BlogHomeView from "@/views/blog/BlogHomeView.vue";
+import { useAuthStore } from "@/stores/auth";
+import { useFeedStore } from "@/stores/feed";
 
-const routerPush = vi.fn()
-const routerReplace = vi.fn().mockResolvedValue(undefined)
-const openPost = vi.fn()
+const routerPush = vi.fn();
+const openPost = vi.fn();
 
-vi.mock('@/composables/useBlogSheets', () => ({
+vi.mock("@/composables/useBlogSheets", () => ({
   useBlogSheets: () => ({ openPost }),
-}))
+}));
 
-vi.mock('vue-router', () => ({
-  RouterLink: { template: '<a><slot /></a>' },
-  useRoute: () => ({ path: '/posts', query: {} }),
-  useRouter: () => ({ push: routerPush, replace: routerReplace }),
-}))
+vi.mock("vue-router", () => ({
+  RouterLink: { template: "<a><slot /></a>" },
+  useRoute: () => ({ query: {} }),
+  useRouter: () => ({ push: routerPush }),
+}));
 
 const segmentedControlStub = {
-  props: ['modelValue', 'options'],
+  props: ["modelValue", "options"],
   template: `
     <div>
       <button
@@ -32,10 +33,10 @@ const segmentedControlStub = {
       </button>
     </div>
   `,
-}
+};
 
 const entryStub = {
-  props: ['title', 'summary'],
+  props: ["title", "summary"],
   template: `
     <article class="p-entry" @click="$emit('click')">
       <h3>{{ title }}</h3>
@@ -43,135 +44,275 @@ const entryStub = {
       <div class="entry-actions" @click.stop><slot name="actions" /></div>
     </article>
   `,
-}
+};
 
-const mountBlogHome = () => mount(BlogHomeView, {
-  global: {
-    stubs: {
-      PAvatar: true,
-      PBadge: true,
-      PButton: { template: '<button><slot /></button>' },
-      PEmpty: true,
-      PContentCard: entryStub,
-      PPageHeader: true,
-      PSegmentedControl: segmentedControlStub,
+const clipStub = {
+  props: ["label", "active"],
+  template:
+    '<button class="p-clip" @click="$emit(\'click\', $event)">{{ label }}</button>',
+};
+
+const mountBlogHome = () =>
+  mount(BlogHomeView, {
+    global: {
+      stubs: {
+        PAvatar: true,
+        PBadge: true,
+        PButton: { template: "<button><slot /></button>" },
+        PClip: clipStub,
+        PEmpty: true,
+        PContentCard: entryStub,
+        PPageHeader: true,
+        PSegmentedControl: segmentedControlStub,
+      },
     },
-  },
-})
+  });
 
-const recommendationResponse = (items: unknown[], hasMore?: boolean) => new Response(JSON.stringify({
-  data: items,
-  ...(hasMore === undefined ? {} : { meta: { has_more: hasMore } }),
-}), { status: 200 })
-
-describe('BlogHomeView', () => {
+describe("BlogHomeView", () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
-    routerPush.mockReset()
-    routerReplace.mockReset().mockResolvedValue(undefined)
-    openPost.mockReset()
-    setActivePinia(createPinia())
-  })
+    vi.restoreAllMocks();
+    routerPush.mockReset();
+    openPost.mockReset();
+    setActivePinia(createPinia());
+  });
 
-  it('renders posts returned by the blog discovery endpoint', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/blog/recommend/posts')) {
-        return recommendationResponse([{
-          id: 'post-discovery-1',
-          title: 'Discovery Post',
-          summary: 'From the blog discovery response',
-          created_at: '2026-07-06T00:00:00Z',
-          target_path: '/posts/post/post-discovery-1',
-        }])
+  it("renders flat posts returned by the blog posts endpoint", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/blog/posts")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "post-flat-1",
+                title: "Flat Explore Post",
+                summary: "From flat /blog/posts response",
+                created_at: "2026-07-06T00:00:00Z",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }
-      return new Response(JSON.stringify({ data: [] }), { status: 200 })
-    })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
 
-    const wrapper = mountBlogHome()
-    await flushPromises()
+    const wrapper = mountBlogHome();
 
-    expect(wrapper.text()).toContain('Discovery Post')
-    await wrapper.find('.p-entry').trigger('click')
+    await flushPromises();
 
-    expect(openPost).toHaveBeenCalledWith('post-discovery-1', 'Discovery Post')
-    const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20')
-  })
+    expect(wrapper.text()).toContain("Flat Explore Post");
+    expect(wrapper.text()).not.toContain("暂无内容");
 
-  it('keeps the heat recommendation filter without duplicate latest/popular filters', async () => {
-    const wrapper = mountBlogHome()
-    await flushPromises()
+    await wrapper
+      .findAll(".p-entry")
+      .find((entry) => entry.text().includes("Flat Explore Post"))
+      ?.trigger("click");
 
-    const options = wrapper.findAll('.segmented-option').map((option) => option.text())
-    expect(options).toContain('热度')
-    expect(options).toContain('精选')
-    expect(options).toContain('探索')
-    expect(options).not.toContain('最新')
-    expect(options).not.toContain('最热')
-  })
+    expect(openPost).toHaveBeenCalledWith("post-flat-1", "Flat Explore Post");
+    expect(routerPush).not.toHaveBeenCalled();
 
-  it('uses the selected recommendation mode for the main post stream', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/blog/recommend/posts')) {
-        const featured = url.includes('mode=featured')
-        return recommendationResponse([{
-          id: featured ? 'featured-post' : 'hot-post',
-          title: featured ? 'Featured Post' : 'Hot Post',
-          summary: 'Recommendation result',
-          created_at: '2026-07-06T00:00:00Z',
-        }])
+    const requestedUrls = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.map(([input]) => String(input));
+    expect(requestedUrls).toContain("/api/v1/blog/posts?page=1&page_size=20");
+    expect(requestedUrls.some((url) => url.includes("/blog/explore"))).toBe(
+      false,
+    );
+  });
+
+  it("keeps the heat recommendation filter without a duplicate latest/popular filter", async () => {
+    const wrapper = mountBlogHome();
+
+    await flushPromises();
+
+    const options = wrapper
+      .findAll(".segmented-option")
+      .map((option) => option.text());
+    expect(options).toContain("热度");
+    expect(options).not.toContain("最新");
+    expect(options).not.toContain("最热");
+  });
+
+  it("uses feed recommendation target path when opening hot feed item", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/feed/recommend/articles")) {
+          return new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: "feed-item-1",
+                  title: "Hot Feed Item",
+                  summary: "External feed item",
+                  target_path: "/feed/item/feed-item-1",
+                },
+              ],
+              meta: { has_more: false },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      });
+
+    const wrapper = mountBlogHome();
+
+    await flushPromises();
+    wrapper.vm.$.setupState.sortBy = "popular";
+    await wrapper.vm.$.setupState.fetchPosts();
+    await flushPromises();
+
+    const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(requestedUrls).toContain(
+      "/api/v1/feed/recommend/articles?mode=hot&page=1&page_size=20",
+    );
+
+    await wrapper
+      .findAll(".p-entry")
+      .find((entry) => entry.text().includes("Hot Feed Item"))
+      ?.trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith("/feed/item/feed-item-1");
+  });
+
+  it("uses feed star and reading-list actions for hot feed items", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/feed/recommend/articles")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "feed-item-1",
+                title: "Hot Feed Item",
+                summary: "External feed item",
+                target_path: "/feed/item/feed-item-1",
+              },
+            ],
+            meta: { has_more: false },
+          }),
+          { status: 200 },
+        );
       }
-      return new Response(JSON.stringify({ data: [] }), { status: 200 })
-    })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
 
-    const wrapper = mountBlogHome()
-    await flushPromises()
-    const featured = wrapper.findAll('.segmented-option').find((option) => option.text() === '精选')
-    await featured?.trigger('click')
-    await flushPromises()
+    const authStore = useAuthStore();
+    authStore.token = "token";
+    authStore.isAuthenticated = true;
+    const feedStore = useFeedStore();
+    const starSpy = vi.spyOn(feedStore, "toggleStar").mockResolvedValue(true);
+    const postBookmarkSpy = vi
+      .spyOn(feedStore, "togglePostBookmark")
+      .mockResolvedValue(true);
+    const readingListSpy = vi
+      .spyOn(feedStore, "toggleReadingListItem")
+      .mockResolvedValue(true);
 
-    expect(wrapper.text()).toContain('Featured Post')
-    expect(routerReplace).toHaveBeenCalledWith({ path: '/posts', query: { mode: 'featured' } })
-    expect(fetchMock.mock.calls.map(([input]) => String(input))).toContain(
-      '/api/v1/blog/recommend/posts?mode=featured&page=1&page_size=20',
-    )
-  })
+    const wrapper = mountBlogHome();
+    await flushPromises();
+    wrapper.vm.$.setupState.sortBy = "popular";
+    await wrapper.vm.$.setupState.fetchPosts();
+    await flushPromises();
 
-  it('hides recommendation modes when the short-note filter is active', async () => {
-    const wrapper = mountBlogHome()
-    await flushPromises()
+    const hotEntry = wrapper
+      .findAll(".p-entry")
+      .find((entry) => entry.text().includes("Hot Feed Item"));
+    const actions = hotEntry?.findAll(".p-clip") ?? [];
+    await actions[0]?.trigger("click");
+    await actions[1]?.trigger("click");
 
-    const note = wrapper.findAll('.segmented-option').find((option) => option.text() === '短笺')
-    await note?.trigger('click')
-    await flushPromises()
+    expect(starSpy).toHaveBeenCalledWith("feed-item-1");
+    expect(readingListSpy).toHaveBeenCalledWith("feed-item-1");
+    expect(postBookmarkSpy).not.toHaveBeenCalled();
+  });
 
-    const options = wrapper.findAll('.segmented-option').map((option) => option.text())
-    expect(options).toContain('短笺')
-    expect(options).not.toContain('热度')
-    expect(options).not.toContain('精选')
-    expect(options).not.toContain('探索')
-    expect(routerReplace).toHaveBeenCalledWith({ path: '/posts', query: { type: 'note' } })
-  })
-
-  it('keeps load-more visible when discovery returns the requested limit', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/blog/recommend/posts')) {
-        return recommendationResponse(Array.from({ length: 20 }, (_, index) => ({
-          id: `post-${index + 1}`,
-          title: `Post ${index + 1}`,
-          summary: 'Discovery post',
-          created_at: '2026-07-06T00:00:00Z',
-        })))
+  it("uses post id from target path for blog post recommendations in mixed hot results", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/feed/recommend/articles")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "recommendation-row-1",
+                title: "Hot Blog Post",
+                summary: "Internal blog post",
+                target_path: "/posts/post/real-post-1",
+              },
+              {
+                id: "feed-item-1",
+                title: "Hot Feed Item",
+                summary: "External feed item",
+                target_path: "/feed/item/feed-item-1",
+              },
+            ],
+            meta: { has_more: false },
+          }),
+          { status: 200 },
+        );
       }
-      return new Response(JSON.stringify({ data: [] }), { status: 200 })
-    })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
 
-    const wrapper = mountBlogHome()
-    await flushPromises()
+    const authStore = useAuthStore();
+    authStore.token = "token";
+    authStore.isAuthenticated = true;
+    const feedStore = useFeedStore();
+    const starSpy = vi.spyOn(feedStore, "toggleStar").mockResolvedValue(true);
+    const postBookmarkSpy = vi
+      .spyOn(feedStore, "togglePostBookmark")
+      .mockResolvedValue(true);
 
-    expect(wrapper.text()).toContain('加载更多')
-  })
-})
+    const wrapper = mountBlogHome();
+    await flushPromises();
+    wrapper.vm.$.setupState.sortBy = "popular";
+    await wrapper.vm.$.setupState.fetchPosts();
+    await flushPromises();
+
+    const blogEntry = wrapper
+      .findAll(".p-entry")
+      .find((entry) => entry.text().includes("Hot Blog Post"));
+    await blogEntry?.trigger("click");
+    await blogEntry?.findAll(".p-clip")[0]?.trigger("click");
+
+    const feedEntry = wrapper
+      .findAll(".p-entry")
+      .find((entry) => entry.text().includes("Hot Feed Item"));
+    await feedEntry?.findAll(".p-clip")[0]?.trigger("click");
+
+    expect(openPost).toHaveBeenCalledWith("real-post-1", "Hot Blog Post");
+    expect(postBookmarkSpy).toHaveBeenCalledWith("real-post-1");
+    expect(postBookmarkSpy).not.toHaveBeenCalledWith("recommendation-row-1");
+    expect(starSpy).toHaveBeenCalledWith("feed-item-1");
+    expect(starSpy).not.toHaveBeenCalledWith("recommendation-row-1");
+  });
+
+  it("keeps load-more visible when latest page returns the requested limit", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/blog/posts")) {
+        return new Response(
+          JSON.stringify({
+            data: Array.from({ length: 20 }, (_, index) => ({
+              id: `post-${index + 1}`,
+              title: `Post ${index + 1}`,
+              summary: "Latest post",
+              created_at: "2026-07-06T00:00:00Z",
+            })),
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
+
+    const wrapper = mountBlogHome();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("加载更多");
+  });
+});

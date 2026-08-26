@@ -119,7 +119,7 @@ function handleInput(event: Event) {
   setCaret(input, cursorAfterParts(parts))
 }
 
-function handleDigit(event: KeyboardEvent) {
+function handleCharacter(event: KeyboardEvent) {
   const input = event.target as HTMLInputElement
   const start = input.selectionStart ?? 0
   const end = input.selectionEnd ?? start
@@ -132,6 +132,19 @@ function handleDigit(event: KeyboardEvent) {
   commitParts(parsePartialDateParts(nextValue))
   input.value = internalValue.value
   const nextPosition = nextEditablePosition(start + 1)
+  setCaret(input, nextPosition)
+}
+
+function handleSeparator(event: KeyboardEvent) {
+  const input = event.target as HTMLInputElement
+  const start = input.selectionStart ?? 0
+  const nextPosition = start === 4
+    ? 5
+    : start === 7
+      ? 8
+      : start
+
+  event.preventDefault()
   setCaret(input, nextPosition)
 }
 
@@ -201,8 +214,12 @@ function handleErase(event: KeyboardEvent, backward: boolean) {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (/^[0-9]$/.test(event.key) && !event.metaKey && !event.ctrlKey && !event.altKey) {
-    handleDigit(event)
+  if (/^[0-9-]$/.test(event.key) && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    handleCharacter(event)
+    return
+  }
+  if (event.key === '/') {
+    handleSeparator(event)
     return
   }
   if (event.key === 'Backspace') {

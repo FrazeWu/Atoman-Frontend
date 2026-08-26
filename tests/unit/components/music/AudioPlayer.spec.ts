@@ -88,9 +88,7 @@ describe("AudioPlayer", () => {
 		musicApi.saveMusicPlaybackProgress.mockResolvedValue({});
 		musicApi.saveMusicPlaybackSession.mockResolvedValue({});
 		musicApi.recordMusicRecommendationEvents.mockResolvedValue(undefined);
-		transportApi.apiFetch.mockResolvedValue(
-			new Response(null, { status: 201 }),
-		);
+		transportApi.apiFetch.mockResolvedValue(new Response(null, { status: 201 }));
 		loginRedirect.requireLogin.mockReset();
 		loginRedirect.requireLogin.mockReturnValue(true);
 		favoriteApi.favoriteSongIds.value = new Set();
@@ -393,13 +391,13 @@ describe("AudioPlayer", () => {
 		player.currentTime = 60;
 		await wrapper.vm.$nextTick();
 		expect(range.element.value).toBe("60");
-		expect(wrapper.get('[aria-label="播放"] svg').exists()).toBe(true);
-		expect(wrapper.get('[aria-label="后退 5 秒"] svg').exists()).toBe(true);
-		expect(wrapper.get('[aria-label="前进 5 秒"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="播放"]').text()).toBe("播放");
+		expect(wrapper.get('[aria-label="后退 5 秒"]').text()).toBe("-5S");
+		expect(wrapper.get('[aria-label="前进 5 秒"]').text()).toBe("+5S");
 		wrapper.unmount();
 	});
 
-	it("renders icon controls with accessible labels", () => {
+	it("renders text controls with accessible labels", () => {
 		const player = usePlayerStore();
 		player.currentSong = {
 			id: "song-1",
@@ -422,10 +420,10 @@ describe("AudioPlayer", () => {
 		const playBtn = wrapper.find(".main-play-btn");
 		expect(playBtn.exists()).toBe(true);
 		expect(playBtn.classes()).toContain("main-play-btn");
-		expect(wrapper.get('[aria-label="播放"] svg').exists()).toBe(true);
-		expect(wrapper.get('[aria-label="上一首"] svg').exists()).toBe(true);
-		expect(wrapper.get('[aria-label="下一首"] svg').exists()).toBe(true);
-		expect(wrapper.get('[aria-label="后退 5 秒"] svg').exists()).toBe(true);
-		expect(wrapper.get('[aria-label="前进 5 秒"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="播放"]').text()).toBe("播放");
+		expect(wrapper.get('[aria-label="上一首"]').text()).toBe("上一首");
+		expect(wrapper.get('[aria-label="下一首"]').text()).toBe("下一首");
+		expect(wrapper.get('[aria-label="后退 5 秒"]').text()).toBe("-5S");
+		expect(wrapper.get('[aria-label="前进 5 秒"]').text()).toBe("+5S");
 	});
 });

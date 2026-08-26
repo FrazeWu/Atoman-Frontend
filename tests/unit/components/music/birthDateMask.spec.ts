@@ -28,6 +28,11 @@ describe("birthDateMask", () => {
 			month: "7",
 			day: "--",
 		});
+		expect(parsePartialDateParts("1990/-m/-d")).toEqual({
+			year: "1990",
+			month: "-",
+			day: "-",
+		});
 		expect(parsePartialDateParts("2015/07/2-")).toEqual({
 			year: "2015",
 			month: "07",

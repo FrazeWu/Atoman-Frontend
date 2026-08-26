@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+	buildAggregatedContentHtml,
 	buildMissingPublicContentHtml,
 	buildPublicContentHtml,
 	buildUnresolvedPublicContentHtml,
@@ -59,6 +60,14 @@ describe("public content SEO", () => {
 		expect(html).not.toContain('content="old"');
 	});
 
+	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
+		const html = buildAggregatedContentHtml(shell);
+
+		expect(html).toContain('<meta name="robots" content="noindex, follow">');
+		expect(html).not.toContain('rel="canonical"');
+		expect(html).not.toContain("noindex, nofollow");
+	});
+
 	it("marks a matched but unavailable detail route as noindex", async () => {
 		const fetcher = vi.fn(async () =>
 			json({ error: "not found" }, 404),
@@ -93,6 +102,20 @@ describe("public content SEO", () => {
 		expect(html).not.toContain('rel="canonical"');
 	});
 
+	it("marks feed item pages as aggregate content through the Pages middleware", async () => {
+		const response = await pageMiddleware({
+			request: new Request(
+				"https://www.atoman.org/feed/item/019f75a2-5466-7e1e-b0fd-1954e03116e4",
+			),
+			next: async () =>
+				new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		const html = await response.text();
+
+		expect(html).toContain('<meta name="robots" content="noindex, follow">');
+		expect(html).not.toContain('rel="canonical"');
+	});
+
 	it("injects detail metadata through the Pages middleware", async () => {
 		vi.stubGlobal(
 			"fetch",
@@ -120,7 +143,9 @@ describe("public content SEO", () => {
 
 		expect(html).toContain("是否应该继续探索太空？ | 辩题 | Atoman");
 		expect(html).toContain("https://www.atoman.org/debate/debate-1");
-		expect(html).toContain('property="og:image" content="https://www.atoman.org/atoman-share.png"');
+		expect(html).toContain(
+			'property="og:image" content="https://www.atoman.org/atoman-share.png"',
+		);
 		expect(html).toContain('"@type":"Article"');
 	});
 

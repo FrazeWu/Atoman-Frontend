@@ -184,8 +184,16 @@ const displayTitle = computed(() => {
 })
 
 const displaySummary = computed(() => {
-  if (postItem.value) return postItem.value.summary?.trim() || markdownExcerpt(postItem.value.content || '')
-  if (feedItem.value) return stripHtml(feedItem.value.summary || feedItem.value.content || '')
+  const post = postItem.value as (Post & { excerpt?: string; description?: string }) | null
+  if (post) {
+    const summary = post.summary?.trim() || post.excerpt?.trim() || post.description?.trim()
+    return summary || markdownExcerpt(post.content || '')
+  }
+  const feed = feedItem.value as (FeedItem & { description?: string }) | null
+  if (feed) {
+    const summary = feed.summary?.trim() || feed.description?.trim() || feed.content || ''
+    return stripHtml(summary)
+  }
   return ''
 })
 

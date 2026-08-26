@@ -41,8 +41,8 @@ function parseDatePart(value: string, part: DatePartKey) {
 	const digits = digitsOnly(compact, limit);
 	if (digits) return digits;
 
-	// Preserve a partially typed unknown year so the mask can finish ----.
-	if (part === "year" && /^-+$/.test(compact)) {
+	// Preserve partially typed unknown markers so the mask can finish -- or ----.
+	if (/^-+$/.test(compact)) {
 		return compact.slice(0, limit);
 	}
 

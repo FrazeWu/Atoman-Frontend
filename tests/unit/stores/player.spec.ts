@@ -133,20 +133,38 @@ describe("player store", () => {
 		player.playSong(song);
 		await audioInstances[0].play.mock.results[0]?.value;
 		await vi.advanceTimersByTimeAsync(5000);
-		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
-			request_id: song.recommendation_context.request_id,
-			events: [expect.objectContaining({ event: "play_start", entity_id: "recommended-song" })],
-		}));
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				request_id: song.recommendation_context.request_id,
+				events: [
+					expect.objectContaining({
+						event: "play_start",
+						entity_id: "recommended-song",
+					}),
+				],
+			}),
+		);
 
 		audioInstances[0].emit("ended");
-		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
-			events: [expect.objectContaining({ event: "play_complete", entity_id: "recommended-song" })],
-		}));
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				events: [
+					expect.objectContaining({
+						event: "play_complete",
+						entity_id: "recommended-song",
+					}),
+				],
+			}),
+		);
 
 		player.playNext();
-		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(expect.objectContaining({
-			events: [expect.objectContaining({ event: "skip", entity_id: "recommended-song" })],
-		}));
+		expect(mocks.recordMusicRecommendationEvents).toHaveBeenCalledWith(
+			expect.objectContaining({
+				events: [
+					expect.objectContaining({ event: "skip", entity_id: "recommended-song" }),
+				],
+			}),
+		);
 		vi.useRealTimers();
 	});
 
@@ -851,9 +869,10 @@ describe("player store", () => {
 
 	it("pauses immediately while an audio play request is still pending", async () => {
 		let resolvePlay!: () => void;
-		audioPlayImplementation = () => new Promise<void>((resolve) => {
-			resolvePlay = resolve;
-		});
+		audioPlayImplementation = () =>
+			new Promise<void>((resolve) => {
+				resolvePlay = resolve;
+			});
 		const player = usePlayerStore();
 		player.playSong({
 			id: "pending-play",

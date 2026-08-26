@@ -562,7 +562,7 @@ export type MusicAlbumMergePreview = {
 	}>;
 };
 
-	export type MusicSongRatingSummary = {
+export type MusicSongRatingSummary = {
 	rating_score: number;
 	rating_count: number;
 	viewer_rating?: number | null;

@@ -1,8 +1,10 @@
 import { buildStaticPageHtml } from "./_lib/pageSeo";
 import {
+	buildAggregatedContentHtml,
 	buildMissingPublicContentHtml,
 	buildPublicContentHtml,
 	buildUnresolvedPublicContentHtml,
+	isAggregatedFeedItemPath,
 	resolvePublicContentSeo,
 } from "./_lib/publicContentSeo";
 
@@ -101,13 +103,15 @@ export async function onRequest(context: MiddlewareContext) {
 			context.env?.VITE_API_URL,
 			requestUrl.origin,
 		);
-		const transformedHtml = lookup.content
-			? buildPublicContentHtml(staticHtml, lookup.content)
-			: lookup.retryable
-				? buildUnresolvedPublicContentHtml(staticHtml)
-				: lookup.matched
-					? buildMissingPublicContentHtml(staticHtml)
-					: staticHtml;
+		const transformedHtml = isAggregatedFeedItemPath(requestUrl.pathname)
+			? buildAggregatedContentHtml(staticHtml)
+			: lookup.content
+				? buildPublicContentHtml(staticHtml, lookup.content)
+				: lookup.retryable
+					? buildUnresolvedPublicContentHtml(staticHtml)
+					: lookup.matched
+						? buildMissingPublicContentHtml(staticHtml)
+						: staticHtml;
 		const headers = new Headers(response.headers);
 		headers.delete("content-length");
 		return new Response(transformedHtml, {

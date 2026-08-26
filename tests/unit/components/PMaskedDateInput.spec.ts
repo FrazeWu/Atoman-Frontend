@@ -146,6 +146,34 @@ describe("PMaskedDateInput", () => {
 		expect(element.selectionStart).toBe(5);
 	});
 
+	it("allows entering a year-only date with unknown month and day", async () => {
+		const model = ref({ year: "", month: "", day: "" });
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: model.value,
+				"onUpdate:modelValue": (value: {
+					year: string;
+					month: string;
+					day: string;
+				}) => {
+					model.value = value;
+				},
+			},
+		});
+		const input = wrapper.find('input[type="text"]');
+		const element = input.element as HTMLInputElement;
+		element.setSelectionRange(0, 0);
+
+		for (const digit of "1990") await input.trigger("keydown", { key: digit });
+		await input.trigger("keydown", { key: "/" });
+		for (const dash of "--") await input.trigger("keydown", { key: dash });
+		await input.trigger("keydown", { key: "/" });
+		for (const dash of "--") await input.trigger("keydown", { key: dash });
+
+		expect(element.value).toBe("1990/--/--");
+		expect(model.value).toEqual({ year: "1990", month: "--", day: "--" });
+	});
+
 	it("fills a complete date in strict year-month-day order", async () => {
 		const wrapper = mount(PMaskedDateInput, {
 			props: { modelValue: { year: "", month: "", day: "" } },

@@ -101,9 +101,7 @@ export function useFeedArticleBrowser({
 
 		selectedArticle.value = item;
 		if (mobile && item.post?.id) {
-			void router.push(
-				`/posts/post/${encodeURIComponent(String(item.post.id))}`,
-			);
+			void router.push(`/posts/post/${encodeURIComponent(String(item.post.id))}`);
 			markReadOnOpen(item);
 			return;
 		}
@@ -170,8 +168,7 @@ export function useFeedArticleBrowser({
 				(subscription) =>
 					subscription.feed_source_id === source.id ||
 					subscription.feed_source?.id === source.id ||
-					(!!source.rssUrl &&
-						subscription.feed_source?.rss_url === source.rssUrl),
+					(!!source.rssUrl && subscription.feed_source?.rss_url === source.rssUrl),
 			);
 		}
 		return undefined;

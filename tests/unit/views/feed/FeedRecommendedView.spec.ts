@@ -176,9 +176,11 @@ describe("FeedRecommendedView", () => {
 	});
 
 	it("closes the discovery dropdown after the search input blurs", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(JSON.stringify({ data: [] }), { status: 200 }),
-		);
+		vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(
+				new Response(JSON.stringify({ data: [] }), { status: 200 }),
+			);
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
 				stubs: {
@@ -271,12 +273,14 @@ describe("FeedRecommendedView", () => {
 			if (url.includes("/feed/timeline?")) {
 				return new Response(
 					JSON.stringify({
-						data: [{
-							type: "feed_item",
-							feed_item: { id: "source-item-1", title: "来源文章" },
-							published_at: "2026-06-17T00:00:00Z",
-							is_read: false,
-						}],
+						data: [
+							{
+								type: "feed_item",
+								feed_item: { id: "source-item-1", title: "来源文章" },
+								published_at: "2026-06-17T00:00:00Z",
+								is_read: false,
+							},
+						],
 					}),
 					{ status: 200 },
 				);
@@ -307,7 +311,9 @@ describe("FeedRecommendedView", () => {
 		await sourceTrigger.trigger("click");
 		await flushPromises();
 
-		const sourceSheet = wrapper.findComponent({ name: "FeedSourceArticlesSheet" });
+		const sourceSheet = wrapper.findComponent({
+			name: "FeedSourceArticlesSheet",
+		});
 		expect(sourceSheet.props("show")).toBe(true);
 		expect(sourceSheet.props("items")).toEqual([
 			expect.objectContaining({
@@ -382,9 +388,7 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
-		const subscribeButton = wrapper.get(
-			'[data-test="feed-source-subscribe"]',
-		);
+		const subscribeButton = wrapper.get('[data-test="feed-source-subscribe"]');
 		expect(subscribeButton.text()).toContain("已订阅");
 	});
 
@@ -505,9 +509,9 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 
 		expect(subscribeSpy).toHaveBeenCalledWith("chan-1");
-		expect(
-			wrapper.find('[data-test="feed-source-subscribe"]').text(),
-		).toContain("已订阅");
+		expect(wrapper.find('[data-test="feed-source-subscribe"]').text()).toContain(
+			"已订阅",
+		);
 	});
 
 	it("does not trigger a second subscribe for already subscribed recommended channels", async () => {
@@ -675,9 +679,9 @@ describe("FeedRecommendedView", () => {
 	});
 
 	it("shows error state when fetching fails", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(null, { status: 500 }),
-		);
+		vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response(null, { status: 500 }));
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -931,9 +935,11 @@ describe("FeedRecommendedView", () => {
 		const authStore = useAuthStore();
 		authStore.isAuthenticated = true;
 
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(JSON.stringify({ data: [] }), { status: 200 }),
-		);
+		vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(
+				new Response(JSON.stringify({ data: [] }), { status: 200 }),
+			);
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -957,7 +963,9 @@ describe("FeedRecommendedView", () => {
 		expect(addBtn.exists()).toBe(true);
 		await addBtn.trigger("click");
 		await flushPromises();
-		expect(wrapper.findComponent({ name: "SubscriptionAddSheet" }).props("show")).toBe(true);
+		expect(
+			wrapper.findComponent({ name: "SubscriptionAddSheet" }).props("show"),
+		).toBe(true);
 	});
 
 	it("navigates to target path when clicking an item card", async () => {
@@ -1029,7 +1037,9 @@ describe("FeedRecommendedView", () => {
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
 				stubs: {
-					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
 					PSegmentedControl: true,
 					PButton: true,
 					PEmpty: true,
@@ -1226,9 +1236,7 @@ describe("FeedRecommendedView", () => {
 						data: [
 							{
 								id: url.includes("page=2") ? "art-page-2" : "art-page-1",
-								title: url.includes("page=2")
-									? "Article Page 2"
-									: "Article Page 1",
+								title: url.includes("page=2") ? "Article Page 2" : "Article Page 1",
 								content_type: "blog",
 								target_path: "/feed/item/example",
 							},
@@ -1252,13 +1260,13 @@ describe("FeedRecommendedView", () => {
 					},
 					PButton: {
 						props: ["label"],
-						template: '<button data-test="feed-recommend-refresh" @click="$emit(\'click\')">{{ label }}</button>',
+						template:
+							'<button data-test="feed-recommend-refresh" @click="$emit(\'click\')">{{ label }}</button>',
 					},
 					PEmpty: true,
 					PContentCard: {
 						props: ["title", "summary"],
-						template:
-							'<article class="p-entry">{{ title }} {{ summary }}</article>',
+						template: '<article class="p-entry">{{ title }} {{ summary }}</article>',
 					},
 					PBadge: true,
 					PClip: true,

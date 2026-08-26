@@ -69,17 +69,20 @@ export function usePostEditorPublication({
 	const studio = useStudioStore();
 	const lifecycle = useContentLifecycle();
 
-	const loadPost = async () => {
-		if (!isEdit.value) return;
+	const loadPost = async (): Promise<boolean> => {
+		if (!isEdit.value) return true;
 		try {
 			const postId = String(route.params.id || "");
-			if (!postId) return;
+			if (!postId) return false;
 			const response = await apiRequestResult(api.blog.post(postId), {
 				headers: authStore.token
 					? { Authorization: `Bearer ${authStore.token}` }
 					: {},
 			});
-			if (!response.ok) return;
+			if (!response.ok) {
+				error.value = "文章加载失败，请刷新重试";
+				return false;
+			}
 
 			const data = response.data;
 			const post = data.data || data;
@@ -102,8 +105,11 @@ export function usePostEditorPublication({
 			const collectionId = String(post.collection_id || "");
 			existingCollectionIds.value = collectionId ? [collectionId] : [];
 			selectedCollectionIds.value = [...existingCollectionIds.value];
+			return true;
 		} catch (cause) {
 			reportError(cause);
+			error.value = "文章加载失败，请刷新重试";
+			return false;
 		} finally {
 			contentReady.value = true;
 			await nextTick();

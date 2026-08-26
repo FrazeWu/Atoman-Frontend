@@ -126,6 +126,20 @@ describe('PodcastEditorView Studio integration', () => {
     expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
   })
 
+  it('blocks editing when an existing episode cannot be loaded', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    })))
+
+    const { wrapper } = await setup('/studio/podcast/missing/edit')
+
+    expect(wrapper.vm.$.setupState.editorLoadFailed).toBe(true)
+    expect(wrapper.get('[role="alert"]').text()).toContain('内容加载失败')
+    await wrapper.vm.$.setupState.saveDraft()
+    expect(vi.mocked(fetch).mock.calls.some(([input, init]) => String(input).endsWith('/podcast/episodes') && init?.method === 'POST')).toBe(false)
+  })
+
   it('switches Studio state to an edited episodes channel before loading collections', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)

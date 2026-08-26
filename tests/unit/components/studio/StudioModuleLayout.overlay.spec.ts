@@ -28,6 +28,10 @@ const routes = [
 					studioOverlayTitle: "新建博客",
 				},
 			},
+			{
+				path: "content",
+				component: BaseContent,
+			},
 		],
 	},
 ];
@@ -50,5 +54,23 @@ describe("StudioModuleLayout overlay", () => {
 			true,
 		);
 		expect(wrapper.findComponent(StudioRouteSheet).exists()).toBe(true);
+	});
+
+	it("falls back to module content when a deep link has no app history", async () => {
+		const router = createRouter({ history: createMemoryHistory(), routes });
+		await router.push("/studio/blog/new?collection=collection-1");
+		await router.isReady();
+
+		const wrapper = mount(StudioModuleLayout, {
+			global: { plugins: [router] },
+		});
+		await flushPromises();
+
+		wrapper.findComponent(StudioRouteSheet).vm.$emit("close");
+		await flushPromises();
+
+		expect(router.currentRoute.value.fullPath).toBe(
+			"/studio/blog/content?collection_id=collection-1",
+		);
 	});
 });

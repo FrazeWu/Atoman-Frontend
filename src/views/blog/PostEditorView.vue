@@ -1,7 +1,11 @@
 <template>
   <div class="editor-page">
     <div class="editor-shell">
-      <div v-if="error" class="editor-error a-error">{{ error }}</div>
+      <div v-if="error && !editorLoadFailed" class="editor-error a-error">{{ error }}</div>
+      <div v-if="editorLoadFailed" class="editor-load-failure" role="alert">
+        <p>{{ error || '编辑器加载失败，请刷新重试' }}</p>
+        <PButton type="button" variant="secondary" @click="void initializeEditor()">重试</PButton>
+      </div>
       <section v-if="markdownImportDiagnostics.length" class="import-diagnostics" aria-label="导入提示">
         <p v-for="diagnostic in markdownImportDiagnostics" :key="`${diagnostic.code}-${diagnostic.line}`">
           {{ diagnostic.line ? `第 ${diagnostic.line} 行：` : '' }}{{ diagnostic.message }}
@@ -9,6 +13,7 @@
       </section>
 
       <div
+        v-if="!editorLoadFailed"
         class="editor-layout"
         :class="{ 'has-sidebar-panel': sidebarPanelOpen }"
       >
@@ -210,6 +215,8 @@ import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { hasAppHistory, studioContentLocation } from '@/router/studioEditor'
+
 import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorFormattingToolbar from '@/components/blog/PostEditorFormattingToolbar.vue'
 import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
@@ -289,7 +296,11 @@ const togglePreview = () => {
 }
 
 const goBack = () => {
-  router.back()
+  if (hasAppHistory()) {
+    router.back()
+    return
+  }
+  void router.replace(studioContentLocation('blog', route.query))
 }
 
 const saving = ref<SaveTarget | null>(null)
@@ -308,6 +319,7 @@ const collabRoomId = computed(() => {
 })
 const shouldEnableCollab = computed(() => Boolean(collabRoomId.value))
 const contentReady = ref(!route.params.id)
+const editorLoadFailed = ref(false)
 const uploading = ref(false)
 const coverUploading = ref(false)
 const error = ref('')
@@ -516,7 +528,12 @@ const handleVersionRestored = async () => {
   versionHistoryOpen.value = false
   savedPostId.value = null
   contentReady.value = false
-  await loadPost()
+  const loaded = await loadPost()
+  if (!loaded) {
+    contentReady.value = false
+    editorLoadFailed.value = true
+    return
+  }
 }
 
 const handleCoverUpload = async (event: Event) => {
@@ -649,6 +666,7 @@ const resetEditorStateForRoute = () => {
   markdownImportID.value = null
   markdownImportDiagnostics.value = []
   error.value = ''
+  editorLoadFailed.value = false
   selectedCollectionIds.value = []
   existingCollectionIds.value = []
   channelCollections.value = []
@@ -657,11 +675,22 @@ const resetEditorStateForRoute = () => {
 
 const initializeEditor = async () => {
   resetEditorStateForRoute()
-  await studio.loadState()
-  await loadPost()
-  if (!isEdit.value) contentReady.value = true
-  await loadChannelCollections()
-  await startDraftSession()
+  try {
+    await studio.loadState()
+    const loaded = await loadPost()
+    if (!loaded) {
+      contentReady.value = false
+      editorLoadFailed.value = true
+      return
+    }
+    if (!isEdit.value) contentReady.value = true
+    await loadChannelCollections()
+    await startDraftSession()
+  } catch {
+    contentReady.value = false
+    editorLoadFailed.value = true
+    error.value = '编辑器加载失败，请刷新重试'
+  }
 }
 
 watch(() => route.params.id, () => { void initializeEditor() })
@@ -705,6 +734,22 @@ onMounted(() => { void initializeEditor() })
   height: 100%;
   min-height: 0;
   flex-direction: column;
+}
+
+.editor-load-failure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-danger, #dc2626);
+  background: var(--a-color-surface, var(--a-color-bg));
+  color: var(--a-color-danger, #dc2626);
+}
+
+.editor-load-failure p {
+  margin: 0;
 }
 
 .editor-error {
@@ -958,8 +1003,14 @@ onMounted(() => { void initializeEditor() })
 }
 
 @media (max-width: 640px) {
-  .editor-error {
+  .editor-error,
+  .editor-load-failure {
     margin: 0.5rem;
+  }
+
+  .editor-load-failure {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .draft-manager-grid {

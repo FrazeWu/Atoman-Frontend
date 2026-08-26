@@ -13,12 +13,6 @@
               :label="showAddModal ? '取消添加' : '+ 订阅'"
               :variant="showAddModal ? 'secondary' : 'primary'"
             />
-            <PButton
-              v-if="authStore.isAuthenticated"
-              variant="secondary"
-              label="订阅源管理"
-              @click="openManageSheet"
-            />
           </div>
         </template>
       </PPageHeader>

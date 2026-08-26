@@ -17,31 +17,41 @@
             accept=".opml,.xml"
             @change="handleOPMLSelected"
           />
-          <PButton
-            variant="secondary"
-            label="导入 OPML"
-            :disabled="busy || healthChecking"
-            @click="openOPMLPicker"
-          />
-          <PButton
-            variant="secondary"
-            label="导出 OPML"
-            :disabled="busy || healthChecking || !subscriptions.length"
-            @click="exportOPML"
-          />
-          <PButton
-            data-test="sync-all-subscriptions"
-            variant="secondary"
-            :label="syncingAllSubscriptions ? '刷新中...' : '刷新全部'"
-            :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
-            @click="syncAllSubscriptions"
-          />
-          <PButton
-            variant="secondary"
-            :label="healthChecking ? '检查中...' : '全部检查'"
-            :disabled="busy || healthChecking || !subscriptions.length"
-            @click="checkAllSubscriptionsHealth"
-          />
+          <div class="manage-toolbar-group">
+            <span class="manage-toolbar-label">数据管理</span>
+            <div class="manage-toolbar-actions">
+              <PButton
+                variant="secondary"
+                label="导入 OPML"
+                :disabled="busy || healthChecking"
+                @click="openOPMLPicker"
+              />
+              <PButton
+                variant="secondary"
+                label="导出 OPML"
+                :disabled="busy || healthChecking || !subscriptions.length"
+                @click="exportOPML"
+              />
+            </div>
+          </div>
+          <div class="manage-toolbar-group">
+            <span class="manage-toolbar-label">来源状态</span>
+            <div class="manage-toolbar-actions">
+              <PButton
+                data-test="sync-all-subscriptions"
+                variant="secondary"
+                :label="syncingAllSubscriptions ? '刷新中...' : '刷新全部'"
+                :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
+                @click="syncAllSubscriptions"
+              />
+              <PButton
+                variant="secondary"
+                :label="healthChecking ? '检查中...' : '全部检查'"
+                :disabled="busy || healthChecking || !subscriptions.length"
+                @click="checkAllSubscriptionsHealth"
+              />
+            </div>
+          </div>
         </div>
         <p v-if="error" class="manage-error" role="alert">{{ error }}</p>
         <p v-if="message" class="manage-message" role="status">{{ message }}</p>
@@ -810,8 +820,27 @@ watch(() => props.filterRules, (rules) => {
 .manage-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 1rem 1.5rem;
   justify-content: flex-start;
+}
+
+.manage-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.manage-toolbar-label {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.manage-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .opml-input {
@@ -1067,7 +1096,7 @@ watch(() => props.filterRules, (rules) => {
 
 .group-manage-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   align-items: center;
   gap: 0.75rem;
   padding: 0.65rem 0.85rem;

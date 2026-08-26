@@ -2254,7 +2254,7 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="add-sheet"]').attributes('data-show')).toBe('true')
     expect(wrapper.find('[data-test="manage-sheet"]').exists()).toBe(false)
 
-    await buttonByText('订阅源管理').trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
 
     expect(wrapper.find('[data-test="add-sheet"]').exists()).toBe(false)
@@ -2302,7 +2302,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -2344,7 +2344,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -2403,7 +2403,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -2515,7 +2515,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -2655,7 +2655,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -3056,7 +3056,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
 
     expect(feedStore.fetchSubscriptions).toHaveBeenCalled()
@@ -3096,7 +3096,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -3148,7 +3148,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -3189,7 +3189,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="manage-sheet"]').trigger('click')
     await flushPromises()
@@ -3247,7 +3247,7 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await (wrapper.vm as any).openManageSheet()
     await flushPromises()
     await wrapper.get('[data-test="move-down"]').trigger('click')
     await wrapper.get('[data-test="apply-all"]').trigger('click')

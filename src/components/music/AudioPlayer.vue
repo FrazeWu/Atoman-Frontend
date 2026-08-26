@@ -1412,7 +1412,6 @@ watch(
   .player-pin-btn,
   .feature-toggle,
   .volume-container,
-  .skip-btn,
   .nav-btn,
   .player-fav-btn,
   .player-add-dropdown,
@@ -1422,7 +1421,7 @@ watch(
 
   .player-inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px 88px;
+    grid-template-columns: minmax(0, 1fr) 116px 88px;
     gap: 0.75rem;
     padding: 0 0.75rem 16px;
   }
@@ -1469,7 +1468,14 @@ watch(
   }
 
   .ctrl-row {
-    gap: 0;
+    gap: 0.25rem;
+  }
+
+  .skip-btn {
+    width: 32px;
+    height: 44px;
+    padding: 0;
+    opacity: 1;
   }
 
   .main-play-btn,

@@ -1,76 +1,74 @@
 <template>
-  <div class="blog-entity-card-shell">
-    <article
-      class="blog-entity-card"
-      :class="{ 'is-compact': compact, 'is-active': active }"
-    >
-      <!-- 头部：40px 图标/封面 + 标题/身份 + 常驻订阅按钮 -->
-      <header class="blog-entity-card__header">
-        <div class="blog-entity-card__visual">
-          <img v-if="coverUrl" :src="coverUrl" :alt="title" loading="lazy" />
-          <span v-else class="blog-entity-card__fallback" aria-hidden="true">{{ fallback }}</span>
-        </div>
+  <PIdentityCard
+    class="blog-entity-card"
+    :class="{ 'is-compact': compact, 'is-active': active }"
+    :compact="compact"
+    :active="active"
+    interactive
+    @activate="emit('select')"
+  >
+    <template #visual>
+      <img v-if="coverUrl" :src="coverUrl" :alt="title" loading="lazy" />
+      <span v-else class="blog-entity-card__fallback" aria-hidden="true">{{ fallback }}</span>
+    </template>
 
-        <div class="blog-entity-card__info">
-          <div class="blog-entity-card__title-row">
-            <h3 class="blog-entity-card__title">{{ title }}</h3>
-            <span class="blog-entity-card__badge">{{ kindLabel }}</span>
-          </div>
-          <div v-if="ownerName" class="blog-entity-card__owner">
-            <PAvatar
-              :src="ownerAvatar"
-              :name="ownerName"
-              :alt="`${ownerName} 的头像`"
-              size="xs"
-            />
-            <span>{{ ownerName }}</span>
-          </div>
-          <p v-if="description && !compact" class="blog-entity-card__description">{{ description }}</p>
-        </div>
+    <template #title>
+      <h3 class="blog-entity-card__title">{{ title }}</h3>
+    </template>
+    <template #badge>
+      <span class="blog-entity-card__badge">{{ kindLabel }}</span>
+    </template>
+    <template #identity>
+      <div v-if="ownerName" class="blog-entity-card__owner">
+        <PAvatar
+          :src="ownerAvatar"
+          :name="ownerName"
+          :alt="`${ownerName} 的头像`"
+          size="xs"
+        />
+        <span>{{ ownerName }}</span>
+      </div>
+    </template>
+    <template #description>
+      <p v-if="description && !compact" class="blog-entity-card__description">{{ description }}</p>
+    </template>
 
-        <button
-          v-if="showSubscribe && !compact"
-          type="button"
-          class="blog-entity-card__subscribe"
-          :class="{ 'is-subscribed': subscribed }"
-          :disabled="subscribeLoading || subscribed"
-          :aria-label="subscribed ? '已订阅' : `订阅${kindLabel}`"
-          @click.stop="emit('toggle-subscribe')"
-        >
-          <Check v-if="subscribed" :size="13" aria-hidden="true" />
-          <Plus v-else :size="13" aria-hidden="true" />
-          <span>{{ subscribed ? '已订阅' : '订阅' }}</span>
-        </button>
-      </header>
+    <template v-if="showSubscribe && !compact" #actions>
+      <button
+        type="button"
+        class="blog-entity-card__subscribe"
+        :class="{ 'is-subscribed': subscribed }"
+        :disabled="subscribeLoading || subscribed"
+        :aria-label="subscribed ? '已订阅' : `订阅${kindLabel}`"
+        @click.stop="emit('toggle-subscribe')"
+      >
+        <Check v-if="subscribed" :size="13" aria-hidden="true" />
+        <Plus v-else :size="13" aria-hidden="true" />
+        <span>{{ subscribed ? '已订阅' : '订阅' }}</span>
+      </button>
+    </template>
 
-      <!-- 导读：最近精选文章预览盒子 (仅在非 compact 时展示) -->
-      <ul v-if="!compact && recentItems.length" class="blog-entity-card__previews">
+    <template v-if="!compact && recentItems.length" #previews>
+      <ul class="blog-entity-card__previews">
         <li v-for="item in recentItems.slice(0, 2)" :key="item.id">
           <span class="preview-bullet">›</span>
           <span class="preview-title">{{ item.title }}</span>
         </li>
       </ul>
+    </template>
 
-      <!-- 底部指标栏 -->
-      <footer class="blog-entity-card__footer">
-        <span v-if="itemCount !== undefined" class="footer-stat">{{ itemCount }} 篇文章</span>
-        <span v-if="subscriberCount !== undefined" class="footer-stat">{{ subscriberCount }} 订阅</span>
-        <span v-if="updatedAt" class="footer-time">{{ formattedUpdatedAt }}</span>
-      </footer>
-    </article>
-
-    <button
-      type="button"
-      class="blog-entity-card__open"
-      :aria-label="`打开${kindLabel}${title}`"
-      @click="emit('select')"
-    />
-  </div>
+    <template #footer>
+      <span v-if="itemCount !== undefined" class="footer-stat">{{ itemCount }} 篇文章</span>
+      <span v-if="subscriberCount !== undefined" class="footer-stat">{{ subscriberCount }} 订阅</span>
+      <span v-if="updatedAt" class="footer-time">{{ formattedUpdatedAt }}</span>
+    </template>
+  </PIdentityCard>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Check, Plus } from 'lucide-vue-next'
+import PIdentityCard from '@/components/ui/PIdentityCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 
 const props = withDefaults(defineProps<{
@@ -120,77 +118,10 @@ const formattedUpdatedAt = computed(() => {
 </script>
 
 <style scoped>
-.blog-entity-card-shell {
-  position: relative;
-  min-width: 0;
-  width: 100%;
-}
-
-.blog-entity-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.85rem 0.95rem;
-  overflow: hidden;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: inherit;
-  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.blog-entity-card-shell:hover .blog-entity-card,
-.blog-entity-card-shell:focus-within .blog-entity-card,
-.blog-entity-card.is-active {
-  border-color: var(--a-color-border);
-  background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
-}
-
-.blog-entity-card__header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.blog-entity-card__visual {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-}
-
-.blog-entity-card__visual img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .blog-entity-card__fallback {
   color: var(--a-color-fg);
   font-size: 1.05rem;
   font-weight: 650;
-}
-
-.blog-entity-card__info {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: grid;
-  gap: 0.2rem;
-}
-
-.blog-entity-card__title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
 }
 
 .blog-entity-card__title {
@@ -318,31 +249,6 @@ const formattedUpdatedAt = computed(() => {
 
 .footer-time {
   margin-left: auto;
-}
-
-/* 遮罩点击链接 */
-.blog-entity-card__open {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  cursor: pointer;
-}
-
-/* 侧栏紧凑模式 */
-.blog-entity-card.is-compact {
-  gap: 0.45rem;
-  padding: 0.65rem 0.8rem;
-}
-
-.blog-entity-card.is-compact .blog-entity-card__visual {
-  width: 32px;
-  height: 32px;
 }
 
 .blog-entity-card.is-compact .blog-entity-card__fallback {

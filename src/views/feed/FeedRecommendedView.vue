@@ -12,7 +12,7 @@
       <div class="discovery-search-box">
         <SearchSurface
           :query="discoverySearchQuery"
-          eyebrow="探索"
+          eyebrow=""
           placeholder="搜索全网文章、专栏、RSS 订阅源与播客..."
           :open="discoverySearchOpen"
           :loading="discoverySearchLoading"
@@ -175,12 +175,6 @@
             </div>
             <div class="stream-sub-filters">
               <PSegmentedControl v-model="mode" :options="modeOptions" />
-              <PButton
-                variant="primary"
-                label="换一批"
-                :loading="loading"
-                @click="refreshRecommendationBatch"
-              />
             </div>
           </div>
 
@@ -245,15 +239,6 @@
               </template>
             </PContentCard>
           </div>
-
-          <FeedTimelineFooter
-            v-if="totalArticles > pageSize"
-            :page="page"
-            :page-size="pageSize"
-            :total="totalArticles"
-            :loading="loading"
-            @change-page="handlePageChange"
-          />
         </section>
 
         <!-- 👉 右信息流：💡 优质频道与源推荐流 -->
@@ -296,10 +281,21 @@
           </div>
         </section>
       </div>
+
+      <div class="feed-recommendation-actions">
+        <PButton
+          variant="primary"
+          label="换一批"
+          :loading="loading"
+          data-test="feed-recommend-refresh"
+          @click="refreshRecommendationBatch"
+        />
+      </div>
     </PContentProgress>
 
     <!-- 文章详情阅读抽屉 -->
     <FeedArticleSheet
+      :index="showChannelSheet ? 1 : 0"
       :show="showChannelArticleSheet"
       :article="selectedChannelArticle"
       @close="closeChannelArticleSheet"
@@ -309,12 +305,14 @@
 
     <!-- 频道文章列表抽屉 -->
     <FeedSourceArticlesSheet
+      :layer-index="0"
       :show="showChannelSheet"
       :source="selectedChannelSource"
       :items="channelArticles"
       :loading="channelArticlesLoading"
       @close="closeChannelSheet"
       @open-article="openChannelArticleFromSheet"
+      @subscribe="subscribeSelectedChannel"
     />
   </div>
 </template>
@@ -339,7 +337,6 @@ import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
-import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
@@ -384,6 +381,7 @@ type RecommendationItem = {
   source_type?: string
   source_category?: string
   source_path?: string
+  rss_url?: string
   score_label?: string
   bookmark_count?: number
   read_count?: number
@@ -629,7 +627,12 @@ async function fetchRecommendations() {
 
     if (authStore.isAuthenticated && channels.value.length) {
       const subscribedStates = await Promise.all(
-        channels.value.map((item) => feedStore.isSubscribedToChannel(item.id)),
+        channels.value.map((item) => item.source_type === 'external_rss'
+          ? Promise.resolve(feedStore.subscriptions.some((subscription) => (
+            subscription.feed_source_id === (item.source_id || item.id)
+            || subscription.feed_source?.id === (item.source_id || item.id)
+          )))
+          : feedStore.isSubscribedToChannel(item.id)),
       )
       channels.value = channels.value.map((item, index) => ({
         ...item,
@@ -657,12 +660,6 @@ function refreshRecommendationBatch() {
   void fetchRecommendations()
 }
 
-function handlePageChange(newPage: number) {
-  page.value = newPage
-  syncQuery()
-  void fetchRecommendations()
-}
-
 // ── 格式化与辅助方法 ──
 function formatDate(dateStr?: string) {
   if (!dateStr) return ''
@@ -674,6 +671,7 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
   return {
     id: item.source_id || item.id,
     title: item.title,
+    rssUrl: item.rss_url,
     category: (item.source_category as FeedSourceCategory) || 'blog',
     subscriptionCount: item.bookmark_count ?? item.read_count ?? 0,
     recentItemCount: item.recent_items?.length ?? 0,
@@ -707,13 +705,27 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
   if (item.subscribed) return
   subscribingChannelIds.value.push(item.id)
   try {
-    await feedStore.subscribeToChannel(item.id)
-    item.subscribed = true
+    const success = item.source_type === 'external_rss'
+      ? await feedStore.subscribeToRSS(item.rss_url || '', item.title)
+      : await feedStore.subscribeToChannel(item.id)
+    if (success) item.subscribed = true
   } catch (error) {
     reportError(error, 'Failed to subscribe channel:')
   } finally {
     subscribingChannelIds.value = subscribingChannelIds.value.filter((id) => id !== item.id)
   }
+}
+
+async function subscribeSelectedChannel() {
+  const source = selectedChannelSource.value
+  if (!source || source.subscribed) return
+  if (source.type === 'external_rss') {
+    const success = await feedStore.subscribeToRSS(source.rssUrl || '', source.title)
+    if (success) source.subscribed = true
+    return
+  }
+  const success = await feedStore.subscribeToChannel(source.id)
+  if (success) source.subscribed = true
 }
 
 // ── 交互事件处理 ──
@@ -730,6 +742,7 @@ function openArticleSource(item: RecommendationItem) {
   selectedChannelSource.value = {
     id: item.source_id || item.id,
     title: item.source_title || item.title,
+    rssUrl: item.rss_url,
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
   }
@@ -989,6 +1002,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.feed-recommendation-actions {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem 0 0.5rem;
+}
+
 .feed-recommended-view {
   max-width: 78rem;
   margin: 0 auto;

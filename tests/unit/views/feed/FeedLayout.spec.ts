@@ -96,8 +96,8 @@ describe("FeedLayout", () => {
       "/feed/subscriptions?source_id=sub-1",
     );
 
-    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(4);
-    expect(wrapper.findAll(".p-sidebar-item-icon svg")).toHaveLength(4);
+    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(3);
+    expect(wrapper.findAll(".p-sidebar-item-icon svg")).toHaveLength(3);
     expect(wrapper.text()).toContain("订阅源类别 / SOURCES");
     expect(wrapper.text()).toContain("少数派");
     expect(wrapper.get('[data-source-id="sub-1"]').classes()).toContain(

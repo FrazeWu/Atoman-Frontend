@@ -7,6 +7,7 @@
     :loading="sourceArticlesLoading"
     :subscribe-busy="sourceSubscribeBusy"
     :show-subscribe="authStore.isAuthenticated"
+    :layer-index="0"
     :stack-size="articleSheetVisible ? 2 : 1"
     :is-shifted="articleSheetVisible"
     :is-top-layer="!articleSheetVisible"
@@ -19,6 +20,7 @@
   <FeedArticleSheet
     v-if="article"
     :presentation="isMobileApp ? 'page' : 'sheet'"
+    :index="sourceSheetVisible ? 1 : 0"
     :show="articleSheetVisible"
     :article="article"
     :reader="reader"

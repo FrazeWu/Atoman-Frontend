@@ -324,7 +324,7 @@ describe("AudioPlayer", () => {
 		);
 
 		expect(source).toMatch(
-			/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 44px 88px;/,
+			/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 116px 88px;/,
 		);
 		expect(source).toContain('class="feature-link"');
 		expect(source).toContain(
@@ -362,6 +362,41 @@ describe("AudioPlayer", () => {
 		// In JSDOM/Happy-DOM without full CSS evaluation, we at least verify the element has the player class
 		// which binds to our glassmorphism CSS rules.
 		expect(playerEl.classes()).toContain("player");
+	});
+
+	it("renders a waveform and follows the current playback progress", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+		player.currentTime = 30;
+		player.duration = 120;
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		expect(wrapper.find(".waveform-progress").exists()).toBe(true);
+		const range = wrapper.get<HTMLInputElement>(".waveform-range");
+		expect(range.element.value).toBe("30");
+
+		player.currentTime = 60;
+		await wrapper.vm.$nextTick();
+		expect(range.element.value).toBe("60");
+		expect(wrapper.get('[aria-label="播放"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="后退 5 秒"] svg').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="前进 5 秒"] svg').exists()).toBe(true);
+		wrapper.unmount();
 	});
 
 	it("renders icon controls with accessible labels", () => {

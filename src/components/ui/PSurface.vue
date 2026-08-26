@@ -16,9 +16,10 @@ withDefaults(defineProps<{
 
 <style scoped>
 .p-surface {
-  border: none;
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
+  box-shadow: none;
 }
 
 .p-surface--soft {
@@ -26,11 +27,8 @@ withDefaults(defineProps<{
 }
 
 .p-surface--layer-0,
-.p-surface--layer-1 {
-  box-shadow: none;
-}
-
+.p-surface--layer-1,
 .p-surface--layer-2 {
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 </style>

@@ -128,6 +128,16 @@ describe("PSheet.vue", () => {
 		expect(panel.style.width).toBe("auto");
 	});
 
+	it("raises the visual layer for stacked sheets", () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, layerIndex: 1 },
+		});
+
+		expect(
+			(wrapper.get(".p-sheet-panel").element as HTMLElement).style.zIndex,
+		).toBe("calc(var(--a-z-sheet) + 1)");
+	});
+
 	it("derives panel width from the left edge instead of custom widths", () => {
 		const bottom = mount(PSheet, {
 			props: {

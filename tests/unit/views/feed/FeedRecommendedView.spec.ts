@@ -17,10 +17,6 @@ const source = readFileSync(
 const routerPush = vi.fn();
 const routerReplace = vi.fn();
 const publicRequestOptions = { credentials: "include" as const };
-const authenticatedSourceRequestOptions = {
-	credentials: "include" as const,
-	headers: { Authorization: "Bearer token" },
-};
 const routeQuery = {
 	mode: undefined as string | undefined,
 	target: undefined as string | undefined,
@@ -369,12 +365,8 @@ describe("FeedRecommendedView", () => {
 		authStore.token = "token";
 		authStore.isAuthenticated = true;
 		const feedStore = useFeedStore();
-		const subscribeSpy = vi
-			.spyOn(feedStore, "subscribeToChannel")
-			.mockResolvedValue(false);
-		const statusSpy = vi
-			.spyOn(feedStore, "isSubscribedToChannel")
-			.mockResolvedValue(true);
+		vi.spyOn(feedStore, "subscribeToChannel").mockResolvedValue(false);
+		vi.spyOn(feedStore, "isSubscribedToChannel").mockResolvedValue(true);
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -427,7 +419,7 @@ describe("FeedRecommendedView", () => {
 		authStore.token = "token";
 		authStore.isAuthenticated = true;
 
-		const wrapper = mount(FeedRecommendedView, {
+		mount(FeedRecommendedView, {
 			global: {
 				stubs: {
 					PPageHeader: {
@@ -1224,7 +1216,7 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.text()).toContain("当前分类下暂无文章");
 	});
 
-	it("requests paged recommendations and resets to page 1 when filters change", async () => {
+	it("changes recommendation batches without rendering pagination and resets to page 1 when filters change", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")
 			.mockImplementation(async (input) => {
@@ -1258,10 +1250,10 @@ describe("FeedRecommendedView", () => {
 					PPageHeader: {
 						template: '<header><slot /><slot name="action" /></header>',
 					},
-					PSegmentedControl: {
-						...segmentedControlStub,
+					PButton: {
+						props: ["label"],
+						template: '<button data-test="feed-recommend-refresh" @click="$emit(\'click\')">{{ label }}</button>',
 					},
-					PButton: true,
 					PEmpty: true,
 					PContentCard: {
 						props: ["title", "summary"],
@@ -1270,11 +1262,6 @@ describe("FeedRecommendedView", () => {
 					},
 					PBadge: true,
 					PClip: true,
-					FeedTimelineFooter: {
-						props: ["page", "pageSize", "total", "loading"],
-						template:
-							'<button class="next-page" @click="$emit(\'change-page\', page + 1)">next</button>',
-					},
 				},
 			},
 		});
@@ -1289,7 +1276,8 @@ describe("FeedRecommendedView", () => {
 		);
 		expect(wrapper.text()).toContain("Article Page 1");
 
-		await wrapper.find(".next-page").trigger("click");
+		expect(wrapper.find(".feed-pagination").exists()).toBe(false);
+		await wrapper.get('[data-test="feed-recommend-refresh"]').trigger("click");
 		await flushPromises();
 
 		expect(fetchSpy).toHaveBeenCalledWith(
@@ -1298,7 +1286,6 @@ describe("FeedRecommendedView", () => {
 			),
 			publicRequestOptions,
 		);
-		expect(wrapper.text()).toContain("Article Page 2");
 
 		await applyFilterValue(wrapper, "mode", "featured");
 

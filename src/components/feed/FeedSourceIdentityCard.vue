@@ -1,36 +1,35 @@
 <template>
-  <article
+  <PIdentityCard
     v-bind="rootAttrs"
-    role="button"
-    tabindex="0"
     class="feed-source-card"
     :class="{
       'is-compact': compact,
       'is-recommend': variant === 'recommend',
     }"
-    @click="emit('select', source)"
-    @keydown.enter.prevent="emit('select', source)"
-    @keydown.space.prevent="emit('select', source)"
+    :compact="compact"
+    interactive
+    @activate="emit('select', source)"
   >
-    <!-- 头部：头像 + 标题/描述 + 常驻订阅按钮 -->
-    <div class="feed-source-card__header">
+    <template #visual>
       <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
         <img v-if="imageUrl" :src="imageUrl" :alt="source.title" class="feed-source-card__avatar-image" />
         <template v-else>{{ avatarLabel }}</template>
       </div>
+    </template>
 
-      <div class="feed-source-card__info">
-        <div class="feed-source-card__title-row">
-          <h3 data-test="feed-source-title" class="feed-source-card__title">{{ source.title }}</h3>
-          <span v-if="eyebrow" class="feed-source-card__tag" data-test="feed-source-eyebrow">{{ eyebrow }}</span>
-        </div>
-        <p v-if="displayUrl && !summaryText" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
-        <p v-if="summaryText" class="feed-source-card__summary">{{ summaryText }}</p>
-        <p v-else-if="source.description" class="feed-source-card__summary">{{ source.description }}</p>
-      </div>
-
+    <template #title>
+      <h3 data-test="feed-source-title" class="feed-source-card__title">{{ source.title }}</h3>
+    </template>
+    <template v-if="eyebrow" #badge>
+      <span class="feed-source-card__tag" data-test="feed-source-eyebrow">{{ eyebrow }}</span>
+    </template>
+    <template #description>
+      <p v-if="displayUrl && !summaryText" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
+      <p v-if="summaryText" class="feed-source-card__summary">{{ summaryText }}</p>
+      <p v-else-if="source.description" class="feed-source-card__summary">{{ source.description }}</p>
+    </template>
+    <template v-if="showSubscribe" #actions>
       <button
-        v-if="showSubscribe"
         type="button"
         class="feed-source-card__sub-btn"
         :class="{ 'is-subscribed': source.subscribed }"
@@ -42,19 +41,21 @@
         <Plus v-else :size="13" aria-hidden="true" />
         <span>{{ subscribeButtonLabel }}</span>
       </button>
-    </div>
+    </template>
 
-    <!-- 中部：最近 2 篇精选文章预览盒子 -->
-    <ul v-if="showPreviews && source.recentItems && source.recentItems.length" class="feed-source-card__previews">
-      <li v-for="item in source.recentItems.slice(0, 2)" :key="item.id" data-test="feed-source-preview-title">
-        <span class="preview-bullet" aria-hidden="true">›</span>
-        <span class="preview-title">{{ item.title }}</span>
-      </li>
-    </ul>
+    <template v-if="showPreviews && source.recentItems && source.recentItems.length" #previews>
+      <ul class="feed-source-card__previews">
+        <li v-for="item in source.recentItems.slice(0, 2)" :key="item.id" data-test="feed-source-preview-title">
+          <span class="preview-bullet" aria-hidden="true">›</span>
+          <span class="preview-title">{{ item.title }}</span>
+        </li>
+      </ul>
+    </template>
 
-    <!-- 底部：数据指标与时间 -->
-    <div v-if="showMeta" class="feed-source-card__footer">
-      <span v-if="metadataText">{{ metadataText }}</span>
+    <template v-if="showMeta" #footer>
+      <template v-if="metadataText">
+        <span>{{ metadataText }}</span>
+      </template>
       <template v-else>
         <span data-test="feed-source-count" class="footer-stat">
           <Users :size="12" aria-hidden="true" />
@@ -69,8 +70,8 @@
           {{ formattedLastUpdated }}
         </span>
       </template>
-    </div>
-  </article>
+    </template>
+  </PIdentityCard>
 </template>
 
 <script setup lang="ts">
@@ -80,6 +81,7 @@ defineOptions({
 
 import { computed, useAttrs } from 'vue'
 import { Check, Clock, FileText, Plus, Users } from 'lucide-vue-next'
+import PIdentityCard from '@/components/ui/PIdentityCard.vue'
 import type { FeedExploreSource } from '@/types'
 
 const props = withDefaults(defineProps<{
@@ -155,7 +157,7 @@ const compactCount = (value: number) => {
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
   outline: none;
 }
 
@@ -163,21 +165,14 @@ const compactCount = (value: number) => {
 .feed-source-card:focus-visible {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
 }
 
 /* 头部 */
-.feed-source-card__header {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
 .feed-source-card__avatar {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--a-radius-control);
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
   background: color-mix(in srgb, var(--feed-source-color) 18%, var(--a-color-bg));
   color: color-mix(in srgb, var(--feed-source-color) 75%, var(--a-color-fg));
   display: grid;
@@ -192,19 +187,6 @@ const compactCount = (value: number) => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.feed-source-card__info {
-  min-width: 0;
-  display: grid;
-  gap: 0.2rem;
-}
-
-.feed-source-card__title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
 }
 
 .feed-source-card__title {
@@ -270,7 +252,6 @@ const compactCount = (value: number) => {
 
 .feed-source-card__sub-btn:hover:not(:disabled) {
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
 }
 
 .feed-source-card__sub-btn.is-subscribed,
@@ -331,16 +312,7 @@ const compactCount = (value: number) => {
 }
 
 /* 紧凑变体适配 */
-.feed-source-card.is-compact {
-  padding: 0.75rem 0.85rem;
-}
 .feed-source-card.is-compact .feed-source-card__summary {
   -webkit-line-clamp: 1;
-}
-
-@media (max-width: 640px) {
-  .feed-source-card__header {
-    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
-  }
 }
 </style>

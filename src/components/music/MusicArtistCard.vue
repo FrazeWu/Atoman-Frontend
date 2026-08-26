@@ -1,5 +1,6 @@
 <template>
-  <div
+  <PMediaCard
+    variant="square"
     class="music-artist-card"
     @click="$emit('click')"
   >
@@ -70,11 +71,13 @@
         </RouterLink>
       </h3>
     </div>
-  </div>
+  </PMediaCard>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+
+import PMediaCard from '@/components/ui/PMediaCard.vue'
 
 export interface MusicArtistCardItem {
   id: string
@@ -153,7 +156,6 @@ const formattedSubscribers = computed(() => {
 }
 
 .music-artist-card:hover .avatar-frame {
-  transform: translateY(1px);
   border-color: var(--a-color-muted-soft);
 }
 
@@ -165,7 +167,7 @@ const formattedSubscribers = computed(() => {
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.2s;
 }
 
 

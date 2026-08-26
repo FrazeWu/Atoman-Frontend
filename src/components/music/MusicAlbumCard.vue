@@ -1,5 +1,5 @@
 <template>
-  <article class="music-album-card">
+  <PMediaCard variant="square" class="music-album-card">
     <div class="cover-frame">
       <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
         <img
@@ -96,11 +96,12 @@
         </p>
       </div>
     </div>
-  </article>
+  </PMediaCard>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import PMediaCard from '@/components/ui/PMediaCard.vue'
 
 export interface MusicAlbumCardItem {
   id: string
@@ -219,14 +220,12 @@ const albumYear = computed(() => {
   border-radius: var(--a-radius-card);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-sm);
-  transition: border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  box-shadow: none;
+  transition: border-color 0.25s ease;
 }
 
 .music-album-card:hover .cover-frame {
-  transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft));
-  box-shadow: var(--a-shadow-md);
 }
 
 .cover-action {

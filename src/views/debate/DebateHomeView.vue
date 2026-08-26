@@ -46,11 +46,12 @@
 
       <!-- Debate List -->
       <div v-else class="debate-list">
-        <article
+        <PInteractionCard
           v-for="debate in debates"
           :key="debate.id"
           class="debate-card"
-          @click="goToDebate(debate.id)"
+          interactive
+          @activate="goToDebate(debate.id)"
         >
           <!-- 头部元数据 -->
           <header class="debate-card__header">
@@ -106,7 +107,7 @@
               <span>论点 12</span>
             </div>
           </footer>
-        </article>
+        </PInteractionCard>
       </div>
     </PContentProgress>
 
@@ -157,6 +158,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { moduleRooms } from '@/config/moduleRooms'
@@ -305,13 +307,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.25rem 1.35rem;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .debate-card::before {
@@ -329,7 +326,6 @@ onMounted(async () => {
 .debate-card:hover {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  transform: translateY(-2px);
 }
 
 .debate-card:hover::before {

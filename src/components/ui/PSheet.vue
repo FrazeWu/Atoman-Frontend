@@ -245,6 +245,11 @@ provide('p-sheet-layer-index', effectiveLayerIndex)
 const layerInset = computed(() => effectiveLayerIndex.value * 32)
 const layerTop = computed(() => `calc(${props.top} + ${effectiveLayerIndex.value * 4}px)`)
 
+const layerZIndex = computed(() => {
+  const base = props.abovePlayer ? '--a-z-player-sheet' : '--a-z-sheet'
+  return `calc(var(${base}) + ${effectiveLayerIndex.value})`
+})
+
 const sheetStyle = computed(() => {
   if (props.side === 'bottom') {
     return {
@@ -253,7 +258,7 @@ const sheetStyle = computed(() => {
       height: props.height,
       left: 0,
       right: 0,
-      top: 'auto',
+      'z-index': layerZIndex.value,
     }
   }
 
@@ -264,6 +269,7 @@ const sheetStyle = computed(() => {
       top: layerTop.value,
       left: `calc(var(--a-sidebar-width) + ${layerInset.value}px)`,
       right: 0,
+      'z-index': layerZIndex.value,
     }
   }
 
@@ -272,6 +278,7 @@ const sheetStyle = computed(() => {
     'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
     top: layerTop.value,
     left: 0,
+    'z-index': layerZIndex.value,
   }
 })
 </script>

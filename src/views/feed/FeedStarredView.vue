@@ -3,6 +3,12 @@
     <PPageHeader title="订阅收藏" mb="1.25rem">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
+          <PSegmentedControl
+            :model-value="activeView"
+            :options="viewOptions"
+            data-test="feed-saved-view-filter"
+            @update:model-value="selectView"
+          />
           <PButton variant="secondary" label="← 返回订阅" @click="router.push('/feed')" />
         </div>
       </template>
@@ -20,6 +26,8 @@
     </div>
 
     <template v-else>
+      <FeedReadingListView v-if="activeView === 'reading'" embedded />
+      <template v-else>
       <div v-if="loading" class="feed-loading">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
@@ -114,6 +122,7 @@
         @change-page="changePage"
       />
     </div>
+    </template>
 
     <FeedArticleSheet
       :show="showArticleSheet"
@@ -141,8 +150,10 @@ import PContentCard from '@/components/ui/PContentCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
+import FeedReadingListView from '@/views/feed/FeedReadingListView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
@@ -160,6 +171,23 @@ const playerStore = usePlayerStore()
 const uiStore = useUIStore()
 const api = useApi()
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
+
+const viewOptions: Array<{ label: string; value: 'starred' | 'reading'; test: string }> = [
+  { label: '收藏', value: 'starred', test: 'feed-saved-view-starred' },
+  { label: '稍后阅读', value: 'reading', test: 'feed-saved-view-reading' },
+]
+const activeView = computed<'starred' | 'reading'>(() => route.query.type === 'reading' ? 'reading' : 'starred')
+
+const selectView = async (view: 'starred' | 'reading') => {
+  await router.push({
+    query: {
+      ...route.query,
+      type: view === 'reading' ? 'reading' : undefined,
+      page: undefined,
+      group: view === 'reading' ? undefined : route.query.group,
+    },
+  })
+}
 
 const normalizePage = (value: unknown) => {
   const parsed = Number.parseInt(String(value || '1'), 10)
@@ -414,6 +442,7 @@ const unstar = async (feedItemId: string) => {
 watch(
   () => route.query,
   async (query) => {
+    if (activeView.value !== 'starred') return
     activeStarGroupId.value = typeof query.group === 'string' ? query.group : null
     page.value = normalizePage(query.page)
     await fetchStarred()
@@ -428,7 +457,7 @@ const handleKeyDownGlobal = (e: KeyboardEvent) => {
 }
 
 onMounted(async () => {
-  await feedStore.fetchStarGroups()
+  if (activeView.value === 'starred') await feedStore.fetchStarGroups()
   window.addEventListener('keydown', handleKeyDownGlobal)
 })
 

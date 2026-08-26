@@ -69,7 +69,9 @@
               @click="emit('select-source', sub.id)"
             >
               <span class="feed-sidebar-sources__badge a-font-meta">{{ sourceBadge(sub) }}</span>
-              <span class="feed-sidebar-sources__name">{{ sourceTitle(sub) }}</span>
+              <span class="feed-sidebar-sources__name">
+                {{ sourceTitle(sub) }}
+              </span>
               <span
                 v-if="sourceHealthLabel(sub)"
                 class="feed-sidebar-sources__health a-font-meta"
@@ -177,14 +179,22 @@ function sourceTitle(sub: Subscription): string {
   return subscriptionDisplayTitle(sub)
 }
 
+function sourceTypeLabel(sub: Subscription): string {
+  const sourceType = sub.feed_source?.source_type
+  if (sourceType === 'internal_channel' || sourceType === 'internal_collection') return '频道'
+  if (sourceType === 'internal_user') return '账号'
+  return ''
+}
+
 function sourceBadge(sub: Subscription): string {
+  const internalType = sourceTypeLabel(sub)
+  if (internalType) return internalType
+
   const title = sourceTitle(sub).toLowerCase()
   const rssUrl = (sub.feed_source?.rss_url ?? '').toLowerCase()
 
   if (title.includes('播客') || rssUrl.includes('podcast')) return '播客'
-  if (title.includes('周报') || title.includes('newsletter') || rssUrl.includes('newsletter')) return '周报'
-
-  return '文章'
+  return 'RSS'
 }
 
 function sourceHealthLabel(sub: Subscription): string {
@@ -198,7 +208,8 @@ const hasUnreadSources = computed(() =>
 )
 
 function unreadCount(subscriptionId: string): number {
-  return Math.max(0, props.unreadCounts[subscriptionId] || 0)
+  const subscription = props.subscriptions.find((sub) => sub.id === subscriptionId)
+  return Math.max(0, props.unreadCounts[subscriptionId] ?? subscription?.unread_count ?? 0)
 }
 
 function toggleGroup(groupId: string) {
@@ -386,6 +397,12 @@ function toggleGroup(groupId: string) {
   font-size: 0.84rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.feed-sidebar-sources__type {
+  color: #64748b;
+  font-size: 0.78em;
+  font-weight: 500;
 }
 
 .feed-sidebar-sources__empty {

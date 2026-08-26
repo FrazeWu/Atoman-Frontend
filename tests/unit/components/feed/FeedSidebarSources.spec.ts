@@ -151,6 +151,96 @@ describe('FeedSidebarSources', () => {
     expect(wrapper.text()).toContain('孤立订阅源')
   })
 
+  it('labels internal account and channel sources after their names', () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions: [
+          {
+            id: 'sub-account',
+            user_id: 'user-1',
+            feed_source_id: 'source-account',
+            title: 'admin',
+            feed_source: {
+              id: 'source-account',
+              source_type: 'internal_user',
+              source_id: 'user-1',
+              title: 'admin',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'sub-channel',
+            user_id: 'user-1',
+            feed_source_id: 'source-channel',
+            title: 'admin',
+            feed_source: {
+              id: 'source-channel',
+              source_type: 'internal_channel',
+              source_id: 'channel-1',
+              title: 'admin',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        groups: [],
+      },
+    })
+
+    const badges = wrapper.findAll('.feed-sidebar-sources__badge').map((node) => node.text())
+    const names = wrapper.findAll('.feed-sidebar-sources__name').map((node) => node.text())
+    expect(badges).toEqual(['账号', '频道'])
+    expect(names).toEqual(['admin', 'admin'])
+  })
+
+  it('uses RSS and podcast badges while preserving names and unread counts', () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions: [
+          {
+            id: 'sub-rss',
+            user_id: 'user-1',
+            feed_source_id: 'source-rss',
+            title: '少数派',
+            feed_source: {
+              id: 'source-rss',
+              source_type: 'external_rss',
+              rss_url: 'https://example.com/feed.xml',
+              hash: 'source-rss-hash',
+              title: '少数派',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'sub-podcast',
+            user_id: 'user-1',
+            feed_source_id: 'source-podcast',
+            title: '科技播客',
+            feed_source: {
+              id: 'source-podcast',
+              source_type: 'external_rss',
+              rss_url: 'https://example.com/podcast.xml',
+              hash: 'source-podcast-hash',
+              title: '科技播客',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            unread_count: 18,
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        groups: [],
+        unreadCounts: { 'sub-rss': 2 },
+      },
+    })
+
+    expect(wrapper.findAll('.feed-sidebar-sources__badge').map((node) => node.text())).toEqual(['RSS', '播客'])
+    expect(wrapper.findAll('.feed-sidebar-sources__name').map((node) => node.text())).toEqual(['少数派', '科技播客'])
+    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-rss"]').text()).toBe('2')
+    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-podcast"]').text()).toBe('18')
+  })
+
   it('renders empty state when subscriptions are empty', () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
@@ -235,7 +325,7 @@ describe('FeedSidebarSources', () => {
     expect(wrapper.text()).not.toContain('英格兰周报')
   })
 
-  it('classifies lowercase newsletter subscriptions as weekly reports', () => {
+  it('classifies lowercase newsletter subscriptions as RSS', () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
         subscriptions: [
@@ -251,7 +341,7 @@ describe('FeedSidebarSources', () => {
       },
     })
 
-    expect(wrapper.get('.feed-sidebar-sources__badge').text()).toBe('周报')
+    expect(wrapper.get('.feed-sidebar-sources__badge').text()).toBe('RSS')
   })
 
   it('emits source selection and manage events', async () => {

@@ -195,7 +195,7 @@ import { computed, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
-  Rss, Compass, Bookmark, Star, Disc3, Users, History,
+  Rss, Compass, Bookmark, Disc3, Users, History,
   MessageSquare, Folder, Archive, BookOpen, Clock, Mic,
   LayoutDashboard, FileText, Mic2, Settings2, Video
 } from 'lucide-vue-next'
@@ -258,8 +258,7 @@ const currentModule = computed(() => {
 const feedNavItems = [
   { to: moduleUrl('feed'), label: '发现', icon: Compass, exact: true },
   { to: modulePathUrl('feed', '/subscriptions'), label: '订阅', icon: Rss },
-  { to: modulePathUrl('feed', '/reading-list'), label: '稍后阅读', icon: Bookmark },
-  { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Star },
+  { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Bookmark },
 ]
 
 const { focusedIndex: focusedSidebarIndex } = useKeyboardList({

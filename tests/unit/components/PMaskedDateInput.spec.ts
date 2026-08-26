@@ -12,8 +12,7 @@ describe("PMaskedDateInput", () => {
 				label: "出生日期",
 			},
 		});
-		const input = wrapper.find('input[type="text"]')
-			.element as HTMLInputElement;
+		const input = wrapper.find('input[type="text"]').element as HTMLInputElement;
 		expect(input.value).toBe("yyyy/mm/dd");
 	});
 
@@ -24,8 +23,7 @@ describe("PMaskedDateInput", () => {
 				label: "出生日期",
 			},
 		});
-		const input = wrapper.find('input[type="text"]')
-			.element as HTMLInputElement;
+		const input = wrapper.find('input[type="text"]').element as HTMLInputElement;
 		expect(input.value).toBe("2026/08/03");
 	});
 

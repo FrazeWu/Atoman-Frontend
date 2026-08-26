@@ -71,9 +71,7 @@ describe("birthDateMask", () => {
 		expect(serializePartialDate({ year: "2023", month: "02", day: "29" })).toBe(
 			"",
 		);
-		expect(serializePartialDate({ year: "2024", month: "0", day: "" })).toBe(
-			"",
-		);
+		expect(serializePartialDate({ year: "2024", month: "0", day: "" })).toBe("");
 		expect(serializePartialDate({ year: "2024", month: "02", day: "3" })).toBe(
 			"",
 		);

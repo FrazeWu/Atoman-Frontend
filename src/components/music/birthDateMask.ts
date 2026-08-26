@@ -161,9 +161,7 @@ export function isPartialDateValid(parts: PartialDateParts) {
 }
 
 export function serializePartialDate(parts?: PartialDateParts) {
-	const normalized = normalizePartialDateParts(
-		parts ?? emptyPartialDateParts(),
-	);
+	const normalized = normalizePartialDateParts(parts ?? emptyPartialDateParts());
 	const year = normalized.year.trim();
 	if (year === "----") return "----/--/--";
 	if (!/^\d{4}$/.test(year) || !isPartialDateValid(normalized)) return "";

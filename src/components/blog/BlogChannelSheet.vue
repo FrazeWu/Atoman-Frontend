@@ -35,28 +35,41 @@ const subscribed = ref(false)
 const subscribeLoading = ref(false)
 
 const channelId = computed(() => props.layer.payload.channelId)
+let loadSequence = 0
 
 async function loadChannel() {
+  const requestedChannelId = channelId.value
+  const requestSequence = ++loadSequence
   loading.value = true
   errorMessage.value = ''
+  channel.value = null
+  posts.value = []
+  subscribed.value = false
   try {
-    const channelResponse = await apiRequestResult(api.blog.channel(channelId.value))
+    const channelResponse = await apiRequestResult(api.blog.channel(requestedChannelId))
+    if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     if (!channelResponse.ok) throw new Error('channel load failed')
     const channelPayload = await Promise.resolve(channelResponse.data)
+    if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     channel.value = channelPayload.data || channelPayload
-    const postResponse = await apiRequestResult(`${api.blog.posts}?channel_id=${encodeURIComponent(channelId.value)}&page=1&page_size=20`)
+    const postResponse = await apiRequestResult(`${api.blog.posts}?channel_id=${encodeURIComponent(requestedChannelId)}&page=1&page_size=20`)
+    if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     if (!postResponse.ok) throw new Error('post load failed')
     const postPayload = await Promise.resolve(postResponse.data)
+    if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     posts.value = Array.isArray(postPayload.data) ? postPayload.data : []
     if (authStore.isAuthenticated && channel.value?.id) {
-      subscribed.value = await feedStore.isSubscribedToChannel(channel.value.id)
+      const nextSubscribed = await feedStore.isSubscribedToChannel(channel.value.id)
+      if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
+      subscribed.value = nextSubscribed
     }
   } catch {
+    if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     channel.value = null
     posts.value = []
     errorMessage.value = '频道内容加载失败，请重试'
   } finally {
-    loading.value = false
+    if (requestSequence === loadSequence && requestedChannelId === channelId.value) loading.value = false
   }
 }
 

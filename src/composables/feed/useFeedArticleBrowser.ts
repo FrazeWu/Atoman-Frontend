@@ -130,6 +130,21 @@ export function useFeedArticleBrowser({
 	};
 
 	const openSourceArticle = (item: TimelineItem) => {
+		if (item.type === "feed_item" && item.feed_item?.id) {
+			selectedArticle.value = item;
+			showArticleSheet.value = true;
+			void router.push({
+				path: `/feed/item/${encodeURIComponent(String(item.feed_item.id))}`,
+				state: feedArticleRouteState({
+					article: item,
+					articles: sourceArticles.value,
+					source: feedItemSource(item.feed_item),
+					sourceArticles: sourceArticles.value,
+				}),
+			});
+			markReadOnOpen(item);
+			return;
+		}
 		selectedArticle.value = item;
 		if (mobile && item.feed_item?.id) {
 			void router.push(

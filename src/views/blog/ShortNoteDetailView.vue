@@ -8,7 +8,10 @@
     </div>
 
     <div v-if="loading" class="a-skeleton short-note-detail__skeleton" />
-    <p v-else-if="error" class="short-note-detail__error" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="short-note-detail__error" role="alert">
+      <p>{{ error }}</p>
+      <PButton variant="secondary" size="sm" @click="load">重试</PButton>
+    </div>
     <template v-else-if="note">
       <ShortNoteCard :note="note" @delete="remove" />
       <div class="short-note-detail__comments">
@@ -36,6 +39,7 @@ import { apiRequestEnvelope } from '@/api/client'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { ShortNote } from '@/types'
@@ -130,7 +134,15 @@ onMounted(() => void load())
 }
 
 .short-note-detail__error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-top: 1.5rem;
   color: var(--a-color-danger);
+}
+
+.short-note-detail__error p {
+  margin: 0;
 }
 </style>

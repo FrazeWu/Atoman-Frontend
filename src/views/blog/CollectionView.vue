@@ -166,15 +166,17 @@ const authHeader = computed<Record<string, string>>(() => {
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
-function copyCollectionRssLink() {
+async function copyCollectionRssLink() {
   if (!collectionRssUrl.value) return
-  void navigator.clipboard.writeText(collectionRssUrl.value).then(() => {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(collectionRssUrl.value)
     toastMessage.value = '已复制 RSS 链接'
-    toastVisible.value = true
-  }).catch(() => {
+  } catch {
     toastMessage.value = '复制失败，请手动复制 RSS 链接'
+  } finally {
     toastVisible.value = true
-  })
+  }
 }
 
 const toggleStar = (id: string) => {

@@ -19,6 +19,27 @@ const layer: BlogPostLayer = {
 const response = (data: unknown) =>
 	new Response(JSON.stringify({ data }), { status: 200 });
 
+function deferred<T>() {
+	let resolve!: (value: T | PromiseLike<T>) => void;
+	const promise = new Promise<T>((nextResolve) => {
+		resolve = nextResolve;
+	});
+	return { promise, resolve };
+}
+
+const postDetail = (id: string, title: string, overrides: Record<string, unknown> = {}) => ({
+	id,
+	user_id: "user-1",
+	user: { uuid: "user-1", username: "author" },
+	title,
+	content: `${title}正文`,
+	status: "published",
+	visibility: "public",
+	created_at: "2026-07-12T00:00:00Z",
+	updated_at: "2026-07-13T00:00:00Z",
+	...overrides,
+});
+
 describe("BlogPostSheet", () => {
 	beforeEach(() => {
 		vi.stubGlobal(
@@ -89,5 +110,55 @@ describe("BlogPostSheet", () => {
 		expect(router.currentRoute.value.fullPath).toBe(
 			"/studio/blog/post-1/edit?channel=channel-1&collection=collection-1",
 		);
+	});
+	it("ignores a late response after switching to another post", async () => {
+		const firstResponse = deferred<Response>();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn((input: RequestInfo | URL) => {
+				const url = String(input);
+				if (url.includes("/blog/posts/post-1")) return firstResponse.promise;
+				return Promise.resolve(
+					response(postDetail("post-2", "文章二", { content: "正文二" })),
+				);
+			}),
+		);
+
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+					PButton: {
+						emits: ["click"],
+						template: "<button @click=\"$emit('click')\"><slot /></button>",
+					},
+				},
+			},
+		});
+
+		const nextLayer: BlogPostLayer = {
+			...layer,
+			key: "post:post-2",
+			title: "文章二",
+			payload: { postId: "post-2", collectionId: "collection-1" },
+		};
+		await wrapper.setProps({ layer: nextLayer });
+		await flushPromises();
+		expect(wrapper.text()).toContain("文章二");
+
+		firstResponse.resolve(response(postDetail("post-1", "文章一")));
+		await flushPromises();
+		expect(wrapper.text()).toContain("文章二");
+		expect(wrapper.text()).not.toContain("文章一");
 	});
 });

@@ -13,6 +13,7 @@
     <div v-else class="blog-subscriptions-layout">
       <aside class="subscription-source-panel">
         <button
+          type="button"
           class="subscription-source"
           :class="{ active: selectedSubscriptionId === null }"
           @click="selectSubscription(null)"
@@ -23,6 +24,7 @@
         <button
           v-for="subscription in subscriptions"
           :key="subscription.id"
+          type="button"
           class="subscription-source"
           :class="{ active: selectedSubscriptionId === subscription.id }"
           @click="selectSubscription(subscription.id)"
@@ -42,7 +44,11 @@
           <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
         </div>
 
-        <PEmpty v-else-if="loadError && !posts.length" title="订阅内容加载失败" />
+        <PEmpty v-else-if="loadError && !posts.length" title="订阅内容加载失败">
+          <template #action>
+            <PButton variant="secondary" size="sm" @click="fetchTimeline()">重试</PButton>
+          </template>
+        </PEmpty>
 
         <PEmpty v-else-if="!posts.length" title="暂无更新" />
 

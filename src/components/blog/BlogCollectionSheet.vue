@@ -46,18 +46,24 @@ const visiblePosts = computed(() => (
 ))
 const publishedCount = computed(() => posts.value.filter(post => post.status !== 'draft').length)
 const draftCount = computed(() => posts.value.filter(post => post.status === 'draft').length)
+let loadSequence = 0
 
 const sortTime = (post: Post) => Date.parse(post.updated_at || post.created_at || '') || 0
 
 async function loadCollection() {
+  const requestedCollectionId = collectionId.value
+  const requestSequence = ++loadSequence
   loading.value = true
   errorMessage.value = ''
+  collection.value = null
+  posts.value = []
   try {
     const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     const [collectionRes, publishedRes] = await Promise.all([
-      apiRequestResult(api.blog.collection(collectionId.value), { headers }),
-      apiRequestResult(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),
+      apiRequestResult(api.blog.collection(requestedCollectionId), { headers }),
+      apiRequestResult(`${api.blog.posts}?collection_id=${requestedCollectionId}`, { headers }),
     ])
+    if (requestSequence !== loadSequence || requestedCollectionId !== collectionId.value) return
     if (!collectionRes.ok || !publishedRes.ok) throw new Error('load failed')
 
     collection.value = collectionRes.data.data
@@ -65,18 +71,21 @@ async function loadCollection() {
     let drafts: Post[] = []
     if (authStore.isAuthenticated) {
       const draftsRes = await apiRequestResult(api.blog.drafts, { headers })
+      if (requestSequence !== loadSequence || requestedCollectionId !== collectionId.value) return
       if (draftsRes.ok) {
         drafts = ((draftsRes.data.data || []) as Post[]).filter(post =>
-          post.collection_id === collectionId.value || post.collection?.id === collectionId.value,
+          post.collection_id === requestedCollectionId || post.collection?.id === requestedCollectionId,
         )
       }
     }
+    if (requestSequence !== loadSequence || requestedCollectionId !== collectionId.value) return
     posts.value = Array.from(new Map([...published, ...drafts].map(post => [post.id, post])).values())
       .sort((left, right) => sortTime(right) - sortTime(left))
   } catch {
+    if (requestSequence !== loadSequence || requestedCollectionId !== collectionId.value) return
     errorMessage.value = '合集内容加载失败，请重试'
   } finally {
-    loading.value = false
+    if (requestSequence === loadSequence && requestedCollectionId === collectionId.value) loading.value = false
   }
 }
 
@@ -115,7 +124,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
         <PSegmentedControl v-model="filter" :options="filterOptions" />
         <div class="collection-sheet-counts" aria-live="polite">
           <span>{{ publishedCount }} 篇文章</span>
-          <span>{{ draftCount }} 篇草稿</span>
+          <span v-if="authStore.isAuthenticated">{{ draftCount }} 篇草稿</span>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
+import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -33,6 +34,7 @@ const sheets = useBlogSheets()
 const { renderMarkdown } = useMarkdownRenderer()
 
 const post = ref<Post | null>(null)
+const relatedPosts = ref<BlogRelatedPost[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
@@ -43,6 +45,7 @@ const channelSubscriptionBusy = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
 let loadSequence = 0
+let relatedRequestSequence = 0
 
 async function loadPost() {
   const requestedPostId = props.layer.payload.postId
@@ -50,6 +53,8 @@ async function loadPost() {
   loading.value = true
   errorMessage.value = ''
   post.value = null
+  relatedPosts.value = []
+  relatedRequestSequence += 1
   channelSubscribed.value = false
   channelSubscriptionBusy.value = false
   try {
@@ -61,6 +66,7 @@ async function loadPost() {
     const payload = await Promise.resolve(res.data)
     if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
     post.value = payload.data || payload
+    void loadRelatedPosts(requestedPostId)
     if (authStore.isAuthenticated && post.value?.channel_id) {
       const nextSubscribed = await feedStore.isSubscribedToChannel(post.value.channel_id)
       if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
@@ -73,6 +79,35 @@ async function loadPost() {
   } finally {
     if (requestSequence === loadSequence && requestedPostId === props.layer.payload.postId) loading.value = false
   }
+}
+
+async function loadRelatedPosts(postID: string) {
+  const requestSequence = ++relatedRequestSequence
+  try {
+    const headers: Record<string, string> = {}
+    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
+    const res = await apiRequestResult(`${api.blog.relatedPosts(postID)}?limit=6`, { headers })
+    if (requestSequence !== relatedRequestSequence || postID !== props.layer.payload.postId || !res.ok) return
+    const payload = await Promise.resolve(res.data) as unknown
+    const items = Array.isArray(payload)
+      ? payload
+      : payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)
+        ? (payload as { data: unknown[] }).data
+        : []
+    relatedPosts.value = items.filter((item): item is BlogRelatedPost => {
+      if (!item || typeof item !== 'object') return false
+      const candidate = item as Partial<BlogRelatedPost>
+      return typeof candidate.id === 'string'
+        && typeof candidate.title === 'string'
+        && typeof candidate.target_path === 'string'
+    })
+  } catch {
+    if (requestSequence === relatedRequestSequence && postID === props.layer.payload.postId) relatedPosts.value = []
+  }
+}
+
+function openRelatedPost(item: BlogRelatedPost) {
+  sheets.openPost(item.id, item.title)
 }
 
 const bookmarked = computed(() => Boolean(post.value?.id && feedStore.bookmarkedPostIds.has(post.value.id)))
@@ -217,6 +252,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
           {{ inReadingList ? '取消稍后阅读' : '稍后阅读' }}
         </PButton>
       </div>
+      <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
     </article>
   </PSheet>
 </template>

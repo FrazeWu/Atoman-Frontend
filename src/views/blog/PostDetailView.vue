@@ -740,7 +740,13 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 }
 
 /* KaTeX math rendering */
-.prose-blog :deep(.katex-display) { margin: 1.5rem 0; overflow-x: auto; }
+.prose-blog :deep(.katex-display) {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.prose-blog :deep(.katex-display::-webkit-scrollbar) { display: none; }
 .prose-blog :deep(.katex) { font-size: 1.05rem; }
 
 /* highlight.js code theme (inside dark pre) */

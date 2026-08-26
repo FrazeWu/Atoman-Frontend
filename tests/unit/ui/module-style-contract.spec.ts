@@ -146,6 +146,20 @@ describe("module style contract", () => {
 		}
 	});
 
+	it("hides the KaTeX display scrollbar without disabling overflow", () => {
+		const source = read("src/views/blog/PostDetailView.vue");
+		const displayRule = source.match(
+			/\.prose-blog :deep\(\.katex-display\)\s*\{([^}]*)\}/,
+		)?.[1] ?? "";
+
+		expect(displayRule).toMatch(/overflow-x:\s*auto/);
+		expect(displayRule).toMatch(/scrollbar-width:\s*none/);
+		expect(displayRule).toMatch(/-ms-overflow-style:\s*none/);
+		expect(source).toMatch(
+			/\.prose-blog :deep\(\.katex-display::-webkit-scrollbar\)\s*\{\s*display:\s*none/,
+		);
+	});
+
 	it("keeps remaining module surfaces on the global contract", () => {
 		for (const path of remainingModuleFiles) {
 			const source = read(path);

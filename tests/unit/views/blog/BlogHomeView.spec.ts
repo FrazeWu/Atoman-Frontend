@@ -107,6 +107,17 @@ describe('BlogHomeView', () => {
     expect(requestedUrls.some((url) => url.includes('/blog/explore'))).toBe(false)
   })
 
+  it('keeps the heat recommendation filter without a duplicate latest/popular filter', async () => {
+    const wrapper = mountBlogHome()
+
+    await flushPromises()
+
+    const options = wrapper.findAll('.segmented-option').map((option) => option.text())
+    expect(options).toContain('热度')
+    expect(options).not.toContain('最新')
+    expect(options).not.toContain('最热')
+  })
+
   it('uses feed recommendation target path when opening hot feed item', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
@@ -127,10 +138,8 @@ describe('BlogHomeView', () => {
     const wrapper = mountBlogHome()
 
     await flushPromises()
-
-    const hotTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '最热')
-    expect(hotTab).toBeDefined()
-    await hotTab?.trigger('click')
+    wrapper.vm.$.setupState.sortBy = 'popular'
+    await wrapper.vm.$.setupState.fetchPosts()
     await flushPromises()
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
@@ -168,9 +177,8 @@ describe('BlogHomeView', () => {
 
     const wrapper = mountBlogHome()
     await flushPromises()
-
-    const hotTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '最热')
-    await hotTab?.trigger('click')
+    wrapper.vm.$.setupState.sortBy = 'popular'
+    await wrapper.vm.$.setupState.fetchPosts()
     await flushPromises()
 
     const hotEntry = wrapper.findAll('.p-entry').find((entry) => entry.text().includes('Hot Feed Item'))
@@ -217,9 +225,8 @@ describe('BlogHomeView', () => {
 
     const wrapper = mountBlogHome()
     await flushPromises()
-
-    const hotTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '最热')
-    await hotTab?.trigger('click')
+    wrapper.vm.$.setupState.sortBy = 'popular'
+    await wrapper.vm.$.setupState.fetchPosts()
     await flushPromises()
 
     const blogEntry = wrapper.findAll('.p-entry').find((entry) => entry.text().includes('Hot Blog Post'))

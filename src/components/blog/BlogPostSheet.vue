@@ -41,6 +41,7 @@ const feedStore = useFeedStore()
 const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
 const ratingLoading = ref(false)
+const ratingError = ref('')
 let loadSequence = 0
 
 async function loadPost() {
@@ -92,6 +93,7 @@ async function toggleChannelSubscription() {
 
 async function ratePost(score: number) {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingError.value = ''
   ratingLoading.value = true
   try {
     const res = await apiRequestResult(api.blog.postRating(post.value.id), {
@@ -99,31 +101,15 @@ async function ratePost(score: number) {
       headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
       body: JSON.stringify({ score }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      ratingError.value = '评分未保存，请重试'
+      return
+    }
     const payload = await Promise.resolve(res.data)
     const summary = payload.data || payload
     post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
     post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
     post.value.viewer_rating = Number(summary.viewer_rating ?? score)
-  } finally {
-    ratingLoading.value = false
-  }
-}
-
-async function clearRating() {
-  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
-  ratingLoading.value = true
-  try {
-    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
-      method: 'DELETE',
-      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
-    })
-    if (!res.ok) return
-    const payload = await Promise.resolve(res.data)
-    const summary = payload.data || payload
-    post.value.rating_score = Number(summary.rating_score ?? 0)
-    post.value.rating_count = Number(summary.rating_count ?? 0)
-    post.value.viewer_rating = undefined
   } finally {
     ratingLoading.value = false
   }
@@ -201,6 +187,16 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
       <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <div class="prose-blog post-sheet-content" v-html="renderedContent" />
+      <PostRatingControl
+        :viewer-rating="post.viewer_rating"
+        :weighted-rating-score="post.weighted_rating_score"
+        :weighted-rating-count="post.weighted_rating_count"
+        :weighted-rating-active="post.weighted_rating_active"
+        :disabled="!authStore.isAuthenticated"
+        :loading="ratingLoading"
+        :error-message="ratingError"
+        @rate="ratePost"
+      />
       <div class="post-sheet-actions-row">
         <PButton
           variant="secondary"

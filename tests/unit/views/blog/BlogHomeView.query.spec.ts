@@ -10,9 +10,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
+    path: '/posts',
     query: mocks.routeQuery,
   }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   RouterLink: { template: '<a><slot /></a>' },
 }))
 
@@ -22,7 +23,7 @@ describe('BlogHomeView query search', () => {
     mocks.routeQuery = {}
   })
 
-  it('passes route query q to blog posts requests', async () => {
+  it('passes route query q to blog discovery requests', async () => {
     mocks.routeQuery = { q: 'atom' }
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify({ data: [] }), { status: 200 }),
@@ -46,7 +47,7 @@ describe('BlogHomeView query search', () => {
     await flushPromises()
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/blog/posts?page=1&page_size=20&q=atom')
+    expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20&q=atom')
     expect(requestedUrls.some((url) => url.includes('/blog/explore'))).toBe(false)
   })
 })

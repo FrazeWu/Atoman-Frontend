@@ -1,6 +1,6 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <PPageHeader title="稍后阅读" mb="1.25rem">
+    <PPageHeader v-if="!embedded" title="稍后阅读" mb="1.25rem">
       <template #action>
         <RouterLink to="/feed" style="text-decoration:none">
           <PButton variant="secondary" label="← 返回订阅" />
@@ -93,6 +93,13 @@ interface ReadingListEntry {
   created_at: string
   is_read?: boolean
 }
+
+const props = withDefaults(defineProps<{
+  embedded?: boolean
+}>(), {
+  embedded: false,
+})
+const embedded = computed(() => props.embedded)
 
 const route = useRoute()
 const router = useRouter()

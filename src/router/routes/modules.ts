@@ -224,7 +224,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "reading-list",
-					component: () => import("@/views/feed/FeedReadingListView.vue"),
+					redirect: (to) => ({
+						path: "/feed/starred",
+						query: { ...to.query, type: "reading" },
+					}),
 					meta: { requiresAuth: true },
 				},
 			],

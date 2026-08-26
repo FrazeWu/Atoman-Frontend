@@ -258,7 +258,6 @@ const currentModule = computed(() => {
 const feedNavItems = [
   { to: moduleUrl('feed'), label: '发现', icon: Compass, exact: true },
   { to: modulePathUrl('feed', '/subscriptions'), label: '订阅', icon: Rss },
-  { to: modulePathUrl('feed', '/reading-list'), label: '稍后阅读', icon: Clock },
   { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Bookmark },
 ]
 

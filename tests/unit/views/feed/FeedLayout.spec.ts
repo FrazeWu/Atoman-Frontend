@@ -90,7 +90,7 @@ describe('FeedLayout', () => {
   })
 
   it('renders nav rows with Ionicon SVG icons and sidebar sources', async () => {
-    const { wrapper } = await mountLayout('/feed?source_id=sub-1')
+    const { wrapper } = await mountLayout('/feed/subscriptions?source_id=sub-1')
 
     expect(wrapper.findAll('.p-sidebar-item')).toHaveLength(4)
     expect(wrapper.findAll('.p-sidebar-item-icon svg')).toHaveLength(4)
@@ -104,7 +104,7 @@ describe('FeedLayout', () => {
 
     await wrapper.get('[data-source-id="sub-1"]').trigger('click')
 
-    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { source_id: 'sub-1' } })
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed/sources', query: { source_id: 'sub-1' } })
   })
 
   it('shows unread counts from the loaded feed timeline', async () => {
@@ -210,7 +210,7 @@ describe('FeedLayout', () => {
     await sheet.get('[data-source-id="sub-1"]').trigger('click')
     await flushPromises()
 
-    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { source_id: 'sub-1' } })
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed/sources', query: { source_id: 'sub-1' } })
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
 
     pushSpy.mockClear()

@@ -205,8 +205,7 @@ test.describe("Mobile route screenshot matrix", () => {
       expect(new URL(page.url()).pathname, `${pathname} was redirected`).toBe(pathname);
       await expect(page.locator("html[data-atoman-app=mobile]")).toHaveCount(1);
       await expect(page.locator(".mobile-app-shell")).toBeVisible();
-      await page.waitForTimeout(450);
-      await expect(page.locator(".mobile-app-main")).not.toBeEmpty();
+      await expect(page.locator(".mobile-app-main")).not.toBeEmpty({ timeout: 10_000 });
 
       const layout = await page.evaluate(() => ({
         viewportWidth: window.innerWidth,
@@ -217,6 +216,33 @@ test.describe("Mobile route screenshot matrix", () => {
       expect(layout.bodyHeight, `${pathname} rendered no document`).toBeGreaterThan(0);
       expect(failedScripts, `${pathname} loaded an invalid script`).toEqual([]);
       expect(runtimeErrors, `${pathname} emitted runtime errors`).toEqual([]);
+
+      if (pathname === "/feed") {
+        const featuredTitle = page.getByRole("heading", { name: "精选文章", exact: true });
+        await expect(featuredTitle).toBeVisible();
+        const titleBox = await featuredTitle.boundingBox();
+        expect(titleBox, `${pathname} featured title is missing`).not.toBeNull();
+        expect(titleBox!.height, `${pathname} featured title wrapped vertically`).toBeLessThanOrEqual(32);
+      }
+
+      const mobileContentSelectors: Record<string, string> = {
+        "/music/discover": ".music-explore-view",
+        "/music/songs": ".songs-view",
+        "/music/bookmarks": ".music-library",
+        "/music/history": ".music-history-view",
+      };
+      const contentSelector = mobileContentSelectors[pathname];
+      if (contentSelector) {
+        const contentMetrics = await page.locator(contentSelector).evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            paddingLeft: Number.parseFloat(style.paddingLeft),
+            paddingRight: Number.parseFloat(style.paddingRight),
+          };
+        });
+        expect(contentMetrics.paddingLeft, `${pathname} content has no mobile inset`).toBeGreaterThanOrEqual(12);
+        expect(contentMetrics.paddingRight, `${pathname} content has no mobile inset`).toBeGreaterThanOrEqual(12);
+      }
 
       await page.screenshot({ path: testInfo.outputPath(`mobile-${routeSlug(pathname)}.png`), fullPage: true });
     });

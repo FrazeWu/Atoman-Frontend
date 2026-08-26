@@ -295,14 +295,14 @@ const subscriptionUnreadCounts = computed(() => {
 
 const selectSource = (sourceId: string) => {
   if (router) {
-    void router.push({ path: moduleUrl('feed'), query: { source_id: sourceId } })
+    void router.push({ path: '/feed/sources', query: { source_id: sourceId } })
   }
 }
 
 const selectAllSources = () => {
   if (router && route) {
     void router.push({
-      path: moduleUrl('feed'),
+      path: '/feed/subscriptions',
       query: {
         ...route.query,
         source_id: undefined,

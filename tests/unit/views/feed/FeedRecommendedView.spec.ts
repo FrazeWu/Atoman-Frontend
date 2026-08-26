@@ -265,7 +265,7 @@ describe("FeedRecommendedView", () => {
 								source_id: "source-popular",
 								source_title: "热门来源",
 								source_type: "external_rss",
-								source_path: "/feed?source_id=source-popular",
+								source_path: "/feed/sources?source_id=source-popular",
 							},
 						],
 					}),

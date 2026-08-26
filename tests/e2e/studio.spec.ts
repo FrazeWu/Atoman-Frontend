@@ -22,6 +22,35 @@ test.describe("Unified Studio", () => {
 			description: "",
 			cover_url: "",
 		};
+		let goalActionStatus: "pending" | "completed" = "pending";
+		const goalData = () => ({
+			current_cycle: {
+				id: "cycle-1",
+				channel_id: "channel-1",
+				start_date: "2026-08-01",
+				end_date: "2026-08-31",
+				timezone: "Asia/Shanghai",
+				status: "active",
+				needs_review: false,
+				goals: [{
+					id: "goal-1",
+					cycle_id: "cycle-1",
+					name: "稳定发布产品观察",
+					module: "blog",
+					metric: "published",
+					baseline_value: 0,
+					target_value: 4,
+					current_value: 2,
+					progress: 50,
+					actions: [{ id: "action-1", goal_id: "goal-1", title: "完成第二篇观察", status: goalActionStatus, due_date: "2026-08-20" }],
+				}],
+			},
+			cycles: [],
+			metrics: [
+				{ module: "blog", metric: "published", label: "发布数量" },
+				{ module: "blog", metric: "view", label: "阅读" },
+			],
+		});
 
 		await page.route("**/api/v1/**", async (route) => {
 			const request = route.request();
@@ -58,6 +87,13 @@ test.describe("Unified Studio", () => {
 				return fulfill({
 					data: { current_channel: channel, channels: [channel] },
 				});
+			}
+			if (path === "/api/v1/studio/goals" && method === "GET") {
+				return fulfill({ data: goalData() });
+			}
+			if (path === "/api/v1/studio/goals/actions/action-1" && method === "PATCH") {
+				goalActionStatus = (request.postDataJSON() as { status: "pending" | "completed" }).status;
+				return fulfill({ data: goalData().current_cycle.goals[0].actions[0] });
 			}
 			if (path === "/api/v1/studio/dashboard") {
 				return fulfill({
@@ -280,6 +316,13 @@ test.describe("Unified Studio", () => {
 		const studioNav = page.getByTestId("studio-primary-nav");
 		await studioNav.getByRole("link", { name: "管理", exact: true }).click();
 		await expect(page).toHaveURL(/\/studio\/manage\/channel$/);
+		await page.getByRole("link", { name: "经营", exact: true }).click();
+		await expect(page).toHaveURL(/\/studio\/manage\/goals$/);
+		await expect(page.getByRole("heading", { name: "经营目标" })).toBeVisible();
+		await expect(page.getByText("稳定发布产品观察")).toBeVisible();
+		await expect(page.getByText("完成 50%")).toBeVisible();
+		await page.getByRole("checkbox").check();
+		await expect(page.getByRole("checkbox")).toBeChecked();
 		await page.getByRole("link", { name: "合集", exact: true }).click();
 		await expect(page).toHaveURL(/\/studio\/manage\/collections$/);
 		await page.getByTestId("new-collection").click();
@@ -367,6 +410,16 @@ test.describe("Unified Studio", () => {
 		expect(mainContentTop - studioFrameTop).toBeLessThan(240);
 		await page.screenshot({
 			path: testInfo.outputPath("studio-mobile.png"),
+			fullPage: true,
+		});
+		await navigateInApp("/studio/manage/goals");
+		await expect(page.getByRole("heading", { name: "经营目标" })).toBeVisible();
+		const goalsPageOverflow = await page.evaluate(
+			() => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+		);
+		expect(goalsPageOverflow).toBe(false);
+		await page.screenshot({
+			path: testInfo.outputPath("studio-goals-mobile.png"),
 			fullPage: true,
 		});
 	});

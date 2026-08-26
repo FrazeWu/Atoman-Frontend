@@ -331,6 +331,62 @@ export interface StudioAnalytics {
 	};
 }
 
+export interface StudioGoalMetricOption {
+	module: StudioModule;
+	metric: string;
+	label: string;
+}
+
+export interface StudioGoalAction {
+	id: string;
+	goal_id: string;
+	title: string;
+	status: 'pending' | 'completed';
+	due_date?: string;
+	content_id?: string;
+	content_module?: StudioModule;
+}
+
+export interface StudioGoal {
+	id: string;
+	cycle_id: string;
+	name: string;
+	module: StudioModule;
+	metric: string;
+	baseline_value: number;
+	target_value: number;
+	current_value: number;
+	actual_value?: number;
+	progress: number;
+	actions: StudioGoalAction[];
+}
+
+export interface StudioGoalReview {
+	id: string;
+	result: string;
+	learning: string;
+	next_action: string;
+	created_at: string;
+}
+
+export interface StudioGoalCycle {
+	id: string;
+	channel_id: string;
+	start_date: string;
+	end_date: string;
+	timezone: string;
+	status: 'planned' | 'active' | 'needs_review' | 'reviewed';
+	needs_review: boolean;
+	goals: StudioGoal[];
+	review?: StudioGoalReview;
+}
+
+export interface StudioGoals {
+	current_cycle?: StudioGoalCycle;
+	cycles: StudioGoalCycle[];
+	metrics: StudioGoalMetricOption[];
+}
+
 export interface StudioInteractionFilters {
 	q: string;
 	content_id: string;

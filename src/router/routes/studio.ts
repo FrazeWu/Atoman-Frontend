@@ -43,6 +43,11 @@ export const studioRoutes: RouteRecordRaw[] = [
 						component: () => import("@/views/studio/StudioCalendarView.vue"),
 					},
 					{
+						path: "goals",
+						name: "studio-manage-goals",
+						component: () => import("@/views/studio/StudioGoalsView.vue"),
+					},
+					{
 						path: "collections",
 						name: "studio-manage-collections",
 						component: () =>

@@ -4,6 +4,7 @@
       <RouterLink to="/studio/manage/channel">频道</RouterLink>
       <RouterLink v-if="studio.currentChannel" to="/studio/manage/calendar">日历</RouterLink>
       <span v-else class="studio-management__nav-unavailable" aria-disabled="true">日历</span>
+      <RouterLink v-if="studio.currentChannel" to="/studio/manage/goals">经营</RouterLink>
       <RouterLink v-if="studio.currentChannel" to="/studio/manage/collections">合集</RouterLink>
       <span v-else class="studio-management__nav-unavailable" aria-disabled="true">合集</span>
     </nav>

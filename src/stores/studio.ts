@@ -14,6 +14,7 @@ import { useAuthStore } from "@/stores/auth";
 import type {
 	StudioAnalytics,
 	StudioAnalyticsFilters,
+	StudioGoals,
 	StudioCalendarItem,
 	StudioChannel,
 	StudioCollection,
@@ -77,6 +78,7 @@ export const useStudioStore = defineStore("studio", () => {
 	);
 	const replyTemplates = ref<StudioReplyTemplate[]>([]);
 	const analytics = ref(emptyModuleRecord<StudioAnalytics | null>(() => null));
+	const goals = ref<StudioGoals | null>(null);
 	const interactions = ref(emptyModuleRecord<StudioInteractionItem[]>(() => []));
 	const interactionPagination = ref(
 		emptyModuleRecord<StudioPagination | null>(() => null),
@@ -93,6 +95,7 @@ export const useStudioStore = defineStore("studio", () => {
 	let unifiedCollectionsRequestVersion = 0;
 	let unifiedCollectionContentsRequestVersion = 0;
 	let unifiedCollectionCandidatesRequestVersion = 0;
+	let goalsRequestVersion = 0;
 	let replyTemplatesRequestVersion = 0;
 	const contentsRequestVersion = emptyModuleRecord(() => 0);
 	const collectionsRequestVersion = emptyModuleRecord(() => 0);
@@ -115,6 +118,7 @@ export const useStudioStore = defineStore("studio", () => {
 		unifiedCollectionsRequestVersion += 1;
 		unifiedCollectionContentsRequestVersion += 1;
 		unifiedCollectionCandidatesRequestVersion += 1;
+		goalsRequestVersion += 1;
 		replyTemplatesRequestVersion += 1;
 		for (const module of Object.keys(contentsRequestVersion) as StudioModule[]) {
 			contentsRequestVersion[module] += 1;
@@ -134,6 +138,7 @@ export const useStudioStore = defineStore("studio", () => {
 		unifiedCollectionContentsCollectionID.value = "";
 		unifiedCollectionCandidates.value = [];
 		replyTemplates.value = [];
+		goals.value = null;
 		analytics.value = emptyModuleRecord(() => null);
 		interactions.value = emptyModuleRecord(() => []);
 		interactionPagination.value = emptyModuleRecord(() => null);
@@ -490,6 +495,74 @@ export const useStudioStore = defineStore("studio", () => {
 		);
 	}
 
+	async function loadGoals(track = true) {
+		if (track) activeReload = () => loadGoals(false);
+		const requestVersion = ++goalsRequestVersion;
+		const requestChannelID = channelID();
+		const response = await apiGet<StudioGoals>(
+			appendQuery(api.goals, { channel_id: requestChannelID }),
+		);
+		if (
+			goalsRequestVersion !== requestVersion ||
+			currentChannel.value?.id !== requestChannelID
+		)
+			return;
+		goals.value = response;
+	}
+
+	async function createGoalCycle(input: {
+		start_date: string;
+		end_date: string;
+		timezone: string;
+	}) {
+		await apiPostJson(api.goalCycles, { ...input, channel_id: channelID() });
+		await loadGoals(false);
+	}
+
+	async function createGoal(cycleID: string, input: {
+		name: string;
+		module: StudioModule;
+		metric: string;
+		target_value: number;
+	}) {
+		await apiPostJson(api.goalCycleGoals(cycleID), input);
+		await loadGoals(false);
+	}
+
+	async function updateGoal(goalID: string, input: { name?: string; target_value?: number }) {
+		await apiPatchJson(api.goal(goalID), input);
+		await loadGoals(false);
+	}
+
+	async function createGoalAction(goalID: string, input: {
+		title: string;
+		due_date?: string;
+		content_id?: string;
+		content_module?: StudioModule;
+	}) {
+		await apiPostJson(api.goalActions(goalID), input);
+		await loadGoals(false);
+	}
+
+	async function updateGoalAction(actionID: string, status: 'pending' | 'completed') {
+		await apiPatchJson(api.goalAction(actionID), { status });
+		await loadGoals(false);
+	}
+
+	async function deleteGoalAction(actionID: string) {
+		await apiDeleteJson(api.goalAction(actionID));
+		await loadGoals(false);
+	}
+
+	async function reviewGoalCycle(cycleID: string, input: {
+		result: string;
+		learning: string;
+		next_action: string;
+	}) {
+		await apiPostJson(api.goalReview(cycleID), input);
+		await loadGoals(false);
+	}
+
 	async function loadAnalytics(
 		module: StudioModule,
 		range: 7 | 28 | 90,
@@ -683,6 +756,7 @@ export const useStudioStore = defineStore("studio", () => {
 		unifiedCollectionCandidates,
 		replyTemplates,
 		analytics,
+		goals,
 		interactions,
 		interactionPagination,
 		settings,
@@ -712,6 +786,14 @@ export const useStudioStore = defineStore("studio", () => {
 		resolveCollectionConflict,
 		resolveCollectionConflicts,
 		loadAnalytics,
+		loadGoals,
+		createGoalCycle,
+		createGoal,
+		updateGoal,
+		createGoalAction,
+		updateGoalAction,
+		deleteGoalAction,
+		reviewGoalCycle,
 		loadInteractions,
 		updateInteractionState,
 		setInteractionsHandled,

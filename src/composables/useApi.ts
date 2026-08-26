@@ -178,6 +178,13 @@ export function useApi() {
 			channel: (id: string) => `${apiUrl}/studio/channels/${id}`,
 			dashboard: `${apiUrl}/studio/dashboard`,
 			calendar: `${apiUrl}/studio/calendar`,
+			goals: `${apiUrl}/studio/goals`,
+			goalCycles: `${apiUrl}/studio/goals/cycles`,
+			goalCycleGoals: (id: string) => `${apiUrl}/studio/goals/cycles/${id}/goals`,
+			goal: (id: string) => `${apiUrl}/studio/goals/${id}`,
+			goalActions: (id: string) => `${apiUrl}/studio/goals/${id}/actions`,
+			goalAction: (id: string) => `${apiUrl}/studio/goals/actions/${id}`,
+			goalReview: (id: string) => `${apiUrl}/studio/goals/cycles/${id}/review`,
 			contents: (module: "blog" | "podcast" | "video") =>
 				`${apiUrl}/studio/${module}/contents`,
 			unifiedContents: `${apiUrl}/studio/contents`,

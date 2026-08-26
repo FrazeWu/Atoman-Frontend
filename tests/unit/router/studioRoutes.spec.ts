@@ -26,6 +26,7 @@ describe("studio routes", () => {
 				"/studio/manage",
 				"/studio/manage/channel",
 				"/studio/manage/calendar",
+				"/studio/manage/goals",
 				"/studio/manage/collections",
 				"/studio/manage/collections/:id",
 				"/studio/channel",

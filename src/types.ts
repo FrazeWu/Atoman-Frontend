@@ -102,6 +102,8 @@ export interface User {
 	created_at?: string;
 	updated_at?: string;
 	forum_trust_level?: number;
+	quality?: number;
+	contribution_total?: number;
 }
 
 export interface ForumGroupMember {
@@ -1103,6 +1105,8 @@ export interface UserProfile {
 	followers_count?: number;
 	following_count?: number;
 	posts_count?: number;
+	quality?: number;
+	contribution_total?: number;
 	created_at: string;
 }
 

@@ -117,6 +117,13 @@ describe("API endpoint construction contract", () => {
 		);
 	});
 
+	it("exposes blog continuation endpoints under the versioned API", () => {
+		const api = useApi();
+
+		expect(api.blog.relatedPosts("post-1")).toBe(
+			"/api/v1/blog/posts/post-1/related",
+		);
+	});
 	it("uses registered unified interaction endpoints", () => {
 		const api = useApi();
 

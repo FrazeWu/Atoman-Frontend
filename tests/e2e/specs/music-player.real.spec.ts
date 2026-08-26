@@ -50,10 +50,18 @@ test.describe("Music player real browser", () => {
     await expect(
       authenticatedMusicPage.locator('[data-testid="album-play-action"]'),
     ).toBeVisible();
+    const playbackSessionSave = authenticatedMusicPage.waitForResponse(
+      (response) =>
+        response.request().method() === "PUT" &&
+        /\/api\/v1\/music\/playback-session(?:\?|$)/.test(response.url()) &&
+        response.ok(),
+      { timeout: 15000 },
+    );
     await authenticatedMusicPage
       .locator('[data-testid="album-play-action"]')
       .click();
     await expect(authenticatedMusicPage.locator(".player-title")).toBeVisible();
+    await playbackSessionSave;
 
     const currentTitle = await authenticatedMusicPage
       .locator(".player-title")
@@ -109,7 +117,7 @@ test.describe("Music player real browser", () => {
     const captureHistoryRequest = (request: { method(): string; url(): string }) => {
       if (
         request.method() === "GET" &&
-        /\/music\/history(?:\?|$)/.test(request.url())
+        /\/api\/v1\/music\/history(?:\?|$)/.test(request.url())
       ) {
         historyEndpoint = request.url().split("?")[0];
       }
@@ -124,9 +132,13 @@ test.describe("Music player real browser", () => {
       await expect.poll(() => historyEndpoint).not.toBe("");
 
       const clearResponse = await authenticatedMusicPage.evaluate(async (endpoint) => {
-        const sessionResponse = await fetch("/api/v1/auth/session", {
+      const apiOrigin = new URL(endpoint).origin;
+      const sessionResponse = await fetch(
+        new URL("/api/v1/auth/session", apiOrigin),
+        {
           credentials: "include",
-        });
+        },
+      );
         const session = (await sessionResponse.json()) as { csrf_token?: string };
         const response = await fetch(endpoint, {
           method: "DELETE",
@@ -165,9 +177,13 @@ test.describe("Music player real browser", () => {
       if (historyEndpoint) {
         try {
           await authenticatedMusicPage.evaluate(async (endpoint) => {
-            const sessionResponse = await fetch("/api/v1/auth/session", {
-              credentials: "include",
-            });
+            const apiOrigin = new URL(endpoint).origin;
+            const sessionResponse = await fetch(
+              new URL("/api/v1/auth/session", apiOrigin),
+              {
+                credentials: "include",
+              },
+            );
             const session = (await sessionResponse.json()) as { csrf_token?: string };
             await fetch(endpoint, {
               method: "DELETE",

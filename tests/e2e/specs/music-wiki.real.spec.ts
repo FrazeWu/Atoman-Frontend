@@ -17,7 +17,7 @@ test.describe("Music Wiki Real", () => {
     const surfaces = [
       { path: "/music", heading: "发现" },
       { path: "/music/me", heading: "我的" },
-      { path: "/music/playlists", heading: "歌单" },
+      { path: "/music/playlists", heading: "收藏" },
       { path: "/music/history", heading: "播放历史" },
     ];
 
@@ -185,7 +185,7 @@ test.describe("Music Wiki Real", () => {
     for (const surface of [
       { path: "/music", heading: "发现" },
       { path: "/music/me", heading: "我的" },
-      { path: "/music/playlists", heading: "歌单" },
+      { path: "/music/playlists", heading: "收藏" },
       { path: "/music/history", heading: "播放历史" },
     ]) {
       await authenticatedMusicMobilePage.goto(surface.path);
@@ -204,11 +204,17 @@ test.describe("Music Wiki Real", () => {
   test("authenticated user can open the music contribute flow against real backend", async ({
     authenticatedMusicPage,
   }) => {
-    await authenticatedMusicPage.goto("/artist/new");
+    await authenticatedMusicPage.goto("/music/artist/new");
 
-    await expect(authenticatedMusicPage.getByText("添加/补全艺术家")).toBeVisible();
+    const creationDialog = authenticatedMusicPage.getByRole("dialog", {
+      name: "创建艺术家",
+    });
+    await expect(creationDialog).toBeVisible();
     await expect(
-      authenticatedMusicPage.getByRole("button", { name: "创建艺术家" }),
+      creationDialog.getByRole("textbox", { name: "本名*" }),
+    ).toBeVisible();
+    await expect(
+      creationDialog.getByRole("button", { name: "创建专辑/歌曲" }),
     ).toBeVisible();
   });
 });

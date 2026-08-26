@@ -130,6 +130,7 @@ export function useApi() {
 
 			posts: `${apiUrl}/blog/posts`,
 			recommendPosts: `${apiUrl}/blog/recommend/posts`,
+			relatedPosts: (id: number | string) => `${apiUrl}/blog/posts/${id}/related`,
 			post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,
 			postRating: (id: number | string) => `${apiUrl}/blog/posts/${id}/rating`,
 			postPublish: (id: number | string) => `${apiUrl}/blog/posts/${id}/publish`,

@@ -43,7 +43,7 @@ describe("CommentItem", () => {
 	it("将已清洗的 Markdown 渲染为结构化节点", () => {
 		const wrapper = mount(CommentItem, {
 			props: { comment: makeComment({ content: "这是 **重点**" }) },
-			global: { stubs: { PAvatar: true } },
+			global: { stubs: { PAvatar: true, UserSummaryCard: true } },
 		});
 
 		expect(wrapper.get('[data-test="comment-content"]').text()).toBe(
@@ -62,7 +62,7 @@ describe("CommentItem", () => {
 				currentUserId: "user-1",
 				canReply: true,
 			},
-			global: { stubs: { PAvatar: true } },
+			global: { stubs: { PAvatar: true, UserSummaryCard: true } },
 		});
 
 		expect(wrapper.find('button[title="举报"]').exists()).toBe(false);

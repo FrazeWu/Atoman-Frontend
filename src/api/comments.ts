@@ -24,7 +24,14 @@ export type CommentTargetKind =
   | 'timeline_person'
 
 export interface CommentTargetRef { kind: CommentTargetKind; resourceId: string }
-export interface CommentUserSummary { id: string; username: string; display_name: string; avatar_url: string }
+export interface CommentUserSummary {
+  id: string
+  username: string
+  display_name: string
+  avatar_url: string
+  quality?: number
+  contribution_total?: number
+}
 export interface CommentMention { user_id: string; start: number; end: number }
 export type CommentMentionInput = CommentMention
 export interface CommentAttachment { id: string; url: string; content_type: string; position: number }

@@ -690,6 +690,39 @@ describe("PostDetailView shared interactions", () => {
 		);
 	});
 
+	it("shows related posts and opens the selected article with its source", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) => {
+				const url = String(input);
+				if (url.includes("/blog/posts/post-1/related")) {
+					return response([
+						{
+							id: "post-2",
+							title: "同频道文章",
+							summary: "继续阅读摘要",
+							target_path: "/posts/post/post-2",
+							score_label: "同频道",
+						},
+					]);
+				}
+				return response(postDetail("post-1", "文章"));
+			}),
+		);
+
+		const { wrapper, router } = await mountPostDetailWithRouter();
+		await flushPromises();
+
+		expect(wrapper.find(".blog-related").exists()).toBe(true);
+		expect(wrapper.text()).toContain("同频道文章");
+
+		await wrapper.get(".blog-related__item").trigger("click");
+		await flushPromises();
+
+		expect(router.currentRoute.value.fullPath).toBe(
+			"/posts/post/post-2?source=related",
+		);
+	});
 	it("在数学运行时就绪后重新渲染文章内容", async () => {
 		mocks.markdownRuntimeState = ref("idle");
 		mocks.markdownHtml = "$(U)$";

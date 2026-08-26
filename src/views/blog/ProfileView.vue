@@ -120,6 +120,13 @@
             </div>
           </div>
 
+          <UserSummaryCard
+            class="profile-header__reputation"
+            :user="profile"
+            :show-identity="false"
+            exact-contribution
+          />
+
           <!-- Stats -->
           <div class="profile-header__stats">
             <span class="profile-header__stat">
@@ -295,6 +302,7 @@ import {
   uploadUserAvatar,
 } from '@/api/userProfile'
 import ChannelView from '@/views/blog/ChannelView.vue'
+import UserSummaryCard from '@/components/user/UserSummaryCard.vue'
 import type { UserProfile, Post, Channel, ShortNote } from '@/types'
 
 type ContentItem =
@@ -818,6 +826,10 @@ onMounted(() => { void loadProfilePage() })
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
   border-color: var(--a-color-border-soft);
+}
+
+.profile-header__reputation {
+  margin-top: 0.35rem;
 }
 
 .profile-header__stats {

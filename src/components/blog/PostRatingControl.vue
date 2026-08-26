@@ -4,7 +4,6 @@
     <!-- 综合评分与统计 -->
     <div class="post-rating__summary">
       <template v-if="weightedRatingActive && weightedRatingScore !== null && weightedRatingScore !== undefined">
-        <span class="post-rating__label">加权分</span>
         <strong class="post-rating__score-num">{{ formatStarScore(weightedRatingScore) }}</strong>
       </template>
       <span v-else class="post-rating__insufficient">依据不足</span>

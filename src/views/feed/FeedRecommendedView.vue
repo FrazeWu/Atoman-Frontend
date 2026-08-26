@@ -175,12 +175,6 @@
             </div>
             <div class="stream-sub-filters">
               <PSegmentedControl v-model="mode" :options="modeOptions" />
-              <PButton
-                variant="primary"
-                label="换一批"
-                :loading="loading"
-                @click="refreshRecommendationBatch"
-              />
             </div>
           </div>
 
@@ -245,15 +239,6 @@
               </template>
             </PContentCard>
           </div>
-
-          <FeedTimelineFooter
-            v-if="totalArticles > pageSize"
-            :page="page"
-            :page-size="pageSize"
-            :total="totalArticles"
-            :loading="loading"
-            @change-page="handlePageChange"
-          />
         </section>
 
         <!-- 👉 右信息流：💡 优质频道与源推荐流 -->
@@ -295,6 +280,16 @@
             />
           </div>
         </section>
+      </div>
+
+      <div class="feed-recommendation-actions">
+        <PButton
+          variant="primary"
+          label="换一批"
+          :loading="loading"
+          data-test="feed-recommend-refresh"
+          @click="refreshRecommendationBatch"
+        />
       </div>
     </PContentProgress>
 
@@ -342,7 +337,6 @@ import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
-import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
@@ -662,12 +656,6 @@ async function fetchRecommendations() {
 function refreshRecommendationBatch() {
   const totalPages = Math.max(1, Math.ceil(totalArticles.value / pageSize))
   page.value = page.value >= totalPages ? 1 : page.value + 1
-  syncQuery()
-  void fetchRecommendations()
-}
-
-function handlePageChange(newPage: number) {
-  page.value = newPage
   syncQuery()
   void fetchRecommendations()
 }
@@ -1014,6 +1002,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.feed-recommendation-actions {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem 0 0.5rem;
+}
+
 .feed-recommended-view {
   max-width: 78rem;
   margin: 0 auto;

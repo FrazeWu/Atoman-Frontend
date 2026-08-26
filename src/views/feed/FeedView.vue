@@ -154,47 +154,20 @@
 
       <div v-else class="feed-timeline">
         <template v-for="(item, index) in visibleTimeline" :key="itemKey(item)">
-          <PContentCard
+          <BlogItemCard
             v-if="item.type === 'post' && item.post"
+            :item="item.post"
+            type="post"
             :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
             :is-read="item.is_read"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+            :source-title="postSource(item)?.title || '未知频道'"
+            :source-interactive="Boolean(postSource(item))"
+            :bookmarked="feedStore.bookmarkedPostIds.has(item.post.id)"
+            :in-reading-list="readingListIds.has(item.post.id)"
             @click="openArticleSheet(item, index)"
-            :title="item.post.title"
-            :summary="item.post.summary"
-            class="content-stream-entry"
+            @open-source="openPostSourceSheet(item)"
           >
-            <template #visual>
-              <PAvatar
-                :src="item.post.user?.avatar_url"
-                :name="item.post.user?.display_name || item.post.user?.username || '作者'"
-                :alt="`${item.post.user?.display_name || item.post.user?.username || '作者'} 的头像`"
-                size="xs"
-              />
-            </template>
-            <template #meta>
-              <span class="a-label">{{ item.post.user?.display_name || item.post.user?.username || '作者' }}</span>
-              <span v-if="item.post.user?.username" class="a-label a-muted">@{{ item.post.user.username }}</span>
-              <button
-                v-if="postSource(item)"
-                type="button"
-                class="a-label feed-source-link feed-source-trigger"
-                data-test="feed-source-trigger"
-                :title="sourceTriggerLabel(postSource(item)!)"
-                :aria-label="sourceTriggerLabel(postSource(item)!)"
-                @click.stop="openPostSourceSheet(item)"
-              >
-                {{ postSource(item)!.title }}
-              </button>
-              <span v-else class="a-label a-muted">未知频道</span>
-              <span class="feed-entry-stats">
-                <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.post.view_count || 0 }}</span>
-                <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.post.rating_score ? `${item.post.rating_score.toFixed(1)} (${item.post.rating_count || 0})` : '—' }}</span>
-                <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.post.bookmarks_count || 0 }}</span>
-              </span>
-              <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
-              <span class="feed-type-tag feed-type-tag--blog">文章</span>
-            </template>
             <template #actions>
               <PClip
                 v-if="authStore.isAuthenticated"
@@ -213,48 +186,28 @@
                 <Clock :size="14" />
               </PClip>
             </template>
-          </PContentCard>
+          </BlogItemCard>
 
-          <PContentCard
+          <BlogItemCard
             v-else-if="item.type === 'feed_item' && item.feed_item"
+            :item="item.feed_item"
+            type="feed_item"
             :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
             :is-read="item.is_read"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+            :source-interactive="Boolean(feedItemSource(item.feed_item))"
+            :source-title="feedItemSource(item.feed_item)?.title || 'RSS'"
+            :type-label="getExternalBadge(item.feed_item)"
+            :starred="starredIds.has(item.feed_item.id)"
+            :in-reading-list="readingListIds.has(item.feed_item.id)"
+            :is-podcast-playing="isPodcastPlaying(item.feed_item)"
             @click="openArticleSheet(item, index)"
-            :title="item.feed_item.title"
-            :summary="stripHtml(item.feed_item.summary || '')"
-            class="content-stream-entry"
+            @open-source="openFeedItemSourceSheet(item.feed_item)"
           >
-            <template #visual>
-              <PAvatar
-                :src="item.feed_item.feed_source?.cover_url || item.feed_item.image_url"
-                :name="feedItemSource(item.feed_item)?.title || 'RSS'"
-                :alt="`${feedItemSource(item.feed_item)?.title || 'RSS'} 的网站图标`"
-                size="xs"
-              />
-            </template>
-            <template #meta>
-              <button
-                v-if="feedItemSource(item.feed_item)"
-                type="button"
-                class="a-label feed-source-link feed-source-trigger"
-                data-test="feed-source-trigger"
-                :title="sourceTriggerLabel(feedItemSource(item.feed_item)!)"
-                :aria-label="sourceTriggerLabel(feedItemSource(item.feed_item)!)"
-                @click.stop="openFeedItemSourceSheet(item.feed_item)"
-              >
-                {{ feedItemSource(item.feed_item)!.title }}
-              </button>
-              <span v-else class="a-label a-muted">RSS</span>
-              <span class="feed-entry-stats">
-                <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.feed_item.read_count || 0 }}</span>
-                <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.feed_item.rating_score ? `${item.feed_item.rating_score.toFixed(1)} (${item.feed_item.rating_count || 0})` : '—' }}</span>
-                <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.feed_item.bookmark_count || 0 }}</span>
-              </span>
-              <span v-if="item.feed_item.duration" style="color:var(--a-color-muted-soft);font-weight: 500">
+            <template #meta-extra>
+              <span v-if="item.feed_item.duration" class="feed-item-duration">
                 时长: {{ item.feed_item.duration }}
               </span>
-              <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.feed_item.published_at) }}</span>
               <span
                 v-if="(item.feed_item.duplicate_count || 0) > 1"
                 class="feed-duplicate-summary"
@@ -278,14 +231,6 @@
                   {{ (item.feed_item.duplicate_sources || []).join(' · ') }}
                 </span>
               </span>
-              <span
-                class="feed-type-tag"
-                :class="{
-                  'feed-type-tag--podcast': getExternalBadge(item.feed_item) === '播客',
-                  'feed-type-tag--video':   getExternalBadge(item.feed_item) === '视频',
-                  'feed-type-tag--rss':     getExternalBadge(item.feed_item) === '文章',
-                }"
-              >{{ getExternalBadge(item.feed_item) }}</span>
             </template>
 
             <template #actions>
@@ -327,7 +272,7 @@
                 <ExternalLink :size="14" aria-hidden="true" />
               </a>
             </template>
-          </PContentCard>
+          </BlogItemCard>
         </template>
 
         <FeedTimelineFooter
@@ -345,6 +290,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -352,9 +298,6 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PField from '@/components/ui/PField.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PContentCard from '@/components/ui/PContentCard.vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
-import PBadge from '@/components/ui/PBadge.vue'
 
 const sourceTypeFilterOptions: Array<{ label: string; value: FeedSourceTypeFilter; test: string }> = [
   { label: '全部', value: 'all', test: 'source-type-filter-all' },
@@ -382,7 +325,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown, Eye, Gauge, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
+import { ChevronDown, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()
@@ -469,8 +412,6 @@ const {
   getExternalBadge,
   feedItemActionIDs,
   itemKey,
-  formatDate,
-  stripHtml,
   toggleDuplicateSources,
 } = useFeedTimelinePresentation({
   timeline,
@@ -937,11 +878,16 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.feed-loading,
-.feed-timeline {
+.feed-loading {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.feed-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .feed-new-content-region {
@@ -1009,69 +955,9 @@ onUnmounted(() => {
   box-shadow: var(--a-shadow-sm);
 }
 
-.feed-source-trigger {
-  appearance: none;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 500;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.16em;
-}
-
-.feed-source-trigger:hover {
-  color: var(--a-color-text);
-  text-decoration-thickness: 2px;
-}
-
-.feed-source-trigger:focus-visible {
-  outline: 2px solid var(--a-color-text);
-  outline-offset: 2px;
-}
-
-.feed-meta-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
+.feed-item-duration {
   color: var(--a-color-muted-soft);
-  font-size: 0.72rem;
   font-weight: 500;
-}
-
-/* 类型标签 */
-.feed-type-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.1em 0.45em;
-  border-radius: var(--a-radius-control);
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.5;
-}
-
-.feed-type-tag--blog {
-  background: color-mix(in srgb, #16a34a 12%, transparent);
-  color: #16a34a;
-}
-
-.feed-type-tag--rss {
-  background: color-mix(in srgb, #2563eb 12%, transparent);
-  color: #2563eb;
-}
-
-.feed-type-tag--podcast {
-  background: color-mix(in srgb, #7c3aed 12%, transparent);
-  color: #7c3aed;
-}
-
-.feed-type-tag--video {
-  background: color-mix(in srgb, #ea580c 12%, transparent);
-  color: #ea580c;
 }
 
 /* 流式列表中 visual 列只显示未读点，无需固定宽度 */

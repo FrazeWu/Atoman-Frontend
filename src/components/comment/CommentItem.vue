@@ -7,11 +7,12 @@
     tabindex="-1"
   >
     <header class="comment-item__header">
-      <PAvatar :src="comment.author.avatar_url" :name="authorName" :size="depth ? 'xs' : 'sm'" />
-      <div class="comment-item__identity">
-        <strong>{{ authorName }}</strong>
-        <span>@{{ comment.author.username }}</span>
-      </div>
+      <UserSummaryCard
+        :user="comment.author"
+        :compact="depth === 1"
+        :avatar-size="depth ? 'xs' : 'sm'"
+        link
+      />
       <span v-if="comment.reply_to_author" class="comment-item__reply-to">
         回复 @{{ comment.reply_to_author.username }}
       </span>
@@ -83,9 +84,9 @@ import { computed, defineComponent, h, ref, type VNodeChild } from 'vue'
 import { BadgeCheck, Flag, Heart, Pencil, Pin, PinOff, Play, Reply, Trash2 } from 'lucide-vue-next'
 
 import type { CommentDTO } from '@/api/comments'
-import PAvatar from '@/components/ui/PAvatar.vue'
 import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
 import { applyResolvedReferences } from '@/composables/useReferenceRendering'
+import UserSummaryCard from '@/components/user/UserSummaryCard.vue'
 
 defineOptions({ name: 'CommentItem' })
 
@@ -163,7 +164,6 @@ defineEmits<{
 }>()
 
 const revealed = ref(false)
-const authorName = computed(() => props.comment.author.display_name || props.comment.author.username)
 const isFolded = computed(() => props.comment.status === 'auto_folded')
 const isOwner = computed(() => Boolean(props.currentUserId && props.currentUserId === props.comment.author_id))
 const showMarked = computed(() => props.depth === 0 && (props.markedCommentId
@@ -191,9 +191,7 @@ function anchorText(start: number, end: number) {
 .comment-item:focus { border-color: var(--a-color-primary); outline: 2px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent); outline-offset: 2px; }
 .comment-item--child { padding: 0.85rem 0 0.25rem; border: 0; border-radius: 0; background: transparent; }
 .comment-item__header { display: flex; align-items: center; gap: 0.6rem; min-height: 32px; }
-.comment-item__identity { display: flex; min-width: 0; align-items: baseline; gap: 0.4rem; }
-.comment-item__identity strong { overflow: hidden; color: var(--a-color-text); font-weight: var(--a-font-weight-strong); text-overflow: ellipsis; white-space: nowrap; }
-.comment-item__identity span, .comment-item__reply-to, .comment-item__floor { color: var(--a-color-muted); font-size: var(--a-text-xs); }
+.comment-item__reply-to, .comment-item__floor { color: var(--a-color-muted); font-size: var(--a-text-xs); }
 .comment-item__reply-to { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comment-item__floor { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .comment-item__marked { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.45rem; border: 1px solid color-mix(in srgb, var(--a-color-primary) 35%, var(--a-color-border-soft)); border-radius: var(--a-radius-control); background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg)); color: var(--a-color-primary); font-size: var(--a-text-xs); font-weight: var(--a-font-weight-strong); white-space: nowrap; }

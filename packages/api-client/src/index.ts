@@ -182,12 +182,13 @@ export function createApiClient(apiFetch: ApiFetcher) {
     }))
   }
 
-  async function apiPostJson<T>(url: string, body: unknown): Promise<T> {
+  async function apiPostJson<T>(url: string, body: unknown, options: { signal?: AbortSignal } = {}): Promise<T> {
     return unwrapResponse<T>(await apiFetch(url, {
       method: 'POST',
       credentials: 'include',
       headers: jsonHeaders,
       body: JSON.stringify(body),
+      ...(options.signal ? { signal: options.signal } : {}),
     }))
   }
 

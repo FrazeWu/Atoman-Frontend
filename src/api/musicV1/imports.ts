@@ -43,6 +43,10 @@ import {
 	type UploadMusicAlbumArchiveOptions,
 } from "./types";
 
+type MusicAlbumImportRequestOptions = {
+	signal?: AbortSignal;
+};
+
 function normalizeMusicAlbumImportMultipart(
 	multipart: MusicAlbumImportMultipart,
 ): MusicAlbumImportMultipart {
@@ -606,6 +610,7 @@ async function uploadAlbumArchivePart(
 
 export type MusicAlbumImportPartUploadOptions = {
 	signal?: AbortSignal;
+	timeoutMs?: number;
 	onProgress?: (progress: { loaded: number; total: number }) => void;
 };
 
@@ -631,6 +636,9 @@ export function uploadMusicAlbumImportFilePart(
 		};
 
 		xhr.open("PUT", uploadUrl);
+		if (options.timeoutMs && options.timeoutMs > 0) {
+			xhr.timeout = options.timeoutMs;
+		}
 		options.signal?.addEventListener("abort", abort, { once: true });
 		xhr.upload.addEventListener("progress", (event) => {
 			if (event.lengthComputable) {
@@ -652,6 +660,9 @@ export function uploadMusicAlbumImportFilePart(
 		});
 		xhr.addEventListener("error", () =>
 			settle(() => reject(new Error("上传分片失败，请重试"))),
+		);
+		xhr.addEventListener("timeout", () =>
+			settle(() => reject(new Error("上传分片超时，请重试"))),
 		);
 		xhr.addEventListener("abort", () =>
 			settle(() => reject(new Error("上传已取消"))),
@@ -755,10 +766,12 @@ export async function createMusicAlbumImportFilePartUpload(
 	fileId: string,
 	partNumber: number,
 	partSize: number,
+	options: MusicAlbumImportRequestOptions = {},
 ): Promise<MusicAlbumImportFilePartUpload> {
 	return apiPostJson<MusicAlbumImportFilePartUpload>(
 		musicV1Endpoints.albumImportFilePart(importId, fileId, partNumber),
 		{ partSize },
+		options,
 	);
 }
 
@@ -768,20 +781,24 @@ export async function completeMusicAlbumImportFilePart(
 	partNumber: number,
 	etag: string,
 	size: number,
+	options: MusicAlbumImportRequestOptions = {},
 ): Promise<MusicAlbumImportFile> {
 	return apiPostJson<MusicAlbumImportFile>(
 		musicV1Endpoints.albumImportFilePartComplete(importId, fileId, partNumber),
 		{ etag, size },
+		options,
 	);
 }
 
 export async function completeMusicAlbumImportFile(
 	importId: string,
 	fileId: string,
+	options: MusicAlbumImportRequestOptions = {},
 ): Promise<MusicAlbumImportFile> {
 	return apiPostJson<MusicAlbumImportFile>(
 		musicV1Endpoints.albumImportFileComplete(importId, fileId),
 		{},
+		options,
 	);
 }
 
@@ -853,11 +870,13 @@ export async function deleteMusicAlbumImportFile(
 
 export async function completeMusicAlbumImportSession(
 	importId: string,
+	options: MusicAlbumImportRequestOptions = {},
 ): Promise<MusicAlbumImport> {
 	return normalizeMusicAlbumImport(
 		await apiPostJson<MusicAlbumImport>(
 			musicV1Endpoints.albumImportSessionComplete(importId),
 			{},
+			options,
 		),
 	);
 }

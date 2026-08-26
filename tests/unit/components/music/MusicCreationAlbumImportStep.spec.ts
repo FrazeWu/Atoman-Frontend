@@ -196,6 +196,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"file-1",
 			1,
 			archive.size,
+			expect.objectContaining({ signal: expect.any(Object) }),
 		);
 		expect(musicApi.completeMusicAlbumImportFilePart).toHaveBeenCalledWith(
 			"import-1",
@@ -203,13 +204,16 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			1,
 			"etag-1",
 			archive.size,
+			expect.objectContaining({ signal: expect.any(Object) }),
 		);
 		expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
 			"import-1",
 			"file-1",
+			expect.objectContaining({ signal: expect.any(Object) }),
 		);
 		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith(
 			"import-1",
+			expect.objectContaining({ signal: expect.any(Object) }),
 		);
 		expect(useMusicDrawers().state.value.creationFlow?.step).toBe(
 			"albumDetails",
@@ -274,8 +278,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			1,
 			"etag-1",
 			audio.size,
+			expect.objectContaining({ signal: expect.any(Object) }),
 		);
-		expect(completeFile).toHaveBeenCalledWith("import-1", "file-1");
+		expect(completeFile).toHaveBeenCalledWith(
+			"import-1",
+			"file-1",
+			expect.objectContaining({ signal: expect.any(Object) }),
+		);
 	});
 
 	it("新建另一张专辑后不会中断已有上传", async () => {
@@ -364,8 +373,16 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		resolveFirstUpload("etag-1");
 		await vi.waitFor(() => {
-			expect(completeFile).toHaveBeenCalledWith("import-1", "first-file");
-			expect(completeFile).toHaveBeenCalledWith("import-2", "second-file");
+			expect(completeFile).toHaveBeenCalledWith(
+				"import-1",
+				"first-file",
+				expect.objectContaining({ signal: expect.any(Object) }),
+			);
+			expect(completeFile).toHaveBeenCalledWith(
+				"import-2",
+				"second-file",
+				expect.objectContaining({ signal: expect.any(Object) }),
+			);
 		});
 	});
 
@@ -895,8 +912,112 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
 			"import-1",
 			"file-1",
+			expect.objectContaining({ signal: expect.any(Object) }),
 		);
 		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(1);
+	});
+
+	it("分片失败后从服务端已确认分片继续上传", async () => {
+		const partSize = 16 * 1024 * 1024;
+		const archive = new File(
+			[new ArrayBuffer(partSize), new ArrayBuffer(1)],
+			"resume.zip",
+			{ type: "application/zip" },
+		);
+		const fileRecord = importFile({
+			relativePath: archive.name,
+			fileName: archive.name,
+			role: "archive",
+			detectedFormat: "zip",
+			size: archive.size,
+			partSize,
+			uploadStatus: "pending",
+			completedParts: [],
+		});
+		const partOne = {
+			partNumber: 1,
+			etag: "etag-1",
+			size: partSize,
+		};
+		const partTwo = {
+			partNumber: 2,
+			etag: "etag-2",
+			size: 1,
+		};
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(
+			snapshot({ inputMode: "archive", progress: { current: 0, total: archive.size } }),
+		);
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({
+				inputMode: "archive",
+				progress: { current: 0, total: archive.size },
+				files: [fileRecord],
+			}),
+		);
+		const createPart = vi
+			.spyOn(musicApi, "createMusicAlbumImportFilePartUpload")
+			.mockImplementation(async (_importId, _fileId, partNumber) => ({
+				partNumber,
+				uploadUrl: `https://upload.test/part-${partNumber}`,
+			}));
+		let uploadCalls = 0;
+		vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockImplementation(
+			async (_url, body, options = {}) => {
+				uploadCalls += 1;
+				options.onProgress?.({ loaded: body.size, total: body.size });
+				if (uploadCalls >= 2 && uploadCalls <= 4) {
+					throw new Error("连接中断");
+				}
+				return uploadCalls === 1 ? "etag-1" : "etag-2";
+			},
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockImplementation(
+			async (_importId, _fileId, partNumber) => ({
+				...fileRecord,
+				uploadStatus: "uploading",
+				completedParts: partNumber === 1 ? [partOne] : [partOne, partTwo],
+			}),
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue({
+			...fileRecord,
+			uploadStatus: "uploaded",
+			completedParts: [partOne, partTwo],
+		});
+		vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(
+			snapshot({
+				status: "uploading",
+				inputMode: "archive",
+				progress: { current: archive.size, total: archive.size },
+				files: [
+					{
+						...fileRecord,
+						uploadStatus: "uploaded",
+						completedParts: [partOne, partTwo],
+					},
+				],
+			}),
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued", stage: "queued", files: [fileRecord] }),
+		);
+		vi.spyOn(musicApi, "retryMusicAlbumImportFile").mockRejectedValue(
+			new Error("不应重建上传会话"),
+		);
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
+		await fileInput(wrapper).trigger("change");
+		await vi.waitFor(() =>
+			expect(wrapper.find('[data-testid="album-import-upload-retry"]').exists()).toBe(true),
+		);
+
+		await wrapper.get('[data-testid="album-import-upload-retry"]').trigger("click");
+		await vi.waitFor(() =>
+			expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalled(),
+		);
+
+		expect(musicApi.retryMusicAlbumImportFile).not.toHaveBeenCalled();
+		expect(createPart.mock.calls.map((call) => call[2])).toEqual([1, 2, 2, 2, 2]);
 	});
 
 	it("会话处理失败后可直接重试而不重复上传", async () => {

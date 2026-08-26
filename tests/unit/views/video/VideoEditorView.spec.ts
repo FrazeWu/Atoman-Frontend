@@ -116,6 +116,15 @@ describe('VideoEditorView', () => {
     vi.unstubAllGlobals()
   })
 
+  it('surfaces a failed resumed import instead of opening a blank editor', async () => {
+    const { wrapper } = await setup('/studio/video/new?import=missing')
+
+    expect(wrapper.vm.$.setupState.editorLoadFailed).toBe(true)
+    expect(wrapper.get('[role="alert"]').text()).toContain('导入任务加载失败')
+    await wrapper.vm.$.setupState.saveDraft()
+    expect(vi.mocked(fetch).mock.calls.some(([input, init]) => String(input).endsWith('/videos') && init?.method === 'POST')).toBe(false)
+  })
+
   it('uses the Studio channel, hides the channel picker and preselects collection query', async () => {
     const { wrapper } = await setup()
     expect(wrapper.vm.$.setupState.form.channel_id).toBe('channel-1')

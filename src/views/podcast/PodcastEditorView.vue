@@ -37,6 +37,7 @@ const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
 const errorMsg = ref('')
+const editorLoadFailed = ref(false)
 const titleError = ref('')
 const audioError = ref('')
 const collections = ref<Collection[]>([])
@@ -285,6 +286,10 @@ function validateInformation(): boolean {
 }
 
 function validate(_status: 'draft' | 'published'): boolean {
+  if (editorLoadFailed.value) {
+    errorMsg.value = '内容加载失败，请刷新重试'
+    return false
+  }
   return validateMedia() && validateInformation()
 }
 
@@ -377,15 +382,20 @@ function applyCreationDefaults() {
 }
 
 onMounted(async () => {
-  await studio.loadState()
-  if (isEdit.value) {
-    uploadStarted.value = true
-    await loadEpisode()
-    return
-  }
-  form.value.channel_id = studio.currentChannel?.id || ''
+  try {
+    await studio.loadState()
+    if (isEdit.value) {
+      uploadStarted.value = true
+      await loadEpisode()
+      return
+    }
+    form.value.channel_id = studio.currentChannel?.id || ''
 	await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('podcast')])
 	applyCreationDefaults()
+  } catch {
+    editorLoadFailed.value = true
+    errorMsg.value = '内容加载失败，请刷新重试'
+  }
 })
 
 async function saveDraft() {
@@ -504,7 +514,9 @@ async function schedulePublish() {
       </div>
     </section>
 
-    <div v-else-if="currentStep === 2" class="pe-layout">
+    <p v-if="currentStep === 1 && errorMsg" class="pe-error" role="alert">{{ errorMsg }}</p>
+
+    <section v-else-if="currentStep === 2" class="pe-layout">
       <!-- 左栏 -->
       <div class="pe-main">
         <!-- 基本信息 -->
@@ -593,7 +605,7 @@ async function schedulePublish() {
           @cover-file-change="onCoverFileChange"
         />
       </aside>
-    </div>
+    </section>
 
     <section v-else class="pe-publish-step">
       <div class="pe-step-heading">

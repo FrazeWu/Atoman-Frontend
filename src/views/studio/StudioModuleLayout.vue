@@ -28,6 +28,7 @@ import { computed, inject } from 'vue'
 import { matchedRouteKey, RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import StudioRouteSheet from '@/components/studio/StudioRouteSheet.vue'
+import { hasAppHistory, studioContentLocation } from '@/router/studioEditor'
 
 import { studioModules } from '@/config/studioModules'
 import type { StudioModule } from '@/types'
@@ -43,7 +44,11 @@ const overlayTitle = computed(() => {
 })
 
 function closeOverlay() {
-  router.back()
+  if (hasAppHistory()) {
+    router.back()
+    return
+  }
+  void router.replace(studioContentLocation(String(module.value), route.query))
 }
 </script>
 

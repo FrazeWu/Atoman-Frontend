@@ -52,6 +52,13 @@ describe("PostEditorView layout", () => {
 		expect(source).toContain("mobilePanel !== 'sidebar'");
 	});
 
+	it("shows a retryable failure state instead of leaving the editor blank", () => {
+		expect(source).toContain("const editorLoadFailed = ref(false)");
+		expect(source).toContain('v-if="editorLoadFailed"');
+		expect(source).toContain('@click="void initializeEditor()"');
+		expect(source).toContain("编辑器加载失败，请刷新重试");
+	});
+
 	it("does not constrain the editor page with the generic sidebar content width", () => {
 		expect(cssRules(".a-main-content > .editor-page", globalStyle)).toContain(
 			"max-width: none",

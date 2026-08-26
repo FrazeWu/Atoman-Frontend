@@ -37,6 +37,7 @@ const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
 const errorMsg = ref('')
+const editorLoadFailed = ref(false)
 const titleError = ref('')
 const urlError = ref('')
 const tagDraft = ref('')
@@ -259,6 +260,10 @@ function validateInformation(): boolean {
 }
 
 function validate(_status: 'draft' | 'published'): boolean {
+  if (editorLoadFailed.value) {
+    errorMsg.value = '内容加载失败，请刷新重试'
+    return false
+  }
   return validateMedia() && validateInformation()
 }
 
@@ -349,43 +354,50 @@ async function loadVideo() {
 }
 
 onMounted(async () => {
-  await studio.loadState()
-  if (isEdit.value) {
-    await loadVideo()
-    return
-  }
-  form.value.channel_id = studio.currentChannel?.id || ''
-  const resumeImportId = typeof route.query.import === 'string' ? route.query.import : ''
-  if (resumeImportId) {
-    try {
-      const task = await getVideoImport(resumeImportId, authStore.token ?? undefined)
-      videoImportUpload.applyTask(task)
-      videoImportId.value = task.id
-      form.value = {
-        channel_id: task.payload.channel_id || studio.currentChannel?.id || '', title: task.payload.title,
-        description: task.payload.description, storage_type: 'local', video_url: '',
-        thumbnail_url: task.payload.thumbnail_url, duration_sec: task.payload.duration_sec || 0,
-        visibility: task.payload.visibility || 'public', tags: [...task.payload.tags],
-      }
-      await loadCollections(form.value.channel_id)
-      selectedCollectionId.value = task.payload.collection_id || task.payload.collection_ids?.[0] || ''
-      currentStep.value = task.payload.title ? 2 : 1
-      maxStep.value = task.payload.title ? 2 : 1
+  try {
+    await studio.loadState()
+    if (isEdit.value) {
+      await loadVideo()
       return
-    } catch (err) {
-      errorMsg.value = errorMessage(err, '导入任务加载失败')
     }
-  }
-  await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('video')])
+    form.value.channel_id = studio.currentChannel?.id || ''
+    const resumeImportId = typeof route.query.import === 'string' ? route.query.import : ''
+    if (resumeImportId) {
+      try {
+        const task = await getVideoImport(resumeImportId, authStore.token ?? undefined)
+        videoImportUpload.applyTask(task)
+        videoImportId.value = task.id
+        form.value = {
+          channel_id: task.payload.channel_id || studio.currentChannel?.id || '', title: task.payload.title,
+          description: task.payload.description, storage_type: 'local', video_url: '',
+          thumbnail_url: task.payload.thumbnail_url, duration_sec: task.payload.duration_sec || 0,
+          visibility: task.payload.visibility || 'public', tags: [...task.payload.tags],
+        }
+        await loadCollections(form.value.channel_id)
+        selectedCollectionId.value = task.payload.collection_id || task.payload.collection_ids?.[0] || ''
+        currentStep.value = task.payload.title ? 2 : 1
+        maxStep.value = task.payload.title ? 2 : 1
+        return
+      } catch {
+        editorLoadFailed.value = true
+        errorMsg.value = '导入任务加载失败，请刷新重试'
+        return
+      }
+    }
+    await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('video')])
 	const settings = studio.settings.video
 	preferredPublishStatus.value = settings?.default_publish_status || 'draft'
-  if (settings?.default_visibility) {
-    form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
-  }
-  if (!selectedCollectionId.value) {
-    selectedCollectionId.value = settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)
-      ? settings.default_collection_id
-      : collections.value.find(item => item.is_default)?.id || ''
+    if (settings?.default_visibility) {
+      form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
+    }
+    if (!selectedCollectionId.value) {
+      selectedCollectionId.value = settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)
+        ? settings.default_collection_id
+        : collections.value.find(item => item.is_default)?.id || ''
+    }
+  } catch {
+    editorLoadFailed.value = true
+    errorMsg.value = '内容加载失败，请刷新重试'
   }
 })
 

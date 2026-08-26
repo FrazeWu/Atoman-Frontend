@@ -69,7 +69,9 @@
               @click="emit('select-source', sub.id)"
             >
               <span class="feed-sidebar-sources__badge a-font-meta">{{ sourceBadge(sub) }}</span>
-              <span class="feed-sidebar-sources__name">{{ sourceTitle(sub) }}</span>
+              <span class="feed-sidebar-sources__name">
+                {{ sourceTitle(sub) }}<span v-if="sourceTypeLabel(sub)" class="feed-sidebar-sources__type"> · {{ sourceTypeLabel(sub) }}</span>
+              </span>
               <span
                 v-if="sourceHealthLabel(sub)"
                 class="feed-sidebar-sources__health a-font-meta"
@@ -175,6 +177,13 @@ const visibleGroups = computed<VisibleGroup[]>(() => {
 
 function sourceTitle(sub: Subscription): string {
   return subscriptionDisplayTitle(sub)
+}
+
+function sourceTypeLabel(sub: Subscription): string {
+  const sourceType = sub.feed_source?.source_type
+  if (sourceType === 'internal_channel') return '频道'
+  if (sourceType === 'internal_user') return '账号'
+  return ''
 }
 
 function sourceBadge(sub: Subscription): string {
@@ -386,6 +395,12 @@ function toggleGroup(groupId: string) {
   font-size: 0.84rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.feed-sidebar-sources__type {
+  color: #64748b;
+  font-size: 0.78em;
+  font-weight: 500;
 }
 
 .feed-sidebar-sources__empty {

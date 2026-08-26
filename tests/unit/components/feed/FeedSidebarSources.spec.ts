@@ -151,6 +151,47 @@ describe('FeedSidebarSources', () => {
     expect(wrapper.text()).toContain('孤立订阅源')
   })
 
+  it('labels internal account and channel sources after their names', () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions: [
+          {
+            id: 'sub-account',
+            user_id: 'user-1',
+            feed_source_id: 'source-account',
+            title: 'admin',
+            feed_source: {
+              id: 'source-account',
+              source_type: 'internal_user',
+              source_id: 'user-1',
+              title: 'admin',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'sub-channel',
+            user_id: 'user-1',
+            feed_source_id: 'source-channel',
+            title: 'admin',
+            feed_source: {
+              id: 'source-channel',
+              source_type: 'internal_channel',
+              source_id: 'channel-1',
+              title: 'admin',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        groups: [],
+      },
+    })
+
+    const names = wrapper.findAll('.feed-sidebar-sources__name').map((node) => node.text())
+    expect(names).toEqual(['admin · 账号', 'admin · 频道'])
+  })
+
   it('renders empty state when subscriptions are empty', () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {

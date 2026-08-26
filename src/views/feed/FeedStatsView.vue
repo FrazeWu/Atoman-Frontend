@@ -35,19 +35,19 @@
       </div>
 
       <div v-if="stats" class="stats-overview">
-        <div class="stats-card">
+        <PCard class="stats-card">
           <div class="a-label a-muted">阅读总量</div>
           <div class="stats-big-value">{{ stats.total_read }}</div>
-        </div>
-        <div class="stats-card">
+        </PCard>
+        <PCard class="stats-card">
           <div class="a-label a-muted">活跃订阅源</div>
           <div class="stats-big-value">{{ stats.source_breakdown.length }}</div>
-        </div>
-        <div class="stats-card">
+        </PCard>
+        <PCard class="stats-card">
           <div class="a-label a-muted">最常阅读</div>
           <div class="stats-small-title">{{ topSourceLabel }}</div>
           <div class="stats-small-meta">{{ topSourceReads }}</div>
-        </div>
+        </PCard>
       </div>
 
       <div v-if="loading" class="feed-loading">
@@ -96,6 +96,7 @@ import { RouterLink } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PCard from '@/components/ui/PCard.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -313,15 +314,12 @@ onBeforeUnmount(() => {
 }
 
 .stats-card {
-  padding: 1.5rem;
   background: var(--a-color-surface);
-  border-bottom: 1px solid var(--a-color-border-soft);
-  transition: all 0.2s;
 }
 
 .stats-card:hover {
+  border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  border-bottom-color: var(--a-color-text);
 }
 
 .stats-big-value {

@@ -3,6 +3,7 @@ import { Clock3, Play } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
+import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
 
@@ -47,7 +48,7 @@ const avatarLetter = () =>
 </script>
 
 <template>
-  <article class="vc-card">
+  <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="video.title">
         <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />
@@ -91,16 +92,10 @@ const avatarLetter = () =>
         </div>
       </div>
     </RouterLink>
-  </article>
+  </PMediaCard>
 </template>
 
 <style scoped>
-.vc-card {
-  display: block;
-  color: inherit;
-  border: none;
-}
-
 /* Thumbnail */
 .vc-thumb {
   position: relative;
@@ -109,12 +104,11 @@ const avatarLetter = () =>
   border-radius: var(--a-radius-card);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-sm);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  box-shadow: none;
+  transition: border-color 0.2s ease;
 }
 
 .vc-card:hover .vc-thumb {
-  transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft));
 }
 

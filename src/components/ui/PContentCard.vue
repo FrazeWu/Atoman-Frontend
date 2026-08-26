@@ -67,7 +67,7 @@ defineEmits(['click'])
   background: var(--a-color-bg);
   padding: 1.25rem;
   margin: 0 0 1rem 0;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -84,7 +84,7 @@ defineEmits(['click'])
 
 .p-entry:hover {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
 }
 
 .p-entry.content-stream-entry {
@@ -96,7 +96,7 @@ defineEmits(['click'])
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease;
 }
 
 .p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {
@@ -123,7 +123,6 @@ defineEmits(['click'])
 .p-entry.content-stream-entry.is-focused,
 .p-entry.content-stream-entry.is-open {
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
 }
 
 /* Hover / Focus 悬浮状态：显示完整贯穿黑线 */

@@ -26,10 +26,11 @@
       {{ displayCount ? '选择带标记的歌词查看注释' : '暂无注释' }}
     </p>
 
-    <article
+    <PInteractionCard
       v-for="annotation in annotations"
       :key="annotation.id"
       class="music-annotation-card"
+      variant="default"
     >
       <p v-if="annotation.selected_text" class="music-annotation-card__quote">
         “{{ annotation.selected_text }}”
@@ -94,7 +95,7 @@
       <p v-if="annotation.status === 'needs_rebind'" class="music-annotation-card__status">
         待重新绑定
       </p>
-    </article>
+    </PInteractionCard>
   </aside>
 </template>
 
@@ -103,6 +104,7 @@ import { computed } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import type { MusicLyricsAnnotation, MusicLyricsAnnotationVote } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
+import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 
 const props = withDefaults(defineProps<{
   annotations?: MusicLyricsAnnotation[]
@@ -201,11 +203,6 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 .music-annotation-card {
   display: grid;
   gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  box-shadow: none;
-  transition: border-color 0.2s ease;
 }
 
 .music-annotation-card:hover {

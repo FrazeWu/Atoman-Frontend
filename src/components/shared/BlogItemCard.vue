@@ -14,6 +14,7 @@
     class="blog-item-card content-stream-entry"
     :class="[`is-type-${cardType}`, { 'is-read': isRead }]"
     :is-focused="isFocused"
+    :is-open="isOpen"
     @click="handleClick"
   >
     <template #visual>
@@ -26,7 +27,7 @@
       />
       <PAvatar
         v-else
-        :src="feedItem?.feed_source?.cover_url"
+        :src="feedItem?.feed_source?.cover_url || feedItem?.image_url"
         :name="sourceTitle"
         :alt="`${sourceTitle} 的网站图标`"
         size="xs"
@@ -137,6 +138,7 @@ const props = withDefaults(defineProps<{
   starred?: boolean
   isRead?: boolean
   isFocused?: boolean
+  isOpen?: boolean
   isPodcastPlaying?: boolean
   sourceTitle?: string
   sourcePath?: string
@@ -146,6 +148,7 @@ const props = withDefaults(defineProps<{
   starred: false,
   isRead: false,
   isFocused: false,
+  isOpen: false,
   isPodcastPlaying: false,
 })
 
@@ -194,8 +197,9 @@ const authorName = computed(() => {
 const authorUsername = computed(() => postItem.value?.user?.username || '')
 
 const sourceTitle = computed(() => {
+  if (props.sourceTitle) return props.sourceTitle
   if (feedItem.value?.feed_source) return feedItem.value.feed_source.title || ''
-  return props.sourceTitle || ''
+  return ''
 })
 
 const sourcePath = computed(() => props.sourcePath || '')

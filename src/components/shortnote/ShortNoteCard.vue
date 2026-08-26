@@ -1,8 +1,9 @@
 <template>
-  <article
+  <PInteractionCard
     :id="`note-${note.id}`"
     class="sticky-memo-card"
     :class="{ 'is-read': isRead }"
+    variant="flat"
     @mouseenter="handleMouseEnter"
   >
     <!-- 1. 紧凑单行头部：作者头像 + 作者 + 相对时间 + 短笺标签 + 作者微操作 -->
@@ -112,7 +113,7 @@
       :images="mediaUrls"
       :index="lightboxIndex"
     />
-  </article>
+  </PInteractionCard>
 </template>
 
 <script setup lang="ts">
@@ -121,6 +122,7 @@ import { Heart, MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
+import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
@@ -214,7 +216,7 @@ function formatDate(value: string) {
   border-top: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   background: transparent;
-  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease;
   overflow: visible;
 }
 
@@ -247,7 +249,6 @@ function formatDate(value: string) {
 .sticky-memo-card:hover,
 .sticky-memo-card:focus-within {
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
 }
 
 /* Hover 状态：显示完整贯穿黑线 */

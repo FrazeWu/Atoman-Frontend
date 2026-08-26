@@ -1,8 +1,9 @@
 <template>
-  <article
+  <PInteractionCard
     :id="`comment-${comment.id}`"
     class="comment-item"
     :class="{ 'comment-item--child': depth === 1 }"
+    :variant="depth === 1 ? 'flat' : 'default'"
     :data-comment-depth="depth"
     tabindex="-1"
   >
@@ -75,7 +76,7 @@
         <button v-if="canMark && depth === 0 && showMarked" type="button" :title="`取消${markLabel}`" :aria-label="`取消${markLabel}`" :disabled="actionPending" @click="$emit('unmark')"><PinOff :size="15" /></button>
       </div>
     </footer>
-  </article>
+  </PInteractionCard>
 </template>
 
 <script setup lang="ts">
@@ -83,6 +84,7 @@ import { computed, defineComponent, h, ref, type VNodeChild } from 'vue'
 import { BadgeCheck, Flag, Heart, Pencil, Pin, PinOff, Play, Reply, Trash2 } from 'lucide-vue-next'
 
 import type { CommentDTO } from '@/api/comments'
+import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
 import { applyResolvedReferences } from '@/composables/useReferenceRendering'
@@ -187,9 +189,10 @@ function anchorText(start: number, end: number) {
 </script>
 
 <style scoped>
-.comment-item { min-width: 0; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.15s ease, background-color 0.15s ease; }
-.comment-item:focus { border-color: var(--a-color-primary); outline: 2px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent); outline-offset: 2px; }
-.comment-item--child { padding: 0.85rem 0 0.25rem; border: 0; border-radius: 0; background: transparent; }
+.comment-item {
+  min-width: 0;
+}
+
 .comment-item__header { display: flex; align-items: center; gap: 0.6rem; min-height: 32px; }
 .comment-item__identity { display: flex; min-width: 0; align-items: baseline; gap: 0.4rem; }
 .comment-item__identity strong { overflow: hidden; color: var(--a-color-text); font-weight: var(--a-font-weight-strong); text-overflow: ellipsis; white-space: nowrap; }

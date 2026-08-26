@@ -1,5 +1,6 @@
 <template>
-  <div
+  <PMediaCard
+    variant="square"
     class="music-playlist-card"
     @click="$emit('click')"
   >
@@ -69,11 +70,13 @@
         <span>{{ playlist.song_count }} 首</span>
       </p>
     </div>
-  </div>
+  </PMediaCard>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+
+import PMediaCard from '@/components/ui/PMediaCard.vue'
 
 export interface MusicPlaylistCardItem {
   id: string
@@ -120,7 +123,6 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
 }
 
 .music-playlist-card:hover .cover-frame {
-  transform: translateY(1px);
   border-color: var(--a-color-muted-soft);
 }
 
@@ -132,7 +134,7 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.2s;
 }
 
 .bookmark-btn {

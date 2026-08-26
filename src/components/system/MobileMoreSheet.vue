@@ -2,7 +2,7 @@
   <PSheet
     :show="show"
     side="bottom"
-    title="更多"
+    title="更多-模块"
     close-type="header"
     @close="$emit('close')"
   >

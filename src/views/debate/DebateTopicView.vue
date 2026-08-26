@@ -134,6 +134,7 @@
       <DebateRevisionSheet
         :show="showRevisions"
         :debate-id="debate.id"
+        :debate-title="debate.title"
         :current-revision-id="debate.current_revision_id"
         @close="closeDetailSheet"
         @reverted="handleWikiMutation"
@@ -141,6 +142,7 @@
       <DebateDiscussionSheet
         :show="showDiscussion"
         :debate-id="debate.id"
+        :debate-title="debate.title"
         @close="closeDetailSheet"
       />
     </template>

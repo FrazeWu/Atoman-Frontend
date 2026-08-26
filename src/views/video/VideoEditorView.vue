@@ -25,6 +25,9 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const studio = useStudioStore()
+const emit = defineEmits<{
+  'title-change': [title: string]
+}>()
 const lifecycle = useContentLifecycle()
 const videoImportUpload = useVideoImportUpload()
 
@@ -76,6 +79,10 @@ const form = ref({
   duration_sec: 0,
   visibility: 'public' as 'public' | 'followers' | 'private',
   tags: [] as string[],
+})
+
+watch(() => form.value.title, (title) => {
+  emit('title-change', title.trim())
 })
 
 function addTag() {

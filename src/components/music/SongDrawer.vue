@@ -70,7 +70,9 @@ const {
 const lyricsEditorOpen = ref(false)
 const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
 
-const sheetTitle = computed(() => detail.value?.song.title ? `歌曲 · ${detail.value.song.title}` : (props.layer?.title ?? '歌曲'))
+const sheetTitle = computed(() => detail.value?.song.title?.trim()
+  ? `歌曲-${detail.value.song.title.trim()}`
+  : '歌曲-加载中')
 
 function playable(song: MusicSongListItem): Song {
   return {
@@ -218,7 +220,10 @@ function editSong() {
 
 function openSongHistory() {
   if (!detail.value || !requireLogin()) return
-  openNestedAction('song_history', { songId: String(detail.value.song.id) })
+  openNestedAction('song_history', {
+    songId: String(detail.value.song.id),
+    title: detail.value.song.title,
+  })
 }
 
 function openLyricsEditor() {

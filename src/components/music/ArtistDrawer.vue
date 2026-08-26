@@ -47,7 +47,9 @@ const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true
 const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)
 const displayName = computed(() => artist.value?.display_name || artist.value?.name || '')
-const sheetTitle = computed(() => displayName.value ? `艺术家 · ${displayName.value}` : (props.layer?.title ?? '艺术家'))
+const sheetTitle = computed(() => displayName.value.trim()
+  ? `艺术家-${displayName.value.trim()}`
+  : '艺术家-加载中')
 const returnCurrentArtist = () => props.layer && returnToLayer(props.layer.key)
 const albums = ref<MusicAlbumListItem[]>([])
 const songs = ref<MusicSongListItem[]>([])
@@ -404,7 +406,7 @@ function mergeArtist() {
 
 function openArtistHistory() {
   if (!artistId.value) return
-  openNestedAction('artist_history', { artistId: artistId.value })
+  openNestedAction('artist_history', { artistId: artistId.value, name: artist.value?.name || '' })
 }
 
 watch(
@@ -543,7 +545,7 @@ watch([releaseType, albumSortMode], () => {
         >
           合并重复条目
         </PButton>
-        <PButton variant="secondary" @click="openNestedAction('artist_history', { artistId })">
+        <PButton variant="secondary" @click="openNestedAction('artist_history', { artistId, name: artist?.name || '' })">
           版本
         </PButton>
       </div>

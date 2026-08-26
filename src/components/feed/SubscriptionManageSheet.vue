@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    :title="activeManageTab === 'groups' ? '分组管理' : '订阅源管理'"
+    :title="activeManageTab === 'groups' ? '管理-分组' : '管理-订阅源'"
     close-type="header"
     above-player
     @close="requestClose"

@@ -64,15 +64,34 @@ const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true
 const closeCurrentAction = () => closeNestedAction(props.layer?.key)
 
 const titleMap: Record<string, string> = {
-  revise: '修改专辑',
-  revise_artist: '修改艺术家',
-  history: '版本历史',
-  artist_history: '版本历史',
-  song_history: '版本历史',
+  revise: '编辑',
+  revise_artist: '编辑',
+  history: '版本',
+  artist_history: '版本',
+  song_history: '版本',
   discussion: '讨论'
 }
-
-const displayTitle = computed(() => titleMap[currentAction.value || ''] || 'Action')
+const targetMap: Record<string, string> = {
+  revise: '专辑',
+  revise_artist: '艺术家',
+  history: '专辑',
+  artist_history: '艺术家',
+  song_history: '歌曲',
+  discussion: '专辑',
+}
+const actionName = computed(() => {
+  const action = currentAction.value || ''
+  const record = payloadRecord.value
+  if (action === 'revise_artist' || action === 'artist_history') return String(record.name ?? '').trim()
+  if (action === 'song_history') return String(record.title ?? record.songTitle ?? '').trim()
+  return String(record.title ?? record.albumTitle ?? '').trim()
+})
+const displayTitle = computed(() => {
+  const action = currentAction.value || ''
+  const type = titleMap[action] || '操作'
+  const name = actionName.value || targetMap[action] || '内容'
+  return `${type}-${name}`
+})
 const contentMaxWidth = computed(() => {
   if (currentAction.value === 'discussion') return '48rem'
   if (currentAction.value?.includes('history')) return '56rem'

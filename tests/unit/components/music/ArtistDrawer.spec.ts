@@ -419,7 +419,7 @@ describe("ArtistDrawer.vue", () => {
 		expect(listArtistContributors).toHaveBeenCalledWith("1");
 		expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith(
 			"artist_history",
-			{ artistId: "1" },
+			{ artistId: "1", name: "Ye" },
 		);
 	});
 

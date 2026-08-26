@@ -397,7 +397,8 @@ function handleSave() {
   <component
     :is="presentation === 'page' ? 'section' : PSheet"
     :show="show"
-    aria-label="编辑歌词"
+    :title="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
+    :aria-label="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
     content-max-width="72rem"
     close-type="header"
     above-player
@@ -410,7 +411,7 @@ function handleSave() {
         <ChevronLeft :size="20" aria-hidden="true" />
         <span>返回</span>
       </button>
-      <h1>编辑歌词</h1>
+      <h1>{{ songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲' }}</h1>
     </header>
     <div class="music-lyric-editor-drawer__body">
       <div class="music-lyric-editor-drawer__toolbar">

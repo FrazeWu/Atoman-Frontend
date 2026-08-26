@@ -17,11 +17,11 @@ defineEmits<{
 const supportEmail = 'support@atoman.org'
 const copied = ref(false)
 const title = computed(() => ({
-  about: '关于',
-  contact: '联系我们',
-  feedback: '问题反馈',
-  terms: '使用条款',
-  privacy: '隐私政策',
+  about: '关于-Atoman',
+  contact: '联系-Atoman',
+  feedback: '反馈-Atoman',
+  terms: '条款-Atoman',
+  privacy: '隐私-Atoman',
 }[props.panel ?? 'about']))
 
 watch(() => props.panel, () => {

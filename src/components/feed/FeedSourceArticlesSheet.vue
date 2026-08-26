@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    :title="sourceTitle || '订阅源文章'"
+    :title="sourceTitle ? `订阅源-${sourceTitle}` : '订阅源-来源'"
     :layer-index="layerIndex"
     :stack-size="stackSize"
     :is-shifted="isShifted"

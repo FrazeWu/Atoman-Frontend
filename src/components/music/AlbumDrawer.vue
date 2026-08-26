@@ -54,7 +54,9 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : i
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentAlbum = () => closeAlbum(props.layer?.key)
 const album = ref<MusicAlbumListItem | null>(null)
-const sheetTitle = computed(() => album.value?.title ? `专辑 · ${album.value.title}` : (props.layer?.title ?? '专辑'))
+const sheetTitle = computed(() => album.value?.title?.trim()
+  ? `专辑-${album.value.title.trim()}`
+  : '专辑-加载中')
 const returnCurrentAlbum = () => props.layer && returnToLayer(props.layer.key)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -560,7 +562,7 @@ function mergeAlbum() {
 
 function openAlbumHistory() {
   if (!albumId.value) return
-  openNestedAction('history', { albumId: albumId.value })
+  openNestedAction('history', { albumId: albumId.value, title: album.value?.title || '' })
 }
 
 function guardPlaylistMenu(event: MouseEvent) {
@@ -726,7 +728,7 @@ watch(
                     <Pencil :size="16" aria-hidden="true" />
                     编辑专辑
                   </button>
-                  <button type="button" @click="close(); openNestedAction('history', { albumId })">
+                  <button type="button" @click="close(); openNestedAction('history', { albumId, title: album?.title || '' })">
                     <History :size="16" aria-hidden="true" />
                     查看版本
                   </button>
@@ -900,7 +902,7 @@ watch(
         @open-history="openAlbumHistory"
       />
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId })" :count="discussionCount" />
+    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId, title: album?.title || '' })" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
   </PSheet>
 </template>

@@ -38,7 +38,7 @@
           :data-layer-index="effectiveLayerIndex"
           tabindex="-1"
           @click="handlePanelBackgroundClick"
-          @keydown.esc="isTopLayer && $emit('close')"
+          @keydown="handlePanelKeydown"
         >
           <div v-if="showLayerRail" class="sheet-layer-rail">
             <div class="sheet-layer-controls">
@@ -121,15 +121,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, provide, ref, useSlots, watch } from 'vue'
+import { computed, inject, provide, ref, useSlots } from 'vue'
 import { getActivePinia } from 'pinia'
 import { X, ChevronLeft } from 'lucide-vue-next'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useSheetStore } from '@/stores/sheet'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
-const isMobile = isStandaloneMobileApp()
+const isMobile = computed(isStandaloneMobileApp)
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -176,20 +177,6 @@ const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
 const sheetContentRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLButtonElement | null>(null)
-
-watch(
-  () => [props.show, props.isTopLayer] as const,
-  async ([show, isTopLayer]) => {
-    if (!show || !isTopLayer || !props.focusOnOpen) return
-    await nextTick()
-    if (closeButtonRef.value) {
-      closeButtonRef.value.focus()
-    } else {
-      panelRef.value?.focus()
-    }
-  },
-  { immediate: true },
-)
 const effectiveCloseType = computed(() => {
   if (props.side === 'bottom' && props.closeType === 'bookmark') {
     return 'header'
@@ -211,6 +198,20 @@ const handlePanelBackgroundClick = (event: MouseEvent) => {
   if (props.side !== 'right' || !props.isTopLayer) return
   const target = event.target
   if (target === panelRef.value || target === sheetContentRef.value) {
+    emit('close')
+  }
+}
+
+const focusManagementOpen = computed(() => (
+  props.show && props.isTopLayer && !isMobile.value && props.focusOnOpen
+))
+const { handleKeydown } = useDialogFocus(focusManagementOpen, panelRef, () => emit('close'))
+const handlePanelKeydown = (event: KeyboardEvent) => {
+  if (!props.isTopLayer) return
+  if (focusManagementOpen.value) {
+    handleKeydown(event)
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
     emit('close')
   }
 }
@@ -300,7 +301,7 @@ const sheetStyle = computed(() => {
   display: block;
   min-width: 0;
   padding: 1rem 0 2rem;
-  background: var(--a-color-bg);
+  background: #ffffff;
 }
 
 .p-sheet-mobile-page__header {
@@ -338,7 +339,7 @@ const sheetStyle = computed(() => {
 .p-sheet-layer {
   position: fixed;
   bottom: var(--a-content-bottom-offset);
-  background: var(--a-color-bg);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--a-color-border-soft);
@@ -399,7 +400,7 @@ const sheetStyle = computed(() => {
   width: 32px;
   flex-direction: column;
   align-items: center;
-  background: var(--a-color-bg);
+  background: #ffffff;
 }
 
 .sheet-layer-controls {

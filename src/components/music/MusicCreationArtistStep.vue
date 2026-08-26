@@ -287,7 +287,7 @@ defineExpose({
     <MusicSquareImageCropSheet
       :show="!!pendingAvatarFile"
       :source-file="pendingAvatarFile"
-      title="裁剪头像"
+      title="裁剪-头像"
       @cancel="clearPendingAvatarCrop"
       @confirm="confirmAvatarCrop"
     />

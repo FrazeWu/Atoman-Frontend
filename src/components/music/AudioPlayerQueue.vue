@@ -3,10 +3,18 @@
     <!-- 背景遮罩 (点击可快速关闭队列) -->
     <div class="queue-backdrop" aria-hidden="true" @click="player.toggleQueue" />
 
-    <div class="queue-panel">
+    <div
+      ref="queuePanelRef"
+      class="queue-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="queue-title"
+      tabindex="-1"
+      @keydown="handleKeydown"
+    >
       <div class="queue-header">
         <div class="queue-title-wrap">
-          <h2 class="queue-title">播放队列</h2>
+          <h2 id="queue-title" class="queue-title">播放队列</h2>
           <span class="queue-badge">{{ player.queue.length }} 首</span>
         </div>
         <button
@@ -129,12 +137,16 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
 const player = usePlayerStore()
+const queuePanelRef = ref<HTMLElement | null>(null)
+const queueOpen = computed(() => player.showQueue)
+const { handleKeydown: handleDialogKeydown } = useDialogFocus(queueOpen, queuePanelRef, () => player.toggleQueue())
 const draggedQueueIndex = ref<number | null>(null)
 const dragOverQueueIndex = ref<number | null>(null)
 
@@ -171,13 +183,18 @@ function dropQueueItem(insertionIndex: number, event: DragEvent) {
   moveQueueItem(sourceIndex, targetIndex)
 }
 
-function handleQueueKeydown(event: KeyboardEvent) {
+function handleKeydown(event: KeyboardEvent) {
+  handleDialogKeydown(event)
+}
+
+function handleWindowKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || event.defaultPrevented) return
+  if (queuePanelRef.value?.contains(document.activeElement)) return
   player.toggleQueue()
 }
 
-onMounted(() => window.addEventListener('keydown', handleQueueKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleQueueKeydown))
+onMounted(() => window.addEventListener('keydown', handleWindowKeydown))
+onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 </script>
 
 <style scoped>

@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="添加订阅"
+    :title="resolvedSourceTitle ? `添加-${resolvedSourceTitle}` : '添加-订阅'"
     close-type="header"
     above-player
     :top="top"

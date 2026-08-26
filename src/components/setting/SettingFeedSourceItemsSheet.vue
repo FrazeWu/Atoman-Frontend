@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="订阅源条目"
+    title="订阅源-条目"
     close-type="header"
     above-player
     @close="$emit('close')"

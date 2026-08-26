@@ -5,7 +5,7 @@
         v-if="visible"
         class="p-toast"
         :class="type ? `p-toast--${type}` : 'p-toast--info'"
-        :style="{ top: `${resolvedTop}px` }"
+        :style="{ top: resolvedTop }"
         role="status"
         @mouseenter="clearTimer"
         @mouseleave="startTimer"
@@ -22,9 +22,8 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
-const isMobile = isStandaloneMobileApp()
+const activeToastTokens = ref<symbol[]>([])
 
 const props = withDefaults(defineProps<{
   modelValue?: boolean
@@ -50,21 +49,45 @@ const emit = defineEmits<{
 
 const visible = ref(false)
 const timer = ref<number | null>(null)
+const toastToken = Symbol('p-toast')
+const hasExternalVisibilityControl = computed(() => props.modelValue !== undefined || props.show !== undefined)
 const controlledValue = computed(() => props.modelValue ?? props.show ?? true)
-const resolvedTop = computed(() => props.top)
+const toastIndex = computed(() => activeToastTokens.value.indexOf(toastToken))
+const resolvedTop = computed(() => props.top === 32
+  ? `calc(var(--a-topbar-height) + max(1rem, env(safe-area-inset-top, 0px)) + ${Math.max(0, toastIndex.value) * 52}px)`
+  : `${props.top}px`)
+
+const registerToast = () => {
+  if (activeToastTokens.value.includes(toastToken)) return
+  activeToastTokens.value.push(toastToken)
+}
+
+const unregisterToast = () => {
+  const index = activeToastTokens.value.indexOf(toastToken)
+  if (index >= 0) activeToastTokens.value.splice(index, 1)
+}
 
 watch(controlledValue, (value) => {
   visible.value = value
-  if (value) startTimer()
-  else clearTimer()
+  if (value) {
+    registerToast()
+    startTimer()
+  } else {
+    unregisterToast()
+    clearTimer()
+  }
 }, { immediate: true })
 
 function startTimer() {
   clearTimer()
   if (props.duration !== 0) {
     timer.value = window.setTimeout(() => {
-      emit('update:modelValue', false)
-      emit('update:show', false)
+      visible.value = false
+      unregisterToast()
+      if (hasExternalVisibilityControl.value) {
+        emit('update:modelValue', false)
+        emit('update:show', false)
+      }
     }, props.duration)
   }
 }
@@ -76,7 +99,10 @@ function clearTimer() {
   }
 }
 
-onUnmounted(clearTimer)
+onUnmounted(() => {
+  unregisterToast()
+  clearTimer()
+})
 </script>
 
 <style scoped>

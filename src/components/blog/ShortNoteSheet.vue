@@ -142,7 +142,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
 <template>
   <PSheet
     :show="sheets.isActive(layer.key)"
-    :title="layer.title || '短笺'"
+    :title="`短笺-${layer.title || '未命名'}`"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

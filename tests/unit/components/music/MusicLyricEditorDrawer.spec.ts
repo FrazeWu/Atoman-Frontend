@@ -242,7 +242,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
 
   it('gives the sheet an accessible lyric editor title', () => {
     const wrapper = mountDrawer()
-    expect(wrapper.get('[role="dialog"]').attributes('aria-label')).toBe('编辑歌词')
+    expect(wrapper.get('[role="dialog"]').attributes('aria-label')).toBe('歌词-Example Song')
   })
 
   it('saves edited rows through the independent revision contract and trims the summary', async () => {

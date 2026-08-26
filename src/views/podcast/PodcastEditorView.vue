@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getPodcastEpisode, savePodcastEpisode, uploadPodcastCover } from '@/api/podcast'
@@ -26,6 +26,9 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const studio = useStudioStore()
+const emit = defineEmits<{
+  'title-change': [title: string]
+}>()
 const lifecycle = useContentLifecycle()
 
 const isEdit = computed(() => !!route.params.id)
@@ -68,6 +71,10 @@ const form = ref({
   episode_cover_url: '',
   season_number: 1,
   episode_number: 1,
+})
+
+watch(() => form.value.title, (title) => {
+  emit('title-change', title.trim())
 })
 
 const visibilityOptions = [

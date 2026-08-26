@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="版本"
+    :title="`版本-${debateTitle || '辩题'}`"
     close-type="header"
     above-player
     @close="closeSheet"
@@ -112,6 +112,7 @@ import type { Debate, DebateRevision, DebateRevisionDiff } from '@/types'
 const props = defineProps<{
   show: boolean
   debateId: string
+  debateTitle?: string
   currentRevisionId: string
 }>()
 

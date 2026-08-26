@@ -246,6 +246,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
 const studio = useStudioStore()
+const emit = defineEmits<{
+  'title-change': [title: string]
+}>()
 
 // ── 布局 ─────────────────────────────────────────────────
 type OutlineItem = {
@@ -653,6 +656,7 @@ const handleMarkdownExport = async () => {
 // ── 内容变化检测 ─────────────────────────────────────────
 watch(() => form.value.title, (nv, ov) => {
   if (!ov && nv && contentSource.value === 'empty') contentSource.value = 'manual'
+  emit('title-change', nv.trim())
 })
 
 watch(() => currentChannelId.value, loadChannelCollections)

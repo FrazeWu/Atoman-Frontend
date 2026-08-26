@@ -60,7 +60,7 @@
           v-if="mobileConversationOpen"
           :show="mobileConversationOpen"
           side="bottom"
-          title="私信"
+          :title="mobileConversationTitle"
           close-type="header"
           :height="'calc(100dvh - var(--a-content-bottom-offset))'"
           panel-class="inbox-mobile-conversation-sheet"
@@ -166,6 +166,10 @@ const viewportMatchesMobile = () => typeof window !== 'undefined' && typeof wind
 const isMobile = ref(viewportMatchesMobile())
 const updateViewport = () => { isMobile.value = viewportMatchesMobile() }
 const mobileConversationOpen = computed(() => isMobile.value && Boolean(dmStore.activeConversation || dmStore.activeTarget))
+const mobileConversationTitle = computed(() => {
+  const name = dmStore.activeConversation?.other_party.display_name || dmStore.activeTarget?.id || '会话'
+  return `私信-${name}`
+})
 const dmMailboxes = computed(() => dmStore.mailboxOrder.map(key => dmStore.mailboxesByKey[key]).filter(Boolean))
 const dmConversations = computed(() => dmStore.conversationIdsByMailbox[dmStore.activeMailboxKey]?.map(id => dmStore.conversationsById[id]).filter(Boolean) || [])
 const hasMoreConversations = computed(() => Boolean(dmStore.conversationCursorByMailbox[dmStore.activeMailboxKey]))

@@ -28,7 +28,9 @@ describe("PSheet.vue", () => {
 		expect(source).toMatch(
 			/\.slide-right-enter-active[\s\S]*?transition:[\s\S]*?transform 360ms/,
 		);
-		expect(source).toMatch(/\.slide-right-enter-from,[\s\S]*?transform:\s*translateX\(100%\)/);
+		expect(source).toMatch(
+			/\.slide-right-enter-from,[\s\S]*?transform:\s*translateX\(100%\)/,
+		);
 	});
 
 	it("renders body content and the vertical page rail", () => {
@@ -156,9 +158,9 @@ describe("PSheet.vue", () => {
 			},
 		});
 
-		expect(
-			(bottom.get(".p-sheet-panel").element as HTMLElement).style.left,
-		).toBe("calc(var(--a-sidebar-width) + 0px)");
+		expect((bottom.get(".p-sheet-panel").element as HTMLElement).style.left).toBe(
+			"calc(var(--a-sidebar-width) + 0px)",
+		);
 		expect((top.get(".p-sheet-panel").element as HTMLElement).style.left).toBe(
 			"calc(var(--a-sidebar-width) + 64px)",
 		);
@@ -366,5 +368,33 @@ describe("PSheet.vue", () => {
 		expect(closeButton).toBeInstanceOf(HTMLButtonElement);
 		expect(document.activeElement).toBe(closeButton);
 		wrapper.unmount();
+	});
+	it("traps focus in the active sheet and restores it on close", async () => {
+		const trigger = document.createElement("button");
+		document.body.append(trigger);
+		trigger.focus();
+		const wrapper = mount(PSheet, {
+			props: { show: true, side: "bottom", title: "关于" },
+		});
+		const panel = wrapper.get(".p-sheet-panel").element;
+		document.body.appendChild(panel);
+		await nextTick();
+		const closeButton = panel.querySelector<HTMLButtonElement>(
+			".sheet-close-btn-floating",
+		);
+		expect(closeButton).toBeInstanceOf(HTMLButtonElement);
+		expect(document.activeElement).toBe(closeButton);
+
+		panel.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+		);
+		expect(document.activeElement).toBe(closeButton);
+
+		await wrapper.setProps({ show: false });
+		await nextTick();
+		expect(document.activeElement).toBe(trigger);
+
+		wrapper.unmount();
+		trigger.remove();
 	});
 });

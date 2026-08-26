@@ -205,7 +205,7 @@
       v-else-if="isMobileViewport"
       :show="mobileAnnotationOpen"
       side="bottom"
-      title="歌词解析"
+      :title="songTitle.trim() ? `歌词解析-${songTitle.trim()}` : '歌词解析-歌曲'"
       height="min(78dvh, 42rem)"
       close-type="header"
       above-player

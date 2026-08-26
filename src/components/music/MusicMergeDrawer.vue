@@ -43,7 +43,7 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : f
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentAction = () => closeNestedAction(props.layer?.key)
 const returnCurrentAction = () => props.layer && returnToLayer(props.layer.key)
-const sheetTitle = computed(() => entity.value === 'album' ? '合并专辑' : '合并艺术家')
+const sheetTitle = computed(() => `合并-${entity.value === 'album' ? '专辑' : '艺术家'}`)
 const query = ref('')
 const targets = ref<MergeTarget[]>([])
 const selected = ref<MergeTarget | null>(null)

@@ -353,7 +353,7 @@ watch(
       :show="!!pendingCoverCrop"
       :source-file="pendingCoverCrop?.sourceFile || null"
       :source-url="pendingCoverCrop?.sourceUrl || ''"
-      title="裁剪封面"
+      title="裁剪-封面"
       @cancel="clearPendingCoverCrop"
       @confirm="confirmCoverCrop"
     />

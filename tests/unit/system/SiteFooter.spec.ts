@@ -151,11 +151,11 @@ describe("SiteFooter", () => {
 	});
 
 	it.each([
-		["about", "关于", "我们希望打造一个纯粹、求真的网络空间。"],
-		["contact", "联系我们", "support@atoman.org"],
-		["feedback", "问题反馈", "发送给 @fazong"],
-		["terms", "使用条款", "不得发布违反良法、侵权的内容。"],
-		["privacy", "隐私政策", "目前并非端到端加密"],
+		["about", "关于-Atoman", "我们希望打造一个纯粹、求真的网络空间。"],
+		["contact", "联系-Atoman", "support@atoman.org"],
+		["feedback", "反馈-Atoman", "发送给 @fazong"],
+		["terms", "条款-Atoman", "不得发布违反良法、侵权的内容。"],
+		["privacy", "隐私-Atoman", "目前并非端到端加密"],
 	])(
 		"opens the %s bottom sheet with its confirmed content",
 		async (panel, title, content) => {
@@ -214,7 +214,7 @@ describe("SiteFooter", () => {
 		trigger.element.focus();
 
 		await trigger.trigger("click");
-		await wrapper.get('[aria-label="关闭关于"]').trigger("click");
+		await wrapper.get('[aria-label="关闭关于-Atoman"]').trigger("click");
 		vi.runAllTimers();
 
 		expect(document.activeElement).toBe(trigger.element);

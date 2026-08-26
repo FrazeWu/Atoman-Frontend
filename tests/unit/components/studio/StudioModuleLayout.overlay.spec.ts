@@ -25,6 +25,7 @@ const routes = [
 				},
 				meta: {
 					studioOverlay: true,
+					studioOverlayMode: "new",
 					studioOverlayTitle: "新建博客",
 				},
 			},
@@ -54,6 +55,15 @@ describe("StudioModuleLayout overlay", () => {
 			true,
 		);
 		expect(wrapper.findComponent(StudioRouteSheet).exists()).toBe(true);
+		expect(wrapper.findComponent(StudioRouteSheet).props("title")).toBe(
+			"新建-文章",
+		);
+
+		wrapper.findComponent(EditorContent).vm.$emit("title-change", "新文章");
+		await wrapper.vm.$nextTick();
+		expect(wrapper.findComponent(StudioRouteSheet).props("title")).toBe(
+			"新建-新文章",
+		);
 	});
 
 	it("falls back to module content when a deep link has no app history", async () => {

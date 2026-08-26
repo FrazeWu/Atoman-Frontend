@@ -274,7 +274,7 @@ describe("AlbumDrawer.vue", () => {
 			.trigger("click");
 
 		expect(listAlbumContributors).toHaveBeenCalledWith("1");
-		expect(openNestedAction).toHaveBeenCalledWith("history", { albumId: "1" });
+		expect(openNestedAction).toHaveBeenCalledWith("history", { albumId: "1", title: "Test Album" });
 	});
 
 	it("groups and displays fixed and custom album creator roles", async () => {

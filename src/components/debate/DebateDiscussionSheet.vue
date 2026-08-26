@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="讨论"
+    :title="`讨论-${debateTitle || '辩题'}`"
     close-type="header"
     @close="emit('close')"
   >
@@ -16,6 +16,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 defineProps<{
   show: boolean
   debateId: string
+  debateTitle?: string
 }>()
 
 const emit = defineEmits<{

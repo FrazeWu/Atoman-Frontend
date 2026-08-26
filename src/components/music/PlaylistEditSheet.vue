@@ -34,7 +34,7 @@ const coverInput = ref<HTMLInputElement | null>(null)
 <template>
   <PSheet
     :show="show"
-    title="编辑歌单"
+    :title="name.trim() ? `编辑-${name.trim()}` : '编辑-歌单'"
     content-max-width="42rem"
     :index="index"
     :layer-index="index"

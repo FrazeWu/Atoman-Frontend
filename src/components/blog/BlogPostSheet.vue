@@ -175,7 +175,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 <template>
   <PSheet
     :show="sheets.isActive(layer.key)"
-    :title="post?.title || layer.title"
+    :title="`文章-${post?.title || layer.title || '未命名'}`"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

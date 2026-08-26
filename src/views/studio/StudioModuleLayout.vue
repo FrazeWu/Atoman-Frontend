@@ -17,14 +17,14 @@
         :title="overlayTitle"
         @close="closeOverlay"
       >
-        <component :is="Component" />
+        <component :is="Component" @title-change="setOverlayName" />
       </StudioRouteSheet>
     </RouterView>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { matchedRouteKey, RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import StudioRouteSheet from '@/components/studio/StudioRouteSheet.vue'
@@ -38,10 +38,18 @@ const router = useRouter()
 const matchedRoute = inject(matchedRouteKey, undefined)
 const module = computed(() => (route.params.module ?? route.meta.studioModule) as StudioModule)
 const config = computed(() => studioModules[module.value])
+const overlayName = ref('')
 const overlayTitle = computed(() => {
   const mode = route.meta.studioOverlayMode === 'new' ? '新建' : '编辑'
-  return `${mode}${config.value?.label || '内容'}`
+  const type = config.value?.itemLabel || '内容'
+  return `${mode}-${overlayName.value.trim() || type}`
 })
+watch(() => route.fullPath, () => {
+  overlayName.value = ''
+})
+function setOverlayName(name: string) {
+  overlayName.value = name.trim()
+}
 
 function closeOverlay() {
   if (hasAppHistory()) {

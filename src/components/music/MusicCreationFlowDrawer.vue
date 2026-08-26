@@ -49,17 +49,26 @@ const creationFlow = computed(() => props.layer
   : state.value.creationFlow)
 provide(musicCreationFlowKey, creationFlow)
 const isEditFlow = computed(() => creationFlow.value?.mode === 'edit')
-const isArtistEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'artist')
-const isAlbumEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'album')
-const isSongEdit = computed(() => isEditFlow.value && creationFlow.value?.entity === 'song')
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : creationFlow.value !== null)
-const sheetTitle = computed(() => {
-  if (!isEditFlow.value) {
-    if (creationFlow.value?.step === 'artist') return '创建艺术家'
-    return ['single', 'leak'].includes(creationFlow.value?.draft.albumDetails.type ?? '') ? '创建歌曲' : '创建专辑'
+const creationEntityLabel = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return '内容'
+  if (flow.step === 'artist' || flow.entity === 'artist') return '艺术家'
+  return ['single', 'leak'].includes(flow.draft.albumDetails.type ?? '') ? '歌曲' : '专辑'
+})
+const creationEntityName = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return ''
+  if (creationEntityLabel.value === '艺术家') {
+    return flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
+      || flow.draft.artist.stageNames.find((item) => item.name.trim())?.name.trim()
+      || flow.draft.artist.legalName.trim()
   }
-  if (isArtistEdit.value) return '编辑艺术家'
-  return isSongEdit.value ? '编辑歌曲' : '编辑专辑'
+  return flow.draft.albumDetails.title.trim()
+})
+const sheetTitle = computed(() => {
+  const action = isEditFlow.value ? '编辑' : '创建'
+  return `${action}-${creationEntityName.value || creationEntityLabel.value}`
 })
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)

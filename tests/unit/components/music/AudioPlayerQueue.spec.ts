@@ -34,17 +34,15 @@ describe("AudioPlayerQueue.vue", () => {
 		const wrapper = mount(AudioPlayerQueue);
 		const dataTransfer = { dropEffect: "move" };
 
-		expect(wrapper.findAll('[data-testid^="queue-drop-slot-"]')).toHaveLength(
-			4,
-		);
+		expect(wrapper.findAll('[data-testid^="queue-drop-slot-"]')).toHaveLength(4);
 
 		await wrapper.findAll(".q-drag")[0]!.trigger("dragstart", { dataTransfer });
 		await wrapper
 			.get('[data-testid="queue-drop-slot-2"]')
 			.trigger("dragover", { dataTransfer });
-		expect(
-			wrapper.get('[data-testid="queue-drop-slot-2"]').classes(),
-		).toContain("is-drag-over");
+		expect(wrapper.get('[data-testid="queue-drop-slot-2"]').classes()).toContain(
+			"is-drag-over",
+		);
 		await wrapper
 			.get('[data-testid="queue-drop-slot-2"]')
 			.trigger("drop", { dataTransfer });
@@ -55,5 +53,24 @@ describe("AudioPlayerQueue.vue", () => {
 			"song-3",
 		]);
 		wrapper.unmount();
+	});
+	it("exposes the queue as a dialog and restores focus when closed", async () => {
+		const player = usePlayerStore();
+		player.showQueue = true;
+		const trigger = document.createElement("button");
+		document.body.append(trigger);
+		trigger.focus();
+		const wrapper = mount(AudioPlayerQueue);
+		document.body.appendChild(wrapper.element);
+		await wrapper.vm.$nextTick();
+
+		const panel = wrapper.get(".queue-panel");
+		expect(panel.attributes("role")).toBe("dialog");
+		expect(panel.attributes("aria-modal")).toBe("true");
+		expect(document.activeElement).toBe(wrapper.get(".queue-close-btn").element);
+
+		wrapper.unmount();
+		expect(document.activeElement).toBe(trigger);
+		trigger.remove();
 	});
 });

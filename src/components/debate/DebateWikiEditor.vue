@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="编辑辩题"
+    :title="`编辑-${debate.title || '辩题'}`"
     close-type="header"
     above-player
     @close="requestClose"

@@ -17,6 +17,7 @@
         :items="directoryItems"
         :active-id="activeDirectoryItem"
         :mobile-open="mobileDirectoryOpen"
+        title="目录-站点管理"
         aria-label="站点管理目录"
         @select="selectDirectoryItem"
         @close-mobile="mobileDirectoryOpen = false"

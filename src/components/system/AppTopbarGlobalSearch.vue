@@ -28,6 +28,7 @@
             role="dialog"
             aria-modal="true"
             aria-label="全局搜索命令面板"
+            @keydown="handleDialogKeydown"
           >
             <!-- 头部搜索输入栏 -->
             <header class="palette-header">
@@ -45,7 +46,6 @@
                 @keydown.down.prevent="moveActive(1)"
                 @keydown.up.prevent="moveActive(-1)"
                 @keydown.enter.prevent="handleEnter"
-                @keydown.escape="closeSearch"
               >
               <button
                 v-if="searchDraft"
@@ -159,6 +159,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, X } from 'lucide-vue-next'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 
@@ -204,6 +205,8 @@ const closeSearch = () => {
   activeFilter.value = 'all'
   globalSearch.reset()
 }
+
+const { handleKeydown: handleDialogKeydown } = useDialogFocus(showSearch, searchPanelRef, closeSearch)
 
 const handleInput = () => {
   isExpanded.value = false

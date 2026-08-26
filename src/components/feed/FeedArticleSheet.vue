@@ -183,7 +183,7 @@
   <PSheet
     v-else-if="article?.type === 'feed_item' && article.feed_item"
     :show="commentsOpen"
-    title="评论"
+    :title="commentSheetTitle"
     width="min(100%, 48rem)"
     content-max-width="42rem"
     :index="(index || 0) + 1"
@@ -296,14 +296,19 @@ const emit = defineEmits<{
 }>()
 
 const sheetTitle = computed(() => {
-  if (!props.article) return '文章'
+  if (!props.article) return '文章-加载中'
   if (props.article.type === 'post' && props.article.post) {
-    return props.article.post.title
+    return `文章-${props.article.post.title || '未命名'}`
   }
   if (props.article.type === 'feed_item' && props.article.feed_item) {
-    return props.article.feed_item.title
+    return `RSS文章-${props.article.feed_item.title || '未命名'}`
   }
-  return '文章'
+  return '文章-加载中'
+})
+
+const commentSheetTitle = computed(() => {
+  const title = props.article?.feed_item?.title || '未命名'
+  return `Feed文章评论-${title}`
 })
 
 const isPlayablePodcast = computed(() => {

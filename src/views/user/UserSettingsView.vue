@@ -60,6 +60,7 @@
         v-model:collapsed="directoryCollapsed"
         :items="directoryNavItems"
         :active-id="activeSection"
+        title="目录-账号设置"
         aria-label="设置导航"
         @select="scrollToSection"
       />

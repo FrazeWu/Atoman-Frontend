@@ -114,6 +114,11 @@ const songDraft = reactive({
   contributors: [] as MusicCreationAlbumContributorDraft[],
 });
 
+const sheetTitle = computed(() => {
+  const name = songDraft.title.trim();
+  return name ? `编辑-${name}` : "编辑-歌曲";
+});
+
 const releaseTypeOptions = [
   { label: "专辑", value: "album" },
   { label: "EP", value: "ep" },
@@ -392,7 +397,7 @@ async function handleSongEditSubmit() {
   <PSheet
     above-player
     :show="isOpen"
-    title="编辑歌曲"
+    :title="sheetTitle"
     content-max-width="64rem"
     :index="sheetIndex"
     :layer-index="layerIndex"

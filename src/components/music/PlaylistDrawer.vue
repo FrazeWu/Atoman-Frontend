@@ -45,7 +45,9 @@ const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true
 const editSheetIndex = computed(() => props.layerIndex + 1)
 const closeCurrentPlaylist = () => closePlaylist(props.layer?.key)
 const playlist = ref<MusicPlaylistDetail | null>(null)
-const sheetTitle = computed(() => playlist.value?.name ? `歌单 · ${playlist.value.name}` : (props.layer?.title ?? '歌单'))
+const sheetTitle = computed(() => playlist.value?.name?.trim()
+  ? `歌单-${playlist.value.name.trim()}`
+  : '歌单-加载中')
 const loading = ref(false)
 const errorMessage = ref('')
 const editing = ref(false)

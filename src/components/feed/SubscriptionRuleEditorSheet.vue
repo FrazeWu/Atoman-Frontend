@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    :title="mode === 'create' ? '创建订阅规则' : '编辑订阅规则'"
+    :title="sheetTitle"
     close-type="header"
     above-player
     @close="requestClose"
@@ -177,6 +177,12 @@ const draft = reactive<RuleEditorPayload>({
   action_muted: false,
   action_auto_mark_read: false,
   action_auto_add_reading_list: false,
+})
+
+const sheetTitle = computed(() => {
+  const name = draft.name.trim()
+  if (name) return `${props.mode === 'create' ? '创建' : '编辑'}-${name}`
+  return props.mode === 'create' ? '创建-订阅规则' : '编辑-订阅规则'
 })
 
 const selectedCategories = ref<string[]>([])

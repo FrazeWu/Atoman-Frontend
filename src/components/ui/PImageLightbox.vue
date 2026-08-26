@@ -7,6 +7,7 @@
         role="dialog"
         aria-label="图片预览"
         aria-modal="true"
+        ref="lightboxRef"
         tabindex="-1"
         @click.self="close"
         @keydown="handleKeydown"
@@ -66,6 +67,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -82,6 +84,7 @@ const emit = defineEmits<{
 }>()
 
 const currentIndex = ref(props.index)
+const lightboxRef = ref<HTMLElement | null>(null)
 
 watch(() => props.index, (val) => {
   currentIndex.value = Math.max(0, Math.min(val, props.images.length - 1))
@@ -94,11 +97,14 @@ watch(() => props.show, (val) => {
 })
 
 const currentImageUrl = computed(() => props.images[currentIndex.value] || '')
+const visible = computed(() => props.show && props.images.length > 0)
 
 function close() {
   emit('update:show', false)
   emit('close')
 }
+
+const { handleKeydown: handleDialogKeydown } = useDialogFocus(visible, lightboxRef, close)
 
 function prev() {
   if (currentIndex.value > 0) {
@@ -115,9 +121,17 @@ function next() {
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') close()
-  if (e.key === 'ArrowLeft') prev()
-  if (e.key === 'ArrowRight') next()
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    prev()
+    return
+  }
+  if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    next()
+    return
+  }
+  handleDialogKeydown(e)
 }
 </script>
 

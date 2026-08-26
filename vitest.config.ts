@@ -86,6 +86,10 @@ export default defineConfig({
 							__dirname,
 							"./packages/api-client/src/index.ts",
 						),
+						"node-unrar-js/esm/js/unrar.wasm?url": path.resolve(
+							__dirname,
+							"./tests/unit/fixtures/unrarWasmUrl.ts",
+						),
 					},
 				},
 				test: {

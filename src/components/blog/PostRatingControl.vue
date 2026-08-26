@@ -51,6 +51,18 @@
       </div>
       </div>
 
+      <button
+        v-if="!disabled && viewerRating !== null && viewerRating !== undefined"
+        type="button"
+        class="post-rating__clear"
+        :disabled="loading"
+        aria-label="清除评分"
+        title="清除评分"
+        @click="emit('clear')"
+      >
+        <X :size="14" aria-hidden="true" />
+      </button>
+
     <label v-if="!disabled" class="post-rating__slider">
       <span class="sr-only">选择 0.5 至 5 星评分</span>
       <input
@@ -132,12 +144,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Star } from 'lucide-vue-next'
+import { Star, X } from 'lucide-vue-next'
 import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 
 const props = withDefaults(defineProps<{
   ratingScore?: number
   ratingCount?: number
+  viewerRating?: number | null
   weightedRatingScore?: number | null
   weightedRatingCount?: number
   weightedRatingActive?: boolean
@@ -160,6 +173,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   rate: [score: number]
+  clear: []
 }>()
 
 const hoverScore = ref<number | null>(null)

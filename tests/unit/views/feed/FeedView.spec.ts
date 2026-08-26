@@ -390,7 +390,9 @@ describe('FeedView', () => {
 
     expect(routerPush).toHaveBeenCalledWith(expect.objectContaining({
       path: '/feed/item/cluster-primary',
-      state: expect.objectContaining({ article: expect.any(Object) }),
+      state: expect.objectContaining({
+        feedArticleBrowser: expect.objectContaining({ article: expect.any(Object) }),
+      }),
     }))
     expect(sourceItem.is_read).toBe(false)
   })

@@ -73,12 +73,15 @@ describe("PostRatingControl.vue", () => {
     expect(wrapper.emitted("rate")![0]).toEqual([5]);
   });
 
-  it("does not render a separate clear control", () => {
+  it("renders a clear control for an existing viewer rating", async () => {
     const wrapper = mount(PostRatingControl, {
       props: { viewerRating: 8 },
     });
 
-    expect(wrapper.find(".post-rating__clear").exists()).toBe(false);
+    const clearButton = wrapper.get(".post-rating__clear");
+    expect(clearButton.attributes("aria-label")).toBe("清除评分");
+    await clearButton.trigger("click");
+    expect(wrapper.emitted("clear")).toEqual([[]]);
   });
 
   it("announces a failed rating next to the control", () => {

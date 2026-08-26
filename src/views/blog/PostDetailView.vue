@@ -65,6 +65,7 @@
           :loading="ratingLoading"
           :error-message="ratingError"
           @rate="ratePost"
+          @clear="clearPostRating"
         />
         <div class="post-detail-toolbar">
           <div class="post-detail-actions">

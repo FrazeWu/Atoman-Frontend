@@ -12,7 +12,7 @@ describe("PostRatingControl.vue", () => {
       },
     });
 
-    expect(wrapper.text()).toContain("加权分");
+    expect(wrapper.text()).not.toContain("加权分");
     expect(wrapper.get(".post-rating__score-num").text()).toBe("4.3");
     expect(wrapper.text()).toContain("55 人");
     expect(wrapper.findAll(".post-rating__star-fill")[0].attributes("style")).toContain("width: 0px");

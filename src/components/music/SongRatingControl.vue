@@ -1,12 +1,12 @@
 <template>
   <section class="song-rating" :class="`song-rating--${size}`" :aria-label="`${songTitle} 评分`">
     <div class="song-rating__summary">
-      <template v-if="ratingCount">
+      <template v-if="ratingCount >= publicRatingThreshold">
         <span class="song-rating__label">评分</span>
         <strong class="song-rating__score">{{ ratingScore.toFixed(1) }}</strong>
-        <span class="song-rating__count">（{{ ratingCount }} 人）</span>
       </template>
-      <span v-else class="song-rating__insufficient">暂无评分</span>
+      <span v-else class="song-rating__insufficient">依据不足</span>
+      <span class="song-rating__count">（{{ ratingCount }} 人）</span>
     </div>
     <div class="song-rating__stars" @mouseleave="hoverScore = null">
       <button
@@ -59,6 +59,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   rate: [score: number]
 }>()
+
+const publicRatingThreshold = 6
 
 const hoverScore = ref<number | null>(null)
 const activeScore = computed(() => {

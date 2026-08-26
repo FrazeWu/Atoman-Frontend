@@ -21,6 +21,21 @@ describe("SongRatingControl.vue", () => {
     expect(wrapper.emitted("rate")).toEqual([[4]]);
   });
 
+  it("hides the public score until six ratings are available", () => {
+    const wrapper = mount(SongRatingControl, {
+      props: {
+        songTitle: "示例歌曲",
+        ratingScore: 5,
+        ratingCount: 1,
+        viewerRating: 5,
+      },
+    });
+
+    expect(wrapper.text()).toContain("依据不足（1 人）");
+    expect(wrapper.find(".song-rating__score").exists()).toBe(false);
+    expect(wrapper.findAll(".song-rating__star-fill")[4].attributes("style")).toContain("width: 18px");
+  });
+
   it("fills only the viewer's personal rating", () => {
     const wrapper = mount(SongRatingControl, {
       props: {

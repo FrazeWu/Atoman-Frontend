@@ -50,7 +50,15 @@
     </header>
 
     <!-- 2. 正文与灵感文字 -->
-    <div class="sticky-memo-body" @click="toggleComments">
+    <div
+      class="sticky-memo-body"
+      role="button"
+      tabindex="0"
+      :aria-expanded="showComments"
+      @click="toggleComments"
+      @keydown.enter="toggleComments"
+      @keydown.space="toggleComments"
+    >
       <p class="sticky-content">{{ note.content }}</p>
 
       <!-- 媒体多图缩略平铺 -->
@@ -203,10 +211,15 @@ function formatDate(value: string) {
   padding: 0.95rem 1.15rem;
   margin-bottom: 0;
   border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   background: transparent;
   transition: background-color 0.18s ease, box-shadow 0.18s ease;
   overflow: visible;
+}
+
+.sticky-memo-card:not(:has(~ .sticky-memo-card)) {
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 /* 绿色未读指示短竖线 */

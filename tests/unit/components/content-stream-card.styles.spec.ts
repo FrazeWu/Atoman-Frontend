@@ -25,18 +25,26 @@ const portalStreamRule = portalSource.match(
 )?.[0] ?? "";
 
 describe("content stream card styles", () => {
-  it("keeps article and feed entries unframed", () => {
+  it("uses single top and bottom separators for article and feed entries", () => {
     expect(contentStreamRule).toContain("border: 0;");
-    expect(contentStreamRule).not.toMatch(/border-(top|right|bottom|left):/);
-    expect(contentCardSource).not.toContain(
-      ".p-entry.content-stream-entry:last-child",
+    expect(contentStreamRule).toContain(
+      "border-top: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);",
+    );
+    expect(contentStreamRule).not.toMatch(/border-(right|left):/);
+    expect(contentCardSource).toContain(
+      ".p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {\n  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);",
     );
   });
 
-  it("keeps short notes unframed", () => {
+  it("uses single top and bottom separators for short notes", () => {
     expect(shortNoteRule).toContain("border: 0;");
-    expect(shortNoteRule).not.toMatch(/border-(top|right|bottom|left):/);
-    expect(shortNoteCardSource).not.toContain(".sticky-memo-card:last-child");
+    expect(shortNoteRule).toContain(
+      "border-top: 1px solid var(--a-color-border-soft);",
+    );
+    expect(shortNoteRule).not.toMatch(/border-(right|left):/);
+    expect(shortNoteCardSource).toContain(
+      ".sticky-memo-card:not(:has(~ .sticky-memo-card)) {\n  border-bottom: 1px solid var(--a-color-border-soft);",
+    );
   });
 
   it("does not frame portal content streams", () => {

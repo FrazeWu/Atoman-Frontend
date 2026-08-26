@@ -41,27 +41,36 @@ const feedStore = useFeedStore()
 const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
 const ratingLoading = ref(false)
+let loadSequence = 0
 
 async function loadPost() {
+  const requestedPostId = props.layer.payload.postId
+  const requestSequence = ++loadSequence
   loading.value = true
   errorMessage.value = ''
+  post.value = null
+  channelSubscribed.value = false
+  channelSubscriptionBusy.value = false
   try {
-    const res = await apiRequestResult(api.blog.post(props.layer.payload.postId), {
+    const res = await apiRequestResult(api.blog.post(requestedPostId), {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
+    if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
     if (!res.ok) throw new Error('load failed')
     const payload = await Promise.resolve(res.data)
+    if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
     post.value = payload.data || payload
     if (authStore.isAuthenticated && post.value?.channel_id) {
-      channelSubscribed.value = await feedStore.isSubscribedToChannel(post.value.channel_id)
-    } else {
-      channelSubscribed.value = false
+      const nextSubscribed = await feedStore.isSubscribedToChannel(post.value.channel_id)
+      if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
+      channelSubscribed.value = nextSubscribed
     }
   } catch {
+    if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
     post.value = null
     errorMessage.value = '文章加载失败，请重试'
   } finally {
-    loading.value = false
+    if (requestSequence === loadSequence && requestedPostId === props.layer.payload.postId) loading.value = false
   }
 }
 

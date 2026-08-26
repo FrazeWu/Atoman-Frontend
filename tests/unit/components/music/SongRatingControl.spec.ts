@@ -29,7 +29,9 @@ describe("SongRatingControl.vue", () => {
       },
     });
 
-    expect(wrapper.findAll(".song-rating__star-fill")[3].attributes("style")).toContain("width: 9px");
+    expect(
+      wrapper.findAll(".song-rating__star-fill")[3].attributes("style"),
+    ).toContain("width: 9px");
   });
 
   it("shows the current score and emits clear for an authenticated viewer", async () => {

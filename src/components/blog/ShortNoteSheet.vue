@@ -6,6 +6,7 @@ import { apiRequestEnvelope } from '@/api/client'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -39,6 +40,7 @@ const loading = ref(false)
 const deleting = ref(false)
 const deletePending = ref(false)
 const errorMessage = ref('')
+let loadSequence = 0
 
 const showLightbox = ref(false)
 const lightboxIndex = ref(0)
@@ -56,22 +58,26 @@ function openLightbox(idx: number) {
 }
 
 async function loadNote() {
+  const requestedNoteId = noteId.value
+  const requestSequence = ++loadSequence
   loading.value = true
   errorMessage.value = ''
   try {
-    const res = await apiRequestEnvelope<ShortNote>(api.blog.shortNote(noteId.value))
+    const res = await apiRequestEnvelope<ShortNote>(api.blog.shortNote(requestedNoteId))
+    if (requestSequence !== loadSequence || requestedNoteId !== noteId.value) return
     note.value = res.data
     if (note.value) {
-      const synced = getNoteState(noteId.value)
+      const synced = getNoteState(requestedNoteId)
       interactions.liked.value = synced?.liked ?? note.value.liked
       interactions.likeCount.value = synced?.likeCount ?? note.value.likes_count
       interactions.commentCount.value = synced?.commentCount ?? note.value.comments_count
     }
   } catch {
+    if (requestSequence !== loadSequence || requestedNoteId !== noteId.value) return
     note.value = null
     errorMessage.value = '短笺不存在或暂时无法加载'
   } finally {
-    loading.value = false
+    if (requestSequence === loadSequence && requestedNoteId === noteId.value) loading.value = false
   }
 }
 
@@ -150,7 +156,11 @@ watch(noteId, () => void loadNote(), { immediate: true })
     <div v-if="loading" class="short-note-sheet-loading" aria-label="正在加载短笺">
       <div class="a-skeleton short-note-sheet-skeleton" />
     </div>
-    <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage" />
+    <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage">
+      <template #action>
+        <PButton variant="secondary" size="sm" @click="loadNote">重试</PButton>
+      </template>
+    </PEmpty>
     <div v-else-if="note" class="short-note-sheet-container">
       <article class="short-note-sheet-card">
         <header class="short-note-sheet-header">

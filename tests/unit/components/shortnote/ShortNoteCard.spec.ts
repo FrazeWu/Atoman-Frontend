@@ -33,6 +33,24 @@ describe('ShortNoteCard', () => {
     expect(headerStats).toEqual(['71.4(7)'])
   })
 
+  it('正文区域支持键盘打开讨论', async () => {
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: mockNote },
+      global: {
+        plugins: [createPinia()],
+        stubs: { RouterLink: true, CommentSection: true, PImageLightbox: true },
+      },
+    })
+
+    const body = wrapper.get('.sticky-memo-body')
+    expect(body.attributes('role')).toBe('button')
+    expect(body.attributes('tabindex')).toBe('0')
+
+    await body.trigger('keydown.enter')
+
+    expect(wrapper.find('.sticky-inline-comments').exists()).toBe(true)
+  })
+
   it('未读时初始渲染，光标扫过 (mouseenter) 时自动标记为已读', async () => {
     const pinia = createPinia()
     const wrapper = mount(ShortNoteCard, {

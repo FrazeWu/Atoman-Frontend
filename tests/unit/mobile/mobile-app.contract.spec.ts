@@ -53,6 +53,7 @@ describe("mobile app route boundary", () => {
 				"/users/:handle",
 				"/users/:handle/posts",
 				"/users/:handle/channels",
+				"/users/:handle/settings",
 				"/collection/:id",
 				"/music",
 				"/music/player",

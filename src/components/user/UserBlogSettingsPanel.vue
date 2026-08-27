@@ -1,6 +1,15 @@
 <template>
   <div class="user-blog-settings-panel">
-    <div class="settings-block">
+    <div v-if="profileLoading" class="profile-settings-state" role="status" data-test="profile-settings-loading">
+      <PSkeleton width="9rem" height="1rem" variant="text" />
+      <PSkeleton width="15rem" height="0.85rem" variant="text" />
+    </div>
+    <div v-else-if="profileError" class="profile-settings-state profile-settings-state--error" role="alert">
+      <span>{{ profileError }}</span>
+      <PButton variant="secondary" size="sm" type="button" @click="loadProfile">重试</PButton>
+    </div>
+    <template v-else>
+      <div class="settings-block">
       <div class="settings-block__copy">
         <strong>资料预览</strong>
         <small>个人主页和公开名片上显示的完整资料。</small>
@@ -111,7 +120,8 @@
 
         <PButton variant="primary" type="submit" :disabled="uploadingAvatar" :loading="saving" loading-text="保存中...">保存更改</PButton>
       </div>
-    </form>
+      </form>
+    </template>
   </div>
 </template>
 
@@ -120,6 +130,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import { Camera, Undo2 } from 'lucide-vue-next'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import {
   getUserAvatarRestoreAvailability,
   restoreUserAvatar,
@@ -166,6 +177,9 @@ const notificationTypes = {
 } as const
 
 const saving = ref(false)
+const profileLoading = ref(true)
+const profileLoaded = ref(false)
+const profileError = ref('')
 const uploadingAvatar = ref(false)
 const restoringAvatar = ref(false)
 const canRestoreAvatar = ref(false)
@@ -220,23 +234,28 @@ const restoreAvatar = async () => {
 }
 
 const loadProfile = async () => {
+  profileLoading.value = true
+  profileError.value = ''
   try {
     const res = await apiRequestResult(api.users.me, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    if (res.ok) {
-      const d = await Promise.resolve(res.data)
-      const u = d.data || d
-      form.value = {
-        display_name: u.display_name || '',
-        bio: u.bio || '',
-        website: u.website || '',
-        location: u.location || '',
-        avatar_url: u.avatar_url || '',
-      }
+    if (!res.ok) throw new Error('资料加载失败，请重试')
+    const d = await Promise.resolve(res.data)
+    const u = d.data || d
+    form.value = {
+      display_name: u.display_name || '',
+      bio: u.bio || '',
+      website: u.website || '',
+      location: u.location || '',
+      avatar_url: u.avatar_url || '',
     }
+    profileLoaded.value = true
   } catch (e) {
+    profileError.value = e instanceof Error ? e.message : '资料加载失败，请重试'
     reportError(e)
+  } finally {
+    profileLoading.value = false
   }
 }
 
@@ -249,6 +268,7 @@ const loadNotificationPreferences = async () => {
 }
 
 const save = async () => {
+  if (!profileLoaded.value || saving.value) return
   error.value = ''
   success.value = false
 
@@ -457,5 +477,17 @@ onMounted(async () => {
   .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.profile-settings-state {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.profile-settings-state--error {
+  color: var(--a-color-accent-destructive);
 }
 </style>

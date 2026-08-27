@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import SubscriptionRuleEditorSheet from '@/components/feed/SubscriptionRuleEditorSheet.vue'
@@ -117,6 +117,7 @@ const props = withDefaults(defineProps<{
   subscriptionRules: FeedSubscriptionRule[]
   ruleApplySummary: ApplySubscriptionRulesSummary | null
   busy?: boolean
+  saveError?: string
   abovePlayer?: boolean
 }>(), {
   subscriptions: () => [],
@@ -137,6 +138,7 @@ const showRuleEditor = ref(false)
 const ruleEditorMode = ref<'create' | 'edit'>('create')
 const editingRule = ref<FeedSubscriptionRule | null>(null)
 const deletePending = ref<string | null>(null)
+const pendingSave = ref(false)
 
 const joinList = (items: unknown[]) => items.map((item) => String(item).trim()).filter(Boolean).join(' / ')
 
@@ -200,17 +202,24 @@ const openEditRule = (rule: FeedSubscriptionRule) => {
 }
 
 const closeRuleEditor = () => {
+  pendingSave.value = false
   showRuleEditor.value = false
   editingRule.value = null
 }
 
 const submitRuleEditor = (payload: SubscriptionRuleSavePayload) => {
+  pendingSave.value = true
   emit('save-rule', {
     id: editingRule.value?.id || null,
     payload,
   })
-  closeRuleEditor()
 }
+
+watch(() => [props.busy, props.saveError] as const, ([busy, saveError]) => {
+  if (!pendingSave.value || busy) return
+  if (!saveError) closeRuleEditor()
+  pendingSave.value = false
+})
 
 const moveRuleUp = (id: string) => {
   if (props.busy) return

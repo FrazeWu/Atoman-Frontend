@@ -37,8 +37,9 @@
         </button>
       </nav>
     </aside>
+  </div>
 
-    <PSheet
+  <PSheet
       :show="mobileOpen"
       side="bottom"
       :title="title"
@@ -63,8 +64,7 @@
           {{ item.label }}
         </button>
       </nav>
-    </PSheet>
-  </div>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
@@ -237,6 +237,27 @@ function selectItem(id: string, mobile: boolean) {
 </style>
 
 <style>
+.p-directory-sheet.p-sheet-mobile-page {
+  position: fixed;
+  right: 0;
+  bottom: var(--a-content-bottom-offset);
+  left: 0;
+  z-index: var(--a-z-sheet);
+  max-height: min(70dvh, 36rem);
+  overflow-y: auto;
+  padding: 1rem 0.75rem 2rem;
+  border-top: 1px solid var(--a-color-border);
+  box-shadow: 0 -12px 28px color-mix(in srgb, var(--a-color-text) 12%, transparent);
+}
+
+.p-directory-sheet.p-sheet-mobile-page .p-sheet-mobile-page__header {
+  margin: 0 0 1rem;
+}
+
+.p-directory-sheet.p-sheet-mobile-page .p-directory-list--mobile {
+  padding: 0;
+}
+
 .p-directory-sheet.p-sheet-panel.is-bottom {
   right: 0.75rem !important;
   bottom: calc(var(--a-content-bottom-offset) + 0.75rem) !important;

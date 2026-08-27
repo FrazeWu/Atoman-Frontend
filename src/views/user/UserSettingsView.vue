@@ -2,7 +2,18 @@
   <main class="user-settings settings-center a-page-xl">
     <PPageHeader title="账号设置" mb="1.5rem" />
 
-    <div class="settings-center__shell user-settings__shell">
+    <PButton
+      v-if="isOwnSettingsRoute()"
+      class="user-settings__directory-trigger"
+      variant="secondary"
+      type="button"
+      @click="mobileDirectoryOpen = true"
+    >
+      <ListTree :size="16" aria-hidden="true" />
+      目录
+    </PButton>
+
+    <div v-if="isOwnSettingsRoute()" class="settings-center__shell user-settings__shell">
       <div class="settings-center__sections">
         <section
           v-for="item in settingSections"
@@ -27,41 +38,38 @@
               <AccountSecurityPanel :email="authStore.user?.email || ''" />
             </template>
 
-            <SubscriptionRulesPanel
-              v-else-if="item.key === 'feed'"
-              :groups="feedStore.groups"
-              :subscription-rules="feedStore.subscriptionRules"
-              :rule-apply-summary="feedStore.ruleApplySummary"
-              :busy="ruleBusy"
-              @save-rule="saveSubscriptionRule"
-              @move-rule-up="moveSubscriptionRuleUp"
-              @move-rule-down="moveSubscriptionRuleDown"
-              @apply-rule="applySubscriptionRule"
-              @apply-all-rules="applyAllSubscriptionRules"
-              @delete-rule="deleteSubscriptionRule"
-            />
+            <template v-else-if="item.key === 'feed'">
+              <div v-if="feedLoading" class="settings-state" role="status">正在加载订阅规则...</div>
+              <div v-else-if="feedError" class="settings-state settings-state--error" role="alert">
+                <span>{{ feedError }}</span>
+                <PButton variant="secondary" size="sm" type="button" @click="loadFeedSettings">重试</PButton>
+              </div>
+              <template v-else>
+                <p v-if="ruleError" class="settings-state settings-state--error" role="alert">{{ ruleError }}</p>
+                <SubscriptionRulesPanel
+                  :groups="feedStore.groups"
+                  :subscriptions="feedStore.subscriptions"
+                  :subscription-rules="feedStore.subscriptionRules"
+                  :rule-apply-summary="feedStore.ruleApplySummary"
+                  :busy="ruleBusy"
+                  :save-error="ruleError"
+                  @save-rule="saveSubscriptionRule"
+                  @move-rule-up="moveSubscriptionRuleUp"
+                  @move-rule-down="moveSubscriptionRuleDown"
+                  @apply-rule="applySubscriptionRule"
+                  @apply-all-rules="applyAllSubscriptionRules"
+                  @delete-rule="deleteSubscriptionRule"
+                />
+              </template>
+            </template>
 
-            <DMSettingsPanel v-else-if="item.key === 'privacy'" :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
+            <NotificationSettingsPanel v-else-if="item.key === 'notification'" />
 
-            <div v-else-if="item.key === 'notification'" class="settings-block">
-              <div class="settings-block__copy">
-                <strong>{{ item.label }}</strong>
-                <small>{{ item.description }}</small>
-              </div>
-              <div class="settings-block__control">
-                <PButton to="/inbox" variant="secondary" size="sm">打开通知详情</PButton>
-              </div>
-            </div>
-
-            <div v-else class="settings-block">
-              <div class="settings-block__copy">
-                <strong>{{ item.label }}</strong>
-                <small>{{ item.description }}</small>
-              </div>
-              <div class="settings-block__control">
-                <span class="settings-placeholder">尚未开放</span>
-              </div>
-            </div>
+            <template v-else-if="item.key === 'privacy'">
+              <PrivacySettingsPanel />
+              <DMSettingsPanel :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
+              <BlockedUsersSettingsPanel />
+            </template>
           </PSurface>
         </section>
       </div>
@@ -70,9 +78,11 @@
         v-model:collapsed="directoryCollapsed"
         :items="directoryNavItems"
         :active-id="activeSection"
+        :mobile-open="mobileDirectoryOpen"
         title="目录-账号设置"
         aria-label="设置导航"
         @select="scrollToSection"
+        @close-mobile="mobileDirectoryOpen = false"
       />
     </div>
   </main>
@@ -90,13 +100,17 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ListTree } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'
 import AccountSecurityPanel from '@/components/user/AccountSecurityPanel.vue'
+import BlockedUsersSettingsPanel from '@/components/user/BlockedUsersSettingsPanel.vue'
+import NotificationSettingsPanel from '@/components/user/NotificationSettingsPanel.vue'
 import PasswordSettingsPanel from '@/components/user/PasswordSettingsPanel.vue'
+import PrivacySettingsPanel from '@/components/user/PrivacySettingsPanel.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -105,7 +119,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 
-type UserSettingSectionKey = 'general' | 'feed' | 'notification' | 'privacy' | 'music' | 'forum'
+type UserSettingSectionKey = 'general' | 'feed' | 'notification' | 'privacy'
 
 const settingSections: Array<{
   key: UserSettingSectionKey
@@ -115,10 +129,8 @@ const settingSections: Array<{
 }> = [
   { key: 'general', kicker: '01 / GENERAL', label: '通用', description: '个人资料与账号安全。' },
   { key: 'feed', kicker: '02 / FEED', label: '订阅', description: '整理订阅源规则。' },
-  { key: 'notification', kicker: '03 / NOTIFY', label: '通知', description: '在通知详情页管理已读状态、静音和偏好。' },
-  { key: 'privacy', kicker: '04 / PRIVACY', label: '隐私', description: '尚未开放。' },
-  { key: 'music', kicker: '05 / MUSIC', label: '音乐', description: '尚未开放。' },
-  { key: 'forum', kicker: '06 / FORUM', label: '论坛', description: '尚未开放。' },
+  { key: 'notification', kicker: '03 / NOTIFY', label: '通知', description: '管理互动、提及和协作提醒。' },
+  { key: 'privacy', kicker: '04 / PRIVACY', label: '隐私与社交', description: '控制个人资料可见范围和私信权限。' },
 ]
 
 const route = useRoute()
@@ -127,6 +139,10 @@ const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const activeSection = ref<UserSettingSectionKey>('general')
 const directoryCollapsed = ref(false)
+const mobileDirectoryOpen = ref(false)
+const feedLoading = ref(true)
+const feedError = ref('')
+const ruleError = ref('')
 const ruleBusy = ref(false)
 const pendingRuleApplication = ref<string | null>(null)
 const applyingRule = ref(false)
@@ -138,6 +154,12 @@ const directoryNavItems = computed(() =>
 )
 
 const sectionDomId = (key: UserSettingSectionKey) => `user-setting-${key}`
+const validSectionKeys = new Set<UserSettingSectionKey>(settingSections.map((section) => section.key))
+
+const sectionKeyFromHash = () => {
+  const key = route.hash.replace(/^#/, '') as UserSettingSectionKey
+  return validSectionKeys.has(key) ? key : null
+}
 
 const isOwnSettingsRoute = () => {
   const handle = String(route.params.handle || '')
@@ -191,10 +213,12 @@ const onScroll = () => {
   })
 }
 
-const scrollToSection = (key: string) => {
+const scrollToSection = (key: string, updateHash = true) => {
   const typedKey = key as UserSettingSectionKey
+  if (!validSectionKeys.has(typedKey)) return
   document.getElementById(sectionDomId(typedKey))?.scrollIntoView({ behavior: 'auto', block: 'start' })
   activeSection.value = typedKey
+  if (updateHash && route.hash !== `#${typedKey}`) void router.replace({ hash: `#${typedKey}` })
 }
 
 const withRuleBusy = async (task: () => Promise<void>) => {
@@ -217,12 +241,33 @@ const findSavedRuleId = (saved: { id: string | null; payload: SubscriptionRuleSa
   return matchedRules[matchedRules.length - 1]?.id || null
 }
 
+const loadFeedSettings = async () => {
+  feedLoading.value = true
+  feedError.value = ''
+  try {
+    const results = await Promise.all([
+      feedStore.fetchGroups(),
+      feedStore.fetchSubscriptions(),
+      feedStore.fetchSubscriptionRules(),
+    ])
+    if (results.some((result) => !result)) throw new Error('订阅规则加载失败')
+  } catch (cause) {
+    feedError.value = cause instanceof Error ? cause.message : '订阅规则加载失败，请重试'
+  } finally {
+    feedLoading.value = false
+  }
+}
+
 const saveSubscriptionRule = async (saved: { id: string | null; payload: SubscriptionRuleSavePayload }) => {
+  ruleError.value = ''
   await withRuleBusy(async () => {
     const success = saved.id
       ? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
       : await feedStore.createSubscriptionRule(saved.payload)
-    if (!success) return
+    if (!success) {
+      ruleError.value = '规则保存失败，请检查条件后重试'
+      return
+    }
     const ruleId = findSavedRuleId(saved)
     if (ruleId) pendingRuleApplication.value = ruleId
   })
@@ -286,17 +331,21 @@ watch(() => route.params.handle, () => {
   void redirectIfNeeded()
 })
 
+watch(() => route.hash, (hash) => {
+  if (!hash) return
+  const key = sectionKeyFromHash()
+  if (key) void nextTick(() => scrollToSection(key, false))
+})
+
 onMounted(async () => {
   await redirectIfNeeded()
   if (!isOwnSettingsRoute()) return
 
-  await Promise.all([
-    feedStore.fetchGroups(),
-    feedStore.fetchSubscriptions(),
-    feedStore.fetchSubscriptionRules(),
-  ])
+  await loadFeedSettings()
   await nextTick()
-  onScroll()
+  const initialSection = sectionKeyFromHash()
+  if (initialSection) scrollToSection(initialSection, false)
+  else onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
 })
 
@@ -304,3 +353,29 @@ onMounted(async () => {
   window.removeEventListener('scroll', onScroll)
 })
 </script>
+
+<style scoped>
+.user-settings__directory-trigger {
+  display: none;
+  margin-bottom: 1rem;
+}
+
+.settings-state {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--a-color-text-secondary);
+}
+
+.settings-state--error {
+  color: var(--a-color-accent-destructive);
+}
+
+@media (max-width: 1023px) {
+  .user-settings__directory-trigger {
+    display: inline-flex;
+  }
+}
+</style>

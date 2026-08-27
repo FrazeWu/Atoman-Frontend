@@ -4,10 +4,9 @@
     class="notif-btn"
     data-testid="notification-link"
     :title="notificationRoom.helper"
-    :aria-label="notificationRoom.name"
+    :aria-label="inboxStore.totalUnread > 0 ? `${notificationRoom.name}，${inboxStore.totalUnread} 条未读` : notificationRoom.name"
   >
-    <Bell class="notif-btn__icon" :size="16" aria-hidden="true" />
-    <span class="notif-btn__text">{{ notificationRoom.name }}</span>
+    <Mail class="notif-btn__icon" :size="18" aria-hidden="true" />
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
   </RouterLink>
 
@@ -60,7 +59,7 @@ import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
-import { Bell, PencilLine, Settings } from 'lucide-vue-next'
+import { Mail, PencilLine, Settings } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
@@ -140,42 +139,29 @@ const logout = async () => {
 }
 
 .notif-btn {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.875rem;
-  font-weight: 500;
+  justify-content: center;
   color: var(--a-color-muted);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
   position: relative;
-  transition: color 0.2s;
+  transition: color 0.2s, background 0.2s;
   text-decoration: none;
-  white-space: nowrap;
   flex-shrink: 0;
 }
 
 .notif-btn__icon {
-  display: none;
+  display: inline-flex;
   flex-shrink: 0;
 }
 
 @media (max-width: 960px) {
-  .notif-btn {
-    justify-content: center;
-    min-width: 2rem;
-  }
-
-  .notif-btn__icon {
-    display: inline-flex;
-  }
-
-  .notif-btn__text {
-    display: none;
-  }
-
   .user-name,
   .chevron {
     display: none;
@@ -199,7 +185,8 @@ const logout = async () => {
 
 .notif-btn:hover {
   color: var(--a-color-fg);
-  text-decoration: underline;
+  background: var(--a-color-surface-muted);
+  text-decoration: none;
 }
 
 .user-settings-link {
@@ -222,17 +209,22 @@ const logout = async () => {
 }
 
 .notif-count {
-  display: inline-block;
-  margin-left: 3px;
-  background: var(--a-color-text);
+  min-width: 1.1rem;
+  height: 1.1rem;
+  position: absolute;
+  top: 0.18rem;
+  right: 0.12rem;
+  display: grid;
+  place-items: center;
+  padding: 0 0.2rem;
+  border: 1px solid var(--a-color-bg);
+  border-radius: 999px;
+  background: var(--a-color-danger);
   color: var(--a-color-bg);
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: var(--a-font-weight-strong, 700);
-  border-radius: 0;
-  border: 1px solid var(--a-color-text);
-  padding: 1px 5px;
   line-height: 1;
-  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
 }
 
 .dropdown-wrap {

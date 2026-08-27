@@ -297,6 +297,10 @@ const notificationTargetPath = (notification: Notification): RouteLocationRaw | 
   if (notification.source_url) {
     return notification.source_url
   }
+  if (notification.type === 'site_announcement') {
+    const path = notification.meta.path
+    if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) return path
+  }
   if (notification.type === 'content_mention' && notification.meta.module && notification.meta.path) {
     return referenceHref({ module: notification.meta.module, path: notification.meta.path })
   }

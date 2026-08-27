@@ -10,6 +10,7 @@
         <router-view />
       </main>
       <BlogSheetStack />
+      <NotificationToastStack v-if="!isAuthRoute" />
       <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="!isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
@@ -22,6 +23,7 @@ import { useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import AppTopbar from '@/components/system/AppTopbar.vue'
+import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
 import { usePlayerStore } from '@/stores/player'

@@ -86,6 +86,24 @@ describe('InboxPage notifications', () => {
     })
   })
 
+  it('opens a site announcement at its configured internal path', async () => {
+    routeQuery = { tab: 'system' }
+    const store = useNotificationStore()
+    store.notifications = [{
+      id: 'announcement-1', recipient_id: 'u1', type: 'site_announcement', category: 'system',
+      reason: '', source_type: 'site_announcement', source_id: 'announcement-1', actor_count: 1,
+      meta: { title: '系统维护', body: '周日维护', path: '/status' },
+      created_at: '2026-08-01T00:00:00Z', updated_at: '2026-08-01T00:00:00Z',
+    }]
+
+    const wrapper = mount(InboxPage, { global: { stubs } })
+    await wrapper.get('.sidebar-item').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.get('.detail-actions button').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith('/status')
+  })
+
   it('shows notification source label in list and detail panes', async () => {
     routeQuery = { tab: 'like' }
     const store = useNotificationStore()

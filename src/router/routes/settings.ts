@@ -10,6 +10,7 @@ export const settingRoutes: RouteRecordRaw[] = [
       { path: 'community', component: () => import('@/views/setting/SettingCommunityView.vue'), meta: { requiresModerator: true } },
       { path: 'users', component: () => import('@/views/setting/SettingUsersView.vue'), meta: { requiresAdmin: true } },
       { path: 'subscriptions', component: () => import('@/views/setting/SettingSubscriptionsView.vue'), meta: { requiresAdmin: true } },
+      { path: 'announcements', component: () => import('@/views/setting/SettingAnnouncementsView.vue'), meta: { requiresAdmin: true } },
     ],
   },
 ]

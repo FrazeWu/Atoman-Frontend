@@ -281,6 +281,7 @@ export function useApi() {
 
 		admin: {
 			siteAccess: `${apiUrl}/admin/site-access`,
+			announcements: `${apiUrl}/admin/announcements`,
 			feed: {
 				sources: `${apiUrl}/admin/feed/sources`,
 				source: (sourceId: number | string) =>

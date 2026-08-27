@@ -190,4 +190,41 @@ describe('inbox store', () => {
     expect(inbox.initialized).toBe(false)
     expect(FakeWebSocket.instances).toHaveLength(0)
   })
+
+  it('queues realtime notifications as independent toast items', async () => {
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+    const inbox = useInboxStore()
+
+    await inbox.connect()
+    await FakeWebSocket.instances[0].onmessage?.({
+      data: JSON.stringify({
+        event: 'notification',
+        data: {
+          id: 'announcement-1',
+          type: 'site_announcement',
+          category: 'system',
+          source_type: 'site_announcement',
+          source_id: 'announcement-1',
+          meta: { title: '系统维护', body: '周日凌晨进行例行维护' },
+          read_at: null,
+          created_at: '2026-08-01T00:00:00Z',
+        },
+      }),
+    } as MessageEvent)
+
+    expect(inbox.toastItems).toEqual([
+      expect.objectContaining({
+        kind: 'notification',
+        category: 'system',
+        title: '系统维护',
+        body: '周日凌晨进行例行维护',
+        href: '/inbox?tab=system',
+      }),
+    ])
+
+    inbox.dismissToast(inbox.toastItems[0].id)
+    expect(inbox.toastItems).toEqual([])
+  })
 })

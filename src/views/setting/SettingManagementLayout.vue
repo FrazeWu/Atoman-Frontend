@@ -41,18 +41,20 @@ const mobileDirectoryOpen = ref(false)
 const directoryItems = [
   { id: 'users', label: '用户管理' },
   { id: 'subscriptions', label: '订阅源管理' },
+  { id: 'announcements', label: '公告' },
   ...moduleNavOrder.map((key) => ({ id: key, label: moduleRooms[key].name }))
 ]
 
 const activeDirectoryItem = computed(() => {
   if (route.path.endsWith('/users')) return 'users'
   if (route.path.endsWith('/subscriptions')) return 'subscriptions'
+  if (route.path.endsWith('/announcements')) return 'announcements'
   if (route.path.endsWith('/community')) return 'forum'
   return route.hash.replace('#module-', '') || 'feed'
 })
 
 function selectDirectoryItem(id: string) {
-  if (id === 'users' || id === 'subscriptions') {
+  if (id === 'users' || id === 'subscriptions' || id === 'announcements') {
     void router.push(`/site/setting/${id}`)
     return
   }

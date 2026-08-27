@@ -3,9 +3,20 @@ import { defineStore, getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useWebSocketUrl } from '@/composables/useApi'
-import { normalizeDMRealtimeEvent } from '@/api/dm'
+import { normalizeDMRealtimeEvent, mailboxKey } from '@/api/dm'
+import type { InboxTab, Notification } from '@/types'
 import { useDMStore } from '@/stores/dm'
 import { registerSessionReset } from '@/stores/sessionReset'
+
+export type InboxToastItem = {
+  id: string
+  kind: 'notification' | 'dm'
+  category: InboxTab
+  title: string
+  body: string
+  href: string
+  isAnnouncement: boolean
+}
 
 export const useInboxStore = defineStore('inbox', () => {
   const pinia = getActivePinia()
@@ -23,6 +34,53 @@ export const useInboxStore = defineStore('inbox', () => {
   let lifecycleGeneration = 0
 
   const totalUnread = computed(() => notificationStore.unreadCount)
+  const toastItems = ref<InboxToastItem[]>([])
+  let toastSequence = 0
+
+  const dismissToast = (id: string) => {
+    toastItems.value = toastItems.value.filter((item) => item.id !== id)
+  }
+
+  const queueToast = (item: Omit<InboxToastItem, 'id'>) => {
+    toastSequence += 1
+    toastItems.value = [{ ...item, id: `${item.kind}-${toastSequence}` }, ...toastItems.value].slice(0, 3)
+  }
+
+  const notificationToastTitle = (notification: Notification) => {
+    if (typeof notification.meta.title === 'string' && notification.meta.title) return notification.meta.title
+    if (notification.type === 'site_announcement') return '站点公告'
+    const actor = notification.actor?.display_name || notification.actor?.username || '有人'
+    if (notification.type.includes('reply')) return `${actor} 回复了你`
+    if (notification.type.includes('mention')) return `${actor} 提到了你`
+    if (notification.type.includes('like')) return `${actor} 赞了你`
+    return '新通知'
+  }
+
+  const queueNotificationToast = (notification: Notification) => {
+    queueToast({
+      kind: 'notification',
+      category: notification.category,
+      title: notificationToastTitle(notification),
+      body: typeof notification.meta.body === 'string'
+        ? notification.meta.body
+        : notification.reason || (typeof notification.meta.reply_excerpt === 'string' ? notification.meta.reply_excerpt : '点击查看详情'),
+      href: `/inbox?tab=${encodeURIComponent(notification.category)}`,
+      isAnnouncement: notification.type === 'site_announcement',
+    })
+  }
+
+  const queueDMToast = (event: ReturnType<typeof normalizeDMRealtimeEvent>) => {
+    if (!event || event.event !== 'dm.message.created') return
+    const { message, conversation, mailbox } = event.data
+    queueToast({
+      kind: 'dm',
+      category: 'dm',
+      title: `${message.sender.display_name || conversation.other_party.display_name} 发来新消息`,
+      body: message.content || '发送了一张图片',
+      href: `/inbox?tab=dm&mailbox=${encodeURIComponent(mailboxKey(mailbox))}&conversation=${encodeURIComponent(conversation.id)}`,
+      isAnnouncement: false,
+    })
+  }
 
   const stopPolling = () => {
     if (pollingTimer) {
@@ -75,6 +133,8 @@ export const useInboxStore = defineStore('inbox', () => {
     disconnect()
     initialized.value = false
     reconnectAttempt = 0
+    toastItems.value = []
+    toastSequence = 0
   }
   onScopeDispose(registerSessionReset(pinia, resetStore))
 
@@ -126,15 +186,22 @@ export const useInboxStore = defineStore('inbox', () => {
       if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       const message = payload as { event?: unknown; data?: unknown }
       if (message.event === 'notification') {
-        notificationStore.receiveNotification(message.data as never)
+        const notification = message.data as Notification
+        notificationStore.receiveNotification(notification)
+        queueNotificationToast(notification)
       }
       const dmEvent = normalizeDMRealtimeEvent(message)
       if (dmEvent) {
         if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         const dmStore = useDMStore()
+        const isActiveConversation = dmEvent.event === 'dm.message.created'
+          && dmStore.activeConversationId === dmEvent.data.message.conversation_id
         dmStore.receiveEvent(dmEvent)
         notificationStore.setDMUnread(dmEvent.data.dm_unread)
-        if (dmEvent.event === 'dm.message.created' && dmStore.activeConversationId === dmEvent.data.conversation.id) {
+        if (dmEvent.event === 'dm.message.created' && !isActiveConversation && dmEvent.data.message.sender.id !== authStore.user?.uuid) {
+          queueDMToast(dmEvent)
+        }
+        if (dmEvent.event === 'dm.message.created' && isActiveConversation) {
           await dmStore.markRead()
         }
       }
@@ -160,8 +227,10 @@ export const useInboxStore = defineStore('inbox', () => {
     polling,
     initialized,
     totalUnread,
+    toastItems,
     bootstrap,
     connect,
     disconnect,
+    dismissToast,
   }
 })

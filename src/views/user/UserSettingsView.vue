@@ -43,6 +43,16 @@
 
             <DMSettingsPanel v-else-if="item.key === 'privacy'" :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
 
+            <div v-else-if="item.key === 'notification'" class="settings-block">
+              <div class="settings-block__copy">
+                <strong>{{ item.label }}</strong>
+                <small>{{ item.description }}</small>
+              </div>
+              <div class="settings-block__control">
+                <PButton to="/inbox" variant="secondary" size="sm">打开通知详情</PButton>
+              </div>
+            </div>
+
             <div v-else class="settings-block">
               <div class="settings-block__copy">
                 <strong>{{ item.label }}</strong>
@@ -105,7 +115,7 @@ const settingSections: Array<{
 }> = [
   { key: 'general', kicker: '01 / GENERAL', label: '通用', description: '个人资料与账号安全。' },
   { key: 'feed', kicker: '02 / FEED', label: '订阅', description: '整理订阅源规则。' },
-  { key: 'notification', kicker: '03 / NOTIFY', label: '通知', description: '尚未开放。' },
+  { key: 'notification', kicker: '03 / NOTIFY', label: '通知', description: '在通知详情页管理已读状态、静音和偏好。' },
   { key: 'privacy', kicker: '04 / PRIVACY', label: '隐私', description: '尚未开放。' },
   { key: 'music', kicker: '05 / MUSIC', label: '音乐', description: '尚未开放。' },
   { key: 'forum', kicker: '06 / FORUM', label: '论坛', description: '尚未开放。' },

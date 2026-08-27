@@ -57,6 +57,7 @@ export function useFeedArticleBrowser({
 	const sourceArticles = ref<TimelineItem[]>([]);
 	const sourceArticlesLoading = ref(false);
 	const sourceSubscribeBusy = ref(false);
+	let sourceArticlesRequestSequence = 0;
 
 	const markReadOnOpen = (item: TimelineItem) => {
 		if (
@@ -242,9 +243,12 @@ export function useFeedArticleBrowser({
 		`查看 ${source.title} 的所有文章`;
 
 	const fetchSourceArticles = async (source: FeedArticleSource) => {
+		const requestSequence = ++sourceArticlesRequestSequence;
 		const sourceID = source.subscriptionId || source.id;
 		if (!sourceID) {
-			sourceArticles.value = [];
+			if (requestSequence === sourceArticlesRequestSequence) {
+				sourceArticles.value = [];
+			}
 			return;
 		}
 
@@ -260,13 +264,18 @@ export function useFeedArticleBrowser({
 				{ headers },
 			);
 			if (response.ok) {
+				if (requestSequence !== sourceArticlesRequestSequence) return;
 				sourceArticles.value = response.data.data || [];
 			}
 		} catch (error) {
 			reportError(error);
-			sourceArticles.value = [];
+			if (requestSequence === sourceArticlesRequestSequence) {
+				sourceArticles.value = [];
+			}
 		} finally {
-			sourceArticlesLoading.value = false;
+			if (requestSequence === sourceArticlesRequestSequence) {
+				sourceArticlesLoading.value = false;
+			}
 		}
 	};
 

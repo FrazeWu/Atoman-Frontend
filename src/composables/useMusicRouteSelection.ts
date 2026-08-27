@@ -22,6 +22,13 @@ export function useMusicRouteSelection(handlers: MusicRouteSelectionHandlers) {
   let lastRouteAlbum: string | null = null
   let lastRouteEditor: string | null = null
 
+  function closeRouteEditor() {
+    if (lastRouteEditor === null) return
+    handlers.closeMusicEditor()
+    handlers.closeMusicCreationFlow()
+    lastRouteEditor = null
+  }
+
   function applyRouteSelection(query: LocationQuery) {
     const artist = query.artist
     const album = query.album
@@ -75,13 +82,12 @@ export function useMusicRouteSelection(handlers: MusicRouteSelectionHandlers) {
         lastRouteEditor = nextEditorKey
         return
       }
+
+      closeRouteEditor()
+      return
     }
 
-    if (typeof editor !== 'string' && lastRouteEditor !== null) {
-      handlers.closeMusicEditor()
-      handlers.closeMusicCreationFlow()
-      lastRouteEditor = null
-    }
+    if (typeof editor !== 'string') closeRouteEditor()
   }
 
   return {

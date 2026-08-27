@@ -5,7 +5,7 @@
         v-if="visible"
         class="p-modal-backdrop"
         :class="{ 'p-modal-backdrop--above-player': abovePlayer }"
-        @click.self="closeOnBackdrop && handleClose"
+        @click.self="handleBackdropClick"
       >
         <div
           ref="dialogRef"
@@ -113,6 +113,11 @@ const handleClose = () => {
   emit('update:modelValue', false)
   emit('update:show', false)
   emit('close')
+}
+
+const handleBackdropClick = () => {
+  if (!props.closeOnBackdrop) return
+  handleClose()
 }
 
 const { handleKeydown } = useDialogFocus(visible, dialogRef, handleClose)

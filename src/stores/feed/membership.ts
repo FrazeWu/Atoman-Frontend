@@ -188,9 +188,12 @@ export function createFeedMembershipState() {
       if (res.ok) {
         const data = res.data
         if (generation !== sessionGeneration) return
-        const bookmarks = (data.data || []) as Array<{ content_id?: unknown }>
+        const bookmarks = (data.data || []) as Array<{ content_id?: unknown; post_id?: unknown }>
         const ids = bookmarks
-          .map((bookmark) => typeof bookmark.content_id === 'string' ? bookmark.content_id : '')
+          .map((bookmark) => {
+            if (typeof bookmark.post_id === 'string') return bookmark.post_id
+            return typeof bookmark.content_id === 'string' ? bookmark.content_id : ''
+          })
           .filter(Boolean)
         bookmarkedPostIds.value = new Set(ids)
       }
@@ -210,7 +213,9 @@ export function createFeedMembershipState() {
         })
         if (!res.ok) return null
         const data = res.data
-        const bookmark = (data.data || []).find((item: { content_id?: unknown }) => item.content_id === postId) as { id?: string } | undefined
+        const bookmark = (data.data || []).find((item: { content_id?: unknown; post_id?: unknown }) =>
+          item.post_id === postId || item.content_id === postId,
+        ) as { id?: string } | undefined
         if (!bookmark?.id) return null
         const deleteRes = await apiRequestResult(`${api.url}/blog/bookmarks/${bookmark.id}`, {
           method: 'DELETE',

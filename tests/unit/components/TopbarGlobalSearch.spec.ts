@@ -63,6 +63,22 @@ describe("AppTopbarGlobalSearch", () => {
     ).toBe(true);
   });
 
+  it("does not open from slash when the focus target is contenteditable", async () => {
+    const { wrapper } = await mountSearch();
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    document.body.appendChild(editable);
+
+    editable.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "/", bubbles: true, cancelable: true }),
+    );
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="topbar-search-dropdown"]').exists(),
+    ).toBe(false);
+  });
+
   it("debounces input and opens the keyboard-selected result with Enter", async () => {
     vi.mocked(referenceApi.search).mockResolvedValue([
       {

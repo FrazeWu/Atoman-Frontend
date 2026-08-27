@@ -40,4 +40,16 @@ describe('useMusicRouteSelection', () => {
     expect(handlers.openAlbum).toHaveBeenCalledTimes(1)
     expect(handlers.closeAlbum).not.toHaveBeenCalled()
   })
+
+  it('closes the active editor when route editor params become invalid', () => {
+    const handlers = createHandlers()
+    const { applyRouteSelection } = useMusicRouteSelection(handlers)
+
+    applyRouteSelection({ editor: 'album-edit', album: 'album-1' })
+    applyRouteSelection({ editor: 'album-edit' })
+
+    expect(handlers.openMusicCreationFlow).toHaveBeenCalledTimes(1)
+    expect(handlers.closeMusicEditor).toHaveBeenCalledTimes(1)
+    expect(handlers.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
+  })
 })

@@ -300,6 +300,20 @@ describe("router auth guards", () => {
 		expect(router.currentRoute.value.path).toBe("/site/setting");
 	});
 
+	it("keeps site setting child routes reachable even when feed is disabled", async () => {
+		const router = await createGuardRouter("music");
+		const auth = useAuthStore();
+		const siteAccess = useSiteAccessStore();
+		auth.token = makeToken(3600);
+		auth.user = { username: "admin", role: "admin" } as never;
+		auth.isAuthenticated = true;
+		siteAccess.access.modules.feed.enabled = false;
+
+		await router.push("/site/setting/users");
+
+		expect(router.currentRoute.value.path).toBe("/site/setting/users");
+	});
+
 	it("redirects non-owner admins to the existing site setting route", async () => {
 		window.history.replaceState(null, "", "/music");
 		const router = createRouter({

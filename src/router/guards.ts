@@ -31,7 +31,8 @@ export function installRouteGuards(router: Router) {
 		const authStore = useAuthStore();
 		const onboardingStore = useOnboardingStore();
 		const siteAccessStore = useSiteAccessStore();
-		const isSettingRoute = to.path === "/site/setting";
+		const isSettingRoute =
+			to.path === "/site/setting" || to.path.startsWith("/site/setting/");
 		const isPublicSystemRoute = publicSystemPaths.has(to.path);
 		const requiresMusicEditorAuth =
 			to.path === "/music" &&

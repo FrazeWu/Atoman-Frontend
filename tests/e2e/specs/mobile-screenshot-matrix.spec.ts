@@ -1,59 +1,5 @@
 import { test, expect } from "../fixtures/base";
-
-const mobileRoutes = [
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/modules",
-  "/inbox",
-  "/feed",
-  "/feed/sources",
-  "/feed/subscriptions",
-  "/feed/reading-list",
-  "/feed/starred",
-  "/feed/item/feed-item-1",
-  "/posts",
-  "/posts/notes",
-  "/posts/notes/note-1",
-  "/posts/notes/note-1/edit",
-  "/posts/subscriptions",
-  "/posts/bookmarks",
-  "/post/post-1",
-  "/posts/post/post-1",
-  "/channel/demo",
-  "/posts/channel/demo",
-  "/channels/demo",
-  "/channels/demo/posts",
-  "/channels/demo/about",
-  "/collection/collection-1",
-  "/users/demo",
-  "/users/demo/posts",
-  "/users/demo/channels",
-  "/music",
-  "/music/discover",
-  "/music/songs",
-  "/music/playlists",
-  "/music/bookmarks",
-  "/music/history",
-  "/music/me",
-  "/music/player",
-  "/music/lyrics",
-  "/music/artist/artist-1",
-  "/music/album/album-1",
-  "/music/song/song-1",
-  "/music/playlist/playlist-1",
-  "/studio",
-  "/studio/channel",
-  "/studio/channel/collections",
-  "/studio/blog/content",
-  "/studio/blog/collections",
-  "/studio/blog/imports",
-  "/studio/blog/analytics",
-  "/studio/blog/interactions",
-  "/studio/blog/settings",
-  "/studio/blog/new",
-  "/studio/blog/content-1/edit",
-] as const;
+import { mobileScreenshotRoutes } from "../helpers/mobile-screenshot-routes";
 
 const listMeta = { page: 1, page_size: 100, total: 0, has_more: false };
 const coverDataURL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23007AFF'/%3E%3C/svg%3E";
@@ -184,7 +130,7 @@ function routeSlug(pathname: string) {
 test.describe("Mobile route screenshot matrix", () => {
   test.describe.configure({ mode: "serial", timeout: 30_000 });
 
-  for (const pathname of mobileRoutes) {
+  for (const pathname of mobileScreenshotRoutes) {
     test(`renders ${pathname} without mobile layout regressions`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await mockMobileApi(page);

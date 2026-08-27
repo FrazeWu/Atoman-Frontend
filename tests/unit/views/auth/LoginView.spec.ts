@@ -292,4 +292,51 @@ describe('LoginView redirect', () => {
     expect(router.currentRoute.value.fullPath).toBe('/register?redirect=/feed')
     expect(wrapper.find('.auth-success').exists()).toBe(false)
   })
+
+  it('prevents duplicate verification sends while the first request is still pending', async () => {
+    vi.useFakeTimers()
+    vi.stubEnv('PROD', false)
+
+    let resolveSend!: (response: Response) => void
+    const sendPromise = new Promise<Response>((resolve) => {
+      resolveSend = resolve
+    })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input)
+      if (url.endsWith('/auth/check-email')) {
+        return Promise.resolve(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      }
+      if (url.endsWith('/auth/send-verification')) {
+        return sendPromise
+      }
+      return Promise.resolve(new Response(JSON.stringify({ available: true }), { status: 200 }))
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/register')
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } })
+
+    await wrapper.findAll('input')[0].setValue('alice@example.com')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+
+    const sendButton = wrapper.get('.auth-code-btn-inline')
+    await sendButton.trigger('click')
+    await sendButton.trigger('click')
+    await flushPromises()
+
+    const sendVerificationCalls = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/v1/auth/send-verification')
+    expect(sendVerificationCalls).toHaveLength(1)
+    expect(sendVerificationCalls[0]?.[1]).toEqual(expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ email: 'alice@example.com', turnstile_token: '' }),
+    }))
+    expect(sendButton.attributes('disabled')).toBeDefined()
+    expect(sendButton.text()).toContain('发送中...')
+
+    resolveSend(new Response(JSON.stringify({ message: 'sent' }), { status: 200 }))
+    await flushPromises()
+  })
 })

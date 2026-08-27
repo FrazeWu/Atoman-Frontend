@@ -156,7 +156,20 @@ export function createApiClient(apiFetch: ApiFetcher) {
     init?: RequestInit,
   ): Promise<ApiResult<T>> {
     const response = await apiRequest(input, init);
-    const data = (await parseJson(response).catch(() => ({}))) as T;
+    let data: T;
+    try {
+      data = (await parseJson(response)) as T;
+    } catch {
+      if (response.ok) {
+        throw new ApiErrorResponseError(
+          response.status,
+          "system.invalid_response",
+          "Invalid API response.",
+          {},
+        );
+      }
+      data = {} as T;
+    }
     return {
       ok: response.ok,
       status: response.status,

@@ -109,10 +109,14 @@ const formatTime = (iso: string) => {
 const doSearch = async () => {
   const q = localQuery.value.trim()
   if (!q) return
-  router.replace({ path: '/forum/search', query: { q } })
   searchQuery.value = q
   page.value = 1
-  await forumStore.searchTopics(q, 1)
+  const currentQuery = typeof route.query.q === 'string' ? route.query.q : ''
+  if (q === currentQuery) {
+    await forumStore.searchTopics(q, 1)
+    return
+  }
+  await router.replace({ path: '/forum/search', query: { q } })
 }
 
 const loadMore = async () => {

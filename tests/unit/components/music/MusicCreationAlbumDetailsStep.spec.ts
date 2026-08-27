@@ -1047,8 +1047,8 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		const importStatus = wrapper.get('[data-testid="album-import-status"]');
 		expect(importStatus.text()).toContain("graduation.zip");
-		expect(importStatus.text()).not.toContain("上传进度 37%");
 		expect(importStatus.text()).toContain("128 KB/s");
+		expect(importStatus.text()).toContain("上传进度 37%");
 		expect(
 			wrapper.get('[data-testid="album-details-title-input"]').exists(),
 		).toBe(true);

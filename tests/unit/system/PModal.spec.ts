@@ -1,9 +1,14 @@
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import PModal from "@/components/ui/PModal.vue";
 
 describe("PModal.vue", () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    delete document.documentElement.dataset.atomanApp;
+  });
+
   it("keeps dialog semantics and restores focus in the mobile runtime", async () => {
     document.documentElement.dataset.atomanApp = "mobile";
     const trigger = document.createElement("button");
@@ -41,5 +46,47 @@ describe("PModal.vue", () => {
       true,
     );
     wrapper.unmount();
+  });
+
+  it("closes from backdrop click only when closeOnBackdrop is enabled", async () => {
+    const onClosableClose = vi.fn();
+    const onClosableUpdateShow = vi.fn();
+    const closable = mount(PModal, {
+      props: {
+        show: false,
+        title: "编辑内容",
+        closeOnBackdrop: true,
+        onClose: onClosableClose,
+        "onUpdate:show": onClosableUpdateShow,
+      },
+    });
+    await closable.setProps({ show: true });
+    await nextTick();
+    document.querySelector<HTMLElement>(".p-modal-backdrop")?.click();
+    await nextTick();
+    expect(onClosableClose).toHaveBeenCalledTimes(1);
+    expect(onClosableUpdateShow).toHaveBeenCalledTimes(1);
+    expect(onClosableUpdateShow).toHaveBeenCalledWith(false);
+
+    closable.unmount();
+
+    const onLockedClose = vi.fn();
+    const onLockedUpdateShow = vi.fn();
+    const locked = mount(PModal, {
+      props: {
+        show: false,
+        title: "编辑内容",
+        closeOnBackdrop: false,
+        onClose: onLockedClose,
+        "onUpdate:show": onLockedUpdateShow,
+      },
+    });
+    await locked.setProps({ show: true });
+    await nextTick();
+    document.querySelector<HTMLElement>(".p-modal-backdrop")?.click();
+    await nextTick();
+    expect(onLockedClose).not.toHaveBeenCalled();
+    expect(onLockedUpdateShow).not.toHaveBeenCalled();
+    locked.unmount();
   });
 });

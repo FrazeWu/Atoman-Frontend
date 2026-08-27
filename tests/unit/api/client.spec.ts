@@ -41,6 +41,19 @@ it('forwards an abort signal for JSON POST requests', async () => {
     .resolves.toEqual({ ok: true })
   expect(requests[0].signal).toBe(signal)
 })
+
+it('throws an API error when apiRequestResult receives invalid JSON in a successful response', async () => {
+  const client = createApiClient(async () => new Response('not-json', {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  }))
+
+  await expect(client.apiRequestResult('/api/v1/posts'))
+    .rejects.toBeInstanceOf(ApiErrorResponseError)
+  await expect(client.apiRequestResult('/api/v1/posts'))
+    .rejects.toMatchObject({ status: 200, code: 'system.invalid_response' })
+})
+
 it('sends custom request options and returns the response envelope', async () => {
   vi.stubGlobal('fetch', vi.fn())
   const fetchMock = vi.mocked(fetch)

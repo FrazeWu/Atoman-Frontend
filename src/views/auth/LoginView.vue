@@ -95,10 +95,10 @@
               <button
                 type="button"
                 class="auth-code-btn-inline"
-                :disabled="countdown > 0 || !canSendVerification"
+                :disabled="sendingCode || countdown > 0 || !canSendVerification"
                 @click="sendVerificationCode"
               >
-                {{ emailChecking ? '检查中...' : countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                {{ sendingCode ? '发送中...' : emailChecking ? '检查中...' : countdown > 0 ? `${countdown}s` : '获取验证码' }}
               </button>
             </div>
             <div v-if="fieldErrors.email" class="p-field-error">{{ fieldErrors.email }}</div>
@@ -426,6 +426,7 @@ const checkUsernameAvailability = async () => {
 }
 
 const sendVerificationCode = async () => {
+  if (sendingCode.value) return
   fieldErrors.value = {}
   if (!email.value || !email.value.includes('@')) {
     fieldErrors.value.email = '请输入有效的邮箱地址'

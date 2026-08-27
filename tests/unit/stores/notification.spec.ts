@@ -42,7 +42,7 @@ describe('notification store', () => {
   })
 
   it('keeps unread from other notification types when marking one type read', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
 
     const store = useNotificationStore()
     store.unreadCounts.reply = 2
@@ -76,7 +76,7 @@ describe('notification store', () => {
   })
 
   it('replaces unread counts from the categorized API contract', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({
       data: { total: 4, items: { like: 2, reply: 1, dm: 1 } },
     }), { status: 200 }))
     const store = useNotificationStore()
@@ -139,7 +139,7 @@ describe('notification store', () => {
   })
 
   it('uses category when fetching a notification category', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
     const store = useNotificationStore()
 
     await store.fetchNotifications('system')
@@ -209,7 +209,7 @@ describe('notification store', () => {
   })
 
   it('marks both forum notification types read', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
     const store = useNotificationStore()
     store.notifications = [
       makeNotification('topic-comment', 'reply', null, 'forum_topic_comment'),

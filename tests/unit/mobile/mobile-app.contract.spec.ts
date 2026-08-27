@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	mobileRoutes,
 	MOBILE_MODULES,
 } from "../../../apps/mobile/mobileRoutes";
+
+const indexHtml = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
 
 function routePaths(routes = mobileRoutes, parentPath = ""): string[] {
 	return routes.flatMap((route) => {
@@ -68,5 +72,11 @@ describe("mobile app route boundary", () => {
 
 	it("does not advertise modules that are not in the pilot", () => {
 		expect(routePaths()).not.toContain("/forum");
+	});
+
+	it("enables viewport-fit=cover so safe-area insets work for fixed mobile chrome", () => {
+		expect(indexHtml).toMatch(
+			/<meta\s+name="viewport"\s+content="[^"]*viewport-fit=cover[^"]*"\s*\/?>/,
+		);
 	});
 });

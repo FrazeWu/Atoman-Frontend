@@ -223,6 +223,12 @@ describe("FeedStarredView", () => {
 					PEmpty: true,
 					PContentCard: true,
 					PBadge: true,
+					PButton: {
+						props: ["label"],
+						emits: ["click"],
+						template:
+							'<button type="button" data-test="header-back" @click="$emit(\'click\')">{{ label }}</button>',
+					},
 					PClip: true,
 					PPress: {
 						props: ["label"],
@@ -237,7 +243,8 @@ describe("FeedStarredView", () => {
 		});
 
 		await flushPromises();
-		await wrapper.get("header button").trigger("click");
+		expect(wrapper.get('[data-test="header-back"]').text()).toContain("返回订阅");
+		await wrapper.get('[data-test="header-back"]').trigger("click");
 
 		expect(routerPush).toHaveBeenCalledWith("/feed");
 	});

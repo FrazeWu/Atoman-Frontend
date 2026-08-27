@@ -237,6 +237,10 @@ const openSearchHref = async (href: string) => {
 }
 
 const handleDocumentKeydown = (event: KeyboardEvent) => {
+  const target = event.target as HTMLElement | null
+  const isTypingContext = target?.isContentEditable
+    || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName || '')
+
   // ⌘K 或 Ctrl+K 触发
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
@@ -249,7 +253,7 @@ const handleDocumentKeydown = (event: KeyboardEvent) => {
   if (
     event.key === '/' &&
     !showSearch.value &&
-    !['INPUT', 'TEXTAREA'].includes((event.target as HTMLElement)?.tagName || '')
+    !isTypingContext
   ) {
     event.preventDefault()
     void openSearch()

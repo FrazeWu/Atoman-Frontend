@@ -79,9 +79,10 @@ const mountWithRouter = async (
   await router.isReady()
 
   const pushSpy = vi.spyOn(router, 'push')
+  const realReplace = router.replace.bind(router)
   const replaceSpy = vi.spyOn(router, 'replace')
   pushSpy.mockResolvedValue(undefined)
-  replaceSpy.mockResolvedValue(undefined)
+  replaceSpy.mockImplementation((...args) => realReplace(...args))
 
   const wrapper = mount(component, {
     global: {
@@ -152,13 +153,15 @@ describe('forum 路由前缀', () => {
   })
 
   it('论坛搜索页返回、结果点击和搜索 replace 都保留 /forum 前缀', async () => {
+    let searchSpy: ReturnType<typeof vi.spyOn>
     const { wrapper, pushSpy, replaceSpy } = await mountWithRouter(ForumSearchView, '/forum/search?q=old', () => {
       const forumStore = useForumStore()
       forumStore.searchResults = [makeTopic('topic-2')]
       forumStore.searchTotal = 1
-      vi.spyOn(forumStore, 'searchTopics').mockResolvedValue(undefined)
+      searchSpy = vi.spyOn(forumStore, 'searchTopics').mockResolvedValue(undefined)
     })
     await flushPromises()
+    searchSpy!.mockClear()
 
     await wrapper.findAll('button').find((button) => button.text().includes('返回论坛'))!.trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum')
@@ -169,6 +172,9 @@ describe('forum 路由前缀', () => {
     await wrapper.get('input.forum-search-input').setValue('prefix')
     await wrapper.get('input.forum-search-input').trigger('keydown.enter')
     expect(replaceSpy).toHaveBeenLastCalledWith({ path: '/forum/search', query: { q: 'prefix' } })
+    await flushPromises()
+    expect(searchSpy!).toHaveBeenCalledTimes(1)
+    expect(searchSpy!).toHaveBeenCalledWith('prefix')
   })
 
   it('发布话题成功后跳转到 /forum/topic/:id', async () => {

@@ -160,6 +160,30 @@ describe('feed store', () => {
     expect(feed.timeline).toEqual([])
   })
 
+  it('hydrates and removes blog bookmarks when the backend returns post_id entries', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'bookmark-1', post_id: 'post-1' }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'bookmark-1', post_id: 'post-1' }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    const feed = useFeedStore()
+
+    await feed.fetchBookmarkedPostIds()
+    expect(feed.bookmarkedPostIds.has('post-1')).toBe(true)
+
+    await expect(feed.togglePostBookmark('post-1')).resolves.toBe(false)
+    expect(feed.bookmarkedPostIds.has('post-1')).toBe(false)
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/blog/bookmarks/bookmark-1', {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer token' },
+      method: 'DELETE',
+    })
+  })
+
   it('does not let an in-flight star toggle restore membership after logout', async () => {
     let resolveToggle!: (response: Response) => void
     const toggleResponse = new Promise<Response>((resolve) => { resolveToggle = resolve })

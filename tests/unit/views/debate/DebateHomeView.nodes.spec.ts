@@ -28,9 +28,20 @@ function mountView() {
         PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
         PContentProgress: { template: '<div><slot /></div>' },
         PContentCard: { template: '<article><slot /><slot name="meta" /><slot name="title" /><slot name="summary" /><slot name="actions" /></article>' },
+        PInteractionCard: { template: '<article class="debate-card-stub"><slot /></article>' },
         PSelect: {
           props: ['options'],
-          template: '<select data-test="status-filter" :data-options="options.map(option => option.value).join(\',\')" />',
+          template: `
+            <select data-test="status-filter">
+              <option
+                v-for="option in options"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          `,
         },
         PInput: {
           props: ['modelValue', 'label'],
@@ -85,7 +96,14 @@ describe('DebateHomeView node wording', () => {
 
     expect(wrapper.text()).toContain('发起辩题')
     expect(wrapper.text()).toContain('结论 · 是')
-    expect(wrapper.get('[data-test="status-filter"]').attributes('data-options')).toBe(',active,archived')
+    expect(wrapper.findAll('[data-test="status-filter"] option').map(option => ({
+      label: option.text(),
+      value: option.attributes('value'),
+    }))).toEqual([
+      { label: '全部状态', value: '' },
+      { label: '开放', value: 'active' },
+      { label: '已归档', value: 'archived' },
+    ])
     expect(wrapper.text()).not.toContain('已结题')
     expect(wrapper.text()).not.toContain('进行中')
     expect(wrapper.text()).not.toContain('论点 9')

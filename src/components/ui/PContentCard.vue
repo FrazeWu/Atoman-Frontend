@@ -90,16 +90,18 @@ defineEmits(['click'])
 .p-entry.content-stream-entry {
   position: relative;
   padding: 0.875rem 1rem;
-  margin-bottom: 0.75rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
+  margin-bottom: 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-radius: 0;
   box-shadow: none;
-  background: var(--a-color-bg);
+  background: transparent;
   transition: border-color 0.18s ease, background-color 0.18s ease;
+  overflow: visible;
 }
 
-.p-entry.content-stream-entry:last-child {
-  margin-bottom: 0;
+.p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
 }
 
 .p-entry.content-stream-entry::before {

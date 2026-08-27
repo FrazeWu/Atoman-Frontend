@@ -278,7 +278,7 @@ const logout = async () => {
 }
 
 .user-dropdown {
-  width: 120px;
+  width: 100%;
   min-width: 0;
 }
 

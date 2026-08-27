@@ -41,6 +41,13 @@ describe("content stream card styles", () => {
     );
   });
 
+  it("reserves a first-line-sized metadata row when a content card has a visual avatar", () => {
+    expect(contentCardSource).toContain(
+      ".p-entry.has-visual .feed-entry-meta {",
+    );
+    expect(contentCardSource).toContain("min-height: 1.25rem;");
+  });
+
   it("uses single top and bottom separators for short notes", () => {
     expect(shortNoteRule).toContain("border: 0;");
     expect(shortNoteRule).toContain(

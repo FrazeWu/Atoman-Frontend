@@ -194,6 +194,16 @@
               class="content-stream-entry"
               @click="openArticle(item)"
             >
+              <template #visual>
+                <PAvatar
+                  data-test="feed-article-avatar"
+                  :src="item.avatar_url || item.image_url"
+                  :name="item.source_title || item.title"
+                  :alt="`${item.source_title || item.title} 的头像`"
+                  size="xs"
+                />
+              </template>
+
               <template #meta>
                 <button
                   v-if="item.source_title"
@@ -339,6 +349,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PToast from '@/components/ui/PToast.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
@@ -384,6 +395,7 @@ type RecommendationItem = {
   content_type?: string
   language_code?: string
   source_subscribed?: boolean
+  avatar_url?: string
   image_url?: string
   target_path: string
   source_id?: string

@@ -1500,6 +1500,8 @@ describe("FeedRecommendedView", () => {
 								id: "art-layout-1",
 								title: "Getty Images 宣布新计划",
 								summary: "用于验证文章推荐卡片不再复用频道双列布局。",
+								avatar_url: "https://example.com/recommendation-avatar.jpg",
+								source_title: "推荐来源",
 								target_path: "/feed/item/art-layout-1",
 							},
 						],
@@ -1532,6 +1534,9 @@ describe("FeedRecommendedView", () => {
 
 		const entry = wrapper.find(".p-entry");
 		expect(entry.exists()).toBe(true);
+		expect(
+			wrapper.get('[data-test="feed-article-avatar"] img').attributes("src"),
+		).toBe("https://example.com/recommendation-avatar.jpg");
 	});
 
 	it("renders channel recommendation heat labels and avatar fallback", async () => {

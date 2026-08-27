@@ -112,8 +112,8 @@ describe("AppTopbarAuthControls", () => {
 			wrapper.find('[data-testid="notification-menu-button"]').exists(),
 		).toBe(false);
 		expect(
-			wrapper.find('[data-testid="user-settings-link"]').attributes("href"),
-		).toBe("/users/alice/settings");
+			wrapper.find('[data-testid="user-settings-link"]').exists(),
+		).toBe(false);
 		expect(
 			wrapper.find('[data-testid="notification-link"]').text(),
 		).not.toContain("◌");

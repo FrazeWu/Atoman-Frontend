@@ -416,7 +416,7 @@ html.dark .topbar--auth {
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-left: auto;
   min-width: 0;
   flex-shrink: 0;
@@ -526,11 +526,11 @@ html.dark .topbar--auth {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 6px;
   border-radius: 50%;
   color: var(--a-color-text);
   transition: background-color 0.2s;
-  margin-right: 0.5rem; /* spacing from auth controls */
+  margin-right: 0;
 }
 .theme-toggle-btn:hover {
   background: var(--a-color-surface-muted);

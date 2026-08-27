@@ -20,16 +20,6 @@
     <span>创作</span>
   </RouterLink>
 
-  <RouterLink
-    :to="userSettingsPath"
-    class="user-settings-link"
-    data-testid="user-settings-link"
-    title="设置"
-    aria-label="设置"
-  >
-    <Settings :size="17" aria-hidden="true" />
-  </RouterLink>
-
   <div class="dropdown-wrap" data-dropdown="user">
     <button class="user-btn" @click="toggleDropdown('user')">
       <span class="user-avatar">
@@ -59,7 +49,7 @@ import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
-import { Mail, PencilLine, Settings } from 'lucide-vue-next'
+import { Mail, PencilLine } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
@@ -117,10 +107,10 @@ const logout = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   min-height: 2.75rem;
-  padding: 0 0.625rem;
-  font-size: 0.875rem;
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--a-color-fg);
   text-decoration: none;
@@ -173,7 +163,6 @@ const logout = async () => {
 }
 
 @media (max-width: 720px) {
-  .user-settings-link,
   .dropdown-wrap[data-dropdown="user"] {
     display: none;
   }
@@ -184,25 +173,6 @@ const logout = async () => {
 }
 
 .notif-btn:hover {
-  color: var(--a-color-fg);
-  background: var(--a-color-surface-muted);
-  text-decoration: none;
-}
-
-.user-settings-link {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--a-color-muted);
-  border: none;
-  background: var(--a-color-bg);
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.user-settings-link:hover {
   color: var(--a-color-fg);
   background: var(--a-color-surface-muted);
   text-decoration: none;
@@ -234,14 +204,14 @@ const logout = async () => {
 .user-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
   background: var(--a-color-bg);
-  border: var(--a-border);
+  border: none;
   border-radius: var(--a-radius-none);
   cursor: pointer;
-  padding: 0.375rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
@@ -280,10 +250,11 @@ const logout = async () => {
 
 .dropdown {
   position: absolute;
-  right: 0;
+  left: 0;
   top: calc(100% + 4px);
   background: var(--a-color-bg);
-  border: var(--a-border);
+  border: none;
+  border-top: 2px solid var(--a-color-fg);
   border-radius: var(--a-radius-none);
   box-shadow: var(--a-shadow-dropdown);
   z-index: var(--a-z-global-menu);
@@ -291,7 +262,8 @@ const logout = async () => {
 }
 
 .user-dropdown {
-  width: 144px;
+  width: 120px;
+  min-width: 0;
 }
 
 .user-menu-enter-active {
@@ -312,8 +284,8 @@ const logout = async () => {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem 0.5rem 3.25rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--a-color-fg);
   text-decoration: none;

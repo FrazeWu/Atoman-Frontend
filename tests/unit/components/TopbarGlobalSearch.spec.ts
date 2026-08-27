@@ -70,7 +70,11 @@ describe("AppTopbarGlobalSearch", () => {
     document.body.appendChild(editable);
 
     editable.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "/", bubbles: true, cancelable: true }),
+      new KeyboardEvent("keydown", {
+        key: "/",
+        bubbles: true,
+        cancelable: true,
+      }),
     );
     await flushPromises();
 

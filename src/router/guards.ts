@@ -37,8 +37,7 @@ export function installRouteGuards(router: Router) {
 		const requiresMusicEditorAuth =
 			to.path === "/music" &&
 			(to.query.editor === "artist-create" || to.query.editor === "album-edit");
-		const requiresAuth =
-			Boolean(to.meta.requiresAuth) || requiresMusicEditorAuth;
+		const requiresAuth = Boolean(to.meta.requiresAuth) || requiresMusicEditorAuth;
 		const hasValidSession =
 			authStore.validateSession() ||
 			(requiresAuth ? await authStore.restoreSession() : false);

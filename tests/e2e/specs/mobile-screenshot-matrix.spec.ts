@@ -2,8 +2,13 @@ import { test, expect } from "../fixtures/base";
 import { mobileScreenshotRoutes } from "../helpers/mobile-screenshot-routes";
 
 const listMeta = { page: 1, page_size: 100, total: 0, has_more: false };
-const coverDataURL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23007AFF'/%3E%3C/svg%3E";
-const user = { uuid: "mobile-test-user", username: "mobile-test", email: "mobile-test@example.com" };
+const coverDataURL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23007AFF'/%3E%3C/svg%3E";
+const user = {
+  uuid: "mobile-test-user",
+  username: "mobile-test",
+  email: "mobile-test@example.com",
+};
 
 function listResponse(data: unknown[] = []) {
   return { data, meta: { ...listMeta, total: data.length } };
@@ -11,23 +16,54 @@ function listResponse(data: unknown[] = []) {
 
 function detailResponse(pathname: string) {
   if (pathname.includes("/music/albums/")) {
-    return { id: "album-1", title: "测试专辑", cover_url: "", artists: [], songs: [] };
+    return {
+      id: "album-1",
+      title: "测试专辑",
+      cover_url: "",
+      artists: [],
+      songs: [],
+    };
   }
   if (pathname.includes("/music/artists/")) {
-    return { id: "artist-1", name: "测试艺人", image_url: "", albums: [], songs: [] };
+    return {
+      id: "artist-1",
+      name: "测试艺人",
+      image_url: "",
+      albums: [],
+      songs: [],
+    };
   }
   if (pathname.includes("/music/songs/")) {
     return {
-      song: { id: "song-1", title: "测试歌曲", audio_url: "", cover_url: coverDataURL, artists: [], album: null },
+      song: {
+        id: "song-1",
+        title: "测试歌曲",
+        audio_url: "",
+        cover_url: coverDataURL,
+        artists: [],
+        album: null,
+      },
       artists: [],
       playable: false,
     };
   }
   if (pathname.includes("/music/playlists/")) {
-    return { id: "playlist-1", name: "测试歌单", cover_url: "", song_count: 0, songs: [] };
+    return {
+      id: "playlist-1",
+      name: "测试歌单",
+      cover_url: "",
+      song_count: 0,
+      songs: [],
+    };
   }
   if (pathname.includes("/blog/channels")) {
-    return { id: "channel-1", name: "测试频道", slug: "demo", description: "", posts: [] };
+    return {
+      id: "channel-1",
+      name: "测试频道",
+      slug: "demo",
+      description: "",
+      posts: [],
+    };
   }
   if (pathname.includes("/blog/collections")) {
     return { id: "collection-1", name: "测试合集", description: "", posts: [] };
@@ -50,7 +86,13 @@ function detailResponse(pathname: string) {
     return { id: "post-1", title: "测试文章", content: "", user };
   }
   if (pathname.includes("/users/")) {
-    return { uuid: user.uuid, username: user.username, email: user.email, posts: [], channels: [] };
+    return {
+      uuid: user.uuid,
+      username: user.username,
+      email: user.email,
+      posts: [],
+      channels: [],
+    };
   }
   return {};
 }
@@ -77,41 +119,138 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
         },
       };
     } else if (pathname.endsWith("/music/playlists/public")) {
-      body = listResponse([{ id: "playlist-public", name: "公开歌单", kind: "user", cover_url: coverDataURL, song_count: 2 }]);
+      body = listResponse([
+        {
+          id: "playlist-public",
+          name: "公开歌单",
+          kind: "user",
+          cover_url: coverDataURL,
+          song_count: 2,
+        },
+      ]);
     } else if (pathname.endsWith("/music/playlists")) {
       body = listResponse([
-        { id: "playlist-own", name: "我的夜行歌单", kind: "user", cover_url: coverDataURL, song_count: 3 },
-        { id: "playlist-favorite", name: "最爱", kind: "favorite", cover_url: coverDataURL, song_count: 5 },
+        {
+          id: "playlist-own",
+          name: "我的夜行歌单",
+          kind: "user",
+          cover_url: coverDataURL,
+          song_count: 3,
+        },
+        {
+          id: "playlist-favorite",
+          name: "最爱",
+          kind: "favorite",
+          cover_url: coverDataURL,
+          song_count: 5,
+        },
       ]);
     } else if (pathname.endsWith("/music/bookmarks/playlists")) {
       body = listResponse([
-        { id: "bookmark-1", playlist_id: "playlist-saved", playlist: { id: "playlist-saved", name: "收藏歌单", kind: "user", cover_url: coverDataURL, song_count: 4 } },
+        {
+          id: "bookmark-1",
+          playlist_id: "playlist-saved",
+          playlist: {
+            id: "playlist-saved",
+            name: "收藏歌单",
+            kind: "user",
+            cover_url: coverDataURL,
+            song_count: 4,
+          },
+        },
       ]);
     } else if (pathname.endsWith("/music/bookmarks/albums")) {
-      body = listResponse([{ id: "album-bookmark-1", album_id: "album-1", album: { id: "album-1", title: "收藏专辑", cover_url: coverDataURL, artists: [] } }]);
+      body = listResponse([
+        {
+          id: "album-bookmark-1",
+          album_id: "album-1",
+          album: {
+            id: "album-1",
+            title: "收藏专辑",
+            cover_url: coverDataURL,
+            artists: [],
+          },
+        },
+      ]);
     } else if (pathname.endsWith("/music/bookmarks/artists")) {
-      body = listResponse([{ id: "artist-bookmark-1", artist_id: "artist-1", artist: { id: "artist-1", name: "收藏艺人", image_url: coverDataURL } }]);
+      body = listResponse([
+        {
+          id: "artist-bookmark-1",
+          artist_id: "artist-1",
+          artist: { id: "artist-1", name: "收藏艺人", image_url: coverDataURL },
+        },
+      ]);
     } else if (pathname.endsWith("/music/albums")) {
-      body = listResponse([{ id: "album-1", title: "测试专辑", cover_url: coverDataURL, artists: [], songs: [] }]);
+      body = listResponse([
+        {
+          id: "album-1",
+          title: "测试专辑",
+          cover_url: coverDataURL,
+          artists: [],
+          songs: [],
+        },
+      ]);
     } else if (pathname.endsWith("/music/artists")) {
-      body = listResponse([{ id: "artist-1", name: "测试艺人", image_url: coverDataURL, albums: [] }]);
+      body = listResponse([
+        {
+          id: "artist-1",
+          name: "测试艺人",
+          image_url: coverDataURL,
+          albums: [],
+        },
+      ]);
     } else if (pathname.endsWith("/music/songs")) {
-      body = listResponse([{ id: "song-1", title: "测试歌曲", audio_url: "", cover_url: coverDataURL, artists: [] }]);
+      body = listResponse([
+        {
+          id: "song-1",
+          title: "测试歌曲",
+          audio_url: "",
+          cover_url: coverDataURL,
+          artists: [],
+        },
+      ]);
     } else if (pathname.endsWith("/music/library")) {
-      body = requestURL.searchParams.get("kind") === "playlist"
-        ? listResponse([{ id: "bookmark-1", playlist_id: "playlist-saved", playlist: { id: "playlist-saved", name: "收藏歌单", kind: "user", cover_url: coverDataURL, song_count: 4 } }])
-        : listResponse();
+      body =
+        requestURL.searchParams.get("kind") === "playlist"
+          ? listResponse([
+              {
+                id: "bookmark-1",
+                playlist_id: "playlist-saved",
+                playlist: {
+                  id: "playlist-saved",
+                  name: "收藏歌单",
+                  kind: "user",
+                  cover_url: coverDataURL,
+                  song_count: 4,
+                },
+              },
+            ])
+          : listResponse();
     } else if (pathname.endsWith("/music/home")) {
-      body = { data: { personalized: false, recently_played: [], for_you: [] } };
+      body = {
+        data: { personalized: false, recently_played: [], for_you: [] },
+      };
     } else if (/\/music\/playlists\/[^/]+\/songs$/.test(pathname)) {
       body = listResponse();
-    } else if (pathname.includes("/blog/channels") && pathname.includes("/collections")) {
+    } else if (
+      pathname.includes("/blog/channels") &&
+      pathname.includes("/collections")
+    ) {
       body = listResponse();
-    } else if (/\/(music|blog)?\/?short-notes\//.test(pathname) || /\/(music|blog)\/(albums|artists|songs|playlists|channels|posts)\//.test(pathname)) {
+    } else if (
+      /\/(music|blog)?\/?short-notes\//.test(pathname) ||
+      /\/(music|blog)\/(albums|artists|songs|playlists|channels|posts)\//.test(
+        pathname,
+      )
+    ) {
       body = { data: detailResponse(pathname) };
     } else if (pathname.includes("/users/")) {
       body = { data: detailResponse(pathname) };
-    } else if (/\/(music|blog)\/(album|artist|song|playlist|channel|collection|post|users)\//.test(pathname)) {
+    } else if (
+      /\/(music|blog)\/(album|artist|song|playlist|channel|collection|post|users)\//.test(
+        pathname,
+      )
+    ) {
       body = { data: detailResponse(pathname) };
     }
 
@@ -124,14 +263,21 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
 }
 
 function routeSlug(pathname: string) {
-  return pathname.replace(/^\//, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "home";
+  return (
+    pathname
+      .replace(/^\//, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "home"
+  );
 }
 
 test.describe("Mobile route screenshot matrix", () => {
   test.describe.configure({ mode: "serial", timeout: 30_000 });
 
   for (const pathname of mobileScreenshotRoutes) {
-    test(`renders ${pathname} without mobile layout regressions`, async ({ page }, testInfo) => {
+    test(`renders ${pathname} without mobile layout regressions`, async ({
+      page,
+    }, testInfo) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await mockMobileApi(page);
       const runtimeErrors: string[] = [];
@@ -142,33 +288,57 @@ test.describe("Mobile route screenshot matrix", () => {
       });
       page.on("response", (response) => {
         const contentType = response.headers()["content-type"] || "";
-        if (response.request().resourceType() === "script" && (response.status() >= 400 || contentType.includes("text/html"))) {
-          failedScripts.push(`${response.status()} ${response.url()} ${contentType}`);
+        if (
+          response.request().resourceType() === "script" &&
+          (response.status() >= 400 || contentType.includes("text/html"))
+        ) {
+          failedScripts.push(
+            `${response.status()} ${response.url()} ${contentType}`,
+          );
         }
       });
 
       await page.goto(pathname, { waitUntil: "domcontentloaded" });
-      expect(new URL(page.url()).pathname, `${pathname} was redirected`).toBe(pathname);
+      expect(new URL(page.url()).pathname, `${pathname} was redirected`).toBe(
+        pathname,
+      );
       await expect(page.locator("html[data-atoman-app=mobile]")).toHaveCount(1);
       await expect(page.locator(".mobile-app-shell")).toBeVisible();
-      await expect(page.locator(".mobile-app-main")).not.toBeEmpty({ timeout: 10_000 });
+      await expect(page.locator(".mobile-app-main")).not.toBeEmpty({
+        timeout: 10_000,
+      });
 
       const layout = await page.evaluate(() => ({
         viewportWidth: window.innerWidth,
         scrollWidth: document.documentElement.scrollWidth,
         bodyHeight: document.body.scrollHeight,
       }));
-      expect(layout.scrollWidth, `${pathname} has horizontal overflow`).toBeLessThanOrEqual(layout.viewportWidth);
-      expect(layout.bodyHeight, `${pathname} rendered no document`).toBeGreaterThan(0);
+      expect(
+        layout.scrollWidth,
+        `${pathname} has horizontal overflow`,
+      ).toBeLessThanOrEqual(layout.viewportWidth);
+      expect(
+        layout.bodyHeight,
+        `${pathname} rendered no document`,
+      ).toBeGreaterThan(0);
       expect(failedScripts, `${pathname} loaded an invalid script`).toEqual([]);
       expect(runtimeErrors, `${pathname} emitted runtime errors`).toEqual([]);
 
       if (pathname === "/feed") {
-        const featuredTitle = page.getByRole("heading", { name: "精选文章", exact: true });
+        const featuredTitle = page.getByRole("heading", {
+          name: "精选文章",
+          exact: true,
+        });
         await expect(featuredTitle).toBeVisible();
         const titleBox = await featuredTitle.boundingBox();
-        expect(titleBox, `${pathname} featured title is missing`).not.toBeNull();
-        expect(titleBox!.height, `${pathname} featured title wrapped vertically`).toBeLessThanOrEqual(32);
+        expect(
+          titleBox,
+          `${pathname} featured title is missing`,
+        ).not.toBeNull();
+        expect(
+          titleBox!.height,
+          `${pathname} featured title wrapped vertically`,
+        ).toBeLessThanOrEqual(32);
       }
 
       const mobileContentSelectors: Record<string, string> = {
@@ -179,42 +349,92 @@ test.describe("Mobile route screenshot matrix", () => {
       };
       const contentSelector = mobileContentSelectors[pathname];
       if (contentSelector) {
-        const contentMetrics = await page.locator(contentSelector).evaluate((element) => {
-          const style = getComputedStyle(element);
-          return {
-            paddingLeft: Number.parseFloat(style.paddingLeft),
-            paddingRight: Number.parseFloat(style.paddingRight),
-          };
-        });
-        expect(contentMetrics.paddingLeft, `${pathname} content has no mobile inset`).toBeGreaterThanOrEqual(12);
-        expect(contentMetrics.paddingRight, `${pathname} content has no mobile inset`).toBeGreaterThanOrEqual(12);
+        const contentMetrics = await page
+          .locator(contentSelector)
+          .evaluate((element) => {
+            const style = getComputedStyle(element);
+            return {
+              paddingLeft: Number.parseFloat(style.paddingLeft),
+              paddingRight: Number.parseFloat(style.paddingRight),
+            };
+          });
+        expect(
+          contentMetrics.paddingLeft,
+          `${pathname} content has no mobile inset`,
+        ).toBeGreaterThanOrEqual(12);
+        expect(
+          contentMetrics.paddingRight,
+          `${pathname} content has no mobile inset`,
+        ).toBeGreaterThanOrEqual(12);
       }
 
-      await page.screenshot({ path: testInfo.outputPath(`mobile-${routeSlug(pathname)}.png`), fullPage: true });
+      await page.screenshot({
+        path: testInfo.outputPath(`mobile-${routeSlug(pathname)}.png`),
+        fullPage: true,
+      });
     });
   }
 
-  test("keeps playlist covers visible at the target mobile widths", async ({ page }, testInfo) => {
+  test("keeps playlist covers visible at the target mobile widths", async ({
+    page,
+  }, testInfo) => {
     await mockMobileApi(page);
     for (const width of [390, 393, 430]) {
-      await page.setViewportSize({ width, height: width === 430 ? 932 : width === 393 ? 852 : 844 });
+      await page.setViewportSize({
+        width,
+        height: width === 430 ? 932 : width === 393 ? 852 : 844,
+      });
       await page.goto("/music/playlists", { waitUntil: "domcontentloaded" });
-      await expect(page.locator('[data-testid="owned-playlist-card"] img')).toHaveCount(2);
-      await expect(page.locator('[data-testid="bookmarked-playlist-card"] img')).toHaveCount(1);
-      const loadedCovers = await page.locator('[data-testid="owned-playlist-card"] img').evaluateAll((images) => images.every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0));
-      expect(loadedCovers, `${width}px playlist covers did not load`).toBe(true);
-      await page.screenshot({ path: testInfo.outputPath(`mobile-playlists-${width}.png`), fullPage: true });
+      await expect(
+        page.locator('[data-testid="owned-playlist-card"] img'),
+      ).toHaveCount(2);
+      await expect(
+        page.locator('[data-testid="bookmarked-playlist-card"] img'),
+      ).toHaveCount(1);
+      const loadedCovers = await page
+        .locator('[data-testid="owned-playlist-card"] img')
+        .evaluateAll((images) =>
+          images.every(
+            (image) =>
+              image instanceof HTMLImageElement &&
+              image.complete &&
+              image.naturalWidth > 0,
+          ),
+        );
+      expect(loadedCovers, `${width}px playlist covers did not load`).toBe(
+        true,
+      );
+      await page.screenshot({
+        path: testInfo.outputPath(`mobile-playlists-${width}.png`),
+        fullPage: true,
+      });
     }
   });
 
-  test("renders playlist covers in the desktop library list", async ({ page }, testInfo) => {
+  test("renders playlist covers in the desktop library list", async ({
+    page,
+  }, testInfo) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await mockMobileApi(page);
     await page.goto("/music/bookmarks", { waitUntil: "domcontentloaded" });
     await page.getByRole("radio", { name: "歌单", exact: true }).click();
-    await expect(page.locator('[data-testid="library-playlist-card"] img')).toHaveCount(2);
-    const loadedCovers = await page.locator('[data-testid="library-playlist-card"] img').evaluateAll((images) => images.every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0));
+    await expect(
+      page.locator('[data-testid="library-playlist-card"] img'),
+    ).toHaveCount(2);
+    const loadedCovers = await page
+      .locator('[data-testid="library-playlist-card"] img')
+      .evaluateAll((images) =>
+        images.every(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
+      );
     expect(loadedCovers).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath("desktop-music-playlists.png"), fullPage: true });
+    await page.screenshot({
+      path: testInfo.outputPath("desktop-music-playlists.png"),
+      fullPage: true,
+    });
   });
 });

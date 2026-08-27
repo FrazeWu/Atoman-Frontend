@@ -9,7 +9,8 @@ describe("R2 CORS config", () => {
 		const config = JSON.parse(readFileSync(r2CorsPath, "utf8")) as {
 			rules?: Array<{ allowed?: { origins?: string[] } }>;
 		};
-		const origins = config.rules?.flatMap((rule) => rule.allowed?.origins || []) || [];
+		const origins =
+			config.rules?.flatMap((rule) => rule.allowed?.origins || []) || [];
 
 		expect(origins).toContain("http://localhost:5174");
 	});

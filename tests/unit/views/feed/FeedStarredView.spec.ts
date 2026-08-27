@@ -131,7 +131,8 @@ describe("FeedStarredView", () => {
 	});
 
 	it("plays a podcast from the starred article sheet", async () => {
-		vi.spyOn(globalThis, "fetch")
+		vi
+			.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(
 				new Response(
 					JSON.stringify({
@@ -206,7 +207,8 @@ describe("FeedStarredView", () => {
 	});
 
 	it("returns to the feed module root from the header action", async () => {
-		vi.spyOn(globalThis, "fetch")
+		vi
+			.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(
 				new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
 			)
@@ -250,7 +252,8 @@ describe("FeedStarredView", () => {
 	});
 
 	it("opens the first starred article through the route with adjacent items", async () => {
-		vi.spyOn(globalThis, "fetch")
+		vi
+			.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(
 				new Response(
 					JSON.stringify({
@@ -355,7 +358,8 @@ describe("FeedStarredView", () => {
 	});
 
 	it("marks an unread starred item as read when opening it", async () => {
-		vi.spyOn(globalThis, "fetch")
+		vi
+			.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(
 				new Response(
 					JSON.stringify({
@@ -420,7 +424,8 @@ describe("FeedStarredView", () => {
 	});
 
 	it("does not refresh subscriptions when marking a starred item read fails", async () => {
-		vi.spyOn(globalThis, "fetch")
+		vi
+			.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(
 				new Response(
 					JSON.stringify({
@@ -484,9 +489,11 @@ describe("FeedStarredView", () => {
 		expect(fetchSubscriptions).not.toHaveBeenCalled();
 	});
 	it("shows a load error instead of an empty state when starred items fail", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(JSON.stringify({ error: "failed" }), { status: 500 }),
-		);
+		vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(
+				new Response(JSON.stringify({ error: "failed" }), { status: 500 }),
+			);
 
 		const wrapper = mount(FeedStarredView, {
 			global: {
@@ -496,7 +503,7 @@ describe("FeedStarredView", () => {
 					},
 					PEmpty: {
 						props: ["title", "description"],
-						template: '<div>{{ title }} {{ description }}</div>',
+						template: "<div>{{ title }} {{ description }}</div>",
 					},
 					PContentCard: true,
 					PBadge: true,

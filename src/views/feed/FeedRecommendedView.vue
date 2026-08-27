@@ -271,7 +271,7 @@
               :summary-text="channelSummaryText(item)"
               :metadata-text="channelMetadataText(item)"
               :subscribe-busy="isChannelSubscribeBusy(item.id)"
-              :show-subscribe="authStore.isAuthenticated"
+              :show-subscribe="true"
               :show-previews="true"
               :show-meta="true"
               data-test="channel-card"
@@ -310,9 +310,17 @@
       :source="selectedChannelSource"
       :items="channelArticles"
       :loading="channelArticlesLoading"
+      :subscribe-busy="selectedChannelSubscribeBusy"
+      :show-subscribe="true"
       @close="closeChannelSheet"
       @open-article="openChannelArticleFromSheet"
       @subscribe="subscribeSelectedChannel"
+    />
+
+    <PToast
+      v-model="subscriptionToastVisible"
+      :message="subscriptionToastMessage"
+      :type="subscriptionToastType"
     />
   </div>
 </template>
@@ -332,6 +340,7 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PToast from '@/components/ui/PToast.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
@@ -559,6 +568,7 @@ const showChannelSheet = ref(false)
 const selectedChannelSource = ref<FeedArticleSource | null>(null)
 const channelArticles = ref<TimelineItem[]>([])
 const channelArticlesLoading = ref(false)
+const selectedChannelSubscribeBusy = ref(false)
 const channelArticleRequestId = ref(0)
 const showChannelArticleSheet = ref(false)
 const selectedChannelArticle = ref<TimelineItem | null>(null)
@@ -579,6 +589,10 @@ const showAddModal = ref(false)
 const addingSubscription = ref(false)
 const addSubscriptionError = ref('')
 const addSubscriptionResetKey = ref(0)
+const subscriptionToastVisible = ref(false)
+const subscriptionToastMessage = ref('')
+const subscriptionToastType = ref<'success' | 'error'>('success')
+const pendingSubscriptionRestored = ref(false)
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
   { label: '热门', value: 'hot' },
@@ -743,6 +757,7 @@ async function fetchRecommendations() {
     totalChannels.value = 0
   } finally {
     loading.value = false
+    restorePendingSubscriptionSource()
   }
 }
 
@@ -795,16 +810,72 @@ function isChannelSubscribeBusy(id: string) {
   return subscribingChannelIds.value.includes(id)
 }
 
+function subscriptionSourceId(item: RecommendationItem) {
+  return item.source_id || item.id
+}
+
+function sourceSubscriptionContext(source: RecommendationItem | FeedArticleSource) {
+  if ('type' in source) {
+    return {
+      id: source.id,
+      title: source.title,
+      type: source.type,
+      rssUrl: source.rssUrl,
+    }
+  }
+  return {
+    id: subscriptionSourceId(source),
+    title: source.title,
+    type: source.source_type === 'external_rss' ? 'external_rss' as const : 'internal_channel' as const,
+    rssUrl: source.rss_url,
+  }
+}
+
+function showSubscriptionFeedback(message: string, type: 'success' | 'error' = 'success') {
+  subscriptionToastMessage.value = message
+  subscriptionToastType.value = type
+  subscriptionToastVisible.value = true
+}
+
+function requireLoginForSubscription(source: RecommendationItem | FeedArticleSource) {
+  if (authStore.isAuthenticated) return true
+
+  const context = sourceSubscriptionContext(source)
+  const query = {
+    ...route.query,
+    subscribe_source_id: context.id,
+    subscribe_source_type: context.type,
+    subscribe_source_title: context.title,
+  } as Record<string, string | string[] | null | undefined>
+  if (context.rssUrl) query.subscribe_source_url = context.rssUrl
+  else delete query.subscribe_source_url
+
+  const returnPath = router.resolve({
+    path: route.path || '/feed',
+    query,
+    hash: route.hash,
+  }).fullPath
+  void router.push({ path: '/login', query: { redirect: returnPath } })
+  return false
+}
+
 async function subscribeRecommendedChannel(item: RecommendationItem) {
-  if (item.subscribed) return
+  if (item.subscribed || !requireLoginForSubscription(item)) return
   subscribingChannelIds.value.push(item.id)
   try {
     const success = item.source_type === 'external_rss'
       ? await feedStore.subscribeToRSS(item.rss_url || '', item.title)
       : await feedStore.subscribeToChannel(item.id)
-    if (success) item.subscribed = true
+    if (success) {
+      item.subscribed = true
+      if (item.source_type !== 'external_rss') await feedStore.fetchSubscriptions()
+      showSubscriptionFeedback('已订阅，可继续阅读')
+    } else {
+      showSubscriptionFeedback('订阅失败，请重试', 'error')
+    }
   } catch (error) {
     reportError(error, 'Failed to subscribe channel:')
+    showSubscriptionFeedback('订阅失败，请重试', 'error')
   } finally {
     subscribingChannelIds.value = subscribingChannelIds.value.filter((id) => id !== item.id)
   }
@@ -812,14 +883,59 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
 
 async function subscribeSelectedChannel() {
   const source = selectedChannelSource.value
-  if (!source || source.subscribed) return
-  if (source.type === 'external_rss') {
-    const success = await feedStore.subscribeToRSS(source.rssUrl || '', source.title)
-    if (success) source.subscribed = true
-    return
+  if (!source || source.subscribed || !requireLoginForSubscription(source)) return
+  selectedChannelSubscribeBusy.value = true
+  try {
+    let success: boolean
+    if (source.type === 'external_rss') {
+      success = await feedStore.subscribeToRSS(source.rssUrl || '', source.title)
+    } else {
+      success = await feedStore.subscribeToChannel(source.id)
+      if (success) await feedStore.fetchSubscriptions()
+    }
+    if (success) {
+      source.subscribed = true
+      showSubscriptionFeedback('已订阅，可继续阅读')
+    } else {
+      showSubscriptionFeedback('订阅失败，请重试', 'error')
+    }
+  } catch (error) {
+    reportError(error, 'Failed to subscribe source:')
+    showSubscriptionFeedback('订阅失败，请重试', 'error')
+  } finally {
+    selectedChannelSubscribeBusy.value = false
   }
-  const success = await feedStore.subscribeToChannel(source.id)
-  if (success) source.subscribed = true
+}
+
+function restorePendingSubscriptionSource() {
+  const sourceId = typeof route.query.subscribe_source_id === 'string'
+    ? route.query.subscribe_source_id
+    : ''
+  if (pendingSubscriptionRestored.value || !authStore.isAuthenticated || !sourceId) return
+
+  const item = channels.value.find((candidate) => subscriptionSourceId(candidate) === sourceId)
+  if (item) {
+    pendingSubscriptionRestored.value = true
+    openArticleSource(item)
+  } else {
+    const type = route.query.subscribe_source_type
+    const title = route.query.subscribe_source_title
+    if ((type !== 'internal_channel' && type !== 'external_rss') || typeof title !== 'string' || !title.trim()) return
+    pendingSubscriptionRestored.value = true
+    openSource({
+      id: sourceId,
+      title,
+      type,
+      rssUrl: typeof route.query.subscribe_source_url === 'string' ? route.query.subscribe_source_url : undefined,
+      subscribed: false,
+    })
+  }
+
+  const query = { ...route.query }
+  for (const key of ['subscribe_source_id', 'subscribe_source_type', 'subscribe_source_title', 'subscribe_source_url']) {
+    delete query[key]
+  }
+  void router.replace({ query })
 }
 
 // ── 交互事件处理 ──
@@ -831,20 +947,26 @@ function openArticle(item: RecommendationItem) {
   void router.push(`/feed/item/${encodeURIComponent(item.id)}`)
 }
 
-function openArticleSource(item: RecommendationItem) {
+function sourceFromRecommendation(item: RecommendationItem): FeedArticleSource {
   const isInternalChannel = item.source_type === 'internal_channel' || item.target_path?.startsWith('/channels/')
-  selectedChannelSource.value = {
-    id: item.source_id || item.id,
+  return {
+    id: subscriptionSourceId(item),
     title: item.source_title || item.title,
     rssUrl: item.rss_url,
     imageUrl: item.source_title ? undefined : item.image_url,
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
   }
+}
+
+function openSource(source: FeedArticleSource) {
+  selectedChannelSource.value = source
   showChannelSheet.value = true
-  if (selectedChannelSource.value) {
-    void fetchChannelArticles(selectedChannelSource.value)
-  }
+  void fetchChannelArticles(source)
+}
+
+function openArticleSource(item: RecommendationItem) {
+  openSource(sourceFromRecommendation(item))
 }
 
 function openRecommendedChannel(item: RecommendationItem) {

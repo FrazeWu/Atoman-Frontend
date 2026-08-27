@@ -51,6 +51,7 @@
             :disabled="source.subscribed || subscribeBusy"
             :loading="subscribeBusy"
             loading-text="处理中..."
+            data-test="feed-source-subscribe"
             @click="$emit('subscribe')"
           />
         </div>

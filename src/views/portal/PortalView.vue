@@ -302,7 +302,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type Component } from 'vue'
+import { computed, onMounted, ref, watch, type Component } from 'vue'
 import { BookOpen, Clock3, FileText, MessageCircle, Music2, Radio, RefreshCw, Rss, Sparkles, Video as VideoIcon } from 'lucide-vue-next'
 import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
@@ -318,6 +318,7 @@ import { useApi } from '@/composables/useApi'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
 
 interface PortalMusicArtist {
@@ -361,6 +362,11 @@ interface PortalHotResponse {
 const router = useRouter()
 const api = useApi()
 const siteAccessStore = useSiteAccessStore()
+const authStore = useAuthStore()
+
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) void router.replace('/feed')
+}, { immediate: true })
 
 const loading = ref(true)
 const spotlightLoading = ref(false)

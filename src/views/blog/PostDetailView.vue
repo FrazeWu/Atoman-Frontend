@@ -197,6 +197,7 @@ const shareToastVisible = ref(false)
 const shareToastMessage = ref('')
 const shareToastType = ref<'success' | 'warning'>('success')
 let loadSeq = 0
+let ratingOperationSeq = 0
 let bookmarkOperationSeq = 0
 let relatedRequestSequence = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
@@ -266,6 +267,7 @@ const renderedContent = computed(() => {
 const fetchPost = async () => {
   const requestedID = postId.value
   const seq = ++loadSeq
+  ratingOperationSeq += 1
   const isCurrentLoad = () => seq === loadSeq && requestedID === postId.value
   loading.value = true
   errorStatus.value = null
@@ -448,54 +450,78 @@ const toggleReadingList = async () => {
 
 const ratePost = async (score: number) => {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  const requestedPostID = post.value.id
+  const requestedLoadSeq = loadSeq
+  const requestOperationSeq = ++ratingOperationSeq
+  const isCurrentRequest = () => (
+    requestOperationSeq === ratingOperationSeq
+    && requestedLoadSeq === loadSeq
+    && requestedPostID === postId.value
+    && post.value?.id === requestedPostID
+  )
   ratingError.value = ''
   ratingLoading.value = true
   try {
-    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+    const res = await apiRequestResult(api.blog.postRating(requestedPostID), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ score }),
     })
+    if (!isCurrentRequest()) return
     if (!res.ok) {
       ratingError.value = '评分未保存，请重试'
       return
     }
     const payload = await Promise.resolve(res.data)
+    if (!isCurrentRequest()) return
     const summary = payload.data || payload
     post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
     post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
     post.value.viewer_rating = Number(summary.viewer_rating ?? score)
   } catch (error) {
+    if (!isCurrentRequest()) return
     reportError(error, 'Failed to rate blog post')
     ratingError.value = '评分未保存，请重试'
   } finally {
-    ratingLoading.value = false
+    if (isCurrentRequest()) ratingLoading.value = false
   }
 }
 
 const clearPostRating = async () => {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  const requestedPostID = post.value.id
+  const requestedLoadSeq = loadSeq
+  const requestOperationSeq = ++ratingOperationSeq
+  const isCurrentRequest = () => (
+    requestOperationSeq === ratingOperationSeq
+    && requestedLoadSeq === loadSeq
+    && requestedPostID === postId.value
+    && post.value?.id === requestedPostID
+  )
   ratingError.value = ''
   ratingLoading.value = true
   try {
-    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+    const res = await apiRequestResult(api.blog.postRating(requestedPostID), {
       method: 'DELETE',
       headers: authHeaders(),
     })
+    if (!isCurrentRequest()) return
     if (!res.ok) {
       ratingError.value = '评分未清除，请重试'
       return
     }
     const payload = await Promise.resolve(res.data)
+    if (!isCurrentRequest()) return
     const summary = payload.data || payload
     post.value.rating_score = Number(summary.rating_score ?? 0)
     post.value.rating_count = Number(summary.rating_count ?? 0)
     post.value.viewer_rating = undefined
   } catch (error) {
+    if (!isCurrentRequest()) return
     reportError(error, 'Failed to clear blog post rating')
     ratingError.value = '评分未清除，请重试'
   } finally {
-    ratingLoading.value = false
+    if (isCurrentRequest()) ratingLoading.value = false
   }
 }
 

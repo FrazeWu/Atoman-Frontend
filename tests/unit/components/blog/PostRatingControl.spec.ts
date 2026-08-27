@@ -73,6 +73,46 @@ describe("PostRatingControl.vue", () => {
     expect(wrapper.emitted("rate")![0]).toEqual([5]);
   });
 
+  it("clears the transient preview after submitting a rating", async () => {
+    const wrapper = mount(PostRatingControl, {
+      props: { viewerRating: 4 },
+    });
+    const rightHalves = wrapper.findAll(".post-rating__half--right");
+
+    await rightHalves[2].trigger("mouseenter");
+    expect(wrapper.find(".post-rating__dynamic-score").text()).toBe("3.0 星");
+
+    await rightHalves[2].trigger("click");
+
+    expect(wrapper.emitted("rate")).toEqual([[6]]);
+    expect(wrapper.find(".post-rating__dynamic-score").exists()).toBe(false);
+    expect(wrapper.get(".post-rating__mine").text()).toBe("我的评分 2.0 星");
+  });
+
+  it("clears the preview when keyboard focus leaves a half-star", async () => {
+    const wrapper = mount(PostRatingControl);
+    const leftHalves = wrapper.findAll(".post-rating__half--left");
+
+    await leftHalves[1].trigger("focus");
+    expect(wrapper.find(".post-rating__dynamic-score").text()).toBe("1.5 星");
+
+    await leftHalves[1].trigger("blur");
+
+    expect(wrapper.find(".post-rating__dynamic-score").exists()).toBe(false);
+  });
+
+  it("clears the slider preview when keyboard focus leaves it", async () => {
+    const wrapper = mount(PostRatingControl);
+    const slider = wrapper.get<HTMLInputElement>(".post-rating__slider input");
+
+    await slider.setValue("7");
+    expect(wrapper.get(".post-rating__slider output").text()).toBe("3.5 星");
+
+    await slider.trigger("blur");
+
+    expect(wrapper.get(".post-rating__slider output").text()).toBe("0.0 星");
+  });
+
   it("renders a clear control for an existing viewer rating", async () => {
     const wrapper = mount(PostRatingControl, {
       props: { viewerRating: 8 },

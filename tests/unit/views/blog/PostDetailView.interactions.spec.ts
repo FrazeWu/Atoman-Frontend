@@ -582,6 +582,47 @@ describe("PostDetailView shared interactions", () => {
 		).toBe(true);
 	});
 
+	it("切换文章后丢弃迟到的评分响应", async () => {
+		const delayedRating = deferred<Response>();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn((input, init) => {
+				const url = String(input);
+				if (
+					url.includes("/blog/posts/post-1/rating") &&
+					(init as RequestInit | undefined)?.method === "PUT"
+				) return delayedRating.promise;
+				if (url.includes("/blog/posts/post-1")) {
+					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
+				}
+				if (url.includes("/blog/posts/post-2")) {
+					return Promise.resolve(response({ data: postDetail("post-2", "文章 B") }));
+				}
+				return Promise.resolve(response({ data: [] }));
+			}),
+		);
+
+		const { wrapper, router } = await mountPostDetailWithRouter();
+		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');
+		const ratingAction = ratingButton.trigger("click");
+		await wrapper.vm.$nextTick();
+
+		await router.push("/posts/post/post-2");
+		await flushPromises();
+		expect(wrapper.vm.$.setupState.post.id).toBe("post-2");
+
+		delayedRating.resolve(
+			response({
+				data: { rating_score: 10, rating_count: 1, viewer_rating: 10 },
+			}),
+		);
+		await ratingAction;
+		await flushPromises();
+
+		expect(wrapper.vm.$.setupState.post.id).toBe("post-2");
+		expect(wrapper.vm.$.setupState.post).not.toHaveProperty("viewer_rating");
+	});
+
 	it("评分控件允许清除已有评分", async () => {
 		const wrapper = await mountPostDetail();
 		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');

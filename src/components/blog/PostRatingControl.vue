@@ -34,6 +34,7 @@
             :disabled="loading"
             @mouseenter="hoverScore = star * 2 - 1"
             @focus="hoverScore = star * 2 - 1"
+            @blur="hoverScore = null"
             @click="handleRate(star * 2 - 1, star)"
             @keydown="handleKeydown($event, star * 2 - 1)"
           />
@@ -44,6 +45,7 @@
             :disabled="loading"
             @mouseenter="hoverScore = star * 2"
             @focus="hoverScore = star * 2"
+            @blur="hoverScore = null"
             @click="handleRate(star * 2, star)"
             @keydown="handleKeydown($event, star * 2)"
           />
@@ -74,7 +76,8 @@
         :disabled="loading"
         aria-label="选择 0.5 至 5 星评分"
         @input="hoverScore = Number(($event.target as HTMLInputElement).value)"
-        @change="handleRate(Number(($event.target as HTMLInputElement).value), Math.ceil(Number(($event.target as HTMLInputElement).value) / 2))"
+        @change="handleRate(Number(($event.target as HTMLInputElement).value), Math.ceil(Number(($event.target as HTMLInputElement).value) / 2), true)"
+        @blur="hoverScore = null"
       >
       <output aria-live="polite">{{ formatStarScore(activeScore) }} 星</output>
     </label>
@@ -143,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Star, X } from 'lucide-vue-next'
 import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 
@@ -179,6 +182,10 @@ const emit = defineEmits<{
 const hoverScore = ref<number | null>(null)
 const lastRatedStar = ref<number | null>(null)
 
+watch(() => props.loading, (loading) => {
+  if (loading) hoverScore.value = null
+})
+
 const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? 0)
 
 const starIconSize = computed(() => props.size === 'sm' ? 18 : 22)
@@ -193,7 +200,8 @@ function fillWidth(star: number) {
   return Math.max(0, Math.min(1, (score - (star - 1) * 2) / 2)) * iconPixel
 }
 
-function handleRate(score: number, starIndex: number) {
+function handleRate(score: number, starIndex: number, keepPreview = false) {
+  if (!keepPreview) hoverScore.value = null
   lastRatedStar.value = starIndex
   setTimeout(() => {
     lastRatedStar.value = null
@@ -212,7 +220,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
         : key === 'ArrowLeft' || key === 'ArrowDown'
           ? Math.max(1, score - 1)
           : Math.min(10, score + 1)
-    emit('rate', nextScore)
+    handleRate(nextScore, Math.ceil(nextScore / 2))
   }
 }
 </script>

@@ -1192,11 +1192,11 @@ describe("MusicCreationFlowDrawer", () => {
 		wrapper.unmount();
 	});
 
-	it("提交成功后跳转到已有艺术家的详情页", async () => {
+	it("提交排队后返回已有艺术家的详情页", async () => {
 		commitMusicAlbumImportMock.mockResolvedValue({
 			importId: "import-1",
 			targetAlbumId: "album-1",
-			status: "committed",
+			status: "queued",
 		});
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "preview",
@@ -1219,7 +1219,7 @@ describe("MusicCreationFlowDrawer", () => {
 			.trigger("click");
 		await flushPromises();
 
-		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/album/album-1");
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-seeded");
 	});
 
 	it("提交时携带已上传的艺人头像和专辑封面", async () => {
@@ -1438,7 +1438,9 @@ describe("MusicCreationFlowDrawer", () => {
 			);
 			expect(completeMusicAlbumImportSessionMock).not.toHaveBeenCalled();
 			expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalled();
-			expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
+			expect(drawerMocks.routerPush).toHaveBeenCalledWith(
+				"/music/artist/artist-seeded",
+			);
 		},
 	);
 
@@ -1474,7 +1476,9 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(completeMusicAlbumImportSessionMock).toHaveBeenCalledWith(
 			"import-1",
 		);
-		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith(
+			"/music/artist/artist-seeded",
+		);
 	});
 
 	it("从已有艺术家进入时提交 artist_id 复用现有艺术家", async () => {

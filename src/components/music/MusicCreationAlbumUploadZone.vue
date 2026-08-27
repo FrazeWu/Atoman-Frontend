@@ -57,13 +57,6 @@ function handleReplacement(event: Event) {
   ;(event.target as HTMLInputElement).value = ''
 }
 
-const multiFileTotalProgress = computed(() => {
-  if (!albumImportDraft.value) return 0
-  const total = albumImportDraft.value.totalBytesTotal
-  if (total <= 0) return 0
-  return Math.round((albumImportDraft.value.totalBytesLoaded / total) * 100)
-})
-
 const isBackendProcessing = computed(() => {
   const status = albumImportDraft.value?.status
   return ['queued', 'extracting', 'analyzing', 'transcoding'].includes(status || '')
@@ -97,8 +90,11 @@ const stageLabelMap: Record<string, string> = {
 }
 
 function formatUploadSpeed(bytesPerSecond: number) {
-  if (bytesPerSecond <= 0) return '0 KB/s'
-  return `${Math.round(bytesPerSecond / 1024)} KB/s`
+  if (bytesPerSecond >= 1024 * 1024) {
+    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')}M`
+  }
+  if (bytesPerSecond >= 1024) return `${Math.round(bytesPerSecond / 1024)}K`
+  return `${Math.round(bytesPerSecond)}B`
 }
 </script>
 
@@ -223,6 +219,13 @@ function formatUploadSpeed(bytesPerSecond: number) {
       >
         <span class="import-file-name">{{ f.fileName }}</span>
         <span class="import-file-format">{{ f.detectedFormat }}</span>
+        <span
+          v-if="f.uploadStatus === 'uploading' && albumImportDraft.uploadSpeed > 0"
+          class="import-file-speed"
+          data-testid="album-import-speed"
+        >
+          {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
+        </span>
         <span class="import-file-progress">
           <template v-if="f.uploadStatus === 'uploaded' || f.uploadStatus === 'completing'">✓</template>
           <template v-else-if="f.uploadStatus === 'failed'">
@@ -271,14 +274,6 @@ function formatUploadSpeed(bytesPerSecond: number) {
       </li>
     </ul>
 
-    <p
-      v-if="albumImportDraft.status === 'uploading' && albumImportDraft.uploadSpeed > 0"
-      class="state-line"
-      data-testid="album-import-speed"
-    >
-      上传速度 {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
-    </p>
-
     <!-- Error -->
     <p v-if="processingErrorMessage" class="state-line state-line--error">
       {{ processingErrorMessage }}
@@ -300,13 +295,6 @@ function formatUploadSpeed(bytesPerSecond: number) {
     >
       取消上传
     </button>
-
-    <div v-if="albumImportDraft.totalBytesTotal > 0" class="progress-panel">
-      <p class="state-line">上传进度 {{ multiFileTotalProgress }}%</p>
-    </div>
-    <div v-else-if="albumImportDraft.uploadProgress > 0" class="progress-panel">
-      <p class="state-line">上传进度 {{ albumImportDraft.uploadProgress }}%</p>
-    </div>
 
     <!-- Backend processing stage banner -->
     <div v-if="isBackendProcessing" class="stage-banner">
@@ -346,7 +334,6 @@ function formatUploadSpeed(bytesPerSecond: number) {
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
-.progress-panel { display: grid; gap: 0.7rem; }
 .state-line {
   margin: 0;
   color: var(--a-color-muted);
@@ -469,6 +456,11 @@ function formatUploadSpeed(bytesPerSecond: number) {
   text-transform: uppercase;
   font-size: 0.7rem;
   font-weight: 800;
+}
+.import-file-speed {
+  color: var(--a-color-muted);
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
 }
 .import-file-progress {
   min-width: 3rem;

@@ -29,7 +29,13 @@ const uploadProgress = computed(() => {
   const loaded = albumImport.value?.totalBytesLoaded ?? 0
   return total > 0 ? Math.round((loaded / total) * 100) : 0
 })
-const uploadSpeed = computed(() => Math.round((albumImport.value?.uploadSpeed ?? 0) / 1024))
+function formatUploadSpeed(bytesPerSecond: number) {
+  if (bytesPerSecond >= 1024 * 1024) {
+    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')}M`
+  }
+  if (bytesPerSecond >= 1024) return `${Math.round(bytesPerSecond / 1024)}K`
+  return `${Math.round(bytesPerSecond)}B`
+}
 const stageLabels = {
   upload: '上传中',
   queued: '等待处理',
@@ -55,8 +61,18 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
   <section v-if="albumImport" class="album-preview-step" data-testid="album-import-preview-step">
     <section class="album-preview-step__status" data-testid="album-import-preview-status">
       <strong>{{ stageLabel }}</strong>
-      <span v-if="albumImport.totalBytesTotal > 0">上传进度 {{ uploadProgress }}%</span>
-      <span v-if="albumImport.totalBytesTotal > 0">{{ uploadSpeed }} KB/s</span>
+      <span
+        v-if="albumImport.totalBytesTotal > 0 && albumImport.uploadSpeed > 0"
+        data-testid="album-import-preview-speed"
+      >
+        {{ formatUploadSpeed(albumImport.uploadSpeed) }}
+      </span>
+      <span
+        v-if="albumImport.totalBytesTotal > 0"
+        data-testid="album-import-preview-progress"
+      >
+        上传进度 {{ uploadProgress }}%
+      </span>
     </section>
     <p v-if="albumImport.status !== 'ready'" class="album-preview-step__hint">
       已开启导入中心后台托管，直接提交即可，解包与格式提取将在后台自动完成。

@@ -581,7 +581,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		await vi.waitFor(() => {
 			expect(wrapper.get(".import-file-progress").text()).toBe("50%");
-			expect(wrapper.get(".progress-panel").text()).toContain("上传进度 50%");
+			expect(wrapper.find(".progress-panel").exists()).toBe(false);
 		});
 		expect(
 			useMusicDrawers().state.value.creationFlow?.draft.albumImport
@@ -657,13 +657,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(draft?.derivedTracks).toEqual([]);
 	});
 
-	it("上传有文件列表时仍显示当前上传速度", async () => {
+	it("上传有文件列表时以紧凑格式在进度左侧显示当前上传速度", async () => {
 		const drawers = useMusicDrawers();
 		if (!drawers.state.value.creationFlow)
 			throw new Error("creation flow missing");
 		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
 			status: "uploading",
-			uploadSpeed: 128 * 1024,
+			uploadSpeed: 3.3 * 1024 * 1024,
 			files: [
 				{
 					fileId: "file-1",
@@ -684,8 +684,10 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		const wrapper = mount(MusicCreationAlbumUploadZone);
 
-		expect(wrapper.get('[data-testid="album-import-speed"]').text()).toContain(
-			"上传速度 128 KB/s",
+		const speed = wrapper.get('[data-testid="album-import-speed"]');
+		expect(speed.text()).toBe("3.3M");
+		expect(speed.element.nextElementSibling).toBe(
+			wrapper.get(".import-file-progress").element,
 		);
 	});
 

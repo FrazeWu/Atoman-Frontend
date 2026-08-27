@@ -679,14 +679,12 @@ async function finishAutomaticallyCommittedImport(
   committed: Awaited<ReturnType<typeof musicApi.commitMusicAlbumImport>>,
 ) {
   if (committed.status !== 'committed' || flow.submitting) return
-  const albumId = committed.targetAlbumId?.trim()
-  const songId = committed.targetSongId?.trim()
   const artistId = committed.artistId?.trim() || flow.draft.artist.id?.trim()
   refreshArtist()
   refreshAlbum()
   refreshSong()
   closeCurrentCreationFlow()
-  await router.push(songId ? `/music/song/${songId}` : albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports')
+  await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
 }
 
 function flushImportAutosave() {
@@ -1154,15 +1152,11 @@ async function completeCreation() {
     }
     toastMessage.value = '已提交至导入中心，后台将继续处理'
     toastVisible.value = true
-    const albumId = committedImport.targetAlbumId?.trim()
-    const songId = committedImport.targetSongId?.trim()
     const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     refreshArtist()
     refreshSong()
     closeCurrentCreationFlow()
-    await router.push(committedImport.status === 'committed'
-      ? songId ? `/music/song/${songId}` : albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports'
-      : '/music/imports')
+    await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

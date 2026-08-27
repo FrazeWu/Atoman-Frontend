@@ -64,4 +64,24 @@ describe('MusicCreationAlbumPreviewStep.vue', () => {
 
     expect(wrapper.get('img[alt="专辑封面预览"]').attributes('src')).toBe('https://img.example/manual-cover.jpg')
   })
+  it('在上传进度左侧显示紧凑速度', () => {
+    const drawers = useMusicDrawers()
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    Object.assign(flow.draft.albumImport, {
+      status: 'uploading',
+      totalBytesLoaded: 5,
+      totalBytesTotal: 10,
+      uploadSpeed: 3.3 * 1024 * 1024,
+    })
+
+    const wrapper = mount(MusicCreationAlbumPreviewStep)
+    const speed = wrapper.get('[data-testid="album-import-preview-speed"]')
+
+    expect(speed.text()).toBe('3.3M')
+    expect(speed.element.nextElementSibling).toBe(
+      wrapper.get('[data-testid="album-import-preview-progress"]').element,
+    )
+  })
 })

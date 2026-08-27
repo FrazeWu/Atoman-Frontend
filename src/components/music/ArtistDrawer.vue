@@ -251,7 +251,13 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
       releaseMeta.value = response.meta
       albums.value = response.data
     } else {
-      const response = await listMusicSongs({ artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
+      const response = await listMusicSongs({
+        artist_id: targetArtistId,
+        release_type: 'single,leak',
+        sort: albumSortQuery(requestedSort),
+        page,
+        page_size: artistAlbumPageSize,
+      })
       if (!isCurrentLoad()) return
       releaseMeta.value = response.meta
       songs.value = response.data

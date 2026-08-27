@@ -229,7 +229,7 @@ describe("ArtistDrawer.vue", () => {
 		wrapper.unmount();
 	});
 
-	it("loads album tracks in the artist song list and keeps them playable", async () => {
+	it("仅加载独立发行的单曲和泄曲", async () => {
 		const wrapper = mount(ArtistDrawer);
 		await vi.dynamicImportSettled();
 		listMusicSongs.mockResolvedValueOnce({
@@ -250,43 +250,8 @@ describe("ArtistDrawer.vue", () => {
 					release_date: "0001-01-01T00:00:00Z",
 					entry_status: "open",
 				},
-				{
-					id: "song-5",
-					title: "Featured Album Track",
-					audio_url: "https://example.com/song-5.mp3",
-					duration_sec: 198,
-					release_date: "2026-01-01",
-					track_number: 3,
-					artists: [
-						{ id: "artist-1", name: "Ye" },
-						{ id: "artist-2", name: "Featured Artist" },
-					],
-					artist_credits: [
-						{
-							song_id: "song-5",
-							artist_id: "artist-1",
-							artist: { id: "artist-1", name: "Ye" },
-							role: "primary",
-							position: 1,
-						},
-						{
-							song_id: "song-5",
-							artist_id: "artist-2",
-							artist: { id: "artist-2", name: "Featured Artist" },
-							role: "featured",
-							position: 2,
-						},
-					],
-					album: {
-						id: "album-5",
-						title: "Featured Album",
-						cover_url: "https://example.com/album-5.jpg",
-						release_date: "2026-01-01",
-					},
-					entry_status: "open",
-				},
 			],
-			meta: { page: 1, page_size: 24, total: 3, has_more: false },
+			meta: { page: 1, page_size: 24, total: 2, has_more: false },
 		});
 
 		await wrapper
@@ -296,18 +261,15 @@ describe("ArtistDrawer.vue", () => {
 
 		expect(listMusicSongs).toHaveBeenLastCalledWith({
 			artist_id: "1",
+			release_type: "single,leak",
 			sort: "-release_date",
 			page: 1,
 			page_size: 24,
 		});
-		expect(wrapper.findAll(".artist-track")).toHaveLength(3);
+		expect(wrapper.findAll(".artist-track")).toHaveLength(2);
 		expect(wrapper.text()).toContain("New Single");
 		expect(wrapper.text()).toContain("Undated Leak");
-		expect(wrapper.text()).toContain("Featured Album Track");
-		expect(wrapper.text()).toContain("Ye feat. Featured Artist");
-		expect(wrapper.text()).toContain("收录于");
-		expect(wrapper.text()).toContain("Featured Album");
-		expect(wrapper.text()).toContain("专辑曲目");
+		expect(wrapper.text()).not.toContain("Featured Album Track");
 		expect(wrapper.text()).toContain("单曲");
 		expect(wrapper.text()).toContain("泄曲");
 		expect(wrapper.text()).toContain("2024/05/01");
@@ -323,10 +285,7 @@ describe("ArtistDrawer.vue", () => {
 			.get('[data-testid="artist-track-play-song-3"]')
 			.trigger("click");
 		expect(playerMocks.playAlbum).toHaveBeenCalledWith(
-			expect.arrayContaining([
-				expect.objectContaining({ id: "song-3", title: "New Single" }),
-				expect.objectContaining({ id: "song-5", title: "Featured Album Track", album: "Featured Album" }),
-			]),
+			[expect.objectContaining({ id: "song-3", title: "New Single" })],
 			0,
 		);
 
@@ -334,11 +293,6 @@ describe("ArtistDrawer.vue", () => {
 			.get('[data-testid="artist-track-title-song-3"]')
 			.trigger("click");
 		expect(musicDrawerMocks.openSong).toHaveBeenCalledWith("song-3");
-
-		await wrapper
-			.get('[data-testid="artist-track-album-song-5"]')
-			.trigger("click");
-		expect(musicDrawerMocks.openAlbum).toHaveBeenCalledWith("album-5");
 	});
 
 	it("requests only the selected release resource when switching tabs", async () => {

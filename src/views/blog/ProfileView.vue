@@ -171,38 +171,6 @@
               </button>
             </template>
           </div>
-
-          <!-- Website inline edit -->
-          <div class="profile-header__website-row">
-            <template v-if="isSelf && editingField === 'website'">
-              <input
-                v-model="editWebsite"
-                class="profile-header__inline-input"
-                type="url"
-                maxlength="200"
-                placeholder="https://example.com"
-                @keydown.enter.prevent="saveField('website')"
-                @keydown.escape="cancelEdit"
-              />
-              <PButton label="保存" size="sm" :loading="saving" loading-text="保存中..." @click="saveField('website')" />
-              <PButton label="取消" size="sm" variant="ghost" :disabled="saving" @click="cancelEdit" />
-            </template>
-            <template v-else>
-              <a v-if="profile.website" :href="profile.website" target="_blank" class="profile-header__website a-link">
-                <LinkIcon :size="13" />{{ profile.website }}
-              </a>
-              <button
-                v-if="isSelf"
-                class="profile-header__bio-edit-btn"
-                :aria-label="profile.website ? '编辑链接' : '添加链接'"
-                @click="startEdit('website')"
-              >
-                <template v-if="profile.website"><Pencil :size="13" /> 编辑链接</template>
-                <template v-else><Plus :size="13" /> 添加链接</template>
-              </button>
-            </template>
-          </div>
-          <p v-if="profile.location" class="profile-header__location">{{ profile.location }}</p>
         </div>
       </header>
 
@@ -278,7 +246,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Camera, LinkIcon, LoaderCircle, Pencil, Plus, Undo2 } from 'lucide-vue-next'
+import { Camera, LoaderCircle, Pencil, Plus, Undo2 } from 'lucide-vue-next'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -309,7 +277,7 @@ type ContentItem =
   | { type: 'post'; sortKey: string; data: Post }
   | { type: 'note'; sortKey: string; data: ShortNote }
 
-type EditableField = 'display_name' | 'bio' | 'website'
+type EditableField = 'display_name' | 'bio'
 
 const PAGE_SIZE = 20
 
@@ -367,7 +335,6 @@ let profileLoadSequence = 0
 const editingField = ref<EditableField | null>(null)
 const editDisplayName = ref('')
 const editBio = ref('')
-const editWebsite = ref('')
 const saving = ref(false)
 const uploadingAvatar = ref(false)
 const restoringAvatar = ref(false)
@@ -391,7 +358,6 @@ function startEdit(field: EditableField) {
   editingField.value = field
   if (field === 'display_name') editDisplayName.value = profile.value?.display_name || ''
   if (field === 'bio') editBio.value = profile.value?.bio || ''
-  if (field === 'website') editWebsite.value = profile.value?.website || ''
 }
 
 function cancelEdit() {
@@ -404,7 +370,6 @@ async function saveField(field: EditableField) {
   const body: Record<string, string> = {}
   if (field === 'display_name') body.display_name = editDisplayName.value.trim()
   if (field === 'bio') body.bio = editBio.value.trim()
-  if (field === 'website') body.website = editWebsite.value.trim()
   try {
     const res = await apiRequestResult(api.users.settings, {
       method: 'PUT',
@@ -847,8 +812,7 @@ onMounted(() => { void loadProfilePage() })
   font-weight: 600;
 }
 
-.profile-header__bio-row,
-.profile-header__website-row {
+.profile-header__bio-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -861,19 +825,6 @@ onMounted(() => { void loadProfilePage() })
   color: var(--a-color-text-secondary);
   font-size: 0.9rem;
   line-height: 1.55;
-}
-
-.profile-header__website {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.85rem;
-}
-
-.profile-header__location {
-  margin: 0 0 0.35rem;
-  color: var(--a-color-text-secondary);
-  font-size: 0.85rem;
 }
 
 .profile-header__bio-edit-btn {

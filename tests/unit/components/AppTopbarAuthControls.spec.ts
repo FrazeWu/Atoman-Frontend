@@ -104,6 +104,7 @@ describe("AppTopbarAuthControls", () => {
 
 		await wrapper.find(".user-btn").trigger("click");
 
+		expect(wrapper.find(".dropdown-wrap").classes()).toContain("is-open");
 		expect(wrapper.text()).toContain("alice");
 		expect(
 			wrapper.find('[data-testid="notification-link"]').attributes("href"),

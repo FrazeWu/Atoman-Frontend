@@ -20,7 +20,7 @@
     <span>创作</span>
   </RouterLink>
 
-  <div class="dropdown-wrap" data-dropdown="user">
+  <div class="dropdown-wrap" :class="{ 'is-open': activeDropdown === 'user' }" data-dropdown="user">
     <button class="user-btn" @click="toggleDropdown('user')">
       <span class="user-avatar">
         <img v-if="avatarSrc" :src="avatarSrc" :alt="`${authStore.user?.username || '用户'}的头像`" />
@@ -201,6 +201,22 @@ const logout = async () => {
   position: relative;
 }
 
+.dropdown-wrap::after {
+  content: '';
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  width: 100%;
+  height: 2px;
+  background: var(--a-color-fg);
+  z-index: var(--a-z-global-menu);
+}
+
+.dropdown-wrap.is-open::after {
+  display: block;
+}
+
 .user-btn {
   display: flex;
   align-items: center;
@@ -216,6 +232,7 @@ const logout = async () => {
   flex-shrink: 0;
 }
 
+.dropdown-wrap.is-open .user-btn,
 .user-btn:hover {
   background: var(--a-color-surface-muted);
 }
@@ -251,10 +268,9 @@ const logout = async () => {
 .dropdown {
   position: absolute;
   left: 0;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   background: var(--a-color-bg);
   border: none;
-  border-top: 2px solid var(--a-color-fg);
   border-radius: var(--a-radius-none);
   box-shadow: var(--a-shadow-dropdown);
   z-index: var(--a-z-global-menu);
@@ -281,37 +297,44 @@ const logout = async () => {
 }
 
 .dropdown-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  text-align: left;
-  padding: 0.5rem 0.75rem 0.5rem 3.25rem;
+  text-align: center;
+  padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--a-color-fg);
   text-decoration: none;
   background: none;
-  border: none;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  border: 1px solid transparent;
+  border-bottom-color: var(--a-color-border-soft);
   cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dropdown-item:last-child {
   border-bottom: none;
 }
 
-.dropdown-item:hover {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
+.dropdown-item:hover,
+.dropdown-item:focus-visible {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
   text-decoration: none;
+  outline: none;
 }
 
 .dropdown-item-danger {
   color: var(--a-color-danger);
 }
 
-.dropdown-item-danger:hover {
-  background: var(--a-color-danger);
-  color: var(--a-color-bg);
+.dropdown-item-danger:hover,
+.dropdown-item-danger:focus-visible {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-danger);
   text-decoration: none;
 }
 

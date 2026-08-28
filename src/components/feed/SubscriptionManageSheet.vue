@@ -44,12 +44,6 @@
                 :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
                 @click="syncAllSubscriptions"
               />
-              <PButton
-                variant="secondary"
-                :label="healthChecking ? '检查中...' : '全部检查'"
-                :disabled="busy || healthChecking || !subscriptions.length"
-                @click="checkAllSubscriptionsHealth"
-              />
             </div>
           </div>
         </div>
@@ -193,6 +187,9 @@
                   <p v-if="sub.feed_source?.last_fetched_at" class="sync-meta a-muted">
                     最近更新 {{ formatCheckedAt(sub.feed_source.last_fetched_at) }}
                   </p>
+                  <p v-if="sub.feed_source?.fetch_last_success_at" class="sync-meta a-muted">
+                    最近成功 {{ formatCheckedAt(sub.feed_source.fetch_last_success_at) }}
+                  </p>
                   <p
                     v-if="subscriptionSyncResults?.[sub.id]"
                     class="sync-result"
@@ -200,15 +197,24 @@
                   >
                     {{ syncResultLabel(subscriptionSyncResults[sub.id]!) }}
                   </p>
-                  <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
+                  <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`" role="status" aria-live="polite">
                     <span class="health-dot" aria-hidden="true"></span>
                     <span>{{ subscriptionHealthLabel(sub) }}</span>
                     <span v-if="sub.last_checked" class="a-muted">
                       {{ formatCheckedAt(sub.last_checked) }}
                     </span>
                   </div>
-                  <p v-if="sub.error_message" class="health-error">
-                    {{ sub.error_message }}
+                  <p v-if="sourceFetchDiagnostic(sub)" class="fetch-diagnostic a-muted">
+                    {{ sourceFetchDiagnostic(sub) }}
+                  </p>
+                  <p v-if="sub.feed_source?.fetch_next_at" class="fetch-diagnostic a-muted">
+                    下次重试 {{ formatCheckedAt(sub.feed_source.fetch_next_at) }}
+                  </p>
+                  <p v-if="subscriptionErrorMessage(sub)" class="health-error">
+                    {{ subscriptionErrorMessage(sub) }}
+                  </p>
+                  <p v-if="sourceRecoveryAdvice(sub)" class="health-recovery">
+                    {{ sourceRecoveryAdvice(sub) }}
                   </p>
                   <div class="subscription-flags">
                     <label>
@@ -261,15 +267,9 @@
                     v-if="sub.feed_source?.source_type === 'external_rss'"
                     data-test="sync-subscription"
                     variant="secondary"
-                    :label="syncingSubscriptionIds?.has(sub.id) ? '刷新中...' : '刷新'"
+                    :label="syncingSubscriptionIds?.has(sub.id) ? '刷新中...' : syncSubscriptionActionLabel(sub)"
                     :disabled="busy || Boolean(sub.is_paused) || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
                     @click="syncSubscription(sub.id)"
-                  />
-                  <PButton
-                    variant="secondary"
-                    label="检查"
-                    :disabled="busy || healthChecking"
-                    @click="checkSubscriptionHealth(sub.id)"
                   />
                   <PButton variant="secondary" label="删除" :disabled="busy" @click="requestDelete('subscription', sub.id)" />
                 </div>
@@ -725,15 +725,64 @@ const confirmDelete = () => {
   }
 }
 
-const subscriptionHealthStatus = (sub: Subscription) => sub.health_status || 'healthy'
+const subscriptionHealthStatus = (sub: Subscription) => {
+  const fetchStatus = sub.feed_source?.fetch_status
+  if (fetchStatus === 'blocked') return 'error'
+  if (fetchStatus === 'warning' || fetchStatus === 'fetching') return 'warning'
+  if (fetchStatus === 'healthy') return 'healthy'
+  if (sub.feed_source?.health_status === 'error') return 'error'
+  return sub.health_status || 'healthy'
+}
 
 const subscriptionHealthLabel = (sub: Subscription) => {
+  const fetchStatus = sub.feed_source?.fetch_status
+  if (fetchStatus === 'blocked') return '暂时受限'
+  if (fetchStatus === 'warning') return '等待重试'
+  if (fetchStatus === 'fetching') return '正在刷新'
   const labels: Record<string, string> = {
     healthy: '正常',
     warning: '警告',
     error: '异常',
   }
   return labels[subscriptionHealthStatus(sub)] || '未知'
+}
+
+const sourceFetchDiagnostic = (sub: Subscription) => {
+  const source = sub.feed_source
+  if (!source?.fetch_last_error_code && !source?.fetch_http_status && !source?.fetch_consecutive_failures) return ''
+  const details: string[] = []
+  if (source.fetch_http_status) details.push(`HTTP ${source.fetch_http_status}`)
+  else if (source.fetch_last_error_code) details.push(source.fetch_last_error_code)
+  if (source.fetch_consecutive_failures) details.push(`连续失败 ${source.fetch_consecutive_failures} 次`)
+  return details.join(' · ')
+}
+
+const subscriptionErrorMessage = (sub: Subscription) =>
+  sub.feed_source?.fetch_last_error || sub.error_message || ''
+
+const sourceRecoveryAdvice = (sub: Subscription) => {
+  switch (sub.feed_source?.fetch_last_error_code) {
+    case 'http_401':
+    case 'http_403':
+      return '来源拒绝访问，请确认地址是否需要登录或已失效。'
+    case 'http_429':
+      return '来源暂时限制请求，系统会自动重试。'
+    case 'ssrf_blocked':
+      return '该地址无法从服务端访问，请更新来源地址。'
+    case 'parse_failed':
+      return '返回内容无法识别为订阅，请更新来源地址。'
+    case 'http_status':
+      return '来源返回异常状态，请稍后重试或更新来源地址。'
+    case 'request_failed':
+      return '暂时无法连接来源，系统会自动重试。'
+    default:
+      return ''
+  }
+}
+
+const syncSubscriptionActionLabel = (sub: Subscription) => {
+  const status = subscriptionHealthStatus(sub)
+  return status === 'warning' || status === 'error' ? '重试' : '刷新'
 }
 
 const formatCheckedAt = (value: string) => {
@@ -1198,10 +1247,23 @@ watch(() => props.filterRules, (rules) => {
   background: #b91c1c;
 }
 
-.health-error {
+.health-error,
+.health-recovery {
   margin: 0.5rem 0 0;
   font-size: 0.75rem;
+}
+
+.fetch-diagnostic {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+}
+
+.health-error {
   color: #b91c1c;
+}
+
+.health-recovery {
+  color: var(--a-color-muted);
 }
 
 .subscription-flags {

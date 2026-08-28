@@ -703,7 +703,15 @@ export interface FeedSource {
 	pending_count?: number;
 	success_rate?: number;
 	cover_url?: string;
+	health_status?: "healthy" | "error";
 	last_fetched_at?: string;
+	fetch_status?: "idle" | "fetching" | "healthy" | "warning" | "blocked";
+	fetch_http_status?: number;
+	fetch_last_success_at?: string;
+	fetch_next_at?: string;
+	fetch_consecutive_failures?: number;
+	fetch_last_error_code?: string;
+	fetch_last_error?: string;
 	last_success_at?: string;
 	last_failure_at?: string;
 	last_error_code?: string;

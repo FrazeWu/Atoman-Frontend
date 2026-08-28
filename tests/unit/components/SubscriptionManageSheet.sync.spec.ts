@@ -32,6 +32,13 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
           title: 'External Feed',
           rss_url: 'https://example.com/feed.xml',
           last_fetched_at: '2026-07-20T02:00:00Z',
+          fetch_status: 'blocked',
+          fetch_http_status: 429,
+          fetch_last_success_at: '2026-07-20T01:30:00Z',
+          fetch_next_at: '2026-07-20T04:00:00Z',
+          fetch_consecutive_failures: 2,
+          fetch_last_error_code: 'http_429',
+          fetch_last_error: 'feed returned HTTP 429',
           created_at: '2026-07-20T00:00:00Z',
         },
         created_at: '2026-07-20T00:00:00Z',
@@ -91,6 +98,19 @@ describe('SubscriptionManageSheet sync controls', () => {
     await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
     expect(wrapper.text()).toContain('最近更新')
     expect(wrapper.text()).toContain('新增 3 篇')
+  })
+
+  it('shows source retry diagnostics and makes recovery the only source action', async () => {
+    const wrapper = mountSheet()
+    await wrapper.get('[data-test="subscription-manage-tab-sources"]').trigger('click')
+
+    expect(wrapper.text()).toContain('暂时受限')
+    expect(wrapper.text()).toContain('HTTP 429')
+    expect(wrapper.text()).toContain('连续失败 2 次')
+    expect(wrapper.text()).toContain('下次重试')
+    expect(wrapper.text()).toContain('来源暂时限制请求，系统会自动重试。')
+    expect(wrapper.get('button[data-test="sync-subscription"]').text()).toBe('重试')
+    expect(wrapper.findAll('button').some(button => button.text() === '检查')).toBe(false)
   })
 
   it('disables refresh-all while one source is refreshing', async () => {

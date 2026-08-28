@@ -102,7 +102,7 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.text()).not.toContain("https://example.com/feed.xml");
 	});
 
-	it("shows subscription health details and emits health check actions", async () => {
+	it("shows subscription health details without duplicate check actions", async () => {
 		const wrapper = mountSheet();
 		await wrapper
 			.get('[data-test="subscription-manage-tab-sources"]')
@@ -111,18 +111,8 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.text()).toContain("异常");
 		expect(wrapper.text()).toContain("HTTP 500");
 		expect(wrapper.text()).toContain("2026-06-17 16:30");
-
-		await wrapper
-			.findAll("button")
-			.find((button) => button.text() === "全部检查")!
-			.trigger("click");
-		await wrapper
-			.findAll("button")
-			.find((button) => button.text() === "检查")!
-			.trigger("click");
-
-		expect(wrapper.emitted("check-all-subscriptions-health")).toEqual([[]]);
-		expect(wrapper.emitted("check-subscription-health")).toEqual([["sub-1"]]);
+		expect(wrapper.get('[data-test="sync-subscription"]').text()).toBe("重试");
+		expect(wrapper.findAll("button").some((button) => button.text() === "检查")).toBe(false);
 	});
 
 	it("emits subscription flag updates from source cards", async () => {

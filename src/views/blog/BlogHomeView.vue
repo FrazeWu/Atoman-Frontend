@@ -187,6 +187,7 @@ interface BlogHomeListItem {
   cover_url?: string
   created_at?: string
   view_count?: number
+  read_count?: number
   rating_score?: number
   rating_count?: number
   bookmarks_count?: number
@@ -273,6 +274,7 @@ const recordedImpressions = new Set<string>()
 
 const recordPostImpressions = (items: BlogHomeListItem[]) => {
   for (const item of items) {
+    if (item.source !== 'post') continue
     const key = `${recommendationMode.value}:${item.id}`
     if (recordedImpressions.has(key)) continue
     recordedImpressions.add(key)
@@ -473,13 +475,16 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
       const rawData = d.data || []
       const extractedPosts = rawData.map((item): BlogHomeListItem | null => {
         if (!item?.id) return null
+        const targetPath = item.target_path || `/posts/post/${item.id}`
+        const source = targetPath.startsWith('/posts/post/') ? 'post' : 'feed'
         return {
           id: item.id,
           title: item.title,
           summary: item.summary?.trim() || item.description?.trim() || item.excerpt?.trim() || undefined,
           cover_url: item.image_url,
           created_at: item.published_at || item.created_at,
-          view_count: item.view_count ?? item.read_count ?? 0,
+          view_count: item.view_count ?? 0,
+          read_count: item.read_count ?? 0,
           rating_score: item.rating_score ?? 0,
           rating_count: item.rating_count ?? 0,
           bookmarks_count: item.bookmarks_count ?? item.bookmark_count ?? 0,
@@ -487,8 +492,8 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
           comments_count: item.comments_count ?? 0,
           user: item.user,
           channel: item.channel,
-          source: 'post',
-          targetPath: item.target_path || `/posts/post/${item.id}`,
+          source,
+          targetPath,
         }
       }).filter((item): item is BlogHomeListItem => item !== null)
 

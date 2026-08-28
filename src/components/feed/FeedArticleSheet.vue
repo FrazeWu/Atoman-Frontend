@@ -82,7 +82,7 @@
           v-if="!feedCoverFailed"
           :src="feedCoverUrl"
           :alt="article.feed_item.title"
-          @error="feedCoverFailed = true"
+          @error="handleFeedCoverError"
         />
         <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
       </div>
@@ -246,6 +246,7 @@ const api = useApi()
 const feedStore = useFeedStore()
 const ratingLoading = ref(false)
 const feedCoverFailed = ref(false)
+const feedCoverCandidateIndex = ref(0)
 const commentsOpen = ref(false)
 const commentCount = ref<number | undefined>(undefined)
 type FeedContentMode = 'rss' | 'full_text'
@@ -263,15 +264,29 @@ const postInReadingList = computed(() => {
   const post = props.article?.type === 'post' ? props.article.post : null
   return Boolean(post?.id && feedStore.readingListItemIds.has(post.id))
 })
-const feedCoverUrl = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  const rawURL = props.article.feed_item.image_url || props.article.feed_item.feed_source?.cover_url || ''
-  return rawURL ? resolveMediaURL(rawURL) : ''
+const feedCoverCandidates = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return []
+  const item = props.article.feed_item
+  return [...new Set([
+    item.image_url,
+    item.feed_source?.cover_url,
+  ].map((url) => url ? resolveMediaURL(url) : '').filter(Boolean))]
 })
+
+const feedCoverUrl = computed(() => feedCoverCandidates.value[feedCoverCandidateIndex.value] || '')
+
+const handleFeedCoverError = () => {
+  if (feedCoverCandidateIndex.value + 1 < feedCoverCandidates.value.length) {
+    feedCoverCandidateIndex.value += 1
+    return
+  }
+  feedCoverFailed.value = true
+}
 
 
 watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant], () => {
   feedCoverFailed.value = false
+  feedCoverCandidateIndex.value = 0
   commentsOpen.value = false
   commentCount.value = undefined
   feedContentMode.value = defaultFeedContentMode(props.reader)

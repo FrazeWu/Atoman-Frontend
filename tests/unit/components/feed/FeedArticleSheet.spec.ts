@@ -44,6 +44,51 @@ describe("FeedArticleSheet", () => {
 		consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 	});
 
+	it("tries the source cover after the article image fails", async () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "feed-item-cover-fallback-1",
+						feed_source_id: "source-cover-fallback-1",
+						guid: "guid-cover-fallback-1",
+						title: "头图回退文章",
+						link: "https://example.com/article",
+						image_url: "https://cdn.example.com/missing-cover.jpg",
+						feed_source: {
+							id: "source-cover-fallback-1",
+							title: "示例来源",
+							cover_url: "https://cdn.example.com/source-cover.jpg",
+						},
+						summary: "摘要",
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				} as any,
+			},
+			global: {
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+					PBadge: true,
+				},
+			},
+		});
+
+		const image = wrapper.get(".article-cover img");
+		expect(image.attributes("src")).toBe("https://cdn.example.com/missing-cover.jpg");
+		await image.trigger("error");
+		await wrapper.vm.$nextTick();
+
+		expect(wrapper.get(".article-cover img").attributes("src")).toBe(
+			"https://cdn.example.com/source-cover.jpg",
+		);
+		expect(wrapper.find(".article-cover--fallback").exists()).toBe(false);
+	});
+
 	afterEach(() => {
 		for (const wrapper of mountedWrappers) wrapper.unmount();
 		mountedWrappers.clear();

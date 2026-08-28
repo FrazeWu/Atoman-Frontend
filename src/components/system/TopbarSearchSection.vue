@@ -37,6 +37,7 @@
 import { computed } from 'vue'
 import {
   FileText,
+  BookOpen,
   Rss,
   Music,
   Disc,
@@ -69,6 +70,7 @@ const sectionIcons: Record<GlobalSearchSectionType, LucideIcon> = {
   debate: Flame,
   feed: Rss,
   music: Music,
+  books: BookOpen,
   podcast: Mic,
   video: Video,
   timeline: Calendar,

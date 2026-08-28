@@ -29,7 +29,21 @@
       </PSidebarItem>
     </template>
 
-    <!-- 3. MUSIC MODULE SIDEBAR -->
+    <!-- 3. BOOKS MODULE SIDEBAR -->
+    <template v-else-if="currentModule === 'books'">
+      <PSidebarItem
+        v-for="(item, index) in booksNavItems"
+        :key="item.to"
+        :to="item.to"
+        :index="index + 1"
+        :icon="item.icon"
+        :exact="item.exact"
+      >
+        {{ item.label }}
+      </PSidebarItem>
+    </template>
+
+    <!-- 4. MUSIC MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'music'">
       <PSidebarItem
         v-for="(item, index) in musicNavItems"
@@ -197,6 +211,7 @@ import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Disc3, Users, History,
   MessageSquare, Folder, Archive, BookOpen, Clock, Mic,
+  Library, Search, Upload, ClipboardCheck,
   LayoutDashboard, FileText, Mic2, Settings2, Video
 } from 'lucide-vue-next'
 
@@ -245,6 +260,7 @@ const currentModule = computed(() => {
   if (!route || !route.path) return 'feed'
   const path = route.path
   if (path.startsWith('/posts')) return 'blog'
+  if (path.startsWith('/books')) return 'books'
   if (path.startsWith('/music')) return 'music'
   if (path.startsWith('/forum')) return 'forum'
   if (path.startsWith('/debate')) return 'debate'
@@ -326,7 +342,16 @@ const blogNavItems = [
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },
 ]
 
-// 4. Music Navigation Items
+// 4. Books Navigation Items
+const booksNavItems: { to: string; label: string; icon: Component; exact?: boolean }[] = [
+  { to: moduleUrl('books'), label: '发现', icon: Compass, exact: true },
+  { to: modulePathUrl('books', '/search'), label: '搜索', icon: Search },
+  { to: modulePathUrl('books', '/library'), label: '我的书库', icon: Library },
+  { to: modulePathUrl('books', '/contributions'), label: '贡献', icon: Upload },
+  { to: modulePathUrl('books', '/review'), label: '审核', icon: ClipboardCheck },
+]
+
+// 5. Music Navigation Items
 const musicNavItems: { to: string; label: string; icon: Component; exact?: boolean }[] = [
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass },
   { to: modulePathUrl('music', '/albums'), label: '专辑', icon: Disc3 },

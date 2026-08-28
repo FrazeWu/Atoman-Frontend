@@ -1,6 +1,7 @@
 import type { Component } from "vue";
 import {
 	Bookmark,
+	BookOpen,
 	Compass,
 	Folder,
 	Heart,
@@ -56,6 +57,12 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 		["subscriptions", "订阅", "/subscriptions", Rss],
 		["bookmarks", "收藏", "/bookmarks", Bookmark],
 	]),
+	books: tabs("books", [
+		["discover", "发现", "/", Compass],
+		["search", "搜索", "/search", Search],
+		["library", "书库", "/library", BookOpen],
+		["contributions", "贡献", "/contributions", UserRound],
+	]),
 	music: tabs("music", [
 		["discover", "发现", "/discover", Compass],
 		["search", "搜索", "/songs", Search],
@@ -96,6 +103,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 const MORE_ITEMS: MobileMoreItem[] = [
 	{ module: "feed", label: "订阅", href: moduleUrl("feed"), icon: Rss },
 	{ module: "blog", label: "博客", href: moduleUrl("blog"), icon: Compass },
+	{ module: "books", label: "读书", href: moduleUrl("books"), icon: BookOpen },
 	{ module: "music", label: "音乐", href: moduleUrl("music"), icon: Radio },
 	{
 		module: "forum",

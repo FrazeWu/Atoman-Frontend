@@ -132,6 +132,56 @@ describe("BlogHomeView", () => {
     expect(wrapper.text()).toContain("来自推荐接口的文章摘要");
   });
 
+  it("preserves external feed item type and read count in the discovery stream", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/blog/recommend/posts")) {
+          return recommendationResponse([
+            {
+              id: "feed-item-1",
+              title: "External Feed Item",
+              summary: "Subscription article",
+              read_count: 34,
+              target_path: "/feed/item/feed-item-1",
+            },
+          ]);
+        }
+        return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      });
+
+    const wrapper = mount(BlogHomeView, {
+      global: {
+        stubs: {
+          PAvatar: true,
+          PBadge: true,
+          PButton: { template: "<button><slot /></button>" },
+          PEmpty: true,
+          PPageHeader: true,
+          PSegmentedControl: segmentedControlStub,
+          BlogItemCard: {
+            props: ["item", "type"],
+            template:
+              '<button data-test="card-probe" :data-type="type" :data-read-count="String(item.read_count ?? \'\')" @click="$emit(\'click\')" />',
+          },
+        },
+      },
+    });
+    await flushPromises();
+
+    const card = wrapper.get('[data-test="card-probe"]');
+    expect(card.attributes("data-type")).toBe("feed_item");
+    expect(card.attributes("data-read-count")).toBe("34");
+    await card.trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith("/feed/item/feed-item-1");
+    expect(openPost).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).not.toContain(
+      "/api/v1/content/events",
+    );
+  });
+
   it("keeps the heat recommendation filter without duplicate latest/popular filters", async () => {
     const wrapper = mountBlogHome();
     await flushPromises();

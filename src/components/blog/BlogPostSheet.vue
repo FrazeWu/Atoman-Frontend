@@ -14,6 +14,7 @@ import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
+import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useFeedStore } from '@/stores/feed'
 import type { Post } from '@/types'
 import type { BlogPostLayer } from '@/components/blog/blogSheetTypes'
@@ -31,6 +32,7 @@ const api = useApi()
 const authStore = useAuthStore()
 const router = useRouter()
 const sheets = useBlogSheets()
+const lifecycle = useContentLifecycle()
 const { renderMarkdown } = useMarkdownRenderer()
 
 const post = ref<Post | null>(null)
@@ -65,7 +67,14 @@ async function loadPost() {
     if (!res.ok) throw new Error('load failed')
     const payload = await Promise.resolve(res.data)
     if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
-    post.value = payload.data || payload
+    const loadedPost = (payload.data || payload) as Post
+    post.value = loadedPost
+    void lifecycle.recordEvent({
+      module: 'blog',
+      content_id: loadedPost.id,
+      event: 'open',
+      source: 'blog_sheet',
+    }).catch(() => undefined)
     void loadRelatedPosts(requestedPostId)
     if (authStore.isAuthenticated && post.value?.channel_id) {
       const nextSubscribed = await feedStore.isSubscribedToChannel(post.value.channel_id)

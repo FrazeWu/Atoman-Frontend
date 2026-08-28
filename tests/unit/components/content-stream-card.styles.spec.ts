@@ -14,15 +14,14 @@ const portalSource = readFileSync(
   "utf8",
 );
 
-const contentStreamRule = contentCardSource.match(
-  /\.p-entry\.content-stream-entry \{[\s\S]*?\n\}/,
-)?.[0] ?? "";
-const shortNoteRule = shortNoteCardSource.match(
-  /\.sticky-memo-card \{[\s\S]*?\n\}/,
-)?.[0] ?? "";
-const portalStreamRule = portalSource.match(
-  /\.feed-timeline-box \{[\s\S]*?\n\}/,
-)?.[0] ?? "";
+const contentStreamRule =
+  contentCardSource.match(
+    /\.p-entry\.content-stream-entry \{[\s\S]*?\n\}/,
+  )?.[0] ?? "";
+const shortNoteRule =
+  shortNoteCardSource.match(/\.sticky-memo-card \{[\s\S]*?\n\}/)?.[0] ?? "";
+const portalStreamRule =
+  portalSource.match(/\.feed-timeline-box \{[\s\S]*?\n\}/)?.[0] ?? "";
 
 describe("content stream card styles", () => {
   it("uses single top and bottom separators for article and feed entries", () => {
@@ -33,6 +32,12 @@ describe("content stream card styles", () => {
     expect(contentStreamRule).not.toMatch(/border-(right|left):/);
     expect(contentCardSource).toContain(
       ".p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {\n  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);",
+    );
+  });
+
+  it("uses the same compact avatar-to-content gap as short-note headers", () => {
+    expect(contentCardSource).toContain(
+      ".p-entry.content-stream-entry .p-entry__body {\n  gap: 0.35rem;",
     );
   });
 

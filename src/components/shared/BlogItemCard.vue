@@ -109,7 +109,7 @@
           @toggle-star="emit('toggle-star')"
         />
 
-        <slot v-if="sourceTitle" name="source-action" />
+        <slot name="source-action" />
 
         <a
           v-if="cardType === 'feed_item' && feedItem?.link"

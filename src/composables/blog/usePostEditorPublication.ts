@@ -20,6 +20,8 @@ interface PostEditorPublicationOptions {
 	contentSource: Ref<PostEditorContentSource>;
 	contentReady: Ref<boolean>;
 	loadedPostUpdatedAt: Ref<number>;
+	loadedPostUpdatedAtRaw: Ref<string>;
+	hasPostConflict: Ref<boolean>;
 	saving: Ref<SaveTarget | null>;
 	savedPostId: Ref<string | null>;
 	markdownImportID: Ref<string | null>;
@@ -35,6 +37,18 @@ interface PostEditorPublicationOptions {
 	allowNextRouteLeave: () => void;
 }
 
+type PostSaveFailure = {
+	error?: { code?: string; message?: string } | string;
+	code?: string;
+};
+
+const postSaveErrorCode = (value: PostSaveFailure) => {
+	if (value.error && typeof value.error === "object") {
+		return value.error.code;
+	}
+	return value.code;
+};
+
 const toLocalDatetimeValue = (value: string) => {
 	const date = new Date(value);
 	if (!Number.isFinite(date.getTime())) return "";
@@ -48,6 +62,8 @@ export function usePostEditorPublication({
 	contentSource,
 	contentReady,
 	loadedPostUpdatedAt,
+	loadedPostUpdatedAtRaw,
+	hasPostConflict,
 	saving,
 	savedPostId,
 	markdownImportID,
@@ -97,6 +113,8 @@ export function usePostEditorPublication({
 				? toLocalDatetimeValue(post.scheduled_at)
 				: "";
 			loadedPostUpdatedAt.value = parseDraftTimestamp(post.updated_at);
+			loadedPostUpdatedAtRaw.value = typeof post.updated_at === "string" ? post.updated_at : "";
+			hasPostConflict.value = false;
 			contentSource.value = "manual";
 			const contentChannelId = post.channel_id;
 			if (contentChannelId && studio.currentChannel?.id !== contentChannelId) {
@@ -146,6 +164,7 @@ export function usePostEditorPublication({
 		}
 
 		error.value = "";
+		hasPostConflict.value = false;
 		saving.value = status;
 		const payload = { ...form.value, status };
 		try {
@@ -162,11 +181,19 @@ export function usePostEditorPublication({
 						...payload,
 						channel_id: currentChannelId.value,
 						collection_id: primaryCollectionId.value || undefined,
+						base_updated_at: isEdit.value
+							? loadedPostUpdatedAtRaw.value || undefined
+							: undefined,
 					}),
 				},
 			);
 			if (!response.ok) {
-				const responseError = response.data;
+				const responseError = response.data as PostSaveFailure;
+				if (postSaveErrorCode(responseError) === "blog.post_conflict") {
+					hasPostConflict.value = true;
+					error.value = "文章已在其他会话更新。请刷新文章后再保存。";
+					return null;
+				}
 				error.value = referencePublishErrorMessage(
 					responseError,
 					typeof responseError.error === "string"
@@ -178,6 +205,8 @@ export function usePostEditorPublication({
 
 			const data = response.data;
 			const savedPost = data.data || data;
+			loadedPostUpdatedAt.value = parseDraftTimestamp(savedPost.updated_at);
+			loadedPostUpdatedAtRaw.value = typeof savedPost.updated_at === "string" ? savedPost.updated_at : "";
 			savedPostId.value = String(savedPost.id);
 			if (!isEdit.value && markdownImportID.value) {
 				const confirmResponse = await apiRequestResult(

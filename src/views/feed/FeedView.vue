@@ -43,6 +43,8 @@
       :syncing-subscription-ids="feedStore.syncingSubscriptionIds"
       :syncing-all-subscriptions="feedStore.syncingAllSubscriptions"
       :subscription-sync-results="feedStore.subscriptionSyncResults"
+      :subscription-diagnostics="subscriptionDiagnostics"
+      :loading-subscription-diagnostic-ids="loadingSubscriptionDiagnosticIds"
       :error="manageError"
       :message="manageMessage"
       :opml-import-result="opmlImportResult"
@@ -58,6 +60,7 @@
       @check-all-subscriptions-health="checkAllSubscriptionsHealth"
       @sync-subscription="syncSubscription"
       @sync-all-subscriptions="syncAllSubscriptions"
+      @load-subscription-diagnostics="loadSubscriptionDiagnostics"
       @import-opml="importOPML"
       @retry-opml-failure="retryOPMLFailure"
       @export-opml="exportOPML"
@@ -485,6 +488,8 @@ const {
   onboardingActionError,
   onboardingFailedIds,
   onboardingMessage,
+  subscriptionDiagnostics,
+  loadingSubscriptionDiagnosticIds,
   closeAddModal,
   toggleAddModal,
   openManageSheet,
@@ -498,6 +503,7 @@ const {
   deleteSubscription,
   renameGroup,
   deleteGroup,
+  loadSubscriptionDiagnostics,
   checkSubscriptionHealth,
   checkAllSubscriptionsHealth,
   syncSubscription,

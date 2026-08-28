@@ -127,6 +127,14 @@
           />
         </div>
 
+        <div v-if="externalSubscriptions.length" class="health-overview" role="status" aria-live="polite">
+          <span class="health-overview-title">来源健康概览</span>
+          <span class="health-overview-item">正常 {{ sourceHealthSummary.healthy }}</span>
+          <span class="health-overview-item">等待重试 {{ sourceHealthSummary.retrying }}</span>
+          <span class="health-overview-item">暂时受限 {{ sourceHealthSummary.blocked }}</span>
+          <span class="health-overview-item">异常 {{ sourceHealthSummary.failing }}</span>
+        </div>
+
         <div v-if="subscriptions.length" class="batch-toolbar">
           <label class="batch-select-all">
             <input type="checkbox" :checked="allVisibleSelected" :disabled="busy || !visibleSubscriptionIds.length" @change="toggleAllVisible" />
@@ -216,6 +224,22 @@
                   <p v-if="sourceRecoveryAdvice(sub)" class="health-recovery">
                     {{ sourceRecoveryAdvice(sub) }}
                   </p>
+                  <PButton
+                    v-if="sub.feed_source?.source_type === 'external_rss'"
+                    data-test="load-subscription-diagnostics"
+                    variant="secondary"
+                    :label="isSubscriptionDiagnosticsLoading(sub.id) ? '加载记录...' : isSubscriptionDiagnosticsExpanded(sub.id) ? '收起记录' : '近期记录'"
+                    :disabled="busy || isSubscriptionDiagnosticsLoading(sub.id)"
+                    @click="toggleSubscriptionDiagnostics(sub.id)"
+                  />
+                  <ul v-if="isSubscriptionDiagnosticsExpanded(sub.id) && !isSubscriptionDiagnosticsLoading(sub.id)" class="diagnostic-history" aria-live="polite">
+                    <li v-if="subscriptionDiagnosticsFor(sub.id).length" v-for="diagnostic in subscriptionDiagnosticsFor(sub.id)" :key="diagnostic.id">
+                      <span class="diagnostic-kind">{{ diagnosticKindLabel(diagnostic.kind) }}</span>
+                      <span>{{ diagnostic.message }}</span>
+                      <span class="a-muted">{{ formatCheckedAt(diagnostic.created_at) }}</span>
+                    </li>
+                    <li v-else class="a-muted">暂无近期抓取记录。</li>
+                  </ul>
                   <div class="subscription-flags">
                     <label>
                       <input
@@ -365,6 +389,7 @@
 import { computed, ref, watch } from 'vue'
 import type {
   ApplySubscriptionRulesSummary,
+  FeedSourceDiagnostic,
   FeedSubscriptionRule,
   Subscription,
   SubscriptionGroup,
@@ -394,6 +419,8 @@ const props = defineProps<{
   syncingSubscriptionIds?: Set<string>
   syncingAllSubscriptions?: boolean
   subscriptionSyncResults?: Record<string, SubscriptionSyncResult>
+  subscriptionDiagnostics?: Record<string, FeedSourceDiagnostic[]>
+  loadingSubscriptionDiagnosticIds?: Set<string>
   error?: string
   message?: string
   opmlImportResult?: FeedOPMLImportResult | null
@@ -412,6 +439,7 @@ const emit = defineEmits<{
   (e: 'check-all-subscriptions-health'): void
   (e: 'sync-subscription', id: string): void
   (e: 'sync-all-subscriptions'): void
+  (e: 'load-subscription-diagnostics', id: string): void
   (e: 'import-opml', file: File): void
   (e: 'retry-opml-failure', failure: { url: string; title?: string; group?: string }): void
   (e: 'export-opml'): void
@@ -439,6 +467,7 @@ const sourceSearch = ref('')
 const healthFilter = ref('')
 const batchGroupId = ref('')
 const selectedSubscriptionIds = ref(new Set<string>())
+const expandedSubscriptionDiagnosticIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
@@ -516,6 +545,18 @@ const allVisibleSelected = computed(() => visibleSubscriptionIds.value.length > 
 const externalSubscriptions = computed(() => props.subscriptions.filter(
   (subscription) => subscription.feed_source?.source_type === 'external_rss',
 ))
+
+const sourceHealthSummary = computed(() => {
+  const summary = { healthy: 0, retrying: 0, blocked: 0, failing: 0 }
+  for (const subscription of externalSubscriptions.value) {
+    const fetchStatus = subscription.feed_source?.fetch_status
+    if (fetchStatus === 'blocked') summary.blocked += 1
+    else if (fetchStatus === 'warning' || fetchStatus === 'fetching') summary.retrying += 1
+    else if (subscriptionHealthStatus(subscription) === 'error') summary.failing += 1
+    else summary.healthy += 1
+  }
+  return summary
+})
 
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
@@ -779,6 +820,27 @@ const sourceRecoveryAdvice = (sub: Subscription) => {
       return ''
   }
 }
+
+const hasSubscriptionDiagnostics = (id: string) => Object.prototype.hasOwnProperty.call(props.subscriptionDiagnostics || {}, id)
+
+const subscriptionDiagnosticsFor = (id: string) => props.subscriptionDiagnostics?.[id] || []
+
+const isSubscriptionDiagnosticsExpanded = (id: string) => expandedSubscriptionDiagnosticIds.value.has(id)
+
+const isSubscriptionDiagnosticsLoading = (id: string) => props.loadingSubscriptionDiagnosticIds?.has(id) || false
+
+const toggleSubscriptionDiagnostics = (id: string) => {
+  const next = new Set(expandedSubscriptionDiagnosticIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+    if (!hasSubscriptionDiagnostics(id)) emit('load-subscription-diagnostics', id)
+  }
+  expandedSubscriptionDiagnosticIds.value = next
+}
+
+const diagnosticKindLabel = (kind: FeedSourceDiagnostic['kind']) => kind === 'rss_fetch_recovered' ? '已恢复' : '抓取失败'
 
 const syncSubscriptionActionLabel = (sub: Subscription) => {
   const status = subscriptionHealthStatus(sub)
@@ -1164,6 +1226,25 @@ watch(() => props.filterRules, (rules) => {
   gap: 0.75rem;
 }
 
+.health-overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 0;
+  border-block: 1px solid var(--a-color-border-soft);
+  font-size: 0.75rem;
+}
+
+.health-overview-title {
+  color: var(--a-color-text);
+  font-weight: 600;
+}
+
+.health-overview-item {
+  color: var(--a-color-muted);
+}
+
 .batch-toolbar {
   display: flex;
   align-items: center;
@@ -1264,6 +1345,28 @@ watch(() => props.filterRules, (rules) => {
 
 .health-recovery {
   color: var(--a-color-muted);
+}
+
+.diagnostic-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+}
+
+.diagnostic-history li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.diagnostic-kind {
+  color: var(--a-color-text);
+  font-weight: 500;
 }
 
 .subscription-flags {

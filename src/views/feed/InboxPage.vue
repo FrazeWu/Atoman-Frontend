@@ -297,7 +297,7 @@ const notificationTargetPath = (notification: Notification): RouteLocationRaw | 
   if (notification.source_url) {
     return notification.source_url
   }
-  if (notification.type === 'site_announcement') {
+  if (notification.type === 'site_announcement' || notification.type === 'feed_source_health') {
     const path = notification.meta.path
     if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) return path
   }

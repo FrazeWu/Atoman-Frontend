@@ -1,12 +1,16 @@
+import { apiRequestResult } from "@/api/client";
+import { useApi } from "@/composables/useApi";
 import { ref, watch, type Ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useFeedStore, type FeedOPMLImportResult } from "@/stores/feed";
+import { reportError } from "@/utils/logger";
 import {
 	useOnboardingStore,
 	type OnboardingFeedRecommendation,
 } from "@/stores/onboarding";
 import type {
 	AutoAddSubscriptionPayload,
+	FeedSourceDiagnostic,
 	FeedSubscriptionRuleMatchType,
 } from "@/types";
 
@@ -36,6 +40,7 @@ export function useFeedSubscriptionManager({
 	const feedStore = useFeedStore();
 	const onboardingStore = useOnboardingStore();
 	const authStore = useAuthStore();
+	const api = useApi();
 
 	const addingSubscription = ref(false);
 	const showAddModal = ref(false);
@@ -50,9 +55,20 @@ export function useFeedSubscriptionManager({
 	const onboardingActionError = ref("");
 	const onboardingFailedIds = ref<string[]>([]);
 	const onboardingMessage = ref("");
+	const subscriptionDiagnostics = ref<Record<string, FeedSourceDiagnostic[]>>(
+		{},
+	);
+	const loadingSubscriptionDiagnosticIds = ref<Set<string>>(new Set());
+	let diagnosticsSessionGeneration = 0;
 
 	watch(showManageSheet, (visible) => {
-		if (!visible || !authStore.isAuthenticated) return;
+		if (!visible) {
+			diagnosticsSessionGeneration += 1;
+			subscriptionDiagnostics.value = {};
+			loadingSubscriptionDiagnosticIds.value = new Set();
+			return;
+		}
+		if (!authStore.isAuthenticated) return;
 		void Promise.all([
 			feedStore.fetchSubscriptions(),
 			feedStore.fetchFilterPreferences(),
@@ -117,10 +133,7 @@ export function useFeedSubscriptionManager({
 		try {
 			const results = await Promise.all(
 				recommendations.map((recommendation) =>
-					feedStore.subscribeToRSS(
-						recommendation.rss_url,
-						recommendation.title,
-					),
+					feedStore.subscribeToRSS(recommendation.rss_url, recommendation.title),
 				),
 			);
 			const successCount = results.filter(Boolean).length;
@@ -174,10 +187,7 @@ export function useFeedSubscriptionManager({
 				setManageError("创建失败");
 				return;
 			}
-			await Promise.all([
-				feedStore.fetchGroups(),
-				feedStore.fetchSubscriptions(),
-			]);
+			await Promise.all([feedStore.fetchGroups(), feedStore.fetchSubscriptions()]);
 			await refreshTimeline();
 		});
 	};
@@ -257,6 +267,58 @@ export function useFeedSubscriptionManager({
 			currentPage.value = 1;
 			await refreshTimeline();
 		});
+	};
+
+	const loadSubscriptionDiagnostics = async (subscriptionID: string) => {
+		if (
+			!authStore.isAuthenticated ||
+			loadingSubscriptionDiagnosticIds.value.has(subscriptionID)
+		)
+			return;
+		const sessionGeneration = diagnosticsSessionGeneration;
+		const token = authStore.token;
+		loadingSubscriptionDiagnosticIds.value = new Set(
+			loadingSubscriptionDiagnosticIds.value,
+		).add(subscriptionID);
+		try {
+			const response = await apiRequestResult(
+				`${api.url}/feed/subscriptions/${subscriptionID}/diagnostics`,
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				},
+			);
+			if (
+				sessionGeneration !== diagnosticsSessionGeneration ||
+				token !== authStore.token
+			)
+				return;
+			if (!response.ok) {
+				manageError.value = "无法加载近期抓取记录";
+				return;
+			}
+			const payload = response.data as { data?: FeedSourceDiagnostic[] };
+			subscriptionDiagnostics.value = {
+				...subscriptionDiagnostics.value,
+				[subscriptionID]: payload.data || [],
+			};
+		} catch (error) {
+			reportError(error);
+			if (
+				sessionGeneration === diagnosticsSessionGeneration &&
+				token === authStore.token
+			) {
+				manageError.value = "无法加载近期抓取记录";
+			}
+		} finally {
+			if (
+				sessionGeneration === diagnosticsSessionGeneration &&
+				token === authStore.token
+			) {
+				const next = new Set(loadingSubscriptionDiagnosticIds.value);
+				next.delete(subscriptionID);
+				loadingSubscriptionDiagnosticIds.value = next;
+			}
+		}
 	};
 
 	const checkSubscriptionHealth = async (id: string) => {
@@ -485,9 +547,7 @@ export function useFeedSubscriptionManager({
 	};
 
 	const moveSubscriptionRuleUp = async (id: string) => {
-		const index = feedStore.subscriptionRules.findIndex(
-			(rule) => rule.id === id,
-		);
+		const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id);
 		if (index <= 0) return;
 		const next = [...feedStore.subscriptionRules];
 		const [target] = next.splice(index, 1);
@@ -496,9 +556,7 @@ export function useFeedSubscriptionManager({
 	};
 
 	const moveSubscriptionRuleDown = async (id: string) => {
-		const index = feedStore.subscriptionRules.findIndex(
-			(rule) => rule.id === id,
-		);
+		const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id);
 		if (index < 0 || index >= feedStore.subscriptionRules.length - 1) return;
 		const next = [...feedStore.subscriptionRules];
 		const [target] = next.splice(index, 1);
@@ -566,6 +624,8 @@ export function useFeedSubscriptionManager({
 		onboardingActionError,
 		onboardingFailedIds,
 		onboardingMessage,
+		subscriptionDiagnostics,
+		loadingSubscriptionDiagnosticIds,
 		closeAddModal,
 		toggleAddModal,
 		openManageSheet,
@@ -579,6 +639,7 @@ export function useFeedSubscriptionManager({
 		deleteSubscription,
 		renameGroup,
 		deleteGroup,
+		loadSubscriptionDiagnostics,
 		checkSubscriptionHealth,
 		checkAllSubscriptionsHealth,
 		syncSubscription,

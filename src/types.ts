@@ -343,7 +343,7 @@ export interface StudioGoalAction {
 	id: string;
 	goal_id: string;
 	title: string;
-	status: 'pending' | 'completed';
+	status: "pending" | "completed";
 	due_date?: string;
 	content_id?: string;
 	content_module?: StudioModule;
@@ -377,7 +377,7 @@ export interface StudioGoalCycle {
 	start_date: string;
 	end_date: string;
 	timezone: string;
-	status: 'planned' | 'active' | 'needs_review' | 'reviewed';
+	status: "planned" | "active" | "needs_review" | "reviewed";
 	needs_review: boolean;
 	goals: StudioGoal[];
 	review?: StudioGoalReview;
@@ -720,6 +720,17 @@ export interface FeedSource {
 	last_sync_error?: string;
 	last_sync_failed_at?: string;
 	consecutive_sync_failures?: number;
+	created_at: string;
+}
+
+export interface FeedSourceDiagnostic {
+	id: string;
+	feed_source_id: string;
+	kind: "rss_fetch_failure" | "rss_fetch_recovered";
+	error_code?: string;
+	message: string;
+	attempt_count: number;
+	recovered_at?: string;
 	created_at: string;
 }
 

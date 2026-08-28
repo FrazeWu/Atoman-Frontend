@@ -14,15 +14,14 @@ const portalSource = readFileSync(
   "utf8",
 );
 
-const contentStreamRule = contentCardSource.match(
-  /\.p-entry\.content-stream-entry \{[\s\S]*?\n\}/,
-)?.[0] ?? "";
-const shortNoteRule = shortNoteCardSource.match(
-  /\.sticky-memo-card \{[\s\S]*?\n\}/,
-)?.[0] ?? "";
-const portalStreamRule = portalSource.match(
-  /\.feed-timeline-box \{[\s\S]*?\n\}/,
-)?.[0] ?? "";
+const contentStreamRule =
+  contentCardSource.match(
+    /\.p-entry\.content-stream-entry \{[\s\S]*?\n\}/,
+  )?.[0] ?? "";
+const shortNoteRule =
+  shortNoteCardSource.match(/\.sticky-memo-card \{[\s\S]*?\n\}/)?.[0] ?? "";
+const portalStreamRule =
+  portalSource.match(/\.feed-timeline-box \{[\s\S]*?\n\}/)?.[0] ?? "";
 
 describe("content stream card styles", () => {
   it("uses single top and bottom separators for article and feed entries", () => {

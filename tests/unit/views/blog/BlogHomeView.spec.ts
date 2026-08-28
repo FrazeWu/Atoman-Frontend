@@ -99,6 +99,26 @@ describe('BlogHomeView', () => {
     expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20')
   })
 
+  it('preserves recommendation excerpts in the discovery stream', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/blog/recommend/posts')) {
+        return recommendationResponse([{
+          id: 'post-with-excerpt',
+          title: '文章标题',
+          excerpt: '来自推荐接口的文章摘要',
+          created_at: '2026-07-06T00:00:00Z',
+        }])
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    const wrapper = mountBlogHome()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('来自推荐接口的文章摘要')
+  })
+
   it('keeps the heat recommendation filter without duplicate latest/popular filters', async () => {
     const wrapper = mountBlogHome()
     await flushPromises()

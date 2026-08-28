@@ -100,6 +100,10 @@ defineEmits(['click'])
   overflow: visible;
 }
 
+.p-entry.content-stream-entry .p-entry__body {
+  gap: 0.35rem;
+}
+
 .p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
 }

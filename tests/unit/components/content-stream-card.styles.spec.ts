@@ -36,6 +36,12 @@ describe("content stream card styles", () => {
     );
   });
 
+  it("uses the same compact avatar-to-content gap as short-note headers", () => {
+    expect(contentCardSource).toContain(
+      ".p-entry.content-stream-entry .p-entry__body {\n  gap: 0.35rem;",
+    );
+  });
+
   it("uses single top and bottom separators for short notes", () => {
     expect(shortNoteRule).toContain("border: 0;");
     expect(shortNoteRule).toContain(

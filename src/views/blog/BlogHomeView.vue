@@ -208,6 +208,7 @@ interface RecommendationPayload {
   title: string
   summary?: string
   description?: string
+  excerpt?: string
   image_url?: string
   target_path?: string
   source_title?: string
@@ -475,7 +476,7 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
         return {
           id: item.id,
           title: item.title,
-          summary: item.summary || item.description,
+          summary: item.summary?.trim() || item.description?.trim() || item.excerpt?.trim() || undefined,
           cover_url: item.image_url,
           created_at: item.published_at || item.created_at,
           view_count: item.view_count ?? item.read_count ?? 0,

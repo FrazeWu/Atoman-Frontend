@@ -24,6 +24,7 @@ describe("@atoman/module-config", () => {
 		expect(topbarNavOrder).toEqual([
 			"feed",
 			"blog",
+			"books",
 			"music",
 			"video",
 			"podcast",

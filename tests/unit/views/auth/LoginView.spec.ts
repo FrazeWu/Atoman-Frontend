@@ -137,7 +137,6 @@ describe("LoginView redirect", () => {
   });
 
   it.each([
-  it.each([
     "https://evil.example/phish",
     "//evil.example/phish",
     "/feed\nnext",

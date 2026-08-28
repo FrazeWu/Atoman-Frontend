@@ -54,6 +54,7 @@ describe("useResponsiveShell", () => {
 		expect(modules).toEqual([
 			"feed",
 			"blog",
+			"books",
 			"music",
 			"forum",
 			"debate",

@@ -9,9 +9,11 @@ describe("@atoman/module-config", () => {
 	it("keeps module identity and navigation order in a UI-independent package", () => {
 		expect(moduleRooms.feed.publicPathSegment).toBe("feed");
 		expect(moduleRooms.blog.publicPathSegment).toBe("posts");
+		expect(moduleRooms.books.publicPathSegment).toBe("books");
 		expect(moduleNavOrder).toEqual([
 			"feed",
 			"blog",
+			"books",
 			"music",
 			"forum",
 			"debate",
@@ -22,6 +24,7 @@ describe("@atoman/module-config", () => {
 		expect(topbarNavOrder).toEqual([
 			"feed",
 			"blog",
+			"books",
 			"music",
 			"video",
 			"podcast",

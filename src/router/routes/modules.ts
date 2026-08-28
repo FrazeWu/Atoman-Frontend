@@ -178,6 +178,54 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			],
 		},
 	],
+	books: [
+		{
+			path: "/",
+			component: () => import("@/views/books/BooksLayout.vue"),
+			meta: { hasSidebar: true },
+			children: [
+				{ path: "", component: () => import("@/views/books/BooksHomeView.vue") },
+				{ path: "search", component: () => import("@/views/books/BooksHomeView.vue") },
+				{ path: "work/:workId", component: () => import("@/views/books/BookWorkView.vue") },
+				{ path: "edition/:editionId", component: () => import("@/views/books/BookEditionView.vue") },
+				{
+					path: "library",
+					component: () => import("@/views/books/BooksHomeView.vue"),
+					meta: { requiresAuth: true },
+				},
+				{
+					path: "import/:importId",
+					component: () => import("@/views/books/BooksHomeView.vue"),
+					meta: { requiresAuth: true },
+				},
+				{
+					path: "read/:assetId",
+					component: () => import("@/views/books/BookReaderView.vue"),
+					meta: { requiresAuth: true },
+				},
+				{
+					path: "public-read/:assetId",
+					component: () => import("@/views/books/BookPublicReaderView.vue"),
+				},
+				{
+					path: "contributions",
+					component: () => import("@/views/books/BooksGovernanceView.vue"),
+					meta: {
+						requiresAuth: true,
+						featureGate: { module: "books", feature: "books.submit" },
+					},
+				},
+				{
+					path: "review",
+					component: () => import("@/views/books/BooksGovernanceView.vue"),
+					meta: {
+						requiresAuth: true,
+						featureGate: { module: "books", feature: "books.review" },
+					},
+				},
+			],
+		},
+	],
 	feed: [
 		{
 			path: "/",

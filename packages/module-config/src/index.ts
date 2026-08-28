@@ -2,6 +2,7 @@ export type ModuleRoomKey =
 	| "feed"
 	| "music"
 	| "blog"
+	| "books"
 	| "forum"
 	| "debate"
 	| "timeline"
@@ -41,6 +42,14 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 		name: "博客",
 		helper: "内容视图",
 		homepageSub: "",
+	},
+	books: {
+		key: "books",
+		homePath: "/",
+		publicPathSegment: "books",
+		name: "读书",
+		helper: "书目与阅读",
+		homepageSub: "发现书目、整理书库与继续阅读。",
 	},
 	forum: {
 		key: "forum",
@@ -87,6 +96,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 export const moduleNavOrder: ModuleRoomKey[] = [
 	"feed",
 	"blog",
+	"books",
 	"music",
 	"forum",
 	"debate",
@@ -98,6 +108,7 @@ export const moduleNavOrder: ModuleRoomKey[] = [
 export const topbarNavOrder: ModuleRoomKey[] = [
 	"feed",
 	"blog",
+	"books",
 	"music",
 	"video",
 	"podcast",

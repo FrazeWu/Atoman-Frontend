@@ -25,9 +25,6 @@ describe("@atoman/module-config", () => {
 			"music",
 			"video",
 			"podcast",
-			"forum",
-			"debate",
-			"timeline",
 		]);
 	});
 });

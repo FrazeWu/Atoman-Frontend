@@ -1641,4 +1641,73 @@ describe("PostEditorView", () => {
 
 		expect(editor.vm.$.setupState.error).toBe("请从候选中选择有效引用");
 	});
+
+	it("编辑态保存携带基准时间并在冲突时提供刷新入口", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts/post/:id/edit", component: PostEditorView }],
+		});
+		await router.push("/posts/post/post-1/edit");
+		await router.isReady();
+
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.user = { uuid: "user-1", username: "demo", role: "user" } as never;
+		auth.isAuthenticated = true;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes("/blog/posts/post-1") && init?.method === "PUT") {
+				return new Response(JSON.stringify({
+					error: { code: "blog.post_conflict", message: "stale" },
+				}), { status: 409 });
+			}
+			if (url.includes("/blog/posts/post-1")) {
+				return makeJsonResponse({
+					data: {
+						id: "post-1",
+						title: "远端标题",
+						content: "远端正文",
+						summary: "",
+						cover_url: "",
+						updated_at: "2026-07-01T12:34:56.123456Z",
+						channel_id: "channel-1",
+						collection_id: "collection-1",
+					},
+				});
+			}
+			if (url.includes("/blog/channels/channel-1/collections")) {
+				return makeJsonResponse({ data: [{ id: "collection-1", channel_id: "channel-1", is_default: true }] });
+			}
+			if (url.includes("/blog/drafts?context_key=")) return makeJsonResponse({ data: null });
+			if (url.includes("/blog/channels?")) return makeJsonResponse({ data: [] });
+			return makeJsonResponse({ data: null });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{
+				global: {
+					plugins: [router],
+					stubs: { PButton: { template: "<button><slot /></button>" }, PModal: { template: '<div><slot /><slot name="footer" /></div>' } },
+				},
+			},
+		);
+		await flushPromises();
+		const editor = wrapper.findComponent(PostEditorView);
+		editor.vm.$.setupState.form.title = "本地修改";
+		editor.vm.$.setupState.form.content = "本地正文";
+
+		await editor.vm.$.setupState.save("draft");
+		await flushPromises();
+
+		const updateCall = fetchMock.mock.calls.find(
+			([input, init]: [RequestInfo | URL, RequestInit?]) => String(input).includes("/blog/posts/post-1") && init?.method === "PUT",
+		);
+		expect(JSON.parse(String(updateCall?.[1]?.body))).toMatchObject({
+			base_updated_at: "2026-07-01T12:34:56.123456Z",
+		});
+		expect(wrapper.text()).toContain("文章已在其他会话更新");
+		expect(wrapper.text()).toContain("刷新文章");
+	});
 });

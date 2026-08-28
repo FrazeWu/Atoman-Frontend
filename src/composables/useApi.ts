@@ -129,7 +129,12 @@ export function useApi() {
 			collection: (id: number | string) => `${apiUrl}/blog/collections/${id}`,
 
 			posts: `${apiUrl}/blog/posts`,
+			search: `${apiUrl}/blog/search`,
 			recommendPosts: `${apiUrl}/blog/recommend/posts`,
+			recommendationFeedback: `${apiUrl}/blog/recommendation-feedback`,
+			recommendationFeedbackItem: (id: number | string) =>
+				`${apiUrl}/blog/recommendation-feedback/${id}`,
+			digest: `${apiUrl}/blog/digest`,
 			relatedPosts: (id: number | string) => `${apiUrl}/blog/posts/${id}/related`,
 			post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,
 			postRating: (id: number | string) => `${apiUrl}/blog/posts/${id}/rating`,

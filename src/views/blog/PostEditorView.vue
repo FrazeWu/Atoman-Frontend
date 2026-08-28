@@ -1,7 +1,10 @@
 <template>
   <div class="editor-page">
     <div class="editor-shell">
-      <div v-if="error && !editorLoadFailed" class="editor-error a-error">{{ error }}</div>
+      <div v-if="error && !editorLoadFailed" class="editor-error a-error" role="alert">
+        <span>{{ error }}</span>
+        <PButton v-if="hasPostConflict" type="button" size="sm" variant="ghost" @click="refreshAfterConflict">刷新文章</PButton>
+      </div>
       <div v-if="editorLoadFailed" class="editor-load-failure" role="alert">
         <p>{{ error || '编辑器加载失败，请刷新重试' }}</p>
         <PButton type="button" variant="secondary" @click="void initializeEditor()">重试</PButton>
@@ -36,14 +39,14 @@
               @update:content-mode="contentMode = $event"
               @open-version-history="versionHistoryOpen = true"
               @save-draft="save('draft')"
-              @save-published="save('published')"
+              @save-published="requestPublication('publish')"
             >
               <template #schedule>
                 <ContentScheduleControl
                   v-model="scheduledAt"
                   :busy="scheduling"
                   :disabled="Boolean(saving) || uploading || coverUploading"
-                  @schedule="schedulePublish"
+                  @schedule="requestPublication('schedule')"
                 />
               </template>
             </PostEditorTopbar>
@@ -111,7 +114,7 @@
 
     <div v-if="contentReady && mobilePanel !== 'sidebar'" class="editor-mobile-publish-actions">
       <PButton type="button" variant="secondary" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="save('draft')">存草稿</PButton>
-      <PButton type="button" variant="primary" :loading="saving === 'published'" :disabled="Boolean(saving)" loading-text="发布中…" @click="save('published')">发布</PButton>
+      <PButton type="button" variant="primary" :loading="saving === 'published'" :disabled="Boolean(saving)" loading-text="发布中…" @click="requestPublication('publish')">发布</PButton>
     </div>
 
     <PostEditorDraftRecoveryModal
@@ -201,6 +204,21 @@
       </template>
     </PModal>
 
+    <PModal v-if="publicationReviewVisible" title="发布前检查" size="sm" @close="closePublicationReview">
+      <div class="publication-review">
+        <p>以下建议不会阻止发布，但处理后会让文章更易阅读和发现。</p>
+        <ul>
+          <li v-for="warning in publicationWarnings" :key="warning.code">{{ warning.message }}</li>
+        </ul>
+      </div>
+      <template #footer>
+        <div class="draft-recovery-actions">
+          <PButton type="button" variant="secondary" @click="closePublicationReview">返回修改</PButton>
+          <PButton type="button" variant="primary" @click="confirmPublication">{{ publicationIntent === 'schedule' ? '继续定时发布' : '仍要发布' }}</PButton>
+        </div>
+      </template>
+    </PModal>
+
     <PostVersionHistoryModal
       v-if="versionHistoryOpen && isEdit"
       :post-id="String(route.params.id || '')"
@@ -232,6 +250,7 @@ import { useStudioStore } from '@/stores/studio'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
 import { usePostEditorCollections } from '@/composables/blog/usePostEditorCollections'
 import { usePostEditorPublication } from '@/composables/blog/usePostEditorPublication'
+import { evaluateBlogPublicationQuality } from '@/utils/blogPublicationQuality'
 import {
   usePostEditorDraftSession,
   type BlogVisibility,
@@ -329,6 +348,10 @@ const error = ref('')
 const coverUploadError = ref('')
 const contentSource = ref<PostEditorContentSource>('empty')
 const loadedPostUpdatedAt = ref(0)
+const loadedPostUpdatedAtRaw = ref('')
+const hasPostConflict = ref(false)
+const publicationReviewVisible = ref(false)
+const publicationIntent = ref<'publish' | 'schedule' | null>(null)
 
 const form = ref<PostEditorDraftForm>({
   title: '',
@@ -337,6 +360,13 @@ const form = ref<PostEditorDraftForm>({
   cover_url: '',
   visibility: 'public' as BlogVisibility,
 })
+
+const publicationWarnings = computed(() => evaluateBlogPublicationQuality({
+  title: form.value.title,
+  summary: form.value.summary,
+  coverUrl: form.value.cover_url,
+  content: form.value.content,
+}))
 
 // ── Title-in-editor binding ──────────────────────────────
 const editorBody = computed({
@@ -512,6 +542,8 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   contentSource,
   contentReady,
   loadedPostUpdatedAt,
+  loadedPostUpdatedAtRaw,
+  hasPostConflict,
   saving,
   savedPostId,
   markdownImportID,
@@ -526,6 +558,42 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   clearAllDrafts,
   allowNextRouteLeave,
 })
+
+const requestPublication = (intent: 'publish' | 'schedule') => {
+  if (publicationWarnings.value.length > 0) {
+    publicationIntent.value = intent
+    publicationReviewVisible.value = true
+    return
+  }
+  if (intent === 'schedule') {
+    void schedulePublish()
+    return
+  }
+  void save('published')
+}
+
+const closePublicationReview = () => {
+  publicationReviewVisible.value = false
+  publicationIntent.value = null
+}
+
+const confirmPublication = () => {
+  const intent = publicationIntent.value
+  closePublicationReview()
+  if (intent === 'schedule') {
+    void schedulePublish()
+    return
+  }
+  if (intent === 'publish') void save('published')
+}
+
+const refreshAfterConflict = async () => {
+  error.value = ''
+  hasPostConflict.value = false
+  savedPostId.value = null
+  const loaded = await loadPost()
+  if (!loaded) editorLoadFailed.value = true
+}
 
 const handleVersionRestored = async () => {
   versionHistoryOpen.value = false
@@ -665,6 +733,10 @@ const resetEditorStateForRoute = () => {
   form.value = { title: '', content: '', summary: '', cover_url: '', visibility: 'public' }
   contentSource.value = 'empty'
   loadedPostUpdatedAt.value = 0
+  loadedPostUpdatedAtRaw.value = ''
+  hasPostConflict.value = false
+  publicationReviewVisible.value = false
+  publicationIntent.value = null
   scheduledAt.value = ''
   savedPostId.value = null
   markdownImportID.value = null
@@ -757,8 +829,31 @@ onMounted(() => { void initializeEditor() })
 }
 
 .editor-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin: 0.75rem;
   padding: 0.9rem 1rem;
+}
+
+.publication-review {
+  padding: 1.25rem;
+}
+
+.publication-review p {
+  margin: 0;
+  color: var(--a-color-fg);
+  line-height: 1.55;
+}
+
+.publication-review ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--a-color-muted);
+  line-height: 1.5;
 }
 
 .editor-layout {

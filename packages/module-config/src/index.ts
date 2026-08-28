@@ -108,13 +108,9 @@ export const moduleNavOrder: ModuleRoomKey[] = [
 export const topbarNavOrder: ModuleRoomKey[] = [
 	"feed",
 	"blog",
-	"books",
 	"music",
 	"video",
 	"podcast",
-	"forum",
-	"debate",
-	"timeline",
 ];
 
 export const notificationRoom = {

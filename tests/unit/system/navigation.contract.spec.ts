@@ -30,13 +30,9 @@ describe("application navigation contracts", () => {
 		expect(topbarNavOrder.map((key) => moduleRooms[key].name)).toEqual([
 			"订阅",
 			"博客",
-			"读书",
 			"音乐",
 			"视频",
 			"播客",
-			"论坛",
-			"辩论",
-			"时间线",
 		]);
 		expect(topbarNavOrder).not.toContain("media");
 		for (const key of topbarNavOrder) {

@@ -13,6 +13,6 @@ describe('moduleRooms content integration', () => {
 
   it('keeps full module order and dedicated topbar order without media', () => {
     expect(moduleNavOrder.slice(0, 5)).toEqual(['feed', 'blog', 'books', 'music', 'forum'])
-    expect(topbarNavOrder).toEqual(['feed', 'blog', 'books', 'music', 'video', 'podcast', 'forum', 'debate', 'timeline'])
+    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast'])
   })
 })

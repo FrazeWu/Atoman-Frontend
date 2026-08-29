@@ -275,6 +275,9 @@ async function fetchItem(id: string) {
       sourceSheetVisible.value = false
       articleSheetVisible.value = true
     }
+    if (authStore.isAuthenticated) {
+      void feedStore.markItemsRead([nextItem.id])
+    }
     void reportReadEvent(nextItem)
   } catch (error) {
     reportError(error, 'Failed to fetch feed item')

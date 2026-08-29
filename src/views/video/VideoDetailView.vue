@@ -526,16 +526,14 @@ function currentCommentTime() {
   width: 52px;
   height: 52px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  border-radius: 50%;
+  padding: 0;
+  border: 0;
   color: #fff;
-  background: rgba(15, 23, 42, 0.72);
+  background: transparent;
   cursor: pointer;
   transform: translate(-50%, -50%);
 }
-.vd-play-overlay:hover,
 .vd-play-overlay:focus-visible {
-  background: rgba(15, 23, 42, 0.92);
   outline: 2px solid #fff;
   outline-offset: 3px;
 }

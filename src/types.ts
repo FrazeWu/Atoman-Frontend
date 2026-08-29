@@ -789,6 +789,7 @@ export interface Subscription {
 	subscription_group_id?: string;
 	subscription_group?: SubscriptionGroup;
 	is_muted?: boolean;
+	priority?: "high" | "normal" | "low";
 	auto_mark_read?: boolean;
 	auto_add_reading_list?: boolean;
 	is_paused?: boolean;
@@ -958,6 +959,7 @@ export interface TimelineItem {
 	orbit_item?: OrbitItem;
 	published_at: string;
 	is_read: boolean;
+	priority_reason?: "subscription_priority_high" | "subscription_priority_normal" | "subscription_priority_low";
 }
 
 export interface FeedArticleSource {

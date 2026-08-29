@@ -133,12 +133,30 @@ describe("SubscriptionManageSheet", () => {
 		]);
 	});
 
+	it("emits a priority update from a source card", async () => {
+		const wrapper = mountSheet();
+		await wrapper
+			.get('[data-test="subscription-manage-tab-sources"]')
+			.trigger("click");
+
+		const prioritySelect = wrapper.get('[data-test="subscription-priority"]');
+		await prioritySelect.get(".p-select-trigger").trigger("click");
+		await prioritySelect
+			.findAll(".p-select-option")
+			.find((option) => option.text() === "高优先")!
+			.trigger("click");
+
+		expect(wrapper.emitted("update-subscription")).toEqual([
+			["sub-1", { priority: "high" }],
+		]);
+	});
+
 	it("allows moving a subscription back to unassigned", async () => {
 		const wrapper = mountSheet();
 		await wrapper
 			.get('[data-test="subscription-manage-tab-sources"]')
 			.trigger("click");
-		const groupSelect = wrapper.get(".subscription-actions .p-select-root");
+		const groupSelect = wrapper.get('[data-test="subscription-group"]');
 
 		await groupSelect.get(".p-select-trigger").trigger("click");
 		expect(groupSelect.text()).toContain("未分类");

@@ -10,9 +10,10 @@ describe('buildFeedTimelineQuery', () => {
       sourceId: 'source-1',
       groupId: 'group-1',
       unreadOnly: true,
+      sort: 'priority',
     })
 
-    expect(query.toString()).toBe('page=2&limit=20&source_id=source-1&group_id=group-1&unread_only=true')
+    expect(query.toString()).toBe('page=2&limit=20&source_id=source-1&group_id=group-1&unread_only=true&sort=priority')
   })
 
   it('builds store timeline params with source type and source id', () => {

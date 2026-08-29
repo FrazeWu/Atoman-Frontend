@@ -39,6 +39,7 @@ export function useFeedTimelineController({
   const queryPage = computed(() => normalizePage(route.query.page))
   const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
   const queryMergeDuplicates = computed(() => route.query.merge_duplicates !== 'false')
+  const timelineMode = computed<'chronological' | 'priority'>(() => route.query.sort === 'priority' ? 'priority' : 'chronological')
   const searchInput = ref(querySearch.value)
   const mergeDuplicates = ref(queryMergeDuplicates.value)
   const activeSearchLabel = computed(() => querySearch.value.trim())
@@ -48,7 +49,7 @@ export function useFeedTimelineController({
   })
   const sourceViewMode = computed(() => Boolean(querySourceId.value))
   const canCheckTimelineUpdates = computed(() => {
-    if (!authStore.isAuthenticated || querySearch.value.trim()) return false
+    if (!authStore.isAuthenticated || querySearch.value.trim() || timelineMode.value === 'priority') return false
     if (sourceTypeFilter.value !== 'all') return false
     const sourceType = currentSourceSubscription.value?.feed_source?.source_type
     return !sourceType || sourceType === 'external_rss'
@@ -71,6 +72,7 @@ export function useFeedTimelineController({
     return allRead.value ? '全部未读' : '全部已读'
   })
   const emptyTimelineText = computed(() => {
+    if (timelineMode.value === 'priority') return '今日精选暂无未读内容'
     if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
     if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
     return subscriptions.value.length ? '订阅源暂无更新' : '订阅后开始探索'
@@ -124,6 +126,17 @@ export function useFeedTimelineController({
       query: {
         ...route.query,
         merge_duplicates: mergeDuplicates.value ? undefined : 'false',
+        page: undefined,
+      },
+    })
+  }
+
+  const setTimelineMode = async (mode: 'chronological' | 'priority') => {
+    if (mode === timelineMode.value) return
+    await router.replace({
+      query: {
+        ...route.query,
+        sort: mode === 'priority' ? 'priority' : undefined,
         page: undefined,
       },
     })
@@ -219,6 +232,7 @@ export function useFeedTimelineController({
       const params = buildFeedTimelineQuery({
         page: currentPage.value,
         limit: pageLimit,
+        sort: timelineMode.value === 'priority' ? 'priority' : undefined,
         sourceId: querySourceId.value,
         groupId: queryGroupId.value,
         unreadOnly: unreadOnly.value,
@@ -324,7 +338,7 @@ export function useFeedTimelineController({
     searchInput.value = next
   })
 
-  watch([querySourceId, queryGroupId, queryPage, querySearch, queryMergeDuplicates], async () => {
+  watch([querySourceId, queryGroupId, queryPage, querySearch, queryMergeDuplicates, timelineMode], async () => {
     mergeDuplicates.value = queryMergeDuplicates.value
     currentPage.value = queryPage.value
     await fetchTimeline()
@@ -342,6 +356,7 @@ export function useFeedTimelineController({
     querySourceId,
     queryGroupId,
     querySearch,
+    timelineMode,
     searchInput,
     mergeDuplicates,
     activeSearchLabel,
@@ -363,6 +378,7 @@ export function useFeedTimelineController({
     submitSearch,
     clearSearch,
     updateMergeDuplicates,
+    setTimelineMode,
     changePage,
     refreshNewTimelineContent,
     fetchTimeline,

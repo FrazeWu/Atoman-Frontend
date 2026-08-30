@@ -95,6 +95,31 @@ describe('useInteractions', () => {
     }))
   })
 
+  it('adds a short-note reply from the create response without refetching the thread', async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({
+        data: {
+          items: [{ id: 'root-1', content: 'root', created_at: '2026-08-30T00:00:00Z', replies: [] }],
+        },
+      }))
+      .mockResolvedValueOnce(response({
+        data: {
+          id: 'reply-1',
+          content: 'reply',
+          created_at: '2026-08-30T00:01:00Z',
+          reply_to_id: 'root-1',
+        },
+      }))
+
+    const interactions = useInteractions('blog', 'short_note', 'note-1')
+    await interactions.fetchComments()
+    await interactions.createComment('reply', 'root-1')
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(interactions.comments.value[0]?.replies).toMatchObject([{ id: 'reply-1', content: 'reply' }])
+    expect(interactions.commentCount.value).toBe(2)
+  })
+
   it('uses the latest reactive target id', async () => {
     fetchMock.mockResolvedValueOnce(response({ data: { Liked: true, LikeCount: 1 } }))
     const targetId = ref('post-1')

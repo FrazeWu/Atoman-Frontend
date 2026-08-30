@@ -266,6 +266,26 @@ export function useInteractions(
 		}
 	};
 
+	const appendCreatedComment = (
+		data: unknown,
+		parentCommentId?: string,
+	) => {
+		if (!data || typeof data !== "object") return false;
+		const created = data as InteractionComment;
+		if (typeof created.id !== "string" || !created.id) return false;
+
+		const parentID = parentCommentId ?? (created as { reply_to_id?: unknown }).reply_to_id;
+		if (typeof parentID === "string" && parentID) {
+			const root = comments.value.find((item) => item.id === parentID);
+			if (!root) return false;
+			root.replies = [...(root.replies ?? []), created];
+		} else {
+			comments.value = [created, ...comments.value];
+		}
+		commentCount.value += 1;
+		return true;
+	};
+
 	const createComment = async (
 		content: string,
 		parentCommentId?: string,
@@ -285,12 +305,14 @@ export function useInteractions(
 					? { timestamp_sec: options.timestamp_sec }
 					: {}),
 			};
-			await apiRequestEnvelope<unknown>(endpoints().comments, {
+			const payload = await apiRequestEnvelope<unknown>(endpoints().comments, {
 				method: "POST",
 				headers: headers(),
 				body: JSON.stringify(body),
 			});
-			await fetchComments();
+			if (!appendCreatedComment(payload.data, parentCommentId)) {
+				await fetchComments();
+			}
 		} finally {
 			submittingComment.value = false;
 		}

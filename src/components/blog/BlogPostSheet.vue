@@ -135,6 +135,12 @@ async function toggleChannelSubscription() {
   }
 }
 
+function ratingFailureMessage(error?: { code?: string; message?: string }) {
+  const message = error?.message?.trim()
+  if (message && error?.code !== 'system.internal_error') return message
+  return '评分未保存，请重试'
+}
+
 async function ratePost(score: number) {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
   ratingError.value = ''
@@ -146,7 +152,7 @@ async function ratePost(score: number) {
       body: JSON.stringify({ score }),
     })
     if (!res.ok) {
-      ratingError.value = '评分未保存，请重试'
+      ratingError.value = ratingFailureMessage(res.error)
       return
     }
     const payload = await Promise.resolve(res.data)

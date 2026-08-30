@@ -12,6 +12,7 @@ import type {
 	AutoAddSubscriptionPayload,
 	FeedSourceDiagnostic,
 	FeedSubscriptionRuleMatchType,
+	Subscription,
 } from "@/types";
 
 type SubscriptionRuleSavePayload = {
@@ -220,6 +221,7 @@ export function useFeedSubscriptionManager({
 		id: string,
 		payload: {
 			is_muted?: boolean;
+			priority?: Subscription["priority"];
 			auto_mark_read?: boolean;
 			auto_add_reading_list?: boolean;
 		},

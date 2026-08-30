@@ -276,6 +276,15 @@
 
                 <div class="subscription-actions">
                   <PSelect
+                    data-test="subscription-priority"
+                    :model-value="sub.priority || 'normal'"
+                    :options="priorityOptions"
+                    :disabled="busy"
+                    aria-label="订阅优先级"
+                    @update:model-value="updateSubscriptionPriority(sub.id, String($event))"
+                  />
+                  <PSelect
+                    data-test="subscription-group"
                     :model-value="sub.subscription_group_id || ''"
                     :options="groupOptions"
                     :disabled="busy"
@@ -430,7 +439,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'create-group', name: string): void
   (e: 'rename-subscription', id: string, title: string): void
-  (e: 'update-subscription', id: string, payload: Partial<Pick<Subscription, 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list'>>): void
+  (e: 'update-subscription', id: string, payload: Partial<Pick<Subscription, 'is_muted' | 'priority' | 'auto_mark_read' | 'auto_add_reading_list'>>): void
   (e: 'move-subscription', id: string, groupId: string): void
   (e: 'delete-subscription', id: string): void
   (e: 'rename-group', id: string, name: string): void
@@ -509,6 +518,12 @@ const groupOptions = computed(() => [
   { label: '未分类', value: '' },
   ...props.groups.map(group => ({ label: group.name, value: group.id })),
 ])
+
+const priorityOptions = [
+  { label: '高优先', value: 'high' },
+  { label: '普通优先', value: 'normal' },
+  { label: '低优先', value: 'low' },
+]
 
 const filteredSubscriptions = computed(() => {
   const query = sourceSearch.value.trim().toLowerCase()
@@ -638,6 +653,11 @@ const updateSubscriptionFlag = (
 ) => {
   if (props.busy) return
   emit('update-subscription', id, { [key]: value })
+}
+
+const updateSubscriptionPriority = (id: string, value: string) => {
+  if (props.busy || !['high', 'normal', 'low'].includes(value)) return
+  emit('update-subscription', id, { priority: value as NonNullable<Subscription['priority']> })
 }
 
 const setSubscriptionPaused = (id: string, paused: boolean) => {

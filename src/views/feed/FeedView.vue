@@ -134,6 +134,7 @@
         :query-source-id="querySourceId ?? undefined"
         :theme-filters="themeFilters"
         :authenticated="authStore.isAuthenticated"
+        :timeline-mode="timelineMode"
         :unread-only="unreadOnly"
         :marking-all-read="markingAllRead"
         :bulk-read-label="bulkReadLabel"
@@ -142,6 +143,7 @@
         @clear-search="clearSearch"
         @clear-source="clearSourceFilter"
         @update-merge-duplicates="updateMergeDuplicates"
+        @update:timeline-mode="setTimelineMode"
         @toggle-unread="toggleUnreadOnly"
         @toggle-all-read="toggleAllRead"
         @refresh-new-content="refreshNewTimelineContent"
@@ -171,6 +173,11 @@
             @click="openArticleSheet(item, index)"
             @open-source="openPostSourceSheet(item)"
           >
+            <template #meta-extra>
+              <span v-if="item.priority_reason" class="feed-priority-reason" data-test="feed-priority-reason">
+                {{ priorityReasonLabel(item.priority_reason) }}
+              </span>
+            </template>
             <template #actions>
               <PClip
                 v-if="authStore.isAuthenticated"
@@ -208,6 +215,9 @@
             @open-source="openFeedItemSourceSheet(item.feed_item)"
           >
             <template #meta-extra>
+              <span v-if="item.priority_reason" class="feed-priority-reason" data-test="feed-priority-reason">
+                {{ priorityReasonLabel(item.priority_reason) }}
+              </span>
               <span v-if="item.feed_item.duration" class="feed-item-duration">
                 时长: {{ item.feed_item.duration }}
               </span>
@@ -364,6 +374,7 @@ const {
   querySourceId,
   queryGroupId,
   querySearch,
+  timelineMode,
   searchInput,
   mergeDuplicates,
   activeSearchLabel,
@@ -385,6 +396,7 @@ const {
   submitSearch,
   clearSearch,
   updateMergeDuplicates,
+  setTimelineMode,
   changePage,
   refreshNewTimelineContent,
   fetchTimeline,
@@ -408,6 +420,11 @@ const currentSourceTitle = computed(() =>
 const currentSourceUnreadCount = computed(() =>
   Math.max(0, currentSourceSubscription.value?.unread_count || 0),
 )
+const priorityReasonLabel = (reason?: string) => ({
+  subscription_priority_high: '来自高优先订阅',
+  subscription_priority_normal: '来自普通优先订阅',
+  subscription_priority_low: '来自低优先订阅',
+}[reason || ''] || '')
 
 const {
   visibleTimeline,
@@ -964,6 +981,12 @@ onUnmounted(() => {
 
 .feed-item-duration {
   color: var(--a-color-muted-soft);
+  font-weight: 500;
+}
+
+.feed-priority-reason {
+  color: var(--a-color-accent-confirm);
+  font-size: 0.78rem;
   font-weight: 500;
 }
 

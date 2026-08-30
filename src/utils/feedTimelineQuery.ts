@@ -6,6 +6,7 @@ export interface FeedTimelineQueryOptions {
   groupId?: string | null
   unreadOnly?: boolean
   hideDuplicates?: boolean
+  sort?: 'priority'
   q?: string | null
 }
 
@@ -17,6 +18,7 @@ export const buildFeedTimelineQuery = ({
   groupId,
   unreadOnly = false,
   hideDuplicates = false,
+  sort,
   q,
 }: FeedTimelineQueryOptions) => {
   const params = new URLSearchParams()
@@ -46,6 +48,10 @@ export const buildFeedTimelineQuery = ({
 
   if (hideDuplicates) {
     params.set('hide_duplicates', 'true')
+  }
+
+  if (sort === 'priority') {
+    params.set('sort', sort)
   }
 
   const search = q?.trim()

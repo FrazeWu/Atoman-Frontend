@@ -463,6 +463,35 @@ const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
+
+function normalizeRecommendationContentFingerprint(value?: string) {
+  return value?.trim().replace(/\s+/g, ' ').toLowerCase() || ''
+}
+
+function recommendationDisplayKey(item: RecommendationItem) {
+  if (item.source_type !== 'external_rss') return `id:${item.id}`
+
+  const fingerprint = [
+    item.source_title,
+    item.title,
+    item.summary || item.description,
+    item.image_url,
+    item.last_published_at,
+  ].map(normalizeRecommendationContentFingerprint)
+  if (!fingerprint[0] || !fingerprint[1]) return `id:${item.id}`
+  return `external:${fingerprint.join('\x1f')}`
+}
+
+function deduplicateRecommendationItems(items: RecommendationItem[]) {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = recommendationDisplayKey(item)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 function normalizePage(value: unknown) {
   const pageValue = Number.parseInt(String(value || '1'), 10)
   return Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
@@ -622,7 +651,8 @@ async function fetchRecommendations() {
       channelRes.data,
     ])
 
-    articles.value = Array.isArray(articlePayload?.data) ? articlePayload.data : []
+    const recommendationArticles = Array.isArray(articlePayload?.data) ? articlePayload.data : []
+    articles.value = deduplicateRecommendationItems(recommendationArticles)
     channels.value = Array.isArray(channelPayload?.data) ? channelPayload.data : []
 
     if (authStore.isAuthenticated && channels.value.length) {
@@ -639,7 +669,11 @@ async function fetchRecommendations() {
         subscribed: subscribedStates[index] ?? false,
       }))
     }
-    totalArticles.value = articlePayload?.meta?.total ?? articlePayload?.total ?? articles.value.length
+    const reportedArticleTotal = Number(articlePayload?.meta?.total ?? articlePayload?.total)
+    const duplicateCount = recommendationArticles.length - articles.value.length
+    totalArticles.value = Number.isFinite(reportedArticleTotal)
+      ? Math.max(articles.value.length, reportedArticleTotal - duplicateCount)
+      : articles.value.length
     totalChannels.value = channelPayload?.meta?.total ?? channelPayload?.total ?? channels.value.length
   } catch (error) {
     reportError(error, 'Failed to fetch feed recommendations:')

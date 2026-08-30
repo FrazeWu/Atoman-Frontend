@@ -216,6 +216,7 @@ import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { hasFeedReaderImage } from '@/utils/feedReader'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
@@ -328,7 +329,7 @@ const commentSheetTitle = computed(() => {
 
 const isPlayablePodcast = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return false
-  return Boolean(props.article.feed_item.enclosure_url)
+  return isPlayableFeedPodcast(props.article.feed_item)
 })
 
 const articleSource = computed<FeedArticleSource | null>(() => {

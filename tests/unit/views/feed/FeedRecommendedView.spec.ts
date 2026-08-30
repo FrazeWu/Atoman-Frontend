@@ -214,7 +214,9 @@ describe("FeedRecommendedView", () => {
 
 	it("keeps discovery streams borderless", () => {
 		expect(source).toContain(".feed-timeline-box {\n  border: 0;");
-		expect(source).toContain(".channels-stack :deep(.feed-source-card) {\n  border: 0;");
+		expect(source).toContain(
+			".channels-stack :deep(.feed-source-card) {\n  border: 0;",
+		);
 	});
 
 	it("applies advanced filters from the compact filter panel", async () => {
@@ -681,6 +683,64 @@ describe("FeedRecommendedView", () => {
 
 		expect(wrapper.text()).toContain("Article 1");
 		expect(wrapper.text()).toContain("Channel 1");
+	});
+
+	it("deduplicates repeated external article recommendations before rendering", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "external-primary",
+								title: "同一篇外部文章",
+								summary: "同一份摘要",
+								image_url: "https://cdn.example.com/article-cover.jpg",
+								last_published_at: "2026-08-29T00:00:00Z",
+								source_title: "机核",
+								source_type: "external_rss",
+								target_path: "/feed/item/external-primary",
+							},
+							{
+								id: "external-mirror",
+								title: "同一篇外部文章",
+								summary: "同一份摘要",
+								image_url: "https://cdn.example.com/article-cover.jpg",
+								last_published_at: "2026-08-29T00:00:00Z",
+								source_title: "机核",
+								source_type: "external_rss",
+								target_path: "/feed/item/external-mirror",
+							},
+						],
+						meta: { total: 2 },
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		expect(wrapper.vm.articles).toHaveLength(1);
+		expect(wrapper.vm.totalArticles).toBe(1);
 	});
 
 	it("shows error state when fetching fails", async () => {

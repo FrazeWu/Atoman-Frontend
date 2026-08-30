@@ -523,6 +523,7 @@ describe("player store", () => {
 			published_at: "2025-01-01T00:00:00Z",
 			summary: "First episode",
 			enclosure_url: "episode-1.mp3",
+			enclosure_type: "audio/mpeg",
 		};
 		const secondFeedItem = {
 			id: "102",
@@ -531,6 +532,7 @@ describe("player store", () => {
 			published_at: "2025-01-02T00:00:00Z",
 			summary: "Second episode",
 			enclosure_url: "episode-2.mp3",
+			enclosure_type: "audio/mpeg",
 		};
 
 		player.setQueueFromCurrentItems([
@@ -548,6 +550,24 @@ describe("player store", () => {
 
 		player.playNext();
 		expect(player.currentSong?.id).toBe(102);
+	});
+
+	it("rejects non-audio feed attachments from the podcast queue", () => {
+		const player = usePlayerStore();
+		const articleAttachment = {
+			id: "image-attachment-1",
+			title: "Article image",
+			published_at: "2025-01-01T00:00:00Z",
+			enclosure_url: "https://cdn.example.com/cover.jpg",
+			enclosure_type: "image/jpeg",
+		};
+
+		player.setQueueFromCurrentItems([
+			{ type: "feed_item", feed_item: articleAttachment },
+		] as any);
+
+		expect(player.createPodcastSong(articleAttachment as any)).toBeNull();
+		expect(player.queue).toEqual([]);
 	});
 
 	it("keeps album queue when selecting another song from the same queue", () => {
@@ -697,7 +717,11 @@ describe("player store", () => {
 		localStorage.clear();
 		const auth = useAuthStore();
 		const player = usePlayerStore();
-		auth.user = { uuid: "user-a", username: "user-a", email: "a@example.com" } as any;
+		auth.user = {
+			uuid: "user-a",
+			username: "user-a",
+			email: "a@example.com",
+		} as any;
 		await nextTick();
 
 		player.playSong({
@@ -719,13 +743,25 @@ describe("player store", () => {
 		expect(localStorage.getItem("playbackState")).toBeNull();
 
 		mocks.getMusicPlaybackSession.mockResolvedValueOnce({
-			queue: [{ id: "new-account-song", title: "New Account Song", audio_url: "new-account.mp3" }],
+			queue: [
+				{
+					id: "new-account-song",
+					title: "New Account Song",
+					audio_url: "new-account.mp3",
+				},
+			],
 			current_song_id: "new-account-song",
 			position_seconds: 8,
 			playback_mode: "loop",
 		});
-		auth.user = { uuid: "user-b", username: "user-b", email: "b@example.com" } as any;
-		await vi.waitFor(() => expect(player.currentSong?.id).toBe("new-account-song"));
+		auth.user = {
+			uuid: "user-b",
+			username: "user-b",
+			email: "b@example.com",
+		} as any;
+		await vi.waitFor(() =>
+			expect(player.currentSong?.id).toBe("new-account-song"),
+		);
 	});
 	it("ignores a stale play rejection after switching songs", async () => {
 		let rejectFirst!: (reason?: unknown) => void;

@@ -3,6 +3,7 @@ import { apiRequestResult } from "@/api/client";
 import { defineStore, getActivePinia } from "pinia";
 import { onScopeDispose, ref, watch } from "vue";
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
+import { isPlayableFeedPodcast } from "@/utils/feedPodcast";
 import { useApi } from "@/composables/useApi";
 import {
 	getMusicPlaybackProgress,
@@ -1126,7 +1127,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const createPodcastSong = (
 		feedItem: TimelineItem["feed_item"],
 	): Song | null => {
-		if (!feedItem) return null;
+		if (!isPlayableFeedPodcast(feedItem)) return null;
 
 		return {
 			id: Number(feedItem.id),
@@ -1180,7 +1181,10 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const setQueueFromCurrentItems = (items: TimelineItem[]) => {
 		const podcastSongs: Song[] = items
-			.filter((item) => item.type === "feed_item" && item.feed_item?.enclosure_url)
+			.filter(
+				(item) =>
+					item.type === "feed_item" && isPlayableFeedPodcast(item.feed_item),
+			)
 			.map((item) => createPodcastSong(item.feed_item))
 			.filter((song): song is Song => Boolean(song));
 		queue.value = podcastSongs;

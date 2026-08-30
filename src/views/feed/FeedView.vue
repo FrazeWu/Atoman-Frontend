@@ -248,7 +248,7 @@
 
             <template #actions>
               <PClip
-                v-if="item.feed_item.enclosure_url"
+                v-if="isPlayableFeedPodcast(item.feed_item)"
                 :title="isPodcastPlaying(item.feed_item) ? '停止播放' : '播放播客'"
                 :aria-label="isPodcastPlaying(item.feed_item) ? '停止播放' : '播放播客'"
                 @click="playPodcast(item.feed_item, $event)"
@@ -339,6 +339,7 @@ import {
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
 import { ChevronDown, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
+import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()

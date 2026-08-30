@@ -79,7 +79,9 @@ describe("FeedArticleSheet", () => {
 		});
 
 		const image = wrapper.get(".article-cover img");
-		expect(image.attributes("src")).toBe("https://cdn.example.com/missing-cover.jpg");
+		expect(image.attributes("src")).toBe(
+			"https://cdn.example.com/missing-cover.jpg",
+		);
 		await image.trigger("error");
 		await wrapper.vm.$nextTick();
 
@@ -327,6 +329,8 @@ describe("FeedArticleSheet", () => {
 						guid: "guid-2",
 						title: "普通文章",
 						link: "https://example.com/article",
+						enclosure_url: "https://cdn.example.com/cover.jpg",
+						enclosure_type: "image/jpeg",
 						summary: "<p>摘要</p>",
 						published_at: "2026-06-20T00:00:00Z",
 						fetched_at: "2026-06-20T00:00:00Z",

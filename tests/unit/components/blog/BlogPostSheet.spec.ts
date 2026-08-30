@@ -19,6 +19,9 @@ const layer: BlogPostLayer = {
 const response = (data: unknown) =>
 	new Response(JSON.stringify({ data }), { status: 200 });
 
+const errorResponse = (status: number, code: string, message: string) =>
+	new Response(JSON.stringify({ error: { code, message } }), { status });
+
 function deferred<T>() {
 	let resolve!: (value: T | PromiseLike<T>) => void;
 	const promise = new Promise<T>((nextResolve) => {
@@ -155,6 +158,50 @@ describe("BlogPostSheet", () => {
 			event: "open",
 			source: "blog_sheet",
 		});
+	});
+
+	it("shows the rating API error instead of a generic retry prompt", async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.includes("/related")) return response([]);
+			if (url.endsWith("/rating")) return errorResponse(403, "blog.post_forbidden", "当前没有权限为这篇文章评分");
+			if (url.includes("/blog/posts/post-1")) return response(postDetail("post-1", "文章一"));
+			return response({ recorded: true });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.isAuthenticated = true;
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+					PostRatingControl: {
+						props: ["errorMessage"],
+						emits: ["rate"],
+						template: '<button data-test="rate" @click="$emit(\'rate\', 7)" /> <p>{{ errorMessage }}</p>',
+					},
+				},
+			},
+		});
+		await flushPromises();
+		await wrapper.get('[data-test="rate"]').trigger("click");
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("当前没有权限为这篇文章评分");
+		expect(wrapper.text()).not.toContain("评分未保存，请重试");
 	});
 
 	it("ignores a late response after switching to another post", async () => {

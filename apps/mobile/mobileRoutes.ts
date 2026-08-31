@@ -1,12 +1,17 @@
 import type { RouteRecordRaw } from "vue-router";
+import PortalView from "@/views/portal/PortalView.vue";
 import { studioRoutes } from "@/router/routes/studio";
 
 const requiresAuth = { requiresAuth: true };
+const portalHomeRoute: RouteRecordRaw = {
+	path: "/",
+	component: PortalView,
+};
 
 export const MOBILE_MODULES = ["feed", "blog", "music"] as const;
 
 export const mobileRoutes: RouteRecordRaw[] = [
-	{ path: "/", redirect: "/feed" },
+	portalHomeRoute,
 	{
 		path: "/login",
 		component: () => import("@/views/auth/LoginView.vue"),

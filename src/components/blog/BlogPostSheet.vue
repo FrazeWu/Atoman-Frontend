@@ -50,6 +50,8 @@ const channelSubscriptionBusy = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
 const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const commentCount = ref<number | undefined>(undefined)
 const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
 const commentSheetTitle = computed(() => `博客文章评论-${post.value?.title || '未命名'}`)
@@ -64,6 +66,7 @@ async function loadPost() {
   post.value = null
   relatedPosts.value = []
   commentsOpen.value = false
+  commentSheetMode.value = 'partial'
   commentCount.value = undefined
   relatedRequestSequence += 1
   channelSubscribed.value = false
@@ -126,6 +129,16 @@ async function loadRelatedPosts(postID: string) {
 
 function openRelatedPost(item: BlogRelatedPost) {
   sheets.openPost(item.id, item.title)
+}
+
+function openComments() {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+function closeComments() {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
 }
 
 const bookmarked = computed(() => Boolean(post.value?.id && feedStore.bookmarkedPostIds.has(post.value.id)))
@@ -216,8 +229,8 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
-    :is-shifted="sheets.isShifted(layer.key) || commentsOpen"
-    :is-top-layer="sheets.isTop(layer.key) && !commentsOpen"
+    :is-shifted="sheets.isShifted(layer.key) || commentsBlockParent"
+    :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     reading-mode
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
@@ -294,7 +307,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     <PDiscussionFAB
       v-if="post && sheets.isActive(layer.key)"
       :count="commentCount"
-      @click="commentsOpen = true"
+      @click="openComments"
     />
   </PSheet>
 
@@ -302,11 +315,12 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     v-if="post"
     :show="commentsOpen"
     :title="commentSheetTitle"
-    width="min(100%, 48rem)"
+    mode="partial"
     content-max-width="42rem"
     :index="layerIndex + 1"
-    @close="commentsOpen = false"
-    @activate="commentsOpen = false"
+    @close="closeComments"
+    @activate="closeComments"
+    @mode-change="commentSheetMode = $event"
   >
     <CommentSection
       :target="{ kind: 'blog_post', resourceId: post.id }"

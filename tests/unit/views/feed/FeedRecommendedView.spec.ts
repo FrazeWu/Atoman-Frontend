@@ -590,6 +590,50 @@ describe("FeedRecommendedView", () => {
 		expect(subscribeSpy).not.toHaveBeenCalled();
 	});
 
+	it("requests latest recommendations when selecting the latest filter", async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockImplementation(async (input) => {
+				const url = String(input);
+				if (url.includes("/feed/recommend/themes")) {
+					return new Response(JSON.stringify({ data: [] }), { status: 200 });
+				}
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			});
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+		fetchSpy.mockClear();
+
+		const latestFilter = wrapper
+			.findAll(".segmented-option")
+			.find((option) => option.text() === "最新");
+		expect(latestFilter).toBeDefined();
+		await latestFilter!.trigger("click");
+		await flushPromises();
+
+		expect(fetchSpy).toHaveBeenCalledWith(
+			expect.stringContaining("/api/v1/feed/recommend/articles?mode=latest"),
+			publicRequestOptions,
+		);
+		expect(fetchSpy).toHaveBeenCalledWith(
+			expect.stringContaining("/api/v1/feed/recommend/channels?mode=latest"),
+			publicRequestOptions,
+		);
+	});
+
 	it("mounts and defaults to hot mode and fetches recommendations", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")

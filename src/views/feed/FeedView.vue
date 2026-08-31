@@ -98,6 +98,7 @@
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"
       :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < visibleTimeline.length - 1"
+      :related-articles="visibleTimeline"
       :index="showSourceSheet ? 1 : 0"
       @close="showArticleSheet = false"
       @open-source="openSelectedArticleSource"

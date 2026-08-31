@@ -8,7 +8,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
@@ -298,23 +298,18 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     />
   </PSheet>
 
-  <PSheet
+  <CommentSideSheet
     v-if="post"
     :show="commentsOpen"
     :title="commentSheetTitle"
-    mode="partial"
-    content-max-width="42rem"
     :index="layerIndex + 1"
+    :target="{ kind: 'blog_post', resourceId: post.id }"
+    :can-delete="canDeleteAllComments"
     @close="closeComments"
     @activate="closeComments"
     @mode-change="commentSheetMode = $event"
-  >
-    <CommentSection
-      :target="{ kind: 'blog_post', resourceId: post.id }"
-      :can-delete="canDeleteAllComments"
-      @count-change="commentCount = $event"
-    />
-  </PSheet>
+    @count-change="commentCount = $event"
+  />
 </template>
 
 <style scoped>

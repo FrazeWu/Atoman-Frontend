@@ -1,16 +1,36 @@
 <template>
-  <form class="comment-composer" @submit.prevent>
-    <div class="comment-composer__heading">
-      <span class="comment-composer__label">{{ replyToName ? `回复 @${replyToName}` : '写评论' }}</span>
+  <form
+    class="comment-composer"
+    :class="{
+      'comment-composer--compact': compact,
+      'comment-composer--dense': dense,
+    }"
+    @submit.prevent
+  >
+    <div v-if="isCompactCollapsed" class="comment-composer__compact-trigger">
+      <PAvatar :src="compactAvatarSrc" :name="compactAvatarName" :alt="`${compactAvatarName}的头像`" size="sm" />
       <button
-        v-if="replyToName"
         type="button"
-        class="comment-composer__cancel"
-        title="取消回复"
-        aria-label="取消回复"
-        @click="$emit('cancel')"
-      ><X :size="16" /></button>
+        class="comment-composer__compact-button"
+        data-test="compact-composer-trigger"
+        @click="expandCompact"
+      >
+        {{ placeholder }}
+      </button>
     </div>
+
+    <template v-else>
+      <div v-if="!compact || replyToName" class="comment-composer__heading">
+      <span class="comment-composer__label">{{ replyToName ? `回复 @${replyToName}` : '写评论' }}</span>
+        <button
+          v-if="replyToName"
+          type="button"
+          class="comment-composer__cancel"
+          title="取消回复"
+          aria-label="取消回复"
+          @click="$emit('cancel')"
+        ><X :size="16" /></button>
+      </div>
 
     <div class="comment-composer__field">
       <textarea
@@ -82,6 +102,14 @@
       </div>
       <span class="comment-composer__count" :class="{ 'is-over': codePointLength > 2000 }">{{ codePointLength }}/2000</span>
       <button
+        v-if="compact"
+        type="button"
+        class="comment-composer__cancel"
+        title="收起编辑器"
+        aria-label="收起编辑器"
+        @click="collapseCompact"
+      ><X :size="16" /></button>
+      <button
         type="button"
         class="comment-composer__submit"
         data-test="comment-submit"
@@ -92,6 +120,7 @@
         {{ submitting || uploading ? '处理中...' : submitLabel }}
       </button>
     </div>
+    </template>
   </form>
 </template>
 
@@ -100,6 +129,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { AtSign, Clock3, Image as ImageIcon, ImagePlus, Send, X } from 'lucide-vue-next'
 
 import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import { commentApi, type CommentMentionInput, type CreateCommentInput } from '@/api/comments'
 import { commentCodePointLength, validateCommentMarkdown } from '@/composables/useCommentMarkdown'
 import {
@@ -119,6 +149,10 @@ import { formatTimeAnchor } from '@/composables/useMediaTimeAnchors'
 defineOptions({ name: 'CommentComposer' })
 
 const props = withDefaults(defineProps<{
+  compact?: boolean
+  dense?: boolean
+  compactAvatarSrc?: string
+  compactAvatarName?: string
   initialContent?: string
   initialAttachmentIds?: string[]
   initialMentions?: CommentMentionInput[]
@@ -128,6 +162,10 @@ const props = withDefaults(defineProps<{
   submitting?: boolean
   currentTime?: () => number | null
 }>(), {
+  compact: false,
+  dense: false,
+  compactAvatarSrc: '',
+  compactAvatarName: '我',
   initialContent: '',
   initialAttachmentIds: () => [],
   initialMentions: () => [],
@@ -161,6 +199,8 @@ function selectedFromInput(value: string, inputs: CommentMentionInput[]) {
 }
 
 const content = ref(props.initialContent)
+const isExpanded = ref(!props.compact || Boolean(props.initialContent.trim()))
+const isCompactCollapsed = computed(() => props.compact && !isExpanded.value)
 const attachments = ref<LocalAttachment[]>(props.initialAttachmentIds.map((id) => ({ id, name: '已上传图片' })))
 const selectedMentions = ref<SelectedMention[]>(selectedFromInput(props.initialContent, props.initialMentions))
 const referenceSuggestions = ref<ReferenceSuggestion[]>([])
@@ -177,6 +217,7 @@ let referenceDebounce: ReturnType<typeof setTimeout> | null = null
 watch(content, (value) => emit('content-change', value))
 watch(() => props.initialContent, (value) => {
   if (value !== content.value) content.value = value
+  if (props.compact && value.trim()) isExpanded.value = true
 })
 
 const codePointLength = computed(() => commentCodePointLength(content.value))
@@ -188,6 +229,18 @@ const validationError = computed(() => {
 })
 const canSubmit = computed(() => !props.submitting && !uploading.value && !validationError.value
   && (normalizeCommentContent(content.value).length > 0 || attachments.value.length > 0))
+
+function expandCompact() {
+  isExpanded.value = true
+  nextTick(() => textareaRef.value?.focus())
+}
+
+function collapseCompact() {
+  if (!props.compact) return
+  isExpanded.value = false
+  closeReferences()
+  emit('cancel')
+}
 
 function closeReferences() {
   referenceVisible.value = false
@@ -346,6 +399,7 @@ function submit() {
 
 function reset() {
   content.value = props.initialContent
+  isExpanded.value = !props.compact
   attachments.value = props.initialAttachmentIds.map((id) => ({ id, name: '已上传图片' }))
   selectedMentions.value = selectedFromInput(props.initialContent, props.initialMentions)
   closeReferences()
@@ -354,6 +408,7 @@ function reset() {
 
 function setContent(value: string) {
   content.value = value
+  if (props.compact && value.trim()) isExpanded.value = true
 }
 
 defineExpose({ reset, setContent })
@@ -365,6 +420,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .comment-composer { display: grid; gap: 0.85rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
+.comment-composer--compact { gap: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.comment-composer__compact-trigger { display: grid; grid-template-columns: 2rem minmax(0, 1fr); align-items: center; gap: 0.6rem; }
+.comment-composer__compact-button { display: flex; align-items: center; width: 100%; min-height: 2.5rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); color: var(--a-color-muted-soft); cursor: text; text-align: left; }
+.comment-composer__compact-button:hover, .comment-composer__compact-button:focus-visible { border-color: var(--a-color-primary); outline: 2px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent); outline-offset: 1px; }
+.comment-composer--compact .comment-composer__field { margin-left: 2.6rem; }
+.comment-composer--compact .comment-composer__footer { margin-left: 2.6rem; }
+.comment-composer--dense { gap: 0.6rem; padding: 0.7rem; }
+.comment-composer--dense textarea { min-height: 4.75rem; }
+.comment-composer--dense .comment-composer__footer { min-height: 2.5rem; padding-top: 0.5rem; }
 .comment-composer__heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 1.5rem; }
 .comment-composer__label { color: var(--a-color-text); font-size: var(--a-text-sm); font-weight: var(--a-font-weight-strong); }
 .comment-composer__cancel, .comment-composer__attachment button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; }
@@ -393,5 +457,5 @@ onBeforeUnmount(() => {
 .comment-composer__submit:disabled { cursor: not-allowed; opacity: 0.5; }
 .comment-composer__error { margin: 0; font-size: var(--a-text-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-@media (max-width: 560px) { .comment-composer { padding: 0.85rem; } .comment-composer__footer { align-items: center; } .comment-composer__count { margin-left: auto; } }
+@media (max-width: 560px) { .comment-composer { padding: 0.85rem; } .comment-composer--compact { padding: 0; } .comment-composer__footer { align-items: center; } .comment-composer__count { margin-left: auto; } }
 </style>

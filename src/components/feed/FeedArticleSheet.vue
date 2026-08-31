@@ -8,9 +8,10 @@
     :is-shifted="commentsBlockParent"
     :is-top-layer="!commentsBlockParent"
     :index="index"
+    :ref="presentation === 'page' ? setPageContentAnchor : undefined"
     :class="{ 'feed-article-page': presentation === 'page' }"
     @close="$emit('close')"
-    @activate="commentsOpen = false"
+    @activate="closeComments"
   >
     <template v-if="article && article.type === 'post' && article.post">
       <div class="article-meta">
@@ -170,31 +171,18 @@
   >
     评论<span v-if="commentCount !== undefined"> · {{ commentCount }}</span>
   </button>
-  <section
-    v-if="article?.type === 'feed_item' && article.feed_item && presentation === 'page' && commentsOpen"
-    class="article-comments-section"
-  >
-    <CommentSection
-      :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
-      @count-change="commentCount = $event"
-    />
-  </section>
-  <PSheet
-    v-else-if="article?.type === 'feed_item' && article.feed_item"
+  <CommentSideSheet
+    v-if="article?.type === 'feed_item' && article.feed_item"
     :show="commentsOpen"
     :title="commentSheetTitle"
-    mode="partial"
-    content-max-width="42rem"
-    :index="(index || 0) + 1"
+    :partial-anchor="presentation === 'page' ? pageContentAnchor : null"
+    :index="presentation === 'page' ? 0 : (index || 0) + 1"
+    :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
     @close="closeComments"
     @activate="closeComments"
     @mode-change="commentSheetMode = $event"
-  >
-    <CommentSection
-      :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
-      @count-change="commentCount = $event"
-    />
-  </PSheet>
+    @count-change="commentCount = $event"
+  />
 </template>
 
 <script setup lang="ts">
@@ -210,7 +198,7 @@ import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
 import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -252,6 +240,11 @@ const commentsOpen = ref(false)
 const commentSheetMode = ref<'full' | 'partial'>('partial')
 const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const commentCount = ref<number | undefined>(undefined)
+const pageContentAnchor = ref<HTMLElement | null>(null)
+
+const setPageContentAnchor = (element: unknown) => {
+  pageContentAnchor.value = element instanceof HTMLElement ? element : null
+}
 
 const openComments = () => {
   commentSheetMode.value = 'partial'
@@ -556,14 +549,6 @@ const emitPlayPodcast = () => {
   color: var(--a-color-primary);
   font: inherit;
   cursor: pointer;
-}
-
-.article-comments-section {
-  margin: 1rem 0 2rem;
-  padding: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
 }
 
 .article-cover {

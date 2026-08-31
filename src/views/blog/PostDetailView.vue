@@ -34,7 +34,7 @@
     </div>
 
     <!-- Post content -->
-    <article v-else-if="post">
+    <article v-else-if="post" ref="postContentAnchor">
       <PostHeader
         :post="post"
         :is-owner="isOwner"
@@ -112,16 +112,24 @@
           </a>
         </div>
 
-        <!-- Comments -->
-        <CommentSection
-          :target="{ kind: 'blog_post', resourceId: postId }"
-          :can-delete="canDeleteAllComments"
-          @count-change="interactions.commentCount.value = $event"
+        <PDiscussionFAB
+          :count="interactions.commentCount.value"
+          @click="commentsOpen = true"
         />
         <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
       </div>
     </article>
   </div>
+  <CommentSideSheet
+    v-if="post"
+    :show="commentsOpen"
+    :title="`文章评论-${post.title || '未命名'}`"
+    :partial-anchor="postContentAnchor"
+    :target="{ kind: 'blog_post', resourceId: postId }"
+    :can-delete="canDeleteAllComments"
+    @close="commentsOpen = false"
+    @count-change="interactions.commentCount.value = $event"
+  />
 </template>
 
 <script setup lang="ts">
@@ -129,7 +137,8 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PostHeader from '@/components/blog/PostHeader.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
@@ -196,6 +205,8 @@ const relatedPosts = ref<BlogRelatedPost[]>([])
 const shareToastVisible = ref(false)
 const shareToastMessage = ref('')
 const shareToastType = ref<'success' | 'warning'>('success')
+const commentsOpen = ref(false)
+const postContentAnchor = ref<HTMLElement | null>(null)
 let loadSeq = 0
 let ratingOperationSeq = 0
 let bookmarkOperationSeq = 0
@@ -271,6 +282,7 @@ const fetchPost = async () => {
   const isCurrentLoad = () => seq === loadSeq && requestedID === postId.value
   loading.value = true
   errorStatus.value = null
+  commentsOpen.value = false
   post.value = null
   isAcademic.value = false
   bookmarked.value = false

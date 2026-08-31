@@ -232,6 +232,7 @@ onBeforeUnmount(() => {
   <PSheet
     :show="show"
     :title="title || '裁剪-图片'"
+    mode="partial"
     content-max-width="36rem"
     close-type="header"
     above-player

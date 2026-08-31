@@ -3,11 +3,10 @@
     :is="presentation === 'page' ? 'article' : PSheet"
     :show="show"
     :title="sheetTitle"
-    width="min(100%, 800px)"
     close-type="bookmark"
     reading-mode
-    :is-shifted="commentsOpen"
-    :is-top-layer="!commentsOpen"
+    :is-shifted="commentsBlockParent"
+    :is-top-layer="!commentsBlockParent"
     :index="index"
     :class="{ 'feed-article-page': presentation === 'page' }"
     @close="$emit('close')"
@@ -159,7 +158,7 @@
     <PDiscussionFAB
       v-if="article?.type === 'feed_item' && article.feed_item && show && presentation !== 'page'"
       :count="commentCount"
-      @click="commentsOpen = true"
+      @click="openComments"
     />
   </component>
 
@@ -167,7 +166,7 @@
     v-if="article?.type === 'feed_item' && article.feed_item && show && presentation === 'page'"
     type="button"
     class="article-comments-link"
-    @click="commentsOpen = true"
+    @click="openComments"
   >
     评论<span v-if="commentCount !== undefined"> · {{ commentCount }}</span>
   </button>
@@ -184,11 +183,12 @@
     v-else-if="article?.type === 'feed_item' && article.feed_item"
     :show="commentsOpen"
     :title="commentSheetTitle"
-    width="min(100%, 48rem)"
+    mode="partial"
     content-max-width="42rem"
     :index="(index || 0) + 1"
-    @close="commentsOpen = false"
-    @activate="commentsOpen = false"
+    @close="closeComments"
+    @activate="closeComments"
+    @mode-change="commentSheetMode = $event"
   >
     <CommentSection
       :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
@@ -249,7 +249,19 @@ const ratingLoading = ref(false)
 const feedCoverFailed = ref(false)
 const feedCoverCandidateIndex = ref(0)
 const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const commentCount = ref<number | undefined>(undefined)
+
+const openComments = () => {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+const closeComments = () => {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+}
 type FeedContentMode = 'rss' | 'full_text'
 const feedContentMode = ref<FeedContentMode>(defaultFeedContentMode(props.reader))
 const feedContentModeOptions: Array<{ label: string; value: FeedContentMode; test: string }> = [
@@ -289,6 +301,7 @@ watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant],
   feedCoverFailed.value = false
   feedCoverCandidateIndex.value = 0
   commentsOpen.value = false
+  commentSheetMode.value = 'partial'
   commentCount.value = undefined
   feedContentMode.value = defaultFeedContentMode(props.reader)
 })

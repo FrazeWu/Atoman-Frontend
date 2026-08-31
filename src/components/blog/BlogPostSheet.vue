@@ -50,6 +50,8 @@ const channelSubscriptionBusy = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
 const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const commentCount = ref<number | undefined>(undefined)
 const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
 const commentSheetTitle = computed(() => `博客文章评论-${post.value?.title || '未命名'}`)
@@ -64,6 +66,7 @@ async function loadPost() {
   post.value = null
   relatedPosts.value = []
   commentsOpen.value = false
+  commentSheetMode.value = 'partial'
   commentCount.value = undefined
   relatedRequestSequence += 1
   channelSubscribed.value = false
@@ -128,6 +131,16 @@ function openRelatedPost(item: BlogRelatedPost) {
   sheets.openPost(item.id, item.title)
 }
 
+function openComments() {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+function closeComments() {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+}
+
 const bookmarked = computed(() => Boolean(post.value?.id && feedStore.bookmarkedPostIds.has(post.value.id)))
 const inReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
 
@@ -150,6 +163,17 @@ function ratingFailureMessage(error?: { code?: string; message?: string }) {
   return '评分未保存，请重试'
 }
 
+function ratingRequestFailureMessage(error: unknown) {
+  if (error instanceof TypeError || (error instanceof Error && /network|fetch|timeout/i.test(error.message))) {
+    return '网络连接失败，请检查网络后重试'
+  }
+  if (error && typeof error === 'object') {
+    const apiError = error as { code?: string; message?: string }
+    return ratingFailureMessage(apiError)
+  }
+  return '评分未保存，请重试'
+}
+
 async function ratePost(score: number) {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
   ratingError.value = ''
@@ -169,6 +193,8 @@ async function ratePost(score: number) {
     post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
     post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
     post.value.viewer_rating = Number(summary.viewer_rating ?? score)
+  } catch (error) {
+    ratingError.value = ratingRequestFailureMessage(error)
   } finally {
     ratingLoading.value = false
   }
@@ -203,8 +229,8 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
-    :is-shifted="sheets.isShifted(layer.key) || commentsOpen"
-    :is-top-layer="sheets.isTop(layer.key) && !commentsOpen"
+    :is-shifted="sheets.isShifted(layer.key) || commentsBlockParent"
+    :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     reading-mode
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
@@ -281,7 +307,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     <PDiscussionFAB
       v-if="post && sheets.isActive(layer.key)"
       :count="commentCount"
-      @click="commentsOpen = true"
+      @click="openComments"
     />
   </PSheet>
 
@@ -289,11 +315,12 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     v-if="post"
     :show="commentsOpen"
     :title="commentSheetTitle"
-    width="min(100%, 48rem)"
+    mode="partial"
     content-max-width="42rem"
     :index="layerIndex + 1"
-    @close="commentsOpen = false"
-    @activate="commentsOpen = false"
+    @close="closeComments"
+    @activate="closeComments"
+    @mode-change="commentSheetMode = $event"
   >
     <CommentSection
       :target="{ kind: 'blog_post', resourceId: post.id }"

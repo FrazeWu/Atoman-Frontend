@@ -3,11 +3,10 @@
     :is="presentation === 'page' ? 'article' : PSheet"
     :show="show"
     :title="sheetTitle"
-    width="min(100%, 800px)"
     close-type="bookmark"
     reading-mode
-    :is-shifted="commentsOpen"
-    :is-top-layer="!commentsOpen"
+    :is-shifted="commentsBlockParent"
+    :is-top-layer="!commentsBlockParent"
     :index="index"
     :class="{ 'feed-article-page': presentation === 'page' }"
     @close="$emit('close')"
@@ -86,7 +85,7 @@
         />
         <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
       </div>
-      <div class="article-meta">
+      <div class="article-meta article-meta--reader">
         <button
           v-if="source && articleSource"
           type="button"
@@ -100,28 +99,43 @@
         <span v-if="article.feed_item.author">{{ article.feed_item.author }}</span>
         <span>{{ formatDate(article.feed_item.published_at) }}</span>
         <span v-if="feedWordCountLabel">{{ feedWordCountLabel }}</span>
+        <div class="article-source-actions">
+          <PButton
+            v-if="showSourceSubscribe && articleSource"
+            data-test="feed-article-subscribe-source"
+            :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+            :variant="articleSource.subscribed ? 'secondary' : 'primary'"
+            :disabled="articleSource.subscribed"
+            :loading="sourceSubscribeBusy"
+            loading-text="订阅中..."
+            @click="emit('subscribe-source')"
+          />
+          <button
+            type="button"
+            class="article-star-button"
+            data-test="feed-article-quick-star"
+            :aria-label="feedItemStarred ? '取消收藏文章' : '收藏文章'"
+            :title="feedItemStarred ? '取消收藏文章' : '收藏文章'"
+            :aria-pressed="feedItemStarred"
+            :disabled="!authStore.isAuthenticated"
+            @click="toggleFeedItemStar"
+          >
+            <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
+          </button>
+        </div>
       </div>
       <h1 class="article-title">{{ article.feed_item.title }}</h1>
       <div class="article-toolbar">
-        <PButton
-          v-if="showSourceSubscribe && articleSource"
-          data-test="feed-article-subscribe-source"
-          :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
-          :variant="articleSource.subscribed ? 'secondary' : 'primary'"
-          :disabled="articleSource.subscribed"
-          :loading="sourceSubscribeBusy"
-          loading-text="订阅中..."
-          @click="emit('subscribe-source')"
-        />
         <a
           v-if="article.feed_item.link"
           :href="article.feed_item.link"
           target="_blank"
           rel="noopener noreferrer"
           class="article-source-link"
+          aria-label="在源站查看"
+          title="在源站查看"
         >
           <ExternalLink :size="16" aria-hidden="true" />
-          在源站查看
         </a>
         <button
           v-if="isPlayablePodcast"
@@ -130,36 +144,73 @@
           data-test="feed-article-play"
           @click="emitPlayPodcast"
         >
+          <Play :size="16" aria-hidden="true" />
           {{ isPodcastPlaying ? '播放中，暂停' : '播放播客' }}
         </button>
       </div>
-      
+
       <div class="article-body-wrap">
-        <PSegmentedControl
-          v-if="showFeedContentModeSwitch"
-          v-model="feedContentMode"
-          class="article-content-switcher"
-          aria-label="正文来源"
-          :options="feedContentModeOptions"
+        <div class="article-reader-controls">
+          <PSegmentedControl
+            v-if="showFeedContentModeSwitch"
+            v-model="feedContentMode"
+            class="article-content-switcher"
+            aria-label="正文来源"
+            :options="feedContentModeOptions"
+          />
+          <span v-else class="article-content-label">{{ feedContentStateLabel }}</span>
+        </div>
+        <BlogPostUpdateNotice
+          v-if="feedContentVariant === 'full_text'"
+          class="article-content-validity"
+          data-test="feed-article-validity-notice"
+          :updated-at="article.feed_item.published_at"
+          label="发布时间："
         />
-        <PBadge v-if="feedContentStateLabel" :type="feedContentSource === 'summary' ? 'external' : 'internal'">
-          {{ feedContentStateLabel }}
-        </PBadge>
-        <p v-if="feedContentStateDescription" class="article-content-note">
-          {{ feedContentStateDescription }}
-        </p>
         <FeedReaderContent
           class="article-body article-body--external-feed"
           :html="feedBodyHtml"
           :base-url="article.feed_item.link"
         />
         <FeedContentFeedback :item-id="article.feed_item.id" :variant="feedContentVariant" />
+        <footer class="article-reader-footer">
+          <div class="article-reader-footer__actions">
+            <span class="article-rating" data-test="feed-article-rating">
+              <Star :size="16" aria-hidden="true" />
+              {{ feedRatingLabel }}
+            </span>
+            <button
+              type="button"
+              class="article-reader-star"
+              data-test="feed-article-footer-star"
+              :aria-pressed="feedItemStarred"
+              :disabled="!authStore.isAuthenticated"
+              @click="toggleFeedItemStar"
+            >
+              <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
+              {{ feedItemStarred ? '取消收藏' : '收藏' }}
+            </button>
+          </div>
+          <section v-if="relatedFeedItems.length" class="article-related-reading" data-test="feed-article-related-reading">
+            <h2>推荐阅读</h2>
+            <a
+              v-for="item in relatedFeedItems"
+              :key="item.id"
+              :href="item.link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span>{{ item.title }}</span>
+              <small>{{ formatDate(item.published_at) }}</small>
+            </a>
+          </section>
+        </footer>
       </div>
     </template>
     <PDiscussionFAB
       v-if="article?.type === 'feed_item' && article.feed_item && show && presentation !== 'page'"
       :count="commentCount"
-      @click="commentsOpen = true"
+      @click="openComments"
     />
   </component>
 
@@ -167,7 +218,7 @@
     v-if="article?.type === 'feed_item' && article.feed_item && show && presentation === 'page'"
     type="button"
     class="article-comments-link"
-    @click="commentsOpen = true"
+    @click="openComments"
   >
     评论<span v-if="commentCount !== undefined"> · {{ commentCount }}</span>
   </button>
@@ -184,11 +235,12 @@
     v-else-if="article?.type === 'feed_item' && article.feed_item"
     :show="commentsOpen"
     :title="commentSheetTitle"
-    width="min(100%, 48rem)"
+    mode="partial"
     content-max-width="42rem"
     :index="(index || 0) + 1"
-    @close="commentsOpen = false"
-    @activate="commentsOpen = false"
+    @close="closeComments"
+    @activate="closeComments"
+    @mode-change="commentSheetMode = $event"
   >
     <CommentSection
       :target="{ kind: 'feed_article', resourceId: article.feed_item.id }"
@@ -199,15 +251,15 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Bookmark, Clock, ExternalLink } from 'lucide-vue-next'
+import { Bookmark, Clock, ExternalLink, Play, Star } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
-import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
+import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
 import FeedReaderContent from '@/components/feed/FeedReaderContent.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
@@ -232,12 +284,14 @@ const props = withDefaults(defineProps<{
   index?: number
   hasPrevious?: boolean
   hasNext?: boolean
+  relatedArticles?: TimelineItem[]
   presentation?: 'sheet' | 'page'
 }>(), {
   reader: null,
   source: null,
   showSourceSubscribe: false,
   sourceSubscribeBusy: false,
+  relatedArticles: () => [],
   presentation: 'sheet',
 })
 
@@ -249,7 +303,19 @@ const ratingLoading = ref(false)
 const feedCoverFailed = ref(false)
 const feedCoverCandidateIndex = ref(0)
 const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const commentCount = ref<number | undefined>(undefined)
+
+const openComments = () => {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+const closeComments = () => {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+}
 type FeedContentMode = 'rss' | 'full_text'
 const feedContentMode = ref<FeedContentMode>(defaultFeedContentMode(props.reader))
 const feedContentModeOptions: Array<{ label: string; value: FeedContentMode; test: string }> = [
@@ -264,6 +330,27 @@ const postBookmarked = computed(() => {
 const postInReadingList = computed(() => {
   const post = props.article?.type === 'post' ? props.article.post : null
   return Boolean(post?.id && feedStore.readingListItemIds.has(post.id))
+})
+const feedItemStarred = computed(() => {
+  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  return Boolean(item?.id && (item.is_starred || feedStore.starredItemIds.has(item.id)))
+})
+const relatedFeedItems = computed(() => {
+  const currentItem = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  if (!currentItem) return []
+
+  const seen = new Set([currentItem.id])
+  return props.relatedArticles.flatMap((candidate) => {
+    const item = candidate.type === 'feed_item' ? candidate.feed_item : undefined
+    if (!item || item.feed_source_id !== currentItem.feed_source_id || seen.has(item.id)) return []
+    seen.add(item.id)
+    return [item]
+  }).slice(0, 3)
+})
+const feedRatingLabel = computed(() => {
+  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  if (!item?.rating_count) return '暂无评分'
+  return `${Number(item.rating_score || 0).toFixed(1)} · ${item.rating_count} 人评分`
 })
 const feedCoverCandidates = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return []
@@ -289,6 +376,7 @@ watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant],
   feedCoverFailed.value = false
   feedCoverCandidateIndex.value = 0
   commentsOpen.value = false
+  commentSheetMode.value = 'partial'
   commentCount.value = undefined
   feedContentMode.value = defaultFeedContentMode(props.reader)
 })
@@ -400,7 +488,7 @@ const feedContentStateLabel = computed(() => {
     case 'rss':
       return 'RSS 正文'
     default:
-      return '摘要'
+      return 'RSS 摘要'
   }
 })
 
@@ -426,13 +514,6 @@ const feedBodyHtml = computed(() => {
 })
 
 const showFeedCover = computed(() => Boolean(feedCoverUrl.value) && !hasFeedReaderImage(feedBodyHtml.value))
-
-const feedContentStateDescription = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
-  if (feedContentVariant.value === 'full_text') return '已展示抓取的全文'
-  if (feedContentVariant.value === 'rss') return '已展示 RSS 正文'
-  return props.article.feed_item.summary ? '当前仅展示 RSS 摘要' : ''
-})
 
 const { navigateWithShutter } = useAsyncNavigate()
 
@@ -476,6 +557,12 @@ async function togglePostReadingList() {
   const post = props.article?.type === 'post' ? props.article.post : null
   if (!post || !authStore.isAuthenticated) return
   await feedStore.toggleReadingListItem(post.id)
+}
+
+async function toggleFeedItemStar() {
+  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  if (!item || !authStore.isAuthenticated) return
+  await feedStore.toggleStar(item.id)
 }
 
 async function ratePost(score: number) {
@@ -583,6 +670,7 @@ const emitPlayPodcast = () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem 0.8rem;
+  align-items: center;
   margin-bottom: 1.15rem;
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
@@ -611,6 +699,45 @@ const emitPlayPodcast = () => {
   outline-offset: 2px;
 }
 
+.article-source-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.article-star-button,
+.article-source-link,
+.article-toolbar__button {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.article-star-button {
+  padding: 0.4rem;
+}
+
+.article-star-button[aria-pressed='true'] {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.article-star-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .article-title {
   max-width: 26ch;
   margin: 0 0 1.35rem;
@@ -627,33 +754,28 @@ const emitPlayPodcast = () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 
 .article-source-link,
 .article-toolbar__button {
-  display: inline-flex;
-  min-height: 36px;
-  align-items: center;
-  gap: 0.42rem;
   padding: 0.4rem 0.7rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  cursor: pointer;
-  font-family: var(--a-font-sans);
-  font-size: 0.78rem;
-  font-weight: 500;
-  text-decoration: none;
+}
+
+.article-source-link {
+  width: 44px;
+  padding: 0.4rem;
 }
 
 .article-source-link:hover,
-.article-toolbar__button:hover {
+.article-toolbar__button:hover,
+.article-star-button:hover {
   border-color: var(--a-color-text);
 }
 
 .article-source-link:focus-visible,
-.article-toolbar__button:focus-visible {
+.article-toolbar__button:focus-visible,
+.article-star-button:focus-visible {
   outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
 }
@@ -685,16 +807,105 @@ const emitPlayPodcast = () => {
   min-width: 0;
 }
 
+.article-reader-controls {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+}
+
 .article-content-switcher {
   width: fit-content;
 }
 
-.article-content-note {
-  margin: 0;
+.article-content-label {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
-  font-size: 0.78rem;
-  line-height: 1.6;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.article-content-validity {
+  margin: 0;
+}
+
+.article-reader-footer {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.article-reader-footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.article-rating {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+}
+
+.article-reader-star {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.article-reader-star[aria-pressed='true'] {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.article-reader-star:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.article-related-reading h2 {
+  margin: 0 0 0.5rem;
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
+  font-size: 0.95rem;
+}
+
+.article-related-reading a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.article-related-reading a:hover {
+  color: var(--a-color-primary);
+}
+
+.article-related-reading small {
+  flex: 0 0 auto;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
 }
 
 @media (max-width: 767px) {
@@ -708,7 +919,15 @@ const emitPlayPodcast = () => {
   }
 
   .article-toolbar {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .article-related-reading a {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.45rem 0;
   }
 }
 </style>

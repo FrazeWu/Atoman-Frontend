@@ -24,6 +24,7 @@
     :show="articleSheetVisible"
     :article="article"
     :reader="reader"
+    :related-articles="routeState?.articles || sourceArticles"
     :source="articleSource"
     :show-source-subscribe="authStore.isAuthenticated"
     :source-subscribe-busy="sourceSubscribeBusy"

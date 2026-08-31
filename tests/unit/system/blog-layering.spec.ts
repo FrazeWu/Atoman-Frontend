@@ -28,7 +28,7 @@ describe("Blog sheet layering", () => {
 
       expect(source).toContain(
         file === "BlogPostSheet.vue"
-          ? ':is-top-layer="sheets.isTop(layer.key) && !commentsOpen"'
+          ? ':is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"'
           : ':is-top-layer="sheets.isTop(layer.key)"',
       );
     },

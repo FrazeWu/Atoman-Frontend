@@ -115,6 +115,25 @@ describe('PortalView', () => {
     expect(recommendationImages[0].attributes('fetchpriority')).toBe('high')
   })
 
+  it('为每条焦点精选提供视觉锚点和推荐依据', async () => {
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: {
+          PButton: true,
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.findAll('.portal-hot__recommendation-image')).toHaveLength(4)
+    expect(wrapper.findAll('[data-test="portal-spotlight-reason"]')).toHaveLength(4)
+  })
+
   it('推荐内容无图时优先加载模块区第一张图片', async () => {
     const textOnlyFeatured = featured.map((item) => ({ ...item, image_url: '' }))
     vi.mocked(fetch).mockResolvedValueOnce({
@@ -151,5 +170,50 @@ describe('PortalView', () => {
     const image = wrapper.get('.portal-hot__thumb img')
     expect(image.attributes('loading')).toBe('eager')
     expect(image.attributes('fetchpriority')).toBe('high')
+  })
+
+  it('点击换一批会请求下一组焦点精选并替换当前卡片', async () => {
+    const nextFeatured = featured.map((item, index) => ({
+      ...item,
+      id: `next-${index + 1}`,
+      title: `下一批内容 ${index + 1}`,
+      target_path: `/next/${index + 1}`,
+    }))
+    vi.mocked(fetch).mockImplementation(async (input) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          featured: String(input).includes('spotlight_offset=4') ? nextFeatured : featured,
+          featured_total: 8,
+          sections: [],
+        },
+      }),
+    }) as Response)
+
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: {
+          PButton: {
+            props: ['disabled', 'label', 'loading'],
+            template: '<button :disabled="disabled || loading" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>',
+          },
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-test="portal-refresh-spotlight"]').trigger('click')
+    await flushPromises()
+
+    expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toContain(
+      '/api/v1/portal/hot?limit=6&spotlight_offset=4',
+    )
+    expect(wrapper.text()).toContain('下一批内容 1')
+    expect(wrapper.text()).not.toContain('第一篇文章')
   })
 })

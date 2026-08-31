@@ -12,6 +12,7 @@ import { createFeedMembershipState } from "@/stores/feed/membership";
 import { createFeedCoreState } from "@/stores/feed/core";
 import { createFeedRulesState } from "@/stores/feed/rules";
 import { createFeedSourcesState } from "@/stores/feed/sources";
+import { createSubscriptionHubState } from "@/stores/feed/subscriptionHub";
 export type { FeedOPMLImportResult } from "@/stores/feed/sources";
 
 const api = useApi();
@@ -180,6 +181,14 @@ export const useFeedStore = defineStore("feed", () => {
 	});
 
 	const {
+		subscriptionHubTree,
+		loadingSubscriptionHubTree,
+		subscriptionHubTreeError,
+		fetchSubscriptionHubTree,
+		clearSubscriptionHubState,
+	} = createSubscriptionHubState();
+
+	const {
 		starredItemIds,
 		bookmarkedPostIds,
 		readingListItemIds,
@@ -206,6 +215,7 @@ export const useFeedStore = defineStore("feed", () => {
 		preferenceGeneration += 1;
 		clearCoreState();
 		clearRulesState();
+		clearSubscriptionHubState();
 		timeline.value = [];
 		clearMembershipState();
 		clearSourcesState();
@@ -467,6 +477,9 @@ export const useFeedStore = defineStore("feed", () => {
 		ruleApplySummary,
 		groups,
 		starGroups,
+		subscriptionHubTree,
+		loadingSubscriptionHubTree,
+		subscriptionHubTreeError,
 		timeline,
 		filterRules,
 		automationRules,
@@ -479,6 +492,7 @@ export const useFeedStore = defineStore("feed", () => {
 		fetchFilterPreferences,
 		fetchSubscriptionRules,
 		fetchGroups,
+		fetchSubscriptionHubTree,
 		createSubscriptionRule,
 		createGroup,
 		fetchStarGroups,

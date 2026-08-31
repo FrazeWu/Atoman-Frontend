@@ -3,37 +3,30 @@
     <AppSidebar module="feed" />
     <main class="a-main-content">
       <header v-if="authStore.isAuthenticated" class="module-mobile-header">
-        <RouterLink
-          v-if="isMobileApp"
-          to="/feed/sources"
-          class="module-mobile-header__action a-font-meta"
-          data-testid="feed-mobile-sources-trigger"
-        >
-          来源
-        </RouterLink>
         <button
-          v-else
           type="button"
           class="module-mobile-header__action a-font-meta"
           data-testid="feed-mobile-sources-trigger"
           @click="mobileSourcesOpen = true"
         >
-          来源
+          订阅
         </button>
       </header>
       <router-view />
     </main>
     <FeedMobileSourcesSheet
-      v-if="authStore.isAuthenticated && !isMobileApp"
+      v-if="authStore.isAuthenticated"
       :show="mobileSourcesOpen"
-      :subscriptions="subscriptions"
-      :groups="groups"
-      :active-source-id="querySourceId"
-      :unread-counts="subscriptionUnreadCounts"
+      :tree="subscriptionHubTree"
+      :active-type="activeHubType"
+      :active-group-id="activeHubGroupId"
+      :active-membership-id="activeHubMembershipId"
+      :loading="loadingSubscriptionHubTree"
+      :error="subscriptionHubTreeError"
       @close="mobileSourcesOpen = false"
-      @select-source="selectSource"
-      @select-all="selectAllSources"
-      @manage="openManageSheet"
+      @select-context="selectSubscriptionHubContext"
+      @manage-rss="openRSSManagement"
+      @retry="reloadSubscriptionHubTree"
     />
   </div>
 </template>
@@ -47,16 +40,12 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
-import { moduleUrl } from '@/router/siteUrls'
-import { isStandaloneMobileApp } from '@/utils/appRuntime'
-import type { TimelineItem } from '@/types'
-import { findSubscriptionByTimelineItem } from '@/utils/feedSubscriptions'
+import type { SubscriptionHubType } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
-const isMobileApp = isStandaloneMobileApp()
 
 // Setup global area switching (H/L)
 useKeyboardLayout()
@@ -64,37 +53,20 @@ useKeyboardLayout()
 const { sidebarCollapsed } = useSidebar()
 const mobileSourcesOpen = ref(false)
 
-const subscriptions = computed(() => feedStore.subscriptions)
-const groups = computed(() => feedStore.groups)
-const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
+const subscriptionHubTree = computed(() => feedStore.subscriptionHubTree)
+const loadingSubscriptionHubTree = computed(() => feedStore.loadingSubscriptionHubTree)
+const subscriptionHubTreeError = computed(() => feedStore.subscriptionHubTreeError)
 
-const subscriptionUnreadCounts = computed(() => {
-  const counts: Record<string, number> = {}
-  const hasServerUnreadCounts = subscriptions.value.some((sub) => typeof sub.unread_count === 'number')
-  if (hasServerUnreadCounts) {
-    subscriptions.value.forEach((sub) => {
-      if (typeof sub.unread_count === 'number') {
-        counts[sub.id] = sub.unread_count
-      }
-    })
-    return counts
-  }
+const isSubscriptionHubType = (value: unknown): value is SubscriptionHubType =>
+  value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
 
-  feedStore.timeline.forEach((item: TimelineItem) => {
-    if (item.is_read) return
-    const subscription = findSubscriptionByTimelineItem(item, subscriptions.value)
-    if (!subscription) return
-    counts[subscription.id] = (counts[subscription.id] || 0) + 1
-  })
-  return counts
-})
+const activeHubType = computed<SubscriptionHubType | null>(() =>
+  isSubscriptionHubType(route.query.hub_type) ? route.query.hub_type : null,
+)
+const activeHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
+const activeHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)
 
-const selectSource = (sourceId: string) => {
-  mobileSourcesOpen.value = false
-  void router.push({ path: '/feed/sources', query: { source_id: sourceId } })
-}
-
-const selectAllSources = () => {
+const selectSubscriptionHubContext = (selection: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }) => {
   mobileSourcesOpen.value = false
   void router.push({
     path: '/feed/subscriptions',
@@ -102,19 +74,43 @@ const selectAllSources = () => {
       ...route.query,
       source_id: undefined,
       group_id: undefined,
+      hub_type: selection.subscriptionType,
+      hub_group_id: selection.groupId,
+      hub_membership_id: selection.membershipId,
+      q: undefined,
+      sort: undefined,
+      merge_duplicates: undefined,
       page: undefined,
     },
   })
 }
 
-const openManageSheet = () => {
+const openRSSManagement = () => {
   mobileSourcesOpen.value = false
-  void router.push({ path: moduleUrl('feed'), query: { ...route.query, manage_subscriptions: '1', manage_tab: 'groups' } })
+  void router.push({
+    path: '/feed/sources',
+    query: {
+      ...route.query,
+      hub_type: undefined,
+      hub_group_id: undefined,
+      hub_membership_id: undefined,
+      manage_subscriptions: '1',
+      manage_tab: 'sources',
+    },
+  })
+}
+
+const reloadSubscriptionHubTree = () => {
+  void feedStore.fetchSubscriptionHubTree()
 }
 
 const ensureSidebarSources = () => {
   if (!authStore.isAuthenticated) return
-  void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
+  void Promise.all([
+    feedStore.fetchSubscriptions(),
+    feedStore.fetchGroups(),
+    feedStore.fetchSubscriptionHubTree(),
+  ])
 }
 
 watch(

@@ -743,6 +743,81 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.vm.totalArticles).toBe(1);
 	});
 
+	it("keeps the subscribed channel when legacy recommendations include a mirrored RSS source", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "channel-mikan",
+								title: "机核",
+								source_type: "internal_channel",
+								source_category: "blog",
+								target_path: "/channels/mikan",
+								recent_items: [
+									{ id: "post-1", title: "相同的第一篇内容" },
+									{ id: "post-2", title: "相同的第二篇内容" },
+								],
+							},
+							{
+								id: "rss-mikan",
+								title: "机核",
+								source_type: "external_rss",
+								source_category: "blog",
+								source_id: "rss-mikan",
+								rss_url: "https://example.com/mikan.xml",
+								target_path: "/feed/sources?source_id=rss-mikan",
+								recent_items: [
+									{ id: "rss-item-1", title: "相同的第一篇内容" },
+									{ id: "rss-item-2", title: "相同的第二篇内容" },
+								],
+							},
+						],
+						meta: { total: 2 },
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const authStore = useAuthStore();
+		authStore.token = "token";
+		authStore.isAuthenticated = true;
+		const feedStore = useFeedStore();
+		vi.spyOn(feedStore, "isSubscribedToChannel").mockResolvedValue(true);
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		expect(wrapper.vm.channels).toHaveLength(1);
+		expect(wrapper.vm.channels[0]).toMatchObject({
+			id: "channel-mikan",
+			subscribed: true,
+		});
+		expect(wrapper.vm.totalChannels).toBe(1);
+	});
+
 	it("shows error state when fetching fails", async () => {
 		vi
 			.spyOn(globalThis, "fetch")

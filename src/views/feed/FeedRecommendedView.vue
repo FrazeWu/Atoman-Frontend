@@ -492,6 +492,55 @@ function deduplicateRecommendationItems(items: RecommendationItem[]) {
   })
 }
 
+function recommendationChannelIdentity(item: RecommendationItem) {
+  const title = normalizeRecommendationContentFingerprint(item.title)
+  if (!title) return ''
+  return `${item.source_category || item.content_type || 'blog'}\x1f${title}`
+}
+
+function recommendationChannelsShareRecentItems(first: RecommendationItem, second: RecommendationItem) {
+  const firstTitles = new Set(
+    (first.recent_items || [])
+      .map((item) => normalizeRecommendationContentFingerprint(item.title))
+      .filter(Boolean),
+  )
+  if (firstTitles.size < 2) return false
+
+  const matchingTitles = new Set(
+    (second.recent_items || [])
+      .map((item) => normalizeRecommendationContentFingerprint(item.title))
+      .filter((title) => firstTitles.has(title)),
+  )
+  return matchingTitles.size >= 2
+}
+
+function deduplicateRecommendedChannels(items: RecommendationItem[]) {
+  const deduplicated: RecommendationItem[] = []
+  const candidateIndexesByIdentity = new Map<string, number[]>()
+  for (const item of items) {
+    const identity = recommendationChannelIdentity(item)
+    if (!identity) {
+      deduplicated.push(item)
+      continue
+    }
+
+    const candidateIndexes = candidateIndexesByIdentity.get(identity) || []
+    const duplicateIndex = candidateIndexes.find((index) => (
+      recommendationChannelsShareRecentItems(deduplicated[index], item)
+    ))
+    if (duplicateIndex === undefined) {
+      candidateIndexes.push(deduplicated.length)
+      candidateIndexesByIdentity.set(identity, candidateIndexes)
+      deduplicated.push(item)
+      continue
+    }
+    if (item.subscribed && !deduplicated[duplicateIndex].subscribed) {
+      deduplicated[duplicateIndex] = item
+    }
+  }
+  return deduplicated
+}
+
 function normalizePage(value: unknown) {
   const pageValue = Number.parseInt(String(value || '1'), 10)
   return Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
@@ -652,8 +701,9 @@ async function fetchRecommendations() {
     ])
 
     const recommendationArticles = Array.isArray(articlePayload?.data) ? articlePayload.data : []
+    const recommendationChannels = Array.isArray(channelPayload?.data) ? channelPayload.data : []
     articles.value = deduplicateRecommendationItems(recommendationArticles)
-    channels.value = Array.isArray(channelPayload?.data) ? channelPayload.data : []
+    channels.value = recommendationChannels
 
     if (authStore.isAuthenticated && channels.value.length) {
       const subscribedStates = await Promise.all(
@@ -669,12 +719,17 @@ async function fetchRecommendations() {
         subscribed: subscribedStates[index] ?? false,
       }))
     }
+    channels.value = deduplicateRecommendedChannels(channels.value)
     const reportedArticleTotal = Number(articlePayload?.meta?.total ?? articlePayload?.total)
-    const duplicateCount = recommendationArticles.length - articles.value.length
+    const articleDuplicateCount = recommendationArticles.length - articles.value.length
+    const reportedChannelTotal = Number(channelPayload?.meta?.total ?? channelPayload?.total)
+    const channelDuplicateCount = recommendationChannels.length - channels.value.length
     totalArticles.value = Number.isFinite(reportedArticleTotal)
-      ? Math.max(articles.value.length, reportedArticleTotal - duplicateCount)
+      ? Math.max(articles.value.length, reportedArticleTotal - articleDuplicateCount)
       : articles.value.length
-    totalChannels.value = channelPayload?.meta?.total ?? channelPayload?.total ?? channels.value.length
+    totalChannels.value = Number.isFinite(reportedChannelTotal)
+      ? Math.max(channels.value.length, reportedChannelTotal - channelDuplicateCount)
+      : channels.value.length
   } catch (error) {
     reportError(error, 'Failed to fetch feed recommendations:')
     errorMessage.value = '推荐内容加载失败'

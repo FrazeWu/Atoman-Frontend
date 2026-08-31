@@ -152,6 +152,7 @@ const props = withDefaults(defineProps<{
   title?: string
   ariaLabel?: string
   mode?: 'full' | 'partial'
+  partialAnchor?: HTMLElement | null
   width?: string
   maxWidth?: string
   height?: string
@@ -173,6 +174,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   title: '',
   mode: 'full',
+  partialAnchor: null,
   width: '100%',
   top: '56px',
   side: 'right',
@@ -293,21 +295,27 @@ const updatePartialBounds = () => {
   }
 
   const parentLayerIndex = effectiveLayerIndex.value - 1
-  const parentPanel = document.querySelector<HTMLElement>(
-    `.p-sheet-panel[data-layer-index="${parentLayerIndex}"]`,
-  )
+  const parentPanel = props.partialAnchor
+    ? undefined
+    : document.querySelector<HTMLElement>(
+      `.p-sheet-panel[data-layer-index="${parentLayerIndex}"]`,
+    )
   const parentContent = parentPanel?.querySelector<HTMLElement>('[data-p-sheet-content]')
-  if (!parentPanel || !parentContent) {
+  const contentAnchor = props.partialAnchor ?? parentContent
+  if (!contentAnchor) {
     partialResolved.value = true
     emit('mode-change', 'full')
     return
   }
 
-  const panelRect = parentPanel.getBoundingClientRect()
-  const contentRect = parentContent.getBoundingClientRect()
-  const gutterWidth = panelRect.width * 0.04
-  const availableWidth = Math.max(0, panelRect.right - contentRect.right - gutterWidth)
-  const availableRatio = panelRect.width ? availableWidth / panelRect.width : 0
+  const contentRect = contentAnchor.getBoundingClientRect()
+  const panelRect = parentPanel?.getBoundingClientRect()
+  const containerLeft = panelRect?.left ?? contentRect.left
+  const containerRight = panelRect?.right ?? window.innerWidth
+  const containerWidth = Math.max(0, containerRight - containerLeft)
+  const gutterWidth = containerWidth * 0.04
+  const availableWidth = Math.max(0, containerRight - contentRect.right - gutterWidth)
+  const availableRatio = containerWidth ? availableWidth / containerWidth : 0
   if (availableRatio < 0.2) {
     partialResolved.value = true
     emit('mode-change', 'full')
@@ -315,9 +323,9 @@ const updatePartialBounds = () => {
   }
 
   partialBounds.value = {
-    top: `${panelRect.top}px`,
-    right: `${window.innerWidth - panelRect.right}px`,
-    bottom: `${window.innerHeight - panelRect.bottom}px`,
+    top: panelRect ? `${panelRect.top}px` : props.top,
+    right: `${window.innerWidth - containerRight}px`,
+    bottom: panelRect ? `${window.innerHeight - panelRect.bottom}px` : 'var(--a-content-bottom-offset)',
     left: `${contentRect.right + gutterWidth}px`,
   }
   partialResolved.value = true
@@ -325,8 +333,8 @@ const updatePartialBounds = () => {
 
   if (typeof ResizeObserver !== 'undefined') {
     partialResizeObserver = new ResizeObserver(updatePartialBounds)
-    partialResizeObserver.observe(parentPanel)
-    partialResizeObserver.observe(parentContent)
+    partialResizeObserver.observe(contentAnchor)
+    if (parentPanel) partialResizeObserver.observe(parentPanel)
   }
 }
 
@@ -338,7 +346,7 @@ const handlePartialEscape = (event: KeyboardEvent) => {
 }
 
 watch(
-  [partialRequested, effectiveLayerIndex],
+  [partialRequested, effectiveLayerIndex, () => props.partialAnchor],
   () => {
     void nextTick(updatePartialBounds)
   },

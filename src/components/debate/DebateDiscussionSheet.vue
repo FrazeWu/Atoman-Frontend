@@ -1,17 +1,15 @@
 <template>
-  <PSheet
+  <CommentSideSheet
     :show="show"
     :title="`讨论-${debateTitle || '辩题'}`"
-    close-type="header"
+    :target="{ kind: 'debate', resourceId: debateId }"
+    noun="讨论"
     @close="emit('close')"
-  >
-    <CommentSection :target="{ kind: 'debate', resourceId: debateId }" noun="讨论" />
-  </PSheet>
+  />
 </template>
 
 <script setup lang="ts">
-import CommentSection from '@/components/comment/CommentSection.vue'
-import PSheet from '@/components/ui/PSheet.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 
 defineProps<{
   show: boolean

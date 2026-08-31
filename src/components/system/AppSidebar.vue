@@ -185,16 +185,18 @@
 
     <!-- UNIFIED BOTTOM SLOT -->
     <template #bottom>
-      <FeedSidebarSources
+      <SubscriptionHubSidebarTree
         v-if="currentModule === 'feed' && authStore && authStore.isAuthenticated"
-        :subscriptions="subscriptions"
-        :groups="groups"
-        :active-source-id="querySourceId"
-        :unread-counts="subscriptionUnreadCounts"
+        :tree="subscriptionHubTree"
+        :active-type="activeHubType"
+        :active-group-id="activeHubGroupId"
+        :active-membership-id="activeHubMembershipId"
+        :loading="loadingSubscriptionHubTree"
+        :error="subscriptionHubTreeError"
         :collapsed="sidebarCollapsed"
-        @select-source="selectSource"
-        @select-all="selectAllSources"
-        @manage="openManageSheet"
+        @select-context="selectSubscriptionHubContext"
+        @manage-rss="openRSSManagement"
+        @retry="reloadSubscriptionHubTree"
       />
       <MusicSidebarPlaylists
         v-else-if="currentModule === 'music'"
@@ -217,7 +219,7 @@ import {
 
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
-import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
+import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
 import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'
 
 import { useAuthStore } from '@/stores/auth'
@@ -228,8 +230,7 @@ import { useForumStore } from '@/stores/forum'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
-import type { TimelineItem } from '@/types'
-import { findSubscriptionByTimelineItem } from '@/utils/feedSubscriptions'
+import type { SubscriptionHubType } from '@/types'
 
 const props = defineProps<{
   module?: string
@@ -282,56 +283,56 @@ const { focusedIndex: focusedSidebarIndex } = useKeyboardList({
   section: 'sidebar'
 })
 
-const subscriptions = computed(() => feedStore ? feedStore.subscriptions : [])
-const groups = computed(() => feedStore ? feedStore.groups : [])
-const querySourceId = computed(() => (route && typeof route.query.source_id === 'string') ? route.query.source_id : null)
+const subscriptionHubTree = computed(() => feedStore ? feedStore.subscriptionHubTree : { types: [] })
+const loadingSubscriptionHubTree = computed(() => feedStore?.loadingSubscriptionHubTree ?? false)
+const subscriptionHubTreeError = computed(() => feedStore?.subscriptionHubTreeError ?? '')
 
-const subscriptionUnreadCounts = computed(() => {
-  if (!feedStore) return {}
-  const counts: Record<string, number> = {}
-  const hasServerUnreadCounts = subscriptions.value.some((sub) => typeof sub.unread_count === 'number')
-  if (hasServerUnreadCounts) {
-    subscriptions.value.forEach((sub) => {
-      if (typeof sub.unread_count === 'number') {
-        counts[sub.id] = sub.unread_count
-      }
-    })
-    return counts
-  }
+const isSubscriptionHubType = (value: unknown): value is SubscriptionHubType =>
+  value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
 
-  feedStore.timeline.forEach((item: TimelineItem) => {
-    if (item.is_read) return
-    const subscription = findSubscriptionByTimelineItem(item, subscriptions.value)
-    if (!subscription) return
-    counts[subscription.id] = (counts[subscription.id] || 0) + 1
-  })
-  return counts
+const activeHubType = computed<SubscriptionHubType | null>(() => {
+  const value = route?.query.hub_type
+  return isSubscriptionHubType(value) ? value : null
 })
+const activeHubGroupId = computed(() => (route && typeof route.query.hub_group_id === 'string') ? route.query.hub_group_id : null)
+const activeHubMembershipId = computed(() => (route && typeof route.query.hub_membership_id === 'string') ? route.query.hub_membership_id : null)
 
-const selectSource = (sourceId: string) => {
-  if (router) {
-    void router.push({ path: '/feed/sources', query: { source_id: sourceId } })
-  }
+const selectSubscriptionHubContext = (selection: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }) => {
+  if (!router || !route) return
+  void router.push({
+    path: '/feed/subscriptions',
+    query: {
+      ...route.query,
+      source_id: undefined,
+      group_id: undefined,
+      hub_type: selection.subscriptionType,
+      hub_group_id: selection.groupId,
+      hub_membership_id: selection.membershipId,
+      q: undefined,
+      sort: undefined,
+      merge_duplicates: undefined,
+      page: undefined,
+    },
+  })
 }
 
-const selectAllSources = () => {
-  if (router && route) {
-    void router.push({
-      path: '/feed/subscriptions',
-      query: {
-        ...route.query,
-        source_id: undefined,
-        group_id: undefined,
-        page: undefined,
-      },
-    })
-  }
+const openRSSManagement = () => {
+  if (!router || !route) return
+  void router.push({
+    path: '/feed/sources',
+    query: {
+      ...route.query,
+      hub_type: undefined,
+      hub_group_id: undefined,
+      hub_membership_id: undefined,
+      manage_subscriptions: '1',
+      manage_tab: 'sources',
+    },
+  })
 }
 
-const openManageSheet = () => {
-  if (router && route) {
-    void router.push({ path: moduleUrl('feed'), query: { ...route.query, manage_subscriptions: '1', manage_tab: 'groups' } })
-  }
+const reloadSubscriptionHubTree = () => {
+  if (feedStore) void feedStore.fetchSubscriptionHubTree()
 }
 
 // 3. Blog Navigation Items

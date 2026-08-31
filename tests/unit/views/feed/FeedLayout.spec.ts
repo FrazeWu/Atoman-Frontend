@@ -6,44 +6,64 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import FeedLayout from "@/views/feed/FeedLayout.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useFeedStore } from "@/stores/feed";
-import type { Subscription, SubscriptionGroup } from "@/types";
+import type { SubscriptionHubTree } from "@/types";
 
-const groups: SubscriptionGroup[] = [
-  {
-    id: "g-tech",
-    user_id: "user-1",
-    name: "科技生活",
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-];
-
-const subscriptions: Subscription[] = [
-  {
-    id: "sub-1",
-    user_id: "user-1",
-    feed_source_id: "source-1",
-    title: "少数派",
-    subscription_group_id: "g-tech",
-    created_at: "2026-01-01T00:00:00Z",
-  },
-  {
-    id: "sub-2",
-    user_id: "user-1",
-    feed_source_id: "source-2",
-    title: "英格兰周报",
-    subscription_group_id: "g-tech",
-    created_at: "2026-01-01T00:00:00Z",
-  },
-];
+const subscriptionHubTree: SubscriptionHubTree = {
+  types: [
+    {
+      subscription_type: "podcast",
+      groups: [
+        {
+          id: "podcast-group",
+          user_id: "user-1",
+          subscription_type: "podcast",
+          name: "常听节目",
+          memberships: [
+            {
+              id: "podcast-member",
+              user_id: "user-1",
+              subscription_type: "podcast",
+              group_id: "podcast-group",
+              feed_source_id: "shared-channel",
+              title: "原子谈话",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      subscription_type: "video",
+      groups: [
+        {
+          id: "video-group",
+          user_id: "user-1",
+          subscription_type: "video",
+          name: "关注频道",
+          memberships: [
+            {
+              id: "video-member",
+              user_id: "user-1",
+              subscription_type: "video",
+              group_id: "video-group",
+              feed_source_id: "shared-channel",
+              title: "原子谈话",
+            },
+          ],
+        },
+      ],
+    },
+    { subscription_type: "blog", groups: [] },
+    { subscription_type: "rss", groups: [] },
+  ],
+};
 
 const makeRouter = async (initialPath = "/feed") => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: "/feed", component: { template: "<div />" } },
-      { path: "/feed/explore", component: { template: "<div />" } },
-      { path: "/feed/reading-list", component: { template: "<div />" } },
+      { path: "/feed/sources", component: { template: "<div />" } },
+      { path: "/feed/subscriptions", component: { template: "<div />" } },
       { path: "/feed/starred", component: { template: "<div />" } },
     ],
   });
@@ -53,7 +73,7 @@ const makeRouter = async (initialPath = "/feed") => {
   return router;
 };
 
-const mountLayout = async (initialPath = "/", authenticated = true) => {
+const mountLayout = async (initialPath = "/feed", authenticated = true) => {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -65,10 +85,12 @@ const mountLayout = async (initialPath = "/", authenticated = true) => {
   authStore.isAuthenticated = authenticated;
 
   const feedStore = useFeedStore();
-  feedStore.subscriptions = subscriptions;
-  feedStore.groups = groups;
+  feedStore.subscriptionHubTree = subscriptionHubTree;
   vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue(undefined);
   vi.spyOn(feedStore, "fetchGroups").mockResolvedValue(undefined);
+  const fetchSubscriptionHubTree = vi
+    .spyOn(feedStore, "fetchSubscriptionHubTree")
+    .mockResolvedValue(true);
 
   const router = await makeRouter(initialPath);
   const pushSpy = vi.spyOn(router, "push");
@@ -82,7 +104,7 @@ const mountLayout = async (initialPath = "/", authenticated = true) => {
   await flushPromises();
   pushSpy.mockClear();
 
-  return { wrapper, router, pushSpy };
+  return { wrapper, router, pushSpy, fetchSubscriptionHubTree };
 };
 
 describe("FeedLayout", () => {
@@ -91,127 +113,80 @@ describe("FeedLayout", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders nav rows with Ionicon SVG icons and sidebar sources", async () => {
+  it("renders the type-isolated subscription tree in the sidebar", async () => {
     const { wrapper } = await mountLayout(
-      "/feed/subscriptions?source_id=sub-1",
+      "/feed/subscriptions?hub_type=podcast&hub_group_id=podcast-group",
     );
 
     expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(3);
-    expect(wrapper.findAll(".p-sidebar-item-icon svg")).toHaveLength(3);
-    expect(wrapper.text()).toContain("订阅源类别 / SOURCES");
-    expect(wrapper.text()).toContain("少数派");
-    expect(wrapper.get('[data-source-id="sub-1"]').classes()).toContain(
-      "is-active",
+    expect(wrapper.text()).toContain("订阅 / SUBSCRIPTIONS");
+    expect(wrapper.text()).toContain("播客");
+    expect(wrapper.text()).toContain("视频");
+    expect(wrapper.text()).toContain("常听节目");
+    expect(wrapper.text()).toContain("关注频道");
+    expect(wrapper.findAll(".subscription-hub-sidebar__membership")).toHaveLength(2);
+    expect(wrapper.text()).not.toContain("全部订阅");
+  });
+
+  it("routes a selected subscription leaf to its isolated update context", async () => {
+    const { wrapper, pushSpy } = await mountLayout("/feed");
+
+    await wrapper
+      .get('[data-testid="subscription-hub-membership-video-member"]')
+      .trigger("click");
+
+    expect(pushSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/feed/subscriptions",
+        query: expect.objectContaining({
+          hub_type: "video",
+          hub_group_id: "video-group",
+          hub_membership_id: "video-member",
+          source_id: undefined,
+          group_id: undefined,
+        }),
+      }),
     );
   });
 
-  it("routes to the selected source when a sidebar source is clicked", async () => {
+  it("selects the first group when a type is chosen", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
-    await wrapper.get('[data-source-id="sub-1"]').trigger("click");
+    await wrapper
+      .get('[data-testid="subscription-hub-type-podcast"]')
+      .trigger("click");
 
-    expect(pushSpy).toHaveBeenCalledWith({
-      path: "/feed/sources",
-      query: { source_id: "sub-1" },
-    });
+    expect(pushSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/feed/subscriptions",
+        query: expect.objectContaining({
+          hub_type: "podcast",
+          hub_group_id: "podcast-group",
+          hub_membership_id: undefined,
+        }),
+      }),
+    );
   });
 
-  it("shows unread counts from the loaded feed timeline", async () => {
-    const { wrapper } = await mountLayout("/feed");
-    const feedStore = useFeedStore();
-
-    feedStore.timeline = [
-      {
-        type: "feed_item",
-        is_read: false,
-        published_at: "2026-01-01T00:00:00Z",
-        feed_item: {
-          id: "item-1",
-          feed_source_id: "source-1",
-          guid: "item-1",
-          title: "未读文章",
-          link: "https://example.com/1",
-          summary: "",
-          author: "",
-          published_at: "2026-01-01T00:00:00Z",
-          fetched_at: "2026-01-01T00:00:00Z",
-        },
-      },
-      {
-        type: "feed_item",
-        is_read: true,
-        published_at: "2026-01-01T00:00:00Z",
-        feed_item: {
-          id: "item-2",
-          feed_source_id: "source-2",
-          guid: "item-2",
-          title: "已读文章",
-          link: "https://example.com/2",
-          summary: "",
-          author: "",
-          published_at: "2026-01-01T00:00:00Z",
-          fetched_at: "2026-01-01T00:00:00Z",
-        },
-      },
-    ];
-    await flushPromises();
-
-    expect(
-      wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text(),
-    ).toBe("1");
-    expect(
-      wrapper.find('[data-test="feed-sidebar-unread-count-sub-2"]').exists(),
-    ).toBe(false);
-  });
-
-  it("prefers server unread counts over the current timeline page", async () => {
-    const { wrapper } = await mountLayout("/feed");
-    const feedStore = useFeedStore();
-
-    feedStore.subscriptions = [
-      { ...subscriptions[0], unread_count: 5 },
-      { ...subscriptions[1], unread_count: 0 },
-    ];
-    feedStore.timeline = [
-      {
-        type: "feed_item",
-        is_read: false,
-        published_at: "2026-01-01T00:00:00Z",
-        feed_item: {
-          id: "item-1",
-          feed_source_id: "source-1",
-          guid: "item-1",
-          title: "当前页未读",
-          link: "https://example.com/1",
-          summary: "",
-          author: "",
-          published_at: "2026-01-01T00:00:00Z",
-          fetched_at: "2026-01-01T00:00:00Z",
-        },
-      },
-    ];
-    await flushPromises();
-
-    expect(
-      wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text(),
-    ).toBe("5");
-    expect(
-      wrapper.find('[data-test="feed-sidebar-unread-count-sub-2"]').exists(),
-    ).toBe(false);
-  });
-
-  it("opens the manage sheet from the sidebar sources manage button", async () => {
+  it("opens the RSS source management workspace from the tree", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
-    await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger("click");
+    await wrapper
+      .get('[data-testid="subscription-hub-manage-rss"]')
+      .trigger("click");
 
-    expect(pushSpy).toHaveBeenCalledWith({
-      path: "/feed",
-      query: { manage_subscriptions: "1", manage_tab: "groups" },
-    });
+    expect(pushSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/feed/sources",
+        query: expect.objectContaining({
+          manage_subscriptions: "1",
+          manage_tab: "sources",
+        }),
+      }),
+    );
   });
 
-  it("opens the feed mobile sources sheet from the header action and reuses source actions", async () => {
+  it("opens the same tree on mobile and selects a leaf in the current timeline", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
     expect(
@@ -227,47 +202,29 @@ describe("FeedLayout", () => {
     await flushPromises();
 
     const sheet = wrapper.get('[data-testid="feed-mobile-sources-sheet"]');
-    expect(sheet.text()).toContain("订阅源类别 / SOURCES");
-    expect(sheet.text()).toContain("少数派");
+    expect(sheet.text()).toContain("订阅 / SUBSCRIPTIONS");
+    expect(sheet.text()).toContain("原子谈话");
 
-    await sheet.get('[data-source-id="sub-1"]').trigger("click");
-    await flushPromises();
-
-    expect(pushSpy).toHaveBeenCalledWith({
-      path: "/feed/sources",
-      query: { source_id: "sub-1" },
-    });
-    expect(
-      wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists(),
-    ).toBe(false);
-
-    pushSpy.mockClear();
-
-    await wrapper
-      .get('[data-testid="feed-mobile-sources-trigger"]')
+    await sheet
+      .get('[data-testid="subscription-hub-membership-podcast-member"]')
       .trigger("click");
-    await flushPromises();
 
-    await wrapper
-      .get('[data-testid="feed-mobile-sources-sheet"]')
-      .get('[data-testid="feed-sidebar-manage"]')
-      .trigger("click");
-    await flushPromises();
-
-    expect(pushSpy).toHaveBeenCalledWith({
-      path: "/feed",
-      query: {
-        source_id: "sub-1",
-        manage_subscriptions: "1",
-        manage_tab: "groups",
-      },
-    });
+    expect(pushSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/feed/subscriptions",
+        query: expect.objectContaining({
+          hub_type: "podcast",
+          hub_group_id: "podcast-group",
+          hub_membership_id: "podcast-member",
+        }),
+      }),
+    );
     expect(
       wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists(),
     ).toBe(false);
   });
 
-  it("does not expose the mobile sources entry point when signed out", async () => {
+  it("does not expose the mobile subscription entry point when signed out", async () => {
     const { wrapper } = await mountLayout("/feed", false);
 
     expect(
@@ -278,24 +235,23 @@ describe("FeedLayout", () => {
     ).toBe(false);
   });
 
-  it("clears stale sidebar sources when auth state becomes signed out", async () => {
+  it("clears the subscription tree when authentication is removed", async () => {
     const { wrapper } = await mountLayout("/feed");
     const authStore = useAuthStore();
     const feedStore = useFeedStore();
 
-    expect(wrapper.text()).toContain("少数派");
+    expect(wrapper.text()).toContain("原子谈话");
 
     authStore.isAuthenticated = false;
     authStore.token = null;
     authStore.user = null;
     await flushPromises();
 
-    expect(feedStore.subscriptions).toEqual([]);
-    expect(feedStore.groups).toEqual([]);
-    expect(wrapper.text()).not.toContain("少数派");
+    expect(feedStore.subscriptionHubTree).toEqual({ types: [] });
+    expect(wrapper.text()).not.toContain("原子谈话");
   });
 
-  it("refetches sidebar sources when an auth token becomes available after mount", async () => {
+  it("refetches the subscription tree when an auth token becomes available", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
 
@@ -305,12 +261,12 @@ describe("FeedLayout", () => {
     authStore.isAuthenticated = true;
 
     const feedStore = useFeedStore();
-    feedStore.subscriptions = [];
-    feedStore.groups = groups;
-    const fetchSubscriptions = vi
-      .spyOn(feedStore, "fetchSubscriptions")
-      .mockResolvedValue(undefined);
+    feedStore.subscriptionHubTree = { types: [] };
+    vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue(undefined);
     vi.spyOn(feedStore, "fetchGroups").mockResolvedValue(undefined);
+    const fetchSubscriptionHubTree = vi
+      .spyOn(feedStore, "fetchSubscriptionHubTree")
+      .mockResolvedValue(true);
 
     const router = await makeRouter("/feed");
     mount(FeedLayout, {
@@ -320,11 +276,11 @@ describe("FeedLayout", () => {
     });
 
     await flushPromises();
-    expect(fetchSubscriptions).toHaveBeenCalledTimes(1);
+    expect(fetchSubscriptionHubTree).toHaveBeenCalledTimes(1);
 
     authStore.token = "token";
     await flushPromises();
 
-    expect(fetchSubscriptions).toHaveBeenCalledTimes(2);
+    expect(fetchSubscriptionHubTree).toHaveBeenCalledTimes(2);
   });
 });

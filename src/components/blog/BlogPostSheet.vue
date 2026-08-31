@@ -7,6 +7,8 @@ import { useRouter } from 'vue-router'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
@@ -16,6 +18,7 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useFeedStore } from '@/stores/feed'
+import { isAdminRole } from '@/utils/roles'
 import type { Post } from '@/types'
 import type { BlogPostLayer } from '@/components/blog/blogSheetTypes'
 
@@ -46,6 +49,10 @@ const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
+const commentsOpen = ref(false)
+const commentCount = ref<number | undefined>(undefined)
+const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
+const commentSheetTitle = computed(() => `博客文章评论-${post.value?.title || '未命名'}`)
 let loadSequence = 0
 let relatedRequestSequence = 0
 
@@ -56,6 +63,8 @@ async function loadPost() {
   errorMessage.value = ''
   post.value = null
   relatedPosts.value = []
+  commentsOpen.value = false
+  commentCount.value = undefined
   relatedRequestSequence += 1
   channelSubscribed.value = false
   channelSubscriptionBusy.value = false
@@ -194,8 +203,8 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
-    :is-shifted="sheets.isShifted(layer.key)"
-    :is-top-layer="sheets.isTop(layer.key)"
+    :is-shifted="sheets.isShifted(layer.key) || commentsOpen"
+    :is-top-layer="sheets.isTop(layer.key) && !commentsOpen"
     reading-mode
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
@@ -269,6 +278,28 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       </div>
       <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
     </article>
+    <PDiscussionFAB
+      v-if="post && sheets.isActive(layer.key)"
+      :count="commentCount"
+      @click="commentsOpen = true"
+    />
+  </PSheet>
+
+  <PSheet
+    v-if="post"
+    :show="commentsOpen"
+    :title="commentSheetTitle"
+    width="min(100%, 48rem)"
+    content-max-width="42rem"
+    :index="layerIndex + 1"
+    @close="commentsOpen = false"
+    @activate="commentsOpen = false"
+  >
+    <CommentSection
+      :target="{ kind: 'blog_post', resourceId: post.id }"
+      :can-delete="canDeleteAllComments"
+      @count-change="commentCount = $event"
+    />
   </PSheet>
 </template>
 

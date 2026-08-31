@@ -496,7 +496,11 @@ describe("FeedArticleSheet", () => {
 			},
 			global: {
 				stubs: {
-					PSheet: { template: "<section><slot /></section>" },
+					PSheet: {
+						props: ["show"],
+						template:
+							'<section v-if="show" data-test="feed-reader-sheet"><slot /></section>',
+					},
 					PBadge: true,
 					PDiscussionFAB: {
 						template:
@@ -512,7 +516,11 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.emitted("previous")).toEqual([[]]);
 		expect(wrapper.emitted("next")).toEqual([[]]);
 
-		await wrapper.get('[data-test="open-comments"]').trigger("click");
+		const commentsTrigger = wrapper.get('[data-test="open-comments"]');
+		expect(
+			commentsTrigger.element.closest('[data-test="feed-reader-sheet"]'),
+		).not.toBeNull();
+		await commentsTrigger.trigger("click");
 		expect(wrapper.text()).toContain("评论区");
 
 		window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));

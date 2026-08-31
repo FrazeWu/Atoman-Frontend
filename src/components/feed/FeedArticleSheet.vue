@@ -156,13 +156,13 @@
         <FeedContentFeedback :item-id="article.feed_item.id" :variant="feedContentVariant" />
       </div>
     </template>
+    <PDiscussionFAB
+      v-if="article?.type === 'feed_item' && article.feed_item && show && presentation !== 'page'"
+      :count="commentCount"
+      @click="commentsOpen = true"
+    />
   </component>
 
-  <PDiscussionFAB
-    v-if="article?.type === 'feed_item' && article.feed_item && show && presentation !== 'page'"
-    :count="commentCount"
-    @click="commentsOpen = true"
-  />
   <button
     v-if="article?.type === 'feed_item' && article.feed_item && show && presentation === 'page'"
     type="button"

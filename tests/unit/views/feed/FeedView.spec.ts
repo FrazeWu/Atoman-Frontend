@@ -3468,7 +3468,7 @@ describe("FeedView", () => {
             name: "FeedArticleSheet",
             emits: ["play-podcast", "close"],
             template:
-              "<button data-test=\"sheet-play\" @click=\"$emit('play-podcast', { id: 'feed-item-play-1', title: '可播放播客', enclosure_url: 'https://cdn.example.com/audio.mp3', published_at: '2026-06-16T00:00:00Z', author: '主播', feed_source: { title: 'Podcast Feed' } })\">play</button>",
+              "<button data-test=\"sheet-play\" @click=\"$emit('play-podcast', { id: 'feed-item-play-1', title: '可播放播客', enclosure_url: 'https://cdn.example.com/audio.mp3', enclosure_type: 'audio/mpeg', published_at: '2026-06-16T00:00:00Z', author: '主播', feed_source: { title: 'Podcast Feed' } })\">play</button>",
           },
           FeedSourceArticlesSheet: true,
         },

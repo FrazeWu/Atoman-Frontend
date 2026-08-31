@@ -63,6 +63,45 @@ test.describe("Blog", () => {
 		await expect(publishBtn).toBeVisible({ timeout: 10000 });
 	});
 
+	test("recovers a local draft when cloud draft sync is unavailable", async ({ page }) => {
+		await mockBlogAuthor(page);
+		await page.route("**/api/v1/blog/drafts", (route) => {
+			if (route.request().method() !== "PUT") return route.continue();
+			return route.fulfill({
+				status: 503,
+				contentType: "application/json",
+				body: JSON.stringify({ error: { code: "system.unavailable", message: "unavailable" } }),
+			});
+		});
+		await page.addInitScript(() => {
+			localStorage.setItem(
+				"blog_editor_blog:new",
+				JSON.stringify({
+					payload: {
+						context_key: "blog:new",
+						title: "离线草稿",
+						content: "这份内容必须能够恢复。",
+						summary: "",
+						cover_url: "",
+						visibility: "public",
+					},
+					saved_at: Date.now(),
+				}),
+			);
+		});
+
+		await page.goto("/studio/blog/new");
+
+		await expect(page.getByText("发现未恢复草稿")).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByText("离线草稿")).toBeVisible();
+		await expect(page.getByText("这份内容必须能够恢复。")).toBeVisible();
+		await page.getByRole("button", { name: "稍后处理" }).click();
+		const editor = page.locator(".cm-content");
+		await editor.click();
+		await page.keyboard.insertText("更新");
+		await expect(page.getByText("云端草稿同步失败，当前仅保存在本地")).toBeVisible({ timeout: 5_000 });
+	});
+
 	test("bookmark page accessible as authenticated user", async ({
 		authenticatedPage,
 	}) => {

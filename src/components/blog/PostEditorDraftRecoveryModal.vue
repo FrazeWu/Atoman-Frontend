@@ -1,5 +1,5 @@
 <template>
-  <PModal :title="title" size="md" @close="emit('keep')">
+  <PModal :title="title" :above-player="abovePlayer" size="md" @close="emit('keep')">
     <div class="draft-recovery-body">
       <span class="a-label">{{ label }}</span>
       <p class="draft-recovery-text">{{ message }}</p>
@@ -22,6 +22,6 @@
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 
-defineProps<{ title: string; label: string; message: string; draftTitle: string; preview: string; keepLabel: string; collabConflict: boolean }>()
+defineProps<{ title: string; label: string; message: string; draftTitle: string; preview: string; keepLabel: string; collabConflict: boolean; abovePlayer?: boolean }>()
 const emit = defineEmits<{ keep: []; discard: []; restore: [] }>()
 </script>

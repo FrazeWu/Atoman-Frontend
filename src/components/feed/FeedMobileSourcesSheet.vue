@@ -3,24 +3,26 @@
     :is="presentation === 'page' ? 'section' : PSheet"
     :show="show"
     side="bottom"
-    title="来源"
+    title="订阅"
     close-type="header"
     class="feed-mobile-sources-sheet-page"
     @close="emit('close')"
   >
     <header v-if="presentation === 'page'" class="feed-mobile-sources-sheet__header">
       <RouterLink to="/feed/subscriptions" aria-label="返回订阅"><ChevronLeft :size="20" aria-hidden="true" /></RouterLink>
-      <h1>来源</h1>
+      <h1>订阅</h1>
     </header>
     <div class="feed-mobile-sources-sheet" data-testid="feed-mobile-sources-sheet">
-      <FeedSidebarSources
-        :subscriptions="subscriptions"
-        :groups="groups"
-        :active-source-id="activeSourceId"
-        :unread-counts="unreadCounts"
-        @select-source="emit('select-source', $event)"
-        @select-all="emit('select-all')"
-        @manage="emit('manage')"
+      <SubscriptionHubSidebarTree
+        :tree="tree"
+        :active-type="activeType"
+        :active-group-id="activeGroupId"
+        :active-membership-id="activeMembershipId"
+        :loading="loading"
+        :error="error"
+        @select-context="emit('select-context', $event)"
+        @manage-rss="emit('manage-rss')"
+        @retry="emit('retry')"
       />
     </div>
   </component>
@@ -29,19 +31,25 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { ChevronLeft } from 'lucide-vue-next'
-import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
+import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
 import PSheet from '@/components/ui/PSheet.vue'
-import type { Subscription, SubscriptionGroup } from '@/types'
+import type { SubscriptionHubTree, SubscriptionHubType } from '@/types'
 
 const props = withDefaults(defineProps<{
   show: boolean
-  subscriptions: Subscription[]
-  groups: SubscriptionGroup[]
-  activeSourceId?: string | null
-  unreadCounts?: Record<string, number>
+  tree: SubscriptionHubTree
+  activeType?: SubscriptionHubType | null
+  activeGroupId?: string | null
+  activeMembershipId?: string | null
+  loading?: boolean
+  error?: string
   presentation?: 'sheet' | 'page'
 }>(), {
-  unreadCounts: () => ({}),
+  activeType: null,
+  activeGroupId: null,
+  activeMembershipId: null,
+  loading: false,
+  error: '',
   presentation: 'sheet',
 })
 
@@ -49,9 +57,9 @@ const { presentation } = props
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'select-source', sourceId: string): void
-  (e: 'select-all'): void
-  (e: 'manage'): void
+  (e: 'select-context', value: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }): void
+  (e: 'manage-rss'): void
+  (e: 'retry'): void
 }>()
 </script>
 
@@ -83,9 +91,8 @@ const emit = defineEmits<{
   display: block;
 }
 
-.feed-mobile-sources-sheet-page :deep(.feed-sidebar-sources) {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 8px;
+.feed-mobile-sources-sheet-page :deep(.subscription-hub-sidebar) {
+  padding: 0;
   background: var(--a-color-surface);
 }
 
@@ -93,7 +100,7 @@ const emit = defineEmits<{
   padding: 0.25rem 0 0;
 }
 
-.feed-mobile-sources-sheet :deep(.feed-sidebar-sources) {
+.feed-mobile-sources-sheet :deep(.subscription-hub-sidebar) {
   padding: 0;
 }
 </style>

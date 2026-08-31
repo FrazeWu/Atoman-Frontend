@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+// @ts-expect-error Vue SFC resolution is provided by vue-tsc and Vitest.
+import PortalView from "../../../src/views/portal/PortalView.vue";
 import {
 	mobileRoutes,
 	MOBILE_MODULES,
@@ -21,8 +23,11 @@ function routePaths(routes = mobileRoutes, parentPath = ""): string[] {
 }
 
 describe("mobile app route boundary", () => {
-	it("starts at Feed and exposes only the pilot modules", () => {
-		expect(mobileRoutes[0]).toMatchObject({ path: "/", redirect: "/feed" });
+	it("starts at the portal homepage and exposes only the pilot modules", () => {
+		const homeRoute = mobileRoutes[0];
+		expect(homeRoute).toMatchObject({ path: "/" });
+		expect(homeRoute).not.toHaveProperty("redirect");
+		expect(homeRoute?.component).toBe(PortalView);
 		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music"]);
 	});
 

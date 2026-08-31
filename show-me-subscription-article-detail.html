@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>订阅文章详情 - 阅读优先方案</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f4f5f3;
+      --surface: #ffffff;
+      --surface-muted: #f7f8f6;
+      --ink: #202622;
+      --muted: #68716b;
+      --line: #d9ded9;
+      --accent: #1c6b4a;
+      --accent-soft: #e5f2eb;
+      --focus: #0a5d3e;
+      --shadow: 0 16px 40px rgb(32 38 34 / 12%);
+      --serif: Georgia, "Noto Serif SC", "Songti SC", serif;
+      --sans: Inter, "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    button {
+      color: inherit;
+      font: inherit;
+    }
+
+    .prototype-bar {
+      position: sticky;
+      z-index: 2;
+      top: 0;
+      display: flex;
+      min-height: 52px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.65rem max(1rem, calc((100vw - 1120px) / 2));
+      border-bottom: 1px solid var(--line);
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .prototype-bar strong { color: var(--ink); font-weight: 650; }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .reader-shell {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 800px);
+      width: min(100% - 2rem, 944px);
+      min-height: calc(100vh - 52px);
+      margin: 0 auto;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .sheet-rail {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 1.25rem;
+      border-right: 1px solid var(--line);
+      background: var(--surface-muted);
+    }
+
+    .rail-close,
+    .icon-button {
+      display: inline-grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .rail-close:hover,
+    .icon-button:hover { border-color: var(--line); background: var(--surface-muted); }
+    .rail-close:focus-visible,
+    .icon-button:focus-visible,
+    .source-link:focus-visible,
+    .subscribe:focus-visible,
+    .mode-button:focus-visible,
+    .comment-fab:focus-visible {
+      outline: 3px solid rgb(10 93 62 / 30%);
+      outline-offset: 2px;
+    }
+
+    .article {
+      position: relative;
+      padding: clamp(2rem, 5vw, 4.5rem) clamp(1.25rem, 7vw, 5.75rem) 6.5rem;
+    }
+
+    .article-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 44px;
+      margin-bottom: 1.6rem;
+    }
+
+    .source-cluster,
+    .top-actions,
+    .reading-facts,
+    .reader-status,
+    .mode-control,
+    .more-menu { display: flex; align-items: center; }
+
+    .source-cluster { min-width: 0; gap: 0.65rem; }
+
+    .source-avatar {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      place-items: center;
+      border-radius: 50%;
+      background: #242d2a;
+      color: #fff;
+      font-family: var(--serif);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .source-copy { min-width: 0; }
+
+    .source-link {
+      max-width: 24ch;
+      overflow: hidden;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 650;
+      text-align: left;
+      text-decoration: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .source-facts {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .subscribe {
+      min-height: 32px;
+      padding: 0.35rem 0.65rem;
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .subscribe:hover { background: #135438; }
+
+    .source-bookmark {
+      width: 32px;
+      height: 32px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .source-bookmark[aria-pressed="true"] {
+      border-color: #cde1d4;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .subscribed-note {
+      display: none;
+      color: var(--accent);
+      font-size: 0.77rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .top-actions { flex: 0 0 auto; gap: 0.25rem; }
+
+    .article-title {
+      max-width: 19ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(2rem, 4vw, 3.25rem);
+      font-weight: 650;
+      line-height: 1.18;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    .reading-facts {
+      flex-wrap: wrap;
+      gap: 0.35rem 0.6rem;
+      margin: 1.35rem 0 1.75rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .reading-facts span + span::before {
+      margin-right: 0.6rem;
+      color: #a5ada7;
+      content: "•";
+    }
+
+    .summary {
+      max-width: 62ch;
+      margin: 0 0 2rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--accent);
+      color: #4e5952;
+      font-family: var(--serif);
+      font-size: 1.08rem;
+      line-height: 1.8;
+    }
+
+    .reader-status {
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0 0 2rem;
+      padding: 0.6rem 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mode-control {
+      gap: 0.15rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface-muted);
+    }
+
+    .mode-button {
+      min-height: 32px;
+      padding: 0.3rem 0.6rem;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+
+    .mode-button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(32 38 34 / 14%); }
+    .reader-status__fact { color: var(--muted); font-size: 0.76rem; white-space: nowrap; }
+
+    .validity-notice {
+      max-width: 62ch;
+      margin: -1rem 0 2.25rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.65;
+    }
+
+    .validity-notice strong { color: #4e5952; font-weight: 650; }
+
+    .article-body {
+      max-width: 62ch;
+      font-family: var(--serif);
+      font-size: 1.08rem;
+      line-height: 1.9;
+    }
+
+    .article-body p { margin: 0 0 1.45rem; }
+
+    .article-body h2 {
+      margin: 2.5rem 0 1rem;
+      font-family: var(--sans);
+      font-size: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .article-image {
+      width: 100%;
+      margin: 2rem 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+
+    .image-caption { margin: -1.35rem 0 2rem; color: var(--muted); font-family: var(--sans); font-size: 0.74rem; }
+
+    .article-end {
+      max-width: 62ch;
+      margin-top: 3.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .article-end__label {
+      margin: 0 0 1.25rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 650;
+    }
+
+    .reader-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+      margin-bottom: 2.75rem;
+    }
+
+    .rating-copy { color: var(--muted); font-family: var(--sans); font-size: 0.82rem; }
+
+    .rating-buttons { display: flex; gap: 0.15rem; }
+
+    .rating-button {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #9aa49d;
+      cursor: pointer;
+      font-size: 1.25rem;
+    }
+
+    .rating-button:hover,
+    .rating-button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+
+    .footer-bookmark {
+      display: inline-flex;
+      min-height: 36px;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 650;
+    }
+
+    .footer-bookmark[aria-pressed="true"] { border-color: #cde1d4; background: var(--accent-soft); color: var(--accent); }
+
+    .related-reading h2 { margin: 0 0 0.85rem; font-family: var(--sans); font-size: 1rem; }
+
+    .related-reading ol {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .related-reading li { border-top: 1px solid var(--line); }
+
+    .related-reading a {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      padding: 0.9rem 0;
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.45;
+      text-decoration: none;
+    }
+
+    .related-reading a:hover { color: var(--accent); }
+    .related-reading small { color: var(--muted); font-size: 0.72rem; font-weight: 500; white-space: nowrap; }
+
+    .comment-fab {
+      position: absolute;
+      right: clamp(1.25rem, 7vw, 5.75rem);
+      bottom: 1.5rem;
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.85rem;
+      border: 1px solid var(--ink);
+      border-radius: 6px;
+      background: var(--ink);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 650;
+    }
+
+    .more-menu {
+      position: absolute;
+      z-index: 3;
+      top: 4.5rem;
+      right: clamp(1.25rem, 7vw, 5.75rem);
+      display: none;
+      width: 148px;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 0.35rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      box-shadow: 0 10px 25px rgb(32 38 34 / 15%);
+    }
+
+    .more-menu[data-open="true"] { display: flex; }
+
+    .more-menu button {
+      min-height: 36px;
+      padding: 0.45rem 0.55rem;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.78rem;
+      text-align: left;
+    }
+
+    .more-menu button:hover { background: var(--surface-muted); }
+
+    .comment-panel {
+      position: fixed;
+      z-index: 4;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      display: none;
+      width: min(360px, calc(100vw - 2.5rem));
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .comment-panel[data-open="true"] { display: block; }
+    .comment-panel h2 { margin: 0 0 0.75rem; font-size: 1rem; }
+    .comment-panel p { margin: 0; color: var(--muted); font-size: 0.84rem; line-height: 1.6; }
+
+    .annotation {
+      position: fixed;
+      z-index: 5;
+      left: 1rem;
+      bottom: 1rem;
+      max-width: 260px;
+      padding: 0.75rem 0.9rem;
+      border-left: 3px solid var(--accent);
+      background: #fff;
+      color: var(--muted);
+      box-shadow: 0 6px 16px rgb(32 38 34 / 8%);
+      font-size: 0.75rem;
+      line-height: 1.55;
+    }
+
+    .annotation strong { color: var(--ink); }
+
+    @media (max-width: 700px) {
+      .prototype-bar { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+      .reader-shell { display: block; width: 100%; min-height: calc(100vh - 72px); box-shadow: none; }
+      .sheet-rail { display: flex; height: 52px; align-items: center; justify-content: flex-start; padding: 0 0.75rem; border-right: 0; border-bottom: 1px solid var(--line); }
+      .rail-close::after { margin-left: 0.25rem; content: "返回订阅"; font-size: 0.82rem; }
+      .article { padding: 1.5rem 1rem 6rem; }
+      .article-topline { align-items: flex-start; }
+      .source-cluster { gap: 0.5rem; }
+      .source-avatar { width: 30px; height: 30px; flex-basis: 30px; }
+      .source-link { max-width: 16ch; }
+      .source-facts { max-width: 19ch; }
+      .top-actions { gap: 0; }
+      .article-title { max-width: none; font-size: 2rem; }
+      .reading-facts { margin: 1rem 0 1.5rem; }
+      .reader-status { align-items: flex-start; flex-direction: column; gap: 0.55rem; }
+      .article-body { font-size: 1.03rem; }
+      .validity-notice { margin-bottom: 1.75rem; }
+      .reader-actions { align-items: flex-start; flex-direction: column; gap: 0.75rem; }
+      .related-reading a { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+      .comment-fab { position: fixed; right: 1rem; bottom: 1rem; }
+      .more-menu { right: 1rem; top: 7.5rem; }
+      .annotation { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="prototype-bar">
+    <strong>订阅文章详情 · 阅读优先方案</strong>
+    <span class="legend"><span class="legend-dot"></span> 仅为布局与交互原型，未修改应用代码</span>
+  </header>
+
+  <main class="reader-shell" aria-label="订阅文章详情原型">
+    <aside class="sheet-rail" aria-label="文章导航">
+      <button class="rail-close" type="button" aria-label="返回订阅列表" title="返回订阅列表">←</button>
+    </aside>
+
+    <article class="article">
+      <div class="article-topline">
+        <div class="source-cluster">
+          <div class="source-avatar" aria-hidden="true">机</div>
+          <div class="source-copy">
+            <button class="source-link" type="button" title="打开机核来源文章列表">机核 GCORES</button>
+            <div class="source-facts">Vincent · 2026 年 4 月 20 日</div>
+          </div>
+          <button id="subscribe" class="subscribe" type="button">订阅</button>
+          <button id="bookmark" class="icon-button source-bookmark" type="button" aria-label="收藏文章" aria-pressed="false" title="收藏文章"><span data-bookmark-glyph aria-hidden="true">&#9734;</span></button>
+          <span id="subscribed-note" class="subscribed-note">已订阅</span>
+        </div>
+
+        <div class="top-actions" aria-label="文章操作">
+          <button class="icon-button" type="button" aria-label="在源站查看" title="在源站查看">↗</button>
+          <button id="more" class="icon-button" type="button" aria-label="更多文章操作" title="更多文章操作">•••</button>
+        </div>
+      </div>
+
+      <h1 class="article-title">一段声音如何把游戏世界变成可以抵达的地方</h1>
+
+      <div class="reading-facts" aria-label="文章信息">
+        <span>全文</span>
+        <span>约 1,860 字</span>
+        <span>5 分钟阅读</span>
+      </div>
+
+      <p class="summary">声音不是画面的附属。它定义距离、材质和空间，让玩家在尚未看见世界之前，就已经相信自己身在其中。</p>
+
+      <div class="reader-status" aria-label="正文来源">
+        <div class="mode-control" role="group" aria-label="正文版本">
+          <button class="mode-button" type="button" aria-pressed="false" data-mode="rss">RSS 正文</button>
+          <button class="mode-button" type="button" aria-pressed="true" data-mode="full">全文</button>
+        </div>
+        <span id="reader-fact" class="reader-status__fact">已选择全文 · 原始链接保持可用</span>
+      </div>
+
+      <p class="validity-notice"><strong>信息有效性：</strong>本文由订阅源抓取并生成全文，原文可能在发布后更新或修订；重要信息请以源站链接中的最新版本为准。</p>
+
+      <div id="article-body" class="article-body">
+        <p>在一个被精心设计的游戏空间里，声音最先告诉我们边界在哪里。它可能是脚步与地面的摩擦，也可能是远处一盏灯在空气中发出的轻响。画面负责展示，声音负责让距离被感知。</p>
+        <img class="article-image" src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&amp;fit=crop&amp;w=1400&amp;q=85" alt="夜空中的银河" />
+        <p class="image-caption">正文中的图片是阅读内容的一部分，因此首屏不再重复展示一张封面。</p>
+        <h2>让声音承担方向感</h2>
+        <p>当空间足够复杂时，玩家不会逐项记住每一个房间。更有效的方式是让某些声音留在记忆里：风从长廊的一端穿过，机器的低频从地下持续传来。它们不是提示，而是可以重新找到位置的线索。</p>
+        <p>这样的设计也让静默变得有意义。一个原本持续运作的环境突然安静下来，往往比任何弹窗更能说明状态发生了变化。</p>
+      </div>
+
+      <footer class="article-end">
+        <p class="article-end__label">读完了</p>
+        <div class="reader-actions">
+          <span id="rating-copy" class="rating-copy">这篇文章对你有帮助吗？</span>
+          <div class="rating-buttons" role="group" aria-label="为文章评分">
+            <button class="rating-button" type="button" aria-label="评分 1" aria-pressed="false" data-rating="1">&#9734;</button>
+            <button class="rating-button" type="button" aria-label="评分 2" aria-pressed="false" data-rating="2">&#9734;</button>
+            <button class="rating-button" type="button" aria-label="评分 3" aria-pressed="false" data-rating="3">&#9734;</button>
+            <button class="rating-button" type="button" aria-label="评分 4" aria-pressed="false" data-rating="4">&#9734;</button>
+            <button class="rating-button" type="button" aria-label="评分 5" aria-pressed="false" data-rating="5">&#9734;</button>
+          </div>
+          <button id="footer-bookmark" class="footer-bookmark" type="button" aria-pressed="false"><span data-bookmark-glyph aria-hidden="true">&#9734;</span> 收藏</button>
+        </div>
+
+        <section class="related-reading" aria-labelledby="related-title">
+          <h2 id="related-title">推荐阅读</h2>
+          <ol>
+            <li><a href="#"><span>从环境音到叙事节奏：游戏听觉设计的三个层次</span><small>机核 · 8 分钟</small></a></li>
+            <li><a href="#"><span>一张地图如何让人产生方向感</span><small>触乐 · 6 分钟</small></a></li>
+            <li><a href="#"><span>当沉默成为交互的一部分</span><small>篝火营地 · 4 分钟</small></a></li>
+          </ol>
+        </section>
+      </footer>
+
+      <div id="more-menu" class="more-menu" data-open="false" role="menu" aria-label="更多文章操作">
+        <button type="button" role="menuitem">保存到稍后阅读</button>
+        <button type="button" role="menuitem">复制文章链接</button>
+      </div>
+
+      <button id="comment" class="comment-fab" type="button" aria-expanded="false">评论 <span>12</span></button>
+    </article>
+  </main>
+
+  <aside id="comment-panel" class="comment-panel" data-open="false" aria-live="polite">
+    <h2>评论 · 12</h2>
+    <p>评论作为阅读后的单一常驻动作，在需要时从右下角进入，不在标题区重复占位。</p>
+  </aside>
+
+  <aside class="annotation">
+    <strong>布局意图：</strong>来源、订阅和原文入口只出现一次；正文状态只表达一次；标题后立即开始阅读。
+  </aside>
+
+  <script>
+    const subscribeButton = document.querySelector('#subscribe')
+    const subscribedNote = document.querySelector('#subscribed-note')
+    const moreButton = document.querySelector('#more')
+    const moreMenu = document.querySelector('#more-menu')
+    const commentButton = document.querySelector('#comment')
+    const commentPanel = document.querySelector('#comment-panel')
+    const readerFact = document.querySelector('#reader-fact')
+    const body = document.querySelector('#article-body')
+    const ratingCopy = document.querySelector('#rating-copy')
+    let bookmarked = false
+
+    function updateBookmark() {
+      document.querySelectorAll('#bookmark, #footer-bookmark').forEach((button) => {
+        button.setAttribute('aria-pressed', String(bookmarked))
+      })
+      document.querySelectorAll('[data-bookmark-glyph]').forEach((glyph) => {
+        glyph.textContent = bookmarked ? '★' : '☆'
+      })
+    }
+
+    subscribeButton.addEventListener('click', () => {
+      subscribeButton.style.display = 'none'
+      subscribedNote.style.display = 'inline'
+    })
+
+    document.querySelectorAll('#bookmark, #footer-bookmark').forEach((button) => {
+      button.addEventListener('click', () => {
+        bookmarked = !bookmarked
+        updateBookmark()
+      })
+    })
+
+    document.querySelectorAll('[data-rating]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const rating = Number(button.dataset.rating)
+        document.querySelectorAll('[data-rating]').forEach((option) => {
+          const active = Number(option.dataset.rating) <= rating
+          option.setAttribute('aria-pressed', String(active))
+          option.textContent = active ? '★' : '☆'
+        })
+        ratingCopy.textContent = `已评分 ${rating} / 5`
+      })
+    })
+
+    moreButton.addEventListener('click', () => {
+      const isOpen = moreMenu.dataset.open === 'true'
+      moreMenu.dataset.open = String(!isOpen)
+      moreButton.setAttribute('aria-expanded', String(!isOpen))
+    })
+
+    commentButton.addEventListener('click', () => {
+      const isOpen = commentPanel.dataset.open === 'true'
+      commentPanel.dataset.open = String(!isOpen)
+      commentButton.setAttribute('aria-expanded', String(!isOpen))
+    })
+
+    document.querySelectorAll('[data-mode]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.dataset.mode
+        document.querySelectorAll('[data-mode]').forEach((option) => {
+          option.setAttribute('aria-pressed', String(option === button))
+        })
+        if (mode === 'rss') {
+          readerFact.textContent = 'RSS 正文 · 约 3 分钟阅读'
+          body.querySelector('p').textContent = '这是 RSS 正文的节选。原文的结构与链接保持可读，用户仍可通过顶部原文图标前往源站。'
+        } else {
+          readerFact.textContent = '已选择全文 · 原始链接保持可用'
+          body.querySelector('p').textContent = '在一个被精心设计的游戏空间里，声音最先告诉我们边界在哪里。它可能是脚步与地面的摩擦，也可能是远处一盏灯在空气中发出的轻响。画面负责展示，声音负责让距离被感知。'
+        }
+      })
+    })
+  </script>
+</body>
+</html>

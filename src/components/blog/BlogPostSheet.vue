@@ -163,6 +163,17 @@ function ratingFailureMessage(error?: { code?: string; message?: string }) {
   return '评分未保存，请重试'
 }
 
+function ratingRequestFailureMessage(error: unknown) {
+  if (error instanceof TypeError || (error instanceof Error && /network|fetch|timeout/i.test(error.message))) {
+    return '网络连接失败，请检查网络后重试'
+  }
+  if (error && typeof error === 'object') {
+    const apiError = error as { code?: string; message?: string }
+    return ratingFailureMessage(apiError)
+  }
+  return '评分未保存，请重试'
+}
+
 async function ratePost(score: number) {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
   ratingError.value = ''
@@ -182,6 +193,8 @@ async function ratePost(score: number) {
     post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
     post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
     post.value.viewer_rating = Number(summary.viewer_rating ?? score)
+  } catch (error) {
+    ratingError.value = ratingRequestFailureMessage(error)
   } finally {
     ratingLoading.value = false
   }

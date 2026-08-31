@@ -32,7 +32,7 @@ const transition = useTransitionStore()
 const player = usePlayerStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
-const showMobileBottomNav = computed(() => !isAuthRoute.value && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio'))
+const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio'))
 const showMobilePlayer = computed(() => Boolean(player.currentSong) && showMobileBottomNav.value && route.path !== '/music/player')
 
 const reportPageView = () => {

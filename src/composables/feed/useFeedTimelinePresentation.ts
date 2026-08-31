@@ -24,27 +24,35 @@ const getExternalBadge = (item: FeedItem) => {
 
 const matchesSourceTypeFilter = (item: TimelineItem, filter: FeedSourceTypeFilter) => {
   if (filter === 'all') return true
-  if (filter === 'internal') return item.type === 'post'
-  if (item.type !== 'feed_item' || !item.feed_item) return false
-
-  const badge = getExternalBadge(item.feed_item)
-  if (filter === 'podcast') return badge === '播客'
-  if (filter === 'blog') return badge === '文章'
+  if (filter === 'internal') return item.type === 'post' || item.type === 'podcast_episode' || item.type === 'video'
+  if (filter === 'podcast') return item.type === 'podcast_episode' || (
+    item.type === 'feed_item' && item.feed_item && getExternalBadge(item.feed_item) === '播客'
+  )
+  if (filter === 'blog') return item.type === 'post' || (
+    item.type === 'feed_item' && item.feed_item && getExternalBadge(item.feed_item) === '文章'
+  )
   return true
 }
 
+const itemText = (item: TimelineItem) => {
+  if (item.type === 'feed_item') {
+    return [item.feed_item?.title || '', item.feed_item?.summary || '', item.feed_item?.feed_source?.title || '']
+  }
+  if (item.type === 'podcast_episode') {
+    return [
+      item.podcast_episode?.post?.title || '',
+      item.podcast_episode?.post?.summary || '',
+      item.podcast_episode?.channel?.name || '',
+    ]
+  }
+  if (item.type === 'video') {
+    return [item.video?.title || '', item.video?.description || '', item.video?.channel?.name || '']
+  }
+  return [item.post?.title || '', item.post?.summary || '', item.post?.channel?.name || '']
+}
+
 const extractThemesFromItem = (item: TimelineItem) => {
-  const parts = item.type === 'feed_item'
-    ? [
-        item.feed_item?.title || '',
-        item.feed_item?.summary || '',
-        item.feed_item?.feed_source?.title || '',
-      ]
-    : [
-        item.post?.title || '',
-        item.post?.summary || '',
-        item.post?.channel?.name || '',
-      ]
+  const parts = itemText(item)
 
   const matches = parts.join(' ').match(/\b[A-Z][A-Z0-9+\-]{1,}\b/g) || []
   return Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)))
@@ -65,6 +73,8 @@ const stripHtml = (html: string) =>
 const itemKey = (item: TimelineItem) => {
   if (item.type === 'post' && item.post) return `post-${item.post.id}`
   if (item.type === 'feed_item' && item.feed_item) return `feed-${item.feed_item.id}`
+  if (item.type === 'podcast_episode' && item.podcast_episode) return `podcast-${item.podcast_episode.id}`
+  if (item.type === 'video' && item.video) return `video-${item.video.id}`
   return `${item.type}-${item.published_at || ''}`
 }
 
@@ -100,11 +110,8 @@ export function useFeedTimelinePresentation({
       ) return false
       if (!normalizedHiddenKeywords.length) return true
 
-      const title = item.type === 'feed_item' ? (item.feed_item?.title || '') : (item.post?.title || '')
-      const summary = item.type === 'feed_item'
-        ? stripHtml(item.feed_item?.summary || '')
-        : (item.post?.summary || '')
-      const haystack = `${title}\n${summary}`.toLocaleLowerCase()
+      const [title = '', summary = ''] = itemText(item)
+      const haystack = `${title}\n${stripHtml(summary)}`.toLocaleLowerCase()
       return !normalizedHiddenKeywords.some((keyword) => haystack.includes(keyword))
     })
   })

@@ -28,8 +28,7 @@ function readItems(data: unknown): InteractionComment[] {
 
 function countComments(items: InteractionComment[]): number {
 	return items.reduce(
-		(total, item) =>
-			total + 1 + (item.replies ? countComments(item.replies) : 0),
+		(total, item) => total + 1 + (item.replies ? countComments(item.replies) : 0),
 		0,
 	);
 }
@@ -62,8 +61,7 @@ export function useInteractions(
 	}
 
 	const currentTargetId = () => unref(targetId);
-	const isShortNote = () =>
-		moduleName === "blog" && targetType === "short_note";
+	const isShortNote = () => moduleName === "blog" && targetType === "short_note";
 	const endpoints = () =>
 		({
 			blog: {
@@ -118,8 +116,7 @@ export function useInteractions(
 			liked.value = values.viewer_liked;
 		if (typeof values.like_count === "number")
 			likeCount.value = values.like_count;
-		if (typeof values.LikeCount === "number")
-			likeCount.value = values.LikeCount;
+		if (typeof values.LikeCount === "number") likeCount.value = values.LikeCount;
 		if (applyCommentCount && typeof values.comment_count === "number")
 			commentCount.value = values.comment_count;
 		if (applyCommentCount && typeof values.CommentCount === "number")
@@ -132,17 +129,11 @@ export function useInteractions(
 		const selectedEndpoints = endpoints();
 		if (moduleName === "videos") return;
 		if (isShortNote()) {
-			await apiRequestEnvelope<unknown>(
-				api.blog.shortNoteLike(requestTargetId),
-				{
-					method: "POST",
-					headers: headers(),
-				},
-			);
-			if (
-				requestSeq !== interactionSeq ||
-				requestTargetId !== currentTargetId()
-			)
+			await apiRequestEnvelope<unknown>(api.blog.shortNoteLike(requestTargetId), {
+				method: "POST",
+				headers: headers(),
+			});
+			if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId())
 				return;
 			liked.value = true;
 			likeCount.value += 1;
@@ -155,10 +146,7 @@ export function useInteractions(
 				method: "POST",
 				headers: headers(),
 			});
-			if (
-				requestSeq !== interactionSeq ||
-				requestTargetId !== currentTargetId()
-			)
+			if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId())
 				return;
 			const nextLiked =
 				payload.data && typeof payload.data === "object"
@@ -190,17 +178,11 @@ export function useInteractions(
 		const selectedEndpoints = endpoints();
 		if (moduleName === "videos") return;
 		if (isShortNote()) {
-			await apiRequestEnvelope<unknown>(
-				api.blog.shortNoteLike(requestTargetId),
-				{
-					method: "DELETE",
-					headers: headers(),
-				},
-			);
-			if (
-				requestSeq !== interactionSeq ||
-				requestTargetId !== currentTargetId()
-			)
+			await apiRequestEnvelope<unknown>(api.blog.shortNoteLike(requestTargetId), {
+				method: "DELETE",
+				headers: headers(),
+			});
+			if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId())
 				return;
 			liked.value = false;
 			likeCount.value = Math.max(0, likeCount.value - 1);
@@ -213,10 +195,7 @@ export function useInteractions(
 				method: "POST",
 				headers: headers(),
 			});
-			if (
-				requestSeq !== interactionSeq ||
-				requestTargetId !== currentTargetId()
-			)
+			if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId())
 				return;
 			const nextLiked =
 				payload.data && typeof payload.data === "object"
@@ -250,10 +229,7 @@ export function useInteractions(
 			const payload = await apiRequestEnvelope<unknown>(endpoints().comments, {
 				headers: headers(),
 			});
-			if (
-				requestSeq !== fetchCommentsSeq ||
-				requestTargetId !== currentTargetId()
-			)
+			if (requestSeq !== fetchCommentsSeq || requestTargetId !== currentTargetId())
 				return;
 
 			comments.value = readItems(payload.data);
@@ -266,15 +242,13 @@ export function useInteractions(
 		}
 	};
 
-	const appendCreatedComment = (
-		data: unknown,
-		parentCommentId?: string,
-	) => {
+	const appendCreatedComment = (data: unknown, parentCommentId?: string) => {
 		if (!data || typeof data !== "object") return false;
 		const created = data as InteractionComment;
 		if (typeof created.id !== "string" || !created.id) return false;
 
-		const parentID = parentCommentId ?? (created as { reply_to_id?: unknown }).reply_to_id;
+		const parentID =
+			parentCommentId ?? (created as { reply_to_id?: unknown }).reply_to_id;
 		if (typeof parentID === "string" && parentID) {
 			const root = comments.value.find((item) => item.id === parentID);
 			if (!root) return false;

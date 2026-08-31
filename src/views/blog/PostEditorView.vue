@@ -125,6 +125,7 @@
       :draft-title="pendingDraftCandidate.payload.title"
       :preview="draftRecoveryPreview"
       :keep-label="keepCurrentContentLabel"
+      :above-player="true"
       :collab-conflict="isCollabConflict"
       @keep="keepCurrentContent"
       @discard="discardPendingDraft"

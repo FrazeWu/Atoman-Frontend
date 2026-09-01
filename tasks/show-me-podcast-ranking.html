@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>播客 Web - 推荐排序决策</title>
+  <style>
+    :root {
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --muted-surface: #f0f4f5;
+      --ink: #17252c;
+      --muted: #63747d;
+      --line: #d8e0e3;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    main { width: min(1160px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 56px; }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: 0; }
+    .lede { max-width: 760px; margin: 12px 0 30px; color: var(--muted); }
+
+    .signal-map { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+    .signal { padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .signal b, .signal span { display: block; }
+    .signal b { font-size: 14px; }
+    .signal span { margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+    .preview, .decision { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .preview { overflow: hidden; }
+    .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+    .preview-head h2 { margin: 0; font-size: 22px; letter-spacing: 0; }
+    .preview-head p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .persona { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 5px; background: var(--muted-surface); }
+    .persona button { min-height: 30px; padding: 0 9px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+    .persona button.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(20 35 40 / 10%); }
+    .preview-body { padding: 22px; }
+    .ranking-tabs { display: flex; gap: 7px; border-bottom: 1px solid var(--line); }
+    .ranking-tab { min-height: 38px; padding: 0 4px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+    .ranking-tab + .ranking-tab { margin-left: 16px; }
+    .ranking-tab.active { border-color: var(--teal); color: var(--teal); font-weight: 700; }
+    .context { display: flex; align-items: center; gap: 8px; margin: 16px 0 12px; padding: 10px 12px; border-radius: 5px; background: var(--teal-soft); color: #194c50; font-size: 13px; }
+    .context b { white-space: nowrap; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .card { padding: 12px; border: 1px solid var(--line); border-radius: 6px; }
+    .cover { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-size: 13px; font-weight: 800; }
+    .card h3 { margin: 10px 0 0; font-size: 13px; line-height: 1.35; letter-spacing: 0; }
+    .card p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .meta { display: inline-block; margin-top: 9px; padding: 2px 6px; border-radius: 3px; background: var(--muted-surface); color: var(--muted); font-size: 10px; }
+    .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+    .rule { padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    .rule h3 { margin: 0; font-size: 14px; }
+    .rule p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .rule.active { border-color: var(--teal); background: #fbfefe; }
+
+    .decision { padding: 24px; }
+    .decision h2 { margin: 0; font-size: 22px; line-height: 1.25; letter-spacing: 0; }
+    .decision > p { margin: 8px 0 18px; color: var(--muted); font-size: 14px; }
+    .options { display: grid; gap: 10px; }
+    .option { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+    .option:hover, .option:focus-visible { border-color: var(--blue); outline: 2px solid transparent; }
+    .option.selected { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); background: #fbfefe; }
+    .radio { width: 18px; height: 18px; margin-top: 1px; border: 2px solid #9aa8af; border-radius: 50%; }
+    .selected .radio { border: 5px solid var(--teal); }
+    .option strong, .option small { display: block; }
+    .option strong { font-size: 14px; }
+    .option small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .tag { display: inline-block; margin-top: 6px; padding: 2px 6px; border-radius: 3px; background: var(--teal-soft); color: var(--teal); font-size: 11px; font-weight: 700; }
+    .summary { margin-top: 18px; padding: 13px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #184c50; font-size: 13px; }
+    .next { margin-top: 18px; padding: 14px; border: 1px solid #edd4a4; border-radius: 6px; background: var(--amber-soft); }
+    .next b, .next span { display: block; }
+    .next span { margin-top: 3px; color: var(--amber); font-size: 13px; }
+
+    @media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } }
+    @media (max-width: 620px) { main { width: min(100% - 24px, 1160px); padding-top: 28px; } .signal-map, .cards, .rules { grid-template-columns: 1fr; } .preview-head { align-items: flex-start; flex-direction: column; } .persona { width: 100%; } .persona button { flex: 1; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Podcast Web / Ranking Decision</p>
+    <h1>新用户先看到什么，老用户如何继续探索</h1>
+    <p class="lede">“热度、精选、探索”应是可解释的排序视图。关键是不要在没有收听数据时伪装成个性化，也不能让所有用户只能看到全站热度。</p>
+
+    <section class="signal-map" aria-label="三个排序视图">
+      <div class="signal"><b>热度</b><span>全站近期收听与互动信号，所有用户一致。</span></div>
+      <div class="signal"><b>精选</b><span>有明确质量基线的节目与单集，新用户的稳定入口。</span></div>
+      <div class="signal"><b>探索</b><span>在订阅、完成收听、收藏等数据足够后，扩展到相邻兴趣。</span></div>
+    </section>
+
+    <section class="workspace">
+      <section class="preview" aria-label="推荐排序预览">
+        <header class="preview-head">
+          <div><h2>发现</h2><p id="page-subtitle">第一次访问，先展示稳定的精选内容。</p></div>
+          <div class="persona" role="group" aria-label="用户状态预览">
+            <button class="active" type="button" data-persona="new">新用户</button>
+            <button type="button" data-persona="returning">回访用户</button>
+          </div>
+        </header>
+        <div class="preview-body">
+          <nav class="ranking-tabs" aria-label="推荐排序模式">
+            <button class="ranking-tab" type="button" data-mode="hot">热度</button>
+            <button class="ranking-tab active" type="button" data-mode="featured">精选</button>
+            <button class="ranking-tab" type="button" data-mode="discover">探索</button>
+          </nav>
+          <div class="context"><b id="ranking-context-title">精选</b><span id="ranking-context-text">新用户默认，优先展示来源可信、信息完整且近期仍活跃的节目。</span></div>
+          <div class="cards">
+            <article class="card"><div class="cover">S</div><h3>声音档案</h3><p>人物与城市的长期观察。</p><span class="meta">RSS 订阅源</span></article>
+            <article class="card"><div class="cover">T</div><h3>技术与社会</h3><p>用实例讨论技术选择。</p><span class="meta">创作者节目</span></article>
+            <article class="card"><div class="cover">N</div><h3>新闻慢读</h3><p>从单个事件理解时代。</p><span class="meta">RSS 订阅源</span></article>
+          </div>
+          <div class="rules">
+            <article class="rule" data-rule="hot"><h3>热度</h3><p>近期有效收听与完播表现，按时间衰减。</p></article>
+            <article class="rule active" data-rule="featured"><h3>精选</h3><p>内容质量、来源完整度和人工策展优先。</p></article>
+            <article class="rule" data-rule="discover"><h3>探索</h3><p>基于已订阅、完成收听、收藏的相邻主题，保留多样性。</p></article>
+          </div>
+        </div>
+      </section>
+
+      <aside class="decision">
+        <h2>采用哪种默认策略？</h2>
+        <p>这个决定只确定入口与降级规则，不锁定具体算法权重。</p>
+        <div class="options" role="radiogroup" aria-label="推荐默认策略">
+          <button class="option selected" type="button" role="radio" aria-checked="true" data-choice="渐进式推荐"><span class="radio" aria-hidden="true"></span><span><strong>渐进式推荐</strong><small>新用户默认“精选”；形成足够收听、订阅或收藏信号后，回访用户默认“探索”。热度始终可主动浏览。</small><span class="tag">推荐</span></span></button>
+          <button class="option" type="button" role="radio" aria-checked="false" data-choice="统一热度默认"><span class="radio" aria-hidden="true"></span><span><strong>统一热度默认</strong><small>所有用户进入发现页都看热度。实现最简单，但新用户无法建立差异化兴趣。</small></span></button>
+          <button class="option" type="button" role="radio" aria-checked="false" data-choice="始终个性化"><span class="radio" aria-hidden="true"></span><span><strong>始终个性化</strong><small>所有用户默认探索。需要在数据不足时推测兴趣，容易产生不可信或重复的推荐。</small></span></button>
+        </div>
+        <p class="summary"><strong id="summary-label">当前建议：</strong><span id="summary-text">采用渐进式推荐：新用户默认精选，积累足够行为后默认探索，热度保持可见且不依赖个人数据。</span></p>
+        <div class="next"><b>请确认一个选项</b><span>回复“渐进式推荐”、“统一热度”或“始终个性化”。确认后再确定订阅页的更新排序和未读提醒规则。</span></div>
+      </aside>
+    </section>
+  </main>
+  <script>
+    const personaButtons = document.querySelectorAll('[data-persona]');
+    const rankingTabs = document.querySelectorAll('[data-mode]');
+    const ruleCards = document.querySelectorAll('[data-rule]');
+    const subtitle = document.querySelector('#page-subtitle');
+    const contextTitle = document.querySelector('#ranking-context-title');
+    const contextText = document.querySelector('#ranking-context-text');
+    const options = document.querySelectorAll('.option');
+    const summaryLabel = document.querySelector('#summary-label');
+    const summaryText = document.querySelector('#summary-text');
+    let persona = 'new';
+    let mode = 'featured';
+
+    const modeDetails = {
+      hot: { title: '热度', text: '全站近期有效收听与互动信号，按时间衰减；不因用户身份改变。' },
+      featured: { title: '精选', text: '优先展示来源可信、信息完整且近期仍活跃的节目。' },
+      discover: { title: '探索', text: '利用已订阅、完成收听和收藏的相邻主题，保留一定的内容多样性。' }
+    };
+    const summaries = {
+      '渐进式推荐': '采用渐进式推荐：新用户默认精选，积累足够行为后默认探索，热度保持可见且不依赖个人数据。',
+      '统一热度默认': '所有用户默认热度。规格将不要求兴趣信号门槛或新用户专用的推荐降级规则。',
+      '始终个性化': '所有用户默认探索。规格需要定义匿名兴趣采集以及数据不足时的可信降级策略。'
+    };
+
+    function renderPreview() {
+      personaButtons.forEach((button) => button.classList.toggle('active', button.dataset.persona === persona));
+      rankingTabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.mode === mode));
+      ruleCards.forEach((card) => card.classList.toggle('active', card.dataset.rule === mode));
+      subtitle.textContent = persona === 'new' ? '第一次访问，先展示稳定的精选内容。' : '已有收听信号，默认提供相邻兴趣的探索内容。';
+      contextTitle.textContent = modeDetails[mode].title;
+      contextText.textContent = modeDetails[mode].text;
+    }
+
+    personaButtons.forEach((button) => button.addEventListener('click', () => {
+      persona = button.dataset.persona;
+      mode = persona === 'new' ? 'featured' : 'discover';
+      renderPreview();
+    }));
+    rankingTabs.forEach((tab) => tab.addEventListener('click', () => {
+      mode = tab.dataset.mode;
+      renderPreview();
+    }));
+    options.forEach((option) => option.addEventListener('click', () => {
+      options.forEach((item) => { item.classList.remove('selected'); item.setAttribute('aria-checked', 'false'); });
+      option.classList.add('selected');
+      option.setAttribute('aria-checked', 'true');
+      summaryLabel.textContent = '当前选择：';
+      summaryText.textContent = summaries[option.dataset.choice];
+    }));
+  </script>
+</body>
+</html>

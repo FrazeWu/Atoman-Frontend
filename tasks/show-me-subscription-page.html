@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订阅 - 页面设计稿</title>
+  <style>
+    :root {
+      --canvas: #f5f7f8;
+      --surface: #ffffff;
+      --surface-muted: #f1f4f5;
+      --ink: #17252c;
+      --text-secondary: #5f7079;
+      --border: #d8e0e3;
+      --border-strong: #bdc9ce;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --violet: #6d3eb0;
+      --violet-soft: #f1ebfb;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+    body { min-width: 320px; margin: 0; background: var(--canvas); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.4; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { display: grid; grid-template-columns: 228px minmax(0, 1fr); min-height: 100vh; }
+    .app-sidebar { display: flex; flex-direction: column; padding: 18px 12px 14px; border-right: 1px solid var(--border); background: var(--surface); }
+    .brand { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 0 10px 18px; border-bottom: 1px solid var(--border); }
+    .brand-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 5px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 800; }
+    .brand b, .brand span { display: block; }
+    .brand b { font-size: 14px; }
+    .brand span { margin-top: 1px; color: var(--text-secondary); font-size: 11px; }
+    .app-nav { display: grid; gap: 3px; padding-top: 14px; }
+    .app-nav button { display: flex; min-height: 39px; align-items: center; gap: 10px; width: 100%; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); text-align: left; font-size: 13px; }
+    .app-nav button.active { background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .nav-symbol { display: grid; width: 18px; place-items: center; color: currentColor; font-size: 15px; }
+    .app-sidebar-bottom { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+    .account { display: flex; align-items: center; gap: 9px; padding: 8px; }
+    .account-avatar { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 800; }
+    .account b, .account span { display: block; }
+    .account b { font-size: 12px; }
+    .account span { color: var(--text-secondary); font-size: 10px; }
+
+    .workspace { min-width: 0; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; min-height: 101px; padding: 26px 32px 18px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .page-header h1 { margin: 0; font-size: 27px; line-height: 1.2; letter-spacing: 0; }
+    .page-header p { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
+    .primary-action { display: inline-flex; min-height: 36px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--teal); border-radius: 5px; background: var(--teal); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .primary-action .plus { font-size: 18px; font-weight: 400; line-height: 1; }
+
+    .page-grid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 18px; padding: 22px 32px 42px; }
+    .tree-panel, .list-panel { border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+    .tree-panel { align-self: start; overflow: hidden; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 53px; padding: 0 14px; border-bottom: 1px solid var(--border); }
+    .panel-head h2 { margin: 0; font-size: 14px; letter-spacing: 0; }
+    .quiet-button { min-height: 28px; border: 0; background: transparent; color: var(--teal); font-size: 12px; font-weight: 700; }
+    .tree-search { width: calc(100% - 24px); height: 33px; margin: 12px; padding: 0 10px; border: 1px solid var(--border); border-radius: 4px; outline: none; color: var(--ink); font-size: 12px; }
+    .tree-search:focus { border-color: var(--teal); }
+    .tree { padding: 0 8px 12px; }
+    .tree-type { margin-top: 4px; }
+    .tree-type-head { display: flex; min-height: 36px; align-items: center; gap: 7px; width: 100%; padding: 0 7px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); text-align: left; font-size: 13px; font-weight: 700; }
+    .tree-type-head:hover { background: var(--surface-muted); }
+    .type-icon { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 4px; background: var(--teal-soft); color: var(--teal); font-size: 10px; }
+    .type-icon.video { background: var(--violet-soft); color: var(--violet); }
+    .type-icon.blog { background: var(--blue-soft); color: var(--blue); }
+    .type-icon.rss { background: var(--surface-muted); color: var(--text-secondary); }
+    .tree-type-head .tree-count { margin-left: auto; color: var(--text-secondary); font-size: 11px; font-weight: 500; }
+    .tree-groups { margin: 1px 0 7px 16px; padding-left: 8px; border-left: 1px solid var(--border); }
+    .tree-group { margin-top: 2px; }
+    .tree-group button { display: flex; min-height: 31px; align-items: center; gap: 6px; width: 100%; padding: 0 7px; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary); text-align: left; font-size: 12px; }
+    .tree-group button.active { background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .tree-group small { margin-left: auto; font-size: 10px; }
+    .tree-item { display: flex; min-height: 28px; align-items: center; gap: 6px; padding: 0 7px 0 18px; color: var(--text-secondary); font-size: 11px; }
+    .tree-item.selected { color: var(--ink); font-weight: 700; }
+    .tiny-avatar { display: grid; width: 17px; height: 17px; flex: 0 0 auto; place-items: center; border-radius: 3px; background: var(--blue-soft); color: var(--blue); font-size: 8px; font-weight: 800; }
+    .tiny-dot { width: 5px; height: 5px; margin-left: auto; border-radius: 50%; background: var(--teal); }
+
+    .list-panel { min-width: 0; overflow: hidden; }
+    .list-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 20px 20px 15px; border-bottom: 1px solid var(--border); }
+    .crumb { color: var(--text-secondary); font-size: 12px; }
+    .crumb strong { color: var(--ink); font-weight: 600; }
+    .group-title { display: flex; align-items: baseline; gap: 9px; margin-top: 4px; }
+    .group-title h2 { margin: 0; font-size: 21px; letter-spacing: 0; }
+    .group-title span { color: var(--text-secondary); font-size: 12px; }
+    .toolbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+    .icon-button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-secondary); font-size: 17px; }
+    .icon-button:hover { border-color: var(--border-strong); color: var(--ink); }
+    .control-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: #fbfcfc; }
+    .filter-group { display: flex; gap: 6px; }
+    .filter { min-height: 29px; padding: 0 9px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--text-secondary); font-size: 12px; }
+    .filter.active { border-color: var(--border); background: var(--surface); color: var(--ink); font-weight: 700; }
+    .sort { color: var(--text-secondary); font-size: 12px; }
+
+    .subscription-list { display: grid; }
+    .subscription { display: grid; grid-template-columns: 48px minmax(180px, 1fr) minmax(140px, .75fr) 105px 34px; align-items: center; gap: 14px; min-height: 84px; padding: 13px 20px; border-bottom: 1px solid var(--border); }
+    .subscription:last-child { border-bottom: 0; }
+    .subscription:hover { background: #fbfcfc; }
+    .cover { width: 48px; height: 48px; border-radius: 5px; object-fit: cover; background: var(--surface-muted); }
+    .sub-main b, .sub-main span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sub-main b { font-size: 14px; }
+    .sub-main span { margin-top: 4px; color: var(--text-secondary); font-size: 12px; }
+    .sub-main .new { display: inline-block; margin: 6px 0 0; padding: 2px 5px; border-radius: 3px; background: var(--teal-soft); color: var(--teal); font-size: 10px; font-weight: 700; }
+    .sub-status { color: var(--text-secondary); font-size: 12px; }
+    .sub-status b { display: block; color: var(--ink); font-size: 12px; }
+    .sub-status span { display: block; margin-top: 3px; }
+    .notify { display: inline-flex; min-height: 28px; align-items: center; justify-content: center; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-secondary); font-size: 11px; }
+    .notify.on { border-color: #96c6c7; background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .more { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary); font-size: 17px; }
+    .more:hover { background: var(--surface-muted); color: var(--ink); }
+    .group-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 20px; border-top: 1px solid var(--border); background: #fbfcfc; color: var(--text-secondary); font-size: 12px; }
+    .group-foot button { border: 0; background: transparent; color: var(--teal); font-size: 12px; font-weight: 700; }
+
+    @media (max-width: 1080px) { .app { grid-template-columns: 68px minmax(0, 1fr); } .app-sidebar { padding: 14px 9px; } .brand { justify-content: center; padding: 0 0 16px; } .brand > span:last-child, .app-nav span, .account > span { display: none; } .app-nav button { justify-content: center; padding: 0; } .account { justify-content: center; padding: 8px 0; } .page-grid { grid-template-columns: 245px minmax(0, 1fr); padding: 18px 22px 36px; } .page-header { padding: 23px 22px 17px; } }
+    @media (max-width: 780px) { .app { grid-template-columns: 1fr; } .app-sidebar { display: none; } .page-header { padding: 20px 16px 16px; } .page-grid { grid-template-columns: 1fr; padding: 14px 16px 28px; } .tree-panel { display: none; } .subscription { grid-template-columns: 44px minmax(0, 1fr) 32px; gap: 11px; padding: 12px 14px; } .cover { width: 44px; height: 44px; } .sub-status, .notify { display: none; } .list-toolbar { padding: 16px 14px 13px; } .control-row { padding: 10px 14px; } }
+    @media (max-width: 480px) { .page-header { align-items: stretch; flex-direction: column; } .primary-action { justify-content: center; } .control-row { align-items: flex-start; flex-direction: column; } .toolbar-actions { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="app-sidebar" aria-label="主导航">
+      <header class="brand"><span class="brand-mark">A</span><span><b>Atoman</b><span>内容空间</span></span></header>
+      <nav class="app-nav">
+        <button type="button"><span class="nav-symbol">⌕</span><span>发现</span></button>
+        <button type="button" class="active"><span class="nav-symbol">◌</span><span>订阅</span></button>
+        <button type="button"><span class="nav-symbol">▱</span><span>收藏</span></button>
+        <button type="button"><span class="nav-symbol">◷</span><span>历史</span></button>
+      </nav>
+      <footer class="app-sidebar-bottom"><div class="account"><span class="account-avatar">Y</span><span><b>Yuki</b><span>个人账户</span></span></div></footer>
+    </aside>
+
+    <main class="workspace">
+      <header class="page-header">
+        <div><h1>订阅</h1><p>按类型、分组管理已关注的频道、账号和 RSS 订阅源。</p></div>
+        <button type="button" class="primary-action"><span class="plus">+</span>添加订阅</button>
+      </header>
+
+      <section class="page-grid">
+        <aside class="tree-panel" aria-label="订阅类型和分组">
+          <header class="panel-head"><h2>订阅目录</h2><button class="quiet-button" type="button">管理分组</button></header>
+          <input class="tree-search" type="search" placeholder="搜索频道或账号" aria-label="搜索订阅">
+          <div class="tree">
+            <section class="tree-type">
+              <button class="tree-type-head" type="button"><span class="type-icon">P</span>播客<span class="tree-count">9</span></button>
+              <div class="tree-groups">
+                <div class="tree-group"><button type="button" class="active">⌄ A 分组 <small>3</small></button><div class="tree-item selected"><span class="tiny-avatar">A</span>频道 A<span class="tiny-dot"></span></div><div class="tree-item"><span class="tiny-avatar">S</span>声音档案</div><div class="tree-item"><span class="tiny-avatar">T</span>技术与社会</div></div>
+                <div class="tree-group"><button type="button">› 新闻 <small>6</small></button></div>
+                <div class="tree-group"><button type="button">› 未分类 <small>0</small></button></div>
+              </div>
+            </section>
+            <section class="tree-type">
+              <button class="tree-type-head" type="button"><span class="type-icon video">V</span>视频<span class="tree-count">12</span></button>
+              <div class="tree-groups"><div class="tree-group"><button type="button">› B 分组 <small>4</small></button></div><div class="tree-group"><button type="button">› 学习 <small>8</small></button></div></div>
+            </section>
+            <section class="tree-type">
+              <button class="tree-type-head" type="button"><span class="type-icon blog">B</span>博客<span class="tree-count">10</span></button>
+              <div class="tree-groups"><div class="tree-group"><button type="button">› 阅读 <small>4</small></button></div><div class="tree-group"><button type="button">› 工作 <small>6</small></button></div></div>
+            </section>
+            <section class="tree-type">
+              <button class="tree-type-head" type="button"><span class="type-icon rss">R</span>RSS<span class="tree-count">17</span></button>
+              <div class="tree-groups"><div class="tree-group"><button type="button">› 设计 <small>5</small></button></div><div class="tree-group"><button type="button">› 技术 <small>12</small></button></div></div>
+            </section>
+          </div>
+        </aside>
+
+        <section class="list-panel" aria-label="播客 A 分组订阅">
+          <header class="list-toolbar">
+            <div><p class="crumb">订阅目录 / <strong>播客</strong></p><div class="group-title"><h2>A 分组</h2><span>3 个频道</span></div></div>
+            <div class="toolbar-actions"><button class="icon-button" type="button" title="排序分组">↕</button><button class="icon-button" type="button" title="分组设置">⚙</button></div>
+          </header>
+          <div class="control-row"><div class="filter-group"><button class="filter active" type="button">全部 3</button><button class="filter" type="button">有更新 2</button></div><span class="sort">按最近更新排序</span></div>
+          <div class="subscription-list">
+            <article class="subscription">
+              <img class="cover" alt="频道 A 封面" src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=160&q=80">
+              <div class="sub-main"><b>频道 A</b><span>科技与社会 · 每周更新</span><span class="new">2 个新单集</span></div>
+              <div class="sub-status"><b>今天 09:30</b><span>最近更新</span></div>
+              <button class="notify on" type="button">提醒开启</button>
+              <button class="more" type="button" title="频道 A 更多操作">⋯</button>
+            </article>
+            <article class="subscription">
+              <img class="cover" alt="声音档案封面" src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=160&q=80">
+              <div class="sub-main"><b>声音档案</b><span>人物与城市 · 双周更新</span><span class="new">1 个新单集</span></div>
+              <div class="sub-status"><b>昨天</b><span>最近更新</span></div>
+              <button class="notify on" type="button">提醒开启</button>
+              <button class="more" type="button" title="声音档案更多操作">⋯</button>
+            </article>
+            <article class="subscription">
+              <img class="cover" alt="技术与社会封面" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=160&q=80">
+              <div class="sub-main"><b>技术与社会</b><span>产品与工程 · 不定期更新</span></div>
+              <div class="sub-status"><b>6 月 12 日</b><span>最近更新</span></div>
+              <button class="notify" type="button">提醒关闭</button>
+              <button class="more" type="button" title="技术与社会更多操作">⋯</button>
+            </article>
+          </div>
+          <footer class="group-foot"><span>所有条目均属于“播客 / A 分组”。</span><button type="button">添加频道</button></footer>
+        </section>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -744,6 +744,7 @@ export interface FeedExploreSource {
 	id: string;
 	title: string;
 	rssUrl?: string;
+	coverUrl?: string;
 	category: FeedSourceCategory;
 	language_code?: string;
 	subscriptionCount: number;
@@ -1004,6 +1005,7 @@ export interface FeedArticleSource {
 	id: string;
 	title: string;
 	rssUrl?: string;
+	imageUrl?: string;
 	subscriptionId?: string;
 	subscribed: boolean;
 	healthStatus?: "healthy" | "warning" | "error";

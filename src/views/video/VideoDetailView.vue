@@ -9,7 +9,7 @@ import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
 import { useInteractions } from '@/composables/useInteractions'
@@ -36,6 +36,8 @@ const lifecycle = useContentLifecycle()
 const videoId = computed(() => String(route.params.id || ''))
 const commentTarget = computed<CommentTargetRef>(() => ({ kind: 'video', resourceId: videoId.value }))
 const interactions = useInteractions('videos', 'video', videoId)
+const commentsOpen = ref(false)
+const videoContentAnchor = ref<HTMLElement | null>(null)
 
 const video = ref<Video | null>(null)
 const canDeleteAllComments = computed(() => Boolean(
@@ -120,6 +122,7 @@ async function load(id: string) {
   const seq = ++loadSeq
   loading.value = true
   error.value = ''
+  commentsOpen.value = false
   video.value = null
   recommended.value = []
   showNextPrompt.value = false
@@ -312,7 +315,7 @@ function currentCommentTime() {
 
     <div v-else-if="video" :class="['vd-layout', { 'vd-layout--theater': theaterMode }]">
       <!-- Main: player + info -->
-      <div class="vd-main">
+      <div ref="videoContentAnchor" class="vd-main">
         <!-- Player Shell -->
         <PVideoPlayerShell
           :video="video"
@@ -413,15 +416,9 @@ function currentCommentTime() {
             :disabled="!authStore.isAuthenticated"
             @like="interactions.like"
             @unlike="interactions.unlike"
+            @comment="commentsOpen = true"
           />
-          <CommentSection
-            :target="commentTarget"
-            noun="评论"
-            :current-time="currentCommentTime"
-            :can-delete="canDeleteAllComments"
-            @seek="handleSeekToTimestamp"
-            @count-change="interactions.commentCount.value = $event"
-          />
+
         </div>
 
         <!-- Tags -->
@@ -443,6 +440,18 @@ function currentCommentTime() {
         @play-next="playNextVideo"
       />
     </div>
+
+    <CommentSideSheet
+      :show="commentsOpen"
+      :title="`视频评论-${video?.title || '未命名'}`"
+      :partial-anchor="videoContentAnchor"
+      :target="commentTarget"
+      :current-time="currentCommentTime"
+      :can-delete="canDeleteAllComments"
+      @close="commentsOpen = false"
+      @seek="handleSeekToTimestamp"
+      @count-change="interactions.commentCount.value = $event"
+    />
   </div>
 </template>
 

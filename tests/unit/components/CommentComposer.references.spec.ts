@@ -16,6 +16,17 @@ vi.mock('@/api/comments', () => ({
 }))
 
 describe('CommentComposer references', () => {
+  it('keeps a compact root composer collapsed until the user starts writing', async () => {
+    const wrapper = mount(CommentComposer, { props: { compact: true } })
+
+    expect(wrapper.find('[data-test="compact-composer-trigger"]').exists()).toBe(true)
+    expect(wrapper.find('textarea').exists()).toBe(false)
+
+    await wrapper.get('[data-test="compact-composer-trigger"]').trigger('click')
+
+    expect(wrapper.find('textarea').exists()).toBe(true)
+  })
+
   it('opens root suggestions from the reference tool', async () => {
     vi.useFakeTimers()
     const wrapper = mount(CommentComposer)

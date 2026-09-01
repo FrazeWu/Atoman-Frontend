@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>紧凑评论区预览</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+      --ink: #18212f;
+      --muted: #6e7887;
+      --soft: #f6f7f9;
+      --border: #e4e7ec;
+      --accent: #1f7a8c;
+      --accent-strong: #166476;
+      --surface: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+    body { min-width: 20rem; margin: 0; background: #edf0f3; color: var(--ink); }
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .page {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(21rem, 0.45fr);
+      min-height: 100vh;
+    }
+
+    .article {
+      padding: clamp(1.5rem, 5vw, 5rem);
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .article__eyebrow {
+      margin: 0 0 1rem;
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .article h1 { max-width: 20ch; margin: 0; font-size: clamp(1.75rem, 3vw, 3rem); line-height: 1.16; }
+    .article p { max-width: 60ch; margin: 1.25rem 0 0; color: #4f5b6b; line-height: 1.8; }
+
+    .comment-sheet { min-width: 0; padding: clamp(1rem, 2vw, 1.5rem); background: var(--surface); }
+
+    .comment-sheet__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-height: 2.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comment-sheet__title { display: flex; align-items: baseline; gap: 0.45rem; min-width: 0; }
+    .comment-sheet h2 { margin: 0; font-size: 1.125rem; line-height: 1.2; }
+    .comment-sheet__count { color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+
+    .sort { display: inline-flex; gap: 0.1rem; padding: 0.18rem; border: 1px solid var(--border); border-radius: 0.35rem; background: var(--soft); }
+    .sort button { min-height: 2rem; padding: 0 0.55rem; border: 0; border-radius: 0.25rem; background: transparent; color: var(--muted); font-size: 0.75rem; }
+    .sort button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgb(24 33 47 / 0.08); }
+
+    .composer { margin: 0.85rem 0 0; border-bottom: 1px solid var(--border); }
+    .composer__collapsed { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.6rem; align-items: center; padding-bottom: 0.85rem; }
+    .avatar { display: grid; width: 2rem; height: 2rem; place-items: center; overflow: hidden; border-radius: 50%; background: #d9e3e7; color: #34515a; font-size: 0.72rem; font-weight: 700; }
+    .avatar--dark { background: #dfe1ee; color: #4c517e; }
+    .avatar--warm { background: #efe2d2; color: #7d572e; }
+
+    .composer__trigger {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-height: 2.5rem;
+      padding: 0 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.35rem;
+      background: var(--soft);
+      color: #8993a0;
+      text-align: left;
+    }
+
+    .composer__trigger:hover, .composer__trigger:focus-visible { border-color: var(--accent); outline: 2px solid rgb(31 122 140 / 0.18); outline-offset: 1px; }
+    .composer__expanded { display: none; padding: 0 0 0.85rem 2.6rem; }
+    .composer.is-expanded .composer__collapsed { padding-bottom: 0.5rem; }
+    .composer.is-expanded .composer__expanded { display: block; }
+
+    .composer textarea, .reply-composer textarea {
+      display: block;
+      width: 100%;
+      min-height: 4.5rem;
+      padding: 0.65rem 0.75rem;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 0.35rem;
+      background: var(--surface);
+      color: var(--ink);
+      line-height: 1.5;
+      outline: none;
+    }
+
+    .composer textarea:focus, .reply-composer textarea:focus { border-color: var(--accent); outline: 2px solid rgb(31 122 140 / 0.18); outline-offset: 1px; }
+    .composer__toolbar { display: flex; align-items: center; gap: 0.25rem; min-height: 2.5rem; margin-top: 0.35rem; }
+    .tool, .quiet-action, .publish { min-height: 2.25rem; border-radius: 0.3rem; font-size: 0.75rem; font-weight: 600; }
+    .tool, .quiet-action { border: 0; background: transparent; color: var(--muted); }
+    .tool { min-width: 2.25rem; }
+    .tool:hover, .quiet-action:hover { background: var(--soft); color: var(--ink); }
+    .quiet-action { margin-left: auto; padding: 0 0.6rem; }
+    .publish { padding: 0 0.8rem; border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+    .publish:hover { border-color: var(--accent-strong); background: var(--accent-strong); }
+
+    .threads { display: grid; }
+    .comment { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.6rem; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+    .comment__main { min-width: 0; }
+    .comment__meta { display: flex; align-items: center; gap: 0.4rem; min-width: 0; color: var(--muted); font-size: 0.75rem; line-height: 1.25; }
+    .comment__author { overflow: hidden; color: #354151; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .comment__badge { padding: 0.08rem 0.25rem; border: 1px solid #a6d5dd; border-radius: 0.2rem; color: var(--accent-strong); font-size: 0.65rem; font-weight: 700; }
+    .comment__more { min-width: 2.25rem; min-height: 2.25rem; margin-left: auto; border: 0; border-radius: 0.25rem; background: transparent; color: var(--muted); font-size: 0.7rem; }
+    .comment__more:hover { background: var(--soft); color: var(--ink); }
+    .comment__content { margin: 0.35rem 0 0; color: #263142; font-size: 0.875rem; line-height: 1.55; overflow-wrap: anywhere; }
+    .comment__actions { display: flex; align-items: center; gap: 0.1rem; min-height: 2rem; margin-top: 0.25rem; }
+    .comment__actions button { min-height: 2rem; padding: 0 0.45rem; border: 0; border-radius: 0.25rem; background: transparent; color: var(--muted); font-size: 0.75rem; }
+    .comment__actions button:hover, .comment__actions button[aria-pressed="true"] { background: var(--soft); color: var(--accent-strong); }
+
+    .replies { display: grid; gap: 0; margin-top: 0.55rem; padding-left: 0.65rem; border-left: 2px solid #d7e5e8; }
+    .replies .comment { grid-template-columns: 1.6rem minmax(0, 1fr); gap: 0.5rem; padding: 0.65rem 0; border-bottom: 0; }
+    .replies .avatar { width: 1.6rem; height: 1.6rem; font-size: 0.62rem; }
+    .replies .comment__content { font-size: 0.8125rem; }
+
+    .reply-composer { display: none; margin-top: 0.5rem; padding: 0.55rem; border: 1px solid var(--border); border-radius: 0.35rem; background: var(--soft); }
+    .reply-composer.is-open { display: block; }
+    .reply-composer textarea { min-height: 3.5rem; padding: 0.55rem; }
+    .reply-composer__actions { display: flex; justify-content: flex-end; gap: 0.25rem; margin-top: 0.35rem; }
+    .status { min-height: 1rem; margin: 0.55rem 0 0; color: var(--accent-strong); font-size: 0.75rem; }
+
+    @media (max-width: 58rem) {
+      .page { grid-template-columns: 1fr; }
+      .article { display: none; }
+      .comment-sheet { max-width: 42rem; width: 100%; margin: 0 auto; }
+    }
+
+    @media (max-width: 25rem) {
+      .comment-sheet { padding: 0.85rem; }
+      .comment-sheet__header { align-items: flex-start; flex-direction: column; padding-bottom: 0.65rem; }
+      .sort { width: 100%; }
+      .sort button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <article class="article">
+      <p class="article__eyebrow">阅读中的文章</p>
+      <h1>让讨论紧随内容，而不是淹没内容</h1>
+      <p>右侧评论层保留文章的阅读上下文。评论本身采用连续信息流，减少卡片和大面积工具栏，让更多真实讨论在同一屏中出现。</p>
+    </article>
+
+    <section class="comment-sheet" aria-label="评论预览">
+      <header class="comment-sheet__header">
+        <div class="comment-sheet__title"><h2>评论</h2><span class="comment-sheet__count">12</span></div>
+        <div class="sort" role="group" aria-label="评论排序">
+          <button type="button" aria-pressed="true" data-sort>热门</button>
+          <button type="button" aria-pressed="false" data-sort>最新</button>
+        </div>
+      </header>
+
+      <form class="composer" id="root-composer">
+        <div class="composer__collapsed"><div class="avatar">我</div><button class="composer__trigger" type="button" id="root-trigger">写下你的评论</button></div>
+        <div class="composer__expanded">
+          <textarea aria-label="评论内容" placeholder="写下你的评论"></textarea>
+          <div class="composer__toolbar"><button class="tool" type="button" title="插入表情">笑</button><button class="tool" type="button" title="提及用户">@</button><button class="quiet-action" type="button" data-cancel-root>取消</button><button class="publish" type="button" data-publish="评论已发布">发布</button></div>
+        </div>
+      </form>
+
+      <div class="threads" aria-live="polite">
+        <article class="comment">
+          <div class="avatar avatar--dark">A</div>
+          <div class="comment__main">
+            <div class="comment__meta"><span class="comment__author">Asahi</span><span class="comment__badge">UP</span><span>1 小时前</span><button class="comment__more" type="button" aria-label="更多评论操作">更多</button></div>
+            <p class="comment__content">马桶盖换一个吧，坐垫磨损后会有异响；如果质量不好，坐着还会移位。</p>
+            <div class="comment__actions"><button type="button" data-like aria-pressed="false">赞 16</button><button type="button" data-reply>回复</button></div>
+            <div class="replies">
+              <article class="comment"><div class="avatar">林</div><div class="comment__main"><div class="comment__meta"><span class="comment__author">林檎</span><span>48 分钟前</span></div><p class="comment__content">同意，换了缓冲垫之后安静很多。</p><div class="comment__actions"><button type="button" data-like aria-pressed="false">赞 3</button><button type="button" data-reply>回复</button></div></div></article>
+              <article class="comment"><div class="avatar avatar--warm">周</div><div class="comment__main"><div class="comment__meta"><span class="comment__author">周末维修</span><span>32 分钟前</span></div><p class="comment__content">先检查固定螺丝，松动也会造成位移。</p><div class="comment__actions"><button type="button" data-like aria-pressed="false">赞</button><button type="button" data-reply>回复</button></div></div></article>
+            </div>
+            <form class="reply-composer" data-reply-composer><textarea aria-label="回复 Asahi" placeholder="回复 @Asahi"></textarea><div class="reply-composer__actions"><button class="quiet-action" type="button" data-cancel-reply>取消</button><button class="publish" type="button" data-publish="回复已发布">回复</button></div></form>
+          </div>
+        </article>
+
+        <article class="comment">
+          <div class="avatar avatar--warm">未</div>
+          <div class="comment__main">
+            <div class="comment__meta"><span class="comment__author">未野</span><span>2 小时前</span><button class="comment__more" type="button" aria-label="更多评论操作">更多</button></div>
+            <p class="comment__content">这个问题我也遇到过，垫片老化时可以先从固定点排查。</p>
+            <div class="comment__actions"><button type="button" data-like aria-pressed="false">赞 8</button><button type="button" data-reply>回复</button></div>
+            <form class="reply-composer" data-reply-composer><textarea aria-label="回复未野" placeholder="回复 @未野"></textarea><div class="reply-composer__actions"><button class="quiet-action" type="button" data-cancel-reply>取消</button><button class="publish" type="button" data-publish="回复已发布">回复</button></div></form>
+          </div>
+        </article>
+      </div>
+      <p class="status" id="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    const rootComposer = document.querySelector('#root-composer');
+    const rootTrigger = document.querySelector('#root-trigger');
+    const status = document.querySelector('#status');
+
+    rootTrigger.addEventListener('click', () => {
+      rootComposer.classList.add('is-expanded');
+      rootComposer.querySelector('textarea').focus();
+    });
+
+    document.querySelector('[data-cancel-root]').addEventListener('click', () => {
+      rootComposer.classList.remove('is-expanded');
+      rootComposer.querySelector('textarea').value = '';
+    });
+
+    document.querySelectorAll('[data-sort]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-sort]').forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+      });
+    });
+
+    document.querySelectorAll('[data-like]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const liked = button.getAttribute('aria-pressed') === 'true';
+        button.setAttribute('aria-pressed', String(!liked));
+        const count = Number((button.textContent.match(/\d+/) || ['0'])[0]);
+        button.textContent = !liked ? `赞 ${count + 1}` : `赞 ${Math.max(0, count - 1)}`;
+      });
+    });
+
+    document.querySelectorAll('[data-reply]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const comment = button.closest('.comment');
+        const composer = comment.querySelector(':scope > .comment__main > [data-reply-composer]');
+        document.querySelectorAll('[data-reply-composer]').forEach((item) => {
+          if (item !== composer) item.classList.remove('is-open');
+        });
+        composer.classList.toggle('is-open');
+        if (composer.classList.contains('is-open')) composer.querySelector('textarea').focus();
+      });
+    });
+
+    document.querySelectorAll('[data-cancel-reply]').forEach((button) => {
+      button.addEventListener('click', () => button.closest('[data-reply-composer]').classList.remove('is-open'));
+    });
+
+    document.querySelectorAll('[data-publish]').forEach((button) => {
+      button.addEventListener('click', () => {
+        status.textContent = button.dataset.publish;
+        rootComposer.classList.remove('is-expanded');
+        button.closest('[data-reply-composer]')?.classList.remove('is-open');
+      });
+    });
+  </script>
+</body>
+</html>

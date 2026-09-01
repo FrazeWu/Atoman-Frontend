@@ -4,6 +4,7 @@
     class="sticky-memo-card"
     :class="{ 'is-read': isRead }"
     variant="flat"
+    :ref="setCardAnchor"
     @mouseenter="handleMouseEnter"
   >
     <!-- 1. 紧凑单行头部：作者头像 + 作者 + 相对时间 + 短笺标签 + 作者微操作 -->
@@ -103,24 +104,29 @@
       </button>
     </footer>
 
-    <!-- 4. 行内平滑展开评论区 -->
-    <div v-if="showComments" class="sticky-inline-comments" @click.stop>
-      <CommentSection :target="{ kind: 'short_note', resourceId: note.id }" />
-    </div>
-
     <PImageLightbox
       v-model:show="showLightbox"
       :images="mediaUrls"
       :index="lightboxIndex"
     />
   </PInteractionCard>
+
+  <CommentSideSheet
+    :show="showComments"
+    :title="`短笺讨论-${note.id}`"
+    :partial-anchor="cardAnchor"
+    :target="{ kind: 'short_note', resourceId: note.id }"
+    noun="讨论"
+    @close="showComments = false"
+    @count-change="interactions.commentCount.value = $event"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch, watchEffect } from 'vue'
 import { Heart, MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
@@ -153,7 +159,15 @@ function handleMouseEnter() {
 const showLightbox = ref(false)
 const lightboxIndex = ref(0)
 const showComments = ref(false)
+const cardAnchor = ref<HTMLElement | null>(null)
 const mediaUrls = computed(() => props.note.media.map(m => resolveMediaURL(m.url)))
+
+function setCardAnchor(value: unknown) {
+  const element = value instanceof HTMLElement
+    ? value
+    : (value as { $el?: unknown } | null)?.$el
+  cardAnchor.value = element instanceof HTMLElement ? element : null
+}
 
 function openLightbox(idx: number) {
   lightboxIndex.value = idx
@@ -465,11 +479,4 @@ function formatDate(value: string) {
   background: var(--a-color-surface-muted);
 }
 
-/* 行内评论区 */
-.sticky-inline-comments {
-  margin: 0.5rem 0 0 2.5rem;
-  padding: 0.75rem;
-  background: var(--a-color-surface-muted);
-  border-radius: var(--a-radius-control);
-}
 </style>

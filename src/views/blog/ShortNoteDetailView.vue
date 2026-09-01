@@ -14,9 +14,6 @@
     </div>
     <template v-else-if="note">
       <ShortNoteCard :note="note" @delete="remove" />
-      <div class="short-note-detail__comments">
-        <CommentSection id="comments" :target="{ kind: 'short_note', resourceId: note.id }" />
-      </div>
     </template>
   </div>
   <PConfirm
@@ -36,7 +33,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ChevronLeft } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
-import CommentSection from '@/components/comment/CommentSection.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -129,9 +125,6 @@ onMounted(() => void load())
   border-radius: var(--a-radius-card);
 }
 
-.short-note-detail__comments {
-  margin-top: 1.5rem;
-}
 
 .short-note-detail__error {
   display: flex;

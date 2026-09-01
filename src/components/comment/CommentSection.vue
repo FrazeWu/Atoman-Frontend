@@ -2,13 +2,10 @@
   <section ref="sectionElement" class="comment-section" :aria-label="noun">
     <header class="comment-section__header">
       <div class="comment-section__title-group">
-        <MessageSquare class="comment-section__title-icon" :size="19" aria-hidden="true" />
-        <div>
-          <h2>{{ noun }}</h2>
-          <span v-if="comments.target.value" class="comment-section__count" aria-live="polite">
-            {{ comments.target.value.comment_count }} 条
-          </span>
-        </div>
+        <h2>{{ noun }}</h2>
+        <span v-if="comments.target.value" class="comment-section__count" aria-live="polite">
+          {{ comments.target.value.comment_count }}
+        </span>
       </div>
       <PSegmentedControl
         :model-value="comments.sort.value"
@@ -21,6 +18,9 @@
     <CommentComposer
       v-if="authStore.isAuthenticated && !readonly"
       ref="rootComposer"
+      compact
+      :compact-avatar-src="authStore.user?.avatar_url || ''"
+      :compact-avatar-name="authStore.user?.display_name || authStore.user?.username || '我'"
       :placeholder="`写下${noun}`"
       :initial-content="rootDraftContent"
       :current-time="currentTime"
@@ -410,15 +410,14 @@ async function submitReport(input: ReportCommentInput) {
 </script>
 
 <style scoped>
-.comment-section { display: grid; gap: 1.25rem; min-width: 0; }
-.comment-section__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--a-color-border-soft); }
-.comment-section__title-group { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
-.comment-section__title-icon { flex: 0 0 auto; color: var(--a-color-primary); }
-.comment-section__header h2 { margin: 0; color: var(--a-color-text); font-size: 1.25rem; font-weight: var(--a-font-weight-strong); line-height: 1.25; }
-.comment-section__count { display: block; margin-top: 0.15rem; color: var(--a-color-muted); font-size: var(--a-text-xs); line-height: 1.35; }
+.comment-section { display: grid; gap: 0.75rem; min-width: 0; }
+.comment-section__header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.comment-section__title-group { display: inline-flex; align-items: baseline; gap: 0.4rem; min-width: 0; }
+.comment-section__header h2 { margin: 0; color: var(--a-color-text); font-size: 1.125rem; font-weight: var(--a-font-weight-strong); line-height: 1.25; }
+.comment-section__count { color: var(--a-color-muted); font-size: var(--a-text-xs); font-variant-numeric: tabular-nums; }
 .comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 7rem; padding: 1rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-card); background: var(--a-color-surface); color: var(--a-color-text-secondary); text-align: center; }
 .comment-section__login :deep(.p-button) { margin-left: 0.25rem; }
-.comment-section__threads { display: grid; gap: 1rem; }
+.comment-section__threads { display: grid; gap: 0; }
 .comment-section__error { margin: 0; padding: 0.75rem 1rem; border-left: 3px solid var(--a-color-accent-destructive); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
-@media (max-width: 640px) { .comment-section { gap: 1rem; } .comment-section__header { align-items: stretch; flex-direction: column; } .comment-section__header :deep(.p-segmented-control) { display: grid; grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .comment-section { gap: 0.65rem; } .comment-section__header { align-items: stretch; flex-direction: column; } .comment-section__header :deep(.p-segmented-control) { display: grid; grid-template-columns: repeat(3, 1fr); } }
 </style>

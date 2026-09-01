@@ -1,8 +1,10 @@
 <template>
-  <div
-    v-if="player.currentSong"
-    class="player"
-    :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered }"
+  <div v-if="player.currentSong" class="player-shell">
+    <div
+      v-if="playerDisplayMode === 'full'"
+      class="player"
+      data-player-mode="full"
+      :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered }"
     @mouseenter="revealPlayer"
     @mouseleave="scheduleAutoHide"
     @focusin="revealPlayer"
@@ -18,6 +20,15 @@
       class="player-inner"
       :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }"
     >
+      <button
+        type="button"
+        class="player-collapse-tab"
+        aria-label="收起播放器"
+        title="收起播放器"
+        @click="setPlayerDisplayMode('collapsed')"
+      >
+        <Minimize2 :size="16" aria-hidden="true" />
+      </button>
       <!-- Left: Identity -->
       <div
         ref="playerInfoRef"
@@ -71,6 +82,18 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="progress-container player-waveform">
+        <AudioWaveformProgress
+          :song-id="String(player.currentSong.id)"
+          :audio-url="player.currentSong.audio_url"
+          :waveform-peaks="player.currentSong.waveform_peaks"
+          :current-time="player.currentTime"
+          :duration="player.duration"
+          :generate-waveform="!isPodcast"
+          @seek="player.seek"
+        />
       </div>
 
       <!-- Center: Controls -->
@@ -169,17 +192,6 @@
             <Clock :size="16" />
           </button>
         </div>
-        <div class="progress-container">
-          <AudioWaveformProgress
-            :song-id="String(player.currentSong.id)"
-            :audio-url="player.currentSong.audio_url"
-            :waveform-peaks="player.currentSong.waveform_peaks"
-            :current-time="player.currentTime"
-            :duration="player.duration"
-            :generate-waveform="!isPodcast"
-            @seek="player.seek"
-          />
-        </div>
       </div>
 
       <!-- Right: Feature Strip -->
@@ -259,6 +271,16 @@
           <span class="queue-count">{{ player.queue.length || 0 }}</span>
         </button>
         <button
+          class="player-mini-btn"
+          type="button"
+          aria-label="切换到小窗播放"
+          title="切换到小窗播放"
+          data-hint="小窗播放"
+          @click="setPlayerDisplayMode('mini')"
+        >
+          <PictureInPicture2 :size="18" aria-hidden="true" />
+        </button>
+        <button
           class="player-pin-btn"
           type="button"
           :aria-label="player.isPinned ? '取消固定播放器' : '固定播放器'"
@@ -271,6 +293,61 @@
         </button>
       </div>
     </div>
+    </div>
+
+    <div
+      v-else-if="playerDisplayMode === 'mini'"
+      class="player-mini-window"
+      data-player-mode="mini"
+    >
+      <button
+        type="button"
+        class="player-mini-cover"
+        aria-label="小窗封面"
+        title="小窗封面"
+        @click="setPlayerDisplayMode('full')"
+      >
+        <img
+          v-if="player.currentSong.cover_url"
+          :src="player.currentSong.cover_url"
+          alt=""
+          class="player-cover"
+        />
+        <span v-else class="player-cover-fallback">{{ coverFallback }}</span>
+      </button>
+      <button
+        type="button"
+        class="player-mini-play"
+        :aria-label="player.isPlaying ? '暂停' : '播放'"
+        :title="player.isPlaying ? '暂停' : '播放'"
+        @click="player.togglePlay()"
+      >
+        <Pause v-if="player.isPlaying" :size="22" fill="currentColor" aria-hidden="true" />
+        <Play v-else :size="22" fill="currentColor" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        class="player-mini-expand"
+        aria-label="展开完整播放器"
+        title="展开完整播放器"
+        @click="setPlayerDisplayMode('full')"
+      >
+        <Maximize2 :size="15" aria-hidden="true" />
+      </button>
+    </div>
+
+    <button
+      v-else
+      type="button"
+      class="player-expand-tab"
+      data-player-mode="collapsed"
+      aria-label="弹出播放器"
+      title="弹出播放器"
+      @click="setPlayerDisplayMode('full')"
+    >
+      <Maximize2 :size="16" aria-hidden="true" />
+      <span>播放器</span>
+    </button>
   </div>
 
   <Transition name="slide-up" appear>
@@ -326,6 +403,11 @@ import {
   Pin,
   PinOff,
   ChevronUp,
+  Minimize2,
+  Maximize2,
+  PictureInPicture2,
+  Pause,
+  Play,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
@@ -346,6 +428,16 @@ const { requireLogin } = useLoginRedirect();
 const playerInfoRef = ref<HTMLElement | null>(null);
 const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
+const playerDisplayMode = ref<"full" | "mini" | "collapsed">("full");
+
+async function setPlayerDisplayMode(mode: "full" | "mini" | "collapsed") {
+  playerDisplayMode.value = mode;
+  if (mode === "full") {
+    await nextTick();
+    revealPlayer();
+    updateMetaCollapse();
+  }
+}
 
 function handleGlobalKeydown(e: KeyboardEvent) {
   const active = document.activeElement
@@ -559,22 +651,26 @@ watch(
 <style scoped>
 .player {
   position: fixed;
-  bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height));
-  width: 100%;
+  right: 2.5vw;
+  bottom: calc(
+    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
+      1.25rem
+  );
+  left: 2.5vw;
   z-index: var(--a-z-player, 720);
-  background: rgba(255, 255, 255, 0.58);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
-  border-top: 1px solid var(--a-color-border-soft);
-  height: var(--a-player-height);
+  height: 4.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+  color: #131c2e;
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 :root.dark .player {
-  background: rgba(15, 23, 42, 0.64);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
-  border-top: 1px solid var(--a-color-border-dark, #334155);
+  border-color: var(--a-color-border-soft);
+  background: #fff;
+  color: #131c2e;
 }
 
 .player.is-auto-hidden {
@@ -593,22 +689,39 @@ watch(
 }
 
 .player-inner {
-  position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(11rem, 1fr) minmax(13rem, 1.2fr) minmax(19rem, 1.45fr) minmax(17rem, 1fr);
   align-items: center;
-  gap: 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 2rem;
+  gap: 0.75rem;
+  width: 100%;
   height: 100%;
+  padding: 0 0.75rem 0 0;
+}
+
+.player-collapse-tab {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-right: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+
+.player-collapse-tab:hover,
+.player-collapse-tab:focus-visible {
+  background: var(--a-color-primary-soft, #edf2ff);
+  color: var(--a-color-primary);
+  outline: none;
 }
 
 /* Left Section */
 .player-info {
   display: flex;
   align-items: center;
-  gap: 15px;
-  flex: 0 0 460px;
+  gap: 0.75rem;
   min-width: 0;
   transition:
     flex-basis 0.22s ease,
@@ -616,8 +729,7 @@ watch(
     gap 0.22s ease;
 }
 .player-info--collapsed {
-  flex-basis: 52px;
-  width: 52px;
+  min-width: 52px;
   gap: 0;
 }
 .cover-wrap {
@@ -781,29 +893,23 @@ watch(
 
 /* Center Section */
 .player-controls-hub {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  width: clamp(280px, calc(100% - 780px), 600px);
-  min-width: 280px;
+  min-width: 0;
 }
 .ctrl-row {
   display: flex;
-  gap: clamp(8px, 1.8vw, 24px);
   align-items: center;
   justify-content: center;
+  width: 100%;
+  gap: clamp(0.25rem, 0.8vw, 0.75rem);
   font-family: var(--a-font-sans);
   font-weight: 950;
   font-size: 10px;
   letter-spacing: 0.15em;
-  color: var(--a-color-text);
+  color: inherit;
   flex-wrap: nowrap;
   white-space: nowrap;
-  width: 100%;
 }
 .skip-btn,
 .nav-btn,
@@ -899,21 +1005,26 @@ watch(
 
 .progress-container {
   width: 100%;
-  max-width: 600px;
-  height: 24px;
+  min-width: 0;
+  height: 2.75rem;
+}
+
+.player-waveform {
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--a-color-border-soft);
 }
 
 /* Right Section */
 .player-features {
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  min-width: 0;
   font-family: var(--a-font-sans);
   font-weight: 950;
   font-size: 10px;
   letter-spacing: 0.1em;
-  flex-shrink: 0;
 }
 .feature-link {
   min-height: 44px;
@@ -1141,6 +1252,139 @@ watch(
   background: rgba(255, 255, 255, 0.1);
 }
 
+.player-mini-btn,
+.player-pin-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+
+.player-mini-btn:hover,
+.player-mini-btn:focus-visible,
+.player-pin-btn:hover,
+.player-pin-btn:focus-visible {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.player-mini-window {
+  position: fixed;
+  right: 1.25rem;
+  bottom: calc(
+    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
+      1.25rem
+  );
+  z-index: var(--a-z-player, 720);
+  width: 4.75rem;
+  height: 4.75rem;
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+}
+
+.player-mini-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.player-mini-cover .player-cover,
+.player-mini-cover .player-cover-fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.player-mini-play,
+.player-mini-expand {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.player-mini-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: rgba(19, 28, 46, 0.78);
+  color: #fff;
+  cursor: pointer;
+}
+
+.player-mini-expand {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(19, 28, 46, 0.78);
+  color: #fff;
+  cursor: pointer;
+}
+
+.player-mini-window:hover .player-mini-play,
+.player-mini-window:hover .player-mini-expand,
+.player-mini-play:focus-visible,
+.player-mini-expand:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+.player-expand-tab {
+  position: fixed;
+  right: 0;
+  bottom: calc(
+    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
+      1.25rem
+  );
+  z-index: var(--a-z-player, 720);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 2.25rem;
+  height: 7rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+  background: #fff;
+  color: #131c2e;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+  cursor: pointer;
+  writing-mode: vertical-rl;
+}
+
+.player-expand-tab:hover,
+.player-expand-tab:focus-visible {
+  background: var(--a-color-primary-soft, #edf2ff);
+  color: var(--a-color-primary);
+  outline: none;
+}
+
+.player-expand-tab span {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
 .player-pin-btn {
   width: 2.75rem;
   height: 2.75rem;
@@ -1180,43 +1424,41 @@ watch(
   text-align: center;
 }
 
-@media (max-width: 1023px) {
-  .player-inner {
-    gap: 1rem;
-    padding: 0 1rem;
+@media (min-width: 768px) and (max-width: 1024px) {
+  .player {
+    right: 1rem;
+    left: 1rem;
+    height: 6.75rem;
   }
 
+  .player-inner {
+    grid-template-columns: 28px 10rem minmax(10rem, 1fr) minmax(15rem, 1.2fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .player-collapse-tab,
   .player-info {
-    flex: 0 0 auto;
-    max-width: 18rem;
+    grid-row: 1 / span 2;
+  }
+
+  .player-waveform {
+    grid-column: 3;
+    grid-row: 1;
   }
 
   .player-controls-hub {
-    width: clamp(240px, calc(100% - 420px), 440px);
-  }
-
-  .ctrl-row {
-    gap: 14px;
+    grid-column: 4;
+    grid-row: 1;
   }
 
   .player-features {
-    gap: 12px;
+    grid-column: 3 / span 2;
+    grid-row: 2;
+    gap: 0.25rem;
   }
-}
 
-@media (max-width: 1024px) {
-  .player-inner {
-    gap: 1rem;
-  }
-  .player-info {
-    flex-basis: 320px;
-  }
-  .player-controls-hub {
-    width: clamp(240px, calc(100% - 620px), 420px);
-  }
-  .player-features {
-    gap: 12px;
-  }
   .volume-container {
     display: none;
   }
@@ -1397,11 +1639,21 @@ watch(
 
 @media (max-width: 767px) {
   .player {
+    right: 0;
+    bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height));
+    left: 0;
     height: var(--a-mobile-player-height);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
     transform: none !important;
   }
 
   .player-reveal-handle,
+  .player-collapse-tab,
+  .player-waveform,
+  .player-mini-btn,
   .player-pin-btn,
   .feature-toggle,
   .volume-container,
@@ -1443,21 +1695,15 @@ watch(
     transform: none;
   }
 
+  .progress-container {
+    display: none;
+  }
+
   .player-controls-hub {
     position: static;
     transform: none;
     width: auto;
     min-width: 0;
-  }
-
-  .progress-container {
-    position: absolute;
-    right: 0.75rem;
-    bottom: 1px;
-    left: 0.75rem;
-    width: auto;
-    max-width: none;
-    height: 24px;
   }
 
   .ctrl-row {
@@ -1504,6 +1750,22 @@ watch(
     clip: rect(0 0 0 0);
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .player-mini-window {
+    right: 0.75rem;
+    bottom: calc(var(--a-mobile-nav-reserved-height) + 0.75rem);
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+
+  .player-expand-tab {
+    bottom: calc(var(--a-mobile-nav-reserved-height) + 0.75rem);
+  }
+
+  .player-mini-play,
+  .player-mini-expand {
+    transition: none;
   }
 
 }

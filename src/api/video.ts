@@ -59,6 +59,12 @@ const authHeaders = (token?: string): Record<string, string> => (
   token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : {}
 )
 
+export interface VideoRatingSummary {
+  rating_score: number
+  rating_count: number
+  viewer_rating?: number | null
+}
+
 export const listVideos = (sort: string) => apiRequestJson<Video[]>(videoUrl(`?sort=${sort}`))
 export const getVideo = <T = Video>(id: string, token?: string) => (
   apiRequestJson<T>(videoUrl(`/${id}`), token ? { headers: authHeaders(token) } : undefined)
@@ -71,6 +77,21 @@ export const getVideoSubscriptions = (page = 1, pageSize = 20) => (
   apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`))
 )
 export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${id}/view`), { method: 'POST' })
+
+export const setVideoRating = (id: string, score: number, token?: string) => (
+  apiRequestJson<VideoRatingSummary>(videoUrl(`/${id}/rating`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify({ score }),
+  })
+)
+
+export const deleteVideoRating = (id: string, token?: string) => (
+  apiRequestJson<VideoRatingSummary>(videoUrl(`/${id}/rating`), {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+)
 
 export function uploadVideoCover(file: File, token?: string) {
   const body = new FormData()

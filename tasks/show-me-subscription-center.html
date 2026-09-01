@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>订阅中心 - 跨模块展示</title>
+    <style>
+      :root {
+        --page: #f5f7f8;
+        --surface: #ffffff;
+        --muted-surface: #f0f4f5;
+        --ink: #17252c;
+        --muted: #63747d;
+        --line: #d8e0e3;
+        --teal: #006d77;
+        --teal-soft: #e2f2f0;
+        --blue: #245fc7;
+        --blue-soft: #e8effd;
+        --violet: #6d3eb0;
+        --violet-soft: #f1ebfb;
+        --amber: #9a5b09;
+        --amber-soft: #fff2dc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        width: min(1100px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 42px 0 56px;
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--teal);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.18;
+        letter-spacing: 0;
+      }
+      .lede {
+        max-width: 810px;
+        margin: 12px 0 28px;
+        color: var(--muted);
+      }
+      .rule {
+        padding: 15px 17px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 15px;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 205px minmax(0, 1fr);
+        overflow: hidden;
+        margin-top: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 4px 16px rgb(18 39 47 / 5%);
+      }
+      .side {
+        min-height: 580px;
+        padding: 18px 11px;
+        border-right: 1px solid var(--line);
+        background: #fafcfc;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 8px 17px;
+        border-bottom: 1px solid var(--line);
+      }
+      .mark {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 5px;
+        background: var(--teal);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .brand b,
+      .brand span {
+        display: block;
+      }
+      .brand b {
+        font-size: 14px;
+      }
+      .brand span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .nav-title {
+        margin: 17px 8px 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+      .nav {
+        display: flex;
+        min-height: 37px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 9px;
+        border-radius: 5px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .nav.active {
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-weight: 700;
+      }
+      .side-note {
+        margin: 18px 8px 0;
+        padding: 10px;
+        border-radius: 5px;
+        background: var(--amber-soft);
+        color: var(--amber);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .content {
+        min-width: 0;
+      }
+      .content-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 24px 26px 0;
+      }
+      .content-head h2 {
+        margin: 0;
+        font-size: 25px;
+        letter-spacing: 0;
+      }
+      .content-head p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .search {
+        display: flex;
+        min-height: 36px;
+        align-items: center;
+        gap: 7px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .tabs {
+        display: flex;
+        gap: 20px;
+        padding: 18px 26px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .tab {
+        min-height: 39px;
+        padding: 0;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .tab.active {
+        border-color: var(--teal);
+        color: var(--teal);
+        font-weight: 700;
+      }
+      .panel {
+        display: none;
+        padding: 22px 26px 30px;
+      }
+      .panel.active {
+        display: block;
+      }
+      .intro {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .intro strong {
+        color: var(--ink);
+      }
+      .label {
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--muted-surface);
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .target-card {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+      }
+      .target-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .identity {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .avatar {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 5px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .identity b,
+      .identity span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .identity b {
+        font-size: 14px;
+      }
+      .identity span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .target-head > span {
+        flex: 0 0 auto;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .context-row {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        min-height: 52px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .context-row:last-child {
+        border-bottom: 0;
+      }
+      .kind {
+        display: inline-flex;
+        width: max-content;
+        padding: 3px 6px;
+        border-radius: 3px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .kind.video {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+      .context-row strong,
+      .context-row span {
+        display: block;
+      }
+      .context-row strong {
+        font-size: 13px;
+      }
+      .context-row span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .manage {
+        border: 0;
+        background: transparent;
+        color: var(--teal);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .all-note {
+        margin-top: 13px;
+        padding: 10px 12px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 12px;
+      }
+
+      .module-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 15px;
+        padding: 11px 12px;
+        border-radius: 5px;
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 13px;
+      }
+      .module-info.video {
+        background: var(--violet-soft);
+        color: #4f2f83;
+      }
+      .module-info.blog {
+        background: var(--blue-soft);
+        color: #194f9d;
+      }
+      .module-info.rss {
+        background: var(--muted-surface);
+        color: #405760;
+      }
+      .group {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+      }
+      .group + .group {
+        margin-top: 11px;
+      }
+      .group-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 13px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .group-title small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .show {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 48px;
+        padding: 0 13px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--teal);
+      }
+      .dot.video {
+        background: var(--violet);
+      }
+      .dot.blog {
+        background: var(--blue);
+      }
+      .dot.rss {
+        background: #667983;
+      }
+      .show small {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .reading {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 13px;
+        margin-top: 18px;
+      }
+      .reading article {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+      }
+      .reading h3 {
+        margin: 0;
+        font-size: 14px;
+        letter-spacing: 0;
+      }
+      .reading p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .confirm {
+        margin-top: 20px;
+        padding: 15px 17px;
+        border: 1px solid #9fc8c9;
+        border-radius: 7px;
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 14px;
+      }
+
+      @media (max-width: 700px) {
+        main {
+          width: min(100% - 24px, 1100px);
+          padding-top: 28px;
+        }
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        .side {
+          display: none;
+        }
+        .content-head {
+          flex-direction: column;
+        }
+        .search {
+          width: 100%;
+        }
+        .tabs {
+          gap: 14px;
+          overflow-x: auto;
+        }
+        .context-row {
+          grid-template-columns: 70px minmax(0, 1fr);
+          padding: 10px 14px;
+        }
+        .manage {
+          grid-column: 2;
+          justify-self: start;
+        }
+        .reading {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Subscription Center / Display Rule</p>
+      <h1>订阅模块不建立“全局分组树”</h1>
+      <p class="lede">
+        “全部订阅”按订阅目标去重；频道 A
+        只显示一次，并列出它在播客、视频和博客中的不同归属。RSS
+        是独立的外部订阅源。只有切换到某个模块时，才按该模块自己的分组浏览。
+      </p>
+      <p class="rule">
+        <strong>避免混乱的规则：</strong
+        >全部页不以分组为一级结构；分组只存在于“播客”“视频”“博客”“RSS”各自的模块页中。
+      </p>
+
+      <section class="shell" aria-label="订阅中心界面示意">
+        <aside class="side">
+          <header class="brand">
+            <span class="mark">S</span
+            ><span><b>订阅</b><span>所有内容的关注</span></span>
+          </header>
+          <p class="nav-title">内容</p>
+          <div class="nav active">⌁ 全部订阅</div>
+          <div class="nav">◌ 播客</div>
+          <div class="nav">▷ 视频</div>
+          <div class="nav">▤ 博客</div>
+          <div class="nav">◫ RSS</div>
+          <p class="side-note">
+            左侧是内容类型切换。每种内容只使用自己的分组，不将跨模块分组拼在一起。
+          </p>
+        </aside>
+
+        <section class="content">
+          <header class="content-head">
+            <div>
+              <h2>订阅</h2>
+              <p id="subtitle">频道去重展示，并列出它在各内容模块的归属。</p>
+            </div>
+            <div class="search">⌕ 搜索已订阅内容</div>
+          </header>
+          <nav class="tabs" aria-label="订阅内容类型">
+            <button type="button" class="tab active" data-panel="all">
+              全部
+            </button>
+            <button type="button" class="tab" data-panel="podcast">播客</button>
+            <button type="button" class="tab" data-panel="video">视频</button>
+            <button type="button" class="tab" data-panel="blog">博客</button>
+            <button type="button" class="tab" data-panel="rss">RSS</button>
+          </nav>
+
+          <section id="all" class="panel active">
+            <div class="intro">
+              <span><strong>36 个订阅目标</strong> · 频道 A 在此只出现一次</span
+              ><span class="label">按目标去重</span>
+            </div>
+            <article class="target-card">
+              <header class="target-head">
+                <div class="identity">
+                  <span class="avatar">A</span
+                  ><span
+                    ><b>频道 A</b><span>已在 3 个站内内容模块订阅</span></span
+                  >
+                </div>
+                <span>⌄</span>
+              </header>
+              <div class="context-row">
+                <span class="kind">播客</span
+                ><span><strong>A 分组</strong><span>2 个新单集</span></span
+                ><button type="button" class="manage">管理播客订阅</button>
+              </div>
+              <div class="context-row">
+                <span class="kind video">视频</span
+                ><span><strong>B 分组</strong><span>1 个新视频</span></span
+                ><button type="button" class="manage">管理视频订阅</button>
+              </div>
+              <div class="context-row">
+                <span class="kind">博客</span
+                ><span><strong>阅读分组</strong><span>3 篇新文章</span></span
+                ><button type="button" class="manage">管理博客订阅</button>
+              </div>
+            </article>
+            <article class="target-card" style="margin-top: 11px">
+              <header class="target-head">
+                <div class="identity">
+                  <span class="avatar">R</span
+                  ><span><b>设计周刊 RSS</b><span>外部 RSS 订阅源</span></span>
+                </div>
+                <span>⌄</span>
+              </header>
+              <div class="context-row">
+                <span class="kind">RSS</span
+                ><span><strong>设计分组</strong><span>4 篇未读文章</span></span
+                ><button type="button" class="manage">管理 RSS 订阅</button>
+              </div>
+            </article>
+            <p class="all-note">
+              全部页只说明每个订阅目标属于哪个内容模块和该模块内的哪个分组。播客、视频、博客与
+              RSS 的分组永不合并为一棵全局树。
+            </p>
+          </section>
+
+          <section id="podcast" class="panel">
+            <div class="module-info">
+              <span><strong>播客订阅</strong> · 只显示播客中的分组与节目</span
+              ><span class="label">9 个节目</span>
+            </div>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ A 分组</span><small>3 个节目</small>
+              </header>
+              <div class="show">
+                <span class="dot"></span>频道 A <small>2 个新单集</small>
+              </div>
+              <div class="show"><span class="dot"></span>声音档案</div>
+            </article>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ 新闻</span><small>6 个节目</small>
+              </header>
+              <div class="show"><span class="dot"></span>新闻慢读</div>
+            </article>
+          </section>
+
+          <section id="video" class="panel">
+            <div class="module-info video">
+              <span><strong>视频订阅</strong> · 只显示视频中的分组与频道</span
+              ><span class="label">12 个频道</span>
+            </div>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ B 分组</span><small>4 个频道</small>
+              </header>
+              <div class="show">
+                <span class="dot video"></span>频道 A <small>1 个新视频</small>
+              </div>
+              <div class="show"><span class="dot video"></span>产品周报</div>
+            </article>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ 学习</span><small>8 个频道</small>
+              </header>
+              <div class="show"><span class="dot video"></span>设计研究所</div>
+            </article>
+          </section>
+
+          <section id="blog" class="panel">
+            <div class="module-info blog">
+              <span><strong>博客订阅</strong> · 只显示博客频道与博客分组</span
+              ><span class="label">10 个频道</span>
+            </div>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ 阅读</span><small>4 个频道</small>
+              </header>
+              <div class="show">
+                <span class="dot blog"></span>频道 A <small>3 篇新文章</small>
+              </div>
+              <div class="show"><span class="dot blog"></span>长文观察</div>
+            </article>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ 工作</span><small>6 个频道</small>
+              </header>
+              <div class="show"><span class="dot blog"></span>产品笔记</div>
+            </article>
+          </section>
+
+          <section id="rss" class="panel">
+            <div class="module-info rss">
+              <span
+                ><strong>RSS 订阅</strong> · 只显示外部订阅源与 RSS 分组</span
+              ><span class="label">17 个来源</span>
+            </div>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ 设计</span><small>5 个来源</small>
+              </header>
+              <div class="show">
+                <span class="dot rss"></span>设计周刊 RSS
+                <small>4 篇未读</small>
+              </div>
+              <div class="show"><span class="dot rss"></span>界面观察</div>
+            </article>
+            <article class="group">
+              <header class="group-title">
+                <span>⌄ 技术</span><small>12 个来源</small>
+              </header>
+              <div class="show"><span class="dot rss"></span>工程实践周报</div>
+            </article>
+          </section>
+        </section>
+      </section>
+
+      <section class="reading">
+        <article>
+          <h3>用户看“全部”时</h3>
+          <p>
+            寻找“我关注了哪些目标”。频道 A
+            只有一项，展开即可看到它的播客、视频、博客归属；RSS
+            源也作为独立目标出现。
+          </p>
+        </article>
+        <article>
+          <h3>用户看“播客 / 视频 / 博客 / RSS”时</h3>
+          <p>
+            寻找“这个内容模块中我如何整理订阅”。此时才显示该模块自己的分组树，其他模块的分组不出现。
+          </p>
+        </article>
+      </section>
+      <p class="confirm">
+        <strong>已确认：</strong>订阅模块采用“全部页按订阅目标去重 +
+        播客、视频、博客、RSS
+        四个独立模块页分别分组”的结构。下一项将确定全部页的搜索、取消关注与批量管理操作。
+      </p>
+    </main>
+    <script>
+      const tabs = document.querySelectorAll(".tab");
+      const panels = document.querySelectorAll(".panel");
+      const subtitle = document.querySelector("#subtitle");
+      const subtitles = {
+        all: "订阅目标去重展示，并列出它在各内容模块的归属。",
+        podcast: "仅显示播客订阅，并按播客自己的分组组织。",
+        video: "仅显示视频订阅，并按视频自己的分组组织。",
+        blog: "仅显示博客订阅，并按博客自己的分组组织。",
+        rss: "仅显示 RSS 订阅源，并按 RSS 自己的分组组织。",
+      };
+      tabs.forEach((tab) =>
+        tab.addEventListener("click", () => {
+          tabs.forEach((item) => item.classList.toggle("active", item === tab));
+          panels.forEach((panel) =>
+            panel.classList.toggle("active", panel.id === tab.dataset.panel),
+          );
+          subtitle.textContent = subtitles[tab.dataset.panel];
+        }),
+      );
+    </script>
+  </body>
+</html>

@@ -12,7 +12,7 @@
   >
     <template #visual>
       <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
-        <img v-if="imageUrl" :src="imageUrl" :alt="source.title" class="feed-source-card__avatar-image" />
+        <img v-if="avatarImageURL" :src="avatarImageURL" :alt="source.title" class="feed-source-card__avatar-image" @error="advanceAvatarImage" />
         <template v-else>{{ avatarLabel }}</template>
       </div>
     </template>
@@ -79,10 +79,12 @@ defineOptions({
   inheritAttrs: false,
 })
 
-import { computed, useAttrs } from 'vue'
+import { computed, ref, useAttrs, watch } from 'vue'
 import { Check, Clock, FileText, Plus, Users } from 'lucide-vue-next'
 import PIdentityCard from '@/components/ui/PIdentityCard.vue'
 import type { FeedExploreSource } from '@/types'
+import { buildSourceFaviconURL } from '@/utils/feedSourcePresentation'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   source: FeedExploreSource
@@ -123,6 +125,28 @@ const rootAttrs = computed(() => ({
   'data-test': 'feed-source-card',
   ...attrs,
 }))
+
+const avatarImageCandidates = computed(() => {
+  const candidates = [
+    props.imageUrl,
+    props.source.coverUrl,
+    buildSourceFaviconURL(props.source.rssUrl),
+  ].map((value) => value?.trim() || '')
+  return [...new Set(candidates.filter(Boolean))]
+})
+const avatarImageIndex = ref(0)
+const avatarImageURL = computed(() => {
+  const value = avatarImageCandidates.value[avatarImageIndex.value] || ''
+  return value ? resolveMediaURL(value) : ''
+})
+
+function advanceAvatarImage() {
+  avatarImageIndex.value += 1
+}
+
+watch(avatarImageCandidates, () => {
+  avatarImageIndex.value = 0
+})
 
 const formattedLastUpdated = computed(() => {
   if (!props.source.lastPublishedAt) return ''

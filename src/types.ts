@@ -744,6 +744,7 @@ export interface FeedExploreSource {
 	id: string;
 	title: string;
 	rssUrl?: string;
+	coverUrl?: string;
 	category: FeedSourceCategory;
 	language_code?: string;
 	subscriptionCount: number;
@@ -1004,6 +1005,7 @@ export interface FeedArticleSource {
 	id: string;
 	title: string;
 	rssUrl?: string;
+	imageUrl?: string;
 	subscriptionId?: string;
 	subscribed: boolean;
 	healthStatus?: "healthy" | "warning" | "error";
@@ -1566,6 +1568,9 @@ export interface Video {
 	view_count: number;
 	like_count?: number;
 	liked?: boolean;
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number | null;
 	subtitle_url?: string;
 	processing_status?: VideoProcessingStatus;
 	processing_error?: string;

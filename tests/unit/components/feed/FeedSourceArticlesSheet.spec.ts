@@ -47,7 +47,8 @@ describe('FeedSourceArticlesSheet', () => {
       },
     })
 
-    expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('E')
+    const favicon = wrapper.get('[data-test="feed-source-avatar"] img')
+    expect(favicon.attributes('src')).toBe('https://example.com/favicon.ico')
     expect(wrapper.get('[data-test="feed-source-title"]').text()).toContain('Example RSS')
     expect(wrapper.get('[data-test="feed-source-url"]').text()).toContain('https://example.com/feed.xml')
     expect(wrapper.text()).toContain('RSS 源')
@@ -58,6 +59,43 @@ describe('FeedSourceArticlesSheet', () => {
     await wrapper.get('button').trigger('click')
 
     expect(wrapper.emitted('subscribe')).toBeTruthy()
+  })
+
+  it('renders a source cover and falls back to the source initial after an image error', async () => {
+    const wrapper = mount(FeedSourceArticlesSheet, {
+      props: {
+        show: true,
+        source: {
+          type: 'external_rss',
+          id: 'source-rss-cover',
+          title: 'Example RSS',
+          rssUrl: 'https://example.com/feed.xml',
+          imageUrl: 'https://cdn.example.com/source-cover.png',
+          subscribed: false,
+        } as any,
+        items: [],
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot name="header" /><slot /></section>' },
+          PEmpty: true,
+          PButton: true,
+        },
+      },
+    })
+
+    const image = wrapper.get('[data-test="feed-source-avatar"] img')
+    expect(image.attributes('src')).toBe('https://cdn.example.com/source-cover.png')
+
+    await image.trigger('error')
+
+    const favicon = wrapper.get('[data-test="feed-source-avatar"] img')
+    expect(favicon.attributes('src')).toBe('https://example.com/favicon.ico')
+
+    await favicon.trigger('error')
+
+    expect(wrapper.find('[data-test="feed-source-avatar"] img').exists()).toBe(false)
+    expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('E')
   })
 
   it('opens a selected article without triggering the source subscribe action', async () => {

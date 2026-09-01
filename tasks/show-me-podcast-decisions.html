@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>播客 Web - 需求决策</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #182128;
+        --muted: #60707c;
+        --line: #d9e0e5;
+        --paper: #f7f9fa;
+        --white: #ffffff;
+        --teal: #006d77;
+        --teal-soft: #e4f3f1;
+        --amber: #d97706;
+        --amber-soft: #fff1d9;
+        --blue: #2563eb;
+        --blue-soft: #e8f0ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 42px 0 56px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--teal);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      .intro {
+        max-width: 720px;
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .progress {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(120px, 1fr));
+        gap: 8px;
+        margin: 34px 0;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .step {
+        min-width: 130px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--white);
+      }
+
+      .step b,
+      .step span {
+        display: block;
+      }
+      .step b {
+        font-size: 13px;
+      }
+      .step span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .step.active {
+        border-color: var(--teal);
+        background: var(--teal-soft);
+      }
+      .step.active b {
+        color: var(--teal);
+      }
+
+      .decision {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 270px;
+        gap: 28px;
+        align-items: start;
+      }
+
+      .panel,
+      .context {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--white);
+      }
+
+      .panel {
+        padding: 28px;
+      }
+      .context {
+        padding: 20px;
+      }
+
+      h2,
+      h3 {
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+      }
+      h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .question {
+        margin: 10px 0 24px;
+        color: var(--muted);
+      }
+
+      .options {
+        display: grid;
+        gap: 12px;
+      }
+
+      .option {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 12px;
+        width: 100%;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--white);
+        text-align: left;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .option:hover,
+      .option:focus-visible {
+        border-color: var(--blue);
+        outline: 2px solid transparent;
+      }
+      .option.selected {
+        border-color: var(--teal);
+        box-shadow: inset 0 0 0 1px var(--teal);
+        background: #fbfefe;
+      }
+
+      .radio {
+        width: 20px;
+        height: 20px;
+        margin-top: 1px;
+        border: 2px solid #93a2ad;
+        border-radius: 50%;
+        background: var(--white);
+      }
+
+      .selected .radio {
+        border: 6px solid var(--teal);
+      }
+      .option strong,
+      .option small {
+        display: block;
+      }
+      .option small {
+        margin-top: 3px;
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-block;
+        margin: 7px 0 0;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .summary {
+        margin: 20px 0 0;
+        padding: 14px 16px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #17494d;
+        font-size: 14px;
+      }
+
+      .context h3 {
+        margin-bottom: 12px;
+      }
+      .context ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .context li + li {
+        margin-top: 9px;
+      }
+
+      .outcome {
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+
+      .outcome p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .next {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        margin-top: 24px;
+        padding: 16px 18px;
+        border: 1px solid #f3cf92;
+        border-radius: 6px;
+        background: var(--amber-soft);
+      }
+
+      .next strong,
+      .next span {
+        display: block;
+      }
+      .next span {
+        color: #80531b;
+        font-size: 14px;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          width: min(100% - 24px, 1120px);
+          padding-top: 28px;
+        }
+        .progress {
+          grid-template-columns: repeat(6, 150px);
+        }
+        .decision {
+          grid-template-columns: 1fr;
+        }
+        .panel {
+          padding: 20px;
+        }
+        .next {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Podcast Web / Decision 01 of 06</p>
+      <h1>先确定内容从哪里来</h1>
+      <p class="intro">
+        内容来源决定数据模型、后端边界、版权责任和首期交付速度。其他界面与播放器决策将以此为前提。
+      </p>
+
+      <nav class="progress" aria-label="需求决策进度">
+        <div class="step active"><b>01 内容来源</b><span>正在确认</span></div>
+        <div class="step"><b>02 目标用户</b><span>听众与登录</span></div>
+        <div class="step"><b>03 发现体验</b><span>首页与搜索</span></div>
+        <div class="step"><b>04 播放体验</b><span>播放器与队列</span></div>
+        <div class="step"><b>05 个人资料</b><span>关注与历史</span></div>
+        <div class="step"><b>06 首期规格</b><span>验收标准</span></div>
+      </nav>
+
+      <section class="decision">
+        <div class="panel">
+          <h2>首期节目内容采用哪种模式？</h2>
+          <p class="question">
+            请选择一个主路径。首期应只选一种，避免同时承担内容运营、RSS
+            同步和创作者后台的复杂度。
+          </p>
+
+          <div class="options" role="radiogroup" aria-label="首期内容来源">
+            <button
+              class="option selected"
+              type="button"
+              role="radio"
+              aria-checked="true"
+              data-choice="现有内容库 / 演示数据"
+            >
+              <span class="radio" aria-hidden="true"></span>
+              <span
+                ><strong>现有内容库或演示数据</strong
+                ><small
+                  >手工维护节目与单集；最快验证发现、播放、关注和队列的完整 Web
+                  体验。</small
+                ><span class="badge">推荐作为首期</span></span
+              >
+            </button>
+            <button
+              class="option"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-choice="外部 RSS 导入"
+            >
+              <span class="radio" aria-hidden="true"></span>
+              <span
+                ><strong>外部 RSS 导入</strong
+                ><small
+                  >输入 RSS
+                  地址后抓取、解析和定时同步；更接近真实播客生态，但需要处理音频跨域、失效源与内容归属。</small
+                ></span
+              >
+            </button>
+            <button
+              class="option"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-choice="创作者上传与发布"
+            >
+              <span class="radio" aria-hidden="true"></span>
+              <span
+                ><strong>创作者上传与发布</strong
+                ><small
+                  >创作者创建节目、上传音频并发布单集；需要对象存储、转码、审核、权限和管理后台。</small
+                ></span
+              >
+            </button>
+          </div>
+
+          <p class="summary">
+            <strong id="summary-label">当前建议：</strong
+            ><span id="summary-text"
+              >先使用现有内容库或演示数据，完整验证听众端闭环；RSS
+              导入作为第二阶段，再独立规划创作者发布能力。</span
+            >
+          </p>
+        </div>
+
+        <aside class="context">
+          <h3>选择依据</h3>
+          <ul>
+            <li>
+              <strong>交付速度：</strong>现有库最快；RSS 次之；上传平台最慢。
+            </li>
+            <li>
+              <strong>工程风险：</strong>RSS
+              需要同步与跨域策略；上传平台还需媒体处理与审核。
+            </li>
+            <li>
+              <strong>验证目标：</strong
+              >当前更需要验证用户会否发现、播放、关注和续听。
+            </li>
+            <li>
+              <strong>可演进性：</strong
+              >节目与单集模型应保留来源字段，后续可平滑加入 RSS。
+            </li>
+          </ul>
+          <div class="outcome">
+            <h3>本项输出</h3>
+            <p>确定内容边界、节目数据归属，以及首期是否包含节目发布工作流。</p>
+          </div>
+        </aside>
+      </section>
+
+      <footer class="next">
+        <div>
+          <strong>请在对话中确认一个选项</strong
+          ><span
+            >回复“现有内容库”、“RSS 导入”或“创作者上传”。确认后进入第 2
+            项：目标用户与登录边界。</span
+          >
+        </div>
+      </footer>
+    </main>
+    <script>
+      const options = document.querySelectorAll(".option");
+      const summaryLabel = document.getElementById("summary-label");
+      const summaryText = document.getElementById("summary-text");
+      const descriptions = {
+        "现有内容库 / 演示数据":
+          "先使用现有内容库或演示数据，完整验证听众端闭环；RSS 导入作为第二阶段，再独立规划创作者发布能力。",
+        "外部 RSS 导入":
+          "首期从外部 RSS 导入节目。需要在规格中加入解析、定时同步、失败重试、音频跨域和内容归属的验收标准。",
+        创作者上传与发布:
+          "首期包含创作者发布能力。范围将扩展为媒体存储、转码、节目管理、发布状态、审核和权限控制。",
+      };
+
+      options.forEach((option) => {
+        option.addEventListener("click", () => {
+          options.forEach((item) => {
+            item.classList.remove("selected");
+            item.setAttribute("aria-checked", "false");
+          });
+          option.classList.add("selected");
+          option.setAttribute("aria-checked", "true");
+          summaryLabel.textContent = "当前选择：";
+          summaryText.textContent = descriptions[option.dataset.choice];
+        });
+      });
+    </script>
+  </body>
+</html>

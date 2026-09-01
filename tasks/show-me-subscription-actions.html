@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>订阅中心 - 管理操作决策</title>
+    <style>
+      :root {
+        --page: #f5f7f8;
+        --surface: #fff;
+        --ink: #17252c;
+        --muted: #63747d;
+        --line: #d8e0e3;
+        --teal: #006d77;
+        --teal-soft: #e2f2f0;
+        --blue: #245fc7;
+        --blue-soft: #e8effd;
+        --violet: #6d3eb0;
+        --violet-soft: #f1ebfb;
+        --red: #b42318;
+        --red-soft: #fff0ee;
+        --amber: #9a5b09;
+        --amber-soft: #fff2dc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 42px 0 56px;
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--teal);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.18;
+        letter-spacing: 0;
+      }
+      .lede {
+        max-width: 790px;
+        margin: 12px 0 28px;
+        color: var(--muted);
+      }
+      .rule {
+        padding: 15px 17px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 15px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 345px;
+        gap: 18px;
+        margin-top: 24px;
+        align-items: start;
+      }
+      .preview,
+      .decision {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      .head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 22px;
+        border-bottom: 1px solid var(--line);
+      }
+      .head h2,
+      .decision h2 {
+        margin: 0;
+        font-size: 21px;
+        letter-spacing: 0;
+      }
+      .head p,
+      .decision > p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .search {
+        display: flex;
+        min-height: 34px;
+        align-items: center;
+        gap: 7px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .body {
+        padding: 20px 22px;
+      }
+      .target {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+      }
+      .target-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 13px;
+        background: #fbfcfc;
+      }
+      .identity {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .avatar {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 5px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .identity b,
+      .identity span {
+        display: block;
+      }
+      .identity b {
+        font-size: 14px;
+      }
+      .identity span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 74px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        min-height: 62px;
+        padding: 10px 13px;
+        border-top: 1px solid var(--line);
+      }
+      .kind {
+        display: inline-flex;
+        width: max-content;
+        padding: 3px 6px;
+        border-radius: 3px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .kind.video {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+      .kind.blog {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .row strong,
+      .row small {
+        display: block;
+      }
+      .row strong {
+        font-size: 13px;
+      }
+      .row small {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+      .plain {
+        min-height: 29px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: var(--surface);
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .plain.danger {
+        color: var(--red);
+      }
+      .all-danger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 14px;
+        padding: 11px 12px;
+        border: 1px solid #e7b5b0;
+        border-radius: 6px;
+        background: var(--red-soft);
+      }
+      .all-danger b,
+      .all-danger span {
+        display: block;
+      }
+      .all-danger b {
+        color: var(--red);
+        font-size: 12px;
+      }
+      .all-danger span {
+        margin-top: 2px;
+        color: #9d453c;
+        font-size: 11px;
+      }
+      .danger-btn {
+        min-height: 30px;
+        padding: 0 8px;
+        border: 1px solid #d78981;
+        border-radius: 4px;
+        background: var(--surface);
+        color: var(--red);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .note {
+        margin-top: 14px;
+        padding: 11px 12px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 12px;
+      }
+      .decision {
+        padding: 23px;
+      }
+      .decision > p {
+        margin: 8px 0 17px;
+        font-size: 14px;
+      }
+      .options {
+        display: grid;
+        gap: 10px;
+      }
+      .option {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 10px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+        text-align: left;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      .option.selected {
+        border-color: var(--teal);
+        box-shadow: inset 0 0 0 1px var(--teal);
+        background: #fbfefe;
+      }
+      .option:hover,
+      .option:focus-visible {
+        border-color: var(--blue);
+        outline: 2px solid transparent;
+      }
+      .radio {
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+        border: 2px solid #9aa8af;
+        border-radius: 50%;
+      }
+      .selected .radio {
+        border: 5px solid var(--teal);
+      }
+      .option strong,
+      .option small {
+        display: block;
+      }
+      .option strong {
+        font-size: 14px;
+      }
+      .option small {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .tag {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .rules {
+        margin: 18px 0 0;
+        padding: 14px 0 0 18px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .rules li + li {
+        margin-top: 7px;
+      }
+      .summary {
+        margin-top: 17px;
+        padding: 12px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 13px;
+      }
+      .next {
+        margin-top: 18px;
+        padding: 14px;
+        border: 1px solid #edd4a4;
+        border-radius: 6px;
+        background: var(--amber-soft);
+        color: var(--amber);
+        font-size: 13px;
+      }
+      .next b {
+        display: block;
+        color: #704811;
+      }
+      @media (max-width: 800px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 540px) {
+        main {
+          width: min(100% - 24px, 1120px);
+          padding-top: 28px;
+        }
+        .head {
+          flex-direction: column;
+        }
+        .search {
+          width: 100%;
+        }
+        .row {
+          grid-template-columns: 65px minmax(0, 1fr);
+        }
+        .actions {
+          grid-column: 2;
+          justify-content: flex-start;
+        }
+        .all-danger {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Subscription Center / Management Decision</p>
+      <h1>操作必须明确作用于一个模块，或明确作用于全部模块</h1>
+      <p class="lede">
+        在“全部订阅”中展开频道 A
+        后，用户能看到播客、视频、博客中的三个归属。每一行只管理该模块；取消所有模块订阅必须是单独的高风险操作。
+      </p>
+      <p class="rule">
+        <strong>默认原则：</strong
+        >普通操作只影响当前模块。跨模块操作不隐藏在普通的“取消订阅”按钮中。
+      </p>
+
+      <section class="layout">
+        <section class="preview" aria-label="推荐的全部订阅管理界面">
+          <header class="head">
+            <div>
+              <h2>全部订阅</h2>
+              <p>搜索频道 A 后，展开查看各模块归属。</p>
+            </div>
+            <div class="search">⌕ 搜索频道或 RSS 源</div>
+          </header>
+          <div class="body">
+            <article class="target">
+              <header class="target-head">
+                <div class="identity">
+                  <span class="avatar">A</span
+                  ><span><b>频道 A</b><span>已在 3 个模块订阅</span></span>
+                </div>
+                <span>⌃</span>
+              </header>
+              <div class="row">
+                <span class="kind">播客</span
+                ><span
+                  ><strong>A 分组</strong
+                  ><small>提醒开启 · 2 个新单集</small></span
+                ><span class="actions"
+                  ><button class="plain" type="button">打开播客</button
+                  ><button class="plain danger" type="button">
+                    取消播客订阅
+                  </button></span
+                >
+              </div>
+              <div class="row">
+                <span class="kind video">视频</span
+                ><span
+                  ><strong>B 分组</strong
+                  ><small>已静音 · 1 个新视频</small></span
+                ><span class="actions"
+                  ><button class="plain" type="button">打开视频</button
+                  ><button class="plain danger" type="button">
+                    取消视频订阅
+                  </button></span
+                >
+              </div>
+              <div class="row">
+                <span class="kind blog">博客</span
+                ><span
+                  ><strong>阅读分组</strong
+                  ><small>提醒开启 · 3 篇新文章</small></span
+                ><span class="actions"
+                  ><button class="plain" type="button">打开博客</button
+                  ><button class="plain danger" type="button">
+                    取消博客订阅
+                  </button></span
+                >
+              </div>
+            </article>
+            <section class="all-danger">
+              <span
+                ><b>取消频道 A 的全部订阅</b
+                ><span
+                  >删除播客、视频和博客的三个归属，需要二次确认。</span
+                ></span
+              ><button class="danger-btn" type="button">取消全部订阅</button>
+            </section>
+            <p class="note">
+              移动分组、静音、提醒等操作不在全部页直接批量修改。进入相应模块页后，只作用于该模块的分组与订阅。
+            </p>
+          </div>
+        </section>
+
+        <aside class="decision">
+          <h2>采用哪种操作边界？</h2>
+          <p>选择决定用户在全部页中能否安全地管理跨模块订阅。</p>
+          <div class="options" role="radiogroup" aria-label="订阅中心操作边界">
+            <button
+              class="option selected"
+              type="button"
+              role="radio"
+              aria-checked="true"
+              data-choice="分层管理"
+            >
+              <span class="radio" aria-hidden="true"></span
+              ><span
+                ><strong>分层管理</strong
+                ><small
+                  >全部页查看和管理单个模块归属；分组、批量操作进入模块页；“取消全部”独立展示并二次确认。</small
+                ><span class="tag">推荐</span></span
+              >
+            </button>
+            <button
+              class="option"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-choice="全部页直接批量管理"
+            >
+              <span class="radio" aria-hidden="true"></span
+              ><span
+                ><strong>全部页直接批量管理</strong
+                ><small
+                  >在全部页移动分组、静音或批量取消。操作快速，但必须先处理跨模块归属冲突，误操作风险高。</small
+                ></span
+              >
+            </button>
+            <button
+              class="option"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-choice="只能进入模块管理"
+            >
+              <span class="radio" aria-hidden="true"></span
+              ><span
+                ><strong>只能进入模块管理</strong
+                ><small
+                  >全部页纯浏览，任何操作均跳转模块页。最安全，但查看后还要多一步才能取消单个模块订阅。</small
+                ></span
+              >
+            </button>
+          </div>
+          <ul class="rules">
+            <li>全局搜索按频道或 RSS 源匹配，并在结果中显示所有模块归属。</li>
+            <li>单个“取消订阅”必须写清模块名，例如“取消播客订阅”。</li>
+            <li>
+              “取消全部订阅”只出现在展开目标后，需要列出将删除的模块并二次确认。
+            </li>
+            <li>模块页支持该模块内的批量移动分组、静音和取消订阅。</li>
+          </ul>
+          <p class="summary">
+            <strong id="summary-label">当前建议：</strong
+            ><span id="summary-text"
+              >采用分层管理：全部页用于总览与逐模块操作，具体整理在模块页完成，全局取消保持显式且受确认保护。</span
+            >
+          </p>
+          <p class="next">
+            <b>请确认一个选项</b>回复“分层管理”、“全部页批量”或“仅模块管理”。
+          </p>
+        </aside>
+      </section>
+    </main>
+    <script>
+      const options = document.querySelectorAll(".option");
+      const summaryLabel = document.querySelector("#summary-label");
+      const summaryText = document.querySelector("#summary-text");
+      const summaries = {
+        分层管理:
+          "采用分层管理：全部页用于总览与逐模块操作，具体整理在模块页完成，全局取消保持显式且受确认保护。",
+        全部页直接批量管理:
+          "在全部页直接批量管理。规格需要先定义同一目标多模块归属的批量操作优先级与冲突处理。",
+        只能进入模块管理: "全部页仅浏览，所有管理动作都进入相应的模块页。",
+      };
+      options.forEach((option) =>
+        option.addEventListener("click", () => {
+          options.forEach((item) => {
+            item.classList.remove("selected");
+            item.setAttribute("aria-checked", "false");
+          });
+          option.classList.add("selected");
+          option.setAttribute("aria-checked", "true");
+          summaryLabel.textContent = "当前选择：";
+          summaryText.textContent = summaries[option.dataset.choice];
+        }),
+      );
+    </script>
+  </body>
+</html>

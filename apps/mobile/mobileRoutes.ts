@@ -1,3 +1,4 @@
+// pi-lens-ignore: typescript:2307
 import type { RouteRecordRaw } from "vue-router";
 import PortalView from "@/views/portal/PortalView.vue";
 import { studioRoutes } from "@/router/routes/studio";
@@ -196,6 +197,10 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				component: () => import("@/views/music/MusicPlaylistRouteView.vue"),
 			},
 		],
+	},
+	{
+		path: "/videos/watch/:id",
+		component: () => import("@/views/video/VideoDetailView.vue"),
 	},
 	...studioRoutes,
 	{

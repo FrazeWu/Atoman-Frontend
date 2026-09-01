@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>播客 Web - 跨模块订阅分组</title>
+  <style>
+    :root {
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --muted-surface: #f0f4f5;
+      --ink: #17252c;
+      --muted: #63747d;
+      --line: #d8e0e3;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --violet: #6d3eb0;
+      --violet-soft: #f1ebfb;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 56px; }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: 0; }
+    .lede { max-width: 800px; margin: 12px 0 30px; color: var(--muted); }
+    .rule { padding: 14px 16px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #184c50; font-size: 14px; }
+
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; }
+    .panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .panel-head { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0; font-size: 20px; letter-spacing: 0; }
+    .panel-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .panel.problem .panel-head { background: var(--red-soft); }
+    .panel.problem .panel-head h2 { color: var(--red); }
+    .panel.solution .panel-head { background: var(--teal-soft); }
+    .panel.solution .panel-head h2 { color: var(--teal); }
+    .canvas { min-height: 350px; padding: 22px; }
+    .entity { position: relative; padding: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .entity b, .entity span { display: block; }
+    .entity b { font-size: 14px; }
+    .entity span { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .entity.target { border-color: var(--blue); background: var(--blue-soft); }
+    .entity.context-podcast { border-color: #91bdc0; background: var(--teal-soft); }
+    .entity.context-video { border-color: #c6b0e8; background: var(--violet-soft); }
+    .entity.conflict { border-color: #e5a59f; background: var(--red-soft); }
+    .arrow { width: 2px; height: 25px; margin: 0 auto; background: var(--line); }
+    .arrow::after { content: ''; display: block; width: 7px; height: 7px; margin-left: -3px; transform: translateY(20px) rotate(45deg); border-right: 2px solid var(--line); border-bottom: 2px solid var(--line); }
+    .branch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; }
+    .branch .entity { min-height: 78px; }
+    .bad-note, .good-note { margin-top: 20px; padding: 12px; border-radius: 5px; font-size: 13px; }
+    .bad-note { background: var(--red-soft); color: var(--red); }
+    .good-note { background: var(--teal-soft); color: #184c50; }
+
+    .outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+    .surface { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .surface h2 { margin: 0; padding: 18px 20px 0; font-size: 18px; letter-spacing: 0; }
+    .surface > p { margin: 5px 20px 16px; color: var(--muted); font-size: 13px; }
+    .tabs { display: flex; gap: 14px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+    .tab { padding: 9px 0; border-bottom: 2px solid transparent; color: var(--muted); font-size: 13px; }
+    .tab.active { border-color: var(--teal); color: var(--teal); font-weight: 700; }
+    .subscription { display: flex; align-items: flex-start; gap: 10px; padding: 13px 20px; border-bottom: 1px solid var(--line); }
+    .subscription:last-child { border-bottom: 0; }
+    .avatar { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-size: 12px; font-weight: 800; }
+    .subscription strong, .subscription small { display: block; }
+    .subscription strong { font-size: 13px; }
+    .subscription small { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .chip { padding: 2px 6px; border-radius: 3px; background: var(--teal-soft); color: var(--teal); font-size: 11px; }
+    .chip.video { background: var(--violet-soft); color: var(--violet); }
+    .group-list { padding: 10px 14px 14px; }
+    .group { margin-top: 9px; }
+    .group-head { display: flex; min-height: 30px; align-items: center; gap: 6px; color: var(--ink); font-size: 12px; font-weight: 700; }
+    .group-item { display: flex; min-height: 28px; align-items: center; gap: 7px; padding-left: 16px; color: var(--muted); font-size: 12px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+
+    .contract { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; margin-top: 18px; padding: 22px; border: 1px solid #edd4a4; border-radius: 8px; background: var(--amber-soft); }
+    .contract h2 { margin: 0; font-size: 20px; letter-spacing: 0; }
+    .contract p { margin: 6px 0 0; color: var(--amber); font-size: 13px; }
+    .contract ul { margin: 0; padding-left: 18px; color: #6f4813; font-size: 14px; }
+    .contract li + li { margin-top: 8px; }
+    .next { margin-top: 18px; padding: 14px 16px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #184c50; font-size: 14px; }
+
+    @media (max-width: 720px) { main { width: min(100% - 24px, 1180px); padding-top: 28px; } .comparison, .outcomes, .contract { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Subscription Architecture Decision</p>
+    <h1>全站订阅聚合，但分组必须属于模块上下文</h1>
+    <p class="lede">频道 A 可以同时被用于播客和视频。用户在两个模块中的收听或观看场景不同，因此订阅事实可全局聚合，分组和设置却不能全局共享。</p>
+    <p class="rule"><strong>核心规则：</strong>一个“订阅目标”对应用户对频道 A 的关注事实；每个模块各自保存一条订阅上下文，分组、排序、静音和提醒都附着在上下文上。</p>
+
+    <section class="comparison">
+      <article class="panel problem">
+        <header class="panel-head"><h2>当前风险：单一全局分组</h2><p>订阅记录只有一个 <code>subscription_group_id</code>。</p></header>
+        <div class="canvas">
+          <div class="entity target"><b>订阅目标：频道 A</b><span>同一用户、同一频道</span></div>
+          <div class="arrow"></div>
+          <div class="entity conflict"><b>全局订阅记录</b><span>group = ?</span></div>
+          <div class="branch"><div class="entity"><b>播客</b><span>用户希望放入 A 分组</span></div><div class="entity"><b>视频</b><span>用户希望放入 B 分组</span></div></div>
+          <p class="bad-note"><strong>冲突：</strong>写入播客的 A 分组会覆盖视频的 B 分组，或产生两个无法识别为同一频道的重复订阅。</p>
+        </div>
+      </article>
+
+      <article class="panel solution">
+        <header class="panel-head"><h2>建议模型：全局目标 + 模块上下文</h2><p>中央订阅中心汇总上下文，模块侧栏只取本模块。</p></header>
+        <div class="canvas">
+          <div class="entity target"><b>订阅目标：频道 A</b><span>用户关注的统一事实，避免重复来源</span></div>
+          <div class="arrow"></div>
+          <div class="entity"><b>用户订阅</b><span>仅表示“是否仍关注频道 A”</span></div>
+          <div class="branch"><div class="entity context-podcast"><b>播客上下文</b><span>分组 A · 播客提醒 · 播客排序</span></div><div class="entity context-video"><b>视频上下文</b><span>分组 B · 视频提醒 · 视频排序</span></div></div>
+          <p class="good-note"><strong>结果：</strong>编辑播客分组 A 不会影响视频分组 B；取消播客关注也不会取消仍在使用的视频关注。</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="outcomes">
+      <article class="surface">
+        <h2>中央订阅中心</h2><p>聚合所有模块，但显式显示每个模块上下文。</p>
+        <nav class="tabs"><span class="tab active">全部</span><span class="tab">播客</span><span class="tab">视频</span><span class="tab">订阅源</span></nav>
+        <div class="subscription"><span class="avatar">A</span><span><strong>频道 A</strong><small>一个统一订阅目标</small><span class="chips"><span class="chip">播客 · A 分组</span><span class="chip video">视频 · B 分组</span></span></span></div>
+        <div class="subscription"><span class="avatar">N</span><span><strong>新闻慢读</strong><small>一个播客订阅上下文</small><span class="chips"><span class="chip">播客 · 新闻</span></span></span></div>
+      </article>
+      <article class="surface">
+        <h2>播客模块侧栏</h2><p>仅查询 <code>module = podcast</code> 的订阅上下文。</p>
+        <div class="group-list"><div class="group"><div class="group-head">⌄ A 分组</div><div class="group-item"><span class="dot"></span>频道 A</div></div><div class="group"><div class="group-head">⌄ 新闻</div><div class="group-item"><span class="dot"></span>新闻慢读</div></div><div class="group"><div class="group-head">› 未分类</div></div></div>
+      </article>
+    </section>
+
+    <section class="contract">
+      <div><h2>实现边界</h2><p>这是数据模型与 API 合约的调整，不应靠前端筛选勉强修补。</p></div>
+      <ul>
+        <li><strong>订阅目标：</strong>用用户与频道/RSS 源的唯一组合去重，作为全局聚合的父项。</li>
+        <li><strong>模块订阅上下文：</strong>唯一键为“用户 + 订阅目标 + 模块”；其中保存 <code>group_id</code>、位置、静音与提醒配置。</li>
+        <li><strong>模块分组：</strong>分组也带 <code>module</code> 作用域；同名的播客和视频分组不共享成员。</li>
+        <li><strong>取消关注：</strong>只删除当前模块上下文；只有最后一个上下文删除后，才删除全局关注事实。</li>
+        <li><strong>迁移：</strong>旧的单一分组归入原订阅模块；播客 <code>show-bookmarks</code> 映射为播客上下文，不覆盖既有视频归属。</li>
+      </ul>
+    </section>
+
+    <p class="next"><strong>需要确认的决策：</strong>采用“全局订阅目标 + 模块订阅上下文”的模型。确认后，播客侧栏的分组将只管理播客上下文；中央订阅中心会清楚展示频道 A 在播客 A 分组和视频 B 分组中的两个归属。</p>
+  </main>
+</body>
+</html>

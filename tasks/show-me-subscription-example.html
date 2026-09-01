@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>频道 A 为什么不会分组冲突</title>
+    <style>
+      :root {
+        --page: #f5f7f8;
+        --surface: #ffffff;
+        --ink: #17252c;
+        --muted: #63747d;
+        --line: #d8e0e3;
+        --teal: #006d77;
+        --teal-soft: #e2f2f0;
+        --blue: #245fc7;
+        --blue-soft: #e8effd;
+        --violet: #6d3eb0;
+        --violet-soft: #f1ebfb;
+        --red: #b42318;
+        --red-soft: #fff0ee;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        width: min(1100px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 42px 0 56px;
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--teal);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.18;
+        letter-spacing: 0;
+      }
+      .lede {
+        max-width: 780px;
+        margin: 12px 0 28px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .one-line {
+        padding: 15px 17px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .one-line strong {
+        color: var(--teal);
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 24px 0;
+      }
+      .step {
+        padding: 17px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+      }
+      .step-number {
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--teal);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .step h2 {
+        margin: 10px 0 4px;
+        font-size: 16px;
+        letter-spacing: 0;
+      }
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .step .podcast {
+        color: var(--teal);
+        font-weight: 700;
+      }
+      .step .video {
+        color: var(--violet);
+        font-weight: 700;
+      }
+
+      .compare {
+        display: grid;
+        grid-template-columns: 1fr 1.35fr;
+        gap: 18px;
+      }
+      .before,
+      .after {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      .before header,
+      .after header {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .before header {
+        background: var(--red-soft);
+      }
+      .after header {
+        background: var(--teal-soft);
+      }
+      .before h2,
+      .after h2 {
+        margin: 0;
+        font-size: 19px;
+        letter-spacing: 0;
+      }
+      .before h2 {
+        color: var(--red);
+      }
+      .after h2 {
+        color: var(--teal);
+      }
+      .before header p,
+      .after header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .body {
+        padding: 20px;
+      }
+      .channel {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+      }
+      .icon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 5px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .channel b,
+      .channel span {
+        display: block;
+      }
+      .channel b {
+        font-size: 14px;
+      }
+      .channel span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .wrong-group {
+        margin: 13px 0;
+        padding: 12px;
+        border: 1px solid #e7b5b0;
+        border-radius: 6px;
+        background: var(--red-soft);
+        color: var(--red);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .wrong-group strong {
+        display: block;
+      }
+      .conflict {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .central {
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+      }
+      .central-title {
+        margin: 0 0 9px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .channels {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .contexts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 10px 0 0 46px;
+      }
+      .chip {
+        padding: 3px 7px;
+        border-radius: 3px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .chip.video {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+      .arrow {
+        width: 2px;
+        height: 21px;
+        margin: 0 auto;
+        background: var(--line);
+      }
+      .arrow::after {
+        content: "";
+        display: block;
+        width: 7px;
+        height: 7px;
+        margin-left: -3px;
+        transform: translateY(16px) rotate(45deg);
+        border-right: 2px solid var(--line);
+        border-bottom: 2px solid var(--line);
+      }
+      .module-views {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .module {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .module.podcast {
+        border-top: 3px solid var(--teal);
+      }
+      .module.video {
+        border-top: 3px solid var(--violet);
+      }
+      .module h3 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0;
+      }
+      .module p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .folder {
+        margin-top: 10px;
+        padding: 7px 8px;
+        border-radius: 4px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .folder.video {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+      .show {
+        margin-top: 6px;
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .answer {
+        display: grid;
+        grid-template-columns: 90px 1fr;
+        gap: 16px;
+        align-items: center;
+        margin-top: 22px;
+        padding: 18px;
+        border: 1px solid #9fc8c9;
+        border-radius: 8px;
+        background: var(--teal-soft);
+      }
+      .answer-mark {
+        display: grid;
+        width: 68px;
+        height: 68px;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--teal);
+        color: #fff;
+        font-size: 28px;
+        font-weight: 800;
+      }
+      .answer h2 {
+        margin: 0;
+        color: #174b4f;
+        font-size: 19px;
+        letter-spacing: 0;
+      }
+      .answer p {
+        margin: 5px 0 0;
+        color: #245356;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .next {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-left: 3px solid var(--teal);
+        background: var(--surface);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          width: min(100% - 24px, 1100px);
+          padding-top: 28px;
+        }
+        .steps,
+        .compare {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">只看频道 A 这个例子</p>
+      <h1>同一个频道，在不同模块可以放进不同分组</h1>
+      <p class="lede">
+        不需要把频道 A
+        复制成两个频道，也不需要在播客和视频之间二选一。只是“放进哪个分组”这件事，分别保存在各自模块里。
+      </p>
+      <p class="one-line">
+        频道 A 只有<strong>一个订阅</strong>；它同时有两条说明：<strong
+          >播客里在 A 分组</strong
+        >，<strong>视频里在 B 分组</strong>。
+      </p>
+
+      <section class="steps" aria-label="用户操作">
+        <article class="step">
+          <span class="step-number">1</span>
+          <h2>在播客订阅 A</h2>
+          <p>你把频道 A 放进<span class="podcast">播客的 A 分组</span>。</p>
+        </article>
+        <article class="step">
+          <span class="step-number">2</span>
+          <h2>在视频订阅 A</h2>
+          <p>你把同一个频道 A 放进<span class="video">视频的 B 分组</span>。</p>
+        </article>
+        <article class="step">
+          <span class="step-number">3</span>
+          <h2>分别浏览</h2>
+          <p>播客侧栏只看播客分组；视频侧栏只看视频分组。</p>
+        </article>
+      </section>
+
+      <section class="compare">
+        <article class="before">
+          <header>
+            <h2>错误做法</h2>
+            <p>一个频道只能保存一个“分组”字段。</p>
+          </header>
+          <div class="body">
+            <div class="channel">
+              <span class="icon">A</span
+              ><span><b>频道 A</b><span>一个全局订阅</span></span>
+            </div>
+            <div class="wrong-group">
+              <strong>分组 = ?</strong>播客要写 A 分组，视频要写 B 分组。
+            </div>
+            <p class="conflict">
+              后写入的视频 B 分组会覆盖播客 A 分组。或者只能复制出两条频道
+              A，导致中央订阅中心出现重复项目。
+            </p>
+          </div>
+        </article>
+
+        <article class="after">
+          <header>
+            <h2>正确做法</h2>
+            <p>频道只有一个；每个模块各自保存自己的分组。</p>
+          </header>
+          <div class="body">
+            <section class="central">
+              <p class="central-title">全部订阅</p>
+              <div class="channels">
+                <span class="icon">A</span
+                ><span><b>频道 A</b><span>只显示一次，不重复</span></span>
+              </div>
+              <div class="contexts">
+                <span class="chip">播客 · A 分组</span
+                ><span class="chip video">视频 · B 分组</span>
+              </div>
+            </section>
+            <div class="arrow" aria-hidden="true"></div>
+            <section class="module-views">
+              <article class="module podcast">
+                <h3>播客侧边栏</h3>
+                <div class="folder">A 分组</div>
+                <p class="show">• 频道 A</p>
+              </article>
+              <article class="module video">
+                <h3>视频侧边栏</h3>
+                <div class="folder video">B 分组</div>
+                <p class="show">• 频道 A</p>
+              </article>
+            </section>
+          </div>
+        </article>
+      </section>
+
+      <section class="answer">
+        <div class="answer-mark">A</div>
+        <div>
+          <h2>这就是修复方式</h2>
+          <p>
+            把“订阅频道 A”和“频道 A
+            在哪个模块的哪个分组”拆开保存。中央订阅中心展示两条模块归属；每个模块只读取自己的归属，因此不会互相修改，也不会重复。
+          </p>
+        </div>
+      </section>
+      <p class="next">
+        <strong>确认点：</strong
+        >每个模块内，频道只放进一个分组；同一个频道跨模块可以放进不同分组。确认后，我会按这个规则继续定义中央订阅中心与播客侧栏的需求。
+      </p>
+    </main>
+  </body>
+</html>

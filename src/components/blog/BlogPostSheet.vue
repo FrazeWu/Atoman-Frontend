@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PDropdown from '@/components/ui/PDropdown.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
@@ -47,6 +48,10 @@ const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const feedStore = useFeedStore()
 const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
+const bookmarkFolders = ref<Array<{ id: string; name: string }>>([])
+const bookmarkFoldersLoading = ref(false)
+const newBookmarkFolderName = ref('')
+const creatingBookmarkFolder = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
 const commentsOpen = ref(false)
@@ -200,6 +205,55 @@ async function ratePost(score: number) {
   }
 }
 
+async function loadBookmarkFolders() {
+  if (!authStore.isAuthenticated || bookmarkFoldersLoading.value) return
+  bookmarkFoldersLoading.value = true
+  try {
+    const res = await apiRequestResult(`${api.url}/blog/bookmark-folders`, {
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (res.ok) {
+      const payload = res.data as { data?: Array<{ id: string; name: string }> }
+      bookmarkFolders.value = payload.data || []
+    }
+  } finally {
+    bookmarkFoldersLoading.value = false
+  }
+}
+
+async function addBookmark(folderId: string) {
+  if (!post.value) return false
+  const res = await apiRequestResult(`${api.url}/blog/bookmarks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+    body: JSON.stringify({ content_id: post.value.id, bookmark_folder_id: folderId }),
+  })
+  if (!res.ok) return false
+  feedStore.bookmarkedPostIds = new Set([...feedStore.bookmarkedPostIds, post.value.id])
+  return true
+}
+
+async function createBookmarkFolder(close: () => void) {
+  const name = newBookmarkFolderName.value.trim()
+  if (!name || creatingBookmarkFolder.value) return
+  creatingBookmarkFolder.value = true
+  try {
+    const res = await apiRequestResult(`${api.url}/blog/bookmark-folders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+      body: JSON.stringify({ name }),
+    })
+    const payload = res.data as { data?: { id: string; name: string } }
+    if (res.ok && payload.data && await addBookmark(payload.data.id)) {
+      bookmarkFolders.value = [...bookmarkFolders.value, payload.data]
+      newBookmarkFolderName.value = ''
+      close()
+    }
+  } finally {
+    creatingBookmarkFolder.value = false
+  }
+}
+
 async function toggleBookmark() {
   if (!post.value || !authStore.isAuthenticated) return
   await feedStore.togglePostBookmark(post.value.id)
@@ -207,7 +261,21 @@ async function toggleBookmark() {
 
 async function toggleReadingList() {
   if (!post.value || !authStore.isAuthenticated) return
-  await feedStore.toggleReadingListItem(post.value.id)
+  const res = await apiRequestResult(`${api.url}/feed/reading-list`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}),
+    },
+    body: JSON.stringify({ target_type: 'post', target_id: post.value.id }),
+  })
+  if (!res.ok) return
+  const payload = res.data as { data?: { saved?: boolean }; saved?: boolean }
+  const saved = Boolean(payload.data?.saved ?? payload.saved)
+  const next = new Set(feedStore.readingListItemIds)
+  if (saved) next.add(post.value.id)
+  else next.delete(post.value.id)
+  feedStore.readingListItemIds = next
 }
 
 function editPost() {
@@ -283,14 +351,24 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         @rate="ratePost"
       />
       <div class="post-sheet-actions-row">
-        <PButton
-          variant="secondary"
-          size="sm"
-          :disabled="!authStore.isAuthenticated"
-          @click="toggleBookmark"
-        >
-          <Bookmark :size="15" aria-hidden="true" />
-          {{ bookmarked ? '取消收藏' : '收藏' }}
+        <PDropdown v-if="!bookmarked" position="right">
+          <template #trigger>
+            <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="loadBookmarkFolders">
+              <Bookmark :size="15" aria-hidden="true" />收藏
+            </PButton>
+          </template>
+          <template #default="{ close }">
+            <div class="post-bookmark-menu">
+              <button v-for="folder in bookmarkFolders" :key="folder.id" type="button" @click="addBookmark(folder.id).then(saved => saved && close())">{{ folder.name }}</button>
+              <form @submit.prevent="createBookmarkFolder(close)">
+                <input v-model="newBookmarkFolderName" aria-label="新收藏夹名称" placeholder="新建收藏夹" />
+                <PButton size="sm" type="submit" :loading="creatingBookmarkFolder">新建</PButton>
+              </form>
+            </div>
+          </template>
+        </PDropdown>
+        <PButton v-else variant="secondary" size="sm" @click="toggleBookmark">
+          <Bookmark :size="15" aria-hidden="true" />取消收藏
         </PButton>
         <PButton
           variant="secondary"

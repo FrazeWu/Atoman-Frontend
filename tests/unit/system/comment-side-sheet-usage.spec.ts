@@ -8,6 +8,7 @@ const commentSideSheetHosts = [
   'src/components/debate/DebateDiscussionSheet.vue',
   'src/components/feed/FeedArticleSheet.vue',
   'src/components/shortnote/ShortNoteCard.vue',
+  'src/components/music/AlbumDrawer.vue',
   'src/views/blog/PostDetailView.vue',
   'src/views/books/BookWorkView.vue',
   'src/views/forum/ForumTopicView.vue',
@@ -21,6 +22,20 @@ describe('Comment side sheet usage', () => {
 
     expect(source).toContain('CommentSideSheet')
     expect(source).not.toContain('CommentSection')
+  })
+
+  it('keeps album discussions out of the generic nested-action drawer', () => {
+    const albumSource = readFileSync(
+      resolve(process.cwd(), 'src/components/music/AlbumDrawer.vue'),
+      'utf8',
+    )
+    const actionSource = readFileSync(
+      resolve(process.cwd(), 'src/components/music/NestedActionDrawer.vue'),
+      'utf8',
+    )
+
+    expect(albumSource).not.toContain("openNestedAction('discussion'")
+    expect(actionSource).not.toContain("currentAction === 'discussion'")
   })
 
   it('keeps short-note detail responsible only for its card, not an inline comment list', () => {

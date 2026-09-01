@@ -8,6 +8,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
@@ -54,6 +55,10 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : i
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentAlbum = () => closeAlbum(props.layer?.key)
 const album = ref<MusicAlbumListItem | null>(null)
+const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentCount = ref<number | undefined>(undefined)
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const sheetTitle = computed(() => album.value?.title?.trim()
   ? `专辑-${album.value.title.trim()}`
   : '专辑-加载中')
@@ -181,6 +186,8 @@ const playableSongs = computed(() => {
 })
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
 const discussionCount = computed(() => {
+  if (commentCount.value !== undefined) return commentCount.value
+
   const currentAlbum = album.value as (MusicAlbumListItem & {
     discussion_count?: number
     open_discussion_count?: number
@@ -190,6 +197,20 @@ const discussionCount = computed(() => {
   return currentAlbum.discussion_count ?? currentAlbum.open_discussion_count
 })
 type AlbumTrack = NonNullable<MusicAlbumListItem['songs']>[number]
+
+function openComments() {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+function closeComments() {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+}
+
+function handleCommentCountChange(count: number) {
+  commentCount.value = count
+}
 
 function formatDuration(value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -404,6 +425,9 @@ async function loadAlbum(albumId: string | null) {
   const { isCurrent: isCurrentLoad } = albumRequests.beginRequest()
   bookmarkLoading.value = false
   album.value = null
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+  commentCount.value = undefined
   isBookmarked.value = false
   contributors.value = []
   contributorTotal.value = 0
@@ -585,8 +609,8 @@ watch(
     content-max-width="72rem"
     @close="closeCurrentAlbum"
     @activate="returnCurrentAlbum"
-    :is-shifted="shifted"
-    :is-top-layer="topLayer"
+    :is-shifted="shifted || commentsBlockParent"
+    :is-top-layer="topLayer && !commentsBlockParent"
     :layer-index="layerIndex"
     :stack-size="stackSize"
     :index="sheetIndex"
@@ -902,9 +926,24 @@ watch(
         @open-history="openAlbumHistory"
       />
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId, title: album?.title || '' })" :count="discussionCount" />
+    <PDiscussionFAB v-if="isOpen" @click="openComments" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
   </PSheet>
+
+  <CommentSideSheet
+    v-if="album"
+    :show="commentsOpen"
+    :title="`专辑评论-${album.title || album.id}`"
+    :target="{ kind: 'music_album', resourceId: String(album.id) }"
+    noun="讨论"
+    :is-top-layer="topLayer"
+    :layer-index="sheetIndex + 1"
+    :stack-size="stackSize + 1"
+    :index="sheetIndex + 1"
+    @close="closeComments"
+    @mode-change="commentSheetMode = $event"
+    @count-change="handleCommentCountChange"
+  />
 </template>
 
 <style scoped>

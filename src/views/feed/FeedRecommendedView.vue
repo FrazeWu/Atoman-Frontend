@@ -351,7 +351,7 @@ import {
 } from '@/utils/recommendationLanguage'
 import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
-type RecommendationMode = 'hot' | 'featured' | 'discover'
+type RecommendationMode = 'hot' | 'featured' | 'latest'
 
 const ALL_CATEGORY = 'all'
 const ALL_THEME = 'all'
@@ -359,6 +359,7 @@ const ALL_THEME = 'all'
 type FeedSourceFilterCategory = typeof ALL_CATEGORY | FeedSourceCategory
 type ExploreSourcePayload = Partial<FeedExploreSource> & {
   rss_url?: string
+  cover_url?: string
   subscription_count?: number
   recent_item_count?: number
   last_published_at?: string
@@ -437,7 +438,9 @@ const toggleReadingList = async (item: RecommendationItem) => {
 }
 
 function normalizeMode(raw: unknown): RecommendationMode {
-  return raw === 'featured' || raw === 'discover' ? raw : 'hot'
+  if (raw === 'featured' || raw === 'latest') return raw
+  // Earlier clients encoded the “最新” control as discover; preserve its intended meaning.
+  return raw === 'discover' ? 'latest' : 'hot'
 }
 
 function normalizeCategory(raw: unknown): FeedSourceFilterCategory {
@@ -463,6 +466,84 @@ const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
+
+function normalizeRecommendationContentFingerprint(value?: string) {
+  return value?.trim().replace(/\s+/g, ' ').toLowerCase() || ''
+}
+
+function recommendationDisplayKey(item: RecommendationItem) {
+  if (item.source_type !== 'external_rss') return `id:${item.id}`
+
+  const fingerprint = [
+    item.source_title,
+    item.title,
+    item.summary || item.description,
+    item.image_url,
+    item.last_published_at,
+  ].map(normalizeRecommendationContentFingerprint)
+  if (!fingerprint[0] || !fingerprint[1]) return `id:${item.id}`
+  return `external:${fingerprint.join('\x1f')}`
+}
+
+function deduplicateRecommendationItems(items: RecommendationItem[]) {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = recommendationDisplayKey(item)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function recommendationChannelIdentity(item: RecommendationItem) {
+  const title = normalizeRecommendationContentFingerprint(item.title)
+  if (!title) return ''
+  return `${item.source_category || item.content_type || 'blog'}\x1f${title}`
+}
+
+function recommendationChannelsShareRecentItems(first: RecommendationItem, second: RecommendationItem) {
+  const firstTitles = new Set(
+    (first.recent_items || [])
+      .map((item) => normalizeRecommendationContentFingerprint(item.title))
+      .filter(Boolean),
+  )
+  if (firstTitles.size < 2) return false
+
+  const matchingTitles = new Set(
+    (second.recent_items || [])
+      .map((item) => normalizeRecommendationContentFingerprint(item.title))
+      .filter((title) => firstTitles.has(title)),
+  )
+  return matchingTitles.size >= 2
+}
+
+function deduplicateRecommendedChannels(items: RecommendationItem[]) {
+  const deduplicated: RecommendationItem[] = []
+  const candidateIndexesByIdentity = new Map<string, number[]>()
+  for (const item of items) {
+    const identity = recommendationChannelIdentity(item)
+    if (!identity) {
+      deduplicated.push(item)
+      continue
+    }
+
+    const candidateIndexes = candidateIndexesByIdentity.get(identity) || []
+    const duplicateIndex = candidateIndexes.find((index) => (
+      recommendationChannelsShareRecentItems(deduplicated[index], item)
+    ))
+    if (duplicateIndex === undefined) {
+      candidateIndexes.push(deduplicated.length)
+      candidateIndexesByIdentity.set(identity, candidateIndexes)
+      deduplicated.push(item)
+      continue
+    }
+    if (item.subscribed && !deduplicated[duplicateIndex].subscribed) {
+      deduplicated[duplicateIndex] = item
+    }
+  }
+  return deduplicated
+}
+
 function normalizePage(value: unknown) {
   const pageValue = Number.parseInt(String(value || '1'), 10)
   return Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
@@ -502,7 +583,7 @@ const addSubscriptionResetKey = ref(0)
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
   { label: '热门', value: 'hot' },
   { label: '精选', value: 'featured' },
-  { label: '最新', value: 'discover' },
+  { label: '最新', value: 'latest' },
 ]
 
 const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }> = [
@@ -529,6 +610,7 @@ function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSourc
     id: payload.id || '',
     title: payload.title || '',
     rssUrl: payload.rssUrl ?? payload.rss_url,
+    coverUrl: payload.coverUrl ?? payload.cover_url,
     category: payload.category || 'blog',
     subscriptionCount: payload.subscriptionCount ?? payload.subscription_count ?? 0,
     recentItemCount: payload.recentItemCount ?? payload.recent_item_count ?? 0,
@@ -622,8 +704,10 @@ async function fetchRecommendations() {
       channelRes.data,
     ])
 
-    articles.value = Array.isArray(articlePayload?.data) ? articlePayload.data : []
-    channels.value = Array.isArray(channelPayload?.data) ? channelPayload.data : []
+    const recommendationArticles = Array.isArray(articlePayload?.data) ? articlePayload.data : []
+    const recommendationChannels = Array.isArray(channelPayload?.data) ? channelPayload.data : []
+    articles.value = deduplicateRecommendationItems(recommendationArticles)
+    channels.value = recommendationChannels
 
     if (authStore.isAuthenticated && channels.value.length) {
       const subscribedStates = await Promise.all(
@@ -639,8 +723,17 @@ async function fetchRecommendations() {
         subscribed: subscribedStates[index] ?? false,
       }))
     }
-    totalArticles.value = articlePayload?.meta?.total ?? articlePayload?.total ?? articles.value.length
-    totalChannels.value = channelPayload?.meta?.total ?? channelPayload?.total ?? channels.value.length
+    channels.value = deduplicateRecommendedChannels(channels.value)
+    const reportedArticleTotal = Number(articlePayload?.meta?.total ?? articlePayload?.total)
+    const articleDuplicateCount = recommendationArticles.length - articles.value.length
+    const reportedChannelTotal = Number(channelPayload?.meta?.total ?? channelPayload?.total)
+    const channelDuplicateCount = recommendationChannels.length - channels.value.length
+    totalArticles.value = Number.isFinite(reportedArticleTotal)
+      ? Math.max(articles.value.length, reportedArticleTotal - articleDuplicateCount)
+      : articles.value.length
+    totalChannels.value = Number.isFinite(reportedChannelTotal)
+      ? Math.max(channels.value.length, reportedChannelTotal - channelDuplicateCount)
+      : channels.value.length
   } catch (error) {
     reportError(error, 'Failed to fetch feed recommendations:')
     errorMessage.value = '推荐内容加载失败'
@@ -672,6 +765,7 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
     id: item.source_id || item.id,
     title: item.title,
     rssUrl: item.rss_url,
+    coverUrl: item.image_url,
     category: (item.source_category as FeedSourceCategory) || 'blog',
     subscriptionCount: item.bookmark_count ?? item.read_count ?? 0,
     recentItemCount: item.recent_items?.length ?? 0,
@@ -743,6 +837,7 @@ function openArticleSource(item: RecommendationItem) {
     id: item.source_id || item.id,
     title: item.source_title || item.title,
     rssUrl: item.rss_url,
+    imageUrl: item.source_title ? undefined : item.image_url,
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
   }

@@ -93,9 +93,9 @@
       <slot name="actions">
         <!-- Optional podcast player clip -->
         <PClip
-          v-if="cardType === 'feed_item' && feedItem?.enclosure_url"
+          v-if="playableFeedItem"
           :label="isPodcastPlaying ? '■ 播放中' : '▶ 播放播客'"
-          @click="emit('play-podcast', feedItem)"
+          @click="emit('play-podcast', playableFeedItem)"
         />
 
         <EntryActions
@@ -135,6 +135,7 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
+import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { channelUrl } from '@/router/siteUrls'
 
 export type BlogItemType = 'post' | 'short_note' | 'feed_item'
@@ -189,6 +190,9 @@ const feedItem = computed<FeedItem | null>(() => {
   if (cardType.value !== 'feed_item') return null
   return (props.item.feed_item || props.item) as FeedItem
 })
+const playableFeedItem = computed(() => (
+  isPlayableFeedPodcast(feedItem.value) ? feedItem.value : null
+))
 
 const displayTitle = computed(() => {
   if (postItem.value) return postItem.value.title

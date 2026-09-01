@@ -744,6 +744,7 @@ export interface FeedExploreSource {
 	id: string;
 	title: string;
 	rssUrl?: string;
+	coverUrl?: string;
 	category: FeedSourceCategory;
 	language_code?: string;
 	subscriptionCount: number;
@@ -780,6 +781,41 @@ export interface FeedStarGroup {
 	updated_at: string;
 }
 
+export type SubscriptionHubType = 'podcast' | 'video' | 'blog' | 'rss'
+
+export interface SubscriptionHubMembership {
+	id: string;
+	user_id: string;
+	subscription_type: SubscriptionHubType;
+	group_id: string;
+	feed_source_id: string;
+	feed_source?: FeedSource;
+	title?: string;
+	position?: number;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface SubscriptionHubGroup {
+	id: string;
+	user_id: string;
+	subscription_type: SubscriptionHubType;
+	name: string;
+	position?: number;
+	memberships: SubscriptionHubMembership[];
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface SubscriptionHubTypeNode {
+	subscription_type: SubscriptionHubType;
+	groups: SubscriptionHubGroup[];
+}
+
+export interface SubscriptionHubTree {
+	types: SubscriptionHubTypeNode[];
+}
+
 export interface Subscription {
 	id: string;
 	user_id: string;
@@ -789,6 +825,7 @@ export interface Subscription {
 	subscription_group_id?: string;
 	subscription_group?: SubscriptionGroup;
 	is_muted?: boolean;
+	priority?: "high" | "normal" | "low";
 	auto_mark_read?: boolean;
 	auto_add_reading_list?: boolean;
 	is_paused?: boolean;
@@ -952,12 +989,15 @@ export interface StarredFeedItem {
 
 // Unified timeline item returned by GET /api/feed/timeline
 export interface TimelineItem {
-	type: "post" | "feed_item" | "orbit_item";
+	type: "post" | "feed_item" | "podcast_episode" | "video" | "orbit_item";
 	post?: Post;
 	feed_item?: FeedItem;
+	podcast_episode?: PodcastEpisode;
+	video?: Video;
 	orbit_item?: OrbitItem;
 	published_at: string;
 	is_read: boolean;
+	priority_reason?: "subscription_priority_high" | "subscription_priority_normal" | "subscription_priority_low";
 }
 
 export interface FeedArticleSource {
@@ -965,6 +1005,7 @@ export interface FeedArticleSource {
 	id: string;
 	title: string;
 	rssUrl?: string;
+	imageUrl?: string;
 	subscriptionId?: string;
 	subscribed: boolean;
 	healthStatus?: "healthy" | "warning" | "error";
@@ -1527,6 +1568,9 @@ export interface Video {
 	view_count: number;
 	like_count?: number;
 	liked?: boolean;
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number | null;
 	subtitle_url?: string;
 	processing_status?: VideoProcessingStatus;
 	processing_error?: string;

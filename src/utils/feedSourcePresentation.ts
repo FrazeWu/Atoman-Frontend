@@ -27,6 +27,12 @@ export function normalizeSourceUrlForCard(url?: string, fallbackTitle?: string):
   return `${trimLeadingWww(parsed.hostname)}${pathname}${parsed.search}`
 }
 
+export function buildSourceFaviconURL(sourceURL?: string): string {
+  const parsed = parseSourceUrl(sourceURL?.trim() || '')
+  if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) return ''
+  return `${parsed.origin}/favicon.ico`
+}
+
 export function buildSourceAvatarLabel(title?: string): string {
   const value = title?.trim()
   if (!value) return '?'

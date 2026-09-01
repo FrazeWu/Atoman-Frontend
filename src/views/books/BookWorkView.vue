@@ -1,5 +1,5 @@
 <template>
-  <main class="a-page-md books-detail">
+  <main ref="workContentAnchor" class="a-page-md books-detail">
     <PSectionHeader title="作品详情" kicker="BOOK" rule />
     <p v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ errorMessage }}</p>
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载作品...</p>
@@ -87,13 +87,10 @@
         </ul>
       </section>
 
-      <section class="books-detail__section books-detail__discussion" aria-labelledby="discussion-title">
-        <CommentSection
-          id="discussion-title"
-          noun="讨论"
-          :target="{ kind: 'book_work', resourceId: work.id }"
-        />
-      </section>
+      <PDiscussionFAB
+        :count="discussionCount"
+        @click="discussionOpen = true"
+      />
 
       <section v-if="publishedAssets.length > 0" class="books-detail__section">
         <h2>公共正文</h2>
@@ -142,6 +139,16 @@
       </section>
     </template>
   </main>
+  <CommentSideSheet
+    v-if="work"
+    :show="discussionOpen"
+    :title="`作品讨论-${work.title}`"
+    :partial-anchor="workContentAnchor"
+    :target="{ kind: 'book_work', resourceId: work.id }"
+    noun="讨论"
+    @close="discussionOpen = false"
+    @count-change="discussionCount = $event"
+  />
 </template>
 
 <script setup lang="ts">
@@ -149,7 +156,8 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { Bookmark, Send, Star, Trash2 } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMyBookReview,
@@ -187,6 +195,9 @@ const reviewInput = ref('')
 const reviewSpoiler = ref(false)
 const reviewVisibility = ref<'public' | 'private'>('public')
 const reviewSaving = ref(false)
+const discussionOpen = ref(false)
+const discussionCount = ref<number | undefined>(undefined)
+const workContentAnchor = ref<HTMLElement | null>(null)
 
 const authorLabel = computed(() => work.value?.authors.map((author) => author.name).join('、') || '作者信息待补充')
 
@@ -381,10 +392,6 @@ onMounted(async () => {
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.books-detail__discussion {
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--a-color-border-soft);
-}
 
 .books-rating-editor,
 .books-shelf-editor,

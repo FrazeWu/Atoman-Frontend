@@ -773,7 +773,6 @@ export function useMusicDrawers() {
 		() =>
 			state.value.nestedAction === "revise" ||
 			state.value.nestedAction === "history" ||
-			state.value.nestedAction === "discussion" ||
 			state.value.nestedAction === "merge_album",
 	);
 	const isCreationFlowOpen = computed(() => state.value.creationFlow !== null);

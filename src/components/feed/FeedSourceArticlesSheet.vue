@@ -22,7 +22,14 @@
             data-test="feed-source-avatar"
             :style="{ '--feed-source-color': sourceColor }"
           >
-            {{ sourceAvatarLabel }}
+            <img
+              v-if="sourceAvatarImageURL"
+              :src="sourceAvatarImageURL"
+              :alt="sourceTitle"
+              class="source-sheet-avatar-image"
+              @error="advanceSourceAvatarImage"
+            >
+            <template v-else>{{ sourceAvatarLabel }}</template>
           </div>
 
           <div class="source-sheet-copy">
@@ -101,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { FeedArticleSource, TimelineItem } from '@/types'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -110,7 +117,9 @@ import PSheet from '@/components/ui/PSheet.vue'
 import {
   buildSourceAvatarLabel,
   buildSourceColor,
+  buildSourceFaviconURL,
 } from '@/utils/feedSourcePresentation'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -151,6 +160,27 @@ const sourceTitle = computed(() => props.source?.title?.trim() || '来源')
 const sourceUrl = computed(() => props.source?.rssUrl || '')
 
 const sourceAvatarLabel = computed(() => buildSourceAvatarLabel(sourceTitle.value))
+
+const sourceAvatarImageCandidates = computed(() => {
+  const candidates = [
+    props.source?.imageUrl,
+    buildSourceFaviconURL(props.source?.rssUrl),
+  ].map((value) => value?.trim() || '')
+  return [...new Set(candidates.filter(Boolean))]
+})
+const sourceAvatarImageIndex = ref(0)
+const sourceAvatarImageURL = computed(() => {
+  const value = sourceAvatarImageCandidates.value[sourceAvatarImageIndex.value] || ''
+  return value ? resolveMediaURL(value) : ''
+})
+
+function advanceSourceAvatarImage() {
+  sourceAvatarImageIndex.value += 1
+}
+
+watch(sourceAvatarImageCandidates, () => {
+  sourceAvatarImageIndex.value = 0
+})
 
 const sourceColor = computed(() => buildSourceColor(props.source?.rssUrl || sourceTitle.value))
 const searchQuery = ref('')
@@ -301,7 +331,14 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   color: color-mix(in srgb, var(--feed-source-color) 74%, black);
   font-size: 1.2rem;
   font-weight: 500;
+  overflow: hidden;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 24%, white);
+}
+
+.source-sheet-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .source-sheet-type {

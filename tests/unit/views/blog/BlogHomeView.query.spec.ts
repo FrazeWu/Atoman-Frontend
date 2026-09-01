@@ -1,36 +1,42 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import BlogHomeView from '@/views/blog/BlogHomeView.vue'
+import BlogHomeView from "@/views/blog/BlogHomeView.vue";
 
 const mocks = vi.hoisted(() => ({
   routeQuery: {} as Record<string, string>,
-}))
+}));
 
-vi.mock('vue-router', () => ({
+vi.mock("vue-router", () => ({
   useRoute: () => ({
-    path: '/posts',
+    path: "/posts",
     query: mocks.routeQuery,
   }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  RouterLink: { template: '<a><slot /></a>' },
-}))
+  RouterLink: { template: "<a><slot /></a>" },
+}));
 
-describe('BlogHomeView query search', () => {
+let pinia = createPinia();
+
+describe("BlogHomeView query search", () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    mocks.routeQuery = {}
-  })
+    pinia = createPinia();
+    setActivePinia(pinia);
+    mocks.routeQuery = {};
+  });
 
-  it('passes route query q to blog discovery requests', async () => {
-    mocks.routeQuery = { q: 'atom' }
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
-      new Response(JSON.stringify({ data: [] }), { status: 200 }),
-    )
+  it("uses the dedicated search endpoint for route query q", async () => {
+    mocks.routeQuery = { q: "atom" };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        async () => new Response(JSON.stringify({ data: [] }), { status: 200 }),
+      );
 
     mount(BlogHomeView, {
       global: {
+        plugins: [pinia],
         stubs: {
           PAvatar: true,
           PBadge: true,
@@ -42,12 +48,19 @@ describe('BlogHomeView query search', () => {
           PSegmentedControl: true,
         },
       },
-    })
+    });
 
-    await flushPromises()
+    await flushPromises();
 
-    const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20&q=atom')
-    expect(requestedUrls.some((url) => url.includes('/blog/explore'))).toBe(false)
-  })
-})
+    const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(requestedUrls).toContain(
+      "/api/v1/blog/search?q=atom&sort=relevance&page=1&page_size=20",
+    );
+    expect(
+      requestedUrls.some((url) => url.includes("/blog/recommend/posts")),
+    ).toBe(false);
+    expect(requestedUrls.some((url) => url.includes("/blog/explore"))).toBe(
+      false,
+    );
+  });
+});

@@ -6,7 +6,10 @@ import { useRouter } from 'vue-router'
 
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PDropdown from '@/components/ui/PDropdown.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
@@ -16,6 +19,7 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useFeedStore } from '@/stores/feed'
+import { isAdminRole } from '@/utils/roles'
 import type { Post } from '@/types'
 import type { BlogPostLayer } from '@/components/blog/blogSheetTypes'
 
@@ -44,8 +48,18 @@ const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const feedStore = useFeedStore()
 const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
+const bookmarkFolders = ref<Array<{ id: string; name: string }>>([])
+const bookmarkFoldersLoading = ref(false)
+const newBookmarkFolderName = ref('')
+const creatingBookmarkFolder = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
+const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
+const commentCount = ref<number | undefined>(undefined)
+const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
+const commentSheetTitle = computed(() => `博客文章评论-${post.value?.title || '未命名'}`)
 let loadSequence = 0
 let relatedRequestSequence = 0
 
@@ -56,6 +70,9 @@ async function loadPost() {
   errorMessage.value = ''
   post.value = null
   relatedPosts.value = []
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+  commentCount.value = undefined
   relatedRequestSequence += 1
   channelSubscribed.value = false
   channelSubscriptionBusy.value = false
@@ -119,6 +136,16 @@ function openRelatedPost(item: BlogRelatedPost) {
   sheets.openPost(item.id, item.title)
 }
 
+function openComments() {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+function closeComments() {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+}
+
 const bookmarked = computed(() => Boolean(post.value?.id && feedStore.bookmarkedPostIds.has(post.value.id)))
 const inReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
 
@@ -135,6 +162,23 @@ async function toggleChannelSubscription() {
   }
 }
 
+function ratingFailureMessage(error?: { code?: string; message?: string }) {
+  const message = error?.message?.trim()
+  if (message && error?.code !== 'system.internal_error') return message
+  return '评分未保存，请重试'
+}
+
+function ratingRequestFailureMessage(error: unknown) {
+  if (error instanceof TypeError || (error instanceof Error && /network|fetch|timeout/i.test(error.message))) {
+    return '网络连接失败，请检查网络后重试'
+  }
+  if (error && typeof error === 'object') {
+    const apiError = error as { code?: string; message?: string }
+    return ratingFailureMessage(apiError)
+  }
+  return '评分未保存，请重试'
+}
+
 async function ratePost(score: number) {
   if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
   ratingError.value = ''
@@ -146,7 +190,7 @@ async function ratePost(score: number) {
       body: JSON.stringify({ score }),
     })
     if (!res.ok) {
-      ratingError.value = '评分未保存，请重试'
+      ratingError.value = ratingFailureMessage(res.error)
       return
     }
     const payload = await Promise.resolve(res.data)
@@ -154,8 +198,59 @@ async function ratePost(score: number) {
     post.value.rating_score = Number(summary.rating_score ?? post.value.rating_score ?? 0)
     post.value.rating_count = Number(summary.rating_count ?? post.value.rating_count ?? 0)
     post.value.viewer_rating = Number(summary.viewer_rating ?? score)
+  } catch (error) {
+    ratingError.value = ratingRequestFailureMessage(error)
   } finally {
     ratingLoading.value = false
+  }
+}
+
+async function loadBookmarkFolders() {
+  if (!authStore.isAuthenticated || bookmarkFoldersLoading.value) return
+  bookmarkFoldersLoading.value = true
+  try {
+    const res = await apiRequestResult(`${api.url}/blog/bookmark-folders`, {
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (res.ok) {
+      const payload = res.data as { data?: Array<{ id: string; name: string }> }
+      bookmarkFolders.value = payload.data || []
+    }
+  } finally {
+    bookmarkFoldersLoading.value = false
+  }
+}
+
+async function addBookmark(folderId: string) {
+  if (!post.value) return false
+  const res = await apiRequestResult(`${api.url}/blog/bookmarks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+    body: JSON.stringify({ content_id: post.value.id, bookmark_folder_id: folderId }),
+  })
+  if (!res.ok) return false
+  feedStore.bookmarkedPostIds = new Set([...feedStore.bookmarkedPostIds, post.value.id])
+  return true
+}
+
+async function createBookmarkFolder(close: () => void) {
+  const name = newBookmarkFolderName.value.trim()
+  if (!name || creatingBookmarkFolder.value) return
+  creatingBookmarkFolder.value = true
+  try {
+    const res = await apiRequestResult(`${api.url}/blog/bookmark-folders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+      body: JSON.stringify({ name }),
+    })
+    const payload = res.data as { data?: { id: string; name: string } }
+    if (res.ok && payload.data && await addBookmark(payload.data.id)) {
+      bookmarkFolders.value = [...bookmarkFolders.value, payload.data]
+      newBookmarkFolderName.value = ''
+      close()
+    }
+  } finally {
+    creatingBookmarkFolder.value = false
   }
 }
 
@@ -166,7 +261,21 @@ async function toggleBookmark() {
 
 async function toggleReadingList() {
   if (!post.value || !authStore.isAuthenticated) return
-  await feedStore.toggleReadingListItem(post.value.id)
+  const res = await apiRequestResult(`${api.url}/feed/reading-list`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}),
+    },
+    body: JSON.stringify({ target_type: 'post', target_id: post.value.id }),
+  })
+  if (!res.ok) return
+  const payload = res.data as { data?: { saved?: boolean }; saved?: boolean }
+  const saved = Boolean(payload.data?.saved ?? payload.saved)
+  const next = new Set(feedStore.readingListItemIds)
+  if (saved) next.add(post.value.id)
+  else next.delete(post.value.id)
+  feedStore.readingListItemIds = next
 }
 
 function editPost() {
@@ -188,8 +297,8 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
-    :is-shifted="sheets.isShifted(layer.key)"
-    :is-top-layer="sheets.isTop(layer.key)"
+    :is-shifted="sheets.isShifted(layer.key) || commentsBlockParent"
+    :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     reading-mode
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
@@ -242,14 +351,24 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         @rate="ratePost"
       />
       <div class="post-sheet-actions-row">
-        <PButton
-          variant="secondary"
-          size="sm"
-          :disabled="!authStore.isAuthenticated"
-          @click="toggleBookmark"
-        >
-          <Bookmark :size="15" aria-hidden="true" />
-          {{ bookmarked ? '取消收藏' : '收藏' }}
+        <PDropdown v-if="!bookmarked" position="right">
+          <template #trigger>
+            <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="loadBookmarkFolders">
+              <Bookmark :size="15" aria-hidden="true" />收藏
+            </PButton>
+          </template>
+          <template #default="{ close }">
+            <div class="post-bookmark-menu">
+              <button v-for="folder in bookmarkFolders" :key="folder.id" type="button" @click="addBookmark(folder.id).then(saved => saved && close())">{{ folder.name }}</button>
+              <form @submit.prevent="createBookmarkFolder(close)">
+                <input v-model="newBookmarkFolderName" aria-label="新收藏夹名称" placeholder="新建收藏夹" />
+                <PButton size="sm" type="submit" :loading="creatingBookmarkFolder">新建</PButton>
+              </form>
+            </div>
+          </template>
+        </PDropdown>
+        <PButton v-else variant="secondary" size="sm" @click="toggleBookmark">
+          <Bookmark :size="15" aria-hidden="true" />取消收藏
         </PButton>
         <PButton
           variant="secondary"
@@ -263,7 +382,25 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       </div>
       <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
     </article>
+    <PDiscussionFAB
+      v-if="post && sheets.isActive(layer.key)"
+      :count="commentCount"
+      @click="openComments"
+    />
   </PSheet>
+
+  <CommentSideSheet
+    v-if="post"
+    :show="commentsOpen"
+    :title="commentSheetTitle"
+    :index="layerIndex + 1"
+    :target="{ kind: 'blog_post', resourceId: post.id }"
+    :can-delete="canDeleteAllComments"
+    @close="closeComments"
+    @activate="closeComments"
+    @mode-change="commentSheetMode = $event"
+    @count-change="commentCount = $event"
+  />
 </template>
 
 <style scoped>

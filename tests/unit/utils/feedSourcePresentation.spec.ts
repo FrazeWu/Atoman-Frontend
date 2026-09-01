@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildSourceAvatarLabel,
   buildSourceColor,
+  buildSourceFaviconURL,
   normalizeSourceUrlForCard,
 } from '@/utils/feedSourcePresentation'
 
@@ -25,6 +26,15 @@ describe('feedSourcePresentation', () => {
     expect(normalizeSourceUrlForCard('www.example.com/feed.xml?source=rss')).toBe(
       'example.com/feed.xml?source=rss',
     )
+  })
+
+  it('derives a favicon from a valid HTTP(S) source URL only', () => {
+    expect(buildSourceFaviconURL('https://www.example.com/feed.xml?source=rss')).toBe(
+      'https://www.example.com/favicon.ico',
+    )
+    expect(buildSourceFaviconURL('example.com/feed.xml')).toBe('https://example.com/favicon.ico')
+    expect(buildSourceFaviconURL('ftp://example.com/feed.xml')).toBe('')
+    expect(buildSourceFaviconURL('not a URL')).toBe('')
   })
 
   it('falls back to the title when no URL is available', () => {

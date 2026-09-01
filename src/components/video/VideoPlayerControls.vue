@@ -244,8 +244,8 @@ onUnmounted(() => {
 
       <div class="vpc-right">
         <!-- 画质 -->
-        <button class="vpc-text-control" type="button" data-control="quality" disabled>
-          1080P 高清
+        <button class="vpc-text-control" type="button" data-control="quality" title="画质切换暂不可用" aria-label="画质切换暂不可用" disabled>
+          画质
         </button>
 
         <!-- 倍速菜单 -->
@@ -273,7 +273,7 @@ onUnmounted(() => {
         </div>
 
         <!-- 字幕 -->
-        <button class="vpc-text-control" type="button" data-control="subtitle" disabled>
+        <button class="vpc-text-control" type="button" data-control="subtitle" title="字幕暂不可用" aria-label="字幕暂不可用" disabled>
           <Captions :size="18" />
         </button>
 
@@ -300,7 +300,7 @@ onUnmounted(() => {
         </div>
 
         <!-- 设置 -->
-        <button class="vpc-icon-button" type="button" data-control="settings" aria-label="设置" disabled>
+        <button class="vpc-icon-button" type="button" data-control="settings" title="播放器设置暂不可用" aria-label="播放器设置暂不可用" disabled>
           <Settings :size="18" />
         </button>
 

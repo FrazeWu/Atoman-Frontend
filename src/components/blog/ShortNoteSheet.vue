@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { Pencil, Trash2 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -48,6 +48,20 @@ const mediaUrls = computed(() => note.value?.media.map(m => resolveMediaURL(m.ur
 
 const noteId = computed(() => props.layer.payload.noteId)
 const interactions = useInteractions('blog', 'short_note', noteId)
+const commentsOpen = ref(false)
+const commentSheetMode = ref<'full' | 'partial'>('partial')
+const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
+const commentSheetTitle = computed(() => `短笺评论-${note.value?.id || props.layer.title || '未命名'}`)
+
+function openComments() {
+  commentSheetMode.value = 'partial'
+  commentsOpen.value = true
+}
+
+function closeComments() {
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
+}
 
 const author = computed(() => note.value?.user?.display_name || note.value?.user?.username || '匿名用户')
 const isOwner = computed(() => authStore.user?.uuid === note.value?.user_id)
@@ -62,6 +76,8 @@ async function loadNote() {
   const requestSequence = ++loadSequence
   loading.value = true
   errorMessage.value = ''
+  commentsOpen.value = false
+  commentSheetMode.value = 'partial'
   try {
     const res = await apiRequestEnvelope<ShortNote>(api.blog.shortNote(requestedNoteId))
     if (requestSequence !== loadSequence || requestedNoteId !== noteId.value) return
@@ -146,8 +162,8 @@ watch(noteId, () => void loadNote(), { immediate: true })
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
-    :is-shifted="sheets.isShifted(layer.key)"
-    :is-top-layer="sheets.isTop(layer.key)"
+    :is-shifted="sheets.isShifted(layer.key) || commentsBlockParent"
+    :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     reading-mode
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
@@ -219,17 +235,11 @@ watch(noteId, () => void loadNote(), { immediate: true })
             :disabled="!authStore.isAuthenticated"
             @like="handleLike"
             @unlike="handleUnlike"
+            @comment="openComments"
           />
         </footer>
       </article>
 
-      <div class="short-note-sheet-comments">
-        <CommentSection
-          id="comments"
-          :target="{ kind: 'short_note', resourceId: note.id }"
-          @count-change="handleCommentCountChange"
-        />
-      </div>
     </div>
 
     <PImageLightbox
@@ -238,6 +248,18 @@ watch(noteId, () => void loadNote(), { immediate: true })
       :index="lightboxIndex"
     />
   </PSheet>
+
+  <CommentSideSheet
+    v-if="note"
+    :show="commentsOpen"
+    :title="commentSheetTitle"
+    :index="layerIndex + 1"
+    :target="{ kind: 'short_note', resourceId: note.id }"
+    @close="closeComments"
+    @activate="closeComments"
+    @mode-change="commentSheetMode = $event"
+    @count-change="handleCommentCountChange"
+  />
 
   <PConfirm
     :show="deletePending"
@@ -400,7 +422,4 @@ watch(noteId, () => void loadNote(), { immediate: true })
   border-top: 1px solid var(--a-color-border-soft);
 }
 
-.short-note-sheet-comments {
-  margin-top: 1.5rem;
-}
 </style>

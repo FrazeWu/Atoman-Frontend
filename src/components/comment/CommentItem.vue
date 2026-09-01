@@ -3,7 +3,7 @@
     :id="`comment-${comment.id}`"
     class="comment-item"
     :class="{ 'comment-item--child': depth === 1 }"
-    :variant="depth === 1 ? 'flat' : 'default'"
+    variant="flat"
     :data-comment-depth="depth"
     tabindex="-1"
   >
@@ -14,6 +14,7 @@
         :avatar-size="depth ? 'xs' : 'sm'"
         link
       />
+      <time class="comment-item__time" :datetime="comment.created_at" :title="comment.created_at">{{ formatDate(comment.created_at) }}</time>
       <span v-if="comment.reply_to_author" class="comment-item__reply-to">
         回复 @{{ comment.reply_to_author.username }}
       </span>
@@ -56,8 +57,7 @@
       </div>
     </template>
 
-    <footer class="comment-item__footer">
-      <time :datetime="comment.created_at">{{ formatDate(comment.created_at) }}</time>
+    <footer v-if="comment.edited_at || authenticated" class="comment-item__footer">
       <time
         v-if="comment.edited_at"
         data-test="edited-at"
@@ -178,9 +178,14 @@ const renderedContent = computed(() => {
 
 function formatDate(value: string) {
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', {
-    year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
+  if (Number.isNaN(date.getTime())) return value
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+  if (elapsedSeconds < 60) return '刚刚'
+  if (elapsedSeconds < 3600) return `${Math.floor(elapsedSeconds / 60)} 分钟前`
+  if (elapsedSeconds < 86400) return `${Math.floor(elapsedSeconds / 3600)} 小时前`
+  if (elapsedSeconds < 604800) return `${Math.floor(elapsedSeconds / 86400)} 天前`
+  return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
 }
 
 function anchorText(start: number, end: number) {
@@ -191,15 +196,24 @@ function anchorText(start: number, end: number) {
 <style scoped>
 .comment-item {
   min-width: 0;
+  padding: 0.75rem 0 0.65rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.comment-item__header { display: flex; align-items: center; gap: 0.6rem; min-height: 32px; }
-.comment-item__reply-to, .comment-item__floor { color: var(--a-color-muted); font-size: var(--a-text-xs); }
+.comment-item--child {
+  padding: 0.55rem 0;
+  border-bottom: 0;
+}
+
+.comment-item__header { display: flex; align-items: center; gap: 0.45rem; min-height: 2rem; min-width: 0; }
+.comment-item__header :deep(.user-summary-card__metrics), .comment-item__header :deep(.user-summary-card__handle) { display: none; }
+.comment-item__time, .comment-item__reply-to, .comment-item__floor { color: var(--a-color-muted); font-size: var(--a-text-xs); }
+.comment-item__time { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comment-item__reply-to { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comment-item__floor { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .comment-item__marked { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.45rem; border: 1px solid color-mix(in srgb, var(--a-color-primary) 35%, var(--a-color-border-soft)); border-radius: var(--a-radius-control); background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg)); color: var(--a-color-primary); font-size: var(--a-text-xs); font-weight: var(--a-font-weight-strong); white-space: nowrap; }
-.comment-item__content { padding: 0.9rem 0; overflow-wrap: anywhere; color: var(--a-color-text); line-height: 1.7; }
-.comment-item__content :deep(p) { margin: 0 0 0.65rem; }
+.comment-item__content { padding: 0.4rem 0; overflow-wrap: anywhere; color: var(--a-color-text); line-height: 1.55; }
+.comment-item__content :deep(p) { margin: 0 0 0.4rem; }
 .comment-item__content :deep(p:last-child) { margin-bottom: 0; }
 .comment-item__content :deep(blockquote) { margin: 0.65rem 0; padding: 0.2rem 0 0.2rem 0.8rem; border-left: 3px solid var(--a-color-border); color: var(--a-color-text-secondary); }
 .comment-item__content :deep(a) { color: var(--a-color-primary); }
@@ -215,13 +229,13 @@ function anchorText(start: number, end: number) {
 .comment-item__folded button { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-primary); cursor: pointer; font: inherit; }
 .comment-item__folded button:hover { background: var(--a-color-surface-muted); }
 .comment-item__folded button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
-.comment-item__footer { display: flex; align-items: center; gap: 0.65rem; min-height: 40px; padding-top: 0.65rem; border-top: 1px solid var(--a-color-border-soft); color: var(--a-color-muted); font-size: var(--a-text-xs); }
+.comment-item__footer { display: flex; align-items: center; gap: 0.35rem; min-height: 2rem; color: var(--a-color-muted); font-size: var(--a-text-xs); }
 .comment-item__footer time { white-space: nowrap; }
-.comment-item__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem; margin-left: auto; }
-.comment-item__actions button { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; width: 44px; height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; font: inherit; }
+.comment-item__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem; margin-left: auto; }
+.comment-item__actions button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-width: 2rem; min-height: 2rem; padding: 0 0.4rem; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; font: inherit; }
 .comment-item__actions button:hover:not(:disabled), .comment-item__actions button:focus-visible { background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .comment-item__actions button[aria-pressed="true"] { color: var(--a-color-primary); }
 .comment-item__actions button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .comment-item__actions button:disabled { cursor: not-allowed; opacity: 0.5; }
-@media (max-width: 600px) { .comment-item { padding: 0.85rem; } .comment-item__header { flex-wrap: wrap; } .comment-item__reply-to { width: 100%; padding-left: 1.8rem; } .comment-item__footer { align-items: flex-start; flex-wrap: wrap; } .comment-item__footer time { min-height: 32px; display: inline-flex; align-items: center; } .comment-item__actions { width: 100%; margin-left: 0; } .comment-item__images { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .comment-item { padding: 0.75rem 0; } .comment-item__header { flex-wrap: wrap; } .comment-item__reply-to { width: 100%; padding-left: 1.8rem; } .comment-item__footer { align-items: flex-start; flex-wrap: wrap; } .comment-item__footer time { min-height: 32px; display: inline-flex; align-items: center; } .comment-item__actions { width: 100%; margin-left: 0; } .comment-item__actions button { min-width: 2.75rem; min-height: 2.75rem; } .comment-item__images { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

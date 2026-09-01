@@ -98,6 +98,7 @@
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"
       :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < visibleTimeline.length - 1"
+      :related-articles="visibleTimeline"
       :index="showSourceSheet ? 1 : 0"
       @close="showArticleSheet = false"
       @open-source="openSelectedArticleSource"
@@ -123,6 +124,7 @@
 
     <section class="feed-content">
       <FeedTimelineToolbar
+        v-if="!isHubTimeline"
         v-model:search-input="searchInput"
         v-model:source-type-filter="sourceTypeFilter"
         v-model:merge-duplicates="mergeDuplicates"
@@ -134,6 +136,7 @@
         :query-source-id="querySourceId ?? undefined"
         :theme-filters="themeFilters"
         :authenticated="authStore.isAuthenticated"
+        :timeline-mode="timelineMode"
         :unread-only="unreadOnly"
         :marking-all-read="markingAllRead"
         :bulk-read-label="bulkReadLabel"
@@ -142,10 +145,12 @@
         @clear-search="clearSearch"
         @clear-source="clearSourceFilter"
         @update-merge-duplicates="updateMergeDuplicates"
+        @update:timeline-mode="setTimelineMode"
         @toggle-unread="toggleUnreadOnly"
         @toggle-all-read="toggleAllRead"
         @refresh-new-content="refreshNewTimelineContent"
       />
+      <p v-else class="feed-hub-context" aria-live="polite">{{ hubTimelineLabel }}</p>
 
       <div v-if="loadingTimeline" class="feed-loading">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
@@ -171,6 +176,11 @@
             @click="openArticleSheet(item, index)"
             @open-source="openPostSourceSheet(item)"
           >
+            <template #meta-extra>
+              <span v-if="item.priority_reason" class="feed-priority-reason" data-test="feed-priority-reason">
+                {{ priorityReasonLabel(item.priority_reason) }}
+              </span>
+            </template>
             <template #actions>
               <PClip
                 v-if="authStore.isAuthenticated"
@@ -208,6 +218,9 @@
             @open-source="openFeedItemSourceSheet(item.feed_item)"
           >
             <template #meta-extra>
+              <span v-if="item.priority_reason" class="feed-priority-reason" data-test="feed-priority-reason">
+                {{ priorityReasonLabel(item.priority_reason) }}
+              </span>
               <span v-if="item.feed_item.duration" class="feed-item-duration">
                 时长: {{ item.feed_item.duration }}
               </span>
@@ -238,7 +251,7 @@
 
             <template #actions>
               <PClip
-                v-if="item.feed_item.enclosure_url"
+                v-if="isPlayableFeedPodcast(item.feed_item)"
                 :title="isPodcastPlaying(item.feed_item) ? '停止播放' : '播放播客'"
                 :aria-label="isPodcastPlaying(item.feed_item) ? '停止播放' : '播放播客'"
                 @click="playPodcast(item.feed_item, $event)"
@@ -276,6 +289,54 @@
               </a>
             </template>
           </BlogItemCard>
+
+          <RouterLink
+            v-else-if="item.type === 'podcast_episode' && item.podcast_episode"
+            :to="`/podcasts/episode/${item.podcast_episode.id}`"
+            class="feed-media-entry"
+            data-test="feed-podcast-timeline-entry"
+          >
+            <div class="feed-media-entry__thumbnail">
+              <img
+                v-if="item.podcast_episode.episode_cover_url"
+                :src="item.podcast_episode.episode_cover_url"
+                :alt="item.podcast_episode.post?.title || '单集封面'"
+              >
+              <span v-else>播客</span>
+            </div>
+            <div class="feed-media-entry__content">
+              <div class="feed-media-entry__meta">
+                <span>播客</span>
+                <span v-if="item.podcast_episode.channel?.name">{{ item.podcast_episode.channel.name }}</span>
+                <span v-if="item.podcast_episode.duration_sec">{{ formatDuration(item.podcast_episode.duration_sec) }}</span>
+                <time :datetime="item.published_at">{{ new Date(item.published_at).toLocaleDateString() }}</time>
+              </div>
+              <h3>{{ item.podcast_episode.post?.title || '未命名单集' }}</h3>
+              <p v-if="item.podcast_episode.post?.summary">{{ item.podcast_episode.post.summary }}</p>
+            </div>
+          </RouterLink>
+
+          <RouterLink
+            v-else-if="item.type === 'video' && item.video"
+            :to="`/videos/watch/${item.video.id}`"
+            class="feed-media-entry"
+            data-test="feed-video-timeline-entry"
+          >
+            <div class="feed-media-entry__thumbnail">
+              <img v-if="item.video.thumbnail_url" :src="item.video.thumbnail_url" :alt="item.video.title">
+              <span v-else>视频</span>
+            </div>
+            <div class="feed-media-entry__content">
+              <div class="feed-media-entry__meta">
+                <span>视频</span>
+                <span v-if="item.video.channel?.name">{{ item.video.channel.name }}</span>
+                <span v-if="item.video.duration_sec">{{ formatDuration(item.video.duration_sec) }}</span>
+                <time :datetime="item.published_at">{{ new Date(item.published_at).toLocaleDateString() }}</time>
+              </div>
+              <h3>{{ item.video.title }}</h3>
+              <p v-if="item.video.description">{{ item.video.description }}</p>
+            </div>
+          </RouterLink>
         </template>
 
         <FeedTimelineFooter
@@ -329,6 +390,7 @@ import {
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
 import { ChevronDown, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
+import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()
@@ -361,8 +423,10 @@ const activeTheme = ref('')
 
 const {
   querySourceId,
-  queryGroupId,
+  queryHubType,
+  isHubTimeline,
   querySearch,
+  timelineMode,
   searchInput,
   mergeDuplicates,
   activeSearchLabel,
@@ -384,6 +448,7 @@ const {
   submitSearch,
   clearSearch,
   updateMergeDuplicates,
+  setTimelineMode,
   changePage,
   refreshNewTimelineContent,
   fetchTimeline,
@@ -407,6 +472,11 @@ const currentSourceTitle = computed(() =>
 const currentSourceUnreadCount = computed(() =>
   Math.max(0, currentSourceSubscription.value?.unread_count || 0),
 )
+const priorityReasonLabel = (reason?: string) => ({
+  subscription_priority_high: '来自高优先订阅',
+  subscription_priority_normal: '来自普通优先订阅',
+  subscription_priority_low: '来自低优先订阅',
+}[reason || ''] || '')
 
 const {
   visibleTimeline,
@@ -444,7 +514,7 @@ const {
 const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: visibleTimeline,
   section: 'content',
-  onEnter: (item, index) => openArticleSheet(item, index),
+  onEnter: (item, index) => openTimelineItem(item, index),
   onAction: (key, item) => {
     switch (key) {
       case 'm': toggleRead(item); break
@@ -564,6 +634,31 @@ const {
   itemKey: (item) => itemKey(item),
   feedItemActionIDs,
 })
+
+const hubTimelineLabel = computed(() => ({
+  podcast: '播客更新',
+  video: '视频更新',
+  blog: '博客更新',
+  rss: 'RSS 更新',
+}[queryHubType.value || 'rss']))
+
+const formatDuration = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60)
+  const remainder = Math.floor(seconds % 60)
+  return `${minutes}:${String(remainder).padStart(2, '0')}`
+}
+
+const openTimelineItem = (item: typeof visibleTimeline.value[number], index: number) => {
+  if (item.type === 'podcast_episode' && item.podcast_episode) {
+    void router.push(`/podcasts/episode/${item.podcast_episode.id}`)
+    return
+  }
+  if (item.type === 'video' && item.video) {
+    void router.push(`/videos/watch/${item.video.id}`)
+    return
+  }
+  openArticleSheet(item, index)
+}
 
 const returnToSource = () => {
   showArticleSheet.value = false
@@ -896,6 +991,92 @@ onUnmounted(() => {
   gap: 0;
 }
 
+.feed-hub-context {
+  margin: 0 0 1rem;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.feed-media-entry {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 5.5rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  color: inherit;
+  text-decoration: none;
+}
+
+.feed-media-entry:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.feed-media-entry:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
+.feed-media-entry__thumbnail {
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  aspect-ratio: 1;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+}
+
+.feed-media-entry__thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feed-media-entry__content {
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.feed-media-entry__content h3,
+.feed-media-entry__content p {
+  margin: 0;
+}
+
+.feed-media-entry__content h3 {
+  overflow: hidden;
+  font-size: 0.98rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-media-entry__content p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.feed-media-entry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+}
+
+.feed-media-entry__meta span + span::before,
+.feed-media-entry__meta time::before {
+  content: '·';
+  margin-right: 0.45rem;
+}
+
 .feed-new-content-region {
   margin-bottom: 0.75rem;
 }
@@ -963,6 +1144,12 @@ onUnmounted(() => {
 
 .feed-item-duration {
   color: var(--a-color-muted-soft);
+  font-weight: 500;
+}
+
+.feed-priority-reason {
+  color: var(--a-color-accent-confirm);
+  font-size: 0.78rem;
   font-weight: 500;
 }
 

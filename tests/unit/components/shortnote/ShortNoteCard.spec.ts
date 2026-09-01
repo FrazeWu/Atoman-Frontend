@@ -6,6 +6,12 @@ import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 // @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
 import type { ShortNote } from '@/types'
 
+const CommentSideSheetStub = {
+  name: 'CommentSideSheet',
+  props: ['show', 'target', 'partialAnchor'],
+  template: '<aside v-if="show" data-test="short-note-comment-sheet" />',
+}
+
 describe('ShortNoteCard', () => {
   const mockNote: ShortNote = {
     id: 'note-test-1',
@@ -25,7 +31,7 @@ describe('ShortNoteCard', () => {
       props: { note: mockNote },
       global: {
         plugins: [createPinia()],
-        stubs: { RouterLink: true, CommentSection: true, PImageLightbox: true },
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
       },
     })
 
@@ -38,7 +44,7 @@ describe('ShortNoteCard', () => {
       props: { note: mockNote },
       global: {
         plugins: [createPinia()],
-        stubs: { RouterLink: true, CommentSection: true, PImageLightbox: true },
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
       },
     })
 
@@ -48,7 +54,9 @@ describe('ShortNoteCard', () => {
 
     await body.trigger('keydown.enter')
 
-    expect(wrapper.find('.sticky-inline-comments').exists()).toBe(true)
+    const commentSheet = wrapper.getComponent(CommentSideSheetStub)
+    expect(commentSheet.props('show')).toBe(true)
+    expect(wrapper.find('[data-test="short-note-comment-sheet"]').exists()).toBe(true)
   })
 
   it('未读时初始渲染，光标扫过 (mouseenter) 时自动标记为已读', async () => {
@@ -64,7 +72,7 @@ describe('ShortNoteCard', () => {
             props: ['to'],
             template: '<a :href="to"><slot /></a>',
           },
-          CommentSection: true,
+          CommentSideSheet: CommentSideSheetStub,
           PImageLightbox: true,
         },
       },

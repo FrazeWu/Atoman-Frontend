@@ -78,8 +78,8 @@ const InteractionBarStub = defineComponent({
 	},
 });
 
-const CommentSectionStub = defineComponent({
-	name: "CommentSection",
+const CommentSideSheetStub = defineComponent({
+	name: "CommentSideSheet",
 	props: ["target", "noun", "readonly", "canDelete"],
 	emits: ["count-change"],
 	template: '<section data-test="unified-comment-section" />',
@@ -115,7 +115,7 @@ async function mountPostDetailWithRouter() {
 			stubs: {
 				RouterLink,
 				InteractionBar: InteractionBarStub,
-				CommentSection: CommentSectionStub,
+				CommentSideSheet: CommentSideSheetStub,
 			},
 		},
 	});
@@ -263,7 +263,7 @@ describe("PostDetailView shared interactions", () => {
 		expect(wrapper.find('[data-test="unified-comment-section"]').exists()).toBe(
 			true,
 		);
-		expect(wrapper.findComponent(CommentSectionStub).props("target")).toEqual({
+		expect(wrapper.findComponent(CommentSideSheetStub).props("target")).toEqual({
 			kind: "blog_post",
 			resourceId: "post-1",
 		});
@@ -645,7 +645,7 @@ describe("PostDetailView shared interactions", () => {
 
 	it("仅将文章作者或管理员的删除权限传给统一评论组件", async () => {
 		const wrapper = await mountPostDetail();
-		const commentSection = wrapper.findComponent(CommentSectionStub);
+		const commentSection = wrapper.findComponent(CommentSideSheetStub);
 
 		const authStore = useAuthStore();
 		authStore.user = {

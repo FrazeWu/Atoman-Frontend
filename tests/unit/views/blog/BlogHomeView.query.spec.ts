@@ -8,8 +8,6 @@ const mocks = vi.hoisted(() => ({
   routeQuery: {} as Record<string, string>,
 }));
 
-let pinia = createPinia();
-
 vi.mock("vue-router", () => ({
   useRoute: () => ({
     path: "/posts",
@@ -19,6 +17,8 @@ vi.mock("vue-router", () => ({
   RouterLink: { template: "<a><slot /></a>" },
 }));
 
+let pinia = createPinia();
+
 describe("BlogHomeView query search", () => {
   beforeEach(() => {
     pinia = createPinia();
@@ -26,7 +26,7 @@ describe("BlogHomeView query search", () => {
     mocks.routeQuery = {};
   });
 
-  it("passes route query q to blog discovery requests", async () => {
+  it("uses the dedicated search endpoint for route query q", async () => {
     mocks.routeQuery = { q: "atom" };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -56,6 +56,9 @@ describe("BlogHomeView query search", () => {
     expect(requestedUrls).toContain(
       "/api/v1/blog/search?q=atom&sort=relevance&page=1&page_size=20",
     );
+    expect(
+      requestedUrls.some((url) => url.includes("/blog/recommend/posts")),
+    ).toBe(false);
     expect(requestedUrls.some((url) => url.includes("/blog/explore"))).toBe(
       false,
     );

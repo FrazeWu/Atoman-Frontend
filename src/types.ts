@@ -1568,6 +1568,9 @@ export interface Video {
 	view_count: number;
 	like_count?: number;
 	liked?: boolean;
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number | null;
 	subtitle_url?: string;
 	processing_status?: VideoProcessingStatus;
 	processing_error?: string;

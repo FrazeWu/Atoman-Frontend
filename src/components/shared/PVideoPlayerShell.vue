@@ -2,12 +2,15 @@
 import PButton from '@/components/ui/PButton.vue'
 import type { Video } from '@/types'
 
-defineProps<{
+withDefaults(defineProps<{
   video: Video
   currentTime?: number
   theaterMode?: boolean
   showTimelinePreview?: boolean
-}>()
+  showCopyLink?: boolean
+}>(), {
+  showCopyLink: true,
+})
 
 const emit = defineEmits<{
   copyLink: []
@@ -21,7 +24,7 @@ const emit = defineEmits<{
       <slot name="player" />
       <slot name="timeline-preview" />
     </div>
-    <div class="vps-actions">
+    <div v-if="showCopyLink" class="vps-actions">
       <PButton variant="secondary" size="sm" @click="emit('copyLink')">复制链接</PButton>
     </div>
   </section>

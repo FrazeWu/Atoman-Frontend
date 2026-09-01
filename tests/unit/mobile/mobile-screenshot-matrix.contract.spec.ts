@@ -9,6 +9,7 @@ describe("mobile screenshot matrix route contract", () => {
 				"/studio/manage/channel",
 				"/studio/manage/collections",
 				"/studio/blog/content",
+				"/videos/watch/video-1",
 			]),
 		);
 

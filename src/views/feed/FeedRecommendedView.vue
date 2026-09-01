@@ -359,6 +359,7 @@ const ALL_THEME = 'all'
 type FeedSourceFilterCategory = typeof ALL_CATEGORY | FeedSourceCategory
 type ExploreSourcePayload = Partial<FeedExploreSource> & {
   rss_url?: string
+  cover_url?: string
   subscription_count?: number
   recent_item_count?: number
   last_published_at?: string
@@ -609,6 +610,7 @@ function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSourc
     id: payload.id || '',
     title: payload.title || '',
     rssUrl: payload.rssUrl ?? payload.rss_url,
+    coverUrl: payload.coverUrl ?? payload.cover_url,
     category: payload.category || 'blog',
     subscriptionCount: payload.subscriptionCount ?? payload.subscription_count ?? 0,
     recentItemCount: payload.recentItemCount ?? payload.recent_item_count ?? 0,
@@ -763,6 +765,7 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
     id: item.source_id || item.id,
     title: item.title,
     rssUrl: item.rss_url,
+    coverUrl: item.image_url,
     category: (item.source_category as FeedSourceCategory) || 'blog',
     subscriptionCount: item.bookmark_count ?? item.read_count ?? 0,
     recentItemCount: item.recent_items?.length ?? 0,
@@ -834,6 +837,7 @@ function openArticleSource(item: RecommendationItem) {
     id: item.source_id || item.id,
     title: item.source_title || item.title,
     rssUrl: item.rss_url,
+    imageUrl: item.source_title ? undefined : item.image_url,
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
   }

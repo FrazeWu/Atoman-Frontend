@@ -8,8 +8,7 @@ import type { Collection, Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
-import PSheet from '@/components/ui/PSheet.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
@@ -48,6 +47,7 @@ const lifecycle = useContentLifecycle()
 const videoId = computed(() => String(route.params.id || ''))
 const commentTarget = computed<CommentTargetRef>(() => ({ kind: 'video', resourceId: videoId.value }))
 const interactions = useInteractions('videos', 'video', videoId)
+const videoContentAnchor = ref<HTMLElement | null>(null)
 
 const video = ref<Video | null>(null)
 const activeCollection = ref<Collection | null>(null)
@@ -489,6 +489,7 @@ async function toggleChannelSubscription() {
     <div v-else-if="error" class="vd-error">{{ error }}</div>
 
     <div v-else-if="video" :class="['vd-layout', { 'vd-layout--theater': theaterMode }]">
+      <div ref="videoContentAnchor" class="vd-main">
       <PVideoPlayerShell
         class="vd-player-shell"
         :video="video"
@@ -590,16 +591,6 @@ async function toggleChannelSubscription() {
         <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
       </section>
 
-      <VideoCollectionPlaylist
-        v-if="activeCollection && collectionVideos.length"
-        class="vd-playlist"
-        :collection="activeCollection"
-        :videos="collectionVideos"
-        :current-video-id="video.id"
-        :completed-video-ids="completedCollectionVideoIds"
-        @select="selectCollectionVideo"
-      />
-
       <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />
 
       <section v-if="video.description || video.tags?.length" class="vd-description" data-testid="video-description">
@@ -653,23 +644,30 @@ async function toggleChannelSubscription() {
       </section>
     </div>
 
-    <PSheet
+      <VideoCollectionPlaylist
+        v-if="activeCollection && collectionVideos.length"
+        class="vd-playlist"
+        :collection="activeCollection"
+        :videos="collectionVideos"
+        :current-video-id="video.id"
+        :completed-video-ids="completedCollectionVideoIds"
+        @select="selectCollectionVideo"
+      />
+    </div>
+
+    <CommentSideSheet
       v-if="video"
       :show="commentsOpen"
       :title="`视频评论-${video.title}`"
-      width="min(100%, 30rem)"
-      content-max-width="28rem"
+      :partial-anchor="videoContentAnchor"
+      :target="commentTarget"
+      noun="评论"
+      :current-time="currentCommentTime"
+      :can-delete="canDeleteAllComments"
       @close="commentsOpen = false"
-    >
-      <CommentSection
-        :target="commentTarget"
-        noun="评论"
-        :current-time="currentCommentTime"
-        :can-delete="canDeleteAllComments"
-        @seek="handleSeekToTimestamp"
-        @count-change="interactions.commentCount.value = $event"
-      />
-    </PSheet>
+      @seek="handleSeekToTimestamp"
+      @count-change="interactions.commentCount.value = $event"
+    />
   </div>
 </template>
 
@@ -714,6 +712,12 @@ async function toggleChannelSubscription() {
   padding: 6rem 0;
   color: var(--a-color-danger);
   text-align: center;
+}
+
+.vd-main {
+  display: grid;
+  min-width: 0;
+  gap: 1.25rem;
 }
 
 .vd-layout {

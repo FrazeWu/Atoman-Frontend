@@ -4,7 +4,7 @@ import { apiRequestResult } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
-import type { Subscription, TimelineItem } from '@/types'
+import type { Subscription, SubscriptionHubType, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 import { reportError } from '@/utils/logger'
 
@@ -36,6 +36,13 @@ export function useFeedTimelineController({
 
   const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
   const queryGroupId = computed(() => typeof route.query.group_id === 'string' ? route.query.group_id : null)
+  const queryHubType = computed<SubscriptionHubType | null>(() => {
+    const value = route.query.hub_type
+    return value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss' ? value : null
+  })
+  const queryHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
+  const queryHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)
+  const isHubTimeline = computed(() => Boolean(queryHubType.value))
   const queryPage = computed(() => normalizePage(route.query.page))
   const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
   const queryMergeDuplicates = computed(() => route.query.merge_duplicates !== 'false')
@@ -49,7 +56,7 @@ export function useFeedTimelineController({
   })
   const sourceViewMode = computed(() => Boolean(querySourceId.value))
   const canCheckTimelineUpdates = computed(() => {
-    if (!authStore.isAuthenticated || querySearch.value.trim() || timelineMode.value === 'priority') return false
+    if (isHubTimeline.value || !authStore.isAuthenticated || querySearch.value.trim() || timelineMode.value === 'priority') return false
     if (sourceTypeFilter.value !== 'all') return false
     const sourceType = currentSourceSubscription.value?.feed_source?.source_type
     return !sourceType || sourceType === 'external_rss'
@@ -74,6 +81,7 @@ export function useFeedTimelineController({
   const emptyTimelineText = computed(() => {
     if (timelineMode.value === 'priority') return '今日精选暂无未读内容'
     if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
+    if (isHubTimeline.value) return '当前订阅上下文暂无更新'
     if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
     return subscriptions.value.length ? '订阅源暂无更新' : '订阅后开始探索'
   })
@@ -109,6 +117,9 @@ export function useFeedTimelineController({
         ...route.query,
         source_id: undefined,
         group_id: undefined,
+        hub_type: undefined,
+        hub_group_id: undefined,
+        hub_membership_id: undefined,
         page: undefined,
       },
     })
@@ -229,17 +240,29 @@ export function useFeedTimelineController({
         return
       }
 
-      const params = buildFeedTimelineQuery({
-        page: currentPage.value,
-        limit: pageLimit,
-        sort: timelineMode.value === 'priority' ? 'priority' : undefined,
-        sourceId: querySourceId.value,
-        groupId: queryGroupId.value,
-        unreadOnly: unreadOnly.value,
-        hideDuplicates: mergeDuplicates.value && !querySourceId.value,
-        q: querySearch.value,
-      })
-      const response = await apiRequestResult(`${apiURL}/feed/timeline?${params}`, { headers: authHeaders() })
+      let response
+      if (isHubTimeline.value) {
+        const params = new URLSearchParams({
+          type: queryHubType.value!,
+          page: String(currentPage.value),
+          limit: String(pageLimit),
+        })
+        if (queryHubGroupId.value) params.set('group_id', queryHubGroupId.value)
+        if (queryHubMembershipId.value) params.set('membership_id', queryHubMembershipId.value)
+        response = await apiRequestResult(`${apiURL}/feed/subscription-hub/updates?${params}`, { headers: authHeaders() })
+      } else {
+        const params = buildFeedTimelineQuery({
+          page: currentPage.value,
+          limit: pageLimit,
+          sort: timelineMode.value === 'priority' ? 'priority' : undefined,
+          sourceId: querySourceId.value,
+          groupId: queryGroupId.value,
+          unreadOnly: unreadOnly.value,
+          hideDuplicates: mergeDuplicates.value && !querySourceId.value,
+          q: querySearch.value,
+        })
+        response = await apiRequestResult(`${apiURL}/feed/timeline?${params}`, { headers: authHeaders() })
+      }
       if (requestSequence !== timelineRequestSequence) return
       if (!response.ok) {
         timelineError.value = '订阅内容加载失败，请稍后重试'
@@ -263,9 +286,11 @@ export function useFeedTimelineController({
         timelineUpdatesCursor.value = data.meta.checked_at
         hasNewTimelineContent.value = false
       }
-      await applyAutomationRules(items)
+      if (!isHubTimeline.value) await applyAutomationRules(items)
       if (requestSequence !== timelineRequestSequence) return
-      if (sourceViewMode.value) {
+      if (isHubTimeline.value) {
+        allRead.value = !items.some((item) => item.type === 'feed_item' && !item.is_read)
+      } else if (sourceViewMode.value) {
         const sourceUnreadCount = currentSourceSubscription.value?.unread_count
         allRead.value = typeof sourceUnreadCount === 'number'
           ? sourceUnreadCount === 0
@@ -303,7 +328,7 @@ export function useFeedTimelineController({
   }
 
   const toggleAllRead = async () => {
-    if (markingAllRead.value) return
+    if (isHubTimeline.value || markingAllRead.value) return
     markingAllRead.value = true
     const nextAllRead = !allRead.value
     try {
@@ -338,7 +363,17 @@ export function useFeedTimelineController({
     searchInput.value = next
   })
 
-  watch([querySourceId, queryGroupId, queryPage, querySearch, queryMergeDuplicates, timelineMode], async () => {
+  watch([
+    querySourceId,
+    queryGroupId,
+    queryHubType,
+    queryHubGroupId,
+    queryHubMembershipId,
+    queryPage,
+    querySearch,
+    queryMergeDuplicates,
+    timelineMode,
+  ], async () => {
     mergeDuplicates.value = queryMergeDuplicates.value
     currentPage.value = queryPage.value
     await fetchTimeline()
@@ -355,6 +390,10 @@ export function useFeedTimelineController({
   return {
     querySourceId,
     queryGroupId,
+    queryHubType,
+    queryHubGroupId,
+    queryHubMembershipId,
+    isHubTimeline,
     querySearch,
     timelineMode,
     searchInput,

@@ -20,10 +20,16 @@
   </section>
 
   <Teleport v-else to="body" :disabled="isTest || !teleport">
-    <div class="p-sheet-root" :class="{ 'p-sheet-root--above-player': abovePlayer }">
+    <div
+      class="p-sheet-root"
+      :class="{
+        'p-sheet-root--above-player': abovePlayer,
+        'p-sheet-root--partial': isPartial,
+      }"
+    >
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade" appear>
-        <div v-if="show && showBackdrop && isTopLayer" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
+        <div v-if="show && showBackdrop && isTopLayer && !isPartial" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
       </Transition>
 
       <Transition :name="transitionName" appear>
@@ -31,7 +37,15 @@
           v-if="show"
           ref="panelRef"
           class="p-sheet-layer p-sheet-panel"
-          :class="[`is-${side}`, panelClass, { 'is-shifted': isShifted }]"
+          :class="[
+            `is-${side}`,
+            panelClass,
+            {
+              'is-shifted': isShifted,
+              'is-partial': isPartial,
+              'is-partial-pending': partialRequested && !partialResolved,
+            },
+          ]"
           :style="sheetStyle"
           role="dialog"
           :aria-label="railTitle"
@@ -105,6 +119,7 @@
             :inert="isTopLayer ? undefined : true"
           >
             <div
+              data-p-sheet-content
               :class="{ 'sheet-content-inner': readingMode || contentMaxWidth }"
               :style="contentMaxWidth ? { maxWidth: contentMaxWidth } : undefined"
             >
@@ -121,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, provide, ref, useSlots } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, provide, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { X, ChevronLeft } from 'lucide-vue-next'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
@@ -136,6 +151,8 @@ const props = withDefaults(defineProps<{
   show: boolean
   title?: string
   ariaLabel?: string
+  mode?: 'full' | 'partial'
+  partialAnchor?: HTMLElement | null
   width?: string
   maxWidth?: string
   height?: string
@@ -156,7 +173,9 @@ const props = withDefaults(defineProps<{
   focusOnOpen?: boolean
 }>(), {
   title: '',
-  width: 'min(100%, 480px)',
+  mode: 'full',
+  partialAnchor: null,
+  width: '100%',
   top: '56px',
   side: 'right',
   closeType: 'bookmark',
@@ -171,12 +190,22 @@ const props = withDefaults(defineProps<{
   focusOnOpen: true,
 })
 
-const emit = defineEmits(['close', 'activate'])
+const emit = defineEmits<{
+  (event: 'close'): void
+  (event: 'activate'): void
+  (event: 'mode-change', mode: 'full' | 'partial'): void
+}>()
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
 const sheetContentRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLButtonElement | null>(null)
+const partialRequested = computed(() => (
+  props.show && props.mode === 'partial' && props.side === 'right' && !isMobile.value
+))
+const partialResolved = ref(false)
+const partialBounds = ref<{ top: string, right: string, bottom: string, left: string } | null>(null)
+const isPartial = computed(() => partialRequested.value && partialResolved.value && partialBounds.value !== null)
 const effectiveCloseType = computed(() => {
   if (props.side === 'bottom' && props.closeType === 'bookmark') {
     return 'header'
@@ -195,7 +224,7 @@ const closeLabel = computed(() => props.isTopLayer
   : `关闭${railTitle.value}及上方页面`)
 
 const handlePanelBackgroundClick = (event: MouseEvent) => {
-  if (props.side !== 'right' || !props.isTopLayer) return
+  if (isPartial.value || props.side !== 'right' || !props.isTopLayer) return
   const target = event.target
   if (target === panelRef.value || target === sheetContentRef.value) {
     emit('close')
@@ -203,7 +232,11 @@ const handlePanelBackgroundClick = (event: MouseEvent) => {
 }
 
 const focusManagementOpen = computed(() => (
-  props.show && props.isTopLayer && !isMobile.value && props.focusOnOpen
+  props.show
+  && props.isTopLayer
+  && !isMobile.value
+  && props.focusOnOpen
+  && (!partialRequested.value || (partialResolved.value && !isPartial.value))
 ))
 const { handleKeydown } = useDialogFocus(focusManagementOpen, panelRef, () => emit('close'))
 const handlePanelKeydown = (event: KeyboardEvent) => {
@@ -243,6 +276,93 @@ const effectiveLayerIndex = computed(() => (
   ?? (parentLayerIndex.value >= 0 ? parentLayerIndex.value + 1 : sheetIndex.value)
 ))
 provide('p-sheet-layer-index', effectiveLayerIndex)
+
+let partialResizeObserver: ResizeObserver | undefined
+
+const disconnectPartialObserver = () => {
+  partialResizeObserver?.disconnect()
+  partialResizeObserver = undefined
+}
+
+const updatePartialBounds = () => {
+  disconnectPartialObserver()
+  partialBounds.value = null
+  partialResolved.value = false
+
+  if (!partialRequested.value || typeof window === 'undefined') {
+    partialResolved.value = true
+    return
+  }
+
+  const parentLayerIndex = effectiveLayerIndex.value - 1
+  const parentPanel = props.partialAnchor
+    ? undefined
+    : document.querySelector<HTMLElement>(
+      `.p-sheet-panel[data-layer-index="${parentLayerIndex}"]`,
+    )
+  const parentContent = parentPanel?.querySelector<HTMLElement>('[data-p-sheet-content]')
+  const contentAnchor = props.partialAnchor ?? parentContent
+  if (!contentAnchor) {
+    partialResolved.value = true
+    emit('mode-change', 'full')
+    return
+  }
+
+  const contentRect = contentAnchor.getBoundingClientRect()
+  const panelRect = parentPanel?.getBoundingClientRect()
+  const containerLeft = panelRect?.left ?? contentRect.left
+  const containerRight = panelRect?.right ?? window.innerWidth
+  const containerWidth = Math.max(0, containerRight - containerLeft)
+  const gutterWidth = containerWidth * 0.04
+  const availableWidth = Math.max(0, containerRight - contentRect.right - gutterWidth)
+  const availableRatio = containerWidth ? availableWidth / containerWidth : 0
+  if (availableRatio < 0.2) {
+    partialResolved.value = true
+    emit('mode-change', 'full')
+    return
+  }
+
+  partialBounds.value = {
+    top: panelRect ? `${panelRect.top}px` : props.top,
+    right: `${window.innerWidth - containerRight}px`,
+    bottom: panelRect ? `${window.innerHeight - panelRect.bottom}px` : 'var(--a-content-bottom-offset)',
+    left: `${contentRect.right + gutterWidth}px`,
+  }
+  partialResolved.value = true
+  emit('mode-change', 'partial')
+
+  if (typeof ResizeObserver !== 'undefined') {
+    partialResizeObserver = new ResizeObserver(updatePartialBounds)
+    partialResizeObserver.observe(contentAnchor)
+    if (parentPanel) partialResizeObserver.observe(parentPanel)
+  }
+}
+
+const handlePartialEscape = (event: KeyboardEvent) => {
+  if (!isPartial.value || !props.isTopLayer || event.defaultPrevented || event.key !== 'Escape') return
+  event.preventDefault()
+  event.stopPropagation()
+  emit('close')
+}
+
+watch(
+  [partialRequested, effectiveLayerIndex, () => props.partialAnchor],
+  () => {
+    void nextTick(updatePartialBounds)
+  },
+  { immediate: true, flush: 'post' },
+)
+
+onMounted(() => {
+  window.addEventListener('keydown', handlePartialEscape, true)
+  void nextTick(updatePartialBounds)
+})
+
+onBeforeUnmount(() => {
+  disconnectPartialObserver()
+  window.removeEventListener('keydown', handlePartialEscape, true)
+})
+
 const layerInset = computed(() => effectiveLayerIndex.value * 32)
 const layerTop = computed(() => `calc(${props.top} + ${effectiveLayerIndex.value * 4}px)`)
 
@@ -252,6 +372,15 @@ const layerZIndex = computed(() => {
 })
 
 const sheetStyle = computed(() => {
+  if (isPartial.value && partialBounds.value) {
+    return {
+      ...partialBounds.value,
+      width: 'auto',
+      'max-width': 'none',
+      'z-index': layerZIndex.value,
+    }
+  }
+
   if (props.side === 'bottom') {
     return {
       width: '100%',
@@ -276,7 +405,7 @@ const sheetStyle = computed(() => {
 
   return {
     width: props.width,
-    'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
+    'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 1rem)',
     top: layerTop.value,
     left: 0,
     'z-index': layerZIndex.value,
@@ -287,6 +416,10 @@ const sheetStyle = computed(() => {
 <style scoped>
 .p-sheet-panel {
   transition: left 200ms ease;
+}
+
+.p-sheet-panel.is-partial-pending {
+  visibility: hidden;
 }
 
 .p-sheet-panel.is-shifted {

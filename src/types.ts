@@ -780,6 +780,41 @@ export interface FeedStarGroup {
 	updated_at: string;
 }
 
+export type SubscriptionHubType = 'podcast' | 'video' | 'blog' | 'rss'
+
+export interface SubscriptionHubMembership {
+	id: string;
+	user_id: string;
+	subscription_type: SubscriptionHubType;
+	group_id: string;
+	feed_source_id: string;
+	feed_source?: FeedSource;
+	title?: string;
+	position?: number;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface SubscriptionHubGroup {
+	id: string;
+	user_id: string;
+	subscription_type: SubscriptionHubType;
+	name: string;
+	position?: number;
+	memberships: SubscriptionHubMembership[];
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface SubscriptionHubTypeNode {
+	subscription_type: SubscriptionHubType;
+	groups: SubscriptionHubGroup[];
+}
+
+export interface SubscriptionHubTree {
+	types: SubscriptionHubTypeNode[];
+}
+
 export interface Subscription {
 	id: string;
 	user_id: string;
@@ -953,9 +988,11 @@ export interface StarredFeedItem {
 
 // Unified timeline item returned by GET /api/feed/timeline
 export interface TimelineItem {
-	type: "post" | "feed_item" | "orbit_item";
+	type: "post" | "feed_item" | "podcast_episode" | "video" | "orbit_item";
 	post?: Post;
 	feed_item?: FeedItem;
+	podcast_episode?: PodcastEpisode;
+	video?: Video;
 	orbit_item?: OrbitItem;
 	published_at: string;
 	is_read: boolean;

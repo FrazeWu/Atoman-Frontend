@@ -140,6 +140,78 @@ describe("PSheet.vue", () => {
 		).toBe("calc(var(--a-z-sheet) + 1)");
 	});
 
+	it("keeps a partial sheet in the lower sheet's right gutter without a backdrop", async () => {
+		const originalWidth = window.innerWidth;
+		const originalHeight = window.innerHeight;
+		Object.defineProperty(window, "innerWidth", { configurable: true, value: 1000 });
+		Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+
+		const parentPanel = document.createElement("div");
+		parentPanel.className = "p-sheet-panel";
+		parentPanel.dataset.layerIndex = "0";
+		const parentContent = document.createElement("div");
+		parentContent.dataset.pSheetContent = "";
+		parentPanel.append(parentContent);
+		document.body.append(parentPanel);
+
+		Object.defineProperty(parentPanel, "getBoundingClientRect", {
+			configurable: true,
+			value: () => ({ left: 0, right: 1000, top: 56, bottom: 800, width: 1000, height: 744 }),
+		});
+		Object.defineProperty(parentContent, "getBoundingClientRect", {
+			configurable: true,
+			value: () => ({ left: 100, right: 700, top: 56, bottom: 800, width: 600, height: 744 }),
+		});
+
+		const wrapper = mount(PSheet, {
+			props: { show: true, mode: "partial", layerIndex: 1 },
+		});
+		await nextTick();
+		await nextTick();
+
+		const panel = wrapper.get(".p-sheet-panel").element as HTMLElement;
+		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
+		expect(panel.style.left).toBe("740px");
+		expect(panel.style.right).toBe("0px");
+		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(false);
+
+		wrapper.unmount();
+		parentPanel.remove();
+		Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+		Object.defineProperty(window, "innerHeight", { configurable: true, value: originalHeight });
+	});
+
+	it("uses a standalone content anchor for a partial sheet", async () => {
+		const originalWidth = window.innerWidth;
+		const originalHeight = window.innerHeight;
+		Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+		Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+
+		const anchor = document.createElement("article");
+		document.body.append(anchor);
+		Object.defineProperty(anchor, "getBoundingClientRect", {
+			configurable: true,
+			value: () => ({ left: 220, right: 800, top: 56, bottom: 800, width: 580, height: 744 }),
+		});
+
+		const wrapper = mount(PSheet, {
+			props: { show: true, mode: "partial", partialAnchor: anchor },
+		});
+		await nextTick();
+		await nextTick();
+
+		const panel = wrapper.get(".p-sheet-panel").element as HTMLElement;
+		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
+		expect(panel.style.left).toBe("839.2px");
+		expect(panel.style.right).toBe("0px");
+		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(false);
+
+		wrapper.unmount();
+		anchor.remove();
+		Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+		Object.defineProperty(window, "innerHeight", { configurable: true, value: originalHeight });
+	});
+
 	it("derives panel width from the left edge instead of custom widths", () => {
 		const bottom = mount(PSheet, {
 			props: {

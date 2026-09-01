@@ -7,7 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PButton from '@/components/ui/PButton.vue'
 import PodcastShownotes from '@/components/podcast/PodcastShownotes.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { writePodcastProgress } from '@/composables/usePodcastProgress'
 
@@ -19,6 +20,9 @@ const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
 const actionMessage = ref('')
+const commentsOpen = ref(false)
+const commentCount = ref<number | undefined>(undefined)
+const episodeContentAnchor = ref<HTMLElement | null>(null)
 let latestRequest = 0
 
 watch(() => route.params.id as string | undefined, (id) => {
@@ -30,6 +34,8 @@ async function loadEpisode(id: string) {
   ep.value = null
   error.value = ''
   actionMessage.value = ''
+  commentsOpen.value = false
+  commentCount.value = undefined
   loading.value = true
 
   try {
@@ -135,7 +141,7 @@ function currentCommentTime() {
 <template>
   <div v-if="loading" class="pev-state">加载中…</div>
   <div v-else-if="error" class="pev-state pev-error">{{ error }}</div>
-  <div v-else-if="ep" class="pev-wrap">
+  <div v-else-if="ep" ref="episodeContentAnchor" class="pev-wrap">
     <!-- 封面 + 标题区 -->
     <div class="pev-header">
       <img
@@ -177,13 +183,20 @@ function currentCommentTime() {
       <PodcastShownotes :text="ep.post.content" />
     </div>
 
-    <div class="pev-comments">
-      <CommentSection
-        :target="{ kind: 'podcast_episode', resourceId: ep.id }"
-        :current-time="currentCommentTime"
-        @seek="player.seek($event)"
-      />
-    </div>
+    <PDiscussionFAB
+      :count="commentCount"
+      @click="commentsOpen = true"
+    />
+    <CommentSideSheet
+      :show="commentsOpen"
+      :title="`节目评论-${ep.post?.title || ep.id}`"
+      :partial-anchor="episodeContentAnchor"
+      :target="{ kind: 'podcast_episode', resourceId: ep.id }"
+      :current-time="currentCommentTime"
+      @close="commentsOpen = false"
+      @seek="player.seek($event)"
+      @count-change="commentCount = $event"
+    />
   </div>
 </template>
 
@@ -202,5 +215,4 @@ function currentCommentTime() {
 .pev-action-message { margin: 0.5rem 0 0; color: #6b7280; font-size: 0.8125rem; }
 .pev-notes { margin-top: 2rem; }
 .pev-notes-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
-.pev-comments { margin-top: 2rem; }
 </style>

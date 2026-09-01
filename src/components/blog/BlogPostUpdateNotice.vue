@@ -1,6 +1,6 @@
 <template>
   <div v-if="updatedAt" class="post-update-notice" role="note">
-    <span class="post-update-notice__label">最近更新时间：</span>
+    <span class="post-update-notice__label">{{ label }}</span>
     <span>{{ formatDate(updatedAt) }}，{{ freshnessMessage }}</span>
   </div>
 </template>
@@ -8,9 +8,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   updatedAt?: string
-}>()
+  label?: string
+}>(), {
+  label: '最近更新时间：',
+})
 
 const elapsedWeeks = computed(() => {
   if (!props.updatedAt) return null

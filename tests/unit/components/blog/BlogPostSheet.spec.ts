@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
 import BlogPostSheet from "../../../../src/components/blog/BlogPostSheet.vue";
 import type { BlogPostLayer } from "../../../../src/components/blog/blogSheetTypes";
+import { useBlogSheets } from "../../../../src/composables/useBlogSheets";
 import { useAuthStore } from "../../../../src/stores/auth";
 
 const layer: BlogPostLayer = {
@@ -67,6 +68,7 @@ describe("BlogPostSheet", () => {
 	});
 
 	afterEach(() => {
+		useBlogSheets().closeAll();
 		vi.unstubAllGlobals();
 	});
 
@@ -164,8 +166,14 @@ describe("BlogPostSheet", () => {
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 			const url = String(input);
 			if (url.includes("/related")) return response([]);
-			if (url.endsWith("/rating")) return errorResponse(403, "blog.post_forbidden", "当前没有权限为这篇文章评分");
-			if (url.includes("/blog/posts/post-1")) return response(postDetail("post-1", "文章一"));
+			if (url.endsWith("/rating"))
+				return errorResponse(
+					403,
+					"blog.post_forbidden",
+					"当前没有权限为这篇文章评分",
+				);
+			if (url.includes("/blog/posts/post-1"))
+				return response(postDetail("post-1", "文章一"));
 			return response({ recorded: true });
 		});
 		vi.stubGlobal("fetch", fetchMock);
@@ -191,7 +199,8 @@ describe("BlogPostSheet", () => {
 					PostRatingControl: {
 						props: ["errorMessage"],
 						emits: ["rate"],
-						template: '<button data-test="rate" @click="$emit(\'rate\', 7)" /> <p>{{ errorMessage }}</p>',
+						template:
+							'<button data-test="rate" @click="$emit(\'rate\', 7)" /> <p>{{ errorMessage }}</p>',
 					},
 				},
 			},
@@ -202,6 +211,52 @@ describe("BlogPostSheet", () => {
 
 		expect(wrapper.text()).toContain("当前没有权限为这篇文章评分");
 		expect(wrapper.text()).not.toContain("评分未保存，请重试");
+	});
+
+	it("opens a right-side discussion sheet for the loaded blog post", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+		useBlogSheets().openPost("post-1", "文章一", "collection-1");
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					PSheet: {
+						props: ["show", "index"],
+						template:
+							'<section v-if="index === 0 || show" :data-sheet-index="index"><slot /></section>',
+					},
+					PDiscussionFAB: {
+						props: ["count"],
+						emits: ["click"],
+						template:
+							'<button data-test="discussion" @click="$emit(\'click\')">讨论 {{ count }}</button>',
+					},
+					CommentSection: {
+						props: ["target"],
+						template:
+							'<div data-test="comments">{{ target.kind }}:{{ target.resourceId }}</div>',
+					},
+				},
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.find('[data-test="comments"]').exists()).toBe(false);
+		const discussion = wrapper.get('[data-test="discussion"]');
+		expect(discussion.element.closest('[data-sheet-index="0"]')).not.toBeNull();
+		await discussion.trigger("click");
+		await flushPromises();
+
+		expect(wrapper.get('[data-test="comments"]').text()).toBe("blog_post:post-1");
 	});
 
 	it("ignores a late response after switching to another post", async () => {

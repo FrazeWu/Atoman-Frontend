@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Isolated TypeScript diagnostics do not load the Vue SFC module resolver.
 import FeedArticleSheet from "@/components/feed/FeedArticleSheet.vue";
 import { useAuthStore } from "../../../../src/stores/auth";
+import { useFeedStore } from "../../../../src/stores/feed";
 
 const mountedWrappers = new Set<VueWrapper>();
 let consoleWarn: ReturnType<typeof vi.spyOn>;
@@ -240,6 +241,108 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.emitted("subscribe-source")).toEqual([[]]);
 	});
 
+	it("renders full-text provenance plus synchronized feed saves and related reading", async () => {
+		const wrapper = mountSheet(
+			{
+				props: {
+					show: true,
+					showSourceSubscribe: true,
+					source: {
+						type: "external_rss",
+						id: "source-reader-footer-1",
+						title: "深读周刊",
+						subscribed: false,
+					},
+					reader: {
+						default_variant: "full_text",
+						rss: { html: "<p>RSS 正文</p>" },
+						full_text: {
+							status: "success",
+							html: "<p>完整正文</p>",
+							word_count: 1280,
+						},
+					},
+					article: {
+						type: "feed_item",
+						published_at: "2026-06-20T00:00:00Z",
+						is_read: false,
+						feed_item: {
+							id: "feed-item-reader-footer-1",
+							feed_source_id: "source-reader-footer-1",
+							guid: "guid-reader-footer-1",
+							title: "正文结尾功能文章",
+							link: "https://example.com/reader-footer",
+							summary: "<p>摘要</p>",
+							rating_score: 4.5,
+							rating_count: 6,
+							published_at: "2026-06-20T00:00:00Z",
+							fetched_at: "2026-06-20T00:00:00Z",
+						},
+					},
+					relatedArticles: [
+						{
+							type: "feed_item",
+							published_at: "2026-06-19T00:00:00Z",
+							is_read: false,
+							feed_item: {
+								id: "feed-item-reader-related-1",
+								feed_source_id: "source-reader-footer-1",
+								guid: "guid-reader-related-1",
+								title: "同源推荐文章",
+								link: "https://example.com/related",
+								summary: "<p>相关正文</p>",
+								published_at: "2026-06-19T00:00:00Z",
+								fetched_at: "2026-06-19T00:00:00Z",
+							},
+						},
+						{
+							type: "feed_item",
+							published_at: "2026-06-18T00:00:00Z",
+							is_read: false,
+							feed_item: {
+								id: "feed-item-other-source-1",
+								feed_source_id: "other-source",
+								guid: "guid-other-source-1",
+								title: "其他来源文章",
+								link: "https://example.com/other",
+								summary: "<p>其他正文</p>",
+								published_at: "2026-06-18T00:00:00Z",
+								fetched_at: "2026-06-18T00:00:00Z",
+							},
+						},
+					],
+				},
+				global: {
+					stubs: {
+						PSheet: { template: "<section><slot /></section>" },
+						PBadge: true,
+					},
+				},
+			},
+			(authStore) => {
+				authStore.isAuthenticated = true;
+				authStore.token = "token";
+			},
+		);
+		const feedStore = useFeedStore();
+		const toggleStar = vi.spyOn(feedStore, "toggleStar").mockResolvedValue(true);
+
+		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
+			"发布时间：",
+		);
+		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
+			"请注意信息有效性",
+		);
+		expect(wrapper.get('[data-test="feed-article-rating"]').text()).toContain("4.5");
+		expect(wrapper.get('[data-test="feed-article-related-reading"]').text()).toContain("同源推荐文章");
+		expect(wrapper.text()).not.toContain("其他来源文章");
+		expect(wrapper.get('[data-test="feed-article-quick-star"]').attributes("aria-pressed")).toBe("false");
+		expect(wrapper.get('[data-test="feed-article-footer-star"]').attributes("aria-pressed")).toBe("false");
+
+		await wrapper.get('[data-test="feed-article-quick-star"]').trigger("click");
+		expect(toggleStar).toHaveBeenCalledWith("feed-item-reader-footer-1");
+	});
+
 	it("marks external feed content as width constrained prose", () => {
 		const wrapper = mountSheet({
 			props: {
@@ -433,9 +536,9 @@ describe("FeedArticleSheet", () => {
 		});
 
 		expect(wrapper.text()).toContain("Longform Weekly");
-		expect(wrapper.text()).toContain("已展示抓取的全文");
+		expect(wrapper.text()).toContain("信息有效性");
 		expect(wrapper.text()).toContain("约 1,280 字，4 分钟阅读");
-		expect(wrapper.get(".article-source-link").text()).toContain("在源站查看");
+		expect(wrapper.get(".article-source-link").attributes("aria-label")).toBe("在源站查看");
 	});
 
 	it("does not render previous and next navigation controls", () => {
@@ -496,7 +599,11 @@ describe("FeedArticleSheet", () => {
 			},
 			global: {
 				stubs: {
-					PSheet: { template: "<section><slot /></section>" },
+					PSheet: {
+						props: ["show"],
+						template:
+							'<section v-if="show" data-test="feed-reader-sheet"><slot /></section>',
+					},
 					PBadge: true,
 					PDiscussionFAB: {
 						template:
@@ -512,7 +619,11 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.emitted("previous")).toEqual([[]]);
 		expect(wrapper.emitted("next")).toEqual([[]]);
 
-		await wrapper.get('[data-test="open-comments"]').trigger("click");
+		const commentsTrigger = wrapper.get('[data-test="open-comments"]');
+		expect(
+			commentsTrigger.element.closest('[data-test="feed-reader-sheet"]'),
+		).not.toBeNull();
+		await commentsTrigger.trigger("click");
 		expect(wrapper.text()).toContain("评论区");
 
 		window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
@@ -591,7 +702,7 @@ describe("FeedArticleSheet", () => {
 			},
 		});
 
-		expect(fullTextWrapper.text()).toContain("已展示抓取的全文");
+		expect(fullTextWrapper.text()).toContain("信息有效性");
 		expect(fullTextWrapper.html()).toContain("全文");
 		expect(
 			fullTextWrapper
@@ -601,14 +712,14 @@ describe("FeedArticleSheet", () => {
 		await fullTextWrapper
 			.get('[data-test="feed-content-mode-rss"]')
 			.trigger("click");
-		expect(fullTextWrapper.text()).toContain("已展示 RSS 正文");
+		expect(fullTextWrapper.text()).toContain("RSS 正文");
 		expect(fullTextWrapper.html()).toContain("RSS 正文");
 		expect(
 			fullTextWrapper
 				.get('[data-test="feed-content-mode-rss"]')
 				.attributes("aria-checked"),
 		).toBe("true");
-		expect(summaryWrapper.text()).toContain("当前仅展示 RSS 摘要");
+		expect(summaryWrapper.text()).toContain("RSS 摘要");
 		expect(
 			summaryWrapper.find('[data-test="feed-content-mode-rss"]').exists(),
 		).toBe(false);

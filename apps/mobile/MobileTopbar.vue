@@ -26,7 +26,7 @@
     >
       <PlayCircle :size="19" aria-hidden="true" />
     </RouterLink>
-    <span v-else-if="!isAuthRoute" class="mobile-app-topbar__title">{{ mobileModuleLabel }}</span>
+    <span v-else-if="!isAuthRoute && route.path === '/modules'" class="mobile-app-topbar__title">{{ mobileModuleLabel }}</span>
     <RouterLink v-else to="/feed" class="mobile-app-topbar__brand">ATOMAN</RouterLink>
   </header>
 </template>
@@ -59,6 +59,7 @@ const mobileModule = computed<ModuleRoomKey | null>(() => {
 const isMusicRoute = computed(() => /^\/music(?:\/|$)/.test(route.path))
 const isVideoRoute = computed(() => route.path.startsWith('/videos/watch/'))
 const mobileModuleLabel = computed(() => {
+  if (route.path === '/') return '首页'
   if (route.path === '/modules') return '模块'
   if (route.path.startsWith('/inbox')) return '私信'
   if (route.path.startsWith('/studio')) return 'Studio'

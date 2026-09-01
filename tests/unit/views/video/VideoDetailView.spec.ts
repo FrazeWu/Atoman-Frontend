@@ -36,11 +36,19 @@ const InteractionBarStub = defineComponent({
 	},
 });
 
-const CommentSectionStub = defineComponent({
-	name: "CommentSection",
-	props: ["target", "noun", "currentTime", "canDelete"],
+const CommentSideSheetStub = defineComponent({
+	name: "CommentSideSheet",
+	props: [
+		"show",
+		"title",
+		"target",
+		"partialAnchor",
+		"noun",
+		"currentTime",
+		"canDelete",
+	],
 	emits: ["seek", "count-change"],
-	template: '<section data-test="comment-section" />',
+	template: '<section v-if="show" data-test="video-comment-sheet" />',
 });
 
 const PVideoPlayerShellStub = defineComponent({
@@ -77,7 +85,12 @@ const VideoRecommendationRowStub = defineComponent({
 
 const PostRatingControlStub = defineComponent({
 	name: "PostRatingControl",
-	props: ["viewerRating", "weightedRatingScore", "weightedRatingCount", "weightedRatingActive"],
+	props: [
+		"viewerRating",
+		"weightedRatingScore",
+		"weightedRatingCount",
+		"weightedRatingActive",
+	],
 	emits: ["rate", "clear"],
 	template: '<section data-test="video-rating-control" />',
 });
@@ -87,12 +100,6 @@ const PBookmarkButtonStub = defineComponent({
 	props: ["bookmarked", "disabled"],
 	emits: ["bookmark", "unbookmark"],
 	template: '<button type="button" data-test="video-bookmark" />',
-});
-
-const PSheetStub = defineComponent({
-	name: "PSheet",
-	props: ["show", "title"],
-	template: '<section v-if="show" data-test="video-comment-sheet"><slot /></section>',
 });
 
 function deferred<T>() {
@@ -159,14 +166,13 @@ async function mountVideoDetail(
 			stubs: {
 				RouterLink,
 				InteractionBar: InteractionBarStub,
-				CommentSection: CommentSectionStub,
+				CommentSideSheet: CommentSideSheetStub,
 				PVideoPlayerShell: PVideoPlayerShellStub,
 				VideoContinueList: VideoContinueListStub,
 				VideoCollectionPlaylist: VideoCollectionPlaylistStub,
 				VideoRecommendationRow: VideoRecommendationRowStub,
 				PostRatingControl: PostRatingControlStub,
 				PBookmarkButton: PBookmarkButtonStub,
-				PSheet: PSheetStub,
 				PButton: true,
 				VideoPlayerControls: VideoPlayerControlsStub,
 			},
@@ -220,7 +226,7 @@ describe("VideoDetailView shared interactions", () => {
 		expect(mocks.interactions.commentCount.value).toBe(0);
 		expect(wrapper.get('[data-testid="video-comments"]').exists()).toBe(true);
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
-		const comments = wrapper.findComponent(CommentSectionStub);
+		const comments = wrapper.findComponent(CommentSideSheetStub);
 		expect(comments.props("target")).toEqual({
 			kind: "video",
 			resourceId: "video-1",
@@ -240,7 +246,7 @@ describe("VideoDetailView shared interactions", () => {
 		const { wrapper } = await mountVideoDetail();
 		const authStore = useAuthStore();
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
-		const comments = wrapper.findComponent(CommentSectionStub);
+		const comments = wrapper.findComponent(CommentSideSheetStub);
 
 		expect(comments.props("canDelete")).toBe(false);
 
@@ -288,7 +294,7 @@ describe("VideoDetailView shared interactions", () => {
 		await flushPromises();
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
 
-		expect(wrapper.findComponent(CommentSectionStub).props("target")).toEqual({
+		expect(wrapper.findComponent(CommentSideSheetStub).props("target")).toEqual({
 			kind: "video",
 			resourceId: "video-2",
 		});
@@ -326,7 +332,7 @@ describe("VideoDetailView shared interactions", () => {
 			writable: true,
 		});
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
-		const comments = wrapper.findComponent(CommentSectionStub);
+		const comments = wrapper.findComponent(CommentSideSheetStub);
 		const currentTime = comments.props("currentTime") as () => number | null;
 
 		expect(currentTime()).toBe(12);
@@ -692,25 +698,35 @@ describe("VideoDetailView shared interactions", () => {
 			"fetch",
 			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 				const url = String(input);
-				if (init?.method === "POST" && url.endsWith("/view")) return makeJsonResponse({});
+				if (init?.method === "POST" && url.endsWith("/view"))
+					return makeJsonResponse({});
 				if (url.endsWith("/videos/video-1")) return makeJsonResponse(current);
-				if (url.endsWith("/videos/video-1/recommended")) return makeJsonResponse([next, outside]);
-				if (url.endsWith("/videos?collection_id=collection-1")) return makeJsonResponse([current, next]);
+				if (url.endsWith("/videos/video-1/recommended"))
+					return makeJsonResponse([next, outside]);
+				if (url.endsWith("/videos?collection_id=collection-1"))
+					return makeJsonResponse([current, next]);
 				if (url.endsWith("/videos/video-2")) return makeJsonResponse(next);
-				if (url.endsWith("/videos/video-2/recommended")) return makeJsonResponse([]);
+				if (url.endsWith("/videos/video-2/recommended"))
+					return makeJsonResponse([]);
 				throw new Error(`unexpected fetch: ${url}`);
 			}),
 		);
 
-		const { wrapper, router } = await mountVideoDetail("/videos/watch/video-1?collection=collection-1");
+		const { wrapper, router } = await mountVideoDetail(
+			"/videos/watch/video-1?collection=collection-1",
+		);
 		const playlist = wrapper.getComponent(VideoCollectionPlaylistStub);
 		expect(playlist.props("collection")).toMatchObject(collection);
 		expect(playlist.props("videos")).toEqual([current, next]);
-		expect(wrapper.getComponent(VideoRecommendationRowStub).props("videos")).toEqual([outside]);
+		expect(
+			wrapper.getComponent(VideoRecommendationRowStub).props("videos"),
+		).toEqual([outside]);
 
 		playlist.vm.$emit("select", "video-2");
 		await flushPromises();
-		expect(router.currentRoute.value.fullPath).toBe("/videos/watch/video-2?collection=collection-1");
+		expect(router.currentRoute.value.fullPath).toBe(
+			"/videos/watch/video-2?collection=collection-1",
+		);
 	});
 
 	it("falls back to the author-selected primary collection when the query collection omits the video", async () => {
@@ -729,29 +745,46 @@ describe("VideoDetailView shared interactions", () => {
 			"fetch",
 			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 				const url = String(input);
-				if (init?.method === "POST" && url.endsWith("/view")) return makeJsonResponse({});
+				if (init?.method === "POST" && url.endsWith("/view"))
+					return makeJsonResponse({});
 				if (url.endsWith("/videos/video-1")) return makeJsonResponse(current);
-				if (url.endsWith("/videos/video-1/recommended")) return makeJsonResponse([]);
-				if (url.endsWith("/videos?collection_id=collection-missing")) return makeJsonResponse([]);
-				if (url.endsWith("/videos?collection_id=collection-primary")) return makeJsonResponse([current, primaryNext]);
+				if (url.endsWith("/videos/video-1/recommended"))
+					return makeJsonResponse([]);
+				if (url.endsWith("/videos?collection_id=collection-missing"))
+					return makeJsonResponse([]);
+				if (url.endsWith("/videos?collection_id=collection-primary"))
+					return makeJsonResponse([current, primaryNext]);
 				throw new Error(`unexpected fetch: ${url}`);
 			}),
 		);
 
-		const { wrapper } = await mountVideoDetail("/videos/watch/video-1?collection=collection-missing");
-		expect(wrapper.getComponent(VideoCollectionPlaylistStub).props("collection")).toMatchObject(primary);
-		expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toContain("/api/v1/videos?collection_id=collection-missing");
-		expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toContain("/api/v1/videos?collection_id=collection-primary");
+		const { wrapper } = await mountVideoDetail(
+			"/videos/watch/video-1?collection=collection-missing",
+		);
+		expect(
+			wrapper.getComponent(VideoCollectionPlaylistStub).props("collection"),
+		).toMatchObject(primary);
+		expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toContain(
+			"/api/v1/videos?collection_id=collection-missing",
+		);
+		expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toContain(
+			"/api/v1/videos?collection_id=collection-primary",
+		);
 	});
 
 	it("opens comments in the shared right sheet and keeps the rating control in the interaction row", async () => {
 		const { wrapper } = await mountVideoDetail();
 
-		expect(wrapper.findComponent(CommentSectionStub).exists()).toBe(false);
-		expect(wrapper.getComponent(PostRatingControlStub).props("weightedRatingActive")).toBe(false);
+		const comments = wrapper.getComponent(CommentSideSheetStub);
+		expect(comments.props("show")).toBe(false);
+		expect(
+			wrapper.getComponent(PostRatingControlStub).props("weightedRatingActive"),
+		).toBe(false);
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
+		expect(comments.props("show")).toBe(true);
+		expect(comments.props("partialAnchor")).toBeInstanceOf(HTMLElement);
 		expect(wrapper.find('[data-test="video-comment-sheet"]').exists()).toBe(true);
-		expect(wrapper.findComponent(CommentSectionStub).props("target")).toEqual({
+		expect(comments.props("target")).toEqual({
 			kind: "video",
 			resourceId: "video-1",
 		});
@@ -760,7 +793,7 @@ describe("VideoDetailView shared interactions", () => {
 	it("评论抽屉的数量变化会同步互动计数", async () => {
 		const { wrapper } = await mountVideoDetail();
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
-		const comments = wrapper.findComponent(CommentSectionStub);
+		const comments = wrapper.findComponent(CommentSideSheetStub);
 		comments.vm.$emit("count-change", 3);
 		await wrapper.vm.$nextTick();
 

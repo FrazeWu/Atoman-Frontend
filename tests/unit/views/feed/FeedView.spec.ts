@@ -193,6 +193,26 @@ describe("FeedView", () => {
     });
   });
 
+  it("loads a selected hub leaf through the type-isolated update stream", async () => {
+    routeQuery.hub_type = "podcast";
+    routeQuery.hub_group_id = "podcast-group";
+    routeQuery.hub_membership_id = "podcast-member";
+
+    mount(FeedView, { global: { stubs: feedViewStubs } });
+    await flushPromises();
+
+    const hubRequest = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.find(([input]) =>
+        String(input).includes("/feed/subscription-hub/updates?"),
+      );
+    expect(String(hubRequest?.[0])).toContain("type=podcast");
+    expect(String(hubRequest?.[0])).toContain("group_id=podcast-group");
+    expect(String(hubRequest?.[0])).toContain("membership_id=podcast-member");
+    expect(String(hubRequest?.[0])).toContain("page=1");
+    expect(String(hubRequest?.[0])).toContain("limit=20");
+  });
+
   it("keeps a single source timeline unmerged and hides the merge control", async () => {
     routeQuery.source_id = "subscription-a";
     const feedStore = useFeedStore();

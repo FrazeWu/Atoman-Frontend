@@ -32,7 +32,8 @@ describe('FeedSourceIdentityCard', () => {
     expect(wrapper.get('[data-test="feed-source-card"]').element.tagName).toBe('ARTICLE')
     expect(wrapper.get('[data-test="feed-source-card"]').attributes('role')).toBe('button')
     expect((wrapper.vm as any).$options.inheritAttrs).toBe(false)
-    expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('少')
+    const favicon = wrapper.get('[data-test="feed-source-avatar"] img')
+    expect(favicon.attributes('src')).toBe('https://sspai.com/favicon.ico')
     expect(wrapper.get('[data-test="feed-source-title"]').text()).toBe('少数派')
     expect(wrapper.get('[data-test="feed-source-url"]').text()).toBe('sspai.com/feed')
     expect(wrapper.get('[data-test="feed-source-count"]').text()).toContain('128 订阅')
@@ -117,6 +118,45 @@ describe('FeedSourceIdentityCard', () => {
     expect(titleStyle.textTransform).toBe('none')
     expect(urlStyle.textTransform).toBe('none')
     expect(titleStyle.letterSpacing).toBe('normal')
+  })
+
+  it('falls back to the source initial when its cover cannot be loaded', async () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source: {
+          ...source,
+          coverUrl: 'https://cdn.example.com/source-cover.png',
+        },
+        color: 'hsl(12 70% 52%)',
+        avatarLabel: '少',
+        displayUrl: 'sspai.com/feed',
+      },
+    })
+
+    const image = wrapper.get('[data-test="feed-source-avatar"] img')
+    expect(image.attributes('src')).toBe('https://cdn.example.com/source-cover.png')
+
+    await image.trigger('error')
+
+    const favicon = wrapper.get('[data-test="feed-source-avatar"] img')
+    expect(favicon.attributes('src')).toBe('https://sspai.com/favicon.ico')
+
+    await favicon.trigger('error')
+
+    expect(wrapper.find('[data-test="feed-source-avatar"] img').exists()).toBe(false)
+    expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('少')
+
+    await wrapper.setProps({
+      source: {
+        ...source,
+        coverUrl: 'https://cdn.example.com/next-source-cover.png',
+        rssUrl: 'https://next.example.com/feed.xml',
+      },
+    })
+
+    expect(wrapper.get('[data-test="feed-source-avatar"] img').attributes('src')).toBe(
+      'https://cdn.example.com/next-source-cover.png',
+    )
   })
 
   it('renders description, compact stats, and recent previews for recommendation cards', () => {

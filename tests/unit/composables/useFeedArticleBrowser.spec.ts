@@ -51,6 +51,7 @@ describe("useFeedArticleBrowser", () => {
 
     const sourceAItem = createFeedItem("item-a", "source-a", "来源 A");
     const sourceBItem = createFeedItem("item-b", "source-b", "来源 B");
+    sourceBItem.feed_item!.feed_source!.cover_url = "https://cdn.example.com/source-b-cover.png";
     const sourceAResponse = deferredResponse({ data: [sourceAItem] });
     const sourceBResponse = deferredResponse({ data: [sourceBItem] });
 
@@ -96,6 +97,9 @@ describe("useFeedArticleBrowser", () => {
     const secondOpen = browser.openFeedItemSourceSheet(sourceBItem.feed_item!);
 
     expect(browser.selectedSource.value?.id).toBe("source-b");
+    expect(browser.selectedSource.value?.imageUrl).toBe(
+      "https://cdn.example.com/source-b-cover.png",
+    );
     expect(browser.sourceArticlesLoading.value).toBe(true);
 
     sourceBResponse.resolve();

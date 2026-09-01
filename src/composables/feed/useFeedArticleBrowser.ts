@@ -213,6 +213,7 @@ export function useFeedArticleBrowser({
 			type: "internal_channel",
 			id: channelID,
 			title: item.post.channel?.name || "",
+			imageUrl: item.post.channel?.cover_url,
 			subscribed: false,
 		};
 		const subscription = findSubscriptionForSource(source);
@@ -230,6 +231,7 @@ export function useFeedArticleBrowser({
 			id: sourceID,
 			title: item.feed_source?.title || "",
 			rssUrl: item.feed_source?.rss_url,
+			imageUrl: item.feed_source?.cover_url,
 			subscribed: false,
 		};
 		const subscription = findSubscriptionForSource(source);

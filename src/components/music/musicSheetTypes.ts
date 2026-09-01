@@ -8,7 +8,6 @@ export type NestedActionType =
 	| "song_history"
 	| "add_album"
 	| "add_artist"
-	| "discussion"
 	| "revise_artist"
 	| "merge_artist"
 	| "merge_album"

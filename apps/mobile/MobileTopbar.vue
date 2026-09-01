@@ -10,7 +10,7 @@
       <ArrowLeft :size="18" aria-hidden="true" />
     </button>
     <MobileModuleSwitcher
-      v-if="!isAuthRoute && route.path !== '/modules'"
+      v-if="!isAuthRoute && !isVideoRoute && route.path !== '/modules'"
       :label="mobileModuleLabel"
       :current-module="mobileModule"
       :available-modules="availableModules"
@@ -57,17 +57,19 @@ const mobileModule = computed<ModuleRoomKey | null>(() => {
   return isBlogContextRoute.value ? 'blog' : null
 })
 const isMusicRoute = computed(() => /^\/music(?:\/|$)/.test(route.path))
+const isVideoRoute = computed(() => route.path.startsWith('/videos/watch/'))
 const mobileModuleLabel = computed(() => {
   if (route.path === '/') return '首页'
   if (route.path === '/modules') return '模块'
   if (route.path.startsWith('/inbox')) return '私信'
   if (route.path.startsWith('/studio')) return 'Studio'
+  if (isVideoRoute.value) return '视频'
   if (mobileModule.value === 'blog') return '博客'
   if (mobileModule.value === 'feed') return 'Feed'
   if (mobileModule.value === 'music') return '音乐'
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|lyrics|artist\/|album\/|song\/|playlist\/))/.test(route.path)))
+const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:player|lyrics|artist\/|album\/|song\/|playlist\/)|videos\/watch\/)/.test(route.path)))
 
 const goBack = () => {
   if (route.path === '/modules') {
@@ -79,6 +81,7 @@ const goBack = () => {
     return
   }
   if (mobileModule.value) void router.push(moduleUrl(mobileModule.value))
+  else if (isVideoRoute.value) void router.push('/feed')
 }
 </script>
 

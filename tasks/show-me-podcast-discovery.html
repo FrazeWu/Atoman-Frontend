@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>播客 Web - 发现页决策</title>
+  <style>
+    :root {
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --muted-surface: #f1f4f5;
+      --ink: #17252c;
+      --muted: #63747d;
+      --line: #d8e0e3;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+      --violet: #6d3eb0;
+      --violet-soft: #f1ebfb;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    main { width: min(1200px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 56px; }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: 0; }
+    .lede { max-width: 790px; margin: 12px 0 30px; color: var(--muted); }
+
+    .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 28px; }
+    .flow-step { padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .flow-step b, .flow-step span { display: block; }
+    .flow-step b { font-size: 13px; }
+    .flow-step span { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .flow-step.active { border-color: var(--teal); background: var(--teal-soft); }
+    .flow-step.active b { color: var(--teal); }
+
+    .workspace { display: grid; grid-template-columns: 208px minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+    .sidebar, .content, .decision { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .sidebar { overflow: hidden; }
+    .side-brand { display: flex; align-items: center; gap: 9px; padding: 17px; border-bottom: 1px solid var(--line); }
+    .brand-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 5px; background: var(--teal); color: #fff; font-size: 13px; font-weight: 800; }
+    .side-brand b, .side-brand span { display: block; }
+    .side-brand span { color: var(--muted); font-size: 11px; }
+    .side-list { padding: 12px 8px; }
+    .side-item { display: flex; min-height: 42px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 5px; color: var(--ink); font-size: 14px; }
+    .side-item.active { background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .side-icon { width: 17px; text-align: center; }
+
+    .content { padding: 24px; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .page-header h2 { margin: 0; font-size: 24px; letter-spacing: 0; }
+    .page-header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    .search { display: flex; min-height: 38px; align-items: center; gap: 8px; margin-top: 22px; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-size: 13px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-top: 25px; }
+    .section-head h3 { margin: 0; font-size: 17px; letter-spacing: 0; }
+    .section-head p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .tabs { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 5px; background: var(--muted-surface); }
+    .tab { padding: 4px 7px; border-radius: 3px; color: var(--muted); font-size: 12px; }
+    .tab.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(20 35 40 / 10%); }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .card { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    .cover { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-weight: 800; }
+    .cover.creator { background: var(--violet-soft); color: var(--violet); }
+    .card-top { display: flex; align-items: flex-start; gap: 10px; }
+    .card h4 { margin: 0; font-size: 13px; line-height: 1.35; }
+    .card p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .badge { display: inline-block; margin-top: 10px; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+    .badge.rss { background: var(--blue-soft); color: var(--blue); }
+    .badge.creator { background: var(--violet-soft); color: var(--violet); }
+    .latest { display: grid; gap: 8px; margin-top: 12px; }
+    .episode { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .episode:last-child { border-bottom: 0; }
+    .episode-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 4px; background: var(--muted-surface); font-size: 12px; }
+    .episode b, .episode span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .episode b { font-size: 12px; }
+    .episode span { margin-top: 1px; color: var(--muted); font-size: 11px; }
+    .episode time { color: var(--muted); font-size: 11px; }
+
+    .decision { padding: 22px; }
+    .decision h2 { margin: 0; font-size: 21px; line-height: 1.28; letter-spacing: 0; }
+    .decision > p { margin: 8px 0 18px; color: var(--muted); font-size: 14px; }
+    .options { display: grid; gap: 10px; }
+    .option { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+    .option:hover, .option:focus-visible { border-color: var(--blue); outline: 2px solid transparent; }
+    .option.selected { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); background: #fbfefe; }
+    .radio { width: 18px; height: 18px; margin-top: 1px; border: 2px solid #9aa8af; border-radius: 50%; }
+    .selected .radio { border: 5px solid var(--teal); }
+    .option strong, .option small { display: block; }
+    .option strong { font-size: 14px; }
+    .option small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .tag { display: inline-block; margin-top: 6px; padding: 2px 6px; border-radius: 3px; background: var(--teal-soft); color: var(--teal); font-size: 11px; font-weight: 700; }
+    .rule-list { margin: 20px 0 0; padding: 16px 0 0 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .rule-list li + li { margin-top: 7px; }
+    .summary { margin-top: 18px; padding: 13px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #184c50; font-size: 13px; }
+    .next { margin-top: 22px; padding: 14px; border: 1px solid #edd4a4; border-radius: 6px; background: var(--amber-soft); }
+    .next b, .next span { display: block; }
+    .next span { margin-top: 3px; color: var(--amber); font-size: 13px; }
+
+    @media (max-width: 980px) { .workspace { grid-template-columns: 180px minmax(0, 1fr); } .decision { grid-column: 1 / -1; } }
+    @media (max-width: 650px) { main { width: min(100% - 24px, 1200px); padding-top: 28px; } .flow { grid-template-columns: repeat(2, 1fr); } .workspace { grid-template-columns: 1fr; } .cards { grid-template-columns: 1fr; } .sidebar { display: none; } .content { padding: 18px; } .page-header { display: block; } .tabs { margin-top: 12px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Podcast Web / Discovery Decision</p>
+    <h1>发现页把 RSS 源与创作者内容放在哪里</h1>
+    <p class="lede">现有发现页已经有搜索、继续收听、推荐和最新单集。现在需确定内容来源是进入一个面向收听价值的推荐流，还是被来源类型拆开呈现。</p>
+
+    <nav class="flow" aria-label="需求决策进度">
+      <div class="flow-step"><b>内容来源</b><span>已确认</span></div>
+      <div class="flow-step"><b>侧边栏</b><span>已确认</span></div>
+      <div class="flow-step active"><b>发现页</b><span>正在确认</span></div>
+      <div class="flow-step"><b>播放与个人资料</b><span>待确认</span></div>
+    </nav>
+
+    <section class="workspace">
+      <aside class="sidebar" aria-label="已确认的播客侧边栏">
+        <div class="side-brand"><span class="brand-mark" aria-hidden="true">P</span><span><b>播客</b><span>你的收听空间</span></span></div>
+        <nav class="side-list" aria-label="播客导航">
+          <div class="side-item active"><span class="side-icon" aria-hidden="true">⌕</span>发现</div>
+          <div class="side-item"><span class="side-icon" aria-hidden="true">◌</span>订阅</div>
+          <div class="side-item"><span class="side-icon" aria-hidden="true">▱</span>收藏</div>
+          <div class="side-item"><span class="side-icon" aria-hidden="true">◷</span>历史</div>
+        </nav>
+      </aside>
+
+      <section class="content" aria-label="推荐的发现页预览">
+        <header class="page-header"><div><h2>发现</h2><p>从可信订阅源和创作者节目中发现值得收听的内容。</p></div></header>
+        <div class="search"><span aria-hidden="true">⌕</span> 搜索播客、单集或 RSS 源</div>
+
+        <div class="section-head"><div><h3>推荐</h3><p>以内容相关性排序，清楚标识来源。</p></div><div class="tabs"><span class="tab active">热度</span><span class="tab">精选</span><span class="tab">探索</span></div></div>
+        <div class="cards">
+          <article class="card"><div class="card-top"><div class="cover">R</div><div><h4>理解人工智能</h4><p>每周一集，讲清技术背后的影响。</p></div></div><span class="badge rss">RSS 订阅源</span></article>
+          <article class="card"><div class="card-top"><div class="cover creator">A</div><div><h4>Atoman Talk</h4><p>创作者发布的深度访谈与观点。</p></div></div><span class="badge creator">创作者节目</span></article>
+          <article class="card"><div class="card-top"><div class="cover">N</div><div><h4>新闻现场</h4><p>把复杂事件讲得清楚、完整。</p></div></div><span class="badge rss">RSS 订阅源</span></article>
+          <article class="card"><div class="card-top"><div class="cover creator">S</div><div><h4>声音实验室</h4><p>新锐创作者的音乐与故事项目。</p></div></div><span class="badge creator">创作者节目</span></article>
+        </div>
+
+        <div class="section-head"><div><h3>最新单集</h3><p>所有公开节目按发布时间排列。</p></div></div>
+        <div class="latest">
+          <article class="episode"><span class="episode-mark">▶</span><span><b>从模型到产品：如何把 AI 用在真实工作流</b><span>理解人工智能 · RSS 订阅源</span></span><time>今天</time></article>
+          <article class="episode"><span class="episode-mark">▶</span><span><b>一段采访的十种剪辑方式</b><span>Atoman Talk · 创作者节目</span></span><time>昨天</time></article>
+        </div>
+      </section>
+
+      <aside class="decision">
+        <h2>推荐流如何组织来源？</h2>
+        <p>此项影响用户能否理解内容出处，同时决定首页是否被来源分类切碎。</p>
+        <div class="options" role="radiogroup" aria-label="发现页内容来源布局">
+          <button class="option selected" type="button" role="radio" aria-checked="true" data-choice="统一推荐流并显示来源标签"><span class="radio" aria-hidden="true"></span><span><strong>统一推荐流并显示来源标签</strong><small>RSS 源和创作者节目进入同一推荐与最新流；卡片和单集清楚标识来源。</small><span class="tag">推荐</span></span></button>
+          <button class="option" type="button" role="radio" aria-checked="false" data-choice="按来源拆分推荐区"><span class="radio" aria-hidden="true"></span><span><strong>按来源拆分推荐区</strong><small>分别呈现“RSS 精选”和“创作者节目”。来源直观，但新用户需在两区之间判断。</small></span></button>
+          <button class="option" type="button" role="radio" aria-checked="false" data-choice="仅推荐 RSS 内容"><span class="radio" aria-hidden="true"></span><span><strong>仅推荐 RSS 内容</strong><small>创作者上传只出现在节目页或搜索结果。范围较小，但无法验证创作者内容的发现价值。</small></span></button>
+        </div>
+        <ul class="rule-list"><li>“热度、精选、探索”继续是排序视图，而非内容来源筛选。</li><li>每张卡显示一个固定来源标签：<strong>RSS 订阅源</strong>或<strong>创作者节目</strong>。</li><li>搜索同时匹配节目、单集和 RSS 源；结果也标注类型。</li><li>没有可推荐内容时，保留现有空状态与“探索更多节目”的恢复路径。</li></ul>
+        <p class="summary"><strong id="summary-label">当前建议：</strong><span id="summary-text">采用统一推荐流并显示来源标签。用户按收听价值浏览，仍能判断内容来自 RSS 订阅源还是站内创作者。</span></p>
+        <div class="next"><b>请确认一个选项</b><span>回复“统一推荐流”、“分区推荐”或“仅 RSS”。确认后将确定推荐的排序信号与新用户默认状态。</span></div>
+      </aside>
+    </section>
+  </main>
+  <script>
+    const options = document.querySelectorAll('.option');
+    const summaryLabel = document.querySelector('#summary-label');
+    const summaryText = document.querySelector('#summary-text');
+    const descriptions = {
+      '统一推荐流并显示来源标签': '采用统一推荐流并显示来源标签。用户按收听价值浏览，仍能判断内容来自 RSS 订阅源还是站内创作者。',
+      '按来源拆分推荐区': '将首页拆分为 RSS 精选与创作者节目两个推荐区。规格需要定义分区顺序、内容不足时的折叠方式与跨区重复规则。',
+      '仅推荐 RSS 内容': '推荐页仅展示 RSS 内容；创作者节目需要通过搜索、频道页或其他入口被发现。'
+    };
+    options.forEach((option) => {
+      option.addEventListener('click', () => {
+        options.forEach((item) => {
+          item.classList.remove('selected');
+          item.setAttribute('aria-checked', 'false');
+        });
+        option.classList.add('selected');
+        option.setAttribute('aria-checked', 'true');
+        summaryLabel.textContent = '当前选择：';
+        summaryText.textContent = descriptions[option.dataset.choice];
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订阅 - 真实使用页面</title>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --surface: #ffffff;
+      --surface-muted: #f1f4f5;
+      --ink: #17252c;
+      --text-secondary: #61727b;
+      --line: #d8e0e3;
+      --line-strong: #becbd0;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --violet: #6d3eb0;
+      --violet-soft: #f1ebfb;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+    }
+
+    * { box-sizing: border-box; }
+    body { min-width: 320px; margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.4; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { display: grid; grid-template-columns: 270px minmax(0, 1fr); min-height: 100vh; }
+    .sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 18px 12px 14px; border-right: 1px solid var(--line); background: var(--surface); }
+    .brand { display: flex; align-items: center; gap: 9px; min-height: 43px; padding: 0 10px 18px; border-bottom: 1px solid var(--line); }
+    .brand-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 5px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 800; }
+    .brand b, .brand span { display: block; }
+    .brand b { font-size: 14px; }
+    .brand span { margin-top: 1px; color: var(--text-secondary); font-size: 11px; }
+
+    .primary-nav { display: grid; gap: 3px; padding: 14px 0 12px; }
+    .primary-nav button { display: flex; min-height: 39px; align-items: center; gap: 10px; width: 100%; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); text-align: left; font-size: 13px; }
+    .primary-nav button.active { background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .nav-icon { display: grid; width: 18px; place-items: center; color: currentColor; font-size: 15px; }
+    .directory { min-height: 0; padding-top: 14px; border-top: 1px solid var(--line); }
+    .directory-head { display: flex; align-items: center; justify-content: space-between; min-height: 26px; padding: 0 9px; }
+    .directory-head p { margin: 0; color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .directory-head button { display: grid; width: 26px; height: 26px; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary); font-size: 15px; }
+    .directory-head button:hover { background: var(--surface-muted); color: var(--ink); }
+    .sidebar-search { width: 100%; height: 33px; margin: 9px 0 9px; padding: 0 10px; border: 1px solid var(--line); border-radius: 4px; outline: none; color: var(--ink); font-size: 12px; }
+    .sidebar-search:focus { border-color: var(--teal); }
+    .tree { overflow: auto; max-height: calc(100vh - 260px); padding: 0 1px; }
+    .tree-type { margin-top: 2px; }
+    .tree-type-head { display: flex; min-height: 36px; align-items: center; gap: 7px; width: 100%; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); text-align: left; font-size: 13px; font-weight: 700; }
+    .tree-type-head:hover { background: var(--surface-muted); }
+    .type-icon { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 4px; background: var(--teal-soft); color: var(--teal); font-size: 10px; font-weight: 800; }
+    .type-icon.video { background: var(--violet-soft); color: var(--violet); }
+    .type-icon.blog { background: var(--blue-soft); color: var(--blue); }
+    .type-icon.rss { background: var(--surface-muted); color: var(--text-secondary); }
+    .tree-type-head small { margin-left: auto; color: var(--text-secondary); font-size: 11px; font-weight: 500; }
+    .tree-groups { margin: 0 0 7px 18px; padding-left: 7px; border-left: 1px solid var(--line); }
+    .tree-group { margin-top: 2px; }
+    .tree-group button { display: flex; min-height: 31px; align-items: center; gap: 6px; width: 100%; padding: 0 7px; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary); text-align: left; font-size: 12px; }
+    .tree-group button.active { background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .tree-group button small { margin-left: auto; font-size: 10px; }
+    .tree-item { display: flex; min-height: 27px; align-items: center; gap: 6px; padding: 0 7px 0 18px; color: var(--text-secondary); font-size: 11px; }
+    .tree-item.active { color: var(--ink); font-weight: 700; }
+    .tree-avatar { display: grid; width: 16px; height: 16px; flex: 0 0 auto; place-items: center; border-radius: 3px; background: var(--blue-soft); color: var(--blue); font-size: 8px; font-weight: 800; }
+    .item-badge { min-width: 17px; margin-left: auto; padding: 1px 5px; border-radius: 8px; background: var(--teal-soft); color: var(--teal); font-size: 9px; text-align: center; }
+    .account { display: flex; align-items: center; gap: 9px; margin-top: auto; padding: 12px 8px 0; border-top: 1px solid var(--line); }
+    .account-avatar { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 800; }
+    .account b, .account span { display: block; }
+    .account b { font-size: 12px; }
+    .account span { color: var(--text-secondary); font-size: 10px; }
+
+    .content { min-width: 0; }
+    .content-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 28px 34px 20px; border-bottom: 1px solid var(--line); background: var(--surface); }
+    .breadcrumb { margin: 0 0 6px; color: var(--text-secondary); font-size: 12px; }
+    .breadcrumb strong { color: var(--ink); font-weight: 600; }
+    .content-head h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+    .content-head p { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
+    .header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .secondary-button, .primary-button { display: inline-flex; min-height: 35px; align-items: center; gap: 7px; padding: 0 11px; border-radius: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .secondary-button { border: 1px solid var(--line); background: var(--surface); color: var(--text-secondary); }
+    .secondary-button:hover { border-color: var(--line-strong); color: var(--ink); }
+    .primary-button { border: 1px solid var(--teal); background: var(--teal); color: #fff; }
+
+    .feed { width: min(920px, 100%); padding: 22px 34px 46px; }
+    .feed-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-bottom: 18px; }
+    .filter-list { display: flex; flex-wrap: wrap; gap: 7px; }
+    .filter { min-height: 30px; padding: 0 9px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--text-secondary); font-size: 12px; }
+    .filter.active { border-color: var(--line); background: var(--surface); color: var(--ink); font-weight: 700; }
+    .quiet-action { min-height: 30px; border: 0; background: transparent; color: var(--teal); font-size: 12px; font-weight: 700; }
+    .date-label { display: flex; align-items: center; gap: 9px; margin: 22px 0 8px; color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .date-label::after { content: ''; height: 1px; flex: 1; background: var(--line); }
+    .update-list { overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); }
+    .update { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 15px; min-height: 108px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .update:last-child { border-bottom: 0; }
+    .cover-wrap { position: relative; padding-left: 1px; }
+    .cover { display: block; width: 76px; height: 76px; border-radius: 5px; object-fit: cover; background: var(--surface-muted); }
+    .unheard { position: absolute; top: 5px; right: 4px; width: 8px; height: 8px; border: 2px solid var(--surface); border-radius: 50%; background: var(--teal); }
+    .update-main { min-width: 0; padding-top: 2px; }
+    .update-main h2 { overflow: hidden; margin: 0; color: var(--ink); font-size: 15px; line-height: 1.35; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
+    .update-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 5px 0 0; color: var(--text-secondary); font-size: 12px; }
+    .update-meta .show-name { color: var(--teal); font-weight: 700; }
+    .update-summary { display: -webkit-box; overflow: hidden; margin: 7px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .update-side { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; min-width: 56px; padding: 3px 14px 3px 0; color: var(--text-secondary); font-size: 11px; }
+    .play { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--teal); font-size: 11px; }
+    .continue { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 15px; align-items: center; min-height: 76px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .continue .cover { width: 58px; height: 58px; }
+    .progress { height: 3px; margin-top: 8px; border-radius: 2px; background: var(--surface-muted); overflow: hidden; }
+    .progress > span { display: block; width: 43%; height: 100%; background: var(--teal); }
+    .empty-note { display: flex; align-items: center; gap: 9px; margin-top: 18px; padding: 12px; border-left: 3px solid var(--amber); background: var(--amber-soft); color: var(--amber); font-size: 12px; }
+
+    @media (max-width: 1030px) { .app { grid-template-columns: 70px minmax(0, 1fr); } .sidebar { padding: 14px 9px; } .brand { justify-content: center; padding: 0 0 16px; } .brand > span:last-child, .primary-nav span:not(.nav-icon), .account > span { display: none; } .primary-nav button { justify-content: center; padding: 0; } .directory-head p, .directory-head button, .sidebar-search, .tree { display: none; } .directory { min-height: 0; padding-top: 14px; } .account { justify-content: center; padding: 12px 0 0; } .content-head { padding: 25px 26px 18px; } .feed { padding: 20px 26px 40px; } }
+    @media (max-width: 720px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } .content-head { padding: 20px 16px 15px; } .feed { padding: 16px 16px 30px; } .update { grid-template-columns: 70px minmax(0, 1fr); gap: 11px; } .cover { width: 62px; height: 62px; } .update-side { display: none; } .update-main h2 { white-space: normal; } .continue { grid-template-columns: 66px minmax(0, 1fr); gap: 11px; } .content-head { flex-direction: column; } .header-actions { justify-content: flex-start; } }
+    @media (max-width: 430px) { .header-actions .secondary-button { display: none; } .feed-toolbar { align-items: flex-start; flex-direction: column; } .update-summary { -webkit-line-clamp: 1; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="主导航和订阅目录">
+      <header class="brand"><span class="brand-mark">A</span><span><b>Atoman</b><span>内容空间</span></span></header>
+      <nav class="primary-nav" aria-label="主导航">
+        <button type="button"><span class="nav-icon">⌕</span><span>发现</span></button>
+        <button type="button" class="active"><span class="nav-icon">◌</span><span>订阅</span></button>
+        <button type="button"><span class="nav-icon">▱</span><span>收藏</span></button>
+        <button type="button"><span class="nav-icon">◷</span><span>历史</span></button>
+      </nav>
+
+      <section class="directory" aria-label="订阅目录">
+        <header class="directory-head"><p>订阅目录</p><button type="button" title="管理类型与分组">⚙</button></header>
+        <input class="sidebar-search" type="search" placeholder="搜索频道、账号或 RSS" aria-label="搜索订阅目录">
+        <div class="tree">
+          <section class="tree-type">
+            <button type="button" class="tree-type-head"><span class="type-icon">P</span>播客<small>9</small></button>
+            <div class="tree-groups">
+              <div class="tree-group"><button type="button" class="active">⌄ A 分组 <small>3</small></button><div class="tree-item active"><span class="tree-avatar">A</span>频道 A<span class="item-badge">2</span></div><div class="tree-item"><span class="tree-avatar">S</span>声音档案<span class="item-badge">1</span></div><div class="tree-item"><span class="tree-avatar">T</span>技术与社会</div></div>
+              <div class="tree-group"><button type="button">› 新闻 <small>6</small></button></div>
+              <div class="tree-group"><button type="button">› 未分类 <small>0</small></button></div>
+            </div>
+          </section>
+          <section class="tree-type">
+            <button type="button" class="tree-type-head"><span class="type-icon video">V</span>视频<small>12</small></button>
+            <div class="tree-groups"><div class="tree-group"><button type="button">› B 分组 <small>4</small></button></div><div class="tree-group"><button type="button">› 学习 <small>8</small></button></div></div>
+          </section>
+          <section class="tree-type">
+            <button type="button" class="tree-type-head"><span class="type-icon blog">B</span>博客<small>10</small></button>
+            <div class="tree-groups"><div class="tree-group"><button type="button">› 阅读 <small>4</small></button></div><div class="tree-group"><button type="button">› 工作 <small>6</small></button></div></div>
+          </section>
+          <section class="tree-type">
+            <button type="button" class="tree-type-head"><span class="type-icon rss">R</span>RSS<small>17</small></button>
+            <div class="tree-groups"><div class="tree-group"><button type="button">› 设计 <small>5</small></button></div><div class="tree-group"><button type="button">› 技术 <small>12</small></button></div></div>
+          </section>
+        </div>
+      </section>
+      <footer class="account"><span class="account-avatar">Y</span><span><b>Yuki</b><span>个人账户</span></span></footer>
+    </aside>
+
+    <main class="content">
+      <header class="content-head">
+        <div><p class="breadcrumb">订阅 / 播客 / <strong>A 分组</strong></p><h1>A 分组</h1><p>3 个已订阅频道 · 按发布时间汇总最新单集</p></div>
+        <div class="header-actions"><button type="button" class="secondary-button">管理分组</button><button type="button" class="primary-button">+ 添加订阅</button></div>
+      </header>
+
+      <section class="feed" aria-label="A 分组的播客更新">
+        <div class="feed-toolbar"><div class="filter-list"><button type="button" class="filter active">最新更新</button><button type="button" class="filter">未听 3</button><button type="button" class="filter">收听中 1</button></div><button type="button" class="quiet-action">全部标为已听</button></div>
+
+        <p class="date-label">今天</p>
+        <section class="update-list">
+          <article class="update">
+            <div class="cover-wrap"><img class="cover" alt="频道 A 封面" src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=180&q=80"><span class="unheard"></span></div>
+            <div class="update-main"><h2>把模型放进真实工作流</h2><p class="update-meta"><span class="show-name">频道 A</span><span>第 42 期</span><span>48 分钟</span></p><p class="update-summary">从原型到团队协作，讨论自动化如何真正进入日常工作，而不只是停留在演示。</p></div>
+            <div class="update-side"><span>09:30</span><button class="play" type="button" title="播放：把模型放进真实工作流">▶</button></div>
+          </article>
+          <article class="update">
+            <div class="cover-wrap"><img class="cover" alt="声音档案封面" src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=180&q=80"><span class="unheard"></span></div>
+            <div class="update-main"><h2>用声音保存城市记忆</h2><p class="update-meta"><span class="show-name">声音档案</span><span>第 18 期</span><span>55 分钟</span></p><p class="update-summary">一段旧录音如何带回城市的声音层次，也带回人与地方之间逐渐被忽略的关系。</p></div>
+            <div class="update-side"><span>08:15</span><button class="play" type="button" title="播放：用声音保存城市记忆">▶</button></div>
+          </article>
+        </section>
+
+        <p class="date-label">继续收听</p>
+        <section class="update-list">
+          <article class="continue">
+            <img class="cover" alt="技术与社会封面" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=180&q=80">
+            <div class="update-main"><h2>当基础设施成为产品的一部分</h2><p class="update-meta"><span class="show-name">技术与社会</span><span>已听 18:04 / 41:20</span></p><div class="progress"><span></span></div></div>
+            <button class="play" type="button" title="继续播放：当基础设施成为产品的一部分">▶</button>
+          </article>
+        </section>
+
+        <p class="date-label">昨天</p>
+        <section class="update-list">
+          <article class="update">
+            <div class="cover-wrap"><img class="cover" alt="频道 A 封面" src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=180&q=80"><span class="unheard"></span></div>
+            <div class="update-main"><h2>远程协作的决策成本</h2><p class="update-meta"><span class="show-name">频道 A</span><span>第 41 期</span><span>36 分钟</span></p><p class="update-summary">把沟通密度与决策质量拆开看，找到异步协作中真正需要同步的时刻。</p></div>
+            <div class="update-side"><span>昨天</span><button class="play" type="button" title="播放：远程协作的决策成本">▶</button></div>
+          </article>
+        </section>
+
+        <p class="empty-note"><span>i</span><span>切换侧边栏中的视频、博客或 RSS 分组后，这里只呈现该类型与分组下的更新内容。</span></p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

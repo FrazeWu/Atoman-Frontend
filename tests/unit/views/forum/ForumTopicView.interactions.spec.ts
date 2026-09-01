@@ -43,8 +43,8 @@ const InteractionBarStub = defineComponent({
   },
 })
 
-const CommentSectionStub = defineComponent({
-  name: 'CommentSection',
+const CommentSideSheetStub = defineComponent({
+  name: 'CommentSideSheet',
   props: ['target', 'noun', 'markLabel', 'readonly', 'canDelete'],
   emits: ['count-change'],
   template: '<section data-test="comment-section" />',
@@ -125,7 +125,7 @@ async function mountTopicView() {
         PSelect: { template: '<select />' },
         PTextarea: { template: '<textarea />' },
         InteractionBar: InteractionBarStub,
-        CommentSection: CommentSectionStub,
+        CommentSideSheet: CommentSideSheetStub,
         ForumReplyNode: { template: '<div data-test="legacy-reply-node" />' },
       },
     },
@@ -165,7 +165,7 @@ describe('ForumTopicView shared interactions', () => {
     expect(mocks.interactions.likeCount.value).toBe(9)
     expect(mocks.interactions.commentCount.value).toBe(4)
     expect(mocks.interactions.fetchComments).not.toHaveBeenCalled()
-    const section = wrapper.findComponent(CommentSectionStub)
+    const section = wrapper.findComponent(CommentSideSheetStub)
     expect(section.exists()).toBe(true)
     expect(section.props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-1' })
     expect(section.props('noun')).toBe('回复')
@@ -182,7 +182,7 @@ describe('ForumTopicView shared interactions', () => {
 
     expect(fetchTopicSpy).toHaveBeenLastCalledWith('topic-2')
     expect(mocks.useInteractions.mock.calls[0][2].value).toBe('topic-2')
-    expect(wrapper.findComponent(CommentSectionStub).props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-2' })
+    expect(wrapper.findComponent(CommentSideSheetStub).props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-2' })
     expect(mocks.interactions.fetchComments).not.toHaveBeenCalled()
   })
 
@@ -222,7 +222,7 @@ describe('ForumTopicView shared interactions', () => {
 
   it('将关闭状态、全局删除权限和评论数同步交给统一评论区', async () => {
     const { wrapper } = await mountTopicView()
-    const section = wrapper.findComponent(CommentSectionStub)
+    const section = wrapper.findComponent(CommentSideSheetStub)
     expect(section.props('canDelete')).toBe(false)
 
     const authStore = useAuthStore()

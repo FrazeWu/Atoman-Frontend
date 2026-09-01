@@ -6,6 +6,8 @@ import AlbumDrawer from "../../../../src/components/music/AlbumDrawer.vue";
 
 vi.mock("@/components/ui/PSheet.vue", () => ({
 	default: {
+		name: "PSheet",
+		props: ["show", "title", "isShifted", "isTopLayer"],
 		template: "<div><slot /></div>",
 	},
 }));
@@ -15,6 +17,15 @@ vi.mock("@/components/ui/PDiscussionFAB.vue", () => ({
 		props: ["count"],
 		template:
 			'<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>',
+	},
+}));
+
+vi.mock("@/components/comment/CommentSideSheet.vue", () => ({
+	default: {
+		name: "CommentSideSheet",
+		props: ["show", "title", "target", "isShifted", "isTopLayer"],
+		emits: ["close", "mode-change", "count-change"],
+		template: '<section data-test="album-comment-side-sheet"><slot /></section>',
 	},
 }));
 
@@ -263,6 +274,35 @@ describe("AlbumDrawer.vue", () => {
 		expect(wrapper.findAll(".track")).toHaveLength(21);
 		expect(wrapper.text()).toContain("21 首");
 		expect(wrapper.findComponent({ name: "PaginationBar" }).exists()).toBe(false);
+	});
+
+	it("opens album comments through the unified side sheet and keeps its count synchronized", async () => {
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		await wrapper.get('[data-test="discussion-fab"]').trigger("click");
+
+		expect(openNestedAction).not.toHaveBeenCalled();
+		const commentSheet = wrapper.getComponent({ name: "CommentSideSheet" });
+		expect(commentSheet.props()).toMatchObject({
+			show: true,
+			title: "专辑评论-Test Album",
+			target: { kind: "music_album", resourceId: "1" },
+		});
+
+		commentSheet.vm.$emit("count-change", 3);
+		await flushPromises();
+		expect(wrapper.get('[data-test="discussion-fab"]').text()).toContain("(3)");
+
+		commentSheet.vm.$emit("mode-change", "full");
+		await flushPromises();
+		const albumSheet = wrapper.getComponent({ name: "PSheet" });
+		expect(albumSheet.props()).toMatchObject({ isShifted: true, isTopLayer: false });
+
+		commentSheet.vm.$emit("close");
+		await flushPromises();
+		expect(commentSheet.props("show")).toBe(false);
+		expect(albumSheet.props()).toMatchObject({ isShifted: false, isTopLayer: true });
 	});
 
 	it("opens album history from the contributors block", async () => {

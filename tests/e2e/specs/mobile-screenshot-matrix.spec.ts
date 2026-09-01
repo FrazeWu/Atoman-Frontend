@@ -230,6 +230,23 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
       body = {
         data: { personalized: false, recently_played: [], for_you: [] },
       };
+    } else if (pathname.endsWith("/videos/video-1/recommended")) {
+      body = [];
+    } else if (pathname.endsWith("/videos/video-1")) {
+      body = {
+        id: "video-1",
+        title: "测试视频",
+        description: "用于移动端截图验证的视频详情。",
+        video_url: "https://example.test/video",
+        thumbnail_url: "",
+        storage_type: "external",
+        duration_sec: 120,
+        visibility: "public",
+        view_count: 0,
+        created_at: "2026-01-01T00:00:00Z",
+        tags: [],
+        collections: [],
+      };
     } else if (/\/music\/playlists\/[^/]+\/songs$/.test(pathname)) {
       body = listResponse();
     } else if (

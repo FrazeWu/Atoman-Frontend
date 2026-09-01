@@ -181,6 +181,47 @@ describe('PortalView', () => {
     expect(card.get('.music-summary').text()).toContain('2024')
   })
 
+  it('作者头像缺失时使用频道封面', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          featured,
+          sections: [
+            {
+              module: 'blog',
+              title: '热门文章',
+              items: [{
+                ...featured[0],
+                id: 'blog-channel-fallback',
+                author_name: '频道作者',
+                author_username: 'channel-owner',
+                author_avatar_url: '',
+                source_image_url: 'https://example.com/channel-owner.png',
+              }],
+            },
+          ],
+        },
+      }),
+    } as Response)
+
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: {
+          PButton: true,
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('img[alt="频道作者 的头像"]').attributes('src')).toContain('/channel-owner.png')
+  })
+
   it('在博客与订阅模块区展示作者和来源头像', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,

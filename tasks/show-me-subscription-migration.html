@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>订阅模型修复与迁移方案</title>
+    <style>
+      :root {
+        --page: #f5f7f8;
+        --surface: #ffffff;
+        --muted-surface: #f0f4f5;
+        --ink: #17252c;
+        --muted: #63747d;
+        --line: #d8e0e3;
+        --teal: #006d77;
+        --teal-soft: #e2f2f0;
+        --blue: #245fc7;
+        --blue-soft: #e8effd;
+        --violet: #6d3eb0;
+        --violet-soft: #f1ebfb;
+        --amber: #9a5b09;
+        --amber-soft: #fff2dc;
+        --red: #b42318;
+        --red-soft: #fff0ee;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        width: min(1200px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0 56px;
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--teal);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.16;
+        letter-spacing: 0;
+      }
+      .lede {
+        max-width: 840px;
+        margin: 12px 0 28px;
+        color: var(--muted);
+      }
+      .principle {
+        padding: 15px 17px;
+        border-left: 3px solid var(--teal);
+        background: var(--teal-soft);
+        color: #174b4f;
+        font-size: 14px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 21px;
+        letter-spacing: 0;
+      }
+      h3 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: 0;
+      }
+      .section {
+        margin-top: 24px;
+      }
+      .section-head {
+        margin-bottom: 13px;
+      }
+      .section-head p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .model {
+        display: grid;
+        grid-template-columns: 1fr 42px 1fr 42px 1.45fr;
+        align-items: center;
+        gap: 10px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      .entity {
+        min-height: 126px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+      }
+      .entity b,
+      .entity span {
+        display: block;
+      }
+      .entity b {
+        font-size: 15px;
+      }
+      .entity span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .entity.target {
+        border-color: #9bbbe9;
+        background: var(--blue-soft);
+      }
+      .entity.subscription {
+        border-color: #8fbbbe;
+        background: var(--teal-soft);
+      }
+      .entity.contexts {
+        background: var(--muted-surface);
+      }
+      .arrow {
+        position: relative;
+        height: 2px;
+        background: var(--line);
+      }
+      .arrow::after {
+        content: "";
+        position: absolute;
+        top: -4px;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        transform: rotate(-45deg);
+        border-right: 2px solid var(--line);
+        border-bottom: 2px solid var(--line);
+      }
+      .context-list {
+        display: grid;
+        gap: 7px;
+        margin-top: 9px;
+      }
+      .context {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 7px;
+        padding: 7px 8px;
+        border-radius: 4px;
+        background: var(--surface);
+        font-size: 12px;
+      }
+      .context.podcast {
+        border-left: 3px solid var(--teal);
+      }
+      .context.video {
+        border-left: 3px solid var(--violet);
+      }
+      .pill {
+        flex: 0 0 auto;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 11px;
+      }
+      .pill.video {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+
+      .contracts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .contract {
+        padding: 17px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+      }
+      .contract p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .contract code {
+        display: block;
+        margin-top: 12px;
+        padding: 7px 8px;
+        border-radius: 4px;
+        background: var(--muted-surface);
+        color: #35505a;
+        font:
+          11px/1.45 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        white-space: pre-wrap;
+      }
+
+      .scenario {
+        display: grid;
+        grid-template-columns: 265px minmax(0, 1fr);
+        gap: 16px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      .actions {
+        display: grid;
+        gap: 8px;
+      }
+      .action {
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        padding: 10px;
+        border-radius: 5px;
+        background: var(--muted-surface);
+        font-size: 13px;
+      }
+      .number {
+        display: grid;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--teal);
+        color: white;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .result {
+        padding: 17px;
+        border-radius: 6px;
+        background: var(--teal-soft);
+      }
+      .result h3 {
+        color: #174b4f;
+      }
+      .tree {
+        margin: 13px 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 13px;
+      }
+      .tree li {
+        padding: 5px 0;
+      }
+      .tree li::before {
+        display: inline-block;
+        width: 22px;
+        color: var(--muted);
+        content: "└─";
+      }
+      .tree .nested {
+        margin-left: 22px;
+      }
+      .tree .nested::before {
+        content: "├─";
+      }
+      .tree .podcast-label {
+        color: var(--teal);
+        font-weight: 700;
+      }
+      .tree .video-label {
+        color: var(--violet);
+        font-weight: 700;
+      }
+
+      .migration {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .phase {
+        position: relative;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+      }
+      .phase b {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--teal);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .phase h3 {
+        font-size: 15px;
+      }
+      .phase p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .phase:not(:last-child)::after {
+        content: "→";
+        position: absolute;
+        top: 50%;
+        right: -20px;
+        z-index: 1;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .checks {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .checks article {
+        padding: 20px;
+        border-radius: 8px;
+      }
+      .checks .required {
+        border: 1px solid #9dc7c7;
+        background: var(--teal-soft);
+      }
+      .checks .guard {
+        border: 1px solid #e3b4ad;
+        background: var(--red-soft);
+      }
+      .checks ul {
+        margin: 12px 0 0;
+        padding-left: 18px;
+        font-size: 13px;
+      }
+      .checks li + li {
+        margin-top: 7px;
+      }
+      .checks .required li {
+        color: #174b4f;
+      }
+      .checks .guard li {
+        color: #8e2e24;
+      }
+      .decision {
+        margin-top: 22px;
+        padding: 16px 18px;
+        border: 1px solid #edd4a4;
+        border-radius: 8px;
+        background: var(--amber-soft);
+      }
+      .decision b {
+        display: block;
+        color: #704811;
+      }
+      .decision p {
+        margin: 5px 0 0;
+        color: var(--amber);
+        font-size: 14px;
+      }
+
+      @media (max-width: 880px) {
+        .model {
+          grid-template-columns: 1fr;
+        }
+        .arrow {
+          width: 2px;
+          height: 26px;
+          margin: -5px auto;
+        }
+        .arrow::after {
+          top: auto;
+          bottom: 0;
+          right: -3px;
+          transform: rotate(45deg);
+        }
+        .contracts,
+        .migration {
+          grid-template-columns: 1fr 1fr;
+        }
+        .phase:not(:last-child)::after {
+          display: none;
+        }
+      }
+      @media (max-width: 620px) {
+        main {
+          width: min(100% - 24px, 1200px);
+          padding-top: 28px;
+        }
+        .contracts,
+        .migration,
+        .checks,
+        .scenario {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Subscription Model Repair</p>
+      <h1>用模块订阅上下文修复跨模块分组冲突</h1>
+      <p class="lede">
+        保留全站统一的订阅目标，新增模块级归属记录。分组、提醒、排序和取消关注都作用于模块归属，而不是作用于全局订阅本身。
+      </p>
+      <p class="principle">
+        <strong>首期约束：</strong
+        >同一订阅目标在同一个模块内可属于零或一个分组；跨模块可以属于不同分组。这个约束与现有单选分组交互一致，避免现在引入不必要的多分组成员关系。
+      </p>
+
+      <section class="section">
+        <header class="section-head">
+          <h2>1. 新的数据边界</h2>
+          <p>目标去重与模块组织分别建模，所有跨模块行为才能可预测。</p>
+        </header>
+        <div class="model">
+          <article class="entity target">
+            <b>订阅目标</b><span>频道 A、RSS 源等可关注对象的规范标识。</span
+            ><span>唯一键：目标类型 + 目标 ID。</span>
+          </article>
+          <span class="arrow" aria-hidden="true"></span>
+          <article class="entity subscription">
+            <b>用户全局订阅</b
+            ><span>表示用户仍关注该目标，用于“全部订阅”聚合与去重。</span
+            ><span>唯一键：用户 + 订阅目标。</span>
+          </article>
+          <span class="arrow" aria-hidden="true"></span>
+          <article class="entity contexts">
+            <b>模块订阅上下文</b><span>唯一键：全局订阅 + 模块。</span>
+            <div class="context-list">
+              <div class="context podcast">
+                <span>播客 · A 分组</span><span class="pill">提醒：开</span>
+              </div>
+              <div class="context video">
+                <span>视频 · B 分组</span
+                ><span class="pill video">提醒：静音</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <header class="section-head">
+          <h2>2. 必需的持久化与 API 合约</h2>
+          <p>
+            不要给旧的全局订阅记录继续增加特殊字段；新增上下文层，并令分组带模块作用域。
+          </p>
+        </header>
+        <div class="contracts">
+          <article class="contract">
+            <h3>SubscriptionTarget</h3>
+            <p>
+              全站可订阅对象的规范引用。相同频道 A
+              不因为播客、视频各订一次而重复。
+            </p>
+            <code>id target_type target_id</code>
+          </article>
+          <article class="contract">
+            <h3>UserSubscription</h3>
+            <p>用户对目标 A 的全局关注事实。中央订阅中心按这个实体聚合。</p>
+            <code>id user_id target_id UNIQUE(user_id, target_id)</code>
+          </article>
+          <article class="contract">
+            <h3>ModuleSubscriptionContext</h3>
+            <p>
+              模块内的组织与设置。组、位置、静音、提醒、未读策略都放在这里。
+            </p>
+            <code
+              >id user_subscription_id module_key group_id?
+              UNIQUE(user_subscription_id, module_key)</code
+            >
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <header class="section-head">
+          <h2>3. 频道 A 的行为应当是什么</h2>
+          <p>
+            每个动作只修改当前模块的上下文；全局记录仅在最后一个上下文移除时删除。
+          </p>
+        </header>
+        <div class="scenario">
+          <div class="actions">
+            <div class="action">
+              <span class="number">1</span
+              ><span>在播客订阅频道 A，并放入 A 分组。</span>
+            </div>
+            <div class="action">
+              <span class="number">2</span
+              ><span>在视频订阅频道 A，并放入 B 分组。</span>
+            </div>
+            <div class="action">
+              <span class="number">3</span
+              ><span>把播客的频道 A 移到“通勤”分组。</span>
+            </div>
+            <div class="action">
+              <span class="number">4</span><span>取消视频订阅频道 A。</span>
+            </div>
+          </div>
+          <article class="result">
+            <h3>最后的数据与界面结果</h3>
+            <ul class="tree">
+              <li>全局订阅：频道 A 仍存在</li>
+              <li class="nested">
+                <span class="podcast-label">播客上下文</span>：通勤分组
+              </li>
+              <li class="nested">
+                <span class="video-label">视频上下文</span>：已删除
+              </li>
+            </ul>
+            <p>
+              中央订阅中心显示频道 A 的播客归属；视频侧栏不再显示频道
+              A；播客侧栏仍能按“通勤”筛选更新流。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <header class="section-head">
+          <h2>4. 无中断迁移顺序</h2>
+          <p>
+            先兼容旧读写，再切换展示，最后移除旧字段。不能在一次发布中直接替换所有订阅数据。
+          </p>
+        </header>
+        <div class="migration">
+          <article class="phase">
+            <b>Phase 1</b>
+            <h3>扩展结构</h3>
+            <p>
+              新增目标、上下文与带
+              <code>module_key</code> 的分组表/字段，不删除现有订阅和书签接口。
+            </p>
+          </article>
+          <article class="phase">
+            <b>Phase 2</b>
+            <h3>回填与双写</h3>
+            <p>
+              旧通用订阅归为原 feed 上下文；播客 show bookmark 回填为 podcast
+              上下文。新操作同时写旧、新模型。
+            </p>
+          </article>
+          <article class="phase">
+            <b>Phase 3</b>
+            <h3>切换读取</h3>
+            <p>
+              中央订阅中心读聚合视图；播客和视频侧栏只读本模块上下文；对比新旧计数与采样数据。
+            </p>
+          </article>
+          <article class="phase">
+            <b>Phase 4</b>
+            <h3>收敛旧模型</h3>
+            <p>
+              停止旧字段写入，迁移旧 API
+              到兼容层；确认没有回滚需求后删除过时分组关联。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <header class="section-head">
+          <h2>5. 上线前必须验证</h2>
+          <p>这些用例能直接证明不会再出现跨模块分组覆盖。</p>
+        </header>
+        <div class="checks">
+          <article class="required">
+            <h3>必须通过的行为测试</h3>
+            <ul>
+              <li>
+                同一频道在播客 A 分组、视频 B 分组，两个侧栏各自正确显示。
+              </li>
+              <li>修改播客分组不会改变视频分组、静音或提醒。</li>
+              <li>取消播客上下文后，视频上下文和全局订阅仍保留。</li>
+              <li>删除最后一个模块上下文后，全局订阅才消失。</li>
+              <li>中央订阅中心按一个目标聚合，并清晰展示各模块归属。</li>
+            </ul>
+          </article>
+          <article class="guard">
+            <h3>禁止发生的回归</h3>
+            <ul>
+              <li>不要把模块名编码进分组名称，例如“播客/科技”。</li>
+              <li>不要把频道 A 复制成两条无关联的全局订阅记录。</li>
+              <li>不要用前端本地映射遮掩后端单一 group 字段。</li>
+              <li>
+                不要在未完成回填前删除
+                <code>show-bookmarks</code> 或旧订阅接口。
+              </li>
+              <li>不要因取消一个模块的订阅而静默取消其他模块。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="decision">
+        <b>建议确认</b>
+        <p>
+          采用“全局订阅目标 + 每模块一个订阅上下文 +
+          每个上下文零或一个分组”的模型。确认后可以据此修订播客、视频与中央订阅中心的完整需求，并进入接口与迁移规格。
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

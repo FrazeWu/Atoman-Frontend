@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订阅 - 类型、分组与频道</title>
+  <style>
+    :root {
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --muted-surface: #f0f4f5;
+      --ink: #17252c;
+      --muted: #63747d;
+      --line: #d8e0e3;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --violet: #6d3eb0;
+      --violet-soft: #f1ebfb;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    main { width: min(1050px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 56px; }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.18; letter-spacing: 0; }
+    .lede { max-width: 780px; margin: 12px 0 28px; color: var(--muted); }
+    .rule { padding: 15px 17px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #174b4f; font-size: 15px; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 315px; gap: 18px; margin-top: 24px; align-items: start; }
+    .manager, .explain { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .manager { overflow: hidden; }
+    .manager-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 22px; border-bottom: 1px solid var(--line); }
+    .manager-head h2 { margin: 0; font-size: 23px; letter-spacing: 0; }
+    .manager-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .search { display: flex; min-height: 34px; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .tree { padding: 12px; }
+    .type { overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+    .type + .type { margin-top: 10px; }
+    .type-header { display: flex; min-height: 45px; align-items: center; gap: 9px; padding: 0 12px; border-bottom: 1px solid var(--line); background: #fbfcfc; }
+    .type-header b { font-size: 14px; }
+    .type-header span { margin-left: auto; color: var(--muted); font-size: 11px; }
+    .type-icon { display: grid; width: 25px; height: 25px; place-items: center; border-radius:4px; background: var(--teal-soft); color: var(--teal); font-size: 12px; font-weight: 800; }
+    .type-icon.video { background: var(--violet-soft); color: var(--violet); }
+    .type-icon.blog { background: var(--blue-soft); color: var(--blue); }
+    .type-icon.rss { background: var(--muted-surface); color: #506873; }
+    .groups { padding: 6px 0; }
+    .group { padding: 0 8px; }
+    .group-head { display: flex; min-height: 33px; align-items: center; gap: 6px; color: var(--ink); font-size: 12px; font-weight: 700; }
+    .group-head small { margin-left: auto; color: var(--muted); font-size: 11px; font-weight: 500; }
+    .items { border-left: 1px solid var(--line); margin: 0 0 7px 11px; padding-left: 9px; }
+    .item { display: flex; min-height: 36px; align-items: center; gap: 8px; color: var(--ink); font-size: 12px; }
+    .avatar { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 4px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 800; }
+    .item small { margin-left: auto; color: var(--muted); font-size: 11px; }
+    .item .count { min-width: 18px; padding: 1px 5px; border-radius: 9px; background: var(--teal-soft); color: var(--teal); font-size: 10px; text-align: center; }
+
+    .explain { padding: 22px; }
+    .explain h2 { margin: 0; font-size: 21px; line-height: 1.25; letter-spacing: 0; }
+    .explain > p { margin: 8px 0 18px; color: var(--muted); font-size: 14px; }
+    .levels { display: grid; gap: 10px; }
+    .level { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; }
+    .level-num { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: var(--teal); color: white; font-size: 11px; font-weight: 800; }
+    .level b, .level span { display: block; }
+    .level b { font-size: 14px; }
+    .level span { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .example { margin-top: 18px; padding: 13px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #174b4f; font-size: 13px; }
+    .example b { display: block; margin-bottom: 7px; }
+    .example code { display: block; margin-top: 4px; color: #245356; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+    .boundary { margin-top: 18px; padding: 13px; border: 1px solid #edd4a4; border-radius: 6px; background: var(--amber-soft); color: var(--amber); font-size: 12px; }
+    .boundary strong { display: block; color: #704811; font-size: 13px; }
+
+    .bottom { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+    .bottom article { padding: 15px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+    .bottom h2 { margin: 0; font-size: 14px; letter-spacing: 0; }
+    .bottom p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+    .confirm { margin-top: 18px; padding: 15px 17px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #174b4f; font-size: 14px; }
+
+    @media (max-width: 760px) { main { width: min(100% - 24px, 1050px); padding-top: 28px; } .layout, .bottom { grid-template-columns: 1fr; } .manager-head { flex-direction: column; } .search { width: 100%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Subscription Manager / Hierarchy</p>
+    <h1>订阅只按“类型 → 分组 → 频道或账号”管理</h1>
+    <p class="lede">没有“全部订阅”去重页，也没有跨类型的频道展开。每一种内容都是一个独立的类型分支；分组始终属于它的类型，频道或账号位于分组内。</p>
+    <p class="rule"><strong>唯一管理树：</strong>类型是第一层，分组是第二层，频道或账号是第三层。RSS 类型下的叶子是 RSS 订阅源。</p>
+
+    <section class="layout">
+      <section class="manager" aria-label="订阅管理树示意">
+        <header class="manager-head"><div><h2>订阅</h2><p>展开类型与分组，管理其中的频道、账号或 RSS 源。</p></div><div class="search">⌕ 搜索订阅</div></header>
+        <div class="tree">
+          <section class="type"><header class="type-header"><span class="type-icon">P</span><b>播客</b><span>9 个频道</span></header><div class="groups"><div class="group"><div class="group-head">⌄ A 分组 <small>3</small></div><div class="items"><div class="item"><span class="avatar">A</span>频道 A <span class="count">2</span></div><div class="item"><span class="avatar">S</span>声音档案</div></div></div><div class="group"><div class="group-head">⌄ 新闻 <small>6</small></div><div class="items"><div class="item"><span class="avatar">N</span>新闻慢读</div></div></div></div></section>
+          <section class="type"><header class="type-header"><span class="type-icon video">V</span><b>视频</b><span>12 个频道</span></header><div class="groups"><div class="group"><div class="group-head">⌄ B 分组 <small>4</small></div><div class="items"><div class="item"><span class="avatar">A</span>频道 A <span class="count">1</span></div><div class="item"><span class="avatar">P</span>产品周报</div></div></div><div class="group"><div class="group-head">⌄ 学习 <small>8</small></div></div></div></section>
+          <section class="type"><header class="type-header"><span class="type-icon blog">B</span><b>博客</b><span>10 个账号</span></header><div class="groups"><div class="group"><div class="group-head">⌄ 阅读 <small>4</small></div><div class="items"><div class="item"><span class="avatar">A</span>频道 A <span class="count">3</span></div><div class="item"><span class="avatar">L</span>长文观察</div></div></div><div class="group"><div class="group-head">⌄ 工作 <small>6</small></div></div></div></section>
+          <section class="type"><header class="type-header"><span class="type-icon rss">R</span><b>RSS</b><span>17 个来源</span></header><div class="groups"><div class="group"><div class="group-head">⌄ 设计 <small>5</small></div><div class="items"><div class="item"><span class="avatar">R</span>设计周刊 RSS <span class="count">4</span></div><div class="item"><span class="avatar">U</span>界面观察</div></div></div><div class="group"><div class="group-head">⌄ 技术 <small>12</small></div></div></div></section>
+        </div>
+      </section>
+
+      <aside class="explain"><h2>频道 A 在哪里显示？</h2><p>它会出现在每个已订阅类型对应的独立路径里，而不是被放到一个共享的全局分组。</p><div class="levels"><article class="level"><span class="level-num">1</span><span><b>类型</b><span>播客、视频、博客、RSS 互相独立。</span></span></article><article class="level"><span class="level-num">2</span><span><b>分组</b><span>A 分组只属于播客；B 分组只属于视频。</span></span></article><article class="level"><span class="level-num">3</span><span><b>频道或账号</b><span>频道 A 是各自类型分组中的一个叶子条目。</span></span></article></div><div class="example"><b>频道 A 的三个显示位置</b><code>播客  → A 分组 → 频道 A
+视频  → B 分组 → 频道 A
+博客  → 阅读分组 → 频道 A</code></div><div class="boundary"><strong>这不是冲突</strong>三个“频道 A”分别代表用户对播客、视频、博客内容的三项订阅。它们不合并，也不会因移动其中一项的分组而影响另外两项。</div></aside>
+    </section>
+
+    <section class="bottom"><article><h2>管理分组</h2><p>在一个类型内创建、重命名、排序与移动分组，不跨类型移动。</p></article><article><h2>管理叶子条目</h2><p>移动频道或账号时，只能移动到当前类型的另一个分组。</p></article><article><h2>取消订阅</h2><p>取消的是该类型下的频道或账号，不存在一次取消多个类型的操作。</p></article></section>
+    <p class="confirm"><strong>请确认：</strong>订阅模块采用这一棵固定管理树。后续我将基于它确定搜索行为、类型/分组的新增与排序、以及频道或账号的移动操作。</p>
+  </main>
+</body>
+</html>

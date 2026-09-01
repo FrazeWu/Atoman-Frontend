@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>播客 Web - 订阅侧栏分组决策</title>
+  <style>
+    :root {
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --muted-surface: #f0f4f5;
+      --ink: #17252c;
+      --muted: #63747d;
+      --line: #d8e0e3;
+      --teal: #006d77;
+      --teal-soft: #e2f2f0;
+      --blue: #245fc7;
+      --blue-soft: #e8effd;
+      --amber: #9a5b09;
+      --amber-soft: #fff2dc;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 56px; }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: 0; }
+    .lede { max-width: 790px; margin: 12px 0 30px; color: var(--muted); }
+
+    .context { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+    .context article { padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .context b, .context span { display: block; }
+    .context b { font-size: 13px; }
+    .context span { margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+    .workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr) 350px; gap: 20px; align-items: start; }
+    .sidebar, .preview, .decision { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .sidebar { overflow: hidden; }
+    .brand { display: flex; align-items: center; gap: 9px; padding: 17px; border-bottom: 1px solid var(--line); }
+    .brand-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 5px; background: var(--teal); color: #fff; font-size: 13px; font-weight: 800; }
+    .brand b, .brand span { display: block; }
+    .brand span { color: var(--muted); font-size: 11px; }
+    .primary { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+    .primary div { display: flex; min-height: 39px; align-items: center; gap: 8px; padding: 0 10px; border-radius: 5px; font-size: 13px; }
+    .primary div.active { background: var(--teal-soft); color: var(--teal); font-weight: 700; }
+    .subscription-area { padding: 15px 12px 12px; }
+    .sub-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sub-head b { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+    .sub-head button { border: 0; background: transparent; color: var(--teal); font: inherit; font-size: 12px; cursor: pointer; }
+    .search { display: flex; min-height: 34px; align-items: center; gap: 7px; margin: 12px 0 8px; padding: 0 9px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 12px; }
+    .quick-filter { display: inline-flex; margin-bottom: 10px; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--muted-surface); }
+    .quick-filter span { padding: 3px 6px; border-radius: 3px; color: var(--muted); font-size: 11px; }
+    .quick-filter .active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(20 35 40 / 10%); }
+    .group { margin-top: 8px; }
+    .group-title { display: flex; min-height: 31px; align-items: center; gap: 6px; color: var(--ink); font-size: 12px; font-weight: 700; }
+    .group-title .count { margin-left: auto; color: var(--muted); font-size: 11px; font-weight: 500; }
+    .show { display: flex; min-height: 32px; align-items: center; gap: 7px; padding-left: 18px; color: var(--muted); font-size: 12px; }
+    .show.active { color: var(--teal); font-weight: 700; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+    .show .badge { margin-left: auto; min-width: 19px; padding: 1px 5px; border-radius: 9px; background: var(--teal-soft); color: var(--teal); font-size: 10px; text-align: center; }
+
+    .preview { padding: 24px; }
+    .preview h2 { margin: 0; font-size: 23px; letter-spacing: 0; }
+    .preview > p { margin: 4px 0 18px; color: var(--muted); font-size: 13px; }
+    .filter-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border-radius: 5px; background: var(--teal-soft); color: #184c50; font-size: 13px; }
+    .filter-banner button { border: 0; background: transparent; color: var(--teal); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .date { margin: 20px 0 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .row { display: grid; grid-template-columns: 8px 42px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 66px; border-top: 1px solid var(--line); }
+    .row:last-child { border-bottom: 1px solid var(--line); }
+    .unread { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+    .cover { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-size: 12px; font-weight: 800; }
+    .row strong, .row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row strong { font-size: 13px; }
+    .row small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .row time { color: var(--muted); font-size: 11px; }
+    .hint { margin: 16px 0 0; padding: 11px 12px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #194c50; font-size: 12px; }
+
+    .decision { padding: 24px; }
+    .decision h2 { margin: 0; font-size: 22px; line-height: 1.25; letter-spacing: 0; }
+    .decision > p { margin: 8px 0 18px; color: var(--muted); font-size: 14px; }
+    .options { display: grid; gap: 10px; }
+    .option { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+    .option:hover, .option:focus-visible { border-color: var(--blue); outline: 2px solid transparent; }
+    .option.selected { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); background: #fbfefe; }
+    .radio { width: 18px; height: 18px; margin-top: 1px; border: 2px solid #9aa8af; border-radius: 50%; }
+    .selected .radio { border: 5px solid var(--teal); }
+    .option strong, .option small { display: block; }
+    .option strong { font-size: 14px; }
+    .option small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .tag { display: inline-block; margin-top: 6px; padding: 2px 6px; border-radius: 3px; background: var(--teal-soft); color: var(--teal); font-size: 11px; font-weight: 700; }
+    .rules { margin: 18px 0 0; padding: 15px 0 0 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .rules li + li { margin-top: 7px; }
+    .summary { margin-top: 18px; padding: 13px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: #184c50; font-size: 13px; }
+    .next { margin-top: 18px; padding: 14px; border: 1px solid #edd4a4; border-radius: 6px; background: var(--amber-soft); }
+    .next b, .next span { display: block; }
+    .next span { margin-top: 3px; color: var(--amber); font-size: 13px; }
+
+    @media (max-width: 980px) { .workspace { grid-template-columns: 250px minmax(0, 1fr); } .decision { grid-column: 1 / -1; } }
+    @media (max-width: 600px) { main { width: min(100% - 24px, 1180px); padding-top: 28px; } .context { grid-template-columns: 1fr; } .workspace { grid-template-columns: 1fr; } .sidebar { display: none; } .row { grid-template-columns: 8px 38px minmax(0, 1fr); } .row time { display: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Podcast Web / Subscription Sidebar Decision</p>
+    <h1>在侧边栏下方按订阅内容快速筛选</h1>
+    <p class="lede">订阅主页面已经是统一更新流。侧边栏“我的订阅”只提供节目与分组的快捷筛选，不能再复制一份单集时间线。</p>
+
+    <section class="context" aria-label="已有能力与新增边界">
+      <article><b>沿用现有交互</b><span>搜索、折叠分组、未读筛选、节目条目和未读数。</span></article>
+      <article><b>主页面职责</b><span>统一更新流，显示跨节目按时间排序的新单集。</span></article>
+      <article><b>侧边栏职责</b><span>在“我的订阅”内按分组或节目筛选主页面。</span></article>
+    </section>
+
+    <section class="workspace">
+      <aside class="sidebar" aria-label="推荐的播客侧边栏预览">
+        <header class="brand"><span class="brand-mark" aria-hidden="true">P</span><span><b>播客</b><span>你的收听空间</span></span></header>
+        <nav class="primary" aria-label="播客导航"><div>⌕ 发现</div><div class="active">◌ 订阅</div><div>▱ 收藏</div><div>◷ 历史</div></nav>
+        <section class="subscription-area" aria-label="我的订阅">
+          <header class="sub-head"><b>我的订阅</b><button type="button">管理</button></header>
+          <div class="search">⌕ 搜索节目</div>
+          <div class="quick-filter"><span class="active">全部</span><span>有更新</span></div>
+          <div class="group"><div class="group-title">⌄ 科技 <span class="count">5</span></div><div class="show active"><span class="dot"></span>理解人工智能 <span class="badge">2</span></div><div class="show"><span class="dot"></span>技术与社会</div></div>
+          <div class="group"><div class="group-title">⌄ 新闻 <span class="count">3</span></div><div class="show"><span class="dot"></span>新闻慢读 <span class="badge">1</span></div><div class="show"><span class="dot"></span>世界现场</div></div>
+          <div class="group"><div class="group-title">› 未分类 <span class="count">2</span></div></div>
+        </section>
+      </aside>
+
+      <section class="preview" aria-label="按分组筛选后的订阅主页面">
+        <h2>订阅</h2><p>统一更新流保留，当前显示“科技”分组的新单集。</p>
+        <div class="filter-banner"><span><strong>科技</strong> · 5 个已订阅节目</span><button type="button">清除筛选</button></div>
+        <p class="date">今天</p>
+        <article class="row"><span class="unread"></span><span class="cover">AI</span><span><strong>把模型放进真实工作流</strong><small>理解人工智能 · 42 分钟</small></span><time>09:30</time></article>
+        <article class="row"><span class="unread"></span><span class="cover">T</span><span><strong>当基础设施成为产品的一部分</strong><small>技术与社会 · 35 分钟</small></span><time>07:40</time></article>
+        <p class="hint">点击分组筛选节目集合；点击节目只筛选该节目。所有筛选都保留在统一更新流内，方便随时返回全部订阅。</p>
+      </section>
+
+      <aside class="decision">
+        <h2>“我的订阅”按什么方式分组？</h2>
+        <p>选择决定用户是否能按自己的收听习惯整理节目，也影响导入 RSS 时的默认归类。</p>
+        <div class="options" role="radiogroup" aria-label="订阅侧边栏分组方式">
+          <button class="option selected" type="button" role="radio" aria-checked="true" data-choice="用户自定义分组"><span class="radio" aria-hidden="true"></span><span><strong>用户自定义分组</strong><small>用户创建“科技、新闻、通勤”等分组，节目可移动到一个分组；未归类节目单独展示。</small><span class="tag">推荐</span></span></button>
+          <button class="option" type="button" role="radio" aria-checked="false" data-choice="按内容分类自动分组"><span class="radio" aria-hidden="true"></span><span><strong>按内容分类自动分组</strong><small>由 RSS 或节目分类自动聚合。免管理，但分类缺失或不同源标签不一致时容易混乱。</small></span></button>
+          <button class="option" type="button" role="radio" aria-checked="false" data-choice="按来源类型分组"><span class="radio" aria-hidden="true"></span><span><strong>按来源类型分组</strong><small>只分“RSS 订阅源”和“创作者节目”。实现直接，但无法帮助用户管理不同主题的节目。</small></span></button>
+        </div>
+        <ul class="rules"><li>侧边栏只在登录且有节目订阅时显示；折叠状态隐藏整个分组区。</li><li>分组与节目条目显示可靠的新单集数量；没有计数时不显示占位数字。</li><li>“有更新”只过滤未开始播放的新单集；收听中单集保留在统一更新流中。</li><li>点击“管理”进入订阅分组管理，不在侧边栏直接编辑。</li></ul>
+        <p class="summary"><strong id="summary-label">当前建议：</strong><span id="summary-text">采用用户自定义分组：沿用现有订阅分组交互，用户按收听场景组织节目，未分类节目始终可见。</span></p>
+        <div class="next"><b>请确认一个选项</b><span>回复“自定义分组”、“自动分类”或“来源分组”。确认后将确定收藏页中收藏、节目收藏和稍后听的组织方式。</span></div>
+      </aside>
+    </section>
+  </main>
+  <script>
+    const options = document.querySelectorAll('.option');
+    const summaryLabel = document.querySelector('#summary-label');
+    const summaryText = document.querySelector('#summary-text');
+    const summaries = {
+      '用户自定义分组': '采用用户自定义分组：沿用现有订阅分组交互，用户按收听场景组织节目，未分类节目始终可见。',
+      '按内容分类自动分组': '按内容分类自动分组。规格需要定义 RSS 分类与站内节目标签的统一映射、缺失分类与多分类展示规则。',
+      '按来源类型分组': '按来源类型分组为 RSS 订阅源与创作者节目。规格不需要用户分组管理，但将失去主题组织能力。'
+    };
+    options.forEach((option) => option.addEventListener('click', () => {
+      options.forEach((item) => { item.classList.remove('selected'); item.setAttribute('aria-checked', 'false'); });
+      option.classList.add('selected');
+      option.setAttribute('aria-checked', 'true');
+      summaryLabel.textContent = '当前选择：';
+      summaryText.textContent = summaries[option.dataset.choice];
+    }));
+  </script>
+</body>
+</html>

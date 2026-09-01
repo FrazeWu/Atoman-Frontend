@@ -10,8 +10,8 @@ import PodcastFavoritesView from "../../../../src/views/podcast/PodcastFavorites
 import { useAuthStore } from "../../../../src/stores/auth";
 import { usePlayerStore } from "../../../../src/stores/player";
 
-const CommentSectionStub = {
-	name: "CommentSection",
+const CommentSideSheetStub = {
+	name: "CommentSideSheet",
 	props: ["target", "currentTime"],
 	emits: ["seek"],
 	template: "<div />",
@@ -90,13 +90,13 @@ describe("podcast bookmark kinds", () => {
 						template: "<button @click=\"$emit('click')\">{{ label }}</button>",
 					},
 					PodcastShownotes: true,
-					CommentSection: CommentSectionStub,
+					CommentSideSheet: CommentSideSheetStub,
 				},
 			},
 		});
 		await flushPromises();
 
-		const commentSection = wrapper.findComponent(CommentSectionStub);
+		const commentSection = wrapper.findComponent(CommentSideSheetStub);
 		expect(commentSection.props("target")).toEqual({
 			kind: "podcast_episode",
 			resourceId: "episode-1",

@@ -148,7 +148,9 @@
                       image_url: item.image_url,
                       cover_url: item.image_url,
                       target_path: item.target_path,
-                      play_count: Math.round(item.score || 0),
+                      artists: item.artists,
+                      play_count: item.play_count,
+                      bookmark_count: item.bookmark_count,
                       year: extractYear(item.published_at),
                       release_date: item.published_at
                     }"
@@ -199,7 +201,12 @@
                       created_at: item.published_at,
                       view_count: Math.round(item.score || 0),
                       source: 'post',
-                      targetPath: item.target_path
+                      targetPath: item.target_path,
+                      user: {
+                        display_name: item.author_name,
+                        username: item.author_username,
+                        avatar_url: item.author_avatar_url,
+                      },
                     }"
                     type="post"
                   />
@@ -210,11 +217,15 @@
                       id: item.id,
                       title: item.title,
                       summary: item.summary,
-                      cover_url: item.image_url,
+                      image_url: item.image_url,
                       created_at: item.published_at,
                       read_count: Math.round(item.score || 0),
                       source: 'feed',
-                      targetPath: item.target_path
+                      targetPath: item.target_path,
+                      feed_source: {
+                        title: item.source_name,
+                        cover_url: item.source_image_url,
+                      },
                     }"
                     type="feed_item"
                   />
@@ -309,6 +320,11 @@ import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
 
+interface PortalMusicArtist {
+  id: string
+  name: string
+}
+
 interface PortalHotItem {
   id: string
   module: string
@@ -316,6 +332,14 @@ interface PortalHotItem {
   title: string
   summary: string
   image_url: string
+  artists?: PortalMusicArtist[]
+  play_count?: number
+  bookmark_count?: number
+  author_name?: string
+  author_username?: string
+  author_avatar_url?: string
+  source_name?: string
+  source_image_url?: string
   target_path: string
   score: number
   score_label: string

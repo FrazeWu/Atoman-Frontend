@@ -58,6 +58,7 @@
             :disabled="!authStore.isAuthenticated"
             @like="interactions.like"
             @unlike="interactions.unlike"
+            @comment="commentsOpen = true"
           />
 
           <!-- Bookmark button -->
@@ -99,21 +100,13 @@
         </div>
       </div>
 
-      <div class="topic-main">
+      <div ref="topicContentAnchor" class="topic-main">
           <!-- Topic content (Markdown rendered) -->
           <div
             class="markdown-body topic-content-card"
             v-html="renderMarkdown(forumStore.currentTopic.content, { references: forumStore.currentTopic.references })"
           />
 
-          <CommentSection
-            :target="{ kind: 'forum_topic', resourceId: topicId }"
-            noun="回复"
-            mark-label="最佳回答"
-            :readonly="topicState.closed"
-            :can-delete="canDeleteAnyComment"
-            @count-change="interactions.commentCount.value = $event"
-          />
       </div>
     </template>
 
@@ -130,6 +123,20 @@
       @click="scrollToTop"
     >顶部</PButton>
   </div>
+
+  <CommentSideSheet
+    v-if="forumStore.currentTopic"
+    :show="commentsOpen"
+    :title="`话题回复-${forumStore.currentTopic.title}`"
+    :partial-anchor="topicContentAnchor"
+    :target="{ kind: 'forum_topic', resourceId: topicId }"
+    noun="回复"
+    mark-label="最佳回答"
+    :readonly="topicState.closed"
+    :can-delete="canDeleteAnyComment"
+    @close="commentsOpen = false"
+    @count-change="interactions.commentCount.value = $event"
+  />
 
   <!-- Report Modal -->
   <PModal v-if="reportModal.show" @close="reportModal.show = false" size="sm">
@@ -182,7 +189,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'
 
@@ -193,6 +200,8 @@ const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
 const topicId = computed(() => String(route.params.id || ''))
 const interactions = useInteractions('forum', 'forum_topic', topicId)
+const commentsOpen = ref(false)
+const topicContentAnchor = ref<HTMLElement | null>(null)
 const showBackTop = ref(false)
 let loadTopicGeneration = 0
 const canDeleteAnyComment = computed(() => Boolean(
@@ -240,6 +249,7 @@ const onScroll = () => {
 const loadTopic = async () => {
   const id = topicId.value
   const generation = ++loadTopicGeneration
+  commentsOpen.value = false
   const topic = await forumStore.fetchTopic(id)
   if (generation !== loadTopicGeneration || topicId.value !== id || topic?.id !== id) return
   interactions.liked.value = topic.is_liked

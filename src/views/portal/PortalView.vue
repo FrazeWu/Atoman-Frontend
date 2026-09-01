@@ -205,7 +205,7 @@
                       user: {
                         display_name: item.author_name,
                         username: item.author_username,
-                        avatar_url: item.author_avatar_url,
+                        avatar_url: item.author_avatar_url || item.source_image_url,
                       },
                     }"
                     type="post"

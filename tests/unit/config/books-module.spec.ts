@@ -12,7 +12,7 @@ describe('books module foundation', () => {
       homePath: '/',
     })
     expect(moduleNavOrder).toContain('books')
-    expect(topbarNavOrder).toContain('books')
+    expect(topbarNavOrder).not.toContain('books')
   })
 
   it('defaults the three book capabilities to enabled', () => {

@@ -838,7 +838,8 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
 }
 
 .blog-home__digest-item:focus-visible {
-  box-shadow: 0 2px 0 var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
 }
 
 .blog-home__digest-skeleton {
@@ -923,7 +924,6 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
 
 .blog-home__entry-card:hover {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
 }
 
 .blog-home__author {

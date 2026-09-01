@@ -40,6 +40,7 @@ export const mobileScreenshotRoutes = [
 	"/music/album/album-1",
 	"/music/song/song-1",
 	"/music/playlist/playlist-1",
+	"/videos/watch/video-1",
 	"/studio",
 	"/studio/manage/channel",
 	"/studio/manage/collections",

@@ -17,13 +17,16 @@ vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' },
 }))
 
+let pinia = createPinia()
+
 describe('BlogHomeView query search', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    pinia = createPinia()
+    setActivePinia(pinia)
     mocks.routeQuery = {}
   })
 
-  it('passes route query q to blog discovery requests', async () => {
+  it('uses the dedicated search endpoint for route query q', async () => {
     mocks.routeQuery = { q: 'atom' }
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify({ data: [] }), { status: 200 }),
@@ -31,6 +34,7 @@ describe('BlogHomeView query search', () => {
 
     mount(BlogHomeView, {
       global: {
+        plugins: [pinia],
         stubs: {
           PAvatar: true,
           PBadge: true,
@@ -47,7 +51,7 @@ describe('BlogHomeView query search', () => {
     await flushPromises()
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20&q=atom')
-    expect(requestedUrls.some((url) => url.includes('/blog/explore'))).toBe(false)
+    expect(requestedUrls).toContain('/api/v1/blog/search?q=atom&sort=relevance&page=1&page_size=20')
+    expect(requestedUrls.some((url) => url.includes('/blog/recommend/posts'))).toBe(false)
   })
 })

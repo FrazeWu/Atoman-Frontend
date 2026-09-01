@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { getRecommendedVideos, getVideo, recordVideoView } from '@/api/video'
-import { ref, onMounted, computed, watch } from 'vue'
-import { Play } from 'lucide-vue-next'
-import { useRoute, useRouter } from 'vue-router'
+import { deleteVideoRating, getRecommendedVideos, getVideo, getVideoResource, recordVideoView, setVideoRating, type VideoRatingSummary } from '@/api/video'
+import { computed, onMounted, ref, watch } from 'vue'
+import { MessageSquare, Play, Share2 } from 'lucide-vue-next'
+import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import type { CommentTargetRef } from '@/api/comments'
-import type { Video } from '@/types'
+import type { Collection, Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
-import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
+import PSheet from '@/components/ui/PSheet.vue'
+import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
+import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
-import VideoContinueList from '@/components/video/VideoContinueList.vue'
+import VideoCollectionPlaylist from '@/components/video/VideoCollectionPlaylist.vue'
+import VideoRecommendationRow from '@/components/video/VideoRecommendationRow.vue'
 import { useInteractions } from '@/composables/useInteractions'
+import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
@@ -29,27 +34,56 @@ type VideoDetailResponse = Video & {
   CommentCount?: number
 }
 
+type CollectionContext = {
+  collection: Collection
+  videos: Video[]
+}
+
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const feedStore = useFeedStore()
+const bookmarks = useVideoBookmarks()
 const lifecycle = useContentLifecycle()
 const videoId = computed(() => String(route.params.id || ''))
 const commentTarget = computed<CommentTargetRef>(() => ({ kind: 'video', resourceId: videoId.value }))
 const interactions = useInteractions('videos', 'video', videoId)
 
 const video = ref<Video | null>(null)
-const canDeleteAllComments = computed(() => Boolean(
-  authStore.user?.uuid === video.value?.user_id || isModeratorRole(authStore.user?.role),
-))
+const activeCollection = ref<Collection | null>(null)
+const collectionVideos = ref<Video[]>([])
 const recommended = ref<Video[]>([])
 const loading = ref(true)
 const error = ref('')
 const theaterMode = ref(getStoredTheaterMode())
-const showNextPrompt = ref(false)
 const videoError = ref('')
+const resumePosition = ref<number | null>(null)
 const isLocalPlaybackActive = ref(false)
 const hasRecordedView = ref(false)
 const hasStartedPlayback = ref(false)
+const commentsOpen = ref(false)
+const descriptionExpanded = ref(false)
+const ratingLoading = ref(false)
+const ratingError = ref('')
+const channelSubscribed = ref(false)
+const channelSubscriptionBusy = ref(false)
+const canDeleteAllComments = computed(() => Boolean(
+  authStore.user?.uuid === video.value?.user_id || isModeratorRole(authStore.user?.role),
+))
+const completedCollectionVideoIds = computed(() => collectionVideos.value
+  .filter((item) => {
+    const progress = getVideoProgress(item.id)
+    return Boolean(progress && progress.duration_sec > 0 && progress.time_sec / progress.duration_sec >= 0.95)
+  })
+  .map((item) => item.id))
+const isDescriptionTruncated = computed(() => {
+  const description = video.value?.description || ''
+  return description.length > 180 || description.split('\n').length > 3
+})
+
+const videoElement = ref<HTMLVideoElement | null>(null)
+const currentPlaybackTime = ref(0)
+const timestampHint = ref('')
 let lastProgressSave = 0
 let loadSeq = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
@@ -75,7 +109,6 @@ function saveStoredTheaterMode(value: boolean) {
   }
 }
 
-// Detect embed type from URL
 const embedSrc = computed(() => {
   const url = video.value?.video_url || ''
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)
@@ -104,16 +137,54 @@ function syncInteractionState(detail: VideoDetailResponse) {
   interactions.commentCount.value = detail.comment_count ?? detail.comments_count ?? detail.CommentCount ?? 0
 }
 
+function findCollection(detail: Video, members: Video[], collectionId: string) {
+  const member = members.find((item) => item.id === detail.id)
+  return detail.collections?.find((item) => item.id === collectionId)
+    ?? (detail.collection?.id === collectionId ? detail.collection : null)
+    ?? member?.collections?.find((item) => item.id === collectionId)
+    ?? (member?.collection?.id === collectionId ? member.collection : null)
+    ?? null
+}
+
+async function resolveCollectionContext(detail: Video, seq: number): Promise<CollectionContext | null> {
+  const requestedId = getFirstStringQueryValue(route.query.collection)
+  const primaryId = detail.collection_id || detail.collection?.id || detail.collections?.[0]?.id
+  const candidateIds = [...new Set([requestedId, primaryId].filter((id): id is string => Boolean(id)))]
+
+  for (const collectionId of candidateIds) {
+    try {
+      const members = await getVideoResource<Video[]>(`/videos?collection_id=${encodeURIComponent(collectionId)}`, authStore.token ?? undefined)
+      if (seq !== loadSeq) return null
+      if (!members.some((item) => item.id === detail.id)) continue
+      const collection = findCollection(detail, members, collectionId)
+      if (collection) return { collection, videos: members }
+    } catch {
+      // Try the author-selected primary collection when an URL context is stale or inaccessible.
+    }
+  }
+  return null
+}
+
+function filterCollectionRecommendations(items: Video[], context: CollectionContext | null) {
+  if (!context) return items.slice(0, 4)
+  const collectionVideoIds = new Set(context.videos.map((item) => item.id))
+  return items.filter((item) => !collectionVideoIds.has(item.id)).slice(0, 4)
+}
+
 function toggleLocalPlayback() {
   if (video.value?.storage_type !== 'local' || !videoElement.value) return
   if (videoElement.value.paused) {
-    videoError.value = ''
-    void videoElement.value.play().catch(() => {
-      videoError.value = '无法开始播放，请重试'
-    })
+    playLocalVideo()
     return
   }
   videoElement.value.pause()
+}
+
+function playLocalVideo() {
+  videoError.value = ''
+  void videoElement.value?.play().catch(() => {
+    videoError.value = '无法开始播放，请重试'
+  })
 }
 
 async function load(id: string) {
@@ -121,22 +192,36 @@ async function load(id: string) {
   loading.value = true
   error.value = ''
   video.value = null
+  activeCollection.value = null
+  collectionVideos.value = []
   recommended.value = []
-  showNextPrompt.value = false
   videoError.value = ''
+  resumePosition.value = null
   isLocalPlaybackActive.value = false
   hasRecordedView.value = false
   hasStartedPlayback.value = false
+  commentsOpen.value = false
+  descriptionExpanded.value = false
+  ratingError.value = ''
+  channelSubscribed.value = false
   currentPlaybackTime.value = 0
   lastProgressSave = 0
   consumptionTracker = null
+
   try {
     const [detail, recommendations] = await Promise.all([
       getVideo<VideoDetailResponse>(id, authStore.token ?? undefined),
       getRecommendedVideos<Video[]>(id).catch(() => []),
     ])
     if (seq !== loadSeq) return
+
     video.value = detail
+    const context = await resolveCollectionContext(detail, seq)
+    if (seq !== loadSeq) return
+    activeCollection.value = context?.collection ?? null
+    collectionVideos.value = context?.videos ?? []
+    recommended.value = filterCollectionRecommendations(recommendations, context)
+
     consumptionTracker = createContentConsumptionTracker({
       onEvent: (event) => {
         if (!authStore.token) return
@@ -154,9 +239,16 @@ async function load(id: string) {
     })
     consumptionTracker.open()
     syncInteractionState(detail)
-    if (seq === loadSeq) recommended.value = recommendations
-    // 外部平台没有可监听的播放事件，在打开详情时记录一次。
-    if (seq === loadSeq && detail.storage_type !== 'local') void recordVideoViewOnce(id)
+
+    if (authStore.isAuthenticated) {
+      void bookmarks.load().catch(() => undefined)
+      if (detail.channel?.id) {
+        void feedStore.isSubscribedToChannel(detail.channel.id).then((subscribed) => {
+          if (seq === loadSeq && video.value?.id === detail.id) channelSubscribed.value = subscribed
+        })
+      }
+    }
+    if (detail.storage_type !== 'local') void recordVideoViewOnce(id)
   } catch {
     if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {
@@ -166,10 +258,6 @@ async function load(id: string) {
 
 onMounted(() => load(videoId.value))
 watch(() => route.params.id, (id) => { if (id) load(id as string) })
-
-const videoElement = ref<HTMLVideoElement | null>(null)
-const currentPlaybackTime = ref(0)
-const timestampHint = ref('')
 
 function syncCurrentPlaybackTime() {
   const current = Math.floor(videoElement.value?.currentTime || 0)
@@ -199,22 +287,61 @@ function seekLocalVideo(value: number) {
   return true
 }
 
+function playbackDuration() {
+  const duration = videoElement.value?.duration
+  if (typeof duration === 'number' && Number.isFinite(duration) && duration > 0) return duration
+  return video.value?.duration_sec || 0
+}
+
+function hasResumablePosition(position: number, duration: number) {
+  return Number.isFinite(position) && Number.isFinite(duration) && position >= 10 && duration > 0 && position / duration < 0.95
+}
+
+function continuePlayback() {
+  if (resumePosition.value === null) return
+  seekLocalVideo(resumePosition.value)
+  resumePosition.value = null
+  playLocalVideo()
+}
+
+function restartPlayback() {
+  if (!video.value) return
+  seekLocalVideo(0)
+  resumePosition.value = null
+  clearVideoProgress(video.value.id)
+  if (authStore.token) {
+    const duration = Math.floor(playbackDuration())
+    void lifecycle.saveProgress({
+      module: 'video', content_id: video.value.id, position_sec: 0, duration_sec: duration,
+      progress: 0, completed: false, source: getFirstStringQueryValue(route.query.source) || 'direct',
+    }).catch(() => undefined)
+  }
+  playLocalVideo()
+}
+
 async function restoreInitialPlaybackPosition() {
-  if (!video.value || video.value.storage_type !== 'local') return
-  const deepLinkTime = parseVideoTimeParam(getFirstStringQueryValue(route.query.t), video.value.duration_sec)
+  const detail = video.value
+  if (!detail || detail.storage_type !== 'local') return
+  resumePosition.value = null
+  const deepLinkTime = parseVideoTimeParam(getFirstStringQueryValue(route.query.t), detail.duration_sec)
   if (deepLinkTime !== null) {
     seekLocalVideo(deepLinkTime)
     return
   }
   if (authStore.token) {
-    const serverProgress = await lifecycle.getProgress('video', video.value.id).catch(() => null)
-    if (serverProgress?.position_sec) {
-      seekLocalVideo(serverProgress.position_sec)
+    const serverProgress = await lifecycle.getProgress('video', detail.id).catch(() => null)
+    if (video.value?.id !== detail.id) return
+    if (serverProgress) {
+      if (hasResumablePosition(serverProgress.position_sec, playbackDuration())) {
+        resumePosition.value = Math.floor(serverProgress.position_sec)
+      }
       return
     }
   }
-  const saved = getVideoProgress(video.value.id)
-  if (saved) seekLocalVideo(saved.time_sec)
+  const saved = getVideoProgress(detail.id)
+  if (saved && hasResumablePosition(saved.time_sec, playbackDuration())) {
+    resumePosition.value = saved.time_sec
+  }
 }
 
 function handlePauseOrUnload() {
@@ -228,29 +355,23 @@ function handleVideoEnded() {
   if (!video.value) return
   clearVideoProgress(video.value.id)
   consumptionTracker?.update(1)
-  showNextPrompt.value = recommended.value.length > 0
 }
 
 function handleVideoError() {
+  resumePosition.value = null
   videoError.value = '视频暂时无法播放，请重试'
 }
 
 function handleVideoPlay() {
+  resumePosition.value = null
   isLocalPlaybackActive.value = true
   hasStartedPlayback.value = true
 }
 
 function retryVideoPlayback() {
+  resumePosition.value = null
   videoError.value = ''
   videoElement.value?.load()
-}
-
-async function copyVideoLink() {
-  try {
-    await navigator.clipboard.writeText(window.location.href)
-  } catch {
-    // ignore
-  }
 }
 
 async function shareVideo() {
@@ -272,10 +393,11 @@ function toggleTheaterMode() {
   saveStoredTheaterMode(theaterMode.value)
 }
 
-function playNextVideo() {
-  const next = recommended.value[0]
-  if (!next) return
-  router.push(`/videos/watch/${next.id}`)
+async function selectCollectionVideo(id: string) {
+  if (!activeCollection.value || id === video.value?.id) return
+  const query: LocationQueryRaw = { ...route.query, collection: activeCollection.value.id }
+  delete query.t
+  await router.push({ path: `/videos/watch/${id}`, query })
 }
 
 function handleSeekToTimestamp(value: number) {
@@ -296,6 +418,62 @@ function currentCommentTime() {
   if (video.value?.storage_type !== 'local') return null
   return Math.floor(videoElement.value?.currentTime ?? currentPlaybackTime.value)
 }
+
+function applyRating(summary: VideoRatingSummary) {
+  if (!video.value) return
+  video.value.rating_score = summary.rating_score
+  video.value.rating_count = summary.rating_count
+  video.value.viewer_rating = summary.viewer_rating ?? null
+}
+
+async function rateVideo(score: number) {
+  if (!video.value || !authStore.token) return
+  ratingLoading.value = true
+  ratingError.value = ''
+  try {
+    applyRating(await setVideoRating(video.value.id, score, authStore.token))
+  } catch {
+    ratingError.value = '评分失败，请稍后再试'
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+async function clearRating() {
+  if (!video.value || !authStore.token) return
+  ratingLoading.value = true
+  ratingError.value = ''
+  try {
+    applyRating(await deleteVideoRating(video.value.id, authStore.token))
+  } catch {
+    ratingError.value = '清除评分失败，请稍后再试'
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+async function toggleBookmark() {
+  if (!video.value) return
+  if (!authStore.isAuthenticated) {
+    await router.push('/login')
+    return
+  }
+  await bookmarks.toggle(video.value.id).catch(() => undefined)
+}
+
+async function toggleChannelSubscription() {
+  const channelId = video.value?.channel?.id
+  if (!channelId || !authStore.isAuthenticated || channelSubscriptionBusy.value) return
+  channelSubscriptionBusy.value = true
+  try {
+    const success = channelSubscribed.value
+      ? await feedStore.unsubscribeFromChannel(channelId)
+      : await feedStore.subscribeToChannel(channelId)
+    if (success) channelSubscribed.value = !channelSubscribed.value
+  } finally {
+    channelSubscriptionBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -311,79 +489,87 @@ function currentCommentTime() {
     <div v-else-if="error" class="vd-error">{{ error }}</div>
 
     <div v-else-if="video" :class="['vd-layout', { 'vd-layout--theater': theaterMode }]">
-      <!-- Main: player + info -->
-      <div class="vd-main">
-        <!-- Player Shell -->
-        <PVideoPlayerShell
-          :video="video"
-          :current-time="currentPlaybackTime"
-          :theater-mode="theaterMode"
-          @copy-link="copyVideoLink"
-          @toggle-theater="toggleTheaterMode"
-        >
-          <template #player>
-            <iframe
-              v-if="embedSrc"
-              :src="embedSrc"
-              class="vd-embed"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
+      <PVideoPlayerShell
+        class="vd-player-shell"
+        :video="video"
+        :current-time="currentPlaybackTime"
+        :theater-mode="theaterMode"
+        :show-copy-link="false"
+        @toggle-theater="toggleTheaterMode"
+      >
+        <template #player>
+          <iframe
+            v-if="embedSrc"
+            :src="embedSrc"
+            class="vd-embed"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          />
+          <template v-else-if="video.storage_type === 'local'">
+            <video
+              ref="videoElement"
+              :src="video.video_url"
+              :poster="video.thumbnail_url || undefined"
+              class="vd-native"
+              playsinline
+              preload="metadata"
+              @click="toggleLocalPlayback"
+              @timeupdate="syncCurrentPlaybackTime"
+              @play="handleVideoPlay"
+              @loadedmetadata="restoreInitialPlaybackPosition"
+              @error="handleVideoError"
+              @pause="handlePauseOrUnload"
+              @ended="handleVideoEnded"
             />
-            <template v-else-if="video.storage_type === 'local'">
-              <video
-                ref="videoElement"
-                :src="video.video_url"
-                :poster="video.thumbnail_url || undefined"
-                class="vd-native"
-                playsinline
-                @click="toggleLocalPlayback"
-                preload="metadata"
-                @timeupdate="syncCurrentPlaybackTime"
-                @play="handleVideoPlay"
-                @loadedmetadata="restoreInitialPlaybackPosition"
-                @error="handleVideoError"
-                @pause="handlePauseOrUnload"
-                @ended="handleVideoEnded"
-              />
-              <button
-                v-if="!isLocalPlaybackActive && !videoError"
-                class="vd-play-overlay"
-                type="button"
-                aria-label="播放视频"
-                data-testid="video-play"
-                @click.stop="toggleLocalPlayback"
-              >
-                <Play :size="28" fill="currentColor" aria-hidden="true" />
-              </button>
-              <div v-if="videoError" class="vd-player-error" role="alert">
-                <p>{{ videoError }}</p>
-                <button type="button" @click="retryVideoPlayback">重试播放</button>
+            <button
+              v-if="!isLocalPlaybackActive && !videoError && resumePosition === null"
+              class="vd-play-overlay"
+              type="button"
+              aria-label="播放视频"
+              data-testid="video-play"
+              @click.stop="toggleLocalPlayback"
+            >
+              <Play :size="28" fill="currentColor" aria-hidden="true" />
+            </button>
+            <div v-if="resumePosition !== null && !videoError" class="vd-resume-prompt" role="group" aria-label="继续观看" data-testid="video-resume-prompt">
+              <span>上次观看至 {{ fmtDuration(resumePosition) }}</span>
+              <div class="vd-resume-actions">
+                <button type="button" data-testid="video-resume-continue" @click="continuePlayback">继续观看</button>
+                <button type="button" data-testid="video-resume-restart" @click="restartPlayback">从头播放</button>
               </div>
-            </template>
-            <div v-else class="vd-external">
-              <a :href="video.video_url" target="_blank" rel="noopener noreferrer" class="vd-external-link">
-                在外部平台观看 →
-              </a>
+            </div>
+            <div v-if="videoError" class="vd-player-error" role="alert">
+              <p>{{ videoError }}</p>
+              <button type="button" @click="retryVideoPlayback">重试播放</button>
             </div>
           </template>
-          <template v-if="video.storage_type === 'local'" #timeline-preview>
-            <VideoPlayerControls
-              :video-element="videoElement"
-              :duration-sec="video.duration_sec"
-              :thumbnails="video.preview_thumbnails"
-              :theater-mode="theaterMode"
-              @toggle-theater="toggleTheaterMode"
-            />
-          </template>
-        </PVideoPlayerShell>
+          <div v-else class="vd-external">
+            <a :href="video.video_url" target="_blank" rel="noopener noreferrer" class="vd-external-link">在外部平台观看</a>
+          </div>
+        </template>
+        <template v-if="video.storage_type === 'local'" #timeline-preview>
+          <VideoPlayerControls
+            :video-element="videoElement"
+            :duration-sec="video.duration_sec"
+            :thumbnails="video.preview_thumbnails"
+            :theater-mode="theaterMode"
+            @toggle-theater="toggleTheaterMode"
+          />
+        </template>
+      </PVideoPlayerShell>
 
-        <!-- Title -->
+      <section class="vd-identity" aria-label="视频信息">
         <h1 class="vd-title">{{ video.title }}</h1>
-
-        <!-- Meta row -->
         <div class="vd-meta-row">
-          <RouterLink v-if="video.channel" :to="`/channel/${video.channel.slug || video.channel_id}`" class="vd-channel">
-            {{ video.channel.name }}
+          <RouterLink v-if="video.channel" :to="`/channel/${video.channel.slug || video.channel_id}`" class="vd-author">
+            <span class="vd-author-avatar" aria-hidden="true">
+              <img v-if="video.channel.cover_url" :src="video.channel.cover_url" alt="">
+              <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
+            </span>
+            <span class="vd-author-copy">
+              <strong>{{ video.channel.name }}</strong>
+              <small v-if="video.user?.username">{{ video.user.username }}</small>
+            </span>
           </RouterLink>
           <div class="vd-stats">
             <span>{{ video.view_count.toLocaleString() }} 次播放</span>
@@ -391,58 +577,99 @@ function currentCommentTime() {
             <span v-if="video.duration_sec">{{ fmtDuration(video.duration_sec) }}</span>
           </div>
           <button
+            v-if="video.channel && authStore.isAuthenticated"
+            type="button"
+            class="vd-subscribe"
+            :disabled="channelSubscriptionBusy"
+            @click="toggleChannelSubscription"
+          >
+            {{ channelSubscribed ? '已订阅' : '订阅频道' }}
+          </button>
+          <RouterLink v-else-if="video.channel" class="vd-subscribe" to="/login">登录后订阅</RouterLink>
+        </div>
+        <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
+      </section>
+
+      <VideoCollectionPlaylist
+        v-if="activeCollection && collectionVideos.length"
+        class="vd-playlist"
+        :collection="activeCollection"
+        :videos="collectionVideos"
+        :current-video-id="video.id"
+        :completed-video-ids="completedCollectionVideoIds"
+        @select="selectCollectionVideo"
+      />
+
+      <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />
+
+      <section v-if="video.description || video.tags?.length" class="vd-description" data-testid="video-description">
+        <pre v-if="video.description" :class="['vd-desc-text', { 'is-expanded': descriptionExpanded }]">{{ video.description }}</pre>
+        <button v-if="video.description && isDescriptionTruncated" type="button" class="vd-desc-toggle" @click="descriptionExpanded = !descriptionExpanded">
+          {{ descriptionExpanded ? '收起简介' : '展开简介' }}
+        </button>
+        <div v-if="descriptionExpanded && video.tags?.length" class="vd-tags">
+          <span v-for="tag in video.tags" :key="tag.id" class="vd-tag"># {{ tag.name }}</span>
+        </div>
+      </section>
+
+      <section class="vd-interactions" aria-label="视频互动">
+        <PostRatingControl
+          class="vd-rating"
+          size="sm"
+          :viewer-rating="video.viewer_rating"
+          :weighted-rating-score="video.rating_score ?? null"
+          :weighted-rating-count="video.rating_count ?? 0"
+          :weighted-rating-active="(video.rating_count ?? 0) > 0"
+          :disabled="!authStore.isAuthenticated"
+          :loading="ratingLoading"
+          :error-message="ratingError"
+          @rate="rateVideo"
+          @clear="clearRating"
+        />
+        <div class="vd-action-row">
+          <PBookmarkButton
+            :bookmarked="bookmarks.isBookmarked(video.id)"
+            :disabled="bookmarks.isPending(video.id)"
+            variant="bordered"
+            @bookmark="toggleBookmark"
+            @unbookmark="toggleBookmark"
+          />
+          <button
             v-if="video.visibility === 'public'"
             type="button"
-            class="vd-share"
+            class="vd-icon-action"
+            title="分享"
+            aria-label="分享"
             data-testid="video-share"
             @click="shareVideo"
           >
-            分享
+            <Share2 :size="16" aria-hidden="true" />
+          </button>
+          <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
+            <MessageSquare :size="16" aria-hidden="true" />
+            评论 {{ interactions.commentCount.value }}
           </button>
         </div>
-
-        <!-- Timestamp hint -->
-        <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
-
-        <!-- Interactions and comments -->
-        <div class="vd-interactions" data-testid="video-comments">
-          <InteractionBar
-            :liked="interactions.liked.value"
-            :like-count="interactions.likeCount.value"
-            :comment-count="interactions.commentCount.value"
-            :disabled="!authStore.isAuthenticated"
-            @like="interactions.like"
-            @unlike="interactions.unlike"
-          />
-          <CommentSection
-            :target="commentTarget"
-            noun="评论"
-            :current-time="currentCommentTime"
-            :can-delete="canDeleteAllComments"
-            @seek="handleSeekToTimestamp"
-            @count-change="interactions.commentCount.value = $event"
-          />
-        </div>
-
-        <!-- Tags -->
-        <div v-if="video.tags && video.tags.length" class="vd-tags">
-          <span v-for="tag in video.tags" :key="tag.id" class="vd-tag"># {{ tag.name }}</span>
-        </div>
-
-        <!-- Description -->
-        <div v-if="video.description" class="vd-desc" data-testid="video-description">
-          <pre class="vd-desc-text">{{ video.description }}</pre>
-        </div>
-      </div>
-
-      <!-- Sidebar: recommended -->
-      <VideoContinueList
-        class="vd-sidebar"
-        :videos="recommended"
-        :show-next-prompt="showNextPrompt"
-        @play-next="playNextVideo"
-      />
+      </section>
     </div>
+
+    <PSheet
+      v-if="video"
+      :show="commentsOpen"
+      :title="`视频评论-${video.title}`"
+      width="min(100%, 30rem)"
+      content-max-width="28rem"
+      @close="commentsOpen = false"
+    >
+      <CommentSection
+        :target="commentTarget"
+        noun="评论"
+        :current-time="currentCommentTime"
+        :can-delete="canDeleteAllComments"
+        @seek="handleSeekToTimestamp"
+        @count-change="interactions.commentCount.value = $event"
+      />
+    </PSheet>
   </div>
 </template>
 
@@ -453,71 +680,89 @@ function currentCommentTime() {
   padding: 1.5rem 1.5rem 6rem;
 }
 
-/* Loading skeleton */
-.vd-loading { display: flex; flex-direction: column; gap: 1rem; }
+.vd-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .vd-loading-player {
   width: 100%;
-  aspect-ratio: 16/9;
-  background: var(--a-color-surface, #f3f4f6);
+  aspect-ratio: 16 / 9;
   border-radius: 4px;
+  background: var(--a-color-surface);
   animation: pulse 1.5s ease-in-out infinite;
 }
-.vd-loading-info { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.vd-loading-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .vd-loading-line {
   height: 1rem;
-  background: var(--a-color-surface, #f3f4f6);
-  border-radius: 0px;
+  border-radius: 0;
+  background: var(--a-color-surface);
   animation: pulse 1.5s ease-in-out infinite;
 }
+
 .vd-loading-line--lg { width: 60%; }
 .vd-loading-line--sm { width: 30%; }
 
 .vd-error {
-  text-align: center;
   padding: 6rem 0;
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
+  text-align: center;
 }
 
-/* Main layout */
 .vd-layout {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  align-items: start;
+  gap: 1.25rem 1.5rem;
 }
+
+.vd-player-shell,
+.vd-identity,
+.vd-recommendations,
+.vd-description,
+.vd-interactions {
+  min-width: 0;
+  grid-column: 1;
+}
+
+.vd-player-shell { grid-row: 1; }
+.vd-identity { grid-row: 2; }
+.vd-playlist {
+  position: sticky;
+  top: calc(3.5rem + 1.5rem);
+  grid-column: 2;
+  grid-row: 1 / span 5;
+}
+.vd-recommendations { grid-row: 3; }
+.vd-description { grid-row: 4; }
+.vd-interactions { grid-row: 5; }
 
 .vd-layout--theater {
-  display: block;
-}
-.vd-layout--theater .vd-main {
-  max-width: none;
-}
-.vd-layout--theater .vd-sidebar {
-  margin-top: 2rem;
-  width: auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.vd-main { flex: 1; min-width: 0; }
+.vd-layout--theater .vd-playlist {
+  position: static;
+  grid-column: 1;
+  grid-row: 6;
+}
 
-/* Player */
-.vd-player-wrap {
-  width: 100%;
-  background: #000;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-.vd-embed {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16/9;
-  border: none;
-}
+.vd-embed,
 .vd-native {
   display: block;
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
+  border: 0;
   background: #000;
 }
+
 .vd-play-overlay {
   position: absolute;
   top: 50%;
@@ -533,169 +778,291 @@ function currentCommentTime() {
   cursor: pointer;
   transform: translate(-50%, -50%);
 }
-.vd-play-overlay:focus-visible {
-  outline: 2px solid #fff;
+
+.vd-play-overlay:focus-visible,
+.vd-resume-actions button:focus-visible,
+.vd-icon-action:focus-visible,
+.vd-comment-action:focus-visible,
+.vd-subscribe:focus-visible,
+.vd-desc-toggle:focus-visible {
+  outline: 2px solid var(--a-color-primary);
   outline-offset: 3px;
 }
+
+.vd-resume-prompt,
 .vd-player-error {
   position: absolute;
   inset: 0;
   display: grid;
-  place-content: center;
   gap: 0.75rem;
+  place-content: center;
   justify-items: center;
   color: #fff;
-  background: rgba(0, 0, 0, 0.72);
 }
+
+.vd-resume-prompt { background: rgba(0, 0, 0, 0.62); }
+.vd-player-error { background: rgba(0, 0, 0, 0.72); }
 .vd-player-error p { margin: 0; }
+
+.vd-resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.vd-resume-actions button,
 .vd-player-error button {
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  padding: 0.4rem 0.8rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.82);
   color: #fff;
   background: transparent;
   cursor: pointer;
 }
-.vd-external {
-  aspect-ratio: 16/9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--a-color-surface, #111);
-}
-.vd-external-link {
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-.vd-external-link:hover { text-decoration: underline; }
 
-/* Info */
-.vd-title {
-  font-size: 1.25rem;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--a-color-fg);
-  margin: 0 0 0.75rem 0;
+.vd-resume-actions button:first-child {
+  color: #111827;
+  background: #fff;
 }
+
+.vd-external {
+  display: grid;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  background: var(--a-color-surface);
+}
+
+.vd-external-link {
+  color: var(--a-color-fg);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.vd-identity {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.vd-title {
+  margin: 0;
+  color: var(--a-color-fg);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .vd-meta-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 0.75rem;
+  gap: 0.7rem;
 }
-.vd-channel {
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: var(--a-color-fg);
+
+.vd-author {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
   text-decoration: none;
 }
-.vd-channel:hover { text-decoration: underline; }
+
+.vd-author:hover strong { text-decoration: underline; }
+
+.vd-author-avatar {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: var(--a-color-bg);
+  background: var(--a-color-primary);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.vd-author-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vd-author-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.vd-author-copy strong {
+  overflow: hidden;
+  color: var(--a-color-fg);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vd-author-copy small,
+.vd-stats {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
 .vd-stats {
   display: flex;
-  gap: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--a-color-muted, #6b7280);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
-.vd-share {
+
+.vd-subscribe {
+  min-height: 2rem;
+  padding: 0.25rem 0.55rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  border-radius: 3px;
   color: var(--a-color-fg);
+  background: var(--a-color-bg);
   font: inherit;
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
+
+.vd-subscribe:disabled { cursor: wait; opacity: 0.6; }
+
+.vd-timestamp-hint {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  color: var(--a-color-muted);
+  background: var(--a-color-surface);
+  font-size: 0.75rem;
+}
+
+.vd-description {
+  padding: 0.8rem;
+  border-radius: 4px;
+  background: var(--a-color-surface);
+}
+
+.vd-desc-text {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--a-color-fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.vd-desc-text.is-expanded {
+  display: block;
+}
+
+.vd-desc-toggle {
+  margin-top: 0.45rem;
+  padding: 0;
+  border: 0;
+  color: var(--a-color-primary);
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .vd-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-bottom: 0.75rem;
+  margin-top: 0.65rem;
 }
-.vd-tag {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
-  background: var(--a-color-surface, #f3f4f6);
-  border-radius: 0px;
-  color: var(--a-color-muted, #6b7280);
-  cursor: pointer;
-}
-.vd-tag:hover { color: var(--a-color-fg); }
 
-.vd-desc {
-  margin-top: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--a-color-surface, #f9fafb);
-  border-radius: 4px;
-}
-.vd-desc-text {
-  font-size: 0.875rem;
-  color: var(--a-color-fg);
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
-  margin: 0;
-  line-height: 1.6;
+.vd-tag {
+  padding: 0.2rem 0.45rem;
+  color: var(--a-color-muted);
+  background: var(--a-color-bg);
+  font-size: 0.72rem;
 }
 
 .vd-interactions {
-  display: grid;
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-/* Sidebar */
-.vd-sidebar {
-  width: 22rem;
-  flex-shrink: 0;
-}
-.vd-sidebar-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  color: var(--a-color-muted, #6b7280);
-  margin: 0 0 0.75rem 0;
-}
-.vd-recommended {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.vd-no-rec {
-  font-size: 0.8rem;
-  color: var(--a-color-muted, #9ca3af);
-  text-align: center;
-  padding: 2rem 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .vd-sidebar { width: 18rem; }
+.vd-rating {
+  min-width: 0;
 }
+
+.vd-rating :deep(.post-rating) {
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+}
+
+.vd-rating :deep(.post-rating__meta-box) {
+  display: none;
+}
+
+.vd-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.vd-icon-action,
+.vd-comment-action {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 3px;
+  color: var(--a-color-fg);
+  background: var(--a-color-bg);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vd-icon-action { width: 2rem; padding: 0; }
+.vd-comment-action { padding: 0 0.55rem; }
+
+@media (max-width: 1024px) {
+  .vd-layout { grid-template-columns: minmax(0, 1fr) 18rem; }
+}
+
 @media (max-width: 768px) {
-  .vd-layout { flex-direction: column; }
-  .vd-sidebar { width: 100%; }
-  .vd-recommended {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+  .vd-page { padding: 1rem 1rem 5rem; }
+  .vd-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .vd-player-shell,
+  .vd-identity,
+  .vd-playlist,
+  .vd-recommendations,
+  .vd-description,
+  .vd-interactions {
+    position: static;
+    grid-column: 1;
+    grid-row: auto;
   }
+  .vd-action-row { width: 100%; margin-left: 0; }
+  .vd-comment-action { margin-left: auto; }
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
-}
-
-.vd-timestamp-hint {
-  font-size: 0.8rem;
-  color: var(--a-color-muted, #6b7280);
-  padding: 0.5rem 0.75rem;
-  background: var(--a-color-surface, #f3f4f6);
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
 }
 </style>

@@ -96,6 +96,44 @@ describe("AudioPlayer", () => {
 		favoriteApi.loadFavoriteSongs.mockResolvedValue(undefined);
 	});
 
+	it("switches between full, cover-only, and collapsed player modes", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		expect(wrapper.get('[data-player-mode="full"]').exists()).toBe(true);
+		expect(
+			wrapper.get('[aria-label="切换到小窗播放"]').find("svg").exists(),
+		).toBe(true);
+
+		await wrapper.get('[aria-label="切换到小窗播放"]').trigger("click");
+		expect(wrapper.get('[data-player-mode="mini"]').exists()).toBe(true);
+		expect(wrapper.find('[data-player-mode="full"]').exists()).toBe(false);
+
+		await wrapper.get('[aria-label="展开完整播放器"]').trigger("click");
+		expect(wrapper.get('[data-player-mode="full"]').exists()).toBe(true);
+
+		await wrapper.get('[aria-label="收起播放器"]').trigger("click");
+		expect(wrapper.get('[data-player-mode="collapsed"]').exists()).toBe(true);
+		expect(wrapper.find('[data-player-mode="full"]').exists()).toBe(false);
+		wrapper.unmount();
+	});
+
 	it("uses cookie-aware transport when bookmarking a podcast in a cookie session", async () => {
 		const player = usePlayerStore();
 		player.currentSong = {

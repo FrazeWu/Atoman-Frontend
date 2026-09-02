@@ -47,8 +47,9 @@ onMounted(async () => {
 <style scoped>
 .site-visit-stats {
   display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
   color: var(--a-color-muted);
   font-size: var(--a-text-xs, 0.75rem);
   line-height: 1.4;
@@ -72,6 +73,6 @@ onMounted(async () => {
 }
 
 .site-visit-stats__divider {
-  color: var(--a-color-border-soft, #e4e4e7);
+  display: none;
 }
 </style>

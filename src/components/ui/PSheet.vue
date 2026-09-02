@@ -1,25 +1,27 @@
 <template>
-  <section
-    v-if="isMobile && show"
-    class="p-sheet-mobile-page"
-    :class="panelClass"
-    role="region"
-    :aria-label="railTitle"
-  >
-    <header v-if="title || slots.header" class="p-sheet-mobile-page__header">
-      <button type="button" class="p-sheet-mobile-page__back" :aria-label="closeLabel" @click="$emit('close')">
-        <ChevronLeft :size="20" aria-hidden="true" />
-        <span>返回</span>
-      </button>
-      <h1 v-if="title">{{ title }}</h1>
-      <slot name="header" />
-    </header>
-    <div class="p-sheet-mobile-page__content">
-      <slot />
-    </div>
-  </section>
+  <Transition :name="transitionName" appear>
+    <section
+      v-if="isMobile && show"
+      class="p-sheet-mobile-page"
+      :class="panelClass"
+      role="region"
+      :aria-label="railTitle"
+    >
+      <header v-if="title || slots.header" class="p-sheet-mobile-page__header">
+        <button type="button" class="p-sheet-mobile-page__back" :aria-label="closeLabel" @click="$emit('close')">
+          <ChevronLeft :size="20" aria-hidden="true" />
+          <span>返回</span>
+        </button>
+        <h1 v-if="title">{{ title }}</h1>
+        <slot name="header" />
+      </header>
+      <div class="p-sheet-mobile-page__content">
+        <slot />
+      </div>
+    </section>
+  </Transition>
 
-  <Teleport v-else to="body" :disabled="isTest || !teleport">
+  <Teleport v-if="!isMobile" to="body" :disabled="isTest || !teleport">
     <div
       class="p-sheet-root"
       :class="{
@@ -723,16 +725,38 @@ const sheetStyle = computed(() => {
   }
 }
 
-.slide-right-enter-active,
+.slide-right-enter-active {
+  animation: p-sheet-right-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+
 .slide-left-enter-active {
   transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
-.slide-right-leave-active,
+.slide-right-leave-active {
+  transition: transform 450ms cubic-bezier(0.4, 0, 1, 1);
+  will-change: transform;
+}
+
 .slide-left-leave-active {
   transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
   will-change: transform;
+}
+
+@keyframes p-sheet-right-enter {
+  0% {
+    transform: translateX(100%);
+  }
+
+  72% {
+    transform: translateX(-1.25rem);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .slide-right-enter-from,
@@ -777,8 +801,6 @@ const sheetStyle = computed(() => {
   .p-sheet-panel,
   .fade-enter-active,
   .fade-leave-active,
-  .slide-right-enter-active,
-  .slide-right-leave-active,
   .slide-left-enter-active,
   .slide-left-leave-active,
   .slide-up-enter-active,
@@ -786,8 +808,14 @@ const sheetStyle = computed(() => {
     transition-duration: 100ms;
   }
 
-  .slide-right-enter-from,
-  .slide-right-leave-to,
+  .slide-right-enter-active {
+    animation: p-sheet-right-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .slide-right-leave-active {
+    transition-duration: 450ms;
+  }
+
   .slide-left-enter-from,
   .slide-left-leave-to,
   .slide-up-enter-from,

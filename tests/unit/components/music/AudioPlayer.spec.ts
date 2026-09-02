@@ -158,6 +158,9 @@ describe("AudioPlayer", () => {
 		expect(source).toContain('IconChevronRight as ChevronRight');
 		expect(source).toContain('<ChevronRight :size="16" aria-hidden="true" />');
 		expect(source).not.toContain('<Minimize2 :size="16" aria-hidden="true" />');
+		expect(source).toContain('IconChevronLeft as ChevronLeft');
+		expect(source).toContain('<ChevronLeft :size="15" aria-hidden="true" />');
+		expect(source).not.toContain('<Maximize2 :size="15" aria-hidden="true" />');
 		expect(source).not.toContain('name="player-display" mode="out-in"');
 		expect(source).toMatch(
 			/\.player-display-enter-active,[\s\S]*?\.player-display-leave-active\s*\{[^}]*550ms/,

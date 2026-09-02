@@ -203,8 +203,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
       6rem
   );
   width: min(26rem, calc(100vw - 2.5vw));
-  height: min(32rem, calc(100dvh - var(--a-topbar-height) - 8rem));
-  max-height: min(32rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  height: min(18rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  max-height: min(18rem, calc(100dvh - var(--a-topbar-height) - 8rem));
   background: var(--a-color-bg);
   border-left: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-player-queue);
@@ -223,7 +223,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 

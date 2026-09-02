@@ -1,6 +1,7 @@
 <template>
   <main class="portal-hot">
     <header class="portal-hot__hero">
+      <div class="portal-hot__hero-glow" aria-hidden="true" />
       <div class="portal-hot__hero-content">
         <div>
           <h1 class="portal-hot__hero-title">从全站挑出的内容</h1>
@@ -379,12 +380,28 @@ onMounted(loadHotContent)
 
 /* ─── Content-first intro ─────────────────────────────── */
 .portal-hot__hero {
+  position: relative;
+  overflow: hidden;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface);
 }
 
+.portal-hot__hero-glow {
+  position: absolute;
+  top: -9rem;
+  left: 50%;
+  width: min(37.5rem, 100vw);
+  height: 18.75rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a-color-primary) 16%, transparent) 0%, transparent 70%);
+  filter: blur(2.5rem);
+  pointer-events: none;
+}
+
 .portal-hot__hero-content {
+  position: relative;
   width: min(1200px, 100%);
   margin: 0 auto;
   display: flex;

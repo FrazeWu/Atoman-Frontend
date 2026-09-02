@@ -14,7 +14,7 @@ import PEmpty from "@/components/ui/PEmpty.vue";
 import PButton from "@/components/ui/PButton.vue";
 import PaginationBar from "@/components/ui/PaginationBar.vue";
 
-const query = ref("");
+const query = ref(typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("q") || "" : "");
 const selectedType = ref<"" | MusicSearchKind>("");
 const searchTypeOptions = [
   { label: "全部", value: "" },
@@ -150,7 +150,7 @@ watch([query, selectedType], ([value]) => {
     return;
   }
   timer = window.setTimeout(() => void runSearch(1), 250);
-});
+}, { immediate: true });
 
 onBeforeUnmount(() => {
   window.clearTimeout(timer);

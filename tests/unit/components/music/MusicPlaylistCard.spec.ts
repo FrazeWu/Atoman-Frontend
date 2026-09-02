@@ -23,6 +23,21 @@ describe('MusicPlaylistCard', () => {
     expect(wrapper.emitted('click')).toHaveLength(1)
   })
 
+  it('keeps the playlist card keyboard accessible', async () => {
+    const wrapper = mount(MusicPlaylistCard, {
+      props: {
+        playlist: { id: 'playlist-1', title: 'Late Night Mix', song_count: 18 },
+      },
+    })
+
+    const coverAction = wrapper.get('[data-testid="playlist-card-cover"]')
+    expect(coverAction.attributes('type')).toBe('button')
+    expect(coverAction.attributes('aria-label')).toBe('打开歌单 Late Night Mix')
+
+    await coverAction.trigger('click')
+    expect(wrapper.emitted('click')).toHaveLength(1)
+  })
+
   it('renders play and bookmark stats on the cover', () => {
     const wrapper = mount(MusicPlaylistCard, {
       props: {

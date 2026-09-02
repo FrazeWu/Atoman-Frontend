@@ -19,10 +19,16 @@
         </div>
       </div>
 
-      <div class="mobile-song-view__identity">
-        <h1>{{ song.title }}</h1>
-        <p>{{ artistText }}</p>
-      </div>
+        <div class="mobile-song-view__identity">
+          <h1>{{ song.title }}</h1>
+          <p v-if="detail.artists.length" class="mobile-song-view__artists">
+            <template v-for="(artist, index) in detail.artists" :key="artist.id">
+              <span v-if="index" aria-hidden="true"> / </span>
+              <RouterLink :to="`/music/artist/${artist.id}`">{{ artist.name }}</RouterLink>
+            </template>
+          </p>
+          <p v-else>{{ artistText }}</p>
+        </div>
 
       <button
         type="button"
@@ -34,10 +40,51 @@
         <span>{{ detail.playable && song.audio_url ? '播放歌曲' : '暂无音频' }}</span>
       </button>
 
+      <div class="mobile-song-view__actions" aria-label="歌曲操作">
+        <button
+          type="button"
+          class="mobile-song-view__action"
+          :class="{ 'is-active': isFavorite }"
+          :disabled="actionBusy === 'favorite'"
+          :aria-label="isFavorite ? '移出最爱' : '加入最爱'"
+          :title="isFavorite ? '移出最爱' : '加入最爱'"
+          @click="toggleFavorite"
+        >
+          <Heart :size="19" :fill="isFavorite ? 'currentColor' : 'none'" aria-hidden="true" />
+          <span>{{ isFavorite ? '已收藏' : '收藏' }}</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-song-view__action"
+          :disabled="!detail.playable || !song.audio_url"
+          aria-label="加入播放队列"
+          title="加入播放队列"
+          @click="queueSong"
+        >
+          <ListPlus :size="19" aria-hidden="true" />
+          <span>加入队列</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-song-view__action"
+          :disabled="actionBusy === 'later'"
+          aria-label="稍后播放"
+          title="稍后播放"
+          @click="addToLater"
+        >
+          <Clock3 :size="19" aria-hidden="true" />
+          <span>稍后播放</span>
+        </button>
+      </div>
+      <p v-if="feedback" class="mobile-song-view__feedback" role="status">{{ feedback }}</p>
+
       <dl class="mobile-song-view__metadata">
         <div v-if="song.album">
           <dt>专辑</dt>
-          <dd>{{ song.album.title }}</dd>
+          <dd>
+            <RouterLink v-if="song.album.id" :to="`/music/album/${song.album.id}`">{{ song.album.title }}</RouterLink>
+            <span v-else>{{ song.album.title }}</span>
+          </dd>
         </div>
         <div v-if="song.release_date">
           <dt>发行日期</dt>
@@ -60,20 +107,29 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Play } from 'lucide-vue-next'
-import { getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
+import { Clock3, Heart, ListPlus, Play } from 'lucide-vue-next'
+import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import type { Song } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
+const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
+const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
 
 const song = computed(() => detail.value?.song as MusicSongListItem)
 const artistText = computed(() => detail.value?.artists.map((artist) => artist.name).join(' / ') || song.value?.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家')
+const isFavorite = computed(() => Boolean(song.value && favoriteSongIds.value.has(String(song.value.id))))
+const actionBusy = ref('')
+const feedback = ref('')
 
 function formatDuration(seconds: number) {
   const total = Math.max(0, Math.floor(seconds))
@@ -114,6 +170,58 @@ async function loadSong() {
     error.value = '请稍后重试'
   } finally {
     loading.value = false
+  }
+}
+
+watch(
+  [() => detail.value?.song.id, () => authStore.isAuthenticated],
+  async ([songId, authenticated]) => {
+    if (!songId || !authenticated) {
+      favoriteSongIds.value = new Set()
+      return
+    }
+    try {
+      await loadFavoriteSongs([String(songId)])
+    } catch {
+      favoriteSongIds.value = new Set()
+    }
+  },
+  { immediate: true },
+)
+
+function showFeedback(message: string) {
+  feedback.value = message
+}
+
+async function toggleFavorite() {
+  if (!song.value || !requireLogin() || actionBusy.value) return
+  actionBusy.value = 'favorite'
+  try {
+    const result = await toggleFavoriteSong(String(song.value.id))
+    showFeedback(result.message)
+  } catch {
+    showFeedback('收藏操作失败，请重试')
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
+function queueSong() {
+  if (!song.value?.audio_url || !detail.value?.playable) return
+  player.addToQueue(toPlayableSong(song.value))
+  showFeedback('已加入播放队列')
+}
+
+async function addToLater() {
+  if (!song.value || !requireLogin() || actionBusy.value) return
+  actionBusy.value = 'later'
+  try {
+    await addMusicSongToLater(String(song.value.id))
+    showFeedback('已加入稍后播放')
+  } catch {
+    showFeedback('加入稍后播放失败，请重试')
+  } finally {
+    actionBusy.value = ''
   }
 }
 
@@ -171,6 +279,67 @@ watch(() => route.params.songId, loadSong, { immediate: true })
 .mobile-song-view__identity h1 {
   font-size: 1.5rem;
   line-height: 1.25;
+}
+
+.mobile-song-view__identity a,
+.mobile-song-view__metadata a {
+  color: var(--a-color-primary);
+  text-decoration: none;
+}
+
+.mobile-song-view__identity a:hover,
+.mobile-song-view__identity a:focus-visible,
+.mobile-song-view__metadata a:hover,
+.mobile-song-view__metadata a:focus-visible {
+  text-decoration: underline;
+}
+
+.mobile-song-view__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.mobile-song-view__action {
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 8px;
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.mobile-song-view__action:hover,
+.mobile-song-view__action:focus-visible,
+.mobile-song-view__action.is-active {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.mobile-song-view__action:disabled {
+  color: var(--a-color-muted);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.mobile-song-view__action:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+.mobile-song-view__feedback {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
 }
 
 .mobile-song-view__identity p,

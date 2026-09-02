@@ -120,7 +120,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "playlists",
-					component: () => import("@/views/music/LibraryView.vue"),
+					component: () => import("@/views/music/PlaylistsView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{
@@ -142,6 +142,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					path: "imports",
 					component: () => import("@/views/music/ImportsView.vue"),
 					meta: { requiresAuth: true },
+				},
+				{
+					path: "more",
+					component: () => import("@/views/music/MusicMoreView.vue"),
 				},
 				{
 					path: "artist/new",

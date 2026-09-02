@@ -193,7 +193,8 @@ export type MusicAlbumImportCommitInput = {
 	album_sources?: MusicSource[];
 };
 
-export type MusicStandaloneSongType = "single" | "leak";
+export type MusicStandaloneSongType = "single" | "leak_song" | "leak";
+export type MusicAlbumType = "album" | "ep" | "single" | "leak_album" | "custom" | (string & {});
 
 export type MusicAlbumImport = {
 	importId: string;
@@ -485,7 +486,7 @@ export type MusicAlbumListItem = {
 	description?: string;
 	reason?: string;
 	section?: string;
-	album_type?: string;
+	album_type?: MusicAlbumType;
 	hot_score?: number;
 	play_count?: number;
 	bookmark_count?: number;
@@ -604,7 +605,7 @@ export type MusicSongListItem = {
 		id: string;
 		title: string;
 		cover_url?: string;
-		album_type?: string;
+		album_type?: MusicAlbumType;
 		sources?: MusicSource[];
 		release_date?: string;
 		release_date_precision?: string;
@@ -820,7 +821,7 @@ export type MusicAlbumInput = {
 	cover_url?: string;
 	cover_key?: string;
 	description?: string;
-	album_type?: string;
+	album_type?: MusicAlbumType;
 	tracks?: MusicAlbumTrackEditInput[];
 };
 
@@ -895,7 +896,7 @@ export type MusicListFilters = {
 	q?: string;
 	artist_id?: string;
 	album_id?: string;
-	release_type?: MusicStandaloneSongType | "single,leak";
+	release_type?: MusicStandaloneSongType | "single,leak_song" | "single,leak";
 	year?: string | number;
 	status?: MusicEntryStatus;
 	page?: number;
@@ -916,7 +917,7 @@ export type AlbumEditDraft = {
 	release_date?: string;
 	cover?: UploadAsset | null;
 	description?: string;
-	album_type?: string;
+	album_type?: MusicAlbumType;
 	tracks?: MusicAlbumTrackEditInput[];
 	reason: string;
 	sources: MusicSource[];

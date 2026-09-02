@@ -1,6 +1,6 @@
 <template>
   <div v-if="tabs.length > 0" class="mobile-bottom-nav">
-    <nav class="mobile-bottom-nav__bar" aria-label="当前模块导航">
+    <nav class="mobile-bottom-nav__bar" :style="navStyle" aria-label="当前模块导航">
       <a
         v-for="tab in tabs"
         :key="tab.key"
@@ -44,6 +44,7 @@ const currentModule = computed(() => {
   return undefined
 })
 const tabs = computed(() => getMobilePrimaryTabs(currentModule.value))
+const navStyle = computed(() => ({ '--mobile-nav-count': String(tabs.value.length) }))
 
 const isTabActive = (tab: MobilePrimaryTab) => {
   if (siteContext.value.type !== 'module' || siteContext.value.module !== tab.module) return false
@@ -80,7 +81,7 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
   bottom: 0;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--mobile-nav-count, 4), minmax(0, 1fr));
   border-top: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface);
   box-shadow: none;

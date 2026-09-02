@@ -5,59 +5,49 @@
     @click="$emit('click')"
   >
     <div class="avatar-frame">
-      <img
-        v-if="imageUrl"
-        :src="imageUrl"
-        :alt="displayName"
-        class="avatar-image"
-        loading="lazy"
-      />
-      <div v-else class="avatar-placeholder-text">{{ artistInitial }}</div>
-
-      <!-- Bookmark/Star Button on Top Right -->
       <button
-        v-if="showBookmarkButton"
         type="button"
-        class="bookmark-btn"
-        :class="{ 'is-bookmarked': isBookmarked }"
-        @click.stop="$emit('toggle-bookmark')"
-        :aria-label="isBookmarked ? '取消收藏' : '收藏'"
+        class="avatar-action"
+        :aria-label="`打开艺人 ${displayName}`"
       >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          :fill="isBookmarked ? 'currentColor' : 'none'"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-        </svg>
+        <img
+          v-if="imageUrl"
+          :src="imageUrl"
+          :alt="displayName"
+          class="avatar-image"
+          loading="lazy"
+        />
+        <span v-else class="avatar-placeholder-text">{{ artistInitial }}</span>
       </button>
 
       <div class="stats-overlay">
         <div class="stats-row">
           <div class="stat-item">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-            </svg>
+            <Headphones class="stat-icon" :size="13" aria-hidden="true" />
             <span class="stat-val">{{ formattedPlayCount }}</span>
           </div>
           <div class="stat-item">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
+            <Users class="stat-icon" :size="13" aria-hidden="true" />
             <span class="stat-val">{{ formattedSubscribers }}</span>
           </div>
         </div>
       </div>
     </div>
+
+    <button
+      v-if="showBookmarkButton"
+      type="button"
+      class="bookmark-btn"
+      :class="{ 'is-bookmarked': isBookmarked }"
+      @click.stop="$emit('toggle-bookmark')"
+      :aria-label="isBookmarked ? '取消收藏' : '收藏'"
+    >
+      <Bookmark
+        :size="17"
+        :fill="isBookmarked ? 'currentColor' : 'none'"
+        aria-hidden="true"
+      />
+    </button>
 
     <div class="artist-info">
       <h3 class="artist-title" :title="displayName">
@@ -76,7 +66,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
+import { Bookmark, Headphones, Users } from 'lucide-vue-next'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 
 export interface MusicArtistCardItem {
@@ -147,6 +137,7 @@ const formattedSubscribers = computed(() => {
 
 <style scoped>
 .music-artist-card {
+  position: relative;
   display: block;
   text-decoration: none;
   color: inherit;
@@ -172,6 +163,23 @@ const formattedSubscribers = computed(() => {
 
 
 
+.avatar-action {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.avatar-action:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -2px;
+}
+
 .avatar-image {
   width: 100%;
   height: 100%;
@@ -189,7 +197,7 @@ const formattedSubscribers = computed(() => {
   font-size: 2.2rem;
   font-weight: 900;
   color: var(--a-color-text);
-  background: linear-gradient(135deg, var(--a-color-surface), var(--a-color-border-soft));
+  background: var(--a-color-surface-muted);
   text-transform: uppercase;
   font-family: var(--a-font-sans);
   letter-spacing: 0;
@@ -199,12 +207,12 @@ const formattedSubscribers = computed(() => {
 /* Bookmark Button */
 .bookmark-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   z-index: 5;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -212,13 +220,14 @@ const formattedSubscribers = computed(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.25s ease, transform 0.1s active;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.25s ease, transform 0.1s ease;
   box-shadow: var(--a-shadow-dropdown);
   padding: 0;
   opacity: 0;
 }
 
-.music-artist-card:hover .bookmark-btn {
+.music-artist-card:hover .bookmark-btn,
+.music-artist-card:focus-within .bookmark-btn {
   opacity: 1;
 }
 

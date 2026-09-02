@@ -740,6 +740,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
                     <span class="search-result__meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
                   </button>
                 </section>
+                <RouterLink
+                  v-if="hasSearchQuery"
+                  :to="{ path: '/music/songs', query: { q: searchQuery } }"
+                  class="search-all-results"
+                  @mousedown.prevent
+                >
+                  查看全部搜索结果
+                </RouterLink>
               </div>
             </template>
           </SearchSurface>
@@ -834,9 +842,9 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       </template>
 
       <p v-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
-      <p v-else-if="contentMode === 'discover' && !personalizedAlbums.length && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !recentPlaybackItems.length" class="state-line">暂无发现内容</p>
+      <p v-else-if="!errorMessage && contentMode === 'discover' && !personalizedAlbums.length && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !recentPlaybackItems.length" class="state-line">暂无发现内容</p>
 
-      <section v-else-if="contentMode === 'albums'" class="album-index">
+      <section v-else-if="!errorMessage && contentMode === 'albums'" class="album-index">
       <div class="discover-grid" aria-label="专辑列表">
         <MusicAlbumCard
           v-for="album in localFilteredAlbums"
@@ -857,7 +865,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       />
     </section>
 
-    <div v-else class="discover-sections" aria-label="发现分区">
+    <div v-else-if="!errorMessage" class="discover-sections" aria-label="发现分区">
       <section v-if="filteredDiscoverAlbums.length" class="discover-section">
         <div class="discover-section__header">
           <h2 class="discover-section__title" data-testid="discover-section-title">专辑</h2>
@@ -1018,13 +1026,31 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   position: absolute;
   top: 0;
   left: 0;
-  width: 40rem;
+  width: min(40rem, calc(100vw - 2rem));
   height: auto !important;
   z-index: 100;
 }
 
 .search-dropdown__sections {
   display: grid;
+}
+
+.search-all-results {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-primary);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.search-all-results:hover,
+.search-all-results:focus-visible {
+  background: var(--a-color-surface-muted);
+  text-decoration: underline;
 }
 
 .search-group + .search-group {

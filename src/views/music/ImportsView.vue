@@ -639,7 +639,7 @@ function continueImport() {
   gap: 0.375rem;
 }
 .music-imports-view__filters button {
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   padding: 0.25rem 0.6rem;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -813,6 +813,10 @@ function continueImport() {
   gap: 0.6rem;
   flex-wrap: wrap;
 }
+.music-imports-view__actions :deep(.p-button) {
+  min-height: 44px;
+}
+
 .music-imports-view__files {
   display: grid;
   gap: 0.5rem;
@@ -857,8 +861,9 @@ function continueImport() {
   flex-shrink: 0;
 }
 .file-actions button {
+  min-height: 44px;
   font-size: 0.75rem;
-  padding: 0.2rem 0.5rem !important;
+  padding: 0.5rem 0.75rem !important;
 }
 .music-imports-view__file-input { display: none; }
 .detail-tracks-section {
@@ -893,9 +898,25 @@ function continueImport() {
   }
 }
 
-@media (max-width: 1023px) {
-  .music-imports-view {
-    padding: 1rem;
+@media (max-width: 720px) {
+  .music-imports-view__header {
+    align-items: flex-start;
+  }
+
+  .music-imports-view__files li {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .file-name-cell,
+  .file-actions {
+    flex-basis: 100%;
+  }
+
+  .file-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
+
 </style>

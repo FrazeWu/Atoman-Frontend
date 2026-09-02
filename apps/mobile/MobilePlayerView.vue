@@ -678,8 +678,8 @@ onUnmounted(() => {
 
 .mobile-player-view__queue-actions button {
   display: inline-grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   padding: 0;
   border: 0;

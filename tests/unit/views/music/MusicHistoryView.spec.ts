@@ -4,6 +4,7 @@ import HistoryView from "@/views/music/HistoryView.vue";
 
 const mocks = vi.hoisted(() => ({
 	listMusicListeningHistory: vi.fn(),
+	clearMusicListeningHistory: vi.fn(),
 	playAlbum: vi.fn(),
 	openAlbum: vi.fn(),
 	openArtist: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/api/musicV1", () => ({
 	listMusicListeningHistory: mocks.listMusicListeningHistory,
+	clearMusicListeningHistory: mocks.clearMusicListeningHistory,
 }));
 
 vi.mock("@/stores/player", () => ({
@@ -65,12 +67,71 @@ function historyItem(id: string, title: string) {
 describe("Music HistoryView.vue", () => {
 	beforeEach(() => {
 		mocks.listMusicListeningHistory.mockReset();
+		mocks.clearMusicListeningHistory.mockReset();
 		mocks.playAlbum.mockReset();
 		mocks.openAlbum.mockReset();
 		mocks.openArtist.mockReset();
 		mocks.loadFavoriteSongs.mockReset();
 		mocks.loadFavoriteSongs.mockResolvedValue(new Set());
 		mocks.toggleFavoriteSong.mockReset();
+	});
+
+	it("shows an empty state without a clear action", async () => {
+		mocks.listMusicListeningHistory.mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 20, total: 0, has_more: false },
+		});
+
+		const wrapper = mount(HistoryView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						props: ["title"],
+						template: '<header><h1>{{ title }}</h1><slot name="action" /></header>',
+					},
+					RouterLink: true,
+				},
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.find('[data-testid="history-empty"]').exists()).toBe(true);
+		expect(wrapper.find('[data-testid="clear-history"]').exists()).toBe(false);
+	});
+
+	it("exposes a clear action and clears the loaded history", async () => {
+		mocks.listMusicListeningHistory.mockResolvedValue({
+			data: [historyItem("1", "First Song")],
+			meta: { page: 1, page_size: 20, total: 1, has_more: false },
+		});
+		mocks.clearMusicListeningHistory.mockResolvedValue({});
+
+		const wrapper = mount(HistoryView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						props: ["title"],
+						template: '<header><h1>{{ title }}</h1><slot name="action" /></header>',
+					},
+					PConfirm: {
+						props: ["show"],
+						emits: ["confirm", "cancel"],
+						template: '<button v-if="show" data-testid="confirm-clear" @click="$emit(\'confirm\')">确认</button>',
+					},
+					RouterLink: true,
+				},
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.get('[data-testid="clear-history"]').exists()).toBe(true);
+		await wrapper.get('[data-testid="clear-history"]').trigger("click");
+		expect(wrapper.get('[data-testid="confirm-clear"]').exists()).toBe(true);
+		await wrapper.get('[data-testid="confirm-clear"]').trigger("click");
+		await flushPromises();
+
+		expect(mocks.clearMusicListeningHistory).toHaveBeenCalledOnce();
+		expect(wrapper.get('[data-testid="history-empty"]').exists()).toBe(true);
 	});
 
 	it("replaces history rows when moving to the next page", async () => {
@@ -109,6 +170,7 @@ describe("Music HistoryView.vue", () => {
 			wrapper.get('button[title="下一页"]').attributes("disabled"),
 		).toBeDefined();
 	});
+
 
 	it("plays from the selected song using the loaded history as the queue", async () => {
 		mocks.listMusicListeningHistory.mockResolvedValue({

@@ -13,6 +13,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -185,7 +186,21 @@ watch(
 
 <template>
   <div class="music-history-view">
-    <PPageHeader title="播放历史" mb="0" />
+    <PPageHeader title="播放历史" mb="0">
+      <template #action>
+        <PButton
+          v-if="historyItems.length"
+          variant="ghost"
+          :disabled="Boolean(actionBusy) || !historyItems.length"
+          data-testid="clear-history"
+          title="清空播放历史"
+          @click="clearHistory"
+        >
+          <Trash2 :size="16" aria-hidden="true" />
+          <span>清空历史</span>
+        </PButton>
+      </template>
+    </PPageHeader>
 
     <div v-if="!authStore.isAuthenticated" class="history-unauth">
       <PEmpty
@@ -198,7 +213,36 @@ watch(
       </PEmpty>
     </div>
 
-    <template v-else>
+    <template v-else-if="loading">
+      <div class="history-loading" role="status" aria-label="正在加载播放历史">
+        <div v-for="index in 5" :key="index" class="history-loading__row">
+          <PSkeleton width="48px" height="48px" variant="rect" />
+          <div class="history-loading__copy">
+            <PSkeleton width="11rem" height="16px" />
+            <PSkeleton width="7rem" height="13px" />
+          </div>
+          <PSkeleton width="4rem" height="13px" />
+          <PSkeleton width="7rem" height="13px" />
+        </div>
+      </div>
+    </template>
+
+    <template v-else-if="errorMessage">
+      <p class="history-state history-state--error" role="alert">{{ errorMessage }}</p>
+    </template>
+
+    <PEmpty
+      v-else-if="!historyItems.length"
+      data-testid="history-empty"
+      title="还没有播放历史"
+      description="去发现页播放一首歌曲，这里会记录你的收听足迹。"
+    >
+      <template #action>
+        <RouterLink to="/music/discover" class="a-btn a-btn--primary">去发现音乐</RouterLink>
+      </template>
+    </PEmpty>
+
+    <template v-else-if="historyItems.length">
       <ol class="history-list" aria-label="播放历史列表">
         <li
           v-for="item in historyItems"
@@ -259,7 +303,6 @@ watch(
         </li>
       </ol>
 
-      <p v-if="errorMessage" class="history-state history-state--error">{{ errorMessage }}</p>
       <PaginationBar
         :meta="historyMeta"
         :loading="loading || loadingMore"
@@ -284,6 +327,30 @@ watch(
 .music-history-view {
   display: grid;
   gap: 1.5rem;
+}
+
+.music-history-view :deep(.p-button) {
+  min-height: 44px;
+}
+
+.history-loading {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.history-loading__row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 4rem 7rem;
+  gap: 1rem;
+  align-items: center;
+  min-height: 72px;
+  padding: 0.65rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.history-loading__copy {
+  display: grid;
+  gap: 0.4rem;
 }
 
 .history-list {
@@ -420,7 +487,7 @@ watch(
 .history-toolbar { display: flex; justify-content: flex-end; }
 .history-actions { display: flex; justify-content: flex-end; gap: 0.25rem; }
 .history-actions > button,
-.history-actions :deep(.p-dropdown-root > div:first-child > button) { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.history-actions :deep(.p-dropdown-root > div:first-child > button) { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .history-actions button.is-active { color: var(--a-color-accent); }
 .history-action-menu { min-width: 11rem; padding: 0.3rem; }
 .history-action-menu button { width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }

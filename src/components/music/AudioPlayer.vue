@@ -1319,12 +1319,15 @@ watch(
 
 .player-display-enter-active,
 .player-display-leave-active {
-  transition: opacity 550ms cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    opacity 550ms cubic-bezier(0.2, 0, 0, 1),
+    transform 550ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .player-display-enter-from,
 .player-display-leave-to {
   opacity: 0;
+  transform: translateX(1.25rem);
 }
 
 @media (prefers-reduced-motion: reduce) {

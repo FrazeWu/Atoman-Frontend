@@ -18,7 +18,7 @@
         <Play :size="13" aria-hidden="true" />
       </button>
     </div>
-    <div class="music-lyrics-line__content">
+    <div ref="contentElement" class="music-lyrics-line__content">
       <p
         ref="textElement"
         class="music-lyrics-line__text"
@@ -41,6 +41,7 @@
         type="button"
         class="music-lyrics-line__selection-action"
         data-testid="lyrics-selection-annotate"
+        :style="selectionActionStyle"
         @mousedown.stop
         @click.stop="submitSelectedText"
       >
@@ -108,6 +109,7 @@ const emit = defineEmits<{
 }>()
 
 const textElement = ref<HTMLElement | null>(null)
+const contentElement = ref<HTMLElement | null>(null)
 const selectedTextDraft = ref<{
   line: MusicSongLyricsLine
   selectedText: string
@@ -116,6 +118,7 @@ const selectedTextDraft = ref<{
 } | null>(null)
 const activeAnnotations = computed(() => props.annotations.filter((annotation) => annotation.status === 'active'))
 const lineTimeMs = computed(() => props.line.time_ms ?? props.line.startTimeMs ?? null)
+const selectionActionStyle = ref<Record<string, string>>({})
 
 const segments = computed<HighlightSegment[]>(() => {
   const text = props.line.text
@@ -182,6 +185,15 @@ function handleMouseUp() {
 
   if (!selectedText.trim() || endOffset <= startOffset) return
 
+  const selectionRect = range.getBoundingClientRect()
+  const contentRect = contentElement.value?.getBoundingClientRect()
+  selectionActionStyle.value = contentRect
+    ? {
+        left: `${Math.max(0, selectionRect.left - contentRect.left)}px`,
+        top: `${selectionRect.bottom - contentRect.top + 8}px`,
+      }
+    : {}
+
   selectedTextDraft.value = {
     line: props.line,
     selectedText,
@@ -194,6 +206,7 @@ function submitSelectedText() {
   if (!selectedTextDraft.value) return
   emit('select-text', selectedTextDraft.value)
   selectedTextDraft.value = null
+  selectionActionStyle.value = {}
 }
 
 function openLineAnnotations() {
@@ -333,8 +346,6 @@ function formatTime(timeMs: number | null | undefined): string {
 .music-lyrics-line__selection-action {
   position: absolute;
   z-index: 1;
-  right: 0;
-  bottom: -0.35rem;
   display: inline-flex;
   min-height: 44px;
   align-items: center;

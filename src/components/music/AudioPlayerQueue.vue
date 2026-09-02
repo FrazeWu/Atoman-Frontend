@@ -129,6 +129,11 @@
           <p class="placeholder-desc">在音乐或播客中点击播放或添加，曲目将显示在这里</p>
         </div>
       </div>
+
+      <div class="queue-footer">
+        <span>{{ playbackModeLabel }}</span>
+        <span>拖动调整顺序</span>
+      </div>
     </div>
   </div>
 </template>
@@ -151,6 +156,14 @@ const { handleKeydown: handleDialogKeydown } = useDialogFocus(
 )
 const draggedQueueIndex = ref<number | null>(null)
 const dragOverQueueIndex = ref<number | null>(null)
+const playbackModeLabel = computed(() => {
+  const labels = {
+    loop: '循环播放',
+    single: '单曲循环',
+    random: '随机播放',
+  }
+  return labels[player.playbackMode]
+})
 
 function isSongActive(song: Song) {
   return !!player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(song)
@@ -207,11 +220,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
     var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
       6rem
   );
-  width: min(26rem, calc(100vw - 2.5vw));
-  height: min(18rem, calc(100dvh - var(--a-topbar-height) - 8rem));
-  max-height: min(18rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  width: min(36rem, calc(100vw - 2.5vw));
+  height: min(21rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  max-height: min(21rem, calc(100dvh - var(--a-topbar-height) - 8rem));
   background: var(--a-color-bg);
-  border-left: 1px solid var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-player-queue);
   display: flex;
   flex-direction: column;
@@ -250,7 +263,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.15rem 0.45rem;
-  border-radius: var(--a-radius-pill, 999px);
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
 }
@@ -262,7 +274,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   font-size: 0.8rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--a-radius-control);
   transition: all 0.15s ease;
 }
 
@@ -277,7 +288,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   color: var(--a-color-fg);
   font-size: 0.78rem;
   padding: 0.25rem 0.65rem;
-  border-radius: var(--a-radius-control);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -290,6 +300,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem 0;
+}
+
+.queue-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 1.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 
 .queue-list {
@@ -358,7 +379,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 .queue-item.active {
-  background: color-mix(in srgb, var(--a-color-text) 4%, transparent);
+  background: var(--a-color-text);
+  border-bottom-color: var(--a-color-text);
 }
 
 .q-visual {
@@ -413,12 +435,18 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 .queue-item.active .q-title {
-  color: #10b981;
+  color: var(--a-color-bg);
 }
 
 .q-artist {
   font-size: 0.72rem;
   color: var(--a-color-muted);
+}
+
+.queue-item.active .q-artist,
+.queue-item.active .q-drag,
+.queue-item.active .q-remove {
+  color: color-mix(in srgb, var(--a-color-bg) 65%, transparent);
 }
 
 .q-drag {
@@ -429,7 +457,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   color: var(--a-color-muted-soft);
   cursor: grab;
   padding: 0.2rem;
-  border-radius: var(--a-radius-control);
 }
 
 .q-drag:hover {
@@ -452,7 +479,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   font-size: 1.1rem;
   line-height: 1;
   padding: 0.25rem 0.4rem;
-  border-radius: var(--a-radius-control);
   cursor: pointer;
   opacity: 0;
   transition: all 0.15s ease;

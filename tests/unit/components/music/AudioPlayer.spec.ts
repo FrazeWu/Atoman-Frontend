@@ -354,6 +354,10 @@ describe("AudioPlayer", () => {
 
 		expect(wrapper.find('[aria-label="固定播放器"]').exists()).toBe(false);
 		expect(wrapper.find('[aria-label="取消固定播放器"]').exists()).toBe(false);
+		expect(wrapper.find('.player-reveal-handle').exists()).toBe(false);
+		expect(
+			readFileSync(resolve(process.cwd(), "src/components/music/AudioPlayer.vue"), "utf8"),
+		).not.toContain(".player-reveal-handle");
 		wrapper.unmount();
 	});
 

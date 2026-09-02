@@ -26,7 +26,7 @@ describe("PSheet.vue", () => {
 			/\.p-sheet-panel\s*\{[\s\S]*?transition:[^;]*left 200ms ease/,
 		);
 		expect(source).toMatch(
-			/\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter 520ms/,
+			/\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter 5200ms/,
 		);
 		expect(source).toMatch(
 			/\.slide-right-enter-from,[\s\S]*?transform:\s*translateX\(100%\)/,
@@ -35,7 +35,7 @@ describe("PSheet.vue", () => {
 			/@keyframes p-sheet-right-enter\s*\{[\s\S]*?72%\s*\{[\s\S]*?transform:\s*translateX\(-1\.25rem\)/,
 		);
 		expect(source).toMatch(
-			/\.slide-right-leave-active\s*\{[\s\S]*?transition:\s*transform 380ms/,
+			/\.slide-right-leave-active\s*\{[\s\S]*?transition:\s*transform 3800ms/,
 		);
 		expect(source).toMatch(
 			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,

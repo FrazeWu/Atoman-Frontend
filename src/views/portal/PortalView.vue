@@ -32,7 +32,7 @@
               <span class="portal-hot__header-line" />
             </div>
 
-            <div class="portal-hot__spotlight-layout">
+            <div v-if="hasSpotlightLeadImage" class="portal-hot__spotlight-layout">
               <RouterLink
                 v-if="spotlightLead"
                 :to="spotlightLead.target_path"
@@ -109,6 +109,41 @@
                   </PContentCard>
                 </RouterLink>
               </div>
+            </div>
+
+            <div v-else class="portal-hot__spotlight-list">
+              <RouterLink
+                v-for="item in recommendationItems"
+                :key="recommendationKey(item)"
+                :to="item.target_path"
+                class="portal-hot__spotlight-list-item"
+              >
+                <PContentCard :title="item.title" :summary="item.summary" class="portal-hot__spotlight-list-card">
+                  <template #visual>
+                    <div class="portal-hot__spotlight-list-image" :class="`portal-hot__spotlight-image--${item.module}`">
+                      <img
+                        v-if="item.image_url && !failedImageKeys.has(recommendationKey(item))"
+                        :src="item.image_url"
+                        :alt="item.title"
+                        referrerpolicy="no-referrer"
+                        loading="lazy"
+                        @error="handleImageError(recommendationKey(item))"
+                      >
+                      <component v-else :is="moduleIcon(item.module)" :size="20" aria-hidden="true" />
+                    </div>
+                  </template>
+                  <template #meta>
+                    <span class="portal-hot__tag">{{ moduleLabel(item.module) }}</span>
+                    <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
+                  </template>
+                  <template #footer>
+                    <span class="portal-hot__reason" data-test="portal-spotlight-reason">
+                      <Sparkles :size="12" aria-hidden="true" />
+                      {{ spotlightReason(item) }}
+                    </span>
+                  </template>
+                </PContentCard>
+              </RouterLink>
             </div>
           </section>
 
@@ -412,6 +447,10 @@ const visibleFeatured = computed(() => (
 const recommendationItems = computed(() => visibleFeatured.value.slice(0, spotlightPageSize))
 const spotlightLead = computed(() => recommendationItems.value[0])
 const spotlightRailItems = computed(() => recommendationItems.value.slice(1))
+const hasSpotlightLeadImage = computed(() => {
+  const lead = spotlightLead.value
+  return Boolean(lead?.image_url && !failedImageKeys.value.has(recommendationKey(lead)))
+})
 const recommendedItemKeys = computed(() => new Set(
   recommendationItems.value.map((item) => `${item.module}:${item.id}`),
 ))
@@ -745,13 +784,59 @@ onMounted(loadHotContent)
 .portal-hot__spotlight-image--timeline { background: color-mix(in srgb, #0891b2 12%, var(--a-color-surface)); color: #0e7490; }
 
 .portal-hot__spotlight-rail {
-  display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
 .portal-hot__spotlight-rail-item .portal-hot__spotlight-card {
-  min-height: 6.25rem;
+  height: auto;
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+.portal-hot__spotlight-list {
+  max-width: 52rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.portal-hot__spotlight-list-item {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.portal-hot__spotlight-list-card {
+  margin: 0;
+  padding: 0.875rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.portal-hot__spotlight-list-card:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.portal-hot__spotlight-list-card :deep(.p-entry__body) {
+  gap: 0.75rem;
+}
+
+.portal-hot__spotlight-list-image {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--a-radius-control);
+}
+
+.portal-hot__spotlight-list-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .portal-hot__tag {

@@ -142,6 +142,30 @@ describe('PortalView', () => {
     expect(wrapper.findAll('[data-test="portal-spotlight-reason"]')).toHaveLength(4)
   })
 
+  it('焦点主推没有真实封面时使用紧凑列表', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          featured: featured.map((item) => ({ ...item, image_url: '' })),
+          sections: [],
+        },
+      }),
+    } as Response)
+
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.portal-hot__spotlight-list').exists()).toBe(true)
+    expect(wrapper.findAll('.portal-hot__spotlight-list-item')).toHaveLength(4)
+    expect(wrapper.find('.portal-hot__spotlight-layout').exists()).toBe(false)
+  })
+
   it('使用后端返回的艺人和真实统计渲染热门音乐', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,

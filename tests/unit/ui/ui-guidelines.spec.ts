@@ -81,6 +81,8 @@ describe("UI 准则", () => {
 		expect(source).toContain("portal-hot__spotlight-lead");
 		expect(source).toContain("portal-hot__spotlight-rail-item");
 		expect(source).toContain("portal-hot__spotlight-card");
+		expect(source).toContain("portal-hot__spotlight-list");
+		expect(source).toContain("hasSpotlightLeadImage");
 		expect(source).toContain("portal-hot__module-strip");
 		expect(source).not.toContain("portal-hot__recommendation-grid");
 		expect(source).not.toContain("portal-refresh-spotlight");

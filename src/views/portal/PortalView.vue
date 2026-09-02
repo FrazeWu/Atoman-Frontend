@@ -303,6 +303,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Component } from 'vue'
+import { getActivePinia } from 'pinia'
 import { BookOpen, Clock3, FileText, MessageCircle, Music2, Radio, RefreshCw, Rss, Sparkles, Video as VideoIcon } from 'lucide-vue-next'
 import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
@@ -362,9 +363,10 @@ interface PortalHotResponse {
 const router = useRouter()
 const api = useApi()
 const siteAccessStore = useSiteAccessStore()
-const authStore = useAuthStore()
+const pinia = getActivePinia()
+const authStore = pinia ? useAuthStore(pinia) : null
 
-watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+watch(() => authStore?.isAuthenticated ?? false, (isAuthenticated) => {
   if (isAuthenticated) void router.replace('/feed')
 }, { immediate: true })
 

@@ -199,6 +199,9 @@ export const usePlayerStore = defineStore("player", () => {
 	let musicSessionRestored = false;
 	let musicAccountGeneration = 0;
 
+	const shouldPauseAudio = (player: HTMLAudioElement) =>
+		!player.paused || isPlaying.value || playRequested;
+
 	const isMusicSong = (song: Song) =>
 		!song.source_type || song.source_type === "music";
 
@@ -364,7 +367,7 @@ export const usePlayerStore = defineStore("player", () => {
 	);
 
 	setForeignPlayRequestCallback(() => {
-		if ((isPlaying.value || playRequested) && audio) {
+		if (audio && shouldPauseAudio(audio)) {
 			playGeneration += 1;
 			playRequested = false;
 			savePodcastProgress();
@@ -684,7 +687,7 @@ export const usePlayerStore = defineStore("player", () => {
 				if (currentSong.value && !isPlaying.value) attemptPlay(nextAudio);
 			},
 			pause: () => {
-				if (isPlaying.value || playRequested) pauseCurrentAudio(nextAudio);
+				if (shouldPauseAudio(nextAudio)) pauseCurrentAudio(nextAudio);
 			},
 			previoustrack: playPrevious,
 			nexttrack: playNext,
@@ -1057,7 +1060,7 @@ export const usePlayerStore = defineStore("player", () => {
 			player.currentTime = currentTime.value;
 		}
 
-		if (isPlaying.value || playRequested) {
+		if (shouldPauseAudio(player)) {
 			pauseCurrentAudio(player);
 		} else {
 			if (listeningSongId !== String(currentSong.value.id))

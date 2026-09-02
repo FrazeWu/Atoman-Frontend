@@ -34,6 +34,7 @@ class MockAudio {
 	volume = 1;
 	src = "";
 	preload = "";
+	paused = true;
 	private readonly listeners = new Map<string, EventListener[]>();
 	play = vi.fn(() => audioPlayImplementation());
 	load = vi.fn();
@@ -934,6 +935,24 @@ describe("player store", () => {
 
 		resolvePlay();
 		await Promise.resolve();
+		expect(player.isPlaying).toBe(false);
+	});
+
+	it("pauses an active audio element even before the playing state syncs", async () => {
+		const player = usePlayerStore();
+		player.playSong({
+			id: "stale-playing-state",
+			title: "Stale Playing State",
+			audio_url: "stale-playing-state.mp3",
+		} as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		player.isPlaying = false;
+		audioInstances[0].paused = false;
+		player.togglePlay();
+
+		expect(audioInstances[0].pause).toHaveBeenCalledOnce();
+		expect(audioInstances[0].play).toHaveBeenCalledOnce();
 		expect(player.isPlaying).toBe(false);
 	});
 	it("keeps repeat-one next paused when audio play fails", async () => {

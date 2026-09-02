@@ -41,7 +41,7 @@ describe("PSheet.vue", () => {
 			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,
 		);
 		expect(source).toMatch(
-			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*none/,
+			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter 900ms/,
 		);
 	});
 

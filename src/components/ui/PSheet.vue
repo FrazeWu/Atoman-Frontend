@@ -723,16 +723,38 @@ const sheetStyle = computed(() => {
   }
 }
 
-.slide-right-enter-active,
+.slide-right-enter-active {
+  animation: p-sheet-right-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+
 .slide-left-enter-active {
   transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
-.slide-right-leave-active,
+.slide-right-leave-active {
+  transition: transform 380ms cubic-bezier(0.4, 0, 1, 1);
+  will-change: transform;
+}
+
 .slide-left-leave-active {
   transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
   will-change: transform;
+}
+
+@keyframes p-sheet-right-enter {
+  0% {
+    transform: translateX(100%);
+  }
+
+  72% {
+    transform: translateX(-1.25rem);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .slide-right-enter-from,
@@ -784,6 +806,10 @@ const sheetStyle = computed(() => {
   .slide-up-enter-active,
   .slide-up-leave-active {
     transition-duration: 100ms;
+  }
+
+  .slide-right-enter-active {
+    animation: none;
   }
 
   .slide-right-enter-from,

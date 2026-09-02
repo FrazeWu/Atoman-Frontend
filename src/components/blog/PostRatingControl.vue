@@ -147,7 +147,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Star, X } from 'lucide-vue-next'
+import { IconStar as Star, IconX as X } from '@tabler/icons-vue'
 import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 
 const props = withDefaults(defineProps<{

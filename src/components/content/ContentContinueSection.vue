@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { BookOpen, Headphones, Play } from 'lucide-vue-next'
+import { IconBook2 as BookOpen, IconHeadphones as Headphones, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useContentLifecycle, type ContinueContentItem } from '@/composables/useContentLifecycle'
 import type { StudioModule } from '@/types'

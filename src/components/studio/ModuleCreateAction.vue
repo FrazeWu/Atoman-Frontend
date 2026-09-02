@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { FilePenLine, Mic2, Upload } from 'lucide-vue-next'
+import { IconFilePencil as FilePenLine, IconMicrophone2 as Mic2, IconUpload as Upload } from '@tabler/icons-vue'
 
 import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'

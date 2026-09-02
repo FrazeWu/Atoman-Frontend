@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ImagePlus } from 'lucide-vue-next'
+import { IconPhotoPlus as ImagePlus } from '@tabler/icons-vue'
 
 defineProps<{
   effectiveCoverURL: string

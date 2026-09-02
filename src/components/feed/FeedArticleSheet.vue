@@ -239,7 +239,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Bookmark, Clock, ExternalLink, Play, Star } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconClock as Clock, IconExternalLink as ExternalLink, IconPlayerPlay as Play, IconStar as Star } from '@tabler/icons-vue'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'

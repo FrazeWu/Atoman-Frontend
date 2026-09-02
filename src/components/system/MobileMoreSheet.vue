@@ -64,7 +64,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { LogOut, UserRound } from 'lucide-vue-next'
+import { IconLogout as LogOut, IconUser as UserRound } from '@tabler/icons-vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import SiteFooterSheet from '@/components/system/footer/SiteFooterSheet.vue'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'

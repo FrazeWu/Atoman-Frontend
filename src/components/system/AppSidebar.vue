@@ -211,12 +211,7 @@
 import { computed, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
-import {
-  Rss, Compass, Bookmark, Disc3, Users, History,
-  MessageSquare, Folder, Archive, BookOpen, Clock, Mic,
-  Library, Search, Upload, ClipboardCheck,
-  LayoutDashboard, FileText, Mic2, Settings2, Video
-} from 'lucide-vue-next'
+import { IconRss as Rss, IconCompass as Compass, IconBookmark as Bookmark, IconDisc as Disc3, IconUsers as Users, IconHistory as History, IconMessage as MessageSquare, IconFolder as Folder, IconArchive as Archive, IconBook2 as BookOpen, IconClock as Clock, IconMicrophone as Mic, IconLibrary as Library, IconSearch as Search, IconUpload as Upload, IconClipboardCheck as ClipboardCheck, IconLayoutDashboard as LayoutDashboard, IconFileText as FileText, IconMicrophone2 as Mic2, IconSettings2 as Settings2, IconVideo as Video } from '@tabler/icons-vue'
 
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'

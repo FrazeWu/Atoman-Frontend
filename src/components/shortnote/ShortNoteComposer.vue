@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { GripVertical, ImagePlus, X } from 'lucide-vue-next'
+import { IconGripVertical as GripVertical, IconPhotoPlus as ImagePlus, IconX as X } from '@tabler/icons-vue'
 import Sortable from 'sortablejs'
 import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'

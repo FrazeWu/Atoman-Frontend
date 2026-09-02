@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Filter, RefreshCw } from 'lucide-vue-next'
+import { IconFilter as Filter, IconRefresh as RefreshCw } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import type { FeedSourceTypeFilter } from '@/composables/feed/useFeedTimelinePresentation'

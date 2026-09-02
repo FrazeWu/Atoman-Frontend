@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { IconCalendar as CalendarDays, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
 import PHelpTooltip from '@/components/ui/PHelpTooltip.vue'
 import {
   BIRTH_DATE_SLOT_POSITIONS,

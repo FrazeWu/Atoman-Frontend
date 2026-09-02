@@ -253,22 +253,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  Clock3,
-  FileText,
-  Heart,
-  ListMusic,
-  LoaderCircle,
-  Music2,
-  Pause,
-  Play,
-  Repeat,
-  RotateCcw,
-  RotateCw,
-  Shuffle,
-  SkipBack,
-  SkipForward,
-} from 'lucide-vue-next'
+import { IconClock as Clock3, IconFileText as FileText, IconHeart as Heart, IconPlaylist as ListMusic, IconLoader as LoaderCircle, IconMusic as Music2, IconPlayerPause as Pause, IconPlayerPlay as Play, IconRepeat as Repeat, IconRotate2 as RotateCcw, IconRotateClockwise as RotateCw, IconArrowsShuffle as Shuffle, IconPlayerSkipBack as SkipBack, IconPlayerSkipForward as SkipForward } from '@tabler/icons-vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'

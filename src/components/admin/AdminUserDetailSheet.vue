@@ -186,16 +186,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import {
-  KeyRound,
-  LogOut,
-  MonitorSmartphone,
-  Pencil,
-  ShieldCheck,
-  Trash2,
-  UserRoundCheck,
-  UserRoundX,
-} from 'lucide-vue-next'
+import { IconKey as KeyRound, IconLogout as LogOut, IconDevices as MonitorSmartphone, IconPencil as Pencil, IconShieldCheck as ShieldCheck, IconTrash as Trash2, IconUserCheck as UserRoundCheck, IconUserX as UserRoundX } from '@tabler/icons-vue'
 
 import {
   getAdminUser,

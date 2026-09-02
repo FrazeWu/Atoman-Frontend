@@ -2,7 +2,7 @@
 import { getPodcastRecommendations, listPodcastEpisodes } from '@/api/podcast'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Headphones, Play } from 'lucide-vue-next'
+import { IconHeadphones as Headphones, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'

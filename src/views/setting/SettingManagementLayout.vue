@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ListTree } from 'lucide-vue-next'
+import { IconListTree as ListTree } from '@tabler/icons-vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'

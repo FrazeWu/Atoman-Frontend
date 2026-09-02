@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Copy, ExternalLink, Mail, MessageCircle } from 'lucide-vue-next'
+import { IconCopy as Copy, IconExternalLink as ExternalLink, IconMail as Mail, IconMessageCircle as MessageCircle } from '@tabler/icons-vue'
 import type { FootbarPanel } from '@/config/moduleRooms'
 import PSheet from '@/components/ui/PSheet.vue'
 import SiteAboutContent from './SiteAboutContent.vue'

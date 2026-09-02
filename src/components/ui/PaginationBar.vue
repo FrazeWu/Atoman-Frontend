@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 
 type PaginationMeta = { page: number; page_size: number; total: number; has_more: boolean }

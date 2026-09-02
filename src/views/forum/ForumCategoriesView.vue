@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { Folder, Search } from 'lucide-vue-next'
+import { IconFolder as Folder, IconSearch as Search } from '@tabler/icons-vue'
 import { useForumStore } from '@/stores/forum'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'

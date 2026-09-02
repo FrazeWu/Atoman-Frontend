@@ -312,7 +312,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Component } from 'vue'
 import { getActivePinia } from 'pinia'
-import { BookOpen, Clock3, FileText, MessageCircle, Music2, Radio, RefreshCw, Rss, Sparkles, Video as VideoIcon } from 'lucide-vue-next'
+import { IconBook2 as BookOpen, IconClock as Clock3, IconFileText as FileText, IconMessageCircle as MessageCircle, IconMusic as Music2, IconRadio as Radio, IconRefresh as RefreshCw, IconRss as Rss, IconSparkles as Sparkles, IconVideo as VideoIcon } from '@tabler/icons-vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { BookOpen, MessageSquare, Settings } from 'lucide-vue-next'
+import { IconBook2 as BookOpen, IconMessage as MessageSquare, IconSettings as Settings } from '@tabler/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
 import PEmpty from '@/components/ui/PEmpty.vue'

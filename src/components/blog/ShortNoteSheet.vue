@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Pencil, Trash2 } from 'lucide-vue-next'
+import { IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'

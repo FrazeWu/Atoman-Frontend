@@ -54,7 +54,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RefreshCw } from 'lucide-vue-next'
+import { IconRefresh as RefreshCw } from '@tabler/icons-vue'
 
 import OAuthBrandIcon from '@/components/auth/OAuthBrandIcon.vue'
 import PButton from '@/components/ui/PButton.vue'

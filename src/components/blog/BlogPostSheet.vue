@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
-import { Bookmark, Clock, Pencil } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconClock as Clock, IconPencil as Pencil } from '@tabler/icons-vue'
 import { useRouter } from 'vue-router'
 
 import PSheet from '@/components/ui/PSheet.vue'

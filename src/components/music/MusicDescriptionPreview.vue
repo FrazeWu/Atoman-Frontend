@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ChevronDown } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown } from '@tabler/icons-vue'
 
 const props = withDefaults(defineProps<{
   description?: string

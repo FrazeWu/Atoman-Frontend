@@ -135,7 +135,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconGripVertical as GripVertical } from '@tabler/icons-vue'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
@@ -143,7 +143,12 @@ import type { Song } from '@/types'
 const player = usePlayerStore()
 const queuePanelRef = ref<HTMLElement | null>(null)
 const queueOpen = computed(() => player.showQueue)
-const { handleKeydown: handleDialogKeydown } = useDialogFocus(queueOpen, queuePanelRef, () => player.toggleQueue())
+const { handleKeydown: handleDialogKeydown } = useDialogFocus(
+  queueOpen,
+  queuePanelRef,
+  () => player.toggleQueue(),
+  { preventScroll: true },
+)
 const draggedQueueIndex = ref<number | null>(null)
 const dragOverQueueIndex = ref<number | null>(null)
 
@@ -203,8 +208,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
       6rem
   );
   width: min(26rem, calc(100vw - 2.5vw));
-  height: min(32rem, calc(100dvh - var(--a-topbar-height) - 8rem));
-  max-height: min(32rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  height: min(18rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  max-height: min(18rem, calc(100dvh - var(--a-topbar-height) - 8rem));
   background: var(--a-color-bg);
   border-left: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-player-queue);
@@ -223,7 +228,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 

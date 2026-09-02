@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Search } from 'lucide-vue-next'
+import { IconSearch as Search } from '@tabler/icons-vue'
 import { useDebateStore } from '@/stores/debate'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'

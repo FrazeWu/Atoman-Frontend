@@ -5,6 +5,7 @@ import { expectTextVisible } from '../helpers/common'
 test.describe('Authentication', () => {
   test('login with valid credentials redirects to feed', async ({ page }) => {
     await loginViaUI(page, ADMIN_USERNAME, ADMIN_PASSWORD)
+    await expect(page).toHaveURL(/\/feed(?:\?.*)?$/)
     await expectTextVisible(page, 'ATOMAN')
   })
 

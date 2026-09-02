@@ -7,6 +7,39 @@ test.describe('Feed', () => {
     await expect(page.getByRole('link', { name: '登录', exact: true }).first()).toBeVisible()
   })
 
+  test('guest subscription starts a safe login return flow from discovery', async ({ page }) => {
+    await page.route('**/api/v1/auth/session', route => route.fulfill({ status: 204, body: '' }))
+    await page.route('**/api/v1/feed/recommend/themes*', route => route.fulfill({ status: 200, json: { data: [] } }))
+    await page.route('**/api/v1/feed/recommend/articles*', route => route.fulfill({ status: 200, json: { data: [] } }))
+    await page.route('**/api/v1/feed/recommend/channels*', route => route.fulfill({
+      status: 200,
+      json: {
+        data: [{
+          id: 'source-e2e',
+          title: 'E2E 推荐来源',
+          summary: '用于验证访客订阅回跳',
+          source_type: 'internal_channel',
+          target_path: '/channels/source-e2e',
+        }],
+      },
+    }))
+
+    await page.goto('/feed?category=blog')
+    const sourceCard = page.locator('[data-test="channel-card"]').first()
+    await expect(sourceCard).toBeVisible({ timeout: 15000 })
+    await sourceCard.getByRole('button', { name: '订阅' }).click()
+
+    await expect(page).toHaveURL(/\/login\?redirect=/)
+    const redirect = new URL(page.url()).searchParams.get('redirect')
+    expect(redirect).toBeTruthy()
+    const redirectUrl = new URL(redirect || '', page.url())
+    expect(redirectUrl.pathname).toBe('/feed')
+    expect(redirectUrl.searchParams.get('category')).toBe('blog')
+    expect(redirectUrl.searchParams.get('subscribe_source_id')).toBe('source-e2e')
+    expect(redirectUrl.searchParams.get('subscribe_source_type')).toBe('internal_channel')
+    expect(redirectUrl.searchParams.get('subscribe_source_title')).toBe('E2E 推荐来源')
+  })
+
   test('authenticated user sees feed timeline', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/feed')
     // wait for either timeline, empty state or loading skeleton to render before asserting

@@ -140,10 +140,10 @@ describe("LoginView redirect", () => {
     "https://evil.example/phish",
     "//evil.example/phish",
     "/feed\nnext",
-  ])("falls back to home for unsafe redirect %s", async (redirect) => {
+  ])("falls back to Feed for unsafe redirect %s", async (redirect) => {
     const router = await mountLogin(redirect);
 
-    expect(router.currentRoute.value.fullPath).toBe("/");
+    expect(router.currentRoute.value.fullPath).toBe("/feed");
   });
 
   it("flags missing turnstile config only for production register routes", () => {
@@ -289,7 +289,7 @@ describe("LoginView redirect", () => {
       "secret123",
       "123456",
     );
-    expect(router.currentRoute.value.fullPath).toBe("/");
+    expect(router.currentRoute.value.fullPath).toBe("/feed");
   });
 
   it("does not navigate or show success when registration is superseded", async () => {

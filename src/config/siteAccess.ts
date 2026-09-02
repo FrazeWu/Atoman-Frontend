@@ -116,7 +116,7 @@ const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {
     for (const feature of siteAccessFeatures[key] ?? []) {
       features[feature.key] = true
     }
-    modules[key] = { enabled: true, features }
+    modules[key] = { enabled: key !== 'books', features }
   }
 
   return modules
@@ -163,6 +163,8 @@ export function mergeSiteAccess(input: SiteAccessInput): SiteAccess {
       },
     }
   }
+
+  modules.books.enabled = false
 
   if (input?.settings?.feed) {
     settings.feed = {

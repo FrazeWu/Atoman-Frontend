@@ -10,79 +10,74 @@
     </div>
     <template v-else>
       <div class="settings-block">
-      <div class="settings-block__copy">
-        <strong>资料预览</strong>
-        <small>个人主页和公开名片上显示的完整资料。</small>
-      </div>
-      <div class="settings-block__control user-blog-settings-panel__identity">
-        <div class="avatar-preview-box">
-          <img v-if="form.avatar_url" :src="resolveMediaURL(form.avatar_url)" alt="当前头像" />
-          <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
+        <div class="settings-block__copy">
+          <strong>身份信息</strong>
+          <small>公开展示在个人主页和内容中的资料。</small>
         </div>
-        <div class="identity-info">
-          <strong>{{ form.display_name || authStore.user?.username }}</strong>
-          <small class="a-muted">@{{ authStore.user?.username }}</small>
-        </div>
-      </div>
-    </div>
-
-    <form class="user-blog-settings-panel__form" @submit.prevent="save">
-      <div class="form-grid">
-        <PInput
-          v-model="form.display_name"
-          label="显示名称"
-          placeholder="用于展示的名称"
-        />
-        <div class="avatar-field">
-          <span class="avatar-field__label">头像</span>
-          <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }" @click="avatarChangeStarted = true">
-            <Camera :size="16" aria-hidden="true" />
-            <span>{{ uploadingAvatar ? '上传中...' : '选择图片' }}</span>
-            <input
-              data-testid="profile-avatar-input"
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              :disabled="uploadingAvatar"
-              @change="selectAvatar"
-            />
-          </label>
-          <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
-          <PButton
-            v-if="avatarChangeStarted && canRestoreAvatar"
-            variant="ghost"
-            size="sm"
-            type="button"
-            :loading="restoringAvatar"
-            loading-text="恢复中..."
-            :disabled="restoringAvatar || uploadingAvatar"
-            @click="restoreAvatar"
-          >
-            <Undo2 :size="14" />
-            恢复上次头像
+        <div class="settings-block__control user-blog-settings-panel__identity">
+          <div class="avatar-preview-box">
+            <img v-if="form.avatar_url" :src="resolveMediaURL(form.avatar_url)" alt="当前头像" />
+            <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
+          </div>
+          <div class="identity-info">
+            <strong>{{ form.display_name || authStore.user?.username }}</strong>
+            <small class="a-muted">@{{ authStore.user?.username }}</small>
+          </div>
+          <PButton v-if="authStore.user?.username" :href="profileHref" variant="secondary" size="sm">
+            查看个人主页
           </PButton>
         </div>
-        <PInput
-          v-model="form.website"
-          label="个人网站"
-          type="url"
-          placeholder="https://yoursite.com"
-        />
-        <PInput
-          v-model="form.location"
-          label="所在地"
-          placeholder="城市或地区"
-        />
-        <div class="form-field-full">
-          <PTextarea
-            v-model="form.bio"
-            label="个人简介"
-            placeholder="介绍一下自己..."
-            :rows="3"
-          />
-        </div>
       </div>
 
-      <section v-if="props.includeAccountExtras" class="settings-section">
+      <form class="user-blog-settings-panel__form" @submit.prevent="save">
+        <div class="form-grid">
+          <PInput
+            v-model="form.display_name"
+            label="显示名称"
+            placeholder="用于展示的名称"
+            maxlength="50"
+          />
+          <div class="avatar-field">
+            <span class="avatar-field__label">头像</span>
+            <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }" @click="avatarChangeStarted = true">
+              <Camera :size="16" aria-hidden="true" />
+              <span>{{ uploadingAvatar ? '上传中...' : '选择图片' }}</span>
+              <input
+                data-testid="profile-avatar-input"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                :disabled="uploadingAvatar"
+                @change="selectAvatar"
+              />
+            </label>
+            <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
+            <PButton
+              v-if="avatarChangeStarted && canRestoreAvatar"
+              variant="ghost"
+              size="sm"
+              type="button"
+              :loading="restoringAvatar"
+              loading-text="恢复中..."
+              :disabled="restoringAvatar || uploadingAvatar"
+              @click="restoreAvatar"
+            >
+              <Undo2 :size="14" />
+              恢复上次头像
+            </PButton>
+          </div>
+          <div class="form-field-full">
+            <PTextarea
+              v-model="form.bio"
+              label="个人简介"
+              placeholder="介绍一下自己..."
+              :rows="3"
+              maxlength="200"
+            />
+            <small class="profile-bio-count" aria-live="polite">{{ form.bio.length }} / 200</small>
+          </div>
+        </div>
+
+        <section v-if="props.includeAccountExtras" class="settings-section">
         <h3 class="section-title">通知设置</h3>
         <div class="toggles-grid">
           <label class="settings-toggle">
@@ -118,7 +113,7 @@
         <div v-if="error" class="a-error">{{ error }}</div>
         <div v-if="success" class="a-success">✓ 更改保存成功</div>
 
-        <PButton variant="primary" type="submit" :disabled="uploadingAvatar" :loading="saving" loading-text="保存中...">保存更改</PButton>
+        <PButton variant="primary" type="submit" :disabled="uploadingAvatar" :loading="saving" loading-text="保存中...">保存资料</PButton>
       </div>
       </form>
     </template>
@@ -128,7 +123,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { Camera, Undo2 } from 'lucide-vue-next'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import {
@@ -144,6 +139,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useUserBlocksStore } from '@/stores/userBlocks'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { desktopAppPath } from '@/utils/desktopAppUrl'
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -159,10 +155,9 @@ const props = withDefaults(defineProps<{
 const form = ref({
   display_name: '',
   bio: '',
-  website: '',
-  location: '',
   avatar_url: '',
 })
+const profileHref = computed(() => desktopAppPath(`/users/${authStore.user?.username || ''}`))
 const notificationPrefs = ref({
   like: true,
   interaction: true,
@@ -187,6 +182,22 @@ const avatarChangeStarted = ref(false)
 const error = ref('')
 const success = ref(false)
 
+const updateProfile = async (patch: Record<string, string>) => {
+  const res = await apiRequestResult(api.users.settings, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authStore.token}`,
+    },
+    body: JSON.stringify(patch),
+  })
+  if (!res.ok) throw new Error('资料保存失败')
+  const d = await Promise.resolve(res.data)
+  const updated = d.data || d
+  if (authStore.user) authStore.updateUser(updated)
+  return updated
+}
+
 const selectAvatar = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -196,14 +207,17 @@ const selectAvatar = async (event: Event) => {
   uploadingAvatar.value = true
   try {
     const uploaded = await uploadUserAvatar(file)
-    try {
-      canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
-    } catch {
+    await getUserAvatarRestoreAvailability().then((availability) => {
+      canRestoreAvatar.value = availability.available
+    }).catch(() => {
       canRestoreAvatar.value = false
-    }
-    form.value.avatar_url = uploaded.url
-  } catch {
-    error.value = '头像上传失败，请重新选择图片'
+    })
+    const updated = await updateProfile({ avatar_url: uploaded.url })
+    form.value.avatar_url = updated.avatar_url || uploaded.url
+    success.value = true
+    setTimeout(() => { success.value = false }, 3000)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '头像更新失败，请重新选择图片'
   } finally {
     uploadingAvatar.value = false
   }
@@ -246,8 +260,6 @@ const loadProfile = async () => {
     form.value = {
       display_name: u.display_name || '',
       bio: u.bio || '',
-      website: u.website || '',
-      location: u.location || '',
       avatar_url: u.avatar_url || '',
     }
     profileLoaded.value = true
@@ -285,20 +297,13 @@ const save = async () => {
       if (!preferencesSaved) throw new Error('通知设置保存失败')
     }
 
-    const res = await apiRequestResult(api.users.settings, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify(form.value),
-    })
-    if (!res.ok) throw new Error('资料保存失败')
-    const d = await Promise.resolve(res.data)
-    const updated = d.data || d
-    if (authStore.user) {
-      authStore.updateUser(updated)
+    const profilePayload = {
+      display_name: form.value.display_name.trim(),
+      bio: form.value.bio.trim(),
     }
+    await updateProfile(profilePayload)
+    form.value.display_name = profilePayload.display_name
+    form.value.bio = profilePayload.bio
     success.value = true
     setTimeout(() => { success.value = false }, 3000)
   } catch (e) {
@@ -326,8 +331,13 @@ onMounted(async () => {
 .user-blog-settings-panel__identity {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
   justify-content: flex-start;
+}
+
+.user-blog-settings-panel__identity :deep(.p-button) {
+  margin-left: auto;
 }
 
 .avatar-preview-box {
@@ -357,8 +367,15 @@ onMounted(async () => {
   gap: 0.15rem;
 }
 
-.avatar-field {
-  display: grid;
+.profile-bio-count {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.avatar-field {  display: grid;
   align-content: start;
   gap: 0.4rem;
 }
@@ -471,6 +488,13 @@ onMounted(async () => {
   align-items: flex-end;
   gap: 0.5rem;
   margin-top: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .user-blog-settings-panel__identity :deep(.p-button) {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 640px) {

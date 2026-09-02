@@ -49,4 +49,73 @@ describe('UserBlogSettingsPanel', () => {
     expect(wrapper.find('form').exists()).toBe(false)
     expect(wrapper.get('button').text()).toContain('重试')
   })
+
+  it('只显示保留的资料字段，并在保存时忽略已移除字段', async () => {
+    let profileUpdateBody: Record<string, unknown> | undefined
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/users/me') && init?.method === 'PUT') {
+        profileUpdateBody = JSON.parse(String(init.body)) as Record<string, unknown>
+        return new Response(JSON.stringify({ data: { display_name: 'New name', bio: 'New bio' } }), { status: 200 })
+      }
+      if (url.endsWith('/users/me')) {
+        return new Response(JSON.stringify({
+          data: {
+            display_name: 'Alice',
+            bio: 'Old bio',
+            website: 'https://example.com',
+            location: 'Shanghai',
+          },
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
+    })
+
+    const wrapper = mount(UserBlogSettingsPanel, { props: { includeAccountExtras: false } })
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('个人网站')
+    expect(wrapper.text()).not.toContain('所在地')
+    expect(wrapper.get('input[placeholder="用于展示的名称"]').attributes('maxlength')).toBe('50')
+    expect(wrapper.get('textarea[placeholder="介绍一下自己..."]').attributes('maxlength')).toBe('200')
+    expect(wrapper.text()).toContain('7 / 200')
+
+    await wrapper.get('input[placeholder="用于展示的名称"]').setValue('  New name  ')
+    await wrapper.get('textarea[placeholder="介绍一下自己..."]').setValue('New bio')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(profileUpdateBody).toEqual({ display_name: 'New name', bio: 'New bio' })
+  })
+
+  it('头像上传成功后立即绑定到用户资料并同步认证用户', async () => {
+    const profileUpdateBodies: Record<string, unknown>[] = []
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/users/me') && init?.method === 'PUT') {
+        profileUpdateBodies.push(JSON.parse(String(init.body)) as Record<string, unknown>)
+        return new Response(JSON.stringify({ data: { avatar_url: 'https://cdn.example.com/avatar.png' } }), { status: 200 })
+      }
+      if (url.endsWith('/users/me')) {
+        return new Response(JSON.stringify({ data: { display_name: 'Alice', bio: '' } }), { status: 200 })
+      }
+      if (url.endsWith('/uploads')) {
+        return new Response(JSON.stringify({ data: { url: 'https://cdn.example.com/avatar.png' } }), { status: 201 })
+      }
+      return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
+    })
+
+    const wrapper = mount(UserBlogSettingsPanel, { props: { includeAccountExtras: false } })
+    await flushPromises()
+    const input = wrapper.get('[data-testid="profile-avatar-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['avatar'], 'avatar.png', { type: 'image/png' })],
+    })
+
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(profileUpdateBodies).toEqual([{ avatar_url: 'https://cdn.example.com/avatar.png' }])
+    expect(useAuthStore().user?.avatar_url).toBe('https://cdn.example.com/avatar.png')
+  })
 })

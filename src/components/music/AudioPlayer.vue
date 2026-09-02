@@ -23,7 +23,7 @@
         title="收起为仅封面"
         @click="setPlayerDisplayMode('cover')"
       >
-        <Minimize2 :size="16" aria-hidden="true" />
+        <ChevronRight :size="16" aria-hidden="true" />
       </button>
       <!-- Left: Identity -->
       <div
@@ -326,7 +326,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronUp as ChevronUp, IconMinimize as Minimize2, IconMaximize as Maximize2, IconPlayerPlay as Play } from '@tabler/icons-vue';
+import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronRight as ChevronRight, IconChevronUp as ChevronUp, IconMaximize as Maximize2, IconPlayerPlay as Play } from '@tabler/icons-vue';
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";

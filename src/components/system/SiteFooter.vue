@@ -39,6 +39,7 @@ function openPanel(panel: FootbarPanel, label: string) {
         <div class="site-footer-column site-footer-primary">
           <RouterLink v-if="isAdmin" to="/site/setting" class="site-footer-brand">凹凸庵</RouterLink>
           <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
+          <SiteVisitStats />
         </div>
 
         <div class="site-footer-column site-footer-center">
@@ -82,7 +83,6 @@ function openPanel(panel: FootbarPanel, label: string) {
             <span class="site-footer-version" aria-label="当前版本">{{ appVersion }}</span>
           </div>
           <span class="site-footer-copyright">© {{ copyrightYear }} 凹凸庵</span>
-          <SiteVisitStats />
         </div>
       </div>
     </div>
@@ -120,7 +120,8 @@ function openPanel(panel: FootbarPanel, label: string) {
 
 .site-footer-primary {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .site-footer-secondary {

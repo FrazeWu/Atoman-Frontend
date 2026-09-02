@@ -14,6 +14,10 @@ const footerSource = readFileSync(
 	resolve(__dirname, "../../../src/components/system/SiteFooter.vue"),
 	"utf8",
 );
+const visitStatsSource = readFileSync(
+	resolve(__dirname, "../../../src/components/system/SiteVisitStats.vue"),
+	"utf8",
+);
 
 const mountFooter = () => {
 	const wrapper = mount(SiteFooter, {
@@ -93,6 +97,21 @@ describe("SiteFooter", () => {
 		expect(wrapper.get(".site-footer-secondary").text()).toContain("使用条款");
 		expect(wrapper.get(".site-footer-secondary").text()).toContain("隐私政策");
 		expect(wrapper.get(".site-footer-version").text()).toBe(appVersion);
+	});
+
+	it("places visit statistics below the brand in a vertical list", () => {
+		const primaryColumn = footerSource.slice(
+			footerSource.indexOf('<div class="site-footer-column site-footer-primary">'),
+			footerSource.indexOf('<div class="site-footer-column site-footer-center">'),
+		);
+		const secondaryColumn = footerSource.slice(
+			footerSource.indexOf('<div class="site-footer-column site-footer-secondary">'),
+		);
+
+		expect(primaryColumn).toContain("<SiteVisitStats />");
+		expect(secondaryColumn).not.toContain("<SiteVisitStats />");
+		expect(visitStatsSource).toContain("flex-direction: column");
+		expect(visitStatsSource).toContain("display: none");
 	});
 
 	it("does not reserve mobile navigation space below the footer", () => {

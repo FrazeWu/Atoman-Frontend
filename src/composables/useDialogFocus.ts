@@ -13,6 +13,7 @@ export function useDialogFocus(
   open: Readonly<Ref<boolean>>,
   root: Ref<HTMLElement | null>,
   close: () => void,
+  options: { preventScroll?: boolean } = {},
 ) {
   let previousFocus: HTMLElement | null = null;
   const focusableElements = () =>
@@ -23,14 +24,14 @@ export function useDialogFocus(
   const restoreFocus = () => {
     const target = previousFocus;
     previousFocus = null;
-    if (target?.isConnected) target.focus();
+    if (target?.isConnected) target.focus({ preventScroll: options.preventScroll });
   };
 
   const focusDialog = async () => {
     await nextTick();
     const first = focusableElements()[0];
-    if (first) first.focus();
-    else root.value?.focus();
+    if (first) first.focus({ preventScroll: options.preventScroll });
+    else root.value?.focus({ preventScroll: options.preventScroll });
   };
 
   const handleKeydown = (event: KeyboardEvent) => {

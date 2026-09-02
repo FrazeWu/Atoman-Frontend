@@ -77,6 +77,15 @@ describe("AudioPlayerQueue.vue", () => {
 		trigger.remove();
 	});
 
+	it("keeps the base page position when it moves focus into the queue", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayerQueue.vue"),
+			"utf8",
+		);
+
+		expect(source).toContain("{ preventScroll: true }");
+	});
+
 	it("limits the desktop queue panel to a compact height", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/music/AudioPlayerQueue.vue"),

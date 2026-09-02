@@ -1,5 +1,6 @@
 <template>
   <div v-if="player.currentSong" class="player-shell">
+    <Transition name="player-display">
     <div
       v-if="playerDisplayMode === 'full'"
       class="player"
@@ -23,9 +24,9 @@
       <button
         type="button"
         class="player-collapse-tab"
-        aria-label="收起播放器"
-        title="收起播放器"
-        @click="setPlayerDisplayMode('collapsed')"
+        aria-label="收起为仅封面"
+        title="收起为仅封面"
+        @click="setPlayerDisplayMode('cover')"
       >
         <Minimize2 :size="16" aria-hidden="true" />
       </button>
@@ -99,7 +100,18 @@
       <!-- Center: Controls -->
       <div ref="playerControlsRef" class="player-controls-hub">
         <div class="ctrl-row">
-          <button type="button" class="skip-btn" aria-label="后退 5 秒" title="后退 5 秒" data-hint="后退 5S (←)" @click="player.skip(-5)">-5S</button>
+          <button v-if="isPodcast" type="button" class="skip-btn" aria-label="后退 15 秒" title="后退 15 秒" data-hint="后退 15S (←)" @click="player.skip(-15)">-15S</button>
+          <button
+            v-else
+            type="button"
+            class="player-fav-btn"
+            :class="{ 'is-active': favoriteSongIds.has(String(player.currentSong.id)) }"
+            :aria-label="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '添加到最爱'"
+            :title="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '添加到最爱'"
+            @click="toggleTrackFavorite(String(player.currentSong.id))"
+          >
+            <Heart :size="18" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" aria-hidden="true" />
+          </button>
           <button type="button" class="nav-btn" aria-label="上一首" title="上一首" data-hint="上一首 (Alt+←)" @click="player.playPrevious()">上一首</button>
           <button
             type="button"
@@ -112,63 +124,17 @@
             {{ player.isPlaying ? '暂停' : '播放' }}
           </button>
           <button type="button" class="nav-btn" aria-label="下一首" title="下一首" data-hint="下一首 (Alt+→)" @click="player.playNext()">下一首</button>
-          <button type="button" class="skip-btn" aria-label="前进 5 秒" title="前进 5 秒" data-hint="前进 5S (→)" @click="player.skip(5)">+5S</button>
-
-          <button
-            v-if="player.currentSong && !isPodcast"
-            type="button"
-            class="player-fav-btn"
-            :class="{
-              'is-active': favoriteSongIds.has(String(player.currentSong.id)),
-            }"
-			:title="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '加入最爱'"
-			:data-hint="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '加入最爱'"
-            @click="toggleTrackFavorite(String(player.currentSong.id))"
-          >
-            <Heart
-              :size="16"
-              :fill="
-                favoriteSongIds.has(String(player.currentSong.id))
-                  ? 'currentColor'
-                  : 'none'
-              "
-            />
+          <button v-if="isPodcast" type="button" class="skip-btn" aria-label="前进 15 秒" title="前进 15 秒" data-hint="前进 15S (→)" @click="player.skip(15)">+15S</button>
+          <button v-else type="button" class="feature-toggle player-mode-btn" aria-label="切换播放模式" title="切换播放模式" data-hint="播放模式" @click="player.cyclePlaybackMode()">
+            <div v-if="player.playbackMode === 'single'" class="repeat-one-wrapper">
+              <Repeat :size="20" />
+              <span class="one-badge">1</span>
+            </div>
+            <span v-else style="display: flex; align-items: center">
+              <Repeat v-if="player.playbackMode === 'loop'" :size="20" />
+              <Shuffle v-else-if="player.playbackMode === 'random'" :size="20" />
+            </span>
           </button>
-
-          <PDropdown
-            v-if="player.currentSong && !isPodcast"
-            class="player-add-dropdown"
-            position="right"
-          >
-            <template #trigger>
-              <button class="player-add-btn" type="button" title="添加到歌单" data-hint="添加到歌单" @click="guardPlaylistMenu">
-                <Plus :size="16" />
-              </button>
-            </template>
-            <template #default="{ close }">
-              <div class="track-add-menu">
-                <div class="track-add-menu-header">添加到歌单</div>
-                <div v-if="!playlists.length" class="track-add-menu-empty">
-                  暂无歌单
-                </div>
-                <button
-                  v-for="p in playlists"
-                  :key="p.id"
-                  type="button"
-                  class="track-add-menu-item"
-                  @click="
-                    addTrackToPlaylist(
-                      String(p.id),
-                      String(player.currentSong.id),
-                      close,
-                    )
-                  "
-                >
-                  {{ p.name }}
-                </button>
-              </div>
-            </template>
-          </PDropdown>
 
           <button
             v-if="isPodcastEpisode"
@@ -196,29 +162,36 @@
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
+        <PDropdown v-if="player.currentSong && !isPodcast" class="player-add-dropdown" position="right">
+          <template #trigger>
+            <button class="player-add-btn" type="button" aria-label="添加到歌单" title="添加到歌单" @click="guardPlaylistMenu">
+              <Plus :size="18" aria-hidden="true" />
+            </button>
+          </template>
+          <template #default="{ close }">
+            <div class="track-add-menu">
+              <div class="track-add-menu-header">添加到歌单</div>
+              <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
+              <button v-for="p in playlists" :key="p.id" type="button" class="track-add-menu-item" @click="addTrackToPlaylist(String(p.id), String(player.currentSong.id), close)">
+                {{ p.name }}
+              </button>
+            </div>
+          </template>
+        </PDropdown>
+
         <button
           type="button"
           class="feature-link"
-          :aria-label="featureLabel"
-          :title="featureLabel"
+          aria-label="歌词"
+          title="歌词"
           data-hint="歌词 (L)"
           @click="player.toggleLyrics"
         >
           <span>{{ featureLabel }}</span>
         </button>
 
-        <button type="button" class="feature-toggle" aria-label="切换播放模式" title="切换播放模式" data-hint="播放模式" @click="player.cyclePlaybackMode()">
-          <div
-            v-if="player.playbackMode === 'single'"
-            class="repeat-one-wrapper"
-          >
-            <Repeat :size="20" />
-            <span class="one-badge">1</span>
-          </div>
-          <span v-else style="display: flex; align-items: center">
-            <Repeat v-if="player.playbackMode === 'loop'" :size="20" />
-            <Shuffle v-else-if="player.playbackMode === 'random'" :size="20" />
-          </span>
+        <button type="button" class="feature-link" aria-label="评论" title="评论" @click="commentsOpen = true">
+          <span>评</span>
         </button>
 
         <div class="volume-container">
@@ -232,14 +205,9 @@
                 step="0.01"
                 :value="player.volume"
                 :style="{ '--vol-percent': `${player.volume * 100}%` }"
-                @input="
-                  (e) =>
-                    player.setVolume(
-                      parseFloat((e.target as HTMLInputElement).value),
-                    )
-                "
                 class="vol-slider"
                 aria-label="音量"
+                @input="(e) => player.setVolume(parseFloat((e.target as HTMLInputElement).value))"
               />
             </div>
           </div>
@@ -249,7 +217,6 @@
               class="vol-icon"
               :aria-label="player.volume > 0 ? '静音' : '解除静音'"
               :title="player.volume > 0 ? '静音' : '解除静音'"
-              style="display: flex; align-items: center"
               @click="player.setVolume(player.volume > 0 ? 0 : 0.5)"
             >
               <Volume2 v-if="player.volume > 0.6" :size="20" />
@@ -264,48 +231,29 @@
           class="queue-trigger"
           :class="{ active: player.showQueue }"
           type="button"
-          data-hint="播放队列"
+          aria-label="播放队列"
+          title="播放队列"
           @click="player.toggleQueue()"
         >
-          <List :size="22" />
+          <List :size="20" aria-hidden="true" />
           <span class="queue-count">{{ player.queue.length || 0 }}</span>
         </button>
-        <button
-          class="player-mini-btn"
-          type="button"
-          aria-label="切换到小窗播放"
-          title="切换到小窗播放"
-          data-hint="小窗播放"
-          @click="setPlayerDisplayMode('mini')"
-        >
-          <PictureInPicture2 :size="18" aria-hidden="true" />
-        </button>
-        <button
-          class="player-pin-btn"
-          type="button"
-          :aria-label="player.isPinned ? '取消固定播放器' : '固定播放器'"
-          :title="player.isPinned ? '取消固定播放器' : '固定播放器'"
-          :data-hint="player.isPinned ? '取消固定' : '固定播放器'"
-          @click="togglePlayerPin"
-        >
-          <PinOff v-if="player.isPinned" :size="20" aria-hidden="true" />
-          <Pin v-else :size="20" aria-hidden="true" />
-        </button>
+
       </div>
     </div>
     </div>
 
     <div
-      v-else-if="playerDisplayMode === 'mini'"
+      v-else
       class="player-mini-window"
-      data-player-mode="mini"
+      data-player-mode="cover"
     >
       <button
         type="button"
         class="player-mini-cover"
-        aria-label="小窗封面"
-        title="小窗封面"
-        @click="setPlayerDisplayMode('full')"
+        :aria-label="player.isPlaying ? '暂停播放' : '继续播放'"
+        :title="player.isPlaying ? '暂停播放' : '继续播放'"
+        @click="player.togglePlay()"
       >
         <img
           v-if="player.currentSong.cover_url"
@@ -314,40 +262,25 @@
           class="player-cover"
         />
         <span v-else class="player-cover-fallback">{{ coverFallback }}</span>
-      </button>
-      <button
-        type="button"
-        class="player-mini-play"
-        :aria-label="player.isPlaying ? '暂停' : '播放'"
-        :title="player.isPlaying ? '暂停' : '播放'"
-        @click="player.togglePlay()"
-      >
-        <Pause v-if="player.isPlaying" :size="22" fill="currentColor" aria-hidden="true" />
-        <Play v-else :size="22" fill="currentColor" aria-hidden="true" />
+        <svg class="player-mini-progress-ring" :data-progress="miniProgressPercent" viewBox="0 0 100 100" aria-hidden="true">
+          <rect class="player-mini-progress-ring__track" x="3" y="3" width="94" height="94" pathLength="100" />
+          <rect class="player-mini-progress-ring__value" x="3" y="3" width="94" height="94" pathLength="100" :style="{ strokeDashoffset: String(100 - miniProgressPercent) }" />
+        </svg>
+        <span v-if="!player.isPlaying" class="player-mini-play-overlay" aria-hidden="true">
+          <Play :size="22" fill="currentColor" />
+        </span>
       </button>
       <button
         type="button"
         class="player-mini-expand"
         aria-label="展开完整播放器"
         title="展开完整播放器"
-        @click="setPlayerDisplayMode('full')"
+        @click.stop="setPlayerDisplayMode('full')"
       >
         <Maximize2 :size="15" aria-hidden="true" />
       </button>
     </div>
-
-    <button
-      v-else
-      type="button"
-      class="player-expand-tab"
-      data-player-mode="collapsed"
-      aria-label="弹出播放器"
-      title="弹出播放器"
-      @click="setPlayerDisplayMode('full')"
-    >
-      <Maximize2 :size="16" aria-hidden="true" />
-      <span>播放器</span>
-    </button>
+    </Transition>
   </div>
 
   <Transition name="slide-up" appear>
@@ -371,6 +304,14 @@
   <Transition name="slide-up" appear>
     <AudioPlayerQueue v-if="player.showQueue" />
   </Transition>
+  <CommentSideSheet
+    v-if="player.currentSong"
+    :show="commentsOpen"
+    title="歌曲评论"
+    :target="{ kind: 'music_song', resourceId: String(player.currentSong.id) }"
+    :above-player="true"
+    @close="commentsOpen = false"
+  />
   <PToast v-model="toastVisible" :message="toastMessage" type="success" />
 </template>
 
@@ -400,18 +341,15 @@ import {
   Heart,
   Plus,
   Clock,
-  Pin,
-  PinOff,
   ChevronUp,
   Minimize2,
   Maximize2,
-  PictureInPicture2,
-  Pause,
   Play,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
+import CommentSideSheet from "@/components/comment/CommentSideSheet.vue";
 import PDropdown from "@/components/ui/PDropdown.vue";
 import PToast from "@/components/ui/PToast.vue";
 import { useMusicFavoritePlaylist } from "@/composables/useMusicFavoritePlaylist";
@@ -428,9 +366,10 @@ const { requireLogin } = useLoginRedirect();
 const playerInfoRef = ref<HTMLElement | null>(null);
 const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
-const playerDisplayMode = ref<"full" | "mini" | "collapsed">("full");
+const playerDisplayMode = ref<"full" | "cover">("full");
+const commentsOpen = ref(false);
 
-async function setPlayerDisplayMode(mode: "full" | "mini" | "collapsed") {
+async function setPlayerDisplayMode(mode: "full" | "cover") {
   playerDisplayMode.value = mode;
   if (mode === "full") {
     await nextTick();
@@ -499,7 +438,6 @@ const {
   playerInnerRef,
   revealPlayer,
   scheduleAutoHide,
-  togglePlayerPin,
   updateMetaCollapse,
 } = useAudioPlayerChrome(computed(() => player.isPinned), () => player.togglePinned());
 
@@ -531,6 +469,10 @@ const isPodcastEpisode = computed(
   () => player.currentSong?.source_type === "podcast_episode",
 );
 const featureLabel = computed(() => (isPodcast.value ? "说明" : "词"));
+const miniProgressPercent = computed(() => {
+  if (!player.duration) return 0;
+  return Math.min(100, Math.max(0, (player.currentTime / player.duration) * 100));
+});
 
 const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);
@@ -596,7 +538,10 @@ async function toggleTrackFavorite(songId: string) {
 
 
 async function addTrackToPlaylist(playlistId: string, songId: string, close?: () => void) {
-  if (!requireLogin()) return;
+  if (!authStore.isAuthenticated) {
+    showToast("登录后可添加到歌单");
+    return;
+  }
   try {
     await addSongToPlaylist(playlistId, songId);
     close?.();
@@ -610,7 +555,10 @@ async function addTrackToPlaylist(playlistId: string, songId: string, close?: ()
 }
 
 function guardPlaylistMenu(event: MouseEvent) {
-  if (!requireLogin()) event.stopPropagation();
+  if (authStore.isAuthenticated) return;
+  event.preventDefault();
+  event.stopPropagation();
+  showToast("登录后可添加到歌单");
 }
 
 watch(
@@ -651,7 +599,7 @@ watch(
 <style scoped>
 .player {
   position: fixed;
-  right: 2.5vw;
+  right: 0;
   bottom: calc(
     var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
       1.25rem
@@ -660,11 +608,12 @@ watch(
   z-index: var(--a-z-player, 720);
   height: 4.5rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 7px;
+  border-right: 0;
+  border-radius: 0;
   background: #fff;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
   color: #131c2e;
-  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 0.56s cubic-bezier(0.2, 0, 0, 1);
 }
 
 :root.dark .player {
@@ -690,7 +639,7 @@ watch(
 
 .player-inner {
   display: grid;
-  grid-template-columns: 28px minmax(11rem, 1fr) minmax(13rem, 1.2fr) minmax(19rem, 1.45fr) minmax(17rem, 1fr);
+  grid-template-columns: 20px minmax(10rem, 0.85fr) minmax(20rem, 2.4fr) minmax(17rem, 1.25fr) minmax(14rem, 0.8fr);
   align-items: center;
   gap: 0.75rem;
   width: 100%;
@@ -704,8 +653,7 @@ watch(
   align-items: center;
   justify-content: center;
   border: 0;
-  border-right: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
+  background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
 }
@@ -734,10 +682,11 @@ watch(
 }
 .cover-wrap {
   position: relative;
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
+  align-self: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 0;
+  border-radius: 0;
   padding: 0;
   background: var(--a-color-surface);
   color: var(--a-color-text);
@@ -870,7 +819,7 @@ watch(
   transition-delay: 0s;
   z-index: 1000;
   box-shadow: var(--a-shadow-dropdown, 0 12px 30px rgba(15, 23, 42, 0.12));
-  border-radius: 6px;
+  border-radius: 0;
 }
 .player-tooltip::after {
   content: "";
@@ -957,7 +906,7 @@ watch(
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: 0;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
@@ -986,7 +935,7 @@ watch(
   background: var(--a-color-text);
   color: var(--a-color-bg);
   border: 1px solid var(--a-color-text);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 4px 16px;
   font-weight: 500;
   font-size: 11px;
@@ -1007,11 +956,16 @@ watch(
   width: 100%;
   min-width: 0;
   height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.progress-container > :deep(.waveform-progress) {
+  width: 100%;
 }
 
 .player-waveform {
-  padding-right: 0.75rem;
-  border-right: 1px solid var(--a-color-border-soft);
+  padding-right: 0.25rem;
 }
 
 /* Right Section */
@@ -1036,7 +990,7 @@ watch(
   background: transparent;
   color: var(--a-color-text);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   opacity: 0.5;
   padding: 0 0.5rem;
@@ -1109,7 +1063,7 @@ watch(
   padding: 12px 0 14px 0;
   z-index: 100;
   box-shadow: var(--a-shadow-dropdown, 0 12px 30px rgba(15, 23, 42, 0.12));
-  border-radius: 12px;
+  border-radius: 0;
 }
 :root.dark .volume-control {
   background: var(--a-color-bg);
@@ -1244,7 +1198,7 @@ watch(
   color: var(--a-color-muted);
   transition: all 0.2s;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.05);
   border: none;
 }
@@ -1252,8 +1206,8 @@ watch(
   background: rgba(255, 255, 255, 0.1);
 }
 
-.player-mini-btn,
-.player-pin-btn {
+.player-fav-btn,
+.player-add-btn {
   width: 2.75rem;
   height: 2.75rem;
   display: inline-flex;
@@ -1265,39 +1219,50 @@ watch(
   cursor: pointer;
 }
 
-.player-mini-btn:hover,
-.player-mini-btn:focus-visible,
-.player-pin-btn:hover,
-.player-pin-btn:focus-visible {
+.player-fav-btn:hover,
+.player-fav-btn:focus-visible,
+.player-add-btn:hover,
+.player-add-btn:focus-visible {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
 
 .player-mini-window {
   position: fixed;
-  right: 1.25rem;
+  right: 0;
   bottom: calc(
     var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
       1.25rem
   );
   z-index: var(--a-z-player, 720);
-  width: 4.75rem;
-  height: 4.75rem;
-  overflow: hidden;
+  display: flex;
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  overflow: visible;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 7px;
+  border-right: 0;
+  border-radius: 0;
   background: #fff;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
 }
 
 .player-mini-cover {
+  position: relative;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 4.5rem;
+  height: 4.5rem;
   padding: 0;
   border: 0;
   background: transparent;
+  font: inherit;
   cursor: pointer;
+}
+
+.player-mini-cover:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
 }
 
 .player-mini-cover .player-cover,
@@ -1307,107 +1272,85 @@ watch(
   height: 100%;
 }
 
-.player-mini-play,
-.player-mini-expand {
-  opacity: 0;
-  transition: opacity 160ms ease;
+.player-mini-progress-ring {
+  position: absolute;
+  inset: -0.2rem;
+  width: calc(100% + 0.4rem);
+  height: calc(100% + 0.4rem);
+  overflow: visible;
+  pointer-events: none;
 }
 
-.player-mini-play {
+.player-mini-progress-ring__track,
+.player-mini-progress-ring__value {
+  fill: none;
+  stroke-width: 3;
+  stroke-linejoin: miter;
+}
+
+.player-mini-progress-ring__track {
+  stroke: var(--a-color-border-soft);
+}
+
+.player-mini-progress-ring__value {
+  stroke: var(--a-color-primary);
+  stroke-dasharray: 100;
+  transition: stroke-dashoffset 160ms linear;
+}
+
+.player-mini-play-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: grid;
   place-items: center;
-  border: 0;
-  background: rgba(19, 28, 46, 0.78);
   color: #fff;
-  cursor: pointer;
+  background: rgba(19, 28, 46, 0.42);
+  pointer-events: none;
 }
 
 .player-mini-expand {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
+  top: 50%;
+  left: -1.25rem;
   display: grid;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.25rem;
+  height: 4.5rem;
   place-items: center;
   padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: rgba(19, 28, 46, 0.78);
-  color: #fff;
-  cursor: pointer;
-}
-
-.player-mini-window:hover .player-mini-play,
-.player-mini-window:hover .player-mini-expand,
-.player-mini-play:focus-visible,
-.player-mini-expand:focus-visible {
-  opacity: 1;
-  outline: none;
-}
-
-.player-expand-tab {
-  position: fixed;
-  right: 0;
-  bottom: calc(
-    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
-      1.25rem
-  );
-  z-index: var(--a-z-player, 720);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  min-width: 2.25rem;
-  height: 7rem;
-  padding: 0.5rem 0.25rem;
   border: 1px solid var(--a-color-border-soft);
   border-right: 0;
-  border-radius: 6px 0 0 6px;
+  border-radius: 0;
   background: #fff;
-  color: #131c2e;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+  color: var(--a-color-muted);
   cursor: pointer;
-  writing-mode: vertical-rl;
+  transform: translateY(-50%);
+  z-index: 2;
 }
 
-.player-expand-tab:hover,
-.player-expand-tab:focus-visible {
+.player-mini-expand:focus-visible {
   background: var(--a-color-primary-soft, #edf2ff);
   color: var(--a-color-primary);
   outline: none;
 }
 
-.player-expand-tab span {
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+.player-display-enter-active,
+.player-display-leave-active {
+  transition: opacity 550ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.player-pin-btn {
-  width: 2.75rem;
-  height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-}
-
-.player-pin-btn:hover,
-.player-pin-btn:focus-visible {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
+.player-display-enter-from,
+.player-display-leave-to {
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .player {
+  .player-display-enter-active,
+  .player-display-leave-active {
     transition-duration: 0.01ms;
   }
 }
+
 .queue-trigger:hover {
   color: var(--a-color-text);
   background: var(--a-color-overlay-soft);
@@ -1426,7 +1369,7 @@ watch(
 
 @media (min-width: 768px) and (max-width: 1024px) {
   .player {
-    right: 1rem;
+    right: 0;
     left: 1rem;
     height: 6.75rem;
   }
@@ -1461,6 +1404,16 @@ watch(
 
   .volume-container {
     display: none;
+  }
+
+  .player-mini-window,
+  .player-mini-cover {
+    width: 6.75rem;
+    height: 6.75rem;
+  }
+
+  .player-mini-expand {
+    height: 6.75rem;
   }
 }
 
@@ -1653,9 +1606,7 @@ watch(
   .player-reveal-handle,
   .player-collapse-tab,
   .player-waveform,
-  .player-mini-btn,
-  .player-pin-btn,
-  .feature-toggle,
+  .feature-toggle:not(.player-mode-btn),
   .volume-container,
   .nav-btn,
   .player-fav-btn,
@@ -1681,8 +1632,8 @@ watch(
   }
 
   .cover-wrap {
-    width: 44px;
-    height: 44px;
+    width: 3rem;
+    height: 3rem;
   }
 
   .player-meta,
@@ -1753,19 +1704,19 @@ watch(
   }
 
   .player-mini-window {
-    right: 0.75rem;
-    bottom: calc(var(--a-mobile-nav-reserved-height) + 0.75rem);
-    width: 4.25rem;
-    height: 4.25rem;
+    right: 0;
+    bottom: var(--a-mobile-nav-reserved-height);
+    width: 3rem;
+    height: 3rem;
   }
 
-  .player-expand-tab {
-    bottom: calc(var(--a-mobile-nav-reserved-height) + 0.75rem);
+  .player-mini-cover {
+    width: 3rem;
+    height: 3rem;
   }
 
-  .player-mini-play,
   .player-mini-expand {
-    transition: none;
+    height: 3rem;
   }
 
 }

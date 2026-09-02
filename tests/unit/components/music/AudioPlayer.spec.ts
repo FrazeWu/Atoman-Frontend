@@ -96,7 +96,7 @@ describe("AudioPlayer", () => {
 		favoriteApi.loadFavoriteSongs.mockResolvedValue(undefined);
 	});
 
-	it("switches between full, cover-only, and collapsed player modes", async () => {
+	it("switches between full and cover-only modes and opens song comments", async () => {
 		const player = usePlayerStore();
 		player.currentSong = {
 			id: "song-1",
@@ -104,6 +104,91 @@ describe("AudioPlayer", () => {
 			artist: "Artist 1",
 			audio_url: "/song-1.mp3",
 		} as any;
+		player.currentTime = 30;
+		player.duration = 120;
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					CommentSideSheet: {
+						props: ["show", "target"],
+						template: '<div class="comment-sheet-stub" :data-show="show" :data-target-kind="target.kind" :data-resource-id="target.resourceId" />',
+					},
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		expect(wrapper.get('[data-player-mode="full"]').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="收起为仅封面"]').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="歌词"]').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="评论"]').exists()).toBe(true);
+
+		await wrapper.get('[aria-label="收起为仅封面"]').trigger("click");
+		expect(wrapper.get('[data-player-mode="cover"]').exists()).toBe(true);
+		expect(wrapper.find('[data-player-mode="full"]').exists()).toBe(false);
+		expect(wrapper.find('.player-mini-play-overlay').exists()).toBe(true);
+		expect(wrapper.find('.player-mini-marquee').exists()).toBe(false);
+		expect(wrapper.get('.player-mini-progress-ring').attributes('data-progress')).toBe('25');
+		expect(wrapper.find('[aria-label="更多"]').exists()).toBe(false);
+		expect(wrapper.find('[aria-label="取消固定播放器"]').exists()).toBe(false);
+
+		const togglePlay = vi.spyOn(player, "togglePlay");
+		const coverButton = wrapper.get('[data-player-mode="cover"] .player-mini-cover');
+		expect(coverButton.element.tagName).toBe("BUTTON");
+		expect(coverButton.attributes("aria-label")).toBe("继续播放");
+		await coverButton.trigger("click");
+		expect(togglePlay).toHaveBeenCalledOnce();
+
+		player.isPlaying = true;
+		await wrapper.vm.$nextTick();
+		expect(coverButton.attributes("aria-label")).toBe("暂停播放");
+		expect(wrapper.find('.player-mini-play-overlay').exists()).toBe(false);
+		await coverButton.trigger("click");
+		expect(togglePlay).toHaveBeenCalledTimes(2);
+
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayer.vue"),
+			"utf8",
+		);
+		expect(source).toContain('<Transition name="player-display">');
+		expect(source).not.toContain('name="player-display" mode="out-in"');
+		expect(source).toMatch(
+			/\.player-display-enter-active,[\s\S]*?\.player-display-leave-active\s*\{[^}]*550ms/,
+		);
+		expect(source).toMatch(
+			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
+		);
+		expect(source).toMatch(
+			/\.player-mini-cover\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
+		);
+		expect(source).toMatch(
+			/\.player-mini-expand\s*\{[^}]*height: 4\.5rem;/,
+		);
+
+		await wrapper.get('[aria-label="展开完整播放器"]').trigger("click");
+		expect(wrapper.get('[data-player-mode="full"]').exists()).toBe(true);
+
+		await wrapper.get('[aria-label="评论"]').trigger("click");
+		expect(wrapper.get('.comment-sheet-stub').attributes('data-show')).toBe('true');
+		expect(wrapper.get('.comment-sheet-stub').attributes('data-target-kind')).toBe('music_song');
+		expect(wrapper.get('.comment-sheet-stub').attributes('data-resource-id')).toBe('song-1');
+		wrapper.unmount();
+	});
+
+	it("keeps the player visible when a guest opens the add-to-playlist menu", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+		const auth = (await import("@/stores/auth")).useAuthStore();
+		auth.isAuthenticated = false;
 
 		const wrapper = mount(AudioPlayer, {
 			global: {
@@ -116,21 +201,9 @@ describe("AudioPlayer", () => {
 			},
 		});
 
-		expect(wrapper.get('[data-player-mode="full"]').exists()).toBe(true);
-		expect(
-			wrapper.get('[aria-label="切换到小窗播放"]').find("svg").exists(),
-		).toBe(true);
-
-		await wrapper.get('[aria-label="切换到小窗播放"]').trigger("click");
-		expect(wrapper.get('[data-player-mode="mini"]').exists()).toBe(true);
-		expect(wrapper.find('[data-player-mode="full"]').exists()).toBe(false);
-
-		await wrapper.get('[aria-label="展开完整播放器"]').trigger("click");
-		expect(wrapper.get('[data-player-mode="full"]').exists()).toBe(true);
-
-		await wrapper.get('[aria-label="收起播放器"]').trigger("click");
-		expect(wrapper.get('[data-player-mode="collapsed"]').exists()).toBe(true);
-		expect(wrapper.find('[data-player-mode="full"]').exists()).toBe(false);
+		await wrapper.get('[aria-label="添加到歌单"]').trigger("click");
+		expect(loginRedirect.requireLogin).not.toHaveBeenCalled();
+		expect(wrapper.find('[data-player-mode="full"]').exists()).toBe(true);
 		wrapper.unmount();
 	});
 
@@ -259,8 +332,7 @@ describe("AudioPlayer", () => {
 		wrapper.unmount();
 	});
 
-	it("unpinns, auto-hides, reveals on hover, and pins again", async () => {
-		vi.useFakeTimers();
+	it("does not render the deprecated pin control", () => {
 		const player = usePlayerStore();
 		player.currentSong = {
 			id: "song-1",
@@ -280,29 +352,9 @@ describe("AudioPlayer", () => {
 			},
 		});
 
-		expect(wrapper.get('[aria-label="取消固定播放器"]').exists()).toBe(true);
-		expect(document.documentElement.dataset.playerPinned).toBe("true");
-
-		await wrapper.get('[aria-label="取消固定播放器"]').trigger("click");
-		expect(wrapper.get(".player").classes()).toContain("is-auto-hidden");
-		expect(document.documentElement.dataset.playerPinned).toBe("false");
-
-		await wrapper.get(".player").trigger("mouseenter");
-		expect(wrapper.get(".player").classes()).not.toContain("is-auto-hidden");
-
-		await wrapper.get(".player").trigger("mouseleave");
-		await vi.advanceTimersByTimeAsync(499);
-		expect(wrapper.get(".player").classes()).not.toContain("is-auto-hidden");
-		await vi.advanceTimersByTimeAsync(1);
-		expect(wrapper.get(".player").classes()).toContain("is-auto-hidden");
-
-		await wrapper.get(".player").trigger("mouseenter");
-		await wrapper.get('[aria-label="固定播放器"]').trigger("click");
-		expect(wrapper.get(".player").classes()).not.toContain("is-auto-hidden");
-		expect(document.documentElement.dataset.playerPinned).toBe("true");
-
+		expect(wrapper.find('[aria-label="固定播放器"]').exists()).toBe(false);
+		expect(wrapper.find('[aria-label="取消固定播放器"]').exists()).toBe(false);
 		wrapper.unmount();
-		vi.useRealTimers();
 	});
 
 	it("passes playback time to the lyrics panel and seeks when the panel emits", async () => {
@@ -371,6 +423,23 @@ describe("AudioPlayer", () => {
 		);
 	});
 
+	it("vertically centers the waveform and keeps lyrics and comments legible", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayer.vue"),
+			"utf8",
+		);
+
+		expect(source).toMatch(
+			/\.progress-container\s*\{[^}]*display: flex;[^}]*align-items: center;/,
+		);
+		expect(source).toMatch(
+			/\.progress-container > :deep\(\.waveform-progress\)\s*\{[^}]*width: 100%;/,
+		);
+		expect(source).toMatch(
+			/\.feature-link\s*\{[^}]*font-size: 12px;/,
+		);
+	});
+
 	it("applies adaptive glassmorphism styles", () => {
 		const player = usePlayerStore();
 		player.currentSong = {
@@ -430,8 +499,10 @@ describe("AudioPlayer", () => {
 		await wrapper.vm.$nextTick();
 		expect(range.element.value).toBe("60");
 		expect(wrapper.get('[aria-label="播放"]').text()).toBe("播放");
-		expect(wrapper.get('[aria-label="后退 5 秒"]').text()).toBe("-5S");
-		expect(wrapper.get('[aria-label="前进 5 秒"]').text()).toBe("+5S");
+		expect(wrapper.find('[aria-label="后退 5 秒"]').exists()).toBe(false);
+		expect(wrapper.find('[aria-label="前进 5 秒"]').exists()).toBe(false);
+		expect(wrapper.get('[aria-label="添加到最爱"]').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="切换播放模式"]').exists()).toBe(true);
 		wrapper.unmount();
 	});
 
@@ -461,7 +532,9 @@ describe("AudioPlayer", () => {
 		expect(wrapper.get('[aria-label="播放"]').text()).toBe("播放");
 		expect(wrapper.get('[aria-label="上一首"]').text()).toBe("上一首");
 		expect(wrapper.get('[aria-label="下一首"]').text()).toBe("下一首");
-		expect(wrapper.get('[aria-label="后退 5 秒"]').text()).toBe("-5S");
-		expect(wrapper.get('[aria-label="前进 5 秒"]').text()).toBe("+5S");
+		expect(wrapper.find('[aria-label="后退 5 秒"]').exists()).toBe(false);
+		expect(wrapper.find('[aria-label="前进 5 秒"]').exists()).toBe(false);
+		expect(wrapper.get('[aria-label="添加到最爱"]').exists()).toBe(true);
+		expect(wrapper.get('[aria-label="切换播放模式"]').exists()).toBe(true);
 	});
 });

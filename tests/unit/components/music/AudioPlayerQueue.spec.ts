@@ -100,14 +100,14 @@ describe("AudioPlayerQueue.vue", () => {
 		wrapper.unmount();
 	});
 
-	it("uses the agreed desktop queue dimensions", () => {
+	it("expands from the player to below the topbar with a 550ms reveal", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/music/AudioPlayerQueue.vue"),
 			"utf8",
 		);
 
 		expect(source).toMatch(
-			/\.queue-panel\s*\{[^}]*width: min\(36rem, calc\(100vw - 2.5vw\)\);[^}]*height: min\(21rem, calc\(100dvh - var\(--a-topbar-height\) - 8rem\)\);/,
+			/\.queue-panel\s*\{[^}]*top: var\(--a-topbar-height\);[^}]*bottom: calc\([^}]*6rem[^}]*\);[^}]*animation: queueReveal 550ms/,
 		);
 	});
 });

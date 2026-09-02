@@ -245,7 +245,8 @@
       :translation-language="lyrics?.translation_language ?? ''"
       :saving="saving || reverting"
       :current-time-seconds="currentTimeSeconds"
-      @close="isLyricEditorOpen = false"
+      @close="requestEditorClose"
+      @dirty-change="editorDirty = $event"
       @save="handleSaveLyrics"
       @seek="emit('seek', $event)"
     />
@@ -260,6 +261,18 @@
       :loading="saving"
       @confirm="confirmLyricsConflict"
       @cancel="cancelLyricsConflict"
+    />
+
+    <PConfirm
+      :show="pendingClose !== null"
+      title="放弃歌词修改？"
+      message="未保存的歌词修改将丢失。"
+      confirm-text="放弃并关闭"
+      cancel-text="继续编辑"
+      danger
+      above-player
+      @confirm="confirmPendingClose"
+      @cancel="pendingClose = null"
     />
   </section>
 </template>
@@ -346,6 +359,8 @@ const selectedTextDraft = ref<{
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const isLyricEditorOpen = ref(false)
+const editorDirty = ref(false)
+const pendingClose = ref<'editor' | 'lyrics' | null>(null)
 const versionsVisible = ref(false)
 const selectedVersionNumber = ref<number | null>(null)
 const displayMode = ref<'original' | 'bilingual'>('bilingual')
@@ -552,6 +567,43 @@ function openLyricEditor() {
   if (!requireLogin()) return
   isLyricEditorOpen.value = true
 }
+
+function closeLyrics() {
+  isLyricEditorOpen.value = false
+  editorDirty.value = false
+  emit('close')
+}
+
+function requestClose() {
+  if (isLyricEditorOpen.value && editorDirty.value) {
+    pendingClose.value = 'lyrics'
+    return
+  }
+  closeLyrics()
+}
+
+function requestEditorClose() {
+  if (editorDirty.value) {
+    pendingClose.value = 'editor'
+    return
+  }
+  isLyricEditorOpen.value = false
+}
+
+function confirmPendingClose() {
+  const target = pendingClose.value
+  pendingClose.value = null
+  if (target === 'lyrics') {
+    closeLyrics()
+    return
+  }
+  if (target === 'editor') {
+    isLyricEditorOpen.value = false
+    editorDirty.value = false
+  }
+}
+
+defineExpose({ requestClose })
 
 function handleSelectText(payload: {
   line: MusicSongLyricsLine

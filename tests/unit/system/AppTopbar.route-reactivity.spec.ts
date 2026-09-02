@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 // @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
 import AppTopbar from "@/components/system/AppTopbar.vue";
+import { usePlayerStore } from "@/stores/player";
 
 const makeRouter = async () => {
 	const router = createRouter({
@@ -62,6 +63,21 @@ describe("AppTopbar route reactivity", () => {
 		await flushPromises();
 
 		expect(router.currentRoute.value.path).toBe("/");
+	});
+
+	it("requests lyrics closure before topbar navigation", async () => {
+		const router = await makeRouter();
+		const player = usePlayerStore();
+		player.showLyrics = true;
+
+		const wrapper = mount(AppTopbar, {
+			global: { plugins: [router] },
+		});
+
+		await wrapper.get(".brand-logo-link").trigger("click");
+
+		expect(player.lyricsCloseRequest).toBe(1);
+		expect(player.showLyrics).toBe(true);
 	});
 
 	it("shows a mobile detail back action while retaining the module context", async () => {

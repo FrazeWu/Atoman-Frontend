@@ -62,6 +62,7 @@ const emit = defineEmits<{
     lines: Array<{ line_key?: string, text: string, translation: string, time_ms: number | null }>
     editSummary: string
   }]
+  'dirty-change': [dirty: boolean]
 }>()
 
 const targetOptions = [
@@ -86,7 +87,15 @@ const exportError = ref('')
 const originalInput = ref<HTMLInputElement | null>(null)
 const translationInput = ref<HTMLInputElement | null>(null)
 const rowEditorRoot = ref<HTMLElement | null>(null)
+const initialDraft = ref('')
 let importGeneration = 0
+
+const draftSnapshot = computed(() => JSON.stringify({
+  rows: rows.value,
+  format: draftFormat.value,
+  editSummary: draftEditSummary.value,
+  language: draftLanguage.value,
+}))
 
 const validationIssues = computed(() => validateMusicLyricDraft(rows.value, draftFormat.value))
 const blockingIssues = computed(() => [
@@ -149,9 +158,18 @@ watch(
     exportError.value = ''
     if (originalInput.value) originalInput.value.value = ''
     if (translationInput.value) translationInput.value.value = ''
+    initialDraft.value = draftSnapshot.value
   },
   { immediate: true },
 )
+
+watch(draftSnapshot, (snapshot) => {
+  emit('dirty-change', props.show && snapshot !== initialDraft.value)
+})
+
+watch(() => props.show, (show) => {
+  if (!show) emit('dirty-change', false)
+})
 
 watch(editTarget, (target) => {
   if (importMode.value && target === 'translation') importIncludesTranslation.value = true
@@ -252,6 +270,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
+  emit('dirty-change', false)
 })
 
 function handleRowsUpdate(nextRows: MusicLyricDraftRow[]) {

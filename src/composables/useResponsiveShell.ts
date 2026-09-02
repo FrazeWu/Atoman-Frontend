@@ -3,6 +3,7 @@ import {
 	Bookmark,
 	BookOpen,
 	Compass,
+	Ellipsis,
 	Folder,
 	Heart,
 	ListMusic,
@@ -68,6 +69,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 		["search", "搜索", "/songs", Search],
 		["library", "歌单", "/playlists", ListMusic],
 		["me", "我的", "/me", UserRound],
+		["more", "更多", "/more", Ellipsis],
 	]),
 	forum: tabs("forum", [
 		["topics", "话题", "/", MessageSquare],

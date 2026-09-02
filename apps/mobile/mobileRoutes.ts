@@ -160,7 +160,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{
 				path: "playlists",
 				name: "mobile-music-playlists",
-				component: () => import("./MusicPlaylistsView.vue"),
+				component: () => import("@/views/music/PlaylistsView.vue"),
 				meta: requiresAuth,
 			},
 			{
@@ -178,6 +178,8 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				component: () => import("@/views/music/MusicProfileView.vue"),
 				meta: requiresAuth,
 			},
+			{ path: "more", component: () => import("@/views/music/MusicMoreView.vue") },
+
 			{ path: "player", component: () => import("./MobilePlayerView.vue") },
 			{ path: "lyrics", component: () => import("./MobileLyricsView.vue") },
 			{

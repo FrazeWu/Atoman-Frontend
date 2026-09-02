@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	listMusicPlaylists: vi.fn(),
 	listPlaylistBookmarks: vi.fn(),
 	deletePlaylistBookmark: vi.fn(),
+	createMusicPlaylist: vi.fn(),
 	openPlaylist: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock("@/api/musicV1", () => ({
 	listMusicPlaylists: mocks.listMusicPlaylists,
 	listPlaylistBookmarks: mocks.listPlaylistBookmarks,
 	deletePlaylistBookmark: mocks.deletePlaylistBookmark,
+	createMusicPlaylist: mocks.createMusicPlaylist,
 }));
 
 vi.mock("@/composables/useMusicDrawers", () => ({
@@ -153,6 +155,25 @@ describe("MusicPlaylistsView", () => {
 		expect(mocks.listMusicPlaylists).toHaveBeenCalledTimes(2);
 	});
 
+	it("offers a create playlist action from the page", async () => {
+		mocks.listMusicPlaylists.mockResolvedValue({ data: [] });
+		mocks.listPlaylistBookmarks.mockResolvedValue({ data: [] });
+		mocks.createMusicPlaylist.mockResolvedValue({ id: "created-1" });
+
+		const wrapper = mountView();
+		await flushPromises();
+		await wrapper.get('[data-testid="create-playlist"]').trigger("click");
+
+		expect(wrapper.get('[data-testid="create-playlist-form"]').exists()).toBe(true);
+		await wrapper.get('[data-testid="create-playlist-name"]').setValue("通勤歌单");
+		await wrapper.get('[data-testid="create-playlist-submit"]').trigger("click");
+		await flushPromises();
+
+		expect(mocks.createMusicPlaylist).toHaveBeenCalledWith({
+			name: "通勤歌单",
+			is_public: false,
+		});
+	});
 	it("removes a bookmarked playlist and updates the list", async () => {
 		mocks.listMusicPlaylists.mockResolvedValue({ data: [] });
 		mocks.listPlaylistBookmarks.mockResolvedValue({

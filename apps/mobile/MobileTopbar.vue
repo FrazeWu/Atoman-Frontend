@@ -101,9 +101,9 @@ const goBack = () => {
 
 .mobile-app-topbar__back {
   display: inline-flex;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -120,9 +120,9 @@ const goBack = () => {
 
 .mobile-app-topbar__player {
   display: inline-flex;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
   margin-left: auto;

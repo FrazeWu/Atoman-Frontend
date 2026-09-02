@@ -12,7 +12,7 @@
           <ChevronLeft :size="20" aria-hidden="true" />
           <span>返回</span>
         </button>
-        <h1 v-if="title">{{ title }}</h1>
+        <h1 v-if="title && !slots.header">{{ title }}</h1>
         <slot name="header" />
       </header>
       <div class="p-sheet-mobile-page__content">

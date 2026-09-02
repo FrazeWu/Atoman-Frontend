@@ -11,9 +11,7 @@
           :fetchpriority="priority ? 'high' : 'auto'"
         />
         <span v-else class="cover-placeholder">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
-          </svg>
+          <Disc3 :size="28" aria-hidden="true" />
         </span>
       </button>
 
@@ -31,36 +29,21 @@
         @click="emit('toggle-bookmark')"
         :aria-label="isBookmarked ? '取消收藏' : '收藏'"
       >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
+        <Bookmark
+          :size="17"
           :fill="isBookmarked ? 'currentColor' : 'none'"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-        </svg>
+          aria-hidden="true"
+        />
       </button>
 
       <div class="stats-overlay">
         <div class="stats-row">
           <div class="stat-item">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-            </svg>
+            <Headphones class="stat-icon" :size="13" aria-hidden="true" />
             <span class="stat-val">{{ formattedPlayCount }}</span>
           </div>
           <div class="stat-item">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
+            <Users class="stat-icon" :size="13" aria-hidden="true" />
             <span class="stat-val">{{ formattedListeners }}</span>
           </div>
         </div>
@@ -101,6 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Bookmark, Disc3, Headphones, Users } from 'lucide-vue-next'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 
 export interface MusicAlbumCardItem {
@@ -311,12 +295,12 @@ const albumYear = computed(() => {
 /* Bookmark Button */
 .bookmark-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   z-index: 5;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--a-radius-pill, 999px);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -330,7 +314,8 @@ const albumYear = computed(() => {
   opacity: 0;
 }
 
-.music-album-card:hover .bookmark-btn {
+.music-album-card:hover .bookmark-btn,
+.music-album-card:focus-within .bookmark-btn {
   opacity: 1;
 }
 

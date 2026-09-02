@@ -54,6 +54,7 @@ import type {
 	MusicSongRatingSummary,
 	MusicAlbumRatingSummary,
 	MusicSongListItem,
+	MusicStandaloneSongType,
 	MusicSongLyrics,
 	MusicSongLyricsVersion,
 	MusicStarredItem,
@@ -240,7 +241,7 @@ export async function getMusicSong(
 export async function listMusicSongs(
 	filters: {
 		artist_id?: string;
-		release_type?: "single" | "leak" | "single,leak";
+		release_type?: MusicStandaloneSongType | "single,leak_song" | "single,leak";
 		sort?: "-release_date" | "release_date" | "hot";
 		page?: number;
 		page_size?: number;

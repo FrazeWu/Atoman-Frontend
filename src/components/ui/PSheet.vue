@@ -53,6 +53,7 @@
           tabindex="-1"
           @click="handlePanelBackgroundClick"
           @keydown="handlePanelKeydown"
+          @wheel="handleLayerWheel"
         >
           <div v-if="showLayerRail" class="sheet-layer-rail">
             <div class="sheet-layer-controls">
@@ -246,6 +247,12 @@ const handlePanelKeydown = (event: KeyboardEvent) => {
   } else if (event.key === 'Escape') {
     event.preventDefault()
     emit('close')
+  }
+}
+
+const handleLayerWheel = (event: WheelEvent) => {
+  if (!props.isTopLayer) {
+    event.preventDefault()
   }
 }
 
@@ -657,6 +664,7 @@ const sheetStyle = computed(() => {
 .sheet-content {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 2.5rem;
   display: flex;
   flex-direction: column;

@@ -385,6 +385,28 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted("activate")).toHaveLength(1);
 	});
 
+	it("prevents wheel scrolling on lower sheet layers", () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, isTopLayer: false },
+		});
+
+		const event = new WheelEvent("wheel", { cancelable: true });
+		wrapper.get(".p-sheet-panel").element.dispatchEvent(event);
+
+		expect(event.defaultPrevented).toBe(true);
+	});
+
+	it("keeps the active sheet content from chaining scroll to the page", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
+			"utf8",
+		);
+
+		expect(source).toMatch(
+			/\.sheet-content\s*\{[\s\S]*?overscroll-behavior:\s*contain/,
+		);
+	});
+
 	it("only lets the top layer close with Escape", async () => {
 		const top = mount(PSheet, { props: { show: true, isTopLayer: true } });
 		const shifted = mount(PSheet, { props: { show: true, isTopLayer: false } });

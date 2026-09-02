@@ -1,5 +1,6 @@
 import { flushPromises } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import type { MusicSheetLayer } from '../../../src/components/music/musicSheetTypes'
@@ -97,5 +98,59 @@ describe('useMusicSheetRouteSync', () => {
 
     expect(router.currentRoute.value.path).toBe('/music/album/album-1')
     expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.key)).toEqual(['album:album-1'])
+  })
+
+  it('returns to the music root when closing a directly opened entity route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music/album/album-1')
+    drawers.openAlbum('album-1')
+    await flushPromises()
+
+    drawers.closeAlbum()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music')
+    expect(drawers.layers.value).toHaveLength(0)
+  })
+
+  it('returns to the music root when a routed layer closes before navigation completes', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/music')
+    const originalPush = router.push.bind(router)
+    let continueNavigation: (() => void) | undefined
+    const navigationBlocked = new Promise<void>((resolve) => {
+      continueNavigation = resolve
+    })
+    vi.spyOn(router, 'push').mockImplementation(async (location) => {
+      await navigationBlocked
+      return originalPush(location)
+    })
+
+    useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+    drawers.openAlbum('album-1')
+    await nextTick()
+
+    drawers.closeAlbum()
+    continueNavigation?.()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music')
+    expect(drawers.layers.value).toHaveLength(0)
   })
 })

@@ -11,27 +11,39 @@ export function useMusicSheetRouteSync(router: Router) {
 
   if (!registeredRouters.has(router)) {
     registeredRouters.add(router)
+    const pushedLayerKeys = new Set<string>()
 
     watch(drawers.layers, async (layers, previousLayers) => {
       const top = layers.at(-1)
       const currentPath = router.currentRoute.value.path
 
       if (layers.length < previousLayers.length) {
-        const removedRouteCount = previousLayers
+        const removedLayers = previousLayers
           .slice(layers.length)
-          .filter(layer => layer.route).length
-        const currentRouteWasRemoved = previousLayers
-          .slice(layers.length)
+        const removedRouteLayers = removedLayers.filter(layer => layer.route)
+        const currentRouteWasRemoved = removedRouteLayers
           .some(layer => layer.route === currentPath)
 
-        if (currentRouteWasRemoved && removedRouteCount > 0) {
-          router.go(-removedRouteCount)
+        const canReturnThroughHistory = removedRouteLayers.every(layer => pushedLayerKeys.has(layer.key))
+        for (const layer of removedRouteLayers) pushedLayerKeys.delete(layer.key)
+
+        if (currentRouteWasRemoved && removedRouteLayers.length > 0) {
+          if (!canReturnThroughHistory) {
+            await router.replace('/music')
+            return
+          }
+          router.go(-removedRouteLayers.length)
           return
         }
       }
 
       if (top?.route && top.route !== currentPath) {
         await router.push(top.route)
+        if (!drawers.layers.value.some(layer => layer.key === top.key)) {
+          await router.replace('/music')
+          return
+        }
+        pushedLayerKeys.add(top.key)
       }
     })
 

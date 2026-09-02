@@ -23,7 +23,6 @@
         :to="item.to"
         :index="index + 1"
         :icon="item.icon"
-        :active="item.active?.(route?.path ?? '')"
         :exact="item.exact"
       >
         {{ item.label }}

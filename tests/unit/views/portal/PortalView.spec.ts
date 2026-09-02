@@ -95,7 +95,7 @@ describe('PortalView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('用一条主推和三条侧列内容展示焦点精选且不在模块区重复', async () => {
+  it('用四张等权卡片展示推荐内容且不在模块区重复', async () => {
     const wrapper = mount(PortalView, {
       global: {
         stubs: {
@@ -110,18 +110,17 @@ describe('PortalView', () => {
 
     await flushPromises()
 
-    expect(wrapper.findAll('.portal-hot__spotlight-lead')).toHaveLength(1)
-    expect(wrapper.findAll('.portal-hot__spotlight-rail-item')).toHaveLength(3)
+    expect(wrapper.findAll('.portal-hot__recommendation-card')).toHaveLength(4)
     for (const item of featured) {
       expect(wrapper.text().split(item.title)).toHaveLength(2)
     }
 
-    const leadImage = wrapper.get('.portal-hot__spotlight-lead img')
-    expect(leadImage.attributes('loading')).toBe('eager')
-    expect(leadImage.attributes('fetchpriority')).toBe('high')
+    const recommendationImages = wrapper.findAll('.portal-hot__recommendation-image img')
+    expect(recommendationImages[0].attributes('loading')).toBe('eager')
+    expect(recommendationImages[0].attributes('fetchpriority')).toBe('high')
   })
 
-  it('为主推与侧列内容提供视觉锚点和推荐依据', async () => {
+  it('为每条焦点精选提供视觉锚点和推荐依据', async () => {
     const wrapper = mount(PortalView, {
       global: {
         stubs: {
@@ -136,7 +135,7 @@ describe('PortalView', () => {
 
     await flushPromises()
 
-    expect(wrapper.findAll('.portal-hot__spotlight-media')).toHaveLength(4)
+    expect(wrapper.findAll('.portal-hot__recommendation-image')).toHaveLength(4)
     expect(wrapper.findAll('[data-test="portal-spotlight-reason"]')).toHaveLength(4)
   })
 

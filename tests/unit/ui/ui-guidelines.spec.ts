@@ -72,17 +72,16 @@ describe("UI 准则", () => {
 		).not.toMatch(/后台审核|后台驳回|后台取消/);
 	});
 
-	it("门户使用主推与侧列的精选结构", () => {
+	it("门户使用等权推荐网格且不保留超大主推结构", () => {
 		const source = read("src/views/portal/PortalView.vue");
 
 		expect(source).toContain("displaySections");
 		expect(source).toContain("recommendedItemKeys");
-		expect(source).toContain("portal-hot__spotlight-layout");
-		expect(source).toContain("portal-hot__spotlight-lead");
-		expect(source).toContain("portal-hot__spotlight-rail-item");
+		expect(source).toContain("portal-hot__recommendation-grid");
+		expect(source).toContain("portal-hot__recommendation-card");
 		expect(source).toContain("portal-hot__module-strip");
-		expect(source).not.toContain("portal-hot__recommendation-grid");
-		expect(source).not.toContain("portal-hot__recommendation-card");
+		expect(source).not.toContain("portal-hot__featured");
+		expect(source).not.toContain("portal-hot__lead");
 	});
 
 	it("页面不再渲染可见快捷键说明", () => {

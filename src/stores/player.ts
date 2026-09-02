@@ -187,6 +187,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	let audio: HTMLAudioElement | null = null;
 	let playGeneration = 0;
+	let playRequested = false;
 	let currentSongStartCached = false;
 	let audioStartPrefetchController: AbortController | null = null;
 	let audioStartPrefetchKey: string | null = null;
@@ -363,8 +364,9 @@ export const usePlayerStore = defineStore("player", () => {
 	);
 
 	setForeignPlayRequestCallback(() => {
-		if (isPlaying.value && audio) {
+		if ((isPlaying.value || playRequested) && audio) {
 			playGeneration += 1;
+			playRequested = false;
 			savePodcastProgress();
 			saveMusicProgress(false, true);
 			audio.pause();
@@ -582,6 +584,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const pauseCurrentAudio = (player: HTMLAudioElement) => {
 		playGeneration += 1;
+		playRequested = false;
 		player.pause();
 		isPlaying.value = false;
 		isLoading.value = false;
@@ -607,11 +610,13 @@ export const usePlayerStore = defineStore("player", () => {
 			if (isPlaying.value) isLoading.value = true;
 		});
 		nextAudio.addEventListener("playing", () => {
+			playRequested = false;
 			isLoading.value = false;
 			isPlaying.value = true;
 			playbackError.value = "";
 		});
 		nextAudio.addEventListener("pause", () => {
+			playRequested = false;
 			isPlaying.value = false;
 			isLoading.value = false;
 			pauseListening();
@@ -620,6 +625,7 @@ export const usePlayerStore = defineStore("player", () => {
 			}
 		});
 		nextAudio.addEventListener("error", () => {
+			playRequested = false;
 			isLoading.value = false;
 			isPlaying.value = false;
 			playbackError.value = "音频加载失败，请重试";
@@ -678,7 +684,7 @@ export const usePlayerStore = defineStore("player", () => {
 				if (currentSong.value && !isPlaying.value) attemptPlay(nextAudio);
 			},
 			pause: () => {
-				if (isPlaying.value) pauseCurrentAudio(nextAudio);
+				if (isPlaying.value || playRequested) pauseCurrentAudio(nextAudio);
 			},
 			previoustrack: playPrevious,
 			nexttrack: playNext,
@@ -725,13 +731,15 @@ export const usePlayerStore = defineStore("player", () => {
 		generation = ++playGeneration,
 	) => {
 		isLoading.value = true;
-		isPlaying.value = true;
+		playRequested = true;
 		playbackError.value = "";
 		player.volume = volume.value;
 		player
 			.play()
 			.then(() => {
 				if (generation !== playGeneration || player !== audio) return;
+				playRequested = false;
+				isPlaying.value = true;
 				broadcastPlayRequest();
 				resumeListening();
 				if ("mediaSession" in navigator) {
@@ -740,6 +748,7 @@ export const usePlayerStore = defineStore("player", () => {
 			})
 			.catch(() => {
 				if (generation !== playGeneration || player !== audio) return;
+				playRequested = false;
 				isLoading.value = false;
 				playbackError.value = "无法播放此音频，请重试";
 				isPlaying.value = false;
@@ -1048,7 +1057,7 @@ export const usePlayerStore = defineStore("player", () => {
 			player.currentTime = currentTime.value;
 		}
 
-		if (isPlaying.value) {
+		if (isPlaying.value || playRequested) {
 			pauseCurrentAudio(player);
 		} else {
 			if (listeningSongId !== String(currentSong.value.id))

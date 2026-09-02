@@ -25,17 +25,13 @@ export function useAudioPlayerChrome(isPinned: Readonly<Ref<boolean>>, togglePin
   }
 
   function scheduleAutoHide() {
-    if (effectivePinned.value) return
     clearHideTimer()
-    hideTimer = window.setTimeout(() => {
-      playerHovered.value = false
-      hideTimer = null
-    }, 500)
+    playerHovered.value = true
   }
 
   function togglePlayerPin() {
     togglePinnedAction()
-    playerHovered.value = isPinned.value
+    playerHovered.value = true
     clearHideTimer()
   }
 

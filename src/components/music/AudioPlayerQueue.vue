@@ -1,13 +1,10 @@
 <template>
   <div>
-    <!-- 背景遮罩 (点击可快速关闭队列) -->
-    <div class="queue-backdrop" aria-hidden="true" @click="player.toggleQueue" />
-
     <div
       ref="queuePanelRef"
       class="queue-panel"
       role="dialog"
-      aria-modal="true"
+      aria-modal="false"
       aria-labelledby="queue-title"
       tabindex="-1"
       @keydown="handleKeydown"
@@ -198,40 +195,28 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 </script>
 
 <style scoped>
-.queue-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(2px);
-  z-index: calc(var(--a-z-player-queue) - 1);
-  animation: fadeIn 0.2s ease forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 .queue-panel {
   position: fixed;
-  top: var(--a-topbar-height);
-  bottom: var(--a-content-bottom-offset);
   right: 0;
-  width: 400px;
-  max-width: 90vw;
-  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset));
+  bottom: calc(
+    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
+      6rem
+  );
+  width: min(26rem, calc(100vw - 2.5vw));
+  height: min(32rem, calc(100dvh - var(--a-topbar-height) - 8rem));
+  max-height: min(32rem, calc(100dvh - var(--a-topbar-height) - 8rem));
   background: var(--a-color-bg);
   border-left: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-player-queue);
   display: flex;
   flex-direction: column;
   box-shadow: var(--a-shadow-lg);
-  animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes slideLeft {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .queue-header {
@@ -498,6 +483,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   .queue-panel {
     width: 100%;
     max-width: 100%;
+    bottom: calc(var(--a-mobile-nav-reserved-height) + var(--a-mobile-player-height) + 0.5rem);
+    height: min(60dvh, calc(100dvh - var(--a-topbar-height) - var(--a-mobile-player-height) - var(--a-mobile-nav-reserved-height) - 1rem));
+    max-height: min(60dvh, calc(100dvh - var(--a-topbar-height) - var(--a-mobile-player-height) - var(--a-mobile-nav-reserved-height) - 1rem));
   }
   .q-drag {
     display: none;

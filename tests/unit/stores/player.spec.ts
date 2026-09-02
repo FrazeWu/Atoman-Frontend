@@ -926,7 +926,7 @@ describe("player store", () => {
 			audio_url: "pending-play.mp3",
 		} as any);
 
-		expect(player.isPlaying).toBe(true);
+		expect(player.isPlaying).toBe(false);
 		player.togglePlay();
 
 		expect(audioInstances[0].pause).toHaveBeenCalledOnce();

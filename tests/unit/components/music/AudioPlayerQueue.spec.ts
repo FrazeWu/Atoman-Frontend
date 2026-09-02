@@ -54,7 +54,7 @@ describe("AudioPlayerQueue.vue", () => {
 		]);
 		wrapper.unmount();
 	});
-	it("exposes the queue as a dialog and restores focus when closed", async () => {
+	it("opens as a compact non-modal dialog and restores focus when closed", async () => {
 		const player = usePlayerStore();
 		player.showQueue = true;
 		const trigger = document.createElement("button");
@@ -66,7 +66,8 @@ describe("AudioPlayerQueue.vue", () => {
 
 		const panel = wrapper.get(".queue-panel");
 		expect(panel.attributes("role")).toBe("dialog");
-		expect(panel.attributes("aria-modal")).toBe("true");
+		expect(panel.attributes("aria-modal")).toBe("false");
+		expect(wrapper.find(".queue-backdrop").exists()).toBe(false);
 		expect(document.activeElement).toBe(wrapper.get(".queue-close-btn").element);
 
 		wrapper.unmount();

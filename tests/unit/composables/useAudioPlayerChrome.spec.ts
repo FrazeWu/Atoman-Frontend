@@ -25,7 +25,7 @@ describe('useAudioPlayerChrome', () => {
     delete document.documentElement.dataset.playerPinned
   })
 
-  it('auto-hides when unpinned and stays visible after pinning', async () => {
+  it('stays visible when unpinned and after pinning', async () => {
     const pinned = ref(false)
     let chrome!: ReturnType<typeof useAudioPlayerChrome>
     const wrapper = mount(defineComponent({
@@ -37,7 +37,7 @@ describe('useAudioPlayerChrome', () => {
 
     chrome.scheduleAutoHide()
     vi.advanceTimersByTime(500)
-    expect(chrome.playerHovered.value).toBe(false)
+    expect(chrome.playerHovered.value).toBe(true)
 
     chrome.revealPlayer()
     chrome.togglePlayerPin()

@@ -51,7 +51,6 @@
           :aria-label="railTitle"
           :data-layer-index="effectiveLayerIndex"
           tabindex="-1"
-          @click="handlePanelBackgroundClick"
           @keydown="handlePanelKeydown"
           @wheel="handleLayerWheel"
         >
@@ -109,7 +108,6 @@
           </button>
 
           <div
-            ref="sheetContentRef"
             class="sheet-content hide-scrollbar"
             :class="{
               'sheet-content--compact': !hasHeader,
@@ -199,7 +197,6 @@ const emit = defineEmits<{
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
-const sheetContentRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLButtonElement | null>(null)
 const partialRequested = computed(() => (
   props.show && props.mode === 'partial' && props.side === 'right' && !isMobile.value
@@ -223,14 +220,6 @@ const railTitle = computed(() => props.title || props.ariaLabel || '页面')
 const closeLabel = computed(() => props.isTopLayer
   ? `关闭${railTitle.value}`
   : `关闭${railTitle.value}及上方页面`)
-
-const handlePanelBackgroundClick = (event: MouseEvent) => {
-  if (isPartial.value || props.side !== 'right' || !props.isTopLayer) return
-  const target = event.target
-  if (target === panelRef.value || target === sheetContentRef.value) {
-    emit('close')
-  }
-}
 
 const focusManagementOpen = computed(() => (
   props.show

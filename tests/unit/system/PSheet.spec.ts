@@ -297,13 +297,13 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted()).toHaveProperty("close");
 	});
 
-	it("emits close when the top right sheet background is clicked", async () => {
+	it("does not close when the top right sheet empty area is clicked", async () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, side: "right" },
 		});
 
 		await wrapper.get(".sheet-content").trigger("click");
-		expect(wrapper.emitted("close")).toHaveLength(1);
+		expect(wrapper.emitted("close")).toBeUndefined();
 	});
 
 	it("does not close a right sheet when its content is clicked", async () => {

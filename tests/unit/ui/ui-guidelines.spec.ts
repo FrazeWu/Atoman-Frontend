@@ -72,20 +72,14 @@ describe("UI 准则", () => {
 		).not.toMatch(/后台审核|后台驳回|后台取消/);
 	});
 
-	it("门户使用主推侧列，并以现有内容卡片承载焦点精选", () => {
+	it("门户不渲染焦点精选，直接展示模块内容", () => {
 		const source = read("src/views/portal/PortalView.vue");
 
 		expect(source).toContain("displaySections");
-		expect(source).toContain("recommendedItemKeys");
-		expect(source).toContain("portal-hot__spotlight-layout");
-		expect(source).toContain("portal-hot__spotlight-lead");
-		expect(source).toContain("portal-hot__spotlight-rail-item");
-		expect(source).toContain("portal-hot__spotlight-card");
-		expect(source).toContain("portal-hot__spotlight-list");
-		expect(source).toContain("hasSpotlightLeadImage");
 		expect(source).toContain("portal-hot__module-strip");
-		expect(source).not.toContain("portal-hot__recommendation-grid");
-		expect(source).not.toContain("portal-refresh-spotlight");
+		expect(source).not.toContain("portal-hot__recommendations");
+		expect(source).not.toContain("recommendedItemKeys");
+		expect(source).not.toContain("portal-hot__spotlight");
 	});
 
 	it("页面不再渲染可见快捷键说明", () => {

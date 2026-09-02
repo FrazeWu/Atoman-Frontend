@@ -95,7 +95,7 @@ describe('PortalView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('用一条主推和三条侧列展示焦点精选，且不在模块区重复', async () => {
+  it('不渲染焦点精选，并在模块区保留后端返回的内容', async () => {
     const wrapper = mount(PortalView, {
       global: {
         stubs: {
@@ -110,60 +110,12 @@ describe('PortalView', () => {
 
     await flushPromises()
 
-    expect(wrapper.findAll('.portal-hot__spotlight-lead')).toHaveLength(1)
-    expect(wrapper.findAll('.portal-hot__spotlight-rail-item')).toHaveLength(3)
+    expect(wrapper.find('.portal-hot__recommendations').exists()).toBe(false)
+    expect(wrapper.findAll('.portal-hot__section')).toHaveLength(2)
     for (const item of featured) {
-      expect(wrapper.text().split(item.title)).toHaveLength(2)
+      expect(wrapper.text()).toContain(item.title)
     }
-
-    const leadImage = wrapper.get('.portal-hot__spotlight-lead img')
-    expect(leadImage.attributes('loading')).toBe('eager')
-    expect(leadImage.attributes('fetchpriority')).toBe('high')
     expect(wrapper.find('.portal-hot__hero-actions').exists()).toBe(false)
-    expect(wrapper.find('[data-test="portal-refresh-spotlight"]').exists()).toBe(false)
-  })
-
-  it('复用内容卡片为焦点精选提供视觉锚点和推荐依据', async () => {
-    const wrapper = mount(PortalView, {
-      global: {
-        stubs: {
-          PButton: true,
-          RouterLink: {
-            props: ['to'],
-            template: '<a :href="to"><slot /></a>',
-          },
-        },
-      },
-    })
-
-    await flushPromises()
-
-    expect(wrapper.findAll('.portal-hot__spotlight-card')).toHaveLength(4)
-    expect(wrapper.findAll('[data-test="portal-spotlight-reason"]')).toHaveLength(4)
-  })
-
-  it('焦点主推没有真实封面时使用紧凑列表', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        data: {
-          featured: featured.map((item) => ({ ...item, image_url: '' })),
-          sections: [],
-        },
-      }),
-    } as Response)
-
-    const wrapper = mount(PortalView, {
-      global: {
-        stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } },
-      },
-    })
-    await flushPromises()
-
-    expect(wrapper.find('.portal-hot__spotlight-list').exists()).toBe(true)
-    expect(wrapper.findAll('.portal-hot__spotlight-list-item')).toHaveLength(4)
-    expect(wrapper.find('.portal-hot__spotlight-layout').exists()).toBe(false)
   })
 
   it('使用后端返回的艺人和真实统计渲染热门音乐', async () => {

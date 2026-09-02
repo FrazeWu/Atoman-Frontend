@@ -9,7 +9,7 @@
       </div>
     </header>
 
-    <div id="spotlight" class="portal-hot__container">
+    <div class="portal-hot__container">
       <PContentProgress
         :loading="loading"
         :error="error"
@@ -26,127 +26,6 @@
         </template>
 
         <template v-if="hasContent">
-          <section v-if="recommendationItems.length" class="portal-hot__recommendations" aria-label="推荐内容">
-            <div class="portal-hot__section-header">
-              <h2>焦点精选</h2>
-              <span class="portal-hot__header-line" />
-            </div>
-
-            <div v-if="hasSpotlightLeadImage" class="portal-hot__spotlight-layout">
-              <RouterLink
-                v-if="spotlightLead"
-                :to="spotlightLead.target_path"
-                class="portal-hot__spotlight-lead"
-              >
-                <PContentCard
-                  :title="spotlightLead.title"
-                  :summary="spotlightLead.summary"
-                  class="portal-hot__spotlight-card portal-hot__spotlight-card--lead"
-                >
-                  <template #visual>
-                    <div
-                      class="portal-hot__spotlight-image"
-                      :class="`portal-hot__spotlight-image--${spotlightLead.module}`"
-                    >
-                      <img
-                        v-if="spotlightLead.image_url && !failedImageKeys.has(recommendationKey(spotlightLead))"
-                        :src="spotlightLead.image_url"
-                        :alt="spotlightLead.title"
-                        referrerpolicy="no-referrer"
-                        loading="eager"
-                        fetchpriority="high"
-                        @error="handleImageError(recommendationKey(spotlightLead))"
-                      >
-                      <component v-else :is="moduleIcon(spotlightLead.module)" :size="40" aria-hidden="true" />
-                    </div>
-                  </template>
-
-                  <template #meta>
-                    <span class="portal-hot__tag">{{ moduleLabel(spotlightLead.module) }}</span>
-                    <span v-if="spotlightLead.published_at" class="portal-hot__date">{{ formatDate(spotlightLead.published_at) }}</span>
-                  </template>
-
-                  <template #footer>
-                    <span class="portal-hot__reason" data-test="portal-spotlight-reason">
-                      <Sparkles :size="13" aria-hidden="true" />
-                      {{ spotlightReason(spotlightLead) }}
-                    </span>
-                  </template>
-                </PContentCard>
-              </RouterLink>
-
-              <div class="portal-hot__spotlight-rail">
-                <RouterLink
-                  v-for="item in spotlightRailItems"
-                  :key="recommendationKey(item)"
-                  :to="item.target_path"
-                  class="portal-hot__spotlight-rail-item"
-                >
-                  <PContentCard :title="item.title" :summary="item.summary" class="portal-hot__spotlight-card">
-                    <template #visual>
-                      <div class="portal-hot__spotlight-image portal-hot__spotlight-image--rail" :class="`portal-hot__spotlight-image--${item.module}`">
-                        <img
-                          v-if="item.image_url && !failedImageKeys.has(recommendationKey(item))"
-                          :src="item.image_url"
-                          :alt="item.title"
-                          referrerpolicy="no-referrer"
-                          loading="lazy"
-                          @error="handleImageError(recommendationKey(item))"
-                        >
-                        <component v-else :is="moduleIcon(item.module)" :size="22" aria-hidden="true" />
-                      </div>
-                    </template>
-                    <template #meta>
-                      <span class="portal-hot__tag">{{ moduleLabel(item.module) }}</span>
-                      <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
-                    </template>
-                    <template #footer>
-                      <span class="portal-hot__reason" data-test="portal-spotlight-reason">
-                        <Sparkles :size="12" aria-hidden="true" />
-                        {{ spotlightReason(item) }}
-                      </span>
-                    </template>
-                  </PContentCard>
-                </RouterLink>
-              </div>
-            </div>
-
-            <div v-else class="portal-hot__spotlight-list">
-              <RouterLink
-                v-for="item in recommendationItems"
-                :key="recommendationKey(item)"
-                :to="item.target_path"
-                class="portal-hot__spotlight-list-item"
-              >
-                <PContentCard :title="item.title" :summary="item.summary" class="portal-hot__spotlight-list-card">
-                  <template #visual>
-                    <div class="portal-hot__spotlight-list-image" :class="`portal-hot__spotlight-image--${item.module}`">
-                      <img
-                        v-if="item.image_url && !failedImageKeys.has(recommendationKey(item))"
-                        :src="item.image_url"
-                        :alt="item.title"
-                        referrerpolicy="no-referrer"
-                        loading="lazy"
-                        @error="handleImageError(recommendationKey(item))"
-                      >
-                      <component v-else :is="moduleIcon(item.module)" :size="20" aria-hidden="true" />
-                    </div>
-                  </template>
-                  <template #meta>
-                    <span class="portal-hot__tag">{{ moduleLabel(item.module) }}</span>
-                    <span v-if="item.published_at" class="portal-hot__date">{{ formatDate(item.published_at) }}</span>
-                  </template>
-                  <template #footer>
-                    <span class="portal-hot__reason" data-test="portal-spotlight-reason">
-                      <Sparkles :size="12" aria-hidden="true" />
-                      {{ spotlightReason(item) }}
-                    </span>
-                  </template>
-                </PContentCard>
-              </RouterLink>
-            </div>
-          </section>
-
           <!-- 2. 分模块热门内容 (Sections) -->
           <section class="portal-hot__sections" aria-label="模块热门内容">
             <article
@@ -334,9 +213,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type Component } from 'vue'
-import { IconBook2 as BookOpen, IconClock as Clock3, IconFileText as FileText, IconMessageCircle as MessageCircle, IconMusic as Music2, IconRadio as Radio, IconRss as Rss, IconSparkles as Sparkles, IconVideo as VideoIcon } from '@tabler/icons-vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
 
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
@@ -390,41 +268,14 @@ interface PortalHotResponse {
 }
 
 const api = useApi()
+const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
 
 const loading = ref(true)
 const error = ref('')
 const hotContent = ref<PortalHotResponse>({ featured: [], sections: [] })
-const failedImageKeys = ref<Set<string>>(new Set())
-const spotlightPageSize = 4
 const sectionItemLimit = 4
 const homeModuleOrder = ['blog', 'feed', 'music', 'video', 'debate']
-
-function handleImageError(key: string) {
-  failedImageKeys.value.add(key)
-}
-
-function recommendationKey(item: PortalHotItem) {
-  return `${item.module}:${item.id}`
-}
-
-const moduleIcons: Record<string, Component> = {
-  blog: BookOpen,
-  feed: Rss,
-  music: Music2,
-  video: VideoIcon,
-  podcast: Radio,
-  forum: MessageCircle,
-  timeline: Clock3,
-}
-
-function moduleIcon(module: string) {
-  return moduleIcons[module] ?? FileText
-}
-
-function spotlightReason(item: PortalHotItem) {
-  return item.score_label || `${moduleLabel(item.module)}精选`
-}
 
 const visibleRooms = computed(() => (
   moduleNavOrder
@@ -438,38 +289,19 @@ const visibleSections = computed(() => (
   ))
 ))
 
-const visibleFeatured = computed(() => (
-  hotContent.value.featured.filter((item) => (
-    isModuleRoomKey(item.module) && siteAccessStore.isModuleVisible(item.module)
-  ))
-))
-
-const recommendationItems = computed(() => visibleFeatured.value.slice(0, spotlightPageSize))
-const spotlightLead = computed(() => recommendationItems.value[0])
-const spotlightRailItems = computed(() => recommendationItems.value.slice(1))
-const hasSpotlightLeadImage = computed(() => {
-  const lead = spotlightLead.value
-  return Boolean(lead?.image_url && !failedImageKeys.value.has(recommendationKey(lead)))
-})
-const recommendedItemKeys = computed(() => new Set(
-  recommendationItems.value.map((item) => `${item.module}:${item.id}`),
-))
 const displaySections = computed(() => visibleSections.value
   .map((section) => ({
     ...section,
-    items: section.items
-      .filter((item) => !recommendedItemKeys.value.has(`${item.module}:${item.id}`))
-      .slice(0, sectionItemLimit),
+    items: section.items.slice(0, sectionItemLimit),
   }))
   .filter((section) => section.items.length > 0)
   .sort((left, right) => modulePriority(left.module) - modulePriority(right.module)))
 const priorityImageKey = computed(() => {
-  const item = recommendationItems.value.find((candidate) => candidate.image_url)
-    ?? displaySections.value.flatMap((section) => section.items).find((candidate) => candidate.image_url)
+  const item = displaySections.value.flatMap((section) => section.items).find((candidate) => candidate.image_url)
   return item ? `${item.module}:${item.id}` : ''
 })
 const otherRooms = computed(() => visibleRooms.value)
-const hasContent = computed(() => visibleFeatured.value.length > 0 || displaySections.value.length > 0)
+const hasContent = computed(() => displaySections.value.length > 0)
 
 async function loadHotContent() {
   loading.value = true
@@ -677,166 +509,10 @@ onMounted(loadHotContent)
   text-transform: uppercase;
 }
 
-/* ─── Spotlight Featured Recommendations (信息流) ──────── */
-.portal-hot__recommendations {
-  margin-bottom: 56px;
-}
-
-.portal-hot__section-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-.portal-hot__section-header h2 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--a-color-text);
-}
-
-.portal-hot__header-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--a-color-border-soft) 0%, transparent 100%);
-}
-
-.portal-hot__spotlight-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 1fr);
-  gap: 1.25rem;
-}
-
-.portal-hot__spotlight-lead,
-.portal-hot__spotlight-rail-item,
 .portal-hot__card-link {
   display: block;
   color: inherit;
   text-decoration: none;
-}
-
-.portal-hot__spotlight-lead {
-  height: 100%;
-}
-
-.portal-hot__spotlight-card {
-  height: 100%;
-  margin: 0;
-  border-color: var(--a-color-border-soft);
-  background: var(--a-color-surface);
-}
-
-.portal-hot__spotlight-card :deep(.p-entry__body) {
-  height: 100%;
-  gap: 0.875rem;
-}
-
-.portal-hot__spotlight-card--lead {
-  min-height: 18rem;
-}
-
-.portal-hot__spotlight-card--lead :deep(.p-entry-visual) {
-  align-self: stretch;
-}
-
-.portal-hot__spotlight-card--lead :deep(.p-entry__body) {
-  align-items: stretch;
-}
-
-.portal-hot__spotlight-image {
-  display: grid;
-  width: 7rem;
-  height: 7rem;
-  flex: 0 0 7rem;
-  place-items: center;
-  overflow: hidden;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-primary);
-}
-
-.portal-hot__spotlight-card--lead .portal-hot__spotlight-image {
-  width: 12rem;
-  height: 100%;
-  min-height: 15.5rem;
-}
-
-.portal-hot__spotlight-image--rail {
-  width: 4.5rem;
-  height: 4.5rem;
-  flex-basis: 4.5rem;
-}
-
-.portal-hot__spotlight-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.portal-hot__spotlight-image--blog { background: color-mix(in srgb, #16a34a 12%, var(--a-color-surface)); color: #15803d; }
-.portal-hot__spotlight-image--feed { background: color-mix(in srgb, #2563eb 12%, var(--a-color-surface)); color: #2563eb; }
-.portal-hot__spotlight-image--music { background: color-mix(in srgb, #8b5cf6 12%, var(--a-color-surface)); color: #7c3aed; }
-.portal-hot__spotlight-image--video { background: color-mix(in srgb, #ea580c 12%, var(--a-color-surface)); color: #c2410c; }
-.portal-hot__spotlight-image--podcast { background: color-mix(in srgb, #db2777 12%, var(--a-color-surface)); color: #be185d; }
-.portal-hot__spotlight-image--forum,
-.portal-hot__spotlight-image--debate { background: color-mix(in srgb, #4f46e5 12%, var(--a-color-surface)); color: #4338ca; }
-.portal-hot__spotlight-image--timeline { background: color-mix(in srgb, #0891b2 12%, var(--a-color-surface)); color: #0e7490; }
-
-.portal-hot__spotlight-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.portal-hot__spotlight-rail-item .portal-hot__spotlight-card {
-  height: auto;
-  min-height: 0;
-  padding: 0.75rem;
-}
-
-.portal-hot__spotlight-list {
-  max-width: 52rem;
-  border-top: 1px solid var(--a-color-border-soft);
-}
-
-.portal-hot__spotlight-list-item {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-
-.portal-hot__spotlight-list-card {
-  margin: 0;
-  padding: 0.875rem 0;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  border-radius: 0;
-  background: transparent;
-}
-
-.portal-hot__spotlight-list-card:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.portal-hot__spotlight-list-card :deep(.p-entry__body) {
-  gap: 0.75rem;
-}
-
-.portal-hot__spotlight-list-image {
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: 0 0 2.75rem;
-  place-items: center;
-  overflow: hidden;
-  border-radius: var(--a-radius-control);
-}
-
-.portal-hot__spotlight-list-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .portal-hot__tag {
@@ -879,17 +555,6 @@ onMounted(loadHotContent)
 .portal-hot__date {
   font-size: 0.7rem;
   color: var(--a-color-muted-soft);
-}
-
-.portal-hot__reason {
-  color: var(--a-color-text-secondary);
-}
-
-.portal-hot__read-more {
-  margin-left: auto;
-  color: var(--a-color-primary);
-  font-size: 0.76rem;
-  font-weight: 600;
 }
 
 /* ─── Sections ─────────────────────────────────────────── */
@@ -1063,32 +728,6 @@ onMounted(loadHotContent)
 
   .portal-hot__container {
     padding: 1.5rem 1rem 0;
-  }
-
-  .portal-hot__section-header {
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-
-  .portal-hot__section-header h2 {
-    font-size: 1.25rem;
-  }
-
-  .portal-hot__spotlight-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .portal-hot__spotlight-card--lead {
-    min-height: 0;
-  }
-
-  .portal-hot__spotlight-card--lead .portal-hot__spotlight-image {
-    width: 7.5rem;
-    min-height: 10rem;
-  }
-
-  .portal-hot__spotlight-rail {
-    gap: 0.5rem;
   }
 
   .portal-hot__music-grid {

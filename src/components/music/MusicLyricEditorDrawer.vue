@@ -86,6 +86,7 @@ const importIncludesTranslation = ref(false)
 const exportError = ref('')
 const originalInput = ref<HTMLInputElement | null>(null)
 const translationInput = ref<HTMLInputElement | null>(null)
+const draggingImport = ref<MusicLyricsEditTarget | null>(null)
 const rowEditorRoot = ref<HTMLElement | null>(null)
 const initialDraft = ref('')
 let importGeneration = 0
@@ -290,12 +291,27 @@ function handleRowsUpdate(nextRows: MusicLyricDraftRow[]) {
 async function selectImportFile(kind: 'original' | 'translation', event: Event) {
   if (props.saving) return
   const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  await setImportFile(kind, file)
+}
+
+async function setImportFile(kind: 'original' | 'translation', file: File | null) {
+  if (props.saving || !file) return
+  if (!file.name.toLowerCase().endsWith('.lrc')) {
+    importError.value = '请选择 .lrc 文件'
+    return
+  }
   if (kind === 'original') originalImportFile.value = file
   else translationImportFile.value = file
   importIssues.value = []
   importError.value = ''
   if (!originalImportFile.value) return
   await importSelectedLrc()
+}
+
+async function handleImportDrop(kind: 'original' | 'translation', event: DragEvent) {
+  event.preventDefault()
+  draggingImport.value = null
+  await setImportFile(kind, event.dataTransfer?.files?.[0] ?? null)
 }
 
 async function importSelectedLrc() {
@@ -454,8 +470,13 @@ function handleSave() {
             class="music-lyric-editor-drawer__file-field"
             :class="{
               'music-lyric-editor-drawer__file-field--selected': originalImportFile,
+              'music-lyric-editor-drawer__file-field--dragging': draggingImport === 'original',
               'music-lyric-editor-drawer__file-field--disabled': saving,
             }"
+            @dragenter.prevent="draggingImport = 'original'"
+            @dragover.prevent="draggingImport = 'original'"
+            @dragleave.prevent="draggingImport = null"
+            @drop="handleImportDrop('original', $event)"
           >
             <input
               ref="originalInput"
@@ -471,7 +492,7 @@ function handleSave() {
             </span>
             <span class="music-lyric-editor-drawer__file-copy">
               <strong>{{ originalImportFile?.name || '原文 LRC' }}</strong>
-              <span>{{ originalImportFile ? '文件已导入' : '支持 .lrc 文件' }}</span>
+              <span>{{ draggingImport === 'original' ? '松开以上传' : originalImportFile ? '文件已导入' : '点击或拖入 .lrc 文件' }}</span>
             </span>
             <PButton
               type="button"
@@ -481,39 +502,6 @@ function handleSave() {
               @click="originalInput?.click()"
             >
               {{ originalImportFile ? '重新选择' : '选择文件' }}
-            </PButton>
-          </div>
-          <div
-            class="music-lyric-editor-drawer__file-field"
-            :class="{
-              'music-lyric-editor-drawer__file-field--selected': translationImportFile,
-              'music-lyric-editor-drawer__file-field--disabled': saving,
-            }"
-          >
-            <input
-              ref="translationInput"
-              class="music-lyric-editor-drawer__file-input"
-              type="file"
-              accept=".lrc,text/plain"
-              aria-label="翻译 LRC"
-              :disabled="saving"
-              @change="selectImportFile('translation', $event)"
-            />
-            <span class="music-lyric-editor-drawer__file-icon">
-              <Languages :size="20" aria-hidden="true" />
-            </span>
-            <span class="music-lyric-editor-drawer__file-copy">
-              <strong>{{ translationImportFile?.name || '翻译 LRC' }}</strong>
-              <span>{{ translationImportFile ? '文件已导入' : '支持 .lrc 文件' }}</span>
-            </span>
-            <PButton
-              type="button"
-              size="sm"
-              variant="secondary"
-              :disabled="saving"
-              @click="translationInput?.click()"
-            >
-              {{ translationImportFile ? '重新选择' : '选择文件' }}
             </PButton>
           </div>
         </div>
@@ -569,6 +557,33 @@ function handleSave() {
         <p v-if="exportError" class="music-lyric-editor-drawer__read-error" role="alert">
           {{ exportError }}
         </p>
+      </section>
+
+      <section
+        v-if="editTarget === 'translation'"
+        class="music-lyric-editor-drawer__import"
+        aria-label="导入翻译 LRC"
+      >
+        <div
+          class="music-lyric-editor-drawer__file-field"
+          :class="{
+            'music-lyric-editor-drawer__file-field--selected': translationImportFile,
+            'music-lyric-editor-drawer__file-field--dragging': draggingImport === 'translation',
+            'music-lyric-editor-drawer__file-field--disabled': saving,
+          }"
+          @dragenter.prevent="draggingImport = 'translation'"
+          @dragover.prevent="draggingImport = 'translation'"
+          @dragleave.prevent="draggingImport = null"
+          @drop="handleImportDrop('translation', $event)"
+        >
+          <input ref="translationInput" class="music-lyric-editor-drawer__file-input" type="file" accept=".lrc,text/plain" aria-label="翻译 LRC" :disabled="saving" @change="selectImportFile('translation', $event)" />
+          <span class="music-lyric-editor-drawer__file-icon"><Languages :size="20" aria-hidden="true" /></span>
+          <span class="music-lyric-editor-drawer__file-copy">
+            <strong>{{ translationImportFile?.name || '翻译 LRC' }}</strong>
+            <span>{{ draggingImport === 'translation' ? '松开以上传' : translationImportFile ? '文件已导入' : '点击或拖入 .lrc 文件' }}</span>
+          </span>
+          <PButton type="button" size="sm" variant="secondary" :disabled="saving" @click="translationInput?.click()">{{ translationImportFile ? '重新选择' : '选择文件' }}</PButton>
+        </div>
       </section>
 
       <div ref="rowEditorRoot" class="music-lyric-editor-drawer__row-editor">
@@ -863,6 +878,12 @@ function handleSave() {
   border-style: solid;
   border-color: color-mix(in srgb, var(--a-color-primary) 50%, var(--a-color-border-soft));
   background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-surface, var(--a-color-bg)));
+}
+
+.music-lyric-editor-drawer__file-field--dragging {
+  border-color: var(--a-color-primary);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
 }
 
 .music-lyric-editor-drawer__file-field--disabled {

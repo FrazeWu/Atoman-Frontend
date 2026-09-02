@@ -75,6 +75,25 @@ afterEach(() => {
 })
 
 describe('MusicLyricEditorDrawer.vue', () => {
+  it('接受拖入的原文 LRC 文件', async () => {
+    const wrapper = mountDrawer({ content: '', translation: '', format: 'plain' })
+    const file = fileWithText('original.lrc', async () => '[00:01.00]Alpha')
+
+    await wrapper.get('[aria-label="导入 LRC"] .music-lyric-editor-drawer__file-field').trigger('drop', {
+      dataTransfer: { files: [file] },
+    })
+
+    expect(draftRows(wrapper)[0]).toMatchObject({ original: 'Alpha', timeMs: 1000 })
+  })
+
+  it('仅在翻译标签显示翻译 LRC 拖拽入口', async () => {
+    const wrapper = mountDrawer()
+    expect(wrapper.find('input[aria-label="翻译 LRC"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
+    expect(wrapper.get('input[aria-label="翻译 LRC"]').exists()).toBe(true)
+  })
+
   it('defaults the current playback time to zero', () => {
     const wrapper = mountDrawer()
     expect(wrapper.props('currentTimeSeconds')).toBe(0)

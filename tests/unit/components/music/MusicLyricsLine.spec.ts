@@ -22,12 +22,17 @@ describe('MusicLyricsLine', () => {
     } as unknown as Selection)
   }
 
-  it('emits text selections when selection is enabled', async () => {
+  it('在选中歌词片段后显示添加入口，并在点击入口时提交选区', async () => {
     const line = { line_key: 'line-1', text: 'Hello world', translation: '' }
-    const wrapper = mount(MusicLyricsLine, { props: { line, canSelect: true } })
+    const wrapper = mount(MusicLyricsLine, { props: { line, canSelect: true, canAnnotate: true } })
     selectHello(wrapper)
 
     await wrapper.get('.music-lyrics-line__text').trigger('mouseup')
+
+    expect(wrapper.emitted('select-text')).toBeUndefined()
+    expect(wrapper.get('[data-testid="lyrics-selection-annotate"]').text()).toContain('添加注释')
+
+    await wrapper.get('[data-testid="lyrics-selection-annotate"]').trigger('click')
 
     expect(wrapper.emitted('select-text')).toEqual([[
       { line, selectedText: 'Hello', startOffset: 0, endOffset: 5 },
@@ -116,13 +121,14 @@ describe('MusicLyricsLine', () => {
     ]])
   })
 
-  it('offers a whole-line action while annotation mode is active', async () => {
-    const line = { line_key: 'line-1', text: 'Hello world', translation: '' }
+  it('未开启注释权限时不显示选区添加入口', async () => {
     const wrapper = mount(MusicLyricsLine, {
-      props: { line, canAnnotate: true, annotationMode: true },
+      props: { line: { line_key: 'line-1', text: 'Hello world', translation: '' }, canAnnotate: false },
     })
+    selectHello(wrapper)
 
-    await wrapper.get('.music-lyrics-line__annotation-action--create').trigger('click')
-    expect(wrapper.emitted('annotate-line')).toEqual([[line]])
+    await wrapper.get('.music-lyrics-line__text').trigger('mouseup')
+
+    expect(wrapper.find('[data-testid="lyrics-selection-annotate"]').exists()).toBe(false)
   })
 })

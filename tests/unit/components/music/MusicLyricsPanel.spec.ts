@@ -373,24 +373,12 @@ describe('MusicLyricsPanel.vue', () => {
     })
   })
 
-  it('从明确入口进入选择模式并创建整句注释', async () => {
+  it('不再提供侧栏和整句注释创建入口', async () => {
     const wrapper = await mountPanel()
     await flushPromises()
 
-    await wrapper.get('[data-testid="annotation-create-trigger"]').trigger('click')
-    expect(wrapper.text()).toContain('选择歌词片段')
-
-    await wrapper.get('[data-line-id="line-2"] .annotate-line').trigger('click')
-    expect(wrapper.get('.annotation-editor-selected').text()).toBe('Midnight radio')
-
-    await wrapper.get('.annotation-save').trigger('click')
-    expect(mocks.createAnnotation).toHaveBeenCalledWith('song-1', {
-      line_key: 'line-2',
-      selected_text: 'Midnight radio',
-      start_offset: 0,
-      end_offset: 14,
-      body: '新的注释',
-    })
+    expect(wrapper.find('[data-testid="annotation-create-trigger"]').exists()).toBe(false)
+    expect(wrapper.find('[data-line-id="line-2"] .annotate-line').exists()).toBe(false)
   })
 
   it('作者可发起待重新绑定并以新选区提交完整锚点', async () => {

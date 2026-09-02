@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ChevronLeft, Clock, Download, FileUp, Languages, Minus, Plus, Sparkles } from 'lucide-vue-next'
+import { IconChevronLeft as ChevronLeft, IconClock as Clock, IconDownload as Download, IconFileUpload as FileUp, IconLanguage as Languages, IconMinus as Minus, IconPlus as Plus, IconSparkles as Sparkles } from '@tabler/icons-vue'
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'

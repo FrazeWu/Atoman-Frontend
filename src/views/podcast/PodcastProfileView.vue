@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Clock3, Download, History, Settings, Star } from 'lucide-vue-next'
+import { IconClock as Clock3, IconDownload as Download, IconHistory as History, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
 import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'

@@ -389,7 +389,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown, IconStar as Star, IconClock as Clock, IconBookmark as Bookmark, IconExternalLink as ExternalLink, IconPlayerPlay as Play, IconSquare as Square } from '@tabler/icons-vue'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 

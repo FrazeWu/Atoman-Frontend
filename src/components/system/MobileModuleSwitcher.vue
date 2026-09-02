@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { ChevronDown } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown } from '@tabler/icons-vue'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 
 defineProps<{

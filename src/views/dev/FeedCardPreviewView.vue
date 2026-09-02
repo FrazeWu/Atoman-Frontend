@@ -445,22 +445,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import {
-  Bookmark,
-  Check,
-  Clock,
-  Eye,
-  FileText,
-  Gauge,
-  Heart,
-  MessageSquare,
-  Pencil,
-  Plus,
-  Search,
-  Share2,
-  Trash2,
-  Users,
-} from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconCheck as Check, IconClock as Clock, IconEye as Eye, IconFileText as FileText, IconGauge as Gauge, IconHeart as Heart, IconMessage as MessageSquare, IconPencil as Pencil, IconPlus as Plus, IconSearch as Search, IconShare2 as Share2, IconTrash as Trash2, IconUsers as Users } from '@tabler/icons-vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
 
 // ── 方案定义 ──

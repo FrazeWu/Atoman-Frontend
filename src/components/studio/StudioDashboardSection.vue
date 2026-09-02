@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { FileText, List, Mic2, Video } from 'lucide-vue-next'
+import { IconFileText as FileText, IconList as List, IconMicrophone2 as Mic2, IconVideo as Video } from '@tabler/icons-vue'
 
 import type { StudioDashboardSection, StudioModule } from '@/types'
 

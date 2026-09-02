@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { Disc3, FileAudio, Upload } from "lucide-vue-next";
+import { IconDisc as Disc3, IconFileMusic as FileAudio, IconUpload as Upload } from '@tabler/icons-vue';
 import {
   convertMusicSongToAlbum,
   getMusicSongDetail,

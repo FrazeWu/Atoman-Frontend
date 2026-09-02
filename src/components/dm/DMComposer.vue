@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Image, Send, X } from 'lucide-vue-next'
+import { IconPhoto as Image, IconSend as Send, IconX as X } from '@tabler/icons-vue'
 import type { DMImage } from '@/api/dm'
 const props = withDefaults(defineProps<{ modelValue?: string; disabled?: boolean; sending?: boolean; replyAsLabel?: string; error?: string; image?: DMImage | null }>(), { modelValue: '', disabled: false, sending: false, replyAsLabel: '', error: '', image: null })
 const emit = defineEmits<{ 'update:modelValue': [value: string]; send: [payload: { content: string; imageId?: string }]; 'upload-image': [file: File]; 'remove-image': [] }>()

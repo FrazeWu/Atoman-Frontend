@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
 import PButton from '@/components/ui/PButton.vue'
-import { ImagePlus } from 'lucide-vue-next'
+import { IconPhotoPlus as ImagePlus } from '@tabler/icons-vue'
 
 defineProps<{
   generatedCoverReady: boolean

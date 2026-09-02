@@ -86,7 +86,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, X } from 'lucide-vue-next'
+import { IconCheck as Check, IconX as X } from '@tabler/icons-vue'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'

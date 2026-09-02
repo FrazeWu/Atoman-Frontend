@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Search } from 'lucide-vue-next'
+import { IconSearch as Search } from '@tabler/icons-vue'
 import { storeToRefs } from 'pinia'
 import { useTimelineStore } from '@/stores/timeline'
 import PEmpty from '@/components/ui/PEmpty.vue'

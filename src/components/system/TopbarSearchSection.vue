@@ -35,22 +35,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  FileText,
-  BookOpen,
-  Rss,
-  Music,
-  Disc,
-  Mic,
-  Video,
-  User,
-  MessageSquare,
-  Sparkles,
-  Layers,
-  Flame,
-  Calendar,
-  type LucideIcon,
-} from 'lucide-vue-next'
+import { IconFileText as FileText, IconBook2 as BookOpen, IconRss as Rss, IconMusic as Music, IconDisc as Disc, IconMicrophone as Mic, IconVideo as Video, IconUser as User, IconMessage as MessageSquare, IconSparkles as Sparkles, IconLayersLinked as Layers, IconFlame as Flame, IconCalendar as Calendar, type Icon as LucideIcon } from '@tabler/icons-vue'
 import type { GlobalSearchSection, GlobalSearchSectionType } from '@/composables/useGlobalSearch'
 import type { ReferenceTargetType } from '@/api/references'
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BookOpen } from 'lucide-vue-next'
+import { IconBook2 as BookOpen } from '@tabler/icons-vue'
 
 export interface BlogRelatedPost {
   id: string

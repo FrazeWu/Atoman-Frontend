@@ -47,7 +47,7 @@
 
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
-import { ChevronDown, LoaderCircle } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown, IconLoader as LoaderCircle } from '@tabler/icons-vue'
 
 import type { DebateFlowNodeData } from './debateGraph'
 

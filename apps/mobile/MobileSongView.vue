@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Clock3, Heart, ListPlus, Play } from 'lucide-vue-next'
+import { IconClock as Clock3, IconHeart as Heart, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'

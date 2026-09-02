@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check } from 'lucide-vue-next'
+import { IconCheck as Check } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import type { OnboardingFeedRecommendation } from '@/stores/onboarding'
 

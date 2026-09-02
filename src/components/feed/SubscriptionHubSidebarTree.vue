@@ -103,7 +103,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChevronRight, FileText, Mic, Rss, Video } from 'lucide-vue-next'
+import { IconChevronRight as ChevronRight, IconFileText as FileText, IconMicrophone as Mic, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
 
 import type { SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
 

@@ -122,7 +122,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Save, Send } from 'lucide-vue-next'
+import { IconArrowLeft as ArrowLeft, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconDownload as Download, IconDeviceFloppy as Save, IconSend as Send } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'

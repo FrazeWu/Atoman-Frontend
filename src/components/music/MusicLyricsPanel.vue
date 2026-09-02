@@ -279,7 +279,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { History, MessageSquareText, Pencil, X } from 'lucide-vue-next'
+import { IconHistory as History, IconMessage2 as MessageSquareText, IconPencil as Pencil, IconX as X } from '@tabler/icons-vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,

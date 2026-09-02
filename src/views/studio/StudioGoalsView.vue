@@ -134,7 +134,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { ExternalLink, Trash2 } from 'lucide-vue-next'
+import { IconExternalLink as ExternalLink, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'

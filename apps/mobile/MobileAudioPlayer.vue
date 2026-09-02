@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ListMusic, LoaderCircle, Pause, Play } from 'lucide-vue-next'
+import { IconPlaylist as ListMusic, IconLoader as LoaderCircle, IconPlayerPause as Pause, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { usePlayerStore } from '@/stores/player'
 
 const player = usePlayerStore()

@@ -5,7 +5,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { useAlbumImportUpload } from '@/composables/useAlbumImportUpload'
 import PButton from '@/components/ui/PButton.vue'
-import { ExternalLink } from 'lucide-vue-next'
+import { IconExternalLink as ExternalLink } from '@tabler/icons-vue'
 
 const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)

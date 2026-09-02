@@ -162,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Flame, Heart, MessageSquare, Sparkles } from 'lucide-vue-next'
+import { IconFlame as Flame, IconHeart as Heart, IconMessage as MessageSquare, IconSparkles as Sparkles } from '@tabler/icons-vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'

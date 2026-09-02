@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Bookmark, Disc3, Headphones, Users } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconDisc as Disc3, IconHeadphones as Headphones, IconUsers as Users } from '@tabler/icons-vue'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 
 export interface MusicAlbumCardItem {

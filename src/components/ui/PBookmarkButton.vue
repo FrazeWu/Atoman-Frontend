@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Bookmark } from 'lucide-vue-next'
+import { IconBookmark as Bookmark } from '@tabler/icons-vue'
 
 const props = withDefaults(defineProps<{
   bookmarked?: boolean

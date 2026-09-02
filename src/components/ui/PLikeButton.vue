@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Heart, ThumbsUp } from 'lucide-vue-next'
+import { IconHeart as Heart, IconThumbUp as ThumbsUp } from '@tabler/icons-vue'
 
 const props = withDefaults(defineProps<{
   liked?: boolean

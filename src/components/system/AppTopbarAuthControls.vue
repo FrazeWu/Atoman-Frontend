@@ -49,7 +49,7 @@ import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
-import { Mail, PencilLine } from 'lucide-vue-next'
+import { IconMail as Mail, IconPencil as PencilLine } from '@tabler/icons-vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Check, Plus } from 'lucide-vue-next'
+import { IconCheck as Check, IconPlus as Plus } from '@tabler/icons-vue'
 
 import { apiRequestResult } from '@/api/client'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'

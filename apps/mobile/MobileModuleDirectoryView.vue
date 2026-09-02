@@ -58,7 +58,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { Bell, Check, ChevronRight, ExternalLink, LogIn, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
+import { IconBell as Bell, IconCheck as Check, IconChevronRight as ChevronRight, IconExternalLink as ExternalLink, IconLogin as LogIn, IconMessageCircle as MessageCircle, IconPencil as PenLine, IconSettings as Settings, IconUser as UserRound } from '@tabler/icons-vue'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'

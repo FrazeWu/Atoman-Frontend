@@ -80,7 +80,7 @@ defineOptions({
 })
 
 import { computed, ref, useAttrs, watch } from 'vue'
-import { Check, Clock, FileText, Plus, Users } from 'lucide-vue-next'
+import { IconCheck as Check, IconClock as Clock, IconFileText as FileText, IconPlus as Plus, IconUsers as Users } from '@tabler/icons-vue'
 import PIdentityCard from '@/components/ui/PIdentityCard.vue'
 import type { FeedExploreSource } from '@/types'
 import { buildSourceFaviconURL } from '@/utils/feedSourcePresentation'

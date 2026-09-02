@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { ChevronLeft } from 'lucide-vue-next'
+import { IconChevronLeft as ChevronLeft } from '@tabler/icons-vue'
 import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import type { SubscriptionHubTree, SubscriptionHubType } from '@/types'

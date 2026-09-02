@@ -173,7 +173,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { Check, ExternalLink, Plus, RotateCcw, X } from 'lucide-vue-next'
+import { IconCheck as Check, IconExternalLink as ExternalLink, IconPlus as Plus, IconRotate2 as RotateCcw, IconX as X } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import {

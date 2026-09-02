@@ -214,7 +214,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Bookmark, Compass, Flame, Hash, MessageSquare, Rss, Sparkles, UserCheck, Users } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconCompass as Compass, IconFlame as Flame, IconHash as Hash, IconMessage as MessageSquare, IconRss as Rss, IconSparkles as Sparkles, IconUserCheck as UserCheck, IconUsers as Users } from '@tabler/icons-vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'

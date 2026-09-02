@@ -124,7 +124,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, watchEffect } from 'vue'
-import { Heart, MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
+import { IconHeart as Heart, IconMessage as MessageSquare, IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'

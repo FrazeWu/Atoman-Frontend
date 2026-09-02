@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { MessageSquare } from 'lucide-vue-next'
+import { IconMessage as MessageSquare } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
 import PLikeButton from '@/components/ui/PLikeButton.vue'

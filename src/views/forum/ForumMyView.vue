@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { Bookmark, MessageSquare, UserRound } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconMessage as MessageSquare, IconUser as UserRound } from '@tabler/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import PEmpty from '@/components/ui/PEmpty.vue'

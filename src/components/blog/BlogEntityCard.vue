@@ -67,7 +67,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Check, Plus } from 'lucide-vue-next'
+import { IconCheck as Check, IconPlus as Plus } from '@tabler/icons-vue'
 import PIdentityCard from '@/components/ui/PIdentityCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 

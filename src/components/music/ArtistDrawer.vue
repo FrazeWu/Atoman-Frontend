@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
-import { Pause, Play, UserRound } from 'lucide-vue-next'
+import { IconPlayerPause as Pause, IconPlayerPlay as Play, IconUser as UserRound } from '@tabler/icons-vue'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'

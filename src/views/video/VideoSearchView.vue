@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search } from 'lucide-vue-next'
+import { IconSearch as Search } from '@tabler/icons-vue'
 import { listVideos } from '@/api/video'
 import type { Video } from '@/types'
 import PEmpty from '@/components/ui/PEmpty.vue'

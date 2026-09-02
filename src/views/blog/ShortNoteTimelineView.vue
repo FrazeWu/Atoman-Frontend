@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Flame, Heart, MessageSquare, Sparkles } from 'lucide-vue-next'
+import { IconFlame as Flame, IconHeart as Heart, IconMessage as MessageSquare, IconSparkles as Sparkles } from '@tabler/icons-vue'
 import { apiRequestEnvelope } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'

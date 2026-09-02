@@ -154,7 +154,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { Bookmark, Send, Star, Trash2 } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconSend as Send, IconStar as Star, IconTrash as Trash2 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'

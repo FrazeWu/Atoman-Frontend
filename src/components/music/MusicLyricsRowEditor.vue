@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { ArrowDown, ArrowUp, Minus, Play, Plus, Trash2 } from 'lucide-vue-next'
+import { IconArrowDown as ArrowDown, IconArrowUp as ArrowUp, IconMinus as Minus, IconPlayerPlay as Play, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
 import type { MusicLyricsEditTarget, MusicLyricsFormat } from '@/api/musicV1'
 import {
   formatMusicLyricTime,

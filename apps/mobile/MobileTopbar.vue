@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowLeft, PlayCircle } from 'lucide-vue-next'
+import { IconArrowLeft as ArrowLeft, IconPlayerPlay as PlayCircle } from '@tabler/icons-vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 import { moduleUrl } from '@/router/siteUrls'

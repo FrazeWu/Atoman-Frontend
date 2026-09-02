@@ -86,14 +86,28 @@ describe("AudioPlayerQueue.vue", () => {
 		expect(source).toContain("{ preventScroll: true }");
 	});
 
-	it("limits the desktop queue panel to a compact height", () => {
+	it("shows the current playback mode and drag hint in the queue footer", async () => {
+		const player = usePlayerStore();
+		player.playbackMode = "random";
+		const wrapper = mount(AudioPlayerQueue);
+
+		expect(wrapper.get(".queue-footer").text()).toContain("随机播放");
+		expect(wrapper.get(".queue-footer").text()).toContain("拖动调整顺序");
+
+		player.playbackMode = "single";
+		await wrapper.vm.$nextTick();
+		expect(wrapper.get(".queue-footer").text()).toContain("单曲循环");
+		wrapper.unmount();
+	});
+
+	it("uses the agreed desktop queue dimensions", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/music/AudioPlayerQueue.vue"),
 			"utf8",
 		);
 
 		expect(source).toMatch(
-			/\.queue-panel\s*\{[^}]*height: min\(18rem, calc\(100dvh - var\(--a-topbar-height\) - 8rem\)\);/,
+			/\.queue-panel\s*\{[^}]*width: min\(36rem, calc\(100vw - 2.5vw\)\);[^}]*height: min\(21rem, calc\(100dvh - var\(--a-topbar-height\) - 8rem\)\);/,
 		);
 	});
 });

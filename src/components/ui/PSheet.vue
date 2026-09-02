@@ -726,7 +726,7 @@ const sheetStyle = computed(() => {
 }
 
 .slide-right-enter-active {
-  animation: p-sheet-right-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: p-sheet-right-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform;
 }
 
@@ -736,7 +736,7 @@ const sheetStyle = computed(() => {
 }
 
 .slide-right-leave-active {
-  transition: transform 600ms cubic-bezier(0.4, 0, 1, 1);
+  transition: transform 450ms cubic-bezier(0.4, 0, 1, 1);
   will-change: transform;
 }
 
@@ -809,11 +809,11 @@ const sheetStyle = computed(() => {
   }
 
   .slide-right-enter-active {
-    animation: p-sheet-right-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: p-sheet-right-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .slide-right-leave-active {
-    transition-duration: 600ms;
+    transition-duration: 450ms;
   }
 
   .slide-left-enter-from,

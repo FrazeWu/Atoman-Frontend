@@ -155,6 +155,9 @@ describe("AudioPlayer", () => {
 			"utf8",
 		);
 		expect(source).toContain('<Transition name="player-display">');
+		expect(source).toContain('IconChevronRight as ChevronRight');
+		expect(source).toContain('<ChevronRight :size="16" aria-hidden="true" />');
+		expect(source).not.toContain('<Minimize2 :size="16" aria-hidden="true" />');
 		expect(source).not.toContain('name="player-display" mode="out-in"');
 		expect(source).toMatch(
 			/\.player-display-enter-active,[\s\S]*?\.player-display-leave-active\s*\{[^}]*550ms/,

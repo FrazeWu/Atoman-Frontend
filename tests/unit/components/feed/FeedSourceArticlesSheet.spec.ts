@@ -23,6 +23,11 @@ describe('FeedSourceArticlesSheet', () => {
             feed_item: {
               id: 'feed-item-1',
               feed_source_id: 'source-rss-1',
+              feed_source: {
+                id: 'source-rss-1',
+                title: 'Example RSS',
+                cover_url: 'https://example.com/source-cover.png',
+              },
               guid: 'guid-1',
               title: '外部文章',
               link: 'https://example.com/article',
@@ -55,6 +60,8 @@ describe('FeedSourceArticlesSheet', () => {
     expect(wrapper.find('.source-sheet-hero').exists()).toBe(false)
     expect(wrapper.text()).toContain('Example RSS')
     expect(wrapper.text()).toContain('外部文章')
+    expect(wrapper.get('[data-test="source-article-card"]').classes()).toContain('blog-item-card')
+    expect(wrapper.get('[data-test="source-article-card"] img').attributes('src')).toBe('https://example.com/source-cover.png')
 
     await wrapper.get('button').trigger('click')
 
@@ -139,7 +146,9 @@ describe('FeedSourceArticlesSheet', () => {
       },
     })
 
-    await wrapper.get('[data-test="source-article-row"]').trigger('click')
+    expect(wrapper.get('[data-test="source-article-card"]').classes()).toContain('blog-item-card')
+
+    await wrapper.get('[data-test="source-article-card"]').trigger('click')
 
     expect(wrapper.emitted('open-article')?.[0]?.[0]).toMatchObject({ type: 'post' })
   })
@@ -267,12 +276,12 @@ describe('FeedSourceArticlesSheet', () => {
       },
     })
 
-    const initialTitles = wrapper.findAll('[data-test="source-article-row"]').map((node) => node.text())
+    const initialTitles = wrapper.findAll('[data-test="source-article-card"]').map((node) => node.text())
     expect(initialTitles[0]).toContain('Zulu Entry')
 
     await wrapper.get('[data-test="source-sort-select"]').setValue('oldest')
 
-    const sortedTitles = wrapper.findAll('[data-test="source-article-row"]').map((node) => node.text())
+    const sortedTitles = wrapper.findAll('[data-test="source-article-card"]').map((node) => node.text())
     expect(sortedTitles[0]).toContain('Alpha Entry')
   })
 

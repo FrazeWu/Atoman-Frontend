@@ -1,5 +1,5 @@
 <template>
-  <div class="p-entry" :class="{ 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }" @click="$emit('click')">
+  <div class="p-entry" :class="{ 'has-visual': Boolean($slots.visual || badge), 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }" @click="$emit('click')">
     <div class="p-entry__body">
 
       <!-- Left Badge / Image Area -->
@@ -34,7 +34,7 @@
         </div>
 
         <!-- Actions Row (Hover revealed) -->
-        <div v-if="$slots.actions" class="feed-entry-actions" @click.stop>
+        <div v-if="$slots.actions && showActions !== false" class="feed-entry-actions" @click.stop>
           <slot name="actions" />
         </div>
         
@@ -52,6 +52,7 @@ defineProps<{
   isRead?: boolean
   isFocused?: boolean
   forceShowActions?: boolean
+  showActions?: boolean
 }>()
 
 defineEmits(['click'])
@@ -222,6 +223,10 @@ defineEmits(['click'])
   color: var(--a-color-text) !important;
   text-decoration: underline !important;
   text-decoration-thickness: 1px;
+}
+
+.p-entry.has-visual .feed-entry-meta {
+  min-height: 1.25rem;
 }
 
 .feed-entry-meta {

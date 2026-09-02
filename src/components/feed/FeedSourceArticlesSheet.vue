@@ -91,18 +91,28 @@
       />
 
       <div v-else class="source-article-list">
-        <button
-          v-for="item in visibleItems"
-          :key="itemKey(item)"
-          type="button"
-          class="source-article-row"
-          data-test="source-article-row"
-          @click="$emit('open-article', item)"
-        >
-          <span class="source-article-date">{{ formatDate(item.published_at) }}</span>
-          <span class="source-article-title">{{ itemTitle(item) }}</span>
-          <span v-if="itemSummary(item)" class="source-article-summary">{{ itemSummary(item) }}</span>
-        </button>
+        <template v-for="item in visibleItems" :key="itemKey(item)">
+          <BlogItemCard
+            v-if="item.type === 'post' && item.post"
+            data-test="source-article-card"
+            :item="item.post"
+            type="post"
+            :source-title="sourceTitle"
+            :is-read="item.is_read"
+            :show-actions="false"
+            @click="emit('open-article', item)"
+          />
+          <BlogItemCard
+            v-else-if="item.type === 'feed_item' && item.feed_item"
+            data-test="source-article-card"
+            :item="item.feed_item"
+            type="feed_item"
+            :source-title="sourceTitle"
+            :is-read="item.is_read"
+            :show-actions="false"
+            @click="emit('open-article', item)"
+          />
+        </template>
       </div>
     </div>
   </PSheet>
@@ -112,6 +122,7 @@
 import { computed, ref, watch } from 'vue'
 
 import type { FeedArticleSource, TimelineItem } from '@/types'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -143,7 +154,7 @@ const props = withDefaults(defineProps<{
   isTopLayer: true,
 })
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'close'): void
   (e: 'activate'): void
   (e: 'subscribe'): void
@@ -270,11 +281,6 @@ function stripText(text: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 120)
-}
-
-function formatDate(date?: string): string {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
 function formatDateTime(date?: string): string {
@@ -408,53 +414,11 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 .source-sheet-loading,
 .source-article-list {
   display: grid;
-  gap: 0.8rem;
+  gap: 0;
 }
 
 .source-sheet-skeleton {
   height: 5.5rem;
-}
-
-.source-article-row {
-  display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  gap: 0.35rem 1rem;
-  width: 100%;
-  padding: 1rem 0;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.source-article-row:hover .source-article-title,
-.source-article-row:focus-visible .source-article-title {
-  color: var(--a-color-text);
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
-
-.source-article-date {
-  color: var(--a-color-muted-soft);
-  font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-
-.source-article-title {
-  color: var(--a-color-fg);
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.source-article-summary {
-  grid-column: 2;
-  color: var(--a-color-muted);
-  font-size: 0.85rem;
-  line-height: 1.55;
 }
 
 @media (max-width: 720px) {
@@ -475,14 +439,6 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 
   .source-sheet-body {
     padding: 1.25rem 1.25rem 3rem;
-  }
-
-  .source-article-row {
-    grid-template-columns: 1fr;
-  }
-
-  .source-article-summary {
-    grid-column: 1;
   }
 }
 </style>

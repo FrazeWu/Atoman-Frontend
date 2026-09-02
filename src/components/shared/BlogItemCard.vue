@@ -15,6 +15,7 @@
     :class="[`is-type-${cardType}`, { 'is-read': isRead }]"
     :is-open="isOpen"
     :is-focused="isFocused"
+    :show-actions="showActions"
     @click="handleClick"
   >
     <template #visual>
@@ -154,6 +155,7 @@ const props = withDefaults(defineProps<{
   sourcePath?: string
   sourceInteractive?: boolean
   typeLabel?: string
+  showActions?: boolean
 }>(), {
   bookmarked: false,
   inReadingList: false,
@@ -164,6 +166,7 @@ const props = withDefaults(defineProps<{
   isPodcastPlaying: false,
   sourceInteractive: false,
   typeLabel: '',
+  showActions: true,
 })
 
 const emit = defineEmits<{

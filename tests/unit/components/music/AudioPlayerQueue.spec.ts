@@ -1,5 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Song } from "../../../../src/types";
@@ -73,5 +75,16 @@ describe("AudioPlayerQueue.vue", () => {
 		wrapper.unmount();
 		expect(document.activeElement).toBe(trigger);
 		trigger.remove();
+	});
+
+	it("limits the desktop queue panel to a compact height", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayerQueue.vue"),
+			"utf8",
+		);
+
+		expect(source).toMatch(
+			/\.queue-panel\s*\{[^}]*height: min\(18rem, calc\(100dvh - var\(--a-topbar-height\) - 8rem\)\);/,
+		);
 	});
 });

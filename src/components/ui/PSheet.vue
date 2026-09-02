@@ -1,25 +1,27 @@
 <template>
-  <section
-    v-if="isMobile && show"
-    class="p-sheet-mobile-page"
-    :class="panelClass"
-    role="region"
-    :aria-label="railTitle"
-  >
-    <header v-if="title || slots.header" class="p-sheet-mobile-page__header">
-      <button type="button" class="p-sheet-mobile-page__back" :aria-label="closeLabel" @click="$emit('close')">
-        <ChevronLeft :size="20" aria-hidden="true" />
-        <span>返回</span>
-      </button>
-      <h1 v-if="title">{{ title }}</h1>
-      <slot name="header" />
-    </header>
-    <div class="p-sheet-mobile-page__content">
-      <slot />
-    </div>
-  </section>
+  <Transition :name="transitionName" appear>
+    <section
+      v-if="isMobile && show"
+      class="p-sheet-mobile-page"
+      :class="panelClass"
+      role="region"
+      :aria-label="railTitle"
+    >
+      <header v-if="title || slots.header" class="p-sheet-mobile-page__header">
+        <button type="button" class="p-sheet-mobile-page__back" :aria-label="closeLabel" @click="$emit('close')">
+          <ChevronLeft :size="20" aria-hidden="true" />
+          <span>返回</span>
+        </button>
+        <h1 v-if="title">{{ title }}</h1>
+        <slot name="header" />
+      </header>
+      <div class="p-sheet-mobile-page__content">
+        <slot />
+      </div>
+    </section>
+  </Transition>
 
-  <Teleport v-else to="body" :disabled="isTest || !teleport">
+  <Teleport v-if="!isMobile" to="body" :disabled="isTest || !teleport">
     <div
       class="p-sheet-root"
       :class="{

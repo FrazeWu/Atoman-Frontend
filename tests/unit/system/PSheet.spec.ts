@@ -37,6 +37,9 @@ describe("PSheet.vue", () => {
 		expect(source).toMatch(
 			/\.slide-right-leave-active\s*\{[\s\S]*?transition:\s*transform 380ms/,
 		);
+		expect(source).toMatch(
+			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,
+		);
 	});
 
 	it("renders body content and the vertical page rail", () => {

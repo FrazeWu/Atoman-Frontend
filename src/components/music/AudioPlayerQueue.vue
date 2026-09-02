@@ -143,7 +143,12 @@ import type { Song } from '@/types'
 const player = usePlayerStore()
 const queuePanelRef = ref<HTMLElement | null>(null)
 const queueOpen = computed(() => player.showQueue)
-const { handleKeydown: handleDialogKeydown } = useDialogFocus(queueOpen, queuePanelRef, () => player.toggleQueue())
+const { handleKeydown: handleDialogKeydown } = useDialogFocus(
+  queueOpen,
+  queuePanelRef,
+  () => player.toggleQueue(),
+  { preventScroll: true },
+)
 const draggedQueueIndex = ref<number | null>(null)
 const dragOverQueueIndex = ref<number | null>(null)
 

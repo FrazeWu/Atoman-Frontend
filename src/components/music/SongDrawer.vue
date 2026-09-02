@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
-import { addMusicSongToLater, deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
+import { addMusicSongToLater, deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
+import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
@@ -65,10 +66,17 @@ const {
   loading: lyricsLoading,
   errorMessage: lyricsError,
   load: loadLyrics,
+  createAnnotation,
   currentLine: currentLyricLine,
 } = useMusicLyrics()
 const lyricsEditorOpen = ref(false)
 const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
+const selectedTextDraft = ref<{
+  line: MusicSongLyricsLine
+  selectedText: string
+  startOffset: number
+  endOffset: number
+} | null>(null)
 
 const sheetTitle = computed(() => detail.value?.song.title?.trim()
   ? `歌曲-${detail.value.song.title.trim()}`
@@ -238,6 +246,35 @@ function handleLyricsSaved(updated: MusicSongLyrics) {
   lyricsEditorOpen.value = false
 }
 
+function handleSelectText(payload: {
+  line: MusicSongLyricsLine
+  selectedText: string
+  startOffset: number
+  endOffset: number
+}) {
+  if (!requireLogin()) return
+  selectedTextDraft.value = payload
+}
+
+function cancelAnnotation() {
+  selectedTextDraft.value = null
+}
+
+async function saveAnnotation(body: string) {
+  if (!detail.value || !selectedTextDraft.value) return
+  const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
+  if (!lineKey) return
+
+  await createAnnotation(String(detail.value.song.id), {
+    line_key: lineKey,
+    selected_text: selectedTextDraft.value.selectedText,
+    start_offset: selectedTextDraft.value.startOffset,
+    end_offset: selectedTextDraft.value.endOffset,
+    body,
+  })
+  selectedTextDraft.value = null
+}
+
 async function loadDetail(targetSongId: unknown) {
   if (typeof targetSongId !== 'string' || !targetSongId) return
   const request = detailRequests.beginRequest()
@@ -276,6 +313,7 @@ watch(
   ([targetSongId]) => {
     lyricsEditorOpen.value = false
     lyricsDisplayMode.value = 'original'
+    selectedTextDraft.value = null
     void loadDetail(targetSongId)
     if (typeof targetSongId === 'string' && targetSongId) void loadLyrics(targetSongId)
   },
@@ -352,10 +390,10 @@ watch(
           </div>
           <div class="song-detail__actions">
             <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
-            <PButton variant="secondary" :loading="actionBusy === 'favorite'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" />{{ favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱' }}</PButton>
+            <PButton variant="secondary" :loading="actionBusy === 'favorite'" :aria-label="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" :title="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></PButton>
             <PDropdown position="right">
               <template #trigger>
-                <PButton variant="secondary" @click="preparePlaylistMenu"><Plus :size="16" aria-hidden="true" />添加到歌单</PButton>
+                <PButton variant="secondary" aria-label="添加到歌单" title="添加到歌单" @click="preparePlaylistMenu"><Plus :size="16" aria-hidden="true" /></PButton>
               </template>
               <template #default="{ close }">
                 <div class="song-detail__playlist-menu">
@@ -364,11 +402,11 @@ watch(
                 </div>
               </template>
             </PDropdown>
-            <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" />下一首</PButton>
-            <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" />加入队列</PButton>
-            <PButton variant="secondary" :loading="actionBusy === 'later'" @click="addToLater"><Clock3 :size="16" aria-hidden="true" />稍后播放</PButton>
-            <PButton variant="secondary" :disabled="detail.song.edit_status !== undefined && (detail.song.edit_status !== 'development' || detail.song.album?.edit_status === 'closed')" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
-            <PButton variant="secondary" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本记录</PButton>
+            <PButton variant="secondary" :disabled="!detail.playable" aria-label="下一首" title="下一首" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" /></PButton>
+            <PButton variant="secondary" :disabled="!detail.playable" aria-label="加入队列" title="加入队列" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" /></PButton>
+            <PButton variant="secondary" :loading="actionBusy === 'later'" aria-label="稍后播放" title="稍后播放" @click="addToLater"><Clock3 :size="16" aria-hidden="true" /></PButton>
+            <PButton variant="secondary" :disabled="detail.song.edit_status !== undefined && (detail.song.edit_status !== 'development' || detail.song.album?.edit_status === 'closed')" aria-label="编辑歌曲" title="编辑歌曲" @click="editSong"><Pencil :size="16" aria-hidden="true" /></PButton>
+            <PButton variant="secondary" aria-label="版本记录" title="版本记录" @click="openSongHistory"><History :size="16" aria-hidden="true" /></PButton>
           </div>
         </div>
         <section class="song-detail__lyrics">
@@ -402,33 +440,49 @@ watch(
               </PButton>
             </div>
           </header>
-          <PContentProgress
-            :loading="lyricsLoading"
-            :error="lyricsError"
-            :retry="reloadLyrics"
+          <div
+            class="song-detail__lyrics-layout"
+            :class="{ 'has-annotation-editor': selectedTextDraft }"
           >
-            <template #skeleton>
-              <div style="padding: 1.5rem 0; display: flex; flex-direction: column; gap: 0.75rem;">
-                <PSkeleton width="50%" height="18px" />
-                <PSkeleton width="70%" height="18px" />
-                <PSkeleton width="40%" height="18px" />
-                <PSkeleton width="60%" height="18px" />
-              </div>
-            </template>
+            <PContentProgress
+              :loading="lyricsLoading"
+              :error="lyricsError"
+              :retry="reloadLyrics"
+            >
+              <template #skeleton>
+                <div style="padding: 1.5rem 0; display: flex; flex-direction: column; gap: 0.75rem;">
+                  <PSkeleton width="50%" height="18px" />
+                  <PSkeleton width="70%" height="18px" />
+                  <PSkeleton width="40%" height="18px" />
+                  <PSkeleton width="60%" height="18px" />
+                </div>
+              </template>
 
-            <p v-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
-            <div v-else class="song-detail__lyric-lines">
-              <MusicLyricsLine
-                v-for="line in lyrics.lines"
-                :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
-                :line="line"
-                :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
-                :bilingual="lyricsDisplayMode === 'bilingual'"
-                :can-select="false"
-                @seek="player.seek"
-              />
-            </div>
-          </PContentProgress>
+              <p v-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
+              <div v-else class="song-detail__lyric-lines">
+                <MusicLyricsLine
+                  v-for="line in lyrics.lines"
+                  :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
+                  :line="line"
+                  :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
+                  :bilingual="lyricsDisplayMode === 'bilingual'"
+                  :can-select="authStore.isAuthenticated"
+                  :can-annotate="authStore.isAuthenticated"
+                  @select-text="handleSelectText"
+                  @seek="player.seek"
+                />
+              </div>
+            </PContentProgress>
+
+            <MusicAnnotationEditor
+              v-if="selectedTextDraft"
+              show
+              class="song-detail__annotation-editor"
+              :selected-text="selectedTextDraft.selectedText"
+              @save="saveAnnotation"
+              @cancel="cancelAnnotation"
+            />
+          </div>
         </section>
         <nav class="song-detail__navigation" aria-label="相邻曲目">
           <RouterLink v-if="detail.previous" :to="`/music/song/${detail.previous.id}`"><ChevronLeft :size="16" aria-hidden="true" />{{ detail.previous.title }}</RouterLink>
@@ -462,10 +516,13 @@ watch(
 .song-detail__lyrics-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
 .song-detail__lyrics h2 { margin: 0; font-size: 1rem; }
 .song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+.song-detail__lyrics-layout { min-width: 0; }
+.song-detail__lyrics-layout.has-annotation-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 0; }
 .song-detail__lyric-lines { display: grid; gap: 0.15rem; max-height: 32rem; overflow-y: auto; overflow-x: hidden; }
 .song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; }
 .song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.65; }
+.song-detail__annotation-editor { align-self: start; border-radius: 0; border-width: 0 0 0 1px; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
-@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } }
+@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-editor { grid-template-columns: 1fr; } .song-detail__annotation-editor { border-width: 1px 0 0; } }
 </style>

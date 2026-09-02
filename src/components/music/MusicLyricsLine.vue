@@ -3,7 +3,6 @@
     class="music-lyrics-line"
     :class="{
       'is-active': active,
-      'is-annotation-mode': annotationMode,
       'has-annotations': activeAnnotations.length > 0,
     }"
   >
@@ -37,6 +36,17 @@
           </button>
         </template>
       </p>
+      <button
+        v-if="selectedTextDraft"
+        type="button"
+        class="music-lyrics-line__selection-action"
+        data-testid="lyrics-selection-annotate"
+        @mousedown.stop
+        @click.stop="submitSelectedText"
+      >
+        <SquarePen :size="15" aria-hidden="true" />
+        添加注释
+      </button>
       <p v-if="bilingual && line.translation" class="music-lyrics-line__translation">
         {{ line.translation }}
       </p>
@@ -52,17 +62,6 @@
       >
         <MessageSquareText :size="17" aria-hidden="true" />
         <span>{{ activeAnnotations.length }}</span>
-      </button>
-      <button
-        v-if="annotationMode && canAnnotate"
-        type="button"
-        class="music-lyrics-line__annotation-action music-lyrics-line__annotation-action--create"
-        aria-label="注释这句歌词"
-        title="注释这句歌词"
-        @click.stop="emit('annotate-line', line)"
-      >
-        <SquarePen :size="17" aria-hidden="true" />
-        <span>注释</span>
       </button>
     </div>
   </div>
@@ -86,14 +85,12 @@ const props = withDefaults(defineProps<{
   bilingual?: boolean
   canSelect?: boolean
   canAnnotate?: boolean
-  annotationMode?: boolean
 }>(), {
   annotations: () => [],
   active: false,
   bilingual: false,
   canSelect: true,
   canAnnotate: false,
-  annotationMode: false,
 })
 
 const emit = defineEmits<{
@@ -107,11 +104,16 @@ const emit = defineEmits<{
     line: MusicSongLyricsLine
     annotationIds: string[]
   }]
-  'annotate-line': [line: MusicSongLyricsLine]
   seek: [timeSeconds: number]
 }>()
 
 const textElement = ref<HTMLElement | null>(null)
+const selectedTextDraft = ref<{
+  line: MusicSongLyricsLine
+  selectedText: string
+  startOffset: number
+  endOffset: number
+} | null>(null)
 const activeAnnotations = computed(() => props.annotations.filter((annotation) => annotation.status === 'active'))
 const lineTimeMs = computed(() => props.line.time_ms ?? props.line.startTimeMs ?? null)
 
@@ -158,7 +160,7 @@ const segments = computed<HighlightSegment[]>(() => {
 })
 
 function handleMouseUp() {
-  if (!props.canSelect) return
+  if (!props.canSelect || !props.canAnnotate) return
   const selection = window.getSelection()
   const root = textElement.value
   if (!selection || !root || selection.rangeCount === 0 || selection.isCollapsed) return
@@ -180,12 +182,18 @@ function handleMouseUp() {
 
   if (!selectedText.trim() || endOffset <= startOffset) return
 
-  emit('select-text', {
+  selectedTextDraft.value = {
     line: props.line,
     selectedText,
     startOffset,
     endOffset,
-  })
+  }
+}
+
+function submitSelectedText() {
+  if (!selectedTextDraft.value) return
+  emit('select-text', selectedTextDraft.value)
+  selectedTextDraft.value = null
 }
 
 function openLineAnnotations() {
@@ -231,7 +239,6 @@ function formatTime(timeMs: number | null | undefined): string {
 
 .music-lyrics-line:hover,
 .music-lyrics-line:focus-within,
-.music-lyrics-line.is-annotation-mode,
 .music-lyrics-line.has-annotations {
   opacity: 0.78;
   transform: scale(1);
@@ -299,6 +306,7 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line__content {
+  position: relative;
   min-width: 0;
   flex: 1;
 }
@@ -320,6 +328,31 @@ function formatTime(timeMs: number | null | undefined): string {
   line-height: 1.5;
   white-space: pre-wrap;
   transition: opacity 0.25s ease, color 0.25s ease;
+}
+
+.music-lyrics-line__selection-action {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: -0.35rem;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.music-lyrics-line__selection-action:hover,
+.music-lyrics-line__selection-action:focus-visible {
+  border-color: var(--a-color-text);
+  outline: none;
 }
 
 .music-lyrics-line__highlight {
@@ -372,10 +405,6 @@ function formatTime(timeMs: number | null | undefined): string {
   border-color: var(--a-color-text);
   color: var(--a-color-text);
   transform: translateY(-1px);
-}
-
-.music-lyrics-line__annotation-action--create {
-  color: var(--a-color-text);
 }
 
 @media (max-width: 900px) {

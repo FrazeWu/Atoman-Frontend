@@ -6,8 +6,6 @@
       :current-user-ids="currentUserIds"
       :total-count="totalCount"
       :selection-mode="selectionMode"
-      show-create-action
-      @create="emit('create')"
       @vote="(...args) => emit('vote', ...args)"
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
@@ -55,7 +53,6 @@ withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  create: []
   vote: [annotationId: string, vote: MusicLyricsAnnotationVote | null]
   edit: [annotation: MusicLyricsAnnotation]
   delete: [annotationId: string]

@@ -6,30 +6,35 @@
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
+          aria-label="歌词解析"
+          title="歌词解析"
           data-testid="lyrics-annotations-trigger"
           @click="openAnnotationOverview"
         >
           <MessageSquareText :size="16" aria-hidden="true" />
-          解析 {{ activeAnnotationCount }}
         </PButton>
         <PButton
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
+          aria-label="歌词版本"
+          title="歌词版本"
           data-testid="lyrics-versions-trigger"
           @click="toggleVersions"
         >
-          版本
+          <History :size="16" aria-hidden="true" />
         </PButton>
         <PButton
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
+          aria-label="编辑歌词"
+          title="编辑歌词"
           :disabled="saving || reverting"
           data-testid="lyrics-edit-trigger"
           @click="openLyricEditor"
         >
-          编辑歌词
+          <Pencil :size="16" aria-hidden="true" />
         </PButton>
         <button
           type="button"
@@ -143,10 +148,8 @@
               :bilingual="showTranslation"
               :can-select="isAuthenticated"
               :can-annotate="isAuthenticated"
-              :annotation-mode="annotationSelectionMode"
               @select-text="handleSelectText"
               @open-annotations="handleOpenAnnotations"
-              @annotate-line="handleAnnotateLine"
               @seek="emit('seek', $event)"
             />
           </template>
@@ -159,12 +162,11 @@
           :can-write="isAuthenticated"
           :current-user-ids="currentUserIds"
           :total-count="activeAnnotationCount"
-          :selection-mode="annotationSelectionMode"
+          :selection-mode="Boolean(rebindingAnnotation)"
           :editor-visible="annotationEditorVisible"
           :selected-text="annotationSelectedText"
           :initial-body="annotationInitialBody"
           :editor-mode="annotationEditorMode"
-          @create="startAnnotationSelection"
           @vote="handleVoteAnnotation"
           @edit="handleEditAnnotation"
           @delete="handleDeleteAnnotation"
@@ -186,12 +188,11 @@
         :can-write="isAuthenticated"
         :current-user-ids="currentUserIds"
         :total-count="activeAnnotationCount"
-        :selection-mode="annotationSelectionMode"
+        :selection-mode="Boolean(rebindingAnnotation)"
         :editor-visible="annotationEditorVisible"
         :selected-text="annotationSelectedText"
         :initial-body="annotationInitialBody"
         :editor-mode="annotationEditorMode"
-        @create="startAnnotationSelection"
         @vote="handleVoteAnnotation"
         @edit="handleEditAnnotation"
         @delete="handleDeleteAnnotation"
@@ -216,12 +217,11 @@
         :can-write="isAuthenticated"
         :current-user-ids="currentUserIds"
         :total-count="activeAnnotationCount"
-        :selection-mode="annotationSelectionMode"
+        :selection-mode="Boolean(rebindingAnnotation)"
         :editor-visible="annotationEditorVisible"
         :selected-text="annotationSelectedText"
         :initial-body="annotationInitialBody"
         :editor-mode="annotationEditorMode"
-        @create="startAnnotationSelection"
         @vote="handleVoteAnnotation"
         @edit="handleEditAnnotation"
         @delete="handleDeleteAnnotation"
@@ -266,7 +266,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { MessageSquareText, X } from 'lucide-vue-next'
+import { History, MessageSquareText, Pencil, X } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,
@@ -335,7 +335,6 @@ const {
 } = useMusicLyrics()
 
 const selectedAnnotationIds = ref<string[]>([])
-const annotationSelectionMode = ref(false)
 const mobileAnnotationOpen = ref(false)
 const isMobileViewport = ref(false)
 const selectedTextDraft = ref<{
@@ -474,7 +473,6 @@ watch(
     versionsViewGeneration += 1
     resetVersions()
     selectedAnnotationIds.value = []
-    annotationSelectionMode.value = false
     mobileAnnotationOpen.value = false
     clearRebindState()
     editingAnnotation.value = null
@@ -542,32 +540,12 @@ function canManageAnnotation(annotation: MusicLyricsAnnotation) {
 function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationIds: string[] }) {
   clearRebindState()
   editingAnnotation.value = null
-  annotationSelectionMode.value = false
   selectedAnnotationIds.value = payload.annotationIds
   if (isMobileViewport.value) mobileAnnotationOpen.value = true
 }
 
 function openAnnotationOverview() {
   if (isMobileViewport.value) mobileAnnotationOpen.value = true
-}
-
-function startAnnotationSelection() {
-  if (!requireLogin()) return
-  clearRebindState()
-  editingAnnotation.value = null
-  selectedAnnotationIds.value = []
-  annotationSelectionMode.value = true
-  if (isMobileViewport.value) mobileAnnotationOpen.value = false
-}
-
-function handleAnnotateLine(line: MusicSongLyricsLine) {
-  if (!requireLogin() || !line.text) return
-  handleSelectText({
-    line,
-    selectedText: line.text,
-    startOffset: 0,
-    endOffset: line.text.length,
-  })
 }
 
 function openLyricEditor() {
@@ -585,7 +563,6 @@ function handleSelectText(payload: {
   if (rebindingAnnotation.value) rebindOperationGeneration += 1
   editingAnnotation.value = null
   selectedAnnotationIds.value = []
-  annotationSelectionMode.value = false
   selectedTextDraft.value = payload
   if (isMobileViewport.value) mobileAnnotationOpen.value = true
 }
@@ -593,7 +570,6 @@ function handleSelectText(payload: {
 function handleCancelAnnotation() {
   clearRebindState()
   editingAnnotation.value = null
-  annotationSelectionMode.value = false
 }
 
 async function handleSaveAnnotation(body: string) {
@@ -618,7 +594,6 @@ async function handleSaveAnnotation(body: string) {
   })
 
   selectedTextDraft.value = null
-  annotationSelectionMode.value = false
   if (annotation?.id) selectedAnnotationIds.value = [annotation.id]
 }
 
@@ -627,7 +602,6 @@ function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
   clearRebindState()
   editingAnnotation.value = null
   rebindingAnnotation.value = annotation
-  annotationSelectionMode.value = true
   if (isMobileViewport.value) mobileAnnotationOpen.value = false
 }
 
@@ -666,7 +640,6 @@ async function handleConfirmRebind() {
 function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
   if (!isAuthenticated.value) return
   clearRebindState()
-  annotationSelectionMode.value = false
   editingAnnotation.value = annotation
   if (isMobileViewport.value) mobileAnnotationOpen.value = true
 }

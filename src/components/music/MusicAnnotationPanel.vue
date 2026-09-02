@@ -5,21 +5,10 @@
         <h3>{{ title }}</h3>
         <span class="music-annotation-panel__count">{{ displayCount }} 条注释</span>
       </div>
-      <PButton
-        v-if="showCreateAction"
-        type="button"
-        size="sm"
-        :variant="selectionMode ? 'primary' : 'secondary'"
-        data-testid="annotation-create-trigger"
-        @click="emit('create')"
-      >
-        <Plus :size="16" aria-hidden="true" />
-        {{ selectionMode ? '选择歌词' : '添加注释' }}
-      </PButton>
     </header>
 
     <p v-if="selectionMode" class="music-annotation-panel__hint" role="status">
-      选择歌词片段，或点击某行的“注释”。
+      选择新的歌词片段。
     </p>
 
     <p v-else-if="!annotations.length" class="music-annotation-panel__empty">
@@ -101,7 +90,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Plus } from 'lucide-vue-next'
 import type { MusicLyricsAnnotation, MusicLyricsAnnotationVote } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'
@@ -112,14 +100,12 @@ const props = withDefaults(defineProps<{
   currentUserIds?: string[]
   title?: string
   totalCount?: number
-  showCreateAction?: boolean
   selectionMode?: boolean
 }>(), {
   annotations: () => [],
   canWrite: false,
   currentUserIds: () => [],
   title: '解析',
-  showCreateAction: false,
   selectionMode: false,
 })
 
@@ -128,7 +114,6 @@ const emit = defineEmits<{
   edit: [annotation: MusicLyricsAnnotation]
   delete: [annotationId: string]
   rebind: [annotation: MusicLyricsAnnotation]
-  create: []
 }>()
 
 const displayCount = computed(() => props.totalCount ?? props.annotations.length)

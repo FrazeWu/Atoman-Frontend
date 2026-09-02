@@ -95,7 +95,7 @@ describe('PortalView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('用四张等权卡片展示推荐内容且不在模块区重复', async () => {
+  it('用一条主推和三条侧列展示焦点精选，且不在模块区重复', async () => {
     const wrapper = mount(PortalView, {
       global: {
         stubs: {
@@ -110,17 +110,20 @@ describe('PortalView', () => {
 
     await flushPromises()
 
-    expect(wrapper.findAll('.portal-hot__recommendation-card')).toHaveLength(4)
+    expect(wrapper.findAll('.portal-hot__spotlight-lead')).toHaveLength(1)
+    expect(wrapper.findAll('.portal-hot__spotlight-rail-item')).toHaveLength(3)
     for (const item of featured) {
       expect(wrapper.text().split(item.title)).toHaveLength(2)
     }
 
-    const recommendationImages = wrapper.findAll('.portal-hot__recommendation-image img')
-    expect(recommendationImages[0].attributes('loading')).toBe('eager')
-    expect(recommendationImages[0].attributes('fetchpriority')).toBe('high')
+    const leadImage = wrapper.get('.portal-hot__spotlight-lead img')
+    expect(leadImage.attributes('loading')).toBe('eager')
+    expect(leadImage.attributes('fetchpriority')).toBe('high')
+    expect(wrapper.find('.portal-hot__hero-actions').exists()).toBe(false)
+    expect(wrapper.find('[data-test="portal-refresh-spotlight"]').exists()).toBe(false)
   })
 
-  it('为每条焦点精选提供视觉锚点和推荐依据', async () => {
+  it('复用内容卡片为焦点精选提供视觉锚点和推荐依据', async () => {
     const wrapper = mount(PortalView, {
       global: {
         stubs: {
@@ -135,7 +138,7 @@ describe('PortalView', () => {
 
     await flushPromises()
 
-    expect(wrapper.findAll('.portal-hot__recommendation-image')).toHaveLength(4)
+    expect(wrapper.findAll('.portal-hot__spotlight-card')).toHaveLength(4)
     expect(wrapper.findAll('[data-test="portal-spotlight-reason"]')).toHaveLength(4)
   })
 
@@ -279,21 +282,22 @@ describe('PortalView', () => {
     expect(wrapper.get('img[alt="技术周刊 的网站图标"]').attributes('src')).toContain('/weekly.png')
   })
 
-  it('推荐内容无图时优先加载模块区第一张图片', async () => {
-    const textOnlyFeatured = featured.map((item) => ({ ...item, image_url: '' }))
+  it('模块按首页顺序展示，标题简化为模块名并限制四条内容', async () => {
+    const blogItems = Array.from({ length: 6 }, (_, index) => ({
+      ...featured[0],
+      id: `blog-${index + 1}`,
+      title: `文章 ${index + 1}`,
+      target_path: `/posts/${index + 1}`,
+    }))
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({
         data: {
-          featured: textOnlyFeatured,
+          featured: [],
           sections: [
-            { module: 'blog', title: '热门文章', items: textOnlyFeatured },
-            {
-              module: 'music',
-              title: '热门音乐',
-              items: [{ ...featured[3], id: 'album-2', image_url: 'https://example.com/album-2.jpg' }],
-            },
+            { module: 'music', title: '热门音乐', items: featured.slice(3) },
+            { module: 'blog', title: '热门文章', items: blogItems },
           ],
         },
       }),
@@ -312,9 +316,8 @@ describe('PortalView', () => {
     })
     await flushPromises()
 
-    const image = wrapper.get('.portal-hot__thumb img')
-    expect(image.attributes('loading')).toBe('eager')
-    expect(image.attributes('fetchpriority')).toBe('high')
+    expect(wrapper.findAll('.portal-hot__card-link')).toHaveLength(4)
+    expect(wrapper.findAll('.portal-hot__section-head h2').map((heading) => heading.text())).toEqual(['博客', '音乐'])
   })
 
   it('登录用户访问首页时不跳转到订阅页', async () => {
@@ -333,48 +336,4 @@ describe('PortalView', () => {
     expect(routerReplace).not.toHaveBeenCalled()
   })
 
-  it('点击换一批会请求下一组焦点精选并替换当前卡片', async () => {
-    const nextFeatured = featured.map((item, index) => ({
-      ...item,
-      id: `next-${index + 1}`,
-      title: `下一批内容 ${index + 1}`,
-      target_path: `/next/${index + 1}`,
-    }))
-    vi.mocked(fetch).mockImplementation(async (input) => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        data: {
-          featured: String(input).includes('spotlight_offset=4') ? nextFeatured : featured,
-          featured_total: 8,
-          sections: [],
-        },
-      }),
-    }) as Response)
-
-    const wrapper = mount(PortalView, {
-      global: {
-        stubs: {
-          PButton: {
-            props: ['disabled', 'label', 'loading'],
-            template: '<button :disabled="disabled || loading" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>',
-          },
-          RouterLink: {
-            props: ['to'],
-            template: '<a :href="to"><slot /></a>',
-          },
-        },
-      },
-    })
-
-    await flushPromises()
-    await wrapper.get('[data-test="portal-refresh-spotlight"]').trigger('click')
-    await flushPromises()
-
-    expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toContain(
-      '/api/v1/portal/hot?limit=6&spotlight_offset=4',
-    )
-    expect(wrapper.text()).toContain('下一批内容 1')
-    expect(wrapper.text()).not.toContain('第一篇文章')
-  })
 })

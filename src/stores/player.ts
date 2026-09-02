@@ -103,6 +103,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const songLibraryBootstrapped = ref(false);
 	const songLibraryLoaded = ref(false);
 	const showLyrics = ref(false);
+	const lyricsCloseRequest = ref(0);
 	const showQueue = ref(false);
 	const isPinned = ref(
 		typeof localStorage === "undefined" ||
@@ -1271,6 +1272,14 @@ export const usePlayerStore = defineStore("player", () => {
 		showLyrics.value = !showLyrics.value;
 	};
 
+	const requestLyricsClose = () => {
+		lyricsCloseRequest.value += 1;
+	};
+
+	const closeLyrics = () => {
+		showLyrics.value = false;
+	};
+
 	const toggleQueue = () => {
 		showQueue.value = !showQueue.value;
 	};
@@ -1319,7 +1328,10 @@ export const usePlayerStore = defineStore("player", () => {
 		skip,
 		retryPlayback,
 		showLyrics,
+		lyricsCloseRequest,
 		toggleLyrics,
+		requestLyricsClose,
+		closeLyrics,
 		showQueue,
 		toggleQueue,
 		isPinned,

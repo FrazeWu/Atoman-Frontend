@@ -178,6 +178,7 @@ vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
           保存歌词
         </button>
         <button type="button" class="drawer-close" @click="$emit('close')">关闭抽屉</button>
+        <button type="button" class="drawer-mark-dirty" @click="$emit('dirty-change', true)">修改草稿</button>
         <button type="button" class="drawer-seek" @click="$emit('seek', 19.625)">定位</button>
       </div>
     `,
@@ -199,9 +200,9 @@ vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
 
 vi.mock('@/components/ui/PConfirm.vue', () => ({
   default: {
-    props: ['show', 'message', 'loading'],
+    props: ['show', 'title', 'message', 'loading'],
     template: `
-      <div v-if="show" class="lyrics-conflict-confirm">
+      <div v-if="show" class="lyrics-conflict-confirm" :data-title="title">
         <span>{{ message }}</span>
         <button class="conflict-confirm" @click="$emit('confirm')">确认</button>
         <button class="conflict-cancel" @click="$emit('cancel')">取消</button>
@@ -519,6 +520,52 @@ describe('MusicLyricsPanel.vue', () => {
       lines: [{ line_key: 'line-1', text: '新的歌词', translation: 'New translation', time_ms: null }],
       edit_summary: '修正歌词',
     })
+  })
+
+  it('导航请求关闭时确认放弃未保存的歌词修改', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-mark-dirty').trigger('click')
+    ;(wrapper.vm as { requestClose: () => void }).requestClose()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('.lyrics-conflict-confirm').attributes('data-title')).toBe('放弃歌词修改？')
+    expect(wrapper.emitted('close')).toBeUndefined()
+
+    await wrapper.get('.conflict-confirm').trigger('click')
+
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('取消导航关闭确认时保留歌词编辑器', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-mark-dirty').trigger('click')
+    ;(wrapper.vm as { requestClose: () => void }).requestClose()
+    await wrapper.vm.$nextTick()
+    await wrapper.get('.conflict-cancel').trigger('click')
+
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
+    expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
+  it('关闭有未保存修改的歌词编辑器时要求确认', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-mark-dirty').trigger('click')
+    await wrapper.get('.drawer-close').trigger('click')
+
+    expect(wrapper.get('.lyrics-conflict-confirm').attributes('data-title')).toBe('放弃歌词修改？')
+    await wrapper.get('.conflict-confirm').trigger('click')
+
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
+    expect(wrapper.emitted('close')).toBeUndefined()
   })
 
   it('将歌曲标题传给歌词编辑抽屉', async () => {

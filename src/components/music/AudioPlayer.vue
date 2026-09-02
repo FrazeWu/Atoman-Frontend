@@ -353,6 +353,7 @@
   <Transition name="slide-up" appear>
     <MusicLyricsPanel
       v-if="player.showLyrics && player.currentSong"
+      ref="lyricsPanelRef"
       :song-id="String(player.currentSong.id)"
       :song-title="player.currentSong.title"
       :artist-text="artistText"
@@ -363,7 +364,7 @@
           : ''
       "
       :start-rebind="route.query.rebind === '1'"
-      @close="player.toggleLyrics"
+      @close="player.closeLyrics"
       @seek="player.seek"
     />
   </Transition>
@@ -422,6 +423,7 @@ import { usePodcastPlayerActions } from "@/composables/usePodcastPlayerActions";
 
 const player = usePlayerStore();
 const route = useRoute();
+const lyricsPanelRef = ref<{ requestClose: () => void } | null>(null);
 const { openAlbum, openArtist } = useMusicDrawers();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
@@ -429,6 +431,18 @@ const playerInfoRef = ref<HTMLElement | null>(null);
 const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
 const playerDisplayMode = ref<"full" | "mini" | "collapsed">("full");
+
+watch(
+  () => player.lyricsCloseRequest,
+  (request, previousRequest) => {
+    if (request === previousRequest) return;
+    if (lyricsPanelRef.value) {
+      lyricsPanelRef.value.requestClose();
+      return;
+    }
+    player.closeLyrics();
+  },
+);
 
 async function setPlayerDisplayMode(mode: "full" | "mini" | "collapsed") {
   playerDisplayMode.value = mode;

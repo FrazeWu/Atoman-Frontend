@@ -43,6 +43,7 @@
         v-if="!isAuthRoute"
         :label="mobileModuleLabel"
         :current-module="mobileModule"
+        @navigate="requestLyricsClose"
       />
 
       <nav v-if="!isAuthRoute" class="nav">
@@ -52,7 +53,7 @@
           :href="moduleUrl(room.key)"
           class="nav-link"
           :class="{ active: isRoomActive(room.key) }"
-          @click.prevent="navigateTo(room.key)"
+          @click.prevent="handleModuleNavigation(room.key)"
         >
           <span class="nav-link-name">{{ room.name }}</span>
         </a>
@@ -82,6 +83,7 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { Menu, Sun, Moon, ArrowLeft } from 'lucide-vue-next'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
+import { usePlayerStore } from '@/stores/player'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
@@ -99,14 +101,25 @@ const route = useRoute()
 
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
+const player = usePlayerStore()
 const { navigateTo } = useModuleNav()
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
 
 const handleBrandClick = () => {
+  requestLyricsClose()
   if (sheetStore.stack.length > 0) {
     sheetStore.clearStack(true)
   }
   void router.push('/')
+}
+
+const requestLyricsClose = () => {
+  player.requestLyricsClose()
+}
+
+const handleModuleNavigation = (key: ModuleRoomKey) => {
+  requestLyricsClose()
+  navigateTo(key)
 }
 
 const authStore = useAuthStore()

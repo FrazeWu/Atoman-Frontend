@@ -328,6 +328,16 @@ describe("player store", () => {
 		expect(player.showLyrics).toBe(false);
 	});
 
+	it("requests lyrics closure without bypassing the panel confirmation", () => {
+		const player = usePlayerStore();
+		player.showLyrics = true;
+
+		player.requestLyricsClose();
+
+		expect(player.showLyrics).toBe(true);
+		expect(player.lyricsCloseRequest).toBe(1);
+	});
+
 	it("keeps lyrics and queue open independently", () => {
 		const player = usePlayerStore();
 

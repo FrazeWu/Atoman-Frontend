@@ -4,6 +4,7 @@
     class="mobile-module-switcher"
     data-testid="mobile-module-switcher"
     aria-label="打开模块"
+    @click="emit('navigate')"
   >
     <span class="mobile-module-switcher__label">{{ label }}</span>
     <ChevronDown :size="16" aria-hidden="true" />
@@ -21,6 +22,10 @@ defineProps<{
   availableModules?: ModuleRoomKey[]
   desktopBaseUrl?: string
   nativePersonalRoutes?: boolean
+}>()
+
+const emit = defineEmits<{
+  navigate: []
 }>()
 </script>
 

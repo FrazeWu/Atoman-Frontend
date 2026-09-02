@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
+import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconClock as Clock3, IconHeart as Heart, IconHistory as History, IconPlaylistAdd as ListPlus, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPlayerTrackNext as StepForward } from '@tabler/icons-vue'
 import { addMusicSongToLater, deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
 import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'

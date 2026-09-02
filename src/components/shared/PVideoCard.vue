@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Clock3, Play } from 'lucide-vue-next'
+import { IconClock as Clock3, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { useRouter } from 'vue-router'
 
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'

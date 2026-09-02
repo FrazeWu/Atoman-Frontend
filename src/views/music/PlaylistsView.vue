@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Plus, RefreshCw, X } from 'lucide-vue-next'
+import { IconPlus as Plus, IconRefresh as RefreshCw, IconX as X } from '@tabler/icons-vue'
 import {
   createMusicPlaylist,
   deletePlaylistBookmark,

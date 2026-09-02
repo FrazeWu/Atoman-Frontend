@@ -208,7 +208,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { EyeOff, Flame, Undo2 } from 'lucide-vue-next'
+import { IconEyeOff as EyeOff, IconFlame as Flame, IconArrowBackUp as Undo2 } from '@tabler/icons-vue'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import ModuleSearch from '@/components/search/ModuleSearch.vue'

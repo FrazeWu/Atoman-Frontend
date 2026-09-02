@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { Music2, Play, X } from 'lucide-vue-next'
+import { IconMusic as Music2, IconPlayerPlay as Play, IconX as X } from '@tabler/icons-vue'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,

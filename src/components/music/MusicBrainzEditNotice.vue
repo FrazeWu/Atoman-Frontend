@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle } from 'lucide-vue-next'
+import { IconAlertTriangle as AlertTriangle } from '@tabler/icons-vue'
 </script>
 
 <template>

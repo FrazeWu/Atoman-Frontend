@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
-import { Clock3, Heart, ListPlus, MoreHorizontal, Play, StepForward, Trash2 } from 'lucide-vue-next'
+import { IconClock as Clock3, IconHeart as Heart, IconPlaylistAdd as ListPlus, IconDots as MoreHorizontal, IconPlayerPlay as Play, IconPlayerTrackNext as StepForward, IconTrash as Trash2 } from '@tabler/icons-vue'
 import {
   addMusicSongToLater,
   clearMusicListeningHistory,

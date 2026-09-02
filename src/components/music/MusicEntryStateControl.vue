@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { getMountedPinia } from '@/utils/pinia'
-import { Lock, LockOpen, ShieldCheck, X } from 'lucide-vue-next'
+import { IconLock as Lock, IconLockOpen as LockOpen, IconShieldCheck as ShieldCheck, IconX as X } from '@tabler/icons-vue'
 import {
   cancelMusicEntryStateRequest,
   createMusicEntryStateRequest,

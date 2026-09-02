@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { Clock3, Map, Settings, UserRound } from 'lucide-vue-next'
+import { IconClock as Clock3, IconMap as Map, IconSettings as Settings, IconUser as UserRound } from '@tabler/icons-vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useTimelineStore } from '@/stores/timeline'

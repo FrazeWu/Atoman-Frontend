@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { BarChart3, Clock3, RefreshCw, Settings, Star } from 'lucide-vue-next'
+import { IconChartBar as BarChart3, IconClock as Clock3, IconRefresh as RefreshCw, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,

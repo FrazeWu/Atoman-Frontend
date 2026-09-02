@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { PanelRightClose, PanelRightOpen } from "lucide-vue-next";
+import { IconLayoutSidebarRightCollapse as PanelRightClose, IconLayoutSidebarRightExpand as PanelRightOpen } from '@tabler/icons-vue';
 import PSheet from "@/components/ui/PSheet.vue";
 
 type DirectoryItem = { id: string; label: string };

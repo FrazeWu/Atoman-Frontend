@@ -12,11 +12,6 @@
     @focusout="scheduleAutoHide"
   >
     <div
-      v-if="!effectivePinned"
-      class="player-reveal-handle"
-      aria-hidden="true"
-    />
-    <div
       ref="playerInnerRef"
       class="player-inner"
       :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }"
@@ -331,22 +326,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import {
-  Repeat,
-  Shuffle,
-  List,
-  Volume2,
-  Volume1,
-  Volume,
-  VolumeX,
-  Heart,
-  Plus,
-  Clock,
-  ChevronUp,
-  Minimize2,
-  Maximize2,
-  Play,
-} from "lucide-vue-next";
+import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronUp as ChevronUp, IconMinimize as Minimize2, IconMaximize as Maximize2, IconPlayerPlay as Play } from '@tabler/icons-vue';
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
@@ -638,17 +618,6 @@ watch(
 
 .player.is-auto-hidden {
   transform: translateY(calc(100% - 10px));
-}
-
-.player-reveal-handle {
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  width: 40px;
-  height: 3px;
-  transform: translateX(-50%);
-  background: var(--a-color-muted-soft);
-  pointer-events: none;
 }
 
 .player-inner {
@@ -1617,7 +1586,6 @@ watch(
     transform: none !important;
   }
 
-  .player-reveal-handle,
   .player-collapse-tab,
   .player-waveform,
   .feature-toggle:not(.player-mode-btn),

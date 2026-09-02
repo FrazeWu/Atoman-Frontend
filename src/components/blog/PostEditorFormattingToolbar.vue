@@ -31,28 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  AtSign,
-  Bold,
-  BookOpen,
-  Code2,
-  Headphones,
-  Hash,
-  Image,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  Minus,
-  Quote,
-  Redo2,
-  Sigma,
-  Strikethrough,
-  Table,
-  Undo2,
-  Video,
-  type LucideIcon,
-} from 'lucide-vue-next'
+import { IconAt as AtSign, IconBold as Bold, IconBook2 as BookOpen, IconCode as Code2, IconHeadphones as Headphones, IconHash as Hash, IconPhoto as Image, IconItalic as Italic, IconLink as Link, IconList as List, IconListNumbers as ListOrdered, IconMinus as Minus, IconQuote as Quote, IconArrowForwardUp as Redo2, IconSum as Sigma, IconStrikethrough as Strikethrough, IconTable as Table, IconArrowBackUp as Undo2, IconVideo as Video, type Icon as LucideIcon } from '@tabler/icons-vue'
 
 import type { PostEditorCommand } from './postEditorCommands'
 

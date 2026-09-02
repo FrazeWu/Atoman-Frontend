@@ -267,17 +267,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import {
-  ChevronRight,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Pencil,
-  Trash2,
-  UserPlus,
-  UserRoundCheck,
-  UserRoundX,
-} from 'lucide-vue-next'
+import { IconChevronRight as ChevronRight, IconEye as Eye, IconEyeOff as EyeOff, IconKey as KeyRound, IconPencil as Pencil, IconTrash as Trash2, IconUserPlus as UserPlus, IconUserCheck as UserRoundCheck, IconUserX as UserRoundX } from '@tabler/icons-vue'
 
 import {
   createAdminUser,

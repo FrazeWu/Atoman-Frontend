@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
+import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconX as X } from '@tabler/icons-vue'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const props = withDefaults(defineProps<{

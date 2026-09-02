@@ -99,7 +99,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import { Search } from 'lucide-vue-next'
+import { IconSearch as Search } from '@tabler/icons-vue'
 import { useRoute, RouterLink } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ExternalLink } from 'lucide-vue-next'
+import { IconExternalLink as ExternalLink } from '@tabler/icons-vue'
 import {
 	getMusicAlbum,
 	listMusicAlbumLinkSuggestions,

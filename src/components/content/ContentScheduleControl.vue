@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarClock } from 'lucide-vue-next'
+import { IconCalendarClock as CalendarClock } from '@tabler/icons-vue'
 
 defineProps<{ modelValue: string; busy?: boolean; disabled?: boolean }>()
 defineEmits<{ 'update:modelValue': [value: string]; schedule: [] }>()

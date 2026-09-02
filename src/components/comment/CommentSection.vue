@@ -82,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { MessageSquare } from 'lucide-vue-next'
+import { IconMessage as MessageSquare } from '@tabler/icons-vue'
 
 import type { CommentDTO, CommentTargetRef, CreateCommentInput, ReportCommentInput } from '@/api/comments'
 import PButton from '@/components/ui/PButton.vue'

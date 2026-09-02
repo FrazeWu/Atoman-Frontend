@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { AtSign, Heart, MessageSquare, MoreHorizontal, Paperclip, Reply, Send, X } from 'lucide-vue-next'
+import { IconAt as AtSign, IconHeart as Heart, IconMessage as MessageSquare, IconDots as MoreHorizontal, IconPaperclip as Paperclip, IconArrowBackUp as Reply, IconSend as Send, IconX as X } from '@tabler/icons-vue'
 
 import PInteractionActions from '@/components/ui/PInteractionActions.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'

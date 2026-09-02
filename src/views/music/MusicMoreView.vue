@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { Archive, Bookmark, ChevronRight, Disc3, History, Plus, Users } from 'lucide-vue-next'
+import { IconArchive as Archive, IconBookmark as Bookmark, IconChevronRight as ChevronRight, IconDisc as Disc3, IconHistory as History, IconPlus as Plus, IconUsers as Users } from '@tabler/icons-vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 </script>
 

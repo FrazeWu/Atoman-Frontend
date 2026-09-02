@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useSlots } from 'vue'
-import { X } from 'lucide-vue-next'
+import { IconX as X } from '@tabler/icons-vue'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const props = withDefaults(defineProps<{

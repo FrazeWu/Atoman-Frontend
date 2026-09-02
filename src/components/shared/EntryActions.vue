@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Bookmark, Clock, Star } from 'lucide-vue-next'
+import { IconBookmark as Bookmark, IconClock as Clock, IconStar as Star } from '@tabler/icons-vue'
 import PClip from '@/components/ui/PClip.vue'
 
 const props = withDefaults(defineProps<{

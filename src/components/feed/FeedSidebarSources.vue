@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
 
 import type { Subscription, SubscriptionGroup } from '@/types'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'

@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
-import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
+import { IconPlayerPlay as Play, IconDisc as Disc, IconMusic as Music, IconAlertCircle as AlertCircle } from '@tabler/icons-vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'

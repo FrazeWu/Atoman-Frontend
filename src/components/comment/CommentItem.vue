@@ -82,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, defineComponent, h, ref, type VNodeChild } from 'vue'
-import { BadgeCheck, Flag, Heart, Pencil, Pin, PinOff, Play, Reply, Trash2 } from 'lucide-vue-next'
+import { IconRosetteDiscountCheck as BadgeCheck, IconFlag as Flag, IconHeart as Heart, IconPencil as Pencil, IconPin as Pin, IconPinnedOff as PinOff, IconPlayerPlay as Play, IconArrowBackUp as Reply, IconTrash as Trash2 } from '@tabler/icons-vue'
 
 import type { CommentDTO } from '@/api/comments'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'

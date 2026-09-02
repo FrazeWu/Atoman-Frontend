@@ -157,7 +157,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, X } from 'lucide-vue-next'
+import { IconSearch as Search, IconX as X } from '@tabler/icons-vue'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'

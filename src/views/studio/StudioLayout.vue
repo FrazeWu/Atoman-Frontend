@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { Menu } from 'lucide-vue-next'
+import { IconMenu as Menu } from '@tabler/icons-vue'
 
 import AppSidebar from '@/components/system/AppSidebar.vue'
 import StudioChannelSelector from '@/components/studio/StudioChannelSelector.vue'

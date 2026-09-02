@@ -190,7 +190,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { BookOpen, Link2, RotateCcw, Search, Trash2, Upload } from 'lucide-vue-next'
+import { IconBook2 as BookOpen, IconLink as Link2, IconRotate2 as RotateCcw, IconSearch as Search, IconTrash as Trash2, IconUpload as Upload } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import { ApiErrorResponseError } from '@/api/client'

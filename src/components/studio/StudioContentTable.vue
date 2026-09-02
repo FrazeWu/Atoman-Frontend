@@ -151,7 +151,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArchiveRestore, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarX, Pencil, RefreshCw, Send, Share2, Trash2, Upload } from 'lucide-vue-next'
+import { IconArchive as ArchiveRestore, IconArrowDown as ArrowDown, IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconArrowUp as ArrowUp, IconCalendarX as CalendarX, IconPencil as Pencil, IconRefresh as RefreshCw, IconSend as Send, IconShare2 as Share2, IconTrash as Trash2, IconUpload as Upload } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 
 import PEmpty from '@/components/ui/PEmpty.vue'

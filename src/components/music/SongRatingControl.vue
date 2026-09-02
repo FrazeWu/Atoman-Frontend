@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Star } from 'lucide-vue-next'
+import { IconStar as Star } from '@tabler/icons-vue'
 
 const props = withDefaults(defineProps<{
   songTitle: string

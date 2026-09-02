@@ -1,18 +1,5 @@
 import type { Component } from "vue";
-import {
-	Bookmark,
-	BookOpen,
-	Compass,
-	Ellipsis,
-	Folder,
-	Heart,
-	ListMusic,
-	MessageSquare,
-	Radio,
-	Rss,
-	Search,
-	UserRound,
-} from "lucide-vue-next";
+import { IconBookmark as Bookmark, IconBook2 as BookOpen, IconCompass as Compass, IconDots as Ellipsis, IconFolder as Folder, IconHeart as Heart, IconPlaylist as ListMusic, IconMessage as MessageSquare, IconRadio as Radio, IconRss as Rss, IconSearch as Search, IconUser as UserRound } from '@tabler/icons-vue';
 import { modulePathUrl, moduleUrl } from "@/router/siteUrls";
 import type { ModuleRoomKey } from "@/config/moduleRooms";
 

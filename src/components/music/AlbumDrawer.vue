@@ -16,7 +16,7 @@ import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vu
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
-import { ChevronDown, ChevronLeft, ChevronRight, FileText, Heart, History, Merge, MoreHorizontal, Pause, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
+import { IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconFileText as FileText, IconHeart as Heart, IconHistory as History, IconGitMerge as Merge, IconDots as MoreHorizontal, IconPlayerPause as Pause, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconUser as UserRound } from '@tabler/icons-vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'

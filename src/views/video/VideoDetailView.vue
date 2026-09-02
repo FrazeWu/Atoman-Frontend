@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { deleteVideoRating, getRecommendedVideos, getVideo, getVideoResource, recordVideoView, setVideoRating, type VideoRatingSummary } from '@/api/video'
 import { computed, onMounted, ref, watch } from 'vue'
-import { MessageSquare, Play, Share2 } from 'lucide-vue-next'
+import { IconMessage as MessageSquare, IconPlayerPlay as Play, IconShare2 as Share2 } from '@tabler/icons-vue'
 import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import type { CommentTargetRef } from '@/api/comments'
 import type { Collection, Video } from '@/types'

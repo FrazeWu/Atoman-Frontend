@@ -152,7 +152,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, History, MessageSquare, Pencil } from 'lucide-vue-next'
+import { IconChevronLeft as ChevronLeft, IconHistory as History, IconMessage as MessageSquare, IconPencil as Pencil } from '@tabler/icons-vue'
 
 import DebateDiscussionSheet from '@/components/debate/DebateDiscussionSheet.vue'
 import DebateRelationGraph from '@/components/debate/DebateRelationGraph.vue'

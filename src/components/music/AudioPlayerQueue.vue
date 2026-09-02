@@ -216,25 +216,29 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 .queue-panel {
   position: fixed;
   right: 0;
+  top: var(--a-topbar-height);
   bottom: calc(
     var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
       6rem
   );
   width: min(36rem, calc(100vw - 2.5vw));
-  height: min(21rem, calc(100dvh - var(--a-topbar-height) - 8rem));
-  max-height: min(21rem, calc(100dvh - var(--a-topbar-height) - 8rem));
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-player-queue);
   display: flex;
   flex-direction: column;
   box-shadow: var(--a-shadow-lg);
-  animation: slideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: right bottom;
+  animation: queueReveal 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(0.5rem); }
+@keyframes queueReveal {
+  from { opacity: 0; transform: translateY(1.5rem) scaleY(0.97); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queue-panel { animation-duration: 1ms; }
 }
 
 .queue-header {
@@ -515,8 +519,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
     width: 100%;
     max-width: 100%;
     bottom: calc(var(--a-mobile-nav-reserved-height) + var(--a-mobile-player-height) + 0.5rem);
-    height: min(60dvh, calc(100dvh - var(--a-topbar-height) - var(--a-mobile-player-height) - var(--a-mobile-nav-reserved-height) - 1rem));
-    max-height: min(60dvh, calc(100dvh - var(--a-topbar-height) - var(--a-mobile-player-height) - var(--a-mobile-nav-reserved-height) - 1rem));
   }
   .q-drag {
     display: none;

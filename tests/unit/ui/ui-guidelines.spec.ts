@@ -72,7 +72,7 @@ describe("UI 准则", () => {
 		).not.toMatch(/后台审核|后台驳回|后台取消/);
 	});
 
-	it("门户使用主推侧列与单一连续内容流", () => {
+	it("门户使用主推与侧列的精选结构", () => {
 		const source = read("src/views/portal/PortalView.vue");
 
 		expect(source).toContain("displaySections");
@@ -80,10 +80,6 @@ describe("UI 准则", () => {
 		expect(source).toContain("portal-hot__spotlight-layout");
 		expect(source).toContain("portal-hot__spotlight-lead");
 		expect(source).toContain("portal-hot__spotlight-rail-item");
-		expect(source).toContain("portal-hot__content-stream");
-		expect(source).not.toContain("portal-hot__sections");
-		expect(source).not.toContain("portal-hot__music-grid");
-		expect(source).not.toContain("portal-hot__video-grid");
 		expect(source).toContain("portal-hot__module-strip");
 		expect(source).not.toContain("portal-hot__recommendation-grid");
 		expect(source).not.toContain("portal-hot__recommendation-card");

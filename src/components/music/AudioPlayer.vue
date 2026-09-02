@@ -12,11 +12,6 @@
     @focusout="scheduleAutoHide"
   >
     <div
-      v-if="!effectivePinned"
-      class="player-reveal-handle"
-      aria-hidden="true"
-    />
-    <div
       ref="playerInnerRef"
       class="player-inner"
       :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }"
@@ -638,17 +633,6 @@ watch(
 
 .player.is-auto-hidden {
   transform: translateY(calc(100% - 10px));
-}
-
-.player-reveal-handle {
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  width: 40px;
-  height: 3px;
-  transform: translateX(-50%);
-  background: var(--a-color-muted-soft);
-  pointer-events: none;
 }
 
 .player-inner {
@@ -1617,7 +1601,6 @@ watch(
     transform: none !important;
   }
 
-  .player-reveal-handle,
   .player-collapse-tab,
   .player-waveform,
   .feature-toggle:not(.player-mode-btn),

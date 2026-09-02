@@ -30,7 +30,6 @@ describe("application navigation contracts", () => {
 		expect(topbarNavOrder.map((key) => moduleRooms[key].name)).toEqual([
 			"订阅",
 			"博客",
-			"读书",
 			"音乐",
 			"视频",
 			"播客",
@@ -81,10 +80,10 @@ describe("application navigation contracts", () => {
 			routes: buildAppRoutes(),
 		});
 		const moduleTargets = Object.keys(moduleRooms).flatMap((module) =>
-			getMobilePrimaryTabs(module as keyof typeof moduleRooms).map(
-				(tab) => tab.href,
-			),
-		);
+				getMobilePrimaryTabs(module as keyof typeof moduleRooms).map(
+					(tab) => tab.href,
+				),
+			);
 		const switcherTargets = getMobileMoreItems().map((item) => item.href);
 		const targets = [...moduleTargets, ...switcherTargets];
 
@@ -95,6 +94,10 @@ describe("application navigation contracts", () => {
 				"/:pathMatch(.*)*",
 			);
 		}
+
+		expect(router.resolve("/books").matched.at(-1)?.path).toBe(
+			"/:pathMatch(.*)*",
+		);
 	});
 
 	it.each([

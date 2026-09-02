@@ -124,7 +124,9 @@ const MORE_ITEMS: MobileMoreItem[] = [
 export const getMobilePrimaryTabs = (
 	module?: ModuleRoomKey,
 ): MobilePrimaryTab[] =>
-	module ? MOBILE_PRIMARY_TABS[module].map((tab) => ({ ...tab })) : [];
+	module && module !== "books"
+		? MOBILE_PRIMARY_TABS[module].map((tab) => ({ ...tab }))
+		: [];
 
 export const getMobileMoreItems = (): MobileMoreItem[] =>
-	MORE_ITEMS.map((item) => ({ ...item }));
+	MORE_ITEMS.filter((item) => item.module !== "books").map((item) => ({ ...item }));

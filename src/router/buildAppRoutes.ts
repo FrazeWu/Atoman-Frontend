@@ -41,7 +41,6 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...scopedModuleRoutes('debate'),
     ...scopedModuleRoutes('timeline'),
     ...scopedModuleRoutes('blog'),
-    ...scopedModuleRoutes('books'),
     ...scopedModuleRoutes('podcast'),
     ...scopedModuleRoutes('video'),
 	...studioRoutes,

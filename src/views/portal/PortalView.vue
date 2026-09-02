@@ -182,10 +182,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, type Component } from 'vue'
-import { getActivePinia } from 'pinia'
+import { computed, onMounted, ref, type Component } from 'vue'
 import { IconBook2 as BookOpen, IconClock as Clock3, IconFileText as FileText, IconMessageCircle as MessageCircle, IconMusic as Music2, IconRadio as Radio, IconRefresh as RefreshCw, IconRss as Rss, IconSparkles as Sparkles, IconVideo as VideoIcon } from '@tabler/icons-vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
 
 import PButton from '@/components/ui/PButton.vue'
@@ -195,7 +194,6 @@ import { useApi } from '@/composables/useApi'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { useAuthStore } from '@/stores/auth'
 interface PortalHotItem {
   id: string
   module: string
@@ -221,15 +219,8 @@ interface PortalHotResponse {
   sections: PortalHotSection[]
 }
 
-const router = useRouter()
 const api = useApi()
 const siteAccessStore = useSiteAccessStore()
-const pinia = getActivePinia()
-const authStore = pinia ? useAuthStore(pinia) : null
-
-watch(() => authStore?.isAuthenticated ?? false, (isAuthenticated) => {
-  if (isAuthenticated) void router.replace('/feed')
-}, { immediate: true })
 
 const loading = ref(true)
 const spotlightLoading = ref(false)

@@ -1,10 +1,14 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import PortalView from '@/views/portal/PortalView.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const { routerReplace } = vi.hoisted(() => ({ routerReplace: vi.fn() }))
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ replace: routerReplace }),
   RouterLink: {
     props: ['to'],
     template: '<a :href="to"><slot /></a>',
@@ -98,6 +102,7 @@ const streamItems = [
 
 describe('PortalView', () => {
   beforeEach(() => {
+    routerReplace.mockReset()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -180,6 +185,22 @@ describe('PortalView', () => {
     expect(wrapper.find('.portal-hot__sections').exists()).toBe(false)
     expect(wrapper.find('.portal-hot__music-grid').exists()).toBe(false)
     expect(wrapper.find('.portal-hot__video-grid').exists()).toBe(false)
+  })
+
+  it('登录用户访问首页时不跳转到订阅页', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore(pinia).isAuthenticated = true
+
+    mount(PortalView, {
+      global: {
+        plugins: [pinia],
+        stubs: { PButton: true, RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } },
+      },
+    })
+    await flushPromises()
+
+    expect(routerReplace).not.toHaveBeenCalled()
   })
 
   it('点击换一批会请求下一组焦点精选并替换当前卡片', async () => {

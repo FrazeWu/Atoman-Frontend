@@ -40,6 +40,9 @@ describe("PSheet.vue", () => {
 		expect(source).toMatch(
 			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,
 		);
+		expect(source).toMatch(
+			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter 5200ms/,
+		);
 	});
 
 	it("renders body content and the vertical page rail", () => {

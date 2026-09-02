@@ -811,11 +811,13 @@ const sheetStyle = computed(() => {
   }
 
   .slide-right-enter-active {
-    animation: none;
+    animation: p-sheet-right-enter 5200ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .slide-right-enter-from,
-  .slide-right-leave-to,
+  .slide-right-leave-active {
+    transition-duration: 3800ms;
+  }
+
   .slide-left-enter-from,
   .slide-left-leave-to,
   .slide-up-enter-from,

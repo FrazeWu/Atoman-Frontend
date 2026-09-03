@@ -11,7 +11,7 @@
       :error="subscriptionHubTreeError"
       @close="router.push('/feed/subscriptions')"
       @select-context="selectSubscriptionHubContext"
-      @manage-rss="openRSSManagement"
+      @manage="openSubscriptionManagement"
       @retry="reloadSubscriptionHubTree"
     />
   </main>
@@ -62,9 +62,9 @@ const selectSubscriptionHubContext = (selection: { subscriptionType: Subscriptio
   })
 }
 
-const openRSSManagement = () => {
+const openSubscriptionManagement = () => {
   void router.push({
-    path: '/feed/sources',
+    path: '/feed/subscriptions',
     query: {
       ...route.query,
       hub_type: undefined,

@@ -880,7 +880,11 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
       : await feedStore.subscribeToChannel(item.id)
     if (success) {
       item.subscribed = true
-      if (item.source_type !== 'external_rss') await feedStore.fetchSubscriptions()
+      await Promise.all([
+        feedStore.fetchSubscriptions(),
+        feedStore.fetchGroups(),
+        feedStore.fetchSubscriptionHubTree(),
+      ])
       showSubscriptionFeedback('已订阅，可继续阅读')
     } else {
       showSubscriptionFeedback('订阅失败，请重试', 'error')
@@ -903,9 +907,13 @@ async function subscribeSelectedChannel() {
       success = await feedStore.subscribeToRSS(source.rssUrl || '', source.title)
     } else {
       success = await feedStore.subscribeToChannel(source.id)
-      if (success) await feedStore.fetchSubscriptions()
     }
     if (success) {
+      await Promise.all([
+        feedStore.fetchSubscriptions(),
+        feedStore.fetchGroups(),
+        feedStore.fetchSubscriptionHubTree(),
+      ])
       source.subscribed = true
       showSubscriptionFeedback('已订阅，可继续阅读')
     } else {

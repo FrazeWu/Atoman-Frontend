@@ -9,12 +9,13 @@
         <p class="subscription-hub-sidebar__eyebrow a-font-meta">我的订阅</p>
         <button
           type="button"
-          class="subscription-hub-sidebar__manage a-font-meta"
-          data-testid="subscription-hub-manage-rss"
-          aria-label="管理 RSS 订阅源"
-          @click="emit('manage-rss')"
+          class="subscription-hub-sidebar__manage"
+          data-testid="subscription-hub-manage"
+          aria-label="管理订阅"
+          title="管理订阅"
+          @click="emit('manage')"
         >
-          管理
+          <Settings2 :size="17" aria-hidden="true" />
         </button>
       </header>
 
@@ -133,14 +134,31 @@
                       membershipId: membership.id,
                     })"
                   >
-                    <span class="subscription-hub-sidebar__membership-name">
-                      {{ membership.title || membership.feed_source?.title || '未命名订阅' }}
+                    <PAvatar
+                      :src="membershipAvatarURL(membership)"
+                      :name="membershipTitle(membership)"
+                      :alt="`${membershipTitle(membership)}的头像`"
+                      size="xs"
+                    />
+                    <span class="subscription-hub-sidebar__membership-copy">
+                      <span class="subscription-hub-sidebar__membership-name">
+                        {{ membershipTitle(membership) }}
+                      </span>
+                      <span
+                        v-if="membershipSourceTypeLabel(membership)"
+                        class="subscription-hub-sidebar__membership-source-type a-font-meta"
+                      >
+                        {{ membershipSourceTypeLabel(membership) }}
+                      </span>
                     </span>
                     <span
-                      v-if="membershipSourceTypeLabel(membership)"
-                      class="subscription-hub-sidebar__membership-source-type a-font-meta"
+                      v-if="membershipStatusLabel(membership)"
+                      class="subscription-hub-sidebar__membership-status"
+                      data-test="subscription-hub-membership-status"
+                      :aria-label="membershipStatusLabel(membership)"
+                      :title="membershipStatusLabel(membership)"
                     >
-                      {{ membershipSourceTypeLabel(membership) }}
+                      <span aria-hidden="true" />
                     </span>
                   </button>
                 </div>
@@ -155,9 +173,18 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconChevronRight as ChevronRight, IconFileText as FileText, IconMicrophone as Mic, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
+import {
+  IconChevronRight as ChevronRight,
+  IconFileText as FileText,
+  IconMicrophone as Mic,
+  IconRss as Rss,
+  IconSettings2 as Settings2,
+  IconVideo as Video,
+} from '@tabler/icons-vue'
 
+import PAvatar from '@/components/ui/PAvatar.vue'
 import type { SubscriptionHubMembership, SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
+import { buildSourceFaviconURL, normalizeSourceUrlForCard } from '@/utils/feedSourcePresentation'
 
 const props = withDefaults(defineProps<{
   tree: SubscriptionHubTree
@@ -182,14 +209,14 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'select-context', value: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }): void
-  (e: 'manage-rss'): void
+  (e: 'manage'): void
   (e: 'retry'): void
 }>()
 
+const isFixedType = computed(() => props.fixedType !== null)
 const typeNodes = computed(() => props.fixedType
   ? props.tree.types.filter((node) => node.subscription_type === props.fixedType)
-  : props.tree.types)
-const isFixedType = computed(() => props.fixedType !== null)
+  : props.tree.types.filter((node) => membershipCount(node) > 0))
 const expandedType = ref<SubscriptionHubType | null>(null)
 const expandedGroupId = ref<string | null>(null)
 
@@ -215,7 +242,29 @@ const membershipSourceTypeLabel = (membership: SubscriptionHubMembership) => {
     case 'internal_collection':
       return '频道'
     case 'external_rss':
-      return 'RSS'
+      return `RSS${membership.feed_source.rss_url ? ` · ${normalizeSourceUrlForCard(membership.feed_source.rss_url)}` : ''}`
+    default:
+      return ''
+  }
+}
+
+const membershipTitle = (membership: SubscriptionHubMembership) =>
+  membership.title || membership.feed_source?.title || '未命名订阅'
+
+const membershipAvatarURL = (membership: SubscriptionHubMembership) =>
+  membership.feed_source?.cover_url
+  || (membership.feed_source?.source_type === 'external_rss'
+    ? buildSourceFaviconURL(membership.feed_source.rss_url)
+    : '')
+
+const membershipStatusLabel = (membership: SubscriptionHubMembership) => {
+  switch (membership.feed_source?.fetch_status) {
+    case 'fetching':
+      return '正在同步'
+    case 'warning':
+      return '等待重试'
+    case 'blocked':
+      return '来源异常'
     default:
       return ''
   }
@@ -341,21 +390,20 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 }
 
 .subscription-hub-sidebar__manage {
-  flex: none;
   border: 0;
+  display: grid;
+  flex: none;
+  width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0 0.25rem;
+  place-items: center;
+  padding: 0;
   background: transparent;
   color: var(--a-color-text);
   cursor: pointer;
-  font: inherit;
-  font-size: 0.68rem;
-  white-space: nowrap;
 }
 
 .subscription-hub-sidebar__manage:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+  background: var(--a-color-surface-muted);
 }
 
 .subscription-hub-sidebar__skeleton {
@@ -492,25 +540,48 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   min-width: 0;
   border-left: 3px solid transparent;
   border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-  min-height: 2.75rem;
+  gap: 0.55rem;
+  min-height: 3rem;
   padding: 0.38rem 0.55rem;
   font-size: 0.8rem;
 }
 
-.subscription-hub-sidebar__membership-name {
+.subscription-hub-sidebar__membership-copy {
+  display: grid;
   min-width: 0;
   flex: 1;
+  gap: 0.12rem;
+}
+
+.subscription-hub-sidebar__membership-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .subscription-hub-sidebar__membership-source-type {
-  flex: none;
-  margin-left: 0.5rem;
+  min-width: 0;
+  overflow: hidden;
   color: var(--a-color-muted);
   font-size: 0.66rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.subscription-hub-sidebar__membership-status {
+  display: grid;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+}
+
+.subscription-hub-sidebar__membership-status > span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--a-color-danger, #b91c1c);
 }
 
 .subscription-hub-sidebar__type-select:hover,
@@ -534,6 +605,7 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 .subscription-hub-sidebar__group-select:focus-visible,
 .subscription-hub-sidebar__group-toggle:focus-visible,
 .subscription-hub-sidebar__membership:focus-visible,
+.subscription-hub-sidebar__manage:focus-visible,
 .subscription-hub-sidebar__error button:focus-visible {
   outline: 2px solid var(--a-color-text);
   outline-offset: -2px;

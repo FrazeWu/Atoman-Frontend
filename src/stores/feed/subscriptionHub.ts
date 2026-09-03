@@ -55,11 +55,32 @@ export function createSubscriptionHubState() {
     }
   }
 
+  const unsubscribeSubscriptionHubSource = async (feedSourceId: string): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+
+    try {
+      const api = useApi()
+      const response = await apiRequestResult(
+        `${api.url}/feed/subscription-hub/sources/${encodeURIComponent(feedSourceId)}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authStore.token}` },
+        },
+      )
+      return response.ok
+    } catch (error) {
+      reportError(error, 'Failed to unsubscribe subscription hub source')
+      return false
+    }
+  }
+
   return {
     subscriptionHubTree,
     loadingSubscriptionHubTree,
     subscriptionHubTreeError,
     fetchSubscriptionHubTree,
+    unsubscribeSubscriptionHubSource,
     clearSubscriptionHubState,
   }
 }

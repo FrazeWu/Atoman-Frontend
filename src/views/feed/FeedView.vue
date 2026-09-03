@@ -33,6 +33,7 @@
       :show="showManageSheet"
       :initial-tab="manageInitialTab"
       :subscriptions="subscriptions"
+      :subscription-hub-tree="feedStore.subscriptionHubTree"
       :groups="groups"
       :subscription-rules="feedStore.subscriptionRules"
       :rule-apply-summary="feedStore.ruleApplySummary"
@@ -402,7 +403,7 @@ const uiStore = useUIStore()
 
 const feedCopy = {
   name: '订阅',
-  homepageSub: '聚合你感兴趣的 RSS 订阅源与内容更新。',
+  homepageSub: '聚合播客、视频、博客与 RSS 更新。',
 }
 const subscriptions = computed(() => feedStore.subscriptions)
 const hasExternalRSSSubscription = computed(() => subscriptions.value.some((subscription) => (
@@ -675,7 +676,7 @@ const scrollToTop = async () => {
 }
 
 
-const manageInitialTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>('groups')
+const manageInitialTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>('sources')
 
 watch(() => route.query.manage_subscriptions, async (value) => {
   if (value !== '1') return
@@ -688,7 +689,7 @@ watch(() => route.query.manage_subscriptions, async (value) => {
     if (tab === 'sources' || tab === 'rules' || tab === 'keywords' || tab === 'groups') {
       manageInitialTab.value = tab
     } else {
-      manageInitialTab.value = 'groups'
+      manageInitialTab.value = 'sources'
     }
     showManageSheet.value = true
   }

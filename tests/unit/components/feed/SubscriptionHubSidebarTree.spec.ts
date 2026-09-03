@@ -107,6 +107,7 @@ const sourceTypeTree: SubscriptionHubTree = {
                 id: 'account-source',
                 source_type: 'internal_user',
                 hash: 'account-hash',
+                cover_url: 'https://cdn.example.com/account.webp',
                 created_at: '',
               },
               title: '某个用户',
@@ -122,6 +123,7 @@ const sourceTypeTree: SubscriptionHubTree = {
                 id: 'channel-source',
                 source_type: 'internal_channel',
                 hash: 'channel-hash',
+                cover_url: 'https://cdn.example.com/channel.webp',
                 created_at: '',
               },
               title: '某个频道',
@@ -151,6 +153,8 @@ const sourceTypeTree: SubscriptionHubTree = {
                 id: 'rss-source',
                 source_type: 'external_rss',
                 hash: 'rss-hash',
+                rss_url: 'https://example.com/feed.xml',
+                fetch_status: 'blocked',
                 created_at: '',
               },
               title: '某个 RSS',
@@ -165,14 +169,14 @@ const sourceTypeTree: SubscriptionHubTree = {
 
 describe('SubscriptionHubSidebarTree', () => {
 
-  it('keeps empty types visible while opening only the first populated type', () => {
+  it('keeps the sidebar focused on populated subscription types', () => {
     const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
 
-    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(4)
+    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(2)
     expect(wrapper.find('[data-testid="subscription-hub-type-toggle-podcast"]').attributes('aria-expanded')).toBe('true')
     expect(wrapper.find('[data-testid="subscription-hub-type-toggle-video"]').attributes('aria-expanded')).toBe('false')
-    expect(wrapper.find('[data-testid="subscription-hub-type-blog"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="subscription-hub-type-rss"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="subscription-hub-type-blog"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="subscription-hub-type-rss"]').exists()).toBe(false)
     expect(wrapper.findAll('.subscription-hub-sidebar__membership')).toHaveLength(1)
   })
 
@@ -243,15 +247,6 @@ describe('SubscriptionHubSidebarTree', () => {
     expect(wrapper.find('[data-testid="subscription-hub-membership-podcast-member"]').exists()).toBe(false)
   })
 
-  it('shows an empty state when an empty type is opened', async () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
-
-    await wrapper.get('[data-testid="subscription-hub-type-blog"]').trigger('click')
-
-    expect(wrapper.text()).toContain('尚无订阅')
-    expect(wrapper.get('[data-testid="subscription-hub-type-toggle-blog"]').attributes('aria-expanded')).toBe('true')
-  })
-
   it('uses a distinct prefix for disclosure panel ids', () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {
@@ -277,7 +272,7 @@ describe('SubscriptionHubSidebarTree', () => {
     expect(wrapper.text()).not.toContain('默认分组')
   })
 
-  it('shows the source type after each subscription name', async () => {
+  it('shows a consistent visual identity and source context for each subscription', async () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {
         tree: sourceTypeTree,
@@ -296,11 +291,28 @@ describe('SubscriptionHubSidebarTree', () => {
       '账户',
       '频道',
     ])
+    expect(memberships.map((membership) => membership.get('.p-avatar img').attributes('src'))).toEqual([
+      'https://cdn.example.com/account.webp',
+      'https://cdn.example.com/channel.webp',
+    ])
 
     await wrapper.setProps({ activeType: 'rss', activeGroupId: 'rss-source-type-group' })
     const rssMembership = wrapper.get('[data-testid="subscription-hub-membership-rss-membership"]')
     expect(rssMembership.find('.subscription-hub-sidebar__membership-name').text()).toBe('某个 RSS')
-    expect(rssMembership.find('.subscription-hub-sidebar__membership-source-type').text()).toBe('RSS')
+    expect(rssMembership.find('.subscription-hub-sidebar__membership-source-type').text()).toBe('RSS · example.com/feed.xml')
+    expect(rssMembership.get('.p-avatar img').attributes('src')).toBe('https://example.com/favicon.ico')
+    expect(rssMembership.get('[data-test="subscription-hub-membership-status"]').attributes('aria-label')).toBe('来源异常')
+  })
+
+  it('opens unified subscription management from the icon action', async () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
+
+    const manageButton = wrapper.get('[data-testid="subscription-hub-manage"]')
+    expect(manageButton.attributes('aria-label')).toBe('管理订阅')
+    expect(manageButton.text()).toBe('')
+
+    await manageButton.trigger('click')
+    expect(wrapper.emitted('manage')).toHaveLength(1)
   })
 
   it('renders a fixed module type without the type layer', () => {

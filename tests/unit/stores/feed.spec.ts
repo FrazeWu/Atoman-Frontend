@@ -48,6 +48,22 @@ describe("feed store", () => {
     );
   });
 
+  it("unsubscribes any managed source through the subscription hub endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(null, { status: 204 }),
+    );
+    const feed = useFeedStore();
+
+    expect(await feed.unsubscribeSubscriptionHubSource("source-1")).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/feed/subscription-hub/sources/source-1",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: { Authorization: "Bearer token" },
+      }),
+    );
+  });
+
   it("clears user subscription state instead of leaking stale data when signed out", async () => {
     const auth = useAuthStore();
     auth.isAuthenticated = false;

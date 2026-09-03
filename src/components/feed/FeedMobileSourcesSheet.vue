@@ -9,7 +9,14 @@
     @close="emit('close')"
   >
     <header v-if="presentation === 'page'" class="feed-mobile-sources-sheet__header">
-      <RouterLink to="/feed/subscriptions" aria-label="返回订阅"><ChevronLeft :size="20" aria-hidden="true" /></RouterLink>
+      <button
+        type="button"
+        data-testid="feed-mobile-sources-close"
+        aria-label="返回订阅"
+        @click="emit('close')"
+      >
+        <ChevronLeft :size="20" aria-hidden="true" />
+      </button>
       <h1>订阅</h1>
     </header>
     <div class="feed-mobile-sources-sheet" data-testid="feed-mobile-sources-sheet">
@@ -22,7 +29,7 @@
         :loading="loading"
         :error="error"
         @select-context="emit('select-context', $event)"
-        @manage-rss="emit('manage-rss')"
+        @manage="emit('manage')"
         @retry="emit('retry')"
       />
     </div>
@@ -30,7 +37,6 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
 import { IconChevronLeft as ChevronLeft } from '@tabler/icons-vue'
 import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -59,7 +65,7 @@ const { presentation } = props
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'select-context', value: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }): void
-  (e: 'manage-rss'): void
+  (e: 'manage'): void
   (e: 'retry'): void
 }>()
 </script>
@@ -73,13 +79,16 @@ const emit = defineEmits<{
   margin-bottom: 1rem;
 }
 
-.feed-mobile-sources-sheet__header a {
+.feed-mobile-sources-sheet__header button {
   display: inline-grid;
   width: 44px;
   height: 44px;
   place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--a-color-primary);
-  text-decoration: none;
+  cursor: pointer;
 }
 
 .feed-mobile-sources-sheet__header h1 {

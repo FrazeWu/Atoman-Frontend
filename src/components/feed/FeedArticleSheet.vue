@@ -162,11 +162,9 @@
           <span v-else class="article-content-label">{{ feedContentStateLabel }}</span>
         </div>
         <BlogPostUpdateNotice
-          v-if="feedContentVariant === 'full_text'"
           class="article-content-validity"
           data-test="feed-article-validity-notice"
           :updated-at="article.feed_item.published_at"
-          label="发布时间："
         />
         <FeedReaderContent
           class="article-body article-body--external-feed"

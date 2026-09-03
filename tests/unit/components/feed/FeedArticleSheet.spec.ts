@@ -186,6 +186,12 @@ describe("FeedArticleSheet", () => {
 		expect(html).toContain("正文");
 		expect(html).not.toContain("<script");
 		expect(html).not.toContain("onerror");
+		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
+			"最近更新时间：",
+		);
+		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
+			"请注意信息有效性",
+		);
 	});
 
 	it("opens the article source and exposes a primary subscribe action", async () => {
@@ -328,7 +334,7 @@ describe("FeedArticleSheet", () => {
 		const toggleStar = vi.spyOn(feedStore, "toggleStar").mockResolvedValue(true);
 
 		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
-			"发布时间：",
+			"最近更新时间：",
 		);
 		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
 			"请注意信息有效性",

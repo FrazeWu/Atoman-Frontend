@@ -156,8 +156,11 @@ describe("AudioPlayer", () => {
 		);
 		expect(source).toContain('<Transition name="player-display">');
 		expect(source).toContain('IconChevronRight as ChevronRight');
+		expect(source).toContain('IconChevronLeft as ChevronLeft');
 		expect(source).toContain('<ChevronRight :size="16" aria-hidden="true" />');
+		expect(source).toContain('<ChevronLeft :size="15" aria-hidden="true" />');
 		expect(source).not.toContain('<Minimize2 :size="16" aria-hidden="true" />');
+		expect(source).not.toContain('IconMaximize as Maximize2');
 		expect(source).not.toContain('name="player-display" mode="out-in"');
 		expect(source).toMatch(
 			/\.player-display-enter-active\s*\{[^}]*animation:\s*player-display-enter\s+700ms/,
@@ -172,6 +175,7 @@ describe("AudioPlayer", () => {
 		expect(source).not.toMatch(
 			/@media \(max-width: 767px\)[\s\S]*?\.player\s*\{[^}]*transform:\s*none\s*!important;/,
 		);
+		expect(source).not.toContain('@media (prefers-reduced-motion: reduce)');
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
 		);

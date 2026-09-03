@@ -272,7 +272,7 @@
         title="展开完整播放器"
         @click.stop="setPlayerDisplayMode('full')"
       >
-        <Maximize2 :size="15" aria-hidden="true" />
+        <ChevronLeft :size="15" aria-hidden="true" />
       </button>
     </div>
     </Transition>
@@ -326,7 +326,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronRight as ChevronRight, IconChevronUp as ChevronUp, IconMaximize as Maximize2, IconPlayerPlay as Play } from '@tabler/icons-vue';
+import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronRight as ChevronRight, IconChevronLeft as ChevronLeft, IconChevronUp as ChevronUp, IconPlayerPlay as Play } from '@tabler/icons-vue';
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
@@ -1353,13 +1353,6 @@ watch(
   100% {
     opacity: 0.85;
     transform: translateX(100%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .player-display-enter-active,
-  .player-display-leave-active {
-    animation-duration: 0.01ms;
   }
 }
 

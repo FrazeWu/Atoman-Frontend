@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IconClock as Clock3, IconPlayerPlay as Play } from '@tabler/icons-vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
@@ -18,14 +18,18 @@ const router = useRouter()
 const authStore = useAuthStore()
 const bookmarks = useVideoBookmarks()
 const watchLaterError = ref('')
+const thumbnailFailed = ref(false)
 const avatarUrl = computed(() => {
   const url = props.video.channel?.cover_url?.trim() || props.video.user?.avatar_url?.trim() || ''
   return url ? resolveMediaURL(url) : ''
 })
 const thumbnailUrl = computed(() => {
+  if (thumbnailFailed.value) return ''
   const url = props.video.thumbnail_url?.trim() || ''
   return url ? resolveMediaURL(url) : ''
 })
+
+watch(() => props.video.thumbnail_url, () => { thumbnailFailed.value = false })
 
 async function toggleWatchLater() {
   if (!authStore.isAuthenticated) {
@@ -67,7 +71,7 @@ const avatarLetter = () =>
   <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="video.title">
-        <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="video.title" class="vc-img" loading="lazy" />
+        <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="video.title" class="vc-img" loading="lazy" @error="thumbnailFailed = true" />
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 
         <!-- 悬浮微渐变与居中播放徽标 -->

@@ -81,6 +81,15 @@ describe('PVideoCard.vue', () => {
     expect(wrapper.find('a button').exists()).toBe(false)
   })
 
+  it('falls back to a video placeholder when the cover cannot load', async () => {
+    const wrapper = mountCard({ thumbnail_url: 'https://cdn.example.test/missing-cover.jpg' })
+
+    await wrapper.get('.vc-img').trigger('error')
+
+    expect(wrapper.find('.vc-img').exists()).toBe(false)
+    expect(wrapper.find('.vc-thumb-placeholder').exists()).toBe(true)
+  })
+
   it('prefers the channel cover over the user avatar', () => {
     const wrapper = mountCard({
       channel: { name: '频道名称', cover_url: 'https://cdn.example.com/channel.jpg' },

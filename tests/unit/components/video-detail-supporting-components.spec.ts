@@ -103,4 +103,17 @@ describe('video detail supporting components', () => {
 
     expect(wrapper.get('img').attributes('src')).toBe('/__object-storage/atoman-dev/video/covers/video-4.jpg')
   })
+
+  it('falls back to an empty recommendation thumbnail when the cover cannot load', async () => {
+    const wrapper = mount(VideoRecommendationRow, {
+      props: {
+        videos: [makeVideo('video-5', '失效封面', { thumbnail_url: 'https://cdn.example.test/missing-cover.jpg' })],
+      },
+    })
+
+    await wrapper.get('img').trigger('error')
+
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.find('.vrr__placeholder').exists()).toBe(true)
+  })
 })

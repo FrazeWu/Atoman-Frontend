@@ -157,6 +157,12 @@ export const createFeedSourcesState = ({
 		const normalized = normalizeRssUrl(rssUrl);
 		if (!normalized) return false;
 		const generation = sessionGeneration;
+		const refreshAndConfirmSubscription = async () => {
+			const refreshed = await fetchSubscriptions();
+			return refreshed && subscriptions.value.some((subscription) => (
+				normalizeRssUrl(subscription.feed_source?.rss_url || "") === normalized
+			));
+		};
 
 		try {
 			const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
@@ -172,14 +178,12 @@ export const createFeedSourcesState = ({
 				}),
 			});
 			if (res.ok && isCurrentSession(generation)) {
-				await fetchSubscriptions();
-				return true;
+				return refreshAndConfirmSubscription();
 			}
 			if (res.status === 400 || res.status === 409) {
 				const data = res.data;
 				if (isCurrentSession(generation) && isAlreadySubscribedPayload(data)) {
-					await fetchSubscriptions();
-					return true;
+					return refreshAndConfirmSubscription();
 				}
 			}
 		} catch (e) {

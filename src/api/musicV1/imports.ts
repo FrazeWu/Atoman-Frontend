@@ -12,6 +12,7 @@ import {
 	apiPostMultipart,
 } from "../client";
 import { configureApiXHR } from "../transport";
+import { uploadBlobPart } from "../uploadTransport";
 import type { PaginationMeta, UploadAsset, UploadPurpose } from "../types";
 import {
 	listResponseWithPaginationFallback,
@@ -596,11 +597,7 @@ async function uploadAlbumArchivePart(
 	uploadUrl: string,
 	body: Blob,
 ): Promise<string> {
-	const response = await apiFetch(uploadUrl, { method: "PUT", body });
-	if (!response.ok) throw new Error(`上传分片失败 (${response.status})`);
-	const etag = response.headers.get("ETag") || response.headers.get("etag");
-	if (!etag) throw new Error("上传分片失败");
-	return etag;
+	return uploadBlobPart(uploadUrl, body, { transport: "fetch" });
 }
 
 export type MusicAlbumImportPartUploadOptions = {
@@ -614,55 +611,7 @@ export function uploadMusicAlbumImportFilePart(
 	body: Blob,
 	options: MusicAlbumImportPartUploadOptions = {},
 ): Promise<string> {
-	return new Promise((resolve, reject) => {
-		if (options.signal?.aborted) {
-			reject(new Error("上传已取消"));
-			return;
-		}
-
-		const xhr = new XMLHttpRequest();
-		let settled = false;
-		const abort = () => xhr.abort();
-		const settle = (callback: () => void) => {
-			if (settled) return;
-			settled = true;
-			options.signal?.removeEventListener("abort", abort);
-			callback();
-		};
-
-		xhr.open("PUT", uploadUrl);
-		if (options.timeoutMs && options.timeoutMs > 0) {
-			xhr.timeout = options.timeoutMs;
-		}
-		options.signal?.addEventListener("abort", abort, { once: true });
-		xhr.upload.addEventListener("progress", (event) => {
-			if (event.lengthComputable) {
-				options.onProgress?.({ loaded: event.loaded, total: event.total });
-			}
-		});
-		xhr.addEventListener("load", () => {
-			if (xhr.status < 200 || xhr.status >= 300) {
-				settle(() => reject(new Error(`上传分片失败 (${xhr.status})`)));
-				return;
-			}
-			const etag = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
-			if (!etag) {
-				settle(() => reject(new Error("上传分片失败")));
-				return;
-			}
-			settle(() => resolve(etag));
-		});
-		xhr.addEventListener("error", () =>
-			settle(() => reject(new Error("上传分片失败，请重试"))),
-		);
-		xhr.addEventListener("timeout", () =>
-			settle(() => reject(new Error("上传分片超时，请重试"))),
-		);
-		xhr.addEventListener("abort", () =>
-			settle(() => reject(new Error("上传已取消"))),
-		);
-		xhr.send(body);
-	});
+	return uploadBlobPart(uploadUrl, body, options);
 }
 
 export async function uploadMusicAlbumArchiveMultipart(

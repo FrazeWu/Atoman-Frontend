@@ -1,5 +1,7 @@
 import { apiGet, apiPostMultipart, apiRequest, apiRequestEnvelope } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
+import { runMultipartUpload } from '@/api/multipartUpload'
+import { uploadBlobPart } from '@/api/uploadTransport'
 
 export type BookImportStatus =
   | 'pending_upload'
@@ -606,11 +608,10 @@ export async function fetchBookAssetContent(assetId: string): Promise<Blob> {
 }
 
 export async function uploadBookImportPart(uploadUrl: string, body: Blob): Promise<string> {
-  const response = await apiRequest(uploadUrl, { method: 'PUT', body })
-  if (!response.ok) throw new Error(`上传分片失败 (${response.status})`)
-  const etag = response.headers.get('ETag') || response.headers.get('etag')
-  if (!etag) throw new Error('上传分片未返回 ETag')
-  return etag
+  return uploadBlobPart(uploadUrl, body, {
+    transport: 'fetch',
+    messages: { missingETag: '上传分片未返回 ETag' },
+  })
 }
 
 export function bookContentType(file: Pick<File, 'name' | 'type'>): string {
@@ -638,20 +639,17 @@ export async function uploadBookFile(
     content_type: bookContentType(file),
     size: file.size,
   })
-  const completed = new Map(session.completed_parts.map((part) => [part.part_number, part]))
-  const totalParts = Math.ceil(file.size / session.part_size)
-  let loaded = [...completed.values()].reduce((sum, part) => sum + part.size, 0)
-  options.onProgress?.({ loaded, total: file.size })
-
-  for (let partNumber = 1; partNumber <= totalParts; partNumber += 1) {
-    if (completed.has(partNumber)) continue
-    const start = (partNumber - 1) * session.part_size
-    const body = file.slice(start, Math.min(start + session.part_size, file.size))
-    const upload = await createBookUploadPart(session.id, partNumber)
-    const etag = await uploadBookImportPart(upload.upload_url, body)
-    await completeBookUploadPart(session.id, partNumber, { etag, size: body.size })
-    loaded += body.size
-    options.onProgress?.({ loaded, total: file.size })
-  }
+  await runMultipartUpload(file, {
+    partSize: session.part_size,
+    completedParts: session.completed_parts.map(part => part.part_number),
+    uploadPart: async ({ partNumber, body }) => {
+      const upload = await createBookUploadPart(session.id, partNumber)
+      return uploadBookImportPart(upload.upload_url, body)
+    },
+    completePart: ({ partNumber, result: etag, size }) => (
+      completeBookUploadPart(session.id, partNumber, { etag, size }).then(() => undefined)
+    ),
+    onProgress: options.onProgress,
+  })
   return completeBookImport(session.id)
 }

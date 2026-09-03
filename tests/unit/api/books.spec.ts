@@ -16,6 +16,7 @@ import {
   searchPublicBooks,
   submitPublicationAppeal,
   uploadBookImportPart,
+  uploadBookFile,
   uploadPublicationEvidence,
   reviewPublicationAppeal,
 } from '@/api/books'
@@ -139,5 +140,40 @@ describe('books API', () => {
     ))
     await expect(uploadBookImportPart('https://storage.example.test/upload', new Blob(['book'])))
       .resolves.toBe('etag-1')
+  })
+
+  it('resumes a book upload by skipping completed parts and reports aggregate progress', async () => {
+    const progress = vi.fn()
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/books/imports') {
+        return new Response(JSON.stringify({ data: {
+          id: 'import-1', file_name: 'book.pdf', content_type: 'application/pdf', size: 6,
+          part_size: 4, completed_parts: [{ part_number: 1, etag: 'existing', size: 4 }],
+        } }), { status: 201 })
+      }
+      if (url.endsWith('/parts/2')) {
+        return new Response(JSON.stringify({ data: { part_number: 2, upload_url: 'https://storage.example.test/part-2' } }), { status: 200 })
+      }
+      if (url === 'https://storage.example.test/part-2') {
+        return new Response('', { status: 200, headers: { ETag: 'etag-2' } })
+      }
+      if (url.endsWith('/parts/2/complete')) {
+        return new Response(JSON.stringify({ data: { id: 'import-1', status: 'uploading' } }), { status: 200 })
+      }
+      if (url.endsWith('/complete')) {
+        return new Response(JSON.stringify({ data: { id: 'import-1', status: 'uploaded' } }), { status: 200 })
+      }
+      throw new Error(`unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(uploadBookFile(
+      new File(['abcdef'], 'book.pdf', { type: 'application/pdf' }),
+      { onProgress: progress },
+    )).resolves.toMatchObject({ id: 'import-1', status: 'uploaded' })
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain('/api/v1/books/imports/import-1/parts/1')
+    expect(progress).toHaveBeenNthCalledWith(1, { loaded: 4, total: 6 })
+    expect(progress).toHaveBeenLastCalledWith({ loaded: 6, total: 6 })
   })
 })

@@ -84,6 +84,8 @@ const isDescriptionTruncated = computed(() => {
   return description.length > 180 || description.split('\n').length > 3
 })
 const posterUrl = computed(() => video.value?.thumbnail_url ? resolveMediaURL(video.value.thumbnail_url) : undefined)
+const nativeVideoUrl = computed(() => video.value?.video_url ? resolveMediaURL(video.value.video_url) : '')
+const subtitleUrl = computed(() => video.value?.subtitle_url ? resolveMediaURL(video.value.subtitle_url) : '')
 const channelCoverUrl = computed(() => video.value?.channel?.cover_url ? resolveMediaURL(video.value.channel.cover_url) : '')
 
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -542,7 +544,7 @@ async function toggleChannelSubscription() {
           <template v-else-if="video.storage_type === 'local'">
             <video
               ref="videoElement"
-              :src="video.video_url"
+              :src="nativeVideoUrl"
               :poster="posterUrl"
               class="vd-native"
               playsinline
@@ -555,7 +557,7 @@ async function toggleChannelSubscription() {
               @pause="handlePauseOrUnload"
               @ended="handleVideoEnded"
             >
-              <track v-if="video.subtitle_url" kind="subtitles" :src="video.subtitle_url" srclang="zh" label="中文" />
+              <track v-if="subtitleUrl" kind="subtitles" :src="subtitleUrl" srclang="zh" label="中文" />
             </video>
             <button
               v-if="!isLocalPlaybackActive && !videoError && resumePosition === null"

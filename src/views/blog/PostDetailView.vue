@@ -41,6 +41,9 @@
         :is-academic="isAcademic"
         @toggle-academic="isAcademic = $event"
       />
+      <div v-if="post.tags?.length" :class="isAcademic ? 'a-page' : 'a-page-md'" class="blog-post-tags" aria-label="文章标签">
+        <button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button>
+      </div>
 
       <div :class="isAcademic ? 'a-page' : 'a-page-md'">
         <BlogPostUpdateNotice :updated-at="post.updated_at" />
@@ -274,6 +277,10 @@ const renderedContent = computed(() => {
     videoEmbeds: videoEmbeds.value,
   })
 })
+
+const openTag = (tag: string) => {
+  void router.push({ path: '/posts', query: { tag } })
+}
 
 const fetchPost = async () => {
   const requestedID = postId.value
@@ -698,6 +705,29 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
   letter-spacing: 0;
   margin: 2rem 0 1rem;
   line-height: 1.25;
+}
+
+.blog-post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.blog-post-tags button {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  padding: 0.35rem 0.6rem;
+}
+
+.blog-post-tags button:hover {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
 }
 .prose-blog :deep(h1) { font-size: 2rem; }
 .prose-blog :deep(h2) { font-size: 1.5rem; border-left: 2px solid var(--a-color-fg); padding-left: 0.75rem; }

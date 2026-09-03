@@ -97,6 +97,7 @@
           :selected-collection-id="selectedNonDefaultCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
+          :tags="form.tags"
           :cover-url="form.cover_url"
           :cover-uploading="coverUploading"
           :cover-upload-error="coverUploadError"
@@ -106,6 +107,7 @@
           @select-collection="onCollectionSelect"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
+          @update:tags="(value) => (form.tags = value)"
           @cover-upload="handleCoverUpload"
           @remove-cover="removeCover"
           @jump-to-heading="jumpToHeading"
@@ -365,6 +367,7 @@ const form = ref<PostEditorDraftForm>({
   summary: '',
   cover_url: '',
   visibility: 'public' as BlogVisibility,
+  tags: [],
 })
 
 const publicationWarnings = computed(() => evaluateBlogPublicationQuality({

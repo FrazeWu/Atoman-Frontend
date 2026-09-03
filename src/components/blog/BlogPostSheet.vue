@@ -287,6 +287,10 @@ function editPost() {
   void router.push(`/studio/blog/${post.value.id}/edit${suffix}`)
 }
 
+function openTag(tag: string) {
+  void router.push({ path: '/posts', query: { tag } })
+}
+
 watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true })
 </script>
 
@@ -338,6 +342,9 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       </div>
       <h1>{{ post.title }}</h1>
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
+      <div v-if="post.tags?.length" class="post-sheet-tags" aria-label="文章标签">
+        <button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button>
+      </div>
       <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <div class="prose-blog post-sheet-content" v-html="renderedContent" />
       <PostRatingControl
@@ -486,6 +493,32 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   color: var(--a-color-muted);
   font-size: 1.05rem;
   line-height: 1.7;
+}
+
+.post-sheet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.post-sheet-tags {
+  margin: -1rem 0 1.5rem;
+}
+
+.post-sheet-tags button {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  padding: 0.35rem 0.6rem;
+}
+
+.post-sheet-tags button:hover {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
 }
 
 .post-sheet-content {

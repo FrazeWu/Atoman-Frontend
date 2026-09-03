@@ -8,6 +8,7 @@ const tree: SubscriptionHubTree = {
   types: [
     {
       subscription_type: 'podcast',
+      has_content: true,
       groups: [
         {
           id: 'podcast-group',
@@ -31,6 +32,7 @@ const tree: SubscriptionHubTree = {
     },
     {
       subscription_type: 'video',
+      has_content: true,
       groups: [
         {
           id: 'video-group',
@@ -52,8 +54,8 @@ const tree: SubscriptionHubTree = {
         },
       ],
     },
-    { subscription_type: 'blog', groups: [] },
-    { subscription_type: 'rss', groups: [] },
+    { subscription_type: 'blog', has_content: false, groups: [] },
+    { subscription_type: 'rss', has_content: false, groups: [] },
   ],
 }
 
@@ -332,7 +334,7 @@ describe('SubscriptionHubSidebarTree', () => {
     expect(wrapper.text()).not.toContain('常听节目')
   })
 
-  it('keeps an empty fixed module type visible without the type layer', () => {
+  it('hides an empty fixed module type including its sidebar', () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {
         tree,
@@ -342,6 +344,7 @@ describe('SubscriptionHubSidebarTree', () => {
     })
 
     expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(0)
-    expect(wrapper.text()).toContain('尚无订阅')
+    expect(wrapper.find('.subscription-hub-sidebar').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('尚无订阅')
   })
 })

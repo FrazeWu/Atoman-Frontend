@@ -1,5 +1,6 @@
 <template>
   <section
+    v-if="shouldRender"
     class="subscription-hub-sidebar"
     :class="{ 'is-collapsed': collapsed }"
     aria-label="订阅"
@@ -214,9 +215,13 @@ const emit = defineEmits<{
 }>()
 
 const isFixedType = computed(() => props.fixedType !== null)
-const typeNodes = computed(() => props.fixedType
-  ? props.tree.types.filter((node) => node.subscription_type === props.fixedType)
-  : props.tree.types.filter((node) => membershipCount(node) > 0))
+const typeNodes = computed(() => {
+  if (!props.fixedType) return props.tree.types.filter((node) => membershipCount(node) > 0)
+  return props.tree.types.filter((node) =>
+    node.subscription_type === props.fixedType && node.has_content !== false,
+  )
+})
+const shouldRender = computed(() => !isFixedType.value || props.loading || !!props.error || typeNodes.value.length > 0)
 const expandedType = ref<SubscriptionHubType | null>(null)
 const expandedGroupId = ref<string | null>(null)
 

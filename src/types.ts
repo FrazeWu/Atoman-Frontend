@@ -813,6 +813,7 @@ export interface SubscriptionHubGroup {
 
 export interface SubscriptionHubTypeNode {
 	subscription_type: SubscriptionHubType;
+	has_content?: boolean;
 	groups: SubscriptionHubGroup[];
 }
 

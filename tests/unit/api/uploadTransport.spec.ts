@@ -75,4 +75,19 @@ describe('uploadBlobPart', () => {
     expect(xhr.withCredentials).toBe(true)
     expect(xhr.setRequestHeader).toHaveBeenCalledWith('Authorization', 'Bearer api-token')
   })
+
+  it('preserves fetch uploads for object storage clients that do not use XHR', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('', { status: 200, headers: { ETag: 'etag-3' } }),
+    ))
+    const body = new Blob(['data'])
+
+    await expect(uploadBlobPart('https://storage.example.test/part-3', body, {
+      transport: 'fetch',
+    })).resolves.toBe('etag-3')
+    expect(fetch).toHaveBeenCalledWith(
+      'https://storage.example.test/part-3',
+      expect.objectContaining({ method: 'PUT', body }),
+    )
+  })
 })

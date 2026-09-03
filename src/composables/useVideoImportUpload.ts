@@ -9,6 +9,7 @@ import {
   uploadVideoImportPart,
   type VideoImportTask,
 } from '@/api/video'
+import { runMultipartUpload } from '@/api/multipartUpload'
 import { useAuthStore } from '@/stores/auth'
 import { errorMessage } from '@/utils/logger'
 
@@ -108,31 +109,21 @@ export function useVideoImportUpload() {
     const isCurrent = () => generations.get(id) === generation
     let task = initialTask
     try {
-      const totalParts = Math.ceil(file.size / task.part_size)
-      const completed = new Set(task.completed_parts)
-      const bytesForPart = (partNumber: number) => Math.min(task.part_size, file.size - (partNumber - 1) * task.part_size)
-      const reportProgress = () => {
-        const completedBytes = [...completed].reduce((sum, partNumber) => sum + bytesForPart(partNumber), 0)
-        setUploadState(id, { progress: file.size ? Math.min(100, Math.round((completedBytes / file.size) * 100)) : 0 })
-      }
-      reportProgress()
-      for (let groupStart = 1; groupStart <= totalParts; groupStart += 3) {
-        const partNumbers = Array.from({ length: Math.min(3, totalParts - groupStart + 1) }, (_, index) => groupStart + index)
-          .filter(partNumber => !completed.has(partNumber))
-        const uploadedParts = await Promise.all(partNumbers.map(async (partNumber) => {
-          if (!isCurrent()) return
-          const startByte = (partNumber - 1) * task.part_size
-          const endByte = Math.min(startByte + task.part_size, file.size)
-          const chunk = file.slice(startByte, endByte)
+      const finished = await runMultipartUpload(file, {
+        partSize: task.part_size,
+        completedParts: task.completed_parts,
+        concurrency: 3,
+        isActive: isCurrent,
+        uploadPart: async ({ partNumber, body }) => {
           const signed = await retry(() => createVideoImportPartUpload(id, partNumber, token.value))
-          if (!isCurrent()) return
-          const etag = await retry(async () => {
+          if (!isCurrent()) throw new Error('上传已取消')
+          return retry(async () => {
             if (!isCurrent()) throw new Error('上传已取消')
             const controller = new AbortController()
             const releaseController = trackController(id, controller)
             const timeout = setTimeout(() => controller.abort(), VIDEO_PART_TIMEOUT_MS)
             try {
-              return await uploadVideoImportPart(signed.upload_url, chunk, {
+              return await uploadVideoImportPart(signed.upload_url, body, {
                 signal: controller.signal,
               })
             } finally {
@@ -140,17 +131,16 @@ export function useVideoImportUpload() {
               releaseController()
             }
           })
-          return { partNumber, etag, size: chunk.size }
-        }))
-        for (const part of uploadedParts) {
-          if (!part || !isCurrent()) return
-          task = await retry(() => completeVideoImportPart(id, part.partNumber, part.etag, part.size, token.value))
-          completed.add(part.partNumber)
-          reportProgress()
-          setUploadState(id, { task, progress: progressOf(task) })
-        }
-      }
-      if (!isCurrent()) return
+        },
+        completePart: async ({ partNumber, result: etag, size }) => {
+          task = await retry(() => completeVideoImportPart(id, partNumber, etag, size, token.value))
+          setUploadState(id, { task })
+        },
+        onProgress: ({ loaded, total }) => {
+          setUploadState(id, { progress: total ? Math.min(100, Math.round((loaded / total) * 100)) : 0 })
+        },
+      })
+      if (!finished) return
       task = await retry(() => completeVideoImport(id, token.value))
       setUploadState(id, { task, uploading: false, progress: 100, error: '' })
       selectedFiles.delete(id)

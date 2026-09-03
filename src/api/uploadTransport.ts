@@ -1,4 +1,5 @@
 import { useApiUrl } from '@/composables/useApi'
+import { apiRequest } from './client'
 import { configureApiXHR } from './transport'
 
 export interface BlobPartUploadProgress {
@@ -7,6 +8,7 @@ export interface BlobPartUploadProgress {
 }
 
 export interface BlobPartUploadOptions {
+  transport?: 'xhr' | 'fetch'
   signal?: AbortSignal
   timeoutMs?: number
   headers?: HeadersInit
@@ -40,6 +42,21 @@ export function uploadBlobPart(
   options: BlobPartUploadOptions = {},
 ): Promise<string> {
   const messages = { ...defaultMessages, ...options.messages }
+
+  if (options.transport === 'fetch') {
+    if (options.signal?.aborted) return Promise.reject(new Error(messages.aborted))
+    return apiRequest(uploadUrl, {
+      method: 'PUT',
+      body,
+      signal: options.signal,
+      headers: options.headers,
+    }).then((response) => {
+      if (!response.ok) throw new Error(`${messages.failed} (${response.status})`)
+      const etag = response.headers.get('ETag') || response.headers.get('etag')
+      if (!etag) throw new Error(messages.missingETag)
+      return etag
+    })
+  }
 
   return new Promise((resolve, reject) => {
     if (options.signal?.aborted) {

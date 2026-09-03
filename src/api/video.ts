@@ -1,5 +1,6 @@
 import { apiRequest, apiRequestJson } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
+import { uploadBlobPart } from './uploadTransport'
 import type { Video } from '@/types'
 
 export type VideoImportStatus = 'pending_upload' | 'uploading' | 'completing' | 'awaiting_submit' | 'publishing' | 'published' | 'draft' | 'scheduled' | 'failed' | 'canceled'
@@ -188,11 +189,15 @@ export function uploadVideoImportPart(
     return Promise.reject(new Error('视频分片必须使用 R2 预签名上传地址'))
   }
 
-  return apiRequest(uploadUrl, { method: 'PUT', body, signal: options.signal }).then(async response => {
-    if (!response.ok) throw new Error('视频分片上传失败')
-    const etag = response.headers.get('ETag') || response.headers.get('etag')
-    if (!etag) throw new Error('视频分片上传失败')
-    return etag
+  return uploadBlobPart(uploadUrl, body, {
+    transport: 'fetch',
+    signal: options.signal,
+    messages: {
+      failed: '视频分片上传失败',
+      network: '视频分片上传失败，请重试',
+      timeout: '视频分片超时，请重试',
+      missingETag: '视频分片上传失败',
+    },
   })
 }
 

@@ -10,6 +10,7 @@ import { useStudioStore } from '@/stores/studio'
 let autoCompleteUpload = true
 let releaseUpload: (() => void) | null = null
 let uploadNetworkFailures = 0
+let extractCoverSuccessfully = false
 
 const importTask = (overrides: Record<string, unknown> = {}) => ({
   id: 'import-1', status: 'uploading', file_name: 'clip.mp4', file_size: 5, content_type: 'video/mp4',
@@ -85,6 +86,7 @@ describe('VideoEditorView', () => {
       const url = String(input)
       if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.endsWith('/videos/upload-cover') && init?.method === 'POST') return makeJsonResponse({ url: 'https://assets.test/video/covers/auto.jpg' })
       if (url.endsWith('/videos/imports') && init?.method === 'POST') return makeJsonResponse(importTask())
       if (url.endsWith('/videos/imports/import-1/parts/1') && init?.method === 'POST') return makeJsonResponse({ part_number: 1, upload_url: 'https://storage.test/part-1' })
       if (url === 'https://storage.test/part-1' && init?.method === 'PUT') {
@@ -112,13 +114,26 @@ describe('VideoEditorView', () => {
     const originalCreateElement = document.createElement.bind(document)
     createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       const element = originalCreateElement(tagName)
-      if (tagName.toLowerCase() === 'video') setTimeout(() => element.dispatchEvent(new Event('error')), 0)
+      if (tagName.toLowerCase() === 'video') {
+        if (extractCoverSuccessfully) {
+          Object.defineProperty(element, 'videoWidth', { value: 640, configurable: true })
+          Object.defineProperty(element, 'videoHeight', { value: 360, configurable: true })
+          Object.defineProperty(element, 'duration', { value: 12.4, configurable: true })
+        }
+        setTimeout(() => element.dispatchEvent(new Event(extractCoverSuccessfully ? 'loadeddata' : 'error')), 0)
+      }
+      if (tagName.toLowerCase() === 'canvas' && extractCoverSuccessfully) {
+        Object.defineProperty(element, 'getContext', { value: vi.fn(() => ({ drawImage: vi.fn() })), configurable: true })
+        Object.defineProperty(element, 'toBlob', { value: vi.fn((callback: BlobCallback) => callback(new Blob(['cover'], { type: 'image/jpeg' }))), configurable: true })
+        Object.defineProperty(element, 'toDataURL', { value: vi.fn(() => 'data:image/jpeg;base64,cover'), configurable: true })
+      }
       return element
     })
   })
 
   afterEach(() => {
     createElementSpy.mockRestore()
+    extractCoverSuccessfully = false
     vi.unstubAllGlobals()
   })
 
@@ -178,6 +193,27 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.errorMsg).toBe('自动封面生成失败，可手动上传封面')
     expect(wrapper.vm.$.setupState.urlError).toBe('')
     expect(wrapper.text()).toContain('自动封面生成失败，可手动上传封面')
+  })
+
+  it('uploads the extracted first frame as the video cover automatically', async () => {
+    extractCoverSuccessfully = true
+    const { wrapper } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+
+    await fileInput.trigger('change')
+
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.form.thumbnail_url).toBe('https://assets.test/video/covers/auto.jpg'))
+    expect(wrapper.vm.$.setupState.form.duration_sec).toBe(12)
+    expect(vi.mocked(fetch).mock.calls.some(([input, init]) => String(input).endsWith('/videos/upload-cover') && init?.method === 'POST')).toBe(true)
+
+    wrapper.vm.$.setupState.requestPublish()
+    await wrapper.vm.$.setupState.doPublish()
+    await flushPromises()
+    const submitCall = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')
+    expect(JSON.parse(String(submitCall?.[1]?.body)).payload.thumbnail_url).toBe('https://assets.test/video/covers/auto.jpg')
   })
 
   it('retries a transient object storage network failure', async () => {

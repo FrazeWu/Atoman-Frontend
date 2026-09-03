@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { deleteVideoRating, getRecommendedVideos, getVideo, getVideoResource, recordVideoView, setVideoRating, type VideoRatingSummary } from '@/api/video'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { IconMessage as MessageSquare, IconPlayerPlay as Play, IconShare2 as Share2 } from '@tabler/icons-vue'
 import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import type { CommentTargetRef } from '@/api/comments'
@@ -66,6 +66,8 @@ const commentsOpen = ref(false)
 const descriptionExpanded = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
+const autoNextSeconds = ref<number | null>(null)
+let autoNextTimer: ReturnType<typeof setInterval> | null = null
 const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
 const canDeleteAllComments = computed(() => Boolean(
@@ -260,6 +262,7 @@ async function load(id: string) {
 }
 
 onMounted(() => load(videoId.value))
+onBeforeUnmount(() => { if (autoNextTimer) clearInterval(autoNextTimer) })
 watch(() => route.params.id, (id) => { if (id) load(id as string) })
 
 function syncCurrentPlaybackTime() {
@@ -358,6 +361,27 @@ function handleVideoEnded() {
   if (!video.value) return
   clearVideoProgress(video.value.id)
   consumptionTracker?.update(1)
+  const current = collectionVideos.value.findIndex(item => item.id === video.value?.id)
+  if (current >= 0 && collectionVideos.value[current + 1]) {
+    autoNextSeconds.value = 3
+    if (autoNextTimer) clearInterval(autoNextTimer)
+    autoNextTimer = setInterval(() => {
+      if (autoNextSeconds.value === null) return
+      autoNextSeconds.value -= 1
+      if (autoNextSeconds.value <= 0) {
+        if (autoNextTimer) clearInterval(autoNextTimer)
+        autoNextTimer = null
+        autoNextSeconds.value = null
+        selectAdjacentCollectionVideo(1)
+      }
+    }, 1000)
+  }
+}
+
+function cancelAutoNext() {
+  if (autoNextTimer) clearInterval(autoNextTimer)
+  autoNextTimer = null
+  autoNextSeconds.value = null
 }
 
 function handleVideoError() {
@@ -554,6 +578,10 @@ async function toggleChannelSubscription() {
               <p>{{ videoError }}</p>
               <button type="button" @click="retryVideoPlayback">重试播放</button>
             </div>
+            <div v-if="autoNextSeconds !== null" class="vd-resume-prompt" role="status">
+              <span>{{ autoNextSeconds }} 秒后播放下一集</span>
+              <button type="button" @click="cancelAutoNext">取消</button>
+            </div>
           </template>
           <div v-else class="vd-external">
             <a :href="video.video_url" target="_blank" rel="noopener noreferrer" class="vd-external-link">在外部平台观看</a>
@@ -601,6 +629,12 @@ async function toggleChannelSubscription() {
           <RouterLink v-else-if="video.channel" class="vd-subscribe" to="/login">登录后订阅</RouterLink>
         </div>
         <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
+      </section>
+      <section v-if="video.chapters?.length" class="vd-chapters" aria-label="视频章节">
+        <h2>章节</h2>
+        <button v-for="chapter in video.chapters" :key="`${chapter.start_sec}-${chapter.title}`" type="button" @click="handleSeekToTimestamp(chapter.start_sec)">
+          {{ fmtDuration(chapter.start_sec) }} {{ chapter.title }}
+        </button>
       </section>
 
       <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />

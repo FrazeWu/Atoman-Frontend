@@ -1552,6 +1552,8 @@ export interface VideoPreviewThumbnail {
 	height: number;
 }
 
+export interface VideoChapter { title: string; start_sec: number }
+
 export interface Video {
 	id: string;
 	channel_id: string | null;
@@ -1577,6 +1579,7 @@ export interface Video {
 	rating_count?: number;
 	viewer_rating?: number | null;
 	subtitle_url?: string;
+	chapters?: VideoChapter[];
 	processing_status?: VideoProcessingStatus;
 	processing_error?: string;
 	preview_thumbnails?: VideoPreviewThumbnail[];

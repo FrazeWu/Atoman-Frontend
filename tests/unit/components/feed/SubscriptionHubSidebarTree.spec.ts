@@ -85,6 +85,84 @@ const singleDefaultGroupTree: SubscriptionHubTree = {
   ],
 }
 
+const sourceTypeTree: SubscriptionHubTree = {
+  types: [
+    {
+      subscription_type: 'blog',
+      groups: [
+        {
+          id: 'blog-source-type-group',
+          user_id: 'viewer',
+          subscription_type: 'blog',
+          name: '博客订阅',
+          position: 0,
+          memberships: [
+            {
+              id: 'account-membership',
+              user_id: 'viewer',
+              subscription_type: 'blog',
+              group_id: 'blog-source-type-group',
+              feed_source_id: 'account-source',
+              feed_source: {
+                id: 'account-source',
+                source_type: 'internal_user',
+                hash: 'account-hash',
+                created_at: '',
+              },
+              title: '某个用户',
+              position: 0,
+            },
+            {
+              id: 'channel-membership',
+              user_id: 'viewer',
+              subscription_type: 'blog',
+              group_id: 'blog-source-type-group',
+              feed_source_id: 'channel-source',
+              feed_source: {
+                id: 'channel-source',
+                source_type: 'internal_channel',
+                hash: 'channel-hash',
+                created_at: '',
+              },
+              title: '某个频道',
+              position: 1,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      subscription_type: 'rss',
+      groups: [
+        {
+          id: 'rss-source-type-group',
+          user_id: 'viewer',
+          subscription_type: 'rss',
+          name: 'RSS 订阅',
+          position: 0,
+          memberships: [
+            {
+              id: 'rss-membership',
+              user_id: 'viewer',
+              subscription_type: 'rss',
+              group_id: 'rss-source-type-group',
+              feed_source_id: 'rss-source',
+              feed_source: {
+                id: 'rss-source',
+                source_type: 'external_rss',
+                hash: 'rss-hash',
+                created_at: '',
+              },
+              title: '某个 RSS',
+              position: 0,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 describe('SubscriptionHubSidebarTree', () => {
 
   it('keeps empty types visible while opening only the first populated type', () => {
@@ -197,6 +275,32 @@ describe('SubscriptionHubSidebarTree', () => {
     expect(wrapper.find('[data-testid="subscription-hub-group-blog-default-group"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="subscription-hub-membership-blog-member-1"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('默认分组')
+  })
+
+  it('shows the source type after each subscription name', async () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: {
+        tree: sourceTypeTree,
+        activeType: 'blog',
+        activeGroupId: 'blog-source-type-group',
+      },
+    })
+
+    const memberships = wrapper.findAll('.subscription-hub-sidebar__membership')
+
+    expect(memberships.map((membership) => membership.find('.subscription-hub-sidebar__membership-name').text())).toEqual([
+      '某个用户',
+      '某个频道',
+    ])
+    expect(memberships.map((membership) => membership.find('.subscription-hub-sidebar__membership-source-type').text())).toEqual([
+      '账户',
+      '频道',
+    ])
+
+    await wrapper.setProps({ activeType: 'rss', activeGroupId: 'rss-source-type-group' })
+    const rssMembership = wrapper.get('[data-testid="subscription-hub-membership-rss-membership"]')
+    expect(rssMembership.find('.subscription-hub-sidebar__membership-name').text()).toBe('某个 RSS')
+    expect(rssMembership.find('.subscription-hub-sidebar__membership-source-type').text()).toBe('RSS')
   })
 
   it('renders a fixed module type without the type layer', () => {

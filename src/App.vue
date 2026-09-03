@@ -7,7 +7,17 @@
         { 'shutter-exit': transition.isExiting },
         { 'shutter-entry': transition.isEntering }
       ]">
-        <router-view />
+        <RouterView v-slot="{ Component, route: viewRoute }">
+          <Transition
+            :name="transition.isModuleNavigation ? 'module-slide' : ''"
+            @after-enter="transition.finishModuleNavigation"
+          >
+            <component
+              :is="Component"
+              :key="viewRoute.matched[0]?.path || viewRoute.fullPath"
+            />
+          </Transition>
+        </RouterView>
       </main>
       <BlogSheetStack />
       <NotificationToastStack v-if="!isAuthRoute" />
@@ -19,7 +29,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import AppTopbar from '@/components/system/AppTopbar.vue'
@@ -69,9 +79,6 @@ onMounted(() => {
   reportPageView(false)
   if (localStorage.getItem('atoman_transition_relay')) {
     checkRelay()
-  } else if (localStorage.getItem('atoman_transition_relay_basic')) {
-    transition.triggerEntry()
-    localStorage.removeItem('atoman_transition_relay_basic')
   }
   siteAccessStore.load()
 })
@@ -88,7 +95,31 @@ onMounted(() => {
 .app-main {
   flex: 1 0 auto;
   background: var(--a-color-bg);
+  position: relative;
   transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+.module-slide-enter-active,
+.module-slide-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.module-slide-enter-from {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
+.module-slide-leave-active {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+}
+
+.module-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-14px);
 }
 
 /* 出场：内容区稍微上移并渐隐 */

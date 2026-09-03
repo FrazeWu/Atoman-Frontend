@@ -44,5 +44,20 @@ describe('transition store', () => {
 
     expect(transition.isExiting).toBe(false)
     expect(transition.isEntering).toBe(false)
+    expect(transition.isModuleNavigation).toBe(false)
+  })
+
+  it('keeps module navigation state separate from the legacy shutter state', () => {
+    const transition = useTransitionStore()
+
+    transition.startModuleNavigation()
+
+    expect(transition.isModuleNavigation).toBe(true)
+    expect(transition.isExiting).toBe(false)
+    expect(transition.isEntering).toBe(false)
+
+    transition.finishModuleNavigation()
+
+    expect(transition.isModuleNavigation).toBe(false)
   })
 })

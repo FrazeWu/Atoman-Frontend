@@ -134,19 +134,19 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button--sm {
-  min-height: 28px;
+  min-height: var(--a-control-height-sm);
   padding: 0 12px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .p-button--md {
-  min-height: 36px;
+  min-height: var(--a-control-height-md);
   padding: 0 16px;
   font-size: 13px;
 }
 
 .p-button--lg {
-  min-height: 44px;
+  min-height: var(--a-control-height-lg);
   padding: 0 20px;
   font-size: 15px;
 }
@@ -231,12 +231,7 @@ const handleClick = (event: MouseEvent) => {
 
 @media (max-width: 767px) {
   .p-button--sm {
-    min-height: 36px;
     font-size: 12px;
-  }
-
-  .p-button--md {
-    min-height: 40px;
   }
 }
 </style>

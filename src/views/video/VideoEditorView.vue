@@ -2,7 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { cancelVideoImport, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, type VideoImportPayload } from '@/api/video'
+import { cancelVideoImport, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, uploadVideoSubtitle, type VideoImportPayload } from '@/api/video'
 import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -78,6 +78,8 @@ const form = ref({
   storage_type: 'local' as 'local' | 'external',
   video_url: '',
   thumbnail_url: '',
+  subtitle_url: '',
+  chapters: [] as Array<{ title: string; start_sec: number }>,
   duration_sec: 0,
   visibility: 'public' as 'public' | 'followers' | 'private',
   tags: [] as string[],
@@ -283,8 +285,22 @@ function validateInformation(): boolean {
     errorMsg.value = '请先创建频道'
     return false
   }
+  if (form.value.chapters.some(chapter => !chapter.title.trim() || chapter.start_sec < 0 || chapter.start_sec >= form.value.duration_sec)) {
+    errorMsg.value = '章节需包含标题，且时间必须在视频时长内'
+    return false
+  }
   return true
 }
+
+async function onSubtitleFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try { form.value.subtitle_url = (await uploadVideoSubtitle(file, authStore.token ?? undefined)).url }
+  catch (cause) { errorMsg.value = errorMessage(cause, '字幕上传失败') }
+}
+
+function addChapter() { form.value.chapters.push({ title: '', start_sec: 0 }) }
+function removeChapter(index: number) { form.value.chapters.splice(index, 1) }
 
 function validate(_status: 'draft' | 'published'): boolean {
   if (editorLoadFailed.value) {
@@ -302,6 +318,8 @@ function buildPayload(status: 'draft' | 'published') {
     storage_type: form.value.storage_type,
     video_url: form.value.video_url.trim(),
     thumbnail_url: form.value.thumbnail_url,
+    subtitle_url: form.value.subtitle_url,
+    chapters: form.value.chapters,
     duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
     status,
@@ -316,6 +334,8 @@ function buildImportPayload(): VideoImportPayload {
     title: form.value.title.trim(),
     description: form.value.description,
     thumbnail_url: form.value.thumbnail_url,
+    subtitle_url: form.value.subtitle_url,
+    chapters: form.value.chapters,
     duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
     tags: [...form.value.tags],
@@ -672,6 +692,19 @@ async function schedulePublish() {
         </div>
 
         <section v-if="currentStep === 3" class="ve-section ve-publish-step">
+          <div class="ve-field">
+            <label class="ve-field-label">字幕（VTT）</label>
+            <input type="file" accept="text/vtt,.vtt" @change="onSubtitleFileChange" />
+            <small v-if="form.subtitle_url">字幕已上传</small>
+          </div>
+          <div class="ve-field">
+            <div class="ve-field-label">章节 <button type="button" @click="addChapter">添加章节</button></div>
+            <div v-for="(chapter, index) in form.chapters" :key="index" class="ve-chapter-row">
+              <PInput v-model="chapter.title" placeholder="章节标题" />
+              <PInput v-model.number="chapter.start_sec" type="number" min="0" label="秒" />
+              <button type="button" @click="removeChapter(index)">移除</button>
+            </div>
+          </div>
           <div class="ve-step-heading">
             <div>
               <h2 class="ve-section-title">检查并发布</h2>

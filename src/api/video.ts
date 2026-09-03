@@ -11,6 +11,8 @@ export interface VideoImportPayload {
   title: string
   description: string
   thumbnail_url: string
+  subtitle_url?: string
+  chapters?: Array<{ title: string; start_sec: number }>
   duration_sec: number
   visibility: 'public' | 'followers' | 'private'
   tags: string[]
@@ -102,6 +104,12 @@ export function uploadVideoCover(file: File, token?: string) {
     headers: authHeaders(token),
     body,
   })
+}
+
+export function uploadVideoSubtitle(file: File, token?: string) {
+  const body = new FormData()
+  body.append('subtitle', file)
+  return apiRequestJson<{ url: string }>(videoUrl('/upload-subtitle'), { method: 'POST', headers: authHeaders(token), body })
 }
 
 export function saveVideo(payload: VideoSavePayload, token?: string, id?: string) {

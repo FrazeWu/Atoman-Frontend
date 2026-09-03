@@ -67,4 +67,15 @@ describe("PostEditorView layout", () => {
 			"padding: 0",
 		);
 	});
+
+	it("keeps editor confirmation modals above the Studio route sheet", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/views/blog/PostEditorView.vue"),
+			"utf8",
+		);
+
+		expect(source).toContain('<PModal v-if="draftManagerVisible" above-player');
+		expect(source).toContain('<PModal v-if="leaveConfirmVisible" above-player');
+		expect(source).toContain('<PModal v-if="publicationReviewVisible" above-player');
+	});
 });

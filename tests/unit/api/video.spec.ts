@@ -5,6 +5,7 @@ import {
   getVideo,
   getVideoRecommendations,
   listVideos,
+  duplicateVideo,
   uploadVideoImportPart,
 } from '@/api/video'
 
@@ -95,5 +96,17 @@ describe('video import API', () => {
       '/api/v1/videos/video%2Fone%3Fdraft%3Dtrue/recommended',
       '/api/v1/videos/recommend/items?mode=for-you%26limit%3D100&page=1&page_size=8',
     ])
+  })
+
+  it('creates a draft copy through the video endpoint', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'copy-1' }), { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await duplicateVideo('video/one', 'token-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos/video%2Fone/duplicate', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer token-1' }),
+    }))
   })
 })

@@ -124,6 +124,13 @@ export function saveVideo(payload: VideoSavePayload, token?: string, id?: string
   })
 }
 
+export function duplicateVideo(id: string, token?: string) {
+  return apiRequestJson<Video>(videoUrl(`/${pathSegment(id)}/duplicate`), {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+}
+
 const importUrl = (id = '', suffix = '') => videoUrl(`/imports${id ? `/${pathSegment(id)}` : ''}${suffix}`)
 
 export function createVideoImport(file: File, channelId: string | null, token?: string) {

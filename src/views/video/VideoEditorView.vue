@@ -330,7 +330,9 @@ function scheduleImportAutosave() {
   importAutosaveTimer = setTimeout(() => {
     importAutosaveTimer = null
     if (videoImportState.value?.task.upload_completed_at) return
-    const request = updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined).catch(() => {})
+    const request = updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined)
+      .then(() => {})
+      .catch(() => {})
     const trackedRequest = request.finally(() => {
       if (importAutosavePromise === trackedRequest) importAutosavePromise = null
     })

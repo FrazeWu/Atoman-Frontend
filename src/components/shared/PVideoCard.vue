@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { IconClock as Clock3, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   video: Video
@@ -15,6 +17,10 @@ const props = defineProps<{
 const router = useRouter()
 const authStore = useAuthStore()
 const bookmarks = useVideoBookmarks()
+const avatarUrl = computed(() => {
+  const url = props.video.channel?.cover_url?.trim() || props.video.user?.avatar_url?.trim() || ''
+  return url ? resolveMediaURL(url) : ''
+})
 
 async function toggleWatchLater() {
   if (!authStore.isAuthenticated) {
@@ -79,7 +85,7 @@ const avatarLetter = () =>
 
     <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-info">
       <div class="vc-avatar" aria-hidden="true">
-        <img v-if="video.channel?.cover_url" :src="video.channel.cover_url" :alt="video.channel.name" />
+        <img v-if="avatarUrl" :src="avatarUrl" :alt="video.channel?.name || video.user?.username || ''" />
         <span v-else>{{ avatarLetter() }}</span>
       </div>
       <div class="vc-text">

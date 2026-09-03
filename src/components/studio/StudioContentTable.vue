@@ -57,7 +57,7 @@
 				  v-if="module === 'blog' && item.status === 'published' && item.visibility === 'public'"
 				  class="studio-content-table__action"
 				  :to="`/posts/post/${item.id}`"
-				  :data-testid="`view-public-blog-${item.id}`"
+				  :data-testid="`view-public-${item.id}`"
 				  aria-label="查看公开博文"
 				  title="查看公开博文"
 				>

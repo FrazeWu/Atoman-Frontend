@@ -42,7 +42,7 @@ const RouterLinkStub = defineComponent({
   },
 })
 
-function mountCard() {
+function mountCard(videoOverrides: Record<string, unknown> = {}) {
   return mount(PVideoCard, {
     props: {
       video: {
@@ -52,6 +52,7 @@ function mountCard() {
         view_count: 12,
         duration_sec: 90,
         created_at: '2026-01-02T00:00:00Z',
+        ...videoOverrides,
       },
     },
     global: { stubs: { RouterLink: RouterLinkStub } },
@@ -78,6 +79,34 @@ describe('PVideoCard.vue', () => {
   it('does not nest the watch-later button inside a link', () => {
     const wrapper = mountCard()
     expect(wrapper.find('a button').exists()).toBe(false)
+  })
+
+  it('prefers the channel cover over the user avatar', () => {
+    const wrapper = mountCard({
+      channel: { name: '频道名称', cover_url: 'https://cdn.example.com/channel.jpg' },
+      user: { username: 'creator', avatar_url: 'https://cdn.example.com/user.jpg' },
+    })
+
+    expect(wrapper.get('.vc-avatar img').attributes('src')).toBe('https://cdn.example.com/channel.jpg')
+  })
+
+  it('falls back to the user avatar when the channel has no cover', () => {
+    const wrapper = mountCard({
+      channel: { name: '频道名称', cover_url: '' },
+      user: { username: 'creator', avatar_url: 'https://cdn.example.com/user.jpg' },
+    })
+
+    expect(wrapper.get('.vc-avatar img').attributes('src')).toBe('https://cdn.example.com/user.jpg')
+    expect(wrapper.find('.vc-avatar span').exists()).toBe(false)
+  })
+
+  it('keeps the author initial when no avatar is available', () => {
+    const wrapper = mountCard({
+      channel: { name: '频道名称', cover_url: '' },
+      user: { username: 'creator', avatar_url: '' },
+    })
+
+    expect(wrapper.get('.vc-avatar span').text()).toBe('频')
   })
 
   it('toggles for members and routes guests to login', async () => {

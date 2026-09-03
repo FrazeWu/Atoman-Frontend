@@ -1317,23 +1317,49 @@ watch(
   outline: none;
 }
 
-.player-display-enter-active,
-.player-display-leave-active {
-  transition:
-    opacity 550ms cubic-bezier(0.2, 0, 0, 1),
-    clip-path 550ms cubic-bezier(0.2, 0, 0, 1);
+.player-display-enter-active {
+  animation: player-display-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
 }
 
-.player-display-enter-from,
-.player-display-leave-to {
-  opacity: 0;
-  clip-path: inset(0 0 0 100%);
+.player-display-leave-active {
+  animation: player-display-leave 320ms cubic-bezier(0.4, 0, 1, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes player-display-enter {
+  0% {
+    opacity: 0.85;
+    transform: translateX(100%);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateX(-1rem);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes player-display-leave {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 0.85;
+    transform: translateX(100%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .player-display-enter-active,
   .player-display-leave-active {
-    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
   }
 }
 

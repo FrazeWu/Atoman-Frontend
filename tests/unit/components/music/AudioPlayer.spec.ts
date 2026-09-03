@@ -160,11 +160,15 @@ describe("AudioPlayer", () => {
 		expect(source).not.toContain('<Minimize2 :size="16" aria-hidden="true" />');
 		expect(source).not.toContain('name="player-display" mode="out-in"');
 		expect(source).toMatch(
-			/\.player-display-enter-active,[\s\S]*?\.player-display-leave-active\s*\{[^}]*550ms/,
+			/\.player-display-enter-active\s*\{[^}]*animation:\s*player-display-enter\s+700ms/,
 		);
 		expect(source).toMatch(
-			/\.player-display-enter-from,[\s\S]*?\.player-display-leave-to\s*\{[^}]*clip-path:\s*inset\(0 0 0 100%\)/,
+			/@keyframes player-display-enter[\s\S]*?72%\s*\{[^}]*transform:\s*translateX\(-1rem\)/,
 		);
+		expect(source).toMatch(
+			/\.player-display-leave-active\s*\{[^}]*animation:\s*player-display-leave\s+320ms/,
+		);
+		expect(source).not.toContain('clip-path: inset(0 0 0 100%)');
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
 		);

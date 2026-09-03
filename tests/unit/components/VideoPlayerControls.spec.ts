@@ -19,10 +19,12 @@ describe("VideoPlayerControls", () => {
 		expect(playerControlsSource).toContain("bottom: 100%;");
 		expect(playerControlsSource).not.toContain("bottom: calc(100% + 0.5rem);");
 	});
-	it("keeps unsupported controls visibly disabled without claiming a fixed quality", () => {
+	it("keeps unavailable quality and settings disabled, while exposing real subtitle tracks", () => {
 		expect(playerControlsSource).toContain('data-control="quality"')
 		expect(playerControlsSource).toContain('画质切换暂不可用')
-		expect(playerControlsSource).toContain('字幕暂不可用')
+		expect(playerControlsSource).toContain('subtitlesAvailable?: boolean')
+		expect(playerControlsSource).toContain("function toggleSubtitles()")
+		expect(playerControlsSource).toContain("显示字幕")
 		expect(playerControlsSource).toContain('播放器设置暂不可用')
 		expect(playerControlsSource).not.toContain('1080P 高清')
 	});

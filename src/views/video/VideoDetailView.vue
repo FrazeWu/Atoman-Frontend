@@ -524,7 +524,9 @@ async function toggleChannelSubscription() {
               @error="handleVideoError"
               @pause="handlePauseOrUnload"
               @ended="handleVideoEnded"
-            />
+            >
+              <track v-if="video.subtitle_url" kind="subtitles" :src="video.subtitle_url" srclang="zh" label="中文" />
+            </video>
             <button
               v-if="!isLocalPlaybackActive && !videoError && resumePosition === null"
               class="vd-play-overlay"
@@ -556,6 +558,7 @@ async function toggleChannelSubscription() {
             :video-element="videoElement"
             :duration-sec="video.duration_sec"
             :thumbnails="video.preview_thumbnails"
+            :subtitles-available="Boolean(video.subtitle_url)"
             :theater-mode="theaterMode"
             @toggle-theater="toggleTheaterMode"
           />

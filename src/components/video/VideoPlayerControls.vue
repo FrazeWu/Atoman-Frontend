@@ -10,6 +10,7 @@ const props = defineProps<{
   durationSec: number
   theaterMode?: boolean
   thumbnails?: VideoPreviewThumbnail[]
+  subtitlesAvailable?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +29,7 @@ const hoverX = ref(0)
 const hoverTime = ref<number | null>(null)
 const isSeeking = ref(false)
 const isFullscreen = ref(false)
+const subtitlesEnabled = ref(false)
 
 let syncTimer: number | undefined
 const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -74,6 +76,7 @@ function syncState() {
   }
 
   playbackRate.value = video.playbackRate || 1
+  subtitlesEnabled.value = video.textTracks?.[0]?.mode === 'showing'
   isFullscreen.value = Boolean(document.fullscreenElement)
 }
 
@@ -159,6 +162,13 @@ function setPlaybackRate(value: number) {
   if (!video) return
   video.playbackRate = value
   playbackRate.value = value
+}
+
+function toggleSubtitles() {
+  const track = props.videoElement?.textTracks?.[0]
+  if (!track) return
+  subtitlesEnabled.value = track.mode !== 'showing'
+  track.mode = subtitlesEnabled.value ? 'showing' : 'disabled'
 }
 
 async function toggleFullscreen() {
@@ -261,8 +271,16 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 字幕 -->
-        <button class="vpc-text-control" type="button" data-control="subtitle" title="字幕暂不可用" aria-label="字幕暂不可用" disabled>
+        <button
+          v-if="subtitlesAvailable"
+          class="vpc-text-control"
+          :class="{ 'vpc-text-control--active': subtitlesEnabled }"
+          type="button"
+          data-control="subtitle"
+          :title="subtitlesEnabled ? '关闭字幕' : '显示字幕'"
+          :aria-label="subtitlesEnabled ? '关闭字幕' : '显示字幕'"
+          @click="toggleSubtitles"
+        >
           <Captions :size="18" />
         </button>
 
@@ -460,6 +478,8 @@ onUnmounted(() => {
   transition: color 150ms ease, opacity 150ms ease;
   padding: 0 0.25rem;
 }
+
+.vpc-text-control--active { color: var(--a-color-primary); }
 
 .vpc-icon-button:hover,
 .vpc-icon-button:focus-visible,

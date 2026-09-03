@@ -358,7 +358,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
 
     await chooseFile(wrapper, '原文 LRC', original)
     expect(wrapper.get('input[aria-label="原文 LRC"]').attributes('accept')).toContain('.lrc')
-    expect(wrapper.get('input[aria-label="翻译 LRC"]').attributes('accept')).toContain('.lrc')
+    expect(wrapper.find('input[aria-label="翻译 LRC"]').exists()).toBe(false)
     await vi.waitFor(() => expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New'))
     expect(wrapper.text()).toContain('已解析 1 行歌词')
     expect(wrapper.text()).toContain('new.lrc')
@@ -370,9 +370,9 @@ describe('MusicLyricEditorDrawer.vue', () => {
   it('reparses immediately after a translation LRC is selected', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('new.lrc', vi.fn().mockResolvedValue('[00:01.00]New')))
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
     await chooseFile(wrapper, '翻译 LRC', fileWithText('new-zh.lrc', vi.fn().mockResolvedValue('[00:01.00]新')))
 
-    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
     await vi.waitFor(() => expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('新'))
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New')
     expect(rowEditor(wrapper).props('format')).toBe('lrc')
@@ -468,6 +468,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
   it('names the translation file when reading it fails', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha')))
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
     await chooseFile(wrapper, '翻译 LRC', fileWithText('broken-translation.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
 
     await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败：broken-translation.lrc'))
@@ -487,6 +488,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
   it('adds the translation filename and physical line to translation parse errors', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha')))
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
     await chooseFile(
       wrapper,
       '翻译 LRC',
@@ -596,7 +598,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
 
     expect(wrapper.get('[data-testid="mode-original"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get<HTMLInputElement>('input[aria-label="原文 LRC"]').element.disabled).toBe(true)
-    expect(wrapper.get<HTMLInputElement>('input[aria-label="翻译 LRC"]').element.disabled).toBe(true)
+    expect(wrapper.find('input[aria-label="翻译 LRC"]').exists()).toBe(false)
     expect(buttonByText(wrapper, '增加行').attributes('disabled')).toBeDefined()
     expect(wrapper.findAll('button').some(button => button.text().trim() === '按时间排序')).toBe(false)
     expect(wrapper.findAll('[data-testid^="lyric-original-"]').every(input => input.attributes('disabled') !== undefined)).toBe(true)

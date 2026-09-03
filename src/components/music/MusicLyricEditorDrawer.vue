@@ -542,18 +542,6 @@ function handleSave() {
         >
           已解析 {{ rows.length }} 行歌词
         </p>
-        <p v-if="importError" class="music-lyric-editor-drawer__read-error" role="alert">
-          {{ importError }}
-        </p>
-        <ul v-if="importIssues.length" class="music-lyric-editor-drawer__import-issues" aria-label="LRC 解析问题">
-          <li
-            v-for="issue in importIssues"
-            :key="`${issue.code}-${issue.sourceLine ?? issue.message}`"
-            :class="`music-lyric-editor-drawer__import-issue--${issue.severity}`"
-          >
-            {{ issue.message }}
-          </li>
-        </ul>
         <p v-if="exportError" class="music-lyric-editor-drawer__read-error" role="alert">
           {{ exportError }}
         </p>
@@ -585,6 +573,19 @@ function handleSave() {
           <PButton type="button" size="sm" variant="secondary" :disabled="saving" @click="translationInput?.click()">{{ translationImportFile ? '重新选择' : '选择文件' }}</PButton>
         </div>
       </section>
+
+      <p v-if="importError" class="music-lyric-editor-drawer__read-error" role="alert">
+        {{ importError }}
+      </p>
+      <ul v-if="importIssues.length" class="music-lyric-editor-drawer__import-issues" aria-label="LRC 解析问题">
+        <li
+          v-for="issue in importIssues"
+          :key="`${issue.code}-${issue.sourceLine ?? issue.message}`"
+          :class="`music-lyric-editor-drawer__import-issue--${issue.severity}`"
+        >
+          {{ issue.message }}
+        </li>
+      </ul>
 
       <div ref="rowEditorRoot" class="music-lyric-editor-drawer__row-editor">
         <MusicLyricsRowEditor
@@ -882,7 +883,7 @@ function handleSave() {
 
 .music-lyric-editor-drawer__file-field--dragging {
   border-color: var(--a-color-primary);
-  border-style: dashed;
+  border-style: solid;
   background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
 }
 

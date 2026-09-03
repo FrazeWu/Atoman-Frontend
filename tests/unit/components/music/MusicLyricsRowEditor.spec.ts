@@ -163,7 +163,7 @@ describe('MusicLyricsRowEditor', () => {
       const button = lrcWrapper.get(`[data-testid="lyric-seek-${row.id}"]`)
       expect(button.attributes('title')).toBe('跳转')
       expect(button.attributes('aria-label')).toBe(`跳转到第 ${index + 1} 行时间`)
-      expect(button.get('svg').classes()).toContain('lucide-play')
+      expect(button.get('svg').classes()).toContain('tabler-icon-player-play')
     })
   })
 
@@ -248,9 +248,9 @@ describe('MusicLyricsRowEditor', () => {
   it('三类行操作按钮具备图标、可访问名称和正确边界状态', () => {
     const wrapper = mountEditor()
     const contracts = [
-      { action: 'move-up', title: '上移', icon: 'lucide-arrow-up' },
-      { action: 'move-down', title: '下移', icon: 'lucide-arrow-down' },
-      { action: 'delete', title: '删除', icon: 'lucide-trash-2' },
+      { action: 'move-up', title: '上移', icon: 'tabler-icon-arrow-up' },
+      { action: 'move-down', title: '下移', icon: 'tabler-icon-arrow-down' },
+      { action: 'delete', title: '删除', icon: 'tabler-icon-trash' },
     ]
 
     rows.forEach((row, index) => {

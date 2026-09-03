@@ -132,7 +132,7 @@
       @restore="restorePendingDraft"
     />
 
-    <PModal v-if="draftManagerVisible" title="草稿管理" size="md" @close="closeDraftManager">
+    <PModal v-if="draftManagerVisible" above-player title="草稿管理" size="md" @close="closeDraftManager">
       <div class="draft-manager-body">
         <div class="draft-manager-grid">
           <div class="draft-manager-card a-card-sm">
@@ -191,7 +191,7 @@
       </template>
     </PModal>
 
-    <PModal v-if="leaveConfirmVisible" title="草稿仍在同步" size="sm" @close="cancelLeave">
+    <PModal v-if="leaveConfirmVisible" above-player title="草稿仍在同步" size="sm" @close="cancelLeave">
       <div class="leave-confirm-body">
         <p class="leave-confirm-text">{{ leaveConfirmText }}</p>
         <p class="a-muted">继续离开会中断当前这次保存或同步，最新改动可能无法写入草稿。</p>
@@ -205,7 +205,7 @@
       </template>
     </PModal>
 
-    <PModal v-if="publicationReviewVisible" title="发布前检查" size="sm" @close="closePublicationReview">
+    <PModal v-if="publicationReviewVisible" above-player title="发布前检查" size="sm" @close="closePublicationReview">
       <div class="publication-review">
         <p>以下建议不会阻止发布，但处理后会让文章更易阅读和发现。</p>
         <ul>

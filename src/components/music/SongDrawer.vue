@@ -7,6 +7,7 @@ import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
+import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
@@ -128,6 +129,9 @@ const formattedReleaseDate = computed(() => {
   return formatStoredPartialDate(song.release_date, song.release_date_precision).replace(/-/g, '/')
 })
 const effectiveSources = computed(() => detail.value?.song.effective_sources ?? detail.value?.song.sources ?? [])
+const appleMusicSource = computed(() => effectiveSources.value.find(source =>
+  source.title === 'Apple Music' || source.url?.includes('music.apple.com'),
+))
 
 function showToast(message: string) {
   toastMessage.value = message
@@ -388,6 +392,11 @@ watch(
               <span v-else>{{ source.title }}</span>
             </template>
           </div>
+          <AppleMusicPreview
+            v-if="appleMusicSource?.url && !detail.playable"
+            :song-id="String(detail.song.id)"
+            :store-url="appleMusicSource.url"
+          />
           <div class="song-detail__actions">
             <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
             <PButton variant="secondary" :loading="actionBusy === 'favorite'" :aria-label="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" :title="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></PButton>

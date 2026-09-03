@@ -40,6 +40,13 @@ export type MusicSource = {
 	title?: string;
 };
 
+export type MusicAppleSongPreview = {
+	preview_url?: string;
+	store_url: string;
+	attribution: string;
+	max_duration_seconds: number;
+};
+
 export type MusicAlbumImportStatus =
 	| "pending_upload"
 	| "uploading"

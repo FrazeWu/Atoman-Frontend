@@ -53,6 +53,7 @@ import type {
 	MusicSongDetail,
 	MusicSongRatingSummary,
 	MusicAlbumRatingSummary,
+	MusicAppleSongPreview,
 	MusicSongListItem,
 	MusicStandaloneSongType,
 	MusicSongLyrics,
@@ -117,6 +118,13 @@ export async function getMusicSongDetail(
 	songId: string,
 ): Promise<MusicSongDetail> {
 	return apiGet<MusicSongDetail>(musicV1Endpoints.songDetail(songId));
+}
+
+export async function getMusicAppleSongPreview(
+	songId: string,
+	signal?: AbortSignal,
+): Promise<MusicAppleSongPreview> {
+	return apiGet<MusicAppleSongPreview>(musicV1Endpoints.songApplePreview(songId), { signal });
 }
 
 export async function setMusicAlbumRating(

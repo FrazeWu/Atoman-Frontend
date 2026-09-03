@@ -163,7 +163,7 @@ describe("AudioPlayer", () => {
 			/\.player-display-enter-active,[\s\S]*?\.player-display-leave-active\s*\{[^}]*550ms/,
 		);
 		expect(source).toMatch(
-			/\.player-display-enter-from,[\s\S]*?\.player-display-leave-to\s*\{[^}]*transform:\s*translateX\(1\.25rem\)/,
+			/\.player-display-enter-from,[\s\S]*?\.player-display-leave-to\s*\{[^}]*clip-path:\s*inset\(0 0 0 100%\)/,
 		);
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,

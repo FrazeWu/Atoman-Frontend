@@ -1321,13 +1321,13 @@ watch(
 .player-display-leave-active {
   transition:
     opacity 550ms cubic-bezier(0.2, 0, 0, 1),
-    transform 550ms cubic-bezier(0.2, 0, 0, 1);
+    clip-path 550ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .player-display-enter-from,
 .player-display-leave-to {
   opacity: 0;
-  transform: translateX(1.25rem);
+  clip-path: inset(0 0 0 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -172,6 +172,14 @@ describe("App responsive shell", () => {
 			);
 		}
 	});
+
+	it("keeps the desktop module transition visible", () => {
+		expect(appSource).toMatch(
+			/\.module-slide-enter-active[\s\S]*?opacity 320ms ease,[\s\S]*?transform 520ms/,
+		);
+		expect(appSource).toContain("translateX(44px)");
+		expect(appSource).toContain("translateX(-44px)");
+	});
 });
 
 describe("shared responsive shell CSS", () => {

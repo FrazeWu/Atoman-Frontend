@@ -102,13 +102,14 @@ onMounted(() => {
 .module-slide-enter-active,
 .module-slide-leave-active {
   transition:
-    opacity 180ms ease,
-    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 320ms ease,
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
 }
 
 .module-slide-enter-from {
   opacity: 0;
-  transform: translateX(14px);
+  transform: translateX(44px);
 }
 
 .module-slide-leave-active {
@@ -119,7 +120,7 @@ onMounted(() => {
 
 .module-slide-leave-to {
   opacity: 0;
-  transform: translateX(-14px);
+  transform: translateX(-44px);
 }
 
 /* 出场：内容区稍微上移并渐隐 */

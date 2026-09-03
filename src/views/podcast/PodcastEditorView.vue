@@ -678,6 +678,7 @@ async function schedulePublish() {
 
     <PConfirm
       :show="showPublishConfirm"
+      above-player
       title="确认发布单集"
       :message="`《${form.title || '未命名单集'}》将立即对听众公开，发布后可继续编辑。`"
       confirm-text="立即发布"

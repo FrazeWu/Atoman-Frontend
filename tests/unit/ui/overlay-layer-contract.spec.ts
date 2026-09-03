@@ -22,6 +22,20 @@ const globalSearchSource = read(
 const mobileNavSource = read("src/components/system/MobileBottomNav.vue");
 const feedSource = read("src/views/feed/FeedView.vue");
 const inboxSource = read("src/views/feed/InboxPage.vue");
+const videoEditorSource = read("src/views/video/VideoEditorView.vue");
+const podcastEditorSource = read("src/views/podcast/PodcastEditorView.vue");
+const postEditorSource = read("src/views/blog/PostEditorView.vue");
+const versionHistorySource = read(
+	"src/components/blog/PostVersionHistoryModal.vue",
+);
+const commentSideSheetSource = read(
+	"src/components/comment/CommentSideSheet.vue",
+);
+const commentSectionSource = read("src/components/comment/CommentSection.vue");
+const commentReportSource = read(
+	"src/components/comment/CommentReportDialog.vue",
+);
+const dmReportSource = read("src/components/dm/DMReportModal.vue");
 const countryFieldSource = read("src/components/ui/PCountryRegionField.vue");
 const adminUserDetailSource = read(
 	"src/components/admin/AdminUserDetailSheet.vue",
@@ -68,6 +82,25 @@ describe("overlay layer contract", () => {
 		expect(globalSearchSource).toContain("z-index: var(--a-z-global-menu);");
 		expect(mobileNavSource).toContain("z-index: var(--a-z-navigation);");
 		expect(inboxSource).toMatch(/<PSheet[\s\S]*above-player/);
+		expect(videoEditorSource).toMatch(/<PConfirm[\s\S]*above-player/);
+		expect(podcastEditorSource).toMatch(/<PConfirm[\s\S]*above-player/);
+		expect(postEditorSource).toMatch(
+			/<PostVersionHistoryModal[\s\S]*above-player/,
+		);
+		expect(versionHistorySource).toMatch(/<PModal[\s\S]*above-player/);
+		expect(commentSideSheetSource).toMatch(
+			/<CommentSection[\s\S]*:above-player="abovePlayer"/,
+		);
+		expect(commentSectionSource).toMatch(
+			/<CommentReportDialog[\s\S]*:above-player="abovePlayer"/,
+		);
+		expect(commentReportSource).toMatch(
+			/<PModal[\s\S]*:above-player="abovePlayer"/,
+		);
+		expect(inboxSource).toMatch(/<DMReportModal[\s\S]*above-player/);
+		expect(dmReportSource).toMatch(
+			/<PModal[\s\S]*:above-player="abovePlayer"/,
+		);
 		expect(inboxSource).not.toContain("z-index: 30;");
 		expect(feedSource).toContain("z-index: var(--a-z-navigation);");
 		expect(feedSource).not.toContain("z-index: 1100;");

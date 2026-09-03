@@ -10,6 +10,7 @@ const PSheetStub = defineComponent({
     mode: String,
     partialAnchor: Object,
     title: String,
+    abovePlayer: Boolean,
   },
   emits: ['close', 'activate', 'mode-change'],
   template: '<section><slot /></section>',
@@ -17,6 +18,9 @@ const PSheetStub = defineComponent({
 
 const CommentSectionStub = defineComponent({
   name: 'CommentSection',
+  props: {
+    abovePlayer: Boolean,
+  },
   emits: ['count-change', 'seek', 'marked-change'],
   template: '<div />',
 })
@@ -30,6 +34,7 @@ describe('CommentSideSheet', () => {
         title: '视频评论',
         target: { kind: 'video', resourceId: 'video-1' },
         partialAnchor: anchor,
+        abovePlayer: true,
       },
       global: {
         stubs: {
@@ -43,7 +48,9 @@ describe('CommentSideSheet', () => {
       mode: 'partial',
       partialAnchor: anchor,
       title: '视频评论',
+      abovePlayer: true,
     })
+    expect(wrapper.findComponent(CommentSectionStub).props('abovePlayer')).toBe(true)
 
     wrapper.findComponent(PSheetStub).vm.$emit('mode-change', 'full')
     wrapper.findComponent(CommentSectionStub).vm.$emit('count-change', 3)

@@ -1,5 +1,5 @@
 <template>
-  <PModal :model-value="modelValue" title="举报" size="sm" @update:model-value="$emit('update:modelValue', $event)">
+  <PModal :model-value="modelValue" title="举报" size="sm" :above-player="abovePlayer" @update:model-value="$emit('update:modelValue', $event)">
     <form class="comment-report" @submit.prevent>
       <label>
         <span>原因</span>
@@ -35,10 +35,13 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 
 defineOptions({ name: 'CommentReportDialog' })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean
   onSubmit?: (input: ReportCommentInput) => Promise<unknown>
-}>()
+  abovePlayer?: boolean
+}>(), {
+  abovePlayer: false,
+})
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   submit: [input: ReportCommentInput]

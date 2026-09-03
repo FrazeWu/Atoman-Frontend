@@ -17,6 +17,7 @@
   >
     <CommentSection
       :target="target"
+      :above-player="abovePlayer"
       :noun="noun"
       :mark-label="markLabel"
       :current-time="currentTime"

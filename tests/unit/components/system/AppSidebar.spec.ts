@@ -5,6 +5,7 @@ import { defineComponent } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 
 import AppSidebar from '@/components/system/AppSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 
@@ -55,6 +56,32 @@ const mountSidebar = async (moduleCase: (typeof moduleCases)[number]) => {
   return { wrapper, router }
 }
 
+const mountFeedSidebar = async () => {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/feed', component: { template: '<div />' } },
+      { path: '/posts', component: { template: '<div />' } },
+    ],
+  })
+  await router.push('/feed')
+  await router.isReady()
+
+  const wrapper = mount(AppSidebar, {
+    props: { module: 'feed' },
+    global: {
+      plugins: [pinia, router],
+      stubs: { SubscriptionHubSidebarTree: SubscriptionHubSidebarTreeStub },
+    },
+  })
+  await flushPromises()
+
+  return { wrapper, router }
+}
+
 describe('AppSidebar module subscription tree', () => {
   it.each(moduleCases)('passes the $module type without rendering the type layer', async (moduleCase) => {
     const { wrapper } = await mountSidebar(moduleCase)
@@ -79,5 +106,16 @@ describe('AppSidebar module subscription tree', () => {
       hub_group_id: `${moduleCase.module}-group`,
       hub_membership_id: `${moduleCase.module}-membership`,
     })
+  })
+})
+
+describe('AppSidebar feed navigation', () => {
+  it('exposes the blog posts entry from the feed sidebar', async () => {
+    const { wrapper, router } = await mountFeedSidebar()
+    const blogItem = wrapper.findAllComponents(PSidebarItem).find((item) => item.text().trim() === '博文')
+
+    expect(blogItem).toBeDefined()
+    expect(blogItem?.props('to')).toBe('/posts')
+    expect(router.resolve('/posts').matched.at(-1)?.path).toBe('/posts')
   })
 })

@@ -66,6 +66,8 @@ const coverUploading = ref(false)
 const generatedCoverPreview = ref('')
 const generatedCoverBlob = ref<Blob | null>(null)
 const generatedCoverReady = ref(false)
+let coverGeneration = 0
+let coverUploadPromise: Promise<void> | null = null
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = ref({
@@ -148,13 +150,14 @@ async function extractFirstFrame(file: File): Promise<{ blob: Blob, preview: str
       }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const durationSec = Math.round(video.duration || 0)
       canvas.toBlob((blob) => {
         cleanup()
         if (!blob) {
           reject(new Error('封面提取失败'))
           return
         }
-        resolve({ blob, preview: canvas.toDataURL('image/jpeg', 0.9), durationSec: Math.round(video.duration || 0) })
+        resolve({ blob, preview: canvas.toDataURL('image/jpeg', 0.9), durationSec })
       }, 'image/jpeg', 0.9)
     }, { once: true })
 
@@ -165,17 +168,17 @@ async function extractFirstFrame(file: File): Promise<{ blob: Blob, preview: str
   })
 }
 
-async function uploadCoverBlob(blob: Blob) {
+async function uploadCoverBlob(blob: Blob, generation = coverGeneration) {
   coverUploading.value = true
   errorMsg.value = ''
   try {
     const file = new File([blob], `auto-cover-${Date.now()}.jpg`, { type: 'image/jpeg' })
     const result = await uploadVideoCover(file, authStore.token ?? undefined)
-    form.value.thumbnail_url = result.url
+    if (generation === coverGeneration) form.value.thumbnail_url = result.url
   } catch (err) {
-    errorMsg.value = errorMessage(err, '封面上传失败')
+    if (generation === coverGeneration) errorMsg.value = errorMessage(err, '封面上传失败')
   } finally {
-    coverUploading.value = false
+    if (generation === coverGeneration) coverUploading.value = false
   }
 }
 
@@ -191,18 +194,28 @@ async function onVideoFileChange(e: Event) {
   startingVideoImport.value = true
   urlError.value = ''
   clearGeneratedCover()
-  void (async () => {
+  form.value.thumbnail_url = ''
+  const generation = ++coverGeneration
+  const coverTask = (async () => {
     try {
       const generated = await extractFirstFrame(file)
+      if (generation !== coverGeneration) return
       generatedCoverBlob.value = generated.blob
       generatedCoverPreview.value = generated.preview
       generatedCoverReady.value = true
       form.value.duration_sec = generated.durationSec
+      await uploadCoverBlob(generated.blob, generation)
     } catch {
-      generatedCoverReady.value = false
-      errorMsg.value = '自动封面生成失败，可手动上传封面'
+      if (generation === coverGeneration) {
+        generatedCoverReady.value = false
+        errorMsg.value = '自动封面生成失败，可手动上传封面'
+      }
     }
   })()
+  coverUploadPromise = coverTask
+  void coverTask.finally(() => {
+    if (coverUploadPromise === coverTask) coverUploadPromise = null
+  })
   try {
     if (videoImportId.value) {
       const task = videoImportState.value?.task ?? await getVideoImport(videoImportId.value, authStore.token ?? undefined)
@@ -329,6 +342,7 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 async function submitImport(mode: 'draft' | 'published' | 'scheduled', scheduledAt: string | null = null) {
   const importId = videoImportId.value
   if (!importId) throw new Error('视频上传任务不存在')
+  await coverUploadPromise
   const payload = buildImportPayload()
   await updateVideoImport(importId, payload, authStore.token ?? undefined)
   await submitVideoImport(importId, payload, mode, scheduledAt, authStore.token ?? undefined)

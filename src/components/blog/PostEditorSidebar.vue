@@ -31,6 +31,7 @@
         @update:summary="$emit('update:summary', $event)"
         @update:visibility="$emit('update:visibility', $event)"
       />
+      <PInput v-model="tagText" label="标签" placeholder="例如：设计, 前端" />
 
       <details class="settings-details">
         <summary class="settings-summary">
@@ -91,6 +92,7 @@ import { IconCheck as Check, IconX as X } from '@tabler/icons-vue'
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PInput from '@/components/ui/PInput.vue'
 
 type FlattenedOutlineNode = {
   id: string
@@ -118,6 +120,7 @@ const props = defineProps<{
   selectedCollectionId?: string
   summary: string
   visibility: BlogVisibility
+  tags: string[]
   coverUrl: string
   coverUploading: boolean
   coverUploadError: string
@@ -126,10 +129,11 @@ const props = defineProps<{
   activeHeadingLine: number | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'select-collection', id: string): void
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: BlogVisibility): void
+  (e: 'update:tags', value: string[]): void
   (e: 'cover-upload', event: Event): void
   (e: 'remove-cover'): void
   (e: 'jump-to-heading', line: number): void
@@ -137,6 +141,10 @@ defineEmits<{
 }>()
 
 const defaultCollection = computed(() => props.channelCollections.find(collection => collection.is_default))
+const tagText = computed({
+  get: () => props.tags.join(', '),
+  set: (value: string) => emit('update:tags', [...new Set(value.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 5)),
+})
 const ordinaryCollectionOptions = computed(() => [
   { label: '仅全部文章', value: '' },
   ...props.channelCollections

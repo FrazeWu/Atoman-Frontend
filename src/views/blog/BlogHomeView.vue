@@ -61,9 +61,10 @@
           @select="openBlogSearchTarget"
         />
       </div>
-      <template v-if="activeQuery">
+      <template v-if="isSearchMode">
         <div class="blog-home__filter-group blog-home__structured-filters" aria-label="结构化筛选">
           <PSelect
+            v-if="activeQuery"
             v-model="searchAuthorID"
             label="作者"
             placeholder="全部作者"
@@ -71,6 +72,7 @@
             @update:model-value="updateSearchAuthor"
           />
           <PSelect
+            v-if="activeQuery"
             v-model="searchChannelID"
             label="频道"
             placeholder="全部频道"
@@ -78,7 +80,7 @@
             @update:model-value="updateSearchChannel"
           />
           <PSelect
-            v-if="searchChannelID"
+            v-if="activeQuery && searchChannelID"
             v-model="searchCollectionID"
             label="合集"
             placeholder="全部合集"
@@ -88,7 +90,7 @@
           />
         </div>
       </template>
-      <template v-if="!activeQuery">
+      <template v-if="!isSearchMode">
         <div class="blog-home__filter-group">
           <PSegmentedControl
             v-model="typeFilter"
@@ -114,7 +116,8 @@
         </div>
       </template>
       <div v-else class="blog-home__filter-group blog-home__filter-group--end">
-        <PButton size="sm" variant="ghost" label="清除搜索" @click="clearBlogSearch" />
+        <span v-if="activeTag" class="blog-home__active-tag">标签：{{ activeTag }}</span>
+        <PButton size="sm" variant="ghost" :label="activeTag ? '清除标签' : '清除搜索'" @click="clearBlogSearch" />
       </div>
     </div>
 
@@ -155,7 +158,7 @@
               </template>
               <template #source-action>
                 <PButton
-                  v-if="authStore.isAuthenticated && !activeQuery"
+                  v-if="authStore.isAuthenticated && !isSearchMode"
                   size="sm"
                   variant="ghost"
                   :loading="hidingPostId === streamItem.post.id"
@@ -406,6 +409,11 @@ const activeQuery = computed(() => {
   const value = queryValue(route.query.q)
   return typeof value === 'string' ? value.trim() : ''
 })
+const activeTag = computed(() => {
+  const value = queryValue(route.query.tag)
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+})
+const isSearchMode = computed(() => Boolean(activeQuery.value || activeTag.value))
 const blogSearchQuery = ref(activeQuery.value)
 const searchAuthorID = ref(typeof queryValue(route.query.author_id) === 'string' ? queryValue(route.query.author_id) as string : '')
 const searchChannelID = ref(typeof queryValue(route.query.channel_id) === 'string' ? queryValue(route.query.channel_id) as string : '')
@@ -414,7 +422,7 @@ let postsRequestSequence = 0
 const recordedImpressions = new Set<string>()
 
 const recordPostImpressions = (items: BlogHomeListItem[]) => {
-  const source = activeQuery.value
+  const source = isSearchMode.value
     ? 'blog_search'
     : `blog_home:${recommendationMode.value}`
   for (const item of items) {
@@ -535,6 +543,7 @@ const homeQuery = (search = activeQuery.value) => {
     if (searchCollectionID.value) query.collection_id = searchCollectionID.value
     return query
   }
+  if (activeTag.value) return { tag: activeTag.value }
   const query: Record<string, string> = {}
   if (typeFilter.value !== 'all') query.type = typeFilter.value
   if (typeFilter.value !== 'note' && recommendationMode.value !== 'hot') query.mode = recommendationMode.value
@@ -573,6 +582,7 @@ const searchMatchLabel = (field?: string) => {
     case 'title': return '标题匹配'
     case 'summary': return '摘要匹配'
     case 'content': return '正文匹配'
+    case 'tag': return '标签匹配'
     default: return '相关结果'
   }
 }
@@ -693,7 +703,7 @@ const restoreRecommendation = async () => {
 }
 
 const fetchShortNotes = async () => {
-  if (typeFilter.value === 'post' || activeQuery.value) {
+  if (typeFilter.value === 'post' || isSearchMode.value) {
     shortNotes.value = []
     notesError.value = false
     notesLoading.value = false
@@ -751,8 +761,10 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
     let query: URLSearchParams
-    if (activeQuery.value) {
-      query = new URLSearchParams({ q: activeQuery.value })
+    if (isSearchMode.value) {
+      query = new URLSearchParams()
+      if (activeQuery.value) query.set('q', activeQuery.value)
+      if (activeTag.value) query.set('tag', activeTag.value)
       if (searchAuthorID.value) query.set('author_id', searchAuthorID.value)
       if (searchChannelID.value) query.set('channel_id', searchChannelID.value)
       if (searchCollectionID.value) query.set('collection_id', searchCollectionID.value)
@@ -766,7 +778,7 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
           page_size: String(PAGE_SIZE),
         })
     }
-    const endpoint = activeQuery.value
+    const endpoint = isSearchMode.value
       ? `${api.blog.search}?${query.toString()}`
       : `${api.blog.recommendPosts}?${query.toString()}`
 
@@ -786,7 +798,7 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
           summary: item.snippet?.trim() || item.summary?.trim() || item.description?.trim() || item.excerpt?.trim() || undefined,
           cover_url: item.cover_url || item.image_url,
           created_at: item.published_at || item.created_at,
-          recommendationReason: activeQuery.value
+          recommendationReason: isSearchMode.value
             ? searchMatchLabel(item.match_field)
             : item.score_label,
           view_count: item.view_count ?? item.read_count ?? 0,
@@ -846,8 +858,8 @@ onUnmounted(() => {
 })
 
 watch(
-  [activeQuery, () => queryValue(route.query.author_id), () => queryValue(route.query.channel_id), () => queryValue(route.query.collection_id)],
-  ([value, rawAuthorID, rawChannelID, rawCollectionID], oldValues) => {
+  [activeQuery, activeTag, () => queryValue(route.query.author_id), () => queryValue(route.query.channel_id), () => queryValue(route.query.collection_id)],
+  ([value, _tag, rawAuthorID, rawChannelID, rawCollectionID], oldValues) => {
     if (value !== blogSearchQuery.value) blogSearchQuery.value = value
     const nextAuthorID = typeof rawAuthorID === 'string' ? rawAuthorID : ''
     const nextChannelID = typeof rawChannelID === 'string' ? rawChannelID : ''
@@ -855,7 +867,7 @@ watch(
     searchAuthorID.value = nextAuthorID
     searchChannelID.value = nextChannelID
     searchCollectionID.value = nextCollectionID
-    const previousChannelID = typeof oldValues?.[2] === 'string' ? oldValues[2] : ''
+    const previousChannelID = typeof oldValues?.[3] === 'string' ? oldValues[3] : ''
     if (nextChannelID !== previousChannelID) void fetchSearchCollections(nextChannelID)
     void Promise.all([fetchPosts(), fetchShortNotes()])
   },

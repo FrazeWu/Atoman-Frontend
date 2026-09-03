@@ -37,7 +37,7 @@ onMounted(async () => {
   errorMessage.value = ''
   try {
     const [videoPage, channelItems, collectionItems, preferences] = await Promise.all([
-      getVideoSubscriptions(),
+      getVideoSubscriptions(1, pageMeta.value.page_size, authStore.token ?? undefined),
       fetchJson<SourceBookmark[]>('/videos/channel-bookmarks'),
       fetchJson<SourceBookmark[]>('/videos/collection-bookmarks'),
       lifecycle.listNotificationPreferences().catch(() => []),
@@ -59,7 +59,7 @@ async function changePage(page: number) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const videoPage = await getVideoSubscriptions(page, pageMeta.value.page_size)
+    const videoPage = await getVideoSubscriptions(page, pageMeta.value.page_size, authStore.token ?? undefined)
     videos.value = videoPage.data
     pageMeta.value = videoPage.meta
   } catch {

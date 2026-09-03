@@ -50,5 +50,7 @@ describe('VideoSubscriptionsView', () => {
     expect(wrapper.text()).toContain('暂无订阅更新')
     expect(wrapper.findAll('.notification-mode')).toHaveLength(2)
     expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/content/notification-preferences'))).toHaveLength(1)
+    const subscriptionCall = fetchMock.mock.calls.find(([input]) => String(input).includes('/videos/subscriptions?'))
+    expect(new Headers(subscriptionCall?.[1]?.headers).get('Authorization')).toBe('Bearer token-1')
   })
 })

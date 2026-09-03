@@ -7,16 +7,10 @@ import { useAuthStore } from '@/stores/auth'
 import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
 import { useContentLifecycle, type ContentNotificationPreference } from '@/composables/useContentLifecycle'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
+import PVideoCard from '@/components/shared/PVideoCard.vue'
+import type { Video } from '@/types'
 
-type SubscriptionVideo = {
-  id: string
-  title: string
-  channel?: { id: string; name: string; slug?: string }
-  collections?: Array<{ id: string; name: string }>
-  updated_at?: string
-  created_at?: string
-  view_count?: number
-}
+type SubscriptionVideo = Video
 
 type SourceBookmark = {
   id: string
@@ -141,19 +135,7 @@ function notificationMode(sourceType: ContentNotificationPreference['source_type
       <main class="video-subscriptions-list" aria-label="订阅更新">
         <PEmpty v-if="!videos.length" title="暂无订阅更新" description="有新视频时会显示在这里。" />
         <template v-else>
-          <article
-            v-for="item in videos"
-            :key="item.id"
-            class="video-subscription-item"
-          >
-            <RouterLink :to="`/videos/watch/${item.id}`" class="video-subscription-item__title">
-              {{ item.title }}
-            </RouterLink>
-            <div class="video-subscription-item__meta">
-              <span v-if="item.channel">{{ item.channel.name }}</span>
-              <span v-for="collection in item.collections" :key="collection.id">{{ collection.name }}</span>
-            </div>
-          </article>
+          <PVideoCard v-for="item in videos" :key="item.id" :video="item" />
         </template>
         <PaginationBar :meta="pageMeta" :loading="loading" @change="changePage" />
       </main>
@@ -189,11 +171,11 @@ function notificationMode(sourceType: ContentNotificationPreference['source_type
   gap: 1rem;
 }
 
-.video-subscriptions-sources section,
-.video-subscriptions-list {
+.video-subscriptions-sources section {
   display: grid;
   gap: 0.65rem;
 }
+.video-subscriptions-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.25rem; }
 
 .video-subscriptions-sources h2 {
   margin: 0;
@@ -201,27 +183,12 @@ function notificationMode(sourceType: ContentNotificationPreference['source_type
   color: var(--a-color-muted);
 }
 
-.video-subscriptions-sources a,
-.video-subscription-item__title {
+.video-subscriptions-sources a {
   color: var(--a-color-fg);
   text-decoration: none;
   font-weight: 500;
 }
 
-.video-subscription-item {
-  display: grid;
-  gap: 0.4rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-
-.video-subscription-item__meta {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  color: var(--a-color-muted);
-  font-size: 0.85rem;
-}
 
 @media (max-width: 720px) {
   .video-subscriptions-content {

@@ -19,6 +19,7 @@ import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
 type VideoDetailResponse = Video & {
@@ -80,6 +81,8 @@ const isDescriptionTruncated = computed(() => {
   const description = video.value?.description || ''
   return description.length > 180 || description.split('\n').length > 3
 })
+const posterUrl = computed(() => video.value?.thumbnail_url ? resolveMediaURL(video.value.thumbnail_url) : undefined)
+const channelCoverUrl = computed(() => video.value?.channel?.cover_url ? resolveMediaURL(video.value.channel.cover_url) : '')
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const currentPlaybackTime = ref(0)
@@ -400,6 +403,12 @@ async function selectCollectionVideo(id: string) {
   await router.push({ path: `/videos/watch/${id}`, query })
 }
 
+function selectAdjacentCollectionVideo(offset: number) {
+  const current = collectionVideos.value.findIndex(item => item.id === video.value?.id)
+  const target = collectionVideos.value[current + offset]
+  if (target) void selectCollectionVideo(target.id)
+}
+
 function handleSeekToTimestamp(value: number) {
   if (video.value?.storage_type === 'local' && videoElement.value) {
     videoElement.value.currentTime = value
@@ -510,7 +519,7 @@ async function toggleChannelSubscription() {
             <video
               ref="videoElement"
               :src="video.video_url"
-              :poster="video.thumbnail_url || undefined"
+              :poster="posterUrl"
               class="vd-native"
               playsinline
               preload="metadata"
@@ -521,7 +530,9 @@ async function toggleChannelSubscription() {
               @error="handleVideoError"
               @pause="handlePauseOrUnload"
               @ended="handleVideoEnded"
-            />
+            >
+              <track v-if="video.subtitle_url" kind="subtitles" :src="video.subtitle_url" srclang="zh" label="中文" />
+            </video>
             <button
               v-if="!isLocalPlaybackActive && !videoError && resumePosition === null"
               class="vd-play-overlay"
@@ -553,6 +564,7 @@ async function toggleChannelSubscription() {
             :video-element="videoElement"
             :duration-sec="video.duration_sec"
             :thumbnails="video.preview_thumbnails"
+            :subtitles-available="Boolean(video.subtitle_url)"
             :theater-mode="theaterMode"
             @toggle-theater="toggleTheaterMode"
           />
@@ -564,7 +576,7 @@ async function toggleChannelSubscription() {
         <div class="vd-meta-row">
           <RouterLink v-if="video.channel" :to="`/channel/${video.channel.slug || video.channel_id}`" class="vd-author">
             <span class="vd-author-avatar" aria-hidden="true">
-              <img v-if="video.channel.cover_url" :src="video.channel.cover_url" alt="">
+              <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
               <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
             </span>
             <span class="vd-author-copy">
@@ -652,6 +664,8 @@ async function toggleChannelSubscription() {
         :current-video-id="video.id"
         :completed-video-ids="completedCollectionVideoIds"
         @select="selectCollectionVideo"
+        @previous="selectAdjacentCollectionVideo(-1)"
+        @next="selectAdjacentCollectionVideo(1)"
       />
     </div>
 

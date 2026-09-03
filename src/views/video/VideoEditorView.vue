@@ -20,6 +20,7 @@ import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useMediaCreationSteps } from '@/composables/useMediaCreationSteps'
 import { useVideoImportUpload } from '@/composables/useVideoImportUpload'
 import { errorMessage } from '@/utils/logger'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,6 +82,7 @@ const form = ref({
   visibility: 'public' as 'public' | 'followers' | 'private',
   tags: [] as string[],
 })
+const coverPreviewUrl = computed(() => form.value.thumbnail_url ? resolveMediaURL(form.value.thumbnail_url) : '')
 
 watch(() => form.value.title, (title) => {
   emit('title-change', title.trim())
@@ -679,7 +681,7 @@ async function schedulePublish() {
 
           <div class="ve-review">
             <div class="ve-review-media">
-              <img v-if="form.thumbnail_url" :src="form.thumbnail_url" :alt="form.title" />
+              <img v-if="coverPreviewUrl" :src="coverPreviewUrl" :alt="form.title" />
               <VideoIcon v-else :size="32" aria-hidden="true" />
             </div>
             <div class="ve-review-content">

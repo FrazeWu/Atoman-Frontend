@@ -22,6 +22,10 @@ const avatarUrl = computed(() => {
   const url = props.video.channel?.cover_url?.trim() || props.video.user?.avatar_url?.trim() || ''
   return url ? resolveMediaURL(url) : ''
 })
+const thumbnailUrl = computed(() => {
+  const url = props.video.thumbnail_url?.trim() || ''
+  return url ? resolveMediaURL(url) : ''
+})
 
 async function toggleWatchLater() {
   if (!authStore.isAuthenticated) {
@@ -63,7 +67,7 @@ const avatarLetter = () =>
   <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="video.title">
-        <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />
+        <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="video.title" class="vc-img" loading="lazy" />
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 
         <!-- 悬浮微渐变与居中播放徽标 -->

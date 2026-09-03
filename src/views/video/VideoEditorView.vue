@@ -2,7 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { cancelVideoImport, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, uploadVideoSubtitle, type VideoImportPayload } from '@/api/video'
+import { cancelVideoImport, duplicateVideo, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, uploadVideoSubtitle, type VideoImportPayload } from '@/api/video'
 import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -12,7 +12,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PCreationSteps from '@/components/ui/PCreationSteps.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconUpload as Upload, IconVideo as VideoIcon, IconX as X } from '@tabler/icons-vue'
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconCopy as Copy, IconUpload as Upload, IconVideo as VideoIcon, IconX as X } from '@tabler/icons-vue'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Collection } from '@/types'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
@@ -37,6 +37,7 @@ const savingDraft = ref(false)
 const publishing = ref(false)
 const scheduling = ref(false)
 const scheduledAt = ref('')
+const duplicating = ref(false)
 const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
@@ -409,6 +410,8 @@ async function loadVideo() {
     storage_type: v.storage_type,
     video_url: v.video_url,
     thumbnail_url: v.thumbnail_url,
+    subtitle_url: v.subtitle_url || '',
+    chapters: [...(v.chapters || [])],
     duration_sec: v.duration_sec,
     visibility: v.visibility,
     tags: v.tags?.map(t => t.name) ?? [],
@@ -440,6 +443,7 @@ onMounted(async () => {
           channel_id: task.payload.channel_id || studio.currentChannel?.id || '', title: task.payload.title,
           description: task.payload.description, storage_type: 'local', video_url: '',
           thumbnail_url: task.payload.thumbnail_url, duration_sec: task.payload.duration_sec || 0,
+          subtitle_url: task.payload.subtitle_url || '', chapters: [...(task.payload.chapters || [])],
           visibility: task.payload.visibility || 'public', tags: [...task.payload.tags],
         }
         await loadCollections(form.value.channel_id)
@@ -543,11 +547,29 @@ async function schedulePublish() {
     scheduling.value = false
   }
 }
+
+async function duplicateDraft() {
+  if (!isEdit.value || duplicating.value) return
+  duplicating.value = true
+  errorMsg.value = ''
+  try {
+    const copied = await duplicateVideo(String(route.params.id), authStore.token ?? undefined)
+    await router.push(`/studio/video/${copied.id}/edit`)
+  } catch (cause) {
+    errorMsg.value = errorMessage(cause, '复制草稿失败，请重试')
+  } finally {
+    duplicating.value = false
+  }
+}
 </script>
 
 <template>
   <div class="ve-wrap">
-    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent mb="1.5rem" />
+    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent mb="1.5rem">
+      <template v-if="isEdit" #action>
+        <PButton variant="secondary" :loading="duplicating" @click="duplicateDraft"><Copy :size="16" aria-hidden="true" />复制为草稿</PButton>
+      </template>
+    </PPageHeader>
 
     <PCreationSteps
       v-model="currentStep"

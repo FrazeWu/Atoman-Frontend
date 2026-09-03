@@ -196,6 +196,7 @@ function playLocalVideo() {
 
 async function load(id: string) {
   const seq = ++loadSeq
+  cancelAutoNext()
   loading.value = true
   error.value = ''
   video.value = null

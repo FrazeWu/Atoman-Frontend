@@ -118,7 +118,7 @@ describe("FeedLayout", () => {
       "/feed/subscriptions?hub_type=podcast&hub_group_id=podcast-group",
     );
 
-    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(3);
+    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(4);
     expect(wrapper.text()).toContain("我的订阅");
     expect(wrapper.text()).toContain("播客");
     expect(wrapper.text()).toContain("视频");

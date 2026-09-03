@@ -34,20 +34,26 @@ describe('content lifecycle client', () => {
     }))
   })
 
-  it('loads module continue items and schedules publication', async () => {
+  it('loads module continue items and manages a blog publication schedule', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify({
-      data: String(input).includes('/continue') ? [{ content_id: 'post-1', module: 'blog', title: '继续读' }] : { status: 'scheduled' },
+      data: String(input).includes('/continue') ? [{ content_id: 'post-1', module: 'blog', title: '继续读' }] : { status: 'scheduled', timezone: 'Asia/Shanghai' },
     })))
     vi.stubGlobal('fetch', fetchMock)
     const client = createContentLifecycleClient({ baseUrl: '/api/v1/content', token: () => 'token-1' })
 
     const items = await client.listContinue('blog', 4)
-    const scheduled = await client.schedule('blog', 'post-1', '2026-08-01T09:00:00Z')
+    const scheduled = await client.schedule('blog', 'post-1', '2026-08-01T09:00:00Z', 'Asia/Shanghai')
+    const status = await client.getSchedule('blog', 'post-1')
+    await client.retrySchedule('blog', 'post-1')
 
     expect(items[0].title).toBe('继续读')
     expect(scheduled.status).toBe('scheduled')
+    expect(status.timezone).toBe('Asia/Shanghai')
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/content/continue?module=blog&limit=4', expect.any(Object))
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/content/blog/post-1/schedule', expect.objectContaining({ method: 'POST' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/content/blog/post-1/schedule', expect.any(Object))
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/v1/content/blog/post-1/schedule/retry', expect.objectContaining({ method: 'POST' }))
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(JSON.stringify({ publish_at: '2026-08-01T09:00:00Z', timezone: 'Asia/Shanghai' }))
   })
 
   it('emits open, engaged and complete once while throttling progress saves', () => {

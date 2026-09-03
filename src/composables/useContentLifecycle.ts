@@ -51,6 +51,15 @@ export interface ScheduledContent {
   publish_at?: string
 }
 
+export interface BlogScheduleStatus extends ScheduledContent {
+  timezone: string
+  attempts: number
+  next_run_at: string
+  last_error?: string
+  published_at?: string
+  cancelled_at?: string
+}
+
 export interface ContentNotificationPreference {
   id?: string
   source_type: 'internal_user' | 'internal_channel' | 'internal_collection'
@@ -146,10 +155,16 @@ export function createContentLifecycleClient(options: ClientOptions) {
       const query = new URLSearchParams({ module, limit: String(limit) })
       return request<ContinueContentItem[]>(`${options.baseUrl}/continue?${query}`, auth())
     },
-    schedule(module: StudioModule, contentID: string, publishAt: string) {
+    schedule(module: StudioModule, contentID: string, publishAt: string, timezone?: string) {
       return request<ScheduledContent>(`${options.baseUrl}/${module}/${contentID}/schedule`, auth(), {
-        method: 'POST', body: JSON.stringify({ publish_at: publishAt }),
+        method: 'POST', body: JSON.stringify({ publish_at: publishAt, ...(timezone ? { timezone } : {}) }),
       })
+    },
+    getSchedule(module: StudioModule, contentID: string) {
+      return request<BlogScheduleStatus>(`${options.baseUrl}/${module}/${contentID}/schedule`, auth())
+    },
+    retrySchedule(module: StudioModule, contentID: string) {
+      return request<BlogScheduleStatus>(`${options.baseUrl}/${module}/${contentID}/schedule/retry`, auth(), { method: 'POST' })
     },
     cancelSchedule(module: StudioModule, contentID: string) {
       return request<{ cancelled: boolean }>(`${options.baseUrl}/${module}/${contentID}/schedule`, auth(), { method: 'DELETE' })

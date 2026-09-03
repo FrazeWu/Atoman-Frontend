@@ -1,5 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import { apiRequestResult } from "@/api/client";
 import { useApiUrl } from "@/composables/useApi";
@@ -33,6 +33,7 @@ export function useFeedArticleBrowser({
 	const authStore = useAuthStore();
 	const feedStore = useFeedStore();
 	const apiURL = useApiUrl();
+	const route = useRoute();
 	const router = useRouter();
 	const mobile = isStandaloneMobileApp();
 
@@ -312,9 +313,27 @@ export function useFeedArticleBrowser({
 		if (source) await openSourceSheet(source);
 	};
 
+	const requireLoginForSubscription = (source: FeedArticleSource) => {
+		if (authStore.isAuthenticated) return true;
+		const query: Record<string, string | string[] | null | undefined> = {
+			...route.query,
+			subscribe_source_id: source.id,
+			subscribe_source_type: source.type,
+			subscribe_source_title: source.title,
+		};
+		if (source.rssUrl) query.subscribe_source_url = source.rssUrl;
+		const returnPath = router.resolve({
+			path: route.path || "/feed",
+			query,
+			hash: route.hash,
+		}).fullPath;
+		void router.push({ path: "/login", query: { redirect: returnPath } });
+		return false;
+	};
+
 	const subscribeSelectedArticleSource = async () => {
 		const source = selectedArticleSource.value;
-		if (!source) return;
+		if (!source || !requireLoginForSubscription(source)) return;
 		selectedSource.value = source;
 		await subscribeSelectedSource();
 	};

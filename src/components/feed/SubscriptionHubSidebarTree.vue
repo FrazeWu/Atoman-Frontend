@@ -29,11 +29,12 @@
 
       <div v-else class="subscription-hub-sidebar__types">
         <section
-          v-for="typeNode in tree.types"
+          v-for="typeNode in typeNodes"
           :key="typeNode.subscription_type"
           class="subscription-hub-sidebar__type"
         >
           <div
+            v-if="!isFixedType"
             class="subscription-hub-sidebar__type-row"
             :class="{ 'is-active': typeNode.subscription_type === activeType }"
           >
@@ -66,9 +67,10 @@
           </div>
 
           <div
-            v-if="expandedType === typeNode.subscription_type"
-            :id="typePanelId(typeNode.subscription_type)"
+            v-if="isFixedType || expandedType === typeNode.subscription_type"
+            :id="isFixedType ? undefined : typePanelId(typeNode.subscription_type)"
             class="subscription-hub-sidebar__groups"
+            :class="{ 'is-flat': isFixedType }"
           >
             <p v-if="!typeNode.groups.length" class="subscription-hub-sidebar__empty">尚无订阅</p>
             <template v-else>
@@ -115,6 +117,7 @@
                   v-if="isSingleDefaultGroup(typeNode) || expandedGroupId === group.id"
                   :id="isSingleDefaultGroup(typeNode) ? undefined : groupPanelId(group.id)"
                   class="subscription-hub-sidebar__memberships"
+                  :class="{ 'is-flat': isFixedType && isSingleDefaultGroup(typeNode) }"
                 >
                   <p v-if="!group.memberships.length" class="subscription-hub-sidebar__empty">尚无订阅</p>
                   <button
@@ -157,6 +160,7 @@ const props = withDefaults(defineProps<{
   error?: string
   collapsed?: boolean
   idPrefix?: string
+  fixedType?: SubscriptionHubType | null
 }>(), {
   activeType: null,
   activeGroupId: null,
@@ -165,6 +169,7 @@ const props = withDefaults(defineProps<{
   error: '',
   collapsed: false,
   idPrefix: 'subscription-hub',
+  fixedType: null,
 })
 
 const emit = defineEmits<{
@@ -173,7 +178,10 @@ const emit = defineEmits<{
   (e: 'retry'): void
 }>()
 
-const typeNodes = computed(() => props.tree.types)
+const typeNodes = computed(() => props.fixedType
+  ? props.tree.types.filter((node) => node.subscription_type === props.fixedType)
+  : props.tree.types)
+const isFixedType = computed(() => props.fixedType !== null)
 const expandedType = ref<SubscriptionHubType | null>(null)
 const expandedGroupId = ref<string | null>(null)
 
@@ -211,7 +219,7 @@ const initialType = () => {
 }
 
 watch(
-  [() => props.activeType, () => props.activeGroupId, () => props.tree.types],
+  [() => props.activeType, () => props.activeGroupId, () => props.fixedType, () => props.tree.types],
   ([activeType, activeGroupId]) => {
     const activeNode = activeType
       ? typeNodes.value.find((node) => node.subscription_type === activeType)
@@ -369,9 +377,17 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   padding: 0.1rem 0 0.35rem 0.35rem;
 }
 
+.subscription-hub-sidebar__groups.is-flat {
+  padding-left: 0;
+}
+
 .subscription-hub-sidebar__memberships {
   gap: 0.05rem;
   padding: 0.05rem 0 0.25rem 1.55rem;
+}
+
+.subscription-hub-sidebar__memberships.is-flat {
+  padding-left: 0.55rem;
 }
 
 .subscription-hub-sidebar__type-select,
@@ -512,6 +528,10 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   padding: 0.35rem 0.55rem 0.5rem 1.75rem;
   color: var(--a-color-muted);
   font-size: 0.76rem;
+}
+
+.subscription-hub-sidebar__groups.is-flat > .subscription-hub-sidebar__empty {
+  padding-left: 0.55rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

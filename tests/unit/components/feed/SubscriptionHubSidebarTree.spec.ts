@@ -198,4 +198,34 @@ describe('SubscriptionHubSidebarTree', () => {
     expect(wrapper.find('[data-testid="subscription-hub-membership-blog-member-1"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('默认分组')
   })
+
+  it('renders a fixed module type without the type layer', () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: {
+        tree,
+        fixedType: 'video',
+        activeType: 'video',
+        activeGroupId: 'video-group',
+      },
+    })
+
+    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(0)
+    expect(wrapper.findAll('.subscription-hub-sidebar__type-toggle')).toHaveLength(0)
+    expect(wrapper.text()).toContain('关注频道')
+    expect(wrapper.text()).toContain('原子谈话')
+    expect(wrapper.text()).not.toContain('常听节目')
+  })
+
+  it('keeps an empty fixed module type visible without the type layer', () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: {
+        tree,
+        fixedType: 'blog',
+        activeType: 'blog',
+      },
+    })
+
+    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(0)
+    expect(wrapper.text()).toContain('尚无订阅')
+  })
 })

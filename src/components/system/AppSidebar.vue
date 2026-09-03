@@ -186,12 +186,13 @@
     <!-- UNIFIED BOTTOM SLOT -->
     <template #bottom>
       <SubscriptionHubSidebarTree
-        v-if="currentModule === 'feed' && authStore && authStore.isAuthenticated"
+        v-if="showSubscriptionHubSidebar"
         id-prefix="desktop"
         :tree="subscriptionHubTree"
         :active-type="activeHubType"
         :active-group-id="activeHubGroupId"
         :active-membership-id="activeHubMembershipId"
+        :fixed-type="subscriptionSidebarType"
         :loading="loadingSubscriptionHubTree"
         :error="subscriptionHubTreeError"
         :collapsed="sidebarCollapsed"
@@ -267,6 +268,20 @@ const currentModule = computed(() => {
   return 'feed'
 })
 
+const subscriptionTypesByModule: Partial<Record<string, SubscriptionHubType>> = {
+  blog: 'blog',
+  podcast: 'podcast',
+  video: 'video',
+}
+
+const subscriptionSidebarType = computed<SubscriptionHubType | null>(() =>
+  subscriptionTypesByModule[currentModule.value] ?? null,
+)
+const showSubscriptionHubSidebar = computed(() => Boolean(
+  authStore?.isAuthenticated
+  && (currentModule.value === 'feed' || subscriptionSidebarType.value),
+))
+
 // 2. Feed Navigation Items & Logic
 const feedNavItems = [
   { to: moduleUrl('feed'), label: '发现', icon: Compass, exact: true },
@@ -287,14 +302,36 @@ const isSubscriptionHubType = (value: unknown): value is SubscriptionHubType =>
   value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
 
 const activeHubType = computed<SubscriptionHubType | null>(() => {
+  if (subscriptionSidebarType.value) return subscriptionSidebarType.value
   const value = route?.query.hub_type
   return isSubscriptionHubType(value) ? value : null
 })
 const activeHubGroupId = computed(() => (route && typeof route.query.hub_group_id === 'string') ? route.query.hub_group_id : null)
 const activeHubMembershipId = computed(() => (route && typeof route.query.hub_membership_id === 'string') ? route.query.hub_membership_id : null)
 
+const subscriptionModulePaths: Partial<Record<SubscriptionHubType, string>> = {
+  blog: '/posts/subscriptions',
+  podcast: '/podcasts/subscriptions',
+  video: '/videos/subscriptions',
+}
+
 const selectSubscriptionHubContext = (selection: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }) => {
   if (!router || !route) return
+
+  const modulePath = subscriptionModulePaths[selection.subscriptionType]
+  if (modulePath && subscriptionSidebarType.value === selection.subscriptionType) {
+    void router.push({
+      path: modulePath,
+      query: {
+        ...route.query,
+        hub_type: undefined,
+        hub_group_id: selection.groupId,
+        hub_membership_id: selection.membershipId,
+      },
+    })
+    return
+  }
+
   void router.push({
     path: '/feed/subscriptions',
     query: {
@@ -330,6 +367,16 @@ const openRSSManagement = () => {
 const reloadSubscriptionHubTree = () => {
   if (feedStore) void feedStore.fetchSubscriptionHubTree()
 }
+
+watch(
+  [subscriptionSidebarType, () => authStore?.isAuthenticated, () => authStore?.token],
+  ([type, isAuthenticated]) => {
+    if (!type || !isAuthenticated || !feedStore) return
+    if (feedStore.loadingSubscriptionHubTree || feedStore.subscriptionHubTree.types.length > 0) return
+    void feedStore.fetchSubscriptionHubTree()
+  },
+  { immediate: true },
+)
 
 // 3. Blog Navigation Items
 const blogNavItems = [

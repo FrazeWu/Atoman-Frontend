@@ -1612,6 +1612,9 @@ watch(
     border-bottom: 0;
     border-left: 0;
     border-radius: 0;
+  }
+
+  .player.is-auto-hidden {
     transform: none !important;
   }
 

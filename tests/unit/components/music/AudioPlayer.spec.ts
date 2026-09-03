@@ -169,6 +169,9 @@ describe("AudioPlayer", () => {
 			/\.player-display-leave-active\s*\{[^}]*animation:\s*player-display-leave\s+320ms/,
 		);
 		expect(source).not.toContain('clip-path: inset(0 0 0 100%)');
+		expect(source).not.toMatch(
+			/@media \(max-width: 767px\)[\s\S]*?\.player\s*\{[^}]*transform:\s*none\s*!important;/,
+		);
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
 		);

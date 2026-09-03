@@ -61,6 +61,33 @@
           @select="openBlogSearchTarget"
         />
       </div>
+      <template v-if="activeQuery">
+        <div class="blog-home__filter-group blog-home__structured-filters" aria-label="结构化筛选">
+          <PSelect
+            v-model="searchAuthorID"
+            label="作者"
+            placeholder="全部作者"
+            :options="authorOptions"
+            @update:model-value="updateSearchAuthor"
+          />
+          <PSelect
+            v-model="searchChannelID"
+            label="频道"
+            placeholder="全部频道"
+            :options="channelOptions"
+            @update:model-value="updateSearchChannel"
+          />
+          <PSelect
+            v-if="searchChannelID"
+            v-model="searchCollectionID"
+            label="合集"
+            placeholder="全部合集"
+            :options="collectionOptions"
+            :disabled="collectionsLoading"
+            @update:model-value="updateSearchCollection"
+          />
+        </div>
+      </template>
       <template v-if="!activeQuery">
         <div class="blog-home__filter-group">
           <PSegmentedControl
@@ -219,6 +246,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 
@@ -243,10 +271,16 @@ interface BlogChannel {
   cover_url?: string
   updated_at?: string
   user?: {
+    uuid?: string
     username?: string
     display_name?: string
     avatar_url?: string
   }
+}
+
+interface BlogCollection {
+  id: string | number
+  name: string
 }
 
 interface BlogHomeListItem {
@@ -347,6 +381,8 @@ const notesLoading = ref(false)
 const pendingDeleteNote = ref<ShortNote | null>(null)
 const deletingNote = ref(false)
 const channels = ref<BlogChannel[]>([])
+const searchCollections = ref<BlogCollection[]>([])
+const collectionsLoading = ref(false)
 const digest = ref<BlogDigestPayload | null>(null)
 const digestLoading = ref(false)
 const digestError = ref(false)
@@ -371,6 +407,9 @@ const activeQuery = computed(() => {
   return typeof value === 'string' ? value.trim() : ''
 })
 const blogSearchQuery = ref(activeQuery.value)
+const searchAuthorID = ref(typeof queryValue(route.query.author_id) === 'string' ? queryValue(route.query.author_id) as string : '')
+const searchChannelID = ref(typeof queryValue(route.query.channel_id) === 'string' ? queryValue(route.query.channel_id) as string : '')
+const searchCollectionID = ref(typeof queryValue(route.query.collection_id) === 'string' ? queryValue(route.query.collection_id) as string : '')
 let postsRequestSequence = 0
 const recordedImpressions = new Set<string>()
 
@@ -403,6 +442,29 @@ const recommendationOptions = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
+
+const channelOptions = computed(() => [
+  { label: '全部频道', value: '' },
+  ...channels.value.map((channel) => ({ label: channel.name, value: String(channel.id) })),
+])
+
+const authorOptions = computed(() => {
+  const authors = new Map<string, string>()
+  for (const channel of channels.value) {
+    const authorID = channel.user?.uuid
+    if (!authorID || authors.has(authorID)) continue
+    authors.set(authorID, channel.user?.display_name || channel.user?.username || authorID)
+  }
+  return [
+    { label: '全部作者', value: '' },
+    ...Array.from(authors, ([value, label]) => ({ value, label })),
+  ]
+})
+
+const collectionOptions = computed(() => [
+  { label: '全部合集', value: '' },
+  ...searchCollections.value.map((collection) => ({ label: collection.name, value: String(collection.id) })),
+])
 
 const isStreamLoading = computed(() => loading.value || notesLoading.value)
 const streamItems = computed<BlogHomeStreamItem[]>(() => {
@@ -466,7 +528,13 @@ const selectRecommendationMode = (value: string) => {
 }
 
 const homeQuery = (search = activeQuery.value) => {
-  if (search) return { q: search }
+  if (search) {
+    const query: Record<string, string> = { q: search }
+    if (searchAuthorID.value) query.author_id = searchAuthorID.value
+    if (searchChannelID.value) query.channel_id = searchChannelID.value
+    if (searchCollectionID.value) query.collection_id = searchCollectionID.value
+    return query
+  }
   const query: Record<string, string> = {}
   if (typeFilter.value !== 'all') query.type = typeFilter.value
   if (typeFilter.value !== 'note' && recommendationMode.value !== 'hot') query.mode = recommendationMode.value
@@ -477,6 +545,22 @@ const syncHomeQuery = () => router.replace({ path: route.path, query: homeQuery(
 
 const submitBlogSearch = (value: string) => {
   void router.replace({ path: route.path, query: homeQuery(value.trim()) })
+}
+
+const updateSearchAuthor = (value: string | number) => {
+  searchAuthorID.value = String(value || '')
+  void syncHomeQuery()
+}
+
+const updateSearchChannel = (value: string | number) => {
+  searchChannelID.value = String(value || '')
+  searchCollectionID.value = ''
+  void syncHomeQuery()
+}
+
+const updateSearchCollection = (value: string | number) => {
+  searchCollectionID.value = String(value || '')
+  void syncHomeQuery()
 }
 
 const clearBlogSearch = () => {
@@ -521,6 +605,23 @@ const fetchChannels = async () => {
     channels.value = Array.isArray(d.data) ? d.data : []
   } catch (error) {
     reportError(error)
+  }
+}
+
+const fetchSearchCollections = async (channelID: string) => {
+  searchCollections.value = []
+  if (!channelID) return
+  collectionsLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.channelCollections(channelID))
+    if (!res.ok) return
+    const payload = await Promise.resolve(res.data) as { data?: BlogCollection[] } | BlogCollection[]
+    const items = Array.isArray(payload) ? payload : payload.data
+    searchCollections.value = Array.isArray(items) ? items : []
+  } catch (error) {
+    reportError(error)
+  } finally {
+    collectionsLoading.value = false
   }
 }
 
@@ -649,18 +750,22 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const query = activeQuery.value
-      ? new URLSearchParams({
-          q: activeQuery.value,
-          sort: 'relevance',
-          page: String(targetPage),
-          page_size: String(PAGE_SIZE),
-        })
-      : new URLSearchParams({
+    let query: URLSearchParams
+    if (activeQuery.value) {
+      query = new URLSearchParams({ q: activeQuery.value })
+      if (searchAuthorID.value) query.set('author_id', searchAuthorID.value)
+      if (searchChannelID.value) query.set('channel_id', searchChannelID.value)
+      if (searchCollectionID.value) query.set('collection_id', searchCollectionID.value)
+      query.set('sort', 'relevance')
+      query.set('page', String(targetPage))
+      query.set('page_size', String(PAGE_SIZE))
+    } else {
+      query = new URLSearchParams({
           mode: recommendationMode.value,
           page: String(targetPage),
           page_size: String(PAGE_SIZE),
         })
+    }
     const endpoint = activeQuery.value
       ? `${api.blog.search}?${query.toString()}`
       : `${api.blog.recommendPosts}?${query.toString()}`
@@ -728,7 +833,7 @@ const loadMore = () => {
 }
 
 onMounted(() => {
-  void Promise.all([fetchPosts(), fetchShortNotes(), fetchChannels(), fetchDigest()])
+  void Promise.all([fetchPosts(), fetchShortNotes(), fetchChannels(), fetchSearchCollections(searchChannelID.value), fetchDigest()])
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchStarredIds()
@@ -740,10 +845,21 @@ onUnmounted(() => {
   postsRequestSequence += 1
 })
 
-watch(activeQuery, (value) => {
-  if (value !== blogSearchQuery.value) blogSearchQuery.value = value
-  void Promise.all([fetchPosts(), fetchShortNotes()])
-})
+watch(
+  [activeQuery, () => queryValue(route.query.author_id), () => queryValue(route.query.channel_id), () => queryValue(route.query.collection_id)],
+  ([value, rawAuthorID, rawChannelID, rawCollectionID], oldValues) => {
+    if (value !== blogSearchQuery.value) blogSearchQuery.value = value
+    const nextAuthorID = typeof rawAuthorID === 'string' ? rawAuthorID : ''
+    const nextChannelID = typeof rawChannelID === 'string' ? rawChannelID : ''
+    const nextCollectionID = typeof rawCollectionID === 'string' ? rawCollectionID : ''
+    searchAuthorID.value = nextAuthorID
+    searchChannelID.value = nextChannelID
+    searchCollectionID.value = nextCollectionID
+    const previousChannelID = typeof oldValues?.[2] === 'string' ? oldValues[2] : ''
+    if (nextChannelID !== previousChannelID) void fetchSearchCollections(nextChannelID)
+    void Promise.all([fetchPosts(), fetchShortNotes()])
+  },
+)
 
 watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => {
   const nextType = normalizeTypeFilter(rawType)

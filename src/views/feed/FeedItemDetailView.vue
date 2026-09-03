@@ -26,7 +26,7 @@
     :reader="reader"
     :related-articles="routeState?.articles || sourceArticles"
     :source="articleSource"
-    :show-source-subscribe="authStore.isAuthenticated"
+    :show-source-subscribe="Boolean(articleSource)"
     :source-subscribe-busy="sourceSubscribeBusy"
     :is-podcast-playing="isPodcastPlaying"
     :has-previous="articleIndex > 0"
@@ -159,7 +159,16 @@ async function openArticleSource() {
 
 async function subscribeSource() {
   const source = articleSource.value
-  if (!source || source.subscribed || !authStore.isAuthenticated || sourceSubscribeBusy.value) return
+  if (!source || source.subscribed || sourceSubscribeBusy.value) return
+  if (!authStore.isAuthenticated) {
+    const redirect = router.resolve({
+      path: route.path,
+      query: route.query,
+      hash: route.hash,
+    }).fullPath
+    await router.push({ path: '/login', query: { redirect } })
+    return
+  }
   if (source.type !== 'external_rss' || !source.rssUrl) return
 
   sourceSubscribeBusy.value = true

@@ -116,4 +116,58 @@ describe("FeedItemDetailView", () => {
 
     expect(router.currentRoute.value.fullPath).toBe("/feed?source_id=source-1");
   });
+
+  it("未登录时也显示 RSS 来源订阅按钮并引导登录", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/feed/items/feed-item-1")) {
+        return response({
+          item: {
+            id: "feed-item-1",
+            feed_source_id: "source-1",
+            feed_source: {
+              id: "source-1",
+              title: "RSS Source",
+              rss_url: "https://example.com/feed.xml",
+            },
+            title: "Subscription article",
+            published_at: "2026-08-28T00:00:00Z",
+          },
+          reader: {},
+        });
+      }
+      return response({ ok: true });
+    });
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/feed/item/:id", component: FeedItemDetailView },
+        { path: "/login", component: { template: "<div />" } },
+      ],
+    });
+    await router.push("/feed/item/feed-item-1");
+    await router.isReady();
+
+    const wrapper = mount(FeedItemDetailView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          FeedArticleSheet: {
+            props: ["showSourceSubscribe"],
+            template: '<button v-if="showSourceSubscribe" data-test="subscribe" @click="$emit(\'subscribe-source\')">订阅来源</button>',
+          },
+          FeedSourceArticlesSheet: true,
+          PEmpty: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-test="subscribe"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.fullPath).toBe(
+      "/login?redirect=/feed/item/feed-item-1",
+    );
+  });
 });

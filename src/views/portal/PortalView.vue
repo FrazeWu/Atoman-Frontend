@@ -1,7 +1,6 @@
 <template>
   <main class="portal-hot">
     <header class="portal-hot__hero">
-      <div class="portal-hot__hero-glow" aria-hidden="true" />
       <div class="portal-hot__hero-content">
         <div class="portal-hot__hero-badge">
           <span class="portal-hot__badge-dot" />
@@ -9,7 +8,7 @@
         </div>
         <h1 class="portal-hot__hero-title">
           3 分钟建立你的<br>
-          <span class="portal-hot__hero-gradient">高质量内容订阅流</span>
+          <span>高质量内容订阅流</span>
         </h1>
         <p class="portal-hot__hero-subtitle">
           聚合博客、播客、音乐与讨论，不用在多个平台反复筛选。
@@ -399,21 +398,9 @@ onMounted(loadHotContent)
   position: relative;
   overflow: hidden;
   padding: 44px 24px 36px;
-  background: linear-gradient(180deg, var(--a-color-surface) 0%, var(--a-color-bg) 100%);
+  background: var(--a-color-surface);
   border-bottom: 1px solid var(--a-color-border-soft);
   text-align: center;
-}
-
-.portal-hot__hero-glow {
-  position: absolute;
-  top: -100px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 300px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--a-color-primary) 12%, transparent) 0%, transparent 70%);
-  pointer-events: none;
-  filter: blur(40px);
 }
 
 .portal-hot__hero-content {
@@ -455,12 +442,6 @@ onMounted(loadHotContent)
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: 0;
-}
-
-.portal-hot__hero-gradient {
-  background: linear-gradient(135deg, var(--a-color-text) 30%, var(--a-color-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .portal-hot__hero-subtitle {

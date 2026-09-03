@@ -110,6 +110,7 @@ export function usePostEditorPublication({
 				summary: post.summary || "",
 				cover_url: post.cover_url || "",
 				visibility: post.visibility || "public",
+				tags: Array.isArray(post.tags) ? post.tags : [],
 			};
 			scheduledAt.value = post.scheduled_at
 				? toLocalDatetimeValue(post.scheduled_at)

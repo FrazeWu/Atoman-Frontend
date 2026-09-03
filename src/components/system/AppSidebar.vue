@@ -168,6 +168,9 @@
       <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact>
         播客大厅
       </PSidebarItem>
+      <PSidebarItem to="/podcasts/subscriptions" :index="2" :icon="Rss">
+        订阅
+      </PSidebarItem>
     </template>
 
     <!-- 9. VIDEO MODULE SIDEBAR -->
@@ -227,7 +230,7 @@ import { useForumStore } from '@/stores/forum'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
-import type { SubscriptionHubType } from '@/types'
+import type { SubscriptionHubSelection, SubscriptionHubType } from '@/types'
 
 const props = defineProps<{
   module?: string
@@ -316,7 +319,7 @@ const subscriptionModulePaths: Partial<Record<SubscriptionHubType, string>> = {
   video: '/videos/subscriptions',
 }
 
-const selectSubscriptionHubContext = (selection: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }) => {
+const selectSubscriptionHubContext = (selection: SubscriptionHubSelection) => {
   if (!router || !route) return
 
   const modulePath = subscriptionModulePaths[selection.subscriptionType]

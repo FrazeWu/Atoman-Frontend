@@ -26,6 +26,7 @@
         :active-type="activeType"
         :active-group-id="activeGroupId"
         :active-membership-id="activeMembershipId"
+        :fixed-type="fixedType"
         :loading="loading"
         :error="error"
         @select-context="emit('select-context', $event)"
@@ -40,7 +41,7 @@
 import { IconChevronLeft as ChevronLeft } from '@tabler/icons-vue'
 import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
 import PSheet from '@/components/ui/PSheet.vue'
-import type { SubscriptionHubTree, SubscriptionHubType } from '@/types'
+import type { SubscriptionHubSelection, SubscriptionHubTree, SubscriptionHubType } from '@/types'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -48,6 +49,7 @@ const props = withDefaults(defineProps<{
   activeType?: SubscriptionHubType | null
   activeGroupId?: string | null
   activeMembershipId?: string | null
+  fixedType?: SubscriptionHubType | null
   loading?: boolean
   error?: string
   presentation?: 'sheet' | 'page'
@@ -55,6 +57,7 @@ const props = withDefaults(defineProps<{
   activeType: null,
   activeGroupId: null,
   activeMembershipId: null,
+  fixedType: null,
   loading: false,
   error: '',
   presentation: 'sheet',
@@ -64,7 +67,7 @@ const { presentation } = props
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'select-context', value: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }): void
+  (e: 'select-context', value: SubscriptionHubSelection): void
   (e: 'manage'): void
   (e: 'retry'): void
 }>()

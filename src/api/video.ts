@@ -1,6 +1,5 @@
 import { apiRequest, apiRequestJson } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
-import { configureApiXHR } from './transport'
 import type { Video } from '@/types'
 
 export type VideoImportStatus = 'pending_upload' | 'uploading' | 'completing' | 'awaiting_submit' | 'publishing' | 'published' | 'draft' | 'scheduled' | 'failed' | 'canceled'
@@ -11,6 +10,8 @@ export interface VideoImportPayload {
   title: string
   description: string
   thumbnail_url: string
+  subtitle_url?: string
+  chapters?: Array<{ title: string; start_sec: number }>
   duration_sec: number
   visibility: 'public' | 'followers' | 'private'
   tags: string[]
@@ -56,6 +57,10 @@ export interface VideoRecommendationPage<T> {
 }
 
 const videoUrl = (path: string) => `${useApiUrl()}/videos${path}`
+const pathSegment = (value: string) => encodeURIComponent(value)
+const queryString = (params: Record<string, string | number>) => new URLSearchParams(
+  Object.entries(params).map(([key, value]) => [key, String(value)]),
+).toString()
 const authHeaders = (token?: string): Record<string, string> => (
   token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : {}
 )
@@ -66,21 +71,29 @@ export interface VideoRatingSummary {
   viewer_rating?: number | null
 }
 
-export const listVideos = (sort: string) => apiRequestJson<Video[]>(videoUrl(`?sort=${sort}`))
+export const listVideos = (sort: string) => apiRequestJson<Video[]>(videoUrl(`?${queryString({ sort })}`))
 export const getVideo = <T = Video>(id: string, token?: string) => (
-  apiRequestJson<T>(videoUrl(`/${id}`), token ? { headers: authHeaders(token) } : undefined)
+  apiRequestJson<T>(videoUrl(`/${pathSegment(id)}`), token ? { headers: authHeaders(token) } : undefined)
 )
-export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUrl(`/${id}/recommended`))
-export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8) => (
-  apiRequestJson<VideoRecommendationPage<T>>(videoUrl(`/recommend/items?mode=${mode}&page=${page}&page_size=${pageSize}`))
+export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUrl(`/${pathSegment(id)}/recommended`))
+export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8, token?: string) => (
+  apiRequestJson<VideoRecommendationPage<T>>(
+    videoUrl(`/recommend/items?${queryString({ mode, page, page_size: pageSize })}`),
+    token ? { headers: authHeaders(token) } : undefined,
+  )
 )
-export const getVideoSubscriptions = (page = 1, pageSize = 20) => (
-  apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`))
+
+export type VideoRecommendationFeedbackScope = 'video' | 'channel' | 'tag'
+export const createVideoRecommendationFeedback = (scope: VideoRecommendationFeedbackScope, targetId: string, token?: string) => (
+  apiRequest(videoUrl('/recommendation-feedback'), { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(token) }, body: JSON.stringify({ scope, target_id: targetId }) })
 )
-export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${id}/view`), { method: 'POST' })
+export const getVideoSubscriptions = (page = 1, pageSize = 20, token?: string) => (
+  apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`), { headers: authHeaders(token) })
+)
+export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${pathSegment(id)}/view`), { method: 'POST' })
 
 export const setVideoRating = (id: string, score: number, token?: string) => (
-  apiRequestJson<VideoRatingSummary>(videoUrl(`/${id}/rating`), {
+  apiRequestJson<VideoRatingSummary>(videoUrl(`/${pathSegment(id)}/rating`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
     body: JSON.stringify({ score }),
@@ -88,7 +101,7 @@ export const setVideoRating = (id: string, score: number, token?: string) => (
 )
 
 export const deleteVideoRating = (id: string, token?: string) => (
-  apiRequestJson<VideoRatingSummary>(videoUrl(`/${id}/rating`), {
+  apiRequestJson<VideoRatingSummary>(videoUrl(`/${pathSegment(id)}/rating`), {
     method: 'DELETE',
     headers: authHeaders(token),
   })
@@ -104,15 +117,28 @@ export function uploadVideoCover(file: File, token?: string) {
   })
 }
 
+export function uploadVideoSubtitle(file: File, token?: string) {
+  const body = new FormData()
+  body.append('subtitle', file)
+  return apiRequestJson<{ url: string }>(videoUrl('/upload-subtitle'), { method: 'POST', headers: authHeaders(token), body })
+}
+
 export function saveVideo(payload: VideoSavePayload, token?: string, id?: string) {
-  return apiRequestJson<Video>(videoUrl(id ? `/${id}` : ''), {
+  return apiRequestJson<Video>(videoUrl(id ? `/${pathSegment(id)}` : ''), {
     method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
     body: JSON.stringify(payload),
   })
 }
 
-const importUrl = (id = '', suffix = '') => videoUrl(`/imports${id ? `/${id}` : ''}${suffix}`)
+export function duplicateVideo(id: string, token?: string) {
+  return apiRequestJson<Video>(videoUrl(`/${pathSegment(id)}/duplicate`), {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+}
+
+const importUrl = (id = '', suffix = '') => videoUrl(`/imports${id ? `/${pathSegment(id)}` : ''}${suffix}`)
 
 export function createVideoImport(file: File, channelId: string | null, token?: string) {
   return apiRequestJson<VideoImportTask>(importUrl(), {
@@ -150,10 +176,7 @@ export function createVideoImportPartUpload(id: string, partNumber: number, toke
 }
 
 export type VideoImportPartUploadOptions = {
-  token?: string
   signal?: AbortSignal
-  timeoutMs?: number
-  onProgress?: (progress: { loaded: number; total: number }) => void
 }
 
 export function uploadVideoImportPart(
@@ -161,60 +184,15 @@ export function uploadVideoImportPart(
   body: Blob,
   options: VideoImportPartUploadOptions = {},
 ): Promise<string> {
-  if (!uploadUrl.startsWith('/')) {
-    return apiRequest(uploadUrl, { method: 'PUT', body, signal: options.signal }).then(async response => {
-      if (!response.ok) throw new Error('视频分片上传失败')
-      const etag = response.headers.get('ETag') || response.headers.get('etag')
-      if (!etag) throw new Error('视频分片上传失败')
-      return etag
-    })
+  if (!/^https:\/\//i.test(uploadUrl)) {
+    return Promise.reject(new Error('视频分片必须使用 R2 预签名上传地址'))
   }
 
-  return new Promise((resolve, reject) => {
-    if (options.signal?.aborted) {
-      reject(new Error('上传已取消'))
-      return
-    }
-    const xhr = new XMLHttpRequest()
-    let settled = false
-    const abort = () => xhr.abort()
-    const settle = (callback: () => void) => {
-      if (settled) return
-      settled = true
-      options.signal?.removeEventListener('abort', abort)
-      callback()
-    }
-
-    const apiUrl = useApiUrl()
-    const requestUrl = uploadUrl.startsWith('/') && /^https?:\/\//i.test(apiUrl)
-      ? new URL(uploadUrl, apiUrl).toString()
-      : uploadUrl
-    xhr.open('PUT', requestUrl)
-    configureApiXHR(xhr, 'PUT')
-    if (options.token && options.token !== 'cookie-session') {
-      xhr.setRequestHeader('Authorization', `Bearer ${options.token}`)
-    }
-    if (options.timeoutMs && options.timeoutMs > 0) xhr.timeout = options.timeoutMs
-    options.signal?.addEventListener('abort', abort, { once: true })
-    xhr.upload.addEventListener('progress', event => {
-      if (event.lengthComputable) options.onProgress?.({ loaded: event.loaded, total: event.total })
-    })
-    xhr.addEventListener('load', () => {
-      if (xhr.status < 200 || xhr.status >= 300) {
-        settle(() => reject(new Error(`视频分片上传失败 (${xhr.status})`)))
-        return
-      }
-      const etag = xhr.getResponseHeader('ETag') || xhr.getResponseHeader('etag')
-      if (!etag) {
-        settle(() => reject(new Error('视频分片上传失败')))
-        return
-      }
-      settle(() => resolve(etag))
-    })
-    xhr.addEventListener('error', () => settle(() => reject(new Error('视频分片上传失败，请重试'))))
-    xhr.addEventListener('timeout', () => settle(() => reject(new Error('视频分片超时，请重试'))))
-    xhr.addEventListener('abort', () => settle(() => reject(new Error('上传已取消'))))
-    xhr.send(body)
+  return apiRequest(uploadUrl, { method: 'PUT', body, signal: options.signal }).then(async response => {
+    if (!response.ok) throw new Error('视频分片上传失败')
+    const etag = response.headers.get('ETag') || response.headers.get('etag')
+    if (!etag) throw new Error('视频分片上传失败')
+    return etag
   })
 }
 

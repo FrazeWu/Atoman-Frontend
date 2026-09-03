@@ -293,7 +293,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  height: 32px;
+  height: var(--a-control-height-md);
   padding: 0 0.65rem 0 0.55rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);

@@ -41,7 +41,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
-import type { SubscriptionHubType } from '@/types'
+import type { SubscriptionHubSelection, SubscriptionHubType } from '@/types'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 const router = useRouter()
@@ -69,7 +69,7 @@ const activeHubType = computed<SubscriptionHubType | null>(() =>
 const activeHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
 const activeHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)
 
-const selectSubscriptionHubContext = (selection: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }) => {
+const selectSubscriptionHubContext = (selection: SubscriptionHubSelection) => {
   mobileSourcesOpen.value = false
   void router.push({
     path: '/feed/subscriptions',

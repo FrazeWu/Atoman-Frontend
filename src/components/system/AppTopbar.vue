@@ -1,7 +1,7 @@
 <template>
   <header class="topbar" :class="{ 'topbar--auth': isAuthRoute, 'is-scrolled': isScrolled }">
     <div class="topbar-inner" :class="{ 'topbar-inner--auth': isAuthRoute }">
-      <div class="brand-link">
+      <div class="brand-link" :class="{ 'brand-link--mobile-visible': !hasSidebar && !isAuthRoute }">
         <button
           v-if="hasSidebar && !isAuthRoute"
           class="topbar-collapse-btn"
@@ -485,6 +485,21 @@ html.dark .topbar--auth {
     display: none;
   }
 
+  .brand-link--mobile-visible {
+    display: flex;
+    min-width: 0;
+    padding: 0 0.75rem;
+  }
+
+  .brand-link--mobile-visible .logo-box {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brand-link--mobile-visible .logo-meta {
+    display: none;
+  }
+
   .mobile-module-switcher {
     display: inline-flex;
   }
@@ -519,8 +534,8 @@ html.dark .topbar--auth {
   color: var(--a-color-fg);
   cursor: pointer;
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: var(--a-control-height-md);
+  height: var(--a-control-height-md);
   border-radius: var(--a-radius-control);
   margin-right: 8px;
   margin-left: -12px;
@@ -539,8 +554,10 @@ html.dark .topbar--auth {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  border-radius: 50%;
+  width: var(--a-control-height-md);
+  height: var(--a-control-height-md);
+  padding: 0;
+  border-radius: var(--a-radius-control);
   color: var(--a-color-text);
   transition: background-color 0.2s;
   margin-right: 0;

@@ -27,6 +27,7 @@ export interface PostEditorDraftForm {
 	summary: string;
 	cover_url: string;
 	visibility: BlogVisibility;
+	tags: string[];
 }
 
 export interface EditorDraftPayload extends PostEditorDraftForm {

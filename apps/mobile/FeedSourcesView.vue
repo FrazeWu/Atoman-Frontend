@@ -24,7 +24,7 @@ import { useRoute, useRouter } from 'vue-router'
 import FeedMobileSourcesSheet from '@/components/feed/FeedMobileSourcesSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
-import type { SubscriptionHubType } from '@/types'
+import type { SubscriptionHubSelection, SubscriptionHubType } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,7 +44,7 @@ const activeHubType = computed<SubscriptionHubType | null>(() =>
 const activeHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
 const activeHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)
 
-const selectSubscriptionHubContext = (selection: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }) => {
+const selectSubscriptionHubContext = (selection: SubscriptionHubSelection) => {
   void router.push({
     path: '/feed/subscriptions',
     query: {

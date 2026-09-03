@@ -554,4 +554,25 @@ describe("MusicCreationArtistStep.vue", () => {
 			wrapper.get('[data-testid="artist-avatar-preview"]').classes(),
 		).toContain("is-square");
 	});
+
+	it("releases the avatar preview URL when the creation step is unmounted", async () => {
+		vi.mocked(uploadMusicAsset).mockResolvedValue({
+			key: "music/avatar-cropped.png",
+			url: "https://img.example/avatar-cropped.png",
+		});
+		const wrapper = mountArtistStep();
+		const input = wrapper.get('[data-testid="artist-avatar-input"]')
+			.element as HTMLInputElement;
+		Object.defineProperty(input, "files", {
+			configurable: true,
+			value: [new File(["avatar"], "avatar.png", { type: "image/png" })],
+		});
+
+		await wrapper.get('[data-testid="artist-avatar-input"]').trigger("change");
+		await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger("click");
+		await flushPromises();
+		wrapper.unmount();
+
+		expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:artist-avatar-preview");
+	});
 });

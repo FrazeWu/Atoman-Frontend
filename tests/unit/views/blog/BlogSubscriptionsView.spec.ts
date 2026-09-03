@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
 import BlogSubscriptionsView from '@/views/blog/BlogSubscriptionsView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -14,7 +15,7 @@ const makeJsonResponse = (data: unknown) =>
     headers: { 'Content-Type': 'application/json' },
   })
 
-async function mountSubscriptionsView() {
+async function mountSubscriptionsView(initialPath = '/posts/subscriptions') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -23,7 +24,7 @@ async function mountSubscriptionsView() {
       { path: '/posts/post/:id', component: { template: '<div />' } },
     ],
   })
-  await router.push('/posts/subscriptions')
+  await router.push(initialPath)
   await router.isReady()
 
   const wrapper = mount(BlogSubscriptionsView, {
@@ -42,7 +43,7 @@ async function mountSubscriptionsView() {
     },
   })
   await flushPromises()
-  return wrapper
+  return { wrapper, router }
 }
 
 describe('BlogSubscriptionsView', () => {
@@ -59,51 +60,31 @@ describe('BlogSubscriptionsView', () => {
     siteAccessStore.access = mergeSiteAccess({ settings: { blog: { features: { 'post.create': true } } } })
   })
 
-  it('显示订阅来源，并按来源筛选文章流', async () => {
+  it('按路由中的分组和来源加载统一订阅更新', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
 
-      if (url.includes('/feed/subscriptions')) {
-        return makeJsonResponse({
-          data: [{
-            id: 'sub-1',
-            title: '作者周报',
-            feed_source: { title: '作者周报' },
-            unread_count: 2,
-            created_at: '2026-07-01T00:00:00Z',
-          }],
-        })
-      }
       if (url.includes('/blog/bookmarks')) {
         return makeJsonResponse({ data: [] })
       }
       if (url.includes('/feed/reading-list')) {
         return makeJsonResponse({ data: [] })
       }
-      if (url.includes('/feed/timeline?') && url.includes('source_id=sub-1')) {
+      if (url.includes('/feed/subscription-hub/tree')) {
+        return makeJsonResponse({ data: { types: [] } })
+      }
+      if (url.includes('/feed/subscription-hub/updates')) {
         return makeJsonResponse({
           data: [{
             type: 'post',
             post: {
               id: 'post-filtered',
-              title: '筛选后的文章',
-              summary: '来自选中的订阅',
+              title: '分组筛选后的文章',
+              summary: '来自统一订阅更新',
               created_at: '2026-07-08T00:00:00Z',
             },
           }],
-        })
-      }
-      if (url.includes('/feed/timeline')) {
-        return makeJsonResponse({
-          data: [{
-            type: 'post',
-            post: {
-              id: 'post-all',
-              title: '全部文章',
-              summary: '来自全部订阅',
-              created_at: '2026-07-07T00:00:00Z',
-            },
-          }],
+          meta: { page: 1, page_size: 12, total: 1, has_more: false },
         })
       }
 
@@ -111,21 +92,30 @@ describe('BlogSubscriptionsView', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const wrapper = await mountSubscriptionsView()
-
-    expect(wrapper.text()).toContain('作者周报')
-    expect(wrapper.text()).toContain('全部文章')
-
-    const sourceButton = wrapper.findAll('button').find((button) => button.text().includes('作者周报'))
-    expect(sourceButton).toBeTruthy()
-
-    await sourceButton!.trigger('click')
-    await flushPromises()
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/feed/timeline?source_id=sub-1'),
-      expect.any(Object),
+    const { wrapper, router } = await mountSubscriptionsView(
+      '/posts/subscriptions?hub_group_id=blog-group&hub_membership_id=blog-member',
     )
-    expect(wrapper.text()).toContain('筛选后的文章')
+
+    const updatesRequest = fetchMock.mock.calls.find(([input]) => String(input).includes('/feed/subscription-hub/updates'))
+    expect(String(updatesRequest?.[0])).toContain('type=blog')
+    expect(String(updatesRequest?.[0])).toContain('group_id=blog-group')
+    expect(String(updatesRequest?.[0])).toContain('membership_id=blog-member')
+    expect(wrapper.text()).toContain('分组筛选后的文章')
+    expect(wrapper.find('.subscription-source-panel').exists()).toBe(false)
+    const picker = wrapper.findComponent(ModuleSubscriptionSourcesPicker)
+    expect(picker.exists()).toBe(true)
+    expect(picker.props()).toMatchObject({
+      subscriptionType: 'blog',
+      subscriptionPath: '/posts/subscriptions',
+    })
+
+    await router.push('/posts/subscriptions?hub_group_id=next-group')
+    await flushPromises()
+    const latestRequest = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((url) => url.includes('/feed/subscription-hub/updates'))
+      .at(-1)
+    expect(latestRequest).toContain('group_id=next-group')
+    expect(latestRequest).not.toContain('membership_id=')
   })
 })

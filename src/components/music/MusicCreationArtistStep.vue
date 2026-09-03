@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -92,6 +92,11 @@ function replaceAvatarPreviewUrl(file: File) {
   }
   avatarPreviewUrl.value = URL.createObjectURL(file)
 }
+
+onBeforeUnmount(() => {
+  if (memberSearchTimer) clearTimeout(memberSearchTimer)
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+})
 
 function triggerFileInput() {
   fileInputRef.value?.click()

@@ -1,123 +1,82 @@
 <template>
   <div class="a-page-xl blog-subscriptions-page">
+    <ModuleSubscriptionSourcesPicker subscription-type="blog" subscription-path="/posts/subscriptions" />
     <PPageHeader title="订阅" accent>
       <template #action>
         <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>
 
-    <div v-if="!authStore.isAuthenticated">
-      <PEmpty title="请先登录" description="登录后查看订阅内容" />
-    </div>
+    <PEmpty v-if="!authStore.isAuthenticated" title="请先登录" description="登录后查看订阅内容" />
 
-    <div v-else class="blog-subscriptions-layout">
-      <aside class="subscription-source-panel">
-        <button
-          type="button"
-          class="subscription-source"
-          :class="{ active: selectedSubscriptionId === null }"
-          @click="selectSubscription(null)"
-        >
-          <span>全部</span>
-          <span>{{ subscriptions.length }}</span>
-        </button>
-        <button
-          v-for="subscription in subscriptions"
-          :key="subscription.id"
-          type="button"
-          class="subscription-source"
-          :class="{ active: selectedSubscriptionId === subscription.id }"
-          @click="selectSubscription(subscription.id)"
-        >
-          <span>{{ subscriptionTitle(subscription) }}</span>
-          <span v-if="subscription.unread_count">{{ subscription.unread_count }}</span>
-        </button>
-      </aside>
+    <section v-else class="subscription-posts">
+      <div v-if="loading && !posts.length" class="a-grid-2">
+        <div v-for="index in 6" :key="index" class="a-skeleton" style="height:12rem" />
+      </div>
 
-      <section class="subscription-posts">
-        <ContentNotificationMode
-          v-if="selectedNotificationSource"
-          :source-type="selectedNotificationSource.sourceType"
-          :source-id="selectedNotificationSource.sourceId"
+      <PEmpty v-else-if="loadError && !posts.length" title="订阅内容加载失败">
+        <template #action>
+          <PButton variant="secondary" size="sm" @click="retry">重试</PButton>
+        </template>
+      </PEmpty>
+
+      <PEmpty v-else-if="!posts.length" title="暂无更新" />
+
+      <div v-else>
+        <p v-if="loadError" class="a-error" role="alert">{{ loadError }}</p>
+        <BlogItemCard
+          v-for="(post, index) in posts"
+          :key="post.id"
+          :item="post"
+          type="post"
+          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+          :bookmarked="starredIds.has(post.id)"
+          :in-reading-list="readingListIds.has(post.id)"
+          @click="blogSheets.openPost(post.id, post.title)"
+          @toggle-bookmark="toggleStar(post.id)"
+          @toggle-reading-list="toggleReadingList(post.id)"
         />
-        <div v-if="loading && !posts.length" class="a-grid-2">
-          <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
-        </div>
+      </div>
 
-        <PEmpty v-else-if="loadError && !posts.length" title="订阅内容加载失败">
-          <template #action>
-            <PButton variant="secondary" size="sm" @click="fetchTimeline()">重试</PButton>
-          </template>
-        </PEmpty>
-
-        <PEmpty v-else-if="!posts.length" title="暂无更新" />
-
-        <div v-else>
-          <p v-if="loadError" class="a-error" role="alert">{{ loadError }}</p>
-          <BlogItemCard
-            v-for="(post, index) in posts"
-            :key="post.id"
-            :item="post"
-            type="post"
-            :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-            :bookmarked="starredIds.has(post.id)"
-            :in-reading-list="readingListIds.has(post.id)"
-            @click="blogSheets.openPost(post.id, post.title)"
-            @toggle-bookmark="toggleStar(post.id)"
-            @toggle-reading-list="toggleReadingList(post.id)"
-          />
-        </div>
-
-        <!-- Load more -->
-        <div v-if="hasMore && !loading" style="display:flex;justify-content:center;margin-top:2rem">
-          <PButton outline @click="loadMore">加载更多</PButton>
-        </div>
-        <div v-else-if="loading && posts.length" style="display:flex;justify-content:center;margin-top:2rem">
-          <p class="a-muted">加载中...</p>
-        </div>
-      </section>
-    </div>
-
+      <div v-if="hasMore && !loading" class="subscription-load-more">
+        <PButton outline @click="loadMore">加载更多</PButton>
+      </div>
+      <p v-else-if="loading && posts.length" class="subscription-loading a-muted">加载中...</p>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { apiRequestResult } from '@/api/client'
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+
+import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PTab from '@/components/ui/PTab.vue'
+import { useBlogSheets } from '@/composables/useBlogSheets'
+import { useKeyboardList } from '@/composables/useKeyboardList'
+import { useModuleSubscriptionTimeline } from '@/composables/feed/useModuleSubscriptionTimeline'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
-import { useApi } from '@/composables/useApi'
-import { useKeyboardList } from '@/composables/useKeyboardList'
-import { useBlogSheets } from '@/composables/useBlogSheets'
-import { moduleRooms } from '@/config/moduleRooms'
-import type { Post, Subscription, TimelineItem } from '@/types'
-import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
-
-// Included components from BlogHomeView as requested, even if not used directly in template
-// to maintain consistency and fulfill requirement
-const _components = { PTab }
+import type { Post } from '@/types'
 
 const blogSheets = useBlogSheets()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const uiStore = useUIStore()
-const api = useApi()
-
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
-const subscriptions = computed(() => feedStore.subscriptions)
-const selectedSubscriptionId = ref<string | null>(null)
-const selectedNotificationSource = computed(() => {
-  const source = subscriptions.value.find(item => item.id === selectedSubscriptionId.value)?.feed_source
-  if (!source?.source_id || (source.source_type !== 'internal_user' && source.source_type !== 'internal_channel')) return null
-  return { sourceType: source.source_type, sourceId: source.source_id }
-})
+const timeline = useModuleSubscriptionTimeline('blog', 12)
+const posts = computed(() => timeline.items.value
+  .filter((item) => item.type === 'post' && item.post)
+  .map((item) => item.post as Post))
+const loading = timeline.loading
+const loadError = timeline.error
+const hasMore = timeline.hasMore
+const retry = () => { void timeline.retry() }
+const loadMore = () => { void timeline.loadMore() }
 
 const toggleStar = (id: string) => {
   void feedStore.togglePostBookmark(id)
@@ -127,29 +86,16 @@ const toggleReadingList = (id: string) => {
   void feedStore.toggleReadingListItem(id)
 }
 
-
-const posts = ref<Post[]>([])
-const loading = ref(true)
-const page = ref(1)
-const hasMore = ref(false)
-const loadError = ref('')
-let timelineRequestSequence = 0
-
 const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: posts,
   section: 'content',
-  onEnter: (post) => {
-    blogSheets.openPost(post.id, post.title)
-  },
+  onEnter: (post) => blogSheets.openPost(post.id, post.title),
   onAction: (key, post) => {
-    switch (key) {
-      case 's': toggleStar(post.id); break
-      case 'l': toggleReadingList(post.id); break
-    }
+    if (key === 's') toggleStar(post.id)
+    if (key === 'l') toggleReadingList(post.id)
   },
 })
 
-// Auto-focus first item when switching to content area
 watch(() => uiStore.focusedSection, (section) => {
   if (section === 'content' && focusedIndex.value === -1 && posts.value.length > 0) {
     focusedIndex.value = 0
@@ -157,170 +103,32 @@ watch(() => uiStore.focusedSection, (section) => {
   }
 })
 
-// Reset focus when posts change
 watch(posts, () => {
   if (focusedIndex.value >= posts.value.length) {
     focusedIndex.value = posts.value.length > 0 ? 0 : -1
   }
 })
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-}
-
-const subscriptionTitle = (subscription: Subscription) =>
-  subscription.title || subscription.feed_source?.title || '订阅'
-
-const fetchTimeline = async (append = false) => {
-  if (!authStore.isAuthenticated) {
-    loading.value = false
-    return false
-  }
-  if (append && loading.value) return false
-  const requestSequence = ++timelineRequestSequence
-  const targetPage = append ? page.value + 1 : 1
-  loading.value = true
-  loadError.value = ''
-  try {
-    const params = new URLSearchParams({
-    })
-    if (selectedSubscriptionId.value) params.set('source_id', selectedSubscriptionId.value)
-    params.set('page', String(targetPage))
-    params.set('limit', '12')
-
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${authStore.token}`
-    }
-
-    const res = await apiRequestResult(`${api.feed.timeline}?${params}`, { headers })
-    if (requestSequence !== timelineRequestSequence) return false
-    if (!res.ok) throw new Error(`Failed to fetch timeline (${res.status})`)
-    const d = await Promise.resolve(res.data)
-    if (requestSequence !== timelineRequestSequence) return false
-      // timeline returns list of items with { type, post, rss_item, ... }
-      const rawData: TimelineItem[] = d.data || []
-      const extractedPosts: Post[] = rawData
-        .filter((item) => item.type === 'post' && item.post)
-        .map((item) => item.post as Post)
-
-      if (append) {
-        posts.value = [...posts.value, ...extractedPosts]
-      } else {
-        posts.value = extractedPosts
-      }
-      hasMore.value = typeof d.meta?.has_more === 'boolean' ? d.meta.has_more : rawData.length === 12
-      page.value = targetPage
-      return true
-  } catch {
-    if (requestSequence !== timelineRequestSequence) return false
-    loadError.value = '订阅内容加载失败'
-    return false
-  } finally {
-    if (requestSequence === timelineRequestSequence) loading.value = false
-  }
-}
-
-const loadMore = () => {
-  void fetchTimeline(true)
-}
-
-const selectSubscription = (id: string | null) => {
-  if (selectedSubscriptionId.value === id) return
-  selectedSubscriptionId.value = id
-  void fetchTimeline()
-}
-
 onMounted(() => {
-  void fetchTimeline()
-  if (authStore.isAuthenticated) {
-    void feedStore.fetchSubscriptions()
-    void feedStore.fetchBookmarkedPostIds()
-    void feedStore.fetchReadingListIds()
-  }
-})
-
-onUnmounted(() => {
-  timelineRequestSequence += 1
+  if (!authStore.isAuthenticated) return
+  void feedStore.fetchBookmarkedPostIds()
+  void feedStore.fetchReadingListIds()
 })
 </script>
 
 <style scoped>
-.blog-entry-cover {
-  width: 4.5rem;
-  height: 4.5rem;
-  object-fit: cover;
-  border-radius: var(--a-radius-control);
-  border: 1px solid var(--a-color-border-soft);
-  transition: transform 0.3s ease;
-}
-
-.blog-subscriptions-layout {
-  display: grid;
-  grid-template-columns: 13.5rem minmax(0, 1fr);
-  gap: 1.75rem;
-  align-items: start;
-}
-
-.subscription-source-panel {
-  position: sticky;
-  top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.subscription-source {
-  display: flex;
-  min-height: 2.85rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-card);
-  background: transparent;
-  color: var(--a-color-text-secondary);
-  cursor: pointer;
-  padding: 0.65rem 1rem;
-  text-align: left;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.subscription-source:hover {
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
-}
-
-.subscription-source.active {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
-  font-weight: 650;
-}
-
 .subscription-posts {
   min-width: 0;
 }
 
-@media (max-width: 767px) {
-  .blog-subscriptions-layout {
-    grid-template-columns: 1fr;
-  }
+.subscription-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
 
-  .subscription-source-panel {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 0.25rem;
-  }
-
-  .subscription-source {
-    min-width: 8rem;
-  }
+.subscription-loading {
+  margin: 2rem 0 0;
+  text-align: center;
 }
 </style>

@@ -482,6 +482,7 @@ export interface Post {
 	weighted_rating_score?: number | null;
 	weighted_rating_count?: number;
 	weighted_rating_active?: boolean;
+	tags?: string[];
 	liked?: boolean;
 	bookmarks_count?: number;
 	channel_followers_count?: number;
@@ -813,11 +814,18 @@ export interface SubscriptionHubGroup {
 
 export interface SubscriptionHubTypeNode {
 	subscription_type: SubscriptionHubType;
+	has_content?: boolean;
 	groups: SubscriptionHubGroup[];
 }
 
 export interface SubscriptionHubTree {
 	types: SubscriptionHubTypeNode[];
+}
+
+export interface SubscriptionHubSelection {
+	subscriptionType: SubscriptionHubType;
+	groupId?: string;
+	membershipId?: string;
 }
 
 export interface Subscription {
@@ -1551,6 +1559,8 @@ export interface VideoPreviewThumbnail {
 	height: number;
 }
 
+export interface VideoChapter { title: string; start_sec: number }
+
 export interface Video {
 	id: string;
 	channel_id: string | null;
@@ -1576,6 +1586,7 @@ export interface Video {
 	rating_count?: number;
 	viewer_rating?: number | null;
 	subtitle_url?: string;
+	chapters?: VideoChapter[];
 	processing_status?: VideoProcessingStatus;
 	processing_error?: string;
 	preview_thumbnails?: VideoPreviewThumbnail[];

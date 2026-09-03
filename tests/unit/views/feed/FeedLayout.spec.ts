@@ -159,7 +159,7 @@ describe("FeedLayout", () => {
     );
   });
 
-  it("selects the first group when a type is chosen", async () => {
+  it("selects the whole module when a type is chosen", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
     await wrapper
@@ -171,7 +171,7 @@ describe("FeedLayout", () => {
         path: "/feed/subscriptions",
         query: expect.objectContaining({
           hub_type: "podcast",
-          hub_group_id: "podcast-group",
+          hub_group_id: undefined,
           hub_membership_id: undefined,
         }),
       }),

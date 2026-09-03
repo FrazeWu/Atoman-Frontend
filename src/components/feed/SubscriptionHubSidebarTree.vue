@@ -1,5 +1,6 @@
 <template>
   <section
+    v-if="shouldRender"
     class="subscription-hub-sidebar"
     :class="{ 'is-collapsed': collapsed }"
     aria-label="订阅"
@@ -44,21 +45,13 @@
               class="subscription-hub-sidebar__type-select"
               :data-testid="`subscription-hub-type-${typeNode.subscription_type}`"
               :aria-current="typeNode.subscription_type === activeType ? 'page' : undefined"
+              :aria-expanded="expandedType === typeNode.subscription_type"
+              :aria-controls="typePanelId(typeNode.subscription_type)"
               @click="selectType(typeNode.subscription_type)"
             >
               <component :is="typeIcon(typeNode.subscription_type)" :size="15" aria-hidden="true" />
               <span class="subscription-hub-sidebar__type-label">{{ typeLabel(typeNode.subscription_type) }}</span>
               <span class="subscription-hub-sidebar__total a-font-meta">{{ membershipCount(typeNode) }}</span>
-            </button>
-            <button
-              type="button"
-              class="subscription-hub-sidebar__type-toggle"
-              :data-testid="`subscription-hub-type-toggle-${typeNode.subscription_type}`"
-              :aria-label="`${expandedType === typeNode.subscription_type ? '收起' : '展开'}${typeLabel(typeNode.subscription_type)}`"
-              :aria-expanded="expandedType === typeNode.subscription_type"
-              :aria-controls="typePanelId(typeNode.subscription_type)"
-              @click="toggleType(typeNode.subscription_type)"
-            >
               <ChevronRight
                 :size="15"
                 aria-hidden="true"
@@ -73,6 +66,19 @@
             class="subscription-hub-sidebar__groups"
             :class="{ 'is-flat': isFixedType }"
           >
+            <button
+              v-if="isFixedType"
+              type="button"
+              class="subscription-hub-sidebar__all"
+              :class="{ 'is-active': !activeGroupId && !activeMembershipId }"
+              :data-testid="`subscription-hub-all-${typeNode.subscription_type}`"
+              :aria-current="!activeGroupId && !activeMembershipId ? 'page' : undefined"
+              @click="selectType(typeNode.subscription_type)"
+            >
+              <List :size="15" aria-hidden="true" />
+              <span>全部来源</span>
+              <span class="subscription-hub-sidebar__total a-font-meta">{{ membershipCount(typeNode) }}</span>
+            </button>
             <p v-if="!typeNode.groups.length" class="subscription-hub-sidebar__empty">尚无订阅</p>
             <template v-else>
               <section
@@ -92,20 +98,12 @@
                     class="subscription-hub-sidebar__group-select"
                     :data-testid="`subscription-hub-group-${group.id}`"
                     :aria-current="group.id === activeGroupId && !activeMembershipId ? 'page' : undefined"
+                    :aria-expanded="expandedGroupId === group.id"
+                    :aria-controls="groupPanelId(group.id)"
                     @click="selectGroup(typeNode.subscription_type, group.id)"
                   >
                     <span>{{ group.name }}</span>
                     <span class="subscription-hub-sidebar__total a-font-meta">{{ group.memberships.length }}</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="subscription-hub-sidebar__group-toggle"
-                    :data-testid="`subscription-hub-group-toggle-${group.id}`"
-                    :aria-label="`${expandedGroupId === group.id ? '收起' : '展开'}${group.name}`"
-                    :aria-expanded="expandedGroupId === group.id"
-                    :aria-controls="groupPanelId(group.id)"
-                    @click="toggleGroup(typeNode.subscription_type, group.id)"
-                  >
                     <ChevronRight
                       :size="13"
                       aria-hidden="true"
@@ -176,6 +174,7 @@ import { computed, ref, watch } from 'vue'
 import {
   IconChevronRight as ChevronRight,
   IconFileText as FileText,
+  IconList as List,
   IconMicrophone as Mic,
   IconRss as Rss,
   IconSettings2 as Settings2,
@@ -183,7 +182,7 @@ import {
 } from '@tabler/icons-vue'
 
 import PAvatar from '@/components/ui/PAvatar.vue'
-import type { SubscriptionHubMembership, SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
+import type { SubscriptionHubMembership, SubscriptionHubSelection, SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
 import { buildSourceFaviconURL, normalizeSourceUrlForCard } from '@/utils/feedSourcePresentation'
 
 const props = withDefaults(defineProps<{
@@ -208,15 +207,19 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  (e: 'select-context', value: { subscriptionType: SubscriptionHubType; groupId: string; membershipId?: string }): void
+  (e: 'select-context', value: SubscriptionHubSelection): void
   (e: 'manage'): void
   (e: 'retry'): void
 }>()
 
 const isFixedType = computed(() => props.fixedType !== null)
-const typeNodes = computed(() => props.fixedType
-  ? props.tree.types.filter((node) => node.subscription_type === props.fixedType)
-  : props.tree.types.filter((node) => membershipCount(node) > 0))
+const typeNodes = computed(() => {
+  if (!props.fixedType) return props.tree.types.filter((node) => membershipCount(node) > 0)
+  return props.tree.types.filter((node) =>
+    node.subscription_type === props.fixedType && node.has_content !== false,
+  )
+})
+const shouldRender = computed(() => !isFixedType.value || props.loading || !!props.error || typeNodes.value.length > 0)
 const expandedType = ref<SubscriptionHubType | null>(null)
 const expandedGroupId = ref<string | null>(null)
 
@@ -322,31 +325,13 @@ const setExpandedType = (subscriptionType: SubscriptionHubType, groupId?: string
 }
 
 const selectType = (subscriptionType: SubscriptionHubType) => {
-  const group = typeNodes.value.find((node) => node.subscription_type === subscriptionType)?.groups[0]
-  setExpandedType(subscriptionType, group?.id)
-  if (group) emit('select-context', { subscriptionType, groupId: group.id })
-}
-
-const toggleType = (subscriptionType: SubscriptionHubType) => {
-  if (expandedType.value === subscriptionType) {
-    expandedType.value = null
-    expandedGroupId.value = null
-    return
-  }
   setExpandedType(subscriptionType)
+  emit('select-context', { subscriptionType })
 }
 
 const selectGroup = (subscriptionType: SubscriptionHubType, groupId: string) => {
   setExpandedType(subscriptionType, groupId)
   emit('select-context', { subscriptionType, groupId })
-}
-
-const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => {
-  if (expandedType.value !== subscriptionType) {
-    setExpandedType(subscriptionType, groupId)
-    return
-  }
-  expandedGroupId.value = expandedGroupId.value === groupId ? null : groupId
 }
 
 </script>
@@ -461,9 +446,8 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 }
 
 .subscription-hub-sidebar__type-select,
-.subscription-hub-sidebar__type-toggle,
 .subscription-hub-sidebar__group-select,
-.subscription-hub-sidebar__group-toggle,
+.subscription-hub-sidebar__all,
 .subscription-hub-sidebar__membership {
   border: 0;
   background: transparent;
@@ -487,23 +471,13 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   display: grid;
   min-width: 0;
   flex: 1;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.55rem;
   min-height: 2.75rem;
   padding: 0.4rem 0.5rem;
   font-size: 0.88rem;
   font-weight: 600;
-}
-
-.subscription-hub-sidebar__type-toggle,
-.subscription-hub-sidebar__group-toggle {
-  display: grid;
-  flex: none;
-  width: 2.75rem;
-  min-height: 2.75rem;
-  place-items: center;
-  padding: 0;
 }
 
 .subscription-hub-sidebar__group-row {
@@ -517,9 +491,10 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 }
 
 .subscription-hub-sidebar__group-select {
-  display: flex;
+  display: grid;
   min-width: 0;
   flex: 1;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.35rem;
   min-height: 2.5rem;
@@ -585,9 +560,8 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 }
 
 .subscription-hub-sidebar__type-select:hover,
-.subscription-hub-sidebar__type-toggle:hover,
 .subscription-hub-sidebar__group-select:hover,
-.subscription-hub-sidebar__group-toggle:hover,
+.subscription-hub-sidebar__all:hover,
 .subscription-hub-sidebar__membership:hover,
 .subscription-hub-sidebar__type-row.is-active,
 .subscription-hub-sidebar__group-row.is-active,
@@ -601,9 +575,8 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 }
 
 .subscription-hub-sidebar__type-select:focus-visible,
-.subscription-hub-sidebar__type-toggle:focus-visible,
 .subscription-hub-sidebar__group-select:focus-visible,
-.subscription-hub-sidebar__group-toggle:focus-visible,
+.subscription-hub-sidebar__all:focus-visible,
 .subscription-hub-sidebar__membership:focus-visible,
 .subscription-hub-sidebar__manage:focus-visible,
 .subscription-hub-sidebar__error button:focus-visible {
@@ -617,14 +590,33 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   font-size: 0.66rem;
 }
 
-.subscription-hub-sidebar__type-toggle svg,
-.subscription-hub-sidebar__group-toggle svg {
+.subscription-hub-sidebar__type-select svg:last-child,
+.subscription-hub-sidebar__group-select svg:last-child {
   transition: transform 0.15s ease;
 }
 
-.subscription-hub-sidebar__type-toggle svg.is-expanded,
-.subscription-hub-sidebar__group-toggle svg.is-expanded {
+.subscription-hub-sidebar__type-select svg.is-expanded,
+.subscription-hub-sidebar__group-select svg.is-expanded {
   transform: rotate(90deg);
+}
+
+.subscription-hub-sidebar__all {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.55rem;
+  border-left: 3px solid transparent;
+  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.subscription-hub-sidebar__all.is-active {
+  border-left-color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
 }
 
 .subscription-hub-sidebar__empty {
@@ -639,8 +631,8 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .subscription-hub-sidebar__type-toggle svg,
-  .subscription-hub-sidebar__group-toggle svg {
+  .subscription-hub-sidebar__type-select svg:last-child,
+  .subscription-hub-sidebar__group-select svg:last-child {
     transition: none;
   }
 }

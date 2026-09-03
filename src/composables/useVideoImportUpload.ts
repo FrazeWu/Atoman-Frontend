@@ -111,11 +111,9 @@ export function useVideoImportUpload() {
       const totalParts = Math.ceil(file.size / task.part_size)
       const completed = new Set(task.completed_parts)
       const bytesForPart = (partNumber: number) => Math.min(task.part_size, file.size - (partNumber - 1) * task.part_size)
-      const activePartBytes = new Map<number, number>()
       const reportProgress = () => {
         const completedBytes = [...completed].reduce((sum, partNumber) => sum + bytesForPart(partNumber), 0)
-        const activeBytes = [...activePartBytes.values()].reduce((sum, bytes) => sum + bytes, 0)
-        setUploadState(id, { progress: file.size ? Math.min(100, Math.round(((completedBytes + activeBytes) / file.size) * 100)) : 0 })
+        setUploadState(id, { progress: file.size ? Math.min(100, Math.round((completedBytes / file.size) * 100)) : 0 })
       }
       reportProgress()
       for (let groupStart = 1; groupStart <= totalParts; groupStart += 3) {
@@ -132,21 +130,13 @@ export function useVideoImportUpload() {
             if (!isCurrent()) throw new Error('上传已取消')
             const controller = new AbortController()
             const releaseController = trackController(id, controller)
-            activePartBytes.set(partNumber, 0)
-            reportProgress()
+            const timeout = setTimeout(() => controller.abort(), VIDEO_PART_TIMEOUT_MS)
             try {
               return await uploadVideoImportPart(signed.upload_url, chunk, {
-                token: token.value,
                 signal: controller.signal,
-                timeoutMs: VIDEO_PART_TIMEOUT_MS,
-                onProgress: progress => {
-                  activePartBytes.set(partNumber, progress.loaded)
-                  reportProgress()
-                },
               })
             } finally {
-              activePartBytes.delete(partNumber)
-              reportProgress()
+              clearTimeout(timeout)
               releaseController()
             }
           })

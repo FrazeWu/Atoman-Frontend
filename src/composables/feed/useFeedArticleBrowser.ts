@@ -285,7 +285,7 @@ export function useFeedArticleBrowser({
 		if (mobile) {
 			const sourceID = source.subscriptionId || source.id;
 			await router.push({
-				path: "/feed/sources",
+				path: "/feed",
 				query: { source_id: sourceID },
 			});
 			return;

@@ -149,7 +149,7 @@ async function openArticleSource() {
   const source = articleSource.value
   if (!source) return
   if (isMobileApp) {
-    await router.push({ path: '/feed/sources', query: { source_id: source.subscriptionId || source.id } })
+    await router.push({ path: '/feed', query: { source_id: source.subscriptionId || source.id } })
     return
   }
   sourceSheetVisible.value = true

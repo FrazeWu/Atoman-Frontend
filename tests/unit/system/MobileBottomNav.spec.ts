@@ -49,13 +49,12 @@ describe("useResponsiveShell", () => {
 		).toEqual(["发现", "搜索", "订阅", "收藏"]);
 	});
 
-	it("keeps all modules in the module switcher collection", () => {
+	it("keeps available modules in the module switcher collection", () => {
 		const items = getMobileMoreItems();
 		const modules = items.map((item: MobileMoreItem) => item.module);
 		expect(modules).toEqual([
 			"feed",
 			"blog",
-			"books",
 			"music",
 			"forum",
 			"debate",

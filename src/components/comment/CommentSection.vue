@@ -76,7 +76,7 @@
     </PButton>
 
     <p v-if="mutationError" class="comment-section__error" role="alert">{{ mutationError }}</p>
-    <CommentReportDialog v-model="reportVisible" :on-submit="submitReport" />
+    <CommentReportDialog v-model="reportVisible" :above-player="abovePlayer" :on-submit="submitReport" />
   </section>
 </template>
 
@@ -107,6 +107,7 @@ const props = withDefaults(defineProps<{
   canDelete?: boolean
   focusCommentId?: string
   focusRootId?: string
+  abovePlayer?: boolean
 }>(), {
   noun: '评论',
   markLabel: undefined,
@@ -115,6 +116,7 @@ const props = withDefaults(defineProps<{
   canDelete: undefined,
   focusCommentId: '',
   focusRootId: '',
+  abovePlayer: false,
 })
 
 const emit = defineEmits<{

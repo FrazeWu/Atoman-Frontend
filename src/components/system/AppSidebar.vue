@@ -187,6 +187,7 @@
     <template #bottom>
       <SubscriptionHubSidebarTree
         v-if="currentModule === 'feed' && authStore && authStore.isAuthenticated"
+        id-prefix="desktop"
         :tree="subscriptionHubTree"
         :active-type="activeHubType"
         :active-group-id="activeHubGroupId"

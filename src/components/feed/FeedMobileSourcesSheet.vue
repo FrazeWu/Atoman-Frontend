@@ -14,6 +14,7 @@
     </header>
     <div class="feed-mobile-sources-sheet" data-testid="feed-mobile-sources-sheet">
       <SubscriptionHubSidebarTree
+        id-prefix="mobile"
         :tree="tree"
         :active-type="activeType"
         :active-group-id="activeGroupId"

@@ -350,7 +350,6 @@ const booksNavItems: { to: string; label: string; icon: Component; exact?: boole
 // 5. Music Navigation Items
 const musicNavItems: { to: string; label: string; icon: Component; exact?: boolean; active?: (path: string) => boolean }[] = [
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass, active: path => path === '/music' || path === '/music/discover' },
-  { to: modulePathUrl('music', '/songs'), label: '歌曲', icon: Search },
   { to: modulePathUrl('music', '/albums'), label: '专辑', icon: Disc3 },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
   { to: modulePathUrl('music', '/bookmarks'), label: '收藏', icon: Bookmark },

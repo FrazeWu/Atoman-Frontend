@@ -7,7 +7,6 @@ vi.mock("@/components/system/AppSidebar.vue", () => ({
 	default: {
 		template: `<nav>
       <div class="sidebar-item" data-to="/music/discover">发现</div>
-      <div class="sidebar-item" data-to="/music/songs">歌曲</div>
       <div class="sidebar-item" data-to="/music/albums">专辑</div>
       <div class="sidebar-item" data-to="/music/artists">艺人</div>
       <div class="sidebar-item" data-to="/music/bookmarks">收藏</div>
@@ -47,21 +46,19 @@ describe("MusicLayout.vue", () => {
 	it("renders the music navigation items", () => {
 		const wrapper = mountLayout();
 		const items = wrapper.findAll(".sidebar-item");
-		expect(items).toHaveLength(7);
+		expect(items).toHaveLength(6);
 		expect(items[0].text()).toContain("发现");
 		expect(items[0].attributes("data-to")).toBe("/music/discover");
-		expect(items[1].text()).toContain("歌曲");
-		expect(items[1].attributes("data-to")).toBe("/music/songs");
-		expect(items[2].text()).toContain("专辑");
-		expect(items[2].attributes("data-to")).toBe("/music/albums");
-		expect(items[3].text()).toContain("艺人");
-		expect(items[3].attributes("data-to")).toBe("/music/artists");
-		expect(items[4].text()).toContain("收藏");
-		expect(items[4].attributes("data-to")).toBe("/music/bookmarks");
-		expect(items[5].text()).toContain("历史");
-		expect(items[5].attributes("data-to")).toBe("/music/history");
-		expect(items[6].text()).toContain("导入");
-		expect(items[6].attributes("data-to")).toBe("/music/imports");
+		expect(items[1].text()).toContain("专辑");
+		expect(items[1].attributes("data-to")).toBe("/music/albums");
+		expect(items[2].text()).toContain("艺人");
+		expect(items[2].attributes("data-to")).toBe("/music/artists");
+		expect(items[3].text()).toContain("收藏");
+		expect(items[3].attributes("data-to")).toBe("/music/bookmarks");
+		expect(items[4].text()).toContain("历史");
+		expect(items[4].attributes("data-to")).toBe("/music/history");
+		expect(items[5].text()).toContain("导入");
+		expect(items[5].attributes("data-to")).toBe("/music/imports");
 	});
 
 	it("marks the music main content area for module-specific scroll behavior", () => {

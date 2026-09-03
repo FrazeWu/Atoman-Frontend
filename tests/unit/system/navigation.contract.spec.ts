@@ -142,6 +142,14 @@ describe("application navigation contracts", () => {
 		expect(router.currentRoute.value.fullPath).toBe("/posts/notes");
 	});
 
+	it("does not render a standalone song entry in the music sidebar", () => {
+		const source = readSource("src/components/system/AppSidebar.vue");
+
+		expect(source).not.toContain(
+			"{ to: modulePathUrl('music', '/songs'), label: '歌曲', icon: Search }",
+		);
+	});
+
 	it("keeps retired Studio copy out of the podcast sidebar", () => {
 		const source = readSource("src/views/podcast/PodcastLayout.vue");
 

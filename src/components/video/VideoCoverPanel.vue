@@ -20,7 +20,7 @@
     </div>
 
     <div v-if="thumbnailUrl" class="ve-cover-preview">
-      <img :src="thumbnailUrl" alt="封面" class="ve-cover-img" />
+      <img :src="resolvedThumbnailUrl" alt="封面" class="ve-cover-img" />
       <label class="ve-cover-reupload">
         <input type="file" accept="image/*" class="ve-file-hidden" :disabled="coverUploading" @change="onCoverFileChange" />
         {{ coverUploading ? '上传中…' : '更换封面' }}
@@ -39,13 +39,17 @@
 <script setup lang="ts">
 import PButton from '@/components/ui/PButton.vue'
 import { IconPhotoPlus as ImagePlus } from '@tabler/icons-vue'
+import { computed } from 'vue'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
-defineProps<{
+const props = defineProps<{
   generatedCoverReady: boolean
   generatedCoverPreview: string
   thumbnailUrl: string
   coverUploading: boolean
 }>()
+
+const resolvedThumbnailUrl = computed(() => props.thumbnailUrl ? resolveMediaURL(props.thumbnailUrl) : '')
 
 const emit = defineEmits<{
   (e: 'use-generated-cover'): void

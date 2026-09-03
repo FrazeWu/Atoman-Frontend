@@ -19,6 +19,7 @@ import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
 type VideoDetailResponse = Video & {
@@ -80,6 +81,8 @@ const isDescriptionTruncated = computed(() => {
   const description = video.value?.description || ''
   return description.length > 180 || description.split('\n').length > 3
 })
+const posterUrl = computed(() => video.value?.thumbnail_url ? resolveMediaURL(video.value.thumbnail_url) : undefined)
+const channelCoverUrl = computed(() => video.value?.channel?.cover_url ? resolveMediaURL(video.value.channel.cover_url) : '')
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const currentPlaybackTime = ref(0)
@@ -510,7 +513,7 @@ async function toggleChannelSubscription() {
             <video
               ref="videoElement"
               :src="video.video_url"
-              :poster="video.thumbnail_url || undefined"
+              :poster="posterUrl"
               class="vd-native"
               playsinline
               preload="metadata"
@@ -564,7 +567,7 @@ async function toggleChannelSubscription() {
         <div class="vd-meta-row">
           <RouterLink v-if="video.channel" :to="`/channel/${video.channel.slug || video.channel_id}`" class="vd-author">
             <span class="vd-author-avatar" aria-hidden="true">
-              <img v-if="video.channel.cover_url" :src="video.channel.cover_url" alt="">
+              <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
               <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
             </span>
             <span class="vd-author-copy">

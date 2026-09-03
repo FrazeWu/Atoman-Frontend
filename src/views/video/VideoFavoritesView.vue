@@ -17,9 +17,8 @@ const loading = ref(false)
 const error = ref('')
 let loadSequence = 0
 const tabOptions = [
-  { label: '视频', value: 'video' },
-  { label: '频道', value: 'channel' },
-  { label: '合集', value: 'collection' },
+  { label: '收藏频道', value: 'channel' },
+  { label: '收藏合集', value: 'collection' },
   { label: '稍后看', value: 'watchLater' },
 ]
 
@@ -32,7 +31,7 @@ async function loadFavorites() {
   loading.value = true
   error.value = ''
   try {
-    if (activeTab.value === 'video' || activeTab.value === 'watchLater') {
+    if (activeTab.value === 'watchLater') {
       const items = (await getVideoResource<Array<{ video?: Video }> | null>('/videos/bookmarks', authStore.token ?? undefined)) ?? []
       if (sequence !== loadSequence) return
       videos.value = items.map(item => item.video).filter((video): video is Video => Boolean(video))
@@ -57,7 +56,7 @@ watch([activeTab, () => authStore.isAuthenticated], () => void loadFavorites(), 
 
 <template>
   <div class="a-page-xl video-favorites-view">
-    <PPageHeader title="视频收藏" mb="1.25rem">
+    <PPageHeader title="视频资料库" mb="1.25rem">
       <template #action>
         <PSegmentedControl v-model="activeTab" :options="tabOptions" />
       </template>
@@ -66,7 +65,7 @@ watch([activeTab, () => authStore.isAuthenticated], () => void loadFavorites(), 
     <div v-if="!authStore.isAuthenticated" class="video-favorites-unauth">
       <PEmpty
         title="请登录后查看视频收藏"
-        description="登录账号以同步你收藏的视频、频道与稍后看清单。"
+        description="登录账号以同步稍后看、收藏频道与收藏合集。"
       >
         <template #action>
           <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
@@ -77,9 +76,9 @@ watch([activeTab, () => authStore.isAuthenticated], () => void loadFavorites(), 
     <template v-else>
       <p v-if="error" class="video-favorites-error">{{ error }}</p>
       <p v-else-if="loading" class="video-favorites-state">加载中...</p>
-      <div v-else-if="activeTab === 'video' || activeTab === 'watchLater'" class="video-favorites-grid">
+      <div v-else-if="activeTab === 'watchLater'" class="video-favorites-grid">
         <PVideoCard v-for="video in videos" :key="video.id" :video="video" />
-        <PEmpty v-if="!videos.length" title="暂无收藏内容" description="浏览视频页面，收藏你感兴趣的视频。" />
+        <PEmpty v-if="!videos.length" title="稍后看为空" description="在视频卡片上加入稍后看，方便继续浏览。" />
       </div>
       <div v-else-if="activeTab === 'channel'" class="video-favorites-links">
         <RouterLink v-for="channel in channels" :key="channel.id" :to="`/channel/${channel.slug || channel.id}`">{{ channel.name }}</RouterLink>

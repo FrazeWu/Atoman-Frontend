@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IconClock as Clock3, IconPlayerPlay as Play } from '@tabler/icons-vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
@@ -17,6 +17,7 @@ const props = defineProps<{
 const router = useRouter()
 const authStore = useAuthStore()
 const bookmarks = useVideoBookmarks()
+const watchLaterError = ref('')
 const avatarUrl = computed(() => {
   const url = props.video.channel?.cover_url?.trim() || props.video.user?.avatar_url?.trim() || ''
   return url ? resolveMediaURL(url) : ''
@@ -27,7 +28,12 @@ async function toggleWatchLater() {
     await router.push('/login')
     return
   }
-  await bookmarks.toggle(String(props.video.id))
+  watchLaterError.value = ''
+  try {
+    await bookmarks.toggle(String(props.video.id))
+  } catch {
+    watchLaterError.value = '稍后看失败，请重试'
+  }
 }
 
 function fmtDuration(sec: number): string {
@@ -73,14 +79,15 @@ const avatarLetter = () =>
       <button
         type="button"
         class="vc-watch-later"
-        :class="{ 'is-active': bookmarks.isBookmarked(String(video.id)) }"
+        :class="{ 'is-active': bookmarks.isBookmarked(String(video.id)), 'is-error': watchLaterError }"
         :disabled="bookmarks.isPending(String(video.id))"
-        :aria-label="`${bookmarks.isBookmarked(String(video.id)) ? '取消稍后看' : '稍后看'} ${video.title}`"
-        :title="bookmarks.isBookmarked(String(video.id)) ? '取消稍后看' : '稍后看'"
+        :aria-label="watchLaterError || `${bookmarks.isBookmarked(String(video.id)) ? '取消稍后看' : '稍后看'} ${video.title}`"
+        :title="watchLaterError || (bookmarks.isBookmarked(String(video.id)) ? '取消稍后看' : '稍后看')"
         @click="toggleWatchLater"
       >
         <Clock3 :size="18" aria-hidden="true" />
       </button>
+      <span v-if="watchLaterError" class="vc-watch-later-error" role="status">{{ watchLaterError }}</span>
     </div>
 
     <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-info">
@@ -186,6 +193,32 @@ const avatarLetter = () =>
   color: var(--a-color-fg);
   cursor: pointer;
   transition: opacity 0.2s ease, background-color 0.15s ease;
+}
+
+.vc-watch-later.is-active {
+  opacity: 1;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+}
+
+.vc-watch-later.is-error {
+  opacity: 1;
+  border-color: var(--a-color-danger);
+  color: var(--a-color-danger);
+}
+
+.vc-watch-later-error {
+  position: absolute;
+  top: 8px;
+  right: 48px;
+  z-index: 2;
+  max-width: calc(100% - 56px);
+  padding: 0.35rem 0.5rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-danger);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .vc-card:hover .vc-watch-later,

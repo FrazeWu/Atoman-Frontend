@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -15,6 +15,7 @@ const channels = ref<Array<{ id: string; name: string; slug?: string }>>([])
 const collections = ref<Array<{ id: string; name: string }>>([])
 const loading = ref(false)
 const error = ref('')
+let loadSequence = 0
 const tabOptions = [
   { label: '视频', value: 'video' },
   { label: '频道', value: 'channel' },
@@ -23,29 +24,35 @@ const tabOptions = [
 ]
 
 async function loadFavorites() {
-  if (!authStore.isAuthenticated) return
+  const sequence = ++loadSequence
+  if (!authStore.isAuthenticated) {
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = ''
   try {
     if (activeTab.value === 'video' || activeTab.value === 'watchLater') {
-      const items = await getVideoResource<Array<{ video?: Video }>>('/videos/bookmarks', authStore.token ?? undefined)
+      const items = (await getVideoResource<Array<{ video?: Video }> | null>('/videos/bookmarks', authStore.token ?? undefined)) ?? []
+      if (sequence !== loadSequence) return
       videos.value = items.map(item => item.video).filter((video): video is Video => Boolean(video))
     } else if (activeTab.value === 'channel') {
-      const items = await getVideoResource<Array<{ channel?: { id: string; name: string; slug?: string } }>>('/videos/channel-bookmarks', authStore.token ?? undefined)
+      const items = (await getVideoResource<Array<{ channel?: { id: string; name: string; slug?: string } }> | null>('/videos/channel-bookmarks', authStore.token ?? undefined)) ?? []
+      if (sequence !== loadSequence) return
       channels.value = items.map(item => item.channel).filter((channel): channel is { id: string; name: string; slug?: string } => Boolean(channel))
     } else {
-      const items = await getVideoResource<Array<{ collection?: { id: string; name: string } }>>('/videos/collection-bookmarks', authStore.token ?? undefined)
+      const items = (await getVideoResource<Array<{ collection?: { id: string; name: string } }> | null>('/videos/collection-bookmarks', authStore.token ?? undefined)) ?? []
+      if (sequence !== loadSequence) return
       collections.value = items.map(item => item.collection).filter((collection): collection is { id: string; name: string } => Boolean(collection))
     }
   } catch {
-    error.value = '收藏加载失败，请重试'
+    if (sequence === loadSequence) error.value = '收藏加载失败，请重试'
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 
-onMounted(() => void loadFavorites())
-watch(activeTab, () => void loadFavorites())
+watch([activeTab, () => authStore.isAuthenticated], () => void loadFavorites(), { immediate: true })
 </script>
 
 <template>

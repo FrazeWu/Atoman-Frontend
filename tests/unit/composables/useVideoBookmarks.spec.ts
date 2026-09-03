@@ -44,4 +44,23 @@ describe('useVideoBookmarks', () => {
     expect(bookmarks.isBookmarked('video-3')).toBe(false)
     expect(bookmarks.errorMessage.value).toBe('稍后再试')
   })
+
+  it('does not let a late load response erase a completed toggle', async () => {
+    let releaseLoad!: (value: Response) => void
+    const pendingLoad = new Promise<Response>(resolve => {
+      releaseLoad = resolve
+    })
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(pendingLoad)
+      .mockResolvedValueOnce(response({ id: 'bookmark-4', video_id: 'video-4' }, 201))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const bookmarks = useVideoBookmarks()
+    const loadPromise = bookmarks.load()
+    await bookmarks.toggle('video-4')
+    releaseLoad(response([]))
+    await loadPromise
+
+    expect(bookmarks.isBookmarked('video-4')).toBe(true)
+  })
 })

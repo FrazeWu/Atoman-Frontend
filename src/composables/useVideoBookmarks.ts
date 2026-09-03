@@ -9,6 +9,8 @@ const records = ref<Record<string, VideoBookmark>>({})
 const loading = ref(false)
 const pendingIds = ref(new Set<string>())
 const errorMessage = ref('')
+const localChanges = new Map<string, VideoBookmark | null>()
+let loadSequence = 0
 
 export function useVideoBookmarks() {
   const endpoints = useApi().videos
@@ -18,13 +20,25 @@ export function useVideoBookmarks() {
   const isPending = (videoId: string) => pendingIds.value.has(videoId)
 
   async function load() {
+    const sequence = ++loadSequence
     loading.value = true
     errorMessage.value = ''
     try {
-      const items = await apiGet<VideoBookmark[]>(endpoints.bookmarks)
-      records.value = Object.fromEntries(items.map(item => [String(item.video_id), item]))
+      const items = await apiGet<VideoBookmark[] | null>(endpoints.bookmarks)
+      if (sequence !== loadSequence) return
+
+      const next = Object.fromEntries((items ?? []).map(item => [String(item.video_id), item]))
+      for (const [videoId, change] of localChanges) {
+        if (change) next[videoId] = change
+        else delete next[videoId]
+      }
+      records.value = next
+      localChanges.clear()
+    } catch (error) {
+      if (sequence === loadSequence) errorMessage.value = '稍后看加载失败，请重试'
+      throw error
     } finally {
-      loading.value = false
+      if (sequence === loadSequence) loading.value = false
     }
   }
 
@@ -39,9 +53,11 @@ export function useVideoBookmarks() {
         const next = { ...records.value }
         delete next[videoId]
         records.value = next
+        localChanges.set(videoId, null)
       } else {
         const created = await apiPostJson<VideoBookmark>(endpoints.bookmarks, { video_id: videoId })
         records.value = { ...records.value, [videoId]: created }
+        localChanges.set(videoId, created)
       }
     } catch (error) {
       errorMessage.value = '稍后再试'
@@ -54,9 +70,11 @@ export function useVideoBookmarks() {
   }
 
   function reset() {
+    loadSequence += 1
     records.value = {}
     pendingIds.value = new Set()
     errorMessage.value = ''
+    localChanges.clear()
   }
 
   return { records, loading, errorMessage, isBookmarked, bookmarkId, isPending, load, toggle, reset }

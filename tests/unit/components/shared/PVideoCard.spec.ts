@@ -119,4 +119,14 @@ describe('PVideoCard.vue', () => {
     await guestCard.get('.vc-watch-later').trigger('click')
     expect(cardMocks.push).toHaveBeenCalledWith('/login')
   })
+
+  it('shows a retry state when watch-later fails', async () => {
+    cardMocks.toggle.mockRejectedValueOnce(new Error('network'))
+    const wrapper = mountCard()
+
+    await wrapper.get('.vc-watch-later').trigger('click')
+
+    expect(wrapper.get('.vc-watch-later').classes()).toContain('is-error')
+    expect(wrapper.get('.vc-watch-later-error').text()).toContain('稍后看失败')
+  })
 })

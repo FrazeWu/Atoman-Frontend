@@ -2,8 +2,11 @@ import { computed, ref } from 'vue'
 
 import { apiDeleteJson, apiGet, apiPostJson } from '@/api/client'
 import { useApi } from '@/composables/useApi'
+import type { Video } from '@/types'
 
-type VideoBookmark = { id: string; video_id: string }
+export type VideoBookmark = { id: string; video_id: string; video?: Video }
+export type VideoBookmarkState = 'active' | 'completed' | 'all'
+export type VideoBookmarkSort = 'latest' | 'popular'
 
 const records = ref<Record<string, VideoBookmark>>({})
 const loading = ref(false)
@@ -19,12 +22,13 @@ export function useVideoBookmarks() {
   const bookmarkId = (videoId: string) => records.value[videoId]?.id ?? null
   const isPending = (videoId: string) => pendingIds.value.has(videoId)
 
-  async function load() {
+  async function load(state: VideoBookmarkState = 'active', sort: VideoBookmarkSort = 'latest') {
     const sequence = ++loadSequence
     loading.value = true
     errorMessage.value = ''
     try {
-      const items = await apiGet<VideoBookmark[] | null>(endpoints.bookmarks)
+      const query = new URLSearchParams({ state, sort })
+      const items = await apiGet<VideoBookmark[] | null>(`${endpoints.bookmarks}?${query}`)
       if (sequence !== loadSequence) return
 
       const next = Object.fromEntries((items ?? []).map(item => [String(item.video_id), item]))
@@ -69,6 +73,31 @@ export function useVideoBookmarks() {
     }
   }
 
+  async function remove(videoId: string) {
+    const bookmark = records.value[videoId]
+    if (!bookmark || isPending(videoId)) return
+    pendingIds.value = new Set([...pendingIds.value, videoId])
+    errorMessage.value = ''
+    try {
+      await apiDeleteJson(endpoints.bookmark(bookmark.id))
+      const next = { ...records.value }
+      delete next[videoId]
+      records.value = next
+      localChanges.set(videoId, null)
+    } catch (error) {
+      errorMessage.value = '稍后再试'
+      throw error
+    } finally {
+      const next = new Set(pendingIds.value)
+      next.delete(videoId)
+      pendingIds.value = next
+    }
+  }
+
+  async function removeMany(videoIds: string[]) {
+    for (const videoId of videoIds) await remove(videoId)
+  }
+
   function reset() {
     loadSequence += 1
     records.value = {}
@@ -77,5 +106,5 @@ export function useVideoBookmarks() {
     localChanges.clear()
   }
 
-  return { records, loading, errorMessage, isBookmarked, bookmarkId, isPending, load, toggle, reset }
+  return { records, loading, errorMessage, isBookmarked, bookmarkId, isPending, load, toggle, remove, removeMany, reset }
 }

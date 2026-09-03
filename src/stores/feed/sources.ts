@@ -81,6 +81,12 @@ export const createFeedSourcesState = ({
 	let sessionGeneration = 0;
 	const isCurrentSession = (generation: number) =>
 		generation === sessionGeneration;
+	const refreshAndConfirmSubscription = async (
+		matches: (subscription: Subscription) => boolean,
+	) => {
+		const refreshed = await fetchSubscriptions();
+		return refreshed && subscriptions.value.some(matches);
+	};
 
 	const requestEntitySubscription = async (
 		entity: "channel" | "collection",
@@ -157,12 +163,10 @@ export const createFeedSourcesState = ({
 		const normalized = normalizeRssUrl(rssUrl);
 		if (!normalized) return false;
 		const generation = sessionGeneration;
-		const refreshAndConfirmSubscription = async () => {
-			const refreshed = await fetchSubscriptions();
-			return refreshed && subscriptions.value.some((subscription) => (
+		const confirmRssSubscription = () =>
+			refreshAndConfirmSubscription((subscription) => (
 				normalizeRssUrl(subscription.feed_source?.rss_url || "") === normalized
 			));
-		};
 
 		try {
 			const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
@@ -178,12 +182,12 @@ export const createFeedSourcesState = ({
 				}),
 			});
 			if (res.ok && isCurrentSession(generation)) {
-				return refreshAndConfirmSubscription();
+				return confirmRssSubscription();
 			}
 			if (res.status === 400 || res.status === 409) {
 				const data = res.data;
 				if (isCurrentSession(generation) && isAlreadySubscribedPayload(data)) {
-					return refreshAndConfirmSubscription();
+					return confirmRssSubscription();
 				}
 			}
 		} catch (e) {
@@ -240,8 +244,9 @@ export const createFeedSourcesState = ({
 					return false;
 				}
 			}
-			await fetchSubscriptions();
-			return true;
+			return refreshAndConfirmSubscription(
+				(subscription) => subscription.id === subscriptionId,
+			);
 		} catch (e) {
 			reportError(e, "Failed to add subscription");
 			if (isCurrentSession(generation)) error.value = "网络错误";
@@ -338,8 +343,11 @@ export const createFeedSourcesState = ({
 				error.value = apiErrorMessage(data, "添加失败");
 				return false;
 			}
-			await fetchSubscriptions();
-			return true;
+			const subscriptionId = data.data?.id;
+			if (!subscriptionId) return false;
+			return refreshAndConfirmSubscription(
+				(subscription) => subscription.id === subscriptionId,
+			);
 		} catch (e) {
 			reportError(e, "Failed to auto add subscription");
 			if (isCurrentSession(generation)) error.value = "网络错误";

@@ -753,6 +753,43 @@ describe("VideoDetailView shared interactions", () => {
 		);
 	});
 
+	it("cancels an ended-video countdown when the viewer manually selects a collection video", async () => {
+		vi.useFakeTimers();
+		const collection = { id: "collection-1", name: "设计入门" };
+		const current = makeVideo("video-1", "当前视频", {
+			storage_type: "local", collection_id: collection.id, collection, collections: [collection],
+		});
+		const next = makeVideo("video-2", "手动选择的视频", {
+			storage_type: "local", collection_id: collection.id, collection, collections: [collection],
+		});
+		const afterNext = makeVideo("video-3", "不应自动跳转的视频", {
+			storage_type: "local", collection_id: collection.id, collection, collections: [collection],
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = String(input);
+				if (init?.method === "POST" && url.endsWith("/view")) return makeJsonResponse({});
+				if (url.endsWith("/videos/video-1")) return makeJsonResponse(current);
+				if (url.endsWith("/videos/video-1/recommended")) return makeJsonResponse([]);
+				if (url.endsWith("/videos/video-2")) return makeJsonResponse(next);
+				if (url.endsWith("/videos/video-2/recommended")) return makeJsonResponse([]);
+				if (url.endsWith("/videos?collection_id=collection-1")) return makeJsonResponse([current, next, afterNext]);
+				throw new Error(`unexpected fetch: ${url}`);
+			}),
+		);
+
+		const { wrapper, router } = await mountVideoDetail("/videos/watch/video-1?collection=collection-1");
+		await wrapper.get("video").trigger("ended");
+		wrapper.getComponent(VideoCollectionPlaylistStub).vm.$emit("select", "video-2");
+		await flushPromises();
+		await vi.advanceTimersByTimeAsync(3_000);
+		await flushPromises();
+
+		expect(router.currentRoute.value.fullPath).toBe("/videos/watch/video-2?collection=collection-1");
+		vi.useRealTimers();
+	});
+
 	it("falls back to the author-selected primary collection when the query collection omits the video", async () => {
 		const primary = { id: "collection-primary", name: "主合集" };
 		const current = makeVideo("video-1", "当前视频", {

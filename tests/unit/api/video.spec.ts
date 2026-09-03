@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { uploadVideoImportPart } from '@/api/video'
+import {
+  getRecommendedVideos,
+  getVideo,
+  getVideoRecommendations,
+  listVideos,
+  duplicateVideo,
+  createVideoRecommendationFeedback,
+  uploadVideoImportPart,
+} from '@/api/video'
 
 describe('video import API', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -72,5 +80,50 @@ describe('video import API', () => {
     xhr.emit('timeout')
 
     await expect(result).rejects.toThrow('视频分片超时，请重试')
+  })
+
+  it('encodes video path segments and query values', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listVideos('latest&visibility=private')
+    await getVideo('video/one?draft=true')
+    await getRecommendedVideos('video/one?draft=true')
+    await getVideoRecommendations('for-you&limit=100', 1, 8, 'token-1')
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/videos?sort=latest%26visibility%3Dprivate',
+      '/api/v1/videos/video%2Fone%3Fdraft%3Dtrue',
+      '/api/v1/videos/video%2Fone%3Fdraft%3Dtrue/recommended',
+      '/api/v1/videos/recommend/items?mode=for-you%26limit%3D100&page=1&page_size=8',
+    ])
+    expect(fetchMock.mock.calls[3][1]).toEqual(expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer token-1' }),
+    }))
+  })
+
+  it('creates a draft copy through the video endpoint', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'copy-1' }), { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await duplicateVideo('video/one', 'token-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos/video%2Fone/duplicate', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer token-1' }),
+    }))
+  })
+
+  it('submits video recommendation feedback with an authenticated scope', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await createVideoRecommendationFeedback('channel', 'channel-1', 'token-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos/recommendation-feedback', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer token-1' }),
+      body: JSON.stringify({ scope: 'channel', target_id: 'channel-1' }),
+    }))
   })
 })

@@ -100,4 +100,39 @@ describe("BlogHomeView query search", () => {
       "/api/v1/blog/search?q=atom&author_id=author-1&channel_id=channel-1&collection_id=collection-1&sort=relevance&page=1&page_size=20",
     );
   });
+
+  it("uses the search endpoint for a tag-only aggregation page", async () => {
+    mocks.routeQuery = { tag: "design" };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        async () => new Response(JSON.stringify({ data: [] }), { status: 200 }),
+      );
+
+    mount(BlogHomeView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          PAvatar: true,
+          PBadge: true,
+          PButton: true,
+          PClip: true,
+          PEmpty: true,
+          PContentCard: true,
+          PPageHeader: true,
+          PSegmentedControl: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(requestedUrls).toContain(
+      "/api/v1/blog/search?tag=design&sort=relevance&page=1&page_size=20",
+    );
+    expect(
+      requestedUrls.some((url) => url.includes("/blog/recommend/posts")),
+    ).toBe(false);
+  });
 });

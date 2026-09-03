@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Video } from '@/types'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   videos: Video[]
 }>()
+const failedThumbnailIds = ref(new Set<string>())
 
 function fmtDuration(seconds: number) {
   if (!seconds) return ''
@@ -19,6 +22,15 @@ function sourceLabel(video: Video) {
   const accountName = video.user?.username?.trim()
   return [channelName, accountName].filter(Boolean).join(' · ')
 }
+
+function thumbnailUrl(video: Video) {
+  if (failedThumbnailIds.value.has(video.id)) return ''
+  return video.thumbnail_url ? resolveMediaURL(video.thumbnail_url) : ''
+}
+
+function markThumbnailFailed(videoID: string) {
+  failedThumbnailIds.value = new Set(failedThumbnailIds.value).add(videoID)
+}
 </script>
 
 <template>
@@ -29,7 +41,7 @@ function sourceLabel(video: Video) {
     <div class="vrr__grid">
       <RouterLink v-for="item in videos" :key="item.id" class="vrr__card" :to="`/videos/watch/${item.id}`">
         <div class="vrr__thumbnail">
-          <img v-if="item.thumbnail_url" :src="item.thumbnail_url" :alt="item.title" loading="lazy">
+          <img v-if="thumbnailUrl(item)" :src="thumbnailUrl(item)" :alt="item.title" loading="lazy" @error="markThumbnailFailed(item.id)">
           <span v-else class="vrr__placeholder" aria-hidden="true" />
           <time v-if="item.duration_sec" class="vrr__duration">{{ fmtDuration(item.duration_sec) }}</time>
         </div>

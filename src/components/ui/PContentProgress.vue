@@ -141,15 +141,14 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   min-height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  align-items: start;
+  gap: 1rem;
 }
 
 .p-content-progress__skeleton-wrapper {
-  position: absolute;
-  inset: 0;
-  opacity: 0.45;
+  position: relative;
+  opacity: 0.6;
   pointer-events: none;
   overflow: hidden;
 }
@@ -157,11 +156,13 @@ onUnmounted(() => {
 /* 居中加载区 */
 .p-content-progress__loader {
   position: relative;
-  z-index: 10;
+  order: -1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 1rem;
 }
 
 /* 轨道 */

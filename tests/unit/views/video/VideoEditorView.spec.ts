@@ -384,12 +384,22 @@ describe('VideoEditorView', () => {
       const url = String(input)
       if (url.endsWith('/videos/video-1')) return makeJsonResponse({
         id: 'video-1', channel_id: 'channel-2', title: '旧视频', description: '', storage_type: 'external',
-        video_url: 'https://example.com/video', thumbnail_url: '', visibility: 'public', tags: [], collections: [],
+        video_url: 'https://example.com/video', thumbnail_url: '', subtitle_url: 'https://example.com/subtitles.vtt',
+        chapters: [{ title: '开场', start_sec: 0 }], visibility: 'public', tags: [], collections: [],
       })
+      if (url.endsWith('/videos/video-1/duplicate') && init?.method === 'POST') return makeJsonResponse({ id: 'video-copy-1' })
       throw new Error(`unexpected fetch: ${url}`)
     }))
-    const { studio } = await setup('/studio/video/video-1/edit')
+    const { wrapper, router, studio } = await setup('/studio/video/video-1/edit')
     expect(studio.selectChannel).toHaveBeenCalledWith('channel-2')
     expect(studio.loadCollections).toHaveBeenCalledWith('video')
+    expect(wrapper.vm.$.setupState.form.subtitle_url).toBe('https://example.com/subtitles.vtt')
+    expect(wrapper.vm.$.setupState.form.chapters).toEqual([{ title: '开场', start_sec: 0 }])
+
+    const copyButton = wrapper.findAll('button').find(button => button.text().includes('复制为草稿'))
+    expect(copyButton).toBeDefined()
+    await copyButton!.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/video-copy-1/edit')
   })
 })

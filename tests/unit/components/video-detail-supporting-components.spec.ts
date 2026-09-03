@@ -91,4 +91,29 @@ describe('video detail supporting components', () => {
     expect(wrapper.get('a').attributes('href')).toBe('/videos/watch/video-3')
     expect(wrapper.text()).toContain('设计观察室 · atoman')
   })
+
+  it('uses the media URL resolver for object-storage recommendation covers', () => {
+    const wrapper = mount(VideoRecommendationRow, {
+      props: {
+        videos: [makeVideo('video-4', '对象存储封面', {
+          thumbnail_url: 'http://localhost:9100/atoman-dev/video/covers/video-4.jpg',
+        })],
+      },
+    })
+
+    expect(wrapper.get('img').attributes('src')).toBe('/__object-storage/atoman-dev/video/covers/video-4.jpg')
+  })
+
+  it('falls back to an empty recommendation thumbnail when the cover cannot load', async () => {
+    const wrapper = mount(VideoRecommendationRow, {
+      props: {
+        videos: [makeVideo('video-5', '失效封面', { thumbnail_url: 'https://cdn.example.test/missing-cover.jpg' })],
+      },
+    })
+
+    await wrapper.get('img').trigger('error')
+
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.find('.vrr__placeholder').exists()).toBe(true)
+  })
 })

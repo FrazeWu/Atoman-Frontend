@@ -344,6 +344,30 @@ describe("VideoDetailView shared interactions", () => {
 		expect(play).toHaveBeenCalled();
 	});
 
+	it("本地对象存储的视频与字幕通过开发代理加载", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = String(input);
+				if (init?.method === "POST" && url.endsWith("/view")) return makeJsonResponse({});
+				if (url.endsWith("/videos/video-1")) {
+					return makeJsonResponse(makeVideo("video-1", "对象存储视频", {
+						storage_type: "local",
+						video_url: "http://localhost:9100/atoman-dev/video/imports/source.mp4",
+						subtitle_url: "http://localhost:9100/atoman-dev/video/subtitles/source.vtt",
+					}));
+				}
+				if (url.endsWith("/videos/video-1/recommended")) return makeJsonResponse([]);
+				throw new Error(`unexpected fetch: ${url}`);
+			}),
+		);
+
+		const { wrapper } = await mountVideoDetail();
+
+		expect(wrapper.get("video").attributes("src")).toBe("/__object-storage/atoman-dev/video/imports/source.mp4");
+		expect(wrapper.get("track").attributes("src")).toBe("/__object-storage/atoman-dev/video/subtitles/source.vtt");
+	});
+
 	it("本地保存的中段进度要求用户选择继续或从头播放", async () => {
 		vi.stubGlobal(
 			"fetch",

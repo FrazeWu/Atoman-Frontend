@@ -2,7 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { cancelVideoImport, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, type VideoImportPayload } from '@/api/video'
+import { cancelVideoImport, duplicateVideo, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, uploadVideoSubtitle, type VideoImportPayload } from '@/api/video'
 import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -12,7 +12,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PCreationSteps from '@/components/ui/PCreationSteps.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconUpload as Upload, IconVideo as VideoIcon, IconX as X } from '@tabler/icons-vue'
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconCopy as Copy, IconUpload as Upload, IconVideo as VideoIcon, IconX as X } from '@tabler/icons-vue'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Collection } from '@/types'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
@@ -37,6 +37,7 @@ const savingDraft = ref(false)
 const publishing = ref(false)
 const scheduling = ref(false)
 const scheduledAt = ref('')
+const duplicating = ref(false)
 const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
@@ -70,6 +71,7 @@ const generatedCoverReady = ref(false)
 let coverGeneration = 0
 let coverUploadPromise: Promise<void> | null = null
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
+let importAutosavePromise: Promise<void> | null = null
 
 const form = ref({
   channel_id: '' as string,
@@ -78,6 +80,8 @@ const form = ref({
   storage_type: 'local' as 'local' | 'external',
   video_url: '',
   thumbnail_url: '',
+  subtitle_url: '',
+  chapters: [] as Array<{ title: string; start_sec: number }>,
   duration_sec: 0,
   visibility: 'public' as 'public' | 'followers' | 'private',
   tags: [] as string[],
@@ -283,8 +287,22 @@ function validateInformation(): boolean {
     errorMsg.value = '请先创建频道'
     return false
   }
+  if (form.value.chapters.some(chapter => !chapter.title.trim() || chapter.start_sec < 0 || chapter.start_sec >= form.value.duration_sec)) {
+    errorMsg.value = '章节需包含标题，且时间必须在视频时长内'
+    return false
+  }
   return true
 }
+
+async function onSubtitleFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try { form.value.subtitle_url = (await uploadVideoSubtitle(file, authStore.token ?? undefined)).url }
+  catch (cause) { errorMsg.value = errorMessage(cause, '字幕上传失败') }
+}
+
+function addChapter() { form.value.chapters.push({ title: '', start_sec: 0 }) }
+function removeChapter(index: number) { form.value.chapters.splice(index, 1) }
 
 function validate(_status: 'draft' | 'published'): boolean {
   if (editorLoadFailed.value) {
@@ -302,6 +320,8 @@ function buildPayload(status: 'draft' | 'published') {
     storage_type: form.value.storage_type,
     video_url: form.value.video_url.trim(),
     thumbnail_url: form.value.thumbnail_url,
+    subtitle_url: form.value.subtitle_url,
+    chapters: form.value.chapters,
     duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
     status,
@@ -316,6 +336,8 @@ function buildImportPayload(): VideoImportPayload {
     title: form.value.title.trim(),
     description: form.value.description,
     thumbnail_url: form.value.thumbnail_url,
+    subtitle_url: form.value.subtitle_url,
+    chapters: form.value.chapters,
     duration_sec: form.value.duration_sec,
     visibility: form.value.visibility,
     tags: [...form.value.tags],
@@ -328,7 +350,14 @@ function scheduleImportAutosave() {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
   importAutosaveTimer = setTimeout(() => {
     importAutosaveTimer = null
-    void updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined).catch(() => {})
+    if (videoImportState.value?.task.upload_completed_at) return
+    const request = updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined)
+      .then(() => {})
+      .catch(() => {})
+    const trackedRequest = request.finally(() => {
+      if (importAutosavePromise === trackedRequest) importAutosavePromise = null
+    })
+    importAutosavePromise = trackedRequest
   }, 600)
 }
 
@@ -344,6 +373,11 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 async function submitImport(mode: 'draft' | 'published' | 'scheduled', scheduledAt: string | null = null) {
   const importId = videoImportId.value
   if (!importId) throw new Error('视频上传任务不存在')
+  if (importAutosaveTimer) {
+    clearTimeout(importAutosaveTimer)
+    importAutosaveTimer = null
+  }
+  await importAutosavePromise
   await coverUploadPromise
   const payload = buildImportPayload()
   await updateVideoImport(importId, payload, authStore.token ?? undefined)
@@ -376,6 +410,8 @@ async function loadVideo() {
     storage_type: v.storage_type,
     video_url: v.video_url,
     thumbnail_url: v.thumbnail_url,
+    subtitle_url: v.subtitle_url || '',
+    chapters: [...(v.chapters || [])],
     duration_sec: v.duration_sec,
     visibility: v.visibility,
     tags: v.tags?.map(t => t.name) ?? [],
@@ -407,6 +443,7 @@ onMounted(async () => {
           channel_id: task.payload.channel_id || studio.currentChannel?.id || '', title: task.payload.title,
           description: task.payload.description, storage_type: 'local', video_url: '',
           thumbnail_url: task.payload.thumbnail_url, duration_sec: task.payload.duration_sec || 0,
+          subtitle_url: task.payload.subtitle_url || '', chapters: [...(task.payload.chapters || [])],
           visibility: task.payload.visibility || 'public', tags: [...task.payload.tags],
         }
         await loadCollections(form.value.channel_id)
@@ -510,11 +547,29 @@ async function schedulePublish() {
     scheduling.value = false
   }
 }
+
+async function duplicateDraft() {
+  if (!isEdit.value || duplicating.value) return
+  duplicating.value = true
+  errorMsg.value = ''
+  try {
+    const copied = await duplicateVideo(String(route.params.id), authStore.token ?? undefined)
+    await router.push(`/studio/video/${copied.id}/edit`)
+  } catch (cause) {
+    errorMsg.value = errorMessage(cause, '复制草稿失败，请重试')
+  } finally {
+    duplicating.value = false
+  }
+}
 </script>
 
 <template>
   <div class="ve-wrap">
-    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent mb="1.5rem" />
+    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent mb="1.5rem">
+      <template v-if="isEdit" #action>
+        <PButton variant="secondary" :loading="duplicating" @click="duplicateDraft"><Copy :size="16" aria-hidden="true" />复制为草稿</PButton>
+      </template>
+    </PPageHeader>
 
     <PCreationSteps
       v-model="currentStep"
@@ -672,6 +727,19 @@ async function schedulePublish() {
         </div>
 
         <section v-if="currentStep === 3" class="ve-section ve-publish-step">
+          <div class="ve-field">
+            <label class="ve-field-label">字幕（VTT）</label>
+            <input type="file" accept="text/vtt,.vtt" @change="onSubtitleFileChange" />
+            <small v-if="form.subtitle_url">字幕已上传</small>
+          </div>
+          <div class="ve-field">
+            <div class="ve-field-label">章节 <button type="button" @click="addChapter">添加章节</button></div>
+            <div v-for="(chapter, index) in form.chapters" :key="index" class="ve-chapter-row">
+              <PInput v-model="chapter.title" placeholder="章节标题" />
+              <PInput v-model.number="chapter.start_sec" type="number" min="0" label="秒" />
+              <button type="button" @click="removeChapter(index)">移除</button>
+            </div>
+          </div>
           <div class="ve-step-heading">
             <div>
               <h2 class="ve-section-title">检查并发布</h2>

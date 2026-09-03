@@ -77,8 +77,16 @@ export const getVideo = <T = Video>(id: string, token?: string) => (
   apiRequestJson<T>(videoUrl(`/${pathSegment(id)}`), token ? { headers: authHeaders(token) } : undefined)
 )
 export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUrl(`/${pathSegment(id)}/recommended`))
-export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8) => (
-  apiRequestJson<VideoRecommendationPage<T>>(videoUrl(`/recommend/items?${queryString({ mode, page, page_size: pageSize })}`))
+export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8, token?: string) => (
+  apiRequestJson<VideoRecommendationPage<T>>(
+    videoUrl(`/recommend/items?${queryString({ mode, page, page_size: pageSize })}`),
+    token ? { headers: authHeaders(token) } : undefined,
+  )
+)
+
+export type VideoRecommendationFeedbackScope = 'video' | 'channel' | 'tag'
+export const createVideoRecommendationFeedback = (scope: VideoRecommendationFeedbackScope, targetId: string, token?: string) => (
+  apiRequest(videoUrl('/recommendation-feedback'), { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(token) }, body: JSON.stringify({ scope, target_id: targetId }) })
 )
 export const getVideoSubscriptions = (page = 1, pageSize = 20, token?: string) => (
   apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`), { headers: authHeaders(token) })

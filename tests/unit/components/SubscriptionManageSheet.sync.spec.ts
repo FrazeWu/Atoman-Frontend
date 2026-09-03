@@ -144,6 +144,7 @@ describe("SubscriptionManageSheet sync controls", () => {
     expect(wrapper.text()).toContain("来源健康概览");
     expect(wrapper.text()).toContain("暂时受限 1");
 
+    await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click")
     await wrapper
       .get('[data-test="load-subscription-diagnostics"]')
       .trigger("click");

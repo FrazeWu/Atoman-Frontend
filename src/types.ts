@@ -821,6 +821,12 @@ export interface SubscriptionHubTree {
 	types: SubscriptionHubTypeNode[];
 }
 
+export interface SubscriptionHubSelection {
+	subscriptionType: SubscriptionHubType;
+	groupId?: string;
+	membershipId?: string;
+}
+
 export interface Subscription {
 	id: string;
 	user_id: string;

@@ -107,6 +107,19 @@ describe('AppSidebar module subscription tree', () => {
       hub_membership_id: `${moduleCase.module}-membership`,
     })
   })
+
+  it.each(moduleCases)('clears source filters when selecting all $module subscriptions', async (moduleCase) => {
+    const { wrapper, router } = await mountSidebar(moduleCase)
+    await router.push(`${moduleCase.subscriptionsPath}?hub_group_id=group-1&hub_membership_id=member-1`)
+
+    wrapper.findComponent(SubscriptionHubSidebarTreeStub).vm.$emit('select-context', {
+      subscriptionType: moduleCase.subscriptionType,
+    })
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe(moduleCase.subscriptionsPath)
+    expect(router.currentRoute.value.query).toEqual({})
+  })
 })
 
 describe('AppSidebar feed navigation', () => {

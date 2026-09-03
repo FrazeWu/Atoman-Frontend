@@ -4,20 +4,21 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
-import VideoSubscriptionsView from '@/views/video/VideoSubscriptionsView.vue'
+import PodcastSubscriptionsView from '@/views/podcast/PodcastSubscriptionsView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const response = (data: unknown) => new Response(JSON.stringify(data), { status: 200 })
 
-describe('VideoSubscriptionsView', () => {
+describe('PodcastSubscriptionsView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     const auth = useAuthStore()
     auth.isAuthenticated = true
     auth.token = 'token-1'
+    localStorage.clear()
   })
 
-  it('按路由上下文通过统一接口加载视频更新', async () => {
+  it('按路由上下文通过统一接口加载播客更新', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.includes('/feed/subscription-hub/tree')) {
@@ -26,11 +27,20 @@ describe('VideoSubscriptionsView', () => {
       if (url.includes('/feed/subscription-hub/updates')) {
         return response({
           data: [{
-            type: 'video',
-            video: { id: 'video-1', title: '筛选后的视频' },
+            type: 'podcast_episode',
+            podcast_episode: {
+              id: 'episode-1',
+              audio_url: 'https://cdn.example.com/episode.mp3',
+              duration_sec: 600,
+              post: { title: '筛选后的单集' },
+              channel: { name: '原子谈话' },
+            },
           }],
           meta: { page: 1, page_size: 20, total: 1, has_more: false },
         })
+      }
+      if (url.includes('/music/playback-session') || url.includes('/music/playback-progress')) {
+        return response({ data: null })
       }
       throw new Error(`unexpected fetch: ${url}`)
     })
@@ -38,38 +48,38 @@ describe('VideoSubscriptionsView', () => {
 
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/videos/subscriptions', component: VideoSubscriptionsView }],
+      routes: [
+        { path: '/podcasts/subscriptions', component: PodcastSubscriptionsView },
+        { path: '/podcasts/episode/:id', component: { template: '<div />' } },
+      ],
     })
-    await router.push('/videos/subscriptions?hub_group_id=video-group&hub_membership_id=video-member')
+    await router.push('/podcasts/subscriptions?hub_group_id=podcast-group&hub_membership_id=podcast-member')
     await router.isReady()
 
-    const wrapper = mount(VideoSubscriptionsView, {
+    const wrapper = mount(PodcastSubscriptionsView, {
       global: {
         plugins: [router],
         stubs: {
           PPageHeader: { template: '<header />' },
           PEmpty: { props: ['title'], template: '<div>{{ title }}</div>' },
-          PaginationBar: true,
-          PVideoCard: { props: ['video'], template: '<article>{{ video.title }}</article>' },
-          RouterLink: { template: '<a><slot /></a>' },
+          PButton: { template: '<button><slot /></button>' },
         },
       },
     })
     await flushPromises()
 
     const updatesRequest = fetchMock.mock.calls.find(([input]) => String(input).includes('/feed/subscription-hub/updates'))
-    expect(String(updatesRequest?.[0])).toContain('type=video')
-    expect(String(updatesRequest?.[0])).toContain('group_id=video-group')
-    expect(String(updatesRequest?.[0])).toContain('membership_id=video-member')
-    expect(wrapper.text()).toContain('筛选后的视频')
-    expect(wrapper.find('.video-subscriptions-sources').exists()).toBe(false)
+    expect(String(updatesRequest?.[0])).toContain('type=podcast')
+    expect(String(updatesRequest?.[0])).toContain('group_id=podcast-group')
+    expect(String(updatesRequest?.[0])).toContain('membership_id=podcast-member')
+    expect(wrapper.text()).toContain('筛选后的单集')
+    expect(wrapper.find('.psub-sources').exists()).toBe(false)
     const picker = wrapper.findComponent(ModuleSubscriptionSourcesPicker)
     expect(picker.exists()).toBe(true)
     expect(picker.props()).toMatchObject({
-      subscriptionType: 'video',
-      subscriptionPath: '/videos/subscriptions',
+      subscriptionType: 'podcast',
+      subscriptionPath: '/podcasts/subscriptions',
     })
-    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/feed/subscription-hub/tree'))).toHaveLength(1)
-    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/feed/subscription-hub/updates'))).toHaveLength(1)
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/podcast/show-bookmarks'))).toBe(false)
   })
 })

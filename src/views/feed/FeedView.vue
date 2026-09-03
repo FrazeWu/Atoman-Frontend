@@ -153,7 +153,7 @@
       />
       <p v-else class="feed-hub-context" aria-live="polite">{{ hubTimelineLabel }}</p>
 
-      <div v-if="loadingTimeline" class="feed-loading">
+      <div v-if="loadingTimeline" class="feed-loading" role="status" aria-label="正在加载订阅内容">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
 

@@ -84,6 +84,51 @@ const remainingModuleFiles = [
 ];
 
 describe("module style contract", () => {
+	it("uses one accessible control scale across both button systems", () => {
+		const globalStyles = read("src/style.css");
+		const button = read("src/components/ui/PButton.vue");
+
+		for (const token of [
+			"--a-control-height-sm: 2.25rem",
+			"--a-control-height-md: 2.5rem",
+			"--a-control-height-lg: 2.75rem",
+		]) {
+			expect(globalStyles).toContain(token);
+		}
+		expect(globalStyles).toMatch(/\.a-btn:focus-visible\s*\{/);
+		expect(globalStyles).toMatch(/\.a-btn--sm\s*\{[^}]*min-height:\s*var\(--a-control-height-sm\)/s);
+		expect(globalStyles).toMatch(/\.a-btn--md\s*\{[^}]*min-height:\s*var\(--a-control-height-md\)/s);
+		expect(button).toMatch(/\.p-button--sm\s*\{[^}]*min-height:\s*var\(--a-control-height-sm\)/s);
+		expect(button).toMatch(/\.p-button--md\s*\{[^}]*min-height:\s*var\(--a-control-height-md\)/s);
+	});
+
+	it("keeps mobile shell controls touchable and content states announced", () => {
+		const topbar = read("src/components/system/AppTopbar.vue");
+		const globalSearch = read("src/components/system/AppTopbarGlobalSearch.vue");
+		const feed = read("src/views/feed/FeedView.vue");
+
+		expect(topbar).toContain("'brand-link--mobile-visible': !hasSidebar && !isAuthRoute");
+		expect(topbar).toMatch(/\.topbar-collapse-btn\s*\{[^}]*width:\s*var\(--a-control-height-md\)[^}]*height:\s*var\(--a-control-height-md\)/s);
+		expect(topbar).toMatch(/\.theme-toggle-btn\s*\{[^}]*width:\s*var\(--a-control-height-md\)[^}]*height:\s*var\(--a-control-height-md\)/s);
+		expect(globalSearch).toMatch(/\.search-pill\s*\{[^}]*height:\s*var\(--a-control-height-md\)/s);
+		expect(feed).toMatch(/v-if="loadingTimeline"[^>]*class="feed-loading"[^>]*role="status"/);
+	});
+
+	it("places progress feedback before skeletons instead of covering them", () => {
+		const progress = read("src/components/ui/PContentProgress.vue");
+
+		expect(progress).toMatch(/\.p-content-progress__overlay\s*\{[^}]*display:\s*grid/s);
+		expect(progress).toMatch(/\.p-content-progress__skeleton-wrapper\s*\{[^}]*position:\s*relative/s);
+		expect(progress).toMatch(/\.p-content-progress__loader\s*\{[^}]*order:\s*-1/s);
+	});
+
+	it("keeps the portal focused on content instead of decorative gradients", () => {
+		const portal = read("src/views/portal/PortalView.vue");
+
+		expect(portal).not.toContain("portal-hot__hero-glow");
+		expect(portal).not.toMatch(/(?:linear|radial)-gradient\(/);
+	});
+
 	it("keeps the debate graph link focus ring inside its clipped node", () => {
 		const source = read("src/components/debate/DebateGraphNode.vue");
 		const nodeRule = source.match(/\.debate-node\s*\{([^}]*)\}/)?.[1] ?? "";

@@ -100,12 +100,13 @@ export function createContentConsumptionTracker(options: ConsumptionTrackerOptio
         engaged = true
         emit('engaged')
       }
-      if (!completed && progress >= 0.95) {
+      const completedNow = !completed && progress >= 0.95
+      if (completedNow) {
         completed = true
         emit('complete')
       }
       const timestamp = now()
-      if (timestamp - lastProgressAt < interval || progress <= 0) return
+      if ((!completedNow && timestamp - lastProgressAt < interval) || progress <= 0) return
       lastProgressAt = timestamp
       options.onProgress(progress)
     },

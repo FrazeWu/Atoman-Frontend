@@ -79,4 +79,21 @@ describe('content lifecycle client', () => {
     expect(events).toEqual(['open', 'engaged', 'complete'])
     expect(saves).toEqual([0.05, 0.5, 0.98])
   })
+
+  it('persists completion even when the latest progress save was recent', () => {
+    const saves: number[] = []
+    let now = 1_000
+    const tracker = createContentConsumptionTracker({
+      onEvent: () => undefined,
+      onProgress: progress => saves.push(progress),
+      now: () => now,
+      progressIntervalMs: 5_000,
+    })
+
+    tracker.update(0.94)
+    now += 1_000
+    tracker.update(1)
+
+    expect(saves).toEqual([0.94, 1])
+  })
 })

@@ -3,14 +3,29 @@
     <header class="portal-hot__hero">
       <div class="portal-hot__hero-glow" aria-hidden="true" />
       <div class="portal-hot__hero-content">
-        <div>
-          <h1 class="portal-hot__hero-title">从全站挑出的内容</h1>
-          <p class="portal-hot__hero-subtitle">优先呈现正在发生、值得阅读和跨领域可探索的高质量内容。</p>
+        <div class="portal-hot__hero-badge">
+          <span class="portal-hot__badge-dot" />
+          <span>ATOMAN</span>
+        </div>
+        <h1 class="portal-hot__hero-title">
+          3 分钟建立你的<br>
+          <span class="portal-hot__hero-gradient">高质量内容订阅流</span>
+        </h1>
+        <p class="portal-hot__hero-subtitle">
+          聚合博客、播客、音乐与讨论，不用在多个平台反复筛选。
+        </p>
+        <div class="portal-hot__hero-actions">
+          <PButton variant="primary" size="md" :to="moduleUrl('feed')">
+            浏览今日精选
+          </PButton>
+          <a href="#sections" class="portal-hot__secondary-btn">
+            查看真实内容
+          </a>
         </div>
       </div>
     </header>
 
-    <div class="portal-hot__container">
+    <div id="sections" class="portal-hot__container">
       <PContentProgress
         :loading="loading"
         :error="error"
@@ -222,6 +237,7 @@ import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApi } from '@/composables/useApi'
@@ -378,53 +394,108 @@ onMounted(loadHotContent)
   background: var(--a-color-bg);
 }
 
-/* ─── Content-first intro ─────────────────────────────── */
+/* ─── Hero Banner ─────────────────────────────────────── */
 .portal-hot__hero {
   position: relative;
   overflow: hidden;
-  padding: 1.25rem 1.5rem;
+  padding: 44px 24px 36px;
+  background: linear-gradient(180deg, var(--a-color-surface) 0%, var(--a-color-bg) 100%);
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  text-align: center;
 }
 
 .portal-hot__hero-glow {
   position: absolute;
-  top: -9rem;
+  top: -100px;
   left: 50%;
-  width: min(37.5rem, 100vw);
-  height: 18.75rem;
   transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--a-color-primary) 16%, transparent) 0%, transparent 70%);
-  filter: blur(2.5rem);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a-color-primary) 12%, transparent) 0%, transparent 70%);
   pointer-events: none;
+  filter: blur(40px);
 }
 
 .portal-hot__hero-content {
   position: relative;
-  width: min(1200px, 100%);
+  z-index: 1;
+  max-width: 800px;
   margin: 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
+  gap: 16px;
+}
+
+.portal-hot__hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--a-color-muted);
+}
+
+.portal-hot__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--a-color-primary);
 }
 
 .portal-hot__hero-title {
   margin: 0;
   color: var(--a-color-text);
-  font-size: 1.875rem;
-  font-weight: 600;
-  letter-spacing: 0;
+  font-size: 32px;
+  font-weight: 500;
   line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.portal-hot__hero-gradient {
+  background: linear-gradient(135deg, var(--a-color-text) 30%, var(--a-color-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .portal-hot__hero-subtitle {
-  max-width: 42rem;
-  margin: 0.45rem 0 0;
-  color: var(--a-color-text-secondary);
-  font-size: 0.9rem;
+  margin: 0;
+  font-size: 14px;
   line-height: 1.5;
+  color: var(--a-color-text-secondary);
+  max-width: 540px;
+}
+
+.portal-hot__hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.portal-hot__secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--a-color-text);
+  text-decoration: none;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  transition: all 0.2s ease;
+}
+
+.portal-hot__secondary-btn:hover {
+  border-color: var(--a-color-text);
+  background: var(--a-color-surface);
 }
 
 /* ─── 辩题专属卡片 ──────────────────────────────────── */
@@ -734,13 +805,11 @@ onMounted(loadHotContent)
   }
 
   .portal-hot__hero-content {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 1rem;
+    align-items: center;
   }
 
   .portal-hot__hero-title {
-    font-size: 1.5rem;
+    font-size: 32px;
   }
 
   .portal-hot__container {

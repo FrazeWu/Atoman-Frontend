@@ -115,7 +115,12 @@ describe('PortalView', () => {
     for (const item of featured) {
       expect(wrapper.text()).toContain(item.title)
     }
-    expect(wrapper.find('.portal-hot__hero-actions').exists()).toBe(false)
+    expect(wrapper.find('.portal-hot__hero-badge').exists()).toBe(true)
+    expect(wrapper.find('.portal-hot__badge-dot').exists()).toBe(true)
+    expect(wrapper.find('.portal-hot__hero-title').text()).toContain('3 分钟建立你的')
+    expect(wrapper.find('.portal-hot__hero-gradient').text()).toContain('高质量内容订阅流')
+    expect(wrapper.find('.portal-hot__hero-actions').exists()).toBe(true)
+    expect(wrapper.find('.portal-hot__secondary-btn').attributes('href')).toBe('#sections')
   })
 
   it('使用后端返回的艺人和真实统计渲染热门音乐', async () => {

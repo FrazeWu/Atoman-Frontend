@@ -2,11 +2,12 @@
   <div :class="['app-shell', { 'has-sidebar': hasSidebar }]">
       <AppTopbar />
       <main :class="[
-        'app-main', 
+        'app-main',
         { 'app-main--auth': isAuthRoute },
-        { 'shutter-exit': transition.isExiting },
-        { 'shutter-entry': transition.isEntering }
-      ]">
+        { 'detail-exit': transition.isExiting },
+        { 'detail-entry': transition.isEntering },
+      ]" :aria-busy="transition.isModuleNavigation || transition.isExiting || transition.isEntering" @transitionend.self="transition.completeExit">
+        <div v-if="transition.isModuleNavigation" class="app-route-progress" aria-hidden="true" />
         <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition
             :name="transition.isModuleNavigation ? 'module-slide' : ''"
@@ -96,14 +97,16 @@ onMounted(() => {
   flex: 1 0 auto;
   background: var(--a-color-bg);
   position: relative;
-  transition: opacity 0.5s ease, filter 0.5s ease;
+  transition:
+    opacity var(--a-motion-detail-exit) var(--a-motion-ease-exit),
+    transform var(--a-motion-detail-exit) var(--a-motion-ease-exit);
 }
 
 .module-slide-enter-active,
 .module-slide-leave-active {
   transition:
-    opacity 320ms ease,
-    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity var(--a-motion-state) var(--a-motion-ease-enter),
+    transform var(--a-motion-navigation) var(--a-motion-ease-enter);
   will-change: opacity, transform;
 }
 
@@ -123,35 +126,88 @@ onMounted(() => {
   transform: translateX(-44px);
 }
 
-/* 出场：内容区稍微上移并渐隐 */
-.shutter-exit {
+.detail-exit {
   opacity: 0;
-  filter: blur(2px);
   transform: translateY(-12px);
   pointer-events: none;
-  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+  will-change: opacity, transform;
 }
 
-/* 入场关键帧：内容区平滑上浮渐现 */
-@keyframes shutterIn {
+.detail-entry {
+  animation: detail-entry var(--a-motion-detail-entry) var(--a-motion-ease-enter) both;
+  will-change: opacity, transform;
+}
+
+@keyframes detail-entry {
   from {
     opacity: 0;
     transform: translateY(16px);
-    filter: blur(2px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
-.shutter-entry {
-  animation: shutterIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.app-route-progress {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--a-sidebar-width);
+  z-index: calc(var(--a-z-navigation) + 1);
+  height: 2px;
+  background: var(--a-color-primary);
+  transform-origin: left center;
+  animation: app-route-progress 900ms var(--a-motion-ease-enter) infinite;
+  pointer-events: none;
+}
+
+@keyframes app-route-progress {
+  0% { transform: scaleX(0.05); opacity: 0.7; }
+  50% { transform: scaleX(0.62); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0.75; }
 }
 
 .app-main--auth {
   padding-bottom: 0;
   background: #fff;
+}
+
+@media (max-width: 767px) {
+  .app-route-progress {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-main {
+    transition-duration: var(--a-motion-detail-exit);
+  }
+
+  .module-slide-enter-active,
+  .module-slide-leave-active {
+    transition-duration: var(--a-motion-state);
+  }
+
+  .module-slide-enter-from,
+  .module-slide-leave-to {
+    transform: translateX(12px);
+  }
+
+  .module-slide-leave-to {
+    transform: translateX(-12px);
+  }
+
+  .detail-exit {
+    transform: none;
+  }
+
+  .detail-entry {
+    animation-duration: var(--a-motion-detail-entry);
+  }
+
+  .app-route-progress {
+    animation-duration: 1200ms;
+  }
 }
 </style>

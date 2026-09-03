@@ -1,5 +1,6 @@
 import { reportError } from '@/utils/logger'
 import { useSheetStore } from '@/stores/sheet'
+import { motionTimings } from '@/config/motion'
 
 export function useTransitionRelay() {
   const sheetStore = useSheetStore()
@@ -20,9 +21,9 @@ export function useTransitionRelay() {
           title: relay.data.title || 'Loading...'
         }
         // 错峰弹出：等待背景浮出动画进行到 200ms
-        setTimeout(() => {
-          sheetStore.pushSheet(sheetData, false) // 不记录历史，因为这是跳转后的初始状态
-        }, 200)
+      setTimeout(() => {
+        sheetStore.pushSheet(sheetData, false) // 不记录历史，因为这是跳转后的初始状态
+      }, motionTimings.relayDelay)
       }
     } catch (e) {
       reportError(e, 'Failed to parse relay data')

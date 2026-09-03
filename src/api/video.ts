@@ -80,8 +80,8 @@ export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUr
 export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8) => (
   apiRequestJson<VideoRecommendationPage<T>>(videoUrl(`/recommend/items?${queryString({ mode, page, page_size: pageSize })}`))
 )
-export const getVideoSubscriptions = (page = 1, pageSize = 20) => (
-  apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`))
+export const getVideoSubscriptions = (page = 1, pageSize = 20, token?: string) => (
+  apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`), { headers: authHeaders(token) })
 )
 export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${pathSegment(id)}/view`), { method: 'POST' })
 

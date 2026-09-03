@@ -46,7 +46,9 @@
                   v-model="scheduledAt"
                   :busy="scheduling"
                   :disabled="Boolean(saving) || uploading || coverUploading"
+                  :schedule="scheduleInfo"
                   @schedule="requestPublication('schedule')"
+                  @retry="void retryFailedSchedule()"
                 />
               </template>
             </PostEditorTopbar>
@@ -247,6 +249,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PostEditorDraftRecoveryModal from '@/components/blog/PostEditorDraftRecoveryModal.vue'
 import PostVersionHistoryModal from '@/components/blog/PostVersionHistoryModal.vue'
 import { useApi } from '@/composables/useApi'
+import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
@@ -332,6 +335,7 @@ const preferredPublishStatus = ref<SaveTarget>('published')
 const savedPostId = ref<string | null>(null)
 const scheduling = ref(false)
 const scheduledAt = ref('')
+const scheduleInfo = ref<BlogScheduleStatus | null>(null)
 const versionHistoryOpen = ref(false)
 
 // ── 状态 ─────────────────────────────────────────────────
@@ -538,7 +542,7 @@ const {
   },
 })
 
-const { loadPost, save, schedulePublish } = usePostEditorPublication({
+const { loadPost, save, schedulePublish, retrySchedule } = usePostEditorPublication({
   isEdit,
   form,
   contentSource,
@@ -551,6 +555,7 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   markdownImportID,
   scheduling,
   scheduledAt,
+  scheduleInfo,
   error,
   currentChannelId,
   primaryCollectionId,
@@ -560,6 +565,10 @@ const { loadPost, save, schedulePublish } = usePostEditorPublication({
   clearAllDrafts,
   allowNextRouteLeave,
 })
+
+const retryFailedSchedule = async () => {
+  await retrySchedule()
+}
 
 const requestPublication = (intent: 'publish' | 'schedule') => {
   if (publicationWarnings.value.length > 0) {

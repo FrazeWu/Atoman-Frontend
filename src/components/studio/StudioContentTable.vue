@@ -29,7 +29,12 @@
               <strong>{{ item.title || `未命名${config.itemLabel}` }}</strong>
               <span v-if="item.processing_status && item.processing_status !== 'ready'">{{ item.processing_status }}</span>
             </td>
-            <td data-label="状态">{{ statusLabel(item.status) }}</td>
+            <td data-label="状态">
+              <span :class="{ 'studio-content-table__schedule-status--failed': item.schedule_status === 'failed' }">{{ item.schedule_status === 'failed' ? '发布失败' : statusLabel(item.status) }}</span>
+              <small v-if="item.schedule_status === 'failed' && item.schedule_last_error" class="studio-content-table__schedule-error">
+                {{ item.schedule_last_error }}
+              </small>
+            </td>
             <td data-label="可见范围">{{ visibilityLabel(item.visibility) }}</td>
             <td data-label="合集">
               <span v-if="item.collection_conflict" class="studio-content-table__collection-conflict">
@@ -43,11 +48,21 @@
             </td>
 			<td v-if="module !== 'blog'" data-label="时长">{{ formatDuration(item.duration_sec || 0) }}</td>
 			<td v-for="column in metricColumns" :key="column.key" :data-label="column.label">{{ formatNumber(item.metrics?.[column.key] ?? 0) }}</td>
-			<td v-if="module === 'blog'" data-label="发布时间">{{ item.scheduled_at ? `定时 ${formatDateTime(item.scheduled_at)}` : item.published_at ? formatDate(item.published_at) : '—' }}</td>
+			<td v-if="module === 'blog'" data-label="发布时间">{{ item.scheduled_at ? `定时 ${formatDateTime(item.scheduled_at, item.schedule_timezone)}` : item.published_at ? formatDate(item.published_at) : '—' }}</td>
 			<td v-if="module === 'video'" data-label="处理状态">{{ item.processing_status || 'ready' }}</td>
             <td data-label="更新时间"><time :datetime="item.updated_at">{{ formatDate(item.updated_at) }}</time></td>
 			<td data-label="操作">
 			  <div class="studio-content-table__actions">
+				<RouterLink
+				  v-if="module === 'blog' && item.status === 'published' && item.visibility === 'public'"
+				  class="studio-content-table__action"
+				  :to="`/posts/post/${item.id}`"
+				  :data-testid="`view-public-blog-${item.id}`"
+				  aria-label="查看公开博文"
+				  title="查看公开博文"
+				>
+				  <ExternalLink :size="16" aria-hidden="true" />
+				</RouterLink>
 				<RouterLink class="studio-content-table__action" :to="`/studio/${module}/${item.id}/edit`" aria-label="编辑" title="编辑">
 				  <Pencil :size="16" aria-hidden="true" />
 				</RouterLink>
@@ -81,6 +96,16 @@
                 >
                   <CalendarX :size="16" aria-hidden="true" />
                 </button>
+				<button
+				  v-if="module === 'blog' && item.schedule_status === 'failed'"
+				  type="button"
+				  :data-testid="`retry-schedule-${item.id}`"
+				  aria-label="重新尝试发布"
+				  title="重新尝试发布"
+				  @click="$emit('retrySchedule', item)"
+				>
+				  <RefreshCw :size="16" aria-hidden="true" />
+				</button>
 				<button
 				  type="button"
 				  :data-testid="`toggle-status-${item.id}`"
@@ -151,7 +176,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconArchive as ArchiveRestore, IconArrowDown as ArrowDown, IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconArrowUp as ArrowUp, IconCalendarX as CalendarX, IconPencil as Pencil, IconRefresh as RefreshCw, IconSend as Send, IconShare2 as Share2, IconTrash as Trash2, IconUpload as Upload } from '@tabler/icons-vue'
+import { IconArchive as ArchiveRestore, IconArrowDown as ArrowDown, IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconArrowUp as ArrowUp, IconCalendarX as CalendarX, IconExternalLink as ExternalLink, IconPencil as Pencil, IconRefresh as RefreshCw, IconSend as Send, IconShare2 as Share2, IconTrash as Trash2, IconUpload as Upload } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -169,6 +194,7 @@ const emit = defineEmits<{
   page: [page: number]
   status: [item: StudioContentItem, status: StudioPublishStatus]
   cancelSchedule: [item: StudioContentItem]
+  retrySchedule: [item: StudioContentItem]
   share: [item: StudioContentItem]
   delete: [item: StudioContentItem]
   reupload: [item: StudioContentItem]
@@ -211,9 +237,9 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, timezone?: string) {
   return new Date(value).toLocaleString('zh-CN', {
-    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: timezone || undefined,
   })
 }
 
@@ -238,6 +264,7 @@ tbody tr:hover { background: var(--a-color-surface); }
 td:first-child { min-width: 3.5rem; }
 td strong, td span { display: block; }
 td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
+td .studio-content-table__schedule-status--failed, .studio-content-table__schedule-error { color: var(--a-color-danger); }
 .studio-content-table__collection-conflict { color: var(--a-color-danger); font-weight: 600; }
 .studio-content-table__collection-conflict select { min-height: 2.25rem; max-width: 100%; margin-top: 0.4rem; padding: 0 0.5rem; border: 1px solid var(--a-color-danger-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); font: inherit; }
 .studio-content-table__collection-conflict select:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }

@@ -2,7 +2,7 @@ import { nextTick, type ComputedRef, type Ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { apiRequestResult } from "@/api/client";
 import { useApi } from "@/composables/useApi";
-import { useContentLifecycle } from "@/composables/useContentLifecycle";
+import { useContentLifecycle, type BlogScheduleStatus } from "@/composables/useContentLifecycle";
 import { referencePublishErrorMessage } from "@/composables/useReferenceAutocomplete";
 import { useAuthStore } from "@/stores/auth";
 import { useStudioStore } from "@/stores/studio";
@@ -27,6 +27,7 @@ interface PostEditorPublicationOptions {
 	markdownImportID: Ref<string | null>;
 	scheduling: Ref<boolean>;
 	scheduledAt: Ref<string>;
+	scheduleInfo: Ref<BlogScheduleStatus | null>;
 	error: Ref<string>;
 	currentChannelId: ComputedRef<string>;
 	primaryCollectionId: ComputedRef<string>;
@@ -69,6 +70,7 @@ export function usePostEditorPublication({
 	markdownImportID,
 	scheduling,
 	scheduledAt,
+	scheduleInfo,
 	error,
 	currentChannelId,
 	primaryCollectionId,
@@ -123,6 +125,11 @@ export function usePostEditorPublication({
 			const collectionId = String(post.collection_id || "");
 			existingCollectionIds.value = collectionId ? [collectionId] : [];
 			selectedCollectionIds.value = [...existingCollectionIds.value];
+			try {
+				scheduleInfo.value = await lifecycle.getSchedule("blog", postId);
+			} catch {
+				scheduleInfo.value = null;
+			}
 			return true;
 		} catch (cause) {
 			reportError(cause);
@@ -267,7 +274,9 @@ export function usePostEditorPublication({
 		try {
 			const postId = await save("draft", false);
 			if (!postId) return;
-			await lifecycle.schedule("blog", postId, publishAt.toISOString());
+			const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+			await lifecycle.schedule("blog", postId, publishAt.toISOString(), timezone);
+			scheduleInfo.value = await lifecycle.getSchedule("blog", postId);
 			allowNextRouteLeave();
 			await router.push("/studio/blog/content");
 		} catch (cause) {
@@ -277,5 +286,19 @@ export function usePostEditorPublication({
 		}
 	};
 
-	return { loadPost, save, schedulePublish };
+	const retrySchedule = async () => {
+		if (!isEdit.value || scheduling.value) return;
+		scheduling.value = true;
+		error.value = "";
+		try {
+			scheduleInfo.value = await lifecycle.retrySchedule("blog", String(route.params.id || ""));
+			scheduledAt.value = toLocalDatetimeValue(scheduleInfo.value.publish_at || "");
+		} catch (cause) {
+			error.value = cause instanceof Error ? cause.message : "重试失败，请稍后再试";
+		} finally {
+			scheduling.value = false;
+		}
+	};
+
+	return { loadPost, save, schedulePublish, retrySchedule };
 }

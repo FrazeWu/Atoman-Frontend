@@ -154,7 +154,7 @@ function itemIcon(targetType: ReferenceTargetType): LucideIcon {
   background: var(--a-color-bg);
   text-align: left;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
   width: 100%;
 }
 
@@ -231,7 +231,7 @@ function itemIcon(targetType: ReferenceTargetType): LucideIcon {
   color: var(--a-color-muted-soft);
   opacity: 0;
   transform: translateX(-4px);
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   flex-shrink: 0;
 }
 

@@ -69,6 +69,17 @@
 	--a-font-sans:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
+	--a-motion-micro: 140ms;
+	--a-motion-state: 220ms;
+	--a-motion-overlay: 360ms;
+	--a-motion-overlay-exit: 260ms;
+	--a-motion-navigation: 520ms;
+	--a-motion-detail-exit: 300ms;
+	--a-motion-detail-entry: 560ms;
+	--a-motion-emphasis: 700ms;
+	--a-motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+	--a-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
 	--a-letter-spacing-tight: 0;
 	--a-letter-spacing-wide: 0;
 	--a-letter-spacing-widest: 0;
@@ -238,9 +249,9 @@ body:has(.studio-layout) {
 	letter-spacing: 0;
 	text-decoration: none;
 	transition:
-		transform 0.12s ease,
-		box-shadow 0.12s ease,
-		text-decoration-color 0.12s ease;
+		transform var(--a-motion-micro) var(--a-motion-ease-enter),
+		box-shadow var(--a-motion-micro) var(--a-motion-ease-enter),
+		text-decoration-color var(--a-motion-micro) ease;
 	white-space: nowrap;
 	background: var(--a-color-bg);
 	color: var(--a-color-fg);
@@ -842,10 +853,10 @@ body:has(.studio-layout) {
 /* Modal Transition */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-	transition: opacity 180ms ease;
+	transition: opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 .modal-fade-leave-active {
-	transition-duration: 140ms;
+	transition-duration: var(--a-motion-overlay-exit);
 }
 .modal-fade-enter-from,
 .modal-fade-leave-to {
@@ -854,13 +865,13 @@ body:has(.studio-layout) {
 
 .modal-fade-enter-active .p-modal {
 	transition:
-		transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-		opacity 180ms ease;
+		transform var(--a-motion-state) var(--a-motion-ease-enter),
+		opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 .modal-fade-leave-active .p-modal {
 	transition:
-		transform 140ms cubic-bezier(0.4, 0, 1, 1),
-		opacity 140ms ease;
+		transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit),
+		opacity var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
 }
 .modal-fade-enter-from .p-modal {
 	transform: translateY(8px);
@@ -876,7 +887,7 @@ body:has(.studio-layout) {
 	.modal-fade-leave-active,
 	.modal-fade-enter-active .p-modal,
 	.modal-fade-leave-active .p-modal {
-		transition-duration: 100ms;
+		transition-duration: var(--a-motion-state);
 	}
 
 	.modal-fade-enter-from .p-modal,
@@ -1205,7 +1216,7 @@ body:has(.studio-layout) {
 	cursor: pointer;
 	color: var(--a-color-muted);
 	text-decoration: none;
-	transition: all 0.15s ease;
+	transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 	background: none;
 	border-top: none;
 	border-right: none;
@@ -1512,4 +1523,17 @@ html.dark {
 ::view-transition-new(root) {
 	animation: none;
 	mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--a-motion-micro: 100ms;
+		--a-motion-state: 140ms;
+		--a-motion-overlay: 180ms;
+		--a-motion-overlay-exit: 140ms;
+		--a-motion-navigation: 180ms;
+		--a-motion-detail-exit: 140ms;
+		--a-motion-detail-entry: 140ms;
+		--a-motion-emphasis: 180ms;
+	}
 }

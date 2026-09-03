@@ -104,7 +104,7 @@ const mergeDuplicatesValue = computed({ get: () => props.mergeDuplicates, set: v
 .feed-search__input:focus { border-bottom-color: var(--a-color-accent-confirm); }
 .feed-merge-duplicates { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; color: var(--a-color-muted); font-size: 0.8rem; white-space: nowrap; }
 .feed-merge-duplicates input { width: 1rem; height: 1rem; accent-color: var(--a-color-text); }
-.filter-toggle-btn { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: none; background: transparent; color: var(--a-color-muted); cursor: pointer; border-radius: var(--a-radius-none, 4px); transition: all 0.2s; }
+.filter-toggle-btn { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: none; background: transparent; color: var(--a-color-muted); cursor: pointer; border-radius: var(--a-radius-none, 4px); transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s; }
 .filter-toggle-btn:hover, .filter-toggle-btn.active { background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .filter-toggle-btn.active { font-weight: bold; }
 .feed-new-content-region { margin-bottom: 0.75rem; }

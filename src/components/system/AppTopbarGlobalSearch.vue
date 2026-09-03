@@ -303,7 +303,7 @@ onBeforeUnmount(() => {
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
 }
 
@@ -361,7 +361,7 @@ onBeforeUnmount(() => {
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-modal);
   overflow: hidden;
-  animation: paletteScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: paletteScaleIn var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .palette-header {
@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
   padding: 0.25rem 0.65rem;
   border-radius: var(--a-radius-control);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .palette-filter-pill:hover {
@@ -655,12 +655,18 @@ onBeforeUnmount(() => {
 /* 浮层动画 */
 .palette-fade-enter-active,
 .palette-fade-leave-active {
-  transition: opacity 0.18s ease;
+  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .palette-fade-enter-from,
 .palette-fade-leave-to {
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-modal {
+    animation: none;
+  }
 }
 
 @keyframes paletteScaleIn {

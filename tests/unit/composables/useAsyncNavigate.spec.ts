@@ -68,6 +68,7 @@ describe('useAsyncNavigate', () => {
     finishModuleNavigation.mockReset()
     resetTransition.mockReset()
     checkRelay.mockReset()
+    triggerExit.mockResolvedValue(undefined)
     document.body.style.cursor = 'default'
   })
 
@@ -135,6 +136,26 @@ describe('useAsyncNavigate', () => {
 
     expect(routerPush).toHaveBeenCalledWith('/posts/1')
     expect(checkRelay).toHaveBeenCalledTimes(1)
+  })
+
+  it('waits for detail exit completion instead of a fixed delay', async () => {
+    let resolveExit: (() => void) | undefined
+    triggerExit.mockImplementationOnce(() => new Promise<void>(resolve => {
+      resolveExit = resolve
+    }))
+    const { navigateWithShutter } = useAsyncNavigate()
+
+    const navigation = navigateWithShutter(async () => ({ id: 1 }), '/posts/1', 'post')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(triggerExit).toHaveBeenCalledOnce()
+    expect(routerPush).not.toHaveBeenCalled()
+
+    resolveExit?.()
+    await navigation
+
+    expect(routerPush).toHaveBeenCalledWith('/posts/1')
   })
 
   it('only completes the latest overlapping module navigation', async () => {

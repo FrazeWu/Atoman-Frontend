@@ -122,7 +122,9 @@ onBeforeUnmount(() => {
   cursor: pointer;
   pointer-events: auto;
   text-align: left;
-  transition: bottom 180ms ease, opacity 220ms ease;
+  transition:
+    bottom var(--a-motion-state) var(--a-motion-ease-enter),
+    opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .notification-toast:hover {
@@ -176,7 +178,7 @@ onBeforeUnmount(() => {
 
 .notification-toast-enter-active,
 .notification-toast-leave-active {
-  transition: opacity 220ms ease;
+  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .notification-toast-enter-from,
@@ -208,7 +210,7 @@ onBeforeUnmount(() => {
   .notification-toast,
   .notification-toast-enter-active,
   .notification-toast-leave-active {
-    transition: none;
+    transition-duration: var(--a-motion-state);
   }
 }
 </style>

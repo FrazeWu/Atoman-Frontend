@@ -197,7 +197,7 @@
               <template #visual>
                 <PAvatar
                   data-test="feed-article-avatar"
-                  :src="item.avatar_url || item.image_url"
+                  :src="articleAvatarURL(item)"
                   :name="item.source_title || item.title"
                   :alt="`${item.source_title || item.title} 的头像`"
                   size="xs"
@@ -362,7 +362,7 @@ import { formatPublicRating, hasPublicRating } from '@/utils/rating'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
-import { buildSourceAvatarLabel, buildSourceColor } from '@/utils/feedSourcePresentation'
+import { buildSourceAvatarLabel, buildSourceColor, buildSourceFaviconURL } from '@/utils/feedSourcePresentation'
 import {
   ALL_RECOMMENDATION_LANGUAGE,
   detectDefaultRecommendationLanguage,
@@ -398,6 +398,7 @@ type RecommendationItem = {
   source_subscribed?: boolean
   avatar_url?: string
   image_url?: string
+  source_image_url?: string
   target_path: string
   source_id?: string
   source_title?: string
@@ -789,6 +790,16 @@ function formatDate(dateStr?: string) {
   return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 
+function articleAvatarURL(item: RecommendationItem) {
+  const candidates = [
+    item.source_image_url,
+    buildSourceFaviconURL(item.rss_url),
+    item.avatar_url,
+    item.image_url,
+  ]
+  return candidates.find((value) => value?.trim())?.trim() || ''
+}
+
 function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
   return {
     id: item.source_id || item.id,
@@ -977,7 +988,7 @@ function sourceFromRecommendation(item: RecommendationItem): FeedArticleSource {
     id: subscriptionSourceId(item),
     title: item.source_title || item.title,
     rssUrl: item.rss_url,
-    imageUrl: item.source_title ? undefined : item.image_url,
+    imageUrl: item.source_image_url || (item.source_title ? undefined : item.image_url),
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
     platform: item.platform,

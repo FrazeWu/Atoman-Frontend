@@ -1539,6 +1539,102 @@ describe("FeedRecommendedView", () => {
 		).toBe("https://example.com/recommendation-avatar.jpg");
 	});
 
+	it("prefers the source avatar over an article image", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "art-source-avatar-1",
+								title: "Source avatar wins",
+								summary: "The source image must identify every article from the same feed.",
+								source_image_url: "https://example.com/source-avatar.jpg",
+								image_url: "https://example.com/article-image.jpg",
+								source_title: "统一来源",
+								target_path: "/feed/item/art-source-avatar-1",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ error: "unexpected" }), {
+				status: 404,
+			});
+		});
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: true,
+					PButton: true,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		expect(
+			wrapper.get('[data-test="feed-article-avatar"] img').attributes("src"),
+		).toBe("https://example.com/source-avatar.jpg");
+	});
+
+	it("uses the source favicon when no source image is available", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "art-source-favicon-1",
+								title: "Source favicon fallback",
+								source_title: "无封面来源",
+								rss_url: "https://example.com/feed.xml",
+								target_path: "/feed/item/art-source-favicon-1",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ error: "unexpected" }), {
+				status: 404,
+			});
+		});
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: true,
+					PButton: true,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		expect(
+			wrapper.get('[data-test="feed-article-avatar"] img').attributes("src"),
+		).toBe("https://example.com/favicon.ico");
+	});
+
 	it("renders channel recommendation heat labels and avatar fallback", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")

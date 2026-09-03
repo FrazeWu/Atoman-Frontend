@@ -1,5 +1,6 @@
 import { apiRequest, apiRequestJson } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
+import { configureApiXHR } from './transport'
 import type { Video } from '@/types'
 
 export type VideoImportStatus = 'pending_upload' | 'uploading' | 'completing' | 'awaiting_submit' | 'publishing' | 'published' | 'draft' | 'scheduled' | 'failed' | 'canceled'
@@ -145,6 +146,75 @@ export function submitVideoImport(id: string, payload: VideoImportPayload, publi
 export function createVideoImportPartUpload(id: string, partNumber: number, token?: string) {
   return apiRequestJson<{ part_number: number; upload_url: string }>(importUrl(id, `/parts/${partNumber}`), {
     method: 'POST', headers: authHeaders(token),
+  })
+}
+
+export type VideoImportPartUploadOptions = {
+  token?: string
+  signal?: AbortSignal
+  timeoutMs?: number
+  onProgress?: (progress: { loaded: number; total: number }) => void
+}
+
+export function uploadVideoImportPart(
+  uploadUrl: string,
+  body: Blob,
+  options: VideoImportPartUploadOptions = {},
+): Promise<string> {
+  if (!uploadUrl.startsWith('/')) {
+    return apiRequest(uploadUrl, { method: 'PUT', body, signal: options.signal }).then(async response => {
+      if (!response.ok) throw new Error('视频分片上传失败')
+      const etag = response.headers.get('ETag') || response.headers.get('etag')
+      if (!etag) throw new Error('视频分片上传失败')
+      return etag
+    })
+  }
+
+  return new Promise((resolve, reject) => {
+    if (options.signal?.aborted) {
+      reject(new Error('上传已取消'))
+      return
+    }
+    const xhr = new XMLHttpRequest()
+    let settled = false
+    const abort = () => xhr.abort()
+    const settle = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      options.signal?.removeEventListener('abort', abort)
+      callback()
+    }
+
+    const apiUrl = useApiUrl()
+    const requestUrl = uploadUrl.startsWith('/') && /^https?:\/\//i.test(apiUrl)
+      ? new URL(uploadUrl, apiUrl).toString()
+      : uploadUrl
+    xhr.open('PUT', requestUrl)
+    configureApiXHR(xhr, 'PUT')
+    if (options.token && options.token !== 'cookie-session') {
+      xhr.setRequestHeader('Authorization', `Bearer ${options.token}`)
+    }
+    if (options.timeoutMs && options.timeoutMs > 0) xhr.timeout = options.timeoutMs
+    options.signal?.addEventListener('abort', abort, { once: true })
+    xhr.upload.addEventListener('progress', event => {
+      if (event.lengthComputable) options.onProgress?.({ loaded: event.loaded, total: event.total })
+    })
+    xhr.addEventListener('load', () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        settle(() => reject(new Error(`视频分片上传失败 (${xhr.status})`)))
+        return
+      }
+      const etag = xhr.getResponseHeader('ETag') || xhr.getResponseHeader('etag')
+      if (!etag) {
+        settle(() => reject(new Error('视频分片上传失败')))
+        return
+      }
+      settle(() => resolve(etag))
+    })
+    xhr.addEventListener('error', () => settle(() => reject(new Error('视频分片上传失败，请重试'))))
+    xhr.addEventListener('timeout', () => settle(() => reject(new Error('视频分片超时，请重试'))))
+    xhr.addEventListener('abort', () => settle(() => reject(new Error('上传已取消'))))
+    xhr.send(body)
   })
 }
 

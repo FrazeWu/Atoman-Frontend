@@ -6,6 +6,7 @@ import { IconExternalLink as ExternalLink, IconPencil as Pencil, IconRefresh as 
 import {
   cancelVideoImport,
   deleteVideoImportRecord,
+  getVideoImport,
   listVideoImports,
   retryVideoImport,
   submitVideoImport,
@@ -159,7 +160,13 @@ async function publishTask() {
   actionBusy.value = 'publish'
   error.value = ''
   try {
-    await submitVideoImport(selected.value.id, selected.value.payload, 'published', null, auth.token ?? undefined)
+    const task = await getVideoImport(selected.value.id, auth.token ?? undefined)
+    uploader.applyTask(task)
+    if (!task.payload.title?.trim() || !task.payload.channel_id) {
+      await router.push(`/studio/video/new?import=${task.id}`)
+      return
+    }
+    await submitVideoImport(task.id, task.payload, 'published', null, auth.token ?? undefined)
     await loadImports(true)
   } catch (cause) {
     error.value = errorMessage(cause, '发布失败，请重试')

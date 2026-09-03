@@ -1,12 +1,12 @@
 import { computed, ref } from 'vue'
 
-import { apiRequest } from '@/api/client'
 import {
   completeVideoImport,
   completeVideoImportPart,
   createVideoImport,
   createVideoImportPartUpload,
   getVideoImport,
+  uploadVideoImportPart,
   type VideoImportTask,
 } from '@/api/video'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +22,10 @@ type UploadState = {
 const uploads = ref<Record<string, UploadState>>({})
 const selectedFiles = new Map<string, File>()
 const generations = new Map<string, number>()
+const uploadPromises = new Map<string, Promise<void>>()
+const abortControllers = new Map<string, Set<AbortController>>()
+
+const VIDEO_PART_TIMEOUT_MS = 5 * 60 * 1000
 
 async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
   let lastError: unknown
@@ -45,6 +49,24 @@ export function useVideoImportUpload() {
   const auth = useAuthStore()
   const token = computed(() => auth.token ?? undefined)
 
+  function trackController(id: string, controller: AbortController) {
+    const controllers = abortControllers.get(id) ?? new Set<AbortController>()
+    controllers.add(controller)
+    abortControllers.set(id, controllers)
+    return () => {
+      controllers.delete(controller)
+      if (controllers.size === 0) abortControllers.delete(id)
+    }
+  }
+
+  function startUpload(task: VideoImportTask, file: File) {
+    const promise = upload(task, file)
+    uploadPromises.set(task.id, promise)
+    void promise.then(() => {
+      if (uploadPromises.get(task.id) === promise) uploadPromises.delete(task.id)
+    })
+  }
+
   async function start(file: File, channelId: string | null) {
     const task = await createVideoImport(file, channelId, token.value)
     selectedFiles.set(task.id, file)
@@ -52,7 +74,7 @@ export function useVideoImportUpload() {
       ...uploads.value,
       [task.id]: { task, uploading: true, progress: 0, error: '' },
     }
-    void upload(task, file)
+    startUpload(task, file)
     return task
   }
 
@@ -66,8 +88,17 @@ export function useVideoImportUpload() {
       ...uploads.value,
       [task.id]: { task, uploading: true, progress: progressOf(task), error: '' },
     }
-    void upload(task, file)
+    startUpload(task, file)
     return task
+  }
+
+  async function waitForUpload(id: string) {
+    await uploadPromises.get(id)
+    const state = uploads.value[id]
+    if (!state?.task.upload_completed_at) {
+      throw new Error(state?.error || '视频上传尚未完成')
+    }
+    return state.task
   }
 
   async function upload(initialTask: VideoImportTask, file: File) {
@@ -79,6 +110,14 @@ export function useVideoImportUpload() {
     try {
       const totalParts = Math.ceil(file.size / task.part_size)
       const completed = new Set(task.completed_parts)
+      const bytesForPart = (partNumber: number) => Math.min(task.part_size, file.size - (partNumber - 1) * task.part_size)
+      const activePartBytes = new Map<number, number>()
+      const reportProgress = () => {
+        const completedBytes = [...completed].reduce((sum, partNumber) => sum + bytesForPart(partNumber), 0)
+        const activeBytes = [...activePartBytes.values()].reduce((sum, bytes) => sum + bytes, 0)
+        setUploadState(id, { progress: file.size ? Math.min(100, Math.round(((completedBytes + activeBytes) / file.size) * 100)) : 0 })
+      }
+      reportProgress()
       for (let groupStart = 1; groupStart <= totalParts; groupStart += 3) {
         const partNumbers = Array.from({ length: Math.min(3, totalParts - groupStart + 1) }, (_, index) => groupStart + index)
           .filter(partNumber => !completed.has(partNumber))
@@ -88,12 +127,28 @@ export function useVideoImportUpload() {
           const endByte = Math.min(startByte + task.part_size, file.size)
           const chunk = file.slice(startByte, endByte)
           const signed = await retry(() => createVideoImportPartUpload(id, partNumber, token.value))
+          if (!isCurrent()) return
           const etag = await retry(async () => {
-            const response = await apiRequest(signed.upload_url, { method: 'PUT', body: chunk })
-            if (!response.ok) throw new Error(`第 ${partNumber} 个分片上传失败`)
-            const value = response.headers.get('ETag') || response.headers.get('etag')
-            if (!value) throw new Error('对象存储未返回 ETag')
-            return value
+            if (!isCurrent()) throw new Error('上传已取消')
+            const controller = new AbortController()
+            const releaseController = trackController(id, controller)
+            activePartBytes.set(partNumber, 0)
+            reportProgress()
+            try {
+              return await uploadVideoImportPart(signed.upload_url, chunk, {
+                token: token.value,
+                signal: controller.signal,
+                timeoutMs: VIDEO_PART_TIMEOUT_MS,
+                onProgress: progress => {
+                  activePartBytes.set(partNumber, progress.loaded)
+                  reportProgress()
+                },
+              })
+            } finally {
+              activePartBytes.delete(partNumber)
+              reportProgress()
+              releaseController()
+            }
           })
           return { partNumber, etag, size: chunk.size }
         }))
@@ -101,6 +156,7 @@ export function useVideoImportUpload() {
           if (!part || !isCurrent()) return
           task = await retry(() => completeVideoImportPart(id, part.partNumber, part.etag, part.size, token.value))
           completed.add(part.partNumber)
+          reportProgress()
           setUploadState(id, { task, progress: progressOf(task) })
         }
       }
@@ -116,6 +172,8 @@ export function useVideoImportUpload() {
 
   function stop(id: string) {
     generations.set(id, (generations.get(id) ?? 0) + 1)
+    abortControllers.get(id)?.forEach(controller => controller.abort())
+    abortControllers.delete(id)
     const state = uploads.value[id]
     if (state) setUploadState(id, { uploading: false })
     selectedFiles.delete(id)
@@ -138,7 +196,7 @@ export function useVideoImportUpload() {
     return computed(() => uploads.value[id])
   }
 
-  return { uploads, start, resume, stop, applyTask, stateFor }
+  return { uploads, start, resume, waitForUpload, stop, applyTask, stateFor }
 }
 
 function progressOf(task: VideoImportTask) {

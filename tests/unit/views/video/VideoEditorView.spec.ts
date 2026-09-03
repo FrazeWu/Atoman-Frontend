@@ -26,6 +26,12 @@ const makeJsonResponse = (data: unknown) => new Response(JSON.stringify(data), {
 
 async function goToMedia(wrapper: ReturnType<typeof mount>) {
   wrapper.vm.$.setupState.form.title = '视频标题'
+  await wrapper.vm.$nextTick()
+}
+
+async function goToInfo(wrapper: ReturnType<typeof mount>) {
+  wrapper.vm.$.setupState.form.storage_type = 'external'
+  wrapper.vm.$.setupState.form.video_url = 'https://example.com/video.mp4'
   await wrapper.get('[data-testid="creator-next"]').trigger('click')
   await wrapper.vm.$nextTick()
 }
@@ -141,6 +147,7 @@ describe('VideoEditorView', () => {
 
   it('confirms each tag with Enter and ignores duplicates', async () => {
     const { wrapper } = await setup('/studio/video/new')
+    await goToInfo(wrapper)
     const input = wrapper.get('#video-tag-input')
 
     await input.setValue('骑行')
@@ -206,7 +213,30 @@ describe('VideoEditorView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/studio/video/new')
   })
 
-  it('does not continue to publish while the selected video is still uploading', async () => {
+  it('saves current metadata before publishing a completed local import', async () => {
+    const { wrapper, router } = await setup('/studio/video/new')
+    await goToMedia(wrapper)
+    const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
+    Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
+    await fileInput.trigger('change')
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoUploaded).toBe(true))
+
+    wrapper.vm.$.setupState.form.description = '上传中的说明'
+    wrapper.vm.$.setupState.requestPublish()
+    await wrapper.vm.$.setupState.doPublish()
+    await flushPromises()
+
+    const calls = vi.mocked(fetch).mock.calls
+    const updateIndex = calls.findIndex(([input, init]) => String(input).endsWith('/videos/imports/import-1') && init?.method === 'PUT')
+    const submitIndex = calls.findIndex(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')
+    expect(updateIndex).toBeGreaterThanOrEqual(0)
+    expect(submitIndex).toBeGreaterThan(updateIndex)
+    expect(JSON.parse(String(calls[updateIndex]?.[1]?.body))).toMatchObject({ title: '视频标题', description: '上传中的说明', channel_id: 'channel-1' })
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/imports?task=import-1')
+  })
+
+  it('allows editing information while the selected video is still uploading', async () => {
     autoCompleteUpload = false
     const { wrapper } = await setup('/studio/video/new')
     await goToMedia(wrapper)
@@ -219,8 +249,8 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.videoUploading).toBe(true)
 
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
-    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
-    expect(wrapper.text()).toContain('请等待视频上传完成')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.text()).not.toContain('请等待视频上传完成')
 
     releaseUpload?.()
     await flushPromises()
@@ -268,13 +298,13 @@ describe('VideoEditorView', () => {
 
   it('keeps the media information and publish steps inside Studio', async () => {
     const { wrapper } = await setup('/studio/video/new')
-    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
 
     wrapper.vm.$.setupState.form.title = '三步视频'
     wrapper.vm.$.setupState.form.storage_type = 'external'
     wrapper.vm.$.setupState.form.video_url = 'https://example.com/video.mp4'
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
-    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
 
     wrapper.vm.$.setupState.selectedCollectionId = ''
     await wrapper.get('[data-testid="creator-next"]').trigger('click')

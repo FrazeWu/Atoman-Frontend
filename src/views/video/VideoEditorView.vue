@@ -53,7 +53,6 @@ const { creationSteps, currentStep, maxStep, goNext, goPrevious } = useMediaCrea
   isEditing: isEdit.value,
   validateMedia,
   validateInformation,
-  informationFirst: true,
 })
 
 // Upload state
@@ -245,12 +244,18 @@ async function onCoverFileChange(e: Event) {
 
 // ── Form logic ────────────────────────────────────────────
 
-function validateMedia(): boolean {
+function validateMedia(requireComplete = false): boolean {
   const hasMedia = form.value.storage_type === 'local'
-    ? (isEdit.value ? Boolean(form.value.video_url.trim()) : Boolean(videoImportState.value?.task.upload_completed_at))
+    ? (isEdit.value
+      ? Boolean(form.value.video_url.trim())
+      : requireComplete
+        ? Boolean(videoImportState.value?.task.upload_completed_at)
+        : Boolean(videoImportId.value))
     : form.value.video_url.trim()
   urlError.value = hasMedia ? '' : (
-    form.value.storage_type === 'local' ? '请等待视频上传完成' : '请填写视频链接'
+    form.value.storage_type === 'local'
+      ? (requireComplete ? '请等待视频上传完成' : '请选择视频文件')
+      : '请填写视频链接'
   )
   return !urlError.value
 }
@@ -271,7 +276,7 @@ function validate(_status: 'draft' | 'published'): boolean {
     errorMsg.value = '内容加载失败，请刷新重试'
     return false
   }
-  return validateMedia() && validateInformation()
+  return validateMedia(true) && validateInformation()
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -321,6 +326,14 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
   return saveVideo(payload, authStore.token ?? undefined, isEdit.value ? String(route.params.id) : undefined)
 }
 
+async function submitImport(mode: 'draft' | 'published' | 'scheduled', scheduledAt: string | null = null) {
+  const importId = videoImportId.value
+  if (!importId) throw new Error('视频上传任务不存在')
+  const payload = buildImportPayload()
+  await updateVideoImport(importId, payload, authStore.token ?? undefined)
+  await submitVideoImport(importId, payload, mode, scheduledAt, authStore.token ?? undefined)
+}
+
 async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
@@ -356,8 +369,8 @@ async function loadVideo() {
     || v.collection?.id
     || v.collections?.[0]?.id
     || ''
-  currentStep.value = 1
-  maxStep.value = 1
+  currentStep.value = 2
+  maxStep.value = 2
 }
 
 onMounted(async () => {
@@ -415,7 +428,7 @@ async function saveDraft() {
   draftSaved.value = false
   try {
     if (!isEdit.value && form.value.storage_type === 'local') {
-      await submitVideoImport(videoImportId.value, buildImportPayload(), 'draft', null, authStore.token ?? undefined)
+      await submitImport('draft')
       await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
       return
     }
@@ -444,7 +457,7 @@ async function doPublish() {
   errorMsg.value = ''
   try {
     if (!isEdit.value && form.value.storage_type === 'local') {
-      await submitVideoImport(videoImportId.value, buildImportPayload(), 'published', null, authStore.token ?? undefined)
+      await submitImport('published')
       await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
       return
     }
@@ -468,7 +481,7 @@ async function schedulePublish() {
   errorMsg.value = ''
   try {
     if (!isEdit.value && form.value.storage_type === 'local') {
-      await submitVideoImport(videoImportId.value, buildImportPayload(), 'scheduled', publishAt.toISOString(), authStore.token ?? undefined)
+      await submitImport('scheduled', publishAt.toISOString())
       await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
       return
     }
@@ -494,11 +507,11 @@ async function schedulePublish() {
       class="ve-steps"
     />
 
-    <div class="ve-layout" :class="{ 've-layout--single': currentStep !== 2 }">
+    <div class="ve-layout" :class="{ 've-layout--single': currentStep !== 1 }">
       <!-- 左栏 -->
       <div class="ve-main">
         <!-- 基本信息 -->
-        <section v-if="currentStep === 1" class="ve-section">
+        <section v-if="currentStep === 2" class="ve-section">
           <h2 class="ve-section-title">基本信息</h2>
           <PInput
             v-model="form.title"
@@ -535,7 +548,7 @@ async function schedulePublish() {
         </section>
 
         <!-- 视频来源 -->
-        <section v-if="currentStep === 2" class="ve-section">
+        <section v-if="currentStep === 1" class="ve-section">
           <div class="ve-step-heading">
             <div>
               <h2 class="ve-section-title">选择视频来源</h2>
@@ -609,7 +622,7 @@ async function schedulePublish() {
         </section>
 
         <!-- 合集 -->
-        <section v-if="currentStep === 1" class="ve-section">
+        <section v-if="currentStep === 2" class="ve-section">
           <h2 class="ve-section-title">归档位置</h2>
           <div class="ve-collections">
             <label class="ve-field-label">合集</label>
@@ -629,9 +642,9 @@ async function schedulePublish() {
           </div>
         </section>
 
-        <p v-if="currentStep === 1 && errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
+        <p v-if="currentStep === 2 && errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
 
-        <div v-if="currentStep === 1" class="ve-step-actions">
+        <div v-if="currentStep === 2" class="ve-step-actions">
           <PButton variant="secondary" @click="goPrevious">
             <ArrowLeft :size="16" aria-hidden="true" />
             上一步
@@ -711,7 +724,7 @@ async function schedulePublish() {
         </section>
       </div>
 
-      <aside v-if="currentStep === 2" class="ve-panel" aria-label="视频封面">
+      <aside v-if="currentStep === 1" class="ve-panel" aria-label="视频封面">
         <VideoCoverPanel
           :generated-cover-ready="generatedCoverReady"
           :generated-cover-preview="generatedCoverPreview"

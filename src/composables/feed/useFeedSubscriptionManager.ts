@@ -74,6 +74,7 @@ export function useFeedSubscriptionManager({
 			feedStore.fetchSubscriptions(),
 			feedStore.fetchFilterPreferences(),
 			feedStore.fetchGroups(),
+			feedStore.fetchSubscriptionHubTree(),
 			feedStore.fetchSubscriptionRules(),
 		]);
 	});
@@ -109,7 +110,7 @@ export function useFeedSubscriptionManager({
 			if (success) {
 				addSubscriptionResetKey.value += 1;
 				showAddModal.value = false;
-				await refreshTimeline();
+				await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 				await onboardingStore.handleSubscriptionSuccess();
 			} else {
 				addSubscriptionError.value =
@@ -148,7 +149,7 @@ export function useFeedSubscriptionManager({
 			}
 
 			await onboardingStore.complete();
-			await Promise.all([feedStore.fetchSubscriptions(), refreshTimeline()]);
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 			onboardingMessage.value = failedCount
 				? `已订阅 ${successCount} 个来源，${failedCount} 个未成功`
 				: `已订阅 ${successCount} 个来源`;
@@ -180,6 +181,13 @@ export function useFeedSubscriptionManager({
 		manageError.value = feedStore.error || fallback;
 	};
 
+	const refreshSubscriptionState = () =>
+		Promise.all([
+			feedStore.fetchSubscriptions(),
+			feedStore.fetchGroups(),
+			feedStore.fetchSubscriptionHubTree(),
+		]);
+
 	const createSubscriptionGroup = async (name: string) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
@@ -188,8 +196,7 @@ export function useFeedSubscriptionManager({
 				setManageError("创建失败");
 				return;
 			}
-			await Promise.all([feedStore.fetchGroups(), feedStore.fetchSubscriptions()]);
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -201,7 +208,7 @@ export function useFeedSubscriptionManager({
 				setManageError("保存失败");
 				return;
 			}
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -213,7 +220,7 @@ export function useFeedSubscriptionManager({
 				setManageError("移动失败");
 				return;
 			}
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -233,20 +240,20 @@ export function useFeedSubscriptionManager({
 				setManageError("保存失败");
 				return;
 			}
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
-	const deleteSubscription = async (id: string) => {
+	const deleteSubscription = async (feedSourceId: string) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
-			const success = await feedStore.unsubscribe(id);
+			const success = await feedStore.unsubscribeSubscriptionHubSource(feedSourceId);
 			if (!success) {
 				setManageError("删除失败");
 				return;
 			}
 			currentPage.value = 1;
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -254,7 +261,11 @@ export function useFeedSubscriptionManager({
 		await withManageBusy(async () => {
 			manageError.value = "";
 			const success = await feedStore.updateGroup(id, name);
-			if (!success) setManageError("保存失败");
+			if (!success) {
+				setManageError("保存失败");
+				return;
+			}
+			await refreshSubscriptionState();
 		});
 	};
 
@@ -267,7 +278,7 @@ export function useFeedSubscriptionManager({
 				return;
 			}
 			currentPage.value = 1;
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -349,7 +360,7 @@ export function useFeedSubscriptionManager({
 		if (!result.success) setManageError(result.error || "刷新失败");
 		if (result.success || result.new_items > 0) {
 			currentPage.value = 1;
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		}
 	};
 
@@ -362,7 +373,7 @@ export function useFeedSubscriptionManager({
 		}
 		if (result.failed > 0) setManageError(`${result.failed} 个来源刷新失败`);
 		currentPage.value = 1;
-		await refreshTimeline();
+		await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 	};
 
 	const setSubscriptionPaused = async (id: string, paused: boolean) => {
@@ -374,23 +385,29 @@ export function useFeedSubscriptionManager({
 				return;
 			}
 			manageMessage.value = paused ? "订阅已暂停" : "订阅已恢复";
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
 	const reorderSubscriptionGroups = async (ids: string[]) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
-			if (!(await feedStore.reorderSubscriptionGroups(ids)))
+			if (!(await feedStore.reorderSubscriptionGroups(ids))) {
 				setManageError("分组排序失败");
+				return;
+			}
+			await refreshSubscriptionState();
 		});
 	};
 
 	const reorderSubscriptions = async (groupId: string, ids: string[]) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
-			if (!(await feedStore.reorderSubscriptions(groupId, ids)))
+			if (!(await feedStore.reorderSubscriptions(groupId, ids))) {
 				setManageError("订阅源排序失败");
+				return;
+			}
+			await refreshSubscriptionState();
 		});
 	};
 
@@ -403,7 +420,7 @@ export function useFeedSubscriptionManager({
 			if (result) {
 				manageMessage.value = `新增 ${result.imported}，复用 ${result.reused}，失败 ${result.failed}`;
 				currentPage.value = 1;
-				await refreshTimeline();
+				await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 			} else {
 				manageError.value = feedStore.error || "导入失败";
 			}
@@ -455,7 +472,7 @@ export function useFeedSubscriptionManager({
 				return;
 			}
 			manageMessage.value = `已更新 ${ids.length} 个订阅源`;
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -463,14 +480,17 @@ export function useFeedSubscriptionManager({
 		await withManageBusy(async () => {
 			manageError.value = "";
 			manageMessage.value = "";
-			const success = await feedStore.batchDeleteSubscriptions(ids);
-			if (!success) {
+			const results = await Promise.all(ids.map((id) =>
+				feedStore.unsubscribeSubscriptionHubSource(id),
+			));
+			if (!results.every(Boolean)) {
 				setManageError("批量取消订阅失败");
+				await refreshSubscriptionState();
 				return;
 			}
 			manageMessage.value = `已取消 ${ids.length} 个订阅源`;
 			currentPage.value = 1;
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -484,7 +504,7 @@ export function useFeedSubscriptionManager({
 				setManageError(read ? "标记已读失败" : "标记未读失败");
 				return;
 			}
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -536,7 +556,7 @@ export function useFeedSubscriptionManager({
 				return;
 			}
 			await confirmApplySavedRule(findSavedRuleId(saved));
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 
@@ -574,7 +594,7 @@ export function useFeedSubscriptionManager({
 				setManageError("应用失败");
 				return;
 			}
-			await refreshTimeline();
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
 

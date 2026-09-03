@@ -176,14 +176,35 @@ export function useFeedArticleBrowser({
 		return undefined;
 	};
 
+	const findHubMembershipForSource = (source: FeedArticleSource) => {
+		for (const typeNode of feedStore.subscriptionHubTree.types) {
+			for (const group of typeNode.groups) {
+				const membership = group.memberships.find((entry) => {
+					const feedSource = entry.feed_source;
+					if (source.type === "internal_channel") {
+						return feedSource?.source_type === "internal_channel" &&
+							(feedSource.source_id === source.id || feedSource.id === source.id);
+					}
+					return source.type === "external_rss" &&
+						(entry.feed_source_id === source.id ||
+							feedSource?.id === source.id ||
+							(!!source.rssUrl && feedSource?.rss_url === source.rssUrl));
+				});
+				if (membership) return membership;
+			}
+		}
+		return undefined;
+	};
+
 	const withSubscriptionState = (
 		source: FeedArticleSource,
 	): FeedArticleSource => {
 		const subscription = findSubscriptionForSource(source);
+		const hubMembership = findHubMembershipForSource(source);
 		return {
 			...source,
 			subscriptionId: subscription?.id || source.subscriptionId,
-			subscribed: Boolean(subscription || source.subscribed),
+			subscribed: Boolean(subscription || hubMembership || source.subscribed),
 		};
 	};
 
@@ -218,9 +239,10 @@ export function useFeedArticleBrowser({
 			subscribed: false,
 		};
 		const subscription = findSubscriptionForSource(source);
+		const hubMembership = findHubMembershipForSource(source);
 		return withSubscriptionState({
 			...source,
-			title: sourceDisplayTitle(source, subscription?.title),
+			title: sourceDisplayTitle(source, subscription?.title || hubMembership?.title),
 		});
 	};
 
@@ -362,7 +384,11 @@ export function useFeedArticleBrowser({
 			}
 			if (!success) return;
 
-			await feedStore.fetchSubscriptions();
+			await Promise.all([
+				feedStore.fetchSubscriptions(),
+				feedStore.fetchGroups(),
+				feedStore.fetchSubscriptionHubTree(),
+			]);
 			selectedSource.value = withSubscriptionState(selectedSource.value);
 			await fetchSourceArticles(selectedSource.value);
 		} finally {

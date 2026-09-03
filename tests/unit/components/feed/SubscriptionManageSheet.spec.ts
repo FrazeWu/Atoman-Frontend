@@ -173,19 +173,19 @@ describe("SubscriptionManageSheet", () => {
 		const wrapper = mountSheet();
 
 		expect(
-			wrapper.get('[data-test="subscription-manage-tab-groups"]').classes(),
+			wrapper.get('[data-test="subscription-manage-tab-sources"]').classes(),
 		).toContain("is-active");
-		expect(wrapper.text()).not.toContain("Example Feed");
+		expect((wrapper.get(".title-input").element as HTMLInputElement).value).toBe("Example Feed");
 		expect(wrapper.text()).not.toContain("规则管理");
 
 		await wrapper
-			.get('[data-test="subscription-manage-tab-sources"]')
+			.get('[data-test="subscription-manage-tab-groups"]')
 			.trigger("click");
 
 		expect(
-			wrapper.get('[data-test="subscription-manage-tab-sources"]').classes(),
+			wrapper.get('[data-test="subscription-manage-tab-groups"]').classes(),
 		).toContain("is-active");
-		expect(wrapper.text()).toContain("Example Feed");
+		expect(wrapper.text()).not.toContain("Example Feed");
 
 		await wrapper
 			.get('[data-test="subscription-manage-tab-rules"]')
@@ -207,6 +207,82 @@ describe("SubscriptionManageSheet", () => {
 		).toContain("is-active");
 		expect(wrapper.text()).toContain("过滤规则");
 		expect(wrapper.text()).not.toContain("播客自动整理");
+	});
+
+	it("merges hub-only sources by feed source and keeps their content contexts", async () => {
+		const wrapper = mount(SubscriptionManageSheet, {
+			props: {
+				...mountSheet().props(),
+				subscriptionHubTree: {
+					types: [
+						{
+							subscription_type: "rss",
+							groups: [{
+								id: "rss-group",
+								user_id: "user-1",
+								subscription_type: "rss",
+								name: "RSS",
+								memberships: [{
+									id: "rss-membership",
+									user_id: "user-1",
+									subscription_type: "rss",
+									group_id: "rss-group",
+									feed_source_id: "source-1",
+									title: "Example Feed",
+								}],
+							}],
+						},
+						...(["podcast", "video"] as const).map((subscriptionType) => ({
+							subscription_type: subscriptionType,
+							groups: [{
+								id: `${subscriptionType}-group`,
+								user_id: "user-1",
+								subscription_type: subscriptionType,
+								name: subscriptionType,
+								memberships: [{
+									id: `${subscriptionType}-membership`,
+									user_id: "user-1",
+									subscription_type: subscriptionType,
+									group_id: `${subscriptionType}-group`,
+									feed_source_id: "source-2",
+									title: "原子谈话",
+									feed_source: {
+										id: "source-2",
+										source_type: "internal_channel",
+										hash: "source-2",
+										cover_url: "https://cdn.example.com/channel.webp",
+										created_at: "2026-09-03T00:00:00Z",
+									},
+								}],
+							}],
+						})),
+					],
+				},
+			},
+			global: {
+				stubs: {
+					PSheet: { template: "<div><slot /></div>" },
+					PField: { props: ["label"], template: "<label><span>{{ label }}</span><slot /></label>" },
+					SubscriptionRuleEditorSheet: true,
+				},
+			},
+		});
+
+		expect(wrapper.findAll(".subscription-card")).toHaveLength(2);
+		const channel = wrapper.get('[data-test="managed-subscription-source-source-2"]');
+		expect(channel.text()).toContain("原子谈话");
+		expect(channel.text()).toContain("播客");
+		expect(channel.text()).toContain("视频");
+		expect(channel.get(".p-avatar img").attributes("src")).toBe("https://cdn.example.com/channel.webp");
+
+		await channel.get('[data-test="unsubscribe-managed-source"]').trigger("click");
+		const confirmButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>(".p-modal-footer button"))
+			.find((button) => button.textContent?.trim() === "删除");
+		expect(confirmButton).toBeDefined();
+		confirmButton!.click();
+		await nextTick();
+
+		expect(wrapper.emitted("delete-subscription")).toEqual([["source-2"]]);
 	});
 
 	it("emits OPML import, export, and failed-source retry actions", async () => {
@@ -282,6 +358,31 @@ describe("SubscriptionManageSheet", () => {
 		]);
 	});
 
+	it("emits feed source ids when cancelling selected subscriptions", async () => {
+		const wrapper = mountSheet();
+		await wrapper
+			.get('[data-test="subscription-manage-tab-sources"]')
+			.trigger("click");
+		await wrapper.get(".subscription-select input").setValue(true);
+		await wrapper
+			.findAll("button")
+			.find((button) => button.text() === "取消订阅")!
+			.trigger("click");
+
+		const confirmButton = Array.from(
+			document.body.querySelectorAll<HTMLButtonElement>(
+				".p-modal-footer button",
+			),
+		).find((button) => button.textContent?.trim() === "删除");
+		expect(confirmButton).toBeDefined();
+		confirmButton!.click();
+		await nextTick();
+
+		expect(wrapper.emitted("batch-delete-subscriptions")).toEqual([
+			[["source-1"]],
+		]);
+	});
+
 	it("emits subscription pause actions", async () => {
 		const wrapper = mountSheet();
 		await wrapper
@@ -299,6 +400,7 @@ describe("SubscriptionManageSheet", () => {
 
 	it("emits group rename and delete actions", async () => {
 		const wrapper = mountSheet();
+		await wrapper.get('[data-test="subscription-manage-tab-groups"]').trigger("click");
 
 		await wrapper.get('[data-test="group-name-input"]').setValue("技术观察");
 		await wrapper.get('[data-test="group-name-input"]').trigger("blur");

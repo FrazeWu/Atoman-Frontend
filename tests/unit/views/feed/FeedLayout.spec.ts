@@ -8,6 +8,12 @@ import { useAuthStore } from "@/stores/auth";
 import { useFeedStore } from "@/stores/feed";
 import type { SubscriptionHubTree } from "@/types";
 
+const { standaloneMobile } = vi.hoisted(() => ({ standaloneMobile: { value: false } }));
+
+vi.mock("@/utils/appRuntime", () => ({
+  isStandaloneMobileApp: () => standaloneMobile.value,
+}));
+
 const subscriptionHubTree: SubscriptionHubTree = {
   types: [
     {
@@ -111,6 +117,7 @@ describe("FeedLayout", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    standaloneMobile.value = false;
   });
 
   it("renders the type-isolated subscription tree in the sidebar", async () => {
@@ -118,7 +125,7 @@ describe("FeedLayout", () => {
       "/feed/subscriptions?hub_type=podcast&hub_group_id=podcast-group",
     );
 
-    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(3);
+    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(4);
     expect(wrapper.text()).toContain("我的订阅");
     expect(wrapper.text()).toContain("播客");
     expect(wrapper.text()).toContain("视频");
@@ -171,11 +178,11 @@ describe("FeedLayout", () => {
     );
   });
 
-  it("opens the RSS source management workspace from the tree", async () => {
+  it("opens unified subscription management from the tree", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
     await wrapper
-      .get('[data-testid="subscription-hub-manage-rss"]')
+      .get('[data-testid="subscription-hub-manage"]')
       .trigger("click");
 
     expect(pushSpy).toHaveBeenCalledWith(
@@ -225,6 +232,23 @@ describe("FeedLayout", () => {
     expect(
       wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists(),
     ).toBe(false);
+  });
+
+  it("replaces the mobile content with the subscription source page and restores it on close", async () => {
+    standaloneMobile.value = true;
+    const { wrapper } = await mountLayout("/feed/subscriptions");
+
+    await wrapper.get('[data-testid="feed-mobile-sources-trigger"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".a-main-content").attributes("style")).toContain("display: none");
+    expect(wrapper.get('[data-testid="feed-mobile-sources-sheet"]').isVisible()).toBe(true);
+
+    await wrapper.get('[data-testid="feed-mobile-sources-close"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".a-main-content").isVisible()).toBe(true);
+    expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false);
   });
 
   it("does not expose the mobile subscription entry point when signed out", async () => {

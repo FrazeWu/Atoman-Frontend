@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useFeedSubscriptionManager } from "@/composables/feed/useFeedSubscriptionManager";
 import { useAuthStore } from "@/stores/auth";
+import { useFeedStore } from "@/stores/feed";
 
 const fetchMock = vi.fn();
 
@@ -19,10 +20,10 @@ function deferredResponse() {
   return { promise, resolve };
 }
 
-function createManager() {
+function createManager(refreshTimeline = async () => {}) {
   return useFeedSubscriptionManager({
     currentPage: ref(1),
-    refreshTimeline: async () => {},
+    refreshTimeline,
   });
 }
 
@@ -115,5 +116,35 @@ describe("useFeedSubscriptionManager diagnostics", () => {
       manager.subscriptionDiagnostics.value["subscription-2"],
     ).toHaveLength(1);
     expect(manager.loadingSubscriptionDiagnosticIds.value.size).toBe(0);
+  });
+});
+
+describe("useFeedSubscriptionManager unified source state", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.stubGlobal("fetch", fetchMock);
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.token = "test-token";
+  });
+
+  it("removes a source by feed source id and refreshes every subscription projection", async () => {
+    const feedStore = useFeedStore();
+    const unsubscribe = vi
+      .spyOn(feedStore, "unsubscribeSubscriptionHubSource")
+      .mockResolvedValue(true);
+    const fetchSubscriptions = vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue(true);
+    const fetchGroups = vi.spyOn(feedStore, "fetchGroups").mockResolvedValue(true);
+    const fetchTree = vi.spyOn(feedStore, "fetchSubscriptionHubTree").mockResolvedValue(true);
+    const refreshTimeline = vi.fn().mockResolvedValue(undefined);
+    const manager = createManager(refreshTimeline);
+
+    await manager.deleteSubscription("source-1");
+
+    expect(unsubscribe).toHaveBeenCalledWith("source-1");
+    expect(fetchSubscriptions).toHaveBeenCalled();
+    expect(fetchGroups).toHaveBeenCalled();
+    expect(fetchTree).toHaveBeenCalled();
+    expect(refreshTimeline).toHaveBeenCalled();
   });
 });

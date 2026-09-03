@@ -1,14 +1,14 @@
 <template>
   <PSheet
     :show="show"
-    :title="activeManageTab === 'groups' ? '管理-分组' : '管理-订阅源'"
+    title="管理订阅"
     close-type="header"
     above-player
     @close="requestClose"
   >
     <div class="manage-sheet">
       <div class="manage-heading">
-        <p class="a-muted manage-copy">整理已有订阅源的名称和分组。</p>
+        <p class="a-muted manage-copy">{{ managedSubscriptions.length }} 个来源</p>
         <div class="manage-toolbar">
           <input
             ref="opmlInputRef"
@@ -29,7 +29,7 @@
               <PButton
                 variant="secondary"
                 label="导出 OPML"
-                :disabled="busy || healthChecking || !subscriptions.length"
+                :disabled="busy || healthChecking || !externalSubscriptions.length"
                 @click="exportOPML"
               />
             </div>
@@ -113,8 +113,14 @@
 
       <!-- 订阅源管理 tab -->
       <template v-else-if="activeManageTab === 'sources'">
-        <div v-if="subscriptions.length" class="source-manage-tools">
+        <div v-if="managedSubscriptions.length" class="source-manage-tools">
           <PInput v-model="sourceSearch" label="搜索订阅源" placeholder="名称或 RSS 地址" />
+          <PSelect
+            v-model="sourceTypeFilter"
+            data-test="subscription-type-filter"
+            label="内容类型"
+            :options="sourceTypeOptions"
+          />
           <PSelect
             v-model="healthFilter"
             label="健康状态"
@@ -135,7 +141,7 @@
           <span class="health-overview-item">异常 {{ sourceHealthSummary.failing }}</span>
         </div>
 
-        <div v-if="subscriptions.length" class="batch-toolbar">
+        <div v-if="legacyManagedSubscriptions.length" class="batch-toolbar">
           <label class="batch-select-all">
             <input type="checkbox" :checked="allVisibleSelected" :disabled="busy || !visibleSubscriptionIds.length" @change="toggleAllVisible" />
             选择当前结果
@@ -152,7 +158,7 @@
           <PButton variant="secondary" label="取消订阅" :disabled="busy || !selectedSubscriptionIds.size" @click="requestBatchDelete" />
         </div>
 
-        <div v-if="!subscriptions.length" class="empty-state a-muted">
+        <div v-if="!managedSubscriptions.length" class="empty-state a-muted">
           暂无订阅源，点击页面上的 “+ 订阅” 添加。
         </div>
 
@@ -171,8 +177,13 @@
             </div>
 
             <div v-else class="subscription-list">
-              <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
-                <label class="subscription-select" :aria-label="`选择 ${subscriptionTitle(sub)}`">
+              <div
+                v-for="sub in group.subscriptions"
+                :key="sub.feed_source_id"
+                class="subscription-card"
+                :data-test="`managed-subscription-source-${sub.feed_source_id}`"
+              >
+                <label v-if="!sub.hubOnly" class="subscription-select" :aria-label="`选择 ${subscriptionTitle(sub)}`">
                   <input
                     type="checkbox"
                     :checked="selectedSubscriptionIds.has(sub.id)"
@@ -180,22 +191,38 @@
                     @change="toggleSubscriptionSelection(sub.id, ($event.target as HTMLInputElement).checked)"
                   />
                 </label>
+                <span v-else class="subscription-select-spacer" aria-hidden="true" />
                 <div class="subscription-main">
-                  <PInput
-                    :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
-                    class="title-input"
-                    :disabled="busy"
-                    @input="updateDraftTitle(sub.id, $event)"
-                    @blur="submitRename(sub)"
-                    @keydown.enter.prevent="submitRename(sub)"
-                  />
-                  <p class="source-url a-muted">
-                    {{ subscriptionSourceLabel(sub) }}
-                  </p>
-                  <p v-if="sub.feed_source?.last_fetched_at" class="sync-meta a-muted">
+                  <div class="subscription-identity">
+                    <PAvatar
+                      :src="subscriptionAvatarURL(sub)"
+                      :name="subscriptionTitle(sub)"
+                      :alt="`${subscriptionTitle(sub)}的头像`"
+                      size="sm"
+                    />
+                    <div class="subscription-identity-copy">
+                      <PInput
+                        v-if="!sub.hubOnly"
+                        :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
+                        class="title-input"
+                        :disabled="busy"
+                        @input="updateDraftTitle(sub.id, $event)"
+                        @blur="submitRename(sub)"
+                        @keydown.enter.prevent="submitRename(sub)"
+                      />
+                      <strong v-else class="subscription-title">{{ subscriptionTitle(sub) }}</strong>
+                      <div class="subscription-type-badges" aria-label="内容类型">
+                        <span v-for="subscriptionType in sub.hubTypes" :key="subscriptionType">
+                          {{ contentTypeLabel(subscriptionType) }}
+                        </span>
+                      </div>
+                      <p class="source-url a-muted">{{ subscriptionSourceLabel(sub) }}</p>
+                    </div>
+                  </div>
+                  <p v-if="isExternalSubscription(sub) && sub.feed_source?.last_fetched_at" class="sync-meta a-muted">
                     最近更新 {{ formatCheckedAt(sub.feed_source.last_fetched_at) }}
                   </p>
-                  <p v-if="sub.feed_source?.fetch_last_success_at" class="sync-meta a-muted">
+                  <p v-if="isExternalSubscription(sub) && sub.feed_source?.fetch_last_success_at" class="sync-meta a-muted">
                     最近成功 {{ formatCheckedAt(sub.feed_source.fetch_last_success_at) }}
                   </p>
                   <p
@@ -205,7 +232,7 @@
                   >
                     {{ syncResultLabel(subscriptionSyncResults[sub.id]!) }}
                   </p>
-                  <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`" role="status" aria-live="polite">
+                  <div v-if="isExternalSubscription(sub)" class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`" role="status" aria-live="polite">
                     <span class="health-dot" aria-hidden="true"></span>
                     <span>{{ subscriptionHealthLabel(sub) }}</span>
                     <span v-if="sub.last_checked" class="a-muted">
@@ -240,7 +267,7 @@
                     </li>
                     <li v-else class="a-muted">暂无近期抓取记录。</li>
                   </ul>
-                  <div class="subscription-flags">
+                  <div v-if="!sub.hubOnly" class="subscription-flags">
                     <label>
                       <input
                         data-test="subscription-flag-muted"
@@ -276,6 +303,7 @@
 
                 <div class="subscription-actions">
                   <PSelect
+                    v-if="!sub.hubOnly"
                     data-test="subscription-priority"
                     :model-value="sub.priority || 'normal'"
                     :options="priorityOptions"
@@ -284,18 +312,19 @@
                     @update:model-value="updateSubscriptionPriority(sub.id, String($event))"
                   />
                   <PSelect
+                    v-if="!sub.hubOnly"
                     data-test="subscription-group"
                     :model-value="sub.subscription_group_id || ''"
                     :options="groupOptions"
                     :disabled="busy"
                     @update:model-value="moveSubscription(sub.id, String($event))"
                   />
-                  <PButton variant="secondary" label="暂停" :disabled="busy || Boolean(sub.is_paused)" @click="setSubscriptionPaused(sub.id, true)" />
-                  <PButton variant="secondary" label="恢复" :disabled="busy || !sub.is_paused" @click="setSubscriptionPaused(sub.id, false)" />
-                  <PButton v-if="!group.virtual" variant="secondary" label="上移" :disabled="busy || group.subscriptions[0]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, -1)" />
-                  <PButton v-if="!group.virtual" variant="secondary" label="下移" :disabled="busy || group.subscriptions[group.subscriptions.length - 1]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, 1)" />
-                  <PButton variant="secondary" label="全部已读" :disabled="busy" @click="markSubscriptionReadState(sub.id, true)" />
-                  <PButton variant="secondary" label="全部未读" :disabled="busy" @click="markSubscriptionReadState(sub.id, false)" />
+                  <PButton v-if="!sub.hubOnly" variant="secondary" label="暂停" :disabled="busy || Boolean(sub.is_paused)" @click="setSubscriptionPaused(sub.id, true)" />
+                  <PButton v-if="!sub.hubOnly" variant="secondary" label="恢复" :disabled="busy || !sub.is_paused" @click="setSubscriptionPaused(sub.id, false)" />
+                  <PButton v-if="!sub.hubOnly && !group.virtual" variant="secondary" label="上移" :disabled="busy || group.subscriptions[0]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, -1)" />
+                  <PButton v-if="!sub.hubOnly && !group.virtual" variant="secondary" label="下移" :disabled="busy || group.subscriptions[group.subscriptions.length - 1]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, 1)" />
+                  <PButton v-if="!sub.hubOnly" variant="secondary" label="全部已读" :disabled="busy" @click="markSubscriptionReadState(sub.id, true)" />
+                  <PButton v-if="!sub.hubOnly" variant="secondary" label="全部未读" :disabled="busy" @click="markSubscriptionReadState(sub.id, false)" />
                   <PButton
                     v-if="sub.feed_source?.source_type === 'external_rss'"
                     data-test="sync-subscription"
@@ -304,7 +333,17 @@
                     :disabled="busy || Boolean(sub.is_paused) || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
                     @click="syncSubscription(sub.id)"
                   />
-                  <PButton variant="secondary" label="删除" :disabled="busy" @click="requestDelete('subscription', sub.id)" />
+                  <button
+                    type="button"
+                    class="subscription-remove"
+                    data-test="unsubscribe-managed-source"
+                    :aria-label="`取消订阅 ${subscriptionTitle(sub)}`"
+                    title="取消订阅"
+                    :disabled="busy"
+                    @click="requestDelete('subscription', sub.feed_source_id)"
+                  >
+                    <Trash :size="17" aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -402,9 +441,13 @@ import type {
   FeedSubscriptionRule,
   Subscription,
   SubscriptionGroup,
+  SubscriptionHubTree,
+  SubscriptionHubType,
   SubscriptionSyncResult,
 } from '@/types'
+import { IconTrash as Trash } from '@tabler/icons-vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -413,10 +456,17 @@ import PSelect from '@/components/ui/PSelect.vue'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import type { FeedAutomationRules, FeedFilterRules, FeedOPMLImportResult } from '@/stores/feed'
+import { buildSourceFaviconURL, normalizeSourceUrlForCard } from '@/utils/feedSourcePresentation'
+
+type ManagedSubscription = Subscription & {
+  hubOnly: boolean
+  hubTypes: SubscriptionHubType[]
+}
 
 const props = defineProps<{
   show: boolean
   subscriptions: Subscription[]
+  subscriptionHubTree?: SubscriptionHubTree
   groups: SubscriptionGroup[]
   subscriptionRules: FeedSubscriptionRule[]
   initialTab?: 'groups' | 'sources' | 'rules' | 'keywords'
@@ -473,6 +523,7 @@ const emit = defineEmits<{
 const newGroupName = ref('')
 const newKeyword = ref('')
 const sourceSearch = ref('')
+const sourceTypeFilter = ref<SubscriptionHubType | ''>('')
 const healthFilter = ref('')
 const batchGroupId = ref('')
 const selectedSubscriptionIds = ref(new Set<string>())
@@ -480,7 +531,7 @@ const expandedSubscriptionDiagnosticIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
-const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.initialTab ?? 'groups')
+const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.initialTab ?? 'sources')
 const deletePending = ref<{
   kind: 'subscription' | 'group' | 'batch'
   id?: string
@@ -525,9 +576,80 @@ const priorityOptions = [
   { label: '低优先', value: 'low' },
 ]
 
+const sourceTypeOptions = [
+  { label: '全部类型', value: '' },
+  { label: '播客', value: 'podcast' },
+  { label: '视频', value: 'video' },
+  { label: '博客', value: 'blog' },
+  { label: 'RSS', value: 'rss' },
+]
+
+const fallbackHubType = (subscription: Subscription): SubscriptionHubType => {
+  switch (subscription.feed_source?.source_type) {
+    case 'external_rss':
+      return 'rss'
+    case 'internal_channel':
+      return 'blog'
+    default:
+      return 'blog'
+  }
+}
+
+const managedSubscriptions = computed<ManagedSubscription[]>(() => {
+  const bySource = new Map<string, ManagedSubscription>()
+
+  props.subscriptions.forEach((subscription) => {
+    bySource.set(subscription.feed_source_id, {
+      ...subscription,
+      hubOnly: false,
+      hubTypes: [],
+    })
+  })
+
+  props.subscriptionHubTree?.types.forEach((typeNode) => {
+    typeNode.groups.forEach((group) => {
+      group.memberships.forEach((membership) => {
+        const current = bySource.get(membership.feed_source_id)
+        if (current) {
+          if (!current.hubTypes.includes(typeNode.subscription_type)) {
+            current.hubTypes.push(typeNode.subscription_type)
+          }
+          current.feed_source ||= membership.feed_source
+          current.title ||= membership.title
+          return
+        }
+
+        bySource.set(membership.feed_source_id, {
+          id: `hub:${membership.feed_source_id}`,
+          user_id: membership.user_id,
+          feed_source_id: membership.feed_source_id,
+          feed_source: membership.feed_source,
+          title: membership.title,
+          position: membership.position,
+          created_at: membership.created_at || '',
+          hubOnly: true,
+          hubTypes: [typeNode.subscription_type],
+        })
+      })
+    })
+  })
+
+  return [...bySource.values()].map((subscription) => ({
+    ...subscription,
+    hubTypes: subscription.hubTypes.length
+      ? subscription.hubTypes
+      : [fallbackHubType(subscription)],
+  }))
+})
+
+const legacyManagedSubscriptions = computed(() =>
+  managedSubscriptions.value.filter((subscription) => !subscription.hubOnly),
+)
+
 const filteredSubscriptions = computed(() => {
   const query = sourceSearch.value.trim().toLowerCase()
-  return props.subscriptions.filter((sub) => {
+  return managedSubscriptions.value.filter((sub) => {
+    if (sourceTypeFilter.value && !sub.hubTypes.includes(sourceTypeFilter.value)) return false
     if (healthFilter.value && subscriptionHealthStatus(sub) !== healthFilter.value) return false
     if (!query) return true
     return [subscriptionTitle(sub), sub.feed_source?.title, sub.feed_source?.rss_url]
@@ -547,17 +669,19 @@ const displayGroups = computed(() => [
   })),
   {
     id: 'unassigned',
-    name: '未分类',
+    name: '其他订阅',
     virtual: true,
     subscriptions: filteredSubscriptions.value.filter(sub => !sub.subscription_group_id),
   },
-].filter(group => group.subscriptions.length > 0 || (!sourceSearch.value && !healthFilter.value)))
+].filter(group => group.subscriptions.length > 0 || (!sourceSearch.value && !sourceTypeFilter.value && !healthFilter.value)))
 
-const visibleSubscriptionIds = computed(() => displayGroups.value.flatMap(group => group.subscriptions.map(sub => sub.id)))
+const visibleSubscriptionIds = computed(() => displayGroups.value.flatMap(group =>
+  group.subscriptions.filter((subscription) => !subscription.hubOnly).map(subscription => subscription.id),
+))
 const allVisibleSelected = computed(() => visibleSubscriptionIds.value.length > 0
   && visibleSubscriptionIds.value.every(id => selectedSubscriptionIds.value.has(id)))
 
-const externalSubscriptions = computed(() => props.subscriptions.filter(
+const externalSubscriptions = computed(() => managedSubscriptions.value.filter(
   (subscription) => subscription.feed_source?.source_type === 'external_rss',
 ))
 
@@ -576,8 +700,36 @@ const sourceHealthSummary = computed(() => {
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
 
-const subscriptionSourceLabel = (sub: Subscription) =>
-  sub.feed_source?.title || sub.title || sub.feed_source?.rss_url || 'RSS'
+const contentTypeLabel = (subscriptionType: SubscriptionHubType) => ({
+  podcast: '播客',
+  video: '视频',
+  blog: '博客',
+  rss: 'RSS',
+}[subscriptionType])
+
+const subscriptionSourceLabel = (sub: ManagedSubscription) => {
+  switch (sub.feed_source?.source_type) {
+    case 'internal_user':
+      return '账户'
+    case 'internal_channel':
+      return '频道'
+    case 'internal_collection':
+      return '合集'
+    case 'external_rss':
+      return normalizeSourceUrlForCard(sub.feed_source.rss_url, 'RSS')
+    default:
+      return sub.hubTypes.map(contentTypeLabel).join(' · ')
+  }
+}
+
+const subscriptionAvatarURL = (sub: ManagedSubscription) =>
+  sub.feed_source?.cover_url
+  || (sub.feed_source?.source_type === 'external_rss'
+    ? buildSourceFaviconURL(sub.feed_source.rss_url)
+    : '')
+
+const isExternalSubscription = (sub: Subscription) =>
+  sub.feed_source?.source_type === 'external_rss'
 
 const groupSubscriptionCount = (groupId: string) =>
   props.subscriptions.filter((sub) => sub.subscription_group_id === groupId).length
@@ -719,7 +871,7 @@ const handleOPMLSelected = (event: Event) => {
 }
 
 const exportOPML = () => {
-  if (props.busy || props.healthChecking || !props.subscriptions.length) return
+  if (props.busy || props.healthChecking || !externalSubscriptions.value.length) return
   emit('export-opml')
 }
 
@@ -767,7 +919,10 @@ const requestDelete = (kind: 'subscription' | 'group', id: string) => {
 }
 
 const requestBatchDelete = () => {
-  const ids = selectedIds()
+  const selected = selectedSubscriptionIds.value
+  const ids = legacyManagedSubscriptions.value
+    .filter((subscription) => selected.has(subscription.id))
+    .map((subscription) => subscription.feed_source_id)
   if (props.busy || !ids.length) return
   deletePending.value = { kind: 'batch', ids }
 }
@@ -883,10 +1038,11 @@ watch(() => props.show, (visible) => {
   if (!visible) {
     return
   }
-  activeManageTab.value = props.initialTab ?? 'groups'
+  activeManageTab.value = props.initialTab ?? 'sources'
   newGroupName.value = ''
   newKeyword.value = ''
   sourceSearch.value = ''
+  sourceTypeFilter.value = ''
   healthFilter.value = ''
   batchGroupId.value = ''
   selectedSubscriptionIds.value = new Set()
@@ -1242,7 +1398,7 @@ watch(() => props.filterRules, (rules) => {
 
 .source-manage-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem) minmax(11rem, 14rem);
   gap: 0.75rem;
 }
 
@@ -1308,12 +1464,51 @@ watch(() => props.filterRules, (rules) => {
   min-width: 0;
 }
 
+.subscription-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.subscription-identity-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 0.35rem;
+}
+
+.subscription-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--a-color-fg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscription-type-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.subscription-type-badges span {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 3px;
+  padding: 0.12rem 0.35rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
 .title-input {
   font-weight: 500;
 }
 
 .source-url {
-  margin: 0.5rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1406,9 +1601,34 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .subscription-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.subscription-remove {
+  display: grid;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-danger, #b91c1c);
+  cursor: pointer;
+}
+
+.subscription-remove:hover {
+  background: var(--a-color-surface);
+}
+
+.subscription-remove:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
+.subscription-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 @media (max-width: 640px) {
@@ -1425,6 +1645,7 @@ watch(() => props.filterRules, (rules) => {
 
   .subscription-actions {
     width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

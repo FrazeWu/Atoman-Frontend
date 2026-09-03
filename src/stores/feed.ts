@@ -185,6 +185,7 @@ export const useFeedStore = defineStore("feed", () => {
 		loadingSubscriptionHubTree,
 		subscriptionHubTreeError,
 		fetchSubscriptionHubTree,
+		unsubscribeSubscriptionHubSource,
 		clearSubscriptionHubState,
 	} = createSubscriptionHubState();
 
@@ -493,6 +494,7 @@ export const useFeedStore = defineStore("feed", () => {
 		fetchSubscriptionRules,
 		fetchGroups,
 		fetchSubscriptionHubTree,
+		unsubscribeSubscriptionHubSource,
 		createSubscriptionRule,
 		createGroup,
 		fetchStarGroups,

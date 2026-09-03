@@ -1,7 +1,7 @@
 <template>
   <div class="a-module-layout feed-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="feed" />
-    <main class="a-main-content">
+    <main v-show="!isMobileApp || !mobileSourcesOpen" class="a-main-content">
       <header v-if="authStore.isAuthenticated" class="module-mobile-header">
         <button
           type="button"
@@ -15,8 +15,9 @@
       <router-view />
     </main>
     <FeedMobileSourcesSheet
-      v-if="authStore.isAuthenticated"
+      v-if="authStore.isAuthenticated && (!isMobileApp || mobileSourcesOpen)"
       :show="mobileSourcesOpen"
+      :presentation="isMobileApp ? 'page' : 'sheet'"
       :tree="subscriptionHubTree"
       :active-type="activeHubType"
       :active-group-id="activeHubGroupId"
@@ -25,7 +26,7 @@
       :error="subscriptionHubTreeError"
       @close="mobileSourcesOpen = false"
       @select-context="selectSubscriptionHubContext"
-      @manage-rss="openRSSManagement"
+      @manage="openSubscriptionManagement"
       @retry="reloadSubscriptionHubTree"
     />
   </div>
@@ -41,11 +42,13 @@ import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
 import type { SubscriptionHubType } from '@/types'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
+const isMobileApp = isStandaloneMobileApp()
 
 // Setup global area switching (H/L)
 useKeyboardLayout()
@@ -85,10 +88,10 @@ const selectSubscriptionHubContext = (selection: { subscriptionType: Subscriptio
   })
 }
 
-const openRSSManagement = () => {
+const openSubscriptionManagement = () => {
   mobileSourcesOpen.value = false
   void router.push({
-    path: '/feed/sources',
+    path: isMobileApp ? '/feed/subscriptions' : '/feed/sources',
     query: {
       ...route.query,
       hub_type: undefined,

@@ -47,6 +47,135 @@ test.describe('Feed', () => {
     await expect(authenticatedPage.getByRole('button', { name: '+ 订阅' })).toBeVisible()
   })
 
+  test('mobile subscription management keeps sources visible and deduplicated', async ({ page }, testInfo) => {
+    const coverDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+    const channelSource = {
+      id: 'source-channel',
+      source_id: 'channel-1',
+      source_type: 'internal_channel',
+      title: '原子谈话',
+      hash: 'source-channel',
+      cover_url: coverDataURL,
+      created_at: '2026-09-03T00:00:00Z',
+    }
+    const rssSource = {
+      id: 'source-rss',
+      source_type: 'external_rss',
+      title: 'Tech Briefing',
+      hash: 'source-rss',
+      rss_url: 'https://news.example.com/feed.xml',
+      fetch_status: 'warning',
+      created_at: '2026-09-03T00:00:00Z',
+    }
+    const membership = (subscriptionType: 'podcast' | 'video') => ({
+      id: `${subscriptionType}-membership`,
+      user_id: 'user-1',
+      subscription_type: subscriptionType,
+      group_id: `${subscriptionType}-group`,
+      feed_source_id: channelSource.id,
+      title: channelSource.title,
+      position: 0,
+      created_at: '2026-09-03T00:00:00Z',
+      feed_source: channelSource,
+    })
+    const tree = {
+      types: [
+        ...(['podcast', 'video'] as const).map(subscriptionType => ({
+          subscription_type: subscriptionType,
+          groups: [{
+            id: `${subscriptionType}-group`,
+            user_id: 'user-1',
+            subscription_type: subscriptionType,
+            name: '默认分组',
+            position: 0,
+            memberships: [membership(subscriptionType)],
+          }],
+        })),
+        {
+          subscription_type: 'rss',
+          groups: [{
+            id: 'rss-group',
+            user_id: 'user-1',
+            subscription_type: 'rss',
+            name: '默认分组',
+            position: 0,
+            memberships: [{
+              id: 'rss-membership',
+              user_id: 'user-1',
+              subscription_type: 'rss',
+              group_id: 'rss-group',
+              feed_source_id: rssSource.id,
+              title: rssSource.title,
+              position: 0,
+              created_at: '2026-09-03T00:00:00Z',
+              feed_source: rssSource,
+            }],
+          }],
+        },
+      ],
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.route('**/api/v1/**', async route => {
+      const pathname = new URL(route.request().url()).pathname
+      let body: unknown = { data: [] }
+      if (pathname.endsWith('/auth/session')) {
+        body = {
+          csrf_token: 'feed-mobile-csrf',
+          user: {
+            uuid: 'user-1',
+            username: 'reader',
+            email: 'reader@example.com',
+            role: 'user',
+          },
+        }
+      } else if (pathname.endsWith('/site/access')) {
+        body = { modules: { feed: { enabled: true, features: {} } } }
+      } else if (pathname.endsWith('/feed/subscription-hub/tree')) {
+        body = { data: tree }
+      } else if (pathname.endsWith('/feed/subscriptions')) {
+        body = {
+          data: [{
+            id: 'subscription-rss',
+            user_id: 'user-1',
+            feed_source_id: rssSource.id,
+            title: rssSource.title,
+            position: 0,
+            priority: 'normal',
+            created_at: '2026-09-03T00:00:00Z',
+            feed_source: rssSource,
+          }],
+        }
+      } else if (pathname.endsWith('/site/visits')) {
+        await route.fulfill({ status: 204, body: '' })
+        return
+      }
+      await route.fulfill({ status: 200, json: body })
+    })
+
+    await page.goto('/feed/subscriptions')
+    await expect(page.locator('html[data-atoman-app=mobile]')).toHaveCount(1)
+    await page.getByTestId('feed-mobile-sources-trigger').click()
+
+    const sourcePage = page.getByTestId('feed-mobile-sources-sheet')
+    await expect(sourcePage).toBeVisible()
+    await expect(page.locator('.a-main-content')).toBeHidden()
+    expect((await sourcePage.boundingBox())?.y).toBeLessThan(140)
+    await expect(sourcePage.getByText('原子谈话', { exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('mobile-feed-sources.png'), fullPage: true })
+
+    await page.getByRole('button', { name: '管理订阅' }).click()
+    const manageRegion = page.getByRole('region', { name: '管理订阅' })
+    await expect(manageRegion).toBeVisible()
+    await expect(manageRegion.locator('[data-test^="managed-subscription-source-"]')).toHaveCount(2)
+    const channelRow = manageRegion.locator('[data-test="managed-subscription-source-source-channel"]')
+    await expect(channelRow.getByText('播客', { exact: true })).toBeVisible()
+    await expect(channelRow.getByText('视频', { exact: true })).toBeVisible()
+    await expect(channelRow.locator('.p-avatar img')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    await page.screenshot({ path: testInfo.outputPath('mobile-feed-subscription-management.png'), fullPage: true })
+  })
+
   test('authenticated user can open add subscription modal', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/feed')
 

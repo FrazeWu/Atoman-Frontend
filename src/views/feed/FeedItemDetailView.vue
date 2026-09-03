@@ -175,7 +175,11 @@ async function subscribeSource() {
   try {
     const success = await feedStore.subscribeToRSS(source.rssUrl, source.title)
     if (!success) return
-    await feedStore.fetchSubscriptions()
+    await Promise.all([
+      feedStore.fetchSubscriptions(),
+      feedStore.fetchGroups(),
+      feedStore.fetchSubscriptionHubTree(),
+    ])
     routeState.value = routeState.value
       ? { ...routeState.value, source: { ...source, subscribed: true } }
       : routeState.value

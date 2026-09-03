@@ -197,7 +197,7 @@
         :error="subscriptionHubTreeError"
         :collapsed="sidebarCollapsed"
         @select-context="selectSubscriptionHubContext"
-        @manage-rss="openRSSManagement"
+        @manage="openSubscriptionManagement"
         @retry="reloadSubscriptionHubTree"
       />
       <MusicSidebarPlaylists
@@ -350,7 +350,7 @@ const selectSubscriptionHubContext = (selection: { subscriptionType: Subscriptio
   })
 }
 
-const openRSSManagement = () => {
+const openSubscriptionManagement = () => {
   if (!router || !route) return
   void router.push({
     path: '/feed/sources',

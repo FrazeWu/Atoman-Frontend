@@ -2962,7 +2962,7 @@ describe("FeedView", () => {
     },
     {
       eventName: "delete-subscription",
-      methodName: "unsubscribe",
+      methodName: "unsubscribeSubscriptionHubSource",
       errorText: "删除失败",
       args: ["sub-1"],
     },

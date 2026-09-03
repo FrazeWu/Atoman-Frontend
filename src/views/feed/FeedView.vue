@@ -93,7 +93,7 @@
       :show="showArticleSheet"
       :article="selectedArticle"
       :source="selectedArticleSource"
-      :show-source-subscribe="authStore.isAuthenticated"
+      :show-source-subscribe="Boolean(selectedArticleSource)"
       :source-subscribe-busy="sourceSubscribeBusy"
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"

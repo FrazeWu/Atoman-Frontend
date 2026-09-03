@@ -158,4 +158,44 @@ describe("useFeedArticleBrowser", () => {
     expect(router.currentRoute.value.fullPath).toBe("/feed?source_id=source-1");
     wrapper.unmount();
   });
+
+  it("未登录时从文章抽屉订阅来源会跳转登录", async () => {
+    setActivePinia(createPinia());
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/feed", component: { template: "<div />" } },
+        { path: "/feed/item/:id", component: { template: "<div />" } },
+        { path: "/login", component: { template: "<div />" } },
+      ],
+    });
+    await router.push("/feed");
+    await router.isReady();
+
+    let browser!: ReturnType<typeof useFeedArticleBrowser>;
+    const Harness = defineComponent({
+      setup() {
+        browser = useFeedArticleBrowser({
+          visibleTimeline: computed(() => []),
+          subscriptions: computed(() => []),
+          focusedIndex: ref(-1),
+          itemKey: (item) => item.feed_item?.id || item.post?.id || "",
+          feedItemActionIDs: (item) => [item.id],
+        });
+        return () => null;
+      },
+    });
+    const wrapper = mount(Harness, { global: { plugins: [router] } });
+
+    await browser.openArticleSheet(createFeedItem("item-1", "source-1", "来源"));
+    await browser.subscribeSelectedArticleSource();
+    await flushPromises();
+
+    expect(router.currentRoute.value.path).toBe("/login");
+    expect(router.currentRoute.value.query.redirect).toContain(
+      "/feed?subscribe_source_id=source-1",
+    );
+    wrapper.unmount();
+  });
 });

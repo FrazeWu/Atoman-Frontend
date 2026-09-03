@@ -298,7 +298,7 @@ const weeklyMustRead = [
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-pill);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .blog-template__chip:hover {

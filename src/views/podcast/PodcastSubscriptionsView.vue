@@ -131,7 +131,7 @@ onMounted(async () => {
 .psub-sources { display: grid; gap: 0.75rem; margin-bottom: 1.25rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .psub-sources > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .psub-list { display: grid; gap: 0.6rem; }
-.psub-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.psub-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .psub-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
 .psub-main { min-width: 0; }
 .psub-title { color: var(--a-color-fg); font-weight: 600; text-decoration: none; font-size: 0.925rem; }

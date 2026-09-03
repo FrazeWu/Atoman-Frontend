@@ -84,6 +84,7 @@
 	  @reorder="reorderContent"
 	  @status="updateStatus"
 	  @cancel-schedule="cancelSchedule"
+	  @retry-schedule="retrySchedule"
 	  @share="shareContent"
 	  @delete="pendingDelete = $event"
 	  @reupload="openReupload"
@@ -266,6 +267,10 @@ async function updateStatus(item: StudioContentItem, status: StudioPublishStatus
 
 async function cancelSchedule(item: StudioContentItem) {
   await runMutation(async () => { await lifecycle.cancelSchedule(module.value, item.id) }, '已取消定时发布')
+}
+
+async function retrySchedule(item: StudioContentItem) {
+  await runMutation(async () => { await lifecycle.retrySchedule(module.value, item.id) }, '已重新进入发布队列')
 }
 
 async function shareContent(item: StudioContentItem) {

@@ -328,7 +328,7 @@ function toggleGroup(groupId: string) {
   font: inherit;
   font-size: 0.72rem;
   font-weight: 500;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .feed-sidebar-sources__all {
@@ -346,7 +346,7 @@ function toggleGroup(groupId: string) {
   font-size: 0.9rem;
   font-weight: 500;
   text-align: left;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .feed-sidebar-sources__item {
@@ -366,7 +366,7 @@ function toggleGroup(groupId: string) {
   cursor: pointer;
   border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
   font-size: 0.9rem;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .feed-sidebar-sources__all:hover,

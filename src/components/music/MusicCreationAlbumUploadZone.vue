@@ -352,7 +352,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .custom-file-picker:hover:not(.is-disabled) {
   border-color: var(--a-color-text);
@@ -406,7 +406,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 .folder-picker-btn:hover:not(:disabled) {
   color: var(--a-color-text);

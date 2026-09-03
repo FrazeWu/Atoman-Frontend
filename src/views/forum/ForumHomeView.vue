@@ -617,7 +617,7 @@ const submitCategoryRequest = async () => {
   border-color: var(--a-color-disabled-border);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: color 0.12s, background-color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .sidebar-tag:hover,
@@ -851,7 +851,7 @@ const submitCategoryRequest = async () => {
 .tr-badge-cat {
   cursor: pointer;
   text-transform: uppercase;
-  transition: all 0.1s;
+  transition: color 0.1s, background-color 0.1s, border-color 0.1s, opacity 0.1s, transform 0.1s, box-shadow 0.1s;
 }
 
 .tr-badge-cat:hover {
@@ -863,7 +863,7 @@ const submitCategoryRequest = async () => {
   border-color: var(--a-color-disabled-border);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 0.1s;
+  transition: color 0.1s, background-color 0.1s, border-color 0.1s, opacity 0.1s, transform 0.1s, box-shadow 0.1s;
 }
 
 .tr-badge-tag:hover {

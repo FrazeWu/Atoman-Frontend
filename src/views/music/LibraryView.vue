@@ -335,7 +335,7 @@ onUnmounted(() => clearTimeout(queryTimer))
 .music-library__unauth { padding: 3rem 0; }
 .music-library__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .music-library__sort { display: flex; gap: 0.4rem; }
-.music-library__sort button { border: 0; background: transparent; color: var(--a-color-muted); padding: 0.35rem 0.6rem; border-radius: var(--a-radius-control); cursor: pointer; transition: all 0.15s ease; }
+.music-library__sort button { border: 0; background: transparent; color: var(--a-color-muted); padding: 0.35rem 0.6rem; border-radius: var(--a-radius-control); cursor: pointer; transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
 .music-library__sort button.active { color: var(--a-color-fg); font-weight: 600; background: var(--a-color-surface-muted); }
 .music-library__cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem; }
 .music-library__cards > * { min-width: 0; align-self: start; }

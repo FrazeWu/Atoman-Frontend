@@ -100,7 +100,7 @@ async function subscribeShow() {
 .ps-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; }
 .ps-message { margin: 0.5rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
 .ps-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
-.ps-ep { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.ps-ep { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .ps-ep:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
 .ps-ep-cover { width: 2.75rem; height: 2.75rem; border-radius: var(--a-radius-control); object-fit: cover; flex-shrink: 0; }
 .ps-ep-num { font-size: 0.75rem; color: var(--a-color-muted); flex-shrink: 0; }

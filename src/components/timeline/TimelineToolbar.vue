@@ -118,7 +118,7 @@ const updateCategory = (value: string) => emit('update:category', value)
   padding: 0.4rem 0.85rem;
   font-size: 0.75rem;
   font-weight: 600;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tl-mode-btn:hover {

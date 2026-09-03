@@ -12,13 +12,32 @@ describe('transition store', () => {
     vi.useRealTimers()
   })
 
-  it('restores the content when an exit navigation does not settle', () => {
+  it('keeps the exit state recoverable when the transition event does not arrive', () => {
     const transition = useTransitionStore()
 
     transition.triggerExit()
     expect(transition.isExiting).toBe(true)
 
     vi.advanceTimersByTime(1000)
+    expect(transition.isExiting).toBe(false)
+  })
+
+  it('resolves exit navigation from the transition completion signal', async () => {
+    const transition = useTransitionStore()
+    let settled = false
+    const exit = transition.triggerExit()
+    void exit.then(() => { settled = true })
+
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    expect(transition.isExiting).toBe(true)
+
+    transition.completeExit()
+    await exit
+
+    expect(settled).toBe(true)
+    expect(transition.isExiting).toBe(true)
+    transition.reset()
     expect(transition.isExiting).toBe(false)
   })
 

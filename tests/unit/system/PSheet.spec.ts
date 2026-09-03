@@ -23,10 +23,10 @@ describe("PSheet.vue", () => {
 			/@media \(max-width: 767px\)[\s\S]*?\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*0/,
 		);
 		expect(source).toMatch(
-			/\.p-sheet-panel\s*\{[\s\S]*?transition:[^;]*left 200ms ease/,
+			/\.p-sheet-panel\s*\{[\s\S]*?transition:\s*left var\(--a-motion-state\)/,
 		);
 		expect(source).toMatch(
-			/\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter 700ms/,
+			/\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter var\(--a-motion-emphasis\)/,
 		);
 		expect(source).toMatch(
 			/\.slide-right-enter-from,[\s\S]*?transform:\s*translateX\(100%\)/,
@@ -35,13 +35,13 @@ describe("PSheet.vue", () => {
 			/@keyframes p-sheet-right-enter\s*\{[\s\S]*?72%\s*\{[\s\S]*?transform:\s*translateX\(-1\.25rem\)/,
 		);
 		expect(source).toMatch(
-			/\.slide-right-leave-active\s*\{[\s\S]*?transition:\s*transform 450ms/,
+			/\.slide-right-leave-active\s*\{[\s\S]*?transition:\s*transform var\(--a-motion-overlay-exit\)/,
 		);
 		expect(source).toMatch(
 			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,
 		);
 		expect(source).toMatch(
-			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*p-sheet-right-enter 700ms/,
+			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.slide-right-enter-active\s*\{[\s\S]*?animation:\s*none/,
 		);
 	});
 

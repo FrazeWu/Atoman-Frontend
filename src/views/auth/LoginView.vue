@@ -952,7 +952,7 @@ watch(username, (value) => {
   background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, white);
   color: var(--a-color-accent-destructive);
   font-size: 0.85rem;
-  transition: all 0.2s;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .auth-success {
@@ -1019,7 +1019,7 @@ watch(username, (value) => {
 /* Transitions */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: all 0.2s ease-out;
+  transition: color 0.2s ease-out, background-color 0.2s ease-out, border-color 0.2s ease-out, opacity 0.2s ease-out, transform 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
 .fade-slide-enter-from {

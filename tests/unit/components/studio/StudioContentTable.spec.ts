@@ -75,6 +75,22 @@ describe("StudioContentTable", () => {
 		expect(wrapper.emitted("cancelSchedule")?.[0]).toEqual([scheduled]);
 	});
 
+	it("shows failed blog scheduling details and emits a retry", async () => {
+		const failed = {
+			...item("blog"),
+			status: "draft" as const,
+			schedule_status: "failed",
+			schedule_attempts: 3,
+			schedule_last_error: "发布检查失败",
+		};
+		const wrapper = mountTable("blog", failed);
+
+		expect(wrapper.text()).toContain("发布失败");
+		expect(wrapper.text()).toContain("发布检查失败");
+		await wrapper.get('[data-testid="retry-schedule-blog-1"]').trigger("click");
+		expect(wrapper.emitted("retrySchedule")?.[0]).toEqual([failed]);
+	});
+
 	it("renders podcast and video media operations", () => {
 		const podcast = mountTable("podcast");
 		expect(podcast.text()).toContain("02:05");
@@ -108,5 +124,11 @@ describe("StudioContentTable", () => {
 		const privateItem = { ...item("blog"), visibility: "private" as const };
 		const wrapper = mountTable("blog", privateItem);
 		expect(wrapper.find('[data-testid="share-blog-1"]').exists()).toBe(false);
+		expect(wrapper.find('[data-testid="view-public-blog-1"]').exists()).toBe(false);
+	});
+
+	it("links published public blogs to their public page", () => {
+		const wrapper = mountTable("blog");
+		expect(wrapper.get('[data-testid="view-public-blog-1"]').attributes("href")).toBe("/posts/post/blog-1");
 	});
 });

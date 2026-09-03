@@ -542,7 +542,7 @@ onUnmounted(() => {
   font-weight: 500;
   text-align: center;
   border-radius: 4px;
-  transition: all 120ms ease;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
 .vpc-speed-option:hover,

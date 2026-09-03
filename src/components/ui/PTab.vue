@@ -49,7 +49,7 @@ const onClick = (event: MouseEvent) => {
   font-weight: var(--a-font-weight-strong, 700);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: all 0.12s ease;
+  transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .p-tab:not(:disabled) {

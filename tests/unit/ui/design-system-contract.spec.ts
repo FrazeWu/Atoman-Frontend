@@ -18,7 +18,19 @@ const sourceText = (directory: string): string =>
     .join("\n");
 
 describe("modern flat UI design-system contract", () => {
-  it("uses neutral semantic tokens and soft geometry", () => {
+	it("defines shared motion tokens and explicit transition properties", () => {
+		const css = read("src/style.css");
+		const source = sourceText("src");
+
+		expect(css).toContain("--a-motion-micro: 140ms;");
+		expect(css).toContain("--a-motion-state: 220ms;");
+		expect(css).toContain("--a-motion-navigation: 520ms;");
+		expect(css).toContain("--a-motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);");
+		expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+		expect(source).not.toMatch(/transition:\s*all\b/);
+	});
+
+	it("uses neutral semantic tokens and soft geometry", () => {
     const css = read("src/style.css");
 
     expect(css).toContain("--a-color-surface-muted: #f1f5f9;");

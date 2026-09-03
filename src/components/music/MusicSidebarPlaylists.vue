@@ -414,7 +414,7 @@ watch(
   gap: 0.45rem;
   width: 100%;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .music-sidebar-playlists__login-button:hover,

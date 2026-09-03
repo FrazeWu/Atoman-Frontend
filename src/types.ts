@@ -226,6 +226,10 @@ export interface StudioContentItem {
 	processing_status?: string;
 	published_at?: string;
 	scheduled_at?: string;
+	schedule_status?: "pending" | "processing" | "published" | "failed" | "cancelled";
+	schedule_timezone?: string;
+	schedule_attempts?: number;
+	schedule_last_error?: string;
 	created_at: string;
 	updated_at: string;
 }

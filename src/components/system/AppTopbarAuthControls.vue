@@ -228,7 +228,7 @@ const logout = async () => {
   padding: 0.25rem 0.5rem;
   font-weight: 500;
   font-size: 0.8125rem;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -283,11 +283,11 @@ const logout = async () => {
 }
 
 .user-menu-enter-active {
-  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
+  transition: transform var(--a-motion-state) var(--a-motion-ease-enter), opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .user-menu-leave-active {
-  transition: transform 120ms cubic-bezier(0.4, 0, 1, 1), opacity 120ms ease;
+  transition: transform var(--a-motion-micro) var(--a-motion-ease-exit), opacity var(--a-motion-micro) var(--a-motion-ease-exit);
 }
 
 .user-menu-enter-from,
@@ -311,7 +311,7 @@ const logout = async () => {
   border: 1px solid transparent;
   border-bottom-color: var(--a-color-border-soft);
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dropdown-item:last-child {

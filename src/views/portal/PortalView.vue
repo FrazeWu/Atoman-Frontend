@@ -490,7 +490,7 @@ onMounted(loadHotContent)
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .portal-hot__secondary-btn:hover {
@@ -742,7 +742,7 @@ onMounted(loadHotContent)
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .portal-hot__strip-links a:hover {
@@ -787,7 +787,7 @@ onMounted(loadHotContent)
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .portal-hot__fallback-links a:hover {

@@ -69,27 +69,18 @@ export function useAsyncNavigate() {
    */
   async function navigateModuleWithShutter(targetUrl: string) {
     const request = ++moduleNavigationRequest
-    try {
-      localStorage.setItem('atoman_transition_relay_basic', 'true')
-    } catch (err) {
-      reportError(err, 'Transition relay failed:')
-      await router.push(targetUrl)
-      return
-    }
-
     sheet.clearStack(false)
-    transition.triggerExit()
+    transition.startModuleNavigation()
 
     try {
-      await router.push(targetUrl)
+      const failure = await router.push(targetUrl)
       if (request !== moduleNavigationRequest) return
-      transition.reset()
-      transition.triggerEntry()
-      localStorage.removeItem('atoman_transition_relay_basic')
+      if (failure) {
+        transition.reset()
+      }
     } catch (err) {
       if (request === moduleNavigationRequest) {
         transition.reset()
-        localStorage.removeItem('atoman_transition_relay_basic')
       }
       reportError(err, 'Module navigation failed:')
     }

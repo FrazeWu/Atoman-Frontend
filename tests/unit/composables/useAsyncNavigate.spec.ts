@@ -4,6 +4,8 @@ import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 const clearStack = vi.fn()
 const triggerExit = vi.fn()
 const triggerEntry = vi.fn()
+const startModuleNavigation = vi.fn()
+const finishModuleNavigation = vi.fn()
 const resetTransition = vi.fn()
 const routerPush = vi.fn()
 const checkRelay = vi.fn()
@@ -20,6 +22,8 @@ vi.mock('@/stores/transition', () => ({
   useTransitionStore: () => ({
     triggerExit,
     triggerEntry,
+    startModuleNavigation,
+    finishModuleNavigation,
     reset: resetTransition,
   }),
 }))
@@ -60,6 +64,8 @@ describe('useAsyncNavigate', () => {
     clearStack.mockReset()
     triggerExit.mockReset()
     triggerEntry.mockReset()
+    startModuleNavigation.mockReset()
+    finishModuleNavigation.mockReset()
     resetTransition.mockReset()
     checkRelay.mockReset()
     document.body.style.cursor = 'default'
@@ -88,17 +94,17 @@ describe('useAsyncNavigate', () => {
     expect(document.body.style.cursor).toBe('default')
   })
 
-  it('falls back to router navigation when basic relay storage write fails', async () => {
-    mockFailingStorage()
+  it('starts module navigation without hiding the current page', async () => {
     const { navigateModuleWithShutter } = useAsyncNavigate()
 
-    await navigateModuleWithShutter('/music')
+    const navigation = navigateModuleWithShutter('/music')
+    await Promise.resolve()
 
-    expect(clearStack).not.toHaveBeenCalled()
+    expect(clearStack).toHaveBeenCalledOnce()
     expect(triggerExit).not.toHaveBeenCalled()
+    expect(startModuleNavigation).toHaveBeenCalledOnce()
     expect(routerPush).toHaveBeenCalledWith('/music')
-    expect(assign).not.toHaveBeenCalled()
-    expect(document.body.style.cursor).toBe('default')
+    await navigation
   })
 
   it('starts router navigation without a fixed transition delay', async () => {
@@ -109,6 +115,15 @@ describe('useAsyncNavigate', () => {
 
     expect(routerPush).toHaveBeenCalledWith('/music')
     await navigation
+  })
+
+  it('resets module transition when navigation is aborted', async () => {
+    routerPush.mockResolvedValueOnce({ type: 4 })
+    const { navigateModuleWithShutter } = useAsyncNavigate()
+
+    await navigateModuleWithShutter('/music')
+
+    expect(resetTransition).toHaveBeenCalledOnce()
   })
 
   it('checks the transition relay after detail navigation', async () => {
@@ -138,7 +153,9 @@ describe('useAsyncNavigate', () => {
     await first
 
     expect(routerPush.mock.calls).toEqual([['/music'], ['/forum']])
-    expect(triggerEntry).toHaveBeenCalledTimes(1)
-    expect(resetTransition).toHaveBeenCalledTimes(1)
+    expect(startModuleNavigation).toHaveBeenCalledTimes(2)
+    expect(triggerExit).not.toHaveBeenCalled()
+    expect(triggerEntry).not.toHaveBeenCalled()
+    expect(resetTransition).not.toHaveBeenCalled()
   })
 })

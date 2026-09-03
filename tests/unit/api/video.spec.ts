@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { uploadVideoImportPart } from '@/api/video'
+import {
+  getRecommendedVideos,
+  getVideo,
+  getVideoRecommendations,
+  listVideos,
+  uploadVideoImportPart,
+} from '@/api/video'
 
 describe('video import API', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -72,5 +78,22 @@ describe('video import API', () => {
     xhr.emit('timeout')
 
     await expect(result).rejects.toThrow('视频分片超时，请重试')
+  })
+
+  it('encodes video path segments and query values', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listVideos('latest&visibility=private')
+    await getVideo('video/one?draft=true')
+    await getRecommendedVideos('video/one?draft=true')
+    await getVideoRecommendations('for-you&limit=100')
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/videos?sort=latest%26visibility%3Dprivate',
+      '/api/v1/videos/video%2Fone%3Fdraft%3Dtrue',
+      '/api/v1/videos/video%2Fone%3Fdraft%3Dtrue/recommended',
+      '/api/v1/videos/recommend/items?mode=for-you%26limit%3D100&page=1&page_size=8',
+    ])
   })
 })

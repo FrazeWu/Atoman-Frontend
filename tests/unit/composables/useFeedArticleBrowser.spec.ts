@@ -7,8 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useFeedArticleBrowser } from "@/composables/feed/useFeedArticleBrowser";
 import type { TimelineItem } from "@/types";
 
+const { isMobileApp } = vi.hoisted(() => ({ isMobileApp: { value: false } }));
+
 vi.mock("@/utils/appRuntime", () => ({
-  isStandaloneMobileApp: () => false,
+  isStandaloneMobileApp: () => isMobileApp.value,
 }));
 
 function deferredResponse(body: unknown) {
@@ -44,6 +46,7 @@ const createFeedItem = (
 describe("useFeedArticleBrowser", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    isMobileApp.value = false;
   });
 
   it("快速切换来源时忽略过期请求结果", async () => {
@@ -121,6 +124,38 @@ describe("useFeedArticleBrowser", () => {
       browser.sourceArticles.value.map((item) => item.feed_item?.id),
     ).toEqual(["item-b"]);
 
+    wrapper.unmount();
+  });
+
+  it("在移动端打开来源时进入筛选后的时间线", async () => {
+    isMobileApp.value = true;
+    setActivePinia(createPinia());
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/", component: { template: "<div />" } }],
+    });
+    await router.push("/");
+    await router.isReady();
+
+    let browser!: ReturnType<typeof useFeedArticleBrowser>;
+    const Harness = defineComponent({
+      setup() {
+        browser = useFeedArticleBrowser({
+          visibleTimeline: computed(() => []),
+          subscriptions: computed(() => []),
+          focusedIndex: ref(-1),
+          itemKey: (item) => item.feed_item?.id || item.post?.id || "",
+          feedItemActionIDs: (item) => [item.id],
+        });
+        return () => null;
+      },
+    });
+    const wrapper = mount(Harness, { global: { plugins: [router] } });
+
+    await browser.openFeedItemSourceSheet(createFeedItem("item-1", "source-1", "来源").feed_item!);
+
+    expect(router.currentRoute.value.fullPath).toBe("/feed?source_id=source-1");
     wrapper.unmount();
   });
 });

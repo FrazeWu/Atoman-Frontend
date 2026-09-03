@@ -1,5 +1,5 @@
 <template>
-  <PModal title="版本历史" size="md" @close="$emit('close')">
+  <PModal title="版本历史" size="md" :above-player="abovePlayer" @close="$emit('close')">
     <p v-if="loading" class="version-history__state">正在加载</p>
     <div v-else-if="error" class="version-history__error" role="alert">
       <p class="version-history__state">{{ error }}</p>
@@ -38,7 +38,9 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
 
-const props = defineProps<{ postId: string }>()
+const props = withDefaults(defineProps<{ postId: string; abovePlayer?: boolean }>(), {
+  abovePlayer: false,
+})
 const emit = defineEmits<{ close: []; restored: [] }>()
 const api = useApi()
 const authStore = useAuthStore()

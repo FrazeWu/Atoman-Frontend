@@ -528,7 +528,7 @@ describe("feed store", () => {
     expect(feed.error).toBe("rss_url must be an absolute http/https URL");
   });
 
-  it("treats nested already-subscribed API errors as successful RSS subscription attempts", async () => {
+  it("does not report RSS subscription success when the refreshed list has no subscription", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
@@ -549,7 +549,7 @@ describe("feed store", () => {
     const feed = useFeedStore();
     const result = await feed.subscribeToRSS("https://example.com/feed.xml");
 
-    expect(result).toBe(true);
+    expect(result).toBe(false);
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/v1/feed/subscriptions",
@@ -557,6 +557,25 @@ describe("feed store", () => {
         headers: { Authorization: "Bearer token" },
       }),
     );
+  });
+
+  it("confirms RSS subscription only after it appears in the refreshed list", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: { id: "sub-1" } }), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          data: [{
+            id: "sub-1",
+            feed_source: { rss_url: "https://example.com/feed.xml" },
+          }],
+        }), { status: 200 }),
+      );
+
+    const feed = useFeedStore();
+
+    await expect(feed.subscribeToRSS("https://example.com/feed.xml")).resolves.toBe(true);
   });
 
   it("discovers feed candidates through the v1 feed endpoint", async () => {

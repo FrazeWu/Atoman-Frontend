@@ -739,6 +739,7 @@ async function schedulePublish() {
     <!-- 发布确认弹窗 -->
     <PConfirm
       :show="showPublishConfirm"
+      above-player
       title="确认发布视频"
       :message="`《${form.title || '未命名视频'}》将对${
         form.visibility === 'public' ? '所有人' :

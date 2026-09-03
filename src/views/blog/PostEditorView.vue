@@ -223,6 +223,7 @@
     <PostVersionHistoryModal
       v-if="versionHistoryOpen && isEdit"
       :post-id="String(route.params.id || '')"
+      above-player
       @close="versionHistoryOpen = false"
       @restored="handleVersionRestored"
     />

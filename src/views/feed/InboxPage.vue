@@ -109,7 +109,7 @@
         </section>
       </div>
     </div>
-    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" @close="closeReportModal" @clear-error="reportError = ''" @report="reportMessage" />
+    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" above-player @close="closeReportModal" @clear-error="reportError = ''" @report="reportMessage" />
   </div>
 </template>
 

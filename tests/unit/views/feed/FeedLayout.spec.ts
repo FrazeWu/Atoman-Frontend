@@ -119,18 +119,21 @@ describe("FeedLayout", () => {
     );
 
     expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(3);
-    expect(wrapper.text()).toContain("订阅 / SUBSCRIPTIONS");
+    expect(wrapper.text()).toContain("我的订阅");
     expect(wrapper.text()).toContain("播客");
     expect(wrapper.text()).toContain("视频");
     expect(wrapper.text()).toContain("常听节目");
-    expect(wrapper.text()).toContain("关注频道");
-    expect(wrapper.findAll(".subscription-hub-sidebar__membership")).toHaveLength(2);
+    expect(wrapper.text()).not.toContain("关注频道");
+    expect(wrapper.findAll(".subscription-hub-sidebar__membership")).toHaveLength(1);
     expect(wrapper.text()).not.toContain("全部订阅");
   });
 
   it("routes a selected subscription leaf to its isolated update context", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
+    await wrapper
+      .get('[data-testid="subscription-hub-type-video"]')
+      .trigger("click");
     await wrapper
       .get('[data-testid="subscription-hub-membership-video-member"]')
       .trigger("click");
@@ -202,7 +205,7 @@ describe("FeedLayout", () => {
     await flushPromises();
 
     const sheet = wrapper.get('[data-testid="feed-mobile-sources-sheet"]');
-    expect(sheet.text()).toContain("订阅 / SUBSCRIPTIONS");
+    expect(sheet.text()).toContain("我的订阅");
     expect(sheet.text()).toContain("原子谈话");
 
     await sheet

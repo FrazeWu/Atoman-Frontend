@@ -403,6 +403,12 @@ async function selectCollectionVideo(id: string) {
   await router.push({ path: `/videos/watch/${id}`, query })
 }
 
+function selectAdjacentCollectionVideo(offset: number) {
+  const current = collectionVideos.value.findIndex(item => item.id === video.value?.id)
+  const target = collectionVideos.value[current + offset]
+  if (target) void selectCollectionVideo(target.id)
+}
+
 function handleSeekToTimestamp(value: number) {
   if (video.value?.storage_type === 'local' && videoElement.value) {
     videoElement.value.currentTime = value
@@ -658,6 +664,8 @@ async function toggleChannelSubscription() {
         :current-video-id="video.id"
         :completed-video-ids="completedCollectionVideoIds"
         @select="selectCollectionVideo"
+        @previous="selectAdjacentCollectionVideo(-1)"
+        @next="selectAdjacentCollectionVideo(1)"
       />
     </div>
 

@@ -15,12 +15,16 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   select: [videoId: string]
+  previous: []
+  next: []
 }>()
 
 const currentIndex = computed(() => {
   const index = props.videos.findIndex((video) => video.id === props.currentVideoId)
   return index >= 0 ? index + 1 : 0
 })
+const hasPrevious = computed(() => currentIndex.value > 1)
+const hasNext = computed(() => currentIndex.value > 0 && currentIndex.value < props.videos.length)
 
 function fmtDuration(seconds: number) {
   if (!seconds) return ''
@@ -70,6 +74,10 @@ function isComplete(videoId: string) {
         </button>
       </li>
     </ol>
+    <div class="vcp__navigation">
+      <button type="button" :disabled="!hasPrevious" @click="emit('previous')">上一集</button>
+      <button type="button" :disabled="!hasNext" @click="emit('next')">下一集</button>
+    </div>
   </aside>
 </template>
 
@@ -120,6 +128,10 @@ function isComplete(videoId: string) {
   overflow-y: auto;
   list-style: none;
 }
+.vcp__navigation { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--a-color-border-soft); }
+.vcp__navigation button { min-height: 2.5rem; border: 0; background: transparent; color: var(--a-color-fg); cursor: pointer; }
+.vcp__navigation button + button { border-left: 1px solid var(--a-color-border-soft); }
+.vcp__navigation button:disabled { color: var(--a-color-muted); cursor: default; }
 
 .vcp__item + .vcp__item {
   border-top: 1px solid var(--a-color-border-soft);

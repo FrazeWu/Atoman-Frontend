@@ -278,7 +278,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   font-size: 0.8rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .queue-clear-btn:hover {
@@ -293,7 +293,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   font-size: 0.78rem;
   padding: 0.25rem 0.65rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .queue-close-btn:hover {
@@ -485,7 +485,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   padding: 0.25rem 0.4rem;
   cursor: pointer;
   opacity: 0;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .queue-item:hover .q-remove {

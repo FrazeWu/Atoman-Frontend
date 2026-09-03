@@ -600,7 +600,7 @@ const mockChannels = ref([
   background: var(--a-color-bg);
   cursor: pointer;
   text-align: left;
-  transition: all 0.18s ease;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 .proto-btn:hover {
   border-color: var(--a-color-border);
@@ -794,7 +794,7 @@ const mockChannels = ref([
 .note-media-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .modern-note-card__footer { display: flex; align-items: center; gap: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--a-color-border-soft); }
-.note-pill-action { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); font-size: 0.72rem; color: var(--a-color-muted); cursor: pointer; transition: all 0.15s ease; }
+.note-pill-action { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); font-size: 0.72rem; color: var(--a-color-muted); cursor: pointer; transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
 .note-pill-action:hover { border-color: var(--a-color-border); color: var(--a-color-fg); background: var(--a-color-surface-muted); }
 .note-pill-action.is-liked { border-color: #ef4444; color: #ef4444; background: color-mix(in srgb, #ef4444 8%, transparent); }
 .note-pill-action.is-active { border-color: var(--a-color-text); color: var(--a-color-fg); background: var(--a-color-surface-muted); }

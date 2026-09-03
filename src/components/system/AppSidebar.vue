@@ -468,7 +468,7 @@ watch(
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 0.1s;
+  transition: color 0.1s, background-color 0.1s, border-color 0.1s, opacity 0.1s, transform 0.1s, box-shadow 0.1s;
   text-transform: uppercase;
 }
 

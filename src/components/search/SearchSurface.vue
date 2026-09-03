@@ -197,7 +197,7 @@ function handleInput(event: Event) {
   font-weight: 600;
   padding: 0.35rem 0.75rem;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -361,7 +361,9 @@ function handleInput(event: Event) {
 
 .search-dropdown-slide-enter-active,
 .search-dropdown-slide-leave-active {
-  transition: max-height 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+  transition:
+    max-height var(--a-motion-state) var(--a-motion-ease-enter),
+    opacity var(--a-motion-state) var(--a-motion-ease-enter);
   overflow: hidden;
 }
 

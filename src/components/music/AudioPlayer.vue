@@ -607,7 +607,7 @@ watch(
   background: #fff;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
   color: #131c2e;
-  transition: transform 0.56s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform var(--a-motion-emphasis) var(--a-motion-ease-enter);
 }
 
 :root.dark .player {
@@ -655,9 +655,9 @@ watch(
   gap: 0.75rem;
   min-width: 0;
   transition:
-    flex-basis 0.22s ease,
-    width 0.22s ease,
-    gap 0.22s ease;
+    flex-basis var(--a-motion-state) var(--a-motion-ease-enter),
+    width var(--a-motion-state) var(--a-motion-ease-enter),
+    gap var(--a-motion-state) var(--a-motion-ease-enter);
 }
 .player-info--collapsed {
   min-width: 52px;
@@ -703,7 +703,7 @@ watch(
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--a-motion-state) ease;
   font-size: 20px;
   font-weight: bold;
 }
@@ -720,10 +720,10 @@ watch(
   flex: 1;
   overflow: visible;
   transition:
-    max-width 0.22s ease,
-    opacity 0.18s ease,
-    transform 0.22s ease,
-    margin 0.22s ease;
+    max-width var(--a-motion-state) var(--a-motion-ease-enter),
+    opacity var(--a-motion-state) var(--a-motion-ease-enter),
+    transform var(--a-motion-state) var(--a-motion-ease-enter),
+    margin var(--a-motion-state) var(--a-motion-ease-enter);
 }
 .player-meta--collapsed {
   max-width: 0;
@@ -1179,7 +1179,10 @@ watch(
   gap: 4px;
   cursor: pointer;
   color: var(--a-color-muted);
-  transition: all 0.2s;
+  transition:
+    color var(--a-motion-state) ease,
+    background-color var(--a-motion-state) ease,
+    opacity var(--a-motion-state) ease;
   padding: 4px 8px;
   border-radius: 0;
   background: rgba(0, 0, 0, 0.05);
@@ -1318,12 +1321,12 @@ watch(
 }
 
 .player-display-enter-active {
-  animation: player-display-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: player-display-enter var(--a-motion-emphasis) var(--a-motion-ease-enter) both;
   will-change: transform, opacity;
 }
 
 .player-display-leave-active {
-  animation: player-display-leave 320ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: player-display-leave var(--a-motion-overlay-exit) var(--a-motion-ease-exit) both;
   will-change: transform, opacity;
 }
 
@@ -1477,12 +1480,12 @@ watch(
 }
 
 .slide-up-enter-active {
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
   will-change: transform;
 }
 
 .slide-up-leave-active {
-  transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
+  transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
   will-change: transform;
 }
 .slide-up-enter-from,
@@ -1491,11 +1494,11 @@ watch(
 }
 
 .slide-right-enter-active {
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
   will-change: transform;
 }
 .slide-right-leave-active {
-  transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
+  transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
   will-change: transform;
 }
 .slide-right-enter-from,
@@ -1726,5 +1729,56 @@ watch(
     height: 3rem;
   }
 
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player,
+  .player-info,
+  .player-meta,
+  .cover-overlay,
+  .queue-trigger {
+    transition-duration: var(--a-motion-state);
+  }
+
+  .player-display-enter-active,
+  .player-display-leave-active {
+    animation: none;
+    transition:
+      opacity var(--a-motion-state) var(--a-motion-ease-enter),
+      transform var(--a-motion-state) var(--a-motion-ease-enter);
+  }
+
+  .player-display-enter-from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+
+  .player-display-leave-to {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  .slide-up-enter-active,
+  .slide-up-leave-active,
+  .slide-right-enter-active,
+  .slide-right-leave-active {
+    transition-duration: var(--a-motion-state);
+  }
+
+  .slide-up-enter-from,
+  .slide-up-leave-to {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+
+  .slide-right-enter-from,
+  .slide-right-leave-to {
+    transform: translateX(8px);
+    opacity: 0;
+  }
+
+  .player.is-auto-hidden {
+    transform: translateY(calc(100% - 10px));
+  }
 }
 </style>

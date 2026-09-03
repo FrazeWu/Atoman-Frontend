@@ -1093,7 +1093,7 @@ watch(
   border-radius: var(--a-radius-card);
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .album-artist-card:hover {

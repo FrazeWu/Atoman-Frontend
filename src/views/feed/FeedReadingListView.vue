@@ -398,7 +398,7 @@ onUnmounted(() => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   text-decoration: none;
-  transition: all 0.15s;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .feed-item-external-link:hover {

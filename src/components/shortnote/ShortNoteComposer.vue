@@ -250,7 +250,7 @@ function submit() {
   color: #ffffff;
   backdrop-filter: blur(4px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .short-note-composer__remove-btn:hover {
@@ -278,7 +278,7 @@ function submit() {
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .short-note-composer__image-button:hover:not(.is-disabled) {

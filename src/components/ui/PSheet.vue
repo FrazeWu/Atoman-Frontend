@@ -413,7 +413,7 @@ const sheetStyle = computed(() => {
 
 <style scoped>
 .p-sheet-panel {
-  transition: left 200ms ease;
+	transition: left var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .p-sheet-panel.is-partial-pending {
@@ -516,7 +516,7 @@ const sheetStyle = computed(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+	transition: opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 .fade-enter-from,
 .fade-leave-to {
@@ -558,7 +558,7 @@ const sheetStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s, opacity 0.2s;
+	transition: color var(--a-motion-state), opacity var(--a-motion-state);
   opacity: 0.6;
 }
 
@@ -638,7 +638,7 @@ const sheetStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s, opacity 0.2s;
+	transition: color var(--a-motion-state), opacity var(--a-motion-state);
   opacity: 0.6;
 }
 
@@ -726,22 +726,22 @@ const sheetStyle = computed(() => {
 }
 
 .slide-right-enter-active {
-  animation: p-sheet-right-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	animation: p-sheet-right-enter var(--a-motion-emphasis) var(--a-motion-ease-enter) both;
   will-change: transform;
 }
 
 .slide-left-enter-active {
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+	transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
   will-change: transform;
 }
 
 .slide-right-leave-active {
-  transition: transform 450ms cubic-bezier(0.4, 0, 1, 1);
+	transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
   will-change: transform;
 }
 
 .slide-left-leave-active {
-  transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
+	transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
   will-change: transform;
 }
 
@@ -770,12 +770,12 @@ const sheetStyle = computed(() => {
 }
 
 .slide-up-enter-active {
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+	transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
   will-change: transform;
 }
 
 .slide-up-leave-active {
-  transition: transform 260ms cubic-bezier(0.4, 0, 1, 1);
+	transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
   will-change: transform;
 }
 
@@ -805,22 +805,40 @@ const sheetStyle = computed(() => {
   .slide-left-leave-active,
   .slide-up-enter-active,
   .slide-up-leave-active {
-    transition-duration: 100ms;
+    transition-duration: var(--a-motion-state);
   }
 
   .slide-right-enter-active {
-    animation: p-sheet-right-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: none;
+    transition:
+      opacity var(--a-motion-state) var(--a-motion-ease-enter),
+      transform var(--a-motion-state) var(--a-motion-ease-enter);
   }
 
   .slide-right-leave-active {
-    transition-duration: 450ms;
+    transition-duration: var(--a-motion-overlay-exit);
+  }
+
+  .slide-right-enter-from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+
+  .slide-right-leave-to {
+    transform: translateX(8px);
+    opacity: 0;
   }
 
   .slide-left-enter-from,
-  .slide-left-leave-to,
+  .slide-left-leave-to {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+
   .slide-up-enter-from,
   .slide-up-leave-to {
-    transform: none;
+    transform: translateY(8px);
+    opacity: 0;
   }
 }
 </style>

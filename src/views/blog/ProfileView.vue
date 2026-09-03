@@ -784,7 +784,7 @@ onMounted(() => { void loadProfilePage() })
   border: 1px solid transparent;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .profile-header__edit-trigger:hover {
@@ -839,7 +839,7 @@ onMounted(() => { void loadProfilePage() })
   border: 1px solid transparent;
   border-radius: var(--a-radius-control);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .profile-header__bio-edit-btn:hover {
@@ -906,7 +906,7 @@ onMounted(() => { void loadProfilePage() })
   border: 1px solid;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .profile-header__inline-save {

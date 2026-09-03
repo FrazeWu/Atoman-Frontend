@@ -163,19 +163,22 @@ describe("AudioPlayer", () => {
 		expect(source).not.toContain('IconMaximize as Maximize2');
 		expect(source).not.toContain('name="player-display" mode="out-in"');
 		expect(source).toMatch(
-			/\.player-display-enter-active\s*\{[^}]*animation:\s*player-display-enter\s+700ms/,
+			/\.player-display-enter-active\s*\{[^}]*animation:\s*player-display-enter\s+var\(--a-motion-emphasis\)/,
 		);
 		expect(source).toMatch(
 			/@keyframes player-display-enter[\s\S]*?72%\s*\{[^}]*transform:\s*translateX\(-1rem\)/,
 		);
 		expect(source).toMatch(
-			/\.player-display-leave-active\s*\{[^}]*animation:\s*player-display-leave\s+320ms/,
+			/\.player-display-leave-active\s*\{[^}]*animation:\s*player-display-leave\s+var\(--a-motion-overlay-exit\)/,
 		);
 		expect(source).not.toContain('clip-path: inset(0 0 0 100%)');
 		expect(source).not.toMatch(
 			/@media \(max-width: 767px\)[\s\S]*?\.player\s*\{[^}]*transform:\s*none\s*!important;/,
 		);
-		expect(source).not.toContain('@media (prefers-reduced-motion: reduce)');
+		expect(source).toContain('@media (prefers-reduced-motion: reduce)');
+		expect(source).toMatch(
+			/\.player-display-enter-active[\s\S]*?animation:\s*player-display-enter var\(--a-motion-emphasis\)/,
+		);
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
 		);

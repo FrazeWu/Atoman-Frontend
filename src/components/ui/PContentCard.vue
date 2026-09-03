@@ -120,7 +120,7 @@ defineEmits(['click'])
   border-radius: 999px;
   background-color: #10b981;
   opacity: 1;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
@@ -205,7 +205,7 @@ defineEmits(['click'])
   line-height: 1.35;
   margin-bottom: 0.15rem;
   color: var(--a-color-fg);
-  transition: all 0.2s;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .feed-entry-title:hover,
@@ -217,7 +217,7 @@ defineEmits(['click'])
 
 /* Meta links / source links hover effect */
 :deep(.feed-source-link) {
-  transition: all 0.2s;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 :deep(.feed-source-link:hover) {
   color: var(--a-color-text) !important;
@@ -310,7 +310,7 @@ defineEmits(['click'])
   background: linear-gradient(to right, transparent, var(--a-color-surface-muted) 40%);
   opacity: 0;
   pointer-events: auto;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: color 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
   z-index: 5;
 }
 

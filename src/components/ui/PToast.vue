@@ -122,7 +122,7 @@ onUnmounted(() => {
   color: var(--a-color-text);
   border: 1px solid var(--a-color-border);
   box-shadow: var(--a-shadow-dropdown);
-  transition: top 0.3s ease;
+  transition: top var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .p-toast.p-toast--inline {
@@ -180,7 +180,7 @@ onUnmounted(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.25s;
+  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
 .fade-enter-from,

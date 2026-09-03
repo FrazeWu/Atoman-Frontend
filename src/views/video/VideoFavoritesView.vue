@@ -11,7 +11,7 @@ import { useVideoBookmarks, type VideoBookmarkSort, type VideoBookmarkState } fr
 import type { Video } from '@/types'
 
 const authStore = useAuthStore()
-const activeTab = ref<string>('video')
+const activeTab = ref<string>('channel')
 const videos = ref<Video[]>([])
 const bookmarks = useVideoBookmarks()
 const queueState = ref<VideoBookmarkState>('active')
@@ -134,7 +134,6 @@ watch([activeTab, () => authStore.isAuthenticated, queueState, queueSort], () =>
           <PEmpty v-if="!queueVideos.length" :title="queueState === 'completed' ? '暂无已看完视频' : '稍后看为空'" description="在视频卡片上加入稍后看，方便继续浏览。" />
         </div>
       </template>
-      </div>
       <div v-else-if="activeTab === 'channel'" class="video-favorites-links">
         <RouterLink v-for="channel in channels" :key="channel.id" :to="`/channel/${channel.slug || channel.id}`">{{ channel.name }}</RouterLink>
         <PEmpty v-if="!channels.length" title="暂无收藏频道" />

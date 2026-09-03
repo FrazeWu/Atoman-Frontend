@@ -28,7 +28,9 @@ describe("feed store", () => {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ data: [] }), { status: 200 }),
+        new Response(JSON.stringify({
+          data: [{ id: "sub-1", feed_source: { rss_url: "http://www.ruanyifeng.com/blog/atom.xml" } }],
+        }), { status: 200 }),
       );
 
     const feed = useFeedStore();
@@ -470,7 +472,7 @@ describe("feed store", () => {
     );
   });
 
-  it("auto-adds subscriptions through the unified endpoint and moves selected group server-side", async () => {
+  it("does not report auto-added subscriptions as successful when refresh has no subscription", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
@@ -489,7 +491,7 @@ describe("feed store", () => {
       group_id: "group-1",
     });
 
-    expect(result).toBe(true);
+    expect(result).toBe(false);
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/v1/feed/subscriptions/auto-add",

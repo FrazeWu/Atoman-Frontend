@@ -133,7 +133,15 @@
                       membershipId: membership.id,
                     })"
                   >
-                    <span>{{ membership.title || membership.feed_source?.title || '未命名订阅' }}</span>
+                    <span class="subscription-hub-sidebar__membership-name">
+                      {{ membership.title || membership.feed_source?.title || '未命名订阅' }}
+                    </span>
+                    <span
+                      v-if="membershipSourceTypeLabel(membership)"
+                      class="subscription-hub-sidebar__membership-source-type a-font-meta"
+                    >
+                      {{ membershipSourceTypeLabel(membership) }}
+                    </span>
                   </button>
                 </div>
               </section>
@@ -149,7 +157,7 @@
 import { computed, ref, watch } from 'vue'
 import { IconChevronRight as ChevronRight, IconFileText as FileText, IconMicrophone as Mic, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
 
-import type { SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
+import type { SubscriptionHubMembership, SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
 
 const props = withDefaults(defineProps<{
   tree: SubscriptionHubTree
@@ -198,6 +206,20 @@ const typeIcon = (subscriptionType: SubscriptionHubType) => ({
   blog: FileText,
   rss: Rss,
 }[subscriptionType])
+
+const membershipSourceTypeLabel = (membership: SubscriptionHubMembership) => {
+  switch (membership.feed_source?.source_type) {
+    case 'internal_user':
+      return '账户'
+    case 'internal_channel':
+    case 'internal_collection':
+      return '频道'
+    case 'external_rss':
+      return 'RSS'
+    default:
+      return ''
+  }
+}
 
 const membershipCount = (typeNode: SubscriptionHubTypeNode) =>
   typeNode.groups.reduce((count, group) => count + group.memberships.length, 0)
@@ -475,9 +497,19 @@ const toggleGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   font-size: 0.8rem;
 }
 
-.subscription-hub-sidebar__membership span {
+.subscription-hub-sidebar__membership-name {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscription-hub-sidebar__membership-source-type {
+  flex: none;
+  margin-left: 0.5rem;
+  color: var(--a-color-muted);
+  font-size: 0.66rem;
   white-space: nowrap;
 }
 

@@ -58,6 +58,10 @@ export interface VideoRecommendationPage<T> {
 }
 
 const videoUrl = (path: string) => `${useApiUrl()}/videos${path}`
+const pathSegment = (value: string) => encodeURIComponent(value)
+const queryString = (params: Record<string, string | number>) => new URLSearchParams(
+  Object.entries(params).map(([key, value]) => [key, String(value)]),
+).toString()
 const authHeaders = (token?: string): Record<string, string> => (
   token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : {}
 )
@@ -68,21 +72,21 @@ export interface VideoRatingSummary {
   viewer_rating?: number | null
 }
 
-export const listVideos = (sort: string) => apiRequestJson<Video[]>(videoUrl(`?sort=${sort}`))
+export const listVideos = (sort: string) => apiRequestJson<Video[]>(videoUrl(`?${queryString({ sort })}`))
 export const getVideo = <T = Video>(id: string, token?: string) => (
-  apiRequestJson<T>(videoUrl(`/${id}`), token ? { headers: authHeaders(token) } : undefined)
+  apiRequestJson<T>(videoUrl(`/${pathSegment(id)}`), token ? { headers: authHeaders(token) } : undefined)
 )
-export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUrl(`/${id}/recommended`))
+export const getRecommendedVideos = <T>(id: string) => apiRequestJson<T>(videoUrl(`/${pathSegment(id)}/recommended`))
 export const getVideoRecommendations = <T>(mode: string, page = 1, pageSize = 8) => (
-  apiRequestJson<VideoRecommendationPage<T>>(videoUrl(`/recommend/items?mode=${mode}&page=${page}&page_size=${pageSize}`))
+  apiRequestJson<VideoRecommendationPage<T>>(videoUrl(`/recommend/items?${queryString({ mode, page, page_size: pageSize })}`))
 )
 export const getVideoSubscriptions = (page = 1, pageSize = 20) => (
   apiRequestJson<VideoSubscriptionPage>(videoUrl(`/subscriptions?page=${page}&page_size=${pageSize}`))
 )
-export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${id}/view`), { method: 'POST' })
+export const recordVideoView = (id: string) => apiRequest(videoUrl(`/${pathSegment(id)}/view`), { method: 'POST' })
 
 export const setVideoRating = (id: string, score: number, token?: string) => (
-  apiRequestJson<VideoRatingSummary>(videoUrl(`/${id}/rating`), {
+  apiRequestJson<VideoRatingSummary>(videoUrl(`/${pathSegment(id)}/rating`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
     body: JSON.stringify({ score }),
@@ -90,7 +94,7 @@ export const setVideoRating = (id: string, score: number, token?: string) => (
 )
 
 export const deleteVideoRating = (id: string, token?: string) => (
-  apiRequestJson<VideoRatingSummary>(videoUrl(`/${id}/rating`), {
+  apiRequestJson<VideoRatingSummary>(videoUrl(`/${pathSegment(id)}/rating`), {
     method: 'DELETE',
     headers: authHeaders(token),
   })
@@ -113,14 +117,14 @@ export function uploadVideoSubtitle(file: File, token?: string) {
 }
 
 export function saveVideo(payload: VideoSavePayload, token?: string, id?: string) {
-  return apiRequestJson<Video>(videoUrl(id ? `/${id}` : ''), {
+  return apiRequestJson<Video>(videoUrl(id ? `/${pathSegment(id)}` : ''), {
     method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
     body: JSON.stringify(payload),
   })
 }
 
-const importUrl = (id = '', suffix = '') => videoUrl(`/imports${id ? `/${id}` : ''}${suffix}`)
+const importUrl = (id = '', suffix = '') => videoUrl(`/imports${id ? `/${pathSegment(id)}` : ''}${suffix}`)
 
 export function createVideoImport(file: File, channelId: string | null, token?: string) {
   return apiRequestJson<VideoImportTask>(importUrl(), {

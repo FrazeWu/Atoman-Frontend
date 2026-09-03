@@ -70,6 +70,7 @@ const generatedCoverReady = ref(false)
 let coverGeneration = 0
 let coverUploadPromise: Promise<void> | null = null
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
+let importAutosavePromise: Promise<void> | null = null
 
 const form = ref({
   channel_id: '' as string,
@@ -348,7 +349,14 @@ function scheduleImportAutosave() {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
   importAutosaveTimer = setTimeout(() => {
     importAutosaveTimer = null
-    void updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined).catch(() => {})
+    if (videoImportState.value?.task.upload_completed_at) return
+    const request = updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined)
+      .then(() => {})
+      .catch(() => {})
+    const trackedRequest = request.finally(() => {
+      if (importAutosavePromise === trackedRequest) importAutosavePromise = null
+    })
+    importAutosavePromise = trackedRequest
   }, 600)
 }
 
@@ -364,6 +372,11 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 async function submitImport(mode: 'draft' | 'published' | 'scheduled', scheduledAt: string | null = null) {
   const importId = videoImportId.value
   if (!importId) throw new Error('视频上传任务不存在')
+  if (importAutosaveTimer) {
+    clearTimeout(importAutosaveTimer)
+    importAutosaveTimer = null
+  }
+  await importAutosavePromise
   await coverUploadPromise
   const payload = buildImportPayload()
   await updateVideoImport(importId, payload, authStore.token ?? undefined)

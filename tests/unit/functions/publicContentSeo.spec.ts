@@ -116,6 +116,21 @@ describe("public content SEO", () => {
 		expect(html).not.toContain('rel="canonical"');
 	});
 
+	it("removes stale content encoding after rewriting HTML", async () => {
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/feed/item/item-1"),
+			next: async () =>
+				new Response(shell, {
+					headers: {
+						"content-type": "text/html",
+						"content-encoding": "gzip",
+					},
+				}),
+		});
+
+		expect(response.headers.get("content-encoding")).toBeNull();
+	});
+
 	it("injects detail metadata through the Pages middleware", async () => {
 		vi.stubGlobal(
 			"fetch",

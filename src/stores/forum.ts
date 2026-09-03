@@ -1,17 +1,20 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
+import { onScopeDispose, ref } from 'vue'
+import { defineStore, getActivePinia } from 'pinia'
 import type { ForumCategory, ForumTopic, ForumDraft, ForumFollow, ForumFollowTargetType } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 const api = useApi()
 
 const DRAFT_KEY_PREFIX = 'forum_draft_'
 
 export const useForumStore = defineStore('forum', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('论坛状态必须在 Pinia 实例中创建')
   const categories = ref<ForumCategory[]>([])
   const categoriesLoaded = ref(false)
   const topics = ref<ForumTopic[]>([])
@@ -29,6 +32,34 @@ export const useForumStore = defineStore('forum', () => {
   const topicsLoading = ref(false)
   const searchLoading = ref(false)
   const error = ref<string | null>(null)
+
+  const clearLocalDrafts = () => {
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index)
+      if (key?.startsWith(DRAFT_KEY_PREFIX)) localStorage.removeItem(key)
+    }
+  }
+
+  const resetStore = () => {
+    followsGeneration += 1
+    topicGeneration += 1
+    topicListGeneration += 1
+    searchGeneration += 1
+    categories.value = []
+    categoriesLoaded.value = false
+    topics.value = []
+    topicsTotal.value = 0
+    currentTopic.value = null
+    searchResults.value = []
+    searchTotal.value = 0
+    follows.value = []
+    followsOwnerID.value = null
+    loading.value = false
+    topicsLoading.value = false
+    searchLoading.value = false
+    error.value = null
+    clearLocalDrafts()
+  }
 
   const authHeaders = () => {
     const authStore = useAuthStore()
@@ -403,6 +434,8 @@ export const useForumStore = defineStore('forum', () => {
     clearDraftLocal(contextKey)
   }
 
+  onScopeDispose(registerSessionReset(pinia, resetStore))
+
   return {
     categories,
     categoriesLoaded,
@@ -436,5 +469,6 @@ export const useForumStore = defineStore('forum', () => {
     fetchDraft,
     putDraft,
     deleteDraft,
+    resetStore,
   }
 })

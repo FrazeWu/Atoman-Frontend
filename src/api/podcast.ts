@@ -18,16 +18,20 @@ export interface PodcastEpisodeSavePayload {
 }
 
 const podcastUrl = (path: string) => `${useApiUrl()}/podcast${path}`
+const pathSegment = (value: string) => encodeURIComponent(value)
+const queryString = (params: Record<string, string | number>) => new URLSearchParams(
+  Object.entries(params).map(([key, value]) => [key, String(value)]),
+).toString()
 
 export const getPodcastEpisode = (id: string, token?: string) => (
-  apiRequestJson<PodcastEpisode>(podcastUrl(`/episodes/${id}`), token ? { headers: authHeaders(token) } : undefined)
+  apiRequestJson<PodcastEpisode>(podcastUrl(`/episodes/${pathSegment(id)}`), token ? { headers: authHeaders(token) } : undefined)
 )
 export const listPodcastEpisodes = () => apiRequestJson<PodcastEpisode[]>(podcastUrl('/episodes'))
 export const getPodcastRecommendations = <T>(mode: string) => (
-  apiRequestJson<{ data?: T[] }>(podcastUrl(`/recommend/episodes?mode=${mode}&page=1&page_size=8`))
+  apiRequestJson<{ data?: T[] }>(podcastUrl(`/recommend/episodes?${queryString({ mode, page: 1, page_size: 8 })}`))
 )
 export const getPodcastShowEpisodes = <T = { channel: unknown; episodes: PodcastEpisode[] }>(slug: string) => (
-  apiRequestJson<T>(podcastUrl(`/shows/${slug}/episodes`))
+  apiRequestJson<T>(podcastUrl(`/shows/${pathSegment(slug)}/episodes`))
 )
 export const getPodcastBookmarks = <T>(kind: PodcastBookmarkKind, token?: string) => (
   apiRequestJson<T>(podcastUrl(`/bookmarks?kind=${kind}`), { headers: authHeaders(token) })
@@ -60,7 +64,7 @@ export function uploadPodcastCover(file: File, token?: string) {
 }
 
 export function savePodcastEpisode<T>(payload: PodcastEpisodeSavePayload, token?: string, id?: string) {
-  return apiRequestJson<T>(podcastUrl(id ? `/episodes/${id}` : '/episodes'), {
+  return apiRequestJson<T>(podcastUrl(id ? `/episodes/${pathSegment(id)}` : '/episodes'), {
     method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
     body: JSON.stringify(payload),

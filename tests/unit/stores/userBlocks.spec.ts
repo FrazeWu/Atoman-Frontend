@@ -10,6 +10,14 @@ const makeToken = () => {
   return `${header}.${payload}.signature`
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
+
 describe('user blocks store', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -64,5 +72,26 @@ describe('user blocks store', () => {
     await store.fetchBlockedUsers()
 
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('clears old blocks and ignores a delayed response after logout', async () => {
+    const pending = deferred<Response>()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === '/api/v1/users/blocked') return pending.promise
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    const auth = useAuthStore()
+    auth.user = { uuid: 'user-1', username: 'alice', email: 'alice@example.com', role: 'user' }
+    auth.isAuthenticated = true
+    const store = useUserBlocksStore()
+    store.blockedUsers = [{ id: 'old-block', blocked_id: 'old-user', created_at: '' }]
+
+    const request = store.fetchBlockedUsers()
+    await auth.logout()
+    pending.resolve(new Response(JSON.stringify({ data: [{ id: 'stale-block', blocked_id: 'stale-user' }] }), { status: 200 }))
+    await request
+
+    expect(store.blockedUsers).toEqual([])
+    expect(store.loading).toBe(false)
   })
 })

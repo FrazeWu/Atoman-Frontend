@@ -175,8 +175,8 @@ describe('SubscriptionHubSidebarTree', () => {
     const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
 
     expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(2)
-    expect(wrapper.find('[data-testid="subscription-hub-type-toggle-podcast"]').attributes('aria-expanded')).toBe('true')
-    expect(wrapper.find('[data-testid="subscription-hub-type-toggle-video"]').attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-testid="subscription-hub-type-podcast"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('[data-testid="subscription-hub-type-video"]').attributes('aria-expanded')).toBe('false')
     expect(wrapper.find('[data-testid="subscription-hub-type-blog"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="subscription-hub-type-rss"]').exists()).toBe(false)
     expect(wrapper.findAll('.subscription-hub-sidebar__membership')).toHaveLength(1)
@@ -204,17 +204,17 @@ describe('SubscriptionHubSidebarTree', () => {
 
     await wrapper.get('[data-testid="subscription-hub-type-video"]').trigger('click')
     expect(wrapper.emitted('select-context')).toEqual([
-      [{ subscriptionType: 'video', groupId: 'video-group' }],
+      [{ subscriptionType: 'video' }],
     ])
 
     await wrapper.get('[data-testid="subscription-hub-membership-video-member"]').trigger('click')
     expect(wrapper.emitted('select-context')).toEqual([
-      [{ subscriptionType: 'video', groupId: 'video-group' }],
+      [{ subscriptionType: 'video' }],
       [{ subscriptionType: 'video', groupId: 'video-group', membershipId: 'video-member' }],
     ])
   })
 
-  it('toggles types without changing the selected subscription context', async () => {
+  it('uses one control to select and reveal a module', async () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {
         tree,
@@ -223,17 +223,14 @@ describe('SubscriptionHubSidebarTree', () => {
       },
     })
 
-    await wrapper.get('[data-testid="subscription-hub-type-toggle-podcast"]').trigger('click')
-    expect(wrapper.emitted('select-context')).toBeUndefined()
-    expect(wrapper.get('[data-testid="subscription-hub-type-toggle-podcast"]').attributes('aria-expanded')).toBe('false')
-
-    await wrapper.get('[data-testid="subscription-hub-type-toggle-video"]').trigger('click')
-    expect(wrapper.get('[data-testid="subscription-hub-type-toggle-video"]').attributes('aria-expanded')).toBe('true')
-    expect(wrapper.get('[data-testid="subscription-hub-type-toggle-podcast"]').attributes('aria-expanded')).toBe('false')
-    expect(wrapper.emitted('select-context')).toBeUndefined()
+    expect(wrapper.findAll('.subscription-hub-sidebar__type-toggle')).toHaveLength(0)
+    await wrapper.get('[data-testid="subscription-hub-type-video"]').trigger('click')
+    expect(wrapper.get('[data-testid="subscription-hub-type-video"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-testid="subscription-hub-type-podcast"]').attributes('aria-expanded')).toBe('false')
+    expect(wrapper.emitted('select-context')).toEqual([[{ subscriptionType: 'video' }]])
   })
 
-  it('keeps group disclosure separate from group selection', async () => {
+  it('uses one control to select and reveal a group', async () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {
         tree,
@@ -242,11 +239,12 @@ describe('SubscriptionHubSidebarTree', () => {
       },
     })
 
-    await wrapper.get('[data-testid="subscription-hub-group-toggle-podcast-group"]').trigger('click')
+    expect(wrapper.findAll('.subscription-hub-sidebar__group-toggle')).toHaveLength(0)
+    await wrapper.get('[data-testid="subscription-hub-group-podcast-group"]').trigger('click')
 
-    expect(wrapper.emitted('select-context')).toBeUndefined()
-    expect(wrapper.get('[data-testid="subscription-hub-group-toggle-podcast-group"]').attributes('aria-expanded')).toBe('false')
-    expect(wrapper.find('[data-testid="subscription-hub-membership-podcast-member"]').exists()).toBe(false)
+    expect(wrapper.emitted('select-context')).toEqual([[{ subscriptionType: 'podcast', groupId: 'podcast-group' }]])
+    expect(wrapper.get('[data-testid="subscription-hub-group-podcast-group"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('[data-testid="subscription-hub-membership-podcast-member"]').exists()).toBe(true)
   })
 
   it('uses a distinct prefix for disclosure panel ids', () => {
@@ -257,7 +255,7 @@ describe('SubscriptionHubSidebarTree', () => {
       },
     })
 
-    expect(wrapper.get('[data-testid="subscription-hub-type-toggle-podcast"]').attributes('aria-controls')).toBe('mobile-type-panel-podcast')
+    expect(wrapper.get('[data-testid="subscription-hub-type-podcast"]').attributes('aria-controls')).toBe('mobile-type-panel-podcast')
   })
 
   it('flattens a single default group into its subscription list', () => {
@@ -329,9 +327,27 @@ describe('SubscriptionHubSidebarTree', () => {
 
     expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(0)
     expect(wrapper.findAll('.subscription-hub-sidebar__type-toggle')).toHaveLength(0)
+    expect(wrapper.get('[data-testid="subscription-hub-all-video"]').text()).toContain('全部来源')
     expect(wrapper.text()).toContain('关注频道')
     expect(wrapper.text()).toContain('原子谈话')
     expect(wrapper.text()).not.toContain('常听节目')
+  })
+
+  it('selects all sources from a fixed module context', async () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: {
+        tree,
+        fixedType: 'video',
+        activeType: 'video',
+        activeGroupId: 'video-group',
+      },
+    })
+
+    await wrapper.get('[data-testid="subscription-hub-all-video"]').trigger('click')
+
+    expect(wrapper.emitted('select-context')).toEqual([
+      [{ subscriptionType: 'video' }],
+    ])
   })
 
   it('hides an empty fixed module type including its sidebar', () => {

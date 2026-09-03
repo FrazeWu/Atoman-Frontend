@@ -1,88 +1,35 @@
 <script setup lang="ts">
-import { getVideoResource, getVideoSubscriptions } from '@/api/video'
-import { onMounted, ref } from 'vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PEmpty from '@/components/ui/PEmpty.vue'
-import { useAuthStore } from '@/stores/auth'
-import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
-import { useContentLifecycle, type ContentNotificationPreference } from '@/composables/useContentLifecycle'
-import PaginationBar from '@/components/ui/PaginationBar.vue'
+import { computed } from 'vue'
+
+import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
+import { useModuleSubscriptionTimeline } from '@/composables/feed/useModuleSubscriptionTimeline'
+import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
 
-type SubscriptionVideo = Video
-
-type SourceBookmark = {
-  id: string
-  channel?: { id: string; name: string; slug?: string }
-  collection?: { id: string; name: string }
-}
-
 const authStore = useAuthStore()
-const videos = ref<SubscriptionVideo[]>([])
-const channelBookmarks = ref<SourceBookmark[]>([])
-const collectionBookmarks = ref<SourceBookmark[]>([])
-const loading = ref(false)
-const errorMessage = ref('')
-const notificationPreferences = ref<ContentNotificationPreference[]>([])
-const lifecycle = useContentLifecycle()
-const pageMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false })
-
-async function fetchJson<T>(path: string): Promise<T> {
-  return getVideoResource<T>(path, authStore.token ?? undefined)
-}
-
-onMounted(async () => {
-  loading.value = true
-  errorMessage.value = ''
-  try {
-    const [videoPage, channelItems, collectionItems, preferences] = await Promise.all([
-      getVideoSubscriptions(1, pageMeta.value.page_size, authStore.token ?? undefined),
-      fetchJson<SourceBookmark[]>('/videos/channel-bookmarks'),
-      fetchJson<SourceBookmark[]>('/videos/collection-bookmarks'),
-      lifecycle.listNotificationPreferences().catch(() => []),
-    ])
-    videos.value = videoPage.data
-    pageMeta.value = videoPage.meta
-    channelBookmarks.value = channelItems
-    collectionBookmarks.value = collectionItems
-    notificationPreferences.value = preferences
-  } catch {
-    errorMessage.value = '订阅加载失败'
-  } finally {
-    loading.value = false
-  }
-})
-
-async function changePage(page: number) {
-  if (page < 1 || page === pageMeta.value.page || loading.value) return
-  loading.value = true
-  errorMessage.value = ''
-  try {
-    const videoPage = await getVideoSubscriptions(page, pageMeta.value.page_size, authStore.token ?? undefined)
-    videos.value = videoPage.data
-    pageMeta.value = videoPage.meta
-  } catch {
-    errorMessage.value = '订阅加载失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-function notificationMode(sourceType: ContentNotificationPreference['source_type'], sourceId: string) {
-  return notificationPreferences.value.find(item => item.source_type === sourceType && item.source_id === sourceId)?.mode || 'feed_only'
-}
+const timeline = useModuleSubscriptionTimeline('video')
+const videos = computed(() => timeline.items.value
+  .filter((item) => item.type === 'video' && item.video)
+  .map((item) => item.video as Video))
+const pageMeta = computed(() => ({
+  page: timeline.page.value,
+  page_size: timeline.pageSize,
+  total: timeline.total.value,
+  has_more: timeline.hasMore.value,
+}))
 </script>
 
 <template>
   <div class="a-page-xl video-subscriptions-view">
+    <ModuleSubscriptionSourcesPicker subscription-type="video" subscription-path="/videos/subscriptions" />
     <PPageHeader title="视频订阅" mb="1.25rem" />
 
     <div v-if="!authStore.isAuthenticated" class="video-subscriptions-unauth">
-      <PEmpty
-        title="请登录后查看视频订阅"
-        description="登录账号以同步你订阅的频道与合集更新。"
-      >
+      <PEmpty title="请登录后查看视频订阅" description="登录账号以同步你订阅的频道与合集更新。">
         <template #action>
           <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
         </template>
@@ -90,56 +37,17 @@ function notificationMode(sourceType: ContentNotificationPreference['source_type
     </div>
 
     <template v-else>
-      <p v-if="loading" class="video-subscriptions-state">正在加载...</p>
-      <p v-else-if="errorMessage" class="video-subscriptions-state video-subscriptions-state--error">{{ errorMessage }}</p>
-      <PEmpty
-        v-else-if="!videos.length && !channelBookmarks.length && !collectionBookmarks.length"
-        title="暂无视频订阅"
-        description="订阅频道或合集后，新发布的视频会显示在这里。"
-      />
-
-      <div v-else class="video-subscriptions-content">
-        <aside class="video-subscriptions-sources" aria-label="订阅来源">
-          <section v-if="channelBookmarks.length">
-            <h2>频道</h2>
-            <div
-              v-for="item in channelBookmarks"
-              :key="item.id"
-            >
-              <RouterLink v-if="item.channel" :to="`/channel/${item.channel.slug || item.channel.id}`">{{ item.channel.name }}</RouterLink>
-              <ContentNotificationMode
-                v-if="item.channel?.id"
-                source-type="internal_channel"
-                :source-id="item.channel.id"
-                :initial-mode="notificationMode('internal_channel', item.channel.id)"
-              />
-            </div>
-          </section>
-
-          <section v-if="collectionBookmarks.length">
-            <h2>合集</h2>
-            <div v-for="item in collectionBookmarks" :key="item.id">
-              <RouterLink v-if="item.collection" :to="`/videos/collections/${item.collection.id}`">
-                {{ item.collection.name }}
-              </RouterLink>
-              <ContentNotificationMode
-                v-if="item.collection?.id"
-                source-type="internal_collection"
-                :source-id="item.collection.id"
-                :initial-mode="notificationMode('internal_collection', item.collection.id)"
-              />
-            </div>
-        </section>
-      </aside>
-
-      <main class="video-subscriptions-list" aria-label="订阅更新">
-        <PEmpty v-if="!videos.length" title="暂无订阅更新" description="有新视频时会显示在这里。" />
-        <template v-else>
-          <PVideoCard v-for="item in videos" :key="item.id" :video="item" />
+      <p v-if="timeline.loading.value && !videos.length" class="video-subscriptions-state">正在加载...</p>
+      <PEmpty v-else-if="timeline.error.value && !videos.length" title="订阅内容加载失败">
+        <template #action>
+          <button type="button" class="a-btn" @click="timeline.retry">重试</button>
         </template>
-        <PaginationBar :meta="pageMeta" :loading="loading" @change="changePage" />
+      </PEmpty>
+      <PEmpty v-else-if="!videos.length" title="暂无订阅更新" description="有新视频时会显示在这里。" />
+      <main v-else class="video-subscriptions-list" aria-label="订阅更新">
+        <PVideoCard v-for="video in videos" :key="video.id" :video="video" />
       </main>
-    </div>
+      <PaginationBar :meta="pageMeta" :loading="timeline.loading.value" @change="timeline.changePage" />
     </template>
   </div>
 </template>
@@ -154,45 +62,10 @@ function notificationMode(sourceType: ContentNotificationPreference['source_type
   color: var(--a-color-muted);
 }
 
-.video-subscriptions-state--error {
-  color: #8a2f2f;
-}
-
-.video-subscriptions-content {
+.video-subscriptions-list {
   display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.25rem;
   margin-top: 1.5rem;
-}
-
-.video-subscriptions-sources {
-  display: grid;
-  align-content: start;
-  gap: 1rem;
-}
-
-.video-subscriptions-sources section {
-  display: grid;
-  gap: 0.65rem;
-}
-.video-subscriptions-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.25rem; }
-
-.video-subscriptions-sources h2 {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--a-color-muted);
-}
-
-.video-subscriptions-sources a {
-  color: var(--a-color-fg);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-
-@media (max-width: 720px) {
-  .video-subscriptions-content {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

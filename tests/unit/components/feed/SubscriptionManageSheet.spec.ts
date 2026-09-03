@@ -102,6 +102,22 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.text()).not.toContain("https://example.com/feed.xml");
 	});
 
+	it("keeps batch actions hidden until a subscription is selected", async () => {
+		const wrapper = mountSheet();
+
+		expect(wrapper.find(".batch-toolbar").exists()).toBe(false);
+		await wrapper.get(".subscription-select input").setValue(true);
+		expect(wrapper.find(".batch-toolbar").exists()).toBe(true);
+	});
+
+	it("keeps advanced source controls collapsed by default", async () => {
+		const wrapper = mountSheet();
+
+		expect(wrapper.find('[data-test="subscription-priority"]').exists()).toBe(false);
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
+		expect(wrapper.find('[data-test="subscription-priority"]').exists()).toBe(true);
+	});
+
 	it("shows subscription health details without duplicate check actions", async () => {
 		const wrapper = mountSheet();
 		await wrapper
@@ -120,6 +136,7 @@ describe("SubscriptionManageSheet", () => {
 		await wrapper
 			.get('[data-test="subscription-manage-tab-sources"]')
 			.trigger("click");
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		const flags = wrapper.findAll('.subscription-flags input[type="checkbox"]');
 
 		await flags[0].setValue(true);
@@ -139,6 +156,7 @@ describe("SubscriptionManageSheet", () => {
 			.get('[data-test="subscription-manage-tab-sources"]')
 			.trigger("click");
 
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		const prioritySelect = wrapper.get('[data-test="subscription-priority"]');
 		await prioritySelect.get(".p-select-trigger").trigger("click");
 		await prioritySelect
@@ -156,14 +174,15 @@ describe("SubscriptionManageSheet", () => {
 		await wrapper
 			.get('[data-test="subscription-manage-tab-sources"]')
 			.trigger("click");
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		const groupSelect = wrapper.get('[data-test="subscription-group"]');
 
 		await groupSelect.get(".p-select-trigger").trigger("click");
-		expect(groupSelect.text()).toContain("未分类");
+		expect(groupSelect.text()).toContain("未分组");
 
 		await groupSelect
 			.findAll(".p-select-option")
-			.find((option) => option.text() === "未分类")!
+			.find((option) => option.text() === "未分组")!
 			.trigger("click");
 
 		expect(wrapper.emitted("move-subscription")).toEqual([["sub-1", ""]]);
@@ -175,7 +194,8 @@ describe("SubscriptionManageSheet", () => {
 		expect(
 			wrapper.get('[data-test="subscription-manage-tab-sources"]').classes(),
 		).toContain("is-active");
-		expect((wrapper.get(".title-input").element as HTMLInputElement).value).toBe("Example Feed");
+		expect(wrapper.get(".subscription-title").text()).toBe("Example Feed");
+		expect(wrapper.find(".title-input").exists()).toBe(false);
 		expect(wrapper.text()).not.toContain("规则管理");
 
 		await wrapper
@@ -275,6 +295,7 @@ describe("SubscriptionManageSheet", () => {
 		expect(channel.text()).toContain("视频");
 		expect(channel.get(".p-avatar img").attributes("src")).toBe("https://cdn.example.com/channel.webp");
 
+		await channel.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		await channel.get('[data-test="unsubscribe-managed-source"]').trigger("click");
 		const confirmButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>(".p-modal-footer button"))
 			.find((button) => button.textContent?.trim() === "删除");
@@ -336,6 +357,7 @@ describe("SubscriptionManageSheet", () => {
 			.get('[data-test="subscription-manage-tab-sources"]')
 			.trigger("click");
 		await wrapper.get(".subscription-select input").setValue(true);
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		await wrapper
 			.findAll("button")
 			.find((button) => button.text() === "静音")!
@@ -388,6 +410,7 @@ describe("SubscriptionManageSheet", () => {
 		await wrapper
 			.get('[data-test="subscription-manage-tab-sources"]')
 			.trigger("click");
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		await wrapper
 			.findAll("button")
 			.find((button) => button.text() === "暂停")!
@@ -398,28 +421,45 @@ describe("SubscriptionManageSheet", () => {
 		]);
 	});
 
-	it("emits group rename and delete actions", async () => {
+	it("keeps the default group read-only and labels it consistently", async () => {
 		const wrapper = mountSheet();
 		await wrapper.get('[data-test="subscription-manage-tab-groups"]').trigger("click");
 
-		await wrapper.get('[data-test="group-name-input"]').setValue("技术观察");
-		await wrapper.get('[data-test="group-name-input"]').trigger("blur");
-		await wrapper
-			.get(".group-manage-row")
-			.findAll("button")
-			.find((button) => button.text() === "删除")!
-			.trigger("click");
-		const confirmButton = Array.from(
-			document.body.querySelectorAll<HTMLButtonElement>(
-				".p-modal-footer button",
-			),
-		).find((button) => button.textContent?.trim() === "删除");
-		expect(confirmButton).toBeDefined();
-		confirmButton!.click();
-		await nextTick();
+		const row = wrapper.get(".group-manage-row");
+		expect(row.text()).toContain("未分组");
+		expect(row.find('[data-test="group-name-input"]').exists()).toBe(false);
+		expect(row.findAll("button")).toHaveLength(0);
+	});
 
-		expect(wrapper.emitted("rename-group")).toEqual([["group-1", "技术观察"]]);
-		expect(wrapper.emitted("delete-group")).toEqual([["group-1"]]);
+	it("does not move a custom group across the default group", async () => {
+		const wrapper = mountSheet();
+		await wrapper.setProps({
+			groups: [
+				{
+					id: "group-1",
+					user_id: "user-1",
+					name: "默认分组",
+					position: 0,
+					created_at: "2026-06-17T00:00:00Z",
+					updated_at: "2026-06-17T00:00:00Z",
+				},
+				{
+					id: "group-2",
+					user_id: "user-1",
+					name: "技术观察",
+					position: 1,
+					created_at: "2026-06-17T00:00:00Z",
+					updated_at: "2026-06-17T00:00:00Z",
+				},
+			],
+		});
+		await wrapper.get('[data-test="subscription-manage-tab-groups"]').trigger("click");
+
+		const customGroup = wrapper.findAll(".group-manage-row")[1]!;
+		const moveUp = customGroup.findAll("button").find((button) => button.text() === "上移")!;
+		expect(moveUp.attributes("disabled")).toBeDefined();
+		await moveUp.trigger("click");
+		expect(wrapper.emitted("reorder-subscription-groups")).toBeUndefined();
 	});
 
 	it("keeps only hidden keyword local controls and emits keyword updates", async () => {

@@ -87,8 +87,15 @@
         </div>
 
         <div v-else class="group-manage-list">
-          <div v-for="group in groups" :key="group.id" class="group-manage-row">
+          <div
+            v-for="group in groups"
+            :key="group.id"
+            class="group-manage-row"
+            :class="{ 'is-system': isDefaultGroup(group) }"
+          >
+            <strong v-if="isDefaultGroup(group)" class="group-system-name">未分组</strong>
             <PInput
+              v-else
               :model-value="draftGroupNames[group.id] ?? group.name"
               data-test="group-name-input"
               class="group-name-input"
@@ -100,13 +107,11 @@
             <span class="group-manage-count a-muted">
               {{ groupSubscriptionCount(group.id) }} 个订阅源
             </span>
-            <PButton variant="secondary" label="上移" :disabled="busy || group.position === 0" @click="moveGroup(group.id, -1)" />
-            <PButton variant="secondary" label="下移" :disabled="busy || group.position === groups.length - 1" @click="moveGroup(group.id, 1)" />
-            <PButton
-              label="删除"
-              :disabled="busy"
-              @click="requestDelete('group', group.id)"
-            />
+            <template v-if="!isDefaultGroup(group)">
+              <PButton variant="secondary" label="上移" :disabled="busy || !canMoveGroup(group.id, -1)" @click="moveGroup(group.id, -1)" />
+              <PButton variant="secondary" label="下移" :disabled="busy || !canMoveGroup(group.id, 1)" @click="moveGroup(group.id, 1)" />
+              <PButton label="删除" :disabled="busy" @click="requestDelete('group', group.id)" />
+            </template>
           </div>
         </div>
       </template>
@@ -141,13 +146,13 @@
           <span class="health-overview-item">异常 {{ sourceHealthSummary.failing }}</span>
         </div>
 
-        <div v-if="legacyManagedSubscriptions.length" class="batch-toolbar">
+        <div v-if="legacyManagedSubscriptions.length && selectedSubscriptionIds.size" class="batch-toolbar">
           <label class="batch-select-all">
             <input type="checkbox" :checked="allVisibleSelected" :disabled="busy || !visibleSubscriptionIds.length" @change="toggleAllVisible" />
             选择当前结果
           </label>
           <span class="a-muted">已选 {{ selectedSubscriptionIds.size }} 个</span>
-          <PSelect v-model="batchGroupId" :options="groups.map(group => ({ label: group.name, value: group.id }))" placeholder="移动到分组" :disabled="busy || !selectedSubscriptionIds.size" />
+          <PSelect v-model="batchGroupId" :options="groups.map(group => ({ label: isDefaultGroup(group) ? '未分组' : group.name, value: group.id }))" placeholder="移动到分组" :disabled="busy || !selectedSubscriptionIds.size" />
           <PButton variant="secondary" label="移动" :disabled="busy || !selectedSubscriptionIds.size || !batchGroupId" @click="applyBatchGroup" />
           <PButton variant="secondary" label="静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', true)" />
           <PButton variant="secondary" label="取消静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', false)" />
@@ -201,16 +206,7 @@
                       size="sm"
                     />
                     <div class="subscription-identity-copy">
-                      <PInput
-                        v-if="!sub.hubOnly"
-                        :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
-                        class="title-input"
-                        :disabled="busy"
-                        @input="updateDraftTitle(sub.id, $event)"
-                        @blur="submitRename(sub)"
-                        @keydown.enter.prevent="submitRename(sub)"
-                      />
-                      <strong v-else class="subscription-title">{{ subscriptionTitle(sub) }}</strong>
+                      <strong class="subscription-title">{{ subscriptionTitle(sub) }}</strong>
                       <div class="subscription-type-badges" aria-label="内容类型">
                         <span v-for="subscriptionType in sub.hubTypes" :key="subscriptionType">
                           {{ contentTypeLabel(subscriptionType) }}
@@ -251,80 +247,9 @@
                   <p v-if="sourceRecoveryAdvice(sub)" class="health-recovery">
                     {{ sourceRecoveryAdvice(sub) }}
                   </p>
-                  <PButton
-                    v-if="sub.feed_source?.source_type === 'external_rss'"
-                    data-test="load-subscription-diagnostics"
-                    variant="secondary"
-                    :label="isSubscriptionDiagnosticsLoading(sub.id) ? '加载记录...' : isSubscriptionDiagnosticsExpanded(sub.id) ? '收起记录' : '近期记录'"
-                    :disabled="busy || isSubscriptionDiagnosticsLoading(sub.id)"
-                    @click="toggleSubscriptionDiagnostics(sub.id)"
-                  />
-                  <ul v-if="isSubscriptionDiagnosticsExpanded(sub.id) && !isSubscriptionDiagnosticsLoading(sub.id)" class="diagnostic-history" aria-live="polite">
-                    <li v-if="subscriptionDiagnosticsFor(sub.id).length" v-for="diagnostic in subscriptionDiagnosticsFor(sub.id)" :key="diagnostic.id">
-                      <span class="diagnostic-kind">{{ diagnosticKindLabel(diagnostic.kind) }}</span>
-                      <span>{{ diagnostic.message }}</span>
-                      <span class="a-muted">{{ formatCheckedAt(diagnostic.created_at) }}</span>
-                    </li>
-                    <li v-else class="a-muted">暂无近期抓取记录。</li>
-                  </ul>
-                  <div v-if="!sub.hubOnly" class="subscription-flags">
-                    <label>
-                      <input
-                        data-test="subscription-flag-muted"
-                        type="checkbox"
-                        :checked="Boolean(sub.is_muted)"
-                        :disabled="busy"
-                        @change="updateSubscriptionFlag(sub.id, 'is_muted', ($event.target as HTMLInputElement).checked)"
-                      />
-                      静音
-                    </label>
-                    <label>
-                      <input
-                        data-test="subscription-flag-auto-read"
-                        type="checkbox"
-                        :checked="Boolean(sub.auto_mark_read)"
-                        :disabled="busy"
-                        @change="updateSubscriptionFlag(sub.id, 'auto_mark_read', ($event.target as HTMLInputElement).checked)"
-                      />
-                      自动已读
-                    </label>
-                    <label>
-                      <input
-                        data-test="subscription-flag-reading-list"
-                        type="checkbox"
-                        :checked="Boolean(sub.auto_add_reading_list)"
-                        :disabled="busy"
-                        @change="updateSubscriptionFlag(sub.id, 'auto_add_reading_list', ($event.target as HTMLInputElement).checked)"
-                      />
-                      稍后阅读
-                    </label>
-                  </div>
                 </div>
 
-                <div class="subscription-actions">
-                  <PSelect
-                    v-if="!sub.hubOnly"
-                    data-test="subscription-priority"
-                    :model-value="sub.priority || 'normal'"
-                    :options="priorityOptions"
-                    :disabled="busy"
-                    aria-label="订阅优先级"
-                    @update:model-value="updateSubscriptionPriority(sub.id, String($event))"
-                  />
-                  <PSelect
-                    v-if="!sub.hubOnly"
-                    data-test="subscription-group"
-                    :model-value="sub.subscription_group_id || ''"
-                    :options="groupOptions"
-                    :disabled="busy"
-                    @update:model-value="moveSubscription(sub.id, String($event))"
-                  />
-                  <PButton v-if="!sub.hubOnly" variant="secondary" label="暂停" :disabled="busy || Boolean(sub.is_paused)" @click="setSubscriptionPaused(sub.id, true)" />
-                  <PButton v-if="!sub.hubOnly" variant="secondary" label="恢复" :disabled="busy || !sub.is_paused" @click="setSubscriptionPaused(sub.id, false)" />
-                  <PButton v-if="!sub.hubOnly && !group.virtual" variant="secondary" label="上移" :disabled="busy || group.subscriptions[0]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, -1)" />
-                  <PButton v-if="!sub.hubOnly && !group.virtual" variant="secondary" label="下移" :disabled="busy || group.subscriptions[group.subscriptions.length - 1]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, 1)" />
-                  <PButton v-if="!sub.hubOnly" variant="secondary" label="全部已读" :disabled="busy" @click="markSubscriptionReadState(sub.id, true)" />
-                  <PButton v-if="!sub.hubOnly" variant="secondary" label="全部未读" :disabled="busy" @click="markSubscriptionReadState(sub.id, false)" />
+                <div class="subscription-quick-actions">
                   <PButton
                     v-if="sub.feed_source?.source_type === 'external_rss'"
                     data-test="sync-subscription"
@@ -333,6 +258,65 @@
                     :disabled="busy || Boolean(sub.is_paused) || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
                     @click="syncSubscription(sub.id)"
                   />
+                  <button
+                    type="button"
+                    class="subscription-settings-toggle"
+                    data-test="subscription-settings-toggle"
+                    :aria-label="`${isSubscriptionSettingsExpanded(sub.id) ? '收起' : '展开'} ${subscriptionTitle(sub)} 设置`"
+                    :aria-expanded="isSubscriptionSettingsExpanded(sub.id)"
+                    :disabled="busy"
+                    @click="toggleSubscriptionSettings(sub.id)"
+                  >
+                    <Settings :size="17" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div v-if="isSubscriptionSettingsExpanded(sub.id)" class="subscription-settings">
+                  <PField v-if="!sub.hubOnly" label="显示名称">
+                    <PInput
+                      :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
+                      class="title-input"
+                      :disabled="busy"
+                      @input="updateDraftTitle(sub.id, $event)"
+                      @blur="submitRename(sub)"
+                      @keydown.enter.prevent="submitRename(sub)"
+                    />
+                  </PField>
+
+                  <div v-if="!sub.hubOnly" class="subscription-flags">
+                    <label><input data-test="subscription-flag-muted" type="checkbox" :checked="Boolean(sub.is_muted)" :disabled="busy" @change="updateSubscriptionFlag(sub.id, 'is_muted', ($event.target as HTMLInputElement).checked)" />静音</label>
+                    <label><input data-test="subscription-flag-auto-read" type="checkbox" :checked="Boolean(sub.auto_mark_read)" :disabled="busy" @change="updateSubscriptionFlag(sub.id, 'auto_mark_read', ($event.target as HTMLInputElement).checked)" />自动已读</label>
+                    <label><input data-test="subscription-flag-reading-list" type="checkbox" :checked="Boolean(sub.auto_add_reading_list)" :disabled="busy" @change="updateSubscriptionFlag(sub.id, 'auto_add_reading_list', ($event.target as HTMLInputElement).checked)" />稍后阅读</label>
+                  </div>
+
+                  <div class="subscription-actions">
+                    <PSelect v-if="!sub.hubOnly" data-test="subscription-priority" :model-value="sub.priority || 'normal'" :options="priorityOptions" :disabled="busy" aria-label="订阅优先级" @update:model-value="updateSubscriptionPriority(sub.id, String($event))" />
+                    <PSelect v-if="!sub.hubOnly" data-test="subscription-group" :model-value="isDefaultGroupId(sub.subscription_group_id) ? '' : sub.subscription_group_id || ''" :options="groupOptions" :disabled="busy" @update:model-value="moveSubscription(sub.id, String($event))" />
+                    <PButton v-if="!sub.hubOnly" variant="secondary" label="暂停" :disabled="busy || Boolean(sub.is_paused)" @click="setSubscriptionPaused(sub.id, true)" />
+                    <PButton v-if="!sub.hubOnly" variant="secondary" label="恢复" :disabled="busy || !sub.is_paused" @click="setSubscriptionPaused(sub.id, false)" />
+                    <PButton v-if="!sub.hubOnly && !group.virtual" variant="secondary" label="上移" :disabled="busy || group.subscriptions[0]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, -1)" />
+                    <PButton v-if="!sub.hubOnly && !group.virtual" variant="secondary" label="下移" :disabled="busy || group.subscriptions[group.subscriptions.length - 1]?.id === sub.id" @click="moveSubscriptionOrder(group.id, sub.id, 1)" />
+                    <PButton v-if="!sub.hubOnly" variant="secondary" label="全部已读" :disabled="busy" @click="markSubscriptionReadState(sub.id, true)" />
+                    <PButton v-if="!sub.hubOnly" variant="secondary" label="全部未读" :disabled="busy" @click="markSubscriptionReadState(sub.id, false)" />
+                    <PButton
+                      v-if="sub.feed_source?.source_type === 'external_rss'"
+                      data-test="load-subscription-diagnostics"
+                      variant="secondary"
+                      :label="isSubscriptionDiagnosticsLoading(sub.id) ? '加载记录...' : isSubscriptionDiagnosticsExpanded(sub.id) ? '收起记录' : '近期记录'"
+                      :disabled="busy || isSubscriptionDiagnosticsLoading(sub.id)"
+                      @click="toggleSubscriptionDiagnostics(sub.id)"
+                    />
+                  </div>
+
+                  <ul v-if="isSubscriptionDiagnosticsExpanded(sub.id) && !isSubscriptionDiagnosticsLoading(sub.id)" class="diagnostic-history" aria-live="polite">
+                    <li v-for="diagnostic in subscriptionDiagnosticsFor(sub.id)" :key="diagnostic.id">
+                      <span class="diagnostic-kind">{{ diagnosticKindLabel(diagnostic.kind) }}</span>
+                      <span>{{ diagnostic.message }}</span>
+                      <span class="a-muted">{{ formatCheckedAt(diagnostic.created_at) }}</span>
+                    </li>
+                    <li v-if="!subscriptionDiagnosticsFor(sub.id).length" class="a-muted">暂无近期抓取记录。</li>
+                  </ul>
+
                   <button
                     type="button"
                     class="subscription-remove"
@@ -445,7 +429,7 @@ import type {
   SubscriptionHubType,
   SubscriptionSyncResult,
 } from '@/types'
-import { IconTrash as Trash } from '@tabler/icons-vue'
+import { IconSettings as Settings, IconTrash as Trash } from '@tabler/icons-vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PField from '@/components/ui/PField.vue'
@@ -527,6 +511,7 @@ const sourceTypeFilter = ref<SubscriptionHubType | ''>('')
 const healthFilter = ref('')
 const batchGroupId = ref('')
 const selectedSubscriptionIds = ref(new Set<string>())
+const expandedSubscriptionSettingIds = ref(new Set<string>())
 const expandedSubscriptionDiagnosticIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
@@ -565,9 +550,16 @@ const manageTabs = [
   { key: 'keywords', label: '过滤' },
 ] as const
 
+const isDefaultGroup = (group: Pick<SubscriptionGroup, 'name'>) => group.name === '默认分组'
+const isDefaultGroupId = (groupId?: string) => props.groups.some(
+  (group) => group.id === groupId && isDefaultGroup(group),
+)
+
 const groupOptions = computed(() => [
-  { label: '未分类', value: '' },
-  ...props.groups.map(group => ({ label: group.name, value: group.id })),
+  { label: '未分组', value: '' },
+  ...props.groups
+    .filter(group => !isDefaultGroup(group))
+    .map(group => ({ label: group.name, value: group.id })),
 ])
 
 const priorityOptions = [
@@ -660,20 +652,25 @@ const filteredSubscriptions = computed(() => {
   })
 })
 
-const displayGroups = computed(() => [
-  ...props.groups.map(group => ({
+const displayGroups = computed(() => {
+  const unassigned = filteredSubscriptions.value.filter(sub => !sub.subscription_group_id)
+  const groups = props.groups.map(group => ({
     id: group.id,
-    name: group.name,
+    name: isDefaultGroup(group) ? '未分组' : group.name,
     virtual: false,
-    subscriptions: filteredSubscriptions.value.filter(sub => sub.subscription_group_id === group.id),
-  })),
-  {
-    id: 'unassigned',
-    name: '其他订阅',
-    virtual: true,
-    subscriptions: filteredSubscriptions.value.filter(sub => !sub.subscription_group_id),
-  },
-].filter(group => group.subscriptions.length > 0 || (!sourceSearch.value && !sourceTypeFilter.value && !healthFilter.value)))
+    subscriptions: [
+      ...filteredSubscriptions.value.filter(sub => sub.subscription_group_id === group.id),
+      ...(isDefaultGroup(group) ? unassigned : []),
+    ],
+  }))
+
+  if (!props.groups.some(isDefaultGroup)) {
+    groups.push({ id: 'unassigned', name: '未分组', virtual: true, subscriptions: unassigned })
+  }
+
+  return groups.filter(group => group.subscriptions.length > 0
+    || (!sourceSearch.value && !sourceTypeFilter.value && !healthFilter.value))
+})
 
 const visibleSubscriptionIds = computed(() => displayGroups.value.flatMap(group =>
   group.subscriptions.filter((subscription) => !subscription.hubOnly).map(subscription => subscription.id),
@@ -817,11 +814,18 @@ const setSubscriptionPaused = (id: string, paused: boolean) => {
   emit('set-subscription-paused', id, paused)
 }
 
+const canMoveGroup = (id: string, direction: -1 | 1) => {
+  const index = props.groups.findIndex(group => group.id === id)
+  const target = index + direction
+  if (index < 0 || target < 0 || target >= props.groups.length) return false
+  return !isDefaultGroup(props.groups[index]!) && !isDefaultGroup(props.groups[target]!)
+}
+
 const moveGroup = (id: string, direction: -1 | 1) => {
   const ids = props.groups.map(group => group.id)
   const index = ids.indexOf(id)
   const target = index + direction
-  if (props.busy || index < 0 || target < 0 || target >= ids.length) return
+  if (props.busy || !canMoveGroup(id, direction)) return
   ;[ids[index], ids[target]] = [ids[target], ids[index]]
   emit('reorder-subscription-groups', ids)
 }
@@ -881,6 +885,15 @@ const retryOPMLFailure = (failure: { url: string; title?: string; group?: string
 }
 
 const selectedIds = () => [...selectedSubscriptionIds.value]
+
+const isSubscriptionSettingsExpanded = (id: string) => expandedSubscriptionSettingIds.value.has(id)
+
+const toggleSubscriptionSettings = (id: string) => {
+  const next = new Set(expandedSubscriptionSettingIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expandedSubscriptionSettingIds.value = next
+}
 
 const toggleSubscriptionSelection = (id: string, checked: boolean) => {
   const next = new Set(selectedSubscriptionIds.value)
@@ -1046,6 +1059,8 @@ watch(() => props.show, (visible) => {
   healthFilter.value = ''
   batchGroupId.value = ''
   selectedSubscriptionIds.value = new Set()
+  expandedSubscriptionSettingIds.value = new Set()
+  expandedSubscriptionDiagnosticIds.value = new Set()
   localFilterRules.value = {
     mutedSourceIds: [...props.filterRules.mutedSourceIds],
     hiddenKeywords: [...props.filterRules.hiddenKeywords],
@@ -1069,6 +1084,7 @@ watch(() => props.subscriptions, (subscriptions) => {
   })
   const validIds = new Set(subscriptions.map(sub => sub.id))
   selectedSubscriptionIds.value = new Set([...selectedSubscriptionIds.value].filter(id => validIds.has(id)))
+  expandedSubscriptionSettingIds.value = new Set([...expandedSubscriptionSettingIds.value].filter(id => validIds.has(id)))
   draftTitles.value = nextDrafts
 })
 
@@ -1391,6 +1407,16 @@ watch(() => props.filterRules, (rules) => {
   background: var(--a-color-surface-muted);
 }
 
+.group-manage-row.is-system {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.group-system-name {
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .group-manage-count {
   font-size: 0.75rem;
   white-space: nowrap;
@@ -1451,7 +1477,7 @@ watch(() => props.filterRules, (rules) => {
 
 .subscription-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 15rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: start;
   padding: 1rem;
@@ -1606,6 +1632,46 @@ watch(() => props.filterRules, (rules) => {
   gap: 0.5rem;
 }
 
+.subscription-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subscription-settings {
+  display: grid;
+  grid-column: 2 / -1;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.subscription-settings-toggle {
+  display: grid;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+
+.subscription-settings-toggle:hover {
+  background: var(--a-color-surface);
+}
+
+.subscription-settings-toggle:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
+.subscription-settings-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .subscription-remove {
   display: grid;
   min-width: 2.75rem;
@@ -1641,6 +1707,26 @@ watch(() => props.filterRules, (rules) => {
 
   .source-manage-tools {
     grid-template-columns: 1fr;
+  }
+
+  .group-manage-row {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .group-name-input,
+  .group-system-name {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .group-manage-count {
+    flex: 1 1 auto;
+  }
+
+  .subscription-quick-actions,
+  .subscription-settings {
+    width: 100%;
   }
 
   .subscription-actions {

@@ -130,7 +130,7 @@ describe('AppSidebar blog navigation', () => {
     const postsItem = items.find((item) => item.text().trim() === '博文')
 
     expect(discoveryItem?.props('to')).toBe('/posts')
-    expect(postsItem?.props('to')).toBe('/posts?type=post')
+    expect(postsItem?.props('to')).toBe('/posts/articles')
   })
 })
 

@@ -1,15 +1,23 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 // @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
 import type { ShortNote } from '@/types'
+import { useAuthStore } from '@/stores/auth'
 
 const CommentSideSheetStub = {
   name: 'CommentSideSheet',
   props: ['show', 'target', 'partialAnchor'],
   template: '<aside v-if="show" data-test="short-note-comment-sheet" />',
+}
+
+const InteractionActionsStub = {
+  name: 'PInteractionActions',
+  props: ['liked', 'likeCount', 'disliked', 'dislikeCount'],
+  emits: ['like-change', 'dislike-change'],
+  template: '<button data-test="short-note-votes" @click="$emit(\'dislike-change\', true)" />',
 }
 
 describe('ShortNoteCard', () => {
@@ -37,6 +45,37 @@ describe('ShortNoteCard', () => {
 
     const headerStats = wrapper.findAll('.sticky-stat').map((stat) => stat.text())
     expect(headerStats).toEqual(['71.4(7)'])
+  })
+
+  it('使用赞踩组件，并在点踩后同步服务端投票结果', async () => {
+    const pinia = createPinia()
+    const authStore = useAuthStore(pinia)
+    authStore.token = 'token'
+    authStore.user = { uuid: 'reader-1', username: 'reader', role: 'user' } as never
+    authStore.isAuthenticated = true
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { likes_count: 4, dislikes_count: 3, viewer_vote: 'down' },
+    }), { status: 200 }))
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: mockNote },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true, PInteractionActions: InteractionActionsStub },
+      },
+    })
+
+    const actions = wrapper.getComponent(InteractionActionsStub)
+    expect(actions.props()).toMatchObject({ liked: false, likeCount: 5, disliked: false, dislikeCount: 2 })
+
+    await wrapper.get('[data-test="short-note-votes"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/short-notes/note-test-1/vote',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ direction: 'down' }) }),
+    )
+    expect(actions.props()).toMatchObject({ liked: false, likeCount: 4, disliked: true, dislikeCount: 3 })
+    expect(wrapper.get('.sticky-stat').text()).toBe('57.1(7)')
   })
 
   it('正文区域支持键盘打开讨论', async () => {

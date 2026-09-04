@@ -82,16 +82,17 @@
 
     <!-- 3. 极轻量互动操作栏 -->
     <footer class="sticky-memo-footer" @click.stop>
-      <button
-        type="button"
-        class="sticky-pill-btn"
-        :class="{ 'is-liked': interactions.liked.value }"
-        :disabled="!authStore.isAuthenticated"
-        @click="handleToggleLike"
-      >
-        <Heart :size="13" :fill="interactions.liked.value ? 'currentColor' : 'none'" />
-        <span>{{ interactions.likeCount.value || 0 }}</span>
-      </button>
+      <PInteractionActions
+        :liked="viewerVote === 'up'"
+        :like-count="interactions.likeCount.value"
+        :disliked="viewerVote === 'down'"
+        :dislike-count="dislikeCount"
+        :disabled="votePending || !authStore.isAuthenticated"
+        :show-ratio-bar="false"
+        size="sm"
+        @like-change="handleLikeVote"
+        @dislike-change="handleDislikeVote"
+      />
 
       <button
         type="button"
@@ -126,10 +127,13 @@
 import { computed, ref, watch, watchEffect } from 'vue'
 import { IconHeart as Heart, IconMessage as MessageSquare, IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
+import { apiRequestEnvelope } from '@/api/client'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
+import PInteractionActions from '@/components/ui/PInteractionActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
+import { useApi } from '@/composables/useApi'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractions } from '@/composables/useInteractions'
@@ -139,11 +143,15 @@ import type { ShortNote } from '@/types'
 const props = defineProps<{ note: ShortNote }>()
 defineEmits<{ delete: [note: ShortNote] }>()
 
+const api = useApi()
 const authStore = useAuthStore()
 const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNoteSync()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
+const dislikeCount = ref(0)
+const viewerVote = ref<'up' | 'down' | 'none'>('none')
+const votePending = ref(false)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
-const voteTotal = computed(() => (interactions.likeCount.value || 0) + (props.note.dislikes_count || 0))
+const voteTotal = computed(() => (interactions.likeCount.value || 0) + dislikeCount.value)
 const likeRate = computed(() => (
   voteTotal.value === 0 ? '0.0' : (((interactions.likeCount.value || 0) / voteTotal.value) * 100).toFixed(1)
 ))
@@ -184,29 +192,49 @@ function toggleComments(event?: Event) {
 
 watchEffect(() => {
   const synced = getNoteState(props.note.id)
-  interactions.liked.value = synced?.liked ?? props.note.liked
+  const nextViewerVote = synced?.viewerVote ?? props.note.viewer_vote ?? (props.note.liked ? 'up' : 'none')
+  viewerVote.value = nextViewerVote
+  interactions.liked.value = nextViewerVote === 'up'
   interactions.likeCount.value = synced?.likeCount ?? props.note.likes_count
+  dislikeCount.value = synced?.dislikeCount ?? props.note.dislikes_count ?? 0
   interactions.commentCount.value = synced?.commentCount ?? props.note.comments_count
 })
 
-watch(() => [interactions.liked.value, interactions.likeCount.value, interactions.commentCount.value], () => {
+watch(() => [interactions.liked.value, interactions.likeCount.value, dislikeCount.value, viewerVote.value, interactions.commentCount.value], () => {
   updateNoteState(props.note.id, {
     liked: interactions.liked.value,
     likeCount: interactions.likeCount.value,
+    dislikeCount: dislikeCount.value,
+    viewerVote: viewerVote.value,
     commentCount: interactions.commentCount.value,
   })
 })
 
-function handleToggleLike() {
-  if (interactions.liked.value) {
-    void interactions.unlike().then(() => {
-      updateNoteState(props.note.id, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
+async function setVote(direction: 'up' | 'down' | 'none') {
+  if (votePending.value || !authStore.isAuthenticated) return
+  votePending.value = true
+  try {
+    const response = await apiRequestEnvelope<ShortNote>(api.blog.shortNoteVote(props.note.id), {
+      method: direction === 'none' ? 'DELETE' : 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+      ...(direction === 'none' ? {} : { body: JSON.stringify({ direction }) }),
     })
-  } else {
-    void interactions.like().then(() => {
-      updateNoteState(props.note.id, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
-    })
+    const note = response.data
+    viewerVote.value = note.viewer_vote ?? 'none'
+    interactions.liked.value = viewerVote.value === 'up'
+    interactions.likeCount.value = note.likes_count
+    dislikeCount.value = note.dislikes_count ?? 0
+  } finally {
+    votePending.value = false
   }
+}
+
+function handleLikeVote(nextLiked: boolean) {
+  void setVote(nextLiked ? 'up' : 'none')
+}
+
+function handleDislikeVote(nextDisliked: boolean) {
+  void setVote(nextDisliked ? 'down' : 'none')
 }
 
 function formatDate(value: string) {

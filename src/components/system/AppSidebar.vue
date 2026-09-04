@@ -385,7 +385,7 @@ watch(
 )
 
 // 3. Blog Navigation Items
-const blogNavItems = [
+const blogNavItems: { to: string; label: string; icon: Component; exact?: boolean; active?: () => boolean; routerActive?: boolean }[] = [
   { to: '/posts', label: '发现', icon: Compass, exact: true },
   { to: '/posts/articles', label: '博文', icon: FileText },
   { to: '/posts/notes', label: '短笺', icon: MessageSquare },

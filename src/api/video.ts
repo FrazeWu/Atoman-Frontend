@@ -47,6 +47,12 @@ export interface VideoImportTask {
   updated_at: string
 }
 
+export function videoFileContentType(file: Pick<File, 'name' | 'type'>) {
+  if (file.type) return file.type
+  const extension = file.name.split('.').pop()?.toLowerCase()
+  return ({ mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' } as Record<string, string>)[extension ?? ''] ?? ''
+}
+
 export interface VideoSubscriptionPage {
   data: Video[]
   meta: { page: number; page_size: number; total: number; has_more: boolean }
@@ -145,7 +151,7 @@ export function createVideoImport(file: File, channelId: string | null, token?: 
   return apiRequestJson<VideoImportTask>(importUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
-    body: JSON.stringify({ channel_id: channelId, file_name: file.name, file_size: file.size, content_type: file.type }),
+    body: JSON.stringify({ channel_id: channelId, file_name: file.name, file_size: file.size, content_type: videoFileContentType(file) }),
   })
 }
 

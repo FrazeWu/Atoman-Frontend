@@ -665,7 +665,7 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .palette-modal {
-    animation: none;
+    animation-duration: var(--a-motion-reduced-state);
   }
 }
 

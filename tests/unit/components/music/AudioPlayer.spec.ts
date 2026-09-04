@@ -154,7 +154,7 @@ describe("AudioPlayer", () => {
 			resolve(process.cwd(), "src/components/music/AudioPlayer.vue"),
 			"utf8",
 		);
-		expect(source).toContain('<Transition name="player-display">');
+		expect(source).toMatch(/<Transition name="player-display" appear>/);
 		expect(source).toContain('IconChevronRight as ChevronRight');
 		expect(source).toContain('IconChevronLeft as ChevronLeft');
 		expect(source).toContain('<ChevronRight :size="16" aria-hidden="true" />');
@@ -178,6 +178,9 @@ describe("AudioPlayer", () => {
 		expect(source).toContain('@media (prefers-reduced-motion: reduce)');
 		expect(source).toMatch(
 			/\.player-display-enter-active[\s\S]*?animation:\s*player-display-enter var\(--a-motion-emphasis\)/,
+		);
+		expect(source).toMatch(
+			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.player-display-enter-active\s*\{[\s\S]*?animation:\s*player-display-enter-reduced var\(--a-motion-reduced-emphasis\)/,
 		);
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,

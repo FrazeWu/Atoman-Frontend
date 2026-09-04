@@ -1,6 +1,6 @@
 <template>
   <div v-if="player.currentSong" class="player-shell">
-    <Transition name="player-display">
+    <Transition name="player-display" appear>
     <div
       v-if="playerDisplayMode === 'full'"
       class="player"
@@ -1347,6 +1347,23 @@ watch(
   }
 }
 
+@keyframes player-display-enter-reduced {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateX(-8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes player-display-leave {
   0% {
     opacity: 1;
@@ -1356,6 +1373,18 @@ watch(
   100% {
     opacity: 0.85;
     transform: translateX(100%);
+  }
+}
+
+@keyframes player-display-leave-reduced {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(24px);
   }
 }
 
@@ -1740,22 +1769,22 @@ watch(
     transition-duration: var(--a-motion-state);
   }
 
-  .player-display-enter-active,
+  .player-display-enter-active {
+    animation: player-display-enter-reduced var(--a-motion-reduced-emphasis) var(--a-motion-ease-enter) both;
+  }
+
   .player-display-leave-active {
-    animation: none;
-    transition:
-      opacity var(--a-motion-state) var(--a-motion-ease-enter),
-      transform var(--a-motion-state) var(--a-motion-ease-enter);
+    animation: player-display-leave-reduced var(--a-motion-reduced-overlay-exit) var(--a-motion-ease-exit) both;
   }
 
   .player-display-enter-from {
     opacity: 0;
-    transform: translateX(16px);
+    transform: translateX(40px);
   }
 
   .player-display-leave-to {
     opacity: 0;
-    transform: translateX(8px);
+    transform: translateX(24px);
   }
 
   .slide-up-enter-active,
@@ -1767,13 +1796,13 @@ watch(
 
   .slide-up-enter-from,
   .slide-up-leave-to {
-    transform: translateY(8px);
+    transform: translateY(32px);
     opacity: 0;
   }
 
   .slide-right-enter-from,
   .slide-right-leave-to {
-    transform: translateX(8px);
+    transform: translateX(24px);
     opacity: 0;
   }
 

@@ -80,6 +80,11 @@
 	--a-motion-detail-exit: 300ms;
 	--a-motion-detail-entry: 560ms;
 	--a-motion-emphasis: 700ms;
+	/* 减弱模式保留可感知的短位移，避免弹层瞬间出现。 */
+	--a-motion-reduced-state: 240ms;
+	--a-motion-reduced-overlay: 320ms;
+	--a-motion-reduced-overlay-exit: 220ms;
+	--a-motion-reduced-emphasis: 420ms;
 	--a-motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
 	--a-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
@@ -901,12 +906,12 @@ body:has(.studio-layout) {
 	.modal-fade-leave-active,
 	.modal-fade-enter-active .p-modal,
 	.modal-fade-leave-active .p-modal {
-		transition-duration: var(--a-motion-state);
+		transition-duration: var(--a-motion-reduced-state);
 	}
 
 	.modal-fade-enter-from .p-modal,
 	.modal-fade-leave-to .p-modal {
-		transform: none;
+		transform: translateY(8px);
 	}
 }
 

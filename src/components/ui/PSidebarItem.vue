@@ -4,8 +4,8 @@
     :to="to"
     class="p-sidebar-item"
     :class="{ active, 'is-focused': isFocused }"
-    active-class="active"
-    :exact-active-class="exact ? 'active' : ''"
+    :active-class="routerActive ? 'active' : ''"
+    :exact-active-class="routerActive && exact ? 'active' : ''"
   >
     <span
       v-if="icon || iconChar"
@@ -46,6 +46,7 @@ defineProps<{
   index?: number | string
   active?: boolean
   exact?: boolean
+  routerActive?: boolean
   icon?: Component
   iconChar?: string
   isFocused?: boolean

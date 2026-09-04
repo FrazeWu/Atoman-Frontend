@@ -640,8 +640,6 @@ async function toggleChannelSubscription() {
         </button>
       </section>
 
-      <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />
-
       <section v-if="video.description || video.tags?.length" class="vd-description" data-testid="video-description">
         <pre v-if="video.description" :class="['vd-desc-text', { 'is-expanded': descriptionExpanded }]">{{ video.description }}</pre>
         <button v-if="video.description && isDescriptionTruncated" type="button" class="vd-desc-toggle" @click="descriptionExpanded = !descriptionExpanded">
@@ -691,6 +689,8 @@ async function toggleChannelSubscription() {
           </button>
         </div>
       </section>
+
+      <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />
     </div>
 
       <VideoCollectionPlaylist
@@ -795,9 +795,9 @@ async function toggleChannelSubscription() {
   grid-column: 2;
   grid-row: 1 / span 5;
 }
-.vd-recommendations { grid-row: 3; }
-.vd-description { grid-row: 4; }
-.vd-interactions { grid-row: 5; }
+.vd-description { grid-row: 3; }
+.vd-interactions { grid-row: 4; }
+.vd-recommendations { grid-row: 5; }
 
 .vd-layout--theater {
   grid-template-columns: minmax(0, 1fr);

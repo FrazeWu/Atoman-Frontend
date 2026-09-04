@@ -234,6 +234,28 @@ describe("VideoDetailView shared interactions", () => {
 		expect(comments.props("noun")).toBe("评论");
 	});
 
+	it("在当前视频信息之后展示推荐视频", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) => {
+				const url = String(input);
+				if (url.endsWith("/videos/video-1")) {
+					return makeJsonResponse(makeVideo("video-1", "当前视频", { description: "当前视频简介" }));
+				}
+				if (url.endsWith("/videos/video-1/recommended")) {
+					return makeJsonResponse([makeVideo("video-2", "推荐视频")]);
+				}
+				throw new Error(`unexpected fetch: ${url}`);
+			}),
+		);
+
+		const { wrapper } = await mountVideoDetail();
+		const markup = wrapper.html();
+
+		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-rating-control"'));
+		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
+	});
+
 	it("游客打开视频时不发送需要登录的消费事件", async () => {
 		await mountVideoDetail("/videos/watch/video-1", false);
 

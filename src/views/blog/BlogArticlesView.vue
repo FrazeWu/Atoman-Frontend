@@ -34,7 +34,7 @@
           description="请稍后重试"
         >
           <template #action>
-            <PButton variant="secondary" label="重试" @click="fetchPosts" />
+            <PButton variant="secondary" label="重试" @click="() => void fetchPosts()" />
           </template>
         </PEmpty>
 
@@ -139,10 +139,10 @@ const queryValue = (value: unknown) => Array.isArray(value) ? value[0] : value
 const currentQuery = computed(() => typeof queryValue(route.query.q) === 'string' ? queryValue(route.query.q) as string : '')
 const currentChannelId = computed(() => typeof queryValue(route.query.channel_id) === 'string' ? queryValue(route.query.channel_id) as string : '')
 const currentSort = computed<'latest' | 'popular'>(() => queryValue(route.query.sort) === 'popular' ? 'popular' : 'latest')
-const sortOptions = [
+const sortOptions: { label: string; value: 'latest' | 'popular' }[] = [
   { label: '最新', value: 'latest' },
   { label: '热门', value: 'popular' },
-] as const
+]
 const channelOptions = computed(() => [
   { label: '全部频道', value: '' },
   ...channels.value.map(channel => ({ label: channel.name, value: String(channel.id) })),
@@ -176,7 +176,7 @@ const updateQuery = (next: { q?: string; channel_id?: string; sort?: 'latest' | 
 
 const submitSearch = () => updateQuery({ q: searchInput.value.trim() })
 const changeChannel = (value: string | number) => updateQuery({ channel_id: String(value) })
-const changeSort = (value: 'latest' | 'popular') => updateQuery({ sort: value === 'popular' ? value : '' })
+const changeSort = (value: 'latest' | 'popular') => updateQuery({ sort: value === 'popular' ? value : undefined })
 const selectChannel = (id: string | number) => updateQuery({ channel_id: String(id) })
 const searchTag = (tag: string) => updateQuery({ q: tag, channel_id: '' })
 const openPost = (post: Post) => blogSheets.openPost(post.id, post.title)

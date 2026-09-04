@@ -300,9 +300,4 @@ defineExpose({
   margin: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .p-help-tooltip__popover {
-    animation-duration: var(--a-motion-reduced-state);
-  }
-}
 </style>

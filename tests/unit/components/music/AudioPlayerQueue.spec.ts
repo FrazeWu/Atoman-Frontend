@@ -109,8 +109,6 @@ describe("AudioPlayerQueue.vue", () => {
 		expect(source).toMatch(
 			/\.queue-panel\s*\{[^}]*top: var\(--a-topbar-height\);[^}]*bottom: calc\([^}]*6rem[^}]*\);[^}]*animation: queueReveal 550ms/,
 		);
-		expect(source).toContain(
-			".queue-panel { animation-duration: var(--a-motion-reduced-overlay); }",
-		);
+		expect(source).not.toContain("prefers-reduced-motion: reduce");
 	});
 });

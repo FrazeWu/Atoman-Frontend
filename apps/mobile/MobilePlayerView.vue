@@ -729,7 +729,4 @@ onUnmounted(() => {
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mobile-player-view__spinner { animation: none; }
-}
 </style>

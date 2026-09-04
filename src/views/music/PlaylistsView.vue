@@ -410,7 +410,4 @@ watch(isAuthenticated, (authenticated) => {
   .music-playlists__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1rem; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .music-playlists__refresh .is-spinning { animation: none; }
-}
 </style>

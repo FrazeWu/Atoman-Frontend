@@ -203,8 +203,4 @@ const emit = defineEmits<{ expand: [nodeId: string] }>()
 
 @keyframes debate-node-spin { to { transform: rotate(360deg); } }
 
-@media (prefers-reduced-motion: reduce) {
-  .debate-node { transition: none; }
-  .debate-node__spinner { animation: none; }
-}
 </style>

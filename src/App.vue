@@ -179,35 +179,4 @@ onMounted(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .app-main {
-    transition-duration: var(--a-motion-detail-exit);
-  }
-
-  .module-slide-enter-active,
-  .module-slide-leave-active {
-    transition-duration: var(--a-motion-state);
-  }
-
-  .module-slide-enter-from,
-  .module-slide-leave-to {
-    transform: translateX(12px);
-  }
-
-  .module-slide-leave-to {
-    transform: translateX(-12px);
-  }
-
-  .detail-exit {
-    transform: none;
-  }
-
-  .detail-entry {
-    animation-duration: var(--a-motion-detail-entry);
-  }
-
-  .app-route-progress {
-    animation-duration: 1200ms;
-  }
-}
 </style>

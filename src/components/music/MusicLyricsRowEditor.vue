@@ -622,11 +622,4 @@ function describedByForField(
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lyric-row,
-  .lyric-input,
-  .lyric-action {
-    transition: none;
-  }
-}
 </style>

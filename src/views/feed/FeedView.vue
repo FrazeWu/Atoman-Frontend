@@ -1111,12 +1111,6 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .feed-new-content {
-    transition: none;
-  }
-}
-
 .feed-skeleton {
   height: 7rem;
 }

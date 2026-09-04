@@ -439,17 +439,6 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .post-rating__star,
-  .post-rating__clear {
-    transition: none;
-  }
-
-  .post-rating__star.is-animating {
-    animation: none;
-  }
-}
-
 /* 评分指南内部条目样式（承载于 PHelpTooltip 中） */
 .guidelines-list {
   display: grid;

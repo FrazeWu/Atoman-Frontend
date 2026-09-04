@@ -237,10 +237,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .queue-panel { animation-duration: var(--a-motion-reduced-overlay); }
-}
-
 .queue-header {
   display: flex;
   align-items: center;

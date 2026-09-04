@@ -92,5 +92,4 @@ function fillWidth(star: number) {
 .song-rating__star:disabled { cursor: default; }
 .song-rating__star:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 2px; }
 .song-rating__login { color: var(--a-color-muted); text-decoration: underline; white-space: nowrap; }
-@media (prefers-reduced-motion: reduce) { .song-rating__star { transition: none; } }
 </style>

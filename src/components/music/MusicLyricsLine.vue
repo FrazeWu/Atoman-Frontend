@@ -444,9 +444,4 @@ function formatTime(timeMs: number | null | undefined): string {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .music-lyrics-line {
-    transition: none;
-  }
-}
 </style>

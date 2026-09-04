@@ -180,7 +180,7 @@ describe("App responsive shell", () => {
 		expect(appSource).toContain("translateX(44px)");
 		expect(appSource).toContain("translateX(-44px)");
 		expect(appSource).toContain("app-route-progress");
-		expect(appSource).toContain("prefers-reduced-motion: reduce");
+		expect(appSource).not.toContain("prefers-reduced-motion: reduce");
 	});
 });
 

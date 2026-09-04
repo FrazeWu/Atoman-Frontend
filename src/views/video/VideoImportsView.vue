@@ -361,5 +361,4 @@ function formatDate(value: string) {
   .video-imports__detail dl { grid-template-columns: 1fr; }
   .video-imports__actions :deep(.p-button) { width: 100%; justify-content: center; }
 }
-@media (prefers-reduced-motion: reduce) { .video-imports__progress-track span { transition: none; } }
 </style>

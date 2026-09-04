@@ -343,6 +343,7 @@ export function useApi() {
 		feed: {
 			subscriptions: `${apiUrl}/feed/subscriptions`,
 			subscription: (id: number) => `${apiUrl}/feed/subscriptions/${id}`,
+			itemRating: (id: number | string) => `${apiUrl}/feed/items/${id}/rating`,
 			timeline: `${apiUrl}/feed/timeline`,
 			sourceTimeline: `${apiUrl}/feed/timeline`,
 			explore: `${apiUrl}/feed/explore`,

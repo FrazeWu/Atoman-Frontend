@@ -153,6 +153,63 @@ describe("FeedArticleSheet", () => {
 		);
 	});
 
+	it("rates and clears an external RSS article", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+			if (String(input).includes("/rating") && init?.method === "DELETE") {
+				return new Response(JSON.stringify({ data: { rating_score: 0, rating_count: 0 } }), { status: 200 });
+			}
+			if (String(input).includes("/rating")) {
+				return new Response(JSON.stringify({ data: { rating_score: 9, rating_count: 1, viewer_rating: 9 } }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 });
+		});
+		const article = {
+			type: "feed_item",
+			published_at: "2026-06-20T00:00:00Z",
+			is_read: false,
+			feed_item: {
+				id: "feed-item-rating-1",
+				feed_source_id: "source-rating-1",
+				guid: "guid-rating-1",
+				title: "可评分 RSS 文章",
+				link: "https://example.com/rated-article",
+				summary: "<p>正文</p>",
+				rating_score: 8,
+				rating_count: 2,
+				viewer_rating: 8,
+				published_at: "2026-06-20T00:00:00Z",
+				fetched_at: "2026-06-20T00:00:00Z",
+			},
+		} as any;
+		const wrapper = mountSheet(
+			{
+				props: { show: true, article },
+				global: {
+					stubs: { PSheet: { template: "<section><slot /></section>" } },
+				},
+			},
+			(authStore) => {
+				authStore.isAuthenticated = true;
+				authStore.token = "token";
+			},
+		);
+
+		expect(wrapper.find('button[aria-label="4.5 星"]').exists()).toBe(true);
+		await wrapper.get('button[aria-label="4.5 星"]').trigger("click");
+		expect(fetchMock).toHaveBeenCalledWith(
+			expect.stringContaining("/feed/items/feed-item-rating-1/rating"),
+			expect.objectContaining({ method: "PUT" }),
+		);
+		await vi.waitFor(() => expect(article.feed_item.viewer_rating).toBe(9));
+
+		await wrapper.get('button[aria-label="清除评分"]').trigger("click");
+		expect(fetchMock).toHaveBeenCalledWith(
+			expect.stringContaining("/feed/items/feed-item-rating-1/rating"),
+			expect.objectContaining({ method: "DELETE" }),
+		);
+		await vi.waitFor(() => expect(article.feed_item.viewer_rating).toBeUndefined());
+	});
+
 	it("sanitizes external feed HTML before rendering it", () => {
 		const wrapper = mountSheet({
 			props: {
@@ -279,7 +336,7 @@ describe("FeedArticleSheet", () => {
 							title: "正文结尾功能文章",
 							link: "https://example.com/reader-footer",
 							summary: "<p>摘要</p>",
-							rating_score: 4.5,
+							rating_score: 9,
 							rating_count: 6,
 							published_at: "2026-06-20T00:00:00Z",
 							fetched_at: "2026-06-20T00:00:00Z",

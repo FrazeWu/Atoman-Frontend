@@ -174,10 +174,22 @@
         <FeedContentFeedback :item-id="article.feed_item.id" :variant="feedContentVariant" />
         <footer class="article-reader-footer">
           <div class="article-reader-footer__actions">
-            <span class="article-rating" data-test="feed-article-rating">
-              <Star :size="16" aria-hidden="true" />
-              {{ feedRatingLabel }}
-            </span>
+            <PostRatingControl
+              class="article-feed-rating"
+              data-test="feed-article-rating"
+              size="sm"
+              :rating-score="article.feed_item.rating_score"
+              :rating-count="article.feed_item.rating_count"
+              :viewer-rating="article.feed_item.viewer_rating"
+              :weighted-rating-score="article.feed_item.rating_count ? article.feed_item.rating_score : null"
+              :weighted-rating-count="article.feed_item.rating_count"
+              :weighted-rating-active="Boolean(article.feed_item.rating_count)"
+              :disabled="!authStore.isAuthenticated"
+              :loading="ratingLoading"
+              :error-message="ratingError"
+              @rate="rateFeedItem"
+              @clear="clearFeedItemRating"
+            />
             <button
               type="button"
               class="article-reader-star"
@@ -237,7 +249,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconBookmark as Bookmark, IconClock as Clock, IconExternalLink as ExternalLink, IconPlayerPlay as Play, IconStar as Star } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconClock as Clock, IconExternalLink as ExternalLink, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -286,6 +298,7 @@ const authStore = useAuthStore()
 const api = useApi()
 const feedStore = useFeedStore()
 const ratingLoading = ref(false)
+const ratingError = ref('')
 const feedCoverFailed = ref(false)
 const feedCoverCandidateIndex = ref(0)
 const commentsOpen = ref(false)
@@ -338,11 +351,6 @@ const relatedFeedItems = computed(() => {
     return [item]
   }).slice(0, 3)
 })
-const feedRatingLabel = computed(() => {
-  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
-  if (!item?.rating_count) return '暂无评分'
-  return `${Number(item.rating_score || 0).toFixed(1)} · ${item.rating_count} 人评分`
-})
 const feedCoverCandidates = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return []
   const item = props.article.feed_item
@@ -369,6 +377,7 @@ watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant],
   commentsOpen.value = false
   commentSheetMode.value = 'partial'
   commentCount.value = undefined
+  ratingError.value = ''
   feedContentMode.value = defaultFeedContentMode(props.reader)
 })
 
@@ -592,6 +601,64 @@ async function clearPostRating() {
     post.rating_score = Number(summary.rating_score ?? 0)
     post.rating_count = Number(summary.rating_count ?? 0)
     post.viewer_rating = undefined
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+function applyFeedItemRating(summary: Record<string, unknown>, fallbackScore?: number) {
+  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  if (!item) return
+  item.rating_score = Number(summary.rating_score ?? item.rating_score ?? 0)
+  item.rating_count = Number(summary.rating_count ?? item.rating_count ?? 0)
+  item.viewer_rating = summary.viewer_rating === null || summary.viewer_rating === undefined
+    ? fallbackScore
+    : Number(summary.viewer_rating)
+}
+
+async function rateFeedItem(score: number) {
+  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  if (!item || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingError.value = ''
+  ratingLoading.value = true
+  try {
+    const response = await apiRequestResult(api.feed.itemRating(item.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
+      body: JSON.stringify({ score }),
+    })
+    if (!response.ok) {
+      ratingError.value = '评分未保存，请重试'
+      return
+    }
+    const payload = await Promise.resolve(response.data)
+    applyFeedItemRating(payload.data || payload, score)
+  } catch {
+    ratingError.value = '评分未保存，请重试'
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
+async function clearFeedItemRating() {
+  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  if (!item || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingError.value = ''
+  ratingLoading.value = true
+  try {
+    const response = await apiRequestResult(api.feed.itemRating(item.id), {
+      method: 'DELETE',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (!response.ok) {
+      ratingError.value = '评分未清除，请重试'
+      return
+    }
+    const payload = await Promise.resolve(response.data)
+    applyFeedItemRating(payload.data || payload)
+    item.viewer_rating = undefined
+  } catch {
+    ratingError.value = '评分未清除，请重试'
   } finally {
     ratingLoading.value = false
   }
@@ -826,14 +893,9 @@ const emitPlayPodcast = () => {
   gap: 0.75rem 1rem;
 }
 
-.article-rating {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.82rem;
+.article-feed-rating {
+  flex: 1 1 100%;
+  min-width: 0;
 }
 
 .article-reader-star {

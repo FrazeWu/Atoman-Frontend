@@ -923,6 +923,7 @@ export interface FeedItem {
 	bookmark_count?: number;
 	rating_score?: number;
 	rating_count?: number;
+	viewer_rating?: number | null;
 	reader_quality_flags?: string[];
 	reader_version?: number;
 	full_text_html?: string;

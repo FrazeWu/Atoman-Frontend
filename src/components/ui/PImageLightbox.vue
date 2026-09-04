@@ -268,20 +268,6 @@ function handleKeydown(e: KeyboardEvent) {
   transform: scale(0.98);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lightbox-fade-enter-active,
-  .lightbox-fade-leave-active,
-  .lightbox-zoom-enter-active,
-  .lightbox-zoom-leave-active {
-    transition-duration: var(--a-motion-reduced-state);
-  }
-
-  .lightbox-zoom-enter-from,
-  .lightbox-zoom-leave-to {
-    transform: scale(0.98);
-  }
-}
-
 @media (max-width: 640px) {
   .p-lightbox-nav.is-prev {
     left: 0.5rem;

@@ -212,8 +212,4 @@ function openPlayer() {
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mobile-mini-player__spinner { animation: none; }
-  .mobile-mini-player__progress span { transition: none; }
-}
 </style>

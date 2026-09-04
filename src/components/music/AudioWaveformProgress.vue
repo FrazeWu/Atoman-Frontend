@@ -369,9 +369,4 @@ function handleRangeInput(event: Event) {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .waveform-shape__played {
-    transition: none;
-  }
-}
 </style>

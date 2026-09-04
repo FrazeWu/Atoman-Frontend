@@ -663,12 +663,6 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .palette-modal {
-    animation-duration: var(--a-motion-reduced-state);
-  }
-}
-
 @keyframes paletteScaleIn {
   from {
     opacity: 0;

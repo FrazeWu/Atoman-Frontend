@@ -724,9 +724,4 @@ async function onCoverChange(event: Event) {
 .import-file-action--danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, var(--a-color-bg));
 }
-@media (prefers-reduced-motion: reduce) {
-  .album-seed-bio__toggle svg {
-    transition: none;
-  }
-}
 </style>

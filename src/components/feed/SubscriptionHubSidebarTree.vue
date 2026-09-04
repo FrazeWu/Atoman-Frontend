@@ -630,10 +630,4 @@ const selectGroup = (subscriptionType: SubscriptionHubType, groupId: string) => 
   padding-left: 0.55rem;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .subscription-hub-sidebar__type-select svg:last-child,
-  .subscription-hub-sidebar__group-select svg:last-child {
-    transition: none;
-  }
-}
 </style>

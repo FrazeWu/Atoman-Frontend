@@ -206,11 +206,4 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .notification-toast,
-  .notification-toast-enter-active,
-  .notification-toast-leave-active {
-    transition-duration: var(--a-motion-state);
-  }
-}
 </style>

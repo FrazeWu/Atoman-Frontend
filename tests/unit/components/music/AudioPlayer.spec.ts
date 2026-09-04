@@ -175,13 +175,10 @@ describe("AudioPlayer", () => {
 		expect(source).not.toMatch(
 			/@media \(max-width: 767px\)[\s\S]*?\.player\s*\{[^}]*transform:\s*none\s*!important;/,
 		);
-		expect(source).toContain('@media (prefers-reduced-motion: reduce)');
 		expect(source).toMatch(
 			/\.player-display-enter-active[\s\S]*?animation:\s*player-display-enter var\(--a-motion-emphasis\)/,
 		);
-		expect(source).toMatch(
-			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.player-display-enter-active\s*\{[\s\S]*?animation:\s*player-display-enter-reduced var\(--a-motion-reduced-emphasis\)/,
-		);
+		expect(source).not.toContain("prefers-reduced-motion: reduce");
 		expect(source).toMatch(
 			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
 		);

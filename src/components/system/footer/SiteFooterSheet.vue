@@ -251,9 +251,4 @@ async function copyEmail() {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .site-footer-sheet {
-    transition-duration: var(--a-motion-reduced-overlay) !important;
-  }
-}
 </style>

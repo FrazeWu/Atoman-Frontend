@@ -26,7 +26,7 @@ describe("modern flat UI design-system contract", () => {
 		expect(css).toContain("--a-motion-state: 220ms;");
 		expect(css).toContain("--a-motion-navigation: 520ms;");
 		expect(css).toContain("--a-motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);");
-		expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+		expect(css).not.toContain("prefers-reduced-motion: reduce");
 		expect(source).not.toMatch(/transition:\s*all\b/);
 	});
 

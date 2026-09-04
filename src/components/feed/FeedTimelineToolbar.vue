@@ -111,5 +111,4 @@ const mergeDuplicatesValue = computed({ get: () => props.mergeDuplicates, set: v
 .feed-new-content { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-none, 4px); background: var(--a-color-surface-muted); color: var(--a-color-fg); cursor: pointer; font: inherit; font-size: 0.875rem; font-weight: 600; transition: background-color 0.15s ease, color 0.15s ease; }
 .feed-new-content:hover { background: var(--a-color-text); color: var(--a-color-bg); }
 .feed-new-content:focus-visible { outline: 2px solid var(--a-color-text); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .feed-new-content { transition: none; } }
 </style>

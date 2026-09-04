@@ -214,10 +214,6 @@ watch(
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .music-profile__refresh .is-spinning { animation: none; }
-}
-
 .music-profile__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

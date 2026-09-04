@@ -996,12 +996,6 @@ function handleSave() {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .music-lyric-editor-drawer__file-field {
-    transition: none;
-  }
-}
-
 :global(.lyric-editor-drawer) {
   background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;

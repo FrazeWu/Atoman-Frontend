@@ -21,6 +21,15 @@ const task = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+const createTestRouter = () => createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    { path: '/studio/video/imports', component: VideoImportsView },
+    { path: '/studio/video/new', component: { template: '<div />' } },
+    { path: '/videos/watch/:id', component: { template: '<div />' } },
+  ],
+})
+
 describe('VideoImportsView', () => {
   afterEach(() => vi.unstubAllGlobals())
 
@@ -33,14 +42,7 @@ describe('VideoImportsView', () => {
       ])
       throw new Error(`unexpected fetch: ${url}`)
     }))
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/studio/video/imports', component: VideoImportsView },
-        { path: '/studio/video/new', component: { template: '<div />' } },
-        { path: '/videos/watch/:id', component: { template: '<div />' } },
-      ],
-    })
+    const router = createTestRouter()
     await router.push('/studio/video/imports?task=task-2')
     await router.isReady()
     const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
@@ -55,5 +57,26 @@ describe('VideoImportsView', () => {
     expect(wrapper.text()).toContain('失败视频')
     expect(wrapper.text()).toContain('发布失败')
     expect(wrapper.text()).toContain('重试发布')
+  })
+
+  it('selects an incomplete failed import and offers a fresh upload session', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith('/videos/imports')) return makeResponse([
+        task({ id: 'task-3', status: 'failed', publish_mode: '', publish_requested_at: undefined, error_message: '视频文件内容无效' }),
+      ])
+      throw new Error(`unexpected fetch: ${String(input)}`)
+    }))
+    const router = createTestRouter()
+    await router.push('/studio/video/imports')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    useAuthStore(pinia).token = 'token'
+
+    const wrapper = mount(VideoImportsView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('需要处理 1')
+    expect(wrapper.text()).toContain('重新开始上传')
+    expect(wrapper.text()).toContain('选择原视频文件继续')
   })
 })

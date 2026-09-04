@@ -62,7 +62,9 @@ function statusDescription(task: VideoImportTask) {
   if (task.status === 'awaiting_submit') return '文件已上传，可以继续编辑或发布'
   if (task.status === 'publishing') return '资料已提交，正在创建视频'
   if (task.status === 'published') return '视频已发布，后台会继续生成播放预览'
-  if (task.status === 'failed') return task.error_message || '发布失败，可以重试'
+  if (task.status === 'failed') return task.upload_completed_at
+    ? task.error_message || '发布失败，可以重试'
+    : `${task.error_message || '上传失败'}，请重新开始上传后选择原视频文件继续`
   if (task.status === 'canceled') return '任务已取消'
   return ''
 }
@@ -78,6 +80,10 @@ async function loadImports(silent = false) {
     imports.value.forEach(uploader.applyTask)
     const selectedTask = mergedImports.value.find(task => task.id === selectedId.value)
     if (selectedTask) activeGroup.value = groupFor(selectedTask.status)
+    else if (!visibleImports.value.length) {
+      const firstNonEmptyGroup = groupTabs.find(tab => groups.value[tab.value].length > 0)
+      if (firstNonEmptyGroup) activeGroup.value = firstNonEmptyGroup.value
+    }
     if (!visibleImports.value.some(task => task.id === selectedId.value)) selectedId.value = visibleImports.value[0]?.id ?? ''
   } catch (cause) {
     if (!silent) error.value = errorMessage(cause, '导入记录加载失败')
@@ -295,6 +301,7 @@ function formatDate(value: string) {
           </template>
           <PButton v-if="!selected.publish_requested_at && selected.status !== 'canceled'" variant="secondary" @click="router.push(`/studio/video/new?import=${selected.id}`)"><Pencil :size="16" aria-hidden="true" />继续编辑</PButton>
           <PButton v-if="selected.upload_completed_at && !selected.publish_requested_at && selected.status !== 'canceled'" :loading="actionBusy === 'publish'" @click="publishTask"><Upload :size="16" aria-hidden="true" />立即发布</PButton>
+          <PButton v-if="selected.status === 'failed' && !selected.upload_completed_at" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重新开始上传</PButton>
           <PButton v-if="selected.status === 'failed' && selected.upload_completed_at && selected.publish_requested_at" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重试发布</PButton>
           <PButton v-if="selected.target_video_id" variant="secondary" :to="`/videos/watch/${selected.target_video_id}`"><ExternalLink :size="16" aria-hidden="true" />查看视频</PButton>
           <PButton v-if="!selected.target_video_id && selected.status !== 'canceled'" variant="danger" :loading="actionBusy === 'cancel'" @click="cancelTask"><XCircle :size="16" aria-hidden="true" />取消任务</PButton>

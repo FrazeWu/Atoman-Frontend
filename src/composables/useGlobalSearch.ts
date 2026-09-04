@@ -1,7 +1,8 @@
-import { computed, ref } from 'vue'
-import { referenceApi, type ReferenceTarget, type ReferenceTargetType } from '@/api/references'
+import { computed, ref, watch } from 'vue'
+import { type ReferenceTarget, type ReferenceTargetType } from '@/api/references'
 import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { modulePathUrl } from '@/router/siteUrls'
+import { useReferenceSearch } from '@/composables/useReferenceSearch'
 
 export type GlobalSearchSectionType = 'user' | ModuleRoomKey
 
@@ -26,8 +27,6 @@ export type GlobalSearchMode = 'preview' | 'expanded'
 type GlobalSearchOptions = {
   isModuleVisible?: (module: ModuleRoomKey) => boolean
 }
-
-const previewDelay = 250
 
 const globalTargetTypes: readonly ReferenceTargetType[] = [
   'user',
@@ -137,97 +136,59 @@ function interleaveItems(items: GlobalSearchItem[], limit: number) {
 
 export function useGlobalSearch(options: GlobalSearchOptions = {}) {
   const query = ref('')
-  const loading = ref(false)
-  const error = ref('')
-  const sections = ref<GlobalSearchSection[]>([])
   const activeIndex = ref(-1)
-  let currentRequestId = 0
-  let currentController: AbortController | null = null
-  let previewTimer: ReturnType<typeof setTimeout> | null = null
+  const sectionLimit = ref(2)
+  const referenceSearch = useReferenceSearch({
+    targetTypes: globalTargetTypes,
+    limit: 2,
+  })
+  const error = computed(() => referenceSearch.failed.value ? '搜索暂不可用' : '')
+  const sections = computed<GlobalSearchSection[]>(() => {
+    const grouped = new Map<GlobalSearchSectionType, GlobalSearchItem[]>()
+    for (const target of referenceSearch.results.value) {
+      if (!target.available) continue
+      const item = itemFromTarget(target)
+      if (!item) continue
+      if (item.type !== 'user' && options.isModuleVisible && !options.isModuleVisible(item.type)) continue
+      const items = grouped.get(item.type) ?? []
+      items.push(item)
+      grouped.set(item.type, items)
+    }
+
+    return sectionOrder.flatMap((type) => {
+      const items = grouped.get(type) ?? []
+      if (items.length === 0) return []
+      return [{
+        type,
+        label: type === 'user' ? '用户' : moduleRooms[type].name,
+        items: interleaveItems(items, sectionLimit.value),
+      }]
+    })
+  })
 
   const flatItems = computed(() => sections.value.flatMap((section) => section.items))
   const activeItem = computed(() => flatItems.value[activeIndex.value] ?? null)
 
-  const cancelPending = () => {
-    if (previewTimer) {
-      clearTimeout(previewTimer)
-      previewTimer = null
-    }
-    currentController?.abort()
-    currentController = null
-  }
+  watch(referenceSearch.results, () => {
+    activeIndex.value = flatItems.value.length > 0 ? 0 : -1
+  })
 
   const clearResults = () => {
-    sections.value = []
     activeIndex.value = -1
-    error.value = ''
-    loading.value = false
   }
 
   const search = async (nextQuery: string, mode: GlobalSearchMode = 'preview') => {
-    cancelPending()
     query.value = nextQuery.trim()
-    const requestId = ++currentRequestId
-    if (query.value.length < 2) {
-      clearResults()
-      return
-    }
-
-    const sectionLimit = mode === 'expanded' ? 6 : 2
-    const controller = new AbortController()
-    currentController = controller
-    loading.value = true
-    error.value = ''
-
-    try {
-      const targets = await referenceApi.search(globalTargetTypes, query.value, sectionLimit, controller.signal)
-      if (requestId !== currentRequestId) return
-
-      const grouped = new Map<GlobalSearchSectionType, GlobalSearchItem[]>()
-      for (const target of targets) {
-        if (!target.available) continue
-        const item = itemFromTarget(target)
-        if (!item) continue
-        if (item.type !== 'user' && options.isModuleVisible && !options.isModuleVisible(item.type)) continue
-        const items = grouped.get(item.type) ?? []
-        items.push(item)
-        grouped.set(item.type, items)
-      }
-
-      sections.value = sectionOrder.flatMap((type) => {
-        const items = grouped.get(type) ?? []
-        if (items.length === 0) return []
-        return [{
-          type,
-          label: type === 'user' ? '用户' : moduleRooms[type].name,
-          items: interleaveItems(items, sectionLimit),
-        }]
-      })
-      activeIndex.value = flatItems.value.length > 0 ? 0 : -1
-    } catch (cause) {
-      if (requestId !== currentRequestId || controller.signal.aborted) return
-      sections.value = []
-      activeIndex.value = -1
-      error.value = '搜索暂不可用'
-    } finally {
-      if (requestId === currentRequestId) {
-        loading.value = false
-        if (currentController === controller) currentController = null
-      }
-    }
+    sectionLimit.value = mode === 'expanded' ? 6 : 2
+    clearResults()
+    await referenceSearch.search(query.value, sectionLimit.value)
   }
 
   const scheduleSearch = (nextQuery: string) => {
-    cancelPending()
-    currentRequestId += 1
     query.value = nextQuery.trim()
+    sectionLimit.value = 2
     clearResults()
-    if (query.value.length < 2) return
-    loading.value = true
-    previewTimer = setTimeout(() => {
-      previewTimer = null
-      void search(query.value, 'preview')
-    }, previewDelay)
+    referenceSearch.schedule(query.value, 2)
   }
 
   const moveActive = (direction: 1 | -1) => {
@@ -244,15 +205,14 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
   }
 
   const reset = () => {
-    cancelPending()
-    currentRequestId += 1
     query.value = ''
     clearResults()
+    referenceSearch.reset()
   }
 
   return {
     query,
-    loading,
+    loading: referenceSearch.loading,
     error,
     sections,
     activeIndex,

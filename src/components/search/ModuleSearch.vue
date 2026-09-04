@@ -37,7 +37,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
-import { referenceApi, type ReferenceTarget, type ReferenceTargetType } from '@/api/references'
+import { type ReferenceTarget, type ReferenceTargetType } from '@/api/references'
+import { useReferenceSearch } from '@/composables/useReferenceSearch'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -59,13 +60,19 @@ const emit = defineEmits<{
   select: [target: ReferenceTarget]
 }>()
 
-const results = ref<ReferenceTarget[]>([])
-const loading = ref(false)
-const error = ref(false)
 const open = ref(false)
-let timer: ReturnType<typeof setTimeout> | undefined
-let requestId = 0
-let controller: AbortController | null = null
+const referenceSearch = useReferenceSearch({
+  targetTypes: () => props.targetTypes,
+  limit: () => props.limit,
+})
+const {
+  loading,
+  failed: error,
+  search,
+  schedule: scheduleSearch,
+  cancelPending,
+} = referenceSearch
+const results = computed(() => referenceSearch.results.value.filter((target) => target.available))
 
 const query = computed({
   get: () => props.modelValue,
@@ -91,54 +98,6 @@ function targetLabel(type: ReferenceTargetType) {
   return labels[type] ?? '结果'
 }
 
-function cancelRequest() {
-  if (timer) {
-    clearTimeout(timer)
-    timer = undefined
-  }
-  controller?.abort()
-  controller = null
-}
-
-async function search(value: string) {
-  const trimmed = value.trim()
-  const currentRequestId = ++requestId
-  const requestController = new AbortController()
-  controller = requestController
-  loading.value = true
-  error.value = false
-  try {
-    const targets = await referenceApi.search(props.targetTypes, trimmed, props.limit, requestController.signal)
-    if (currentRequestId !== requestId) return
-    results.value = targets.filter((target) => target.available)
-  } catch {
-    if (currentRequestId !== requestId || requestController.signal.aborted) return
-    results.value = []
-    error.value = true
-  } finally {
-    if (currentRequestId === requestId) {
-      loading.value = false
-      if (controller === requestController) controller = null
-    }
-  }
-}
-
-function scheduleSearch(value: string) {
-  cancelRequest()
-  results.value = []
-  error.value = false
-  const trimmed = value.trim()
-  if (trimmed.length < 2) {
-    loading.value = false
-    return
-  }
-  loading.value = true
-  timer = setTimeout(() => {
-    timer = undefined
-    void search(trimmed)
-  }, 250)
-}
-
 function handleFocus() {
   open.value = true
 }
@@ -154,7 +113,7 @@ function handleSubmit() {
   if (!trimmed) return
   open.value = true
   if (trimmed.length >= 2) {
-    cancelRequest()
+    cancelPending()
     void search(trimmed)
   }
   emit('submit', trimmed)
@@ -165,10 +124,10 @@ function selectTarget(target: ReferenceTarget) {
   emit('select', target)
 }
 
-watch(() => props.modelValue, scheduleSearch, { immediate: true })
+watch(() => props.modelValue, (value) => scheduleSearch(value), { immediate: true })
 
 onUnmounted(() => {
-  cancelRequest()
+  cancelPending()
 })
 </script>
 

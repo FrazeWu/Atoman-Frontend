@@ -380,7 +380,7 @@ describe('VideoEditorView', () => {
   })
 
   it('switches Studio state for an edited video before loading collections', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.endsWith('/videos/video-1')) return makeJsonResponse({
         id: 'video-1', channel_id: 'channel-2', title: '旧视频', description: '', storage_type: 'external',
@@ -400,6 +400,10 @@ describe('VideoEditorView', () => {
     expect(copyButton).toBeDefined()
     await copyButton!.trigger('click')
     await flushPromises()
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      expect.stringMatching(/\/videos\/video-1\/duplicate$/),
+      expect.objectContaining({ method: 'POST' }),
+    )
     expect(router.currentRoute.value.fullPath).toBe('/studio/video/video-copy-1/edit')
   })
 })

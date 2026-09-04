@@ -276,6 +276,7 @@ export function usePostEditorDraftSession({
 		summary: draft.summary || "",
 		cover_url: draft.cover_url || "",
 		visibility: draft.visibility || "public",
+		tags: [],
 		channel_id: draft.channel_id,
 		collection_id: draft.collection_id,
 	});
@@ -398,7 +399,8 @@ export function usePostEditorDraftSession({
 				content: payload.content,
 				summary: payload.summary,
 				cover_url: payload.cover_url,
-				visibility: payload.visibility,
+				visibility: payload.visibility ?? "public",
+				tags: Array.isArray(payload.tags) ? payload.tags : [],
 			};
 			contentSource.value = hasMeaningfulDraft(payload) ? "manual" : "empty";
 			const allowed = new Set(

@@ -273,12 +273,12 @@ function handleKeydown(e: KeyboardEvent) {
   .lightbox-fade-leave-active,
   .lightbox-zoom-enter-active,
   .lightbox-zoom-leave-active {
-    transition-duration: 100ms;
+    transition-duration: var(--a-motion-reduced-state);
   }
 
   .lightbox-zoom-enter-from,
   .lightbox-zoom-leave-to {
-    transform: none;
+    transform: scale(0.98);
   }
 }
 

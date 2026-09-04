@@ -238,7 +238,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .queue-panel { animation-duration: 1ms; }
+  .queue-panel { animation-duration: var(--a-motion-reduced-overlay); }
 }
 
 .queue-header {

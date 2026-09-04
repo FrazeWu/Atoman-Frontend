@@ -302,7 +302,7 @@ defineExpose({
 
 @media (prefers-reduced-motion: reduce) {
   .p-help-tooltip__popover {
-    animation: none;
+    animation-duration: var(--a-motion-reduced-state);
   }
 }
 </style>

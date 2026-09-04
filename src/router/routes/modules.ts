@@ -38,6 +38,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			meta: { hasSidebar: true },
 			children: [
 				{ path: "", component: () => import("@/views/blog/BlogHomeView.vue") },
+				{ path: "articles", component: () => import("@/views/blog/BlogArticlesView.vue") },
 				{
 					path: "notes",
 					component: () => import("@/views/blog/ShortNoteTimelineView.vue"),

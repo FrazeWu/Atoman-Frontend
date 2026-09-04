@@ -7,6 +7,7 @@ import {
   createVideoImportPartUpload,
   getVideoImport,
   uploadVideoImportPart,
+  videoFileContentType,
   type VideoImportTask,
 } from '@/api/video'
 import { runMultipartUpload } from '@/api/multipartUpload'
@@ -81,7 +82,7 @@ export function useVideoImportUpload() {
 
   async function resume(taskOrId: VideoImportTask | string, file: File) {
     const task = typeof taskOrId === 'string' ? await getVideoImport(taskOrId, token.value) : taskOrId
-    if (file.name !== task.file_name || file.size !== task.file_size || file.type !== task.content_type) {
+    if (file.name !== task.file_name || file.size !== task.file_size || videoFileContentType(file) !== task.content_type) {
       throw new Error('请选择原视频文件继续上传')
     }
     selectedFiles.set(task.id, file)

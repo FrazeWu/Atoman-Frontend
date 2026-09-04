@@ -3,6 +3,8 @@ import { reactive } from 'vue'
 export interface ShortNoteStateSync {
   liked?: boolean
   likeCount?: number
+  dislikeCount?: number
+  viewerVote?: 'up' | 'down' | 'none'
   commentCount?: number
   read?: boolean
 }

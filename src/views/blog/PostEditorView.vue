@@ -486,6 +486,7 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   summary: form.value.summary,
   cover_url: form.value.cover_url,
   visibility: form.value.visibility,
+  tags: form.value.tags,
   channel_id: currentChannelId.value || derivedChannelId.value || undefined,
   collection_id: primaryCollectionId.value || undefined,
 }))
@@ -744,7 +745,7 @@ watch(() => form.value.title, (nv, ov) => {
 watch(() => currentChannelId.value, loadChannelCollections)
 
 const resetEditorStateForRoute = () => {
-  form.value = { title: '', content: '', summary: '', cover_url: '', visibility: 'public' }
+  form.value = { title: '', content: '', summary: '', cover_url: '', visibility: 'public', tags: [] }
   contentSource.value = 'empty'
   loadedPostUpdatedAt.value = 0
   loadedPostUpdatedAtRaw.value = ''

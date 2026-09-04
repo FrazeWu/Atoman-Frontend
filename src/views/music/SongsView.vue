@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
-import { IconCirclePlus as CirclePlus, IconInfoCircle as Info, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play, IconSearch as Search } from '@tabler/icons-vue';
+import { IconCirclePlus as CirclePlus, IconExternalLink as ExternalLink, IconInfoCircle as Info, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play, IconSearch as Search } from '@tabler/icons-vue';
 import { recordMusicSearchInteraction, searchMusic, listMusicPlaylistSongs, getMusicArtist, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { useAuthStore } from "@/stores/auth";
@@ -90,6 +90,11 @@ function asSong(song: MusicSongListItem): Song {
     status: "approved",
     track_number: song.track_number,
   };
+}
+
+function appleMusicURL(song: MusicSongListItem) {
+  const sources = song.effective_sources?.length ? song.effective_sources : song.sources;
+  return sources?.find((source) => source.title === "Apple Music" && source.url)?.url || "";
 }
 
 function asAlbumSong(song: NonNullable<Awaited<ReturnType<typeof searchMusic>>["albums"][number]["songs"]>[number], album: Awaited<ReturnType<typeof searchMusic>>["albums"][number]): Song {
@@ -202,7 +207,19 @@ onBeforeUnmount(() => {
       <section v-if="songs.length">
         <h2>歌曲</h2>
         <div v-for="song in songs" :key="song.id" class="song-result">
+          <a
+            v-if="!song.audio_url && appleMusicURL(song)"
+            class="song-play"
+            :href="appleMusicURL(song)"
+            target="_blank"
+            rel="noopener noreferrer"
+            :aria-label="`在 Apple Music 查看 ${song.title}`"
+            :title="`在 Apple Music 查看 ${song.title}`"
+          >
+            <ExternalLink :size="16" aria-hidden="true" />
+          </a>
           <button
+            v-else
             type="button"
             class="song-play"
             :disabled="!song.audio_url"
@@ -230,6 +247,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="song-action-btn"
+            :disabled="!song.audio_url"
             :title="`加入队列：${song.title}`"
             :aria-label="`加入队列：${song.title}`"
             @click="trackSearchClick('song', String(song.id)); player.addToQueue(asSong(song))"
@@ -239,6 +257,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="song-action-btn"
+            :disabled="!song.audio_url"
             :title="`下一首播放：${song.title}`"
             :aria-label="`下一首播放：${song.title}`"
             @click="trackSearchClick('song', String(song.id)); player.addToQueue(asSong(song), true)"

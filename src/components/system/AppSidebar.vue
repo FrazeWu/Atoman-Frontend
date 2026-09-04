@@ -24,6 +24,8 @@
         :index="index + 1"
         :icon="item.icon"
         :exact="item.exact"
+        :active="item.active?.()"
+        :router-active="item.routerActive"
       >
         {{ item.label }}
       </PSidebarItem>
@@ -384,7 +386,8 @@ watch(
 
 // 3. Blog Navigation Items
 const blogNavItems = [
-  { to: '/posts', label: '发现', icon: Compass, exact: true },
+  { to: '/posts', label: '发现', icon: Compass, exact: true, active: () => route?.query.type !== 'post', routerActive: false },
+  { to: '/posts?type=post', label: '博文', icon: FileText, active: () => route?.query.type === 'post', routerActive: false },
   { to: '/posts/notes', label: '短笺', icon: MessageSquare },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },

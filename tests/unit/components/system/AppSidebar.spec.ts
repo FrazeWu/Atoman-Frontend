@@ -122,6 +122,18 @@ describe('AppSidebar module subscription tree', () => {
   })
 })
 
+describe('AppSidebar blog navigation', () => {
+  it('keeps discovery and adds a separate posts-only entry', async () => {
+    const { wrapper } = await mountSidebar(moduleCases[0])
+    const items = wrapper.findAllComponents(PSidebarItem)
+    const discoveryItem = items.find((item) => item.text().trim() === '发现')
+    const postsItem = items.find((item) => item.text().trim() === '博文')
+
+    expect(discoveryItem?.props('to')).toBe('/posts')
+    expect(postsItem?.props('to')).toBe('/posts?type=post')
+  })
+})
+
 describe('AppSidebar feed navigation', () => {
   it('exposes the blog posts entry from the feed sidebar', async () => {
     const { wrapper, router } = await mountFeedSidebar()

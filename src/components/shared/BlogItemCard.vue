@@ -70,8 +70,8 @@
         <span v-if="postItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
         <span v-else-if="feedItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(feedItem.read_count) }}</span>
 
-        <span v-if="postItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(postItem.rating_score, postItem.rating_count) }}</span>
-        <span v-else-if="feedItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRating(feedItem.rating_score, feedItem.rating_count) }}</span>
+        <span v-if="postItem && hasPublicRating(postItem.rating_count)" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatPublicRating(postItem.rating_score, postItem.rating_count) }}</span>
+        <span v-else-if="feedItem && hasPublicRating(feedItem.rating_count)" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatPublicRating(feedItem.rating_score, feedItem.rating_count) }}</span>
 
         <span v-if="postItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
         <span v-else-if="feedItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(feedItem.bookmark_count) }}</span>
@@ -137,6 +137,7 @@ import PClip from '@/components/ui/PClip.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
+import { formatPublicRating, hasPublicRating } from '@/utils/rating'
 import { channelUrl } from '@/router/siteUrls'
 
 export type BlogItemType = 'post' | 'short_note' | 'feed_item'
@@ -276,10 +277,6 @@ function formatCount(value?: number) {
   return String(value)
 }
 
-function formatRating(score?: number, count?: number) {
-  if (!count) return '—'
-  return `${Number(score || 0).toFixed(1)} (${count})`
-}
 </script>
 
 <style scoped>

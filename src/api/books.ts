@@ -439,6 +439,14 @@ export const setBookRating = (workId: string, score: number) =>
     body: JSON.stringify({ score }),
   })
 
+export const getBookRating = (workId: string) =>
+  requestEnvelope<BookRatingSummary>(catalogUrl(`/works/${encodeURIComponent(workId)}/rating`), {})
+
+export const deleteBookRating = (workId: string) =>
+  requestEnvelope<BookRatingSummary>(catalogUrl(`/works/${encodeURIComponent(workId)}/rating`), {
+    method: 'DELETE',
+  })
+
 export const saveBookReview = (workId: string, input: SaveBookReviewInput) =>
   requestEnvelope<BookReview>(catalogUrl(`/works/${encodeURIComponent(workId)}/review`), {
     method: 'PUT',

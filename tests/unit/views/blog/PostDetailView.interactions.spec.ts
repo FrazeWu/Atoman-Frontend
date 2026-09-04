@@ -565,7 +565,7 @@ describe("PostDetailView shared interactions", () => {
 
 	it("文章详情使用评分而不是点赞", async () => {
 		const wrapper = await mountPostDetail();
-		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');
+		const ratingButton = wrapper.get('button[aria-label="7 分，3.5 星"]');
 		await ratingButton.trigger("click");
 		await flushPromises();
 
@@ -603,7 +603,7 @@ describe("PostDetailView shared interactions", () => {
 		);
 
 		const { wrapper, router } = await mountPostDetailWithRouter();
-		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');
+		const ratingButton = wrapper.get('button[aria-label="7 分，3.5 星"]');
 		const ratingAction = ratingButton.trigger("click");
 		await wrapper.vm.$nextTick();
 
@@ -625,7 +625,7 @@ describe("PostDetailView shared interactions", () => {
 
 	it("评分控件允许清除已有评分", async () => {
 		const wrapper = await mountPostDetail();
-		const ratingButton = wrapper.get('button[aria-label="3.5 星"]');
+		const ratingButton = wrapper.get('button[aria-label="7 分，3.5 星"]');
 		await ratingButton.trigger("click");
 		await flushPromises();
 		const clearButton = wrapper.get('button[aria-label="清除评分"]');

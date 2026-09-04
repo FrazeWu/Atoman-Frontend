@@ -86,10 +86,9 @@ const VideoRecommendationRowStub = defineComponent({
 const PostRatingControlStub = defineComponent({
 	name: "PostRatingControl",
 	props: [
+		"ratingScore",
+		"ratingCount",
 		"viewerRating",
-		"weightedRatingScore",
-		"weightedRatingCount",
-		"weightedRatingActive",
 	],
 	emits: ["rate", "clear"],
 	template: '<section data-test="video-rating-control" />',
@@ -860,9 +859,7 @@ describe("VideoDetailView shared interactions", () => {
 
 		const comments = wrapper.getComponent(CommentSideSheetStub);
 		expect(comments.props("show")).toBe(false);
-		expect(
-			wrapper.getComponent(PostRatingControlStub).props("weightedRatingActive"),
-		).toBe(false);
+		expect(wrapper.getComponent(PostRatingControlStub).exists()).toBe(true);
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
 		expect(comments.props("show")).toBe(true);
 		expect(comments.props("partialAnchor")).toBeInstanceOf(HTMLElement);

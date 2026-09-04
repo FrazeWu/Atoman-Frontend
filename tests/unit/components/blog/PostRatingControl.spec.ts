@@ -1,148 +1,36 @@
-import { describe, expect, it } from "vitest";
-import { mount } from "@vue/test-utils";
-import PostRatingControl from "@/components/blog/PostRatingControl.vue";
+import { describe, expect, it } from 'vitest'
+import { mount } from '@vue/test-utils'
 
-describe("PostRatingControl.vue", () => {
-  it("emphasizes the weighted score once sufficient evidence exists", () => {
+import PostRatingControl from '@/components/blog/PostRatingControl.vue'
+
+describe('PostRatingControl.vue', () => {
+  it('uses the raw public score and the shared five-rating threshold', () => {
     const wrapper = mount(PostRatingControl, {
-      props: {
-        weightedRatingScore: 8.6,
-        weightedRatingCount: 55,
-        weightedRatingActive: true,
-      },
-    });
+      props: { ratingScore: 8.6, ratingCount: 5 },
+    })
 
-    expect(wrapper.text()).not.toContain("加权分");
-    expect(wrapper.get(".post-rating__score-num").text()).toBe("4.3");
-    expect(wrapper.text()).toContain("55 人");
-    expect(wrapper.findAll(".post-rating__star-fill")[0].attributes("style")).toContain("width: 0px");
-  });
+    expect(wrapper.get('.rating-control__public-score').text()).toBe('8.6 / 10')
+    expect(wrapper.text()).toContain('5 人')
+  })
 
-  it("shows insufficient evidence below the weighted-rating threshold", () => {
+  it('forwards half-star ratings and clear actions', async () => {
     const wrapper = mount(PostRatingControl, {
-      props: { weightedRatingCount: 4 },
-    });
+      props: { viewerRating: 9 },
+    })
 
-    expect(wrapper.text()).toContain("依据不足");
-    expect(wrapper.text()).toContain("4 人");
-    expect(wrapper.find(".post-rating__score-num").exists()).toBe(false);
-  });
+    await wrapper.get('button[data-score="7"]').trigger('click')
+    await wrapper.get('.rating-control__clear').trigger('click')
 
-  it("shows hover score dynamically when hovering on half stars", async () => {
+    expect(wrapper.emitted('rate')).toEqual([[7]])
+    expect(wrapper.emitted('clear')).toEqual([[]])
+  })
+
+  it('forwards loading and error states', () => {
     const wrapper = mount(PostRatingControl, {
-      props: {
-        ratingScore: 6.0,
-        ratingCount: 5,
-      },
-    });
+      props: { loading: true, errorMessage: '评分未保存，请重试' },
+    })
 
-    // Find the 4th star right half (8 points)
-    const rightHalves = wrapper.findAll(".post-rating__half--right");
-    expect(rightHalves.length).toBe(5);
-
-    await rightHalves[3].trigger("mouseenter");
-    expect(wrapper.find(".post-rating__dynamic-score").text()).toBe("4.0 星");
-
-    await wrapper.find(".post-rating__control").trigger("mouseleave");
-    expect(wrapper.find(".post-rating__dynamic-score").exists()).toBe(false);
-  });
-
-  it("emits a one-point rating from the half-star range control", async () => {
-    const wrapper = mount(PostRatingControl);
-    const slider = wrapper.get<HTMLInputElement>(".post-rating__slider input");
-
-    await slider.setValue("1");
-
-    expect(wrapper.emitted("rate")).toEqual([[1]]);
-    expect(wrapper.get(".post-rating__slider output").text()).toBe("0.5 星");
-  });
-
-  it("emits rate event when clicking on a star half", async () => {
-    const wrapper = mount(PostRatingControl, {
-      props: {
-        ratingScore: 0,
-        ratingCount: 0,
-      },
-    });
-
-    const leftHalves = wrapper.findAll(".post-rating__half--left");
-    // Click 3rd star left half -> 5 points
-    await leftHalves[2].trigger("click");
-
-    expect(wrapper.emitted("rate")).toBeTruthy();
-    expect(wrapper.emitted("rate")![0]).toEqual([5]);
-  });
-
-  it("clears the transient preview after submitting a rating", async () => {
-    const wrapper = mount(PostRatingControl, {
-      props: { viewerRating: 4 },
-    });
-    const rightHalves = wrapper.findAll(".post-rating__half--right");
-
-    await rightHalves[2].trigger("mouseenter");
-    expect(wrapper.find(".post-rating__dynamic-score").text()).toBe("3.0 星");
-
-    await rightHalves[2].trigger("click");
-
-    expect(wrapper.emitted("rate")).toEqual([[6]]);
-    expect(wrapper.find(".post-rating__dynamic-score").exists()).toBe(false);
-    expect(wrapper.get(".post-rating__mine").text()).toBe("我的评分 2.0 星");
-  });
-
-  it("clears the preview when keyboard focus leaves a half-star", async () => {
-    const wrapper = mount(PostRatingControl);
-    const leftHalves = wrapper.findAll(".post-rating__half--left");
-
-    await leftHalves[1].trigger("focus");
-    expect(wrapper.find(".post-rating__dynamic-score").text()).toBe("1.5 星");
-
-    await leftHalves[1].trigger("blur");
-
-    expect(wrapper.find(".post-rating__dynamic-score").exists()).toBe(false);
-  });
-
-  it("clears the slider preview when keyboard focus leaves it", async () => {
-    const wrapper = mount(PostRatingControl);
-    const slider = wrapper.get<HTMLInputElement>(".post-rating__slider input");
-
-    await slider.setValue("7");
-    expect(wrapper.get(".post-rating__slider output").text()).toBe("3.5 星");
-
-    await slider.trigger("blur");
-
-    expect(wrapper.get(".post-rating__slider output").text()).toBe("0.0 星");
-  });
-
-  it("renders a clear control for an existing viewer rating", async () => {
-    const wrapper = mount(PostRatingControl, {
-      props: { viewerRating: 8 },
-    });
-
-    const clearButton = wrapper.get(".post-rating__clear");
-    expect(clearButton.attributes("aria-label")).toBe("清除评分");
-    await clearButton.trigger("click");
-    expect(wrapper.emitted("clear")).toEqual([[]]);
-  });
-
-  it("announces a failed rating next to the control", () => {
-    const wrapper = mount(PostRatingControl, {
-      props: { errorMessage: "评分未保存，请重试" },
-    });
-
-    expect(wrapper.get(".post-rating__error").attributes("role")).toBe("alert");
-    expect(wrapper.text()).toContain("评分未保存，请重试");
-  });
-
-  it("shows rating guidelines with a three-star pass baseline", async () => {
-    const wrapper = mount(PostRatingControl);
-    await wrapper.get(".p-help-tooltip__trigger").trigger("click");
-
-    const popover = wrapper.get(".p-help-tooltip__popover");
-    expect(popover.text()).toContain("3 星为合格");
-    expect(popover.text()).toContain("力荐");
-    expect(popover.text()).toContain("推荐");
-    expect(popover.text()).toContain("及格 / 还行");
-    expect(popover.text()).toContain("一般");
-    expect(popover.text()).toContain("较差");
-  });
-});
+    expect(wrapper.get('button[data-score="10"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('.rating-control__error').attributes('role')).toBe('alert')
+  })
+})

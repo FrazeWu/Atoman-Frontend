@@ -205,6 +205,31 @@ async function ratePost(score: number) {
   }
 }
 
+async function clearPostRating() {
+  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingError.value = ''
+  ratingLoading.value = true
+  try {
+    const res = await apiRequestResult(api.blog.postRating(post.value.id), {
+      method: 'DELETE',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (!res.ok) {
+      ratingError.value = '评分未清除，请重试'
+      return
+    }
+    const payload = await Promise.resolve(res.data)
+    const summary = payload.data || payload
+    post.value.rating_score = Number(summary.rating_score ?? 0)
+    post.value.rating_count = Number(summary.rating_count ?? 0)
+    post.value.viewer_rating = undefined
+  } catch {
+    ratingError.value = '评分未清除，请重试'
+  } finally {
+    ratingLoading.value = false
+  }
+}
+
 async function loadBookmarkFolders() {
   if (!authStore.isAuthenticated || bookmarkFoldersLoading.value) return
   bookmarkFoldersLoading.value = true
@@ -348,14 +373,14 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <div class="prose-blog post-sheet-content" v-html="renderedContent" />
       <PostRatingControl
+        :rating-score="post.rating_score"
+        :rating-count="post.rating_count"
         :viewer-rating="post.viewer_rating"
-        :weighted-rating-score="post.weighted_rating_score"
-        :weighted-rating-count="post.weighted_rating_count"
-        :weighted-rating-active="post.weighted_rating_active"
         :disabled="!authStore.isAuthenticated"
         :loading="ratingLoading"
         :error-message="ratingError"
         @rate="ratePost"
+        @clear="clearPostRating"
       />
       <div class="post-sheet-actions-row">
         <PDropdown v-if="!bookmarked" position="right">

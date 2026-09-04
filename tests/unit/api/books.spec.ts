@@ -4,7 +4,9 @@ import {
   bookContentType,
   createBookImport,
   fetchBookAssetContent,
+  deleteBookRating,
   getBookAsset,
+  getBookRating,
   getBookReadingState,
   listBookImports,
   listMyPublicationAppeals,
@@ -64,6 +66,18 @@ describe('books API', () => {
       '/api/v1/books/catalog/search?q=%E4%B8%AD%E6%96%87%E4%B9%A6&limit=20&offset=0',
       expect.objectContaining({ credentials: 'include' }),
     )
+  })
+
+  it('loads and clears the current user book rating', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { rating_score: 8, rating_count: 5, viewer_rating: 9 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { rating_score: 7.5, rating_count: 4 } }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getBookRating('work-1')).resolves.toMatchObject({ viewer_rating: 9 })
+    await expect(deleteBookRating('work-1')).resolves.toMatchObject({ rating_count: 4 })
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/books/catalog/works/work-1/rating', expect.objectContaining({ credentials: 'include' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/books/catalog/works/work-1/rating', expect.objectContaining({ method: 'DELETE', credentials: 'include' }))
   })
 
   it('reads private content as a blob and persists a private reading state', async () => {

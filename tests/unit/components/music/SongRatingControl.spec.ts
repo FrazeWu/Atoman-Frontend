@@ -1,64 +1,35 @@
-import { describe, expect, it } from "vitest";
-import { mount } from "@vue/test-utils";
-import SongRatingControl from "@/components/music/SongRatingControl.vue";
+import { describe, expect, it } from 'vitest'
+import { mount } from '@vue/test-utils'
 
-describe("SongRatingControl.vue", () => {
-  it("renders the public score separately and emits the selected personal score", async () => {
+import SongRatingControl from '@/components/music/SongRatingControl.vue'
+
+describe('SongRatingControl.vue', () => {
+  it('uses the shared ten-point public score and threshold', () => {
     const wrapper = mount(SongRatingControl, {
-      props: {
-        songTitle: "示例歌曲",
-        ratingScore: 3.5,
-        ratingCount: 12,
-      },
-    });
+      props: { songTitle: '示例歌曲', ratingScore: 7.5, ratingCount: 5 },
+    })
 
-    expect(wrapper.text()).toContain("评分：3.5（12 人）");
-    const stars = wrapper.findAll(".song-rating__star");
-    expect(stars).toHaveLength(5);
-    expect(wrapper.findAll(".song-rating__star-fill")[0].attributes("style")).toContain("width: 0px");
+    expect(wrapper.get('.rating-control__public-score').text()).toBe('7.5 / 10')
+  })
 
-    await stars[3].trigger("click");
-    expect(wrapper.emitted("rate")).toEqual([[4]]);
-  });
-
-  it("hides the public score until six ratings are available", () => {
+  it('submits half-star scores instead of five-point whole stars', async () => {
     const wrapper = mount(SongRatingControl, {
-      props: {
-        songTitle: "示例歌曲",
-        ratingScore: 5,
-        ratingCount: 1,
-        viewerRating: 5,
-      },
-    });
+      props: { songTitle: '示例歌曲' },
+    })
 
-    expect(wrapper.text()).toContain("评分：依据不足（1 人）");
-    expect(wrapper.find(".song-rating__score").exists()).toBe(false);
-    expect(wrapper.findAll(".song-rating__star-fill")[4].attributes("style")).toContain("width: 18px");
-  });
+    await wrapper.get('button[data-score="9"]').trigger('click')
 
-  it("fills only the viewer's personal rating", () => {
+    expect(wrapper.emitted('rate')).toEqual([[9]])
+  })
+
+  it('shows and forwards the clear action for a personal rating', async () => {
     const wrapper = mount(SongRatingControl, {
-      props: {
-        songTitle: "示例歌曲",
-        ratingScore: 3.5,
-        ratingCount: 2,
-        viewerRating: 4,
-      },
-    });
+      props: { songTitle: '示例歌曲', viewerRating: 8 },
+    })
 
-    expect(
-      wrapper.findAll(".song-rating__star-fill")[3].attributes("style"),
-    ).toContain("width: 18px");
-  });
+    await wrapper.get('.rating-control__clear').trigger('click')
 
-  it("does not render a clear control", () => {
-    const wrapper = mount(SongRatingControl, {
-      props: {
-        songTitle: "示例歌曲",
-        viewerRating: 4,
-      },
-    });
-
-    expect(wrapper.find(".song-rating__clear").exists()).toBe(false);
-  });
-});
+    expect(wrapper.text()).toContain('我的评分 8/10 · 4.0 星')
+    expect(wrapper.emitted('clear')).toEqual([[]])
+  })
+})

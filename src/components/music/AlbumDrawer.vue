@@ -371,6 +371,20 @@ async function rateAlbum(score: number) {
   }
 }
 
+async function clearAlbumRating() {
+  if (!album.value || !requireLogin() || ratingAlbumLoading.value) return
+  ratingAlbumLoading.value = true
+  try {
+    applyAlbumRating(await deleteMusicAlbumRating(String(album.value.id)))
+  } catch (err) {
+    reportError(err, 'Failed to clear album rating')
+    toastMessage.value = '清除评分失败'
+    toastVisible.value = true
+  } finally {
+    ratingAlbumLoading.value = false
+  }
+}
+
 function applyTrackRating(songId: string, summary: { rating_score: number; rating_count: number; viewer_rating?: number | null }) {
   const track = album.value?.songs?.find((item) => String(item.id) === songId)
   if (!track) return
@@ -387,6 +401,20 @@ async function rateTrack(track: AlbumTrack, score: number) {
   } catch (err) {
     reportError(err, 'Failed to rate song')
     toastMessage.value = '评分失败'
+    toastVisible.value = true
+  } finally {
+    ratingSongID.value = null
+  }
+}
+
+async function clearTrackRating(track: AlbumTrack) {
+  if (!requireLogin() || ratingSongID.value) return
+  ratingSongID.value = String(track.id)
+  try {
+    applyTrackRating(String(track.id), await deleteMusicSongRating(String(track.id)))
+  } catch (err) {
+    reportError(err, 'Failed to clear song rating')
+    toastMessage.value = '清除评分失败'
     toastVisible.value = true
   } finally {
     ratingSongID.value = null
@@ -721,6 +749,7 @@ watch(
             :disabled="!isAuthenticated"
             :loading="ratingAlbumLoading"
             @rate="rateAlbum"
+            @clear="clearAlbumRating"
           />
           <div class="album-actions">
             <PButton
@@ -796,6 +825,7 @@ watch(
               :disabled="!isAuthenticated"
               :loading="ratingSongID === String(track.id)"
               @rate="rateTrack(track, $event)"
+              @clear="clearTrackRating(track)"
             />
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
             <button

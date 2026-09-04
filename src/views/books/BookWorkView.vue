@@ -9,10 +9,18 @@
         <h1>{{ work.title }}</h1>
         <p v-if="work.subtitle">{{ work.subtitle }}</p>
         <p class="books-detail__authors">{{ authorLabel }}</p>
-        <div class="books-detail__stats" aria-label="作品评分">
-          <span>评分 {{ work.rating_count ? work.rating_score.toFixed(1) : '暂无' }}</span>
-          <span>{{ work.rating_count }} 人评分</span>
-        </div>
+        <RatingControl
+          :aria-label="`${work.title} 评分`"
+          :rating-score="work.rating_score"
+          :rating-count="work.rating_count"
+          :viewer-rating="viewerRating"
+          :disabled="!authStore.isAuthenticated"
+          :loading="ratingSaving"
+          :error-message="ratingError"
+          @rate="submitRating"
+          @clear="clearRating"
+        />
+        <p v-if="ratingMessage" class="books-detail__feedback" aria-live="polite">{{ ratingMessage }}</p>
       </header>
 
       <section v-if="work.description" class="books-detail__section">
@@ -41,17 +49,6 @@
 
       <section class="books-detail__section books-detail__engagement" aria-labelledby="engagement-title">
         <h2 id="engagement-title">参与评价</h2>
-        <div class="books-rating-editor">
-          <label for="book-rating">我的评分</label>
-          <select id="book-rating" v-model.number="ratingInput">
-            <option :value="0">暂不评分</option>
-            <option v-for="score in [1, 2, 3, 4, 5]" :key="score" :value="score">{{ score }} 分</option>
-          </select>
-          <PButton type="button" variant="secondary" :loading="ratingSaving" :disabled="ratingInput === 0" @click="submitRating">
-            <Star :size="16" aria-hidden="true" />
-            <span>提交评分</span>
-          </PButton>
-        </div>
         <form class="books-review-editor" @submit.prevent="submitReview">
           <label for="book-review">短书评</label>
           <textarea id="book-review" v-model="reviewInput" maxlength="5000" rows="4" placeholder="写下对这部作品的简短感受" />
@@ -152,15 +149,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconBookmark as Bookmark, IconSend as Send, IconStar as Star, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import RatingControl from '@/components/shared/RatingControl.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {
+  deleteBookRating,
   getMyBookReview,
+  getBookRating,
   getPublicBookReviews,
   getPublicBookWork,
   listPublishedBookAssets,
@@ -174,8 +174,10 @@ import {
   type BookPublishedAsset,
   type BookShelfItem,
 } from '@/api/books'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const work = ref<BookPublicWork | null>(null)
 const reviews = ref<BookReview[]>([])
 const publishedAssets = ref<BookPublishedAsset[]>([])
@@ -189,8 +191,10 @@ const shelfStatusInput = ref<BookShelfItem['status']>('want_to_read')
 const shelfSaving = ref(false)
 const shelfError = ref('')
 const shelfMessage = ref('')
-const ratingInput = ref(0)
+const viewerRating = ref<number | null>(null)
 const ratingSaving = ref(false)
+const ratingError = ref('')
+const ratingMessage = ref('')
 const reviewInput = ref('')
 const reviewSpoiler = ref(false)
 const reviewVisibility = ref<'public' | 'private'>('public')
@@ -232,22 +236,56 @@ async function submitShelf() {
   }
 }
 
-async function submitRating() {
-  if (!work.value || ratingInput.value < 1) return
+function applyRating(summary: { rating_score: number; rating_count: number; viewer_rating?: number | null }) {
+  if (!work.value) return
+  work.value.rating_score = Number(summary.rating_score || 0)
+  work.value.rating_count = Number(summary.rating_count || 0)
+  viewerRating.value = summary.viewer_rating ?? null
+}
+
+async function submitRating(score: number) {
+  if (!work.value) return
   ratingSaving.value = true
-  interactionError.value = ''
-  interactionMessage.value = ''
+  ratingError.value = ''
+  ratingMessage.value = ''
   try {
-    const summary = await setBookRating(work.value.id, ratingInput.value)
-    work.value.rating_score = summary.rating_score
-    work.value.rating_count = summary.rating_count
-    interactionMessage.value = '评分已保存'
+    applyRating(await setBookRating(work.value.id, score))
+    ratingMessage.value = '评分已保存'
   } catch (error) {
-    interactionError.value = error instanceof ApiErrorResponseError && error.status === 401 ? '登录后才能评分' : '评分保存失败，请稍后重试'
+    ratingError.value = error instanceof ApiErrorResponseError && error.status === 401 ? '登录后才能评分' : '评分保存失败，请稍后重试'
   } finally {
     ratingSaving.value = false
   }
 }
+
+async function clearRating() {
+  if (!work.value) return
+  ratingSaving.value = true
+  ratingError.value = ''
+  ratingMessage.value = ''
+  try {
+    applyRating(await deleteBookRating(work.value.id))
+    ratingMessage.value = '评分已清除'
+  } catch {
+    ratingError.value = '评分清除失败，请稍后重试'
+  } finally {
+    ratingSaving.value = false
+  }
+}
+
+async function loadViewerRating() {
+  if (!work.value || !authStore.isAuthenticated) return
+  try {
+    applyRating(await getBookRating(work.value.id))
+  } catch {
+    // 公共作品详情不依赖个人评分请求。
+  }
+}
+
+watch(() => authStore.isAuthenticated, (authenticated) => {
+  if (authenticated) void loadViewerRating()
+  else viewerRating.value = null
+})
 
 async function submitReview() {
   if (!work.value || !reviewInput.value.trim()) return
@@ -295,6 +333,7 @@ onMounted(async () => {
     isLoading.value = false
   }
   if (!work.value) return
+  await loadViewerRating()
   reviewsLoading.value = true
   try {
     reviews.value = (await getPublicBookReviews(work.value.id)).items
@@ -356,16 +395,8 @@ onMounted(async () => {
   line-height: 1.7;
 }
 
-.books-detail__authors,
-.books-detail__stats {
+.books-detail__authors {
   color: var(--a-color-fg) !important;
-}
-
-.books-detail__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  font-size: 0.88rem;
 }
 
 .books-detail__feedback--error {
@@ -393,7 +424,6 @@ onMounted(async () => {
 }
 
 
-.books-rating-editor,
 .books-shelf-editor,
 .books-review-editor__options {
   display: flex;
@@ -402,13 +432,11 @@ onMounted(async () => {
   gap: 0.65rem;
 }
 
-.books-rating-editor label,
 .books-review-editor > label {
   color: var(--a-color-muted);
   font-size: 0.88rem;
 }
 
-.books-rating-editor select,
 .books-shelf-editor select,
 .books-review-editor select,
 .books-review-editor textarea {
@@ -418,7 +446,6 @@ onMounted(async () => {
   font: inherit;
 }
 
-.books-rating-editor select,
 .books-shelf-editor select,
 .books-review-editor select {
   height: 2.25rem;

@@ -213,6 +213,54 @@ describe("BlogPostSheet", () => {
 		expect(wrapper.text()).not.toContain("评分未保存，请重试");
 	});
 
+	it("clears an existing rating from the sheet", async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes("/related")) return response([]);
+			if (url.endsWith("/rating") && init?.method === "DELETE") {
+				return response({ rating_score: 0, rating_count: 0 });
+			}
+			if (url.includes("/blog/posts/post-1")) {
+				return response(postDetail("post-1", "文章一", { viewer_rating: 8 }));
+			}
+			return response({ recorded: true });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.isAuthenticated = true;
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+					PostRatingControl: {
+						emits: ["clear"],
+						template: '<button data-test="clear-rating" @click="$emit(\'clear\')" />',
+					},
+				},
+			},
+		});
+		await flushPromises();
+		await wrapper.get('[data-test="clear-rating"]').trigger("click");
+		await flushPromises();
+
+		expect(fetchMock.mock.calls.some(([input, init]) => (
+			String(input).endsWith("/rating") && init?.method === "DELETE"
+		))).toBe(true);
+	});
+
 	it("opens a right-side discussion sheet for the loaded blog post", async () => {
 		const pinia = createPinia();
 		setActivePinia(pinia);

@@ -71,6 +71,7 @@
         :viewer-rating="article.post.viewer_rating"
         :disabled="!authStore.isAuthenticated"
         :loading="ratingLoading"
+        :error-message="ratingError"
         @rate="ratePost"
         @clear="clearPostRating"
       />
@@ -181,9 +182,6 @@
               :rating-score="article.feed_item.rating_score"
               :rating-count="article.feed_item.rating_count"
               :viewer-rating="article.feed_item.viewer_rating"
-              :weighted-rating-score="article.feed_item.rating_count ? article.feed_item.rating_score : null"
-              :weighted-rating-count="article.feed_item.rating_count"
-              :weighted-rating-active="Boolean(article.feed_item.rating_count)"
               :disabled="!authStore.isAuthenticated"
               :loading="ratingLoading"
               :error-message="ratingError"
@@ -568,6 +566,7 @@ async function toggleFeedItemStar() {
 async function ratePost(score: number) {
   const post = props.article?.type === 'post' ? props.article.post : null
   if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingError.value = ''
   ratingLoading.value = true
   try {
     const res = await apiRequestResult(api.blog.postRating(post.id), {
@@ -575,12 +574,17 @@ async function ratePost(score: number) {
       headers: { 'Content-Type': 'application/json', ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}) },
       body: JSON.stringify({ score }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      ratingError.value = '评分未保存，请重试'
+      return
+    }
     const payload = await Promise.resolve(res.data)
     const summary = payload.data || payload
     post.rating_score = Number(summary.rating_score ?? post.rating_score ?? 0)
     post.rating_count = Number(summary.rating_count ?? post.rating_count ?? 0)
     post.viewer_rating = Number(summary.viewer_rating ?? score)
+  } catch {
+    ratingError.value = '评分未保存，请重试'
   } finally {
     ratingLoading.value = false
   }
@@ -589,18 +593,24 @@ async function ratePost(score: number) {
 async function clearPostRating() {
   const post = props.article?.type === 'post' ? props.article.post : null
   if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  ratingError.value = ''
   ratingLoading.value = true
   try {
     const res = await apiRequestResult(api.blog.postRating(post.id), {
       method: 'DELETE',
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      ratingError.value = '评分未清除，请重试'
+      return
+    }
     const payload = await Promise.resolve(res.data)
     const summary = payload.data || payload
     post.rating_score = Number(summary.rating_score ?? 0)
     post.rating_count = Number(summary.rating_count ?? 0)
     post.viewer_rating = undefined
+  } catch {
+    ratingError.value = '评分未清除，请重试'
   } finally {
     ratingLoading.value = false
   }

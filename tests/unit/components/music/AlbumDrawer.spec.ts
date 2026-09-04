@@ -47,6 +47,10 @@ const {
 	deleteAlbumBookmark,
 	listMusicPlaylists,
 	addMusicPlaylistSong,
+	setMusicAlbumRating,
+	deleteMusicAlbumRating,
+	setMusicSongRating,
+	deleteMusicSongRating,
 	requireLogin,
 	isAuthenticated,
 } = vi.hoisted(() => ({
@@ -67,6 +71,10 @@ const {
 	deleteAlbumBookmark: vi.fn(),
 	listMusicPlaylists: vi.fn(() => Promise.resolve({ data: [] })),
 	addMusicPlaylistSong: vi.fn(() => Promise.resolve({})),
+	setMusicAlbumRating: vi.fn(),
+	deleteMusicAlbumRating: vi.fn(),
+	setMusicSongRating: vi.fn(),
+	deleteMusicSongRating: vi.fn(),
 	requireLogin: vi.fn(),
 	isAuthenticated: { value: true },
 }));
@@ -100,6 +108,10 @@ vi.mock("@/api/musicV1", () => ({
 	deleteAlbumBookmark,
 	listMusicPlaylists,
 	addMusicPlaylistSong,
+	setMusicAlbumRating,
+	deleteMusicAlbumRating,
+	setMusicSongRating,
+	deleteMusicSongRating,
 }));
 
 vi.mock("@/stores/player", () => ({
@@ -134,6 +146,10 @@ describe("AlbumDrawer.vue", () => {
 		addMusicPlaylistSong.mockReset();
 		createAlbumBookmark.mockReset();
 		deleteAlbumBookmark.mockReset();
+		setMusicAlbumRating.mockReset();
+		deleteMusicAlbumRating.mockReset();
+		setMusicSongRating.mockReset();
+		deleteMusicSongRating.mockReset();
 		requireLogin.mockReset();
 		requireLogin.mockReturnValue(true);
 		isAuthenticated.value = true;
@@ -178,6 +194,8 @@ describe("AlbumDrawer.vue", () => {
 			created_at: "2026-07-02T00:00:00Z",
 		});
 		deleteAlbumBookmark.mockResolvedValue({ deleted: true });
+		deleteMusicAlbumRating.mockResolvedValue({ rating_score: 8, rating_count: 4 });
+		deleteMusicSongRating.mockResolvedValue({ rating_score: 7, rating_count: 4 });
 		listMusicPlaylists.mockResolvedValue({ data: [] });
 	});
 
@@ -237,6 +255,36 @@ describe("AlbumDrawer.vue", () => {
 		const track = wrapper.get(".track");
 		expect(track.get(".track-meta").find(".track-rating").exists()).toBe(true);
 		expect(track.findAll(".track-rating")).toHaveLength(1);
+	});
+
+	it("clears album and track ratings through their rating APIs", async () => {
+		getMusicAlbum.mockResolvedValueOnce({
+			id: "1",
+			title: "Rated Album",
+			entry_status: "open",
+			rating_score: 8,
+			rating_count: 5,
+			viewer_rating: 8,
+			songs: [{
+				id: "101",
+				title: "Rated Song",
+				track_number: 1,
+				audio_url: "https://cdn.test/1.mp3",
+				rating_score: 7,
+				rating_count: 5,
+				viewer_rating: 7,
+			}],
+		});
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		await wrapper.findAll(".rating-control__clear")[0].trigger("click");
+		await flushPromises();
+		expect(deleteMusicAlbumRating).toHaveBeenCalledWith("1");
+
+		await wrapper.get(".track .rating-control__clear").trigger("click");
+		await flushPromises();
+		expect(deleteMusicSongRating).toHaveBeenCalledWith("101");
 	});
 
 	it("shows a short album description without a collapse control", async () => {

@@ -110,4 +110,18 @@ describe("BlogItemCard", () => {
     await wrapper.get('[data-test="feed-source-trigger"]').trigger("click");
     expect(wrapper.emitted("open-source")).toHaveLength(1);
   });
+
+  it("hides public rating statistics until five people have rated", () => {
+    const insufficient = mount(BlogItemCard, {
+      props: { item: { ...post, rating_score: 10, rating_count: 4 }, type: "post" },
+      global: { stubs: { PContentCard: entryStub } },
+    });
+    const publicRating = mount(BlogItemCard, {
+      props: { item: { ...post, rating_score: 8.6, rating_count: 5 }, type: "post" },
+      global: { stubs: { PContentCard: entryStub } },
+    });
+
+    expect(insufficient.text()).not.toContain("10.0 / 10");
+    expect(publicRating.text()).toContain("8.6 / 10 · 5 人");
+  });
 });

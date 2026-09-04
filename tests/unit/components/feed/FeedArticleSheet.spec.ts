@@ -145,8 +145,8 @@ describe("FeedArticleSheet", () => {
 		);
 
 		await wrapper.vm.$nextTick();
-		expect(wrapper.find('button[aria-label="0.5 星"]').exists()).toBe(true);
-		await wrapper.get('button[aria-label="4.0 星"]').trigger("click");
+		expect(wrapper.find('button[aria-label="1 分，0.5 星"]').exists()).toBe(true);
+		await wrapper.get('button[aria-label="8 分，4.0 星"]').trigger("click");
 		expect(fetchMock).toHaveBeenCalledWith(
 			expect.stringContaining("/blog/posts/post-sheet-rating-1/rating"),
 			expect.objectContaining({ method: "PUT" }),
@@ -194,8 +194,8 @@ describe("FeedArticleSheet", () => {
 			},
 		);
 
-		expect(wrapper.find('button[aria-label="4.5 星"]').exists()).toBe(true);
-		await wrapper.get('button[aria-label="4.5 星"]').trigger("click");
+		expect(wrapper.find('button[aria-label="9 分，4.5 星"]').exists()).toBe(true);
+		await wrapper.get('button[aria-label="9 分，4.5 星"]').trigger("click");
 		expect(fetchMock).toHaveBeenCalledWith(
 			expect.stringContaining("/feed/items/feed-item-rating-1/rating"),
 			expect.objectContaining({ method: "PUT" }),
@@ -396,7 +396,7 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.get('[data-test="feed-article-validity-notice"]').text()).toContain(
 			"请注意信息有效性",
 		);
-		expect(wrapper.get('[data-test="feed-article-rating"]').text()).toContain("4.5");
+		expect(wrapper.get('[data-test="feed-article-rating"]').text()).toContain("9.0 / 10");
 		expect(wrapper.get('[data-test="feed-article-related-reading"]').text()).toContain("同源推荐文章");
 		expect(wrapper.text()).not.toContain("其他来源文章");
 		expect(wrapper.get('[data-test="feed-article-quick-star"]').attributes("aria-pressed")).toBe("false");

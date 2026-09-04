@@ -654,10 +654,9 @@ async function toggleChannelSubscription() {
         <PostRatingControl
           class="vd-rating"
           size="sm"
+          :rating-score="video.rating_score"
+          :rating-count="video.rating_count"
           :viewer-rating="video.viewer_rating"
-          :weighted-rating-score="video.rating_score ?? null"
-          :weighted-rating-count="video.rating_count ?? 0"
-          :weighted-rating-active="(video.rating_count ?? 0) > 0"
           :disabled="!authStore.isAuthenticated"
           :loading="ratingLoading"
           :error-message="ratingError"
@@ -1058,13 +1057,13 @@ async function toggleChannelSubscription() {
   min-width: 0;
 }
 
-.vd-rating :deep(.post-rating) {
+.vd-rating {
   gap: 0.35rem;
   padding: 0;
   border: 0;
 }
 
-.vd-rating :deep(.post-rating__meta-box) {
+.vd-rating :deep(.rating-control__meta) {
   display: none;
 }
 

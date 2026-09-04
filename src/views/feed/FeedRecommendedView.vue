@@ -217,7 +217,7 @@
 
                 <span class="feed-entry-stats">
                   <span class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ item.view_count || 0 }}</span>
-                  <span class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ item.rating_score ? `${item.rating_score.toFixed(1)} (${item.rating_count || 0})` : '—' }}</span>
+                  <span v-if="hasPublicRating(item.rating_count)" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatPublicRating(item.rating_score, item.rating_count) }}</span>
                   <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.bookmark_count || 0 }}</span>
                 </span>
                 <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.last_published_at) }}</span>
@@ -358,6 +358,7 @@ import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import { useApi } from '@/composables/useApi'
+import { formatPublicRating, hasPublicRating } from '@/utils/rating'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'

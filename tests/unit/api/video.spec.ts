@@ -7,6 +7,7 @@ import {
   listVideos,
   duplicateVideo,
   createVideoRecommendationFeedback,
+  createVideoImport,
   uploadVideoImportPart,
 } from '@/api/video'
 
@@ -34,6 +35,18 @@ describe('video import API', () => {
 
   it('rejects a non-R2 import part URL', async () => {
     await expect(uploadVideoImportPart('/api/v1/videos/imports/task-1/parts/1/upload', new Blob(['data']))).rejects.toThrow('R2')
+  })
+
+  it('infers the R2 upload content type from a video filename when the browser omits it', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'import-1' }), { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await createVideoImport(new File(['video'], 'clip.MP4', { type: '' }), 'channel-1', 'token-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos/imports', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ channel_id: 'channel-1', file_name: 'clip.MP4', file_size: 5, content_type: 'video/mp4' }),
+    }))
   })
 
   it('encodes video path segments and query values', async () => {

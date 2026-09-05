@@ -9,6 +9,7 @@ const PSheetStub = defineComponent({
   props: {
     mode: String,
     partialAnchor: Object,
+    partialWidth: String,
     title: String,
     abovePlayer: Boolean,
   },
@@ -34,6 +35,7 @@ describe('CommentSideSheet', () => {
         title: '视频评论',
         target: { kind: 'video', resourceId: 'video-1' },
         partialAnchor: anchor,
+        partialWidth: '42rem',
         abovePlayer: true,
       },
       global: {
@@ -47,6 +49,7 @@ describe('CommentSideSheet', () => {
     expect(wrapper.findComponent(PSheetStub).props()).toMatchObject({
       mode: 'partial',
       partialAnchor: anchor,
+      partialWidth: '42rem',
       title: '视频评论',
       abovePlayer: true,
     })

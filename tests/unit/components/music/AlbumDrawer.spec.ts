@@ -23,7 +23,7 @@ vi.mock("@/components/ui/PDiscussionFAB.vue", () => ({
 vi.mock("@/components/comment/CommentSideSheet.vue", () => ({
 	default: {
 		name: "CommentSideSheet",
-		props: ["show", "title", "target", "isShifted", "isTopLayer"],
+		props: ["show", "title", "target", "partialWidth", "isShifted", "isTopLayer"],
 		emits: ["close", "mode-change", "count-change"],
 		template: '<section data-test="album-comment-side-sheet"><slot /></section>',
 	},
@@ -336,6 +336,7 @@ describe("AlbumDrawer.vue", () => {
 			show: true,
 			title: "专辑评论-Test Album",
 			target: { kind: "music_album", resourceId: "1" },
+			partialWidth: "42rem",
 		});
 
 		commentSheet.vm.$emit("count-change", 3);

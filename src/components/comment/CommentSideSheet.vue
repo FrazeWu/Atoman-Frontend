@@ -4,6 +4,7 @@
     :title="title"
     mode="partial"
     :partial-anchor="partialAnchor"
+    :partial-width="partialWidth"
     :content-max-width="contentMaxWidth"
     :is-shifted="isShifted"
     :is-top-layer="isTopLayer"
@@ -44,6 +45,7 @@ withDefaults(defineProps<{
   title?: string
   target: CommentTargetRef
   partialAnchor?: HTMLElement | null
+  partialWidth?: string
   noun?: '评论' | '讨论' | '回复' | '修订提案'
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
@@ -61,6 +63,7 @@ withDefaults(defineProps<{
 }>(), {
   title: '评论',
   partialAnchor: null,
+  partialWidth: '',
   noun: '评论',
   markLabel: undefined,
   currentTime: undefined,

@@ -222,6 +222,25 @@ describe("PSheet.vue", () => {
 		Object.defineProperty(window, "innerHeight", { configurable: true, value: originalHeight });
 	});
 
+	it("keeps a partial sheet narrow when no content anchor is available", async () => {
+		const originalWidth = window.innerWidth;
+		Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+
+		const wrapper = mount(PSheet, {
+			props: { show: true, mode: "partial", partialWidth: "42rem" },
+		});
+		await nextTick();
+		await nextTick();
+
+		const panel = wrapper.get(".p-sheet-panel").element as HTMLElement;
+		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
+		expect(panel.style.left).toContain("42rem");
+		expect(wrapper.emitted("mode-change")).toContainEqual(["partial"]);
+
+		wrapper.unmount();
+		Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+	});
+
 	it("derives panel width from the left edge instead of custom widths", () => {
 		const bottom = mount(PSheet, {
 			props: {

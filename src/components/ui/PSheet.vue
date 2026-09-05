@@ -154,6 +154,7 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string
   mode?: 'full' | 'partial'
   partialAnchor?: HTMLElement | null
+  partialWidth?: string
   width?: string
   maxWidth?: string
   height?: string
@@ -176,6 +177,7 @@ const props = withDefaults(defineProps<{
   title: '',
   mode: 'full',
   partialAnchor: null,
+  partialWidth: '',
   width: '100%',
   top: '56px',
   side: 'right',
@@ -300,38 +302,58 @@ const updatePartialBounds = () => {
     )
   const parentContent = parentPanel?.querySelector<HTMLElement>('[data-p-sheet-content]')
   const contentAnchor = props.partialAnchor ?? parentContent
-  if (!contentAnchor) {
+  if (!contentAnchor && !props.partialWidth) {
     partialResolved.value = true
     emit('mode-change', 'full')
     return
   }
 
-  const contentRect = contentAnchor.getBoundingClientRect()
+  const contentRect = contentAnchor?.getBoundingClientRect()
   const panelRect = parentPanel?.getBoundingClientRect()
-  const containerLeft = panelRect?.left ?? contentRect.left
+  const containerLeft = panelRect?.left ?? contentRect?.left ?? 0
   const containerRight = panelRect?.right ?? window.innerWidth
   const containerWidth = Math.max(0, containerRight - containerLeft)
   const gutterWidth = containerWidth * 0.04
-  const availableWidth = Math.max(0, containerRight - contentRect.right - gutterWidth)
+  const availableWidth = contentRect
+    ? Math.max(0, containerRight - contentRect.right - gutterWidth)
+    : 0
   const availableRatio = containerWidth ? availableWidth / containerWidth : 0
-  if (availableRatio < 0.2) {
+  if (!props.partialWidth && availableRatio < 0.2) {
     partialResolved.value = true
     emit('mode-change', 'full')
+    return
+  }
+
+  const top = panelRect ? `${panelRect.top}px` : props.top
+  const right = `${window.innerWidth - containerRight}px`
+  const bottom = panelRect ? `${window.innerHeight - panelRect.bottom}px` : 'var(--a-content-bottom-offset)'
+  if (props.partialWidth) {
+    const minimumLeft = panelRect
+      ? `${panelRect.left}px`
+      : `calc(var(--a-sidebar-width) + ${effectiveLayerIndex.value * 32}px)`
+    partialBounds.value = {
+      top,
+      right,
+      bottom,
+      left: `max(${minimumLeft}, calc(100vw - ${props.partialWidth} - ${right}))`,
+    }
+    partialResolved.value = true
+    emit('mode-change', 'partial')
     return
   }
 
   partialBounds.value = {
-    top: panelRect ? `${panelRect.top}px` : props.top,
-    right: `${window.innerWidth - containerRight}px`,
-    bottom: panelRect ? `${window.innerHeight - panelRect.bottom}px` : 'var(--a-content-bottom-offset)',
-    left: `${contentRect.right + gutterWidth}px`,
+    top,
+    right,
+    bottom,
+    left: `${contentRect!.right + gutterWidth}px`,
   }
   partialResolved.value = true
   emit('mode-change', 'partial')
 
   if (typeof ResizeObserver !== 'undefined') {
     partialResizeObserver = new ResizeObserver(updatePartialBounds)
-    partialResizeObserver.observe(contentAnchor)
+    if (contentAnchor) partialResizeObserver.observe(contentAnchor)
     if (parentPanel) partialResizeObserver.observe(parentPanel)
   }
 }
@@ -344,7 +366,7 @@ const handlePartialEscape = (event: KeyboardEvent) => {
 }
 
 watch(
-  [partialRequested, effectiveLayerIndex, () => props.partialAnchor],
+  [partialRequested, effectiveLayerIndex, () => props.partialAnchor, () => props.partialWidth],
   () => {
     void nextTick(updatePartialBounds)
   },

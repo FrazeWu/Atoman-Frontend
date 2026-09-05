@@ -88,7 +88,10 @@ const isDescriptionTruncated = computed(() => {
 const posterUrl = computed(() => video.value?.thumbnail_url ? resolveMediaURL(video.value.thumbnail_url) : undefined)
 const nativeVideoUrl = computed(() => video.value?.video_url ? resolveMediaURL(video.value.video_url) : '')
 const subtitleUrl = computed(() => video.value?.subtitle_url ? resolveMediaURL(video.value.subtitle_url) : '')
-const channelCoverUrl = computed(() => video.value?.channel?.cover_url ? resolveMediaURL(video.value.channel.cover_url) : '')
+const channelCoverUrl = computed(() => {
+  const url = video.value?.channel?.cover_url || video.value?.user?.avatar_url || ''
+  return url ? resolveMediaURL(url) : ''
+})
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const currentPlaybackTime = ref(0)
@@ -540,6 +543,7 @@ async function toggleChannelSubscription() {
 
     <div v-else-if="video" :class="['vd-layout', { 'vd-layout--theater': theaterMode }]">
       <div ref="videoContentAnchor" class="vd-main">
+      <h1 class="vd-title">{{ video.title }}</h1>
       <PVideoPlayerShell
         class="vd-player-shell"
         :video="video"
@@ -616,6 +620,37 @@ async function toggleChannelSubscription() {
         </template>
       </PVideoPlayerShell>
 
+      <section class="vd-channel-info" aria-label="视频频道信息">
+        <div class="vd-meta-row">
+          <RouterLink v-if="video.channel" :to="`/channels/${video.channel.slug || video.channel_id}`" class="vd-author">
+            <span class="vd-author-avatar" aria-hidden="true">
+              <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
+              <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
+            </span>
+            <span class="vd-author-copy">
+              <strong>{{ video.channel.name }}</strong>
+              <small v-if="video.user?.username">@{{ video.user.username }}</small>
+            </span>
+          </RouterLink>
+          <div class="vd-stats">
+            <span>{{ video.view_count.toLocaleString() }} 次播放</span>
+            <span>{{ fmtDate(video.created_at) }}</span>
+            <span v-if="video.duration_sec">{{ fmtDuration(video.duration_sec) }}</span>
+          </div>
+          <button
+            v-if="video.channel && authStore.isAuthenticated"
+            type="button"
+            class="vd-subscribe"
+            :disabled="channelSubscriptionBusy"
+            @click="toggleChannelSubscription"
+          >
+            {{ channelSubscribed ? '已订阅' : '订阅频道' }}
+          </button>
+          <RouterLink v-else-if="video.channel" class="vd-subscribe" to="/login">登录后订阅</RouterLink>
+        </div>
+        <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
+      </section>
+
       <section class="vd-interactions" aria-label="视频互动">
         <PostRatingControl
           class="vd-rating"
@@ -648,42 +683,15 @@ async function toggleChannelSubscription() {
           >
             <Share2 :size="16" aria-hidden="true" />
           </button>
+          <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
+            <MessageSquare :size="16" aria-hidden="true" />
+            评论 {{ interactions.commentCount.value }}
+          </button>
         </div>
         <p v-if="actionFeedback" class="vd-action-feedback" role="status">{{ actionFeedback }}</p>
         <p v-if="actionError" class="vd-action-feedback vd-action-feedback--error" role="alert">{{ actionError }}</p>
       </section>
 
-      <section class="vd-identity" aria-label="视频信息">
-        <h1 class="vd-title">{{ video.title }}</h1>
-        <div class="vd-meta-row">
-          <RouterLink v-if="video.channel" :to="`/channel/${video.channel.slug || video.channel_id}`" class="vd-author">
-            <span class="vd-author-avatar" aria-hidden="true">
-              <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
-              <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
-            </span>
-            <span class="vd-author-copy">
-              <strong>{{ video.channel.name }}</strong>
-              <small v-if="video.user?.username">{{ video.user.username }}</small>
-            </span>
-          </RouterLink>
-          <div class="vd-stats">
-            <span>{{ video.view_count.toLocaleString() }} 次播放</span>
-            <span>{{ fmtDate(video.created_at) }}</span>
-            <span v-if="video.duration_sec">{{ fmtDuration(video.duration_sec) }}</span>
-          </div>
-          <button
-            v-if="video.channel && authStore.isAuthenticated"
-            type="button"
-            class="vd-subscribe"
-            :disabled="channelSubscriptionBusy"
-            @click="toggleChannelSubscription"
-          >
-            {{ channelSubscribed ? '已订阅' : '订阅频道' }}
-          </button>
-          <RouterLink v-else-if="video.channel" class="vd-subscribe" to="/login">登录后订阅</RouterLink>
-        </div>
-        <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
-      </section>
       <section v-if="video.chapters?.length" class="vd-chapters" aria-label="视频章节">
         <h2>章节</h2>
         <button v-for="chapter in video.chapters" :key="`${chapter.start_sec}-${chapter.title}`" type="button" @click="handleSeekToTimestamp(chapter.start_sec)">
@@ -699,13 +707,6 @@ async function toggleChannelSubscription() {
         <div v-if="descriptionExpanded && video.tags?.length" class="vd-tags">
           <span v-for="tag in video.tags" :key="tag.id" class="vd-tag"># {{ tag.name }}</span>
         </div>
-      </section>
-
-      <section class="vd-comments" aria-label="视频评论操作">
-        <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
-          <MessageSquare :size="16" aria-hidden="true" />
-          评论 {{ interactions.commentCount.value }}
-        </button>
       </section>
 
       <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />
@@ -797,7 +798,8 @@ async function toggleChannelSubscription() {
 }
 
 .vd-player-shell,
-.vd-identity,
+.vd-title,
+.vd-channel-info,
 .vd-recommendations,
 .vd-description,
 .vd-interactions {
@@ -805,17 +807,18 @@ async function toggleChannelSubscription() {
   grid-column: 1;
 }
 
-.vd-player-shell { grid-row: 1; }
-.vd-identity { grid-row: 2; }
+.vd-title { grid-row: 1; }
+.vd-player-shell { grid-row: 2; }
 .vd-playlist {
   position: sticky;
   top: calc(3.5rem + 1.5rem);
   grid-column: 2;
   grid-row: 1 / span 5;
 }
-.vd-description { grid-row: 3; }
+.vd-channel-info { grid-row: 3; }
 .vd-interactions { grid-row: 4; }
-.vd-recommendations { grid-row: 5; }
+.vd-description { grid-row: 5; }
+.vd-recommendations { grid-row: 6; }
 
 .vd-layout--theater {
   grid-template-columns: minmax(0, 1fr);
@@ -912,7 +915,7 @@ async function toggleChannelSubscription() {
   font-weight: 600;
 }
 
-.vd-identity {
+.vd-channel-info {
   display: grid;
   gap: 0.7rem;
 }
@@ -1093,13 +1096,6 @@ async function toggleChannelSubscription() {
   margin-left: auto;
 }
 
-.vd-comments {
-  display: flex;
-  justify-content: flex-end;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-
 .vd-action-feedback {
   width: 100%;
   margin: 0;
@@ -1137,7 +1133,8 @@ async function toggleChannelSubscription() {
   .vd-page { padding: 1rem 1rem 5rem; }
   .vd-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
   .vd-player-shell,
-  .vd-identity,
+  .vd-title,
+  .vd-channel-info,
   .vd-playlist,
   .vd-recommendations,
   .vd-description,

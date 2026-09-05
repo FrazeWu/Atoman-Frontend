@@ -113,8 +113,8 @@ describe("AudioPlayer", () => {
 				stubs: {
 					MusicLyricsPanel: true,
 					CommentSideSheet: {
-						props: ["show", "target"],
-						template: '<div class="comment-sheet-stub" :data-show="show" :data-target-kind="target.kind" :data-resource-id="target.resourceId" />',
+						props: ["show", "target", "partialWidth"],
+						template: '<div class="comment-sheet-stub" :data-show="show" :data-target-kind="target.kind" :data-resource-id="target.resourceId" :data-partial-width="partialWidth" />',
 					},
 					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
 					PToast: true,
@@ -196,6 +196,7 @@ describe("AudioPlayer", () => {
 		expect(wrapper.get('.comment-sheet-stub').attributes('data-show')).toBe('true');
 		expect(wrapper.get('.comment-sheet-stub').attributes('data-target-kind')).toBe('music_song');
 		expect(wrapper.get('.comment-sheet-stub').attributes('data-resource-id')).toBe('song-1');
+		expect(wrapper.get('.comment-sheet-stub').attributes('data-partial-width')).toBe('42rem');
 		wrapper.unmount();
 	});
 

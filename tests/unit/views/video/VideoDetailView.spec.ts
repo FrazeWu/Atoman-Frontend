@@ -261,6 +261,7 @@ describe("VideoDetailView shared interactions", () => {
 		const markup = wrapper.html();
 
 		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-testid="video-description"'));
+		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-testid="video-comments"'));
 		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
 	});
 

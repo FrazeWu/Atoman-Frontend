@@ -154,7 +154,10 @@ async function mountVideoDetail(
 
 	const router = createRouter({
 		history: createMemoryHistory(),
-		routes: [{ path: "/videos/watch/:id", component: VideoDetailView }],
+		routes: [
+			{ path: "/videos/watch/:id", component: VideoDetailView },
+			{ path: "/channels/:slug", component: { template: "<div />" } },
+		],
 	});
 	await router.push(path);
 	await router.isReady();
@@ -247,8 +250,15 @@ describe("VideoDetailView shared interactions", () => {
 			"fetch",
 			vi.fn(async (input: RequestInfo | URL) => {
 				const url = String(input);
+				if (url.endsWith("/feed/subscribe/channel/channel-1/status")) {
+					return makeJsonResponse({ subscribed: false });
+				}
 				if (url.endsWith("/videos/video-1")) {
-					return makeJsonResponse(makeVideo("video-1", "当前视频", { description: "当前视频简介" }));
+					return makeJsonResponse(makeVideo("video-1", "当前视频", {
+						description: "当前视频简介",
+						channel: { id: "channel-1", name: "视频频道", slug: "main" },
+						user: { username: "author", avatar_url: "https://assets.test/author.jpg" },
+					}));
 				}
 				if (url.endsWith("/videos/video-1/recommended")) {
 					return makeJsonResponse([makeVideo("video-2", "推荐视频")]);
@@ -260,9 +270,14 @@ describe("VideoDetailView shared interactions", () => {
 		const { wrapper } = await mountVideoDetail();
 		const markup = wrapper.html();
 
-		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-testid="video-description"'));
-		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-testid="video-comments"'));
+		expect(markup.indexOf('class="vd-title"')).toBeLessThan(markup.indexOf('class="vd-player-shell"'));
+		expect(markup.indexOf('class="vd-player-shell"')).toBeLessThan(markup.indexOf('class="vd-channel-info"'));
+		expect(markup.indexOf('class="vd-channel-info"')).toBeLessThan(markup.indexOf('data-test="video-rating-control"'));
+		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-testid="video-comments"'));
+		expect(markup.indexOf('data-testid="video-comments"')).toBeLessThan(markup.indexOf('data-testid="video-description"'));
 		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
+		expect(wrapper.get('.vd-author').attributes('href')).toBe('/channels/main');
+		expect(wrapper.get('.vd-author-avatar img').attributes('src')).toBe('https://assets.test/author.jpg');
 	});
 
 	it("游客打开视频时不发送需要登录的消费事件", async () => {

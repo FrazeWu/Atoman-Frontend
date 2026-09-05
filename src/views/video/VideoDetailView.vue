@@ -648,10 +648,6 @@ async function toggleChannelSubscription() {
           >
             <Share2 :size="16" aria-hidden="true" />
           </button>
-          <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
-            <MessageSquare :size="16" aria-hidden="true" />
-            评论 {{ interactions.commentCount.value }}
-          </button>
         </div>
         <p v-if="actionFeedback" class="vd-action-feedback" role="status">{{ actionFeedback }}</p>
         <p v-if="actionError" class="vd-action-feedback vd-action-feedback--error" role="alert">{{ actionError }}</p>
@@ -703,6 +699,13 @@ async function toggleChannelSubscription() {
         <div v-if="descriptionExpanded && video.tags?.length" class="vd-tags">
           <span v-for="tag in video.tags" :key="tag.id" class="vd-tag"># {{ tag.name }}</span>
         </div>
+      </section>
+
+      <section class="vd-comments" aria-label="视频评论操作">
+        <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
+          <MessageSquare :size="16" aria-hidden="true" />
+          评论 {{ interactions.commentCount.value }}
+        </button>
       </section>
 
       <VideoRecommendationRow class="vd-recommendations" :videos="recommended" />
@@ -1088,6 +1091,13 @@ async function toggleChannelSubscription() {
   align-items: center;
   gap: 0.45rem;
   margin-left: auto;
+}
+
+.vd-comments {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .vd-action-feedback {

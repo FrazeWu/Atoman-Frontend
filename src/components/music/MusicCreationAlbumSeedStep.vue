@@ -36,6 +36,7 @@ function renumberTracks() {
 
 function addTrack() {
   if (!creationFlow.value) return
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = [
     ...creationFlow.value.draft.tracks,
     {
@@ -49,6 +50,7 @@ function addTrack() {
 
 function updateTrackTitle(trackId: string, title: string) {
   if (!creationFlow.value) return
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
     track.id === trackId
       ? { ...track, title }
@@ -58,6 +60,7 @@ function updateTrackTitle(trackId: string, title: string) {
 
 function removeTrack(trackId: string) {
   if (!creationFlow.value) return
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.filter((track) => track.id !== trackId)
   renumberTracks()
 }

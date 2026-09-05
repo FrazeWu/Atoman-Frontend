@@ -36,6 +36,7 @@ const showsTrackList = computed(() => !standaloneTypeSelected.value || (creation
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
 const importMetadataMatched = computed(() => !isEditMode.value && albumImportDraft.value?.metadataMatched === true)
+const importMetadataModified = computed(() => importMetadataMatched.value && creationFlow.value?.tracksCustomized === true)
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
@@ -539,7 +540,19 @@ watch(
           <div class="track-adjustment__header-title">
             <span class="field-label">曲目列表</span>
             <p class="track-adjustment__count" data-testid="album-details-track-count">{{ orderedTracks.length }} 首</p>
-            <span v-if="importMetadataMatched" class="track-adjustment__matched" data-testid="album-details-matched-status">已匹配 MusicBrainz</span>
+            <span
+              v-if="importMetadataMatched"
+              class="track-adjustment__matched"
+              :aria-label="importMetadataModified ? 'MusicBrainz 已匹配，用户已修改曲目' : 'MusicBrainz 已匹配'"
+              data-testid="album-details-matched-status"
+            >
+              <span class="track-adjustment__matched-mark" aria-hidden="true">MB</span>
+              <span>已匹配</span>
+              <template v-if="importMetadataModified">
+                <span class="track-adjustment__matched-divider" aria-hidden="true">·</span>
+                <span>已修改</span>
+              </template>
+            </span>
           </div>
           <input
             ref="trackAudioInputRef"
@@ -973,9 +986,37 @@ watch(
 }
 
 .track-adjustment__matched {
-  color: var(--a-color-success, #16803c);
-  font-size: 0.78rem;
+  align-items: center;
+  background: #1e1e1e;
+  border: 1px solid #2d2a22;
+  color: #cfb26f;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 500;
+  gap: 0.2rem;
+  line-height: 1;
+  min-height: 1.25rem;
+  padding: 0.15rem 0.42rem 0.15rem 0.25rem;
+  white-space: nowrap;
+}
+
+.track-adjustment__matched-mark {
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: #e2cb90;
+  display: inline-flex;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.48rem;
   font-weight: 700;
+  height: 0.76rem;
+  justify-content: center;
+  letter-spacing: -0.03em;
+  width: 0.76rem;
+}
+
+.track-adjustment__matched-divider {
+  color: #8f7b4a;
 }
 
 .track-adjustment__add-btn {

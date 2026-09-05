@@ -154,7 +154,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		createWrapper.unmount();
 	});
 
-	it("在创建流程的曲目列表旁显示预匹配状态", () => {
+	it("在创建流程的曲目列表旁显示预匹配状态和用户修改状态", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
 		const flow = drawers.state.value.creationFlow;
@@ -164,7 +164,11 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
+		expect(wrapper.get('[data-testid="album-details-matched-status"]').text()).toContain("MB");
 		expect(wrapper.get('[data-testid="album-details-matched-status"]').text()).toContain("已匹配");
+
+		await wrapper.get('[data-testid="album-track-title-input"]').setValue("用户修改后的曲目");
+		expect(wrapper.get('[data-testid="album-details-matched-status"]').text()).toContain("已修改");
 	});
 
 	it("keeps text editing separate from drag sorting", () => {

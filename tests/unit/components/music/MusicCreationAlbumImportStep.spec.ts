@@ -135,6 +135,25 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(wrapper.get('[data-testid="album-import-matched-status"]').text()).toContain("已匹配");
 	});
 
+	it("在上传页修改已匹配曲目时保留用户曲目状态", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumImport.metadataMatched = true;
+		flow.draft.tracks = [{
+			id: "preview-track-1",
+			sequence: 1,
+			title: "IGOR'S THEME",
+			origin: "local_preview",
+		}];
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		await wrapper
+			.get('[data-testid="album-import-track-title-input"]')
+			.setValue("用户修改后的曲目");
+
+		expect(flow.tracksCustomized).toBe(true);
+	});
+
 	it("本地预览匹配成功后按匹配曲序显示曲目", async () => {
 		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
 		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({

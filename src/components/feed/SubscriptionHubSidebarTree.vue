@@ -43,68 +43,34 @@
         </button>
       </div>
       <div v-else class="subscription-hub-sidebar__list">
-        <template v-for="node in typeNodes" :key="node.subscription_type">
-          <button
-            type="button"
-            class="subscription-hub-sidebar__all"
-            :class="{
-              'is-active':
-                node.subscription_type === activeType && !activeMembershipId,
-            }"
-            :data-testid="
-              isFixedType
-                ? `subscription-hub-all-${node.subscription_type}`
-                : `subscription-hub-type-${node.subscription_type}`
-            "
-            @click="
-              emit('select-context', {
-                subscriptionType: node.subscription_type,
-              })
-            "
-          >
-            <component
-              :is="isFixedType ? List : typeIcon(node.subscription_type)"
-              :size="15"
-            /><span>{{
-              isFixedType ? "全部更新" : typeLabel(node.subscription_type)
-            }}</span
-            ><span>{{ unreadTotal(node) }}</span>
-          </button>
-          <p
-            v-if="!sources(node).length"
-            class="subscription-hub-sidebar__empty"
-          >
-            尚无订阅
-          </p>
-          <button
-            v-for="item in sources(node)"
-            :key="item.id"
+        <button
+          v-for="row in sourceRows"
+          :key="row.membership.id"
             type="button"
             class="subscription-hub-sidebar__source"
-            :class="{ 'is-active': item.id === activeMembershipId }"
-            :data-testid="`subscription-hub-membership-${item.id}`"
+          :class="{ 'is-active': row.membership.id === activeMembershipId }"
+          :data-testid="`subscription-hub-membership-${row.membership.id}`"
             @click="
               emit('select-context', {
-                subscriptionType: node.subscription_type,
-                groupId: item.group_id,
-                membershipId: item.id,
+              subscriptionType: row.subscriptionType,
+              groupId: row.membership.group_id,
+              membershipId: row.membership.id,
               })
             "
           >
-            <span>{{ sourceType(item, node.subscription_type) }}</span
+          <span>{{ sourceType(row.membership, row.subscriptionType) }}</span
             ><PAvatar
-              :src="avatar(item)"
-              :name="title(item)"
-              :alt="`${title(item)}的头像`"
+            :src="avatar(row.membership)"
+            :name="title(row.membership)"
+            :alt="`${title(row.membership)}的头像`"
               size="xs"
             /><span class="subscription-hub-sidebar__name">{{
-              title(item)
+            title(row.membership)
             }}</span
-            ><span :class="{ 'is-zero': unread(item) === 0 }">{{
-              unread(item)
+          ><span :class="{ 'is-zero': unread(row.membership) === 0 }">{{
+            unread(row.membership)
             }}</span>
           </button>
-        </template>
       </div>
     </template>
   </section>
@@ -112,14 +78,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import {
-  IconFileText as FileText,
-  IconList as List,
-  IconMicrophone as Mic,
-  IconRss as Rss,
-  IconSettings2 as Settings2,
-  IconVideo as Video,
-} from "@tabler/icons-vue";
+import { IconSettings2 as Settings2 } from "@tabler/icons-vue";
 import PAvatar from "@/components/ui/PAvatar.vue";
 import type {
   SubscriptionHubMembership,
@@ -165,12 +124,20 @@ const typeNodes = computed(() =>
 );
 const sources = (node: SubscriptionHubTypeNode) =>
   node.groups.flatMap((group) => group.memberships);
+const sourceRows = computed(() =>
+  typeNodes.value.flatMap((node) =>
+    sources(node).map((membership) => ({
+      membership,
+      subscriptionType: node.subscription_type,
+    })),
+  ),
+);
 const shouldRender = computed(
   () =>
     !isFixedType.value ||
     props.loading ||
     !!props.error ||
-    typeNodes.value.some((node) => sources(node).length > 0),
+    sourceRows.value.length > 0,
 );
 const title = (item: SubscriptionHubMembership) =>
   item.title || item.feed_source?.title || "未命名订阅";
@@ -180,12 +147,6 @@ const avatar = (item: SubscriptionHubMembership) =>
     ? buildSourceFaviconURL(item.feed_source.rss_url)
     : "");
 const unread = (item: SubscriptionHubMembership) => item.unread_count ?? 0;
-const unreadTotal = (node: SubscriptionHubTypeNode) =>
-  sources(node).reduce((total, item) => total + unread(item), 0);
-const typeLabel = (type: SubscriptionHubType) =>
-  ({ podcast: "播客", video: "视频", blog: "博客", rss: "RSS" })[type];
-const typeIcon = (type: SubscriptionHubType) =>
-  ({ podcast: Mic, video: Video, blog: FileText, rss: Rss })[type];
 const sourceType = (
   item: SubscriptionHubMembership,
   type: SubscriptionHubType,
@@ -272,7 +233,6 @@ const updateScrollProgress = () => {
   color: inherit;
   cursor: pointer;
 }
-.subscription-hub-sidebar__all,
 .subscription-hub-sidebar__source {
   width: 100%;
   border: 0;
@@ -280,15 +240,6 @@ const updateScrollProgress = () => {
   color: inherit;
   cursor: pointer;
   text-align: left;
-}
-.subscription-hub-sidebar__all {
-  display: grid;
-  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
-  min-height: 2.75rem;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0 0.6rem;
-  font-weight: 650;
 }
 .subscription-hub-sidebar__source {
   display: grid;
@@ -299,9 +250,6 @@ const updateScrollProgress = () => {
   padding: 0 0.6rem;
   font-size: 0.78rem;
 }
-.subscription-hub-sidebar__all:hover,
-.subscription-hub-sidebar__all:focus-visible,
-.subscription-hub-sidebar__all.is-active,
 .subscription-hub-sidebar__source:hover,
 .subscription-hub-sidebar__source:focus-visible,
 .subscription-hub-sidebar__source.is-active {
@@ -319,18 +267,12 @@ const updateScrollProgress = () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.subscription-hub-sidebar__all > span:last-child,
 .subscription-hub-sidebar__source > span:last-child {
   color: var(--a-color-primary);
   font-variant-numeric: tabular-nums;
 }
 .subscription-hub-sidebar__source > span:last-child.is-zero {
   color: var(--a-color-muted);
-}
-.subscription-hub-sidebar__empty {
-  margin: 0.3rem 0.6rem;
-  color: var(--a-color-muted);
-  font-size: 0.78rem;
 }
 @media (prefers-reduced-motion: reduce) {
   .subscription-hub-sidebar::after {

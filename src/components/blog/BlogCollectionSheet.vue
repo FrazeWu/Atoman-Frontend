@@ -11,6 +11,7 @@ import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useAuthStore } from '@/stores/auth'
 import type { Collection, Post } from '@/types'
 import type { BlogCollectionLayer } from '@/components/blog/blogSheetTypes'
+import { useBlogSheetNavigation } from '@/composables/useBlogSheetNavigation'
 
 const props = withDefaults(defineProps<{
   layer: BlogCollectionLayer
@@ -38,6 +39,7 @@ const filterOptions = computed(() => [
 ])
 
 const collectionId = computed(() => props.layer.payload.collectionId)
+const replaceCurrentCollection = (id: string) => sheets.replaceCollection(id, '合集', props.layer.payload.channelId)
 const channelId = computed(() => collection.value?.channel_id || props.layer.payload.channelId)
 const visiblePosts = computed(() => (
   filter.value === 'all'
@@ -46,6 +48,8 @@ const visiblePosts = computed(() => (
 ))
 const publishedCount = computed(() => posts.value.filter(post => post.status !== 'draft').length)
 const draftCount = computed(() => posts.value.filter(post => post.status === 'draft').length)
+const isTopSheet = computed(() => sheets.isTop(props.layer.key))
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('collection', collectionId, replaceCurrentCollection, isTopSheet)
 let loadSequence = 0
 
 const sortTime = (post: Post) => Date.parse(post.updated_at || post.created_at || '') || 0
@@ -102,8 +106,13 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
     :is-shifted="sheets.isShifted(layer.key)"
     :is-top-layer="sheets.isTop(layer.key)"
     close-type="both"
+    :navigation="navigation"
+    :navigation-key="collectionId"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
     @close="sheets.closeLayer(layer.key)"
     @activate="sheets.returnToLayer(layer.key)"
+    @navigate="navigate"
   >
     <template #header>
       <div class="collection-sheet-header">

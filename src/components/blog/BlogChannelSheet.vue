@@ -13,6 +13,7 @@ import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useFeedStore } from '@/stores/feed'
 import type { Channel, Post } from '@/types'
 import type { BlogChannelLayer } from '@/components/blog/blogSheetTypes'
+import { useBlogSheetNavigation } from '@/composables/useBlogSheetNavigation'
 
 const props = withDefaults(defineProps<{
   layer: BlogChannelLayer
@@ -35,6 +36,9 @@ const subscribed = ref(false)
 const subscribeLoading = ref(false)
 
 const channelId = computed(() => props.layer.payload.channelId)
+const replaceCurrentChannel = (id: string) => sheets.replaceChannel(id, '频道')
+const isTopSheet = computed(() => sheets.isTop(props.layer.key))
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('channel', channelId, replaceCurrentChannel, isTopSheet)
 let loadSequence = 0
 
 async function loadChannel() {
@@ -99,8 +103,13 @@ watch(channelId, () => void loadChannel(), { immediate: true })
     :is-shifted="sheets.isShifted(layer.key)"
     :is-top-layer="sheets.isTop(layer.key)"
     close-type="both"
+    :navigation="navigation"
+    :navigation-key="channelId"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
     @close="sheets.closeLayer(layer.key)"
     @activate="sheets.returnToLayer(layer.key)"
+    @navigate="navigate"
   >
     <div v-if="loading" class="channel-sheet-loading" aria-label="正在加载频道">
       <div class="a-skeleton channel-sheet-visual-skeleton" />

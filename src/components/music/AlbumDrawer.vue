@@ -20,6 +20,7 @@ import { IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconChe
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
+import { useMusicSheetNavigation } from '@/composables/useMusicSheetNavigation'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
   createAlbumBookmark,
@@ -45,7 +46,7 @@ import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/mu
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
+const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, replaceAlbum, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
@@ -53,6 +54,7 @@ const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : alb
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isAlbumShifted.value)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useMusicSheetNavigation('album', albumId, replaceAlbum, topLayer)
 const closeCurrentAlbum = () => closeAlbum(props.layer?.key)
 const album = ref<MusicAlbumListItem | null>(null)
 const commentsOpen = ref(false)
@@ -643,6 +645,11 @@ watch(
     :stack-size="stackSize"
     :index="sheetIndex"
     panel-class="album-drawer"
+    :navigation="navigation"
+    :navigation-key="albumId || ''"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
+    @navigate="navigate"
   >
     <MusicSongLyricsEditorDrawer
       v-if="lyricTrack"

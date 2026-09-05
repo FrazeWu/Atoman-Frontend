@@ -22,6 +22,7 @@ import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
+import { useMusicSheetNavigation } from '@/composables/useMusicSheetNavigation'
 import { reportError } from '@/utils/logger'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
@@ -41,6 +42,7 @@ const {
   isTopLayer,
   openAlbum,
   openArtist,
+  replaceSong,
   openMusicCreationFlow,
   openMusicEditor,
   openNestedAction,
@@ -52,6 +54,7 @@ const songId = computed(() => props.layer?.payload.songId ?? state.value.songId)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : songId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useMusicSheetNavigation('song', songId, replaceSong, topLayer)
 const closeCurrentSong = () => closeSong(props.layer?.key)
 const returnCurrentSong = () => props.layer && returnToLayer(props.layer.key)
 const detail = ref<MusicSongDetail | null>(null)
@@ -355,8 +358,13 @@ watch(
     :stack-size="stackSize"
     :index="layerIndex"
     panel-class="song-drawer"
+    :navigation="navigation"
+    :navigation-key="songId || ''"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
     @close="closeCurrentSong"
     @activate="returnCurrentSong"
+    @navigate="navigate"
   >
     <main class="song-detail">
       <p v-if="loading" class="song-detail__state">正在加载</p>

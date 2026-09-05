@@ -35,6 +35,17 @@ describe("createSheetStack", () => {
 		expect(stack.pop()?.key).toBe("artist:1");
 	});
 
+	it("can replace the current payload without changing the active layer identity", () => {
+		const stack = createSheetStack<TestLayer>();
+		stack.push(layer("album", "1"));
+
+		stack.replaceTop(layer("album", "2"), true);
+
+		expect(stack.layers.value).toHaveLength(1);
+		expect(stack.layers.value[0].key).toBe("album:1");
+		expect(stack.layers.value[0].payload.id).toBe("2");
+	});
+
 	it("allows repeated kinds but not an identical top key", () => {
 		const stack = createSheetStack<TestLayer>();
 		stack.push(layer("artist", "1"));

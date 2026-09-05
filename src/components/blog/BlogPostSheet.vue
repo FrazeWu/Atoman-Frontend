@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useFeedStore } from '@/stores/feed'
 import { isAdminRole } from '@/utils/roles'
+import { useBlogSheetNavigation } from '@/composables/useBlogSheetNavigation'
 import type { Post } from '@/types'
 import type { BlogPostLayer } from '@/components/blog/blogSheetTypes'
 
@@ -60,6 +61,10 @@ const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMod
 const commentCount = ref<number | undefined>(undefined)
 const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
 const commentSheetTitle = computed(() => `博客文章评论-${post.value?.title || '未命名'}`)
+const postId = computed(() => props.layer.payload.postId)
+const replaceCurrentPost = (id: string) => sheets.replacePost(id, '文章', props.layer.payload.collectionId)
+const isTopSheet = computed(() => sheets.isTop(props.layer.key) && !commentsBlockParent.value)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('post', postId, replaceCurrentPost, isTopSheet)
 let loadSequence = 0
 let relatedRequestSequence = 0
 
@@ -330,8 +335,13 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     reading-mode
     close-type="both"
+    :navigation="navigation"
+    :navigation-key="postId"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
     @close="sheets.closeLayer(layer.key)"
     @activate="sheets.returnToLayer(layer.key)"
+    @navigate="navigate"
   >
     <div v-if="loading" class="post-sheet-loading" aria-label="正在加载文章">
       <div class="a-skeleton post-sheet-title-skeleton" />

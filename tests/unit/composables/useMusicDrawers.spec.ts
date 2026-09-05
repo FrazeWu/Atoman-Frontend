@@ -28,6 +28,18 @@ describe("useMusicDrawers", () => {
 		expect(state.value.albumId).toBeNull();
 	});
 
+	it("replaces an entity for navigation without adding a new layer", () => {
+		const drawers = useMusicDrawers();
+		drawers.openAlbum("album-1");
+		const key = drawers.layers.value[0]?.key;
+
+		drawers.replaceAlbum("album-2");
+
+		expect(drawers.layers.value).toHaveLength(1);
+		expect(drawers.layers.value[0]?.key).toBe(key);
+		expect(drawers.state.value.albumId).toBe("album-2");
+	});
+
 	it("closes an album and the action layers above it", () => {
 		const { state, openArtist, openAlbum, openNestedAction, closeAlbum } =
 			useMusicDrawers();

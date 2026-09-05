@@ -26,6 +26,16 @@ export function useBlogSheets() {
 			payload: { channelId },
 		});
 	};
+	const replaceChannel = (channelId: string, title: string) => {
+		const layer: BlogSheetLayer = {
+			key: `channel:${channelId}`,
+			kind: "channel",
+			title,
+			payload: { channelId },
+		};
+		if (mobile) void router?.replace(`/channel/${encodeURIComponent(channelId)}`);
+		else stack.replaceTop(layer, true);
+	};
 	const openCollection = (
 		collectionId: string,
 		title: string,
@@ -42,6 +52,20 @@ export function useBlogSheets() {
 			payload: { collectionId, channelId },
 		});
 	};
+	const replaceCollection = (
+		collectionId: string,
+		title: string,
+		channelId: string,
+	) => {
+		const layer: BlogSheetLayer = {
+			key: `collection:${collectionId}`,
+			kind: "collection",
+			title,
+			payload: { collectionId, channelId },
+		};
+		if (mobile) void router?.replace(`/collection/${encodeURIComponent(collectionId)}`);
+		else stack.replaceTop(layer, true);
+	};
 
 	const openPost = (postId: string, title: string, collectionId?: string) => {
 		if (mobile) {
@@ -55,6 +79,17 @@ export function useBlogSheets() {
 			route: `/posts/post/${postId}`,
 			payload: { postId, collectionId },
 		});
+	};
+	const replacePost = (postId: string, title: string, collectionId?: string) => {
+		const layer: BlogSheetLayer = {
+			key: `post:${postId}`,
+			kind: "post",
+			title,
+			route: `/posts/post/${postId}`,
+			payload: { postId, collectionId },
+		};
+		if (mobile) void router?.replace(`/posts/post/${encodeURIComponent(postId)}`);
+		else stack.replaceTop(layer, true);
 	};
 
 	const openShortNote = (noteId: string, title?: string) => {
@@ -70,6 +105,17 @@ export function useBlogSheets() {
 			payload: { noteId },
 		});
 	};
+	const replaceShortNote = (noteId: string, title?: string) => {
+		const layer: BlogSheetLayer = {
+			key: `short_note:${noteId}`,
+			kind: "short_note",
+			title: title || "短笺",
+			route: `/posts/notes/${noteId}`,
+			payload: { noteId },
+		};
+		if (mobile) void router?.replace(`/posts/notes/${encodeURIComponent(noteId)}`);
+		else stack.replaceTop(layer, true);
+	};
 
 	const closeLayer = (key: string) => {
 		stack.popTo(key);
@@ -83,9 +129,13 @@ export function useBlogSheets() {
 		renderLayers: stack.renderLayers,
 		top: stack.top,
 		openChannel,
+		replaceChannel,
 		openCollection,
+		replaceCollection,
 		openPost,
+		replacePost,
 		openShortNote,
+		replaceShortNote,
 		closeLayer,
 		returnToLayer,
 		closeTop: stack.pop,

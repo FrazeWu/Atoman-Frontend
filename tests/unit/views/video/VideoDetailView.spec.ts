@@ -815,6 +815,37 @@ describe("VideoDetailView shared interactions", () => {
 		);
 	});
 
+	it("影院模式下仍将合集固定在桌面右侧", async () => {
+		window.localStorage.setItem("atoman:video-theater-mode", "on");
+		const collection = { id: "collection-1", name: "设计入门" };
+		const current = makeVideo("video-1", "当前视频", {
+			collection_id: collection.id,
+			collection,
+			collections: [collection],
+		});
+		const next = makeVideo("video-2", "合集下一集", {
+			collection_id: collection.id,
+			collection,
+			collections: [collection],
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = String(input);
+				if (init?.method === "POST" && url.endsWith("/view")) return makeJsonResponse({});
+				if (url.endsWith("/videos/video-1")) return makeJsonResponse(current);
+				if (url.endsWith("/videos/video-1/recommended")) return makeJsonResponse([]);
+				if (url.endsWith("/videos?collection_id=collection-1")) return makeJsonResponse([current, next]);
+				throw new Error(`unexpected fetch: ${url}`);
+			}),
+		);
+
+		const { wrapper } = await mountVideoDetail("/videos/watch/video-1?collection=collection-1");
+
+		expect(wrapper.get(".vd-layout").classes()).toContain("vd-layout--theater");
+		expect(wrapper.get('[data-test="video-collection-playlist"]').classes()).toContain("vd-playlist--sidebar");
+	});
+
 	it("cancels an ended-video countdown when the viewer manually selects a collection video", async () => {
 		vi.useFakeTimers();
 		const collection = { id: "collection-1", name: "设计入门" };

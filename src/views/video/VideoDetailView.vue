@@ -714,7 +714,7 @@ async function toggleChannelSubscription() {
 
       <VideoCollectionPlaylist
         v-if="activeCollection && collectionVideos.length"
-        class="vd-playlist"
+        :class="['vd-playlist', { 'vd-playlist--sidebar': theaterMode }]"
         :collection="activeCollection"
         :videos="collectionVideos"
         :current-video-id="video.id"
@@ -820,16 +820,6 @@ async function toggleChannelSubscription() {
 .vd-interactions { grid-row: 4; }
 .vd-description { grid-row: 5; }
 .vd-recommendations { grid-row: 6; }
-
-.vd-layout--theater {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.vd-layout--theater .vd-playlist {
-  position: static;
-  grid-column: 1;
-  grid-row: 6;
-}
 
 .vd-embed,
 .vd-native {

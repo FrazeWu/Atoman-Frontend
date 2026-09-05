@@ -271,12 +271,13 @@ describe("VideoDetailView shared interactions", () => {
 		const { wrapper } = await mountVideoDetail();
 		const markup = wrapper.html();
 
-		expect(markup.indexOf('class="vd-title"')).toBeLessThan(markup.indexOf('class="vd-player-shell"'));
-		expect(markup.indexOf('class="vd-player-shell"')).toBeLessThan(markup.indexOf('class="vd-channel-info"'));
+		expect(markup.indexOf('class="vd-title"')).toBeLessThan(markup.indexOf('class="vd-player-shell vd-player-shell--compact"'));
+		expect(markup.indexOf('class="vd-player-shell vd-player-shell--compact"')).toBeLessThan(markup.indexOf('class="vd-channel-info"'));
 		expect(markup.indexOf('class="vd-channel-info"')).toBeLessThan(markup.indexOf('data-test="video-rating-control"'));
 		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-testid="video-comments"'));
 		expect(markup.indexOf('data-testid="video-comments"')).toBeLessThan(markup.indexOf('data-testid="video-description"'));
 		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
+		expect(wrapper.getComponent(PVideoPlayerShellStub).classes()).toContain("vd-player-shell--compact");
 		expect(wrapper.get('.vd-author').attributes('href')).toBe('/channels/main');
 		expect(wrapper.get('.vd-author-avatar img').attributes('src')).toBe('https://assets.test/author.jpg');
 	});

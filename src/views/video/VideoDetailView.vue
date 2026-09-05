@@ -545,7 +545,7 @@ async function toggleChannelSubscription() {
       <div ref="videoContentAnchor" class="vd-main">
       <h1 class="vd-title">{{ video.title }}</h1>
       <PVideoPlayerShell
-        class="vd-player-shell"
+        class="vd-player-shell vd-player-shell--compact"
         :video="video"
         :current-time="currentPlaybackTime"
         :theater-mode="theaterMode"
@@ -810,6 +810,7 @@ async function toggleChannelSubscription() {
 
 .vd-title { grid-row: 1; }
 .vd-player-shell { grid-row: 2; }
+.vd-player-shell--compact { width: 75%; }
 .vd-playlist {
   position: sticky;
   top: calc(3.5rem + 1.5rem);
@@ -1135,6 +1136,7 @@ async function toggleChannelSubscription() {
     grid-row: auto;
   }
   .vd-action-row { width: 100%; margin-left: 0; }
+  .vd-player-shell--compact { width: 100%; }
   .vd-comment-action { margin-left: auto; }
 }
 

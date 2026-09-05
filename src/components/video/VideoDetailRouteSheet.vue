@@ -3,8 +3,6 @@
     :show="true"
     title="视频详情"
     panel-class="video-detail-route-sheet"
-    mode="partial"
-    partial-width="75vw"
     :side="side"
     close-type="header"
     @close="$emit('close')"

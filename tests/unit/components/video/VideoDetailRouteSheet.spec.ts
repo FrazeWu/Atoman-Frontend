@@ -25,10 +25,10 @@ describe('VideoDetailRouteSheet', () => {
     expect(wrapper.getComponent(PSheetStub).props()).toMatchObject({
       show: true,
       title: '视频详情',
-      mode: 'partial',
-      partialWidth: '75vw',
       closeType: 'header',
       panelClass: 'video-detail-route-sheet',
     })
+    expect(wrapper.getComponent(PSheetStub).props('mode')).toBeUndefined()
+    expect(wrapper.getComponent(PSheetStub).props('partialWidth')).toBeUndefined()
   })
 })

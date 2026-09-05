@@ -66,6 +66,8 @@ const commentsOpen = ref(false)
 const descriptionExpanded = ref(false)
 const ratingLoading = ref(false)
 const ratingError = ref('')
+const actionFeedback = ref('')
+const actionError = ref('')
 const autoNextSeconds = ref<number | null>(null)
 let autoNextTimer: ReturnType<typeof setInterval> | null = null
 const channelSubscribed = ref(false)
@@ -406,15 +408,20 @@ function retryVideoPlayback() {
 
 async function shareVideo() {
   if (!video.value || video.value.visibility !== 'public') return
+  actionFeedback.value = ''
+  actionError.value = ''
   try {
     const shareUrl = window.location.href
     if (navigator.share) {
       await navigator.share({ title: video.value.title, url: shareUrl })
+      actionFeedback.value = '已打开分享面板'
     } else {
+      if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(shareUrl)
+      actionFeedback.value = '链接已复制'
     }
   } catch {
-    // The user may cancel native share.
+    actionError.value = '无法分享，请手动复制地址栏链接'
   }
 }
 
@@ -494,7 +501,14 @@ async function toggleBookmark() {
     await router.push('/login')
     return
   }
-  await bookmarks.toggle(video.value.id).catch(() => undefined)
+  actionFeedback.value = ''
+  actionError.value = ''
+  try {
+    await bookmarks.toggle(video.value.id)
+    actionFeedback.value = bookmarks.isBookmarked(video.value.id) ? '已收藏' : '已取消收藏'
+  } catch {
+    actionError.value = '收藏失败，请稍后再试'
+  }
 }
 
 async function toggleChannelSubscription() {
@@ -602,6 +616,47 @@ async function toggleChannelSubscription() {
         </template>
       </PVideoPlayerShell>
 
+      <section class="vd-interactions" aria-label="视频互动">
+        <PostRatingControl
+          class="vd-rating"
+          size="sm"
+          :rating-score="video.rating_score"
+          :rating-count="video.rating_count"
+          :viewer-rating="video.viewer_rating"
+          :disabled="!authStore.isAuthenticated"
+          :loading="ratingLoading"
+          :error-message="ratingError"
+          @rate="rateVideo"
+          @clear="clearRating"
+        />
+        <div class="vd-action-row">
+          <PBookmarkButton
+            :bookmarked="bookmarks.isBookmarked(video.id)"
+            :disabled="bookmarks.isPending(video.id)"
+            variant="bordered"
+            @bookmark="toggleBookmark"
+            @unbookmark="toggleBookmark"
+          />
+          <button
+            v-if="video.visibility === 'public'"
+            type="button"
+            class="vd-icon-action"
+            title="分享"
+            aria-label="分享"
+            data-testid="video-share"
+            @click="shareVideo"
+          >
+            <Share2 :size="16" aria-hidden="true" />
+          </button>
+          <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
+            <MessageSquare :size="16" aria-hidden="true" />
+            评论 {{ interactions.commentCount.value }}
+          </button>
+        </div>
+        <p v-if="actionFeedback" class="vd-action-feedback" role="status">{{ actionFeedback }}</p>
+        <p v-if="actionError" class="vd-action-feedback vd-action-feedback--error" role="alert">{{ actionError }}</p>
+      </section>
+
       <section class="vd-identity" aria-label="视频信息">
         <h1 class="vd-title">{{ video.title }}</h1>
         <div class="vd-meta-row">
@@ -647,45 +702,6 @@ async function toggleChannelSubscription() {
         </button>
         <div v-if="descriptionExpanded && video.tags?.length" class="vd-tags">
           <span v-for="tag in video.tags" :key="tag.id" class="vd-tag"># {{ tag.name }}</span>
-        </div>
-      </section>
-
-      <section class="vd-interactions" aria-label="视频互动">
-        <PostRatingControl
-          class="vd-rating"
-          size="sm"
-          :rating-score="video.rating_score"
-          :rating-count="video.rating_count"
-          :viewer-rating="video.viewer_rating"
-          :disabled="!authStore.isAuthenticated"
-          :loading="ratingLoading"
-          :error-message="ratingError"
-          @rate="rateVideo"
-          @clear="clearRating"
-        />
-        <div class="vd-action-row">
-          <PBookmarkButton
-            :bookmarked="bookmarks.isBookmarked(video.id)"
-            :disabled="bookmarks.isPending(video.id)"
-            variant="bordered"
-            @bookmark="toggleBookmark"
-            @unbookmark="toggleBookmark"
-          />
-          <button
-            v-if="video.visibility === 'public'"
-            type="button"
-            class="vd-icon-action"
-            title="分享"
-            aria-label="分享"
-            data-testid="video-share"
-            @click="shareVideo"
-          >
-            <Share2 :size="16" aria-hidden="true" />
-          </button>
-          <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
-            <MessageSquare :size="16" aria-hidden="true" />
-            评论 {{ interactions.commentCount.value }}
-          </button>
         </div>
       </section>
 
@@ -1073,6 +1089,15 @@ async function toggleChannelSubscription() {
   gap: 0.45rem;
   margin-left: auto;
 }
+
+.vd-action-feedback {
+  width: 100%;
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.vd-action-feedback--error { color: var(--a-color-danger); }
 
 .vd-icon-action,
 .vd-comment-action {

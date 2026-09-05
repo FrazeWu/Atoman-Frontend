@@ -98,7 +98,7 @@ const PBookmarkButtonStub = defineComponent({
 	name: "PBookmarkButton",
 	props: ["bookmarked", "disabled"],
 	emits: ["bookmark", "unbookmark"],
-	template: '<button type="button" data-test="video-bookmark" />',
+	template: '<button type="button" data-test="video-bookmark" @click="$emit(\'bookmark\')" />',
 });
 
 function deferred<T>() {
@@ -233,6 +233,15 @@ describe("VideoDetailView shared interactions", () => {
 		expect(comments.props("noun")).toBe("评论");
 	});
 
+	it("收藏失败时给出可见反馈", async () => {
+		const { wrapper } = await mountVideoDetail();
+
+		await wrapper.get('[data-test="video-bookmark"]').trigger("click");
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("收藏失败，请稍后再试");
+	});
+
 	it("在当前视频信息之后展示推荐视频", async () => {
 		vi.stubGlobal(
 			"fetch",
@@ -251,8 +260,8 @@ describe("VideoDetailView shared interactions", () => {
 		const { wrapper } = await mountVideoDetail();
 		const markup = wrapper.html();
 
-		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-rating-control"'));
-		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
+		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-testid="video-description"'));
+		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
 	});
 
 	it("游客打开视频时不发送需要登录的消费事件", async () => {
@@ -679,6 +688,21 @@ describe("VideoDetailView shared interactions", () => {
 			"/api/v1/videos/video-1/share",
 			expect.objectContaining({ method: "POST" }),
 		);
+	});
+
+	it("分享回退到复制链接时给出完成反馈", async () => {
+		Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+		Object.defineProperty(navigator, "clipboard", {
+			configurable: true,
+			value: { writeText: vi.fn().mockResolvedValue(undefined) },
+		});
+
+		const { wrapper } = await mountVideoDetail();
+		await wrapper.get('[data-testid="video-share"]').trigger("click");
+		await flushPromises();
+
+		expect(navigator.clipboard.writeText).toHaveBeenCalledWith(window.location.href);
+		expect(wrapper.text()).toContain("链接已复制");
 	});
 
 	it("路由 id 快速切换时忽略过期详情响应", async () => {

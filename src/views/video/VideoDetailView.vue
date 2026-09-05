@@ -730,6 +730,7 @@ async function toggleChannelSubscription() {
       :show="commentsOpen"
       :title="`视频评论-${video.title}`"
       :partial-anchor="videoContentAnchor"
+      partial-width="42rem"
       :target="commentTarget"
       noun="评论"
       :current-time="currentCommentTime"

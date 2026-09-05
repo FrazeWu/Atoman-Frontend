@@ -43,6 +43,7 @@ const CommentSideSheetStub = defineComponent({
 		"title",
 		"target",
 		"partialAnchor",
+		"partialWidth",
 		"noun",
 		"currentTime",
 		"canDelete",
@@ -903,6 +904,7 @@ describe("VideoDetailView shared interactions", () => {
 		await wrapper.get('[data-testid="video-comments"]').trigger("click");
 		expect(comments.props("show")).toBe(true);
 		expect(comments.props("partialAnchor")).toBeInstanceOf(HTMLElement);
+		expect(comments.props("partialWidth")).toBe("42rem");
 		expect(wrapper.find('[data-test="video-comment-sheet"]').exists()).toBe(true);
 		expect(comments.props("target")).toEqual({
 			kind: "video",

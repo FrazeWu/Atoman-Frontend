@@ -2,6 +2,9 @@ import type { RouteRecordRaw } from "vue-router";
 import type { ModuleRoomKey } from "@/config/moduleRooms";
 import { settingRoutes } from "@/router/routes/settings";
 
+const videoHomeView = () => import("@/views/video/VideoHomeView.vue");
+const videoDetailRouteSheet = () => import("@/components/video/VideoDetailRouteSheet.vue");
+
 function musicBookmarksPath(path: string) {
 	return path.startsWith("/music/") ? "/music/bookmarks" : "/bookmarks";
 }
@@ -433,7 +436,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			children: [
 				{
 					path: "",
-					component: () => import("@/views/video/VideoHomeView.vue"),
+					component: videoHomeView,
 				},
 				{
 					path: "search",
@@ -455,7 +458,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "watch/:id",
-					component: () => import("@/views/video/VideoDetailView.vue"),
+					components: {
+						default: videoHomeView,
+						overlay: videoDetailRouteSheet,
+					},
+					meta: { routeOverlay: true },
 				},
 			],
 		},

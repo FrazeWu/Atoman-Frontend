@@ -1222,6 +1222,49 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-seeded");
 	});
 
+	it("新建艺人的专辑提交成功后关闭父流程并进入艺术家详情", async () => {
+		const parentKey = "creation:create:album:new";
+		const childKey = `${parentKey}:child:${parentKey}`;
+		commitMusicAlbumImportMock.mockResolvedValue({
+			importId: "import-1",
+			artistId: "artist-created",
+			status: "queued",
+		});
+		const childFlow = createFlowState({
+			parentKey,
+			step: "preview",
+			draft: {
+				...createFlowState().draft,
+				albumDetails: {
+					...createFlowState().draft.albumDetails,
+					title: "Created Album",
+				},
+				albumImport: {
+					...createFlowState().draft.albumImport,
+					status: "ready",
+				},
+			},
+		});
+		drawerMocks.state.value.creationFlow = childFlow;
+		drawerMocks.state.value.creationFlows[childKey] = childFlow;
+
+		const wrapper = mount(MusicCreationFlowDrawer, {
+			props: {
+				layer: {
+					key: childKey,
+					kind: "creation",
+					title: "创建专辑",
+					payload: { parentKey, startStep: "albumDetails" },
+				},
+			},
+		});
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+
+		expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledWith(parentKey);
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-created");
+	});
+
 	it("提交时携带已上传的艺人头像和专辑封面", async () => {
 		commitMusicAlbumImportMock.mockResolvedValue({
 			importId: "import-1",

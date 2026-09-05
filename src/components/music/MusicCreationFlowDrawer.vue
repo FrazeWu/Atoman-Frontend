@@ -683,7 +683,8 @@ async function finishAutomaticallyCommittedImport(
   refreshArtist()
   refreshAlbum()
   refreshSong()
-  closeCurrentCreationFlow()
+  invalidateImportAutosave()
+  closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
   await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
 }
 
@@ -1155,7 +1156,8 @@ async function completeCreation() {
     const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     refreshArtist()
     refreshSong()
-    closeCurrentCreationFlow()
+    invalidateImportAutosave()
+    closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
     await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'

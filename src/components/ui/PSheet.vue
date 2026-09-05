@@ -353,7 +353,7 @@ const updatePartialBounds = () => {
 
   if (typeof ResizeObserver !== 'undefined') {
     partialResizeObserver = new ResizeObserver(updatePartialBounds)
-    partialResizeObserver.observe(contentAnchor)
+    if (contentAnchor) partialResizeObserver.observe(contentAnchor)
     if (parentPanel) partialResizeObserver.observe(parentPanel)
   }
 }

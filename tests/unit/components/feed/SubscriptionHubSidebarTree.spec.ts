@@ -1,366 +1,232 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { mount } from "@vue/test-utils";
+import { describe, expect, it } from "vitest";
 
-import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
-import type { SubscriptionHubTree } from '@/types'
+import SubscriptionHubSidebarTree from "@/components/feed/SubscriptionHubSidebarTree.vue";
+import type { SubscriptionHubTree } from "@/types";
 
 const tree: SubscriptionHubTree = {
   types: [
     {
-      subscription_type: 'podcast',
+      subscription_type: "podcast",
       has_content: true,
       groups: [
         {
-          id: 'podcast-group',
-          user_id: 'viewer',
-          subscription_type: 'podcast',
-          name: '常听节目',
-          position: 0,
+          id: "podcast-group",
+          user_id: "viewer",
+          subscription_type: "podcast",
+          name: "常听节目",
           memberships: [
             {
-              id: 'podcast-member',
-              user_id: 'viewer',
-              subscription_type: 'podcast',
-              group_id: 'podcast-group',
-              feed_source_id: 'shared-channel',
-              title: '原子谈话',
-              position: 0,
+              id: "podcast-member",
+              user_id: "viewer",
+              subscription_type: "podcast",
+              group_id: "podcast-group",
+              feed_source_id: "podcast-source",
+              title: "原子谈话",
+              unread_count: 3,
+              feed_source: {
+                id: "podcast-source",
+                source_type: "internal_channel",
+                hash: "podcast",
+                cover_url: "/podcast.webp",
+                created_at: "",
+              },
             },
           ],
         },
       ],
     },
     {
-      subscription_type: 'video',
+      subscription_type: "video",
       has_content: true,
       groups: [
         {
-          id: 'video-group',
-          user_id: 'viewer',
-          subscription_type: 'video',
-          name: '关注频道',
-          position: 0,
+          id: "video-group",
+          user_id: "viewer",
+          subscription_type: "video",
+          name: "关注频道",
           memberships: [
             {
-              id: 'video-member',
-              user_id: 'viewer',
-              subscription_type: 'video',
-              group_id: 'video-group',
-              feed_source_id: 'shared-channel',
-              title: '原子谈话',
-              position: 0,
-            },
-          ],
-        },
-      ],
-    },
-    { subscription_type: 'blog', has_content: false, groups: [] },
-    { subscription_type: 'rss', has_content: false, groups: [] },
-  ],
-}
-
-const singleDefaultGroupTree: SubscriptionHubTree = {
-  types: [
-    {
-      subscription_type: 'blog',
-      groups: [
-        {
-          id: 'blog-default-group',
-          user_id: 'viewer',
-          subscription_type: 'blog',
-          name: '默认分组',
-          position: 0,
-          memberships: [
-            {
-              id: 'blog-member-1',
-              user_id: 'viewer',
-              subscription_type: 'blog',
-              group_id: 'blog-default-group',
-              feed_source_id: 'blog-source-1',
-              title: '第一篇博客',
-              position: 0,
-            },
-          ],
-        },
-      ],
-    },
-  ],
-}
-
-const sourceTypeTree: SubscriptionHubTree = {
-  types: [
-    {
-      subscription_type: 'blog',
-      groups: [
-        {
-          id: 'blog-source-type-group',
-          user_id: 'viewer',
-          subscription_type: 'blog',
-          name: '博客订阅',
-          position: 0,
-          memberships: [
-            {
-              id: 'account-membership',
-              user_id: 'viewer',
-              subscription_type: 'blog',
-              group_id: 'blog-source-type-group',
-              feed_source_id: 'account-source',
+              id: "video-member",
+              user_id: "viewer",
+              subscription_type: "video",
+              group_id: "video-group",
+              feed_source_id: "video-source",
+              title: "视频频道",
+              unread_count: 2,
               feed_source: {
-                id: 'account-source',
-                source_type: 'internal_user',
-                hash: 'account-hash',
-                cover_url: 'https://cdn.example.com/account.webp',
-                created_at: '',
+                id: "video-source",
+                source_type: "internal_user",
+                hash: "video",
+                cover_url: "/video.webp",
+                created_at: "",
               },
-              title: '某个用户',
-              position: 0,
-            },
-            {
-              id: 'channel-membership',
-              user_id: 'viewer',
-              subscription_type: 'blog',
-              group_id: 'blog-source-type-group',
-              feed_source_id: 'channel-source',
-              feed_source: {
-                id: 'channel-source',
-                source_type: 'internal_channel',
-                hash: 'channel-hash',
-                cover_url: 'https://cdn.example.com/channel.webp',
-                created_at: '',
-              },
-              title: '某个频道',
-              position: 1,
             },
           ],
         },
       ],
     },
     {
-      subscription_type: 'rss',
+      subscription_type: "blog",
       groups: [
         {
-          id: 'rss-source-type-group',
-          user_id: 'viewer',
-          subscription_type: 'rss',
-          name: 'RSS 订阅',
-          position: 0,
+          id: "blog-group",
+          user_id: "viewer",
+          subscription_type: "blog",
+          name: "博客分组",
           memberships: [
             {
-              id: 'rss-membership',
-              user_id: 'viewer',
-              subscription_type: 'rss',
-              group_id: 'rss-source-type-group',
-              feed_source_id: 'rss-source',
+              id: "blog-member",
+              user_id: "viewer",
+              subscription_type: "blog",
+              group_id: "blog-group",
+              feed_source_id: "blog-source",
+              title: "博客作者",
+              unread_count: 0,
               feed_source: {
-                id: 'rss-source',
-                source_type: 'external_rss',
-                hash: 'rss-hash',
-                rss_url: 'https://example.com/feed.xml',
-                fetch_status: 'blocked',
-                created_at: '',
+                id: "blog-source",
+                source_type: "internal_collection",
+                hash: "blog",
+                cover_url: "/blog.webp",
+                created_at: "",
               },
-              title: '某个 RSS',
-              position: 0,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      subscription_type: "rss",
+      groups: [
+        {
+          id: "rss-group",
+          user_id: "viewer",
+          subscription_type: "rss",
+          name: "RSS 分组",
+          memberships: [
+            {
+              id: "rss-member",
+              user_id: "viewer",
+              subscription_type: "rss",
+              group_id: "rss-group",
+              feed_source_id: "rss-source",
+              title: "某个 RSS",
+              unread_count: 7,
+              feed_source: {
+                id: "rss-source",
+                source_type: "external_rss",
+                hash: "rss",
+                rss_url: "https://example.com/feed.xml",
+                created_at: "",
+              },
             },
           ],
         },
       ],
     },
   ],
-}
+};
 
-describe('SubscriptionHubSidebarTree', () => {
+describe("SubscriptionHubSidebarTree", () => {
+  it("renders a flat source list without group names", () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } });
 
-  it('keeps the sidebar focused on populated subscription types', () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
+    expect(wrapper.text()).not.toContain("常听节目");
+    expect(wrapper.text()).not.toContain("关注频道");
+    expect(wrapper.text()).not.toContain("博客分组");
+    expect(wrapper.text()).not.toContain("RSS 分组");
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(
+      4,
+    );
+  });
 
-    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(2)
-    expect(wrapper.find('[data-testid="subscription-hub-type-podcast"]').attributes('aria-expanded')).toBe('true')
-    expect(wrapper.find('[data-testid="subscription-hub-type-video"]').attributes('aria-expanded')).toBe('false')
-    expect(wrapper.find('[data-testid="subscription-hub-type-blog"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="subscription-hub-type-rss"]').exists()).toBe(false)
-    expect(wrapper.findAll('.subscription-hub-sidebar__membership')).toHaveLength(1)
-  })
+  it("shows source type, avatar, name, and real unread count for every source", () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } });
+    const sources = wrapper.findAll(".subscription-hub-sidebar__source");
 
-  it('keeps identical sources separate in their podcast and video contexts', () => {
+    expect(sources.map((source) => source.text())).toEqual([
+      expect.stringContaining("播客原子谈话3"),
+      expect.stringContaining("账号视频频道2"),
+      expect.stringContaining("频道博客作者0"),
+      expect.stringContaining("RSS某个 RSS7"),
+    ]);
+    expect(
+      sources.map((source) => source.find(".p-avatar img").attributes("src")),
+    ).toEqual([
+      "/podcast.webp",
+      "/video.webp",
+      "/blog.webp",
+      "https://example.com/favicon.ico",
+    ]);
+  });
+
+  it("selects a source with its hidden group context for timeline compatibility", async () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } });
+
+    await wrapper
+      .get('[data-testid="subscription-hub-membership-video-member"]')
+      .trigger("click");
+
+    expect(wrapper.emitted("select-context")).toEqual([
+      [
+        {
+          subscriptionType: "video",
+          groupId: "video-group",
+          membershipId: "video-member",
+        },
+      ],
+    ]);
+  });
+
+  it("selects all updates for a fixed module and does not render the type layer", async () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: { tree, fixedType: "video", activeType: "video" },
+    });
+
+    expect(
+      wrapper.get('[data-testid="subscription-hub-all-video"]').text(),
+    ).toContain("全部更新");
+    expect(
+      wrapper.find('[data-testid="subscription-hub-type-video"]').exists(),
+    ).toBe(false);
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(
+      1,
+    );
+
+    await wrapper
+      .get('[data-testid="subscription-hub-all-video"]')
+      .trigger("click");
+    expect(wrapper.emitted("select-context")).toEqual([
+      [{ subscriptionType: "video" }],
+    ]);
+  });
+
+  it("keeps an empty fixed module out of the layout", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {
-        tree,
-        activeType: 'podcast',
-        activeGroupId: 'podcast-group',
+        tree: { types: [{ subscription_type: "blog", groups: [] }] },
+        fixedType: "blog",
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('播客')
-    expect(wrapper.text()).toContain('视频')
-    expect(wrapper.text()).toContain('常听节目')
-    expect(wrapper.text()).not.toContain('关注频道')
-    expect(wrapper.findAll('.subscription-hub-sidebar__membership').length).toBe(1)
-    expect(wrapper.text()).not.toContain('全部订阅')
-  })
+    expect(wrapper.find(".subscription-hub-sidebar").exists()).toBe(false);
+  });
 
-  it('selects a type and a leaf with their isolated context', async () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
-
-    await wrapper.get('[data-testid="subscription-hub-type-video"]').trigger('click')
-    expect(wrapper.emitted('select-context')).toEqual([
-      [{ subscriptionType: 'video' }],
-    ])
-
-    await wrapper.get('[data-testid="subscription-hub-membership-video-member"]').trigger('click')
-    expect(wrapper.emitted('select-context')).toEqual([
-      [{ subscriptionType: 'video' }],
-      [{ subscriptionType: 'video', groupId: 'video-group', membershipId: 'video-member' }],
-    ])
-  })
-
-  it('uses one control to select and reveal a module', async () => {
+  it("exposes loading, error retry, and management actions", async () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree,
-        activeType: 'podcast',
-        activeGroupId: 'podcast-group',
-      },
-    })
+      props: { tree, loading: true },
+    });
+    expect(wrapper.find('[aria-label="正在加载订阅"]').exists()).toBe(true);
 
-    expect(wrapper.findAll('.subscription-hub-sidebar__type-toggle')).toHaveLength(0)
-    await wrapper.get('[data-testid="subscription-hub-type-video"]').trigger('click')
-    expect(wrapper.get('[data-testid="subscription-hub-type-video"]').attributes('aria-expanded')).toBe('true')
-    expect(wrapper.get('[data-testid="subscription-hub-type-podcast"]').attributes('aria-expanded')).toBe('false')
-    expect(wrapper.emitted('select-context')).toEqual([[{ subscriptionType: 'video' }]])
-  })
+    await wrapper.setProps({ loading: false, error: "加载失败" });
+    await wrapper
+      .get('[data-testid="subscription-hub-retry"]')
+      .trigger("click");
+    await wrapper
+      .get('[data-testid="subscription-hub-manage"]')
+      .trigger("click");
 
-  it('uses one control to select and reveal a group', async () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree,
-        activeType: 'podcast',
-        activeGroupId: 'podcast-group',
-      },
-    })
-
-    expect(wrapper.findAll('.subscription-hub-sidebar__group-toggle')).toHaveLength(0)
-    await wrapper.get('[data-testid="subscription-hub-group-podcast-group"]').trigger('click')
-
-    expect(wrapper.emitted('select-context')).toEqual([[{ subscriptionType: 'podcast', groupId: 'podcast-group' }]])
-    expect(wrapper.get('[data-testid="subscription-hub-group-podcast-group"]').attributes('aria-expanded')).toBe('true')
-    expect(wrapper.find('[data-testid="subscription-hub-membership-podcast-member"]').exists()).toBe(true)
-  })
-
-  it('uses a distinct prefix for disclosure panel ids', () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree,
-        idPrefix: 'mobile',
-      },
-    })
-
-    expect(wrapper.get('[data-testid="subscription-hub-type-podcast"]').attributes('aria-controls')).toBe('mobile-type-panel-podcast')
-  })
-
-  it('flattens a single default group into its subscription list', () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree: singleDefaultGroupTree,
-        activeType: 'blog',
-        activeGroupId: 'blog-default-group',
-      },
-    })
-
-    expect(wrapper.find('[data-testid="subscription-hub-group-blog-default-group"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="subscription-hub-membership-blog-member-1"]').exists()).toBe(true)
-    expect(wrapper.text()).not.toContain('默认分组')
-  })
-
-  it('shows a consistent visual identity and source context for each subscription', async () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree: sourceTypeTree,
-        activeType: 'blog',
-        activeGroupId: 'blog-source-type-group',
-      },
-    })
-
-    const memberships = wrapper.findAll('.subscription-hub-sidebar__membership')
-
-    expect(memberships.map((membership) => membership.find('.subscription-hub-sidebar__membership-name').text())).toEqual([
-      '某个用户',
-      '某个频道',
-    ])
-    expect(memberships.map((membership) => membership.find('.subscription-hub-sidebar__membership-source-type').text())).toEqual([
-      '账户',
-      '频道',
-    ])
-    expect(memberships.map((membership) => membership.get('.p-avatar img').attributes('src'))).toEqual([
-      'https://cdn.example.com/account.webp',
-      'https://cdn.example.com/channel.webp',
-    ])
-
-    await wrapper.setProps({ activeType: 'rss', activeGroupId: 'rss-source-type-group' })
-    const rssMembership = wrapper.get('[data-testid="subscription-hub-membership-rss-membership"]')
-    expect(rssMembership.find('.subscription-hub-sidebar__membership-name').text()).toBe('某个 RSS')
-    expect(rssMembership.find('.subscription-hub-sidebar__membership-source-type').text()).toBe('RSS · example.com/feed.xml')
-    expect(rssMembership.get('.p-avatar img').attributes('src')).toBe('https://example.com/favicon.ico')
-    expect(rssMembership.get('[data-test="subscription-hub-membership-status"]').attributes('aria-label')).toBe('来源异常')
-  })
-
-  it('opens unified subscription management from the icon action', async () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } })
-
-    const manageButton = wrapper.get('[data-testid="subscription-hub-manage"]')
-    expect(manageButton.attributes('aria-label')).toBe('管理订阅')
-    expect(manageButton.text()).toBe('')
-
-    await manageButton.trigger('click')
-    expect(wrapper.emitted('manage')).toHaveLength(1)
-  })
-
-  it('renders a fixed module type without the type layer', () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree,
-        fixedType: 'video',
-        activeType: 'video',
-        activeGroupId: 'video-group',
-      },
-    })
-
-    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(0)
-    expect(wrapper.findAll('.subscription-hub-sidebar__type-toggle')).toHaveLength(0)
-    expect(wrapper.get('[data-testid="subscription-hub-all-video"]').text()).toContain('全部来源')
-    expect(wrapper.text()).toContain('关注频道')
-    expect(wrapper.text()).toContain('原子谈话')
-    expect(wrapper.text()).not.toContain('常听节目')
-  })
-
-  it('selects all sources from a fixed module context', async () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree,
-        fixedType: 'video',
-        activeType: 'video',
-        activeGroupId: 'video-group',
-      },
-    })
-
-    await wrapper.get('[data-testid="subscription-hub-all-video"]').trigger('click')
-
-    expect(wrapper.emitted('select-context')).toEqual([
-      [{ subscriptionType: 'video' }],
-    ])
-  })
-
-  it('hides an empty fixed module type including its sidebar', () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: {
-        tree,
-        fixedType: 'blog',
-        activeType: 'blog',
-      },
-    })
-
-    expect(wrapper.findAll('.subscription-hub-sidebar__type-select')).toHaveLength(0)
-    expect(wrapper.find('.subscription-hub-sidebar').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('尚无订阅')
-  })
-})
+    expect(wrapper.emitted("retry")).toHaveLength(1);
+    expect(wrapper.emitted("manage")).toHaveLength(1);
+  });
+});

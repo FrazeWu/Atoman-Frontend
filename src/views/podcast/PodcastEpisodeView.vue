@@ -43,6 +43,12 @@ async function loadEpisode(id: string) {
       if (request !== latestRequest) return
       ep.value = episode
       if (authStore.token) {
+        void lifecycle.recordEvent({
+          module: 'podcast',
+          content_id: episode.id,
+          event: 'open',
+          source: typeof route.query.source === 'string' ? route.query.source : 'direct',
+        }).catch(() => undefined)
         const serverProgress = await lifecycle.getProgress('podcast', episode.id).catch(() => null)
         if (request !== latestRequest) return
         if (serverProgress?.position_sec) {

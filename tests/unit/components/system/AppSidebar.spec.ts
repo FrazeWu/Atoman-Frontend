@@ -135,12 +135,10 @@ describe('AppSidebar blog navigation', () => {
 })
 
 describe('AppSidebar feed navigation', () => {
-  it('exposes the blog posts entry from the feed sidebar', async () => {
-    const { wrapper, router } = await mountFeedSidebar()
+  it('does not expose the blog posts entry from the feed sidebar', async () => {
+    const { wrapper } = await mountFeedSidebar()
     const blogItem = wrapper.findAllComponents(PSidebarItem).find((item) => item.text().trim() === '博文')
 
-    expect(blogItem).toBeDefined()
-    expect(blogItem?.props('to')).toBe('/posts')
-    expect(router.resolve('/posts').matched.at(-1)?.path).toBe('/posts')
+    expect(blogItem).toBeUndefined()
   })
 })

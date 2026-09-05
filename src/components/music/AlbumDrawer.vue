@@ -805,8 +805,10 @@ watch(
             aria-label="MusicBrainz 已匹配"
             data-testid="album-tracks-musicbrainz-status"
           >
-            <span class="album-tracks-musicbrainz-status__mark" aria-hidden="true">MB</span>
-            <span>已匹配</span>
+            <img src="https://musicbrainz.org/static/images/favicons/favicon-32x32.png" alt="" aria-hidden="true">
+            <b>MusicBrainz</b>
+            <span class="album-tracks-musicbrainz-status__divider" aria-hidden="true"></span>
+            <span>已核验</span>
           </span>
         </div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
@@ -1316,30 +1318,27 @@ watch(
 .album-tracks-musicbrainz-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  min-height: 1.25rem;
-  padding: 0.15rem 0.42rem 0.15rem 0.25rem;
-  border: 1px solid #2d2a22;
-  background: #1e1e1e;
-  color: #cfb26f;
-  font-size: 0.72rem;
+  gap: 0.375rem;
+  color: var(--a-text-muted);
+  font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1;
   text-transform: none;
   white-space: nowrap;
 }
-.album-tracks-musicbrainz-status__mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 0.76rem;
-  height: 0.76rem;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  color: #e2cb90;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 0.48rem;
-  font-weight: 700;
+.album-tracks-musicbrainz-status img {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 2px;
+}
+.album-tracks-musicbrainz-status b {
+  color: var(--a-text-secondary);
+  font-weight: 650;
+}
+.album-tracks-musicbrainz-status__divider {
+  width: 1px;
+  height: 0.75rem;
+  background: var(--a-border);
 }
 .track {
   display: grid;

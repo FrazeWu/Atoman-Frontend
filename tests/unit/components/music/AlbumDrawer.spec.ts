@@ -249,9 +249,10 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		const status = wrapper.get('[data-testid="album-tracks-musicbrainz-status"]');
-		expect(status.text()).toContain("MB");
-		expect(status.text()).toContain("已匹配");
+		expect(status.text()).toContain("MusicBrainz");
+		expect(status.text()).toContain("已核验");
 		expect(status.attributes("aria-label")).toBe("MusicBrainz 已匹配");
+		expect(status.get("img").attributes("src")).toBe("https://musicbrainz.org/static/images/favicons/favicon-32x32.png");
 	});
 
 	it("collapses track details by default", async () => {

@@ -6,7 +6,7 @@ import VideoDetailRouteSheet from '@/components/video/VideoDetailRouteSheet.vue'
 
 const PSheetStub = defineComponent({
   name: 'PSheet',
-  props: ['show', 'title', 'side', 'closeType', 'panelClass'],
+  props: ['show', 'title', 'mode', 'partialWidth', 'side', 'closeType', 'panelClass'],
   template: '<section data-testid="sheet" :data-side="side"><slot /></section>',
 })
 
@@ -25,6 +25,8 @@ describe('VideoDetailRouteSheet', () => {
     expect(wrapper.getComponent(PSheetStub).props()).toMatchObject({
       show: true,
       title: '视频详情',
+      mode: 'partial',
+      partialWidth: '75vw',
       closeType: 'header',
       panelClass: 'video-detail-route-sheet',
     })

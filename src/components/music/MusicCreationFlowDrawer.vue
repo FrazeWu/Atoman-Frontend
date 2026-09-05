@@ -649,6 +649,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
             edit_summary: track.lyricsDraft.editSummary,
           },
         } : {}),
+			...(track.lyricsSource ? { lyrics_source: track.lyricsSource } : {}),
       })),
     },
     album_source: albumSource,
@@ -763,6 +764,7 @@ function syncReadyImportToDraft() {
         audioKey: track.audioKey,
         origin: track.origin,
         ...(existing?.lyrics ? { lyrics: existing.lyrics } : {}),
+		...(track.lyricsSource ? { lyricsSource: track.lyricsSource } : {}),
         ...(existing?.lyricsDraft ? { lyricsDraft: existing.lyricsDraft } : track.lyrics ? {
           lyrics: track.lyrics.content,
           lyricsDraft: {

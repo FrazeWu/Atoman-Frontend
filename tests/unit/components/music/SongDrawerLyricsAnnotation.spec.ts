@@ -15,4 +15,11 @@ describe('SongDrawer 歌词注释入口', () => {
     expect(source).toContain('class="song-detail__lyrics-layout"')
     expect(source).toContain('grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem)')
   })
+
+  it('仅为 LRCLIB 自动匹配歌词显示来源与编辑状态', () => {
+    expect(source).toContain("lyrics.value?.source === 'lrclib'")
+    expect(source).toContain('LRCLIB')
+    expect(source).toContain("lyrics.value?.is_edited ? '已编辑' : '已核验'")
+    expect(source).toContain('https://lrclib.net/favicon.ico')
+  })
 })

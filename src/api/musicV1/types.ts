@@ -111,6 +111,7 @@ export type MusicAlbumImportCommitTrack = {
 		language: string;
 		edit_summary: string;
 	};
+	lyrics_source?: "lrclib" | string;
 };
 
 export type MusicAlbumImportCommitMember = {
@@ -1114,6 +1115,8 @@ export type MusicSongLyrics = {
 	translation: string;
 	translation_language?: string;
 	edit_summary: string;
+	source: string;
+	is_edited: boolean;
 	updated_at: string;
 	updated_by?: string;
 	lines: MusicSongLyricsLine[];

@@ -116,6 +116,12 @@ const roleLabels: Record<string, string> = {
   recording_engineer: '录音', mixing_engineer: '混音', mastering_engineer: '母带', remixer: '重混',
 }
 const hasTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
+const lyricsMatchSource = computed(() => lyrics.value?.source === 'lrclib'
+  ? {
+      name: 'LRCLIB',
+      status: lyrics.value?.is_edited ? '已编辑' : '已核验',
+    }
+  : null)
 const activeLyricLineId = computed(() => {
   if (!detail.value || String(player.currentSong?.id ?? '') !== String(detail.value.song.id)) return ''
   const line = currentLyricLine(player.currentTime ?? 0)
@@ -434,7 +440,15 @@ watch(
         </div>
         <section class="song-detail__lyrics">
           <header class="song-detail__lyrics-header">
-            <h2>歌词</h2>
+            <h2 class="song-detail__lyrics-title">
+              歌词
+              <span v-if="lyricsMatchSource" class="song-detail__lyrics-source" :aria-label="`${lyricsMatchSource.name}${lyricsMatchSource.status}`">
+                <img src="https://lrclib.net/favicon.ico" alt="" aria-hidden="true">
+                <b>{{ lyricsMatchSource.name }}</b>
+                <span class="song-detail__lyrics-source-divider" aria-hidden="true"></span>
+                <span>{{ lyricsMatchSource.status }}</span>
+              </span>
+            </h2>
             <div class="song-detail__lyrics-actions">
               <PButton
                 v-if="hasTranslation"
@@ -537,6 +551,11 @@ watch(
 .song-detail__playlist-menu button:hover { background: var(--a-color-surface-muted); }
 .song-detail__lyrics { grid-column: 1 / -1; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
 .song-detail__lyrics-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.song-detail__lyrics-title { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.song-detail__lyrics-source { display: inline-flex; align-items: center; gap: 0.375rem; color: var(--a-text-muted); font-size: 0.6875rem; font-weight: 500; line-height: 1; white-space: nowrap; }
+.song-detail__lyrics-source img { width: 0.875rem; height: 0.875rem; border-radius: 2px; }
+.song-detail__lyrics-source b { color: var(--a-text-secondary); font-weight: 650; }
+.song-detail__lyrics-source-divider { width: 1px; height: 0.75rem; background: var(--a-border); }
 .song-detail__lyrics h2 { margin: 0; font-size: 1rem; }
 .song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 .song-detail__lyrics-layout { min-width: 0; }

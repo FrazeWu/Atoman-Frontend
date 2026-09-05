@@ -37,6 +37,7 @@ export interface MusicCreationTrackDraft {
 	discNumber?: number;
 	lyrics?: string;
 	lyricsDraft?: MusicCreationLyricsDraft;
+	lyricsSource?: string;
 	coverUrl?: string;
 	contributors?: MusicCreationAlbumContributorDraft[];
 }

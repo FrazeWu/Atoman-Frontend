@@ -12,6 +12,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
+import { useMusicSheetNavigation } from '@/composables/useMusicSheetNavigation'
 import {
   createPlaylistBookmark,
   deletePlaylistBookmark,
@@ -33,7 +34,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 
 type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
 const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerActive, isLayerShifted, isTopLayer, openAlbum, openArtist } = useMusicDrawers()
+const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerActive, isLayerShifted, isTopLayer, openAlbum, openArtist, replacePlaylist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
@@ -42,6 +43,7 @@ const playlistId = computed(() => props.layer?.payload.playlistId ?? state.value
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : playlistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useMusicSheetNavigation('playlist', playlistId, replacePlaylist, topLayer)
 const editSheetIndex = computed(() => props.layerIndex + 1)
 const closeCurrentPlaylist = () => closePlaylist(props.layer?.key)
 const playlist = ref<MusicPlaylistDetail | null>(null)
@@ -504,6 +506,11 @@ watch(playlist, syncEditForm, { immediate: true })
     :stack-size="stackSize + (editing ? 1 : 0)"
     :index="layerIndex"
     panel-class="playlist-drawer"
+    :navigation="navigation"
+    :navigation-key="playlistId || ''"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
+    @navigate="navigate"
   >
     <template #header>
       <div class="playlist-header-container">

@@ -55,6 +55,7 @@
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"
       :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < rssEntries.length - 1"
+      :related-articles="relatedArticles"
       @close="showArticleSheet = false"
       @play-podcast="playFeedItemFromSheet"
       @previous="openPreviousArticle"
@@ -130,6 +131,13 @@ const selectedArticleIndex = computed(() => {
   if (!selectedArticle.value?.feed_item?.id) return -1
   return rssEntries.value.findIndex((entry) => entry.target_id === selectedArticle.value?.feed_item?.id)
 })
+
+const relatedArticles = computed<TimelineItem[]>(() => rssEntries.value.map((entry) => ({
+  type: 'feed_item',
+  feed_item: entry.feed_item!,
+  published_at: entry.feed_item!.published_at,
+  is_read: entry.is_read === true,
+})))
 
 const pageRootRef = ref<HTMLElement | null>(null)
 

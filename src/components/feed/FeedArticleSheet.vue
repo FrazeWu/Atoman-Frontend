@@ -10,8 +10,12 @@
     :index="index"
     :ref="presentation === 'page' ? setPageContentAnchor : undefined"
     :class="{ 'feed-article-page': presentation === 'page' }"
+    :navigation="presentation === 'sheet' ? articleNavigation : undefined"
+    :navigation-key="presentation === 'sheet' ? articleKey : undefined"
+    :navigation-direction="navigationDirection"
     @close="$emit('close')"
     @activate="closeComments"
+    @navigate="navigateSheet"
   >
     <template v-if="article && article.type === 'post' && article.post">
       <div class="article-meta">
@@ -413,6 +417,37 @@ const commentSheetTitle = computed(() => {
   return `Feed文章评论-${title}`
 })
 
+const articleKeyFor = (item: TimelineItem) => {
+  if (item.type === 'post') return item.post?.id || ''
+  return item.feed_item?.id || ''
+}
+
+const articleKey = computed(() => (
+  props.article ? articleKeyFor(props.article) : ''
+))
+
+const articleLabel = (item: TimelineItem | undefined) => {
+  if (!item) return ''
+  if (item.type === 'post') return item.post?.title || '文章'
+  return item.feed_item?.title || 'RSS 文章'
+}
+
+const articleNavigation = computed(() => {
+  const index = props.article
+    ? props.relatedArticles.findIndex((item) => articleKeyFor(item) === articleKey.value)
+    : -1
+  return {
+    previous: props.hasPrevious
+      ? { label: articleLabel(index > 0 ? props.relatedArticles[index - 1] : undefined) || '上一项' }
+      : null,
+    next: props.hasNext
+      ? { label: articleLabel(index >= 0 ? props.relatedArticles[index + 1] : undefined) || '下一项' }
+      : null,
+  }
+})
+
+const navigationDirection = ref<'previous' | 'next'>('next')
+
 const isPlayablePodcast = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return false
   return isPlayableFeedPodcast(props.article.feed_item)
@@ -534,12 +569,20 @@ const handleKeydown = (event: KeyboardEvent) => {
   if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable="true"]')) return
   if (event.key === 'ArrowLeft' && props.hasPrevious) {
     event.preventDefault()
+    navigationDirection.value = 'previous'
     emit('previous')
   }
   if (event.key === 'ArrowRight' && props.hasNext) {
     event.preventDefault()
+    navigationDirection.value = 'next'
     emit('next')
   }
+}
+
+const navigateSheet = (direction: 'previous' | 'next') => {
+  navigationDirection.value = direction
+  if (direction === 'previous') emit('previous')
+  else emit('next')
 }
 
 onMounted(() => window.addEventListener('keydown', handleKeydown))

@@ -37,4 +37,16 @@ describe('useBlogSheets', () => {
     expect(sheets.layers.value).toHaveLength(2)
     expect(sheets.top.value?.key).toBe('post:post-2')
   })
+
+  it('replaces the current post without adding a layer', () => {
+    const sheets = useBlogSheets()
+    sheets.openPost('post-1', '文章一')
+    const key = sheets.top.value?.key
+
+    sheets.replacePost('post-2', '文章二')
+
+    expect(sheets.layers.value).toHaveLength(1)
+    expect(sheets.top.value?.key).toBe(key)
+    expect(sheets.top.value?.payload).toEqual({ postId: 'post-2', collectionId: undefined })
+  })
 })

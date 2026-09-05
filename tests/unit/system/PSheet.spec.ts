@@ -60,6 +60,46 @@ describe("PSheet.vue", () => {
 		);
 	});
 
+	it("renders previous and next navigation in the title rail", async () => {
+		const wrapper = mount(PSheet, {
+			props: {
+				show: true,
+				title: "专辑-当前",
+				navigation: {
+					previous: { label: "专辑-上一张" },
+					next: { label: "专辑-下一张" },
+				},
+			},
+		});
+
+		const buttons = wrapper.findAll(".sheet-navigation-button");
+		expect(buttons).toHaveLength(2);
+		expect(buttons[0].attributes("aria-label")).toContain("专辑-上一张");
+		expect(buttons[1].attributes("aria-label")).toContain("专辑-下一张");
+
+		await buttons[0].trigger("click");
+		await buttons[1].trigger("click");
+		expect(wrapper.emitted("navigate")?.map(([direction]) => direction)).toEqual([
+			"previous",
+			"next",
+		]);
+	});
+
+	it("disables navigation at the list boundary", () => {
+		const wrapper = mount(PSheet, {
+			props: {
+				show: true,
+				navigation: {
+					previous: null,
+					next: { label: "下一项" },
+				},
+			},
+		});
+
+		expect(wrapper.get('[data-navigation="previous"]').attributes("disabled")).toBeDefined();
+		expect(wrapper.get('[data-navigation="next"]').attributes("disabled")).toBeUndefined();
+	});
+
 	it("keeps the close control and title centered as one group", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/ui/PSheet.vue"),

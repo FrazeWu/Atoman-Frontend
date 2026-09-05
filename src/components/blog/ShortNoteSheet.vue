@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/auth'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import type { ShortNote } from '@/types'
 import type { ShortNoteLayer } from '@/components/blog/blogSheetTypes'
+import { useBlogSheetNavigation } from '@/composables/useBlogSheetNavigation'
 
 const props = withDefaults(defineProps<{
   layer: ShortNoteLayer
@@ -47,10 +48,13 @@ const lightboxIndex = ref(0)
 const mediaUrls = computed(() => note.value?.media.map(m => resolveMediaURL(m.url)) || [])
 
 const noteId = computed(() => props.layer.payload.noteId)
+const replaceCurrentNote = (id: string) => sheets.replaceShortNote(id, '短笺')
 const interactions = useInteractions('blog', 'short_note', noteId)
 const commentsOpen = ref(false)
 const commentSheetMode = ref<'full' | 'partial'>('partial')
 const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
+const isTopSheet = computed(() => sheets.isTop(props.layer.key) && !commentsBlockParent.value)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('short_note', noteId, replaceCurrentNote, isTopSheet)
 const commentSheetTitle = computed(() => `短笺评论-${note.value?.id || props.layer.title || '未命名'}`)
 
 function openComments() {
@@ -78,6 +82,7 @@ async function loadNote() {
   errorMessage.value = ''
   commentsOpen.value = false
   commentSheetMode.value = 'partial'
+  showLightbox.value = false
   try {
     const res = await apiRequestEnvelope<ShortNote>(api.blog.shortNote(requestedNoteId))
     if (requestSequence !== loadSequence || requestedNoteId !== noteId.value) return
@@ -166,8 +171,13 @@ watch(noteId, () => void loadNote(), { immediate: true })
     :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     reading-mode
     close-type="both"
+    :navigation="navigation"
+    :navigation-key="noteId"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
     @close="sheets.closeLayer(layer.key)"
     @activate="sheets.returnToLayer(layer.key)"
+    @navigate="navigate"
   >
     <div v-if="loading" class="short-note-sheet-loading" aria-label="正在加载短笺">
       <div class="a-skeleton short-note-sheet-skeleton" />

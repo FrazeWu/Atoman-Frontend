@@ -85,14 +85,16 @@ export function createSheetStack<T extends BaseSheetLayer>(
 		renderLayers.value = layers.value;
 	}
 
-	function replaceTop(layer: T) {
+	function replaceTop(layer: T, preserveKey = false) {
 		cancelRenderTransition();
+		const current = top.value;
 		layers.value = [
 			...layers.value.slice(0, -1),
 			{
 				...layer,
+				key: preserveKey && current ? current.key : layer.key,
 				returnFocusTo:
-					layer.returnFocusTo ?? top.value?.returnFocusTo ?? activeElement(),
+					layer.returnFocusTo ?? current?.returnFocusTo ?? activeElement(),
 			},
 		] as T[];
 		renderLayers.value = layers.value;

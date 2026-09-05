@@ -299,6 +299,14 @@ const songLayer = (id: string): MusicSheetLayer => ({
 	payload: { songId: id },
 });
 
+const playlistLayer = (id: string): MusicSheetLayer => ({
+	key: `playlist:${id}`,
+	kind: "playlist",
+	title: "歌单详情",
+	route: `/music/playlist/${id}`,
+	payload: { playlistId: id },
+});
+
 function resolveShortestMusicPath(layer: MusicSheetLayer): MusicSheetLayer[] {
 	if (layer.kind !== "action") return [layer];
 	if (!layer.payload.data || typeof layer.payload.data !== "object")
@@ -420,6 +428,11 @@ export function useMusicDrawers() {
 	const refreshArtist = () => {
 		state.value.artistRefreshToken += 1;
 	};
+	const replaceArtist = (id: string) => {
+		const target = artistLayer(id);
+		if (mobile) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
 
 	const openAlbum = (id: string) => {
 		const target = `/music/album/${encodeURIComponent(id)}`;
@@ -438,6 +451,11 @@ export function useMusicDrawers() {
 	) => closeLayerAndAbove(key);
 	const refreshAlbum = () => {
 		state.value.albumRefreshToken += 1;
+	};
+	const replaceAlbum = (id: string) => {
+		const target = albumLayer(id);
+		if (mobile) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
 	};
 	const refreshSong = () => {
 		state.value.songRefreshToken += 1;
@@ -458,31 +476,30 @@ export function useMusicDrawers() {
 			.reverse()
 			.find((layer) => layer.kind === "song")?.key ?? "",
 	) => closeLayerAndAbove(key);
+	const replaceSong = (id: string) => {
+		const target = songLayer(id);
+		if (mobile) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
 
 	const openPlaylist = (id: string) => {
 		const target = `/music/playlist/${encodeURIComponent(id)}`;
+		const layer = playlistLayer(id);
 		if (mobile) {
 			if (router.currentRoute.value.path === target)
-				sheetStack.push({
-					key: `playlist:${id}`,
-					kind: "playlist",
-					title: "歌单详情",
-					route: target,
-					payload: { playlistId: id },
-				});
+				sheetStack.push(layer);
 			else void router.push(target);
 			return;
 		}
-		sheetStack.push({
-			key: `playlist:${id}`,
-			kind: "playlist",
-			title: "歌单详情",
-			route: `/music/playlist/${id}`,
-			payload: { playlistId: id },
-		});
+		sheetStack.push(layer);
 	};
 	const closePlaylist = (key = sheetStack.top.value?.key ?? "") =>
 		closeLayerAndAbove(key);
+	const replacePlaylist = (id: string) => {
+		const target = playlistLayer(id);
+		if (mobile) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
 	const refreshPlaylists = () => {
 		state.value.playlistRefreshToken += 1;
 	};
@@ -783,14 +800,18 @@ export function useMusicDrawers() {
 		openArtist,
 		closeArtist,
 		refreshArtist,
+		replaceArtist,
 		openAlbum,
 		closeAlbum,
 		refreshAlbum,
+		replaceAlbum,
 		refreshSong,
 		openSong,
 		closeSong,
+		replaceSong,
 		openPlaylist,
 		closePlaylist,
+		replacePlaylist,
 		refreshPlaylists,
 		openNestedAction,
 		closeNestedAction,

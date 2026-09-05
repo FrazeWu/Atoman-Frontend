@@ -15,6 +15,7 @@ import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vu
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
+import { useMusicSheetNavigation } from '@/composables/useMusicSheetNavigation'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -37,13 +38,14 @@ import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openSong, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openSong, replaceArtist, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : artistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useMusicSheetNavigation('artist', artistId, replaceArtist, topLayer)
 const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)
 const displayName = computed(() => artist.value?.display_name || artist.value?.name || '')
@@ -444,6 +446,11 @@ watch([releaseType, albumSortMode], () => {
     :layer-index="layerIndex"
     :stack-size="stackSize"
     :index="layerIndex"
+    :navigation="navigation"
+    :navigation-key="artistId || ''"
+    :navigation-direction="navigationDirection"
+    :navigation-loading="navigationLoading"
+    @navigate="navigate"
   >
     <template #header>
       <div class="drawer-header-content">

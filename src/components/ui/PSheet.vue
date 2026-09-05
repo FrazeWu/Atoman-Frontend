@@ -82,6 +82,33 @@
               <span v-else class="sheet-layer-title" :title="railTitle" aria-hidden="true">
                 <span>{{ railTitle }}</span>
               </span>
+
+              <div v-if="navigation" class="sheet-navigation" aria-label="切换内容">
+                <button
+                  class="sheet-navigation-button"
+                  data-navigation="previous"
+                  type="button"
+                  :disabled="!isTopLayer || !navigation.previous || navigationLoading"
+                  :aria-label="navigation.previous ? `上一项：${navigation.previous.label}` : '没有上一项'"
+                  :title="navigation.previous ? `上一项：${navigation.previous.label}` : '没有上一项'"
+                  @click="emit('navigate', 'previous')"
+                >
+                  <ChevronUp :size="18" aria-hidden="true" />
+                  <span v-if="navigation.previous" class="sheet-navigation-preview">{{ navigation.previous.label }}</span>
+                </button>
+                <button
+                  class="sheet-navigation-button"
+                  data-navigation="next"
+                  type="button"
+                  :disabled="!isTopLayer || !navigation.next || navigationLoading"
+                  :aria-label="navigation.next ? `下一项：${navigation.next.label}` : '没有下一项'"
+                  :title="navigation.next ? `下一项：${navigation.next.label}` : '没有下一项'"
+                  @click="emit('navigate', 'next')"
+                >
+                  <ChevronDown :size="18" aria-hidden="true" />
+                  <span v-if="navigation.next" class="sheet-navigation-preview">{{ navigation.next.label }}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -119,16 +146,19 @@
             :aria-hidden="isTopLayer ? undefined : 'true'"
             :inert="isTopLayer ? undefined : true"
           >
-            <div
-              data-p-sheet-content
-              :class="{ 'sheet-content-inner': readingMode || contentMaxWidth }"
-              :style="contentMaxWidth ? { maxWidth: contentMaxWidth } : undefined"
-            >
-              <div v-if="slots.header" class="sheet-content-header-inline">
-                <slot name="header" />
+            <Transition :name="contentTransitionName" mode="out-in">
+              <div
+                :key="navigationKey || 'sheet-content'"
+                data-p-sheet-content
+                :class="{ 'sheet-content-inner': readingMode || contentMaxWidth }"
+                :style="contentMaxWidth ? { maxWidth: contentMaxWidth } : undefined"
+              >
+                <div v-if="slots.header" class="sheet-content-header-inline">
+                  <slot name="header" />
+                </div>
+                <slot />
               </div>
-              <slot />
-            </div>
+            </Transition>
           </div>
         </div>
       </Transition>
@@ -139,7 +169,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, provide, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
-import { IconX as X, IconChevronLeft as ChevronLeft } from '@tabler/icons-vue'
+import { IconX as X, IconChevronLeft as ChevronLeft, IconChevronUp as ChevronUp, IconChevronDown as ChevronDown } from '@tabler/icons-vue'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useSheetStore } from '@/stores/sheet'
@@ -173,6 +203,13 @@ const props = withDefaults(defineProps<{
   abovePlayer?: boolean
   teleport?: boolean
   focusOnOpen?: boolean
+  navigation?: {
+    previous?: { label: string } | null
+    next?: { label: string } | null
+  }
+  navigationLoading?: boolean
+  navigationKey?: string
+  navigationDirection?: 'previous' | 'next'
 }>(), {
   title: '',
   mode: 'full',
@@ -191,12 +228,16 @@ const props = withDefaults(defineProps<{
   abovePlayer: false,
   teleport: true,
   focusOnOpen: true,
+  navigationLoading: false,
+  navigationKey: '',
+  navigationDirection: 'next',
 })
 
 const emit = defineEmits<{
   (event: 'close'): void
   (event: 'activate'): void
   (event: 'mode-change', mode: 'full' | 'partial'): void
+  (event: 'navigate', direction: 'previous' | 'next'): void
 }>()
 
 const slots = useSlots()
@@ -254,6 +295,12 @@ const transitionName = computed(() => {
   if (props.side === 'bottom') return 'slide-up'
   return 'slide-right'
 })
+
+const contentTransitionName = computed(() => (
+  props.navigationDirection === 'previous'
+    ? 'sheet-content-navigation-previous'
+    : 'sheet-content-navigation-next'
+))
 
 const sheetIndex = computed(() => {
   if (props.index !== undefined) {
@@ -634,6 +681,70 @@ const sheetStyle = computed(() => {
   outline: none;
 }
 
+.sheet-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.sheet-navigation-button {
+  position: relative;
+  display: flex;
+  width: 44px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  opacity: 0.72;
+  transition: color var(--a-motion-state), opacity var(--a-motion-state);
+}
+
+.sheet-navigation-button:hover:not(:disabled),
+.sheet-navigation-button:focus-visible:not(:disabled) {
+  color: var(--a-color-fg);
+  opacity: 1;
+  outline: none;
+}
+
+.sheet-navigation-button:disabled {
+  cursor: default;
+  opacity: 0.22;
+}
+
+.sheet-navigation-preview {
+  position: absolute;
+  left: 2.75rem;
+  top: 50%;
+  z-index: 2;
+  width: max-content;
+  max-width: 12rem;
+  padding: 0.35rem 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: #ffffff;
+  color: var(--a-color-fg);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%) translateX(-0.25rem);
+  transition: opacity var(--a-motion-state), transform var(--a-motion-state);
+}
+
+.sheet-navigation-button:hover .sheet-navigation-preview,
+.sheet-navigation-button:focus-visible .sheet-navigation-preview {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
 .is-right .sheet-content--has-bookmark-close {
   padding-left: 6.5rem;
 }
@@ -696,6 +807,35 @@ const sheetStyle = computed(() => {
   max-width: 720px;
   margin: 0 auto;
   align-self: center;
+}
+
+.sheet-content-navigation-next-enter-active,
+.sheet-content-navigation-next-leave-active,
+.sheet-content-navigation-previous-enter-active,
+.sheet-content-navigation-previous-leave-active {
+  transition: opacity var(--a-motion-navigation) var(--a-motion-ease-enter),
+    transform var(--a-motion-navigation) var(--a-motion-ease-enter);
+  will-change: opacity, transform;
+}
+
+.sheet-content-navigation-next-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.sheet-content-navigation-next-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.sheet-content-navigation-previous-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.sheet-content-navigation-previous-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .hide-scrollbar {

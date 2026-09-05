@@ -135,6 +135,7 @@ describe("SubscriptionHubSidebarTree", () => {
     expect(wrapper.text()).not.toContain("关注频道");
     expect(wrapper.text()).not.toContain("博客分组");
     expect(wrapper.text()).not.toContain("RSS 分组");
+    expect(wrapper.findAll(".subscription-hub-sidebar__all")).toHaveLength(0);
     expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(
       4,
     );
@@ -178,27 +179,15 @@ describe("SubscriptionHubSidebarTree", () => {
     ]);
   });
 
-  it("selects all updates for a fixed module and does not render the type layer", async () => {
+  it("renders only source rows for a fixed module", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: { tree, fixedType: "video", activeType: "video" },
     });
 
-    expect(
-      wrapper.get('[data-testid="subscription-hub-all-video"]').text(),
-    ).toContain("全部更新");
-    expect(
-      wrapper.find('[data-testid="subscription-hub-type-video"]').exists(),
-    ).toBe(false);
+    expect(wrapper.findAll(".subscription-hub-sidebar__all")).toHaveLength(0);
     expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(
       1,
     );
-
-    await wrapper
-      .get('[data-testid="subscription-hub-all-video"]')
-      .trigger("click");
-    expect(wrapper.emitted("select-context")).toEqual([
-      [{ subscriptionType: "video" }],
-    ]);
   });
 
   it("keeps an empty fixed module out of the layout", () => {

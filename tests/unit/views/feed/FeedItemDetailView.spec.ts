@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import FeedItemDetailView from "@/views/feed/FeedItemDetailView.vue";
+import { feedArticleRouteState } from "@/composables/feed/feedArticleRouteState";
 import { useAuthStore } from "@/stores/auth";
 import { useFeedStore } from "@/stores/feed";
 
@@ -169,5 +170,82 @@ describe("FeedItemDetailView", () => {
     expect(router.currentRoute.value.fullPath).toBe(
       "/login?redirect=/feed/item/feed-item-1",
     );
+  });
+
+  it("在当前详情 Sheet 内替换相邻文章而不新增页面历史", async () => {
+    const articleOne = {
+      type: "feed_item" as const,
+      published_at: "2026-08-28T00:00:00Z",
+      is_read: true,
+      feed_item: {
+        id: "feed-item-1",
+        feed_source_id: "source-1",
+        feed_source: { id: "source-1", title: "RSS Source" },
+        title: "第一篇文章",
+        published_at: "2026-08-28T00:00:00Z",
+      },
+    };
+    const articleTwo = {
+      ...articleOne,
+      feed_item: {
+        ...articleOne.feed_item,
+        id: "feed-item-2",
+        title: "第二篇文章",
+      },
+    };
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      const item = url.includes("feed-item-2") ? articleTwo.feed_item : articleOne.feed_item;
+      return response({ item, reader: {} });
+    });
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/feed/item/:id", component: FeedItemDetailView }],
+    });
+    const initialRouteState = feedArticleRouteState({
+      article: articleOne,
+      articles: [articleOne, articleTwo],
+      source: null,
+      sourceArticles: [],
+    });
+    await router.push({
+      path: "/feed/item/feed-item-1",
+      state: initialRouteState,
+    });
+    window.history.replaceState({ ...window.history.state, ...initialRouteState }, "", "/feed/item/feed-item-1");
+    await router.isReady();
+    const replaceSpy = vi.spyOn(router, "replace");
+
+    const wrapper = mount(FeedItemDetailView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          FeedArticleSheet: {
+            props: ["show", "article", "hasNext"],
+            template: `
+              <section v-if="show">
+                <h1 data-test="article-title">{{ article?.feed_item?.title }}</h1>
+                <button v-if="hasNext" data-test="next" @click="$emit('next')">下一篇</button>
+              </section>
+            `,
+          },
+          FeedSourceArticlesSheet: true,
+          PEmpty: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-test="next"]').trigger("click");
+    await flushPromises();
+
+    expect(replaceSpy).toHaveBeenCalledWith(expect.objectContaining({
+      path: "/feed/item/feed-item-2",
+    }));
+    expect(router.currentRoute.value.path).toBe("/feed/item/feed-item-2");
+    expect(wrapper.get('[data-test="article-title"]').text()).toBe("第二篇文章");
+    wrapper.unmount();
   });
 });

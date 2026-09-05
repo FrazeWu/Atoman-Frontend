@@ -81,14 +81,19 @@ export function useFeedArticleBrowser({
 		})();
 	};
 
-	const openArticleSheet = (item: TimelineItem, index?: number) => {
+	const openArticleSheet = (
+		item: TimelineItem,
+		index?: number,
+		options: { replaceRoute?: boolean } = {},
+	) => {
 		if (index !== undefined) focusedIndex.value = index;
 		if (!item.post && !item.feed_item) return;
 
 		if (item.type === "feed_item" && item.feed_item) {
 			selectedArticle.value = item;
 			showArticleSheet.value = true;
-			void router.push({
+			const navigate = options.replaceRoute ? router.replace : router.push;
+			void navigate({
 				path: `/feed/item/${item.feed_item.id}`,
 				state: feedArticleRouteState({
 					article: item,
@@ -115,7 +120,7 @@ export function useFeedArticleBrowser({
 		if (selectedArticleIndex.value <= 0) return;
 		const nextItem = visibleTimeline.value[selectedArticleIndex.value - 1];
 		if (!nextItem) return;
-		openArticleSheet(nextItem, selectedArticleIndex.value - 1);
+		openArticleSheet(nextItem, selectedArticleIndex.value - 1, { replaceRoute: true });
 	};
 
 	const openNextArticle = () => {
@@ -126,7 +131,7 @@ export function useFeedArticleBrowser({
 			return;
 		const nextItem = visibleTimeline.value[selectedArticleIndex.value + 1];
 		if (!nextItem) return;
-		openArticleSheet(nextItem, selectedArticleIndex.value + 1);
+		openArticleSheet(nextItem, selectedArticleIndex.value + 1, { replaceRoute: true });
 	};
 
 	const openSourceArticle = (item: TimelineItem) => {

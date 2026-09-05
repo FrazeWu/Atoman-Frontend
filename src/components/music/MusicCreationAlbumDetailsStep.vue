@@ -35,6 +35,7 @@ const detailsDescriptionPlaceholder = computed(() => standaloneTypeSelected.valu
 const showsTrackList = computed(() => !standaloneTypeSelected.value || (creationFlow.value?.draft.tracks.length ?? 0) !== 1 || isEditMode.value)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
+const importMetadataMatched = computed(() => !isEditMode.value && albumImportDraft.value?.metadataMatched === true)
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
@@ -538,6 +539,7 @@ watch(
           <div class="track-adjustment__header-title">
             <span class="field-label">曲目列表</span>
             <p class="track-adjustment__count" data-testid="album-details-track-count">{{ orderedTracks.length }} 首</p>
+            <span v-if="importMetadataMatched" class="track-adjustment__matched" data-testid="album-details-matched-status">已匹配 MusicBrainz</span>
           </div>
           <input
             ref="trackAudioInputRef"
@@ -968,6 +970,12 @@ watch(
   color: var(--a-color-muted);
   font-size: 0.82rem;
   font-weight: 600;
+}
+
+.track-adjustment__matched {
+  color: var(--a-color-success, #16803c);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .track-adjustment__add-btn {

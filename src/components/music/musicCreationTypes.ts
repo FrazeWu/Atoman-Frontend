@@ -127,6 +127,7 @@ export interface MusicCreationAlbumImportDraft {
 	derivedReleaseDate?: string;
 	derivedAlbumType?: string;
 	metadataSourceUrl?: string;
+	metadataMatched?: boolean;
 	missingArtists?: string[];
 	lastSyncedAt: string;
 	errorMessage: string;

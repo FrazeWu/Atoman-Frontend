@@ -78,6 +78,18 @@ export type MusicAlbumImportTrack = {
 	lyricsSource?: "local" | "lrclib" | string;
 };
 
+export type MusicAlbumImportMetadataPreview = {
+	matched: boolean;
+	sourceUrl: string;
+	tracks: MusicAlbumImportTrack[];
+};
+
+export type MusicAlbumImportMetadataPreviewInput = {
+	albumTitle: string;
+	artist: string;
+	trackTitles: string[];
+};
+
 export type MusicAlbumImportCommitStageName = {
 	name: string;
 	is_primary: boolean;

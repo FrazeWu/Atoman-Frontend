@@ -151,6 +151,8 @@ export const musicV1Endpoints = {
 	albumDiscussionReply: (_albumId: string, discussionId: string) =>
 		`${apiV1Base()}/comments/${discussionId}`,
 	albumImports: () => `${apiV1Base()}/music/imports/albums`,
+	albumImportMetadataPreview: () =>
+		`${apiV1Base()}/music/imports/albums/metadata-preview`,
 	albumImport: (importId: string) =>
 		`${apiV1Base()}/music/imports/albums/${importId}`,
 	albumImportArchive: (importId: string) =>

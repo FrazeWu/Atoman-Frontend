@@ -8,6 +8,7 @@ import MusicCreationAlbumDetailsStep from "../../../../src/components/music/Musi
 // @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
 import MusicCreationAlbumUploadZone from "../../../../src/components/music/MusicCreationAlbumUploadZone.vue";
 import * as musicApi from "../../../../src/api/musicV1";
+import * as musicImportPreview from "../../../../src/utils/musicImportPreview";
 import { useMusicDrawers } from "../../../../src/composables/useMusicDrawers";
 import { useAlbumImportUpload } from "../../../../src/composables/useAlbumImportUpload";
 
@@ -115,6 +116,61 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(
 			wrapper.get('[data-testid="album-details-bio-input"]').element,
 		).toHaveProperty("value", "Seed description");
+	});
+
+	it("在曲目列表旁显示已匹配状态", () => {
+		const flow = useMusicDrawers().state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumImport.metadataMatched = true;
+		flow.draft.tracks = [{
+			id: "preview-track-1",
+			sequence: 1,
+			discNumber: 1,
+			title: "IGOR'S THEME",
+			origin: "local_preview",
+		}];
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+
+		expect(wrapper.get('[data-testid="album-import-matched-status"]').text()).toContain("已匹配");
+	});
+
+	it("本地预览匹配成功后按匹配曲序显示曲目", async () => {
+		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
+		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
+			title: "IGOR",
+			tracks: ["EARFQUAKE", "IGOR'S THEME"],
+		});
+		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
+			matched: true,
+			sourceUrl: "https://musicbrainz.org/release/igor-release",
+			tracks: [
+				{ title: "IGOR'S THEME", audioKey: "", origin: "local_preview:2", trackNumber: 1 },
+				{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 2 },
+			],
+		});
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
+			inputMode: "archive",
+			files: [importFile({ role: "archive", fileName: archive.name, relativePath: archive.name, detectedFormat: "zip" })],
+		}));
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(snapshot({ status: "queued", inputMode: "archive" }));
+
+		const files = { 0: archive, length: 1, item: () => archive } as unknown as FileList;
+		await useAlbumImportUpload().handleFilesUpload(files);
+		await vi.waitFor(() => {
+			expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith({
+				albumTitle: "IGOR",
+				artist: "",
+				trackTitles: ["EARFQUAKE", "IGOR'S THEME"],
+			});
+		});
+
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		expect(flow.draft.albumImport.metadataMatched).toBe(true);
+		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["IGOR'S THEME", "EARFQUAKE"]);
+		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
 	});
 
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {

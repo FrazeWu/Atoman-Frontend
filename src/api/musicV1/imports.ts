@@ -32,6 +32,8 @@ import {
 	type MusicAlbumImportMultipartPart,
 	type MusicListResponse,
 	type MusicAlbumImportMultipartPartUpload,
+	type MusicAlbumImportMetadataPreview,
+	type MusicAlbumImportMetadataPreviewInput,
 	type MusicRevisionSummary,
 	type MusicReleaseConversionInput,
 	type MusicReleaseConversionResult,
@@ -443,6 +445,15 @@ export async function createMusicAlbumImport(
 ): Promise<MusicAlbumImport> {
 	return normalizeMusicAlbumImport(
 		await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImports(), input),
+	);
+}
+
+export async function previewMusicAlbumImportMetadata(
+	input: MusicAlbumImportMetadataPreviewInput,
+): Promise<MusicAlbumImportMetadataPreview> {
+	return apiPostJson<MusicAlbumImportMetadataPreview>(
+		musicV1Endpoints.albumImportMetadataPreview(),
+		input,
 	);
 }
 

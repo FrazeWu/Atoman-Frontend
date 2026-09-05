@@ -154,6 +154,19 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		createWrapper.unmount();
 	});
 
+	it("在创建流程的曲目列表旁显示预匹配状态", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumImport.metadataMatched = true;
+		flow.draft.tracks = [{ id: "track-1", sequence: 1, title: "IGOR'S THEME" }];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+
+		expect(wrapper.get('[data-testid="album-details-matched-status"]').text()).toContain("已匹配");
+	});
+
 	it("keeps text editing separate from drag sorting", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

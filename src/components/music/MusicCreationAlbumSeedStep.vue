@@ -111,6 +111,11 @@ async function onCoverChange(event: Event) {
           <div>
             <p class="card-kicker">曲目整理</p>
           </div>
+          <span
+            v-if="albumImportDraft.metadataMatched"
+            class="metadata-match-status"
+            data-testid="album-import-matched-status"
+          >已匹配 MusicBrainz</span>
           <button
             data-testid="album-import-add-track-button"
             type="button"
@@ -723,5 +728,12 @@ async function onCoverChange(event: Event) {
 
 .import-file-action--danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, var(--a-color-bg));
+}
+
+.metadata-match-status {
+  margin-left: auto;
+  color: var(--a-color-success, #16803c);
+  font-size: 12px;
+  font-weight: 600;
 }
 </style>

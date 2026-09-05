@@ -14,9 +14,11 @@ import {
 	replaceMusicAlbumImportFile,
 	deleteMusicAlbumImportFile,
 	cancelMusicAlbumImportSession,
+	previewMusicAlbumImportMetadata,
 	type MusicAlbumImport,
 	type MusicAlbumImportFile,
 	type MusicAlbumImportInputMode,
+	type MusicAlbumImportTrack,
 } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { runMultipartUpload } from "@/api/multipartUpload";
@@ -539,6 +541,14 @@ export function useAlbumImportUpload() {
 		draft.totalBytesTotal = files.reduce((sum, file) => sum + file.size, 0);
 		draft.uploadSpeed = 0;
 		uploadState.uploadStartedAt = Date.now();
+		const artistName =
+			flow.draft.artist.stageNames
+				.find((item) => item.isPrimary && item.name.trim())
+				?.name.trim() ||
+			flow.draft.artist.stageNames
+				.find((item) => item.name.trim())
+				?.name.trim() ||
+			flow.draft.artist.legalName.trim();
 
 		const previewFile = isArchive
 			? files[0]
@@ -551,25 +561,43 @@ export function useAlbumImportUpload() {
 				);
 		if (previewFile) {
 			void readAlbumImportPreview(previewFile)
-				.then((preview) => {
+				.then(async (preview) => {
 					if (!isCurrent()) return;
 					if (files.length === 1) {
-						draft.derivedAlbumTitle = preview.title;
-						draft.derivedTracks = preview.tracks.map((title) => ({
+						const localTracks: MusicAlbumImportTrack[] = preview.tracks.map((title, index) => ({
 							title,
 							audioKey: "",
-							origin: "local_preview",
+							origin: `local_preview:${index + 1}`,
 						}));
+						let matchedTracks = localTracks;
+						draft.metadataMatched = false;
+						try {
+							const matched = await previewMusicAlbumImportMetadata({
+								albumTitle: preview.title,
+								artist: preview.artist || artistName,
+								trackTitles: preview.tracks,
+							});
+							if (matched.matched && matched.tracks.length > 0) {
+								matchedTracks = matched.tracks;
+								draft.metadataMatched = true;
+								draft.metadataSourceUrl = matched.sourceUrl;
+							}
+						} catch {
+							// 匹配服务不可用时保持本地预览，不阻塞上传。
+						}
+						if (!isCurrent()) return;
+						draft.derivedAlbumTitle = preview.title;
+						draft.derivedTracks = matchedTracks;
 						if (!flow.titleCustomized) {
 							flow.draft.albumDetails.title = preview.title;
 						}
-						if (!flow.tracksCustomized && preview.tracks.length > 0) {
-							flow.draft.tracks = preview.tracks.map((title, index) => ({
+						if (!flow.tracksCustomized && matchedTracks.length > 0) {
+							flow.draft.tracks = matchedTracks.map((track, index) => ({
 								id: `preview-track-${index + 1}`,
-								sequence: index + 1,
-								discNumber: 1,
-								title,
-								origin: "local_preview",
+								sequence: track.trackNumber ?? index + 1,
+								discNumber: track.discNumber ?? 1,
+								title: track.title,
+								origin: track.origin,
 							}));
 						}
 					}
@@ -583,14 +611,6 @@ export function useAlbumImportUpload() {
 		}
 
 		try {
-			const artistName =
-				flow.draft.artist.stageNames
-					.find((item) => item.isPrimary && item.name.trim())
-					?.name.trim() ||
-				flow.draft.artist.stageNames
-					.find((item) => item.name.trim())
-					?.name.trim() ||
-				flow.draft.artist.legalName.trim();
 			const session = await createMusicAlbumImport({
 				artistId: flow.draft.artist.id,
 				...(artistName ? { artistName } : {}),

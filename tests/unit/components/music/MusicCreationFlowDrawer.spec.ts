@@ -1810,11 +1810,12 @@ describe("MusicCreationFlowDrawer", () => {
 					title: "Dragged Album",
 				},
 				tracks: [
-					{ id: "track-9", songId: "song-outro", sequence: 9, title: "Outro" },
-					{ id: "track-3", songId: "song-intro", sequence: 3, title: "Intro" },
+					{ id: "track-9", songId: "song-outro", audioKey: "audio-outro", sequence: 9, title: "Outro" },
+					{ id: "track-3", songId: "song-intro", audioKey: "audio-intro", sequence: 3, title: "Intro" },
 					{
 						id: "track-5",
 						songId: "song-middle",
+						audioKey: "audio-middle",
 						sequence: 5,
 						title: "Middle",
 					},
@@ -1842,18 +1843,21 @@ describe("MusicCreationFlowDrawer", () => {
 					tracks: [
 						{
 							song_id: "song-outro",
+							audio_key: "audio-outro",
 							title: "Outro",
 							disc_number: 1,
 							track_number: 1,
 						},
 						{
 							song_id: "song-intro",
+							audio_key: "audio-intro",
 							title: "Intro",
 							disc_number: 1,
 							track_number: 2,
 						},
 						{
 							song_id: "song-middle",
+							audio_key: "audio-middle",
 							title: "Middle",
 							disc_number: 1,
 							track_number: 3,

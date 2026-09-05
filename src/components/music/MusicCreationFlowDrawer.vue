@@ -636,6 +636,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       release_year: derivedReleaseYear || 0,
 		tracks: flow.draft.tracks.map((track, index) => ({
 			...(track.songId ? { song_id: track.songId } : {}),
+			...(track.audioKey ? { audio_key: track.audioKey } : {}),
 			title: isStandaloneSong ? flow.draft.albumDetails.title.trim() : track.title.trim(),
 			disc_number: track.discNumber ?? 1,
 			track_number: trackNumberWithinDisc(flow.draft.tracks, index),

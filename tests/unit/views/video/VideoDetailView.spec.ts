@@ -98,7 +98,7 @@ const PBookmarkButtonStub = defineComponent({
 	name: "PBookmarkButton",
 	props: ["bookmarked", "disabled"],
 	emits: ["bookmark", "unbookmark"],
-	template: '<button type="button" data-test="video-bookmark" />',
+	template: '<button type="button" data-test="video-bookmark" @click="$emit(\'bookmark\')" />',
 });
 
 function deferred<T>() {
@@ -154,7 +154,10 @@ async function mountVideoDetail(
 
 	const router = createRouter({
 		history: createMemoryHistory(),
-		routes: [{ path: "/videos/watch/:id", component: VideoDetailView }],
+		routes: [
+			{ path: "/videos/watch/:id", component: VideoDetailView },
+			{ path: "/channels/:slug", component: { template: "<div />" } },
+		],
 	});
 	await router.push(path);
 	await router.isReady();
@@ -233,13 +236,29 @@ describe("VideoDetailView shared interactions", () => {
 		expect(comments.props("noun")).toBe("评论");
 	});
 
+	it("收藏失败时给出可见反馈", async () => {
+		const { wrapper } = await mountVideoDetail();
+
+		await wrapper.get('[data-test="video-bookmark"]').trigger("click");
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("收藏失败，请稍后再试");
+	});
+
 	it("在当前视频信息之后展示推荐视频", async () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async (input: RequestInfo | URL) => {
 				const url = String(input);
+				if (url.endsWith("/feed/subscribe/channel/channel-1/status")) {
+					return makeJsonResponse({ subscribed: false });
+				}
 				if (url.endsWith("/videos/video-1")) {
-					return makeJsonResponse(makeVideo("video-1", "当前视频", { description: "当前视频简介" }));
+					return makeJsonResponse(makeVideo("video-1", "当前视频", {
+						description: "当前视频简介",
+						channel: { id: "channel-1", name: "视频频道", slug: "main" },
+						user: { username: "author", avatar_url: "https://assets.test/author.jpg" },
+					}));
 				}
 				if (url.endsWith("/videos/video-1/recommended")) {
 					return makeJsonResponse([makeVideo("video-2", "推荐视频")]);
@@ -251,8 +270,14 @@ describe("VideoDetailView shared interactions", () => {
 		const { wrapper } = await mountVideoDetail();
 		const markup = wrapper.html();
 
-		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-rating-control"'));
-		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
+		expect(markup.indexOf('class="vd-title"')).toBeLessThan(markup.indexOf('class="vd-player-shell"'));
+		expect(markup.indexOf('class="vd-player-shell"')).toBeLessThan(markup.indexOf('class="vd-channel-info"'));
+		expect(markup.indexOf('class="vd-channel-info"')).toBeLessThan(markup.indexOf('data-test="video-rating-control"'));
+		expect(markup.indexOf('data-test="video-rating-control"')).toBeLessThan(markup.indexOf('data-testid="video-comments"'));
+		expect(markup.indexOf('data-testid="video-comments"')).toBeLessThan(markup.indexOf('data-testid="video-description"'));
+		expect(markup.indexOf('data-testid="video-description"')).toBeLessThan(markup.indexOf('data-test="video-recommendations"'));
+		expect(wrapper.get('.vd-author').attributes('href')).toBe('/channels/main');
+		expect(wrapper.get('.vd-author-avatar img').attributes('src')).toBe('https://assets.test/author.jpg');
 	});
 
 	it("游客打开视频时不发送需要登录的消费事件", async () => {
@@ -679,6 +704,21 @@ describe("VideoDetailView shared interactions", () => {
 			"/api/v1/videos/video-1/share",
 			expect.objectContaining({ method: "POST" }),
 		);
+	});
+
+	it("分享回退到复制链接时给出完成反馈", async () => {
+		Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+		Object.defineProperty(navigator, "clipboard", {
+			configurable: true,
+			value: { writeText: vi.fn().mockResolvedValue(undefined) },
+		});
+
+		const { wrapper } = await mountVideoDetail();
+		await wrapper.get('[data-testid="video-share"]').trigger("click");
+		await flushPromises();
+
+		expect(navigator.clipboard.writeText).toHaveBeenCalledWith(window.location.href);
+		expect(wrapper.text()).toContain("链接已复制");
 	});
 
 	it("路由 id 快速切换时忽略过期详情响应", async () => {

@@ -146,9 +146,9 @@ describe("SubscriptionHubSidebarTree", () => {
     const sources = wrapper.findAll(".subscription-hub-sidebar__source");
 
     expect(sources.map((source) => source.text())).toEqual([
-      expect.stringContaining("播客原子谈话3"),
-      expect.stringContaining("账号视频频道2"),
-      expect.stringContaining("频道博客作者0"),
+      expect.stringContaining("频道原子谈话3"),
+      expect.stringContaining("频道视频频道2"),
+      expect.stringContaining("合集博客作者0"),
       expect.stringContaining("RSS某个 RSS7"),
     ]);
     expect(

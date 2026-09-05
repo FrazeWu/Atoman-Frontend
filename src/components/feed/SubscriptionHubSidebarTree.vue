@@ -58,7 +58,7 @@
               })
             "
           >
-          <span>{{ sourceType(row.membership, row.subscriptionType) }}</span
+          <span>{{ sourceType(row.membership) }}</span
             ><PAvatar
             :src="avatar(row.membership)"
             :name="title(row.membership)"
@@ -147,17 +147,12 @@ const avatar = (item: SubscriptionHubMembership) =>
     ? buildSourceFaviconURL(item.feed_source.rss_url)
     : "");
 const unread = (item: SubscriptionHubMembership) => item.unread_count ?? 0;
-const sourceType = (
-  item: SubscriptionHubMembership,
-  type: SubscriptionHubType,
-) =>
-  type === "podcast"
-    ? "播客"
-    : item.feed_source?.source_type === "internal_user"
-      ? "账号"
-      : item.feed_source?.source_type === "external_rss"
-        ? "RSS"
-        : "频道";
+const sourceType = (item: SubscriptionHubMembership) =>
+  item.feed_source?.source_type === "external_rss"
+    ? "RSS"
+    : item.feed_source?.source_type === "internal_collection"
+      ? "合集"
+      : "频道";
 const updateScrollProgress = () => {
   const el = sidebarRef.value;
   if (el)

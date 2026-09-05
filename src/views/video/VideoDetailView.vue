@@ -542,10 +542,10 @@ async function toggleChannelSubscription() {
     <div v-else-if="error" class="vd-error">{{ error }}</div>
 
     <div v-else-if="video" :class="['vd-layout', { 'vd-layout--theater': theaterMode }]">
-      <div ref="videoContentAnchor" class="vd-main">
+      <div ref="videoContentAnchor" class="vd-main vd-main--compact">
       <h1 class="vd-title">{{ video.title }}</h1>
       <PVideoPlayerShell
-        class="vd-player-shell vd-player-shell--compact"
+        class="vd-player-shell"
         :video="video"
         :current-time="currentPlaybackTime"
         :theater-mode="theaterMode"
@@ -791,6 +791,8 @@ async function toggleChannelSubscription() {
   gap: 1.25rem;
 }
 
+.vd-main--compact { width: 75%; }
+
 .vd-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
@@ -810,7 +812,6 @@ async function toggleChannelSubscription() {
 
 .vd-title { grid-row: 1; }
 .vd-player-shell { grid-row: 2; }
-.vd-player-shell--compact { width: 75%; }
 .vd-playlist {
   position: sticky;
   top: calc(3.5rem + 1.5rem);
@@ -1136,7 +1137,7 @@ async function toggleChannelSubscription() {
     grid-row: auto;
   }
   .vd-action-row { width: 100%; margin-left: 0; }
-  .vd-player-shell--compact { width: 100%; }
+  .vd-main--compact { width: 100%; }
   .vd-comment-action { margin-left: auto; }
 }
 

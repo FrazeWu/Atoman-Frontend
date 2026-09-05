@@ -236,6 +236,24 @@ describe("AlbumDrawer.vue", () => {
 		wrapper.unmount();
 	});
 
+	it("在曲目标题旁显示 MusicBrainz 已匹配状态", async () => {
+		getMusicAlbum.mockResolvedValueOnce({
+			id: "1",
+			title: "IGOR",
+			entry_status: "open",
+			musicbrainz_matched: true,
+			songs: [],
+		});
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		const status = wrapper.get('[data-testid="album-tracks-musicbrainz-status"]');
+		expect(status.text()).toContain("MB");
+		expect(status.text()).toContain("已匹配");
+		expect(status.attributes("aria-label")).toBe("MusicBrainz 已匹配");
+	});
+
 	it("collapses track details by default", async () => {
 		const wrapper = mount(AlbumDrawer);
 		await flushPromises();

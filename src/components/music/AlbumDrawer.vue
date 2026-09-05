@@ -797,7 +797,18 @@ watch(
       </div>
 
       <div v-if="!loading" class="content-section">
-        <div class="section-title">曲目</div>
+        <div class="section-title section-title--tracks">
+          <span>曲目</span>
+          <span
+            v-if="album?.musicbrainz_matched"
+            class="album-tracks-musicbrainz-status"
+            aria-label="MusicBrainz 已匹配"
+            data-testid="album-tracks-musicbrainz-status"
+          >
+            <span class="album-tracks-musicbrainz-status__mark" aria-hidden="true">MB</span>
+            <span>已匹配</span>
+          </span>
+        </div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="(track, index) in tracks" :key="track.id" class="track">
           <button
@@ -1296,6 +1307,39 @@ watch(
   margin-bottom: 1.25rem;
   color: var(--a-color-muted);
   font-weight: 500;
+}
+.section-title--tracks {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.album-tracks-musicbrainz-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 1.25rem;
+  padding: 0.15rem 0.42rem 0.15rem 0.25rem;
+  border: 1px solid #2d2a22;
+  background: #1e1e1e;
+  color: #cfb26f;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
+}
+.album-tracks-musicbrainz-status__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.76rem;
+  height: 0.76rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: #e2cb90;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.48rem;
+  font-weight: 700;
 }
 .track {
   display: grid;

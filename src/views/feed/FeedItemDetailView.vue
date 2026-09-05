@@ -120,7 +120,7 @@ function openRelativeArticle(offset: -1 | 1) {
   const next = routeState.value?.articles[articleIndex.value + offset]
   if (next?.type !== 'feed_item' || !next.feed_item) return
   const state = { ...routeState.value!, article: next }
-  void router.push({ path: `/feed/item/${next.feed_item.id}`, state: feedArticleRouteState(state) })
+  void router.replace({ path: `/feed/item/${next.feed_item.id}`, state: feedArticleRouteState(state) })
 }
 
 function close() {

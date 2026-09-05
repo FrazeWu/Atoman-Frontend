@@ -248,7 +248,7 @@ watch(items, () => {
   }
 })
 
-const openArticleSheet = (item: StarredFeedItem, index?: number) => {
+const openArticleSheet = (item: StarredFeedItem, index?: number, replaceRoute = false) => {
   if (index !== undefined) focusedIndex.value = index
   const wasRead = item.is_read === true
   item.is_read = true
@@ -266,7 +266,8 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
     is_read: true,
   }
   selectedArticle.value = article
-  void router.push({
+  const navigate = replaceRoute ? router.replace : router.push
+  void navigate({
     path: `/feed/item/${feedItem.id}`,
     state: feedArticleRouteState({ article, articles: items.value.map((entry) => ({
       type: 'feed_item',
@@ -294,14 +295,14 @@ const openPreviousArticle = () => {
   if (selectedArticleIndex.value <= 0) return
   const item = items.value[selectedArticleIndex.value - 1]
   if (!item) return
-  openArticleSheet(item, selectedArticleIndex.value - 1)
+  openArticleSheet(item, selectedArticleIndex.value - 1, true)
 }
 
 const openNextArticle = () => {
   if (selectedArticleIndex.value < 0 || selectedArticleIndex.value >= items.value.length - 1) return
   const item = items.value[selectedArticleIndex.value + 1]
   if (!item) return
-  openArticleSheet(item, selectedArticleIndex.value + 1)
+  openArticleSheet(item, selectedArticleIndex.value + 1, true)
 }
 
 const formatDate = (d?: string) => {

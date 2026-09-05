@@ -797,6 +797,7 @@ export interface SubscriptionHubMembership {
 	feed_source?: FeedSource;
 	title?: string;
 	position?: number;
+	unread_count?: number;
 	created_at?: string;
 	updated_at?: string;
 }

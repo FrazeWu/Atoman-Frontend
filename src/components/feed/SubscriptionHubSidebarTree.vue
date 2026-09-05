@@ -1,633 +1,340 @@
 <template>
   <section
     v-if="shouldRender"
+    ref="sidebarRef"
     class="subscription-hub-sidebar"
     :class="{ 'is-collapsed': collapsed }"
+    :style="{ '--scroll-progress': String(scrollProgress) }"
     aria-label="订阅"
+    @scroll.passive="updateScrollProgress"
   >
     <template v-if="!collapsed">
       <header class="subscription-hub-sidebar__header">
-        <p class="subscription-hub-sidebar__eyebrow a-font-meta">我的订阅</p>
+        <p class="a-font-meta">我的订阅</p>
         <button
           type="button"
-          class="subscription-hub-sidebar__manage"
           data-testid="subscription-hub-manage"
           aria-label="管理订阅"
           title="管理订阅"
           @click="emit('manage')"
         >
-          <Settings2 :size="17" aria-hidden="true" />
+          <Settings2 :size="17" />
         </button>
       </header>
-
-      <div v-if="loading" class="subscription-hub-sidebar__skeleton" aria-label="正在加载订阅">
+      <div
+        v-if="loading"
+        class="subscription-hub-sidebar__skeleton"
+        aria-label="正在加载订阅"
+      >
         <span v-for="index in 4" :key="index" class="a-skeleton" />
       </div>
-
-      <div v-else-if="error" class="subscription-hub-sidebar__error" role="alert">
-        <span>{{ error }}</span>
-        <button type="button" data-testid="subscription-hub-retry" @click="emit('retry')">重试</button>
-      </div>
-
-      <div v-else class="subscription-hub-sidebar__types">
-        <section
-          v-for="typeNode in typeNodes"
-          :key="typeNode.subscription_type"
-          class="subscription-hub-sidebar__type"
+      <div
+        v-else-if="error"
+        class="subscription-hub-sidebar__error"
+        role="alert"
+      >
+        <span>{{ error }}</span
+        ><button
+          type="button"
+          data-testid="subscription-hub-retry"
+          @click="emit('retry')"
         >
-          <div
-            v-if="!isFixedType"
-            class="subscription-hub-sidebar__type-row"
-            :class="{ 'is-active': typeNode.subscription_type === activeType }"
+          重试
+        </button>
+      </div>
+      <div v-else class="subscription-hub-sidebar__list">
+        <template v-for="node in typeNodes" :key="node.subscription_type">
+          <button
+            type="button"
+            class="subscription-hub-sidebar__all"
+            :class="{
+              'is-active':
+                node.subscription_type === activeType && !activeMembershipId,
+            }"
+            :data-testid="
+              isFixedType
+                ? `subscription-hub-all-${node.subscription_type}`
+                : `subscription-hub-type-${node.subscription_type}`
+            "
+            @click="
+              emit('select-context', {
+                subscriptionType: node.subscription_type,
+              })
+            "
           >
-            <button
-              type="button"
-              class="subscription-hub-sidebar__type-select"
-              :data-testid="`subscription-hub-type-${typeNode.subscription_type}`"
-              :aria-current="typeNode.subscription_type === activeType ? 'page' : undefined"
-              :aria-expanded="expandedType === typeNode.subscription_type"
-              :aria-controls="typePanelId(typeNode.subscription_type)"
-              @click="selectType(typeNode.subscription_type)"
-            >
-              <component :is="typeIcon(typeNode.subscription_type)" :size="15" aria-hidden="true" />
-              <span class="subscription-hub-sidebar__type-label">{{ typeLabel(typeNode.subscription_type) }}</span>
-              <span class="subscription-hub-sidebar__total a-font-meta">{{ membershipCount(typeNode) }}</span>
-              <ChevronRight
-                :size="15"
-                aria-hidden="true"
-                :class="{ 'is-expanded': expandedType === typeNode.subscription_type }"
-              />
-            </button>
-          </div>
-
-          <div
-            v-if="isFixedType || expandedType === typeNode.subscription_type"
-            :id="isFixedType ? undefined : typePanelId(typeNode.subscription_type)"
-            class="subscription-hub-sidebar__groups"
-            :class="{ 'is-flat': isFixedType }"
+            <component
+              :is="isFixedType ? List : typeIcon(node.subscription_type)"
+              :size="15"
+            /><span>{{
+              isFixedType ? "全部更新" : typeLabel(node.subscription_type)
+            }}</span
+            ><span>{{ unreadTotal(node) }}</span>
+          </button>
+          <p
+            v-if="!sources(node).length"
+            class="subscription-hub-sidebar__empty"
           >
-            <button
-              v-if="isFixedType"
-              type="button"
-              class="subscription-hub-sidebar__all"
-              :class="{ 'is-active': !activeGroupId && !activeMembershipId }"
-              :data-testid="`subscription-hub-all-${typeNode.subscription_type}`"
-              :aria-current="!activeGroupId && !activeMembershipId ? 'page' : undefined"
-              @click="selectType(typeNode.subscription_type)"
-            >
-              <List :size="15" aria-hidden="true" />
-              <span>全部来源</span>
-              <span class="subscription-hub-sidebar__total a-font-meta">{{ membershipCount(typeNode) }}</span>
-            </button>
-            <p v-if="!typeNode.groups.length" class="subscription-hub-sidebar__empty">尚无订阅</p>
-            <template v-else>
-              <section
-                v-for="group in typeNode.groups"
-                :key="group.id"
-                class="subscription-hub-sidebar__group"
-              >
-                <div
-                  v-if="!isSingleDefaultGroup(typeNode)"
-                  class="subscription-hub-sidebar__group-row"
-                  :class="{
-                    'is-active': group.id === activeGroupId && !activeMembershipId,
-                  }"
-                >
-                  <button
-                    type="button"
-                    class="subscription-hub-sidebar__group-select"
-                    :data-testid="`subscription-hub-group-${group.id}`"
-                    :aria-current="group.id === activeGroupId && !activeMembershipId ? 'page' : undefined"
-                    :aria-expanded="expandedGroupId === group.id"
-                    :aria-controls="groupPanelId(group.id)"
-                    @click="selectGroup(typeNode.subscription_type, group.id)"
-                  >
-                    <span>{{ group.name }}</span>
-                    <span class="subscription-hub-sidebar__total a-font-meta">{{ group.memberships.length }}</span>
-                    <ChevronRight
-                      :size="13"
-                      aria-hidden="true"
-                      :class="{ 'is-expanded': expandedGroupId === group.id }"
-                    />
-                  </button>
-                </div>
-
-                <div
-                  v-if="isSingleDefaultGroup(typeNode) || expandedGroupId === group.id"
-                  :id="isSingleDefaultGroup(typeNode) ? undefined : groupPanelId(group.id)"
-                  class="subscription-hub-sidebar__memberships"
-                  :class="{ 'is-flat': isFixedType && isSingleDefaultGroup(typeNode) }"
-                >
-                  <p v-if="!group.memberships.length" class="subscription-hub-sidebar__empty">尚无订阅</p>
-                  <button
-                    v-for="membership in group.memberships"
-                    :key="membership.id"
-                    type="button"
-                    class="subscription-hub-sidebar__membership"
-                    :class="{ 'is-active': membership.id === activeMembershipId }"
-                    :data-testid="`subscription-hub-membership-${membership.id}`"
-                    @click="emit('select-context', {
-                      subscriptionType: typeNode.subscription_type,
-                      groupId: group.id,
-                      membershipId: membership.id,
-                    })"
-                  >
-                    <PAvatar
-                      :src="membershipAvatarURL(membership)"
-                      :name="membershipTitle(membership)"
-                      :alt="`${membershipTitle(membership)}的头像`"
-                      size="xs"
-                    />
-                    <span class="subscription-hub-sidebar__membership-copy">
-                      <span class="subscription-hub-sidebar__membership-name">
-                        {{ membershipTitle(membership) }}
-                      </span>
-                      <span
-                        v-if="membershipSourceTypeLabel(membership)"
-                        class="subscription-hub-sidebar__membership-source-type a-font-meta"
-                      >
-                        {{ membershipSourceTypeLabel(membership) }}
-                      </span>
-                    </span>
-                    <span
-                      v-if="membershipStatusLabel(membership)"
-                      class="subscription-hub-sidebar__membership-status"
-                      data-test="subscription-hub-membership-status"
-                      :aria-label="membershipStatusLabel(membership)"
-                      :title="membershipStatusLabel(membership)"
-                    >
-                      <span aria-hidden="true" />
-                    </span>
-                  </button>
-                </div>
-              </section>
-            </template>
-          </div>
-        </section>
+            尚无订阅
+          </p>
+          <button
+            v-for="item in sources(node)"
+            :key="item.id"
+            type="button"
+            class="subscription-hub-sidebar__source"
+            :class="{ 'is-active': item.id === activeMembershipId }"
+            :data-testid="`subscription-hub-membership-${item.id}`"
+            @click="
+              emit('select-context', {
+                subscriptionType: node.subscription_type,
+                groupId: item.group_id,
+                membershipId: item.id,
+              })
+            "
+          >
+            <span>{{ sourceType(item, node.subscription_type) }}</span
+            ><PAvatar
+              :src="avatar(item)"
+              :name="title(item)"
+              :alt="`${title(item)}的头像`"
+              size="xs"
+            /><span class="subscription-hub-sidebar__name">{{
+              title(item)
+            }}</span
+            ><span :class="{ 'is-zero': unread(item) === 0 }">{{
+              unread(item)
+            }}</span>
+          </button>
+        </template>
       </div>
     </template>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from "vue";
 import {
-  IconChevronRight as ChevronRight,
   IconFileText as FileText,
   IconList as List,
   IconMicrophone as Mic,
   IconRss as Rss,
   IconSettings2 as Settings2,
   IconVideo as Video,
-} from '@tabler/icons-vue'
-
-import PAvatar from '@/components/ui/PAvatar.vue'
-import type { SubscriptionHubMembership, SubscriptionHubSelection, SubscriptionHubTree, SubscriptionHubType, SubscriptionHubTypeNode } from '@/types'
-import { buildSourceFaviconURL, normalizeSourceUrlForCard } from '@/utils/feedSourcePresentation'
-
-const props = withDefaults(defineProps<{
-  tree: SubscriptionHubTree
-  activeType?: SubscriptionHubType | null
-  activeGroupId?: string | null
-  activeMembershipId?: string | null
-  loading?: boolean
-  error?: string
-  collapsed?: boolean
-  idPrefix?: string
-  fixedType?: SubscriptionHubType | null
-}>(), {
-  activeType: null,
-  activeGroupId: null,
-  activeMembershipId: null,
-  loading: false,
-  error: '',
-  collapsed: false,
-  idPrefix: 'subscription-hub',
-  fixedType: null,
-})
-
-const emit = defineEmits<{
-  (e: 'select-context', value: SubscriptionHubSelection): void
-  (e: 'manage'): void
-  (e: 'retry'): void
-}>()
-
-const isFixedType = computed(() => props.fixedType !== null)
-const typeNodes = computed(() => {
-  if (!props.fixedType) return props.tree.types.filter((node) => membershipCount(node) > 0)
-  return props.tree.types.filter((node) =>
-    node.subscription_type === props.fixedType && node.has_content !== false,
-  )
-})
-const shouldRender = computed(() => !isFixedType.value || props.loading || !!props.error || typeNodes.value.length > 0)
-const expandedType = ref<SubscriptionHubType | null>(null)
-const expandedGroupId = ref<string | null>(null)
-
-const typeLabel = (subscriptionType: SubscriptionHubType) => ({
-  podcast: '播客',
-  video: '视频',
-  blog: '博客',
-  rss: 'RSS',
-}[subscriptionType])
-
-const typeIcon = (subscriptionType: SubscriptionHubType) => ({
-  podcast: Mic,
-  video: Video,
-  blog: FileText,
-  rss: Rss,
-}[subscriptionType])
-
-const membershipSourceTypeLabel = (membership: SubscriptionHubMembership) => {
-  switch (membership.feed_source?.source_type) {
-    case 'internal_user':
-      return '账户'
-    case 'internal_channel':
-    case 'internal_collection':
-      return '频道'
-    case 'external_rss':
-      return `RSS${membership.feed_source.rss_url ? ` · ${normalizeSourceUrlForCard(membership.feed_source.rss_url)}` : ''}`
-    default:
-      return ''
-  }
-}
-
-const membershipTitle = (membership: SubscriptionHubMembership) =>
-  membership.title || membership.feed_source?.title || '未命名订阅'
-
-const membershipAvatarURL = (membership: SubscriptionHubMembership) =>
-  membership.feed_source?.cover_url
-  || (membership.feed_source?.source_type === 'external_rss'
-    ? buildSourceFaviconURL(membership.feed_source.rss_url)
-    : '')
-
-const membershipStatusLabel = (membership: SubscriptionHubMembership) => {
-  switch (membership.feed_source?.fetch_status) {
-    case 'fetching':
-      return '正在同步'
-    case 'warning':
-      return '等待重试'
-    case 'blocked':
-      return '来源异常'
-    default:
-      return ''
-  }
-}
-
-const membershipCount = (typeNode: SubscriptionHubTypeNode) =>
-  typeNode.groups.reduce((count, group) => count + group.memberships.length, 0)
-
-const typePanelId = (subscriptionType: SubscriptionHubType) => `${props.idPrefix}-type-panel-${subscriptionType}`
-const groupPanelId = (groupId: string) => `${props.idPrefix}-group-panel-${groupId}`
-const isSingleDefaultGroup = (typeNode: SubscriptionHubTypeNode) =>
-  typeNode.groups.length === 1 && typeNode.groups[0]?.name === '默认分组'
-
-const firstGroupId = (typeNode?: SubscriptionHubTypeNode) => typeNode?.groups[0]?.id ?? null
-
-const initialType = () => {
-  if (props.activeType && typeNodes.value.some((node) => node.subscription_type === props.activeType)) {
-    return props.activeType
-  }
-  return typeNodes.value.find((node) => membershipCount(node) > 0)?.subscription_type
-    ?? typeNodes.value[0]?.subscription_type
-    ?? null
-}
-
-watch(
-  [() => props.activeType, () => props.activeGroupId, () => props.fixedType, () => props.tree.types],
-  ([activeType, activeGroupId]) => {
-    const activeNode = activeType
-      ? typeNodes.value.find((node) => node.subscription_type === activeType)
-      : undefined
-    if (activeNode) {
-      expandedType.value = activeType
-      expandedGroupId.value = activeGroupId && activeNode.groups.some((group) => group.id === activeGroupId)
-        ? activeGroupId
-        : firstGroupId(activeNode)
-      return
-    }
-
-    const currentTypeExists = expandedType.value
-      && typeNodes.value.some((node) => node.subscription_type === expandedType.value)
-    if (!currentTypeExists) expandedType.value = initialType()
-
-    const expandedNode = typeNodes.value.find((node) => node.subscription_type === expandedType.value)
-    if (!expandedNode || !expandedNode.groups.some((group) => group.id === expandedGroupId.value)) {
-      expandedGroupId.value = firstGroupId(expandedNode)
-    }
+} from "@tabler/icons-vue";
+import PAvatar from "@/components/ui/PAvatar.vue";
+import type {
+  SubscriptionHubMembership,
+  SubscriptionHubSelection,
+  SubscriptionHubTree,
+  SubscriptionHubType,
+  SubscriptionHubTypeNode,
+} from "@/types";
+import { buildSourceFaviconURL } from "@/utils/feedSourcePresentation";
+const props = withDefaults(
+  defineProps<{
+    tree: SubscriptionHubTree;
+    activeType?: SubscriptionHubType | null;
+    activeGroupId?: string | null;
+    activeMembershipId?: string | null;
+    loading?: boolean;
+    error?: string;
+    collapsed?: boolean;
+    fixedType?: SubscriptionHubType | null;
+  }>(),
+  {
+    activeType: null,
+    activeGroupId: null,
+    activeMembershipId: null,
+    loading: false,
+    error: "",
+    collapsed: false,
+    fixedType: null,
   },
-  { immediate: true, deep: true },
-)
-
-const setExpandedType = (subscriptionType: SubscriptionHubType, groupId?: string | null) => {
-  expandedType.value = subscriptionType
-  const node = typeNodes.value.find((typeNode) => typeNode.subscription_type === subscriptionType)
-  expandedGroupId.value = groupId ?? firstGroupId(node)
-}
-
-const selectType = (subscriptionType: SubscriptionHubType) => {
-  setExpandedType(subscriptionType)
-  emit('select-context', { subscriptionType })
-}
-
-const selectGroup = (subscriptionType: SubscriptionHubType, groupId: string) => {
-  setExpandedType(subscriptionType, groupId)
-  emit('select-context', { subscriptionType, groupId })
-}
-
+);
+const emit = defineEmits<{
+  (e: "select-context", value: SubscriptionHubSelection): void;
+  (e: "manage"): void;
+  (e: "retry"): void;
+}>();
+const sidebarRef = ref<HTMLElement | null>(null);
+const scrollProgress = ref(0);
+const isFixedType = computed(() => props.fixedType !== null);
+const typeNodes = computed(() =>
+  props.tree.types.filter(
+    (node) => !props.fixedType || node.subscription_type === props.fixedType,
+  ),
+);
+const sources = (node: SubscriptionHubTypeNode) =>
+  node.groups.flatMap((group) => group.memberships);
+const shouldRender = computed(
+  () =>
+    !isFixedType.value ||
+    props.loading ||
+    !!props.error ||
+    typeNodes.value.some((node) => sources(node).length > 0),
+);
+const title = (item: SubscriptionHubMembership) =>
+  item.title || item.feed_source?.title || "未命名订阅";
+const avatar = (item: SubscriptionHubMembership) =>
+  item.feed_source?.cover_url ||
+  (item.feed_source?.source_type === "external_rss"
+    ? buildSourceFaviconURL(item.feed_source.rss_url)
+    : "");
+const unread = (item: SubscriptionHubMembership) => item.unread_count ?? 0;
+const unreadTotal = (node: SubscriptionHubTypeNode) =>
+  sources(node).reduce((total, item) => total + unread(item), 0);
+const typeLabel = (type: SubscriptionHubType) =>
+  ({ podcast: "播客", video: "视频", blog: "博客", rss: "RSS" })[type];
+const typeIcon = (type: SubscriptionHubType) =>
+  ({ podcast: Mic, video: Video, blog: FileText, rss: Rss })[type];
+const sourceType = (
+  item: SubscriptionHubMembership,
+  type: SubscriptionHubType,
+) =>
+  type === "podcast"
+    ? "播客"
+    : item.feed_source?.source_type === "internal_user"
+      ? "账号"
+      : item.feed_source?.source_type === "external_rss"
+        ? "RSS"
+        : "频道";
+const updateScrollProgress = () => {
+  const el = sidebarRef.value;
+  if (el)
+    scrollProgress.value =
+      el.scrollHeight > el.clientHeight
+        ? el.scrollTop / (el.scrollHeight - el.clientHeight)
+        : 0;
+};
 </script>
 
 <style scoped>
 .subscription-hub-sidebar {
+  position: relative;
   display: grid;
   gap: 0.5rem;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
   padding: 0.75rem 0.7rem;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
 }
-
+.subscription-hub-sidebar::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: calc(3rem + (100% - 3rem) * var(--scroll-progress));
+  background: var(--a-color-primary);
+  content: "";
+  pointer-events: none;
+}
 .subscription-hub-sidebar.is-collapsed {
   padding: 0;
 }
-
-.subscription-hub-sidebar__header,
-.subscription-hub-sidebar__type-row,
-.subscription-hub-sidebar__group-row,
-.subscription-hub-sidebar__membership,
-.subscription-hub-sidebar__error {
-  display: flex;
-  align-items: center;
-}
-
 .subscription-hub-sidebar__header {
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: flex;
   min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
 }
-
-.subscription-hub-sidebar__eyebrow {
-  min-width: 0;
-  flex: 1;
+.subscription-hub-sidebar__header p {
   margin: 0;
   color: var(--a-color-muted);
-  font-size: 0.78rem;
   font-weight: 650;
-  letter-spacing: 0;
 }
-
-.subscription-hub-sidebar__manage {
-  border: 0;
+.subscription-hub-sidebar__header button {
   display: grid;
-  flex: none;
   width: 2.75rem;
   min-height: 2.75rem;
   place-items: center;
-  padding: 0;
+  border: 0;
   background: transparent;
-  color: var(--a-color-text);
+  color: inherit;
   cursor: pointer;
 }
-
-.subscription-hub-sidebar__manage:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.subscription-hub-sidebar__skeleton {
+.subscription-hub-sidebar__skeleton,
+.subscription-hub-sidebar__list {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
-
 .subscription-hub-sidebar__skeleton span {
-  display: block;
-  height: 2.5rem;
+  height: 3rem;
 }
-
 .subscription-hub-sidebar__error {
+  display: flex;
   justify-content: space-between;
-  gap: 0.5rem;
-  color: var(--a-color-danger, #b91c1c);
-  font-size: 0.8rem;
+  color: var(--a-color-danger);
 }
-
 .subscription-hub-sidebar__error button {
   border: 0;
-  padding: 0.35rem 0.5rem;
   background: var(--a-color-surface-muted);
   color: inherit;
   cursor: pointer;
-  font: inherit;
 }
-
-.subscription-hub-sidebar__types,
-.subscription-hub-sidebar__groups,
-.subscription-hub-sidebar__memberships {
-  display: grid;
-}
-
-.subscription-hub-sidebar__types {
-  gap: 0.2rem;
-}
-
-.subscription-hub-sidebar__groups {
-  gap: 0.15rem;
-  padding: 0.1rem 0 0.35rem 0.35rem;
-}
-
-.subscription-hub-sidebar__groups.is-flat {
-  padding-left: 0;
-}
-
-.subscription-hub-sidebar__memberships {
-  gap: 0.05rem;
-  padding: 0.05rem 0 0.25rem 1.55rem;
-}
-
-.subscription-hub-sidebar__memberships.is-flat {
-  padding-left: 0.55rem;
-}
-
-.subscription-hub-sidebar__type-select,
-.subscription-hub-sidebar__group-select,
 .subscription-hub-sidebar__all,
-.subscription-hub-sidebar__membership {
+.subscription-hub-sidebar__source {
+  width: 100%;
   border: 0;
   background: transparent;
-  color: var(--a-color-text-secondary);
+  color: inherit;
   cursor: pointer;
-  font: inherit;
   text-align: left;
 }
-
-.subscription-hub-sidebar__type-row {
-  min-width: 0;
-  border-left: 3px solid transparent;
-  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-}
-
-.subscription-hub-sidebar__type-row.is-active {
-  border-left-color: var(--a-color-text);
-}
-
-.subscription-hub-sidebar__type-select {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.55rem;
-  min-height: 2.75rem;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-.subscription-hub-sidebar__group-row {
-  min-width: 0;
-  border-left: 3px solid transparent;
-  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-}
-
-.subscription-hub-sidebar__group-row.is-active {
-  border-left-color: var(--a-color-text);
-}
-
-.subscription-hub-sidebar__group-select {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 2.5rem;
-  padding: 0.3rem 0.45rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.subscription-hub-sidebar__group-select span:first-child,
-.subscription-hub-sidebar__type-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.subscription-hub-sidebar__membership {
-  min-width: 0;
-  border-left: 3px solid transparent;
-  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-  gap: 0.55rem;
-  min-height: 3rem;
-  padding: 0.38rem 0.55rem;
-  font-size: 0.8rem;
-}
-
-.subscription-hub-sidebar__membership-copy {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-  gap: 0.12rem;
-}
-
-.subscription-hub-sidebar__membership-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.subscription-hub-sidebar__membership-source-type {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--a-color-muted);
-  font-size: 0.66rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.subscription-hub-sidebar__membership-status {
-  display: grid;
-  flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
-  place-items: center;
-}
-
-.subscription-hub-sidebar__membership-status > span {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 50%;
-  background: var(--a-color-danger, #b91c1c);
-}
-
-.subscription-hub-sidebar__type-select:hover,
-.subscription-hub-sidebar__group-select:hover,
-.subscription-hub-sidebar__all:hover,
-.subscription-hub-sidebar__membership:hover,
-.subscription-hub-sidebar__type-row.is-active,
-.subscription-hub-sidebar__group-row.is-active,
-.subscription-hub-sidebar__membership.is-active {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.subscription-hub-sidebar__membership.is-active {
-  border-left-color: var(--a-color-text);
-}
-
-.subscription-hub-sidebar__type-select:focus-visible,
-.subscription-hub-sidebar__group-select:focus-visible,
-.subscription-hub-sidebar__all:focus-visible,
-.subscription-hub-sidebar__membership:focus-visible,
-.subscription-hub-sidebar__manage:focus-visible,
-.subscription-hub-sidebar__error button:focus-visible {
-  outline: 2px solid var(--a-color-text);
-  outline-offset: -2px;
-}
-
-.subscription-hub-sidebar__total {
-  margin-left: auto;
-  color: var(--a-color-muted);
-  font-size: 0.66rem;
-}
-
-.subscription-hub-sidebar__type-select svg:last-child,
-.subscription-hub-sidebar__group-select svg:last-child {
-  transition: transform 0.15s ease;
-}
-
-.subscription-hub-sidebar__type-select svg.is-expanded,
-.subscription-hub-sidebar__group-select svg.is-expanded {
-  transform: rotate(90deg);
-}
-
 .subscription-hub-sidebar__all {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.55rem;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
   min-height: 2.75rem;
-  padding: 0.4rem 0.55rem;
-  border-left: 3px solid transparent;
-  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-  font-size: 0.84rem;
-  font-weight: 600;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.6rem;
+  font-weight: 650;
 }
-
-.subscription-hub-sidebar__all.is-active {
-  border-left-color: var(--a-color-text);
+.subscription-hub-sidebar__source {
+  display: grid;
+  grid-template-columns: 2.25rem 1.7rem minmax(0, 1fr) auto;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0 0.6rem;
+  font-size: 0.78rem;
+}
+.subscription-hub-sidebar__all:hover,
+.subscription-hub-sidebar__all:focus-visible,
+.subscription-hub-sidebar__all.is-active,
+.subscription-hub-sidebar__source:hover,
+.subscription-hub-sidebar__source:focus-visible,
+.subscription-hub-sidebar__source.is-active {
   background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
+  outline: 0;
 }
-
-.subscription-hub-sidebar__empty {
-  margin: 0;
-  padding: 0.35rem 0.55rem 0.5rem 1.75rem;
+.subscription-hub-sidebar__source > span:first-child {
   color: var(--a-color-muted);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
 }
-
-.subscription-hub-sidebar__groups.is-flat > .subscription-hub-sidebar__empty {
-  padding-left: 0.55rem;
+.subscription-hub-sidebar__name {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
+.subscription-hub-sidebar__all > span:last-child,
+.subscription-hub-sidebar__source > span:last-child {
+  color: var(--a-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+.subscription-hub-sidebar__source > span:last-child.is-zero {
+  color: var(--a-color-muted);
+}
+.subscription-hub-sidebar__empty {
+  margin: 0.3rem 0.6rem;
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .subscription-hub-sidebar::after {
+    transition: none;
+  }
+}
 </style>

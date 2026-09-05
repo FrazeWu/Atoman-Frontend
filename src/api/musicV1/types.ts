@@ -493,6 +493,7 @@ export type MusicArtistListItem = {
 export type MusicAlbumListItem = {
 	id: string;
 	title: string;
+	musicbrainz_matched?: boolean;
 	sources?: MusicSource[];
 	status?: string;
 	importSession?: MusicAlbumImport;
@@ -623,6 +624,7 @@ export type MusicSongListItem = {
 	album?: {
 		id: string;
 		title: string;
+		musicbrainz_matched?: boolean;
 		cover_url?: string;
 		album_type?: MusicAlbumType;
 		sources?: MusicSource[];

@@ -189,6 +189,7 @@ async function loadSong(songId: string) {
       detail.song.release_type === "single" ||
       detail.song.release_type === "leak";
     musicBrainzMatched.value =
+      detail.song.album?.musicbrainz_matched === true ||
       hasMusicBrainzSource(detail.song.sources) ||
       hasMusicBrainzSource(detail.song.album?.sources);
     parentAlbum.value = detail.song.album?.id

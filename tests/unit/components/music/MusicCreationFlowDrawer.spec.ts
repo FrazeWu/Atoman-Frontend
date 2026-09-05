@@ -718,6 +718,7 @@ describe("MusicCreationFlowDrawer", () => {
 		getMusicAlbumMock.mockResolvedValue({
 			id: "album-1",
 			title: "Attack of the Attacking Things",
+			musicbrainz_matched: true,
 			cover_url: "https://img.test/album.jpg",
 			release_date: "2002-01-01",
 			release_date_precision: "day",
@@ -749,6 +750,9 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(
 			drawerMocks.state.value.creationFlow?.draft.albumDetails.existingSources,
 		).toEqual([{ type: "url", url: "https://example.test/album" }]);
+		expect(
+			drawerMocks.state.value.creationFlow?.draft.albumDetails.musicBrainzMatched,
+		).toBe(true);
 		if (!drawerMocks.state.value.creationFlow)
 			throw new Error("creation flow missing");
 		drawerMocks.state.value.creationFlow.draft.albumDetails.source =

@@ -172,6 +172,8 @@ export function useAlbumImportUpload() {
 		draft.derivedReleaseDate = snapshot.derivedReleaseDate;
 		draft.derivedAlbumType = snapshot.derivedAlbumType;
 		draft.metadataSourceUrl = snapshot.metadataSourceUrl;
+		draft.metadataSource = snapshot.metadataSource;
+		draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
 		draft.missingArtists = snapshot.missingArtists ?? [];
 		draft.lastSyncedAt = snapshot.lastSyncedAt;
 		draft.errorMessage =
@@ -581,6 +583,7 @@ export function useAlbumImportUpload() {
 								matchedTracks = matched.tracks;
 								draft.metadataMatched = true;
 								draft.metadataSourceUrl = matched.sourceUrl;
+								draft.metadataSource = matched.metadataSource;
 							}
 						} catch {
 							// 匹配服务不可用时保持本地预览，不阻塞上传。

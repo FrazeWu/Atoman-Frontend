@@ -81,6 +81,7 @@ export type MusicAlbumImportTrack = {
 export type MusicAlbumImportMetadataPreview = {
 	matched: boolean;
 	sourceUrl: string;
+	metadataSource?: string;
 	tracks: MusicAlbumImportTrack[];
 };
 
@@ -238,6 +239,8 @@ export type MusicAlbumImport = {
 	derivedReleaseDate?: string;
 	derivedAlbumType?: string;
 	metadataSourceUrl?: string;
+	metadataSource?: string;
+	metadataMatched?: boolean;
 	missingArtists?: string[];
 	lastSyncedAt: string;
 	errorMessage: string;

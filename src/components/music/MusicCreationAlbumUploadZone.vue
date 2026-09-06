@@ -11,6 +11,7 @@ const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport)
+const metadataSourceLabel = computed(() => albumImportDraft.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
 
 const {
   uploading,
@@ -187,7 +188,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          查看 MusicBrainz 来源
+          查看 {{ metadataSourceLabel }} 来源
           <ExternalLink :size="14" aria-hidden="true" />
         </a>
       </template>

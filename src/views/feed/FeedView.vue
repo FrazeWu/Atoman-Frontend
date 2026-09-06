@@ -7,6 +7,11 @@
       <PPageHeader accent :title="feedCopy.name" :sub="feedCopy.homepageSub" mb="1rem">
         <template #action>
           <div style="display:flex;gap:0.75rem;align-items:center">
+            <PSegmentedControl
+              v-if="authStore.isAuthenticated"
+              v-model="activeFeedView"
+              :options="[{ label: '订阅', value: 'subscriptions' }, { label: '收藏', value: 'bookmarks' }]"
+            />
             <PButton
               v-if="authStore.isAuthenticated"
               @click="toggleAddModal"
@@ -125,7 +130,7 @@
 
     <section class="feed-content">
       <FeedTimelineToolbar
-        v-if="!isHubTimeline"
+        v-if="!isHubTimeline && !isBookmarksTimeline"
         v-model:search-input="searchInput"
         v-model:source-type-filter="sourceTypeFilter"
         v-model:merge-duplicates="mergeDuplicates"
@@ -151,7 +156,7 @@
         @toggle-all-read="toggleAllRead"
         @refresh-new-content="refreshNewTimelineContent"
       />
-      <p v-else class="feed-hub-context" aria-live="polite">{{ hubTimelineLabel }}</p>
+      <p v-else class="feed-hub-context" aria-live="polite">{{ timelineContextLabel }}</p>
 
       <div v-if="loadingTimeline" class="feed-loading" role="status" aria-label="正在加载订阅内容">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
@@ -363,6 +368,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PField from '@/components/ui/PField.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
 const sourceTypeFilterOptions: Array<{ label: string; value: FeedSourceTypeFilter; test: string }> = [
   { label: '全部', value: 'all', test: 'source-type-filter-all' },
@@ -421,11 +427,31 @@ const starredIds = computed(() => feedStore.starredItemIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 const sourceTypeFilter = ref<FeedSourceTypeFilter>('all')
 const activeTheme = ref('')
+const activeFeedView = computed<'subscriptions' | 'bookmarks'>({
+  get: () => route.query.view === 'bookmarks' ? 'bookmarks' : 'subscriptions',
+  set: (view) => {
+    void router.push({
+      query: {
+        ...route.query,
+        view: view === 'bookmarks' ? 'bookmarks' : undefined,
+        source_id: undefined,
+        group_id: undefined,
+        hub_type: undefined,
+        hub_group_id: undefined,
+        hub_membership_id: undefined,
+        q: undefined,
+        sort: undefined,
+        page: undefined,
+      },
+    })
+  },
+})
 
 const {
   querySourceId,
   queryHubType,
   isHubTimeline,
+  isBookmarksTimeline,
   querySearch,
   timelineMode,
   searchInput,
@@ -636,7 +662,7 @@ const {
   feedItemActionIDs,
 })
 
-const hubTimelineLabel = computed(() => ({
+const timelineContextLabel = computed(() => isBookmarksTimeline.value ? '收藏内容' : ({
   podcast: '播客更新',
   video: '视频更新',
   blog: '博客更新',

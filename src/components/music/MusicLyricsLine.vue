@@ -4,6 +4,7 @@
     :class="{
       'is-active': active,
       'has-annotations': activeAnnotations.length > 0,
+      'is-clickable': clickToSeek,
     }"
   >
     <div v-if="lineTimeMs != null" class="music-lyrics-line__time">
@@ -18,7 +19,7 @@
         <Play :size="13" aria-hidden="true" />
       </button>
     </div>
-    <div ref="contentElement" class="music-lyrics-line__content">
+    <div ref="contentElement" class="music-lyrics-line__content" @click="handleContentClick">
       <p
         ref="textElement"
         class="music-lyrics-line__text"
@@ -30,7 +31,7 @@
             v-else
             type="button"
             class="music-lyrics-line__highlight"
-            @click.stop="emit('open-annotations', { line, annotationIds: segment.annotationIds })"
+            @click.stop="handleHighlightClick(segment.annotationIds)"
           >
             {{ segment.text }}
           </button>
@@ -48,6 +49,21 @@
         <SquarePen :size="15" aria-hidden="true" />
         添加注释
       </button>
+      <div
+        v-if="clickToSeek && activeAnnotations.length"
+        class="music-lyrics-line__annotation-preview"
+        aria-label="歌词注释预览"
+      >
+        <p
+          v-for="annotation in activeAnnotations.slice(0, 2)"
+          :key="annotation.id"
+          tabindex="0"
+          class="music-lyrics-line__annotation-preview-item"
+        >
+          <span v-if="annotation.selected_text">“{{ annotation.selected_text }}”</span>
+          <span>{{ annotation.body }}</span>
+        </p>
+      </div>
       <p v-if="bilingual && line.translation" class="music-lyrics-line__translation">
         {{ line.translation }}
       </p>
@@ -86,12 +102,14 @@ const props = withDefaults(defineProps<{
   bilingual?: boolean
   canSelect?: boolean
   canAnnotate?: boolean
+  clickToSeek?: boolean
 }>(), {
   annotations: () => [],
   active: false,
   bilingual: false,
   canSelect: true,
   canAnnotate: false,
+  clickToSeek: false,
 })
 
 const emit = defineEmits<{
@@ -209,6 +227,18 @@ function submitSelectedText() {
   selectionActionStyle.value = {}
 }
 
+function handleHighlightClick(annotationIds: string[]) {
+  if (props.clickToSeek) {
+    handleSeek()
+    return
+  }
+  emit('open-annotations', { line: props.line, annotationIds })
+}
+
+function handleContentClick() {
+  if (props.clickToSeek) handleSeek()
+}
+
 function openLineAnnotations() {
   emit('open-annotations', {
     line: props.line,
@@ -272,6 +302,10 @@ function formatTime(timeMs: number | null | undefined): string {
   color: var(--a-color-text);
   opacity: 0.88;
   font-weight: 500;
+}
+
+.music-lyrics-line.is-clickable .music-lyrics-line__content {
+  cursor: pointer;
 }
 
 .music-lyrics-line__time {
@@ -341,6 +375,38 @@ function formatTime(timeMs: number | null | undefined): string {
   line-height: 1.5;
   white-space: pre-wrap;
   transition: opacity 0.25s ease, color 0.25s ease;
+}
+
+.music-lyrics-line__annotation-preview {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.55rem;
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  opacity: 0;
+  transform: translateY(0.25rem);
+  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter),
+    transform var(--a-motion-state) var(--a-motion-ease-enter);
+  pointer-events: none;
+}
+
+.music-lyrics-line:hover .music-lyrics-line__annotation-preview,
+.music-lyrics-line:focus-within .music-lyrics-line__annotation-preview {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.music-lyrics-line__annotation-preview-item {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0;
+  max-width: 36rem;
+}
+
+.music-lyrics-line__annotation-preview-item span:first-child {
+  color: var(--a-color-text);
+  font-weight: 700;
 }
 
 .music-lyrics-line__selection-action {
@@ -441,6 +507,11 @@ function formatTime(timeMs: number | null | undefined): string {
   .music-lyrics-line__actions {
     min-width: 36px;
     flex-direction: column;
+  }
+
+  .music-lyrics-line__annotation-preview {
+    opacity: 1;
+    transform: none;
   }
 }
 

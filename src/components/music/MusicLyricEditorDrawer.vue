@@ -32,6 +32,7 @@ const props = withDefaults(defineProps<{
   lines?: MusicSongLyricsLine[]
   version?: number
   translationLanguage?: string
+  source?: string
   defaultEditSummary?: string
   presentation?: 'sheet' | 'page'
 }>(), {
@@ -44,6 +45,7 @@ const props = withDefaults(defineProps<{
   lines: () => [],
   version: 0,
   translationLanguage: '',
+  source: '',
   defaultEditSummary: '',
   presentation: 'sheet',
 })
@@ -457,6 +459,9 @@ function handleSave() {
           aria-label="修改内容"
         />
       </div>
+      <p v-if="source" class="music-lyric-editor-drawer__source">
+        歌词来源：{{ source === 'lrclib' ? 'LRCLIB' : source }}
+      </p>
 
       <div class="music-lyric-editor-drawer__workflow" role="status" aria-live="polite">
         <strong>{{ workflowTitle }}</strong>
@@ -724,6 +729,12 @@ function handleSave() {
   background: var(--a-color-surface-muted, var(--a-color-bg));
   color: var(--a-color-muted);
   font-size: 0.875rem;
+}
+
+.music-lyric-editor-drawer__source {
+  margin: -0.35rem 0 0;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
 }
 
 .music-lyric-editor-drawer__workflow strong {

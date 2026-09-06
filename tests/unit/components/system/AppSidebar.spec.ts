@@ -39,6 +39,7 @@ const mountSidebar = async (moduleCase: (typeof moduleCases)[number]) => {
     routes: [
       { path: moduleCase.homePath, component: { template: '<div />' } },
       { path: moduleCase.subscriptionsPath, component: { template: '<div />' } },
+      { path: '/users/:handle/settings', component: { template: '<div />' } },
       ...(moduleCase.module === 'blog'
         ? [{ path: '/posts/articles', component: { template: '<div />' } }]
         : []),
@@ -78,6 +79,7 @@ const mountFeedSidebar = async () => {
       { path: '/feed', component: { template: '<div />' } },
       { path: '/feed/subscriptions', component: { template: '<div />' } },
       { path: '/posts', component: { template: '<div />' } },
+      { path: '/users/:handle/settings', component: { template: '<div />' } },
     ],
   })
   await router.push('/feed')
@@ -159,6 +161,15 @@ describe('AppSidebar blog navigation', () => {
 })
 
 describe('AppSidebar feed navigation', () => {
+  it('opens the user subscription settings from the subscription tree', async () => {
+    const { wrapper, router } = await mountFeedSidebar()
+
+    wrapper.findComponent(SubscriptionHubSidebarTreeStub).vm.$emit('manage')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/users/fafa/settings#feed')
+  })
+
   it('uses the unified subscription tree and keeps selections in the feed route', async () => {
     const { wrapper, router } = await mountFeedSidebar()
     const tree = wrapper.get('[data-testid="subscription-hub-sidebar-tree"]')

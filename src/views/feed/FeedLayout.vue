@@ -93,16 +93,10 @@ const selectSubscriptionHubContext = (selection: SubscriptionHubSelection) => {
 
 const openSubscriptionManagement = () => {
   mobileSourcesOpen.value = false
+  if (!authStore.user?.username) return
   void router.push({
-    path: isMobileApp ? '/feed/subscriptions' : '/feed/sources',
-    query: {
-      ...route.query,
-      hub_type: undefined,
-      hub_group_id: undefined,
-      hub_membership_id: undefined,
-      manage_subscriptions: '1',
-      manage_tab: 'sources',
-    },
+    path: `/users/${authStore.user.username}/settings`,
+    hash: '#feed',
   })
 }
 

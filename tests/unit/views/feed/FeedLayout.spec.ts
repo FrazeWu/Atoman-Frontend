@@ -92,6 +92,7 @@ const makeRouter = async (initialPath = "/feed") => {
       { path: "/feed/sources", component: { template: "<div />" } },
       { path: "/feed/subscriptions", component: { template: "<div />" } },
       { path: "/feed/starred", component: { template: "<div />" } },
+      { path: "/users/:handle/settings", component: { template: "<div />" } },
     ],
   });
 
@@ -175,7 +176,7 @@ describe("FeedLayout", () => {
     );
   });
 
-  it("opens unified subscription management from the tree", async () => {
+  it("opens the user's subscription settings from the tree", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
     await wrapper
@@ -183,13 +184,10 @@ describe("FeedLayout", () => {
       .trigger("click");
 
     expect(pushSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        path: "/feed/sources",
-        query: expect.objectContaining({
-          manage_subscriptions: "1",
-          manage_tab: "sources",
-        }),
-      }),
+      {
+        path: "/users/fafa/settings",
+        hash: "#feed",
+      },
     );
   });
 

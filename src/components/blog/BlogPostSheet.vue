@@ -760,6 +760,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 
 .academic-paper__body :deep(p) {
   margin: 0 0 0.9rem;
+  text-indent: 0;
 }
 
 .academic-paper__footer {

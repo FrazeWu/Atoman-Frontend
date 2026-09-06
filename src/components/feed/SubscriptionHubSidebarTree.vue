@@ -135,6 +135,7 @@ const sourceRows = computed(() =>
 const shouldRender = computed(
   () =>
     !isFixedType.value ||
+    props.fixedType === "all" ||
     props.loading ||
     !!props.error ||
     sourceRows.value.length > 0,

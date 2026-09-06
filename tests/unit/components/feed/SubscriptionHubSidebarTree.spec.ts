@@ -216,6 +216,19 @@ describe("SubscriptionHubSidebarTree", () => {
     expect(wrapper.text()).toContain("原子谈话");
   });
 
+  it("keeps the unified subscription section available when it has no sources", () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: {
+        tree: { types: [{ subscription_type: "all", groups: [] }] },
+        fixedType: "all",
+      },
+    });
+
+    expect(wrapper.find(".subscription-hub-sidebar").exists()).toBe(true);
+    expect(wrapper.text()).toContain("我的订阅");
+    expect(wrapper.get('[data-testid="subscription-hub-manage"]')).toBeDefined();
+  });
+
   it("keeps an empty fixed module out of the layout", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {

@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import SubscriptionHubSidebarTree from "@/components/feed/SubscriptionHubSidebarTree.vue";
@@ -128,6 +130,15 @@ const tree: SubscriptionHubTree = {
 };
 
 describe("SubscriptionHubSidebarTree", () => {
+  it("does not render a scroll progress indicator beside subscriptions", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/components/feed/SubscriptionHubSidebarTree.vue"),
+      "utf8",
+    );
+
+    expect(source).not.toContain(".subscription-hub-sidebar::after");
+  });
+
   it("renders a flat source list without group names", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } });
 
@@ -214,6 +225,46 @@ describe("SubscriptionHubSidebarTree", () => {
 
     expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(1);
     expect(wrapper.text()).toContain("原子谈话");
+  });
+
+  it("falls back to deduplicated legacy sources until the unified node is populated", () => {
+    const legacyTree: SubscriptionHubTree = {
+      types: [
+        tree.types[0],
+        {
+          ...tree.types[1],
+          groups: [{
+            ...tree.types[1].groups[0],
+            memberships: [{
+              ...tree.types[1].groups[0].memberships[0],
+              id: "legacy-duplicate-member",
+              feed_source_id: "podcast-source",
+              title: "原子谈话",
+            }],
+          }],
+        },
+        ...tree.types.slice(2),
+      ],
+    };
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: { tree: legacyTree, fixedType: "all" },
+    });
+
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(3);
+    expect(wrapper.text().match(/原子谈话/g)).toHaveLength(1);
+  });
+
+  it("keeps the unified subscription section available when it has no sources", () => {
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: {
+        tree: { types: [{ subscription_type: "all", groups: [] }] },
+        fixedType: "all",
+      },
+    });
+
+    expect(wrapper.find(".subscription-hub-sidebar").exists()).toBe(true);
+    expect(wrapper.text()).toContain("我的订阅");
+    expect(wrapper.get('[data-testid="subscription-hub-manage"]')).toBeDefined();
   });
 
   it("keeps an empty fixed module out of the layout", () => {

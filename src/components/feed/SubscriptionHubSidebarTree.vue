@@ -1,12 +1,9 @@
 <template>
   <section
     v-if="shouldRender"
-    ref="sidebarRef"
     class="subscription-hub-sidebar"
     :class="{ 'is-collapsed': collapsed }"
-    :style="{ '--scroll-progress': String(scrollProgress) }"
     aria-label="订阅"
-    @scroll.passive="updateScrollProgress"
   >
     <template v-if="!collapsed">
       <header class="subscription-hub-sidebar__header">
@@ -77,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { IconSettings2 as Settings2 } from "@tabler/icons-vue";
 import PAvatar from "@/components/ui/PAvatar.vue";
 import type {
@@ -114,27 +111,37 @@ const emit = defineEmits<{
   (e: "manage"): void;
   (e: "retry"): void;
 }>();
-const sidebarRef = ref<HTMLElement | null>(null);
-const scrollProgress = ref(0);
 const isFixedType = computed(() => props.fixedType !== null);
-const typeNodes = computed(() =>
-  props.tree.types.filter(
-    (node) => !props.fixedType || node.subscription_type === props.fixedType,
-  ),
-);
 const sources = (node: SubscriptionHubTypeNode) =>
   node.groups.flatMap((group) => group.memberships);
-const sourceRows = computed(() =>
-  typeNodes.value.flatMap((node) =>
+const typeNodes = computed(() => {
+  if (props.fixedType !== "all") {
+    return props.tree.types.filter(
+      (node) => !props.fixedType || node.subscription_type === props.fixedType,
+    );
+  }
+
+  const unifiedNode = props.tree.types.find(
+    (node) => node.subscription_type === "all",
+  );
+  if (unifiedNode && sources(unifiedNode).length > 0) return [unifiedNode];
+  return props.tree.types.filter((node) => node.subscription_type !== "all");
+});
+const sourceRows = computed(() => {
+  const rows = typeNodes.value.flatMap((node) =>
     sources(node).map((membership) => ({
       membership,
       subscriptionType: node.subscription_type,
     })),
-  ),
-);
+  );
+  if (props.fixedType !== "all") return rows;
+
+  return [...new Map(rows.map((row) => [row.membership.feed_source_id, row])).values()];
+});
 const shouldRender = computed(
   () =>
     !isFixedType.value ||
+    props.fixedType === "all" ||
     props.loading ||
     !!props.error ||
     sourceRows.value.length > 0,
@@ -153,14 +160,6 @@ const sourceType = (item: SubscriptionHubMembership) =>
     : item.feed_source?.source_type === "internal_collection"
       ? "合集"
       : "频道";
-const updateScrollProgress = () => {
-  const el = sidebarRef.value;
-  if (el)
-    scrollProgress.value =
-      el.scrollHeight > el.clientHeight
-        ? el.scrollTop / (el.scrollHeight - el.clientHeight)
-        : 0;
-};
 </script>
 
 <style scoped>
@@ -174,16 +173,6 @@ const updateScrollProgress = () => {
   padding: 0.75rem 0.7rem;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
-}
-.subscription-hub-sidebar::after {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 2px;
-  height: calc(3rem + (100% - 3rem) * var(--scroll-progress));
-  background: var(--a-color-primary);
-  content: "";
-  pointer-events: none;
 }
 .subscription-hub-sidebar.is-collapsed {
   padding: 0;
@@ -268,10 +257,5 @@ const updateScrollProgress = () => {
 }
 .subscription-hub-sidebar__source > span:last-child.is-zero {
   color: var(--a-color-muted);
-}
-@media (prefers-reduced-motion: reduce) {
-  .subscription-hub-sidebar::after {
-    transition: none;
-  }
 }
 </style>

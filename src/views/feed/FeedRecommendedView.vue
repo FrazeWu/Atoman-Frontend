@@ -372,7 +372,7 @@ import {
 } from '@/utils/recommendationLanguage'
 import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
-type RecommendationMode = 'hot' | 'featured' | 'latest'
+type RecommendationMode = 'featured' | 'random'
 
 const ALL_CATEGORY = 'all'
 const ALL_THEME = 'all'
@@ -460,9 +460,7 @@ const toggleReadingList = async (item: RecommendationItem) => {
 }
 
 function normalizeMode(raw: unknown): RecommendationMode {
-  if (raw === 'featured' || raw === 'latest') return raw
-  // Earlier clients encoded the “最新” control as discover; preserve its intended meaning.
-  return raw === 'discover' ? 'latest' : 'hot'
+  return raw === 'random' ? 'random' : 'featured'
 }
 
 function normalizeCategory(raw: unknown): FeedSourceFilterCategory {
@@ -608,9 +606,8 @@ const subscriptionToastType = ref<'success' | 'error'>('success')
 const pendingSubscriptionRestored = ref(false)
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
-  { label: '热门', value: 'hot' },
   { label: '精选', value: 'featured' },
-  { label: '最新', value: 'latest' },
+  { label: '随机', value: 'random' },
 ]
 
 const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }> = [

@@ -42,5 +42,5 @@ watch(
 </script>
 
 <template>
-  <AlbumsView v-if="!isMobileApp" />
+  <AlbumsView v-if="!isMobileApp" :load-content="false" />
 </template>

@@ -108,6 +108,7 @@ const albumItems = ref<MusicAlbumListItem[]>([])
 const albumMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
 let activeSearchRequestId = 0
 let albumSearchTimer: ReturnType<typeof setTimeout> | null = null
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 let bookmarkRequestId = 0
 const musicHomeRequests = useRequestGeneration()
 const personalizationRequests = useRequestGeneration()
@@ -641,13 +642,14 @@ function handleSearchBlur() {
 }
 
 watch(searchQuery, () => {
+  if (searchTimer) clearTimeout(searchTimer)
   if (props.contentMode === 'albums') {
     albumIndexRequests.beginRequest()
     if (albumSearchTimer) clearTimeout(albumSearchTimer)
     albumSearchTimer = setTimeout(() => void fetchAlbumIndex(), 250)
     return
   }
-  fetchSearchResults()
+  searchTimer = setTimeout(() => void fetchSearchResults(), 250)
 })
 
 onMounted(() => {
@@ -660,6 +662,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (albumSearchTimer) clearTimeout(albumSearchTimer)
+  if (searchTimer) clearTimeout(searchTimer)
   musicHomeRequests.beginRequest()
   personalizationRequests.beginRequest()
   albumIndexRequests.beginRequest()

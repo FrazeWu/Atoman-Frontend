@@ -3,34 +3,43 @@ interface CacheEntry<T> {
   timestamp: number
 }
 
-const cache = new Map<string, CacheEntry<any>>()
+const cache = new Map<string, CacheEntry<unknown>>()
+const inFlight = new Map<string, Promise<unknown>>()
+const defaultStaleTime = 1000 * 60 * 5
+
+export type QueryCacheOptions = {
+  force?: boolean
+  staleTime?: number
+}
 
 export function useQueryCache() {
-  const staleTime = 1000 * 60 * 5 // 5 minutes
-
   const fetchWithCache = async <T>(
     key: string,
     fetcher: () => Promise<T>,
-    options?: { force?: boolean }
+    options?: QueryCacheOptions,
   ): Promise<T> => {
     const cached = cache.get(key)
     const now = Date.now()
+    const staleTime = options?.staleTime ?? defaultStaleTime
 
     if (cached && !options?.force && now - cached.timestamp < staleTime) {
-      // Background revalidate (stale-while-revalidate)
-      fetcher().then(data => {
-        cache.set(key, { data, timestamp: Date.now() })
-      }).catch(err => {
-        console.warn('Background revalidation failed for', key, err)
-      })
-      
-      return cached.data
+      return cached.data as T
     }
 
-    // Force fetch or stale
-    const data = await fetcher()
-    cache.set(key, { data, timestamp: now })
-    return data
+    const running = inFlight.get(key)
+    if (running) return running as Promise<T>
+
+    const request = Promise.resolve()
+      .then(fetcher)
+      .then((data) => {
+        cache.set(key, { data, timestamp: Date.now() })
+        return data
+      })
+      .finally(() => {
+        inFlight.delete(key)
+      })
+    inFlight.set(key, request)
+    return request
   }
 
   const invalidate = (keyOrPrefix: string) => {

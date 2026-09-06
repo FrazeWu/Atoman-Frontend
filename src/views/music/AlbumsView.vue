@@ -9,6 +9,7 @@ import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePendingMusicLyricsAnnotations } from '@/composables/usePendingMusicLyricsAnnotations'
 
+const props = withDefaults(defineProps<{ loadContent?: boolean }>(), { loadContent: true })
 const route = useRoute()
 const authStore = getMountedPinia() ? useAuthStore() : null
 const { pendingMusicLyricsAnnotations: pendingRebindNotifications, loadPendingMusicLyricsAnnotations } = usePendingMusicLyricsAnnotations()
@@ -79,7 +80,7 @@ watch(
       </PButton>
     </div>
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
-      <DiscoverView page-title="专辑" content-mode="albums" />
+      <DiscoverView v-if="props.loadContent" page-title="专辑" content-mode="albums" />
     </div>
   </div>
 </template>

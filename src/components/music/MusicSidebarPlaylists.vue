@@ -117,7 +117,7 @@
 import { reportError } from '@/utils/logger'
 import { ref, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { IconBookmark as Bookmark, IconHeart as Heart, IconPlaylist as ListMusic, IconLogin as LogIn, IconPlus as Plus } from '@tabler/icons-vue'
 import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -130,7 +130,6 @@ defineProps<{
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const bookmarkedPlaylists = ref<MusicPlaylistSummary[]>([])
-const route = useRoute()
 const router = useRouter()
 const { state } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
@@ -240,7 +239,7 @@ async function submitNewPlaylist() {
 }
 
 watch(
-  () => [route.path, state.value.playlistRefreshToken, isAuthenticated.value] as const,
+  () => [state.value.playlistRefreshToken, isAuthenticated.value] as const,
   () => {
     void fetchPlaylists()
   },

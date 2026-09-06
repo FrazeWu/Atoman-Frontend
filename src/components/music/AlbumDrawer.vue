@@ -477,7 +477,8 @@ async function loadAlbum(albumId: string | null) {
 
   loading.value = true
   try {
-    const resolved = await resolveMusicRedirect(albumId, (id) => getMusicAlbum(id, { force: true }))
+    const shouldForceRefresh = state.value.albumRefreshToken > 0
+    const resolved = await resolveMusicRedirect(albumId, (id) => getMusicAlbum(id, { force: shouldForceRefresh }))
     if (!isCurrentLoad()) return
 
     const albumResponse = resolved.entity

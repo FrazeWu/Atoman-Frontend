@@ -590,7 +590,7 @@ describe("FeedRecommendedView", () => {
 		expect(subscribeSpy).not.toHaveBeenCalled();
 	});
 
-	it("requests latest recommendations when selecting the latest filter", async () => {
+	it("requests random recommendations when selecting the random filter", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")
 			.mockImplementation(async (input) => {
@@ -617,24 +617,24 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		fetchSpy.mockClear();
 
-		const latestFilter = wrapper
+		const randomFilter = wrapper
 			.findAll(".segmented-option")
-			.find((option) => option.text() === "最新");
-		expect(latestFilter).toBeDefined();
-		await latestFilter!.trigger("click");
+			.find((option) => option.text() === "随机");
+		expect(randomFilter).toBeDefined();
+		await randomFilter!.trigger("click");
 		await flushPromises();
 
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/recommend/articles?mode=latest"),
+			expect.stringContaining("/api/v1/feed/recommend/articles?mode=random"),
 			publicRequestOptions,
 		);
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/recommend/channels?mode=latest"),
+			expect.stringContaining("/api/v1/feed/recommend/channels?mode=random"),
 			publicRequestOptions,
 		);
 	});
 
-	it("mounts and defaults to hot mode and fetches recommendations", async () => {
+	it("mounts and defaults to featured mode and fetches recommendations", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")
 			.mockImplementation(async (input) => {
@@ -717,11 +717,11 @@ describe("FeedRecommendedView", () => {
 			publicRequestOptions,
 		);
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/recommend/articles?mode=hot"),
+			expect.stringContaining("/api/v1/feed/recommend/articles?mode=featured"),
 			publicRequestOptions,
 		);
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/recommend/channels?mode=hot"),
+			expect.stringContaining("/api/v1/feed/recommend/channels?mode=featured"),
 			publicRequestOptions,
 		);
 
@@ -1075,7 +1075,7 @@ describe("FeedRecommendedView", () => {
 			.spyOn(globalThis, "fetch")
 			.mockImplementation(async (input) => {
 				const url = String(input);
-				const mode = url.includes("mode=featured") ? "featured" : "hot";
+				const mode = url.includes("mode=random") ? "random" : "featured";
 				return new Response(
 					JSON.stringify({
 						data: [
@@ -1104,15 +1104,15 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
-		expect(wrapper.text()).toContain("Article hot");
+		expect(wrapper.text()).toContain("Article featured");
 
-		await applyFilterValue(wrapper, "mode", "featured");
+		await applyFilterValue(wrapper, "mode", "random");
 
 		expect(fetchSpy).toHaveBeenCalledWith(
-			expect.stringContaining("/api/v1/feed/recommend/articles?mode=featured"),
+			expect.stringContaining("/api/v1/feed/recommend/articles?mode=random"),
 			publicRequestOptions,
 		);
-		expect(wrapper.text()).toContain("Article featured");
+		expect(wrapper.text()).toContain("Article random");
 	});
 
 	it("opens subscription modal when clicking add button", async () => {
@@ -1462,7 +1462,7 @@ describe("FeedRecommendedView", () => {
 
 		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining(
-				"/api/v1/feed/recommend/articles?mode=hot&page=1&page_size=20",
+				"/api/v1/feed/recommend/articles?mode=featured&page=1&page_size=20",
 			),
 			publicRequestOptions,
 		);
@@ -1474,7 +1474,7 @@ describe("FeedRecommendedView", () => {
 
 		expect(fetchSpy).toHaveBeenCalledWith(
 			expect.stringContaining(
-				"/api/v1/feed/recommend/articles?mode=hot&page=2&page_size=20",
+				"/api/v1/feed/recommend/articles?mode=featured&page=2&page_size=20",
 			),
 			publicRequestOptions,
 		);

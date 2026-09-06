@@ -72,7 +72,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { apiDeleteJson, apiPatchJson, apiPostJson } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
@@ -86,6 +86,7 @@ import { useStudioStore } from '@/stores/studio'
 import type { StudioChannel } from '@/types'
 
 const api = useApi().studio
+const route = useRoute()
 const router = useRouter()
 const studio = useStudioStore()
 const editing = ref(false)
@@ -152,7 +153,10 @@ async function saveChannel() {
     else await apiPostJson<StudioChannel>(api.channels, input)
     resetDraft()
     await studio.loadState(true)
-    if (firstChannel) await router.push('/studio')
+    if (firstChannel) {
+      const returnTo = typeof route.query.return_to === 'string' ? route.query.return_to : ''
+      await router.push(returnTo.startsWith('/studio/') ? returnTo : '/studio')
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '保存失败'
   } finally {

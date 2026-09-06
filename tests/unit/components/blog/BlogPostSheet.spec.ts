@@ -93,10 +93,13 @@ describe("BlogPostSheet", () => {
 		});
 		await flushPromises();
 
-		expect(wrapper.get('[data-test="post-reading-mode"]').text()).toContain("学术双栏");
-		await wrapper.get('[data-test="post-reading-mode"]').trigger("click");
+		expect(wrapper.get('[data-test="post-reading-single"]').text()).toBe("单栏");
+		expect(wrapper.get('[data-test="post-reading-double"]').text()).toBe("双栏");
+		expect(wrapper.get('[role="note"]').text()).toContain("最近更新时间：");
+		await wrapper.get('[data-test="post-reading-double"]').trigger("click");
 
 		expect(wrapper.find(".academic-reader").exists()).toBe(true);
+		expect(wrapper.get('[role="note"]').text()).toContain("最近更新时间：");
 		expect(wrapper.findAll(".academic-paper")).toHaveLength(1);
 		expect(wrapper.get(".academic-paper__header").text()).toContain("Atoman");
 		expect(wrapper.get(".academic-paper__footer").text()).toMatch(/发布.*第 1 页.*更新/);

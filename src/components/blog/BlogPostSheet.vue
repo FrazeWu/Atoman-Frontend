@@ -9,6 +9,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
@@ -44,7 +45,12 @@ const post = ref<Post | null>(null)
 const relatedPosts = ref<BlogRelatedPost[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
-const isAcademic = ref(false)
+const readingMode = ref<'single' | 'double'>('single')
+const isAcademic = computed(() => readingMode.value === 'double')
+const readingModeOptions = [
+  { label: '单栏', value: 'single', test: 'post-reading-single' },
+  { label: '双栏', value: 'double', test: 'post-reading-double' },
+] as const
 const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
 const academicPages = computed(() => paginateAcademicContent(renderedContent.value))
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
@@ -113,7 +119,7 @@ async function loadPost() {
   commentsOpen.value = false
   commentSheetMode.value = 'partial'
   commentCount.value = undefined
-  isAcademic.value = false
+  readingMode.value = 'single'
   relatedRequestSequence += 1
   channelSubscribed.value = false
   channelSubscriptionBusy.value = false
@@ -411,21 +417,13 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         </button>
         <RouterLink v-else-if="post.channel_id" to="/login" class="post-sheet-subscribe">登录后订阅频道</RouterLink>
       </div>
-      <div class="post-sheet-reading-toolbar">
-        <button
-          type="button"
-          class="post-sheet-reading-mode"
-          data-test="post-reading-mode"
-          :aria-pressed="isAcademic"
-          @click="isAcademic = !isAcademic"
-        >
-          {{ isAcademic ? '普通阅读' : '学术双栏' }}
-        </button>
-      </div>
       <h1>{{ post.title }}</h1>
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
-      <div v-if="post.tags?.length" class="post-sheet-tags" aria-label="文章标签">
-        <button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button>
+      <div class="post-sheet-detail-toolbar">
+        <div v-if="post.tags?.length" class="post-sheet-tags" aria-label="文章标签">
+          <button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button>
+        </div>
+        <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
       </div>
       <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <template v-if="!isAcademic">
@@ -529,28 +527,12 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   margin-top: 1rem;
 }
 
-.post-sheet-reading-toolbar {
+.post-sheet-detail-toolbar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  margin: 0.75rem 0 0;
-}
-
-.post-sheet-reading-mode {
-  min-height: 2.25rem;
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.post-sheet-reading-mode:hover,
-.post-sheet-reading-mode[aria-pressed='true'] {
-  border-color: var(--a-color-fg);
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
+  gap: 1rem;
+  margin: 0 0 1.5rem;
 }
 
 .post-sheet-loading,
@@ -621,10 +603,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.post-sheet-tags {
-  margin: -1rem 0 1.5rem;
+  margin-right: auto;
 }
 
 .post-sheet-tags button {

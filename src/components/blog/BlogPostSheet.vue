@@ -70,7 +70,7 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 let loadSequence = 0
 let relatedRequestSequence = 0
 
-const ACADEMIC_PAGE_LENGTH = 3_000
+const ACADEMIC_PAGE_LENGTH = 1_700
 
 function paginateAcademicContent(content: string) {
   if (!content) return []
@@ -396,7 +396,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         </PButton>
       </div>
       <img v-if="post.cover_url" :src="post.cover_url" :alt="post.title" class="post-sheet-cover" />
-      <div v-if="!isAcademic" class="post-sheet-meta">
+      <div class="post-sheet-meta">
         <span>{{ post.user?.display_name || post.user?.username || '未知作者' }}</span>
         <span>{{ new Date(post.created_at).toLocaleDateString('zh-CN') }}</span>
         <button
@@ -422,15 +422,13 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
           {{ isAcademic ? '普通阅读' : '学术双栏' }}
         </button>
       </div>
-      <template v-if="!isAcademic">
-        <h1>{{ post.title }}</h1>
-        <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
-      </template>
-      <div v-if="post.tags?.length && !isAcademic" class="post-sheet-tags" aria-label="文章标签">
+      <h1>{{ post.title }}</h1>
+      <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
+      <div v-if="post.tags?.length" class="post-sheet-tags" aria-label="文章标签">
         <button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button>
       </div>
+      <BlogPostUpdateNotice :updated-at="post.updated_at" />
       <template v-if="!isAcademic">
-        <BlogPostUpdateNotice :updated-at="post.updated_at" />
         <div class="prose-blog post-sheet-content" v-html="renderedContent" />
       </template>
       <div v-else class="academic-reader">
@@ -439,11 +437,6 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
             <span>Atoman</span>
             <span :title="post.title">{{ post.title }}</span>
           </header>
-          <div v-if="index === 0" class="academic-paper__lead">
-            <h1>{{ post.title }}</h1>
-            <p>{{ post.user?.display_name || post.user?.username || '未知作者' }}</p>
-            <p v-if="post.summary" class="academic-paper__abstract">{{ post.summary }}</p>
-          </div>
           <div class="academic-paper__body prose-blog prose-blog-academic" v-html="page" />
           <footer class="academic-paper__footer">
             <span>发布 {{ formatAcademicDate(post.created_at) }}</span>
@@ -663,9 +656,9 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 
 .academic-paper {
   display: grid;
-  grid-template-rows: auto auto minmax(40rem, 1fr) auto;
-  width: min(100%, 54rem);
-  min-height: 58rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(100%, 42rem);
+  aspect-ratio: 210 / 297;
   margin: 0 auto;
   padding: 1.25rem 1.5rem 1rem;
   background: #ffffff;
@@ -698,32 +691,9 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   white-space: nowrap;
 }
 
-.academic-paper__lead {
-  padding: 2.1rem 0 1.6rem;
-  text-align: center;
-}
-
-.academic-paper__lead h1 {
-  margin: 0 0 0.8rem;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.academic-paper__lead p {
-  margin: 0.35rem 0;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 0.9rem;
-}
-
-.academic-paper__abstract {
-  max-width: 40rem;
-  margin: 1rem auto 0 !important;
-  text-align: justify;
-}
-
 .academic-paper__body {
+  min-height: 0;
+  overflow: hidden;
   column-count: 2;
   column-gap: 2rem;
   column-rule: none;
@@ -781,12 +751,8 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   }
 
   .academic-paper {
-    min-height: 0;
+    aspect-ratio: auto;
     padding: 1rem;
-  }
-
-  .academic-paper__lead {
-    padding: 1.5rem 0 1.25rem;
   }
 
   .academic-paper__body {

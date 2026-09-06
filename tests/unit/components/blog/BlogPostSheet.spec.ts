@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
@@ -99,6 +101,17 @@ describe("BlogPostSheet", () => {
 		expect(wrapper.get(".academic-paper__header").text()).toContain("Atoman");
 		expect(wrapper.get(".academic-paper__footer").text()).toMatch(/发布.*第 1 页.*更新/);
 		expect(wrapper.find(".academic-paper__body").classes()).toContain("prose-blog-academic");
+	});
+
+	it("保留详情头部，并将学术正文限制在 A4 纸张内", async () => {
+		const source = readFileSync(
+			resolve(__dirname, "../../../../src/components/blog/BlogPostSheet.vue"),
+			"utf8",
+		);
+
+		expect(source).toContain("aspect-ratio: 210 / 297;");
+		expect(source).toContain("width: min(100%, 42rem);");
+		expect(source).not.toContain('v-if="index === 0" class="academic-paper__lead"');
 	});
 
 	it("opens the Studio editor and preserves collection context", async () => {

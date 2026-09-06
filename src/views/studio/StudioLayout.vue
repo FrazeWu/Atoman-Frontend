@@ -30,7 +30,7 @@
         </div>
         <section v-else-if="studio.loaded && !studio.currentChannel && !isManagementRoute" class="studio-empty">
           <h1>还没有频道</h1>
-          <RouterLink to="/studio/manage/channel">创建频道</RouterLink>
+          <RouterLink :to="{ path: '/studio/manage/channel', query: { return_to: route.fullPath } }">创建频道</RouterLink>
         </section>
         <RouterView v-else v-slot="{ Component }">
           <component v-if="Component" :is="Component" />

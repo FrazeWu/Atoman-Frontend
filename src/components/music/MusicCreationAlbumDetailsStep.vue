@@ -14,6 +14,7 @@ import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 import MusicBrainzEditNotice from '@/components/music/MusicBrainzEditNotice.vue'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
@@ -81,6 +82,7 @@ const trackAudioInputRef = ref<HTMLInputElement | null>(null)
 const pendingAudioTrackId = ref<string | null>(null)
 const trackAudioUploading = ref(false)
 const trackAudioError = ref('')
+const pendingTrackRemovalId = ref<string | null>(null)
 const activeTrackUploads = new Map<string, AbortController>()
 
 onUnmounted(() => {
@@ -92,6 +94,25 @@ function removeTrack(trackId: string) {
   activeTrackUploads.get(trackId)?.abort()
   activeTrackUploads.delete(trackId)
   removeTrackDraft(trackId)
+}
+
+function requestTrackRemoval(trackId: string) {
+  const track = orderedTracks.value.find((item) => item.id === trackId)
+  if (isEditMode.value && track?.songId) {
+    pendingTrackRemovalId.value = trackId
+    return
+  }
+  removeTrack(trackId)
+}
+
+function confirmTrackRemoval() {
+  const trackId = pendingTrackRemovalId.value
+  pendingTrackRemovalId.value = null
+  if (trackId) removeTrack(trackId)
+}
+
+function cancelTrackRemoval() {
+  pendingTrackRemovalId.value = null
 }
 
 function openTrackAudioPicker(trackId: string | null = null) {
@@ -660,7 +681,7 @@ watch(
               class="track-row__remove-btn"
               aria-label="删除曲目"
               title="删除曲目"
-              @click="removeTrack(track.id)"
+              @click="requestTrackRemoval(track.id)"
             >
               <X :size="15" />
             </button>
@@ -738,6 +759,18 @@ watch(
       </div>
     </div>
   </div>
+
+  <PConfirm
+    above-player
+    :show="pendingTrackRemovalId !== null"
+    title="从当前版本移除曲目？"
+    message="这首曲目只会从当前专辑版本移除，旧版本仍会保留，之后可以通过版本回滚恢复。"
+    confirm-text="移除曲目"
+    cancel-text="保留曲目"
+    danger
+    @confirm="confirmTrackRemoval"
+    @cancel="cancelTrackRemoval"
+  />
 </template>
 
 <style scoped>

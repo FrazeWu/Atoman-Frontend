@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import SubscriptionHubSidebarTree from "@/components/feed/SubscriptionHubSidebarTree.vue";
@@ -128,6 +130,15 @@ const tree: SubscriptionHubTree = {
 };
 
 describe("SubscriptionHubSidebarTree", () => {
+  it("does not render a scroll progress indicator beside subscriptions", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/components/feed/SubscriptionHubSidebarTree.vue"),
+      "utf8",
+    );
+
+    expect(source).not.toContain(".subscription-hub-sidebar::after");
+  });
+
   it("renders a flat source list without group names", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, { props: { tree } });
 

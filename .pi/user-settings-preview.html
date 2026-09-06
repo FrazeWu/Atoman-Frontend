@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Atoman 账号设置预览</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --paper: #fff;
+      --ink: #17202a;
+      --muted: #687482;
+      --line: #dfe4e9;
+      --soft: #edf1f4;
+      --accent: #2364d2;
+      --accent-soft: #eaf1ff;
+      --danger: #bd3f3f;
+      --danger-soft: #fff1f1;
+      --success: #1f8a63;
+      --radius: 8px;
+      --shadow: 0 18px 45px rgb(17 28 45 / 14%);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; line-height: 1.5; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 28px; border-bottom: 1px solid var(--line); background: rgb(255 255 255 / 96%); backdrop-filter: blur(8px); }
+    .brand { font-weight: 700; }
+    .topbar nav { display: flex; gap: 20px; color: var(--muted); font-size: 14px; }
+    .topbar nav a { color: inherit; text-decoration: none; }
+    .topbar nav a:last-child { color: var(--ink); font-weight: 600; }
+    .page { width: min(1180px, calc(100% - 40px)); margin: 30px auto 80px; }
+    .page-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    .page-head h1 { margin: 0; font-size: 30px; line-height: 1.2; }
+    .page-head p { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 32px; align-items: start; }
+    .sections { display: grid; gap: 20px; min-width: 0; }
+    .section { scroll-margin-top: 84px; padding: 26px 28px 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+    .section-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--soft); }
+    .kicker { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+    h2 { margin: 0; font-size: 20px; }
+    .section-head p:last-child { max-width: 420px; margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .row { display: grid; grid-template-columns: minmax(170px, .8fr) minmax(0, 1.2fr); gap: 26px; padding: 22px 0; border-bottom: 1px solid var(--soft); }
+    .row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .copy strong { display: block; font-size: 14px; }
+    .copy small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .control { min-width: 0; }
+    .input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    label.field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+    input, textarea, select { width: 100%; min-height: 40px; padding: 0 11px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); outline: 0; }
+    textarea { min-height: 86px; padding-top: 9px; resize: vertical; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .btn { min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); font-weight: 600; }
+    .btn:hover { border-color: #aeb9c5; background: #fafbfc; }
+    .btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .btn.danger { border-color: var(--danger); background: var(--danger); color: #fff; }
+    .btn.link { border-color: transparent; color: var(--accent); background: transparent; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 13px; }
+    .avatar-line { display: flex; align-items: center; gap: 13px; }
+    .avatar { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 7px; background: var(--ink); color: #fff; font-size: 22px; font-weight: 700; }
+    .avatar-line small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .status { color: var(--success); font-size: 12px; }
+    .account-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--soft); }
+    .account-inline:last-child { border-bottom: 0; }
+    .account-inline strong { font-size: 13px; }
+    .account-inline small { display: block; color: var(--muted); font-size: 12px; }
+    .device-list { display: grid; gap: 8px; }
+    .device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 13px 14px; border: 1px solid var(--line); border-radius: 6px; }
+    .device strong { display: block; font-size: 13px; }
+    .device small { color: var(--muted); font-size: 12px; }
+    .badge { display: inline-flex; align-items: center; min-height: 22px; margin-left: 7px; padding: 0 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; }
+    .log-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+    .log-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--soft); color: var(--muted); font-size: 12px; }
+    .log-list li:last-child { border-bottom: 0; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 0; border-bottom: 1px solid var(--soft); }
+    .toggle-row:last-child { border-bottom: 0; }
+    .toggle-row span { color: var(--muted); font-size: 12px; }
+    .switch { position: relative; display: inline-flex; flex-shrink: 0; align-items: center; width: 44px; height: 24px; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .switch i { width: 44px; height: 24px; border-radius: 12px; background: #c7d0d9; transition: background .15s ease; }
+    .switch i::after { display: block; width: 18px; height: 18px; margin: 3px; border-radius: 50%; background: #fff; content: ""; transition: transform .15s ease; }
+    .switch input:checked + i { background: var(--accent); }
+    .switch input:checked + i::after { transform: translateX(20px); }
+    .danger-zone { border-color: #efcaca; background: var(--danger-soft); }
+    .danger-zone .section-head { border-color: #f3dada; }
+    .danger-zone .kicker, .danger-zone h2 { color: var(--danger); }
+    .directory { position: sticky; top: 88px; padding: 14px; border-left: 1px solid var(--line); }
+    .directory strong { display: block; margin-bottom: 9px; font-size: 12px; }
+    .directory a { display: block; padding: 8px 9px; border-left: 2px solid transparent; color: var(--muted); font-size: 13px; text-decoration: none; }
+    .directory a:hover, .directory a.active { border-left-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .mobile-directory { display: none; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: none; place-items: center; padding: 20px; background: rgb(15 23 42 / 36%); }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(440px, 100%); padding: 24px; border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+    .modal.profile-modal { width: min(640px, 100%); }
+    .modal h2 { margin: 0 0 8px; }
+    .modal p { margin: 0; color: var(--muted); font-size: 13px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+    .sheet-backdrop { position: fixed; inset: 0; z-index: 9; display: none; justify-content: flex-end; background: rgb(15 23 42 / 36%); }
+    .sheet-backdrop.open { display: flex; }
+    .sheet { width: min(560px, 100%); height: 100%; overflow: auto; padding: 24px; background: var(--paper); box-shadow: var(--shadow); animation: sheet-in .18s ease both; }
+    .sheet.narrow { width: min(420px, 100%); }
+    @keyframes sheet-in { from { transform: translateX(20px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
+    .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .sheet-head h2 { margin: 0; font-size: 20px; }
+    .sheet-close { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--muted); font-size: 21px; }
+    .sheet-body { display: grid; gap: 16px; padding-top: 20px; }
+    .sheet-copy { margin: 0; color: var(--muted); font-size: 13px; }
+    .sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+    .sheet-preview { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; }
+    .sheet-preview-head { display: flex; align-items: center; gap: 12px; }
+    .sheet-preview .avatar { width: 50px; height: 50px; font-size: 18px; }
+    .sheet-preview strong { font-size: 16px; }
+    .avatar-editor { display: grid; gap: 14px; }
+    .avatar-editor-preview { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; }
+    .avatar-editor-preview .avatar { width: 64px; height: 64px; font-size: 24px; }
+    .file-input { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+    .file-input input { min-height: 42px; padding: 8px 10px; }
+    .sheet-status { min-height: 20px; color: var(--success); font-size: 12px; }
+    .sheet-note { margin: 0; color: var(--muted); font-size: 12px; }
+    .sheet-actions .btn.primary { min-width: 110px; }
+    .security-list { display: grid; gap: 8px; }
+    .security-item { display: grid; gap: 3px; padding: 14px; border: 1px solid var(--line); border-radius: 6px; }
+    .security-item strong { font-size: 13px; }
+    .security-item span, .security-item small { color: var(--muted); font-size: 12px; }
+    .security-item .item-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .log-detail { display: grid; gap: 3px; }
+    body.overlay-open { overflow: hidden; }
+    .detail-list { display: grid; gap: 8px; }
+    .detail-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 6px; }
+    .detail-item strong { display: block; font-size: 13px; }
+    .detail-item small { color: var(--muted); font-size: 12px; }
+    .modules-list { display: grid; gap: 0; }
+    .module-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 15px 0; border-bottom: 1px solid var(--soft); }
+    .module-row:last-child { border-bottom: 0; }
+    .module-row strong { display: block; font-size: 14px; }
+    .module-row small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .directory { display: none; }
+      .mobile-directory { display: inline-flex; }
+    }
+    @media (max-width: 640px) {
+      .topbar { padding: 0 16px; }
+      .topbar nav { display: none; }
+      .page { width: min(100% - 24px, 680px); margin-top: 16px; }
+      .page-head { align-items: start; flex-direction: column; gap: 12px; }
+      .page-head h1 { font-size: 26px; }
+      .section { padding: 21px 18px 24px; }
+      .section-head { display: block; }
+      .section-head p:last-child { max-width: none; }
+      .row { grid-template-columns: 1fr; gap: 13px; padding: 19px 0; }
+      .input-grid { grid-template-columns: 1fr; }
+      .device { grid-template-columns: 1fr; }
+      .device .btn { justify-self: start; }
+      .module-row { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="brand">Atoman</div><nav><a href="#">主页</a><a href="#">订阅</a><a href="#">工作台</a><a href="#">账号设置</a></nav><button class="btn" type="button">林默</button></header>
+  <main class="page">
+    <div class="page-head"><div><h1>账号设置</h1><p>管理你的资料、账号安全、通知和社交权限。</p></div><button class="btn mobile-directory" type="button" onclick="document.querySelector('.directory').scrollIntoView({behavior:'smooth'})">打开目录</button></div>
+    <div class="layout">
+      <div class="sections">
+        <section class="section" id="profile">
+          <div class="section-head"><div><p class="kicker">01 / PROFILE</p><h2>个人资料</h2></div><p>这些资料会显示在你的个人主页和内容中。</p></div>
+          <div class="row"><div class="copy"><strong>头像</strong><small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB。</small></div><div class="control"><div class="avatar-line"><div class="avatar">林</div><div><button class="btn" type="button" data-open-sheet="avatar">更换头像</button><small>上次更新：今天</small></div></div><div class="actions"><button class="btn link" type="button" data-open-sheet="avatar">恢复上次头像</button></div></div></div>
+          <div class="row"><div class="copy"><strong>基本信息</strong><small>显示名和简介会公开展示。</small></div><div class="control"><div class="input-grid"><label class="field">显示名<input name="displayName" value="林默"></label><label class="field">网站<input name="website" value="https://linmo.example"></label></div><label class="field" style="margin-top:12px">所在地<input name="location" value="上海"></label><label class="field" style="margin-top:12px">个人简介<textarea name="bio">记录产品、技术与长期主义实践。让每一次输出都能成为下一次思考的起点。</textarea></label><div class="actions"><button class="btn primary" type="button" data-save>保存资料</button><span class="status" data-save-status></span></div></div></div>
+          <div class="row"><div class="copy"><strong>主页预览</strong><small>查看其他人看到的主页。</small></div><div class="control"><button class="btn" type="button" data-open-sheet="profile">查看个人主页</button></div></div>
+        </section>
+
+        <section class="section" id="security">
+          <div class="section-head"><div><p class="kicker">02 / SECURITY</p><h2>账号与安全</h2></div><p>保护登录凭据，查看设备和近期安全活动。</p></div>
+          <div class="row"><div class="copy"><strong>修改密码</strong><small>定期更新密码可以保护账号安全。</small></div><div class="control"><button class="btn" type="button" data-open-sheet="password">修改密码</button></div></div>
+          <div class="row"><div class="copy"><strong>登录邮箱</strong><small>当前绑定邮箱：linmo@example.com</small></div><div class="control"><button class="btn" type="button" data-open-sheet="email">修改邮箱</button></div></div>
+          <div class="row"><div class="copy"><strong>已连接账号</strong><small>使用第三方账号登录 Atoman。</small></div><div class="control"><div class="account-inline"><div><strong>GitHub</strong><small>linmo-dev</small></div><button class="btn" type="button">解除连接</button></div><div class="account-inline"><div><strong>Google</strong><small>未连接</small></div><button class="btn" type="button">连接</button></div></div></div>
+          <div class="row"><div class="copy"><strong>登录设备</strong><small>退出不再使用的设备。</small></div><div class="control"><div class="device-list" data-devices><div class="device"><div><strong>MacBook Pro <span class="badge">当前设备</span></strong><small>Chrome · 上海 · 刚刚</small></div></div><div class="device"><div><strong>iPhone 15</strong><small>Atoman App · 上海 · 2 小时前</small></div><button class="btn" type="button" data-revoke>退出设备</button></div><div class="device"><div><strong>Windows PC</strong><small>Edge · 杭州 · 3 天前</small></div><button class="btn" type="button" data-revoke>退出设备</button></div></div><div class="actions"><button class="btn link" type="button" data-open-sheet="devices">详情</button></div></div></div>
+          <div class="row"><div class="copy"><strong>安全日志</strong><small>近期认证和安全操作记录。</small></div><div class="control"><ul class="log-list"><li><span>修改个人资料</span><span>今天 09:42</span></li><li><span>新设备登录：iPhone 15</span><span>今天 07:18</span></li><li><span>绑定 GitHub</span><span>5 月 18 日</span></li></ul><div class="actions"><button class="btn link" type="button" data-open-sheet="logs">详情</button></div></div></div>
+        </section>
+
+        <section class="section" id="notifications">
+          <div class="section-head"><div><p class="kicker">03 / NOTIFICATIONS</p><h2>通知</h2></div><p>只接收站内通知；账号安全和私信提醒始终开启。</p></div>
+          <div class="row"><div class="copy"><strong>通知偏好</strong><small>按类型控制站内提醒。</small></div><div class="control"><div class="toggle-row"><div><strong>点赞提醒</strong><span>有人赞了你的内容</span></div><label class="switch"><input name="notifyLikes" type="checkbox" checked><i></i></label></div><div class="toggle-row"><div><strong>互动提醒</strong><span>关注、标记和话题状态变化</span></div><label class="switch"><input name="notifyInteractions" type="checkbox" checked><i></i></label></div><div class="toggle-row"><div><strong>提及提醒</strong><span>有人在内容中提到你</span></div><label class="switch"><input name="notifyMentions" type="checkbox" checked><i></i></label></div><div class="toggle-row"><div><strong>回复提醒</strong><span>有人回复你的内容</span></div><label class="switch"><input name="notifyReplies" type="checkbox" checked><i></i></label></div><div class="toggle-row"><div><strong>协作提醒</strong><span>协作请求和任务变化</span></div><label class="switch"><input name="notifyCollaboration" type="checkbox" checked><i></i></label></div></div></div>
+        </section>
+
+        <section class="section" id="privacy">
+          <div class="section-head"><div><p class="kicker">04 / PRIVACY</p><h2>隐私与社交</h2></div><p>控制主页可见范围、订阅关系和私信权限。</p></div>
+          <div class="row"><div class="copy"><strong>设为私密</strong><small>开启后，其他人只能看到你的用户名和头像。</small></div><div class="control"><label class="switch"><input name="privateProfile" type="checkbox"><i></i></label></div></div>
+          <div class="row"><div class="copy"><strong>允许他人查看订阅关系</strong><small>开启后，其他人点击主页上的“订阅中 / 被订阅”才可查看列表。</small></div><div class="control"><label class="switch"><input name="showSubscriptions" type="checkbox"><i></i></label></div></div>
+          <div class="row"><div class="copy"><strong>私信权限</strong><small>不提供“允许连续发送”。</small></div><div class="control"><select name="messagePermission"><option>陌生人仅可发一条</option><option>仅我订阅的人</option></select></div></div>
+          <div class="row"><div class="copy"><strong>拉黑用户</strong><small>被拉黑的用户无法订阅你的账号或频道，也不能向你发送私信。</small></div><div class="control"><div class="account-inline"><div><strong>暂无拉黑用户</strong><small>被拉黑的用户会显示在这里</small></div><button class="btn" type="button">管理拉黑列表</button></div></div></div>
+        </section>
+
+        <section class="section" id="modules">
+          <div class="section-head"><div><p class="kicker">05 / MODULES</p><h2>模块设置</h2></div><p>每个内容模块使用独立设置，互不影响。</p></div>
+          <div class="modules-list">
+            <div class="module-row"><div><strong>博客</strong><small>文章默认可见性、编辑器和内容发布偏好。</small></div><button class="btn" type="button">进入博客设置</button></div>
+            <div class="module-row"><div><strong>播客</strong><small>节目资料、单集发布和音频默认设置。</small></div><button class="btn" type="button">进入播客设置</button></div>
+            <div class="module-row"><div><strong>视频</strong><small>视频发布、封面和字幕默认设置。</small></div><button class="btn" type="button">进入视频设置</button></div>
+            <div class="module-row"><div><strong>音乐</strong><small>音乐资料、播放和作品展示设置。</small></div><button class="btn" type="button">进入音乐设置</button></div>
+          </div>
+        </section>
+
+        <section class="section" id="rules">
+          <div class="section-head"><div><p class="kicker">06 / SUBSCRIPTIONS</p><h2>订阅规则</h2></div><p>规则、分组和自动整理功能，具体内容待最后确认。</p></div>
+          <div class="row"><div class="copy"><strong>订阅规则</strong><small>此区域暂不展开，等订阅规则方案确认后补充。</small></div><div class="control"><button class="btn" type="button">稍后设置</button></div></div>
+        </section>
+
+        <section class="section danger-zone" id="danger">
+          <div class="section-head"><div><p class="kicker">DANGER ZONE</p><h2>注销账户</h2></div><p>立即注销，已发布内容会匿名化保留。</p></div>
+          <div class="row"><div class="copy"><strong>永久注销账号</strong><small>账号、频道、订阅、私信和登录会话立即失效。此操作不可恢复。</small></div><div class="control"><button class="btn danger" type="button" data-delete>注销账户</button></div></div>
+        </section>
+      </div>
+      <aside class="directory"><strong>目录 · 账号设置</strong><a class="active" href="#profile">个人资料</a><a href="#security">账号与安全</a><a href="#notifications">通知</a><a href="#privacy">隐私与社交</a><a href="#modules">模块设置</a><a href="#rules">订阅规则</a><a href="#danger">注销账户</a></aside>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" data-modal="delete" role="dialog" aria-modal="true" aria-labelledby="delete-title"><div class="modal"><h2 id="delete-title">注销账户</h2><p>确认立即注销吗？已发布内容会匿名化保留，账号、频道、订阅、私信和登录会话将失效，无法恢复。</p><div class="modal-actions"><button class="btn" type="button" data-cancel-modal>取消</button><button class="btn danger" type="button" data-confirm-delete>确认注销</button></div></div></div>
+
+  <div class="modal-backdrop" data-modal="profile" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title"><div class="modal profile-modal"><h2 id="profile-modal-title">个人主页预览</h2><p>这是其他人看到的公开主页。</p><div class="sheet-preview" style="margin-top:18px"><div class="sheet-preview-head"><div class="avatar">林</div><div><strong>林默</strong><p class="sheet-note">@linmo</p></div></div><p class="sheet-note">记录产品、技术与长期主义实践。让每一次输出都能成为下一次思考的起点。</p><div class="channel-meta"><span><strong>128</strong> 订阅中</span><span><strong>1k+</strong> 被订阅</span><span><strong>86</strong> 信誉分</span><span><strong>1.8k</strong> 贡献分</span></div></div><div class="modal-actions"><button class="btn" type="button" data-close-modal>关闭</button><button class="btn primary" type="button" data-go-profile>打开主页</button></div></div></div>
+
+  <div class="sheet-backdrop" data-overlay="avatar" role="dialog" aria-modal="true" aria-labelledby="avatar-sheet-title"><aside class="sheet narrow"><div class="sheet-head"><h2 id="avatar-sheet-title">更换头像</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><div class="avatar-editor"><div class="avatar-editor-preview"><div class="avatar" data-avatar-preview>林</div><div><strong>当前头像</strong><p class="sheet-note">上次更新：今天</p></div></div><label class="file-input">选择图片<input name="avatar" type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-avatar-file></label><p class="sheet-note">支持 JPG、PNG、GIF 或 WebP，最大 10 MB。</p><div class="sheet-actions"><button class="btn link" type="button" data-restore-avatar>恢复上次头像</button><button class="btn primary" type="button" data-avatar-save>保存头像</button></div><span class="sheet-status" data-avatar-status></span></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="password" role="dialog" aria-modal="true" aria-labelledby="password-sheet-title"><aside class="sheet narrow"><div class="sheet-head"><h2 id="password-sheet-title">修改密码</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><form class="sheet-body" data-password-form><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none"><p class="sheet-copy">设置一个新的登录密码，保存后其他设备需要重新登录。</p><label class="field">当前密码<input name="currentPassword" type="password" autocomplete="current-password"></label><label class="field">新密码<input name="newPassword" type="password" autocomplete="new-password"></label><label class="field">确认新密码<input name="confirmPassword" type="password" autocomplete="new-password"></label><div class="sheet-actions"><button class="btn primary" type="submit" data-password-save>保存新密码</button></div><span class="sheet-status" data-password-status></span></form></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="email" role="dialog" aria-modal="true" aria-labelledby="email-sheet-title"><aside class="sheet narrow"><div class="sheet-head"><h2 id="email-sheet-title">修改邮箱</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><form class="sheet-body" data-email-form><p class="sheet-copy">当前邮箱：linmo@example.com。新邮箱需要通过验证码确认。</p><label class="field">新邮箱<input name="newEmail" type="email" autocomplete="email" placeholder="name@example.com"></label><label class="field">验证码<input name="emailCode" inputmode="numeric" autocomplete="one-time-code" placeholder="输入 6 位验证码"></label><div class="sheet-actions"><button class="btn primary" type="submit" data-email-save>保存新邮箱</button></div><span class="sheet-status" data-email-status></span></form></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="devices" role="dialog" aria-modal="true" aria-labelledby="devices-sheet-title"><aside class="sheet"><div class="sheet-head"><h2 id="devices-sheet-title">登录设备</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">这里显示全部登录会话。退出设备后，该设备需要重新登录。</p><div class="security-list" data-device-details><div class="security-item"><strong>MacBook Pro <span class="badge">当前设备</span></strong><span>Chrome · 上海 · 刚刚</span></div><div class="security-item"><strong>iPhone 15</strong><span>Atoman App · 上海 · 2 小时前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div><div class="security-item"><strong>Windows PC</strong><span>Edge · 杭州 · 3 天前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div><div class="security-item"><strong>iPad Air</strong><span>Safari · 上海 · 8 天前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div><div class="security-item"><strong>Linux 工作站</strong><span>Firefox · 北京 · 14 天前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="logs" role="dialog" aria-modal="true" aria-labelledby="logs-sheet-title"><aside class="sheet"><div class="sheet-head"><h2 id="logs-sheet-title">安全日志</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">记录账号认证、资料变更和第三方账号操作。</p><div class="security-list"><div class="security-item"><strong>修改个人资料</strong><span class="log-detail"><span>今天 09:42</span><small>上海 · 当前设备</small></span></div><div class="security-item"><strong>新设备登录：iPhone 15</strong><span class="log-detail"><span>今天 07:18</span><small>上海 · Atoman App</small></span></div><div class="security-item"><strong>绑定 GitHub</strong><span class="log-detail"><span>5 月 18 日</span><small>网页端 · 上海</small></span></div><div class="security-item"><strong>修改登录邮箱</strong><span class="log-detail"><span>5 月 12 日</span><small>网页端 · 上海</small></span></div><div class="security-item"><strong>退出 Windows PC</strong><span class="log-detail"><span>5 月 08 日</span><small>网页端 · 杭州</small></span></div></div></div></aside></div>
+
+  <script>
+    const body = document.body
+    const closeOverlay = overlay => {
+      if (!overlay) return
+      overlay.classList.remove('open')
+      body.classList.remove('overlay-open')
+    }
+    const openOverlay = overlay => {
+      if (!overlay) return
+      document.querySelectorAll('[data-overlay].open, [data-modal].open').forEach(closeOverlay)
+      overlay.classList.add('open')
+      body.classList.add('overlay-open')
+    }
+
+    document.querySelectorAll('[data-open-sheet]').forEach(button => button.addEventListener('click', () => {
+      openOverlay(document.querySelector(`[data-overlay="${button.dataset.openSheet}"]`) || document.querySelector(`[data-modal="${button.dataset.openSheet}"]`))
+    }))
+    document.querySelectorAll('[data-close-overlay]').forEach(button => button.addEventListener('click', () => closeOverlay(button.closest('[data-overlay]'))))
+    document.querySelectorAll('[data-overlay]').forEach(overlay => overlay.addEventListener('click', event => { if (event.target === overlay) closeOverlay(overlay) }))
+    document.querySelectorAll('[data-close-modal], [data-cancel-modal]').forEach(button => button.addEventListener('click', () => closeOverlay(button.closest('[data-modal]'))))
+    document.querySelectorAll('[data-modal]').forEach(modalLayer => modalLayer.addEventListener('click', event => { if (event.target === modalLayer) closeOverlay(modalLayer) }))
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return
+      const openLayer = document.querySelector('[data-overlay].open, [data-modal].open')
+      closeOverlay(openLayer)
+    })
+
+    document.querySelector('[data-delete]').addEventListener('click', () => openOverlay(document.querySelector('[data-modal="delete"]')))
+    document.querySelector('[data-confirm-delete]').addEventListener('click', () => { closeOverlay(document.querySelector('[data-modal="delete"]')); alert('原型：已提交注销请求') })
+    document.querySelector('[data-avatar-file]').addEventListener('change', event => {
+      const file = event.target.files[0]
+      if (file) document.querySelector('[data-avatar-status]').textContent = `已选择：${file.name}`
+    })
+    document.querySelector('[data-restore-avatar]').addEventListener('click', () => { document.querySelector('[data-avatar-preview]').textContent = '林'; document.querySelector('[data-avatar-status]').textContent = '已恢复上次头像' })
+    document.querySelector('[data-avatar-save]').addEventListener('click', () => { document.querySelector('[data-avatar-status]').textContent = '头像已保存' })
+    document.querySelector('[data-password-form]').addEventListener('submit', event => { event.preventDefault(); document.querySelector('[data-password-status]').textContent = '密码已更新' })
+    document.querySelector('[data-email-form]').addEventListener('submit', event => { event.preventDefault(); document.querySelector('[data-email-status]').textContent = '邮箱已更新' })
+    document.querySelector('[data-go-profile]').addEventListener('click', () => { window.location.href = 'user-profile-preview.html' })
+    document.querySelector('[data-save]').addEventListener('click', () => { document.querySelector('[data-save-status]').textContent = '资料已保存' })
+    document.querySelectorAll('[data-revoke], [data-revoke-detail]').forEach(button => button.addEventListener('click', () => button.closest('.device, .security-item').remove()))
+    const links = [...document.querySelectorAll('.directory a')]
+    const sections = links.map(link => document.querySelector(link.getAttribute('href')))
+    const updateDirectory = () => { const marker = window.scrollY + 120; let active = 0; sections.forEach((section, index) => { if (section.offsetTop <= marker) active = index }); links.forEach((link, index) => link.classList.toggle('active', index === active)) }
+    window.addEventListener('scroll', updateDirectory, { passive: true })
+    updateDirectory()
+  </script>
+</body>
+</html>

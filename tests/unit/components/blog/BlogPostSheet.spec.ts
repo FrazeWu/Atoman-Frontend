@@ -72,6 +72,35 @@ describe("BlogPostSheet", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("在弹层中切换为带页眉页脚的学术双栏阅读", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.get('[data-test="post-reading-mode"]').text()).toContain("学术双栏");
+		await wrapper.get('[data-test="post-reading-mode"]').trigger("click");
+
+		expect(wrapper.find(".academic-reader").exists()).toBe(true);
+		expect(wrapper.findAll(".academic-paper")).toHaveLength(1);
+		expect(wrapper.get(".academic-paper__header").text()).toContain("Atoman");
+		expect(wrapper.get(".academic-paper__footer").text()).toMatch(/发布.*第 1 页.*更新/);
+		expect(wrapper.find(".academic-paper__body").classes()).toContain("prose-blog-academic");
+	});
+
 	it("opens the Studio editor and preserves collection context", async () => {
 		const pinia = createPinia();
 		setActivePinia(pinia);

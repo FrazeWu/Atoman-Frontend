@@ -77,7 +77,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 		},
 		{
 			path: "/post/:id",
-			component: () => import("@/views/blog/PostDetailView.vue"),
+			component: () => import("@/views/blog/PostDetailRouteView.vue"),
 			beforeEnter: (to) => (to.params.id === "new" ? "/__not_found__" : true),
 		},
 	],

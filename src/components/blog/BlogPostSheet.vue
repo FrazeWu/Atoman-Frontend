@@ -44,7 +44,9 @@ const post = ref<Post | null>(null)
 const relatedPosts = ref<BlogRelatedPost[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+const isAcademic = ref(false)
 const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
+const academicPages = computed(() => paginateAcademicContent(renderedContent.value))
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const feedStore = useFeedStore()
 const channelSubscribed = ref(false)
@@ -68,6 +70,39 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 let loadSequence = 0
 let relatedRequestSequence = 0
 
+const ACADEMIC_PAGE_LENGTH = 3_000
+
+function paginateAcademicContent(content: string) {
+  if (!content) return []
+
+  const documentFragment = document.implementation.createHTMLDocument('academic-reader')
+  documentFragment.body.innerHTML = content
+  const blocks = Array.from(documentFragment.body.children)
+  if (!blocks.length) return [content]
+
+  const pages: string[] = []
+  let page = ''
+  let pageLength = 0
+  for (const block of blocks) {
+    const blockHtml = block.outerHTML
+    const blockLength = block.textContent?.trim().length || 0
+    if (page && pageLength + blockLength > ACADEMIC_PAGE_LENGTH) {
+      pages.push(page)
+      page = ''
+      pageLength = 0
+    }
+    page += blockHtml
+    pageLength += blockLength
+  }
+  if (page) pages.push(page)
+  return pages
+}
+
+function formatAcademicDate(value?: string) {
+  if (!value) return '未记录'
+  return new Date(value).toLocaleDateString('zh-CN')
+}
+
 async function loadPost() {
   const requestedPostId = props.layer.payload.postId
   const requestSequence = ++loadSequence
@@ -78,6 +113,7 @@ async function loadPost() {
   commentsOpen.value = false
   commentSheetMode.value = 'partial'
   commentCount.value = undefined
+  isAcademic.value = false
   relatedRequestSequence += 1
   channelSubscribed.value = false
   channelSubscriptionBusy.value = false
@@ -360,7 +396,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         </PButton>
       </div>
       <img v-if="post.cover_url" :src="post.cover_url" :alt="post.title" class="post-sheet-cover" />
-      <div class="post-sheet-meta">
+      <div v-if="!isAcademic" class="post-sheet-meta">
         <span>{{ post.user?.display_name || post.user?.username || '未知作者' }}</span>
         <span>{{ new Date(post.created_at).toLocaleDateString('zh-CN') }}</span>
         <button
@@ -375,13 +411,47 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         </button>
         <RouterLink v-else-if="post.channel_id" to="/login" class="post-sheet-subscribe">登录后订阅频道</RouterLink>
       </div>
-      <h1>{{ post.title }}</h1>
-      <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
-      <div v-if="post.tags?.length" class="post-sheet-tags" aria-label="文章标签">
+      <div class="post-sheet-reading-toolbar">
+        <button
+          type="button"
+          class="post-sheet-reading-mode"
+          data-test="post-reading-mode"
+          :aria-pressed="isAcademic"
+          @click="isAcademic = !isAcademic"
+        >
+          {{ isAcademic ? '普通阅读' : '学术双栏' }}
+        </button>
+      </div>
+      <template v-if="!isAcademic">
+        <h1>{{ post.title }}</h1>
+        <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
+      </template>
+      <div v-if="post.tags?.length && !isAcademic" class="post-sheet-tags" aria-label="文章标签">
         <button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button>
       </div>
-      <BlogPostUpdateNotice :updated-at="post.updated_at" />
-      <div class="prose-blog post-sheet-content" v-html="renderedContent" />
+      <template v-if="!isAcademic">
+        <BlogPostUpdateNotice :updated-at="post.updated_at" />
+        <div class="prose-blog post-sheet-content" v-html="renderedContent" />
+      </template>
+      <div v-else class="academic-reader">
+        <section v-for="(page, index) in academicPages" :key="index" class="academic-paper">
+          <header class="academic-paper__header">
+            <span>Atoman</span>
+            <span :title="post.title">{{ post.title }}</span>
+          </header>
+          <div v-if="index === 0" class="academic-paper__lead">
+            <h1>{{ post.title }}</h1>
+            <p>{{ post.user?.display_name || post.user?.username || '未知作者' }}</p>
+            <p v-if="post.summary" class="academic-paper__abstract">{{ post.summary }}</p>
+          </div>
+          <div class="academic-paper__body prose-blog prose-blog-academic" v-html="page" />
+          <footer class="academic-paper__footer">
+            <span>发布 {{ formatAcademicDate(post.created_at) }}</span>
+            <span>第 {{ index + 1 }} 页</span>
+            <span>更新 {{ formatAcademicDate(post.updated_at) }}</span>
+          </footer>
+        </section>
+      </div>
       <PostRatingControl
         :rating-score="post.rating_score"
         :rating-count="post.rating_count"
@@ -464,6 +534,30 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-top: 1rem;
+}
+
+.post-sheet-reading-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.75rem 0 0;
+}
+
+.post-sheet-reading-mode {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.post-sheet-reading-mode:hover,
+.post-sheet-reading-mode[aria-pressed='true'] {
+  border-color: var(--a-color-fg);
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
 }
 
 .post-sheet-loading,
@@ -561,10 +655,150 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   margin: 0 auto;
 }
 
+.academic-reader {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.academic-paper {
+  display: grid;
+  grid-template-rows: auto auto minmax(40rem, 1fr) auto;
+  width: min(100%, 54rem);
+  min-height: 58rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 1rem;
+  background: #ffffff;
+  color: #171717;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+}
+
+.academic-paper__header,
+.academic-paper__footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  color: #616161;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.academic-paper__header {
+  min-height: 1.8rem;
+  border-bottom: 1px solid #bdbdbd;
+}
+
+.academic-paper__header > :last-child {
+  grid-column: 3;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.academic-paper__lead {
+  padding: 2.1rem 0 1.6rem;
+  text-align: center;
+}
+
+.academic-paper__lead h1 {
+  margin: 0 0 0.8rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.academic-paper__lead p {
+  margin: 0.35rem 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.9rem;
+}
+
+.academic-paper__abstract {
+  max-width: 40rem;
+  margin: 1rem auto 0 !important;
+  text-align: justify;
+}
+
+.academic-paper__body {
+  column-count: 2;
+  column-gap: 2rem;
+  column-rule: none;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.92rem;
+  line-height: 1.68;
+  text-align: justify;
+}
+
+.academic-paper__body :deep(h1),
+.academic-paper__body :deep(h2),
+.academic-paper__body :deep(h3),
+.academic-paper__body :deep(h4),
+.academic-paper__body :deep(blockquote),
+.academic-paper__body :deep(pre),
+.academic-paper__body :deep(table),
+.academic-paper__body :deep(img) {
+  break-inside: avoid;
+}
+
+.academic-paper__body :deep(p) {
+  margin: 0 0 0.9rem;
+}
+
+.academic-paper__footer {
+  min-height: 2rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid #bdbdbd;
+}
+
+.academic-paper__footer > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.academic-paper__footer > :nth-child(2) {
+  grid-column: 2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.academic-paper__footer > :last-child {
+  grid-column: 3;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .post-sheet-loading,
   .post-sheet-article {
     padding: 1.25rem 1rem 5rem;
+  }
+
+  .academic-paper {
+    min-height: 0;
+    padding: 1rem;
+  }
+
+  .academic-paper__lead {
+    padding: 1.5rem 0 1.25rem;
+  }
+
+  .academic-paper__body {
+    column-count: 1;
+  }
+
+  .academic-paper__footer {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .academic-paper__footer > :last-child {
+    display: none;
   }
 }
 </style>

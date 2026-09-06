@@ -438,7 +438,6 @@ function handleSave() {
     :aria-label="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
     content-max-width="72rem"
     close-type="header"
-    above-player
     panel-class="lyric-editor-drawer"
     class="music-lyric-editor-drawer"
     @close="emit('close')"

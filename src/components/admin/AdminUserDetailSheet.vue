@@ -3,7 +3,6 @@
     :show="show"
     :title="detail ? `用户-${detail.display_name || detail.username}` : '用户-加载中'"
     close-type="header"
-    above-player
     panel-class="admin-user-detail-sheet"
     @close="emit('close')"
   >

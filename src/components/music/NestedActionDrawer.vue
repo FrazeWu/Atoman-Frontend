@@ -496,7 +496,6 @@ async function submitEdit() {
 
 <template>
   <PSheet
-    above-player
     :show="isOpen"
     :title="displayTitle"
     @close="closeCurrentAction"

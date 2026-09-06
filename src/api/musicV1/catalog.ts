@@ -14,6 +14,8 @@ import {
 	queryString,
 } from "./core";
 import { useQueryCache } from "@/composables/useQueryCache";
+import { getActivePinia } from "pinia";
+import { useAuthStore } from "@/stores/auth";
 import type {
 	CreateMusicLyricsAnnotationInput,
 	CreateMusicPlaylistInput,
@@ -72,6 +74,18 @@ type MusicPlaylistSongEnvelope = {
 type MusicPlaylistMutationResult = Record<string, unknown>;
 
 const queryCache = useQueryCache();
+const musicListStaleTime = 15_000;
+
+function musicViewerCacheScope() {
+	const pinia = getActivePinia();
+	if (!pinia) return "anonymous";
+	const authStore = useAuthStore(pinia);
+	return authStore.user?.uuid || "anonymous";
+}
+
+function musicListCacheKey(resource: string, filters: Record<string, unknown>) {
+	return `music:list:${resource}:${musicViewerCacheScope()}:${queryString(filters as Record<string, string | number | undefined>)}`;
+}
 
 export type MusicSongSearchResult = {
 	id: string;
@@ -255,19 +269,31 @@ export async function listMusicSongs(
 		page_size?: number;
 	} = {},
 ): Promise<MusicListResponse<MusicSongListItem>> {
-	const response = await apiGetEnvelope<MusicSongListItem[], PaginationMeta>(
-		`${musicV1Endpoints.songs()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("songs", filters),
+		async () => {
+			const response = await apiGetEnvelope<MusicSongListItem[], PaginationMeta>(
+				`${musicV1Endpoints.songs()}${queryString(filters)}`,
+			);
+			return listResponseWithPaginationFallback(response, filters);
+		},
+		{ staleTime: musicListStaleTime },
 	);
-	return listResponseWithPaginationFallback(response, filters);
 }
 
 export async function listMusicAlbums(
 	filters: MusicListFilters = {},
 ): Promise<MusicListResponse<MusicAlbumListItem>> {
-	const response = await apiGetEnvelope<MusicAlbumListItem[], PaginationMeta>(
-		`${musicV1Endpoints.albums()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("albums", filters),
+		async () => {
+			const response = await apiGetEnvelope<MusicAlbumListItem[], PaginationMeta>(
+				`${musicV1Endpoints.albums()}${queryString(filters)}`,
+			);
+			return listResponseWithPaginationFallback(response, filters);
+		},
+		{ staleTime: musicListStaleTime },
 	);
-	return listResponseWithPaginationFallback(response, filters);
 }
 
 export async function listMusicAlbumLinkSuggestions(
@@ -281,89 +307,121 @@ export async function listMusicAlbumLinkSuggestions(
 export async function listArtistBookmarks(
 	filters: Pick<MusicListFilters, "sort" | "page" | "page_size"> = {},
 ) {
-	return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(
-		`${musicV1Endpoints.artistBookmarks()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("artist-bookmarks", filters),
+		() => apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(
+			`${musicV1Endpoints.artistBookmarks()}${queryString(filters)}`,
+		),
+		{ staleTime: musicListStaleTime },
 	);
 }
 
 export async function createArtistBookmark(
 	artistId: string,
 ): Promise<MusicArtistBookmark> {
-	return apiPostJson<MusicArtistBookmark>(musicV1Endpoints.artistBookmarks(), {
+	const result = await apiPostJson<MusicArtistBookmark>(musicV1Endpoints.artistBookmarks(), {
 		artist_id: artistId,
 	});
+	queryCache.invalidate("music:list:artist-bookmarks:");
+	return result;
 }
 
 export async function deleteArtistBookmark(
 	artistId: string,
 ): Promise<{ deleted: boolean }> {
-	return apiDeleteJson<{ deleted: boolean }>(
+	const result = await apiDeleteJson<{ deleted: boolean }>(
 		musicV1Endpoints.artistBookmark(artistId),
 	);
+	queryCache.invalidate("music:list:artist-bookmarks:");
+	return result;
 }
 
 export async function listAlbumBookmarks(
 	filters: Pick<MusicListFilters, "sort" | "page" | "page_size"> = {},
 ) {
-	return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(
-		`${musicV1Endpoints.albumBookmarks()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("album-bookmarks", filters),
+		() => apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(
+			`${musicV1Endpoints.albumBookmarks()}${queryString(filters)}`,
+		),
+		{ staleTime: musicListStaleTime },
 	);
 }
 
 export async function createAlbumBookmark(
 	albumId: string,
 ): Promise<MusicAlbumBookmark> {
-	return apiPostJson<MusicAlbumBookmark>(musicV1Endpoints.albumBookmarks(), {
+	const result = await apiPostJson<MusicAlbumBookmark>(musicV1Endpoints.albumBookmarks(), {
 		album_id: albumId,
 	});
+	queryCache.invalidate("music:list:album-bookmarks:");
+	return result;
 }
 
 export async function deleteAlbumBookmark(
 	albumId: string,
 ): Promise<{ deleted: boolean }> {
-	return apiDeleteJson<{ deleted: boolean }>(
+	const result = await apiDeleteJson<{ deleted: boolean }>(
 		musicV1Endpoints.albumBookmark(albumId),
 	);
+	queryCache.invalidate("music:list:album-bookmarks:");
+	return result;
 }
 
 export async function listPlaylistBookmarks(
 	filters: Pick<MusicListFilters, "sort" | "page" | "page_size"> = {},
 ) {
-	return apiGetEnvelope<MusicPlaylistBookmark[], PaginationMeta>(
-		`${musicV1Endpoints.playlistBookmarks()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("playlist-bookmarks", filters),
+		() => apiGetEnvelope<MusicPlaylistBookmark[], PaginationMeta>(
+			`${musicV1Endpoints.playlistBookmarks()}${queryString(filters)}`,
+		),
+		{ staleTime: musicListStaleTime },
 	);
 }
 
 export async function createPlaylistBookmark(
 	playlistId: string,
 ): Promise<MusicPlaylistBookmark> {
-	return apiPostJson<MusicPlaylistBookmark>(
+	const result = await apiPostJson<MusicPlaylistBookmark>(
 		musicV1Endpoints.playlistBookmarks(),
 		{ playlist_id: playlistId },
 	);
+	queryCache.invalidate("music:list:playlist-bookmarks:");
+	return result;
 }
 
 export async function deletePlaylistBookmark(
 	playlistId: string,
 ): Promise<{ deleted: boolean }> {
-	return apiDeleteJson<{ deleted: boolean }>(
+	const result = await apiDeleteJson<{ deleted: boolean }>(
 		musicV1Endpoints.playlistBookmark(playlistId),
 	);
+	queryCache.invalidate("music:list:playlist-bookmarks:");
+	return result;
 }
 
 export async function listMusicPlaylists(
 	filters: Pick<MusicListFilters, "sort" | "page" | "page_size"> = {},
 ) {
-	return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(
-		`${musicV1Endpoints.playlists()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("playlists", filters),
+		() => apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(
+			`${musicV1Endpoints.playlists()}${queryString(filters)}`,
+		),
+		{ staleTime: musicListStaleTime },
 	);
 }
 
 export async function listPublicMusicPlaylists(
 	filters: Pick<MusicListFilters, "page" | "page_size"> = {},
 ) {
-	return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(
-		`${musicV1Endpoints.playlists()}/public${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("public-playlists", filters),
+		() => apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(
+			`${musicV1Endpoints.playlists()}/public${queryString(filters)}`,
+		),
+		{ staleTime: musicListStaleTime },
 	);
 }
 
@@ -463,25 +521,31 @@ export async function mergeMusicArtists(
 export async function createMusicPlaylist(
 	input: CreateMusicPlaylistInput,
 ): Promise<MusicPlaylistDetail> {
-	return apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input);
+	const result = await apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input);
+	queryCache.invalidate("music:list:playlists:");
+	return result;
 }
 
 export async function updateMusicPlaylist(
 	playlistId: string,
 	input: UpdateMusicPlaylistInput,
 ): Promise<MusicPlaylistDetail> {
-	return apiPatchJson<MusicPlaylistDetail>(
+	const result = await apiPatchJson<MusicPlaylistDetail>(
 		musicV1Endpoints.playlist(playlistId),
 		input,
 	);
+	queryCache.invalidate("music:list:playlists:");
+	return result;
 }
 
 export async function deleteMusicPlaylist(
 	playlistId: string,
 ): Promise<{ deleted: boolean }> {
-	return apiDeleteJson<{ deleted: boolean }>(
+	const result = await apiDeleteJson<{ deleted: boolean }>(
 		musicV1Endpoints.playlist(playlistId),
 	);
+	queryCache.invalidate("music:list:playlists:");
+	return result;
 }
 
 export async function getMusicPlaylist(
@@ -952,10 +1016,16 @@ export async function listRecommendedArtists(
 export async function listMusicArtists(
 	filters: MusicListFilters = {},
 ): Promise<MusicListResponse<MusicArtistListItem>> {
-	const response = await apiGetEnvelope<MusicArtistListItem[], PaginationMeta>(
-		`${musicV1Endpoints.artists()}${queryString(filters)}`,
+	return queryCache.fetchWithCache(
+		musicListCacheKey("artists", filters),
+		async () => {
+			const response = await apiGetEnvelope<MusicArtistListItem[], PaginationMeta>(
+				`${musicV1Endpoints.artists()}${queryString(filters)}`,
+			);
+			return listResponseWithPaginationFallback(response, filters);
+		},
+		{ staleTime: musicListStaleTime },
 	);
-	return listResponseWithPaginationFallback(response, filters);
 }
 
 export async function getMusicArtist(

@@ -278,6 +278,38 @@ function changeReleasePage(page: number) {
   void loadArtistReleases(artistId.value, page)
 }
 
+async function loadArtistContributors(targetArtistId: string, isCurrentLoad: () => boolean) {
+  try {
+    const response = await listArtistContributors(targetArtistId)
+    if (!isCurrentLoad()) return
+    contributors.value = response.data
+    contributorTotal.value = response.total
+  } catch (error) {
+    if (!isCurrentLoad()) return
+    contributors.value = []
+    contributorTotal.value = 0
+    reportError(error, 'Failed to load artist contributors:')
+  }
+}
+
+async function loadArtistBookmarkState(targetArtistId: string, isCurrentLoad: () => boolean) {
+  if (!isAuthenticated.value) {
+    if (isCurrentLoad()) isBookmarked.value = false
+    return
+  }
+  try {
+    const response = await listArtistBookmarks()
+    if (!isCurrentLoad()) return
+    isBookmarked.value = response.data.some((bookmark) => String(bookmark.artist_id) === targetArtistId)
+  } catch (error) {
+    if (!isCurrentLoad()) return
+    isBookmarked.value = false
+    if (!(error instanceof ApiErrorResponseError && error.status === 401)) {
+      reportError(error, 'Failed to load artist bookmark:')
+    }
+  }
+}
+
 async function loadArtist(targetArtistId: string | null) {
   const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
   releaseRequests.beginRequest()
@@ -317,35 +349,12 @@ async function loadArtist(targetArtistId: string | null) {
     }
     redirectMessage.value = ''
     artist.value = artistResponse
-    await loadArtistReleases(targetArtistId)
-    if (!isCurrentLoad()) return
-
-    try {
-      const contributorResponse = await listArtistContributors(targetArtistId)
-      if (!isCurrentLoad()) return
-      contributors.value = contributorResponse.data
-      contributorTotal.value = contributorResponse.total
-    } catch (error) {
-      if (!isCurrentLoad()) return
-      contributors.value = []
-      contributorTotal.value = 0
-      reportError(error, 'Failed to load artist contributors:')
-    }
-    if (isAuthenticated.value) {
-      try {
-        const bookmarksResponse = await listArtistBookmarks()
-        if (!isCurrentLoad()) return
-        isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === targetArtistId)
-      } catch (error) {
-        if (!isCurrentLoad()) return
-        isBookmarked.value = false
-        if (!(error instanceof ApiErrorResponseError && error.status === 401)) {
-          reportError(error, 'Failed to load artist bookmark:')
-        }
-      }
-    } else {
-      isBookmarked.value = false
-    }
+    loading.value = false
+    void Promise.all([
+      loadArtistReleases(targetArtistId),
+      loadArtistContributors(targetArtistId, isCurrentLoad),
+      loadArtistBookmarkState(targetArtistId, isCurrentLoad),
+    ])
   } catch (error) {
     if (!isCurrentLoad()) return
     reportError(error, 'Failed to fetch artist:')

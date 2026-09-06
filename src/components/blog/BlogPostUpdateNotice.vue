@@ -1,5 +1,5 @@
 <template>
-  <div v-if="updatedAt" class="post-update-notice" role="note">
+  <div v-if="updatedAt" class="post-update-notice" :class="`post-update-notice--${variant}`" role="note">
     <span class="post-update-notice__label">{{ label }}</span>
     <span>{{ formatDate(updatedAt) }}，{{ freshnessMessage }}</span>
   </div>
@@ -11,8 +11,10 @@ import { computed } from 'vue'
 const props = withDefaults(defineProps<{
   updatedAt?: string
   label?: string
+  variant?: 'default' | 'compact'
 }>(), {
   label: '最近更新时间：',
+  variant: 'default',
 })
 
 const elapsedWeeks = computed(() => {
@@ -60,5 +62,15 @@ const freshnessMessage = computed(() => {
   color: var(--a-color-success);
   font-weight: 600;
   white-space: nowrap;
+}
+
+.post-update-notice--compact {
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.65rem 0.875rem;
+  border: 0;
+  border-left: 3px solid var(--a-color-success);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--a-color-success) 6%, var(--a-color-surface-muted));
 }
 </style>

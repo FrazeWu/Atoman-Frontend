@@ -106,6 +106,32 @@ describe("BlogPostSheet", () => {
 		expect(wrapper.find(".academic-paper__body").classes()).toContain("prose-blog-academic");
 	});
 
+	it("在详情头部展示作者身份、阅读时长和轻量有效性提示", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.find(".post-sheet-author-avatar").exists()).toBe(true);
+		expect(wrapper.get(".post-sheet-author").text()).toContain("author");
+		expect(wrapper.get(".post-sheet-author-handle").text()).toBe("@author");
+		expect(wrapper.get(".post-sheet-reading-time").text()).toBe("约 1 分钟阅读");
+		expect(wrapper.get('[role="note"]').classes()).toContain("post-update-notice--compact");
+	});
+
 	it("保留详情头部，并将学术正文限制在 A4 纸张内", async () => {
 		const source = readFileSync(
 			resolve(__dirname, "../../../../src/components/blog/BlogPostSheet.vue"),
@@ -115,6 +141,17 @@ describe("BlogPostSheet", () => {
 		expect(source).toContain("aspect-ratio: 210 / 297;");
 		expect(source).toContain("width: min(100%, 42rem);");
 		expect(source).not.toContain('v-if="index === 0" class="academic-paper__lead"');
+	});
+
+	it("学术正文不使用段落首行缩进", () => {
+		const source = readFileSync(
+			resolve(__dirname, "../../../../src/views/blog/PostDetailView.vue"),
+			"utf8",
+		);
+
+		expect(source).toContain(".prose-blog-academic :deep(p) {");
+		expect(source).toContain("text-indent: 0;");
+		expect(source).not.toContain("text-indent: 1.5rem;");
 	});
 
 	it("opens the Studio editor and preserves collection context", async () => {

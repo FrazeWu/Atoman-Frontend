@@ -117,21 +117,32 @@ const emit = defineEmits<{
 const sidebarRef = ref<HTMLElement | null>(null);
 const scrollProgress = ref(0);
 const isFixedType = computed(() => props.fixedType !== null);
-const typeNodes = computed(() =>
-  props.tree.types.filter(
-    (node) => !props.fixedType || node.subscription_type === props.fixedType,
-  ),
-);
 const sources = (node: SubscriptionHubTypeNode) =>
   node.groups.flatMap((group) => group.memberships);
-const sourceRows = computed(() =>
-  typeNodes.value.flatMap((node) =>
+const typeNodes = computed(() => {
+  if (props.fixedType !== "all") {
+    return props.tree.types.filter(
+      (node) => !props.fixedType || node.subscription_type === props.fixedType,
+    );
+  }
+
+  const unifiedNode = props.tree.types.find(
+    (node) => node.subscription_type === "all",
+  );
+  if (unifiedNode && sources(unifiedNode).length > 0) return [unifiedNode];
+  return props.tree.types.filter((node) => node.subscription_type !== "all");
+});
+const sourceRows = computed(() => {
+  const rows = typeNodes.value.flatMap((node) =>
     sources(node).map((membership) => ({
       membership,
       subscriptionType: node.subscription_type,
     })),
-  ),
-);
+  );
+  if (props.fixedType !== "all") return rows;
+
+  return [...new Map(rows.map((row) => [row.membership.feed_source_id, row])).values()];
+});
 const shouldRender = computed(
   () =>
     !isFixedType.value ||

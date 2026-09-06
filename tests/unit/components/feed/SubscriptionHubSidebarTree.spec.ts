@@ -216,6 +216,33 @@ describe("SubscriptionHubSidebarTree", () => {
     expect(wrapper.text()).toContain("原子谈话");
   });
 
+  it("falls back to deduplicated legacy sources until the unified node is populated", () => {
+    const legacyTree: SubscriptionHubTree = {
+      types: [
+        tree.types[0],
+        {
+          ...tree.types[1],
+          groups: [{
+            ...tree.types[1].groups[0],
+            memberships: [{
+              ...tree.types[1].groups[0].memberships[0],
+              id: "legacy-duplicate-member",
+              feed_source_id: "podcast-source",
+              title: "原子谈话",
+            }],
+          }],
+        },
+        ...tree.types.slice(2),
+      ],
+    };
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: { tree: legacyTree, fixedType: "all" },
+    });
+
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(3);
+    expect(wrapper.text().match(/原子谈话/g)).toHaveLength(1);
+  });
+
   it("keeps the unified subscription section available when it has no sources", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {

@@ -68,6 +68,13 @@ vi.mock("@/components/music/MusicCreationContributorPicker.vue", () => ({
 	},
 }));
 
+vi.mock("@/components/music/MusicSongLyricsEditorDrawer.vue", () => ({
+	default: {
+		props: ["show", "songId", "songTitle"],
+		template: '<div v-if="show" data-testid="song-editor-lyrics-drawer" :data-song-id="songId" :data-song-title="songTitle" />',
+	},
+}));
+
 vi.mock("@/api/musicV1", () => ({
 	convertMusicSongToAlbum: mocks.convertMusicSongToAlbum,
 	getMusicSongDetail: mocks.getMusicSongDetail,
@@ -175,6 +182,21 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		expect(mocks.refreshSong).toHaveBeenCalled();
 	});
 
+	it("歌曲编辑器提供统一的歌词正文入口", async () => {
+		drawerState.value.musicEditor = {
+			entity: "song",
+			mode: "edit",
+			id: "song-1",
+		};
+		const wrapper = mountDrawer();
+		await flushPromises();
+
+		const trigger = wrapper.get('[data-testid="song-editor-lyrics-trigger"]');
+		expect(trigger.text()).toContain("歌词正文");
+		await trigger.trigger("click");
+		expect(wrapper.get('[data-testid="song-editor-lyrics-drawer"]').attributes("data-song-id")).toBe("song-1");
+	});
+
 	it("shows a MusicBrainz warning when the song or parent album was matched", async () => {
 		mocks.getMusicSongDetail.mockResolvedValueOnce({
 			song: {
@@ -254,7 +276,7 @@ describe("MusicEntityEditorDrawer.vue", () => {
 		const wrapper = mountDrawer();
 		await flushPromises();
 
-		expect(wrapper.text()).not.toContain("歌词");
+		expect(wrapper.text()).toContain("歌词正文");
 		expect(wrapper.text()).not.toContain("碟号");
 		expect(wrapper.text()).not.toContain("曲序");
 		await wrapper.get('[data-testid="song-editor-source"]').setValue("修正独立歌曲资料");

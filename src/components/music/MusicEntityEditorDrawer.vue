@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { IconDisc as Disc3, IconFileMusic as FileAudio, IconUpload as Upload } from '@tabler/icons-vue';
+import { IconBook as BookOpen, IconDisc as Disc3, IconFileMusic as FileAudio, IconUpload as Upload } from '@tabler/icons-vue';
 import {
   convertMusicSongToAlbum,
   getMusicSongDetail,
@@ -13,6 +13,7 @@ import {
   type MusicStandaloneSongType,
 } from "@/api/musicV1";
 import MusicCreationContributorPicker from "@/components/music/MusicCreationContributorPicker.vue";
+import MusicSongLyricsEditorDrawer from "@/components/music/MusicSongLyricsEditorDrawer.vue";
 import MusicBrainzEditNotice from "@/components/music/MusicBrainzEditNotice.vue";
 import PMaskedDateInput from "@/components/ui/PMaskedDateInput.vue";
 import PButton from "@/components/ui/PButton.vue";
@@ -113,6 +114,7 @@ const songDraft = reactive({
   audioFile: null as File | null,
   contributors: [] as MusicCreationAlbumContributorDraft[],
 });
+const lyricsEditorOpen = ref(false);
 
 const sheetTitle = computed(() => {
   const name = songDraft.title.trim();
@@ -143,6 +145,7 @@ watch(
   editor,
   async (value) => {
     resetSongState();
+    lyricsEditorOpen.value = false;
     if (value?.entity !== "song" || value.mode !== "edit" || !value.id) return;
     closeMusicCreationFlow();
     await loadSong(value.id);
@@ -168,6 +171,15 @@ function resetSongState() {
   songDraft.audioFile = null;
   songDraft.contributors = [];
   revokeSongCoverPreview();
+}
+
+function openLyricsEditor() {
+  if (!isSongEditor.value || !editor.value?.id) return;
+  lyricsEditorOpen.value = true;
+}
+
+function closeLyricsEditor() {
+  lyricsEditorOpen.value = false;
 }
 
 function revokeSongCoverPreview() {
@@ -411,6 +423,13 @@ async function handleSongEditSubmit() {
     @activate="props.layer && returnToLayer(props.layer.key)"
   >
     <div v-if="isSongEditor" class="song-editor" data-testid="song-editor">
+      <MusicSongLyricsEditorDrawer
+        v-if="editor?.id"
+        :show="lyricsEditorOpen"
+        :song-id="String(editor.id)"
+        :song-title="songDraft.title"
+        @close="closeLyricsEditor"
+      />
       <p v-if="songErrorMessage" class="song-editor__error">
         {{ songErrorMessage }}
       </p>
@@ -501,6 +520,21 @@ async function handleSongEditSubmit() {
           <MusicCreationContributorPicker v-model="songDraft.contributors" />
         </section>
 
+        <section class="song-editor__lyrics" aria-label="歌词正文">
+          <div>
+            <strong>歌词正文</strong>
+            <span>歌词内容和时间轴在此编辑，来源信息会保留。</span>
+          </div>
+          <PButton
+            type="button"
+            variant="secondary"
+            data-testid="song-editor-lyrics-trigger"
+            @click="openLyricsEditor"
+          >
+            <BookOpen :size="16" aria-hidden="true" />编辑歌词正文
+          </PButton>
+        </section>
+
         <PInput
           v-model="songDraft.source"
           label="修改原因*"
@@ -578,6 +612,27 @@ async function handleSongEditSubmit() {
 .song-editor__album-context span,
 .song-editor__audio span,
 .song-editor__contributors > span {
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
+.song-editor__lyrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+}
+.song-editor__lyrics > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.song-editor__lyrics strong {
+  color: var(--a-color-text);
+}
+.song-editor__lyrics span {
   color: var(--a-color-muted);
   font-size: 0.85rem;
 }
@@ -669,6 +724,10 @@ async function handleSongEditSubmit() {
     flex-direction: column;
   }
   .song-editor__audio {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .song-editor__lyrics {
     align-items: flex-start;
     flex-direction: column;
   }

@@ -93,6 +93,33 @@ describe('MusicLyricsLine', () => {
     expect(wrapper.emitted('seek')).toEqual([[125]])
   })
 
+  it('播放器模式点击歌词正文会发出定位事件', async () => {
+    const line = { line_key: 'line-1', text: 'Playable line', translation: '', time_ms: 125000 }
+    const wrapper = mount(MusicLyricsLine, {
+      props: { line, clickToSeek: true },
+    })
+
+    await wrapper.get('.music-lyrics-line__content').trigger('click')
+
+    expect(wrapper.emitted('seek')).toEqual([[125]])
+  })
+
+  it('播放器模式最多展示两条悬停注解预览', () => {
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line: { line_key: 'line-1', text: 'Hello world', translation: '', time_ms: 1000 },
+        clickToSeek: true,
+        annotations: [
+          { id: 'a-1', status: 'active', selected_text: 'Hello', body: '第一条', start_offset: 0, end_offset: 5 },
+          { id: 'a-2', status: 'active', selected_text: 'world', body: '第二条', start_offset: 6, end_offset: 11 },
+          { id: 'a-3', status: 'active', selected_text: 'Hello world', body: '第三条', start_offset: 0, end_offset: 11 },
+        ] as any,
+      },
+    })
+
+    expect(wrapper.findAll('.music-lyrics-line__annotation-preview-item')).toHaveLength(2)
+  })
+
   it('无时间轴的歌词行没有定位按钮', async () => {
     const wrapper = mount(MusicLyricsLine, {
       props: { line: { line_key: 'line-1', text: 'Untimed line', translation: '' } },

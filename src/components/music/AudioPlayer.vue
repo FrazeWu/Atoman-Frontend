@@ -286,13 +286,15 @@
       :song-title="player.currentSong.title"
       :artist-text="artistText"
       :current-time-seconds="player.currentTime"
+      :mode="lyricsMode"
       :focus-annotation-id="
         typeof route.query.annotation_id === 'string'
           ? route.query.annotation_id
           : ''
       "
       :start-rebind="route.query.rebind === '1'"
-      @close="player.closeLyrics"
+      @close="closeLyricsPanel"
+      @mode-change="lyricsMode = $event"
       @seek="player.seek"
     />
   </Transition>
@@ -351,6 +353,7 @@ const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
 const playerDisplayMode = ref<"full" | "cover">("full");
 const commentsOpen = ref(false);
+const lyricsMode = ref<'player' | 'annotation'>('player');
 
 watch(
   () => player.lyricsCloseRequest,
@@ -360,7 +363,7 @@ watch(
       lyricsPanelRef.value.requestClose();
       return;
     }
-    player.closeLyrics();
+    closeLyricsPanel();
   },
 );
 
@@ -371,6 +374,11 @@ async function setPlayerDisplayMode(mode: "full" | "cover") {
     revealPlayer();
     updateMetaCollapse();
   }
+}
+
+function closeLyricsPanel() {
+  lyricsMode.value = 'player'
+  player.closeLyrics()
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
@@ -584,6 +592,7 @@ watch(
 watch(
   () => player.currentSong?.id,
   async () => {
+    lyricsMode.value = 'player';
     await nextTick();
     updateMetaCollapse();
   },
@@ -1322,7 +1331,7 @@ watch(
 }
 
 .player-display-enter-active {
-  animation: player-display-enter var(--a-motion-emphasis) var(--a-motion-ease-enter) both;
+  animation: player-display-enter var(--a-motion-overlay) var(--a-motion-ease-enter) both;
   will-change: transform, opacity;
 }
 

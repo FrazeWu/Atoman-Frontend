@@ -333,7 +333,7 @@ describe('MusicLyricsPanel.vue', () => {
 
     expect(mocks.load).toHaveBeenCalledWith('song-1')
     expect(wrapper.findAll('.lyrics-line-stub')).toHaveLength(2)
-    expect(wrapper.get('[data-line-id="line-2"]').attributes('data-active')).toBe('true')
+    expect(wrapper.get('[data-line-id="line-2"]').attributes('data-active')).toBe('false')
     expect(wrapper.get('[data-line-id="line-1"]').attributes('data-annotation-count')).toBe('1')
 
     await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
@@ -341,8 +341,20 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1 条注释')
   })
 
+  it('播放器歌词模式只读并显示歌词注解入口', async () => {
+    const wrapper = await mountPanel({ mode: 'player' })
+    await flushPromises()
+
+    const trigger = wrapper.get('[data-testid="lyrics-annotations-trigger"]')
+    expect(trigger.text()).toContain('歌词注解')
+    expect(wrapper.get('[data-line-id="line-1"]').attributes('data-can-select')).toBe('false')
+    expect(wrapper.find('.music-lyrics-panel__sidebar').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="lyrics-edit-trigger"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="lyrics-versions-trigger"]').exists()).toBe(false)
+  })
+
   it('在歌词正文前展示歌曲名与已有署名', async () => {
-    const wrapper = await mountPanel()
+    const wrapper = await mountPanel({ mode: 'player' })
     await flushPromises()
 
     const info = wrapper.get('.music-lyrics-panel__song-info')
@@ -841,7 +853,7 @@ describe('MusicLyricsPanel.vue', () => {
       return time >= 10 ? lyricsState.lyrics.value.lines[1] : lyricsState.lyrics.value.lines[0]
     })
 
-    const wrapper = await mountPanel()
+    const wrapper = await mountPanel({ mode: 'player' })
     await flushPromises()
     expect(scrollIntoView).toHaveBeenCalledOnce()
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })

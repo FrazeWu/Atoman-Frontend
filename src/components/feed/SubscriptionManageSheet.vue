@@ -698,6 +698,7 @@ const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
 
 const contentTypeLabel = (subscriptionType: SubscriptionHubType) => ({
+	all: '全部',
   podcast: '播客',
   video: '视频',
   blog: '博客',

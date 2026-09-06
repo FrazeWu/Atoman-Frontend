@@ -38,7 +38,7 @@ export function useFeedTimelineController({
   const queryGroupId = computed(() => typeof route.query.group_id === 'string' ? route.query.group_id : null)
   const queryHubType = computed<SubscriptionHubType | null>(() => {
     const value = route.query.hub_type
-    return value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss' ? value : null
+    return value === 'all' || value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss' ? value : null
   })
   const queryHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
   const queryHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)

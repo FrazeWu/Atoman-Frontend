@@ -10,6 +10,7 @@
         :icon="item.icon"
         :is-focused="Boolean(uiStore && uiStore.focusedSection === 'sidebar' && focusedSidebarIndex === index)"
         :exact="item.exact"
+        router-active
       >
         {{ item.label }}
       </PSidebarItem>
@@ -25,7 +26,7 @@
         :icon="item.icon"
         :exact="item.exact"
         :active="item.active?.()"
-        :router-active="item.routerActive"
+        :router-active="item.routerActive ?? true"
       >
         {{ item.label }}
       </PSidebarItem>
@@ -40,6 +41,7 @@
         :index="index + 1"
         :icon="item.icon"
         :exact="item.exact"
+        router-active
       >
         {{ item.label }}
       </PSidebarItem>
@@ -54,6 +56,7 @@
         :index="index + 1"
         :icon="item.icon"
         :exact="item.exact"
+        router-active
       >
         {{ item.label }}
       </PSidebarItem>
@@ -133,17 +136,17 @@
 
     <!-- 6. TIMELINE MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'timeline'">
-      <PSidebarItem to="/timeline" :index="1" :icon="Clock" exact>
+      <PSidebarItem to="/timeline" :index="1" :icon="Clock" exact router-active>
         时间轴首页
       </PSidebarItem>
-      <PSidebarItem to="/timeline/persons" :index="2" :icon="Users">
+      <PSidebarItem to="/timeline/persons" :index="2" :icon="Users" router-active>
         人物志
       </PSidebarItem>
     </template>
 
     <!-- 7. STUDIO MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'studio'">
-      <PSidebarItem to="/studio" :index="1" :icon="LayoutDashboard" exact>
+      <PSidebarItem to="/studio" :index="1" :icon="LayoutDashboard" exact router-active>
         概览
       </PSidebarItem>
       <PSidebarItem
@@ -151,39 +154,40 @@
         :index="2"
         :icon="Settings2"
         :active="Boolean(route && route.path.startsWith('/studio/manage'))"
+        router-active
       >
         管理
       </PSidebarItem>
-      <PSidebarItem to="/studio/blog" :index="3" :icon="FileText">
+      <PSidebarItem to="/studio/blog" :index="3" :icon="FileText" router-active>
         博客
       </PSidebarItem>
-      <PSidebarItem to="/studio/podcast" :index="4" :icon="Mic2">
+      <PSidebarItem to="/studio/podcast" :index="4" :icon="Mic2" router-active>
         播客
       </PSidebarItem>
-      <PSidebarItem to="/studio/video" :index="5" :icon="Video">
+      <PSidebarItem to="/studio/video" :index="5" :icon="Video" router-active>
         视频
       </PSidebarItem>
     </template>
 
     <!-- 8. PODCAST MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'podcast'">
-      <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact>
+      <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact router-active>
         播客大厅
       </PSidebarItem>
-      <PSidebarItem to="/podcasts/subscriptions" :index="2" :icon="Rss">
+      <PSidebarItem to="/podcasts/subscriptions" :index="2" :icon="Rss" router-active>
         订阅
       </PSidebarItem>
     </template>
 
     <!-- 9. VIDEO MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'video'">
-      <PSidebarItem to="/videos" :index="1" :icon="Compass" exact>
+      <PSidebarItem to="/videos" :index="1" :icon="Compass" exact router-active>
         探索
       </PSidebarItem>
-      <PSidebarItem to="/videos/subscriptions" :index="2" :icon="Rss">
+      <PSidebarItem to="/videos/subscriptions" :index="2" :icon="Rss" router-active>
         订阅
       </PSidebarItem>
-      <PSidebarItem to="/videos/favorites" :index="3" :icon="Bookmark">
+      <PSidebarItem to="/videos/favorites" :index="3" :icon="Bookmark" router-active>
         收藏
       </PSidebarItem>
     </template>
@@ -274,6 +278,7 @@ const currentModule = computed(() => {
 })
 
 const subscriptionTypesByModule: Partial<Record<string, SubscriptionHubType>> = {
+  feed: 'all',
   blog: 'blog',
   podcast: 'podcast',
   video: 'video',
@@ -304,7 +309,7 @@ const loadingSubscriptionHubTree = computed(() => feedStore?.loadingSubscription
 const subscriptionHubTreeError = computed(() => feedStore?.subscriptionHubTreeError ?? '')
 
 const isSubscriptionHubType = (value: unknown): value is SubscriptionHubType =>
-  value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
+  value === 'all' || value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
 
 const activeHubType = computed<SubscriptionHubType | null>(() => {
   if (subscriptionSidebarType.value) return subscriptionSidebarType.value
@@ -376,7 +381,7 @@ const reloadSubscriptionHubTree = () => {
 watch(
   [subscriptionSidebarType, () => authStore?.isAuthenticated, () => authStore?.token],
   ([type, isAuthenticated]) => {
-    if (!type || !isAuthenticated || !feedStore) return
+    if (currentModule.value === 'feed' || !type || !isAuthenticated || !feedStore) return
     if (feedStore.loadingSubscriptionHubTree || feedStore.subscriptionHubTree.types.length > 0) return
     void feedStore.fetchSubscriptionHubTree()
   },

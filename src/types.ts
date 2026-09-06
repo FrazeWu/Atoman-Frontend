@@ -786,7 +786,7 @@ export interface FeedStarGroup {
 	updated_at: string;
 }
 
-export type SubscriptionHubType = 'podcast' | 'video' | 'blog' | 'rss'
+export type SubscriptionHubType = 'all' | 'podcast' | 'video' | 'blog' | 'rss'
 
 export interface SubscriptionHubMembership {
 	id: string;

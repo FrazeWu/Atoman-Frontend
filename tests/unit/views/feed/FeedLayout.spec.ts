@@ -17,6 +17,27 @@ vi.mock("@/utils/appRuntime", () => ({
 const subscriptionHubTree: SubscriptionHubTree = {
   types: [
     {
+      subscription_type: "all",
+      groups: [
+        {
+          id: "all-group",
+          user_id: "user-1",
+          subscription_type: "all",
+          name: "我的订阅",
+          memberships: [
+            {
+              id: "all-member",
+              user_id: "user-1",
+              subscription_type: "all",
+              group_id: "all-group",
+              feed_source_id: "shared-channel",
+              title: "原子谈话",
+            },
+          ],
+        },
+      ],
+    },
+    {
       subscription_type: "podcast",
       groups: [
         {
@@ -120,59 +141,35 @@ describe("FeedLayout", () => {
     standaloneMobile.value = false;
   });
 
-  it("renders the type-isolated subscription tree in the sidebar", async () => {
+  it("renders each unified subscription source once in the sidebar", async () => {
     const { wrapper } = await mountLayout(
-      "/feed/subscriptions?hub_type=podcast&hub_group_id=podcast-group",
+      "/feed/subscriptions?hub_type=all&hub_group_id=all-group",
     );
 
-    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(4);
+    expect(wrapper.findAll(".p-sidebar-item")).toHaveLength(3);
     expect(wrapper.text()).toContain("我的订阅");
-    expect(wrapper.text()).toContain("播客");
-    expect(wrapper.text()).toContain("视频");
-    expect(wrapper.text()).toContain("常听节目");
+    expect(wrapper.text()).toContain("原子谈话");
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(1);
+    expect(wrapper.text()).not.toContain("常听节目");
     expect(wrapper.text()).not.toContain("关注频道");
-    expect(wrapper.findAll(".subscription-hub-sidebar__membership")).toHaveLength(1);
-    expect(wrapper.text()).not.toContain("全部订阅");
   });
 
-  it("routes a selected subscription leaf to its isolated update context", async () => {
+  it("routes a selected subscription leaf to the unified update context", async () => {
     const { wrapper, pushSpy } = await mountLayout("/feed");
 
     await wrapper
-      .get('[data-testid="subscription-hub-type-video"]')
-      .trigger("click");
-    await wrapper
-      .get('[data-testid="subscription-hub-membership-video-member"]')
+      .get('[data-testid="subscription-hub-membership-all-member"]')
       .trigger("click");
 
     expect(pushSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         path: "/feed/subscriptions",
         query: expect.objectContaining({
-          hub_type: "video",
-          hub_group_id: "video-group",
-          hub_membership_id: "video-member",
+          hub_type: "all",
+          hub_group_id: "all-group",
+          hub_membership_id: "all-member",
           source_id: undefined,
           group_id: undefined,
-        }),
-      }),
-    );
-  });
-
-  it("selects the whole module when a type is chosen", async () => {
-    const { wrapper, pushSpy } = await mountLayout("/feed");
-
-    await wrapper
-      .get('[data-testid="subscription-hub-type-podcast"]')
-      .trigger("click");
-
-    expect(pushSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        path: "/feed/subscriptions",
-        query: expect.objectContaining({
-          hub_type: "podcast",
-          hub_group_id: undefined,
-          hub_membership_id: undefined,
         }),
       }),
     );
@@ -216,16 +213,16 @@ describe("FeedLayout", () => {
     expect(sheet.text()).toContain("原子谈话");
 
     await sheet
-      .get('[data-testid="subscription-hub-membership-podcast-member"]')
+      .get('[data-testid="subscription-hub-membership-all-member"]')
       .trigger("click");
 
     expect(pushSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         path: "/feed/subscriptions",
         query: expect.objectContaining({
-          hub_type: "podcast",
-          hub_group_id: "podcast-group",
-          hub_membership_id: "podcast-member",
+          hub_type: "all",
+          hub_group_id: "all-group",
+          hub_membership_id: "all-member",
         }),
       }),
     );

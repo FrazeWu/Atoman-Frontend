@@ -190,6 +190,32 @@ describe("SubscriptionHubSidebarTree", () => {
     );
   });
 
+  it("renders only the deduplicated unified sources for the feed module", () => {
+    const unifiedTree: SubscriptionHubTree = {
+      types: [
+        {
+          subscription_type: "all",
+          groups: [
+            {
+              id: "all-group",
+              user_id: "viewer",
+              subscription_type: "all",
+              name: "我的订阅",
+              memberships: [{ ...tree.types[0].groups[0].memberships[0], id: "all-member", group_id: "all-group", subscription_type: "all" }],
+            },
+          ],
+        },
+        ...tree.types,
+      ],
+    };
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: { tree: unifiedTree, fixedType: "all", activeType: "all" },
+    });
+
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(1);
+    expect(wrapper.text()).toContain("原子谈话");
+  });
+
   it("keeps an empty fixed module out of the layout", () => {
     const wrapper = mount(SubscriptionHubSidebarTree, {
       props: {

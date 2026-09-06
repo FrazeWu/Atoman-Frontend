@@ -62,4 +62,22 @@ describe('BookReaderView', () => {
       private_notes: 'remember this',
     }))
   })
+
+  it('将长 TXT 正文渲染为带页码的独立双栏页面', async () => {
+    vi.spyOn(booksApi, 'getBookAsset').mockResolvedValue(asset)
+    vi.spyOn(booksApi, 'getBookReadingState').mockResolvedValue(readingState)
+    vi.spyOn(booksApi, 'fetchBookAssetContent').mockResolvedValue(new Blob(['正文'.repeat(3_000)]))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/read/:assetId', component: BookReaderView }],
+    })
+    await router.push('/books/read/asset-1')
+    await router.isReady()
+    const wrapper = mount(BookReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    expect(wrapper.findAll('.books-reader__text-page:not(.books-reader__text-page--measure)')).toHaveLength(3)
+    expect(wrapper.text()).toContain('第 1 / 3 页')
+  })
 })

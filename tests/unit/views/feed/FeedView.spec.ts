@@ -213,6 +213,24 @@ describe("FeedView", () => {
     expect(String(hubRequest?.[0])).toContain("limit=20");
   });
 
+  it("loads a unified subscription leaf through the mixed update stream", async () => {
+    routeQuery.hub_type = "all";
+    routeQuery.hub_group_id = "all-group";
+    routeQuery.hub_membership_id = "all-member";
+
+    mount(FeedView, { global: { stubs: feedViewStubs } });
+    await flushPromises();
+
+    const hubRequest = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.find(([input]) =>
+        String(input).includes("/feed/subscription-hub/updates?"),
+      );
+    expect(String(hubRequest?.[0])).toContain("type=all");
+    expect(String(hubRequest?.[0])).toContain("group_id=all-group");
+    expect(String(hubRequest?.[0])).toContain("membership_id=all-member");
+  });
+
   it("loads all saved content through the unified bookmarks timeline", async () => {
     routeQuery.view = "bookmarks";
 

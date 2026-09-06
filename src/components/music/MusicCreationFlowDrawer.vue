@@ -1175,7 +1175,6 @@ async function completeCreation() {
 <template>
   <PToast v-model="toastVisible" :message="toastMessage" />
   <PSheet
-    above-player
     :show="isOpen"
     :title="sheetTitle"
     :index="sheetIndex"

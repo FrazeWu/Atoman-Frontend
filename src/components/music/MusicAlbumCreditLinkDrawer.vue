@@ -172,7 +172,6 @@ onBeforeUnmount(() => {
 
 <template>
 	<PSheet
-		above-player
 		:show="props.layer ? isLayerActive(props.layer.key) : false"
 		title="关联-专辑"
 		content-max-width="48rem"

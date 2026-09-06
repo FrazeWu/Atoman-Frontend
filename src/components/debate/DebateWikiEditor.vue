@@ -3,7 +3,6 @@
     :show="show"
     :title="`编辑-${debate.title || '辩题'}`"
     close-type="header"
-    above-player
     @close="requestClose"
   >
     <form class="wiki-editor" @submit.prevent="save">

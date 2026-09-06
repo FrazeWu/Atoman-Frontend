@@ -1068,11 +1068,11 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 .prose-blog-academic :deep(p) {
   font-size: 0.95rem !important;
   margin: 0 0 1rem 0 !important;
-  text-indent: 1.5rem;
+  text-indent: 0;
   line-height: 1.65 !important;
 }
 
-/* Do not indent the very first paragraph after a heading or blockquotes/pre/table */
+/* Keep every paragraph flush with its column, including a paragraph continued in the next column. */
 .prose-blog-academic :deep(h2) + :deep(p),
 .prose-blog-academic :deep(h3) + :deep(p),
 .prose-blog-academic :deep(h4) + :deep(p),

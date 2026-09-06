@@ -408,7 +408,6 @@ async function handleSongEditSubmit() {
 
 <template>
   <PSheet
-    above-player
     :show="isOpen"
     :title="sheetTitle"
     content-max-width="64rem"

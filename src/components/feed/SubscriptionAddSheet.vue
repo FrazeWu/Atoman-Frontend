@@ -3,7 +3,6 @@
     :show="show"
     :title="resolvedSourceTitle ? `添加-${resolvedSourceTitle}` : '添加-订阅'"
     close-type="header"
-    above-player
     :top="top"
     @close="requestClose"
   >

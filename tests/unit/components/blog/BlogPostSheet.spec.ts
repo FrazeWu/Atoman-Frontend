@@ -143,6 +143,17 @@ describe("BlogPostSheet", () => {
 		expect(source).not.toContain('v-if="index === 0" class="academic-paper__lead"');
 	});
 
+	it("学术正文不使用段落首行缩进", () => {
+		const source = readFileSync(
+			resolve(__dirname, "../../../../src/views/blog/PostDetailView.vue"),
+			"utf8",
+		);
+
+		expect(source).toContain(".prose-blog-academic :deep(p) {");
+		expect(source).toContain("text-indent: 0;");
+		expect(source).not.toContain("text-indent: 1.5rem;");
+	});
+
 	it("opens the Studio editor and preserves collection context", async () => {
 		const pinia = createPinia();
 		setActivePinia(pinia);

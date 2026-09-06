@@ -274,6 +274,7 @@ const currentModule = computed(() => {
 })
 
 const subscriptionTypesByModule: Partial<Record<string, SubscriptionHubType>> = {
+  feed: 'all',
   blog: 'blog',
   podcast: 'podcast',
   video: 'video',
@@ -304,7 +305,7 @@ const loadingSubscriptionHubTree = computed(() => feedStore?.loadingSubscription
 const subscriptionHubTreeError = computed(() => feedStore?.subscriptionHubTreeError ?? '')
 
 const isSubscriptionHubType = (value: unknown): value is SubscriptionHubType =>
-  value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
+  value === 'all' || value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
 
 const activeHubType = computed<SubscriptionHubType | null>(() => {
   if (subscriptionSidebarType.value) return subscriptionSidebarType.value
@@ -376,7 +377,7 @@ const reloadSubscriptionHubTree = () => {
 watch(
   [subscriptionSidebarType, () => authStore?.isAuthenticated, () => authStore?.token],
   ([type, isAuthenticated]) => {
-    if (!type || !isAuthenticated || !feedStore) return
+    if (currentModule.value === 'feed' || !type || !isAuthenticated || !feedStore) return
     if (feedStore.loadingSubscriptionHubTree || feedStore.subscriptionHubTree.types.length > 0) return
     void feedStore.fetchSubscriptionHubTree()
   },

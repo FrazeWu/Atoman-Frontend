@@ -60,10 +60,20 @@ const mountFeedSidebar = async () => {
   const pinia = createPinia()
   setActivePinia(pinia)
 
+  const authStore = useAuthStore()
+  authStore.token = 'token'
+  authStore.user = { username: 'fafa', email: 'fafa@example.com' }
+  authStore.isAuthenticated = true
+
+  const feedStore = useFeedStore()
+  feedStore.subscriptionHubTree = { types: [] }
+  vi.spyOn(feedStore, 'fetchSubscriptionHubTree').mockResolvedValue(true)
+
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: '/feed', component: { template: '<div />' } },
+      { path: '/feed/subscriptions', component: { template: '<div />' } },
       { path: '/posts', component: { template: '<div />' } },
     ],
   })
@@ -135,6 +145,28 @@ describe('AppSidebar blog navigation', () => {
 })
 
 describe('AppSidebar feed navigation', () => {
+  it('uses the unified subscription tree and keeps selections in the feed route', async () => {
+    const { wrapper, router } = await mountFeedSidebar()
+    const tree = wrapper.get('[data-testid="subscription-hub-sidebar-tree"]')
+
+    expect(tree.attributes('data-fixed-type')).toBe('all')
+    expect(tree.attributes('data-active-type')).toBe('all')
+
+    wrapper.findComponent(SubscriptionHubSidebarTreeStub).vm.$emit('select-context', {
+      subscriptionType: 'all',
+      groupId: 'all-group',
+      membershipId: 'all-member',
+    })
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/feed/subscriptions')
+    expect(router.currentRoute.value.query).toEqual({
+      hub_type: 'all',
+      hub_group_id: 'all-group',
+      hub_membership_id: 'all-member',
+    })
+  })
+
   it('does not expose the blog posts entry from the feed sidebar', async () => {
     const { wrapper } = await mountFeedSidebar()
     const blogItem = wrapper.findAllComponents(PSidebarItem).find((item) => item.text().trim() === '博文')

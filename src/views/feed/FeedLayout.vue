@@ -22,6 +22,7 @@
       :active-type="activeHubType"
       :active-group-id="activeHubGroupId"
       :active-membership-id="activeHubMembershipId"
+      :fixed-type="subscriptionSidebarType"
       :loading="loadingSubscriptionHubTree"
       :error="subscriptionHubTreeError"
       @close="mobileSourcesOpen = false"
@@ -61,10 +62,11 @@ const loadingSubscriptionHubTree = computed(() => feedStore.loadingSubscriptionH
 const subscriptionHubTreeError = computed(() => feedStore.subscriptionHubTreeError)
 
 const isSubscriptionHubType = (value: unknown): value is SubscriptionHubType =>
-  value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
+  value === 'all' || value === 'podcast' || value === 'video' || value === 'blog' || value === 'rss'
 
-const activeHubType = computed<SubscriptionHubType | null>(() =>
-  isSubscriptionHubType(route.query.hub_type) ? route.query.hub_type : null,
+const subscriptionSidebarType: SubscriptionHubType = 'all'
+const activeHubType = computed<SubscriptionHubType>(() =>
+  isSubscriptionHubType(route.query.hub_type) ? route.query.hub_type : subscriptionSidebarType,
 )
 const activeHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
 const activeHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)

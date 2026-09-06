@@ -48,10 +48,10 @@ const loading = ref(false)
 const errorMessage = ref('')
 const readingMode = ref<'single' | 'double'>('single')
 const isAcademic = computed(() => readingMode.value === 'double')
-const readingModeOptions = [
+const readingModeOptions: Array<{ label: string; value: 'single' | 'double'; test: string }> = [
   { label: '单栏', value: 'single', test: 'post-reading-single' },
   { label: '双栏', value: 'double', test: 'post-reading-double' },
-] as const
+]
 const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
 const academicPages = computed(() => paginateAcademicContent(renderedContent.value))
 const authorName = computed(() => post.value?.user?.display_name || post.value?.user?.username || '未知作者')

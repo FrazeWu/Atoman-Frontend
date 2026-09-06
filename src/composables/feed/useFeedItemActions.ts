@@ -34,13 +34,15 @@ export function useFeedItemActions({
   }
 
   const toggleRead = (item: TimelineItem) => {
-    if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item) return
-    const itemIDs = feedItemActionIDs(item.feed_item)
+    if (!authStore.isAuthenticated) return
+    const isShortNote = item.type === 'short_note' && Boolean(item.short_note)
+    const isFeedItem = (item.type === 'feed_item' || item.type === 'project_update') && Boolean(item.feed_item)
+    if (!isShortNote && !isFeedItem) return
     const nextIsRead = !item.is_read
     void (async () => {
       const success = nextIsRead
-        ? await feedStore.markItemsRead(itemIDs)
-        : await feedStore.markItemsUnread(itemIDs)
+        ? await feedStore.markItemsRead(isFeedItem ? feedItemActionIDs(item.feed_item!) : [], isShortNote ? [item.short_note!.id] : [])
+        : await feedStore.markItemsUnread(isFeedItem ? feedItemActionIDs(item.feed_item!) : [], isShortNote ? [item.short_note!.id] : [])
       if (!success) return
       item.is_read = nextIsRead
       if (!nextIsRead) allRead.value = false
@@ -48,10 +50,20 @@ export function useFeedItemActions({
     })()
   }
 
+  const markShortNoteRead = (item: TimelineItem) => {
+    if (!authStore.isAuthenticated || item.type !== 'short_note' || !item.short_note || item.is_read) return
+    void (async () => {
+      const success = await feedStore.markItemsRead([], [item.short_note!.id])
+      if (!success) return
+      item.is_read = true
+      await feedStore.fetchSubscriptions()
+    })()
+  }
+
   const setTimelineItemsReadState = (ids: string[], isRead: boolean) => {
     const targetIds = new Set(ids)
     timeline.value.forEach((item) => {
-      if (item.type === 'feed_item' && item.feed_item && targetIds.has(item.feed_item.id)) {
+      if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item && targetIds.has(item.feed_item.id)) {
         item.is_read = isRead
       }
     })
@@ -84,7 +96,7 @@ export function useFeedItemActions({
     if (!autoReadSubscriptionSourceIds.size && !autoReadingListSubscriptionSourceIds.size) return
 
     const pendingReadItems = items.filter((item) => (
-      item.type === 'feed_item'
+      (item.type === 'feed_item' || item.type === 'project_update')
       && item.feed_item
       && !item.is_read
       && autoReadSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
@@ -103,7 +115,7 @@ export function useFeedItemActions({
 
     const pendingReadingListIds = items
       .filter((item) => (
-        item.type === 'feed_item'
+        (item.type === 'feed_item' || item.type === 'project_update')
         && item.feed_item
         && !readingListIds.value.has(item.feed_item.id)
         && autoReadingListSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
@@ -119,7 +131,7 @@ export function useFeedItemActions({
     playerStore.setQueueFromCurrentItems(timeline.value)
 
     const timelineItem = timeline.value.find(
-      (entry) => entry.type === 'feed_item' && entry.feed_item?.id === feedItem.id,
+      (entry) => (entry.type === 'feed_item' || entry.type === 'project_update') && entry.feed_item?.id === feedItem.id,
     )
     if (authStore.isAuthenticated && timelineItem && !timelineItem.is_read) {
       timelineItem.is_read = true
@@ -154,6 +166,7 @@ export function useFeedItemActions({
     toggleStar,
     toggleReadingList,
     toggleRead,
+    markShortNoteRead,
     applyAutomationRules,
     playPodcast,
     isPodcastPlaying,

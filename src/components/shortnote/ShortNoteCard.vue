@@ -140,8 +140,8 @@ import { useInteractions } from '@/composables/useInteractions'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import type { ShortNote } from '@/types'
 
-const props = defineProps<{ note: ShortNote }>()
-defineEmits<{ delete: [note: ShortNote] }>()
+const props = defineProps<{ note: ShortNote; isRead?: boolean }>()
+const emit = defineEmits<{ delete: [note: ShortNote]; 'mark-read': [] }>()
 
 const api = useApi()
 const authStore = useAuthStore()
@@ -156,11 +156,12 @@ const likeRate = computed(() => (
   voteTotal.value === 0 ? '0.0' : (((interactions.likeCount.value || 0) / voteTotal.value) * 100).toFixed(1)
 ))
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
-const isRead = computed(() => isNoteRead(props.note.id))
+const isRead = computed(() => props.isRead ?? isNoteRead(props.note.id))
 
 function handleMouseEnter() {
   if (!isRead.value) {
     markNoteAsRead(props.note.id)
+    emit('mark-read')
   }
 }
 
@@ -168,7 +169,7 @@ const showLightbox = ref(false)
 const lightboxIndex = ref(0)
 const showComments = ref(false)
 const cardAnchor = ref<HTMLElement | null>(null)
-const mediaUrls = computed(() => props.note.media.map(m => resolveMediaURL(m.url)))
+const mediaUrls = computed(() => (props.note.media || []).map(m => resolveMediaURL(m.url)))
 
 function setCardAnchor(value: unknown) {
   const element = value instanceof HTMLElement

@@ -4,7 +4,7 @@ export function findSubscriptionByTimelineItem(
   item: TimelineItem,
   subscriptions: readonly Subscription[],
 ): Subscription | undefined {
-  if (item.type === 'feed_item' && item.feed_item) {
+  if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) {
     const sourceId = item.feed_item.feed_source?.id || item.feed_item.feed_source_id
     if (!sourceId) return undefined
     return subscriptions.find((subscription) => (

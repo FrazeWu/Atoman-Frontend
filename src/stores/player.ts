@@ -1196,7 +1196,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const podcastSongs: Song[] = items
 			.filter(
 				(item) =>
-					item.type === "feed_item" && isPlayableFeedPodcast(item.feed_item),
+					(item.type === "feed_item" || item.type === "project_update") && isPlayableFeedPodcast(item.feed_item),
 			)
 			.map((item) => createPodcastSong(item.feed_item))
 			.filter((song): song is Song => Boolean(song));

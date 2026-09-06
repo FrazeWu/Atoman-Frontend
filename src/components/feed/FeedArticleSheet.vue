@@ -81,7 +81,7 @@
       />
     </template>
     
-    <template v-else-if="article && article.type === 'feed_item' && article.feed_item">
+    <template v-else-if="article && isFeedItemTimeline(article) && article.feed_item">
       <div v-if="showFeedCover" class="article-cover" :class="{ 'article-cover--fallback': feedCoverFailed }">
         <img
           v-if="!feedCoverFailed"
@@ -221,14 +221,14 @@
       </div>
     </template>
     <PDiscussionFAB
-      v-if="article?.type === 'feed_item' && article.feed_item && show && presentation !== 'page'"
+    v-if="article && isFeedItemTimeline(article) && article.feed_item && show && presentation !== 'page'"
       :count="commentCount"
       @click="openComments"
     />
   </component>
 
   <button
-    v-if="article?.type === 'feed_item' && article.feed_item && show && presentation === 'page'"
+    v-if="article && isFeedItemTimeline(article) && article.feed_item && show && presentation === 'page'"
     type="button"
     class="article-comments-link"
     @click="openComments"
@@ -236,7 +236,7 @@
     评论<span v-if="commentCount !== undefined"> · {{ commentCount }}</span>
   </button>
   <CommentSideSheet
-    v-if="article?.type === 'feed_item' && article.feed_item"
+    v-if="article && isFeedItemTimeline(article) && article.feed_item"
     :show="commentsOpen"
     :title="commentSheetTitle"
     :partial-anchor="presentation === 'page' ? pageContentAnchor : null"
@@ -295,6 +295,11 @@ const props = withDefaults(defineProps<{
   presentation: 'sheet',
 })
 
+const isFeedItemTimeline = (
+	item: TimelineItem | null | undefined,
+): item is TimelineItem & { type: 'feed_item' | 'project_update'; feed_item: FeedItem } =>
+	(item?.type === 'feed_item' || item?.type === 'project_update') && Boolean(item.feed_item)
+
 const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
 const authStore = useAuthStore()
 const api = useApi()
@@ -338,23 +343,23 @@ const postInReadingList = computed(() => {
   return Boolean(post?.id && feedStore.readingListItemIds.has(post.id))
 })
 const feedItemStarred = computed(() => {
-  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   return Boolean(item?.id && (item.is_starred || feedStore.starredItemIds.has(item.id)))
 })
 const relatedFeedItems = computed(() => {
-  const currentItem = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  const currentItem = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!currentItem) return []
 
   const seen = new Set([currentItem.id])
   return props.relatedArticles.flatMap((candidate) => {
-    const item = candidate.type === 'feed_item' ? candidate.feed_item : undefined
+    const item = isFeedItemTimeline(candidate) ? candidate.feed_item : undefined
     if (!item || item.feed_source_id !== currentItem.feed_source_id || seen.has(item.id)) return []
     seen.add(item.id)
     return [item]
   }).slice(0, 3)
 })
 const feedCoverCandidates = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return []
+  if (!isFeedItemTimeline(props.article) || !props.article.feed_item) return []
   const item = props.article.feed_item
   return [...new Set([
     item.image_url,
@@ -406,7 +411,7 @@ const sheetTitle = computed(() => {
   if (props.article.type === 'post' && props.article.post) {
     return `文章-${props.article.post.title || '未命名'}`
   }
-  if (props.article.type === 'feed_item' && props.article.feed_item) {
+  if (isFeedItemTimeline(props.article) && props.article.feed_item) {
     return `RSS文章-${props.article.feed_item.title || '未命名'}`
   }
   return '文章-加载中'
@@ -449,13 +454,13 @@ const articleNavigation = computed(() => {
 const navigationDirection = ref<'previous' | 'next'>('next')
 
 const isPlayablePodcast = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return false
+  if (!isFeedItemTimeline(props.article) || !props.article.feed_item) return false
   return isPlayableFeedPodcast(props.article.feed_item)
 })
 
 const articleSource = computed<FeedArticleSource | null>(() => {
   if (props.source) return props.source
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return null
+  if (!isFeedItemTimeline(props.article) || !props.article.feed_item) return null
 
   const item = props.article.feed_item
   const sourceID = item.feed_source?.id || item.feed_source_id
@@ -470,7 +475,7 @@ const articleSource = computed<FeedArticleSource | null>(() => {
 })
 
 const feedSourceTitle = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  if (!isFeedItemTimeline(props.article) || !props.article.feed_item) return ''
   return articleSource.value?.title || ''
 })
 
@@ -501,7 +506,7 @@ const feedContentVariant = computed<FeedReaderVariant>(() => {
     return 'summary'
   }
 
-  switch (props.article?.type === 'feed_item' ? props.article.feed_item?.content_source : undefined) {
+  switch (isFeedItemTimeline(props.article) ? props.article.feed_item?.content_source : undefined) {
     case 'feed':
       return 'rss'
     case 'page':
@@ -529,7 +534,7 @@ const feedWordCountLabel = computed(() => {
   const html = feedBodyHtml.value
   const plainTextLength = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length
   const fullTextWordCount = props.reader?.full_text.word_count
-    ?? (props.article?.type === 'feed_item' ? props.article.feed_item?.full_text_word_count : 0)
+    ?? (isFeedItemTimeline(props.article) ? props.article.feed_item?.full_text_word_count : 0)
   const wordCount = feedContentVariant.value === 'full_text' ? fullTextWordCount : 0
   const count = wordCount || plainTextLength
   if (!count) return ''
@@ -537,7 +542,7 @@ const feedWordCountLabel = computed(() => {
 })
 
 const feedBodyHtml = computed(() => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  if (!isFeedItemTimeline(props.article) || !props.article.feed_item) return ''
   if (hasReader.value) {
     if (feedContentVariant.value === 'full_text') return fullTextBodyHtml.value
     if (feedContentVariant.value === 'rss') return rssBodyHtml.value
@@ -601,7 +606,7 @@ async function togglePostReadingList() {
 }
 
 async function toggleFeedItemStar() {
-  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!item || !authStore.isAuthenticated) return
   await feedStore.toggleStar(item.id)
 }
@@ -660,7 +665,7 @@ async function clearPostRating() {
 }
 
 function applyFeedItemRating(summary: Record<string, unknown>, fallbackScore?: number) {
-  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!item) return
   item.rating_score = Number(summary.rating_score ?? item.rating_score ?? 0)
   item.rating_count = Number(summary.rating_count ?? item.rating_count ?? 0)
@@ -670,7 +675,7 @@ function applyFeedItemRating(summary: Record<string, unknown>, fallbackScore?: n
 }
 
 async function rateFeedItem(score: number) {
-  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!item || !authStore.isAuthenticated || ratingLoading.value) return
   ratingError.value = ''
   ratingLoading.value = true
@@ -694,7 +699,7 @@ async function rateFeedItem(score: number) {
 }
 
 async function clearFeedItemRating() {
-  const item = props.article?.type === 'feed_item' ? props.article.feed_item : null
+  const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!item || !authStore.isAuthenticated || ratingLoading.value) return
   ratingError.value = ''
   ratingLoading.value = true
@@ -718,7 +723,7 @@ async function clearFeedItemRating() {
 }
 
 const emitPlayPodcast = () => {
-  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return
+  if (!isFeedItemTimeline(props.article) || !props.article.feed_item) return
   emit('play-podcast', props.article.feed_item)
 }
 </script>

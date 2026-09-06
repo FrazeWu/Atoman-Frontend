@@ -57,8 +57,8 @@
           />
         </PField>
 
-        <div v-if="detectedCategoryLabel" class="resolve-status resolve-status--ok">
-          已识别为：{{ detectedCategoryLabel }}
+        <div v-if="detectedCategoryLabel || detectedPlatformLabel" class="resolve-status resolve-status--ok">
+          已识别为：{{ detectedPlatformLabel || detectedCategoryLabel }}
         </div>
 
         <PField v-if="groups.length" label="添加到分组（可选）">
@@ -169,6 +169,13 @@ const detectedCategory = computed<FeedSourceCategory | ''>(() => {
   return category
 })
 const detectedCategoryLabel = computed(() => categoryOptions.find((option) => option.value === detectedCategory.value)?.label || '')
+const detectedPlatformLabel = computed(() => {
+  const platform = activeSource.value?.platform
+  if (platform === 'youtube') return 'YouTube'
+  if (platform === 'bilibili') return 'Bilibili'
+  if (platform === 'github') return 'GitHub 项目更新'
+  return ''
+})
 const selectedCandidateBlocked = computed(() => selectedCandidate.value?.status === 'already_subscribed')
 const canSubmit = computed(() => {
   if (resolving.value || !sourceInput.value.trim() || !resolved.value) return false

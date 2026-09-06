@@ -23,6 +23,9 @@ interface FeedArticleBrowserOptions {
 	feedItemActionIDs: (item: FeedItem) => string[];
 }
 
+const isFeedItemTimeline = (item: TimelineItem | null | undefined) =>
+	item?.type === "feed_item" || item?.type === "project_update"
+
 export function useFeedArticleBrowser({
 	visibleTimeline,
 	subscriptions,
@@ -50,7 +53,7 @@ export function useFeedArticleBrowser({
 		const article = selectedArticle.value;
 		if (!article) return null;
 		if (article.type === "post") return postSource(article);
-		if (article.type === "feed_item" && article.feed_item)
+		if (isFeedItemTimeline(article) && article.feed_item)
 			return feedItemSource(article.feed_item);
 		return null;
 	});
@@ -63,7 +66,7 @@ export function useFeedArticleBrowser({
 	const markReadOnOpen = (item: TimelineItem) => {
 		if (
 			!authStore.isAuthenticated ||
-			item.type !== "feed_item" ||
+			!isFeedItemTimeline(item) ||
 			!item.feed_item ||
 			item.is_read
 		)
@@ -89,7 +92,7 @@ export function useFeedArticleBrowser({
 		if (index !== undefined) focusedIndex.value = index;
 		if (!item.post && !item.feed_item) return;
 
-		if (item.type === "feed_item" && item.feed_item) {
+		if (isFeedItemTimeline(item) && item.feed_item) {
 			selectedArticle.value = item;
 			showArticleSheet.value = true;
 			const navigate = options.replaceRoute ? router.replace : router.push;
@@ -135,7 +138,7 @@ export function useFeedArticleBrowser({
 	};
 
 	const openSourceArticle = (item: TimelineItem) => {
-		if (item.type === "feed_item" && item.feed_item?.id) {
+		if (isFeedItemTimeline(item) && item.feed_item?.id) {
 			selectedArticle.value = item;
 			showArticleSheet.value = true;
 			void router.push({

@@ -294,12 +294,12 @@ export function useFeedTimelineController({
       if (!isHubTimeline.value && !isBookmarksTimeline.value) await applyAutomationRules(items)
       if (requestSequence !== timelineRequestSequence) return
       if (isHubTimeline.value || isBookmarksTimeline.value) {
-        allRead.value = !items.some((item) => item.type === 'feed_item' && !item.is_read)
+        allRead.value = !items.some((item) => (item.type === 'feed_item' || item.type === 'project_update' || item.type === 'short_note') && !item.is_read)
       } else if (sourceViewMode.value) {
         const sourceUnreadCount = currentSourceSubscription.value?.unread_count
         allRead.value = typeof sourceUnreadCount === 'number'
           ? sourceUnreadCount === 0
-          : !items.some((item) => item.type === 'feed_item' && !item.is_read)
+          : !items.some((item) => (item.type === 'feed_item' || item.type === 'project_update' || item.type === 'short_note') && !item.is_read)
       } else {
         const unreadCount = await feedStore.fetchUnreadFeedItemCount()
         if (requestSequence === timelineRequestSequence && unreadCount !== null) {
@@ -343,7 +343,7 @@ export function useFeedTimelineController({
           : await feedStore.markSubscriptionUnread(querySourceId.value!)
         if (!success) return
         timeline.value.forEach((item) => {
-          if (item.type === 'feed_item') item.is_read = nextAllRead
+          if (item.type === 'feed_item' || item.type === 'project_update' || item.type === 'short_note') item.is_read = nextAllRead
         })
         await Promise.all([fetchTimeline(), feedStore.fetchSubscriptions()])
         allRead.value = nextAllRead
@@ -355,7 +355,7 @@ export function useFeedTimelineController({
         : await feedStore.markAllFeedUnread()
       if (!success) return
       timeline.value.forEach((item) => {
-        if (item.type === 'feed_item') item.is_read = nextAllRead
+        if (item.type === 'feed_item' || item.type === 'project_update' || item.type === 'short_note') item.is_read = nextAllRead
       })
       await feedStore.fetchSubscriptions()
       allRead.value = nextAllRead

@@ -103,7 +103,7 @@
             @click="emit('open-article', item)"
           />
           <BlogItemCard
-            v-else-if="item.type === 'feed_item' && item.feed_item"
+            v-else-if="(item.type === 'feed_item' || item.type === 'project_update') && item.feed_item"
             data-test="source-article-card"
             :item="item.feed_item"
             type="feed_item"
@@ -162,6 +162,9 @@ const emit = defineEmits<{
 }>()
 
 const sourceTypeLabel = computed(() => {
+  if (props.source?.platform === 'youtube') return 'YouTube 视频'
+  if (props.source?.platform === 'bilibili') return 'Bilibili 视频'
+  if (props.source?.platform === 'github' || props.source?.contentType === 'project_update') return 'GitHub 项目更新'
   if (props.source?.type === 'internal_channel') return '频道'
   if (props.source?.type === 'external_rss') return 'RSS 源'
   return '来源'
@@ -255,19 +258,19 @@ const visibleItems = computed(() => {
 
 function itemKey(item: TimelineItem): string {
   if (item.type === 'post' && item.post) return `post-${item.post.id}`
-  if (item.type === 'feed_item' && item.feed_item) return `feed-${item.feed_item.id}`
+  if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) return `feed-${item.feed_item.id}`
   return `${item.type}-${item.published_at}`
 }
 
 function itemTitle(item: TimelineItem): string {
   if (item.type === 'post' && item.post) return item.post.title
-  if (item.type === 'feed_item' && item.feed_item) return item.feed_item.title
+  if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) return item.feed_item.title
   return '未命名文章'
 }
 
 function itemSummary(item: TimelineItem): string {
   if (item.type === 'post' && item.post) return item.post.summary || stripText(item.post.content)
-  if (item.type === 'feed_item' && item.feed_item) return stripText(item.feed_item.summary || '')
+  if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) return stripText(item.feed_item.summary || '')
   return ''
 }
 

@@ -24,19 +24,22 @@ const getExternalBadge = (item: FeedItem) => {
 
 const matchesSourceTypeFilter = (item: TimelineItem, filter: FeedSourceTypeFilter) => {
   if (filter === 'all') return true
-  if (filter === 'internal') return item.type === 'post' || item.type === 'podcast_episode' || item.type === 'video'
+  if (filter === 'internal') return item.type === 'post' || item.type === 'short_note' || item.type === 'podcast_episode' || item.type === 'video'
   if (filter === 'podcast') return item.type === 'podcast_episode' || (
     item.type === 'feed_item' && item.feed_item && getExternalBadge(item.feed_item) === '播客'
   )
-  if (filter === 'blog') return item.type === 'post' || (
-    item.type === 'feed_item' && item.feed_item && getExternalBadge(item.feed_item) === '文章'
+  if (filter === 'blog') return item.type === 'post' || item.type === 'short_note' || (
+    (item.type === 'feed_item' || item.type === 'project_update') && item.feed_item && getExternalBadge(item.feed_item) === '文章'
   )
   return true
 }
 
 const itemText = (item: TimelineItem) => {
-  if (item.type === 'feed_item') {
+  if (item.type === 'feed_item' || item.type === 'project_update') {
     return [item.feed_item?.title || '', item.feed_item?.summary || '', item.feed_item?.feed_source?.title || '']
+  }
+  if (item.type === 'short_note') {
+    return [item.short_note?.content || '', '', item.short_note?.user?.display_name || item.short_note?.user?.username || '']
   }
   if (item.type === 'podcast_episode') {
     return [
@@ -72,7 +75,8 @@ const stripHtml = (html: string) =>
 
 const itemKey = (item: TimelineItem) => {
   if (item.type === 'post' && item.post) return `post-${item.post.id}`
-  if (item.type === 'feed_item' && item.feed_item) return `feed-${item.feed_item.id}`
+  if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) return `feed-${item.feed_item.id}`
+  if (item.type === 'short_note' && item.short_note) return `short-note-${item.short_note.id}`
   if (item.type === 'podcast_episode' && item.podcast_episode) return `podcast-${item.podcast_episode.id}`
   if (item.type === 'video' && item.video) return `video-${item.video.id}`
   return `${item.type}-${item.published_at || ''}`

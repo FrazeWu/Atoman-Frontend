@@ -345,9 +345,9 @@ export const useFeedStore = defineStore("feed", () => {
 		}
 	};
 
-	const markItemsRead = async (feedItemIds: string[]): Promise<boolean> => {
+	const markItemsRead = async (feedItemIds: string[], shortNoteIds: string[] = []): Promise<boolean> => {
 		const authStore = useAuthStore();
-		if (!feedItemIds.length) return false;
+		if (!feedItemIds.length && !shortNoteIds.length) return false;
 		try {
 			const res = await apiRequestResult(`${api.url}/feed/timeline/mark-read`, {
 				method: "POST",
@@ -355,7 +355,7 @@ export const useFeedStore = defineStore("feed", () => {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${authStore.token}`,
 				},
-				body: JSON.stringify({ feed_item_ids: feedItemIds }),
+				body: JSON.stringify({ feed_item_ids: feedItemIds, short_note_ids: shortNoteIds }),
 			});
 			return res.ok;
 		} catch (e) {
@@ -364,9 +364,9 @@ export const useFeedStore = defineStore("feed", () => {
 		return false;
 	};
 
-	const markItemsUnread = async (feedItemIds: string[]): Promise<boolean> => {
+	const markItemsUnread = async (feedItemIds: string[], shortNoteIds: string[] = []): Promise<boolean> => {
 		const authStore = useAuthStore();
-		if (!feedItemIds.length) return false;
+		if (!feedItemIds.length && !shortNoteIds.length) return false;
 		try {
 			const res = await apiRequestResult(
 				`${api.url}/feed/timeline/mark-unread`,
@@ -376,7 +376,7 @@ export const useFeedStore = defineStore("feed", () => {
 						"Content-Type": "application/json",
 						Authorization: `Bearer ${authStore.token}`,
 					},
-					body: JSON.stringify({ feed_item_ids: feedItemIds }),
+					body: JSON.stringify({ feed_item_ids: feedItemIds, short_note_ids: shortNoteIds }),
 				},
 			);
 			return res.ok;

@@ -626,6 +626,8 @@ export type ResolvedSubscriptionStatus =
 export interface ResolvedSubscriptionSource {
 	id?: string;
 	provider: FeedSourceProvider;
+	platform?: "youtube" | "bilibili" | "github";
+	content_type?: "video" | "project_update";
 	source_type:
 		| "external_rss"
 		| "internal_user"
@@ -697,6 +699,8 @@ export interface FeedSource {
 		| "external_rss";
 	source_id?: string;
 	rss_url?: string;
+	platform?: "youtube" | "bilibili" | "github";
+	content_type?: "video" | "project_update";
 	hash: string;
 	title?: string;
 	language_code?: string;
@@ -761,6 +765,8 @@ export interface FeedExploreSource {
 	updateFrequencyLabel?: string;
 	bookmarkCount?: number;
 	readCount?: number;
+	platform?: "youtube" | "bilibili" | "github";
+	content_type?: "video" | "project_update";
 }
 
 export interface FeedRecommendationTheme {
@@ -1003,8 +1009,9 @@ export interface StarredFeedItem {
 
 // Unified timeline item returned by GET /api/feed/timeline
 export interface TimelineItem {
-	type: "post" | "feed_item" | "podcast_episode" | "video" | "orbit_item";
+	type: "post" | "short_note" | "feed_item" | "project_update" | "podcast_episode" | "video" | "orbit_item";
 	post?: Post;
+	short_note?: ShortNote;
 	feed_item?: FeedItem;
 	podcast_episode?: PodcastEpisode;
 	video?: Video;
@@ -1025,6 +1032,8 @@ export interface FeedArticleSource {
 	healthStatus?: "healthy" | "warning" | "error";
 	lastCheckedAt?: string;
 	itemCount?: number;
+	platform?: "youtube" | "bilibili" | "github";
+	contentType?: "video" | "project_update";
 }
 
 // ===== Bookmark Types =====

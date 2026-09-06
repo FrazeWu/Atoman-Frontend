@@ -101,7 +101,7 @@
       :source="selectedArticleSource"
       :show-source-subscribe="Boolean(selectedArticleSource)"
       :source-subscribe-busy="sourceSubscribeBusy"
-      :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
+      :is-podcast-playing="(selectedArticle?.type === 'feed_item' || selectedArticle?.type === 'project_update') && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"
       :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < visibleTimeline.length - 1"
       :related-articles="visibleTimeline"
@@ -208,7 +208,7 @@
           </BlogItemCard>
 
           <BlogItemCard
-            v-else-if="item.type === 'feed_item' && item.feed_item"
+            v-else-if="(item.type === 'feed_item' || item.type === 'project_update') && item.feed_item"
             :item="item.feed_item"
             type="feed_item"
             :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
@@ -216,7 +216,7 @@
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
             :source-interactive="Boolean(feedItemSource(item.feed_item))"
             :source-title="feedItemSource(item.feed_item)?.title || 'RSS'"
-            :type-label="getExternalBadge(item.feed_item)"
+            :type-label="item.type === 'project_update' ? '项目更新' : getExternalBadge(item.feed_item)"
             :starred="starredIds.has(item.feed_item.id)"
             :in-reading-list="readingListIds.has(item.feed_item.id)"
             :is-podcast-playing="isPodcastPlaying(item.feed_item)"
@@ -296,6 +296,13 @@
             </template>
           </BlogItemCard>
 
+          <ShortNoteCard
+            v-else-if="item.type === 'short_note' && item.short_note"
+            :note="item.short_note"
+            :is-read="item.is_read"
+            @mark-read="markShortNoteRead(item)"
+          />
+
           <RouterLink
             v-else-if="item.type === 'podcast_episode' && item.podcast_episode"
             :to="`/podcasts/episode/${item.podcast_episode.id}`"
@@ -361,6 +368,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
+import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -526,6 +534,7 @@ const {
   toggleStar,
   toggleReadingList,
   toggleRead,
+  markShortNoteRead,
   applyAutomationRules,
   playPodcast,
   isPodcastPlaying,
@@ -546,10 +555,10 @@ const { focusedIndex, scrollToFocused } = useKeyboardList({
     switch (key) {
       case 'm': toggleRead(item); break
       case 's':
-        if (item.type === 'feed_item' && item.feed_item) toggleStar(item.feed_item.id)
+        if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) toggleStar(item.feed_item.id)
         break
       case 'l':
-        if (item.type === 'feed_item' && item.feed_item) toggleReadingList(item.feed_item.id)
+        if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) toggleReadingList(item.feed_item.id)
         break
       case 'v': window.open(item.feed_item?.link || '#', '_blank'); break
     }
@@ -663,7 +672,8 @@ const {
 })
 
 const timelineContextLabel = computed(() => isBookmarksTimeline.value ? '收藏内容' : ({
-  podcast: '播客更新',
+	all: '全部订阅',
+	podcast: '播客更新',
   video: '视频更新',
   blog: '博客更新',
   rss: 'RSS 更新',

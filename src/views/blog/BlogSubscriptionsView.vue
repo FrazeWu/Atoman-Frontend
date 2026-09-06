@@ -10,32 +10,39 @@
     <PEmpty v-if="!authStore.isAuthenticated" title="请先登录" description="登录后查看订阅内容" />
 
     <section v-else class="subscription-posts">
-      <div v-if="loading && !posts.length" class="a-grid-2">
+      <div v-if="loading && !subscriptionItems.length" class="a-grid-2">
         <div v-for="index in 6" :key="index" class="a-skeleton" style="height:12rem" />
       </div>
 
-      <PEmpty v-else-if="loadError && !posts.length" title="订阅内容加载失败">
+      <PEmpty v-else-if="loadError && !subscriptionItems.length" title="订阅内容加载失败">
         <template #action>
           <PButton variant="secondary" size="sm" @click="retry">重试</PButton>
         </template>
       </PEmpty>
 
-      <PEmpty v-else-if="!posts.length" title="暂无更新" />
+      <PEmpty v-else-if="!subscriptionItems.length" title="暂无更新" />
 
       <div v-else>
         <p v-if="loadError" class="a-error" role="alert">{{ loadError }}</p>
-        <BlogItemCard
-          v-for="(post, index) in posts"
-          :key="post.id"
-          :item="post"
-          type="post"
-          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-          :bookmarked="starredIds.has(post.id)"
-          :in-reading-list="readingListIds.has(post.id)"
-          @click="blogSheets.openPost(post.id, post.title)"
-          @toggle-bookmark="toggleStar(post.id)"
-          @toggle-reading-list="toggleReadingList(post.id)"
-        />
+        <template v-for="(item, index) in subscriptionItems" :key="item.post?.id || item.short_note?.id">
+          <BlogItemCard
+            v-if="item.type === 'post' && item.post"
+            :item="item.post"
+            type="post"
+            :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+            :bookmarked="starredIds.has(item.post.id)"
+            :in-reading-list="readingListIds.has(item.post.id)"
+            @click="blogSheets.openPost(item.post.id, item.post.title)"
+            @toggle-bookmark="toggleStar(item.post.id)"
+            @toggle-reading-list="toggleReadingList(item.post.id)"
+          />
+          <ShortNoteCard
+            v-else-if="item.type === 'short_note' && item.short_note"
+            :note="item.short_note"
+            :is-read="item.is_read"
+            @mark-read="markShortNoteRead(item)"
+          />
+        </template>
       </div>
 
       <div v-if="hasMore && !loading" class="subscription-load-more">
@@ -51,6 +58,7 @@ import { computed, onMounted, watch } from 'vue'
 
 import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
+import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -60,7 +68,7 @@ import { useModuleSubscriptionTimeline } from '@/composables/feed/useModuleSubsc
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
-import type { Post } from '@/types'
+import type { Post, TimelineItem } from '@/types'
 
 const blogSheets = useBlogSheets()
 const authStore = useAuthStore()
@@ -72,6 +80,9 @@ const timeline = useModuleSubscriptionTimeline('blog', 12)
 const posts = computed(() => timeline.items.value
   .filter((item) => item.type === 'post' && item.post)
   .map((item) => item.post as Post))
+const subscriptionItems = computed(() => timeline.items.value.filter((item) =>
+  (item.type === 'post' && item.post) || (item.type === 'short_note' && item.short_note),
+))
 const loading = timeline.loading
 const loadError = timeline.error
 const hasMore = timeline.hasMore
@@ -84,6 +95,16 @@ const toggleStar = (id: string) => {
 
 const toggleReadingList = (id: string) => {
   void feedStore.toggleReadingListItem(id)
+}
+
+const markShortNoteRead = (item: TimelineItem) => {
+  if (item.type !== 'short_note' || !item.short_note || item.is_read) return
+  void (async () => {
+    const success = await feedStore.markItemsRead([], [item.short_note!.id])
+    if (!success) return
+    item.is_read = true
+    await feedStore.fetchSubscriptions()
+  })()
 }
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({

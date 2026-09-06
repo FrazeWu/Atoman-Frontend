@@ -20,8 +20,8 @@
     <template #title>
       <h3 data-test="feed-source-title" class="feed-source-card__title">{{ source.title }}</h3>
     </template>
-    <template v-if="eyebrow" #badge>
-      <span class="feed-source-card__tag" data-test="feed-source-eyebrow">{{ eyebrow }}</span>
+    <template v-if="eyebrow || sourcePlatformLabel" #badge>
+      <span class="feed-source-card__tag" data-test="feed-source-eyebrow">{{ eyebrow || sourcePlatformLabel }}</span>
     </template>
     <template #description>
       <p v-if="displayUrl && !summaryText" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
@@ -157,6 +157,13 @@ const subscribeButtonLabel = computed(() => {
   if (props.source.subscribed) return '已订阅'
   if (props.subscribeBusy) return '处理中'
   return '订阅'
+})
+
+const sourcePlatformLabel = computed(() => {
+  if (props.source.platform === 'youtube') return 'YouTube'
+  if (props.source.platform === 'bilibili') return 'Bilibili'
+  if (props.source.platform === 'github' || props.source.content_type === 'project_update') return '项目更新'
+  return ''
 })
 
 const compactCount = (value: number) => {

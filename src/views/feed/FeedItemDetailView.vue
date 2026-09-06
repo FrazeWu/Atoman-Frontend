@@ -113,12 +113,12 @@ const articleSource = computed<FeedArticleSource | null>(() => {
   }
 })
 const articleIndex = computed(() => routeState.value?.articles.findIndex(
-  (entry) => entry.type === 'feed_item' && entry.feed_item?.id === item.value?.id,
+  (entry) => (entry.type === 'feed_item' || entry.type === 'project_update') && entry.feed_item?.id === item.value?.id,
 ) ?? -1)
 
 function openRelativeArticle(offset: -1 | 1) {
   const next = routeState.value?.articles[articleIndex.value + offset]
-  if (next?.type !== 'feed_item' || !next.feed_item) return
+  if ((next?.type !== 'feed_item' && next?.type !== 'project_update') || !next.feed_item) return
   const state = { ...routeState.value!, article: next }
   void router.replace({ path: `/feed/item/${next.feed_item.id}`, state: feedArticleRouteState(state) })
 }
@@ -233,7 +233,7 @@ async function reportReadEvent(feedItem: FeedItem) {
 
 async function fetchItem(id: string) {
   const restored = readFeedArticleRouteState()
-  const restoredItem = restored?.article.type === 'feed_item' && restored.article.feed_item?.id === id
+  const restoredItem = (restored?.article.type === 'feed_item' || restored?.article.type === 'project_update') && restored.article.feed_item?.id === id
     ? restored.article.feed_item
     : null
   reader.value = null

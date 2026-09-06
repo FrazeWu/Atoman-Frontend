@@ -403,6 +403,8 @@ type RecommendationItem = {
   source_title?: string
   source_type?: string
   source_category?: string
+  platform?: 'youtube' | 'bilibili' | 'github'
+  source_content_type?: 'video' | 'project_update'
   source_path?: string
   rss_url?: string
   score_label?: string
@@ -413,8 +415,8 @@ type RecommendationItem = {
   rating_count?: number
   update_frequency_label?: string
   last_published_at?: string
-  subscribed?: boolean
-  recent_items?: Array<{ id: string; title: string }>
+	  subscribed?: boolean
+	  recent_items?: Array<{ id: string; title: string }>
 }
 
 type DiscoverySearchArticle = {
@@ -641,6 +643,8 @@ function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSourc
     lastPublishedAt: payload.lastPublishedAt ?? payload.last_published_at,
     language_code: payload.language_code,
     subscribed: Boolean(payload.subscribed),
+    platform: payload.platform,
+    content_type: payload.content_type,
     recentItems: (payload.recentItems ?? payload.recent_items ?? []).map((item) => {
       const recent = item as FeedExploreRecentItem & { published_at?: string }
       return {
@@ -798,6 +802,8 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
     subscribed: Boolean(item.subscribed),
     recentItems: item.recent_items ?? [],
     description: item.summary || item.description,
+    platform: item.platform,
+    content_type: item.source_content_type,
   }
 }
 
@@ -974,6 +980,8 @@ function sourceFromRecommendation(item: RecommendationItem): FeedArticleSource {
     imageUrl: item.source_title ? undefined : item.image_url,
     type: isInternalChannel ? 'internal_channel' : 'external_rss',
     subscribed: Boolean(item.source_subscribed || item.subscribed),
+    platform: item.platform,
+    contentType: item.source_content_type,
   }
 }
 
@@ -1046,13 +1054,13 @@ function openChannelArticleFromSheet(article: TimelineItem) {
 }
 
 function toggleChannelArticleStar(article: TimelineItem) {
-  if (article.type === 'feed_item' && article.feed_item) {
+  if ((article.type === 'feed_item' || article.type === 'project_update') && article.feed_item) {
     void feedStore.toggleStar(article.feed_item.id)
   }
 }
 
 function toggleChannelArticleReadingList(article: TimelineItem) {
-  if (article.type === 'feed_item' && article.feed_item) {
+  if ((article.type === 'feed_item' || article.type === 'project_update') && article.feed_item) {
     void feedStore.toggleReadingListItem(article.feed_item.id)
   }
 }
@@ -1114,7 +1122,7 @@ async function searchDiscovery(queryValue = discoverySearchQuery.value) {
         if (item.type === 'post' && item.post) {
           return { id: item.post.id, title: item.post.title, summary: item.post.summary || '', sourceTitle: item.post.channel?.name || '', targetPath: `/posts/post/${item.post.id}` }
         }
-        if (item.type === 'feed_item' && item.feed_item) {
+        if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) {
           return { id: item.feed_item.id, title: item.feed_item.title, summary: item.feed_item.summary || '', sourceTitle: item.feed_item.feed_source?.title || '', targetPath: `/feed/item/${item.feed_item.id}` }
         }
         return null
@@ -1137,6 +1145,8 @@ function openDiscoverySearchSource(source: FeedExploreSource) {
     type: 'external_rss',
     rssUrl: source.rssUrl,
     subscribed: Boolean(source.subscribed),
+    platform: source.platform,
+    contentType: source.content_type,
   }
   showChannelSheet.value = true
   discoverySearchOpen.value = false

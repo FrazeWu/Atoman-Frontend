@@ -63,6 +63,9 @@
             <ChevronRight :size="17" aria-hidden="true" />
           </button>
         </div>
+        <div v-else-if="asset?.format === 'txt' && textPages.length" class="books-reader__pagination">
+          <span>第 {{ textPage }} / {{ textPages.length }} 页</span>
+        </div>
       </div>
 
       <details v-if="epubTOC.length > 0" class="books-reader__toc" open>
@@ -75,7 +78,20 @@
       </details>
 
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="books-reader__text" @scroll="handleTextScroll">
-        <pre>{{ textContent }}</pre>
+        <div class="books-reader__text-pages">
+          <article
+            v-for="(page, index) in textPages"
+            :key="page.start"
+            :ref="element => setTextPageRef(index, element)"
+            class="books-reader__text-page"
+          >
+            <div class="books-reader__text-page-content">{{ page.content }}</div>
+            <span class="books-reader__text-page-number">{{ index + 1 }}</span>
+          </article>
+        </div>
+        <div ref="textPageFrame" class="books-reader__text-page books-reader__text-page--measure" aria-hidden="true">
+          <div ref="textMeasure" class="books-reader__text-page-content" />
+        </div>
       </div>
       <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="books-reader__epub" />
       <div v-else class="books-reader__pdf">
@@ -128,6 +144,7 @@ import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-d
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
   getBookAsset,
@@ -163,6 +180,8 @@ const asset = ref<BookPrivateAsset | null>(null)
 const readingState = ref<BookReadingState | null>(null)
 const contentBlob = ref<Blob | null>(null)
 const textContent = ref('')
+const textPages = ref<TextPage[]>([])
+const textPage = ref(1)
 const privateNotes = ref('')
 const publicationWorkID = ref('')
 const publicationLicense = ref<SubmitPublicationInput['license_type']>('public_domain')
@@ -180,13 +199,18 @@ const isLoading = ref(true)
 const isSaving = ref(false)
 const errorMessage = ref('')
 const textViewport = ref<HTMLElement | null>(null)
+const textPageFrame = ref<HTMLElement | null>(null)
+const textMeasure = ref<HTMLElement | null>(null)
 const epubViewport = ref<HTMLElement | null>(null)
 const pdfCanvas = ref<HTMLCanvasElement | null>(null)
+const textPageElements: Array<HTMLElement | undefined> = []
 let pdfDocument: PDFDocumentProxy | null = null
 let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
 let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+let textResizeObserver: ResizeObserver | null = null
+let textPaginationFrame: number | null = null
 
 const canRead = computed(() => ['private_available', 'publication_requested', 'pending_review', 'rejected'].includes(asset.value?.processing_status || ''))
 const statusLabel = computed(() => {
@@ -221,9 +245,8 @@ function applyReadingState(state: BookReadingState) {
 async function loadText() {
   textContent.value = await contentBlob.value!.text()
   await nextTick()
-  const viewport = textViewport.value
-  if (!viewport || !textContent.value.length) return
-  viewport.scrollTop = (readingPercent.value || 0) * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+  await paginateTextContent(readingState.value?.txt_offset || 0)
+  observeTextPageSize()
 }
 
 async function loadPDF() {
@@ -331,11 +354,84 @@ async function submitPublication() {
 
 function handleTextScroll() {
   const viewport = textViewport.value
-  if (!viewport) return
-  const distance = Math.max(1, viewport.scrollHeight - viewport.clientHeight)
-  readingPercent.value = clampPercent(viewport.scrollTop / distance)
-  if (readingState.value) readingState.value.txt_offset = Math.round(readingPercent.value * textContent.value.length)
+  if (!viewport || !textPages.value.length) return
+  const focusLine = viewport.scrollTop + viewport.clientHeight * 0.3
+  let pageIndex = 0
+  for (let index = 0; index < textPageElements.length; index += 1) {
+    if ((textPageElements[index]?.offsetTop || 0) <= focusLine) pageIndex = index
+  }
+  const page = textPages.value[pageIndex]
+  const element = textPageElements[pageIndex]
+  if (!page || !element) return
+  textPage.value = pageIndex + 1
+  const pageProgress = clampPercent((focusLine - element.offsetTop) / Math.max(1, element.clientHeight))
+  const offset = Math.min(page.end, page.start + Math.round((page.end - page.start) * pageProgress))
+  readingPercent.value = clampPercent(offset / Math.max(1, textContent.value.length))
+  if (readingState.value) readingState.value.txt_offset = offset
   scheduleSaveState()
+}
+
+function setTextPageRef(index: number, element: unknown) {
+  if (element instanceof HTMLElement) textPageElements[index] = element
+  else textPageElements[index] = undefined
+}
+
+function textPageSize() {
+  const frame = textPageFrame.value
+  if (!frame) return null
+  const styles = window.getComputedStyle(frame)
+  const horizontalPadding = Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight)
+  const verticalPadding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom)
+  const width = frame.clientWidth - horizontalPadding
+  const height = frame.clientHeight - verticalPadding
+  return width > 0 && height > 0 ? { width, height } : null
+}
+
+async function paginateTextContent(offset = 0) {
+  if (!textContent.value) {
+    textPages.value = []
+    return
+  }
+  await nextTick()
+  const measure = textMeasure.value
+  const size = textPageSize()
+  textPageElements.length = 0
+  if (!measure || !size) {
+    textPages.value = paginateText(textContent.value)
+  } else {
+    measure.style.width = `${size.width}px`
+    measure.style.height = `${size.height}px`
+    textPages.value = paginateText(textContent.value, (content) => {
+      measure.textContent = content
+      return measure.scrollWidth <= measure.clientWidth + 1
+    })
+  }
+  await nextTick()
+  restoreTextPosition(offset)
+}
+
+function restoreTextPosition(offset: number) {
+  const viewport = textViewport.value
+  if (!viewport || !textPages.value.length) return
+  const pageIndex = textPages.value.findIndex((page) => offset >= page.start && offset < page.end)
+  const index = pageIndex >= 0 ? pageIndex : textPages.value.length - 1
+  textPage.value = index + 1
+  viewport.scrollTop = textPageElements[index]?.offsetTop || 0
+}
+
+function scheduleTextPagination() {
+  if (textPaginationFrame !== null) cancelAnimationFrame(textPaginationFrame)
+  textPaginationFrame = requestAnimationFrame(() => {
+    textPaginationFrame = null
+    void paginateTextContent(readingState.value?.txt_offset || 0)
+  })
+}
+
+function observeTextPageSize() {
+  textResizeObserver?.disconnect()
+  if (typeof ResizeObserver === 'undefined' || !textPageFrame.value) return
+  textResizeObserver = new ResizeObserver(scheduleTextPagination)
+  textResizeObserver.observe(textPageFrame.value)
 }
 
 function scheduleSaveState() {
@@ -392,6 +488,8 @@ function downloadBook() {
 onMounted(loadReader)
 onBeforeUnmount(() => {
   if (saveTimer) clearTimeout(saveTimer)
+  if (textPaginationFrame !== null) cancelAnimationFrame(textPaginationFrame)
+  textResizeObserver?.disconnect()
   if (epubRendition) epubRendition.destroy()
   if (epubBook) epubBook.destroy()
   if (pdfLoadingTask) void pdfLoadingTask.destroy()
@@ -537,18 +635,59 @@ onBeforeUnmount(() => {
 }
 
 .books-reader__text {
+  position: relative;
   overflow: auto;
-  padding: clamp(1.25rem, 4vw, 3rem);
+  max-height: min(78vh, 60rem);
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  background: var(--a-color-surface-muted);
 }
 
-.books-reader__text pre {
-  max-width: 72ch;
-  margin: 0 auto;
+.books-reader__text-pages {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+}
+
+.books-reader__text-page {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 56rem);
+  aspect-ratio: 1 / 1.414;
+  padding: clamp(2rem, 5vw, 4.75rem) clamp(1.75rem, 7vw, 6.5rem) 3.25rem;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 22%);
+}
+
+.books-reader__text-page-content {
+  height: 100%;
   color: var(--a-color-fg);
   font: inherit;
-  line-height: 1.85;
+  font-family: Georgia, "Songti SC", "SimSun", serif;
+  font-size: clamp(0.9rem, 1vw, 1.05rem);
+  line-height: 1.78;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  column-count: 2;
+  column-fill: auto;
+  column-gap: clamp(1.5rem, 4vw, 3.5rem);
+  column-rule: 1px solid var(--a-color-border-soft);
+  overflow: hidden;
+}
+
+.books-reader__text-page-number {
+  position: absolute;
+  inset: auto 0 1.1rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.books-reader__text-page--measure {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .books-reader__epub {
@@ -618,6 +757,27 @@ onBeforeUnmount(() => {
 .books-reader__notes span {
   color: var(--a-color-muted);
   font-size: 0.88rem;
+}
+
+@media (max-width: 720px) {
+  .books-reader__text {
+    max-height: none;
+    overflow: visible;
+    padding-inline: 0;
+  }
+
+  .books-reader__text-page {
+    width: 100%;
+    min-height: 141vw;
+    aspect-ratio: auto;
+    padding: 2.5rem 9vw 3.25rem;
+  }
+
+  .books-reader__text-page-content {
+    column-count: 1;
+    column-rule: 0;
+    font-size: 1rem;
+  }
 }
 
 .books-reader__notes textarea {

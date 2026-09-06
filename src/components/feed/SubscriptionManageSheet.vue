@@ -3,7 +3,6 @@
     :show="show"
     title="管理订阅"
     close-type="header"
-    above-player
     @close="requestClose"
   >
     <div class="manage-sheet">

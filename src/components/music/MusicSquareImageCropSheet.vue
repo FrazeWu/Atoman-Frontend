@@ -235,7 +235,6 @@ onBeforeUnmount(() => {
     mode="partial"
     content-max-width="36rem"
     close-type="header"
-    above-player
     @close="$emit('cancel')"
   >
     <div class="crop-sheet" data-testid="music-square-crop-sheet">

@@ -52,6 +52,35 @@ const musicCreationSource = read(
 const songLyricsEditorSource = read(
 	"src/components/music/MusicSongLyricsEditorDrawer.vue",
 );
+const musicEntityEditorSource = read(
+	"src/components/music/MusicEntityEditorDrawer.vue",
+);
+const musicMergeSource = read("src/components/music/MusicMergeDrawer.vue");
+const musicCreditLinkSource = read(
+	"src/components/music/MusicAlbumCreditLinkDrawer.vue",
+);
+const musicNestedActionSource = read(
+	"src/components/music/NestedActionDrawer.vue",
+);
+const musicCropSource = read(
+	"src/components/music/MusicSquareImageCropSheet.vue",
+);
+const debateWikiEditorSource = read(
+	"src/components/debate/DebateWikiEditor.vue",
+);
+const debateRevisionSource = read(
+	"src/components/debate/DebateRevisionSheet.vue",
+);
+const studioRouteSource = read("src/components/studio/StudioRouteSheet.vue");
+const subscriptionAddSource = read(
+	"src/components/feed/SubscriptionAddSheet.vue",
+);
+	const subscriptionRuleEditorSource = read(
+	"src/components/feed/SubscriptionRuleEditorSheet.vue",
+);
+const feedSourceItemsSource = read(
+	"src/components/setting/SettingFeedSourceItemsSheet.vue",
+);
 
 describe("overlay layer contract", () => {
 	it("defines one ordered semantic layer scale", () => {
@@ -81,7 +110,7 @@ describe("overlay layer contract", () => {
 		expect(topbarAuthSource).toContain("z-index: var(--a-z-global-menu);");
 		expect(globalSearchSource).toContain("z-index: var(--a-z-global-menu);");
 		expect(mobileNavSource).toContain("z-index: var(--a-z-navigation);");
-		expect(inboxSource).toMatch(/<PSheet[\s\S]*above-player/);
+		expect(inboxSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
 		expect(videoEditorSource).toMatch(/<PConfirm[\s\S]*above-player/);
 		expect(podcastEditorSource).toMatch(/<PConfirm[\s\S]*above-player/);
 		expect(postEditorSource).toMatch(
@@ -107,7 +136,7 @@ describe("overlay layer contract", () => {
 		expect(countryFieldSource).toContain("import PModal from './PModal.vue'");
 		expect(countryFieldSource).toMatch(/<PModal[\s\S]*above-player/);
 		expect(countryFieldSource).not.toContain("country-field-dialog-backdrop");
-		expect(lyricEditorSource).toContain("above-player");
+		expect(lyricEditorSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
 		expect(lyricsSource).toMatch(/<PConfirm[\s\S]*above-player/);
 		expect(adminUserDetailSource).toMatch(
 			/<PConfirm[\s\S]*pendingRevoke[\s\S]*above-player/,
@@ -120,6 +149,20 @@ describe("overlay layer contract", () => {
 		);
 		expect(musicCreationSource).toMatch(/<PConfirm[\s\S]*above-player/);
 		expect(songLyricsEditorSource).toMatch(/<PConfirm[\s\S]*above-player/);
+		expect(musicEntityEditorSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(musicCreationSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(musicMergeSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(musicCreditLinkSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(musicNestedActionSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(musicCropSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(debateWikiEditorSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(debateRevisionSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(studioRouteSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(adminUserDetailSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(subscriptionAddSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(subscriptionManageSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(subscriptionRuleEditorSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
+		expect(feedSourceItemsSource).not.toMatch(/<PSheet\b[^>]*\babove-player/);
 		expect(sheetSource).toMatch(
 			/\.p-sheet-root--above-player \.p-sheet-backdrop\s*\{[^}]*z-index: var\(--a-z-player-sheet-backdrop\);/,
 		);

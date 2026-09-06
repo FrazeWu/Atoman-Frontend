@@ -3,7 +3,6 @@
     :show="show"
     :title="sheetTitle"
     close-type="header"
-    above-player
     @close="requestClose"
   >
     <div class="rule-editor-sheet">

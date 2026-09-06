@@ -64,7 +64,6 @@
           close-type="header"
           :height="'calc(100dvh - var(--a-content-bottom-offset))'"
           panel-class="inbox-mobile-conversation-sheet"
-          above-player
           @close="closeMobileConversation"
         >
           <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">

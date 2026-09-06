@@ -3,7 +3,6 @@
     :show="show"
     :title="`版本-${debateTitle || '辩题'}`"
     close-type="header"
-    above-player
     @close="closeSheet"
   >
     <div class="revision-sheet">

@@ -5,7 +5,6 @@
     panel-class="studio-route-sheet"
     :side="side"
     close-type="header"
-    above-player
     @close="$emit('close')"
   >
     <slot />

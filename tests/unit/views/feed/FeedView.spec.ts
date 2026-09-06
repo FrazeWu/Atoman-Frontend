@@ -213,6 +213,19 @@ describe("FeedView", () => {
     expect(String(hubRequest?.[0])).toContain("limit=20");
   });
 
+  it("loads all saved content through the unified bookmarks timeline", async () => {
+    routeQuery.view = "bookmarks";
+
+    mount(FeedView, { global: { stubs: feedViewStubs } });
+    await flushPromises();
+
+    const bookmarkRequest = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.find(([input]) => String(input).includes("/feed/bookmarks?"));
+    expect(String(bookmarkRequest?.[0])).toContain("page=1");
+    expect(String(bookmarkRequest?.[0])).toContain("limit=20");
+  });
+
   it("keeps a single source timeline unmerged and hides the merge control", async () => {
     routeQuery.source_id = "subscription-a";
     const feedStore = useFeedStore();
@@ -899,7 +912,9 @@ describe("FeedView", () => {
       value: 160,
     });
 
-    await wrapper.get("button").trigger("click");
+    const addButton = wrapper.findAll("button").find((button) => button.text().includes("+ 订阅"));
+    expect(addButton).toBeDefined();
+    await addButton!.trigger("click");
     await flushPromises();
 
     const sheet = wrapper.get('[data-test="add-sheet-probe"]');
@@ -920,6 +935,7 @@ describe("FeedView", () => {
           PPageHeader: {
             template: '<header><slot /><slot name="action" /></header>',
           },
+          PSegmentedControl: true,
           PSelect: true,
           PField: true,
           PClip: {

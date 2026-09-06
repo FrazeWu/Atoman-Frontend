@@ -43,6 +43,7 @@ export function useFeedTimelineController({
   const queryHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
   const queryHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)
   const isHubTimeline = computed(() => Boolean(queryHubType.value))
+  const isBookmarksTimeline = computed(() => route.query.view === 'bookmarks')
   const queryPage = computed(() => normalizePage(route.query.page))
   const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
   const queryMergeDuplicates = computed(() => route.query.merge_duplicates !== 'false')
@@ -56,7 +57,7 @@ export function useFeedTimelineController({
   })
   const sourceViewMode = computed(() => Boolean(querySourceId.value))
   const canCheckTimelineUpdates = computed(() => {
-    if (isHubTimeline.value || !authStore.isAuthenticated || querySearch.value.trim() || timelineMode.value === 'priority') return false
+    if (isHubTimeline.value || isBookmarksTimeline.value || !authStore.isAuthenticated || querySearch.value.trim() || timelineMode.value === 'priority') return false
     if (sourceTypeFilter.value !== 'all') return false
     const sourceType = currentSourceSubscription.value?.feed_source?.source_type
     return !sourceType || sourceType === 'external_rss'
@@ -81,6 +82,7 @@ export function useFeedTimelineController({
   const emptyTimelineText = computed(() => {
     if (timelineMode.value === 'priority') return '今日精选暂无未读内容'
     if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
+    if (isBookmarksTimeline.value) return '还没有收藏内容'
     if (isHubTimeline.value) return '当前订阅上下文暂无更新'
     if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
     return subscriptions.value.length ? '订阅源暂无更新' : '订阅后开始探索'
@@ -241,7 +243,10 @@ export function useFeedTimelineController({
       }
 
       let response
-      if (isHubTimeline.value) {
+      if (isBookmarksTimeline.value) {
+        const params = new URLSearchParams({ page: String(currentPage.value), limit: String(pageLimit) })
+        response = await apiRequestResult(`${apiURL}/feed/bookmarks?${params}`, { headers: authHeaders() })
+      } else if (isHubTimeline.value) {
         const params = new URLSearchParams({
           type: queryHubType.value!,
           page: String(currentPage.value),
@@ -286,9 +291,9 @@ export function useFeedTimelineController({
         timelineUpdatesCursor.value = data.meta.checked_at
         hasNewTimelineContent.value = false
       }
-      if (!isHubTimeline.value) await applyAutomationRules(items)
+      if (!isHubTimeline.value && !isBookmarksTimeline.value) await applyAutomationRules(items)
       if (requestSequence !== timelineRequestSequence) return
-      if (isHubTimeline.value) {
+      if (isHubTimeline.value || isBookmarksTimeline.value) {
         allRead.value = !items.some((item) => item.type === 'feed_item' && !item.is_read)
       } else if (sourceViewMode.value) {
         const sourceUnreadCount = currentSourceSubscription.value?.unread_count
@@ -328,7 +333,7 @@ export function useFeedTimelineController({
   }
 
   const toggleAllRead = async () => {
-    if (isHubTimeline.value || markingAllRead.value) return
+    if (isHubTimeline.value || isBookmarksTimeline.value || markingAllRead.value) return
     markingAllRead.value = true
     const nextAllRead = !allRead.value
     try {
@@ -370,6 +375,7 @@ export function useFeedTimelineController({
     queryHubGroupId,
     queryHubMembershipId,
     queryPage,
+    isBookmarksTimeline,
     querySearch,
     queryMergeDuplicates,
     timelineMode,
@@ -394,6 +400,7 @@ export function useFeedTimelineController({
     queryHubGroupId,
     queryHubMembershipId,
     isHubTimeline,
+    isBookmarksTimeline,
     querySearch,
     timelineMode,
     searchInput,

@@ -77,6 +77,7 @@ const selectSubscriptionHubContext = (selection: SubscriptionHubSelection) => {
       ...route.query,
       source_id: undefined,
       group_id: undefined,
+      view: undefined,
       hub_type: selection.subscriptionType,
       hub_group_id: selection.groupId,
       hub_membership_id: selection.membershipId,

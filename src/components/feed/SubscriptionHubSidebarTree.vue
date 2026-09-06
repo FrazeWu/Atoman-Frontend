@@ -120,18 +120,11 @@ const typeNodes = computed(() => {
   );
 });
 const sourceRows = computed(() => {
-  const rows = typeNodes.value.flatMap((node) =>
+  return typeNodes.value.flatMap((node) =>
     sources(node).map((membership) => ({
       membership,
       subscriptionType: node.subscription_type,
     })),
-  );
-  const hasAccountSubscription = rows.some(
-    (row) => row.membership.feed_source?.source_type === "internal_user",
-  );
-  if (!hasAccountSubscription) return rows;
-  return rows.filter(
-    (row) => row.membership.feed_source?.source_type !== "internal_channel",
   );
 });
 const shouldRender = computed(

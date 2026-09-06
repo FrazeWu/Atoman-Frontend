@@ -148,7 +148,7 @@ describe("SubscriptionHubSidebarTree", () => {
     expect(wrapper.text()).not.toContain("RSS 分组");
     expect(wrapper.findAll(".subscription-hub-sidebar__all")).toHaveLength(0);
     expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(
-      3,
+      4,
     );
   });
 
@@ -157,6 +157,7 @@ describe("SubscriptionHubSidebarTree", () => {
     const sources = wrapper.findAll(".subscription-hub-sidebar__source");
 
     expect(sources.map((source) => source.text())).toEqual([
+      expect.stringContaining("频道原子谈话3"),
       expect.stringContaining("账号视频频道2"),
       expect.stringContaining("合集博客作者0"),
       expect.stringContaining("RSS某个 RSS7"),
@@ -164,6 +165,7 @@ describe("SubscriptionHubSidebarTree", () => {
     expect(
       sources.map((source) => source.find(".p-avatar img").attributes("src")),
     ).toEqual([
+      "/podcast.webp",
       "/video.webp",
       "/blog.webp",
       "https://example.com/favicon.ico",
@@ -225,7 +227,7 @@ describe("SubscriptionHubSidebarTree", () => {
     expect(wrapper.text()).toContain("原子谈话");
   });
 
-  it("hides channel subscriptions when an account subscription exists", () => {
+  it("renders account and channel rows supplied by the backend", () => {
     const accountAndChannelTree: SubscriptionHubTree = {
       types: [
         {
@@ -278,18 +280,9 @@ describe("SubscriptionHubSidebarTree", () => {
       props: { tree: accountAndChannelTree, fixedType: "blog" },
     });
 
-    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(1);
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(2);
     expect(wrapper.text()).toContain("账号admin");
-    expect(wrapper.text()).not.toContain("频道admin");
-  });
-
-  it("keeps channel subscriptions when no account subscription exists", () => {
-    const wrapper = mount(SubscriptionHubSidebarTree, {
-      props: { tree, fixedType: "podcast" },
-    });
-
-    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(1);
-    expect(wrapper.text()).toContain("频道原子谈话");
+    expect(wrapper.text()).toContain("频道admin");
   });
 
   it("keeps the unified subscription section available when it has no sources", () => {

@@ -647,6 +647,8 @@ export function useMusicDrawers() {
 			derivedReleaseDate: snapshot.derivedReleaseDate,
 			derivedAlbumType: snapshot.derivedAlbumType,
 			metadataSourceUrl: snapshot.metadataSourceUrl,
+			metadataSource: snapshot.metadataSource,
+			metadataMatched: snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl),
 			missingArtists: snapshot.missingArtists ?? [],
 			lastSyncedAt: snapshot.lastSyncedAt,
 			errorMessage: snapshot.errorMessage,

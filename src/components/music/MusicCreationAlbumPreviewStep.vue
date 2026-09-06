@@ -10,6 +10,7 @@ const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumDetails = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const albumImport = computed(() => creationFlow.value?.draft.albumImport ?? null)
+const metadataSourceLabel = computed(() => albumImport.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
 const tracks = computed(() => creationFlow.value?.draft.tracks ?? [])
 const contributors = computed(() => creationFlow.value?.draft.albumDetails.contributors ?? [])
 const coverUrl = computed(() => (
@@ -80,7 +81,7 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
     <p v-if="albumImport.metadataSourceUrl" class="album-preview-step__source" data-testid="album-import-metadata-source">
       已自动匹配专辑信息、曲序和歌词。
       <a :href="albumImport.metadataSourceUrl" target="_blank" rel="noopener noreferrer">
-        查看 MusicBrainz 来源
+        查看 {{ metadataSourceLabel }} 来源
         <ExternalLink :size="14" aria-hidden="true" />
       </a>
     </p>

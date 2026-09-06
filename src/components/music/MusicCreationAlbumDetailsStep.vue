@@ -36,6 +36,7 @@ const showsTrackList = computed(() => !standaloneTypeSelected.value || (creation
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
 const importMetadataMatched = computed(() => !isEditMode.value && albumImportDraft.value?.metadataMatched === true)
+const importMetadataSourceLabel = computed(() => albumImportDraft.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
 const importMetadataModified = computed(() => importMetadataMatched.value && creationFlow.value?.tracksCustomized === true)
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
@@ -543,10 +544,10 @@ watch(
             <span
               v-if="importMetadataMatched"
               class="track-adjustment__matched"
-              :aria-label="importMetadataModified ? 'MusicBrainz 已匹配，用户已修改曲目' : 'MusicBrainz 已匹配'"
+              :aria-label="importMetadataModified ? `${importMetadataSourceLabel} 已匹配，用户已修改曲目` : `${importMetadataSourceLabel} 已匹配`"
               data-testid="album-details-matched-status"
             >
-              <span class="track-adjustment__matched-mark" aria-hidden="true">MB</span>
+              <span class="track-adjustment__matched-mark" aria-hidden="true">{{ importMetadataSourceLabel === 'Discogs' ? 'DG' : 'MB' }}</span>
               <span>已匹配</span>
               <template v-if="importMetadataModified">
                 <span class="track-adjustment__matched-divider" aria-hidden="true">·</span>

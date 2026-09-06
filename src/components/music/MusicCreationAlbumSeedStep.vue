@@ -22,6 +22,7 @@ const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
+const metadataSourceLabel = computed(() => albumImportDraft.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
 const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const resolvedCoverUrl = computed(() => albumImportDraft.value?.coverUrl || albumImportDraft.value?.derivedCover || '')
@@ -118,7 +119,7 @@ async function onCoverChange(event: Event) {
             v-if="albumImportDraft.metadataMatched"
             class="metadata-match-status"
             data-testid="album-import-matched-status"
-          >已匹配 MusicBrainz</span>
+          >已匹配 {{ metadataSourceLabel }}</span>
           <button
             data-testid="album-import-add-track-button"
             type="button"

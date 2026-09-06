@@ -10,6 +10,7 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
@@ -53,6 +54,17 @@ const readingModeOptions = [
 ] as const
 const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
 const academicPages = computed(() => paginateAcademicContent(renderedContent.value))
+const authorName = computed(() => post.value?.user?.display_name || post.value?.user?.username || '未知作者')
+const authorHandle = computed(() => post.value?.user?.username ? `@${post.value.user.username}` : '')
+const readingTime = computed(() => {
+  const plainText = (post.value?.content || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[`*_>#~=-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return `约 ${Math.max(1, Math.ceil(plainText.length / 400))} 分钟阅读`
+})
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const feedStore = useFeedStore()
 const channelSubscribed = ref(false)
@@ -402,9 +414,25 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         </PButton>
       </div>
       <img v-if="post.cover_url" :src="post.cover_url" :alt="post.title" class="post-sheet-cover" />
-      <div class="post-sheet-meta">
-        <span>{{ post.user?.display_name || post.user?.username || '未知作者' }}</span>
-        <span>{{ new Date(post.created_at).toLocaleDateString('zh-CN') }}</span>
+      <div class="post-sheet-byline">
+        <PAvatar
+          class="post-sheet-author-avatar"
+          :src="post.user?.avatar_url"
+          :name="authorName"
+          :alt="`${authorName} 的头像`"
+          size="sm"
+        />
+        <div class="post-sheet-author-info">
+          <div class="post-sheet-author-row">
+            <span class="post-sheet-author">{{ authorName }}</span>
+            <span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span>
+          </div>
+          <div class="post-sheet-publishing-meta">
+            <span>发布于 {{ new Date(post.created_at).toLocaleDateString('zh-CN') }}</span>
+            <span aria-hidden="true">·</span>
+            <span class="post-sheet-reading-time">{{ readingTime }}</span>
+          </div>
+        </div>
         <button
           v-if="post.channel_id && authStore.isAuthenticated"
           type="button"
@@ -425,7 +453,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         </div>
         <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
       </div>
-      <BlogPostUpdateNotice :updated-at="post.updated_at" />
+      <BlogPostUpdateNotice variant="compact" :updated-at="post.updated_at" />
       <template v-if="!isAcademic">
         <div class="prose-blog post-sheet-content" v-html="renderedContent" />
       </template>
@@ -508,7 +536,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 
 <style scoped>
 .post-sheet-actions,
-.post-sheet-meta {
+.post-sheet-byline {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -530,6 +558,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 .post-sheet-detail-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 1rem;
   margin: 0 0 1.5rem;
@@ -558,10 +587,46 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
   object-fit: cover;
 }
 
-.post-sheet-meta {
-  justify-content: flex-start;
+.post-sheet-byline {
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.post-sheet-author-info {
+  min-width: 0;
+}
+
+.post-sheet-author-row,
+.post-sheet-publishing-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.post-sheet-author {
+  overflow: hidden;
+  color: var(--a-color-fg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-sheet-author-handle,
+.post-sheet-publishing-meta {
   color: var(--a-color-muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.post-sheet-author-handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-sheet-publishing-meta {
+  margin-top: 0.2rem;
 }
 
 .post-sheet-subscribe {
@@ -744,6 +809,14 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 
   .academic-paper__footer > :last-child {
     display: none;
+  }
+
+  .post-sheet-byline {
+    flex-wrap: wrap;
+  }
+
+  .post-sheet-subscribe {
+    margin-left: 2.5rem;
   }
 }
 </style>

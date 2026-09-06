@@ -126,7 +126,13 @@ const sourceRows = computed(() => {
       subscriptionType: node.subscription_type,
     })),
   );
-  return rows;
+  const hasAccountSubscription = rows.some(
+    (row) => row.membership.feed_source?.source_type === "internal_user",
+  );
+  if (!hasAccountSubscription) return rows;
+  return rows.filter(
+    (row) => row.membership.feed_source?.source_type !== "internal_channel",
+  );
 });
 const shouldRender = computed(
   () =>
@@ -149,6 +155,8 @@ const sourceType = (item: SubscriptionHubMembership) =>
     ? "RSS"
     : item.feed_source?.source_type === "internal_collection"
       ? "合集"
+      : item.feed_source?.source_type === "internal_user"
+        ? "账号"
       : "频道";
 </script>
 

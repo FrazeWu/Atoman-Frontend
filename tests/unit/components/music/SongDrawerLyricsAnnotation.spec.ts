@@ -8,6 +8,11 @@ const source = readFileSync(
 )
 
 describe('SongDrawer 歌词注释入口', () => {
+  it('歌曲信息页不再保留独立歌词编辑入口，歌词编辑归入歌曲编辑器', () => {
+    expect(source).not.toContain('data-testid="song-detail-edit-lyrics"')
+    expect(source).not.toContain('MusicSongLyricsEditorDrawer')
+  })
+
   it('允许已登录用户选择歌词，并在紧贴歌词的编辑区创建注释', () => {
     expect(source).toContain(':can-select="authStore.isAuthenticated"')
     expect(source).toContain(':can-annotate="authStore.isAuthenticated"')

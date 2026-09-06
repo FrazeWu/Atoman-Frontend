@@ -6,14 +6,17 @@
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
-          aria-label="歌词解析"
-          title="歌词解析"
+          :aria-label="isAnnotationMode ? '返回歌词' : '歌词注解'"
+          :title="isAnnotationMode ? '返回歌词' : '歌词注解'"
+          :aria-pressed="isAnnotationMode"
           data-testid="lyrics-annotations-trigger"
           @click="openAnnotationOverview"
         >
-          <MessageSquareText :size="16" aria-hidden="true" />
+          <BookOpen :size="16" aria-hidden="true" />
+          <span>{{ isAnnotationMode ? '返回歌词' : '歌词注解' }}</span>
         </PButton>
         <PButton
+          v-if="!isPlayerMode"
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
@@ -25,6 +28,7 @@
           <History :size="16" aria-hidden="true" />
         </PButton>
         <PButton
+          v-if="!isPlayerMode"
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
@@ -144,10 +148,11 @@
               :key="line.line_key ?? line.id ?? line.text"
               :line="line"
               :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
-              :active="currentLineId === (line.line_key ?? line.id ?? '')"
+              :active="isPlayerMode && currentLineId === (line.line_key ?? line.id ?? '')"
               :bilingual="showTranslation"
-              :can-select="isAuthenticated"
-              :can-annotate="isAuthenticated"
+              :can-select="isAnnotationMode && isAuthenticated"
+              :can-annotate="isAnnotationMode && isAuthenticated"
+              :click-to-seek="isPlayerMode"
               @select-text="handleSelectText"
               @open-annotations="handleOpenAnnotations"
               @seek="emit('seek', $event)"
@@ -156,30 +161,32 @@
         </div>
       </div>
 
-      <aside v-if="!isMobileViewport" class="music-lyrics-panel__sidebar" aria-label="歌词解析">
-        <MusicAnnotationWorkspace
-          :annotations="visibleAnnotations"
-          :can-write="isAuthenticated"
-          :current-user-ids="currentUserIds"
-          :total-count="activeAnnotationCount"
-          :selection-mode="Boolean(rebindingAnnotation)"
-          :editor-visible="annotationEditorVisible"
-          :selected-text="annotationSelectedText"
-          :initial-body="annotationInitialBody"
-          :editor-mode="annotationEditorMode"
-          @vote="handleVoteAnnotation"
-          @edit="handleEditAnnotation"
-          @delete="handleDeleteAnnotation"
-          @rebind="handleRebindAnnotation"
-          @save="handleSaveAnnotation"
-          @cancel="handleCancelAnnotation"
-          @confirm-rebind="handleConfirmRebind"
-        />
-      </aside>
+      <Transition name="lyrics-annotation-panel">
+        <aside v-if="!isMobileViewport && isAnnotationMode" class="music-lyrics-panel__sidebar" aria-label="歌词注解">
+          <MusicAnnotationWorkspace
+            :annotations="visibleAnnotations"
+            :can-write="isAuthenticated"
+            :current-user-ids="currentUserIds"
+            :total-count="activeAnnotationCount"
+            :selection-mode="Boolean(rebindingAnnotation)"
+            :editor-visible="annotationEditorVisible"
+            :selected-text="annotationSelectedText"
+            :initial-body="annotationInitialBody"
+            :editor-mode="annotationEditorMode"
+            @vote="handleVoteAnnotation"
+            @edit="handleEditAnnotation"
+            @delete="handleDeleteAnnotation"
+            @rebind="handleRebindAnnotation"
+            @save="handleSaveAnnotation"
+            @cancel="handleCancelAnnotation"
+            @confirm-rebind="handleConfirmRebind"
+          />
+        </aside>
+      </Transition>
     </div>
 
     <section
-      v-if="isMobileViewport && mobilePage && mobileAnnotationOpen"
+      v-if="isMobileViewport && isAnnotationMode && mobilePage && mobileAnnotationOpen"
       class="music-lyrics-panel__mobile-annotations"
       aria-label="歌词解析"
     >
@@ -203,7 +210,7 @@
       />
     </section>
     <PSheet
-      v-else-if="isMobileViewport"
+      v-else-if="isMobileViewport && isAnnotationMode"
       :show="mobileAnnotationOpen"
       side="bottom"
       :title="songTitle.trim() ? `歌词解析-${songTitle.trim()}` : '歌词解析-歌曲'"
@@ -233,7 +240,7 @@
     </PSheet>
 
     <MusicLyricEditorDrawer
-      v-if="isAuthenticated && (presentation === 'sheet' || isLyricEditorOpen)"
+      v-if="isAuthenticated && isAnnotationMode && (presentation === 'sheet' || isLyricEditorOpen)"
       :presentation="mobilePage ? 'page' : 'sheet'"
       :show="isLyricEditorOpen"
       :song-title="songTitle"
@@ -243,6 +250,7 @@
       :lines="lyrics?.lines ?? []"
       :version="lyrics?.version ?? 0"
       :translation-language="lyrics?.translation_language ?? ''"
+      :source="lyrics?.source ?? ''"
       :saving="saving || reverting"
       :current-time-seconds="currentTimeSeconds"
       @close="requestEditorClose"
@@ -279,7 +287,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconHistory as History, IconMessage2 as MessageSquareText, IconPencil as Pencil, IconX as X } from '@tabler/icons-vue'
+import { IconBook as BookOpen, IconHistory as History, IconPencil as Pencil, IconX as X } from '@tabler/icons-vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,
@@ -312,14 +320,18 @@ const props = defineProps<{
   focusAnnotationId?: string
   startRebind?: boolean
   presentation?: 'sheet' | 'page'
+  mode?: 'annotation' | 'player'
 }>()
 
 const emit = defineEmits<{
   close: []
   seek: [timeSeconds: number]
+  'mode-change': [mode: 'annotation' | 'player']
 }>()
 
 const mobilePage = computed(() => props.presentation === 'page')
+const isPlayerMode = computed(() => props.mode === 'player')
+const isAnnotationMode = computed(() => !isPlayerMode.value)
 
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
@@ -419,6 +431,7 @@ const displayModeOptions = [
 const isAuthenticated = computed(() => Boolean(authStore.isAuthenticated))
 const currentUserIds = computed(() => collectIdentityValues(authStore.user as Record<string, unknown> | null))
 const activeTimedLine = computed(() => {
+  if (!isPlayerMode.value) return null
   const line = currentLine(props.currentTimeSeconds)
   const startTime = line?.time_ms ?? line?.startTimeMs
   return typeof startTime === 'number' ? line : null
@@ -528,6 +541,7 @@ watch(
   () => [props.focusAnnotationId, props.startRebind, lyrics.value?.song_id, lyrics.value?.annotations] as const,
   async ([annotationId, startRebind]) => {
     if (!annotationId || !lyrics.value) return
+    if (isPlayerMode.value) emit('mode-change', 'annotation')
     const annotation = lyrics.value.annotations.find((item) => item.id === annotationId)
     if (!annotation) return
     selectedAnnotationIds.value = [annotation.id]
@@ -560,7 +574,14 @@ function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationI
 }
 
 function openAnnotationOverview() {
-  if (isMobileViewport.value) mobileAnnotationOpen.value = true
+  if (isPlayerMode.value) {
+    emit('mode-change', 'annotation')
+    if (isMobileViewport.value) mobileAnnotationOpen.value = true
+    return
+  }
+  mobileAnnotationOpen.value = false
+  handleCancelAnnotation()
+  emit('mode-change', 'player')
 }
 
 function openLyricEditor() {
@@ -699,6 +720,7 @@ function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
 function closeMobileAnnotations() {
   mobileAnnotationOpen.value = false
   handleCancelAnnotation()
+  emit('mode-change', 'player')
 }
 
 function clearRebindState() {
@@ -1152,6 +1174,19 @@ function cancelLyricsConflict() {
   border-left: 1px solid var(--a-color-border-soft);
   padding-left: 1.5rem;
   overflow: hidden;
+}
+
+.lyrics-annotation-panel-enter-active,
+.lyrics-annotation-panel-leave-active {
+  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter),
+    transform var(--a-motion-state) var(--a-motion-ease-enter);
+  will-change: opacity, transform;
+}
+
+.lyrics-annotation-panel-enter-from,
+.lyrics-annotation-panel-leave-to {
+  opacity: 0;
+  transform: translateX(1rem);
 }
 
 @media (max-width: 900px) {

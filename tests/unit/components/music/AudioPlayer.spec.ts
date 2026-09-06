@@ -163,7 +163,7 @@ describe("AudioPlayer", () => {
 		expect(source).not.toContain('IconMaximize as Maximize2');
 		expect(source).not.toContain('name="player-display" mode="out-in"');
 		expect(source).toMatch(
-			/\.player-display-enter-active\s*\{[^}]*animation:\s*player-display-enter\s+var\(--a-motion-emphasis\)/,
+				/\.player-display-enter-active\s*\{[^}]*animation:\s*player-display-enter\s+var\(--a-motion-overlay\)/,
 		);
 		expect(source).toMatch(
 			/@keyframes player-display-enter[\s\S]*?72%\s*\{[^}]*transform:\s*translateX\(-1rem\)/,
@@ -176,7 +176,7 @@ describe("AudioPlayer", () => {
 			/@media \(max-width: 767px\)[\s\S]*?\.player\s*\{[^}]*transform:\s*none\s*!important;/,
 		);
 		expect(source).toMatch(
-			/\.player-display-enter-active[\s\S]*?animation:\s*player-display-enter var\(--a-motion-emphasis\)/,
+				/\.player-display-enter-active[\s\S]*?animation:\s*player-display-enter var\(--a-motion-overlay\)/,
 		);
 		expect(source).not.toContain("prefers-reduced-motion: reduce");
 		expect(source).toMatch(

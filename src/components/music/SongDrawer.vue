@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconClock as Clock3, IconHeart as Heart, IconHistory as History, IconPlaylistAdd as ListPlus, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPlayerTrackNext as StepForward } from '@tabler/icons-vue'
-import { addMusicSongToLater, deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
+import { addMusicSongToLater, deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem } from '@/api/musicV1'
 import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
-import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -73,7 +72,6 @@ const {
   createAnnotation,
   currentLine: currentLyricLine,
 } = useMusicLyrics()
-const lyricsEditorOpen = ref(false)
 const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
 const selectedTextDraft = ref<{
   line: MusicSongLyricsLine
@@ -260,18 +258,6 @@ function openSongHistory() {
   })
 }
 
-function openLyricsEditor() {
-  if (!detail.value || !requireLogin()) return
-  lyricsEditorOpen.value = true
-}
-
-function handleLyricsSaved(updated: MusicSongLyrics) {
-  if (!detail.value || String(updated.song_id) !== String(detail.value.song.id)) return
-  lyrics.value = updated
-  detail.value.song.lyrics = updated.content
-  lyricsEditorOpen.value = false
-}
-
 function handleSelectText(payload: {
   line: MusicSongLyricsLine
   selectedText: string
@@ -337,7 +323,6 @@ function reloadLyrics() {
 watch(
   [songId, () => state.value.songRefreshToken],
   ([targetSongId]) => {
-    lyricsEditorOpen.value = false
     lyricsDisplayMode.value = 'original'
     selectedTextDraft.value = null
     void loadDetail(targetSongId)
@@ -370,15 +355,6 @@ watch(
       <p v-if="loading" class="song-detail__state">正在加载</p>
       <p v-else-if="error" class="song-detail__state song-detail__state--error">{{ error }}</p>
       <section v-else-if="detail" class="song-detail__content">
-        <MusicSongLyricsEditorDrawer
-          :show="lyricsEditorOpen"
-          :song-id="String(detail.song.id)"
-          :song-title="detail.song.title"
-          :current-time-seconds="player.currentTime"
-          @close="lyricsEditorOpen = false"
-          @seek="player.seek"
-          @saved="handleLyricsSaved"
-        />
         <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
         <div class="song-detail__main">
           <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
@@ -473,15 +449,6 @@ watch(
                 @click="lyricsDisplayMode = 'bilingual'"
               >
                 双语
-              </PButton>
-              <PButton
-                data-testid="song-detail-edit-lyrics"
-                size="sm"
-                variant="warning"
-                :disabled="detail.song.edit_status !== undefined && detail.song.edit_status !== 'development'"
-                @click="openLyricsEditor"
-              >
-                编辑
               </PButton>
             </div>
           </header>

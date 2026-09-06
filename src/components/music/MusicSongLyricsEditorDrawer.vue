@@ -23,6 +23,8 @@ const emit = defineEmits<{
 const { lyrics, loading, saving, load, save } = useMusicLyrics()
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const editorDirty = ref(false)
+const pendingClose = ref(false)
 const pendingInput = ref<UpdateMusicSongLyricsInput | null>(null)
 const conflictingAnnotationIds = ref<string[]>([])
 
@@ -33,6 +35,31 @@ watch(
   },
   { immediate: true },
 )
+
+watch(() => props.show, (show) => {
+  if (!show) {
+    editorDirty.value = false
+    pendingClose.value = false
+  }
+})
+
+function requestClose() {
+  if (editorDirty.value) {
+    pendingClose.value = true
+    return
+  }
+  emit('close')
+}
+
+function confirmClose() {
+  pendingClose.value = false
+  editorDirty.value = false
+  emit('close')
+}
+
+function cancelClose() {
+  pendingClose.value = false
+}
 
 async function handleSave(payload: {
   target: MusicLyricsSaveTarget
@@ -58,6 +85,7 @@ async function handleSave(payload: {
   }
   try {
     const updated = await save(props.songId, input)
+    editorDirty.value = false
     emit('saved', updated)
     emit('close')
   } catch (error) {
@@ -91,6 +119,7 @@ async function confirmAnnotationConflict() {
   conflictingAnnotationIds.value = []
   try {
     const updated = await save(props.songId, input)
+    editorDirty.value = false
     emit('saved', updated)
     emit('close')
   } catch {
@@ -115,11 +144,24 @@ function cancelAnnotationConflict() {
     :lines="lyrics?.lines ?? []"
     :version="lyrics?.version ?? 0"
     :translation-language="lyrics?.translation_language ?? ''"
+    :source="lyrics?.source ?? ''"
     :current-time-seconds="currentTimeSeconds"
     :saving="saving || loading"
-    @close="emit('close')"
+    @close="requestClose"
+    @dirty-change="editorDirty = $event"
     @seek="emit('seek', $event)"
     @save="handleSave"
+  />
+  <PConfirm
+    above-player
+    :show="pendingClose"
+    title="放弃歌词修改？"
+    message="未保存的歌词修改将丢失。"
+    confirm-text="放弃并关闭"
+    cancel-text="继续编辑"
+    danger
+    @confirm="confirmClose"
+    @cancel="cancelClose"
   />
   <PConfirm
     above-player

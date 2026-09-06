@@ -39,6 +39,9 @@ const mountSidebar = async (moduleCase: (typeof moduleCases)[number]) => {
     routes: [
       { path: moduleCase.homePath, component: { template: '<div />' } },
       { path: moduleCase.subscriptionsPath, component: { template: '<div />' } },
+      ...(moduleCase.module === 'blog'
+        ? [{ path: '/posts/articles', component: { template: '<div />' } }]
+        : []),
     ],
   })
   await router.push(moduleCase.homePath)
@@ -141,6 +144,17 @@ describe('AppSidebar blog navigation', () => {
 
     expect(discoveryItem?.props('to')).toBe('/posts')
     expect(postsItem?.props('to')).toBe('/posts/articles')
+  })
+
+  it('marks the current blog page as active', async () => {
+    const { wrapper, router } = await mountSidebar(moduleCases[0])
+    await router.push('/posts/articles')
+
+    const discoveryItem = wrapper.findAllComponents(PSidebarItem).find((item) => item.text().trim() === '发现')
+    const postsItem = wrapper.findAllComponents(PSidebarItem).find((item) => item.text().trim() === '博文')
+
+    expect(discoveryItem?.props('routerActive')).toBe(true)
+    expect(postsItem?.props('routerActive')).toBe(true)
   })
 })
 

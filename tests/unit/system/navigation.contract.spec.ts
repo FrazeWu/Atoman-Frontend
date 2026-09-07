@@ -95,9 +95,7 @@ describe("application navigation contracts", () => {
 			);
 		}
 
-		expect(router.resolve("/books").matched.at(-1)?.path).toBe(
-			"/:pathMatch(.*)*",
-		);
+		expect(router.resolve("/books").matched.at(-1)?.path).toBe("/books");
 	});
 
 	it.each([

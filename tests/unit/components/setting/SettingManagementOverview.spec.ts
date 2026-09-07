@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
 
 import SettingManagementOverview from '@/components/setting/SettingManagementOverview.vue'
 import { defaultSiteAccess, mergeSiteAccess } from '@/config/siteAccess'
+import { moduleNavOrder } from '@/config/moduleRooms'
 
 describe('SettingManagementOverview', () => {
-  it('shows the prototype module list with one switch per module', async () => {
+  it('shows the module list and opens implemented detail modules', async () => {
     const access = mergeSiteAccess(defaultSiteAccess)
     const openDetail = vi.fn()
     const wrapper = mount(SettingManagementOverview, {
@@ -13,8 +14,8 @@ describe('SettingManagementOverview', () => {
     })
 
     expect(wrapper.text()).toContain('模块可用性')
-    expect(wrapper.findAll('[data-test^="module-detail-"]')).toHaveLength(6)
-    expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(8)
+    expect(wrapper.findAll('[data-test^="module-detail-"]')).toHaveLength(3)
+    expect(wrapper.findAll('input[data-test^="module-enabled-"]')).toHaveLength(moduleNavOrder.length)
 
     await wrapper.get('[data-test="module-detail-music"]').trigger('click')
     expect(openDetail).toHaveBeenCalledWith('music')
@@ -29,5 +30,30 @@ describe('SettingManagementOverview', () => {
 
     expect(access.settings.feed.full_text_mode).toBe('disabled')
     expect(access.settings.blog.comment_mode).toBe('all')
+  })
+
+  it('renders a switch for every configured module, including books', () => {
+    const access = mergeSiteAccess({ modules: { books: { enabled: true } } })
+    const wrapper = mount(SettingManagementOverview, {
+      props: { access },
+    })
+
+    expect(wrapper.findAll('[data-test="module-list"] > article')).toHaveLength(moduleNavOrder.length)
+    expect(wrapper.findAll('input[data-test^="module-enabled-"]')).toHaveLength(moduleNavOrder.length)
+    expect((wrapper.get('[data-test="module-enabled-books"]').element as HTMLInputElement).checked).toBe(true)
+    expect(wrapper.find('[data-test="module-detail-books"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="module-detail-video"]').exists()).toBe(false)
+  })
+
+  it('keeps module feature switches visible beside module quick settings', () => {
+    const access = mergeSiteAccess(null)
+    const wrapper = mount(SettingManagementOverview, { props: { access } })
+
+    expect(wrapper.get('[data-test="module-enabled-feed"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="module-enabled-blog"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="module-enabled-forum"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="feature-subscription.manage"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="feature-post.create"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="feature-topic.create"]').exists()).toBe(true)
   })
 })

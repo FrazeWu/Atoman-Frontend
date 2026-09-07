@@ -11,7 +11,7 @@
 
     <div class="setting-access__actions">
       <PButton variant="secondary" to="/">返回首页</PButton>
-      <PButton :loading="saving" loading-text="保存中..." @click="save">保存设置</PButton>
+      <PButton :loading="saving" loading-text="保存中..." @click="() => save()">保存设置</PButton>
     </div>
 
     <PSheet
@@ -53,7 +53,7 @@
                 <p>{{ moduleDescriptions[selectedModule] }}</p>
               </div>
             </div>
-            <PButton variant="ghost" size="sm" title="关闭详情" aria-label="关闭详情" @click="closeDetail">
+            <PButton variant="ghost" size="sm" title="关闭详情" aria-label="关闭详情" @click="() => closeDetail()">
               <X :size="18" aria-hidden="true" />
               关闭
             </PButton>

@@ -1029,8 +1029,7 @@ watch(
 .album-detail-tags {
   min-width: 0;
   align-self: start;
-  border-left: 1px solid var(--a-color-border-soft);
-  padding-left: 1rem;
+  padding-left: 0.25rem;
 }
 
 .album-meta-row {
@@ -1079,8 +1078,6 @@ watch(
 .album-skeleton-track { cursor: default; }
 .album-skeleton-track:hover {
   background: transparent;
-  border-left-color: transparent;
-  box-shadow: none;
 }
 .album-info {
   flex: 1;
@@ -1149,9 +1146,8 @@ watch(
 }
 
 .album-artists-section {
-  margin-top: 2.25rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--a-color-border-soft);
+  margin-top: 3rem;
+  padding-top: 0;
 }
 
 .artist-cards-grid {
@@ -1292,9 +1288,7 @@ watch(
   }
 
   .album-detail-tags {
-    border-top: 1px solid var(--a-color-border-soft);
-    border-left: 0;
-    padding: 1.25rem 0 0;
+    padding: 0;
   }
 
   .album-meta-row {
@@ -1350,9 +1344,7 @@ watch(
   }
 
   .album-detail-tags {
-    border-top: 1px solid var(--a-color-border-soft);
-    border-left: 0;
-    padding: 1.25rem 0 0;
+    padding: 0;
   }
 }
 
@@ -1361,9 +1353,8 @@ watch(
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1.25rem;
+  padding-bottom: 0;
+  margin-bottom: 0.75rem;
   color: var(--a-color-muted);
   font-weight: 500;
 }
@@ -1403,18 +1394,15 @@ watch(
   grid-template-rows: auto;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.4rem 0.5rem;
-  border-left: 4px solid transparent;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
+  padding: 0.65rem 0.5rem;
+  margin-bottom: 0.25rem;
+  border-radius: var(--a-radius-control);
   font-size: 0.9rem;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease;
 }
-.track:last-child { border-bottom: none; }
 .track:hover,
 .track:focus-within {
   background-color: var(--a-color-surface-muted);
-  border-left-color: var(--a-color-text);
-  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
 }
 .track-play-btn {
   width: 2rem;

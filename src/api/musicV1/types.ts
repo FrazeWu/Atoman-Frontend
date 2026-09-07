@@ -1046,6 +1046,9 @@ export type MusicLyricsAnnotation = {
 	song_id?: string;
 	line_key?: string;
 	line_id?: string;
+	start_line_key?: string;
+	end_line_key?: string;
+	end_line_id?: string;
 	body: string;
 	selected_text: string;
 	start_offset: number;
@@ -1084,6 +1087,10 @@ export type MusicLyricsAnnotationResolution = {
 	action: "needs_rebind" | "rebind";
 	line_id?: string;
 	line_key?: string;
+	start_line_id?: string;
+	start_line_key?: string;
+	end_line_id?: string;
+	end_line_key?: string;
 	selected_text?: string;
 	start_offset?: number;
 	end_offset?: number;
@@ -1108,7 +1115,9 @@ export type UpdateMusicSongLyricsInput = {
 };
 
 export type CreateMusicLyricsAnnotationInput = {
-	line_key: string;
+	line_key?: string;
+	start_line_key?: string;
+	end_line_key?: string;
 	selected_text: string;
 	start_offset: number;
 	end_offset: number;
@@ -1119,13 +1128,17 @@ export type UpdateMusicLyricsAnnotationInput =
 	| {
 			body: string;
 			line_key?: never;
+			start_line_key?: never;
+			end_line_key?: never;
 			selected_text?: never;
 			start_offset?: never;
 			end_offset?: never;
 	  }
 	| {
 			body?: string;
-			line_key: string;
+			line_key?: string;
+			start_line_key?: string;
+			end_line_key?: string;
 			selected_text: string;
 			start_offset: number;
 			end_offset: number;

@@ -36,7 +36,7 @@ async function setup(path = '/studio/podcast/new?collection=collection-2', defau
     { id: 'channel-2', name: '旧内容频道', slug: 'legacy', description: '', cover_url: '' },
   ]
   studio.currentChannel = studio.channels[0]
-  studio.collections.podcast = [
+  studio.unifiedCollections = [
     { id: 'collection-1', channel_id: 'channel-1', content_type: 'podcast', name: '默认合集', description: '', cover_url: '', is_default: true, created_at: '', updated_at: '' },
     { id: 'collection-2', channel_id: 'channel-1', content_type: 'podcast', name: '专题', description: '', cover_url: '', is_default: false, created_at: '', updated_at: '' },
   ]
@@ -154,7 +154,7 @@ describe('PodcastEditorView Studio integration', () => {
     }))
     const { wrapper, studio } = await setup('/studio/podcast/episode-1/edit')
     expect(studio.selectChannel).toHaveBeenCalledWith('channel-2')
-    expect(studio.loadCollections).toHaveBeenCalledWith('podcast')
+    expect(studio.loadUnifiedCollections).toHaveBeenCalled()
     expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-2')
   })
 })

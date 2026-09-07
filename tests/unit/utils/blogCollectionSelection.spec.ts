@@ -9,15 +9,15 @@ const collections = [
 ]
 
 describe('normalizeBlogCollectionSelection', () => {
-  it('keeps only the default collection when no ordinary collection is selected', () => {
+  it('selects the default collection when no collection is requested', () => {
     expect(normalizeBlogCollectionSelection(collections, null)).toEqual(['default-1'])
   })
 
-  it('keeps the default collection and one selected ordinary collection', () => {
-    expect(normalizeBlogCollectionSelection(collections, 'collection-2')).toEqual(['default-1', 'collection-2'])
+  it('selects only the requested ordinary collection', () => {
+    expect(normalizeBlogCollectionSelection(collections, 'collection-2')).toEqual(['collection-2'])
   })
 
-  it('treats the default collection as no ordinary selection', () => {
+  it('allows selecting the default collection explicitly', () => {
     expect(normalizeBlogCollectionSelection(collections, 'default-1')).toEqual(['default-1'])
   })
 })

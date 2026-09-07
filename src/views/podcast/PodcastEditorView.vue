@@ -326,8 +326,10 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Podcas
 async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
-  await studio.loadCollections('podcast')
-  collections.value = studio.collections.podcast
+  await studio.loadUnifiedCollections()
+  collections.value = Array.isArray(studio.unifiedCollections)
+    ? studio.unifiedCollections
+    : []
   if (isEdit.value) {
     if (selectedCollectionId.value && !collections.value.some(collection => collection.id === selectedCollectionId.value)) {
       selectedCollectionId.value = ''

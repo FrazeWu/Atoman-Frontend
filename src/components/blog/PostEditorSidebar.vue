@@ -8,16 +8,11 @@
     </div>
     <section class="left-section">
       <span class="a-label">所属合集</span>
-      <div v-if="defaultCollection" class="collection-selection">
-        <div class="default-collection-row" aria-label="默认合集：全部文章">
-          <Check :size="16" aria-hidden="true" />
-          <span>全部文章</span>
-          <span class="badge-default">默认</span>
-        </div>
+      <div v-if="collectionOptions.length" class="collection-selection">
         <PSelect
           :model-value="selectedCollectionId || ''"
-          :options="ordinaryCollectionOptions"
-          label="普通合集"
+          :options="collectionOptions"
+          label="合集"
           @update:model-value="$emit('select-collection', String($event))"
         />
       </div>
@@ -87,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconCheck as Check, IconX as X } from '@tabler/icons-vue'
+import { IconX as X } from '@tabler/icons-vue'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
@@ -140,17 +135,14 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const defaultCollection = computed(() => props.channelCollections.find(collection => collection.is_default))
 const tagText = computed({
   get: () => props.tags.join(', '),
   set: (value: string) => emit('update:tags', [...new Set(value.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 5)),
 })
-const ordinaryCollectionOptions = computed(() => [
-  { label: '仅全部文章', value: '' },
-  ...props.channelCollections
-    .filter(collection => !collection.is_default)
-    .map(collection => ({ label: collection.name, value: collection.id })),
-])
+const collectionOptions = computed(() => props.channelCollections.map(collection => ({
+  label: collection.name,
+  value: collection.id,
+})))
 
 const coverInput = ref<HTMLInputElement | null>(null)
 
@@ -205,20 +197,6 @@ const triggerCoverUpload = () => {
 .collection-selection {
   display: grid;
   gap: 1rem;
-}
-
-.default-collection-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  font-weight: 500;
-}
-
-.default-collection-row .badge-default {
-  margin-left: auto;
 }
 
 .settings-section {

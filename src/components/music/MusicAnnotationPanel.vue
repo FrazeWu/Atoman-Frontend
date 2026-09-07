@@ -19,7 +19,7 @@
       v-for="annotation in annotations"
       :key="annotation.id"
       class="music-annotation-card"
-      variant="default"
+      variant="flat"
     >
       <p v-if="annotation.selected_text" class="music-annotation-card__quote">
         “{{ annotation.selected_text }}”
@@ -142,9 +142,9 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 .music-annotation-panel {
   display: grid;
   align-content: start;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--a-color-bg);
+  gap: 0.75rem;
+  padding: 0;
+  background: transparent;
 }
 
 .music-annotation-panel__header {
@@ -152,6 +152,8 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .music-annotation-panel__header > div {
@@ -187,24 +189,27 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 
 .music-annotation-card {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
-.music-annotation-card:hover {
-  border-color: var(--a-color-muted-soft);
+.music-annotation-card + .music-annotation-card {
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 0.75rem;
 }
 
 .music-annotation-card__quote {
   margin: 0;
+  padding-left: 0.65rem;
+  border-left: 3px solid var(--a-color-primary);
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .music-annotation-card__body {
   margin: 0;
   color: var(--a-color-text);
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .music-annotation-card__meta,
@@ -216,16 +221,16 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 }
 
 .music-annotation-card__vote {
-  border: 1px solid var(--a-color-border-soft);
+  border: 0;
   background: transparent;
   color: var(--a-color-muted);
-  padding: 0.35rem 0.55rem;
+  padding: 0.25rem 0;
   cursor: pointer;
   font: inherit;
+  font-size: 0.78rem;
 }
 
 .music-annotation-card__vote.is-active {
-  border-color: var(--a-color-text);
   color: var(--a-color-text);
 }
 

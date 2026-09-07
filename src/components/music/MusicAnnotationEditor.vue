@@ -92,19 +92,22 @@ function handleSave() {
 <style scoped>
 .music-annotation-editor {
   display: grid;
-  gap: 0.9rem;
-  padding: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
+  gap: 0.7rem;
+  padding: 0.9rem 0 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
   box-shadow: none;
-  background: var(--a-color-bg);
+  background: transparent;
 }
 
 .music-annotation-editor__quote {
   margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 3px solid var(--a-color-primary);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
-  font-weight: 800;
-  line-height: 1.5;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .music-annotation-editor__hint {

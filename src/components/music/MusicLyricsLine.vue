@@ -336,21 +336,44 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line.is-static .music-lyrics-line__highlight:hover {
-  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 20%, transparent);
-  border-bottom-color: var(--a-color-primary, #3b82f6);
+  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 14%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--a-color-primary, #3b82f6) 65%, transparent);
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__highlight {
+  padding: 0.08rem 0.16rem;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 14%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--a-color-primary, #3b82f6) 65%, transparent);
+  transition: none;
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__annotation-action {
+  min-width: 32px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 2px;
+  padding: 0.25rem 0.35rem;
+  background: transparent;
+  transition: none;
 }
 
 .music-lyrics-line.is-static .music-lyrics-line__annotation-action:hover,
 .music-lyrics-line.is-static .music-lyrics-line__annotation-action:focus-visible {
-  border-color: var(--a-color-border-soft);
+  border-color: transparent;
   color: var(--a-color-muted);
-  background: var(--a-color-bg);
+  background: transparent;
   transform: none;
 }
 
 .music-lyrics-line.is-static .music-lyrics-line__selection-action:hover,
 .music-lyrics-line.is-static .music-lyrics-line__selection-action:focus-visible {
   border-color: var(--a-color-border-soft);
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__selection-action:hover {
+  border-color: var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .music-lyrics-line.is-active .music-lyrics-line__text {

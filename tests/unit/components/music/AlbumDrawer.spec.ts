@@ -226,6 +226,15 @@ describe("AlbumDrawer.vue", () => {
 		expect(albumDrawerSource).toContain("@container (max-width: 89.99rem)");
 	});
 
+	it("用留白和 hover 区分详情层级，减少结构分隔线", () => {
+		expect(albumDrawerSource).not.toMatch(/\.section-title\s*\{[^}]*border-bottom:/);
+		expect(albumDrawerSource).not.toMatch(/\.track\s*\{[^}]*border-bottom:/);
+		expect(albumDrawerSource).not.toMatch(/\.album-artists-section\s*\{[^}]*border-top:/);
+		expect(albumDrawerSource).not.toMatch(/\.album-detail-tags\s*\{[^}]*border-left:/);
+		expect(albumDrawerSource).toContain(".track:hover");
+		expect(albumDrawerSource).toContain("background-color: var(--a-color-surface-muted)");
+	});
+
 	it("does not render redundant sheet headings", () => {
 		const wrapper = mount(AlbumDrawer, {});
 		expect(wrapper.text()).not.toContain("Album Notes");

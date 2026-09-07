@@ -55,8 +55,6 @@ function contributorName(contributor: MusicContributor) {
 <style scoped>
 .music-contributors {
   margin-top: 2rem;
-  border-top: 1px solid var(--a-color-border-soft);
-  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .music-contributors__button {

@@ -15,6 +15,7 @@ import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vu
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
+import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import { IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconFileText as FileText, IconHeart as Heart, IconHistory as History, IconGitMerge as Merge, IconDots as MoreHorizontal, IconPlayerPause as Pause, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconUser as UserRound } from '@tabler/icons-vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -804,6 +805,7 @@ watch(
         </div>
       </div>
 
+      <MusicTagList v-if="!loading && album" entity="album" :entity-id="String(album.id)" />
       <div v-if="!loading" class="content-section">
         <div class="section-title section-title--tracks">
           <span>曲目</span>

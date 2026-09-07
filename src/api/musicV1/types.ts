@@ -556,6 +556,20 @@ export type MusicAlbumListItem = {
 	redirect_to?: string | null;
 };
 
+export type MusicTagKind = "mood" | "type";
+
+export type MusicTag = {
+	id: string;
+	assignment_id: string;
+	name: string;
+	kind: MusicTagKind;
+	upvotes: number;
+	downvotes: number;
+	score: number;
+	viewer_vote: "up" | "down" | "";
+	can_delete: boolean;
+};
+
 export type MusicAlbumLinkSuggestion = {
 	album: MusicAlbumListItem;
 	musicbrainz: MusicBrainzReleaseCandidate;
@@ -922,6 +936,7 @@ export type MusicListFilters = {
 	q?: string;
 	artist_id?: string;
 	album_id?: string;
+	tag_id?: string;
 	release_type?: MusicStandaloneSongType | "single,leak_song" | "single,leak";
 	year?: string | number;
 	status?: MusicEntryStatus;

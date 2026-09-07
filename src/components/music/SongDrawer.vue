@@ -7,6 +7,7 @@ import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
+import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
@@ -422,6 +423,7 @@ watch(
             <PButton variant="secondary" aria-label="版本记录" title="版本记录" @click="openSongHistory"><History :size="16" aria-hidden="true" /></PButton>
           </div>
         </div>
+        <MusicTagList entity="song" :entity-id="String(detail.song.id)" />
         <section class="song-detail__lyrics">
           <header class="song-detail__lyrics-header">
             <h2 class="song-detail__lyrics-title">

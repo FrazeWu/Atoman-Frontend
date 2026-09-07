@@ -38,20 +38,10 @@
               @toggle-preview="togglePreview"
               @update:content-mode="contentMode = $event"
               @open-version-history="versionHistoryOpen = true"
-              @save-draft="save('draft')"
+              @save-draft="saveDraft"
               @save-published="requestPublication('publish')"
-            >
-              <template #schedule>
-                <ContentScheduleControl
-                  v-model="scheduledAt"
-                  :busy="scheduling"
-                  :disabled="Boolean(saving) || uploading || coverUploading"
-                  :schedule="scheduleInfo"
-                  @schedule="requestPublication('schedule')"
-                  @retry="void retryFailedSchedule()"
-                />
-              </template>
-            </PostEditorTopbar>
+              @schedule-publish="requestPublication('schedule')"
+            />
 
             <div class="editor-workspace">
               <section class="editor-canvas" :class="{ 'is-preview-open': previewOpen }">
@@ -93,33 +83,45 @@
         <PostEditorSidebar
           :mobile-open="mobilePanel === 'sidebar'"
           :desktop-open="sidebarPanelOpen"
-          :channel-collections="channelCollections"
-          :selected-collection-id="primaryCollectionId"
-          :summary="form.summary"
-          :visibility="form.visibility"
-          :tags="form.tags"
-          :cover-url="form.cover_url"
-          :cover-uploading="coverUploading"
-          :cover-upload-error="coverUploadError"
           :outline-count="outline.length"
           :flattened-outline="flattenedOutline"
           :active-heading-line="activeHeadingLine"
-          @select-collection="onCollectionSelect"
-          @update:summary="(value) => (form.summary = value)"
-          @update:visibility="(value) => (form.visibility = value)"
-          @update:tags="(value) => (form.tags = value)"
-          @cover-upload="handleCoverUpload"
-          @remove-cover="removeCover"
           @jump-to-heading="jumpToHeading"
           @close="mobilePanel = null"
         />
       </div>
     </div>
 
-    <div v-if="contentReady && mobilePanel !== 'sidebar'" class="editor-mobile-publish-actions">
-      <PButton type="button" variant="secondary" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="save('draft')">存草稿</PButton>
-      <PButton type="button" variant="primary" :loading="saving === 'published'" :disabled="Boolean(saving)" loading-text="发布中…" @click="requestPublication('publish')">发布</PButton>
-    </div>
+    <PostPublicationSheet
+      :show="publicationReviewVisible"
+      :intent="publicationIntent || 'publish'"
+      :channel-name="studio.currentChannel?.name || ''"
+      :channel-collections="channelCollections"
+      :selected-collection-id="primaryCollectionId"
+      :summary="form.summary"
+      :visibility="form.visibility"
+      :tags="form.tags"
+      :cover-url="form.cover_url"
+      :cover-uploading="coverUploading"
+      :cover-upload-error="coverUploadError"
+      :scheduled-at="scheduledAt"
+      :scheduling="scheduling"
+      :saving="saving"
+      :schedule="scheduleInfo"
+      :warnings="publicationWarnings"
+      :blocking-errors="publicationBlockingErrors"
+      :error="error"
+      :can-confirm="canConfirmPublication"
+      @close="closePublicationReview"
+      @confirm="confirmPublication"
+      @select-collection="onCollectionSelect"
+      @update:summary="(value) => (form.summary = value)"
+      @update:visibility="(value) => (form.visibility = value)"
+      @update:tags="(value) => (form.tags = value)"
+      @cover-upload="handleCoverUpload"
+      @remove-cover="removeCover"
+      @update:scheduled-at="scheduledAt = $event"
+    />
 
     <PostEditorDraftRecoveryModal
       v-if="recoveryModalVisible && pendingDraftCandidate"
@@ -209,21 +211,6 @@
       </template>
     </PModal>
 
-    <PModal v-if="publicationReviewVisible" above-player title="发布前检查" size="sm" @close="closePublicationReview">
-      <div class="publication-review">
-        <p>以下建议不会阻止发布，但处理后会让文章更易阅读和发现。</p>
-        <ul>
-          <li v-for="warning in publicationWarnings" :key="warning.code">{{ warning.message }}</li>
-        </ul>
-      </div>
-      <template #footer>
-        <div class="draft-recovery-actions">
-          <PButton type="button" variant="secondary" @click="closePublicationReview">返回修改</PButton>
-          <PButton type="button" variant="primary" @click="confirmPublication">{{ publicationIntent === 'schedule' ? '继续定时发布' : '仍要发布' }}</PButton>
-        </div>
-      </template>
-    </PModal>
-
     <PostVersionHistoryModal
       v-if="versionHistoryOpen && isEdit"
       :post-id="String(route.params.id || '')"
@@ -254,7 +241,7 @@ import { useApi } from '@/composables/useApi'
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
-import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
+import PostPublicationSheet from '@/components/blog/PostPublicationSheet.vue'
 import { usePostEditorCollections } from '@/composables/blog/usePostEditorCollections'
 import { usePostEditorPublication } from '@/composables/blog/usePostEditorPublication'
 import { evaluateBlogPublicationQuality } from '@/utils/blogPublicationQuality'
@@ -297,7 +284,7 @@ const activeHeadingLine = ref<number | null>(null)
 const lineNumbersVisible = ref(true)
 const previewOpen = ref(false)
 const mobilePanel = ref<'sidebar' | null>(null)
-const sidebarPanelOpen = ref(false)
+const sidebarPanelOpen = ref(true)
 const contentMode = ref<'markdown' | 'visual'>('markdown')
 const exporting = ref(false)
 const markdownImportID = ref<string | null>(null)
@@ -477,6 +464,28 @@ const {
   error,
 })
 
+const publicationBlockingErrors = computed(() => {
+  const errors: string[] = []
+  if (!form.value.title.trim()) errors.push('请输入文章标题')
+  if (!form.value.content.trim()) errors.push('请输入文章内容')
+  if (!currentChannelId.value) errors.push('请先创建频道')
+  if (!selectedCollectionIds.value.length) errors.push('请选择一个合集')
+  if (publicationIntent.value === 'schedule') {
+    const publishAt = new Date(scheduledAt.value)
+    if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+      errors.push('请选择未来的发布时间')
+    }
+  }
+  return errors
+})
+
+const canConfirmPublication = computed(() => (
+  publicationBlockingErrors.value.length === 0
+  && contentReady.value
+  && !uploading.value
+  && !coverUploading.value
+))
+
 const draftContextKey = computed(() => isEdit.value ? `blog:post:${String(route.params.id || '')}` : 'blog:new')
 const draftPayload = computed<EditorDraftPayload>(() => ({
   context_key: draftContextKey.value,
@@ -575,16 +584,9 @@ const retryFailedSchedule = async () => {
 }
 
 const requestPublication = (intent: 'publish' | 'schedule') => {
-  if (publicationWarnings.value.length > 0) {
-    publicationIntent.value = intent
-    publicationReviewVisible.value = true
-    return
-  }
-  if (intent === 'schedule') {
-    void schedulePublish()
-    return
-  }
-  void save('published')
+  error.value = ''
+  publicationIntent.value = intent
+  publicationReviewVisible.value = true
 }
 
 const closePublicationReview = () => {
@@ -594,12 +596,16 @@ const closePublicationReview = () => {
 
 const confirmPublication = () => {
   const intent = publicationIntent.value
-  closePublicationReview()
+  if (!intent || !canConfirmPublication.value) return
   if (intent === 'schedule') {
     void schedulePublish()
     return
   }
   if (intent === 'publish') void save('published')
+}
+
+const saveDraft = () => {
+  void save('draft', false, true)
 }
 
 const refreshAfterConflict = async () => {
@@ -852,25 +858,6 @@ onMounted(() => { void initializeEditor() })
   padding: 0.9rem 1rem;
 }
 
-.publication-review {
-  padding: 1.25rem;
-}
-
-.publication-review p {
-  margin: 0;
-  color: var(--a-color-fg);
-  line-height: 1.55;
-}
-
-.publication-review ul {
-  display: grid;
-  gap: 0.5rem;
-  margin: 1rem 0 0;
-  padding-left: 1.1rem;
-  color: var(--a-color-muted);
-  line-height: 1.5;
-}
-
 .editor-layout {
   position: relative;
   display: grid;
@@ -883,10 +870,6 @@ onMounted(() => { void initializeEditor() })
 
 .editor-layout.has-sidebar-panel {
   grid-template-columns: minmax(0, 1fr) 17.5rem;
-}
-
-.editor-mobile-publish-actions {
-  display: none;
 }
 
 .col-center {
@@ -1083,24 +1066,6 @@ onMounted(() => { void initializeEditor() })
   .col-center {
     flex: 1;
     min-height: 0;
-  }
-
-  .editor-mobile-publish-actions {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 4;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    padding: 0.625rem 0.75rem calc(0.625rem + env(safe-area-inset-bottom));
-    border-top: var(--a-border);
-    background: var(--a-color-bg);
-  }
-
-  .editor-mobile-publish-actions :deep(.p-button) {
-    min-height: 2.75rem;
   }
 
   .editor-canvas.is-preview-open :deep(.post-format-toolbar) {

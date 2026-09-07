@@ -1353,7 +1353,7 @@ describe("PostEditorView", () => {
 		expect(body.collection_id).toBe("collection-2");
 		expect(body).not.toHaveProperty("collection_ids");
 		expect(router.currentRoute.value.fullPath).toBe(
-			"/studio/blog/content?collection_id=collection-2",
+			"/posts/post/post-1/edit?channel=channel-1",
 		);
 	});
 
@@ -1589,6 +1589,114 @@ describe("PostEditorView", () => {
 			"collection-2",
 		]);
 		expect(editor.vm.$.setupState.preferredPublishStatus).toBe("draft");
+	});
+
+	it("新建文章存草稿后进入编辑路由，并允许继续保存", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: "/studio/blog/new", component: PostEditorView },
+				{ path: "/studio/blog/:id/edit", component: PostEditorView },
+			],
+		});
+		await router.push("/studio/blog/new");
+		await router.isReady();
+
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.user = { uuid: "user-1", username: "demo", role: "user" } as never;
+		auth.isAuthenticated = true;
+		const studio = useStudioStore();
+		studio.currentChannel = {
+			id: "channel-1",
+			name: "主频道",
+			slug: "main",
+			description: "",
+			cover_url: "",
+		};
+		studio.channels = [studio.currentChannel];
+		studio.unifiedCollections = [
+			{
+				id: "collection-1",
+				channel_id: "channel-1",
+				content_type: "blog",
+				name: "默认合集",
+				description: "",
+				cover_url: "",
+				is_default: true,
+				created_at: "",
+				updated_at: "",
+			},
+		];
+
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes("/users/me/default-channels")) {
+				return makeJsonResponse({ data: { blog: null, podcast: null, video: null } });
+			}
+			if (url.includes("/blog/channels/channel-1/collections")) {
+				return makeJsonResponse({ data: [{ id: "collection-1", channel_id: "channel-1", name: "默认合集", is_default: true }] });
+			}
+			if (url.includes("/blog/channels?")) return makeJsonResponse({ data: [] });
+			if (url.includes("/blog/drafts?context_key=")) return makeJsonResponse({ data: null });
+			if (url.endsWith("/blog/posts") && init?.method === "POST") {
+				return makeJsonResponse({ data: { id: "post-1", updated_at: "2026-09-07T12:00:00.000Z" } });
+			}
+			if (url.includes("/blog/posts/post-1") && init?.method === "PUT") {
+				return makeJsonResponse({ data: { id: "post-1", updated_at: "2026-09-07T12:01:00.000Z" } });
+			}
+			if (url.includes("/blog/posts/post-1")) {
+				return makeJsonResponse({
+					data: {
+						id: "post-1",
+						title: "第一版",
+						content: "正文",
+						summary: "",
+						cover_url: "",
+						visibility: "public",
+						updated_at: "2026-09-07T12:00:00.000Z",
+						channel_id: "channel-1",
+						collection_id: "collection-1",
+					},
+				});
+			}
+			if (init?.method === "DELETE" && url.includes("/blog/drafts?context_key=")) return makeJsonResponse({ data: null });
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{
+				global: {
+					plugins: [router],
+					stubs: {
+						PButton: { template: "<button @click=\"$emit('click')\"><slot /></button>" },
+						PModal: { template: "<div><slot /><slot name=\"footer\" /></div>" },
+					},
+				},
+			},
+		);
+		await flushPromises();
+
+		let editor = wrapper.findComponent(PostEditorView);
+		editor.vm.$.setupState.form.title = "第一版";
+		editor.vm.$.setupState.form.content = "正文";
+		await editor.vm.$.setupState.saveDraft();
+		await flushPromises();
+
+		expect(router.currentRoute.value.fullPath).toBe("/studio/blog/post-1/edit");
+		await flushPromises();
+		editor = wrapper.findComponent(PostEditorView);
+		editor.vm.$.setupState.form.title = "第二版";
+		editor.vm.$.setupState.form.content = "更新后的正文";
+		await editor.vm.$.setupState.saveDraft();
+		await flushPromises();
+
+		const putCalls = fetchMock.mock.calls.filter(
+			([input, request]) => String(input).includes("/blog/posts/post-1") && request?.method === "PUT",
+		);
+		expect(putCalls).toHaveLength(1);
 	});
 
 	it("发布文章遇到无效引用时显示候选选择提示", async () => {

@@ -145,15 +145,9 @@ export function usePostEditorPublication({
 	const save = async (
 		status: SaveTarget,
 		redirect = true,
+		keepEditing = false,
 	): Promise<string | null> => {
 		if (saving.value) return null;
-		if (savedPostId.value) {
-			if (redirect) {
-				allowNextRouteLeave();
-				await router.push(`/posts/post/${savedPostId.value}`);
-			}
-			return savedPostId.value;
-		}
 		if (!form.value.title.trim()) {
 			error.value = "请输入文章标题";
 			return null;
@@ -175,12 +169,13 @@ export function usePostEditorPublication({
 		hasPostConflict.value = false;
 		saving.value = status;
 		const payload = { ...form.value, status };
+		const wasEdit = isEdit.value;
 		try {
 			const postId = String(route.params.id || "");
 			const response = await apiRequestResult(
-				isEdit.value ? api.blog.post(postId) : api.blog.posts,
+				wasEdit ? api.blog.post(postId) : api.blog.posts,
 				{
-					method: isEdit.value ? "PUT" : "POST",
+					method: wasEdit ? "PUT" : "POST",
 					headers: {
 						"Content-Type": "application/json",
 						Authorization: `Bearer ${authStore.token}`,
@@ -189,7 +184,7 @@ export function usePostEditorPublication({
 						...payload,
 						channel_id: currentChannelId.value,
 						collection_id: primaryCollectionId.value || undefined,
-						base_updated_at: isEdit.value
+						base_updated_at: wasEdit
 							? loadedPostUpdatedAtRaw.value || undefined
 							: undefined,
 					}),
@@ -215,8 +210,9 @@ export function usePostEditorPublication({
 			const savedPost = data.data || data;
 			loadedPostUpdatedAt.value = parseDraftTimestamp(savedPost.updated_at);
 			loadedPostUpdatedAtRaw.value = typeof savedPost.updated_at === "string" ? savedPost.updated_at : "";
-			savedPostId.value = String(savedPost.id);
-			if (!isEdit.value && markdownImportID.value) {
+			const savedID = String(savedPost.id);
+			savedPostId.value = savedID;
+			if (!wasEdit && markdownImportID.value) {
 				const confirmResponse = await apiRequestResult(
 					api.blog.markdownImportConfirm(markdownImportID.value),
 					{
@@ -225,7 +221,7 @@ export function usePostEditorPublication({
 							"Content-Type": "application/json",
 							Authorization: `Bearer ${authStore.token}`,
 						},
-						body: JSON.stringify({ content_id: savedPostId.value }),
+						body: JSON.stringify({ content_id: savedID }),
 					},
 				);
 				if (confirmResponse.ok) {
@@ -236,7 +232,13 @@ export function usePostEditorPublication({
 			}
 			await clearAllDrafts();
 			allowNextRouteLeave();
-			if (!redirect) return savedPostId.value;
+			if (!redirect && keepEditing && status === "draft" && !wasEdit) {
+				const editPath = route.path.replace(/\/new$/, `/${savedID}/edit`);
+				await router.replace({ path: editPath, query: route.query });
+				savedPostId.value = null;
+				return savedID;
+			}
+			if (!redirect) return savedID;
 			if (status === "draft") {
 				await router.push({
 					path: "/studio/blog/content",
@@ -247,7 +249,7 @@ export function usePostEditorPublication({
 			} else {
 				await router.push(`/posts/post/${savedPost.id}`);
 			}
-			return savedPostId.value;
+			return savedID;
 		} catch (cause) {
 			error.value = cause instanceof Error ? cause.message : "网络错误，请重试";
 			return null;

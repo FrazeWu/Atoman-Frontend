@@ -28,8 +28,10 @@ describe("PostEditorView layout", () => {
 	});
 
 	it("starts focused and opens one right sidebar from the topbar", () => {
-		expect(source).toContain("const sidebarPanelOpen = ref(false)");
+		expect(source).toContain("const sidebarPanelOpen = ref(true)");
 		expect(source).toContain('@toggle-sidebar="toggleSidebarPanel"');
+		expect(source).toContain('@save-published="requestPublication(\'publish\')"');
+		expect(source).toContain('@confirm="confirmPublication"');
 		expect(cssRules(".editor-layout")).toContain(
 			"grid-template-columns: minmax(0, 1fr) 0",
 		);
@@ -49,7 +51,7 @@ describe("PostEditorView layout", () => {
 		expect(source).toContain(":live-preview=\"contentMode === 'visual'\"");
 		expect(source).toContain("const lineNumbersVisible = ref(true)");
 		expect(source).toContain("const line = idx + 2");
-		expect(source).toContain("mobilePanel !== 'sidebar'");
+		expect(source).toContain("mobilePanel.value !== 'sidebar'");
 	});
 
 	it("shows a retryable failure state instead of leaving the editor blank", () => {
@@ -68,7 +70,7 @@ describe("PostEditorView layout", () => {
 		);
 	});
 
-	it("keeps editor confirmation modals above the Studio route sheet", () => {
+	it("uses a narrow publication sheet above the Studio route sheet", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/views/blog/PostEditorView.vue"),
 			"utf8",
@@ -76,6 +78,8 @@ describe("PostEditorView layout", () => {
 
 		expect(source).toContain('<PModal v-if="draftManagerVisible" above-player');
 		expect(source).toContain('<PModal v-if="leaveConfirmVisible" above-player');
-		expect(source).toContain('<PModal v-if="publicationReviewVisible" above-player');
+		expect(source).toContain("<PostPublicationSheet");
+		expect(source).toContain(":show=\"publicationReviewVisible\"");
+		expect(source).toContain('@schedule-publish="requestPublication(\'schedule\')"');
 	});
 });

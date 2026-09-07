@@ -2,42 +2,31 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
-import PSelect from '@/components/ui/PSelect.vue'
 
-describe('PostEditorSidebar 合集选择', () => {
-  it('将默认合集和普通合集放入同一个单选下拉框', () => {
+describe('PostEditorSidebar 文档目录', () => {
+  it('只展示目录内容，不混入发布元数据', () => {
     const wrapper = mount(PostEditorSidebar, {
       props: {
         mobileOpen: false,
         desktopOpen: true,
-        channelCollections: [
-          { id: 'default-1', name: '默认合集', is_default: true },
-          { id: 'collection-1', name: '专题合集', is_default: false },
-        ],
-        selectedCollectionId: 'default-1',
-        summary: '',
-        visibility: 'public',
-        tags: [],
-        coverUrl: '',
-        coverUploading: false,
-        coverUploadError: '',
-        outlineCount: 0,
-        flattenedOutline: [],
-        activeHeadingLine: null,
-      },
-      global: {
-        stubs: {
-          PostMetaSettingsPanel: true,
-          PostCoverField: true,
-          PInput: true,
-        },
+        outlineCount: 1,
+        flattenedOutline: [{
+          id: 'heading-2',
+          line: 2,
+          text: '第一节',
+          depth: 0,
+          hasChildren: false,
+          isExpanded: false,
+          isActiveBranch: true,
+        }],
+        activeHeadingLine: 2,
       },
     })
 
-    expect(wrapper.findComponent(PSelect).props('options')).toEqual([
-      { label: '默认合集', value: 'default-1' },
-      { label: '专题合集', value: 'collection-1' },
-    ])
-    expect(wrapper.findComponent(PSelect).props('modelValue')).toBe('default-1')
+    expect(wrapper.text()).toContain('文档目录')
+    expect(wrapper.text()).toContain('第一节')
+    expect(wrapper.text()).not.toContain('所属合集')
+    expect(wrapper.text()).not.toContain('文章摘要')
+    expect(wrapper.find('.outline-node.is-active').exists()).toBe(true)
   })
 })

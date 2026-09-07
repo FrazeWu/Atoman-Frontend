@@ -67,6 +67,10 @@ export function useMusicSheetRouteSync(router: Router) {
   function syncEntityRoute(key: string, open: () => void) {
     if (drawers.layers.value.some(layer => layer.key === key)) {
       drawers.popToLayer(key)
+    } else if (drawers.layers.value.some(layer => layer.route === router.currentRoute.value.path)) {
+      // Current-sheet navigation updates the layer route while preserving its key.
+      // The route view must reuse that layer instead of opening a duplicate one.
+      return
     } else {
       open()
     }

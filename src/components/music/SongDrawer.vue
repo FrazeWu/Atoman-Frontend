@@ -706,7 +706,7 @@ watch(
 .song-detail__lyric-lines { display: grid; gap: 0; }
 .song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; padding: 0.2rem 0; }
 .song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.45; }
-.song-detail__annotation-workspace { align-self: start; min-width: 0; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
+.song-detail__annotation-workspace { align-self: stretch; min-width: 0; border-left: 1px solid var(--a-color-border-soft); padding: 0.15rem 0 0 1.25rem; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
 @container (max-width: 76.5rem) {

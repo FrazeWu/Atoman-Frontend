@@ -1171,7 +1171,7 @@ function cancelLyricsConflict() {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .music-lyrics-panel__main {
@@ -1207,9 +1207,9 @@ function cancelLyricsConflict() {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 1rem;
+  gap: 0.75rem;
   border-left: 1px solid var(--a-color-border-soft);
-  padding-left: 1.5rem;
+  padding-left: 1.25rem;
   overflow: hidden;
 }
 

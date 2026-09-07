@@ -153,4 +153,31 @@ describe('useMusicSheetRouteSync', () => {
     expect(router.currentRoute.value.path).toBe('/music')
     expect(drawers.layers.value).toHaveLength(0)
   })
+
+  it('does not reopen a sheet when its current content is replaced by navigation', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    const { syncEntityRoute } = useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music/album/album-1')
+    drawers.openAlbum('album-1')
+    await flushPromises()
+
+    drawers.replaceAlbum('album-2')
+    await flushPromises()
+
+    syncEntityRoute('album:album-2', () => drawers.openAlbum('album-2'))
+    await nextTick()
+
+    expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.key)).toEqual([
+      'album:album-1',
+    ])
+    expect(drawers.layers.value[0]?.payload).toEqual({ albumId: 'album-2' })
+  })
 })

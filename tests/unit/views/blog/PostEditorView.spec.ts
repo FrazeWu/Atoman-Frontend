@@ -1567,6 +1567,7 @@ describe("PostEditorView", () => {
 			default_visibility: "private",
 			default_publish_status: "draft",
 			autoplay_enabled: false,
+			editor_mode: "visual",
 		};
 		vi.stubGlobal(
 			"fetch",
@@ -1589,6 +1590,7 @@ describe("PostEditorView", () => {
 			"collection-2",
 		]);
 		expect(editor.vm.$.setupState.preferredPublishStatus).toBe("draft");
+		expect(editor.vm.$.setupState.contentMode).toBe("visual");
 	});
 
 	it("新建文章存草稿后进入编辑路由，并允许继续保存", async () => {

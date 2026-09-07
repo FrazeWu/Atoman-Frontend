@@ -1,5 +1,6 @@
 <template>
   <PModal
+    v-if="side !== 'right'"
     :show="show"
     size="sm"
     :title="title"
@@ -22,11 +23,37 @@
       />
     </template>
   </PModal>
+
+  <PSheet
+    v-else
+    :show="show"
+    :title="title"
+    side="right"
+    mode="partial"
+    partial-width="var(--a-recommendation-width)"
+    close-type="header"
+    :above-player="abovePlayer"
+    @close="cancel"
+  >
+    <p class="p-confirm__message">{{ message }}</p>
+    <div class="p-confirm__actions">
+      <PButton variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />
+      <PButton
+        :variant="danger ? 'danger' : 'primary'"
+        :label="confirmText"
+        :disabled="loading"
+        :loading="loading"
+        :loading-text="loadingText"
+        @click="confirm"
+      />
+    </div>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
 import PButton from './PButton.vue'
 import PModal from './PModal.vue'
+import PSheet from './PSheet.vue'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -38,6 +65,7 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   loadingText?: string
   abovePlayer?: boolean
+  side?: 'right'
 }>(), {
   title: '请确认操作',
   message: '该操作不可撤销，是否继续？',
@@ -47,6 +75,7 @@ const props = withDefaults(defineProps<{
   loading: false,
   loadingText: '处理中...',
   abovePlayer: false,
+  side: undefined,
 })
 
 const emit = defineEmits<{

@@ -48,6 +48,17 @@ describe('OAuthIdentitySettingsPanel', () => {
     expect(wrapper.get('[data-test="oauth-identity-github"]').text()).toContain('alice@example.com')
   })
 
+  it('uses the shared settings row for connected accounts', async () => {
+    const wrapper = mount(OAuthIdentitySettingsPanel, {
+      global: { stubs: { PConfirm: PConfirmStub } },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('.settings-block').text()).toContain('已连接账号')
+    expect(wrapper.get('.settings-block__copy').text()).toContain('使用第三方账号登录 Atoman')
+    expect(wrapper.get('.settings-block__control').exists()).toBe(true)
+  })
+
   it('confirms before unlinking a provider', async () => {
     const wrapper = mount(OAuthIdentitySettingsPanel, {
       global: { stubs: { PConfirm: PConfirmStub } },

@@ -48,7 +48,7 @@ defineEmits<{
 
 const visibilityOptions = [
   { label: '公开', value: 'public' },
-  { label: '仅关注者', value: 'followers' },
+  { label: '仅订阅者', value: 'followers' },
   { label: '私密', value: 'private' },
 ]
 </script>

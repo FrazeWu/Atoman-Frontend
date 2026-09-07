@@ -486,6 +486,7 @@ body:has(.studio-layout) {
 
 .settings-block__copy {
 	display: grid;
+	min-width: 0;
 	gap: 0.35rem;
 }
 
@@ -546,6 +547,11 @@ body:has(.studio-layout) {
 @media (max-width: 900px) {
 	.settings-center__shell {
 		grid-template-columns: 1fr;
+	}
+
+	.settings-center__section-head {
+		display: grid;
+		gap: 0.5rem;
 	}
 
 	.settings-center__sidebar {

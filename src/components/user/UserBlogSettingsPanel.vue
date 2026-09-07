@@ -9,42 +9,38 @@
       <PButton variant="secondary" size="sm" type="button" @click="loadProfile">重试</PButton>
     </div>
     <template v-else>
-      <div class="settings-block">
+      <div class="settings-block user-blog-settings-panel__avatar-row">
         <div class="settings-block__copy">
-          <strong>身份信息</strong>
-          <small>公开展示在个人主页和内容中的资料。</small>
+          <strong>头像</strong>
+          <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB。</small>
         </div>
         <div class="settings-block__control user-blog-settings-panel__identity">
           <div class="avatar-preview-box">
             <img v-if="form.avatar_url" :src="resolveMediaURL(form.avatar_url)" alt="当前头像" />
             <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
           </div>
-          <div class="identity-info">
-            <strong>{{ form.display_name || authStore.user?.username }}</strong>
-            <small class="a-muted">@{{ authStore.user?.username }}</small>
+          <div class="avatar-field">
+            <PButton type="button" variant="secondary" size="sm" :disabled="uploadingAvatar" @click="avatarModalOpen = true">
+              <Camera :size="16" aria-hidden="true" />
+              <span>{{ uploadingAvatar ? '上传中...' : '更换头像' }}</span>
+            </PButton>
+            <small>上次更新：{{ form.avatar_url ? '最近' : '尚未更新' }}</small>
           </div>
-          <PButton v-if="authStore.user?.username" type="button" variant="secondary" size="sm" @click="profileModalOpen = true">
-            查看个人主页
-          </PButton>
         </div>
       </div>
 
-      <form class="user-blog-settings-panel__form" @submit.prevent="save">
-        <div class="form-grid">
+      <form class="settings-block user-blog-settings-panel__form" @submit.prevent="save">
+        <div class="settings-block__copy">
+          <strong>基本信息</strong>
+          <small>显示名和简介会公开展示。</small>
+        </div>
+        <div class="settings-block__control user-blog-settings-panel__form-fields">
           <PInput
             v-model="form.display_name"
             label="显示名称"
             placeholder="用于展示的名称"
             maxlength="50"
           />
-          <div class="avatar-field">
-            <span class="avatar-field__label">头像</span>
-            <PButton type="button" variant="secondary" size="sm" :disabled="uploadingAvatar" @click="avatarModalOpen = true">
-              <Camera :size="16" aria-hidden="true" />
-              <span>{{ uploadingAvatar ? '上传中...' : '更换头像' }}</span>
-            </PButton>
-            <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
-          </div>
           <div class="form-field-full">
             <PTextarea
               v-model="form.bio"
@@ -55,9 +51,28 @@
             />
             <small class="profile-bio-count" aria-live="polite">{{ form.bio.length }} / 200</small>
           </div>
-        </div>
+          <div class="form-submit-row">
+            <div v-if="error" class="a-error">{{ error }}</div>
+            <div v-if="success" class="a-success">✓ 更改保存成功</div>
 
-        <section v-if="props.includeAccountExtras" class="settings-section">
+            <PButton variant="primary" type="submit" :disabled="uploadingAvatar" :loading="saving" loading-text="保存中...">保存资料</PButton>
+          </div>
+        </div>
+      </form>
+
+      <div class="settings-block user-blog-settings-panel__preview-row">
+        <div class="settings-block__copy">
+          <strong>主页预览</strong>
+          <small>查看其他人看到的主页。</small>
+        </div>
+        <div class="settings-block__control">
+          <PButton v-if="authStore.user?.username" type="button" variant="secondary" size="sm" @click="profileModalOpen = true">
+            查看个人主页
+          </PButton>
+        </div>
+      </div>
+
+      <section v-if="props.includeAccountExtras" class="settings-section">
         <h3 class="section-title">通知设置</h3>
         <div class="toggles-grid">
           <label class="settings-toggle">
@@ -89,16 +104,9 @@
         </div>
       </section>
 
-      <div class="form-submit-row">
-        <div v-if="error" class="a-error">{{ error }}</div>
-        <div v-if="success" class="a-success">✓ 更改保存成功</div>
-
-        <PButton variant="primary" type="submit" :disabled="uploadingAvatar" :loading="saving" loading-text="保存中...">保存资料</PButton>
-      </div>
-      </form>
     </template>
   </div>
-  <PModal v-if="avatarModalOpen" title="更换头像" size="sm" @close="avatarModalOpen = false">
+  <PSheet v-if="avatarModalOpen" :show="avatarModalOpen" title="更换头像" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="avatarModalOpen = false">
     <div class="avatar-modal">
       <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }">
         <Camera :size="16" aria-hidden="true" />
@@ -126,8 +134,8 @@
       </PButton>
       <p v-if="error" class="a-error" role="alert">{{ error }}</p>
     </div>
-  </PModal>
-  <PModal v-if="profileModalOpen" title="个人主页" size="md" @close="profileModalOpen = false">
+  </PSheet>
+  <PSheet v-if="profileModalOpen" :show="profileModalOpen" title="个人主页" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="profileModalOpen = false">
     <div class="profile-preview-modal">
       <div class="profile-preview-modal__identity">
         <div class="avatar-preview-box">
@@ -142,7 +150,7 @@
       <p class="profile-preview-modal__bio">{{ form.bio || '这个用户还没有填写简介' }}</p>
       <PButton :href="profileHref" variant="primary" size="sm">打开完整主页</PButton>
     </div>
-  </PModal>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
@@ -159,7 +167,7 @@ import {
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import PModal from '@/components/ui/PModal.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -351,7 +359,7 @@ onMounted(async () => {
 <style scoped>
 .user-blog-settings-panel {
   display: grid;
-  gap: 1.25rem;
+  gap: 0;
 }
 
 .user-blog-settings-panel__identity {
@@ -363,7 +371,7 @@ onMounted(async () => {
 }
 
 .user-blog-settings-panel__identity :deep(.p-button) {
-  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .avatar-preview-box {
@@ -387,12 +395,6 @@ onMounted(async () => {
   object-fit: cover;
 }
 
-.identity-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
 .profile-bio-count {
   display: block;
   margin-top: 0.35rem;
@@ -410,12 +412,6 @@ onMounted(async () => {
 .profile-preview-modal { display: grid; gap: 1rem; }
 .profile-preview-modal__identity { display: flex; align-items: center; gap: 0.75rem; }
 .profile-preview-modal__bio { margin: 0; color: var(--a-color-text-secondary); line-height: 1.6; white-space: pre-wrap; }
-
-.avatar-field__label {
-  color: var(--a-color-text);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
 
 .avatar-field__picker {
   display: inline-flex;
@@ -466,9 +462,8 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.form-grid {
+.user-blog-settings-panel__form-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -529,9 +524,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 640px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+  .user-blog-settings-panel__identity { align-items: flex-start; }
 }
 
 .profile-settings-state {

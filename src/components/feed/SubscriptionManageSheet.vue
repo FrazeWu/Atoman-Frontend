@@ -1,7 +1,9 @@
 <template>
   <PSheet
     :show="show"
-    title="管理订阅"
+    title="订阅管理"
+    side="right"
+    mode="full"
     close-type="header"
     @close="requestClose"
   >
@@ -49,9 +51,16 @@
             <span class="manage-toolbar-label">来源状态</span>
             <div class="manage-toolbar-actions">
               <PButton
+                data-test="check-all-subscriptions-health"
+                variant="secondary"
+                label="健康检查"
+                :disabled="busy || healthChecking || !externalSubscriptions.length"
+                @click="checkAllSubscriptionsHealth"
+              />
+              <PButton
                 data-test="sync-all-subscriptions"
                 variant="secondary"
-                :label="syncingAllSubscriptions ? '刷新中...' : '刷新全部'"
+                :label="syncingAllSubscriptions ? '同步中...' : '同步全部 RSS'"
                 :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
                 @click="syncAllSubscriptions"
               />
@@ -68,7 +77,7 @@
         </ul>
       </div>
 
-      <div class="manage-tabs" aria-label="订阅源管理分区">
+      <div v-if="showAdvancedTabs" class="manage-tabs" aria-label="订阅源管理分区">
         <button
           v-for="tab in manageTabs"
           :key="tab.key"
@@ -127,7 +136,64 @@
 
       <!-- 订阅源管理 tab -->
       <template v-else-if="activeManageTab === 'sources'">
-        <div v-if="managedSubscriptions.length" class="source-manage-tools">
+        <form v-if="!showAdvancedTabs" class="create-group-form" @submit.prevent="submitGroup">
+          <PField label="新建分组">
+            <div class="inline-form">
+              <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
+              <PButton variant="secondary" label="创建分组" :disabled="busy" @click="submitGroup" />
+            </div>
+          </PField>
+        </form>
+
+        <div
+          v-if="legacyManagedSubscriptions.length"
+          class="batch-tools"
+          :class="{ 'batch-tools--combined': !showAdvancedTabs }"
+        >
+          <div class="batch-toolbar" :class="{ 'batch-toolbar--combined': !showAdvancedTabs }">
+            <label class="batch-select-all">
+              <input type="checkbox" :checked="allVisibleSelected" :disabled="busy || !visibleSubscriptionIds.length" @change="toggleAllVisible" />
+              选择当前结果
+            </label>
+            <span class="a-muted">已选 {{ selectedSubscriptionIds.size }} 个</span>
+            <PSelect v-model="batchGroupId" :options="groups.map(group => ({ label: isDefaultGroup(group) ? '未分组' : group.name, value: group.id }))" placeholder="移动到分组" :disabled="busy || !selectedSubscriptionIds.size" />
+            <PButton data-test="batch-move-subscriptions" variant="secondary" label="移动" :disabled="busy || !selectedSubscriptionIds.size || !batchGroupId" @click="applyBatchGroup" />
+            <template v-if="showAdvancedTabs">
+              <PButton variant="secondary" label="静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', true)" />
+              <PButton variant="secondary" label="取消静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', false)" />
+              <PButton variant="secondary" label="自动已读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_mark_read', true)" />
+              <PButton variant="secondary" label="取消自动已读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_mark_read', false)" />
+              <PButton variant="secondary" label="自动稍后阅读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_add_reading_list', true)" />
+              <PButton variant="secondary" label="取消自动稍后阅读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_add_reading_list', false)" />
+              <PButton variant="secondary" label="取消订阅" :disabled="busy || !selectedSubscriptionIds.size" @click="requestBatchDelete" />
+            </template>
+          </div>
+
+          <div v-if="!showAdvancedTabs" class="batch-operation-toolbar">
+            <div class="batch-operation-copy">
+              <strong>批量操作</strong>
+              <small>先选择订阅源，再执行暂停、同步、健康检查或静音。</small>
+            </div>
+            <div class="batch-operation-controls">
+              <PSelect
+                v-model="batchOperation"
+                data-test="batch-operation"
+                :options="batchOperationOptions"
+                placeholder="选择操作"
+                :disabled="busy || !selectedSubscriptionIds.size"
+              />
+              <PButton
+                data-test="batch-execute"
+                variant="secondary"
+                label="执行"
+                :disabled="busy || !selectedSubscriptionIds.size || !batchOperation"
+                @click="applyBatchOperation"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="showAdvancedTabs && managedSubscriptions.length" class="source-manage-tools">
           <PInput v-model="sourceSearch" label="搜索订阅源" placeholder="名称或 RSS 地址" />
           <PSelect
             v-model="sourceTypeFilter"
@@ -155,23 +221,6 @@
           <span class="health-overview-item">异常 {{ sourceHealthSummary.failing }}</span>
         </div>
 
-        <div v-if="legacyManagedSubscriptions.length && selectedSubscriptionIds.size" class="batch-toolbar">
-          <label class="batch-select-all">
-            <input type="checkbox" :checked="allVisibleSelected" :disabled="busy || !visibleSubscriptionIds.length" @change="toggleAllVisible" />
-            选择当前结果
-          </label>
-          <span class="a-muted">已选 {{ selectedSubscriptionIds.size }} 个</span>
-          <PSelect v-model="batchGroupId" :options="groups.map(group => ({ label: isDefaultGroup(group) ? '未分组' : group.name, value: group.id }))" placeholder="移动到分组" :disabled="busy || !selectedSubscriptionIds.size" />
-          <PButton variant="secondary" label="移动" :disabled="busy || !selectedSubscriptionIds.size || !batchGroupId" @click="applyBatchGroup" />
-          <PButton variant="secondary" label="静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', true)" />
-          <PButton variant="secondary" label="取消静音" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('is_muted', false)" />
-          <PButton variant="secondary" label="自动已读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_mark_read', true)" />
-          <PButton variant="secondary" label="取消自动已读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_mark_read', false)" />
-          <PButton variant="secondary" label="自动稍后阅读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_add_reading_list', true)" />
-          <PButton variant="secondary" label="取消自动稍后阅读" :disabled="busy || !selectedSubscriptionIds.size" @click="applyBatchFlag('auto_add_reading_list', false)" />
-          <PButton variant="secondary" label="取消订阅" :disabled="busy || !selectedSubscriptionIds.size" @click="requestBatchDelete" />
-        </div>
-
         <div v-if="!managedSubscriptions.length" class="empty-state a-muted">
           暂无订阅源，点击页面上的 “+ 订阅” 添加。
         </div>
@@ -182,17 +231,29 @@
 
         <div v-else class="group-list">
           <section v-for="group in displayGroups" :key="group.id" class="group-section">
-            <button
-              type="button"
-              class="group-title"
-              :class="{ 'is-collapsed': isGroupCollapsed(group.id) }"
-              :aria-expanded="!isGroupCollapsed(group.id)"
-              :aria-controls="`subscription-group-${group.id}`"
-              @click="toggleGroup(group.id)"
-            >
-              <span class="group-label-virtual">{{ group.name }}</span>
-              <ChevronDown :size="16" aria-hidden="true" />
-            </button>
+            <div class="group-heading">
+              <button
+                type="button"
+                class="group-title"
+                :class="{ 'is-collapsed': isGroupCollapsed(group.id) }"
+                :aria-expanded="!isGroupCollapsed(group.id)"
+                :aria-controls="`subscription-group-${group.id}`"
+                @click="toggleGroup(group.id)"
+              >
+                <span class="group-label-virtual">{{ isDefaultGroup(group) ? '未分组' : (draftGroupNames[group.id] ?? group.name) }}</span>
+                <ChevronDown :size="16" aria-hidden="true" />
+              </button>
+              <div v-if="!group.virtual && !isDefaultGroup(group)" class="group-heading-actions">
+                <PInput
+                  :model-value="draftGroupNames[group.id] ?? group.name"
+                  class="group-name-input"
+                  :disabled="busy"
+                  aria-label="分组名称"
+                  @input="updateDraftGroupName(group.id, $event)"
+                />
+                <PButton variant="secondary" label="删除分组" :disabled="busy" @click="requestDelete('group', group.id)" />
+              </div>
+            </div>
 
             <div v-if="!isGroupCollapsed(group.id)" :id="`subscription-group-${group.id}`">
               <div v-if="!group.subscriptions.length" class="group-empty a-muted">
@@ -224,13 +285,19 @@
                       size="sm"
                     />
                     <div class="subscription-identity-copy">
-                      <strong class="subscription-title">{{ subscriptionTitle(sub) }}</strong>
+                      <div class="subscription-title-row">
+                        <strong class="subscription-title">{{ subscriptionTitle(sub) }}</strong>
+                        <span class="subscription-status-badge">已订阅</span>
+                      </div>
                       <div class="subscription-type-badges" aria-label="内容类型">
                         <span v-for="subscriptionType in sub.hubTypes" :key="subscriptionType">
                           {{ contentTypeLabel(subscriptionType) }}
                         </span>
                       </div>
-                      <p class="source-url a-muted">{{ subscriptionSourceLabel(sub) }}</p>
+                      <p v-if="subscriptionDescription(sub)" class="subscription-description">
+                        {{ subscriptionDescription(sub) }}
+                      </p>
+                      <p v-if="showAdvancedTabs" class="source-url a-muted">{{ subscriptionSourceLabel(sub) }}</p>
                     </div>
                   </div>
                   <p v-if="isExternalSubscription(sub) && sub.feed_source?.last_fetched_at" class="sync-meta a-muted">
@@ -268,8 +335,8 @@
                 </div>
 
                 <div class="subscription-quick-actions">
-                  <PButton
-                    v-if="sub.feed_source?.source_type === 'external_rss'"
+              <PButton
+                v-if="showAdvancedTabs && sub.feed_source?.source_type === 'external_rss'"
                     data-test="sync-subscription"
                     variant="secondary"
                     :label="syncingSubscriptionIds?.has(sub.id) ? '刷新中...' : syncSubscriptionActionLabel(sub)"
@@ -283,13 +350,13 @@
                     :aria-label="`${isSubscriptionSettingsExpanded(sub.id) ? '收起' : '展开'} ${subscriptionTitle(sub)} 设置`"
                     :aria-expanded="isSubscriptionSettingsExpanded(sub.id)"
                     :disabled="busy"
-                    @click="toggleSubscriptionSettings(sub.id)"
+                    @click="openSubscriptionSettings(sub.id)"
                   >
                     <Settings :size="17" aria-hidden="true" />
                   </button>
                 </div>
 
-                <div v-if="isSubscriptionSettingsExpanded(sub.id)" class="subscription-settings">
+                <div v-if="showAdvancedTabs && isSubscriptionSettingsExpanded(sub.id)" class="subscription-settings">
                   <PField v-if="!sub.hubOnly" label="显示名称">
                     <PInput
                       :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
@@ -406,6 +473,103 @@
     </div>
   </PSheet>
 
+  <PSheet
+    v-if="!showAdvancedTabs && activeSubscription"
+    :show="Boolean(activeSubscription)"
+    :title="`${subscriptionTitle(activeSubscription)}设置`"
+    side="right"
+    mode="partial"
+    partial-width="var(--a-recommendation-width)"
+    close-type="header"
+    @close="activeSubscriptionId = null"
+  >
+    <div data-test="subscription-details-content" class="subscription-details-content">
+      <div class="subscription-detail-identity">
+        <PAvatar
+          :src="subscriptionAvatarURL(activeSubscription)"
+          :name="subscriptionTitle(activeSubscription)"
+          :alt="`${subscriptionTitle(activeSubscription)}的头像`"
+          size="md"
+        />
+        <div>
+          <strong>{{ subscriptionTitle(activeSubscription) }}</strong>
+          <small>{{ subscriptionSourceLabel(activeSubscription) }}</small>
+        </div>
+      </div>
+
+      <PField v-if="!activeSubscription.hubOnly" label="显示名称">
+        <PInput
+          :model-value="draftTitles[activeSubscription.id] ?? subscriptionTitle(activeSubscription)"
+          class="title-input"
+          :disabled="busy"
+          @input="updateDraftTitle(activeSubscription.id, $event)"
+        />
+      </PField>
+
+      <div v-if="!activeSubscription.hubOnly" class="subscription-flags">
+        <label><input data-test="subscription-flag-muted" type="checkbox" :checked="Boolean(activeSubscription.is_muted)" :disabled="busy" @change="updateSubscriptionFlag(activeSubscription.id, 'is_muted', ($event.target as HTMLInputElement).checked)" />静音</label>
+        <label><input data-test="subscription-flag-auto-read" type="checkbox" :checked="Boolean(activeSubscription.auto_mark_read)" :disabled="busy" @change="updateSubscriptionFlag(activeSubscription.id, 'auto_mark_read', ($event.target as HTMLInputElement).checked)" />自动已读</label>
+        <label><input data-test="subscription-flag-reading-list" type="checkbox" :checked="Boolean(activeSubscription.auto_add_reading_list)" :disabled="busy" @change="updateSubscriptionFlag(activeSubscription.id, 'auto_add_reading_list', ($event.target as HTMLInputElement).checked)" />稍后阅读</label>
+      </div>
+
+      <div v-if="!activeSubscription.hubOnly" class="subscription-actions">
+        <PSelect data-test="subscription-priority" :model-value="activeSubscription.priority || 'normal'" :options="priorityOptions" :disabled="busy" aria-label="订阅优先级" @update:model-value="updateSubscriptionPriority(activeSubscription.id, String($event))" />
+        <PSelect data-test="subscription-group" :model-value="isDefaultGroupId(activeSubscription.subscription_group_id) ? '' : activeSubscription.subscription_group_id || ''" :options="groupOptions" :disabled="busy" @update:model-value="moveSubscription(activeSubscription.id, String($event))" />
+        <PButton variant="secondary" label="暂停" :disabled="busy || Boolean(activeSubscription.is_paused)" @click="setSubscriptionPaused(activeSubscription.id, true)" />
+        <PButton variant="secondary" label="恢复" :disabled="busy || !activeSubscription.is_paused" @click="setSubscriptionPaused(activeSubscription.id, false)" />
+        <PButton variant="secondary" label="全部已读" :disabled="busy" @click="markSubscriptionReadState(activeSubscription.id, true)" />
+        <PButton variant="secondary" label="全部未读" :disabled="busy" @click="markSubscriptionReadState(activeSubscription.id, false)" />
+      </div>
+
+      <div v-if="isExternalSubscription(activeSubscription)" class="subscription-detail-actions">
+        <PButton
+          data-test="sync-subscription-details"
+          variant="secondary"
+          :label="syncingSubscriptionIds?.has(activeSubscription.id) ? '同步中...' : '手动同步 RSS'"
+          :disabled="busy || Boolean(activeSubscription.is_paused) || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(activeSubscription.id)"
+          @click="syncSubscription(activeSubscription.id)"
+        />
+        <PButton
+          data-test="check-subscription-health-details"
+          variant="secondary"
+          label="健康检查"
+          :disabled="busy || healthChecking"
+          @click="checkSubscriptionHealth(activeSubscription.id)"
+        />
+        <PButton
+          data-test="load-subscription-diagnostics-details"
+          variant="secondary"
+          :label="isSubscriptionDiagnosticsLoading(activeSubscription.id) ? '加载记录...' : '查看诊断'"
+          :disabled="busy || isSubscriptionDiagnosticsLoading(activeSubscription.id)"
+          @click="toggleSubscriptionDiagnostics(activeSubscription.id)"
+        />
+      </div>
+
+      <ul v-if="isSubscriptionDiagnosticsExpanded(activeSubscription.id) && !isSubscriptionDiagnosticsLoading(activeSubscription.id)" class="diagnostic-history" aria-live="polite">
+        <li v-for="diagnostic in subscriptionDiagnosticsFor(activeSubscription.id)" :key="diagnostic.id">
+          <span class="diagnostic-kind">{{ diagnosticKindLabel(diagnostic.kind) }}</span>
+          <span>{{ diagnostic.message }}</span>
+          <span class="a-muted">{{ formatCheckedAt(diagnostic.created_at) }}</span>
+        </li>
+        <li v-if="!subscriptionDiagnosticsFor(activeSubscription.id).length" class="a-muted">暂无近期抓取记录。</li>
+      </ul>
+
+      <button
+        v-if="!activeSubscription.hubOnly"
+        type="button"
+        class="subscription-remove"
+        data-test="unsubscribe-subscription-details"
+        :aria-label="`取消订阅 ${subscriptionTitle(activeSubscription)}`"
+        title="取消订阅"
+        :disabled="busy"
+        @click="requestDeleteFromDetails(activeSubscription.feed_source_id)"
+      >
+        <Trash :size="17" aria-hidden="true" />
+        <span>取消订阅</span>
+      </button>
+    </div>
+  </PSheet>
+
   <PConfirm
     :show="discardPending"
     title="放弃修改？"
@@ -413,6 +577,7 @@
     confirm-text="放弃"
     danger
     above-player
+    side="right"
     @confirm="confirmDiscard"
     @cancel="cancelDiscard"
   />
@@ -428,6 +593,7 @@
     confirm-text="删除"
     danger
     above-player
+    side="right"
     :loading="props.busy"
     @confirm="confirmDelete"
     @cancel="deletePending = null"
@@ -464,13 +630,14 @@ type ManagedSubscription = Subscription & {
   hubTypes: SubscriptionHubType[]
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   subscriptions: Subscription[]
   subscriptionHubTree?: SubscriptionHubTree
   groups: SubscriptionGroup[]
   subscriptionRules: FeedSubscriptionRule[]
   initialTab?: 'groups' | 'sources' | 'rules' | 'keywords'
+  showAdvancedTabs?: boolean
   ruleApplySummary: ApplySubscriptionRulesSummary | null
   filterRules: FeedFilterRules
   automationRules: FeedAutomationRules
@@ -484,7 +651,9 @@ const props = defineProps<{
   error?: string
   message?: string
   opmlImportResult?: FeedOPMLImportResult | null
-}>()
+}>(), {
+  showAdvancedTabs: true,
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -528,14 +697,16 @@ const sourceSearch = ref('')
 const sourceTypeFilter = ref<SubscriptionHubType | ''>('')
 const healthFilter = ref('')
 const batchGroupId = ref('')
+const batchOperation = ref('')
 const selectedSubscriptionIds = ref(new Set<string>())
+const activeSubscriptionId = ref<string | null>(null)
 const expandedSubscriptionSettingIds = ref(new Set<string>())
 const expandedSubscriptionDiagnosticIds = ref(new Set<string>())
 const collapsedGroupIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
-const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.initialTab ?? 'sources')
+const activeManageTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>(props.showAdvancedTabs ? props.initialTab ?? 'sources' : 'sources')
 const deletePending = ref<{
   kind: 'subscription' | 'group' | 'batch'
   id?: string
@@ -573,12 +744,13 @@ const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: rese
   close: () => emit('close'),
 })
 
-const manageTabs = [
+const allManageTabs: Array<{ key: 'groups' | 'sources' | 'rules' | 'keywords'; label: string }> = [
   { key: 'groups', label: '分组' },
   { key: 'sources', label: '订阅源' },
   { key: 'rules', label: '规则' },
   { key: 'keywords', label: '过滤' },
-] as const
+]
+const manageTabs = computed(() => allManageTabs.filter(tab => props.showAdvancedTabs || tab.key === 'sources'))
 
 const isDefaultGroup = (group: Pick<SubscriptionGroup, 'name'>) => group.name === '默认分组'
 const isDefaultGroupId = (groupId?: string) => props.groups.some(
@@ -604,6 +776,16 @@ const sourceTypeOptions = [
   { label: '视频', value: 'video' },
   { label: '博客', value: 'blog' },
   { label: 'RSS', value: 'rss' },
+]
+
+const batchOperationOptions = [
+  { label: '暂停订阅', value: 'pause' },
+  { label: '恢复订阅', value: 'resume' },
+  { label: '静音', value: 'mute' },
+  { label: '取消静音', value: 'unmute' },
+  { label: '手动同步 RSS', value: 'sync' },
+  { label: '健康检查', value: 'health' },
+  { label: '查看诊断', value: 'diagnostic' },
 ]
 
 const fallbackHubType = (subscription: Subscription): SubscriptionHubType => {
@@ -663,6 +845,12 @@ const managedSubscriptions = computed<ManagedSubscription[]>(() => {
       : [fallbackHubType(subscription)],
   }))
 })
+
+const activeSubscription = computed(() => (
+  activeSubscriptionId.value
+    ? managedSubscriptions.value.find(subscription => subscription.id === activeSubscriptionId.value) || null
+    : null
+))
 
 const legacyManagedSubscriptions = computed(() =>
   managedSubscriptions.value.filter((subscription) => !subscription.hubOnly),
@@ -748,6 +936,10 @@ const subscriptionSourceLabel = (sub: ManagedSubscription) => {
     default:
       return sub.hubTypes.map(contentTypeLabel).join(' · ')
   }
+}
+
+const subscriptionDescription = (sub: ManagedSubscription) => {
+  return sub.feed_source?.description?.trim() || sub.feed_source?.summary?.trim() || ''
 }
 
 const subscriptionAvatarURL = (sub: ManagedSubscription) =>
@@ -928,11 +1120,24 @@ const selectedIds = () => [...selectedSubscriptionIds.value]
 
 const isSubscriptionSettingsExpanded = (id: string) => expandedSubscriptionSettingIds.value.has(id)
 
+const openSubscriptionSettings = (id: string) => {
+  if (!props.showAdvancedTabs) {
+    activeSubscriptionId.value = id
+    return
+  }
+  toggleSubscriptionSettings(id)
+}
+
 const toggleSubscriptionSettings = (id: string) => {
   const next = new Set(expandedSubscriptionSettingIds.value)
   if (next.has(id)) next.delete(id)
   else next.add(id)
   expandedSubscriptionSettingIds.value = next
+}
+
+const requestDeleteFromDetails = (id: string) => {
+  activeSubscriptionId.value = null
+  requestDelete('subscription', id)
 }
 
 const toggleSubscriptionSelection = (id: string, checked: boolean) => {
@@ -959,6 +1164,30 @@ const applyBatchFlag = (key: 'is_muted' | 'auto_mark_read' | 'auto_add_reading_l
   const ids = selectedIds()
   if (props.busy || !ids.length) return
   emit('batch-update-subscriptions', ids, { [key]: value })
+}
+
+const applyBatchOperation = () => {
+  const ids = selectedIds()
+  const operation = batchOperation.value
+  if (props.busy || !ids.length || !operation) return
+
+  if (operation === 'pause' || operation === 'resume') {
+    ids.forEach(id => emit('set-subscription-paused', id, operation === 'pause'))
+  } else if (operation === 'mute' || operation === 'unmute') {
+    emit('batch-update-subscriptions', ids, { is_muted: operation === 'mute' })
+  } else if (operation === 'sync') {
+    managedSubscriptions.value
+      .filter(subscription => ids.includes(subscription.id) && isExternalSubscription(subscription))
+      .forEach(subscription => syncSubscription(subscription.id))
+  } else if (operation === 'health') {
+    ids.forEach(id => checkSubscriptionHealth(id))
+  } else if (operation === 'diagnostic') {
+    const firstId = ids[0]
+    if (firstId) {
+      activeSubscriptionId.value = firstId
+      if (!isSubscriptionDiagnosticsExpanded(firstId)) toggleSubscriptionDiagnostics(firstId)
+    }
+  }
 }
 
 const markSubscriptionReadState = (id: string, read: boolean) => {
@@ -1091,15 +1320,17 @@ watch(() => props.show, (visible) => {
   if (!visible) {
     return
   }
-  activeManageTab.value = props.initialTab ?? 'sources'
+  activeManageTab.value = props.showAdvancedTabs ? props.initialTab ?? 'sources' : 'sources'
   newGroupName.value = ''
   newKeyword.value = ''
   sourceSearch.value = ''
   sourceTypeFilter.value = ''
   healthFilter.value = ''
   batchGroupId.value = ''
+  batchOperation.value = ''
   selectedSubscriptionIds.value = new Set()
   expandedSubscriptionSettingIds.value = new Set()
+  activeSubscriptionId.value = null
   expandedSubscriptionDiagnosticIds.value = new Set()
   localFilterRules.value = {
     mutedSourceIds: [...props.filterRules.mutedSourceIds],
@@ -1112,6 +1343,12 @@ watch(() => props.show, (visible) => {
     props.groups.map(group => [group.id, group.name]),
   )
   resetCloseGuard()
+})
+
+watch(() => props.showAdvancedTabs, (enabled) => {
+  if (!enabled && activeManageTab.value !== 'sources') {
+    activeManageTab.value = 'sources'
+  }
 })
 
 watch(() => props.subscriptions, (subscriptions) => {
@@ -1151,7 +1388,7 @@ watch(() => props.filterRules, (rules) => {
 .manage-sheet {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .manage-heading {
@@ -1378,7 +1615,7 @@ watch(() => props.filterRules, (rules) => {
 .group-list {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 1.5rem;
 }
 
 .rule-chip-list {
@@ -1407,17 +1644,33 @@ watch(() => props.filterRules, (rules) => {
 .group-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
+}
+
+.group-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.group-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .group-title {
-  border-bottom: 1px solid var(--a-color-border-soft);
+  border-bottom: 0;
   padding-bottom: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  width: 100%;
+  width: auto;
+  flex: 1;
   border-inline: 0;
   border-top: 0;
   background: transparent;
@@ -1441,7 +1694,7 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .group-name-input {
-  max-width: 18rem;
+  max-width: 12rem;
   font-weight: 500;
   font-size: 0.8rem;
 }
@@ -1514,8 +1767,65 @@ watch(() => props.filterRules, (rules) => {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  min-width: 0;
   padding: 0.75rem 0;
+}
+
+.batch-tools {
+  display: grid;
   border-block: 1px solid var(--a-color-border-soft);
+}
+
+.batch-tools--combined {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.batch-tools--combined .batch-toolbar {
+  grid-column: 1;
+}
+
+.batch-tools--combined .batch-operation-toolbar {
+  grid-column: 2;
+}
+
+.batch-operation-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  margin-left: auto;
+  padding: 0;
+}
+
+.batch-operation-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.batch-operation-copy strong {
+  color: var(--a-color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.batch-operation-copy small {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.batch-operation-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.batch-operation-controls :deep(.p-select) {
+  min-width: 11rem;
 }
 
 .batch-select-all,
@@ -1532,14 +1842,17 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .subscription-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
 .subscription-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "select main"
+    "actions actions";
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   padding: 1rem;
@@ -1549,7 +1862,13 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .subscription-main {
+  grid-area: main;
   min-width: 0;
+}
+
+.subscription-select,
+.subscription-select-spacer {
+  grid-area: select;
 }
 
 .subscription-identity {
@@ -1575,6 +1894,23 @@ watch(() => props.filterRules, (rules) => {
   white-space: nowrap;
 }
 
+.subscription-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.subscription-status-badge {
+  flex: 0 0 auto;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 3px;
+  color: var(--a-color-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
 .subscription-type-badges {
   display: flex;
   flex-wrap: wrap;
@@ -1589,6 +1925,17 @@ watch(() => props.filterRules, (rules) => {
   color: var(--a-color-text-secondary);
   font-size: 0.65rem;
   line-height: 1.2;
+}
+
+.subscription-description {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--a-color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .title-input {
@@ -1695,17 +2042,65 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .subscription-quick-actions {
+  grid-area: actions;
   display: flex;
+  justify-content: flex-end;
   align-items: center;
   gap: 0.5rem;
 }
 
 .subscription-settings {
   display: grid;
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
+  grid-row: auto;
   gap: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--a-color-border-soft);
+}
+
+.subscription-details-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.subscription-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.subscription-detail-identity > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.subscription-detail-identity strong {
+  overflow-wrap: anywhere;
+  color: var(--a-color-text);
+  font-size: 1rem;
+}
+
+.subscription-detail-identity small {
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+}
+
+.subscription-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.subscription-details-content > .subscription-remove {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: center;
+  padding: 0 0.7rem;
 }
 
 .subscription-settings-toggle {
@@ -1759,6 +2154,59 @@ watch(() => props.filterRules, (rules) => {
   opacity: 0.5;
 }
 
+@media (max-width: 760px) {
+  .manage-toolbar-group {
+    flex: 1 1 100%;
+    align-items: flex-start;
+  }
+
+  .manage-toolbar-actions {
+    flex: 1 1 auto;
+  }
+
+  .batch-tools--combined {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-tools--combined .batch-toolbar,
+  .batch-tools--combined .batch-operation-toolbar {
+    grid-column: 1;
+  }
+
+  .batch-operation-toolbar {
+    width: 100%;
+    margin-left: 0;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .batch-operation-controls {
+    width: 100%;
+  }
+
+  .batch-operation-controls :deep(.p-select),
+  .batch-operation-controls :deep(.p-button) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .group-heading-actions {
+    width: 100%;
+  }
+
+  .group-name-input {
+    max-width: none;
+    flex: 1 1 auto;
+  }
+}
+
 @media (max-width: 640px) {
   .inline-form,
   .subscription-card,
@@ -1782,18 +2230,82 @@ watch(() => props.filterRules, (rules) => {
     max-width: none;
   }
 
+  .group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .group-heading-actions {
+    width: 100%;
+  }
+
   .group-manage-count {
     flex: 1 1 auto;
   }
 
   .subscription-quick-actions,
-  .subscription-settings {
+  .subscription-settings,
+  .batch-toolbar {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .batch-tools--combined {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-tools--combined .batch-toolbar,
+  .batch-tools--combined .batch-operation-toolbar {
+    grid-column: 1;
+  }
+
+  .batch-operation-toolbar {
+    width: auto;
+    margin-left: 0;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .batch-operation-controls {
     width: 100%;
+  }
+
+  .batch-operation-controls :deep(.p-select),
+  .batch-operation-controls :deep(.p-button) {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .subscription-actions {
     width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .subscription-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .subscription-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .subscription-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .subscription-list {
+    grid-template-columns: 1fr;
   }
 }
 </style>

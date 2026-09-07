@@ -1,9 +1,16 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { defineComponent } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'
 import { useAuthStore } from '@/stores/auth'
+
+const PSheetStub = defineComponent({
+  name: 'PSheet',
+  props: ['side', 'mode', 'partialWidth'],
+  template: '<section data-testid="user-right-sheet" :data-side="side" :data-mode="mode" :data-partial-width="partialWidth"><slot /></section>',
+})
 
 describe('UserBlogSettingsPanel', () => {
   beforeEach(() => {
@@ -27,7 +34,7 @@ describe('UserBlogSettingsPanel', () => {
     })
     const wrapper = mount(UserBlogSettingsPanel, {
       props: { includeAccountExtras: false },
-      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' }, PSheet: PSheetStub } },
     })
     expect(wrapper.find('[data-test="profile-settings-loading"]').exists()).toBe(true)
     expect(wrapper.find('form').exists()).toBe(false)
@@ -47,7 +54,7 @@ describe('UserBlogSettingsPanel', () => {
     })
     const wrapper = mount(UserBlogSettingsPanel, {
       props: { includeAccountExtras: false },
-      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' }, PSheet: PSheetStub } },
     })
     await flushPromises()
 
@@ -79,7 +86,7 @@ describe('UserBlogSettingsPanel', () => {
 
     const wrapper = mount(UserBlogSettingsPanel, {
       props: { includeAccountExtras: false },
-      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' }, PSheet: PSheetStub } },
     })
     await flushPromises()
 
@@ -116,10 +123,12 @@ describe('UserBlogSettingsPanel', () => {
 
     const wrapper = mount(UserBlogSettingsPanel, {
       props: { includeAccountExtras: false },
-      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' }, PSheet: PSheetStub } },
     })
     await flushPromises()
     await wrapper.get('.avatar-field button').trigger('click')
+    expect(wrapper.findComponent(PSheetStub).props('side')).toBe('right')
+    expect(wrapper.findComponent(PSheetStub).props('mode')).toBe('partial')
     const input = wrapper.get('[data-testid="profile-avatar-input"]')
     Object.defineProperty(input.element, 'files', {
       value: [new File(['avatar'], 'avatar.png', { type: 'image/png' })],
@@ -130,5 +139,53 @@ describe('UserBlogSettingsPanel', () => {
 
     expect(profileUpdateBodies).toEqual([{ avatar_url: 'https://cdn.example.com/avatar.png' }])
     expect(useAuthStore().user?.avatar_url).toBe('https://cdn.example.com/avatar.png')
+  })
+
+  it('个人主页预览使用正常宽度的右侧面板', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).endsWith('/users/me')) {
+        return new Response(JSON.stringify({ data: { display_name: 'Alice', bio: '个人简介' } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
+    })
+
+    const wrapper = mount(UserBlogSettingsPanel, {
+      props: { includeAccountExtras: false },
+      global: { stubs: { PSheet: PSheetStub } },
+    })
+    await flushPromises()
+
+    const previewButton = wrapper.findAll('button').find((button) => button.text().includes('查看个人主页'))
+    expect(previewButton).toBeDefined()
+    await previewButton!.trigger('click')
+
+    const sheet = wrapper.findComponent(PSheetStub)
+    expect(sheet.props('side')).toBe('right')
+    expect(sheet.props('mode')).toBe('partial')
+    expect(sheet.props('partialWidth')).toBe('var(--a-comment-sheet-width)')
+  })
+
+  it('按头像、基本信息、主页预览的顺序排列资料设置', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).endsWith('/users/me')) {
+        return new Response(JSON.stringify({ data: { display_name: 'Alice', bio: '个人简介' } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
+    })
+
+    const wrapper = mount(UserBlogSettingsPanel, {
+      props: { includeAccountExtras: false },
+      global: { stubs: { PSheet: PSheetStub } },
+    })
+    await flushPromises()
+
+    const rows = wrapper.findAll('.settings-block')
+    expect(rows).toHaveLength(3)
+    expect(rows[0]!.text()).toContain('头像')
+    expect(rows[0]!.text()).not.toContain('显示名称')
+    expect(rows[1]!.text()).toContain('基本信息')
+    expect(rows[1]!.text()).toContain('显示名称')
+    expect(rows[2]!.text()).toContain('主页预览')
+    expect(rows[2]!.text()).not.toContain('个人简介')
   })
 })

@@ -41,7 +41,7 @@
 
   <PSheet
       :show="mobileOpen"
-      side="bottom"
+      :side="mobileSide"
       :title="title"
       close-type="header"
       panel-class="p-directory-sheet"
@@ -79,6 +79,7 @@ withDefaults(
     activeId?: string | null;
     collapsed?: boolean;
     mobileOpen?: boolean;
+    mobileSide?: "left" | "right" | "bottom";
     title?: string;
     ariaLabel?: string;
   }>(),
@@ -86,6 +87,7 @@ withDefaults(
     activeId: null,
     collapsed: false,
     mobileOpen: false,
+    mobileSide: "right",
     title: "目录",
     ariaLabel: "页面目录",
   },
@@ -248,6 +250,19 @@ function selectItem(id: string, mobile: boolean) {
   padding: 1rem 0.75rem 2rem;
   border-top: 1px solid var(--a-color-border);
   box-shadow: 0 -12px 28px color-mix(in srgb, var(--a-color-text) 12%, transparent);
+}
+
+.p-directory-sheet.p-sheet-mobile-page.is-right {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(var(--a-recommendation-width), 100vw);
+  max-height: none;
+  border-top: 0;
+  border-right: 0;
+  border-left: 1px solid var(--a-color-border);
+  box-shadow: -12px 0 28px color-mix(in srgb, var(--a-color-text) 12%, transparent);
 }
 
 .p-directory-sheet.p-sheet-mobile-page .p-sheet-mobile-page__header {

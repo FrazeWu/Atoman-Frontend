@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
+import { defineComponent } from "vue";
 import { afterEach, describe, expect, it } from "vitest";
 import PConfirm from "@/components/ui/PConfirm.vue";
 
@@ -28,5 +29,21 @@ describe("PConfirm.vue", () => {
 
     expect(wrapper.emitted("cancel")).toHaveLength(1);
     wrapper.unmount();
+  });
+
+  it("supports an explicit right-side sheet presentation", () => {
+    const PSheetStub = defineComponent({
+      name: "PSheet",
+      props: ["side", "mode", "partialWidth"],
+      template: '<section data-testid="confirm-right-sheet" :data-side="side" :data-mode="mode" :data-partial-width="partialWidth"><slot /></section>',
+    });
+    const wrapper = mount(PConfirm, {
+      props: { show: true, side: "right", title: "注销账户", message: "确认注销吗？" },
+      global: { stubs: { PSheet: PSheetStub } },
+    });
+
+    const sheet = wrapper.findComponent(PSheetStub);
+    expect(sheet.props("side")).toBe("right");
+    expect(sheet.props("mode")).toBe("partial");
   });
 });

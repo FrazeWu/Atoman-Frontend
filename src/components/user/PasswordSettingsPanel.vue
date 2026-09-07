@@ -1,12 +1,14 @@
 <template>
-  <section class="password-settings">
+  <section class="settings-block password-settings">
     <div class="password-settings__copy">
       <strong>{{ hasPassword ? '修改密码' : '设置密码' }}</strong>
       <small>{{ hasPassword ? '修改后，其他设备需要重新登录。' : '设置后可使用用户名和密码登录。' }}</small>
     </div>
-    <PButton type="button" variant="secondary" size="sm" @click="modalOpen = true">修改密码</PButton>
+    <div class="settings-block__control">
+      <PButton type="button" variant="secondary" size="sm" @click="modalOpen = true">{{ hasPassword ? '修改密码' : '设置密码' }}</PButton>
+    </div>
   </section>
-  <PModal v-if="modalOpen" :title="hasPassword ? '修改密码' : '设置密码'" size="sm" @close="modalOpen = false">
+  <PSheet v-if="modalOpen" :show="modalOpen" :title="hasPassword ? '修改密码' : '设置密码'" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="modalOpen = false">
     <form class="password-settings__form" @submit.prevent="submit">
       <PInput
         v-if="hasPassword"
@@ -23,7 +25,7 @@
       <p v-if="success" class="a-success" role="status">{{ hasPassword ? '密码已修改' : '密码已设置' }}</p>
       <PButton type="submit" size="lg" :loading="submitting" loading-text="正在修改...">{{ hasPassword ? '修改密码' : '设置密码' }}</PButton>
     </form>
-  </PModal>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
@@ -32,7 +34,7 @@ import { computed, reactive, ref } from 'vue'
 import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PModal from '@/components/ui/PModal.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import { useApiUrl } from '@/composables/useApi'
 
 const props = withDefaults(defineProps<{ hasPassword?: boolean }>(), { hasPassword: true })
@@ -87,12 +89,7 @@ async function submit() {
 
 <style scoped>
 .password-settings {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 0;
-  border-top: 1px solid var(--a-color-border-soft);
+  min-width: 0;
 }
 
 .password-settings__copy,
@@ -110,10 +107,4 @@ async function submit() {
   color: var(--a-color-muted);
 }
 
-@media (max-width: 767px) {
-  .password-settings {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
 </style>

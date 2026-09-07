@@ -60,4 +60,67 @@ describe('BlogSheetStack', () => {
 
     expect(sheets.layers.value).toHaveLength(0)
   })
+
+  it('closes all layers when switching blog sections or modules', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts', component: { template: '<div />' } },
+        { path: '/posts/articles', component: { template: '<div />' } },
+        { path: '/music', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/posts')
+    await router.isReady()
+
+    const sheets = useBlogSheets()
+    const wrapper = mount(BlogSheetStack, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BlogPostSheet: { template: '<div />' },
+        },
+      },
+    })
+
+    sheets.openPost('post-1', '文章一')
+    await router.push('/posts/articles')
+    await router.isReady()
+    expect(sheets.layers.value).toHaveLength(0)
+
+    sheets.openPost('post-2', '文章二')
+    await router.push('/music')
+    await router.isReady()
+    expect(sheets.layers.value).toHaveLength(0)
+    wrapper.unmount()
+  })
+
+  it('keeps the sheet during a desktop post route handoff back to the blog home', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts', component: { template: '<div />' } },
+        { path: '/posts/post/:id', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/posts/post/post-1')
+    await router.isReady()
+
+    const sheets = useBlogSheets()
+    const wrapper = mount(BlogSheetStack, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BlogPostSheet: { template: '<div />' },
+        },
+      },
+    })
+
+    sheets.openPost('post-1', '文章一')
+    await router.replace('/posts')
+    await router.isReady()
+
+    expect(sheets.layers.value.map(layer => layer.key)).toEqual(['post:post-1'])
+    wrapper.unmount()
+  })
 })

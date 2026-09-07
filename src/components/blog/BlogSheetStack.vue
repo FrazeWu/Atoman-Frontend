@@ -11,8 +11,17 @@ const ShortNoteSheet = defineAsyncComponent(() => import('@/components/blog/Shor
 const route = useRoute()
 const { renderLayers, closeAll } = useBlogSheets()
 
-watch(() => route.path, (path) => {
-  if (/^\/studio\/blog\/(new|[^/]+\/edit)$/.test(path) || /^\/posts\/notes\/(new|[^/]+\/edit)$/.test(path)) closeAll()
+if (!route.path.startsWith('/posts')) closeAll()
+
+watch(() => route.fullPath, (_, previousFullPath) => {
+  const path = route.path
+  const previousPath = previousFullPath?.split(/[?#]/, 1)[0] || ''
+  const directPostHandoff = path === '/posts'
+    && /^\/posts\/post\/[^/]+$/.test(previousPath)
+    && renderLayers.value.some(layer => layer.key === `post:${previousPath.split('/').at(-1)}`)
+
+  if (directPostHandoff) return
+  closeAll()
 })
 </script>
 

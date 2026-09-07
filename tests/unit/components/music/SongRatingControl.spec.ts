@@ -22,14 +22,15 @@ describe('SongRatingControl.vue', () => {
     expect(wrapper.emitted('rate')).toEqual([[9]])
   })
 
-  it('shows and forwards the clear action for a personal rating', async () => {
+  it('hides personal rating text and forwards the clear action', async () => {
     const wrapper = mount(SongRatingControl, {
       props: { songTitle: '示例歌曲', viewerRating: 8 },
     })
 
     await wrapper.get('.rating-control__clear').trigger('click')
 
-    expect(wrapper.text()).toContain('我的评分 8/10 · 4.0 星')
+    expect(wrapper.find('.rating-control__mine').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('我的评分')
     expect(wrapper.emitted('clear')).toEqual([[]])
   })
 })

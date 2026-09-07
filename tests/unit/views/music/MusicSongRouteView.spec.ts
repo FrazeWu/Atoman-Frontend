@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
 import MusicSongRouteView from "../../../../src/views/music/MusicSongRouteView.vue";
 
+
 const mocks = vi.hoisted(() => ({
 	getMusicSongDetail: vi.fn(),
 	listMusicAlbums: vi.fn(),
 	route: { params: { songId: "song-1" } },
+	routeQuery: {} as Record<string, string>,
 	drawerState: { songRefreshToken: 0 },
 	loadLyrics: vi.fn(),
 	currentLyricLine: vi.fn(),
@@ -28,7 +30,7 @@ vi.mock("@/api/musicV1", async (importOriginal) => ({
 	addMusicSongToLater: vi.fn(),
 }));
 vi.mock("vue-router", () => ({
-	useRoute: () => ({ ...route, query: {} }),
+	useRoute: () => ({ ...route, query: mocks.routeQuery }),
 	useRouter: () => ({
 		currentRoute,
 		push: vi.fn(),
@@ -107,6 +109,7 @@ describe("MusicSongRouteView", () => {
 		mocks.listMusicAlbums.mockReset();
 		mocks.listMusicAlbums.mockResolvedValue({ data: [], meta: { total: 0 } });
 		route.params.songId = "song-1";
+		mocks.routeQuery = {};
 		drawerState.value.songRefreshToken = 0;
 		mocks.loadLyrics.mockReset();
 		mocks.openSong.mockReset();
@@ -149,5 +152,17 @@ describe("MusicSongRouteView", () => {
 		await flushPromises();
 
 		expect(mocks.openSong).toHaveBeenLastCalledWith("song-2");
+	});
+
+	it("forwards annotation focus query to the song sheet", async () => {
+		mocks.routeQuery = { annotation_id: "annotation-1", rebind: "1" };
+
+		mount(MusicSongRouteView);
+		await flushPromises();
+
+		expect(mocks.openSong).toHaveBeenCalledWith("song-1", {
+			focusAnnotationId: "annotation-1",
+			startRebind: true,
+		});
 	});
 });

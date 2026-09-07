@@ -293,8 +293,10 @@
           : ''
       "
       :start-rebind="route.query.rebind === '1'"
+      read-only-annotations
       @close="closeLyricsPanel"
       @mode-change="lyricsMode = $event"
+      @open-song-detail="openCurrentSongDetail"
       @seek="player.seek"
     />
   </Transition>
@@ -345,7 +347,7 @@ import { usePodcastPlayerActions } from "@/composables/usePodcastPlayerActions";
 const player = usePlayerStore();
 const route = useRoute();
 const lyricsPanelRef = ref<{ requestClose: () => void } | null>(null);
-const { openAlbum, openArtist } = useMusicDrawers();
+const { openAlbum, openArtist, openSong } = useMusicDrawers();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
 const playerInfoRef = ref<HTMLElement | null>(null);
@@ -379,6 +381,13 @@ async function setPlayerDisplayMode(mode: "full" | "cover") {
 function closeLyricsPanel() {
   lyricsMode.value = 'player'
   player.closeLyrics()
+}
+
+function openCurrentSongDetail() {
+  const songId = player.currentSong?.id
+  if (!songId) return
+  player.closeLyrics()
+  openSong(String(songId))
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {

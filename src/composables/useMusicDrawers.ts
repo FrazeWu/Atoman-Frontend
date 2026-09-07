@@ -16,6 +16,7 @@ import type {
 	MusicCreationFlowSeed,
 	MusicEditorState,
 	MusicSheetLayer,
+	MusicSongLayerOptions,
 	NestedActionType,
 } from "@/components/music/musicSheetTypes";
 import { createSheetStack } from "@/composables/useSheetStack";
@@ -291,13 +292,26 @@ const albumLayer = (id: string): MusicSheetLayer => ({
 	payload: { albumId: id },
 });
 
-const songLayer = (id: string): MusicSheetLayer => ({
-	key: `song:${id}`,
-	kind: "song",
-	title: "歌曲详情",
-	route: `/music/song/${id}`,
-	payload: { songId: id },
-});
+const songLayer = (id: string, options: MusicSongLayerOptions = {}): MusicSheetLayer => {
+	const query = new URLSearchParams();
+	if (options.focusAnnotationId?.trim()) {
+		query.set("annotation_id", options.focusAnnotationId.trim());
+	}
+	if (options.startRebind) query.set("rebind", "1");
+	const queryString = query.toString();
+
+	return {
+		key: `song:${id}`,
+		kind: "song",
+		title: "歌曲详情",
+		route: `/music/song/${encodeURIComponent(id)}${queryString ? `?${queryString}` : ""}`,
+		payload: {
+			songId: id,
+			...(options.focusAnnotationId?.trim() ? { focusAnnotationId: options.focusAnnotationId.trim() } : {}),
+			...(options.startRebind ? { startRebind: true } : {}),
+		},
+	};
+};
 
 const playlistLayer = (id: string): MusicSheetLayer => ({
 	key: `playlist:${id}`,
@@ -461,15 +475,22 @@ export function useMusicDrawers() {
 		state.value.songRefreshToken += 1;
 	};
 
-	const openSong = (id: string) => {
-		const target = `/music/song/${encodeURIComponent(id)}`;
+	const openSong = (id: string, options: MusicSongLayerOptions = {}) => {
+		const layer = songLayer(id, options);
+		const target = layer.route!;
+		const hasFocus = Boolean(options.focusAnnotationId?.trim() || options.startRebind);
+		if (hasFocus && sheetStack.layers.value.some((item) => item.key === layer.key)) {
+			if (sheetStack.top.value?.key !== layer.key) sheetStack.popTo(layer.key);
+			sheetStack.replaceTop(layer, true);
+			return;
+		}
 		if (mobile) {
-			if (router.currentRoute.value.path === target)
-				sheetStack.push(songLayer(id));
+			if (router.currentRoute.value.fullPath === target)
+				sheetStack.push(layer);
 			else void router.push(target);
 			return;
 		}
-		sheetStack.push(songLayer(id));
+		sheetStack.push(layer);
 	};
 	const closeSong = (
 		key = [...sheetStack.layers.value]

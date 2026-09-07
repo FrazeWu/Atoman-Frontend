@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconHeart as Heart, IconHistory as History, IconPlaylistAdd as ListPlus, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPlayerTrackNext as StepForward } from '@tabler/icons-vue'
-import { deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem } from '@/api/musicV1'
-import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
+import { deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicLyricsAnnotation, type MusicLyricsAnnotationVote, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem } from '@/api/musicV1'
+import MusicAnnotationWorkspace from '@/components/music/MusicAnnotationWorkspace.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
@@ -20,6 +20,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
+import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useMusicSheetNavigation } from '@/composables/useMusicSheetNavigation'
 import { reportError } from '@/utils/logger'
@@ -47,9 +48,11 @@ const {
   openNestedAction,
 } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
-const authStore = getMountedPinia() ? useAuthStore() : { isAuthenticated: false }
+const authStore = getMountedPinia() ? useAuthStore() : { isAuthenticated: false, user: null }
 const { favoriteSongIds, playlists, loadFavoriteSongs, loadPlaylists, toggleFavoriteSong, addSongToPlaylist } = useMusicFavoritePlaylist()
 const songId = computed(() => props.layer?.payload.songId ?? state.value.songId)
+const focusAnnotationId = computed(() => props.layer?.payload.focusAnnotationId ?? '')
+const startRebind = computed(() => props.layer?.payload.startRebind === true)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : songId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
@@ -70,6 +73,10 @@ const {
   errorMessage: lyricsError,
   load: loadLyrics,
   createAnnotation,
+  annotationsByLine,
+  updateAnnotation,
+  deleteAnnotation,
+  voteAnnotation,
   currentLine: currentLyricLine,
 } = useMusicLyrics()
 const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
@@ -79,6 +86,10 @@ const selectedTextDraft = ref<{
   startOffset: number
   endOffset: number
 } | null>(null)
+const selectedAnnotationIds = ref<string[]>([])
+const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
+const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
+let rebindOperationGeneration = 0
 
 const sheetTitle = computed(() => detail.value?.song.title?.trim()
   ? `歌曲-${detail.value.song.title.trim()}`
@@ -138,6 +149,30 @@ const formattedReleaseDate = computed(() => {
 const effectiveSources = computed(() => detail.value?.song.effective_sources ?? detail.value?.song.sources ?? [])
 const appleMusicSource = computed(() => effectiveSources.value.find(source =>
   source.title === 'Apple Music' || source.url?.includes('music.apple.com'),
+))
+
+const currentUserIds = computed(() => collectIdentityValues(authStore.user as Record<string, unknown> | null))
+const activeAnnotationCount = computed(() => (
+  lyrics.value?.annotations.filter(annotation => annotation.status === 'active').length ?? 0
+))
+const visibleAnnotations = computed(() => {
+  const annotations = lyrics.value?.annotations ?? []
+  const selected = selectedAnnotationIds.value.length
+    ? annotations.filter(annotation => selectedAnnotationIds.value.includes(annotation.id) && annotation.status === 'active')
+    : annotations.filter(annotation => annotation.status === 'active')
+  const pending = annotations.filter(annotation => annotation.status === 'needs_rebind' && canManageAnnotation(annotation))
+  const seen = new Set<string>()
+  return [...selected, ...pending].filter(annotation => {
+    if (seen.has(annotation.id)) return false
+    seen.add(annotation.id)
+    return true
+  })
+})
+const annotationEditorVisible = computed(() => Boolean(selectedTextDraft.value || editingAnnotation.value || rebindingAnnotation.value))
+const annotationSelectedText = computed(() => editingAnnotation.value?.selected_text ?? selectedTextDraft.value?.selectedText ?? '')
+const annotationInitialBody = computed(() => editingAnnotation.value?.body ?? '')
+const annotationEditorMode = computed<'create' | 'edit' | 'rebind'>(() => (
+  rebindingAnnotation.value ? 'rebind' : editingAnnotation.value ? 'edit' : 'create'
 ))
 
 function showToast(message: string) {
@@ -244,6 +279,25 @@ function openSongHistory() {
   })
 }
 
+function collectIdentityValues(value: Record<string, unknown> | null | undefined) {
+  if (!value) return []
+  return [value.id, value.uuid]
+    .filter(candidate => candidate !== null && candidate !== undefined && candidate !== '')
+    .map(candidate => String(candidate))
+}
+
+function canManageAnnotation(annotation: MusicLyricsAnnotation) {
+  if (!authStore.isAuthenticated || currentUserIds.value.length === 0) return false
+  const creatorIds = collectIdentityValues(annotation.creator as Record<string, unknown> | null)
+  return creatorIds.some(creatorId => currentUserIds.value.includes(creatorId))
+}
+
+function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationIds: string[] }) {
+  selectedAnnotationIds.value = payload.annotationIds
+  editingAnnotation.value = null
+  clearRebindState()
+}
+
 function handleSelectText(payload: {
   line: MusicSongLyricsLine
   selectedText: string
@@ -251,19 +305,28 @@ function handleSelectText(payload: {
   endOffset: number
 }) {
   if (!requireLogin()) return
+  if (rebindingAnnotation.value) rebindOperationGeneration += 1
+  editingAnnotation.value = null
   selectedTextDraft.value = payload
 }
 
-function cancelAnnotation() {
-  selectedTextDraft.value = null
+function handleCancelAnnotation() {
+  clearRebindState()
+  editingAnnotation.value = null
 }
 
-async function saveAnnotation(body: string) {
-  if (!detail.value || !selectedTextDraft.value) return
+async function handleSaveAnnotation(body: string) {
+  if (!detail.value || !authStore.isAuthenticated) return
+  if (editingAnnotation.value) {
+    await updateAnnotation(String(detail.value.song.id), editingAnnotation.value.id, { body })
+    editingAnnotation.value = null
+    return
+  }
+  if (!selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
 
-  await createAnnotation(String(detail.value.song.id), {
+  const annotation = await createAnnotation(String(detail.value.song.id), {
     line_key: lineKey,
     selected_text: selectedTextDraft.value.selectedText,
     start_offset: selectedTextDraft.value.startOffset,
@@ -271,6 +334,59 @@ async function saveAnnotation(body: string) {
     body,
   })
   selectedTextDraft.value = null
+  if (annotation?.id) selectedAnnotationIds.value = [annotation.id]
+}
+
+function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
+  if (!authStore.isAuthenticated) return
+  clearRebindState()
+  editingAnnotation.value = annotation
+}
+
+async function handleDeleteAnnotation(annotationId: string) {
+  if (!detail.value || !authStore.isAuthenticated) return
+  await deleteAnnotation(String(detail.value.song.id), annotationId)
+  selectedAnnotationIds.value = selectedAnnotationIds.value.filter(id => id !== annotationId)
+}
+
+async function handleVoteAnnotation(annotationId: string, vote: MusicLyricsAnnotationVote | null) {
+  if (!detail.value || !authStore.isAuthenticated) return
+  await voteAnnotation(String(detail.value.song.id), annotationId, vote)
+}
+
+function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
+  if (!canManageAnnotation(annotation) || annotation.status !== 'needs_rebind') return
+  clearRebindState()
+  editingAnnotation.value = null
+  rebindingAnnotation.value = annotation
+}
+
+async function handleConfirmRebind() {
+  if (!detail.value || !authStore.isAuthenticated || !rebindingAnnotation.value || !selectedTextDraft.value) return
+  const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
+  if (!lineKey) return
+  const annotation = rebindingAnnotation.value
+  const songId = String(detail.value.song.id)
+  const operationGeneration = ++rebindOperationGeneration
+  try {
+    await updateAnnotation(songId, annotation.id, {
+      line_key: lineKey,
+      selected_text: selectedTextDraft.value.selectedText,
+      start_offset: selectedTextDraft.value.startOffset,
+      end_offset: selectedTextDraft.value.endOffset,
+    })
+  } catch {
+    return
+  }
+  if (String(detail.value.song.id) !== songId || rebindOperationGeneration !== operationGeneration) return
+  removePendingMusicLyricsAnnotation(annotation.id)
+  clearRebindState()
+}
+
+function clearRebindState() {
+  rebindOperationGeneration += 1
+  selectedTextDraft.value = null
+  rebindingAnnotation.value = null
 }
 
 async function loadDetail(targetSongId: unknown) {
@@ -311,10 +427,28 @@ watch(
   ([targetSongId]) => {
     lyricsDisplayMode.value = 'original'
     selectedTextDraft.value = null
+    selectedAnnotationIds.value = []
+    editingAnnotation.value = null
+    clearRebindState()
     void loadDetail(targetSongId)
     if (typeof targetSongId === 'string' && targetSongId) void loadLyrics(targetSongId)
   },
   { immediate: true },
+)
+
+watch(
+  () => [focusAnnotationId.value, startRebind.value, lyrics.value?.song_id, lyrics.value?.annotations] as const,
+  ([annotationId, shouldRebind, lyricSongId, annotations]) => {
+    if (!annotationId || String(lyricSongId ?? '') !== String(songId.value ?? '') || !annotations) return
+    const annotation = annotations.find(item => item.id === annotationId)
+    if (!annotation) return
+
+    selectedAnnotationIds.value = [annotation.id]
+    if (shouldRebind && annotation.status === 'needs_rebind' && canManageAnnotation(annotation)) {
+      handleRebindAnnotation(annotation)
+    }
+  },
+  { immediate: true, deep: true },
 )
 </script>
 
@@ -428,7 +562,7 @@ watch(
           </header>
           <div
             class="song-detail__lyrics-layout"
-            :class="{ 'has-annotation-editor': selectedTextDraft }"
+            :class="{ 'has-annotation-workspace': lyrics }"
           >
             <PContentProgress
               :loading="lyricsLoading"
@@ -450,23 +584,36 @@ watch(
                   v-for="line in lyrics.lines"
                   :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
                   :line="line"
+                  :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
                   :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
                   :bilingual="lyricsDisplayMode === 'bilingual'"
                   :can-select="authStore.isAuthenticated"
                   :can-annotate="authStore.isAuthenticated"
                   @select-text="handleSelectText"
+                  @open-annotations="handleOpenAnnotations"
                   @seek="player.seek"
                 />
               </div>
             </PContentProgress>
 
-            <MusicAnnotationEditor
-              v-if="selectedTextDraft"
-              show
-              class="song-detail__annotation-editor"
-              :selected-text="selectedTextDraft.selectedText"
-              @save="saveAnnotation"
-              @cancel="cancelAnnotation"
+            <MusicAnnotationWorkspace
+              class="song-detail__annotation-workspace"
+              :annotations="visibleAnnotations"
+              :can-write="authStore.isAuthenticated"
+              :current-user-ids="currentUserIds"
+              :total-count="activeAnnotationCount"
+              :selection-mode="Boolean(rebindingAnnotation)"
+              :editor-visible="annotationEditorVisible"
+              :selected-text="annotationSelectedText"
+              :initial-body="annotationInitialBody"
+              :editor-mode="annotationEditorMode"
+              @vote="handleVoteAnnotation"
+              @edit="handleEditAnnotation"
+              @delete="handleDeleteAnnotation"
+              @rebind="handleRebindAnnotation"
+              @save="handleSaveAnnotation"
+              @cancel="handleCancelAnnotation"
+              @confirm-rebind="handleConfirmRebind"
             />
           </div>
         </section>
@@ -527,12 +674,12 @@ watch(
 .song-detail__lyrics h2 { margin: 0; font-size: 1rem; }
 .song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 .song-detail__lyrics-layout { min-width: 0; }
-.song-detail__lyrics-layout.has-annotation-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 0; }
+.song-detail__lyrics-layout.has-annotation-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 0; }
 .song-detail__lyric-lines { display: grid; gap: 0.15rem; max-height: 32rem; overflow-y: auto; overflow-x: hidden; }
 .song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; }
 .song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.65; }
-.song-detail__annotation-editor { align-self: start; border-radius: 0; border-width: 0 0 0 1px; }
+.song-detail__annotation-workspace { align-self: start; min-width: 0; max-height: 32rem; overflow-y: auto; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
-@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-editor { grid-template-columns: 1fr; } .song-detail__annotation-editor { border-width: 1px 0 0; } }
+@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-workspace { grid-template-columns: 1fr; } .song-detail__annotation-workspace { max-height: none; border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding-top: 1rem; padding-left: 0; } }
 </style>

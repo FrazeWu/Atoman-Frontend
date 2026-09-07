@@ -28,6 +28,37 @@ describe("useMusicDrawers", () => {
 		expect(state.value.albumId).toBeNull();
 	});
 
+	it("preserves lyric annotation focus in a song layer route", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.openSong("song-1", {
+			focusAnnotationId: "annotation-1",
+			startRebind: true,
+		});
+
+		expect(drawers.layers.value[0]).toMatchObject({
+			route: "/music/song/song-1?annotation_id=annotation-1&rebind=1",
+			payload: {
+				songId: "song-1",
+				focusAnnotationId: "annotation-1",
+				startRebind: true,
+			},
+		});
+	});
+
+	it("updates an already open song with a new lyric annotation focus", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.openSong("song-1");
+		drawers.openSong("song-1", { focusAnnotationId: "annotation-2", startRebind: true });
+
+		expect(drawers.layers.value).toHaveLength(1);
+		expect(drawers.layers.value[0]?.payload).toMatchObject({
+			focusAnnotationId: "annotation-2",
+			startRebind: true,
+		});
+	});
+
 	it("replaces an entity for navigation without adding a new layer", () => {
 		const drawers = useMusicDrawers();
 		drawers.openAlbum("album-1");

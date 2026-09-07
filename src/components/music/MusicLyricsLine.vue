@@ -49,21 +49,6 @@
         <SquarePen :size="15" aria-hidden="true" />
         添加注释
       </button>
-      <div
-        v-if="clickToSeek && activeAnnotations.length"
-        class="music-lyrics-line__annotation-preview"
-        aria-label="歌词注释预览"
-      >
-        <p
-          v-for="annotation in activeAnnotations.slice(0, 2)"
-          :key="annotation.id"
-          tabindex="0"
-          class="music-lyrics-line__annotation-preview-item"
-        >
-          <span v-if="annotation.selected_text">“{{ annotation.selected_text }}”</span>
-          <span>{{ annotation.body }}</span>
-        </p>
-      </div>
       <p v-if="bilingual && line.translation" class="music-lyrics-line__translation">
         {{ line.translation }}
       </p>
@@ -228,6 +213,10 @@ function submitSelectedText() {
 }
 
 function handleHighlightClick(annotationIds: string[]) {
+  if (props.clickToSeek && activeAnnotations.value.length) {
+    emit('open-annotations', { line: props.line, annotationIds })
+    return
+  }
   if (props.clickToSeek) {
     handleSeek()
     return
@@ -236,7 +225,10 @@ function handleHighlightClick(annotationIds: string[]) {
 }
 
 function handleContentClick() {
-  if (props.clickToSeek) handleSeek()
+  if (!props.clickToSeek) return
+  if (activeAnnotations.value.length) openLineAnnotations()
+  else emit('open-annotations', { line: props.line, annotationIds: [] })
+  if (!activeAnnotations.value.length) handleSeek()
 }
 
 function openLineAnnotations() {
@@ -377,38 +369,6 @@ function formatTime(timeMs: number | null | undefined): string {
   transition: opacity 0.25s ease, color 0.25s ease;
 }
 
-.music-lyrics-line__annotation-preview {
-  display: grid;
-  gap: 0.25rem;
-  margin-top: 0.55rem;
-  color: var(--a-color-muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
-  opacity: 0;
-  transform: translateY(0.25rem);
-  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter),
-    transform var(--a-motion-state) var(--a-motion-ease-enter);
-  pointer-events: none;
-}
-
-.music-lyrics-line:hover .music-lyrics-line__annotation-preview,
-.music-lyrics-line:focus-within .music-lyrics-line__annotation-preview {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.music-lyrics-line__annotation-preview-item {
-  display: flex;
-  gap: 0.45rem;
-  margin: 0;
-  max-width: 36rem;
-}
-
-.music-lyrics-line__annotation-preview-item span:first-child {
-  color: var(--a-color-text);
-  font-weight: 700;
-}
-
 .music-lyrics-line__selection-action {
   position: absolute;
   z-index: 1;
@@ -509,10 +469,6 @@ function formatTime(timeMs: number | null | undefined): string {
     flex-direction: column;
   }
 
-  .music-lyrics-line__annotation-preview {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 </style>

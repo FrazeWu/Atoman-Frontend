@@ -33,6 +33,12 @@ const favoriteApi = vi.hoisted(() => ({
 	addSongToPlaylist: vi.fn(),
 }));
 
+const musicDrawers = vi.hoisted(() => ({
+	openAlbum: vi.fn(),
+	openArtist: vi.fn(),
+	openSong: vi.fn(),
+}));
+
 vi.mock("@/composables/useApi", () => ({
 	useApiUrl: () => "/api/v1",
 	useApi: () => ({
@@ -61,6 +67,10 @@ vi.mock("@/composables/useLoginRedirect", () => ({
 
 vi.mock("@/composables/useMusicFavoritePlaylist", () => ({
 	useMusicFavoritePlaylist: () => favoriteApi,
+}));
+
+vi.mock("@/composables/useMusicDrawers", () => ({
+	useMusicDrawers: () => musicDrawers,
 }));
 
 class ResizeObserverStub {
@@ -92,6 +102,9 @@ describe("AudioPlayer", () => {
 		loginRedirect.requireLogin.mockReset();
 		loginRedirect.requireLogin.mockReturnValue(true);
 		favoriteApi.favoriteSongIds.value = new Set();
+		musicDrawers.openAlbum.mockReset();
+		musicDrawers.openArtist.mockReset();
+		musicDrawers.openSong.mockReset();
 		favoriteApi.loadFavoriteSongs.mockReset();
 		favoriteApi.loadFavoriteSongs.mockResolvedValue(undefined);
 	});
@@ -427,6 +440,37 @@ describe("AudioPlayer", () => {
 		expect(seek).toHaveBeenCalledOnce();
 		expect(seek).toHaveBeenCalledWith(27.125);
 
+		wrapper.unmount();
+	});
+
+	it("closes the lyrics popup and opens the current song detail for annotation editing", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+		player.showLyrics = true;
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: {
+						emits: ["open-song-detail"],
+						template: '<button class="open-song-detail" @click="$emit(\'open-song-detail\')">编辑注释</button>',
+					},
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		await wrapper.get(".open-song-detail").trigger("click");
+
+		expect(player.showLyrics).toBe(false);
+		expect(musicDrawers.openSong).toHaveBeenCalledWith("song-1");
 		wrapper.unmount();
 	});
 

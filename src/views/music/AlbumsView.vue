@@ -52,8 +52,8 @@ async function openFirstPendingRebind() {
   if (!notification) return
   const router = (await import('@/router')).default
   await router.push({
-    path: `/music/album/${notification.album_id}`,
-    query: { song_id: notification.song_id, annotation_id: notification.annotation_id, rebind: '1' },
+    path: `/music/song/${notification.song_id}`,
+    query: { annotation_id: notification.annotation_id, rebind: '1' },
   })
 }
 

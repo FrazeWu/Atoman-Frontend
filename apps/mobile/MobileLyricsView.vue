@@ -6,8 +6,11 @@
       :song-title="player.currentSong.title"
       :artist-text="player.currentSong.artist || '未知艺术家'"
       :current-time-seconds="player.currentTime"
+      mode="player"
       presentation="page"
+      read-only-annotations
       @close="close"
+      @open-song-detail="openSongDetail"
       @seek="player.seek"
     />
     <section v-else class="mobile-lyrics-view__empty">
@@ -21,15 +24,24 @@
 <script setup lang="ts">
 import { RouterLink, useRouter } from 'vue-router'
 import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
 
 const player = usePlayerStore()
 const router = useRouter()
+const { openSong } = useMusicDrawers()
 
 function close() {
   player.showLyrics = false
   if (window.history.state?.back) router.back()
   else void router.push('/music/player')
+}
+
+function openSongDetail() {
+  const songId = player.currentSong?.id
+  if (!songId) return
+  player.showLyrics = false
+  openSong(String(songId))
 }
 </script>
 

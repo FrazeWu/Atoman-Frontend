@@ -3,6 +3,20 @@
     <header class="music-lyrics-panel__header">
       <div class="music-lyrics-panel__actions">
         <PButton
+          v-if="isReadOnlyAnnotations"
+          class="music-lyrics-panel__action-btn"
+          type="button"
+          variant="secondary"
+          aria-label="在歌曲详情中编辑注释"
+          title="在歌曲详情中编辑注释"
+          data-testid="lyrics-open-song-detail"
+          @click="emit('open-song-detail')"
+        >
+          <Pencil :size="16" aria-hidden="true" />
+          <span>编辑注释</span>
+        </PButton>
+        <PButton
+          v-else
           class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
@@ -162,10 +176,10 @@
       </div>
 
       <Transition name="lyrics-annotation-panel">
-        <aside v-if="!isMobileViewport && isAnnotationMode" class="music-lyrics-panel__sidebar" aria-label="歌词注解">
+        <aside v-if="!isMobileViewport" class="music-lyrics-panel__sidebar" aria-label="歌词注解">
           <MusicAnnotationWorkspace
             :annotations="visibleAnnotations"
-            :can-write="isAuthenticated"
+            :can-write="isAuthenticated && isAnnotationMode && !isReadOnlyAnnotations"
             :current-user-ids="currentUserIds"
             :total-count="activeAnnotationCount"
             :selection-mode="Boolean(rebindingAnnotation)"
@@ -186,13 +200,13 @@
     </div>
 
     <section
-      v-if="isMobileViewport && isAnnotationMode && mobilePage && mobileAnnotationOpen"
+      v-if="isMobileViewport && isReadOnlyAnnotations"
       class="music-lyrics-panel__mobile-annotations"
       aria-label="歌词解析"
     >
       <MusicAnnotationWorkspace
         :annotations="visibleAnnotations"
-        :can-write="isAuthenticated"
+        :can-write="false"
         :current-user-ids="currentUserIds"
         :total-count="activeAnnotationCount"
         :selection-mode="Boolean(rebindingAnnotation)"
@@ -210,7 +224,7 @@
       />
     </section>
     <PSheet
-      v-else-if="isMobileViewport && isAnnotationMode"
+      v-else-if="isMobileViewport && isAnnotationMode && !isReadOnlyAnnotations"
       :show="mobileAnnotationOpen"
       side="bottom"
       :title="songTitle.trim() ? `歌词解析-${songTitle.trim()}` : '歌词解析-歌曲'"
@@ -240,7 +254,7 @@
     </PSheet>
 
     <MusicLyricEditorDrawer
-      v-if="isAuthenticated && isAnnotationMode && (presentation === 'sheet' || isLyricEditorOpen)"
+      v-if="isAuthenticated && isAnnotationMode && !isReadOnlyAnnotations && (presentation === 'sheet' || isLyricEditorOpen)"
       :presentation="mobilePage ? 'page' : 'sheet'"
       :show="isLyricEditorOpen"
       :song-title="songTitle"
@@ -321,17 +335,20 @@ const props = defineProps<{
   startRebind?: boolean
   presentation?: 'sheet' | 'page'
   mode?: 'annotation' | 'player'
+  readOnlyAnnotations?: boolean
 }>()
 
 const emit = defineEmits<{
   close: []
   seek: [timeSeconds: number]
   'mode-change': [mode: 'annotation' | 'player']
+  'open-song-detail': []
 }>()
 
 const mobilePage = computed(() => props.presentation === 'page')
-const isPlayerMode = computed(() => props.mode === 'player')
+const isPlayerMode = computed(() => props.mode === 'player' || props.readOnlyAnnotations === true)
 const isAnnotationMode = computed(() => !isPlayerMode.value)
+const isReadOnlyAnnotations = computed(() => Boolean(props.readOnlyAnnotations || isPlayerMode.value))
 
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
@@ -476,7 +493,10 @@ const rebindableAnnotations = computed(() => (lyrics.value?.annotations ?? []).f
 )))
 const visibleAnnotations = computed(() => {
   const seen = new Set<string>()
-  return [...selectedAnnotations.value, ...rebindableAnnotations.value].filter((annotation) => {
+  const annotations = isReadOnlyAnnotations.value
+    ? selectedAnnotations.value
+    : [...selectedAnnotations.value, ...rebindableAnnotations.value]
+  return annotations.filter((annotation) => {
     if (seen.has(annotation.id)) return false
     seen.add(annotation.id)
     return true
@@ -541,7 +561,7 @@ watch(
   () => [props.focusAnnotationId, props.startRebind, lyrics.value?.song_id, lyrics.value?.annotations] as const,
   async ([annotationId, startRebind]) => {
     if (!annotationId || !lyrics.value) return
-    if (isPlayerMode.value) emit('mode-change', 'annotation')
+    if (isPlayerMode.value && !isReadOnlyAnnotations.value) emit('mode-change', 'annotation')
     const annotation = lyrics.value.annotations.find((item) => item.id === annotationId)
     if (!annotation) return
     selectedAnnotationIds.value = [annotation.id]

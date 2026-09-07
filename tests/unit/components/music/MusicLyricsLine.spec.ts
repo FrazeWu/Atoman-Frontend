@@ -104,7 +104,7 @@ describe('MusicLyricsLine', () => {
     expect(wrapper.emitted('seek')).toEqual([[125]])
   })
 
-  it('播放器模式最多展示两条悬停注解预览', () => {
+  it('播放器模式点击前不展示注释正文', () => {
     const wrapper = mount(MusicLyricsLine, {
       props: {
         line: { line_key: 'line-1', text: 'Hello world', translation: '', time_ms: 1000 },
@@ -117,7 +117,40 @@ describe('MusicLyricsLine', () => {
       },
     })
 
-    expect(wrapper.findAll('.music-lyrics-line__annotation-preview-item')).toHaveLength(2)
+    expect(wrapper.find('.music-lyrics-line__annotation-preview').exists()).toBe(false)
+  })
+
+  it('播放器模式点击带注释的歌词行只打开该句注释，不触发定位', async () => {
+    const line = { line_key: 'line-1', text: 'Hello world', translation: '', time_ms: 1000 }
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line,
+        clickToSeek: true,
+        annotations: [
+          { id: 'a-1', status: 'active', start_offset: 0, end_offset: 5, selected_text: 'Hello', body: '解释' },
+        ] as any,
+      },
+    })
+
+    await wrapper.get('.music-lyrics-line__content').trigger('click')
+
+    expect(wrapper.emitted('open-annotations')).toEqual([[{ line, annotationIds: ['a-1'] }]])
+    expect(wrapper.emitted('seek')).toBeUndefined()
+  })
+
+  it('播放器模式点击无注释歌词会清空注释选择并继续定位', async () => {
+    const line = { line_key: 'line-2', text: 'No annotation', translation: '', time_ms: 2000 }
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line,
+        clickToSeek: true,
+      },
+    })
+
+    await wrapper.get('.music-lyrics-line__content').trigger('click')
+
+    expect(wrapper.emitted('open-annotations')).toEqual([[{ line, annotationIds: [] }]])
+    expect(wrapper.emitted('seek')).toEqual([[2]])
   })
 
   it('无时间轴的歌词行没有定位按钮', async () => {

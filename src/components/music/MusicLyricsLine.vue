@@ -5,9 +5,10 @@
       'is-active': active,
       'has-annotations': activeAnnotations.length > 0,
       'is-clickable': clickToSeek,
+      'is-static': disableHoverEffects,
     }"
   >
-    <div v-if="lineTimeMs != null" class="music-lyrics-line__time">
+    <div v-if="showTimeline && lineTimeMs != null" class="music-lyrics-line__time">
       <span>{{ formatTime(lineTimeMs) }}</span>
       <button
         type="button"
@@ -88,6 +89,8 @@ const props = withDefaults(defineProps<{
   canSelect?: boolean
   canAnnotate?: boolean
   clickToSeek?: boolean
+  showTimeline?: boolean
+  disableHoverEffects?: boolean
 }>(), {
   annotations: () => [],
   active: false,
@@ -95,6 +98,8 @@ const props = withDefaults(defineProps<{
   canSelect: true,
   canAnnotate: false,
   clickToSeek: false,
+  showTimeline: true,
+  disableHoverEffects: false,
 })
 
 const emit = defineEmits<{
@@ -283,6 +288,37 @@ function formatTime(timeMs: number | null | undefined): string {
   opacity: 1;
   transform: scale(1.02);
   color: var(--a-color-text);
+}
+
+.music-lyrics-line.is-static,
+.music-lyrics-line.is-static:hover,
+.music-lyrics-line.is-static:focus-within,
+.music-lyrics-line.is-static.has-annotations {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__actions {
+  min-width: 0;
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__highlight:hover {
+  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 20%, transparent);
+  border-bottom-color: var(--a-color-primary, #3b82f6);
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__annotation-action:hover,
+.music-lyrics-line.is-static .music-lyrics-line__annotation-action:focus-visible {
+  border-color: var(--a-color-border-soft);
+  color: var(--a-color-muted);
+  background: var(--a-color-bg);
+  transform: none;
+}
+
+.music-lyrics-line.is-static .music-lyrics-line__selection-action:hover,
+.music-lyrics-line.is-static .music-lyrics-line__selection-action:focus-visible {
+  border-color: var(--a-color-border-soft);
 }
 
 .music-lyrics-line.is-active .music-lyrics-line__text {

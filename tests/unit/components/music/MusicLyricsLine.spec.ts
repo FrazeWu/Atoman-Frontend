@@ -161,6 +161,19 @@ describe('MusicLyricsLine', () => {
     expect(wrapper.find('.music-lyrics-line__seek').exists()).toBe(false)
   })
 
+  it('详情模式可以隐藏时间轴并关闭行 hover 效果', () => {
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line: { line_key: 'line-1', text: 'Detail line', translation: '', time_ms: 1000 },
+        showTimeline: false,
+        disableHoverEffects: true,
+      },
+    })
+
+    expect(wrapper.find('.music-lyrics-line__time').exists()).toBe(false)
+    expect(wrapper.classes()).toContain('is-static')
+  })
+
   it('shows annotation count and opens all active annotations', async () => {
     const line = { line_key: 'line-1', text: 'Hello world', translation: '' }
     const wrapper = mount(MusicLyricsLine, {

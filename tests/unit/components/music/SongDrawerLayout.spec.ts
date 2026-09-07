@@ -31,4 +31,10 @@ describe('SongDrawer 单曲详情布局', () => {
     expect(source).not.toContain('overflow-y: auto')
     expect(source).toContain('grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem)')
   })
+
+  it('详情歌词使用紧凑行距，便于连续选择多行', () => {
+    expect(source).toContain(':deep(.music-lyrics-line) { opacity: 1; padding: 0.2rem 0; }')
+    expect(source).toContain(':deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.45; }')
+    expect(source).toContain('.song-detail__lyric-lines { display: grid; gap: 0; }')
+  })
 })

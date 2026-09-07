@@ -348,6 +348,7 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		await wrapper.get('[data-test="discussion-fab"]').trigger("click");
+		expect(wrapper.find('[data-test="discussion-fab"]').exists()).toBe(false);
 
 		expect(openNestedAction).not.toHaveBeenCalled();
 		const commentSheet = wrapper.getComponent({ name: "CommentSideSheet" });
@@ -360,7 +361,6 @@ describe("AlbumDrawer.vue", () => {
 
 		commentSheet.vm.$emit("count-change", 3);
 		await flushPromises();
-		expect(wrapper.get('[data-test="discussion-fab"]').text()).toContain("(3)");
 
 		commentSheet.vm.$emit("mode-change", "full");
 		await flushPromises();
@@ -370,6 +370,8 @@ describe("AlbumDrawer.vue", () => {
 		commentSheet.vm.$emit("close");
 		await flushPromises();
 		expect(commentSheet.props("show")).toBe(false);
+		expect(wrapper.get('[data-test="discussion-fab"]').text()).toContain("(3)");
+		expect(wrapper.get('[data-test="discussion-fab"]').text()).toContain("(3)");
 		expect(albumSheet.props()).toMatchObject({ isShifted: false, isTopLayer: true });
 	});
 

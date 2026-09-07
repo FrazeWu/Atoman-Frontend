@@ -514,7 +514,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
       <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
     </article>
     <PDiscussionFAB
-      v-if="post && sheets.isActive(layer.key)"
+      v-if="post && sheets.isActive(layer.key) && !commentsOpen"
       :count="commentCount"
       @click="openComments"
     />

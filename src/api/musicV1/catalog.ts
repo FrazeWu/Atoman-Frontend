@@ -54,6 +54,7 @@ import type {
 	MusicSearchKind,
 	MusicSongDetail,
 	MusicTag,
+	MusicTagOption,
 	MusicTagKind,
 	MusicSongRatingSummary,
 	MusicAlbumRatingSummary,
@@ -141,6 +142,12 @@ export async function listMusicTags(entity: "song" | "album", entityId: string):
 		? musicV1Endpoints.songTags(entityId)
 		: musicV1Endpoints.albumTags(entityId)
 	return apiGet<MusicTag[]>(endpoint)
+}
+
+export async function searchMusicTags(kind: MusicTagKind, query: string): Promise<MusicTagOption[]> {
+	return apiGet<MusicTagOption[]>(
+		`${musicV1Endpoints.tags()}${queryString({ kind, q: query })}`,
+	)
 }
 
 export async function addMusicTag(

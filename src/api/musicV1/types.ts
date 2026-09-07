@@ -570,6 +570,12 @@ export type MusicTag = {
 	can_delete: boolean;
 };
 
+export type MusicTagOption = {
+	id: string;
+	name: string;
+	kind: MusicTagKind;
+};
+
 export type MusicAlbumLinkSuggestion = {
 	album: MusicAlbumListItem;
 	musicbrainz: MusicBrainzReleaseCandidate;

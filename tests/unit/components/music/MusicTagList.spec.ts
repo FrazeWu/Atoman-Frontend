@@ -1,9 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicTagList from '@/components/music/MusicTagList.vue'
 
 const mocks = vi.hoisted(() => ({
   listMusicTags: vi.fn(),
+  searchMusicTags: vi.fn(),
   addMusicTag: vi.fn(),
   deleteMusicTag: vi.fn(),
   voteMusicTag: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/musicV1', () => ({
   listMusicTags: mocks.listMusicTags,
+  searchMusicTags: mocks.searchMusicTags,
   addMusicTag: mocks.addMusicTag,
   deleteMusicTag: mocks.deleteMusicTag,
   voteMusicTag: mocks.voteMusicTag,
@@ -27,7 +29,9 @@ vi.mock('@/composables/useLoginRedirect', () => ({
 
 describe('MusicTagList.vue', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     mocks.listMusicTags.mockReset()
+    mocks.searchMusicTags.mockReset()
     mocks.addMusicTag.mockReset()
     mocks.deleteMusicTag.mockReset()
     mocks.voteMusicTag.mockReset()
@@ -58,6 +62,7 @@ describe('MusicTagList.vue', () => {
         can_delete: false,
       },
     ])
+    mocks.searchMusicTags.mockResolvedValue([])
     mocks.addMusicTag.mockResolvedValue({
       id: 'tag-new',
       assignment_id: 'assignment-new',
@@ -81,6 +86,10 @@ describe('MusicTagList.vue', () => {
       can_delete: true,
     })
     mocks.deleteMusicTag.mockResolvedValue({ deleted: true })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('按情绪和类型分组展示标签，并支持添加、投票和确认删除', async () => {
@@ -111,8 +120,10 @@ describe('MusicTagList.vue', () => {
     expect(wrapper.get('[data-testid="music-tag-group-mood"]').text()).toContain('治愈')
     expect(wrapper.get('[data-testid="music-tag-group-type"]').text()).toContain('现场')
 
-    await wrapper.get('[data-testid="music-tag-name-input"]').setValue('夜晚')
-    await wrapper.get('form').trigger('submit')
+    await wrapper.get('[data-testid="music-tag-search-mood"]').setValue('夜晚')
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    await wrapper.get('[data-testid="music-tag-create-mood"]').trigger('click')
     await flushPromises()
     expect(mocks.addMusicTag).toHaveBeenCalledWith('song', 'song-1', { kind: 'mood', name: '夜晚' })
     expect(wrapper.get('[data-testid="music-tag-group-mood"]').text()).toContain('夜晚')
@@ -127,5 +138,43 @@ describe('MusicTagList.vue', () => {
     await flushPromises()
     expect(mocks.deleteMusicTag).toHaveBeenCalledWith('song', 'song-1', 'tag-mood')
     expect(wrapper.find('[data-testid="music-tag-delete-tag-mood"]').exists()).toBe(false)
+  })
+
+  it('分别搜索情绪和类型标签，已有结果可选择，无结果才显示创建入口', async () => {
+    mocks.searchMusicTags.mockImplementation(async (kind: string) => kind === 'mood'
+      ? [{ id: 'tag-existing', name: '温柔', kind: 'mood' }]
+      : [])
+    const wrapper = mount(MusicTagList, {
+      props: { entity: 'song', entityId: 'song-1' },
+      global: {
+        stubs: {
+          RouterLink: { template: '<a><slot /></a>' },
+          PInteractionActions: true,
+          PConfirm: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="music-tag-kind-selector"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="music-tag-search-mood"]')).toBeTruthy()
+    expect(wrapper.get('[data-testid="music-tag-search-type"]')).toBeTruthy()
+
+    await wrapper.get('[data-testid="music-tag-search-mood"]').setValue('温柔')
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    expect(mocks.searchMusicTags).toHaveBeenCalledWith('mood', '温柔')
+    expect(wrapper.get('[data-testid="music-tag-option-tag-existing"]').text()).toContain('温柔')
+    expect(wrapper.find('[data-testid="music-tag-create-mood"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="music-tag-option-tag-existing"]').trigger('click')
+    await flushPromises()
+    expect(mocks.addMusicTag).toHaveBeenCalledWith('song', 'song-1', { kind: 'mood', name: '温柔' })
+
+    await wrapper.get('[data-testid="music-tag-search-type"]').setValue('概念专辑')
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    expect(mocks.searchMusicTags).toHaveBeenCalledWith('type', '概念专辑')
+    expect(wrapper.get('[data-testid="music-tag-create-type"]').text()).toContain('创建“概念专辑”')
   })
 })

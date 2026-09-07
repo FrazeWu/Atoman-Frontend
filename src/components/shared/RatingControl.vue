@@ -219,6 +219,17 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   border: 0;
   background: transparent;
   cursor: pointer;
+  appearance: none;
+  transform: none;
+  transition: none;
+}
+
+.rating-control__score-target:hover,
+.rating-control__score-target:active,
+.rating-control__score-target:focus,
+.rating-control__score-target:focus-visible {
+  transform: none;
+  transition: none;
 }
 
 .rating-control__score-target--left {

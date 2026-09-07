@@ -221,7 +221,9 @@ describe("AlbumDrawer.vue", () => {
 	it("将标签放在专辑详情右侧栏，而不是曲目区域整行", () => {
 		expect(albumDrawerSource).toContain('class="album-detail-layout"');
 		expect(albumDrawerSource).toContain('<aside class="album-detail-tags"');
-		expect(albumDrawerSource).toContain(".album-detail-layout {\n  display: grid;");
+		expect(albumDrawerSource).toContain('content-max-width="96rem"');
+		expect(albumDrawerSource).toContain("grid-template-columns: minmax(72rem, 72rem) minmax(16rem, 19rem);");
+		expect(albumDrawerSource).toContain("@container (max-width: 89.99rem)");
 	});
 
 	it("does not render redundant sheet headings", () => {

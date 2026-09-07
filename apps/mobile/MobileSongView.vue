@@ -30,17 +30,16 @@
           <p v-else>{{ artistText }}</p>
         </div>
 
-      <button
-        type="button"
-        class="mobile-song-view__play"
-        :disabled="!detail.playable || !song.audio_url"
-        @click="playSong"
-      >
-        <Play :size="18" fill="currentColor" aria-hidden="true" />
-        <span>{{ detail.playable && song.audio_url ? '播放歌曲' : '暂无音频' }}</span>
-      </button>
-
       <div class="mobile-song-view__actions" aria-label="歌曲操作">
+        <button
+          type="button"
+          class="mobile-song-view__play"
+          :disabled="!detail.playable || !song.audio_url"
+          @click="playSong"
+        >
+          <Play :size="18" fill="currentColor" aria-hidden="true" />
+          <span>{{ detail.playable && song.audio_url ? '播放歌曲' : '暂无音频' }}</span>
+        </button>
         <button
           type="button"
           class="mobile-song-view__action"
@@ -67,13 +66,13 @@
         <button
           type="button"
           class="mobile-song-view__action"
-          :disabled="actionBusy === 'later'"
-          aria-label="稍后播放"
-          title="稍后播放"
-          @click="addToLater"
+          :disabled="song.edit_status !== undefined && song.edit_status !== 'development'"
+          aria-label="编辑歌曲"
+          title="编辑歌曲"
+          @click="editSong"
         >
-          <Clock3 :size="19" aria-hidden="true" />
-          <span>稍后播放</span>
+          <Pencil :size="19" aria-hidden="true" />
+          <span>编辑</span>
         </button>
       </div>
       <p v-if="feedback" class="mobile-song-view__feedback" role="status">{{ feedback }}</p>
@@ -96,6 +95,13 @@
         </div>
       </dl>
 
+      <MusicDescriptionPreview
+        v-if="song.description"
+        :description="song.description"
+        content-id="mobile-song-description"
+        test-id="mobile-song-description-toggle"
+      />
+
       <section v-if="song.lyrics" class="mobile-song-view__lyrics" aria-labelledby="lyrics-heading">
         <h2 id="lyrics-heading">歌词</h2>
         <p>{{ song.lyrics }}</p>
@@ -107,12 +113,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconClock as Clock3, IconHeart as Heart, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play } from '@tabler/icons-vue'
-import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
+import { IconHeart as Heart, IconPencil as Pencil, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import type { Song } from '@/types'
 
 const route = useRoute()
@@ -121,6 +129,7 @@ const player = usePlayerStore()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const { openMusicCreationFlow, openMusicEditor } = useMusicDrawers()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -212,17 +221,18 @@ function queueSong() {
   showFeedback('已加入播放队列')
 }
 
-async function addToLater() {
-  if (!song.value || !requireLogin() || actionBusy.value) return
-  actionBusy.value = 'later'
-  try {
-    await addMusicSongToLater(String(song.value.id))
-    showFeedback('已加入稍后播放')
-  } catch {
-    showFeedback('加入稍后播放失败，请重试')
-  } finally {
-    actionBusy.value = ''
+function editSong() {
+  if (!song.value || !requireLogin()) return
+  if (song.value.release_type === 'single' || song.value.release_type === 'leak') {
+    openMusicCreationFlow({
+      mode: 'edit',
+      entity: 'song',
+      songId: String(song.value.id),
+      startStep: 'albumDetails',
+    })
+    return
   }
+  openMusicEditor({ entity: 'song', mode: 'edit', id: String(song.value.id) })
 }
 
 function playSong() {
@@ -299,6 +309,10 @@ watch(() => route.params.songId, loadSong, { immediate: true })
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   padding: 0.25rem 0;
+}
+
+.mobile-song-view__actions .mobile-song-view__play {
+  grid-column: 1 / -1;
 }
 
 .mobile-song-view__action {

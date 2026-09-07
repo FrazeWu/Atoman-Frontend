@@ -73,6 +73,15 @@ describe('RatingControl.vue', () => {
     expect(wrapper.get('.rating-control__preview').text()).toContain('1.5 星')
   })
 
+  it('only changes the stars while hovering in compact mode', async () => {
+    const wrapper = mount(RatingControl, { props: { size: 'compact' } })
+
+    await wrapper.get('button[data-score="10"]').trigger('mouseenter')
+
+    expect(wrapper.find('.rating-control__preview').exists()).toBe(false)
+    expect(wrapper.get('.rating-control__star-fill').attributes('style')).toContain('width: 16px')
+  })
+
   it('moves one point at a time with the keyboard', async () => {
     const wrapper = mount(RatingControl)
 

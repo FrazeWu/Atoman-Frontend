@@ -56,6 +56,18 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
 		role.role === 'custom' ? role.label : albumArtistRoleLabels[role.role]
 	)).filter(Boolean).join('、')
 }
+
+function trackMatchLabel(track: (typeof tracks.value)[number]) {
+	if (track.matchStatus === 'manual') return '已修改'
+	if (track.matchStatus === 'matched') return '已匹配'
+	if (track.matchStatus === 'ambiguous') return '待确认'
+	return '未匹配'
+}
+
+function trackMatchSource(track: (typeof tracks.value)[number]) {
+	if (!track.matchProvider) return ''
+	return track.matchProvider === 'discogs' ? 'Discogs' : 'MusicBrainz'
+}
 </script>
 
 <template>
@@ -105,7 +117,13 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
 	<section class="album-preview-step__section">
       <h4>曲目</h4>
       <ol v-if="tracks.length" class="album-preview-step__tracks">
-        <li v-for="track in tracks" :key="track.id">{{ track.title }}</li>
+        <li v-for="track in tracks" :key="track.id" class="album-preview-step__track">
+          <span class="album-preview-step__track-number">{{ track.discNumber ?? 1 }}-{{ track.sequence }}</span>
+          <span>{{ track.title }}</span>
+          <span v-if="track.matchStatus" class="album-preview-step__match" :class="`is-${track.matchStatus}`">
+            {{ trackMatchLabel(track) }}<template v-if="trackMatchSource(track)"> · {{ trackMatchSource(track) }}</template>
+          </span>
+        </li>
       </ol>
       <p v-else>未识别到曲目</p>
     </section>
@@ -141,4 +159,10 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
 .album-preview-step__source { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: 0; color: var(--a-color-muted); font-size: 0.82rem; }
 .album-preview-step__source a { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--a-color-text); font-weight: 800; text-decoration: underline; text-underline-offset: 0.18em; }
 .album-preview-step__tracks, .album-preview-step__failures, .album-preview-step__contributors { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
+.album-preview-step__track { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
+.album-preview-step__track-number { color: var(--a-color-muted); font-variant-numeric: tabular-nums; }
+.album-preview-step__match { color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
+.album-preview-step__match.is-matched { color: #866b2d; }
+.album-preview-step__match.is-manual { color: var(--a-color-text); }
+.album-preview-step__match.is-ambiguous { color: var(--a-color-accent-warning); }
 </style>

@@ -35,6 +35,14 @@ export interface MusicCreationTrackDraft {
 	origin?: string;
 	songId?: string;
 	discNumber?: number;
+	originalTitle?: string;
+	originalDiscNumber?: number;
+	originalTrackNumber?: number;
+	matchStatus?: "unmatched" | "matched" | "ambiguous" | "manual" | string;
+	matchProvider?: string;
+	matchExternalId?: string;
+	matchSourceUrl?: string;
+	matchConfidence?: number;
 	lyrics?: string;
 	lyricsDraft?: MusicCreationLyricsDraft;
 	lyricsSource?: string;
@@ -116,6 +124,14 @@ export interface MusicCreationAlbumImportDraft {
 		origin: string;
 		discNumber?: number;
 		trackNumber?: number;
+		originalTitle?: string;
+		originalDiscNumber?: number;
+		originalTrackNumber?: number;
+		matchStatus?: "unmatched" | "matched" | "ambiguous" | "manual" | string;
+		matchProvider?: string;
+		matchExternalId?: string;
+		matchSourceUrl?: string;
+		matchConfidence?: number;
 		lyrics?: {
 			content: string;
 			translation: string;
@@ -129,6 +145,9 @@ export interface MusicCreationAlbumImportDraft {
 	derivedAlbumType?: string;
 	metadataSourceUrl?: string;
 	metadataSource?: string;
+	metadataExternalId?: string;
+	metadataMatchStatus?: string;
+	metadataMatchConfidence?: number;
 	metadataMatched?: boolean;
 	missingArtists?: string[];
 	lastSyncedAt: string;

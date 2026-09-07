@@ -21,6 +21,7 @@ export function useMusicAlbumTrackEditor() {
 
 	function updateTracks(
 		mutator: (tracks: typeof tracksDraft.value) => typeof tracksDraft.value,
+		markMetadataManual = false,
 	) {
 		if (!creationFlow.value) return;
 		creationFlow.value.tracksCustomized = true;
@@ -29,6 +30,9 @@ export function useMusicAlbumTrackEditor() {
 		).map((track, index) => ({
 			...track,
 			sequence: index + 1,
+			...(markMetadataManual && track.matchStatus === "matched"
+				? { matchStatus: "manual" as const }
+				: {}),
 		}));
 	}
 
@@ -135,10 +139,12 @@ export function useMusicAlbumTrackEditor() {
 	}
 
 	function updateTrackTitle(trackId: string, title: string) {
-		updateTracks((tracks) =>
-			tracks.map((track) =>
-				track.id === trackId ? { ...track, title } : track,
-			),
+		updateTracks(
+			(tracks) =>
+				tracks.map((track) =>
+					track.id === trackId ? { ...track, title } : track,
+				),
+			true,
 		);
 	}
 
@@ -150,7 +156,7 @@ export function useMusicAlbumTrackEditor() {
 			const [track] = next.splice(index, 1);
 			next.splice(target, 0, track);
 			return next;
-		});
+		}, true);
 	}
 
 	function handleTrackDragStart(trackId: string, event: DragEvent) {
@@ -192,11 +198,11 @@ export function useMusicAlbumTrackEditor() {
 				sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex;
 			next.splice(targetIndex, 0, sourceTrack);
 			return next;
-		});
+		}, true);
 	}
 
 	const removeTrack = (trackId: string) =>
-		updateTracks((tracks) => tracks.filter((track) => track.id !== trackId));
+		updateTracks((tracks) => tracks.filter((track) => track.id !== trackId), true);
 	const openTrackLyrics = (trackId: string) => {
 		lyricTrackId.value = trackId;
 	};

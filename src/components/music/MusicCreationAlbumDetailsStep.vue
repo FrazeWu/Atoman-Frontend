@@ -38,7 +38,9 @@ const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ??
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
 const importMetadataMatched = computed(() => !isEditMode.value && albumImportDraft.value?.metadataMatched === true)
 const importMetadataSourceLabel = computed(() => albumImportDraft.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
-const importMetadataModified = computed(() => importMetadataMatched.value && creationFlow.value?.tracksCustomized === true)
+const importMetadataModified = computed(() => importMetadataMatched.value && (
+  creationFlow.value?.tracksCustomized === true || creationFlow.value?.titleCustomized === true
+))
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
@@ -639,6 +641,15 @@ watch(
               />
             </div>
 
+            <span
+              v-if="track.matchStatus"
+              class="track-row__match-status"
+              :class="`is-${track.matchStatus}`"
+              :title="track.matchProvider ? `来源：${track.matchProvider}` : undefined"
+            >
+              {{ track.matchStatus === 'manual' ? '已修改' : track.matchStatus === 'matched' ? '已匹配' : track.matchStatus === 'ambiguous' ? '待确认' : '未匹配' }}
+            </span>
+
             <div class="track-row__audio">
               <span v-if="track.uploadProgress !== undefined" class="track-row__upload-status" :data-testid="`album-track-upload-${track.id}`">
                 上传中 {{ track.uploadProgress }}%
@@ -1195,6 +1206,35 @@ watch(
   gap: 0.35rem;
   min-width: 0;
   flex: 0 1 auto;
+}
+
+.track-row__match-status {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.38rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.track-row__match-status.is-matched {
+  border-color: #b89a55;
+  color: #866b2d;
+}
+
+.track-row__match-status.is-manual {
+  border-color: var(--a-color-border);
+  color: var(--a-color-text);
+}
+
+.track-row__match-status.is-ambiguous {
+  color: var(--a-color-accent-warning);
+}
+
+.track-row__match-status.is-unmatched {
+  color: var(--a-color-muted-soft);
 }
 
 .track-row__upload-status,

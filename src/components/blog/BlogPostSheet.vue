@@ -18,6 +18,7 @@ import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRe
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import { useBlogMediaEmbeds } from '@/composables/useBlogMediaEmbeds'
 import { useAuthStore } from '@/stores/auth'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useFeedStore } from '@/stores/feed'
@@ -41,6 +42,7 @@ const router = useRouter()
 const sheets = useBlogSheets()
 const lifecycle = useContentLifecycle()
 const { renderMarkdown } = useMarkdownRenderer()
+const { postEmbeds, musicEmbeds, videoEmbeds, load: loadMediaEmbeds } = useBlogMediaEmbeds()
 
 const post = ref<Post | null>(null)
 const relatedPosts = ref<BlogRelatedPost[]>([])
@@ -52,7 +54,12 @@ const readingModeOptions: Array<{ label: string; value: 'single' | 'double'; tes
   { label: '单栏', value: 'single', test: 'post-reading-single' },
   { label: '双栏', value: 'double', test: 'post-reading-double' },
 ]
-const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
+const renderedContent = computed(() => renderMarkdown(post.value?.content || '', {
+  references: post.value?.references,
+  postEmbeds: postEmbeds.value,
+  musicEmbeds: musicEmbeds.value,
+  videoEmbeds: videoEmbeds.value,
+}))
 const academicPages = computed(() => paginateAcademicContent(renderedContent.value))
 const authorName = computed(() => post.value?.user?.display_name || post.value?.user?.username || '未知作者')
 const authorHandle = computed(() => post.value?.user?.username ? `@${post.value.user.username}` : '')
@@ -145,6 +152,8 @@ async function loadPost() {
     if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
     const loadedPost = (payload.data || payload) as Post
     post.value = loadedPost
+    await loadMediaEmbeds(loadedPost.content, authStore.token ?? undefined)
+    if (requestSequence !== loadSequence || requestedPostId !== props.layer.payload.postId) return
     void lifecycle.recordEvent({
       module: 'blog',
       content_id: loadedPost.id,
@@ -371,6 +380,15 @@ function editPost() {
   void router.push(`/studio/blog/${post.value.id}/edit${suffix}`)
 }
 
+function handleRenderedContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const link = target?.closest<HTMLAnchorElement>('a[data-atoman-embed]')
+  const href = link?.getAttribute('href')
+  if (!link || !href || href.startsWith('#')) return
+  event.preventDefault()
+  void router.push(href)
+}
+
 function openTag(tag: string) {
   void router.push({ path: '/posts', query: { tag } })
 }
@@ -406,7 +424,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
         <PButton variant="secondary" size="sm" @click="loadPost">重试</PButton>
       </template>
     </PEmpty>
-    <article v-else-if="post" class="post-sheet-article">
+    <article v-else-if="post" class="post-sheet-article" @click="handleRenderedContentClick">
       <div v-if="isOwner" class="post-sheet-actions">
         <PButton variant="secondary" size="sm" @click="editPost">
           <Pencil :size="15" aria-hidden="true" />

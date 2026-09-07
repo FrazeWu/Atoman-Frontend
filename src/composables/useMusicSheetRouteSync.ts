@@ -1,19 +1,22 @@
-import { watch } from 'vue'
+import { getCurrentScope, onScopeDispose, watch } from 'vue'
 import type { Router } from 'vue-router'
 
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
-const registeredRouters = new WeakSet<Router>()
+interface RouteSyncRegistration {
+  stop: () => void
+}
+
+const registrations = new WeakMap<Router, RouteSyncRegistration>()
 const musicEntityRoutePattern = /^\/music\/(?:artist|album|song|playlist)\/[^/]+$/
 
 export function useMusicSheetRouteSync(router: Router) {
   const drawers = useMusicDrawers()
 
-  if (!registeredRouters.has(router)) {
-    registeredRouters.add(router)
+  if (!registrations.has(router)) {
     const pushedLayerKeys = new Set<string>()
 
-    watch(drawers.layers, async (layers, previousLayers) => {
+    const stopLayersWatch = watch(drawers.layers, async (layers, previousLayers) => {
       const top = layers.at(-1)
       const currentPath = router.currentRoute.value.path
 
@@ -47,7 +50,7 @@ export function useMusicSheetRouteSync(router: Router) {
       }
     })
 
-    watch(() => router.currentRoute.value.path, (path) => {
+    const stopRouteWatch = watch(() => router.currentRoute.value.path, (path) => {
       const matchingLayer = drawers.layers.value.find(layer => layer.route === path)
       if (matchingLayer) {
         drawers.popToLayer(matchingLayer.key)
@@ -62,6 +65,26 @@ export function useMusicSheetRouteSync(router: Router) {
         drawers.closeAll()
       }
     })
+
+    const registration: RouteSyncRegistration = {
+      stop: () => {
+        stopLayersWatch()
+        stopRouteWatch()
+      },
+    }
+    registrations.set(router, registration)
+
+    if (getCurrentScope()) {
+      onScopeDispose(() => {
+        if (registrations.get(router) !== registration) return
+        registration.stop()
+        registrations.delete(router)
+      })
+    }
+  }
+
+  if (!musicEntityRoutePattern.test(router.currentRoute.value.path) && drawers.layers.value.some(layer => layer.route)) {
+    drawers.closeAll()
   }
 
   function syncEntityRoute(key: string, open: () => void) {

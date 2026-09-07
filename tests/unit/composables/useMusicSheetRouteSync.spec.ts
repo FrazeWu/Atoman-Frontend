@@ -1,6 +1,6 @@
-import { flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import type { MusicSheetLayer } from '../../../src/components/music/musicSheetTypes'
@@ -179,5 +179,43 @@ describe('useMusicSheetRouteSync', () => {
       'album:album-1',
     ])
     expect(drawers.layers.value[0]?.payload).toEqual({ albumId: 'album-2' })
+  })
+
+  it('registers route cleanup again after the music layout is remounted', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/albums', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/music')
+    const RouteSyncHarness = defineComponent({
+      setup() {
+        useMusicSheetRouteSync(router)
+        return () => h('div')
+      },
+    })
+    const drawers = useMusicDrawers()
+    const firstMount = mount(RouteSyncHarness, { global: { plugins: [router] } })
+
+    drawers.openAlbum('album-1')
+    await flushPromises()
+    await router.push('/music/albums')
+    await flushPromises()
+    expect(drawers.layers.value).toHaveLength(0)
+
+    await router.push('/music')
+    firstMount.unmount()
+    const secondMount = mount(RouteSyncHarness, { global: { plugins: [router] } })
+
+    drawers.openAlbum('album-2')
+    await flushPromises()
+    await router.push('/music/albums')
+    await flushPromises()
+
+    expect(drawers.layers.value).toHaveLength(0)
+    secondMount.unmount()
   })
 })

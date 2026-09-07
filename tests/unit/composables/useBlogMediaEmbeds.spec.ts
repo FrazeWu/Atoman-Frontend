@@ -4,6 +4,7 @@ import { useBlogMediaEmbeds } from "../../../src/composables/useBlogMediaEmbeds"
 
 const albumId = "22222222-2222-2222-2222-222222222222";
 const videoId = "44444444-4444-4444-4444-444444444444";
+const songAudioUrl = "https://cdn.example.com/audio/song.mp3";
 
 const response = (data: unknown, status = 200) =>
 	new Response(JSON.stringify({ data }), { status });
@@ -23,6 +24,7 @@ describe("useBlogMediaEmbeds", () => {
 						artists: [{ id: "artist-1", name: "作者" }],
 						cover_url: "/cover.jpg",
 						duration_sec: 125,
+						audio_url: songAudioUrl,
 					},
 					playable: true,
 				});
@@ -38,6 +40,7 @@ describe("useBlogMediaEmbeds", () => {
 			kind: "song",
 			title: "单曲引用",
 			href: `/music/song/${albumId}`,
+			audioSrc: songAudioUrl,
 		});
 		expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(
 			expect.arrayContaining([

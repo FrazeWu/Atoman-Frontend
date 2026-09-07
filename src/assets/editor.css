@@ -353,8 +353,31 @@
 	background: var(--a-color-surface-muted);
 }
 
+.prose-blog .atoman-post-embed__music-card {
+	display: flex;
+	align-items: center;
+	gap: 0.9rem;
+	padding: 0.75rem;
+	border: 1px solid var(--a-color-border-soft);
+	background: var(--a-color-surface-muted);
+}
+
+.prose-blog .atoman-post-embed__music-card .atoman-post-embed__link {
+	min-width: 0;
+	flex: 1 1 auto;
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
 .prose-blog .atoman-post-embed--music .atoman-post-embed__link {
 	min-height: 5.25rem;
+}
+
+.prose-blog .atoman-post-embed__audio {
+	flex: 0 1 20rem;
+	width: min(100%, 20rem);
+	min-width: 12rem;
 }
 
 .prose-blog .atoman-post-embed__image {
@@ -423,6 +446,21 @@
 @media (max-width: 640px) {
 	.prose-blog .atoman-post-embed--music .atoman-post-embed__link {
 		gap: 0.7rem;
+	}
+
+	.prose-blog .atoman-post-embed__music-card {
+		align-items: stretch;
+		flex-wrap: wrap;
+		gap: 0.7rem;
+	}
+
+	.prose-blog .atoman-post-embed__music-card .atoman-post-embed__link {
+		flex-basis: 100%;
+	}
+
+	.prose-blog .atoman-post-embed__audio {
+		width: 100%;
+		min-width: 0;
 	}
 
 	.prose-blog .atoman-post-embed__image {

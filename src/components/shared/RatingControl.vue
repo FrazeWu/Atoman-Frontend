@@ -59,12 +59,21 @@
       <X :size="15" aria-hidden="true" />
     </button>
 
-    <div v-if="size !== 'compact'" class="rating-control__meta" aria-live="polite">
+    <div
+      v-if="size !== 'compact' && (
+        hoverScore !== null
+        || (disabled && (viewerRating === null || viewerRating === undefined))
+        || errorMessage
+      )"
+      class="rating-control__meta"
+      aria-live="polite"
+    >
       <span v-if="hoverScore !== null" class="rating-control__preview">{{ formatViewerRating(hoverScore) }}</span>
-      <span v-else-if="viewerRating !== null && viewerRating !== undefined" class="rating-control__mine">
-        我的评分 {{ formatViewerRating(viewerRating) }}
-      </span>
-      <RouterLink v-else-if="disabled" class="rating-control__login" to="/login">登录后评分</RouterLink>
+      <RouterLink
+        v-else-if="disabled && (viewerRating === null || viewerRating === undefined)"
+        class="rating-control__login"
+        to="/login"
+      >登录后评分</RouterLink>
       <span v-if="errorMessage" class="rating-control__error" role="alert">{{ errorMessage }}</span>
     </div>
   </section>
@@ -281,8 +290,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   font-size: 0.78rem;
 }
 
-.rating-control__preview,
-.rating-control__mine {
+.rating-control__preview {
   color: var(--a-color-muted);
   white-space: nowrap;
 }

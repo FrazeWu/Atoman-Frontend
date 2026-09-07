@@ -88,6 +88,8 @@ const selectedTextDraft = ref<{
   endOffset: number
   startLineKey?: string
   endLineKey?: string
+  startLineId?: string
+  endLineId?: string
 } | null>(null)
 const selectedAnnotationIds = ref<string[]>([])
 const lyricsLinesElement = ref<HTMLElement | null>(null)
@@ -309,6 +311,8 @@ function handleSelectText(payload: {
   endOffset: number
   startLineKey?: string
   endLineKey?: string
+  startLineId?: string
+  endLineId?: string
 }) {
   if (!requireLogin()) return
   if (rebindingAnnotation.value) rebindOperationGeneration += 1
@@ -329,20 +333,31 @@ async function handleSaveAnnotation(body: string) {
     return
   }
   if (!selectedTextDraft.value) return
-  const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
+  const draft = selectedTextDraft.value
+  const lineKey = draft.line.line_key || draft.line.id
   if (!lineKey) return
-  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+  const hasRange = Boolean(
+    (draft.startLineKey && draft.endLineKey && draft.startLineKey !== draft.endLineKey)
+    || (draft.startLineId && draft.endLineId && draft.startLineId !== draft.endLineId),
+  )
+  const rangeInput = hasRange
     ? {
-        start_line_key: selectedTextDraft.value.startLineKey,
-        end_line_key: selectedTextDraft.value.endLineKey,
+        ...(draft.startLineKey ? { start_line_key: draft.startLineKey } : {}),
+        ...(draft.startLineId ? { start_line_id: draft.startLineId } : {}),
+        ...(draft.endLineKey ? { end_line_key: draft.endLineKey } : {}),
+        ...(draft.endLineId ? { end_line_id: draft.endLineId } : {}),
       }
-    : { line_key: lineKey }
+    : draft.line.line_key
+      ? { line_key: draft.line.line_key }
+      : draft.line.id
+        ? { line_id: draft.line.id }
+        : { line_key: lineKey }
 
   const annotation = await createAnnotation(String(detail.value.song.id), {
     ...rangeInput,
-    selected_text: selectedTextDraft.value.selectedText,
-    start_offset: selectedTextDraft.value.startOffset,
-    end_offset: selectedTextDraft.value.endOffset,
+    selected_text: draft.selectedText,
+    start_offset: draft.startOffset,
+    end_offset: draft.endOffset,
     body,
   })
   selectedTextDraft.value = null

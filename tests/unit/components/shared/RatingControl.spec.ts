@@ -81,12 +81,13 @@ describe('RatingControl.vue', () => {
     expect(wrapper.emitted('rate')).toEqual([[9]])
   })
 
-  it('keeps the personal score visible and allows clearing it', async () => {
+  it('hides the personal score text and allows clearing it', async () => {
     const wrapper = mount(RatingControl, {
       props: { viewerRating: 9 },
     })
 
-    expect(wrapper.get('.rating-control__mine').text()).toContain('我的评分 9/10 · 4.5 星')
+    expect(wrapper.find('.rating-control__mine').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('我的评分')
     await wrapper.get('.rating-control__clear').trigger('click')
 
     expect(wrapper.emitted('clear')).toEqual([[]])

@@ -1,6 +1,8 @@
 export type ResolvedLyricsSelection = {
   startLineKey: string
   endLineKey: string
+  startLineId?: string
+  endLineId?: string
   startOffset: number
   endOffset: number
   selectedText: string
@@ -64,6 +66,8 @@ export function resolveLyricsSelection(root: HTMLElement, range: Range): Resolve
   return {
     startLineKey: startLine.dataset.lyricLineKey ?? '',
     endLineKey: endLine.dataset.lyricLineKey ?? '',
+    startLineId: startLine.dataset.lyricLineId || undefined,
+    endLineId: endLine.dataset.lyricLineId || undefined,
     startOffset,
     endOffset,
     selectedText,

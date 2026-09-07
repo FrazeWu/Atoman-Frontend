@@ -2,6 +2,7 @@
   <div
     class="music-lyrics-line"
     :data-lyric-line-key="line.line_key ?? line.id"
+    :data-lyric-line-id="line.id"
     :class="{
       'is-active': active,
       'has-annotations': activeAnnotations.length > 0,
@@ -114,6 +115,8 @@ const emit = defineEmits<{
     endOffset: number
     startLineKey?: string
     endLineKey?: string
+    startLineId?: string
+    endLineId?: string
   }]
   'open-annotations': [payload: {
     line: MusicSongLyricsLine
@@ -131,6 +134,8 @@ const selectedTextDraft = ref<{
   endOffset: number
   startLineKey?: string
   endLineKey?: string
+  startLineId?: string
+  endLineId?: string
 } | null>(null)
 const activeAnnotations = computed(() => props.annotations.filter((annotation) => annotation.status === 'active'))
 const lineTimeMs = computed(() => props.line.time_ms ?? props.line.startTimeMs ?? null)
@@ -203,8 +208,18 @@ function handleMouseUp() {
       selectedText: resolved.selectedText,
       startOffset: resolved.startOffset,
       endOffset: resolved.endOffset,
-      startLineKey: resolved.startLineKey === resolved.endLineKey ? undefined : resolved.startLineKey,
-      endLineKey: resolved.startLineKey === resolved.endLineKey ? undefined : resolved.endLineKey,
+      startLineKey: resolved.startLineKey !== resolved.endLineKey || resolved.startLineId !== resolved.endLineId
+        ? resolved.startLineKey
+        : undefined,
+      endLineKey: resolved.startLineKey !== resolved.endLineKey || resolved.startLineId !== resolved.endLineId
+        ? resolved.endLineKey
+        : undefined,
+      startLineId: resolved.startLineKey !== resolved.endLineKey || resolved.startLineId !== resolved.endLineId
+        ? resolved.startLineId
+        : undefined,
+      endLineId: resolved.startLineKey !== resolved.endLineKey || resolved.startLineId !== resolved.endLineId
+        ? resolved.endLineId
+        : undefined,
     }
     return
   }

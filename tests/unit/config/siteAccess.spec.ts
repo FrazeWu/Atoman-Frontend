@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  defaultSiteAccess,
   getBlogCommentMode,
   getFeedFullTextMode,
   isForumCategoryRequestEnabled,
@@ -38,7 +37,7 @@ describe('site access config', () => {
     expect(access.version).toBe(1)
     expect(access.modules.blog.enabled).toBe(true)
     expect(isModuleFeatureEnabled(access, 'blog', 'post.create')).toBe(false)
-    expect(isModuleFeatureEnabled(access, 'blog', 'channel.manage')).toBe(defaultSiteAccess.modules.blog.features['channel.manage'])
+    expect(access.modules.blog.features).not.toHaveProperty('channel.manage')
   })
 
   it('accepts legacy visible payloads', () => {

@@ -122,6 +122,9 @@ vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
         <button type="button" class="select-text" @click="$emit('select-text', { line, selectedText: 'Neon', startOffset: 0, endOffset: 4 })">
           选中文本
         </button>
+        <button type="button" class="select-multi-text" @click="$emit('select-text', { line, selectedText: 'lights\\nMidnight', startOffset: 5, endOffset: 8, startLineKey: 'line-1', endLineKey: 'line-2', startLineId: 'id-1', endLineId: 'id-2' })">
+          选择多行
+        </button>
         <button v-if="annotationMode && canAnnotate" type="button" class="annotate-line" @click="$emit('annotate-line', line)">
           注释整句
         </button>
@@ -409,6 +412,25 @@ describe('MusicLyricsPanel.vue', () => {
       selected_text: 'Neon',
       start_offset: 0,
       end_offset: 4,
+      body: '新的注释',
+    })
+  })
+
+  it('跨行选区创建注释时提交起止行 ID 与 key', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('.select-multi-text').trigger('click')
+    await wrapper.get('.annotation-save').trigger('click')
+
+    expect(mocks.createAnnotation).toHaveBeenCalledWith('song-1', {
+      start_line_key: 'line-1',
+      start_line_id: 'id-1',
+      end_line_key: 'line-2',
+      end_line_id: 'id-2',
+      selected_text: 'lights\nMidnight',
+      start_offset: 5,
+      end_offset: 8,
       body: '新的注释',
     })
   })

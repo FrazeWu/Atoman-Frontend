@@ -2,143 +2,347 @@
   <section class="setting-management-overview" aria-labelledby="management-overview-title">
     <div class="setting-management-overview__heading">
       <div>
-        <p class="settings-center__kicker">MANAGEMENT</p>
-        <h2 id="management-overview-title">管理概览</h2>
+        <p class="settings-center__kicker">MODULES</p>
+        <h2 id="management-overview-title">模块可用性</h2>
+        <p>在这里直接调整模块开关和常用策略，复杂管理进入详情。</p>
       </div>
     </div>
 
-    <div class="setting-management-overview__grid">
-      <section class="setting-management-overview__section" aria-labelledby="management-users-title">
-        <div class="setting-management-overview__section-heading">
-          <div>
-            <p class="settings-center__kicker">USERS</p>
-            <h3 id="management-users-title">用户管理</h3>
-            <p>{{ usersMeta.total }} 位用户</p>
+    <div class="setting-management-overview__list" data-test="module-list">
+      <article v-for="key in overviewModuleOrder" :key="key" class="setting-management-overview__row">
+        <button
+          type="button"
+          class="setting-management-overview__main"
+          :aria-label="`打开${moduleRooms[key].name}详情`"
+          :data-test="`module-detail-${key}`"
+          @click="openModuleDetail(key)"
+        >
+          <span class="setting-management-overview__icon" aria-hidden="true">
+            <component :is="moduleIcons[key]" :size="17" stroke-width="1.8" />
+          </span>
+          <span class="setting-management-overview__copy">
+            <strong>{{ moduleRooms[key].name }}</strong>
+            <small>{{ moduleDescriptions[key] }}</small>
+          </span>
+          <ChevronRight class="setting-management-overview__arrow" :size="17" aria-hidden="true" />
+        </button>
+
+        <div class="setting-management-overview__quick">
+          <select
+            v-if="key === 'feed'"
+            v-model="access.settings.feed.full_text_mode"
+            aria-label="订阅全文抓取策略"
+          >
+            <option value="per_source">全文：按源设置</option>
+            <option value="disabled">全文：暂停抓取</option>
+          </select>
+
+          <div v-else-if="key === 'music'" class="setting-management-overview__quick-stack">
+            <label>
+              <input v-model="access.modules.music.features['music.submit']" type="checkbox" />
+              允许提交资料
+            </label>
+            <label>
+              <input v-model="access.modules.music.features['music.review']" type="checkbox" />
+              允许音乐审核
+            </label>
           </div>
-          <PButton data-test="user-management-link" to="/site/setting/users" variant="secondary" size="sm">查看详情</PButton>
+
+          <select
+            v-else-if="key === 'blog'"
+            v-model="access.settings.blog.comment_mode"
+            aria-label="博客评论权限"
+          >
+            <option value="all">评论：所有人</option>
+            <option value="authenticated">评论：仅登录用户</option>
+            <option value="disabled">评论：关闭</option>
+          </select>
+
+          <select
+            v-else-if="key === 'forum'"
+            v-model="access.settings.forum.allow_category_request"
+            aria-label="社区分类申请"
+          >
+            <option :value="true">分类申请：允许</option>
+            <option :value="false">分类申请：关闭</option>
+          </select>
+
+          <span v-else class="setting-management-overview__quick-empty">无额外设置</span>
         </div>
 
-        <p v-if="usersError" class="setting-management-overview__message" role="alert">{{ usersError }}</p>
-        <p v-else-if="loadingUsers" class="setting-management-overview__message" role="status">正在加载...</p>
-        <ul v-else-if="users.length" class="setting-management-overview__list">
-          <li v-for="user in users" :key="user.uuid">
-            <span>
-              <strong>{{ user.display_name || user.username }}</strong>
-              <small>@{{ user.username }}</small>
-            </span>
-            <span>{{ user.is_active ? '正常' : '已停用' }}</span>
-          </li>
-        </ul>
-        <p v-else class="setting-management-overview__message">暂无用户</p>
-      </section>
-
-      <section class="setting-management-overview__section" aria-labelledby="management-sources-title">
-        <div class="setting-management-overview__section-heading">
-          <div>
-            <p class="settings-center__kicker">FEED</p>
-            <h3 id="management-sources-title">订阅源管理</h3>
-            <p>{{ sourcesMeta.total }} 个订阅源</p>
-          </div>
-          <PButton data-test="subscription-management-link" to="/site/setting/subscriptions" variant="secondary" size="sm">查看详情</PButton>
+        <div class="setting-management-overview__switch-wrap">
+          <label class="setting-management-overview__switch" :title="`${access.modules[key].enabled ? '关闭' : '开启'}${moduleRooms[key].name}模块`">
+            <input
+              v-model="access.modules[key].enabled"
+              :data-test="`module-enabled-${key}`"
+              type="checkbox"
+              :aria-label="`开启${moduleRooms[key].name}模块`"
+            />
+            <span aria-hidden="true" />
+          </label>
         </div>
-
-        <p v-if="sourcesError" class="setting-management-overview__message" role="alert">{{ sourcesError }}</p>
-        <p v-else-if="loadingSources" class="setting-management-overview__message" role="status">正在加载...</p>
-        <ul v-else-if="sources.length" class="setting-management-overview__list">
-          <li v-for="source in sources" :key="source.id">
-            <span>
-              <strong>{{ source.title || '未命名订阅源' }}</strong>
-              <small>待处理 {{ source.pending_count || 0 }}</small>
-            </span>
-            <span>{{ sourceStatusLabel(source.status) }}</span>
-          </li>
-        </ul>
-        <p v-else class="setting-management-overview__message">暂无订阅源</p>
-      </section>
+      </article>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { IconBook2 as Book, IconChevronRight as ChevronRight, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
+import { toRef, type Component } from 'vue'
 
-import { listAdminUsers, type AdminUser, type AdminUserPageMeta } from '@/api/adminUsers'
-import PButton from '@/components/ui/PButton.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useAdminFeedFulltextStore, type AdminFeedFulltextSourceRow } from '@/stores/adminFeedFulltext'
+import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import type { SiteAccess } from '@/config/siteAccess'
 
-const authStore = useAuthStore()
-const feedStore = useAdminFeedFulltextStore()
-const users = ref<AdminUser[]>([])
-const usersMeta = ref<AdminUserPageMeta>({ page: 1, page_size: 5, total: 0, has_more: false })
-const sources = ref<AdminFeedFulltextSourceRow[]>([])
-const sourcesMeta = ref({ total: 0 })
-const loadingUsers = ref(false)
-const loadingSources = ref(false)
-const usersError = ref('')
-const sourcesError = ref('')
+const props = defineProps<{
+  access: SiteAccess
+}>()
 
-function sourceStatusLabel(status: AdminFeedFulltextSourceRow['status']) {
-  if (status === 'degraded') return '降级'
-  if (status === 'failing') return '无效'
-  if (status === 'disabled') return '已关闭'
-  return '正常'
+const emit = defineEmits<{
+  'open-detail': [key: ModuleRoomKey]
+}>()
+
+const access = toRef(props, 'access')
+const overviewModuleOrder: ModuleRoomKey[] = ['feed', 'music', 'blog', 'forum', 'podcast', 'video']
+const moduleDescriptions: Record<ModuleRoomKey, string> = {
+  feed: 'RSS、文章聚合与全文抓取',
+  music: '音乐资料库与协作编辑',
+  blog: '文章发布与评论',
+  books: '书目与阅读',
+  forum: '话题、分类与讨论',
+  debate: '辩题与论点讨论',
+  timeline: '人物与事件时间线',
+  podcast: '音频节目与单集',
+  video: '视频发布与播放',
+}
+const moduleIcons: Record<ModuleRoomKey, Component> = {
+  feed: Rss,
+  music: Music,
+  blog: Book,
+  books: Book,
+  forum: Messages,
+  debate: Messages,
+  timeline: Book,
+  podcast: Microphone,
+  video: Video,
 }
 
-async function loadUsers() {
-  loadingUsers.value = true
-  usersError.value = ''
-  try {
-    const response = await listAdminUsers({ page: 1, page_size: 5 })
-    users.value = response.data
-    usersMeta.value = response.meta ?? { page: 1, page_size: 5, total: response.data.length, has_more: false }
-  } catch (cause) {
-    usersError.value = cause instanceof Error ? cause.message : '加载用户失败'
-  } finally {
-    loadingUsers.value = false
-  }
+function openModuleDetail(key: ModuleRoomKey) {
+  emit('open-detail', key)
 }
-
-async function loadSources() {
-  if (!authStore.token) return
-  loadingSources.value = true
-  sourcesError.value = ''
-  try {
-    sources.value = await feedStore.fetchSources(authStore.token, { page: 1, limit: 5 })
-    sourcesMeta.value = { total: feedStore.sourcesMeta.total }
-  } catch (cause) {
-    sourcesError.value = cause instanceof Error ? cause.message : '加载订阅源失败'
-  } finally {
-    loadingSources.value = false
-  }
-}
-
-onMounted(() => {
-  void loadUsers()
-  void loadSources()
-})
 </script>
 
 <style scoped>
-.setting-management-overview { border-top: 1px solid var(--a-color-border-soft); border-bottom: 1px solid var(--a-color-border-soft); }
-.setting-management-overview__heading { padding: 1rem 0; }
+.setting-management-overview {
+  display: grid;
+  gap: 1rem;
+}
+
+.setting-management-overview__heading {
+  display: grid;
+  gap: 0.35rem;
+}
+
 .setting-management-overview__heading h2,
-.setting-management-overview__heading p,
-.setting-management-overview__section-heading h3,
-.setting-management-overview__section-heading p,
-.setting-management-overview__message { margin: 0; }
-.setting-management-overview__heading h2 { font-size: 1.05rem; }
-.setting-management-overview__grid { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--a-color-border-soft); }
-.setting-management-overview__section { min-width: 0; padding: 1rem 0; }
-.setting-management-overview__section + .setting-management-overview__section { border-top: 1px solid var(--a-color-border-soft); }
-.setting-management-overview__section-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
-.setting-management-overview__section-heading h3 { font-size: 0.95rem; }
-.setting-management-overview__section-heading p { margin-top: 0.25rem; color: var(--a-color-text-secondary); font-size: 0.8rem; }
-.setting-management-overview__list { display: grid; margin: 1rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--a-color-border-soft); }
-.setting-management-overview__list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; padding: 0.65rem 0; border-bottom: 1px solid var(--a-color-border-soft); color: var(--a-color-text-secondary); font-size: 0.8rem; }
-.setting-management-overview__list li:last-child { border-bottom: 0; }
-.setting-management-overview__list li > span:first-child { display: grid; min-width: 0; gap: 0.15rem; }
-.setting-management-overview__list strong { overflow: hidden; color: var(--a-color-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.setting-management-overview__list small { overflow: hidden; color: var(--a-color-muted); text-overflow: ellipsis; white-space: nowrap; }
-.setting-management-overview__message { padding-top: 1rem; color: var(--a-color-text-secondary); font-size: 0.82rem; }
+.setting-management-overview__heading p {
+  margin: 0;
+}
+
+.setting-management-overview__heading h2 {
+  font-size: 1.05rem;
+}
+
+.setting-management-overview__heading p:last-child {
+  color: var(--a-color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.setting-management-overview__list {
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+}
+
+.setting-management-overview__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 14rem) auto;
+  min-height: 4.125rem;
+  align-items: stretch;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.setting-management-overview__row:last-child {
+  border-bottom: 0;
+}
+
+.setting-management-overview__main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.setting-management-overview__main:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.setting-management-overview__icon {
+  display: grid;
+  width: 2.125rem;
+  height: 2.125rem;
+  flex: 0 0 2.125rem;
+  place-items: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-text-secondary);
+}
+
+.setting-management-overview__copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.setting-management-overview__copy strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.setting-management-overview__copy small {
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setting-management-overview__arrow {
+  margin-left: auto;
+  color: var(--a-color-muted);
+}
+
+.setting-management-overview__quick {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.6rem 0.5rem;
+}
+
+.setting-management-overview__quick select {
+  width: 100%;
+  min-height: 2.375rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.setting-management-overview__quick-stack {
+  display: grid;
+  width: 100%;
+  gap: 0.3rem;
+}
+
+.setting-management-overview__quick-stack label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--a-color-text-secondary);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.setting-management-overview__quick-stack input {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin: 0;
+  accent-color: var(--a-color-primary);
+}
+
+.setting-management-overview__quick-empty {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.setting-management-overview__switch-wrap {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+}
+
+.setting-management-overview__switch {
+  position: relative;
+  display: inline-flex;
+  width: 2.625rem;
+  height: 1.625rem;
+  cursor: pointer;
+}
+
+.setting-management-overview__switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.setting-management-overview__switch span {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--a-color-disabled-border);
+  transition: background-color 0.15s ease;
+}
+
+.setting-management-overview__switch span::after {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--a-color-bg);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--a-color-text) 25%, transparent);
+  content: "";
+  transition: transform 0.15s ease;
+}
+
+.setting-management-overview__switch input:checked + span {
+  background: var(--a-color-primary);
+}
+
+.setting-management-overview__switch input:checked + span::after {
+  transform: translateX(1rem);
+}
+
+.setting-management-overview__switch input:focus-visible + span {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .setting-management-overview__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .setting-management-overview__quick {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+    padding: 0 1rem 0.75rem 4rem;
+  }
+
+  .setting-management-overview__quick select,
+  .setting-management-overview__quick-stack {
+    max-width: 18rem;
+  }
+}
 </style>

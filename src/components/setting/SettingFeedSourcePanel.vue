@@ -240,6 +240,7 @@
         v-for="source in sources"
         :key="source.id"
         class="setting-feed-panel__row"
+        :class="{ 'setting-feed-panel__row--expanded': expandedSourceIds.has(source.id) }"
       >
         <div class="setting-feed-panel__meta">
           <strong @click="openItemsSheet(source)">{{ source.title || '未命名订阅源' }}</strong>
@@ -266,6 +267,17 @@
         </div>
 
         <div class="setting-feed-panel__row-actions">
+          <PButton
+            size="sm"
+            variant="ghost"
+            :data-test="`feed-source-expand-${source.id}`"
+            :aria-label="expandedSourceIds.has(source.id) ? `收起${source.title || '订阅源'}详情` : `展开${source.title || '订阅源'}详情`"
+            @click="toggleExpanded(source.id)"
+          >
+            <ChevronUp v-if="expandedSourceIds.has(source.id)" :size="16" aria-hidden="true" />
+            <ChevronDown v-else :size="16" aria-hidden="true" />
+            {{ expandedSourceIds.has(source.id) ? '收起' : '展开' }}
+          </PButton>
           <label class="setting-feed-panel__toggle">
             <span>全文抓取</span>
             <input
@@ -298,6 +310,13 @@
           >
             手工爬取
           </PButton>
+        </div>
+        <div v-if="expandedSourceIds.has(source.id)" class="setting-feed-panel__expanded-detail" :data-test="`feed-source-expanded-${source.id}`">
+          <div><span>RSS 地址</span><strong>{{ source.rss_url }}</strong></div>
+          <div><span>抓取状态</span><strong>{{ source.hidden ? '已隐藏' : sourceStatusLabel(source.status) }}</strong></div>
+          <div><span>全文抓取</span><strong>{{ source.full_text_enabled ? '已开启' : '已关闭' }}</strong></div>
+          <div><span>待处理条目</span><strong>{{ source.pending_count || 0 }}</strong></div>
+          <div><span>最近更新</span><strong>{{ source.last_success_at || source.last_failure_at || '暂无记录' }}</strong></div>
         </div>
         <div v-if="impactSourceId === source.id && sourceImpact" class="setting-feed-panel__detail">
           <span>订阅 {{ sourceImpact.subscriptions }}</span><span>条目 {{ sourceImpact.feed_items }}</span><span>收藏 {{ sourceImpact.starred_items }}</span><span>稍后阅读 {{ sourceImpact.reading_list_items }}</span>
@@ -333,7 +352,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { IconRefresh as RefreshCw } from '@tabler/icons-vue'
+import { IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconRefresh as RefreshCw } from '@tabler/icons-vue'
 
 import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceItemsSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -376,6 +395,7 @@ const appliedSearchQuery = ref('')
 const visibilityFilter = ref<'visible' | 'hidden' | 'all'>('visible')
 const currentPage = ref(1)
 const pageSize = 20
+const expandedSourceIds = ref(new Set<string>())
 const autoSyncEnabled = ref(false)
 const syncIntervalMinutes = ref('60')
 const readerCrawlEnabled = ref(true)
@@ -437,6 +457,13 @@ function sourceStatusLabel(status?: string) {
   if (status === 'degraded') return '降级'
   if (status === 'failing') return '无效'
   return '正常'
+}
+
+function toggleExpanded(sourceId: string) {
+  const next = new Set(expandedSourceIds.value)
+  if (next.has(sourceId)) next.delete(sourceId)
+  else next.add(sourceId)
+  expandedSourceIds.value = next
 }
 
 function sourceFetchOptions() {
@@ -1080,8 +1107,15 @@ defineExpose({ refresh })
 }
 
 .setting-feed-panel__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   padding: 0.9rem 0;
   border-top: 1px solid var(--a-color-border-soft);
+}
+
+.setting-feed-panel__row--expanded {
+  background: var(--a-color-surface-muted);
 }
 
 .setting-feed-panel__meta {
@@ -1097,6 +1131,36 @@ defineExpose({ refresh })
 .setting-feed-panel__row-actions {
   align-items: center;
   flex-wrap: wrap;
+}
+
+.setting-feed-panel__expanded-detail {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.setting-feed-panel__expanded-detail div {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.setting-feed-panel__expanded-detail span {
+  color: var(--a-color-muted);
+  font-size: 0.7rem;
+}
+
+.setting-feed-panel__expanded-detail strong {
+  overflow: hidden;
+  color: var(--a-color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .setting-feed-panel__toggle {
@@ -1134,6 +1198,14 @@ defineExpose({ refresh })
   .setting-feed-panel__pagination {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .setting-feed-panel__row {
+    display: flex;
+  }
+
+  .setting-feed-panel__expanded-detail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .setting-feed-panel__opml-failure {

@@ -32,17 +32,18 @@ import { IconListTree as ListTree } from '@tabler/icons-vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
-import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 
 const route = useRoute()
 const router = useRouter()
 const directoryCollapsed = ref(false)
 const mobileDirectoryOpen = ref(false)
+const managementModuleOrder: ModuleRoomKey[] = ['feed', 'music', 'blog', 'forum', 'podcast', 'video']
 const directoryItems = [
   { id: 'users', label: '用户管理' },
   { id: 'subscriptions', label: '订阅源管理' },
   { id: 'announcements', label: '公告' },
-  ...moduleNavOrder.map((key) => ({ id: key, label: moduleRooms[key].name }))
+  ...managementModuleOrder.map((key) => ({ id: key, label: moduleRooms[key].name }))
 ]
 
 const activeDirectoryItem = computed(() => {
@@ -50,7 +51,7 @@ const activeDirectoryItem = computed(() => {
   if (route.path.endsWith('/subscriptions')) return 'subscriptions'
   if (route.path.endsWith('/announcements')) return 'announcements'
   if (route.path.endsWith('/community')) return 'forum'
-  return route.hash.replace('#module-', '') || 'feed'
+  return route.hash.replace(/^#(?:module|detail)-/, '') || 'feed'
 })
 
 function selectDirectoryItem(id: string) {

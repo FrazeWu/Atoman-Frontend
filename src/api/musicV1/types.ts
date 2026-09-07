@@ -68,6 +68,14 @@ export type MusicAlbumImportTrack = {
 	origin: string;
 	discNumber?: number;
 	trackNumber?: number;
+	originalTitle?: string;
+	originalDiscNumber?: number;
+	originalTrackNumber?: number;
+	matchStatus?: "unmatched" | "matched" | "ambiguous" | "manual" | string;
+	matchProvider?: string;
+	matchExternalId?: string;
+	matchSourceUrl?: string;
+	matchConfidence?: number;
 	lyrics?: {
 		content: string;
 		translation: string;
@@ -82,6 +90,9 @@ export type MusicAlbumImportMetadataPreview = {
 	matched: boolean;
 	sourceUrl: string;
 	metadataSource?: string;
+	externalId?: string;
+	matchStatus?: string;
+	matchConfidence?: number;
 	tracks: MusicAlbumImportTrack[];
 };
 
@@ -105,6 +116,14 @@ export type MusicAlbumImportCommitTrack = {
 	title: string;
 	disc_number: number;
 	track_number: number;
+	original_title?: string;
+	original_disc_number?: number;
+	original_track_number?: number;
+	match_status?: "unmatched" | "matched" | "ambiguous" | "manual" | string;
+	match_provider?: string;
+	match_external_id?: string;
+	match_source_url?: string;
+	match_confidence?: number;
 	lyrics?: {
 		content: string;
 		translation: string;
@@ -240,6 +259,9 @@ export type MusicAlbumImport = {
 	derivedAlbumType?: string;
 	metadataSourceUrl?: string;
 	metadataSource?: string;
+	metadataExternalId?: string;
+	metadataMatchStatus?: string;
+	metadataMatchConfidence?: number;
 	metadataMatched?: boolean;
 	missingArtists?: string[];
 	lastSyncedAt: string;

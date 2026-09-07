@@ -173,6 +173,9 @@ export function useAlbumImportUpload() {
 		draft.derivedAlbumType = snapshot.derivedAlbumType;
 		draft.metadataSourceUrl = snapshot.metadataSourceUrl;
 		draft.metadataSource = snapshot.metadataSource;
+		draft.metadataExternalId = snapshot.metadataExternalId;
+		draft.metadataMatchStatus = snapshot.metadataMatchStatus;
+		draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
 		draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
 		draft.missingArtists = snapshot.missingArtists ?? [];
 		draft.lastSyncedAt = snapshot.lastSyncedAt;
@@ -211,10 +214,18 @@ export function useAlbumImportUpload() {
 				id: `import-track-${index + 1}`,
 				...(track.songId ? { songId: track.songId } : {}),
 				sequence: track.trackNumber ?? index + 1,
-				...(track.discNumber ? { discNumber: track.discNumber } : {}),
-				title: track.title,
-				audioKey: track.audioKey,
-				origin: track.origin,
+					...(track.discNumber ? { discNumber: track.discNumber } : {}),
+					title: track.title,
+					audioKey: track.audioKey,
+					origin: track.origin,
+					...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
+					...(track.originalDiscNumber ? { originalDiscNumber: track.originalDiscNumber } : {}),
+					...(track.originalTrackNumber ? { originalTrackNumber: track.originalTrackNumber } : {}),
+					...(track.matchStatus ? { matchStatus: track.matchStatus } : {}),
+					...(track.matchProvider ? { matchProvider: track.matchProvider } : {}),
+					...(track.matchExternalId ? { matchExternalId: track.matchExternalId } : {}),
+					...(track.matchSourceUrl ? { matchSourceUrl: track.matchSourceUrl } : {}),
+					...(track.matchConfidence !== undefined ? { matchConfidence: track.matchConfidence } : {}),
 				...(track.lyrics
 					? {
 							lyrics: track.lyrics.content,
@@ -570,9 +581,18 @@ export function useAlbumImportUpload() {
 							title,
 							audioKey: "",
 							origin: `local_preview:${index + 1}`,
+							originalTitle: title,
+							originalDiscNumber: 1,
+							originalTrackNumber: index + 1,
+							matchStatus: "unmatched",
 						}));
 						let matchedTracks = localTracks;
 						draft.metadataMatched = false;
+						draft.metadataSourceUrl = undefined;
+						draft.metadataSource = undefined;
+						draft.metadataExternalId = undefined;
+						draft.metadataMatchStatus = "unmatched";
+						draft.metadataMatchConfidence = 0;
 						try {
 							const matched = await previewMusicAlbumImportMetadata({
 								albumTitle: preview.title,
@@ -584,6 +604,9 @@ export function useAlbumImportUpload() {
 								draft.metadataMatched = true;
 								draft.metadataSourceUrl = matched.sourceUrl;
 								draft.metadataSource = matched.metadataSource;
+								draft.metadataExternalId = matched.externalId;
+								draft.metadataMatchStatus = matched.matchStatus;
+								draft.metadataMatchConfidence = matched.matchConfidence;
 							}
 						} catch {
 							// 匹配服务不可用时保持本地预览，不阻塞上传。
@@ -596,11 +619,19 @@ export function useAlbumImportUpload() {
 						}
 						if (!flow.tracksCustomized && matchedTracks.length > 0) {
 							flow.draft.tracks = matchedTracks.map((track, index) => ({
-								id: `preview-track-${index + 1}`,
-								sequence: track.trackNumber ?? index + 1,
-								discNumber: track.discNumber ?? 1,
-								title: track.title,
-								origin: track.origin,
+									id: `preview-track-${index + 1}`,
+									sequence: track.trackNumber ?? index + 1,
+									discNumber: track.discNumber ?? 1,
+									title: track.title,
+									origin: track.origin,
+									...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
+									...(track.originalDiscNumber ? { originalDiscNumber: track.originalDiscNumber } : {}),
+									...(track.originalTrackNumber ? { originalTrackNumber: track.originalTrackNumber } : {}),
+									...(track.matchStatus ? { matchStatus: track.matchStatus } : {}),
+									...(track.matchProvider ? { matchProvider: track.matchProvider } : {}),
+									...(track.matchExternalId ? { matchExternalId: track.matchExternalId } : {}),
+									...(track.matchSourceUrl ? { matchSourceUrl: track.matchSourceUrl } : {}),
+									...(track.matchConfidence !== undefined ? { matchConfidence: track.matchConfidence } : {}),
 							}));
 						}
 					}

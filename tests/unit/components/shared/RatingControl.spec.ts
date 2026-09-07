@@ -29,6 +29,22 @@ describe('RatingControl.vue', () => {
     expect(wrapper.text()).toContain('评分人数不足（4/5）')
   })
 
+  it('uses solid gray base stars and orange-gold fills', () => {
+    const wrapper = mount(RatingControl)
+    const baseStarRule = ratingControlSource.match(
+      /\.rating-control__star-base\s*\{([^}]*)\}/s,
+    )?.[1] ?? ''
+    const fillRule = [...ratingControlSource.matchAll(
+      /\.rating-control__star-fill\s*\{([^}]*)\}/gs,
+    )].map((match) => match[1]).find((rule) => rule.includes('overflow: hidden')) ?? ''
+
+    expect(wrapper.findAll('.rating-control__star-base')).toHaveLength(5)
+    expect(wrapper.findAll('.rating-control__star-fill')).toHaveLength(5)
+    expect(ratingControlSource).toContain('IconStarFilled as StarFilled')
+    expect(baseStarRule).toMatch(/color:\s*#d7dbe0/)
+    expect(fillRule).toMatch(/color:\s*#ff9d24/)
+  })
+
   it('emits integer ten-point scores from half-star targets', async () => {
     const wrapper = mount(RatingControl)
     const scoreNine = wrapper.get('button[data-score="9"]')

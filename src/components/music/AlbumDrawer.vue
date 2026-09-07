@@ -986,7 +986,7 @@ watch(
     :show="commentsOpen"
     :title="`专辑评论-${album.title || album.id}`"
     :target="{ kind: 'music_album', resourceId: String(album.id) }"
-    partial-width="var(--a-recommendation-width)"
+    partial-width="var(--a-comment-sheet-width)"
     noun="讨论"
     :is-top-layer="topLayer"
     :layer-index="sheetIndex + 1"

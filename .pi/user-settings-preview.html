@@ -195,15 +195,17 @@
     .subscription-card-state.paused, .subscription-card-state.muted { color: #9a6a00; }
     .subscription-card-actions { display: flex; justify-content: flex-end; gap: 6px; padding-top: 2px; border-top: 1px solid var(--soft); }
     .subscription-card-actions .btn { min-height: 30px; padding: 0 9px; font-size: 11px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card { position: relative; gap: 6px; min-height: 108px; padding: 9px 78px 10px 0; border: 0; border-bottom: 1px solid var(--soft); background: transparent; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-head { align-items: center; gap: 8px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-mark { width: 40px; height: 40px; border-radius: 4px; font-size: 14px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card { display: grid; grid-template-columns: 16px 40px minmax(0, 1fr) auto; grid-template-rows: auto auto auto auto; column-gap: 8px; row-gap: 6px; min-height: 108px; padding: 9px 0 10px; border: 0; border-bottom: 1px solid var(--soft); background: transparent; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head { display: contents; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head input { grid-column: 1; grid-row: 1; align-self: start; margin: 12px 0 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head > span:last-child { grid-column: 3; grid-row: 1; align-self: center; min-width: 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-mark { grid-column: 2; grid-row: 1 / span 4; align-self: start; width: 40px; height: 40px; border-radius: 4px; font-size: 14px; }
     .subscription-grid[data-subscription-grid-all] .subscription-card strong { font-size: 13px; }
     .subscription-grid[data-subscription-grid-all] .subscription-card small { font-size: 11px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-status { margin-left: 48px; padding: 2px 5px; font-size: 10px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-description { display: -webkit-box; margin-left: 48px; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-state { margin-left: 48px; font-size: 10px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-actions { position: absolute; top: 12px; right: 0; justify-content: flex-start; border-top: 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-status { grid-column: 3; grid-row: 2; align-self: start; padding: 2px 5px; font-size: 10px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-description { display: -webkit-box; grid-column: 3 / -1; grid-row: 3; margin: 0; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-state { grid-column: 3 / -1; grid-row: 4; margin: 0; font-size: 10px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-actions { grid-column: 4; grid-row: 1; align-self: start; justify-content: flex-start; border-top: 0; }
     .subscription-grid[data-subscription-grid-all] .subscription-card-actions .btn { min-height: 30px; padding: 0 9px; border-color: #e2e8f0; background: #f1f5f9; color: var(--muted); font-size: 11px; }
     .subscription-groups { display: grid; gap: 14px; }
     .subscription-group { overflow: hidden; border: 1px solid var(--line); background: var(--paper); }

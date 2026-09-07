@@ -1,643 +1,445 @@
 <template>
   <ChannelView v-if="resolvedChannelSlug" :entity-handle="resolvedChannelSlug" />
-  <div v-else class="profile-page a-page" style="padding-bottom: 12rem">
-    <PToast v-model="toastVisible" :message="toastMessage" />
-
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="profile-page__skeleton">
+  <main v-else class="profile-page a-page" aria-labelledby="profile-title">
+    <div v-if="loading" class="profile-page__skeleton" role="status" aria-label="正在加载用户资料">
       <div class="a-skeleton profile-page__skeleton-header" />
       <div class="a-skeleton profile-page__skeleton-line" style="width: 40%" />
-      <div class="a-skeleton profile-page__skeleton-line" style="width: 60%; margin-top: .5rem" />
+      <div class="a-skeleton profile-page__skeleton-line" style="width: 60%" />
     </div>
 
-    <!-- Not found -->
-    <div v-else-if="!profile" class="profile-page__not-found">
+    <section v-else-if="!profile" class="profile-page__not-found" aria-live="polite">
       <p class="a-title a-muted">用户不存在</p>
-      <a :href="moduleUrl('blog')" class="a-link">← 文章</a>
-    </div>
+      <RouterLink :to="moduleUrl('blog')" class="a-link">返回文章</RouterLink>
+    </section>
 
     <template v-else>
-      <!-- ── Profile Header ─────────────────────────────── -->
-      <header class="profile-header">
-        <!-- Avatar -->
-        <label
-          v-if="isSelf"
-          class="profile-header__avatar profile-header__avatar--editable"
-          :class="{ 'is-uploading': uploadingAvatar }"
-          :aria-label="uploadingAvatar ? '头像上传中' : '更换头像'"
-          :title="uploadingAvatar ? '头像上传中' : '更换头像'"
-          @click="avatarChangeStarted = true"
-        >
-          <img v-if="profile.avatar_url" :src="resolveMediaURL(profile.avatar_url)" alt="当前头像" />
-          <span v-else>{{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}</span>
-          <span class="profile-header__avatar-overlay" aria-hidden="true">
-            <LoaderCircle v-if="uploadingAvatar" :size="20" class="profile-header__avatar-spinner" />
-            <Camera v-else :size="20" />
-          </span>
-          <input
-            data-testid="profile-avatar-input"
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            :disabled="uploadingAvatar"
-            @change="changeAvatar"
-          />
-        </label>
-        <div v-else class="profile-header__avatar" aria-hidden="true">
-          <img v-if="profile.avatar_url" :src="resolveMediaURL(profile.avatar_url)" alt="" />
-          <span v-else>{{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}</span>
-        </div>
+      <PToast v-model="toastVisible" :message="toastMessage" />
+
+      <section class="profile-header" aria-label="用户身份">
+        <PAvatar
+          :src="profile.avatar_url"
+          :name="displayName"
+          :alt="`${displayName}的头像`"
+          size="lg"
+          class="profile-header__avatar"
+        />
 
         <div class="profile-header__body">
-          <!-- Name row + actions -->
-          <div class="profile-header__top">
-            <!-- Inline edit: display_name -->
-            <div v-if="isSelf && editingField === 'display_name'" class="profile-header__inline-edit">
-              <input
-                v-model="editDisplayName"
-                class="profile-header__inline-input"
-                maxlength="50"
-                placeholder="显示名"
-                @keydown.enter.prevent="saveField('display_name')"
-                @keydown.escape="cancelEdit"
-              />
-              <PButton label="保存" size="sm" :loading="saving" loading-text="保存中..." @click="saveField('display_name')" />
-              <PButton label="取消" size="sm" variant="ghost" :disabled="saving" @click="cancelEdit" />
-            </div>
-            <div v-else class="profile-header__name-wrap">
-              <h1 class="profile-header__name">{{ profile.display_name || profile.username }}</h1>
-              <button
-                v-if="isSelf"
-                class="profile-header__edit-trigger"
-                title="编辑显示名"
-                aria-label="编辑显示名"
-                @click="startEdit('display_name')"
-              >
-                <Pencil :size="14" />
-              </button>
-            </div>
-            <p class="profile-header__handle">@{{ profile.username }}</p>
-
-            <!-- Action buttons -->
-            <div class="profile-header__actions">
-              <button
-                v-if="authStore.isAuthenticated && !isSelf"
-                class="a-toggle-btn"
-                :class="{ 'a-toggle-btn-active': following }"
-                @click="toggleFollow"
-              >{{ following ? '已关注' : '关注' }}</button>
-              <PButton
-                v-if="authStore.isAuthenticated && !isSelf"
-                data-testid="message-user"
-                :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'user', target_id: profile.uuid } }"
-                size="sm"
-                variant="secondary"
-              >私信</PButton>
-              <PClip
-                v-if="userRssUrl"
-                data-testid="user-rss"
-                label="RSS"
-                title="复制 RSS 订阅地址"
-                @click="copyUserRssLink"
-              />
-              <PButton
-                v-if="isSelf"
-                :href="desktopAppPath(`/users/${profile.username}/settings`)"
-                size="sm"
-                variant="secondary"
-              >设置</PButton>
-              <PButton
-                v-if="isSelf && avatarChangeStarted && canRestoreAvatar"
-                variant="ghost"
-                size="sm"
-                :loading="restoringAvatar"
-                loading-text="恢复中..."
-                :disabled="restoringAvatar || uploadingAvatar"
-                @click="restoreAvatar"
-              >
-                <Undo2 :size="14" />
-                恢复上次头像
-              </PButton>
-            </div>
-          </div>
-
-          <UserSummaryCard
-            class="profile-header__reputation"
-            :user="profile"
-            :show-identity="false"
-            exact-contribution
-          />
-
-          <!-- Stats -->
-          <div class="profile-header__stats">
-            <span class="profile-header__stat">
-              <strong>{{ channels.length }}</strong> 个频道
-            </span>
-            <span class="profile-header__stat">
-              <strong>{{ profile.posts_count ?? 0 }}</strong> 篇内容
-            </span>
-            <span class="profile-header__stat">
-              <strong>{{ profile.followers_count ?? 0 }}</strong> 位关注者
-            </span>
-            <span class="profile-header__stat">
-              <strong>{{ profile.following_count ?? 0 }}</strong> 正在关注
-            </span>
-          </div>
-
-          <!-- Bio inline edit -->
-          <div class="profile-header__bio-row">
-            <template v-if="isSelf && editingField === 'bio'">
-              <textarea
-                v-model="editBio"
-                class="profile-header__inline-textarea"
-                maxlength="200"
-                placeholder="一句话介绍自己"
-                rows="2"
-              />
-              <div class="profile-header__inline-actions">
-                <PButton label="保存" size="sm" :loading="saving" loading-text="保存中..." @click="saveField('bio')" />
-                <PButton label="取消" size="sm" variant="ghost" :disabled="saving" @click="cancelEdit" />
+          <div class="profile-header__identity-row">
+            <div class="profile-header__identity">
+              <div class="profile-header__name-row">
+                <h1 id="profile-title" class="profile-header__name">{{ displayName }}</h1>
+                <UserSummaryCard
+                  class="profile-header__reputation"
+                  :user="profile"
+                  :show-identity="false"
+                  exact-contribution
+                />
               </div>
-            </template>
-            <template v-else>
-              <p v-if="profile.bio" class="profile-header__bio">{{ profile.bio }}</p>
-              <button
-                v-if="isSelf"
-                class="profile-header__bio-edit-btn"
-                :aria-label="profile.bio ? '编辑简介' : '添加简介'"
-                @click="startEdit('bio')"
-              >
-                <template v-if="profile.bio"><Pencil :size="13" /> 编辑简介</template>
-                <template v-else><Plus :size="13" /> 添加简介</template>
-              </button>
-            </template>
+              <p class="profile-header__handle">@{{ profile.username }}</p>
+            </div>
+
+            <div class="profile-header__action-area">
+              <div class="profile-header__actions" aria-label="用户操作">
+                <button
+                  v-if="authStore.isAuthenticated && !isSelf"
+                  data-testid="profile-subscribe"
+                  type="button"
+                  class="a-toggle-btn"
+                  :class="{ 'a-toggle-btn-active': following }"
+                  :disabled="followBusy"
+                  @click="toggleFollow"
+                >{{ following ? '已订阅' : '订阅' }}</button>
+                <PButton
+                  v-if="authStore.isAuthenticated && !isSelf"
+                  data-testid="message-user"
+                  :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'user', target_id: profile.uuid } }"
+                  size="sm"
+                  variant="secondary"
+                >私信</PButton>
+                <PClip
+                  v-if="userRssUrl"
+                  data-testid="user-rss"
+                  label="订阅RSS"
+                  title="复制订阅 RSS 地址"
+                  @click="copyUserRssLink"
+                />
+                <PButton
+                  v-if="isSelf"
+                  data-testid="edit-profile"
+                  :href="desktopAppPath(`/users/${profile.username}/settings`)"
+                  size="sm"
+                  variant="secondary"
+                >编辑资料</PButton>
+              </div>
+
+              <div v-if="canViewRelations" class="profile-header__relations" aria-label="订阅关系">
+                <div class="profile-header__relation-stat">
+                  <strong data-testid="profile-following-count">{{ formatProfileCount(profile.following_count) }}</strong>
+                  <button
+                    data-testid="profile-following"
+                    type="button"
+                    class="profile-header__relation-link"
+                    @click="openRelations('following')"
+                  >订阅中</button>
+                </div>
+                <div class="profile-header__relation-stat">
+                  <strong data-testid="profile-followers-count">{{ formatProfileCount(profile.followers_count) }}</strong>
+                  <button
+                    data-testid="profile-followers"
+                    type="button"
+                    class="profile-header__relation-link"
+                    @click="openRelations('followers')"
+                  >被订阅</button>
+                </div>
+              </div>
+              <p v-else class="profile-header__relations-private">订阅关系未公开</p>
+            </div>
+          </div>
+
+          <div class="profile-header__bio-row">
+            <p v-if="profile.bio" class="profile-header__bio">{{ profile.bio }}</p>
+            <p v-else class="profile-header__bio profile-header__bio--empty">这个用户还没有填写简介</p>
           </div>
         </div>
-      </header>
-
-      <!-- ── Channels ────────────────────────────────────── -->
-      <section class="profile-section">
-        <h2 class="profile-section__title">频道</h2>
-        <div class="profile-channels">
-          <RouterLink
-            v-for="ch in channels"
-            :key="ch.id"
-            :to="`/channels/${ch.slug || ch.id}`"
-            class="profile-channel-chip"
-          >{{ ch.name }}</RouterLink>
-        </div>
-      </section>
-
-      <!-- ── Content feed ───────────────────────────────── -->
-      <section class="profile-section">
-        <h2 class="profile-section__title">内容</h2>
-
-        <!-- Loading -->
-        <div v-if="loadingContent && contentItems.length === 0" class="profile-content__loading">
-          <div v-for="i in 3" :key="i" class="a-skeleton profile-content__skeleton" />
-        </div>
-
-        <PEmpty v-else-if="!contentItems.length" title="暂无内容" description="该用户还没有发布内容" />
-
-        <div v-else class="profile-content__list feed-timeline-box">
-          <template v-for="item in contentItems" :key="itemKey(item)">
-            <!-- Short note: card with lightbox and sheet support -->
-            <ShortNoteCard
-              v-if="item.type === 'note'"
-              :note="item.data"
-              @delete="removeNote"
-            />
-
-            <BlogItemCard
-              v-else-if="item.type === 'post'"
-              :item="item.data"
-              type="post"
-              :bookmarked="starredIds.has(item.data.id)"
-              :in-reading-list="readingListIds.has(item.data.id)"
-              @click="blogSheets.openPost(item.data.id, item.data.title)"
-              @toggle-bookmark="toggleStar(item.data.id)"
-              @toggle-reading-list="toggleReadingList(item.data.id)"
-            />
-          </template>
-        </div>
-
-        <PaginationBar
-          v-if="contentMeta.total > 0"
-          :meta="contentMeta"
-          :loading="loadingContent"
-          @change="loadContentPage"
-        />
       </section>
     </template>
-  </div>
-  <PConfirm
-    :show="deletePending !== null"
-    title="删除短笺"
-    message="确定删除这条短笺吗？"
-    confirm-text="删除"
-    danger
-    :loading="deleting"
-    @confirm="confirmRemoveNote"
-    @cancel="deletePending = null"
-  />
+  </main>
+
+  <PModal
+    v-if="relationModalOpen"
+    :title="relationTitle"
+    size="md"
+    @close="closeRelations"
+  >
+    <div data-testid="profile-relations-modal" class="profile-relations-modal">
+      <div class="profile-relations-modal__tabs" role="tablist" aria-label="订阅关系类型">
+        <button
+          data-testid="profile-relations-tab-following"
+          type="button"
+          role="tab"
+          :aria-selected="relationTab === 'following'"
+          :class="{ 'is-active': relationTab === 'following' }"
+          @click="openRelations('following')"
+        >订阅中</button>
+        <button
+          data-testid="profile-relations-tab-followers"
+          type="button"
+          role="tab"
+          :aria-selected="relationTab === 'followers'"
+          :class="{ 'is-active': relationTab === 'followers' }"
+          @click="openRelations('followers')"
+        >被订阅</button>
+      </div>
+
+      <div v-if="relationLoading" class="profile-relations-modal__state" role="status">正在加载...</div>
+      <div v-else-if="relationError" class="profile-relations-modal__state profile-relations-modal__state--error" role="alert">
+        <span>{{ relationError }}</span>
+        <PButton type="button" size="sm" variant="secondary" @click="loadRelations(relationTab, true)">重试</PButton>
+      </div>
+      <div v-else-if="!relationEntries.length" class="profile-relations-modal__state">暂无{{ relationTab === 'following' ? '订阅对象' : '订阅者' }}</div>
+      <ul v-else class="profile-relations-modal__list">
+        <li v-for="entry in relationEntries" :key="entry.key" class="profile-relation-item">
+          <RouterLink
+            v-if="entry.username"
+            :to="userUrl(entry.username)"
+            class="profile-relation-item__link"
+          >
+            <PAvatar :src="entry.avatarUrl" :name="entry.name" :alt="`${entry.name}的头像`" size="md" />
+            <span class="profile-relation-item__identity">
+              <strong>{{ entry.name }}</strong>
+              <small>@{{ entry.username }}</small>
+            </span>
+            <small v-if="entry.detail" class="profile-relation-item__detail">{{ entry.detail }}</small>
+          </RouterLink>
+          <div v-else class="profile-relation-item__link">
+            <PAvatar :src="entry.avatarUrl" :name="entry.name" :alt="entry.name" size="md" />
+            <span class="profile-relation-item__identity"><strong>{{ entry.name }}</strong></span>
+            <small v-if="entry.detail" class="profile-relation-item__detail">{{ entry.detail }}</small>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </PModal>
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
-import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { IconCamera as Camera, IconLoader as LoaderCircle, IconPencil as Pencil, IconPlus as Plus, IconArrowBackUp as Undo2 } from '@tabler/icons-vue'
-import BlogItemCard from '@/components/shared/BlogItemCard.vue'
-import PEmpty from '@/components/ui/PEmpty.vue'
+import { RouterLink, useRoute } from 'vue-router'
+import { apiRequestResult } from '@/api/client'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PClip from '@/components/ui/PClip.vue'
-import PConfirm from '@/components/ui/PConfirm.vue'
-import PaginationBar from '@/components/ui/PaginationBar.vue'
+import PModal from '@/components/ui/PModal.vue'
 import PToast from '@/components/ui/PToast.vue'
-import { apiRequestEnvelope } from '@/api/client'
-import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useFeedStore } from '@/stores/feed'
-import { useApi } from '@/composables/useApi'
-import { resolveSiteContext } from '@/router/siteContext'
-import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
-import { useBlogSheets } from '@/composables/useBlogSheets'
-import { resolveMediaURL } from '@/utils/mediaUrl'
-import { desktopAppPath } from '@/utils/desktopAppUrl'
-import {
-  getUserAvatarRestoreAvailability,
-  restoreUserAvatar,
-  uploadUserAvatar,
-} from '@/api/userProfile'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import UserSummaryCard from '@/components/user/UserSummaryCard.vue'
-import type { UserProfile, Post, Channel, ShortNote } from '@/types'
+import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
+import { resolveSiteContext } from '@/router/siteContext'
+import { moduleUrl, userUrl } from '@/composables/useSubdomainNav'
+import { desktopAppPath } from '@/utils/desktopAppUrl'
+import type { UserProfile } from '@/types'
 
-type ContentItem =
-  | { type: 'post'; sortKey: string; data: Post }
-  | { type: 'note'; sortKey: string; data: ShortNote }
+type RelationTab = 'following' | 'followers'
 
-type EditableField = 'display_name' | 'bio'
-
-const PAGE_SIZE = 20
+type RelationEntry = {
+  key: string
+  name: string
+  username?: string
+  avatarUrl?: string
+  detail?: string
+}
 
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
-const feedStore = useFeedStore()
 const api = useApi()
-const blogSheets = useBlogSheets()
 
-const starredIds = computed(() => feedStore.bookmarkedPostIds)
-const readingListIds = computed(() => feedStore.readingListItemIds)
-
-const toggleStar = (id: string) => { void feedStore.togglePostBookmark(id) }
-const toggleReadingList = (id: string) => { void feedStore.toggleReadingListItem(id) }
-const deletePending = ref<ShortNote | null>(null)
-const deleting = ref(false)
-
-function removeNote(noteToRemove: ShortNote) {
-  if (deleting.value) return
-  deletePending.value = noteToRemove
-}
-
-async function confirmRemoveNote() {
-  const noteToRemove = deletePending.value
-  if (!noteToRemove || deleting.value) return
-  deleting.value = true
-  try {
-    await apiRequestEnvelope(api.blog.shortNote(noteToRemove.id), {
-      method: 'DELETE',
-      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
-    })
-    allNotes.value = allNotes.value.filter(item => item.id !== noteToRemove.id)
-  } catch {
-    toastMessage.value = '删除失败，请重试'
-    toastVisible.value = true
-  } finally {
-    deleting.value = false
-    deletePending.value = null
-  }
-}
-
-// ── Profile data ──────────────────────────────────────────
 const profile = ref<UserProfile | null>(null)
-const channels = ref<Channel[]>([])
-const userRssUrl = computed(() => profile.value?.username ? api.rss.user(profile.value.username) : '')
 const loading = ref(true)
 const following = ref(false)
+const followBusy = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const resolvedChannelSlug = ref('')
+const resolvedUsername = ref('')
 let profileLoadSequence = 0
 
-// ── Inline edit ───────────────────────────────────────────
-const editingField = ref<EditableField | null>(null)
-const editDisplayName = ref('')
-const editBio = ref('')
-const saving = ref(false)
-const uploadingAvatar = ref(false)
-const restoringAvatar = ref(false)
-const canRestoreAvatar = ref(false)
-const avatarChangeStarted = ref(false)
+const relationModalOpen = ref(false)
+const relationTab = ref<RelationTab>('following')
+const relationLoading = ref(false)
+const relationError = ref('')
+const relationCache = ref<Record<RelationTab, RelationEntry[]>>({ following: [], followers: [] })
+const relationLoaded = ref<Record<RelationTab, boolean>>({ following: false, followers: false })
+
+const siteContext = computed(() => resolveSiteContext(
+  window.location.hostname,
+  window.location.search,
+  window.location.pathname,
+))
+const username = computed(() => resolvedUsername.value || String(route.params.handle || ''))
+const displayName = computed(() => profile.value?.display_name || profile.value?.username || '')
+const isSelf = computed(() => authStore.user?.username === profile.value?.username)
+const userRssUrl = computed(() => profile.value?.username ? api.rss.user(profile.value.username) : '')
+const relationTitle = computed(() => relationTab.value === 'following' ? '订阅中' : '被订阅')
+const relationEntries = computed(() => relationCache.value[relationTab.value])
+const canViewRelations = computed(() => {
+  if (isSelf.value) return true
+  const candidate = profile.value as (UserProfile & { private_profile?: boolean; show_relations?: boolean }) | null
+  return candidate?.private_profile !== true && candidate?.show_relations !== false
+})
+
+function formatProfileCount(value: number | null | undefined) {
+  const normalized = Math.max(0, Math.floor(Number(value) || 0))
+  if (normalized < 1000) return String(normalized)
+  if (normalized < 10000) return `${Math.floor(normalized / 1000)}k+`
+  return `${Math.floor(normalized / 10000)}w+`
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function responsePayload(value: unknown): unknown {
+  if (!isRecord(value) || !('data' in value)) return value
+  return value.data
+}
+
+function relationRawItems(value: unknown) {
+  const payload = responsePayload(value)
+  if (Array.isArray(payload)) return payload
+  if (!isRecord(payload)) return []
+  const users = Array.isArray(payload.users) ? payload.users : []
+  const channels = Array.isArray(payload.channels) ? payload.channels : []
+  const items = Array.isArray(payload.items) ? payload.items : []
+  return [...users, ...channels, ...items]
+}
+
+function normalizeRelationItems(value: unknown): RelationEntry[] {
+  const entries: RelationEntry[] = []
+  const seen = new Set<string>()
+
+  for (const raw of relationRawItems(value)) {
+    if (!isRecord(raw)) continue
+    const channel = isRecord(raw.channel) ? raw.channel : isRecord(raw.target) ? raw.target : raw
+    const owner = isRecord(raw.user)
+      ? raw.user
+      : isRecord(raw.owner)
+        ? raw.owner
+        : isRecord(channel.user)
+          ? channel.user
+          : isRecord(channel.owner)
+            ? channel.owner
+            : raw
+    const uuid = stringValue(owner.uuid)
+    const usernameValue = stringValue(owner.username)
+    const id = stringValue(channel.id) || stringValue(channel.uuid)
+    const isChannel = raw.kind === 'channel' || raw.type === 'channel' || raw.target_type === 'channel'
+      || raw.source_type === 'internal_channel' || isRecord(raw.channel)
+    const channelName = stringValue(channel.name) || stringValue(channel.title)
+    const name = stringValue(owner.display_name) || usernameValue || channelName
+    if (!name) continue
+
+    const key = uuid || usernameValue || (isChannel && id ? `channel:${id}` : '')
+    if (!key) continue
+    if (seen.has(key)) {
+      if (isChannel && channelName) {
+        const existing = entries.find((entry) => entry.key === key)
+        if (existing && !existing.detail?.includes(channelName)) {
+          existing.detail = existing.detail ? `${existing.detail} · ${channelName}` : `频道 · ${channelName}`
+        }
+      }
+      continue
+    }
+    seen.add(key)
+    entries.push({
+      key,
+      name,
+      username: usernameValue,
+      avatarUrl: stringValue(owner.avatar_url) || stringValue(raw.cover_url),
+      detail: isChannel && channelName ? `频道 · ${channelName}` : usernameValue ? `账号 · @${usernameValue}` : undefined,
+    })
+  }
+
+  return entries
+}
+
+function resetRelations() {
+  relationCache.value = { following: [], followers: [] }
+  relationLoaded.value = { following: false, followers: false }
+  relationLoading.value = false
+  relationError.value = ''
+}
 
 async function copyUserRssLink() {
   if (!userRssUrl.value) return
   try {
     if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
     await navigator.clipboard.writeText(userRssUrl.value)
-    toastMessage.value = '已复制 RSS 链接'
+    toastMessage.value = '已复制订阅 RSS 链接'
   } catch {
-    toastMessage.value = '复制失败，请手动复制 RSS 链接'
-  } finally {
-    toastVisible.value = true
+    toastMessage.value = '复制失败，请手动复制订阅 RSS 链接'
   }
+  toastVisible.value = true
 }
 
-function startEdit(field: EditableField) {
-  editingField.value = field
-  if (field === 'display_name') editDisplayName.value = profile.value?.display_name || ''
-  if (field === 'bio') editBio.value = profile.value?.bio || ''
-}
-
-function cancelEdit() {
-  editingField.value = null
-}
-
-async function saveField(field: EditableField) {
-  if (!profile.value || saving.value) return
-  saving.value = true
-  const body: Record<string, string> = {}
-  if (field === 'display_name') body.display_name = editDisplayName.value.trim()
-  if (field === 'bio') body.bio = editBio.value.trim()
-  try {
-    const res = await apiRequestResult(api.users.settings, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-      body: JSON.stringify(body),
-    })
-    if (res.ok) {
-      const data = (await Promise.resolve(res.data)).data
-      profile.value = { ...profile.value!, ...data }
-      authStore.updateUser(data)
-      cancelEdit()
-      toastMessage.value = '资料已更新'
-      toastVisible.value = true
-    } else {
-      toastMessage.value = '保存失败，请重试'
-      toastVisible.value = true
-    }
-  } catch (e) {
-    reportError(e)
-    toastMessage.value = '保存失败，请重试'
-    toastVisible.value = true
-  } finally {
-    saving.value = false
+async function fetchProfile(generation = profileLoadSequence) {
+  if (!username.value) {
+    loading.value = false
+    return
   }
-}
-
-async function refreshAvatarRestoreAvailability() {
-  if (!authStore.isAuthenticated || !profile.value || !isSelf.value) return
   try {
-    canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
-  } catch {
-    canRestoreAvatar.value = false
-  }
-}
-
-async function restoreAvatar() {
-  if (!profile.value || restoringAvatar.value || !canRestoreAvatar.value) return
-  restoringAvatar.value = true
-  try {
-    const restored = await restoreUserAvatar()
-    profile.value = { ...profile.value, avatar_url: restored.url }
-    authStore.updateUser({ avatar_url: restored.url })
-    avatarChangeStarted.value = false
-    toastMessage.value = '已恢复上次头像'
-  } catch (error) {
-    reportError(error)
-    toastMessage.value = '恢复失败，请重试'
-  } finally {
-    toastVisible.value = true
-    restoringAvatar.value = false
-  }
-}
-
-async function changeAvatar(event: Event) {
-  if (!profile.value || uploadingAvatar.value) return
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-
-  uploadingAvatar.value = true
-  try {
-    const uploaded = await uploadUserAvatar(file)
-    try {
-      canRestoreAvatar.value = (await getUserAvatarRestoreAvailability()).available
-    } catch {
-      canRestoreAvatar.value = false
-    }
-    const res = await apiRequestResult(api.users.settings, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-      body: JSON.stringify({ avatar_url: uploaded.url }),
-    })
-    if (!res.ok) throw new Error('avatar update failed')
-    const data = (await Promise.resolve(res.data)).data
-    profile.value = { ...profile.value, ...data }
-    authStore.updateUser(data)
-    toastMessage.value = '头像已更新'
-  } catch (error) {
-    reportError(error)
-    toastMessage.value = '头像更新失败，请重新选择图片'
-  } finally {
-    toastVisible.value = true
-    uploadingAvatar.value = false
-  }
-}
-
-// ── Content (posts + notes merged) ───────────────────────
-const allPosts = ref<Post[]>([])
-const allNotes = ref<ShortNote[]>([])
-const loadingContent = ref(true)
-const contentPage = ref(1)
-const contentMeta = ref({ page: 1, page_size: PAGE_SIZE, total: 0, has_more: false })
-
-const contentItems = computed<ContentItem[]>(() => {
-  const posts: ContentItem[] = allPosts.value.map(p => ({
-    type: 'post',
-    sortKey: p.created_at,
-    data: p,
-  }))
-  const notes: ContentItem[] = allNotes.value.map(n => ({
-    type: 'note',
-    sortKey: n.created_at,
-    data: n,
-  }))
-  return [...posts, ...notes].sort((a, b) => b.sortKey.localeCompare(a.sortKey))
-})
-
-const itemKey = (item: ContentItem) =>
-  item.type === 'post' ? `post-${item.data.id}` : `note-${item.data.id}`
-
-async function loadContent(page: number, generation = profileLoadSequence) {
-  if (!profile.value) return
-  const profileID = profile.value.uuid
-  loadingContent.value = true
-  const params = new URLSearchParams({
-    user_id: profileID,
-    page: String(page),
-    page_size: String(PAGE_SIZE),
-  })
-  try {
-    const [postsRes, notesRes] = await Promise.all([
-      apiRequestResult(`${api.blog.posts}?${params}&status=published`),
-      apiRequestResult(`${api.blog.shortNotes}?${params}`),
-    ])
-
-    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
-    if (postsRes.ok) {
-      const body = postsRes.data
-      allPosts.value = body.data || []
-      const meta = body.meta || {}
-      contentMeta.value = {
-        page,
-        page_size: PAGE_SIZE,
-        total: (meta.total ?? 0),
-        has_more: Boolean(meta.has_more),
-      }
-    }
-
-    if (notesRes.ok) {
-      const body = notesRes.data
-      allNotes.value = body.data || []
-      const meta = body.meta || {}
-      contentMeta.value = {
-        ...contentMeta.value,
-        total: contentMeta.value.total + (meta.total ?? 0),
-        has_more: contentMeta.value.has_more || Boolean(meta.has_more),
-      }
-    }
-  } finally {
-    if (generation === profileLoadSequence && profile.value?.uuid === profileID) loadingContent.value = false
-  }
-}
-
-function loadContentPage(page: number) {
-  contentPage.value = page
-  void loadContent(page)
-}
-
-// ── Routing / profile ────────────────────────────────────
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-}
-
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
-const resolvedUsername = ref('')
-const username = computed(() => resolvedUsername.value || (route.params.username as string) || '')
-const isSelf = computed(() => authStore.user?.username === profile.value?.username)
-
-const resolveEntityContext = async (generation = profileLoadSequence) => {
-  if (siteContext.value.type !== 'entity') return
-  const res = await apiRequestResult(api.site.resolve(siteContext.value.handle))
-  if (generation !== profileLoadSequence) return
-  if (!res.ok) { resolvedUsername.value = siteContext.value.handle; return }
-  const payload = await Promise.resolve(res.data)
-  if (generation !== profileLoadSequence) return
-  const data = payload.data || {}
-  if (data.type === 'channel' && data.slug) { resolvedChannelSlug.value = data.slug; return }
-  if (data.type === 'user' && data.username) { resolvedUsername.value = data.username; return }
-  resolvedUsername.value = siteContext.value.handle
-}
-
-const fetchProfile = async (generation = profileLoadSequence) => {
-  const handle = String(route.params.handle || username.value || '')
-  if (!handle) { loading.value = false; return }
-  try {
-    const res = await apiRequestResult(api.users.profile(handle))
+    const response = await apiRequestResult(api.users.profile(username.value))
     if (generation !== profileLoadSequence) return
-    if (res.ok) {
-      profile.value = (await Promise.resolve(res.data)).data || null
-      if (generation === profileLoadSequence) void refreshAvatarRestoreAvailability()
-    }
+    if (response.ok) profile.value = (response.data as { data?: UserProfile }).data || null
   } finally {
     if (generation === profileLoadSequence) loading.value = false
   }
 }
 
-const fetchChannels = async (generation = profileLoadSequence) => {
-  if (!profile.value) return
-  const profileID = profile.value.uuid
-  try {
-    const res = await apiRequestResult(`${api.blog.channels}?user_id=${profileID}`)
-    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
-    if (res.ok) channels.value = (await Promise.resolve(res.data)).data || []
-  } catch (e) { reportError(e) }
-}
-
-const fetchFollowingState = async (generation = profileLoadSequence) => {
+async function fetchFollowingState(generation = profileLoadSequence) {
   if (!profile.value || !authStore.isAuthenticated || isSelf.value) return
   const profileID = profile.value.uuid
   try {
-    const res = await apiRequestResult(api.users.following(authStore.user?.uuid || ''), {
+    const response = await apiRequestResult(api.users.following(authStore.user?.uuid || ''), {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
-    if (res.ok) {
-      const list = (await Promise.resolve(res.data)).data || []
-      if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
-      following.value = list.some((u: { uuid?: string }) => u.uuid === profileID)
-    }
-  } catch (e) { reportError(e) }
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID || !response.ok) return
+    const list = relationRawItems(response.data)
+    following.value = list.some((item) => isRecord(item) && item.uuid === profileID)
+  } catch {
+    // The profile remains usable when the viewer state cannot be loaded.
+  }
 }
 
-const toggleFollow = async () => {
-  if (!profile.value) return
-  const method = following.value ? 'DELETE' : 'POST'
+async function toggleFollow() {
+  if (!profile.value || followBusy.value) return
+  followBusy.value = true
+  const wasFollowing = following.value
   try {
-    const res = await apiRequestResult(api.users.follow(profile.value.uuid), {
-      method,
+    const response = await apiRequestResult(api.users.follow(profile.value.uuid), {
+      method: wasFollowing ? 'DELETE' : 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    if (res.ok) {
-      following.value = !following.value
-      toastMessage.value = following.value ? '已关注该用户' : '已取消关注'
-      toastVisible.value = true
-    }
-  } catch (e) { reportError(e) }
+    if (!response.ok) throw new Error('follow request failed')
+    following.value = !wasFollowing
+    profile.value.followers_count = Math.max(0, (profile.value.followers_count || 0) + (following.value ? 1 : -1))
+    relationLoaded.value.followers = false
+    toastMessage.value = following.value ? '已订阅该用户' : '已取消订阅'
+    toastVisible.value = true
+  } catch {
+    toastMessage.value = '订阅操作失败，请重试'
+    toastVisible.value = true
+  } finally {
+    followBusy.value = false
+  }
 }
 
-const loadProfilePage = async () => {
+async function loadRelations(tab: RelationTab, force = false) {
+  if (!profile.value || !canViewRelations.value) return
+  if (!force && relationLoaded.value[tab]) return
+  relationLoading.value = true
+  relationError.value = ''
+  try {
+    const endpoint = tab === 'following'
+      ? api.users.following(profile.value.uuid)
+      : api.users.followers(profile.value.uuid)
+    const response = await apiRequestResult(endpoint)
+    if (!response.ok) throw new Error('relation request failed')
+    relationCache.value[tab] = normalizeRelationItems(response.data)
+    relationLoaded.value[tab] = true
+  } catch {
+    relationError.value = '订阅关系加载失败，请重试'
+  } finally {
+    relationLoading.value = false
+  }
+}
+
+function openRelations(tab: RelationTab) {
+  relationTab.value = tab
+  relationModalOpen.value = true
+  void loadRelations(tab)
+}
+
+function closeRelations() {
+  relationModalOpen.value = false
+}
+
+async function resolveEntityContext(generation = profileLoadSequence) {
+  if (siteContext.value.type !== 'entity') return
+  const response = await apiRequestResult(api.site.resolve(siteContext.value.handle))
+  if (generation !== profileLoadSequence) return
+  if (!response.ok) {
+    resolvedUsername.value = siteContext.value.handle
+    return
+  }
+  const payload = response.data as { data?: { type?: string; slug?: string; username?: string } }
+  const data = payload.data || {}
+  if (data.type === 'channel' && data.slug) {
+    resolvedChannelSlug.value = data.slug
+    return
+  }
+  resolvedUsername.value = data.username || siteContext.value.handle
+}
+
+async function loadProfilePage() {
   const generation = ++profileLoadSequence
+  profile.value = null
   resolvedUsername.value = ''
   resolvedChannelSlug.value = ''
-  profile.value = null
-  channels.value = []
-  allPosts.value = []
-  allNotes.value = []
-  contentPage.value = 1
-  contentMeta.value = { page: 1, page_size: PAGE_SIZE, total: 0, has_more: false }
   following.value = false
   loading.value = true
-  loadingContent.value = true
+  resetRelations()
 
   await resolveEntityContext(generation)
   if (generation !== profileLoadSequence || resolvedChannelSlug.value) return
   await fetchProfile(generation)
   if (generation !== profileLoadSequence || !profile.value) return
-  void Promise.all([
-    fetchFollowingState(generation),
-    fetchChannels(generation),
-    loadContent(1, generation),
-  ])
-  if (authStore.isAuthenticated) {
-    void feedStore.fetchBookmarkedPostIds()
-    void feedStore.fetchReadingListIds()
-  }
+  void fetchFollowingState(generation)
 }
 
 watch(() => route.fullPath, () => { void loadProfilePage() })
@@ -645,468 +447,226 @@ onMounted(() => { void loadProfilePage() })
 </script>
 
 <style scoped>
-.profile-page__skeleton { display: grid; gap: 1rem; }
-.profile-page__skeleton-header { height: 5rem; border-radius: var(--a-radius-card); }
-.profile-page__skeleton-line { height: 1.25rem; border-radius: var(--a-radius-control); }
+.profile-page { padding-bottom: 8rem; }
+.profile-page__skeleton { display: grid; gap: 0.75rem; }
+.profile-page__skeleton-header { height: 12rem; border-radius: var(--a-radius-card); }
+.profile-page__skeleton-line { height: 1rem; border-radius: var(--a-radius-control); }
 
 .profile-page__not-found {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  justify-items: center;
   gap: 1rem;
   padding: 6rem 0;
   text-align: center;
 }
 
-/* ── Header ─────────────────────────────────── */
 .profile-header {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-  margin-bottom: 2.5rem;
-  padding: 1.75rem;
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  padding: 1.5rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-surface);
 }
 
-.profile-header__avatar {
-  flex-shrink: 0;
+.profile-header__avatar { margin-top: 0.15rem; }
+.profile-header__body { min-width: 0; }
+.profile-header__identity-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 5rem;
-  height: 5rem;
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  font-size: 2rem;
-  font-weight: 500;
-  user-select: none;
-  position: relative;
-  overflow: hidden;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.profile-header__identity { min-width: 0; }
+.profile-header__name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.profile-header__name {
+  margin: 0;
+  color: var(--a-color-text);
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.profile-header__reputation { padding-top: 0.1rem; }
+.profile-header__handle {
+  margin: 0.35rem 0 0;
+  color: var(--a-color-text-secondary);
+  font-size: 0.875rem;
 }
 
-.profile-header__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.profile-header__action-area {
+  display: grid;
+  flex: 0 0 min(22rem, 46%);
+  gap: 0.75rem;
+  min-width: 17rem;
 }
-
-.profile-header__avatar--editable {
+.profile-header__actions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.profile-header__actions::-webkit-scrollbar { display: none; }
+.profile-header__actions :deep(.p-button),
+.profile-header__actions .a-toggle-btn { flex: 0 0 auto; }
+.profile-header__relations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.profile-header__relation-stat {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+}
+.profile-header__relation-stat strong {
+  color: var(--a-color-text);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.profile-header__relation-link {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text-secondary);
   cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
 }
-
-.profile-header__avatar--editable:focus-within {
+.profile-header__relation-link:hover {
+  color: var(--a-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15rem;
+}
+.profile-header__relation-link:focus-visible {
   outline: 2px solid var(--a-color-primary);
   outline-offset: 2px;
 }
-
-.profile-header__avatar--editable input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.profile-header__avatar-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: rgb(0 0 0 / 55%);
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.profile-header__avatar--editable:hover .profile-header__avatar-overlay,
-.profile-header__avatar--editable:focus-within .profile-header__avatar-overlay,
-.profile-header__avatar--editable.is-uploading .profile-header__avatar-overlay {
-  opacity: 1;
-}
-
-.profile-header__avatar-spinner {
-  animation: profile-avatar-spin 0.8s linear infinite;
-}
-
-@keyframes profile-avatar-spin {
-  to { transform: rotate(360deg); }
-}
-
-.profile-header__body { flex: 1; min-width: 0; }
-
-.profile-header__top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.profile-header__name-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.profile-header__name {
-  font-size: 1.625rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 1.2;
-}
-
-.profile-header__handle {
-  color: var(--a-color-text-secondary);
-  font-size: 0.875rem;
-  flex-shrink: 0;
-}
-
-.profile-header__actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-left: auto;
-  flex-wrap: wrap;
-}
-
-.profile-header__edit-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  color: var(--a-color-text-secondary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.profile-header__edit-trigger:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-  border-color: var(--a-color-border-soft);
-}
-
-.profile-header__reputation {
-  margin-top: 0.35rem;
-}
-
-.profile-header__stats {
-  display: flex;
-  gap: 1.25rem;
-  font-size: 0.85rem;
-  color: var(--a-color-text-secondary);
-  margin-bottom: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.profile-header__stat strong {
-  color: var(--a-color-text);
-  font-size: 1.05rem;
-  font-weight: 600;
+.profile-header__relations-private {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+  text-align: right;
 }
 
 .profile-header__bio-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  max-width: 46rem;
+  margin-top: 1.1rem;
 }
-
 .profile-header__bio {
   margin: 0;
   color: var(--a-color-text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
-.profile-header__bio-edit-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.5rem;
-  min-height: 2.75rem;
-  color: var(--a-color-text-secondary);
-  font-size: 0.8rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.profile-header__bio-edit-btn:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-  border-color: var(--a-color-border-soft);
-}
-
-/* Inline edit controls */
-.profile-header__inline-edit {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.profile-header__inline-input {
-  flex: 1;
-  min-width: 12rem;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  font-size: 0.95rem;
-  outline: none;
-}
-
-.profile-header__inline-input:focus {
-  border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 15%, transparent);
-}
-
-.profile-header__inline-textarea {
-  width: 100%;
-  padding: 0.45rem 0.65rem;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  resize: vertical;
-  outline: none;
-  font-family: inherit;
-}
-
-.profile-header__inline-textarea:focus {
-  border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 15%, transparent);
-}
-
-.profile-header__inline-actions {
-  display: flex;
-  gap: 0.4rem;
-  margin-top: 0.35rem;
-}
-
-.profile-header__inline-save,
-.profile-header__inline-cancel {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.82rem;
-  border-radius: var(--a-radius-control);
-  border: 1px solid;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.profile-header__inline-save {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-text);
-}
-
-.profile-header__inline-save:hover {
-  opacity: 0.8;
-}
-
-.profile-header__inline-cancel {
-  background: transparent;
-  color: var(--a-color-text-secondary);
-  border-color: var(--a-color-border);
-}
-
-.profile-header__inline-cancel:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-}
-
-/* ── Section ─────────────────────────────────── */
-.profile-section { margin-bottom: 3rem; }
-
-.profile-section__title {
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--a-color-text-secondary);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-/* ── Channels ────────────────────────────────── */
-.profile-channels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.profile-channel-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.85rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-pill);
-  background: var(--a-color-surface);
-  color: var(--a-color-text);
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.profile-channel-chip:hover {
-  border-color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-}
-
-/* ── Content list ────────────────────────────── */
-.profile-content__loading { display: grid; gap: 1rem; }
-
-.profile-content__skeleton {
-  height: 6rem;
-  border-radius: var(--a-radius-card);
-}
-
-.profile-content__list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.profile-content__entry { cursor: pointer; }
-
-.profile-content__visual {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  align-items: flex-start;
-  flex-shrink: 0;
-}
-
-.profile-content__cover {
-  width: 5.5rem;
-  height: 5.5rem;
-  object-fit: cover;
-  border: 1px solid var(--a-color-border-soft);
-  filter: grayscale(100%);
-  flex-shrink: 0;
-  border-radius: var(--a-radius-control);
-  margin-top: 0.25rem;
-}
-
-.profile-content__actions {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-  width: 100%;
-}
-
-.profile-content__stats {
-  display: flex;
-  gap: 1rem;
-  color: var(--a-color-muted-soft);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* ── Short note bubble ───────────────────────── */
-.profile-note-bubble {
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
-  transition: border-color 0.15s ease;
-}
-
-.profile-note-bubble:hover {
-  border-color: var(--a-color-border);
-}
-
-.profile-note-bubble__body {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  margin-bottom: 0.65rem;
-}
-
-.profile-note-bubble__text {
-  margin: 0 0 0.65rem;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: var(--a-color-text);
-  white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
+.profile-header__bio--empty { color: var(--a-color-muted); }
 
-.profile-note-bubble__media {
-  display: grid;
-  gap: 0.35rem;
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-  max-width: 24rem;
+.profile-relations-modal { display: grid; gap: 0.75rem; }
+.profile-relations-modal__tabs {
+  display: flex;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
-
-.profile-note-bubble__media.count-1 { grid-template-columns: 1fr; }
-.profile-note-bubble__media.count-2 { grid-template-columns: repeat(2, 1fr); }
-.profile-note-bubble__media.count-3 { grid-template-columns: repeat(3, 1fr); }
-.profile-note-bubble__media.count-4 { grid-template-columns: repeat(2, 1fr); }
-
-.profile-note-bubble__img {
-  aspect-ratio: 1;
-  width: 100%;
-  object-fit: cover;
+.profile-relations-modal__tabs button {
+  min-height: 2.25rem;
+  padding: 0 0 0.55rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--a-color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
 }
-
-.profile-note-bubble__footer {
+.profile-relations-modal__tabs button:hover,
+.profile-relations-modal__tabs button.is-active {
+  border-bottom-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+.profile-relations-modal__tabs button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+.profile-relations-modal__state {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 8rem;
   color: var(--a-color-text-secondary);
-  font-size: 0.78rem;
+  text-align: center;
 }
-
-.profile-note-bubble__time { color: var(--a-color-muted); }
-
-.profile-content__list.feed-timeline-box {
-  border: 0;
-  border-radius: 0;
-  overflow: visible;
-  background: transparent;
-}
-
-.profile-content__list :deep(.sticky-memo-card) {
+.profile-relations-modal__state--error { color: var(--a-color-accent-destructive); }
+.profile-relations-modal__list {
+  display: grid;
+  max-height: min(26rem, 55vh);
   margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.profile-relation-item { border-bottom: 1px solid var(--a-color-border-soft); }
+.profile-relation-item:last-child { border-bottom: 0; }
+.profile-relation-item__link {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.7rem 0.2rem;
+  color: inherit;
+  text-decoration: none;
+}
+.profile-relation-item__link:hover { background: var(--a-color-surface-muted); }
+.profile-relation-item__identity { display: grid; min-width: 0; gap: 0.1rem; }
+.profile-relation-item__identity strong,
+.profile-relation-item__identity small,
+.profile-relation-item__detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-relation-item__identity strong { color: var(--a-color-text); font-size: 0.92rem; }
+.profile-relation-item__identity small,
+.profile-relation-item__detail { color: var(--a-color-muted); font-size: 0.76rem; }
+.profile-relation-item__detail { max-width: 12rem; text-align: right; }
+
+@media (max-width: 760px) {
+  .profile-header {
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1.1rem;
+  }
+  .profile-header__identity-row { display: grid; gap: 1rem; }
+  .profile-header__action-area { min-width: 0; width: 100%; }
+  .profile-header__actions { justify-content: flex-start; }
+  .profile-header__name { font-size: 1.5rem; }
+  .profile-header__reputation { margin-top: 0.05rem; }
 }
 
-/* ── Responsive ──────────────────────────────── */
-@media (max-width: 640px) {
-  .profile-header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .profile-header__actions {
-    margin-left: 0;
-  }
-
-  .profile-header__top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .profile-header__avatar--editable .profile-header__avatar-overlay {
-    opacity: 1;
-    background: rgb(0 0 0 / 30%);
-  }
+@media (max-width: 480px) {
+  .profile-header { grid-template-columns: 1fr; }
+  .profile-header__avatar { margin: 0; }
+  .profile-header__name-row { align-items: center; }
+  .profile-relation-item__link { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .profile-relation-item__detail { grid-column: 2; max-width: none; text-align: left; }
 }
 </style>

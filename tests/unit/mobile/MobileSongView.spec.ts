@@ -5,16 +5,16 @@ import MobileSongView from '../../../apps/mobile/MobileSongView.vue'
 
 const mocks = vi.hoisted(() => ({
   getMusicSongDetail: vi.fn(),
-  addMusicSongToLater: vi.fn(),
   loadFavoriteSongs: vi.fn(),
   toggleFavoriteSong: vi.fn(),
   playSong: vi.fn(),
   addToQueue: vi.fn(),
+  openMusicEditor: vi.fn(),
+  openMusicCreationFlow: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
   getMusicSongDetail: mocks.getMusicSongDetail,
-  addMusicSongToLater: mocks.addMusicSongToLater,
 }))
 
 vi.mock('@/stores/player', () => ({
@@ -40,6 +40,13 @@ vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
   }),
 }))
 
+vi.mock('@/composables/useMusicDrawers', () => ({
+  useMusicDrawers: () => ({
+    openMusicEditor: mocks.openMusicEditor,
+    openMusicCreationFlow: mocks.openMusicCreationFlow,
+  }),
+}))
+
 describe('MobileSongView', () => {
   it('exposes playback and library actions for a loaded song', async () => {
     mocks.getMusicSongDetail.mockResolvedValue({
@@ -55,7 +62,6 @@ describe('MobileSongView', () => {
     })
     mocks.loadFavoriteSongs.mockResolvedValue(new Set())
     mocks.toggleFavoriteSong.mockResolvedValue({ message: '已加入最爱' })
-    mocks.addMusicSongToLater.mockResolvedValue({})
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -75,14 +81,15 @@ describe('MobileSongView', () => {
     expect(wrapper.text()).toContain('夜行列车')
     expect(wrapper.find('[aria-label="加入最爱"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="加入播放队列"]').exists()).toBe(true)
-    expect(wrapper.find('[aria-label="稍后播放"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="稍后播放"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="编辑歌曲"]').exists()).toBe(true)
 
     await wrapper.get('[aria-label="加入播放队列"]').trigger('click')
-    await wrapper.get('[aria-label="稍后播放"]').trigger('click')
     await wrapper.get('[aria-label="加入最爱"]').trigger('click')
+    await wrapper.get('[aria-label="编辑歌曲"]').trigger('click')
 
     expect(mocks.addToQueue).toHaveBeenCalledWith(expect.objectContaining({ id: 'song-1' }))
-    expect(mocks.addMusicSongToLater).toHaveBeenCalledWith('song-1')
     expect(mocks.toggleFavoriteSong).toHaveBeenCalledWith('song-1')
+    expect(mocks.openMusicEditor).toHaveBeenCalledWith({ entity: 'song', mode: 'edit', id: 'song-1' })
   })
 })

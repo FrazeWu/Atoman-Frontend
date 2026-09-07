@@ -244,16 +244,18 @@ watch(() => [props.entity, props.entityId], () => {
 .music-tags {
   display: grid;
   gap: 0.9rem;
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 1rem;
 }
 
 .music-tags__header,
 .music-tags__header > div,
-.music-tags__add-controls,
 .music-tag {
   display: flex;
+  align-items: center;
+}
+
+.music-tags__add-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
 
@@ -355,8 +357,8 @@ watch(() => [props.entity, props.entityId], () => {
 }
 
 .music-tags__add-controls :deep(.p-field) {
-  flex: 1;
-  min-width: 12rem;
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .music-tags__add-controls :deep(.p-segmented-control) {
@@ -370,8 +372,8 @@ watch(() => [props.entity, props.entityId], () => {
 
 @media (max-width: 640px) {
   .music-tags__add-controls {
+    grid-template-columns: 1fr;
     align-items: stretch;
-    flex-direction: column;
   }
 
   .music-tags__add-controls :deep(.p-field) {

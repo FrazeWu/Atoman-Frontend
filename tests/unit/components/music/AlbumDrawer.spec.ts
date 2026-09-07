@@ -1,8 +1,15 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { ApiErrorResponseError } from "../../../../src/api/client";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import AlbumDrawer from "../../../../src/components/music/AlbumDrawer.vue";
+
+const albumDrawerSource = readFileSync(
+	resolve(process.cwd(), "src/components/music/AlbumDrawer.vue"),
+	"utf8",
+);
 
 vi.mock("@/components/ui/PSheet.vue", () => ({
 	default: {
@@ -210,6 +217,12 @@ describe("AlbumDrawer.vue", () => {
 			},
 		};
 	}
+
+	it("将标签放在专辑详情右侧栏，而不是曲目区域整行", () => {
+		expect(albumDrawerSource).toContain('class="album-detail-layout"');
+		expect(albumDrawerSource).toContain('<aside class="album-detail-tags"');
+		expect(albumDrawerSource).toContain(".album-detail-layout {\n  display: grid;");
+	});
 
 	it("does not render redundant sheet headings", () => {
 		const wrapper = mount(AlbumDrawer, {});

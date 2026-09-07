@@ -86,8 +86,11 @@ const selectedTextDraft = ref<{
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 } | null>(null)
 const selectedAnnotationIds = ref<string[]>([])
+const lyricsLinesElement = ref<HTMLElement | null>(null)
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 let rebindOperationGeneration = 0
@@ -304,6 +307,8 @@ function handleSelectText(payload: {
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 }) {
   if (!requireLogin()) return
   if (rebindingAnnotation.value) rebindOperationGeneration += 1
@@ -326,9 +331,15 @@ async function handleSaveAnnotation(body: string) {
   if (!selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
+  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+    ? {
+        start_line_key: selectedTextDraft.value.startLineKey,
+        end_line_key: selectedTextDraft.value.endLineKey,
+      }
+    : { line_key: lineKey }
 
   const annotation = await createAnnotation(String(detail.value.song.id), {
-    line_key: lineKey,
+    ...rangeInput,
     selected_text: selectedTextDraft.value.selectedText,
     start_offset: selectedTextDraft.value.startOffset,
     end_offset: selectedTextDraft.value.endOffset,
@@ -366,12 +377,18 @@ async function handleConfirmRebind() {
   if (!detail.value || !authStore.isAuthenticated || !rebindingAnnotation.value || !selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
+  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+    ? {
+        start_line_key: selectedTextDraft.value.startLineKey,
+        end_line_key: selectedTextDraft.value.endLineKey,
+      }
+    : { line_key: lineKey }
   const annotation = rebindingAnnotation.value
   const songId = String(detail.value.song.id)
   const operationGeneration = ++rebindOperationGeneration
   try {
     await updateAnnotation(songId, annotation.id, {
-      line_key: lineKey,
+      ...rangeInput,
       selected_text: selectedTextDraft.value.selectedText,
       start_offset: selectedTextDraft.value.startOffset,
       end_offset: selectedTextDraft.value.endOffset,
@@ -581,7 +598,7 @@ watch(
               </template>
 
               <p v-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
-              <div v-else class="song-detail__lyric-lines">
+              <div v-else ref="lyricsLinesElement" class="song-detail__lyric-lines">
                 <MusicLyricsLine
                   v-for="line in lyrics.lines"
                   :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
@@ -593,6 +610,7 @@ watch(
                   :can-annotate="authStore.isAuthenticated"
                   :show-timeline="false"
                   :disable-hover-effects="true"
+                  :selection-root="lyricsLinesElement"
                   @select-text="handleSelectText"
                   @open-annotations="handleOpenAnnotations"
                   @seek="player.seek"

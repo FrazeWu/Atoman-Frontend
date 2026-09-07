@@ -167,6 +167,7 @@
               :can-select="isAnnotationMode && isAuthenticated"
               :can-annotate="isAnnotationMode && isAuthenticated"
               :click-to-seek="isPlayerMode"
+              :selection-root="lyricsLinesElement"
               @select-text="handleSelectText"
               @open-annotations="handleOpenAnnotations"
               @seek="emit('seek', $event)"
@@ -384,6 +385,8 @@ const selectedTextDraft = ref<{
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 } | null>(null)
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
@@ -651,6 +654,8 @@ function handleSelectText(payload: {
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 }) {
   if (!isAuthenticated.value) return
   if (rebindingAnnotation.value) rebindOperationGeneration += 1
@@ -677,9 +682,15 @@ async function handleSaveAnnotation(body: string) {
 
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
+  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+    ? {
+        start_line_key: selectedTextDraft.value.startLineKey,
+        end_line_key: selectedTextDraft.value.endLineKey,
+      }
+    : { line_key: lineKey }
 
   const annotation = await createAnnotation(props.songId, {
-    line_key: lineKey,
+    ...rangeInput,
     selected_text: selectedTextDraft.value.selectedText,
     start_offset: selectedTextDraft.value.startOffset,
     end_offset: selectedTextDraft.value.endOffset,
@@ -711,13 +722,19 @@ async function handleConfirmRebind() {
   if (!isAuthenticated.value || !rebindingAnnotation.value || !selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
+  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+    ? {
+        start_line_key: selectedTextDraft.value.startLineKey,
+        end_line_key: selectedTextDraft.value.endLineKey,
+      }
+    : { line_key: lineKey }
 
   const annotation = rebindingAnnotation.value
   const songId = props.songId
   const operationGeneration = ++rebindOperationGeneration
   try {
     await updateAnnotation(songId, annotation.id, {
-      line_key: lineKey,
+      ...rangeInput,
       selected_text: selectedTextDraft.value.selectedText,
       start_offset: selectedTextDraft.value.startOffset,
       end_offset: selectedTextDraft.value.endOffset,

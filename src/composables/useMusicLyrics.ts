@@ -12,6 +12,7 @@ import {
   type MusicLyricsAnnotation,
   type MusicLyricsAnnotationVote,
   type MusicSongLyrics,
+  type MusicSongLyricsLine,
   type MusicSongLyricsVersion,
   type UpdateMusicLyricsAnnotationInput,
   type UpdateMusicSongLyricsInput,
@@ -22,16 +23,33 @@ function replaceAnnotation(lyrics: MusicSongLyrics, updated: MusicLyricsAnnotati
   lyrics.annotations = lyrics.annotations.map((annotation) => annotation.id === updated.id ? updated : annotation)
 }
 
-function buildAnnotationsByLine(annotations: MusicLyricsAnnotation[]) {
+export function buildAnnotationsByLine(annotations: MusicLyricsAnnotation[], lines: MusicSongLyricsLine[]) {
   const grouped = new Map<string, MusicLyricsAnnotation[]>()
+  const lineIndexByKey = new Map(lines.map((line, index) => [line.line_key ?? line.id ?? `line-${index}`, index]))
 
   for (const annotation of annotations) {
     if (annotation.status !== 'active') continue
-    const lineKey = annotation.line_key ?? annotation.line_id
-    if (!lineKey) continue
-    const lineAnnotations = grouped.get(lineKey) ?? []
-    lineAnnotations.push(annotation)
-    grouped.set(lineKey, lineAnnotations)
+    const startKey = annotation.start_line_key ?? annotation.line_key ?? annotation.line_id
+    const endKey = annotation.end_line_key ?? startKey
+    if (!startKey || !endKey) continue
+    const startIndex = lineIndexByKey.get(startKey)
+    const endIndex = lineIndexByKey.get(endKey)
+    if (startIndex === undefined || endIndex === undefined || endIndex < startIndex) continue
+
+    for (let index = startIndex; index <= endIndex; index += 1) {
+      const line = lines[index]
+      const lineKey = line.line_key ?? line.id ?? `line-${index}`
+      const lineLength = line.text.length
+      const localAnnotation: MusicLyricsAnnotation = {
+        ...annotation,
+        line_key: lineKey,
+        start_offset: index === startIndex ? annotation.start_offset : 0,
+        end_offset: index === endIndex ? annotation.end_offset : lineLength,
+      }
+      const lineAnnotations = grouped.get(lineKey) ?? []
+      lineAnnotations.push(localAnnotation)
+      grouped.set(lineKey, lineAnnotations)
+    }
   }
 
   for (const lineAnnotations of grouped.values()) {
@@ -62,7 +80,7 @@ export function useMusicLyrics() {
   let activeRevertSongId = ''
   const activeSongId = ref('')
 
-  const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
+  const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? [], lyrics.value?.lines ?? []))
 
   function invalidateContentLoad() {
     activeLoadRequestId += 1

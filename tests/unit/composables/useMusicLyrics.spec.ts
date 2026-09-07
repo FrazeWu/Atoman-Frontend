@@ -38,6 +38,31 @@ describe('useMusicLyrics', () => {
     Object.values(apiMocks).forEach((mock) => mock.mockReset())
   })
 
+  it('将跨行注释投影到每一行的局部高亮范围', async () => {
+    const { buildAnnotationsByLine } = await import('@/composables/useMusicLyrics')
+    const lines = [
+      { line_key: 'line-1', text: 'first line', translation: '' },
+      { line_key: 'line-2', text: 'second line', translation: '' },
+    ]
+    const annotations = [{
+      id: 'annotation-1',
+      status: 'active' as const,
+      line_key: 'line-1',
+      start_line_key: 'line-1',
+      end_line_key: 'line-2',
+      start_offset: 6,
+      end_offset: 6,
+      selected_text: 'line\nsecond',
+      body: '解释',
+      upvotes: 0,
+      downvotes: 0,
+    }]
+
+    const grouped = buildAnnotationsByLine(annotations, lines)
+    expect(grouped.get('line-1')?.[0]).toMatchObject({ start_offset: 6, end_offset: 10 })
+    expect(grouped.get('line-2')?.[0]).toMatchObject({ start_offset: 0, end_offset: 6 })
+  })
+
   it('ignores stale save responses after switching songs', async () => {
     const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
     const composable = useMusicLyrics()

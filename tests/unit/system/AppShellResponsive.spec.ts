@@ -187,6 +187,7 @@ describe("App responsive shell", () => {
 describe("shared responsive shell CSS", () => {
 	const hasSidebarBlock = getBlock(".has-sidebar");
 	const mainContentBlock = getBlock(".a-main-content");
+	const contentFrameBlock = getBlock(".a-content-frame");
 	const desktopBlock = getMediaBlock("(min-width: 768px)");
 	const tabletBlock = getMediaBlock("(max-width: 1023px)");
 	const mobileBlock = getMediaBlock("(max-width: 767px)");
@@ -219,7 +220,7 @@ describe("shared responsive shell CSS", () => {
 			/body:has\(\.app-shell\.has-sidebar\)\s*\{\s*--a-sidebar-width:\s*12rem;/,
 		);
 		expect(hasSidebarBlock).toContain("--a-mobile-nav-offset: 0px;");
-		expect(mainContentBlock).toContain(
+		expect(contentFrameBlock).toContain(
 			"calc(8rem + var(--a-mobile-nav-offset, 0px))",
 		);
 	});
@@ -228,11 +229,12 @@ describe("shared responsive shell CSS", () => {
 		expect(styleSource).toMatch(
 			/\.p-sidebar\s*\{[\s\S]*?height:\s*calc\(\s*100dvh\s*-[\s\S]*?overflow-y:\s*auto;/,
 		);
-		expect(mainContentBlock).toContain(
+		expect(contentFrameBlock).toContain(
 			"padding: var(--a-page-start-space) 2rem",
 		);
+		expect(mainContentBlock).toContain("max-width: none;");
 		expect(mainContentBlock).not.toContain("position: sticky;");
-		expect(mainContentBlock).not.toContain("height: calc(100dvh");
+		expect(mainContentBlock).not.toMatch(/\n\s*height:\s*calc\(100dvh/);
 		expect(mainContentBlock).not.toContain("overflow-y: auto;");
 	});
 

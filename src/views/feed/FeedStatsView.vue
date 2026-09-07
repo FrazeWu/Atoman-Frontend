@@ -347,8 +347,8 @@ onBeforeUnmount(() => {
 
 .stats-charts-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(20rem, 1fr);
-  gap: 2.5rem;
+  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
+  gap: var(--a-content-column-gap);
   align-items: start;
 }
 
@@ -393,7 +393,7 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1199px) {
   .stats-charts-grid {
     grid-template-columns: 1fr;
   }

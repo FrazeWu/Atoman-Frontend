@@ -63,7 +63,7 @@ withDefaults(defineProps<{
 }>(), {
   title: '评论',
   partialAnchor: null,
-  partialWidth: '',
+  partialWidth: 'var(--a-recommendation-width)',
   noun: '评论',
   markLabel: undefined,
   currentTime: undefined,

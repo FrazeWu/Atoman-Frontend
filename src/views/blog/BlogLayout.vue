@@ -2,8 +2,10 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="blog" />
     <main class="a-main-content">
-      <ModuleCreateAction module="blog" />
-      <router-view />
+      <div class="a-content-frame">
+        <ModuleCreateAction module="blog" />
+        <router-view />
+      </div>
     </main>
   </div>
 </template>

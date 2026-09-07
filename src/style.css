@@ -120,6 +120,10 @@
 	--a-z-global-menu: 950;
 	--a-sidebar-width: 0px;
 	--a-sidebar-collapsed-width: 4.5rem;
+	--a-content-max-width: 80rem;
+	--a-recommendation-width: 20rem;
+	--a-content-column-gap: 2rem;
+	--a-content-main-min-width: 36rem;
 }
 
 html[data-player-active="true"][data-player-pinned="true"] {
@@ -192,7 +196,7 @@ body:has(.studio-layout) {
 	padding: var(--a-page-start-space) 2rem 12rem;
 }
 .a-page-xl {
-	max-width: 80rem;
+	max-width: var(--a-content-max-width);
 	margin: 0 auto;
 	padding: var(--a-page-start-space) 2rem 12rem;
 }
@@ -1271,9 +1275,19 @@ body:has(.studio-layout) {
 }
 
 .a-main-content {
-	flex: 1;
+	flex: 1 1 auto;
 	min-width: 0;
-	max-width: 80rem;
+	min-height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset));
+	width: auto;
+	max-width: none;
+	margin: 0;
+	padding: 0;
+}
+
+.a-content-frame {
+	width: 100%;
+	max-width: var(--a-content-max-width);
+	min-height: 100%;
 	margin: 0 auto;
 	padding: var(--a-page-start-space) 2rem
 		calc(8rem + var(--a-mobile-nav-offset, 0px));
@@ -1294,7 +1308,14 @@ body:has(.studio-layout) {
 .a-main-content > .a-page-sm,
 .a-main-content > .forum-page,
 .a-main-content > .vh-wrap,
-.a-main-content > .editor-page {
+.a-main-content > .editor-page,
+.a-content-frame > .a-page,
+.a-content-frame > .a-page-xl,
+.a-content-frame > .a-page-md,
+.a-content-frame > .a-page-sm,
+.a-content-frame > .forum-page,
+.a-content-frame > .vh-wrap,
+.a-content-frame > .editor-page {
 	max-width: none !important;
 	margin: 0 !important;
 	padding: 0 !important;
@@ -1355,13 +1376,16 @@ body:has(.studio-layout) {
 	.a-main-content {
 		position: static;
 		margin-top: 0;
-		height: auto;
 		min-height: calc(
 			100dvh -
 			var(--a-topbar-height) -
 			var(--a-content-bottom-offset)
 		);
 		overflow-y: visible;
+		max-width: none;
+		padding: 0;
+	}
+	.a-content-frame {
 		max-width: none;
 		padding: var(--a-page-start-space) 1rem
 			calc(7rem + env(safe-area-inset-bottom));

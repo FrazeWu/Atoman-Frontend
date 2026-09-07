@@ -21,6 +21,6 @@ describe('ShortNoteTimelineView', () => {
     expect(source).toContain('const hotNotes = computed')
     expect(source).toContain('type="button"')
     expect(source).toContain('blogSheets.openShortNote')
-    expect(source).toContain('@media (max-width: 1024px)')
+    expect(source).toContain('@media (max-width: 1199px)')
   })
 })

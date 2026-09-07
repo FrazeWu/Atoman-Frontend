@@ -60,11 +60,11 @@ describe("PostEditorView layout", () => {
 	});
 
 	it("does not constrain the editor page with the generic sidebar content width", () => {
-		expect(cssRules(".a-main-content > .editor-page", globalStyle)).toContain(
-			"max-width: none",
+		expect(globalStyle).toMatch(
+			/\.a-content-frame > \.editor-page[\s\S]*?max-width: none/,
 		);
-		expect(cssRules(".a-main-content > .editor-page", globalStyle)).toContain(
-			"padding: 0",
+		expect(globalStyle).toMatch(
+			/\.a-content-frame > \.editor-page[\s\S]*?padding: 0/,
 		);
 	});
 

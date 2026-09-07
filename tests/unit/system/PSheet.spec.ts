@@ -319,6 +319,21 @@ describe("PSheet.vue", () => {
 		expect(panel.style.maxWidth).toBe("none");
 	});
 
+	it("keeps recommendation sheets on the shared recommendation width", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/comment/CommentSideSheet.vue"),
+			"utf8",
+		);
+		const audioPlayerSource = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayer.vue"),
+			"utf8",
+		);
+
+		expect(source).toContain("partialWidth: 'var(--a-recommendation-width)'");
+		expect(audioPlayerSource).toContain('partial-width="var(--a-recommendation-width)"');
+		expect(audioPlayerSource).not.toContain('partial-width="42rem"');
+	});
+
 	it("uses compact content spacing when there is no header bar", () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, title: "VIEW" },

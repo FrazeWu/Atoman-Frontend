@@ -307,7 +307,7 @@
     :show="commentsOpen"
     title="歌曲评论"
     :target="{ kind: 'music_song', resourceId: String(player.currentSong.id) }"
-    partial-width="42rem"
+    partial-width="var(--a-recommendation-width)"
     :above-player="true"
     @close="commentsOpen = false"
   />

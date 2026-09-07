@@ -218,6 +218,34 @@ export const useAuthStore = defineStore('auth', () => {
     lastAuthError.value = null
   }
 
+  const deleteAccount = async () => {
+    const actionGeneration = ++sessionActionGeneration
+    invalidatePendingRestore()
+    invalidatePendingCredentials()
+    const headers: Record<string, string> = {}
+    if (token.value && token.value !== 'cookie-session') headers.Authorization = `Bearer ${token.value}`
+    const response = await apiRequest(`${API_URL}/users/me`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers,
+    })
+    if (!response.ok) {
+      let message = '注销失败，请重试'
+      try {
+        const payload = await response.clone().json() as { error?: string; message?: string }
+        message = payload.error || payload.message || message
+      } catch {
+        // Keep the stable fallback for empty or non-JSON error responses.
+      }
+      throw new Error(message)
+    }
+    if (actionGeneration !== sessionActionGeneration) return
+    invalidatePendingRestore()
+    invalidatePendingCredentials()
+    clearSessionState()
+    lastAuthError.value = null
+  }
+
   const restoreSession = async (force = false) => {
     if (!force && isAuthenticated.value && user.value) return true
     if (restoreSessionInFlight) return restoreSessionInFlight
@@ -277,5 +305,5 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value) user.value = { ...user.value, ...patch }
   }
 
-  return { token, user, isAuthenticated, lastAuthError, loginWithPassword, register, restoreSession, validateSession, updateUser, logout }
+  return { token, user, isAuthenticated, lastAuthError, loginWithPassword, register, restoreSession, validateSession, updateUser, logout, deleteAccount }
 })

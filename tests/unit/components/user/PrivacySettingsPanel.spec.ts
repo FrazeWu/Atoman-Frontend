@@ -40,6 +40,28 @@ describe('PrivacySettingsPanel', () => {
     expect(wrapper.text()).toContain('个人资料设置已保存')
   })
 
+  it('loads and saves the subscription relationship visibility setting', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'PUT') {
+        return new Response(JSON.stringify({ data: { private_profile: false, show_relations: true } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: { private_profile: false, show_relations: false } }), { status: 200 })
+    })
+    const wrapper = mount(PrivacySettingsPanel)
+    await flushPromises()
+
+    const toggle = wrapper.get('[data-test="show-relations-toggle"]')
+    expect((toggle.element as HTMLInputElement).checked).toBe(false)
+    await toggle.setValue(true)
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/users/me/settings', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({ show_relations: true }),
+    }))
+    expect(wrapper.text()).toContain('订阅关系设置已保存')
+  })
+
   it('shows a retry action when the settings request fails', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(null, { status: 503 }))

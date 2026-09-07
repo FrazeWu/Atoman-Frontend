@@ -10,7 +10,10 @@ describe('PasswordSettingsPanel', () => {
   it('changes the password with the current password and csrf cookie transport', async () => {
 	setCSRFToken('csrf-settings')
 	const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
-	const wrapper = mount(PasswordSettingsPanel)
+	const wrapper = mount(PasswordSettingsPanel, {
+	  global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+	})
+	await wrapper.get('button').trigger('click')
 	const inputs = wrapper.findAll('input')
 	await inputs[0].setValue('old-password')
 	await inputs[1].setValue('new-password')

@@ -31,7 +31,7 @@ describe('DMSettingsPanel', () => {
   it('offers retry after a failed permission request', async () => {
     vi.mocked(getDMSettings)
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce({ permission: 'anyone' })
+      .mockResolvedValueOnce({ permission: 'following_only' })
     const wrapper = mount(DMSettingsPanel, { props: { subject: { type: 'user', id: 'user-1' } } })
     await flushPromises()
 
@@ -39,7 +39,16 @@ describe('DMSettingsPanel', () => {
     await wrapper.get('button').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('select').element).toHaveProperty('value', 'anyone')
+    expect(wrapper.get('select').element).toHaveProperty('value', 'following_only')
     expect(updateDMSettings).not.toHaveBeenCalled()
+  })
+
+  it('does not offer continuous messages for user private messages', async () => {
+    vi.mocked(getDMSettings).mockResolvedValue({ permission: 'following_only' })
+    const wrapper = mount(DMSettingsPanel, { props: { subject: { type: 'user', id: 'user-1' } } })
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('允许连续发送')
+    expect(wrapper.find('option[value="anyone"]').exists()).toBe(false)
   })
 })

@@ -6,64 +6,8 @@
         <small>当前绑定邮箱: {{ email || '未绑定' }}</small>
       </div>
 
-      <div class="settings-block__control settings-block__control--form">
-        <div class="email-input-row">
-          <PInput
-            v-model="nextEmail"
-            label="新邮箱"
-            type="email"
-            placeholder="输入新电子邮箱地址"
-            class="email-input-flex"
-            :error="emailError"
-            autocomplete="email"
-          />
-          <PButton
-            type="button"
-            variant="secondary"
-            size="md"
-            class="send-code-btn"
-            :disabled="!nextEmail.trim() || sendingCode || codeCooldown > 0"
-            :loading="sendingCode"
-            loading-text="发送中..."
-            @click="sendCode"
-          >
-            {{ codeCooldown > 0 ? `${codeCooldown} 秒后重发` : '发送验证码' }}
-          </PButton>
-        </div>
-
-        <div class="form-grid-two">
-          <PInput
-            v-model="code"
-            label="验证码"
-            placeholder="6 位数字验证码"
-            inputmode="numeric"
-            maxlength="6"
-          />
-          <PInput
-            v-model="currentPassword"
-            label="当前密码"
-            type="password"
-            placeholder="输入当前账号密码"
-            autocomplete="current-password"
-          />
-        </div>
-
-        <div class="security-submit-row">
-          <PButton
-            type="button"
-            variant="primary"
-            size="md"
-            :disabled="!nextEmail.trim() || !code.trim() || !currentPassword || changingEmail"
-            :loading="changingEmail"
-            loading-text="修改中..."
-            @click="changeEmail"
-          >
-            确认修改邮箱
-          </PButton>
-          <span v-if="message" class="security-message" :class="{ 'security-message--error': messageError }" :role="messageError ? 'alert' : 'status'">
-            {{ message }}
-          </span>
-        </div>
+      <div class="settings-block__control security-summary-control">
+        <PButton type="button" variant="secondary" size="sm" @click="emailModalOpen = true">修改邮箱</PButton>
       </div>
     </div>
 
@@ -80,8 +24,9 @@
           <PButton type="button" variant="secondary" size="sm" @click="loadSessions">重试</PButton>
         </div>
         <div v-else-if="!sessions.length" class="security-state a-muted text-sm">暂无活跃会话记录</div>
-        <ul v-else class="sessions-list">
-          <li v-for="session in sessions" :key="session.id" class="session-item">
+        <template v-else>
+          <ul v-if="sessions.length" class="sessions-list">
+          <li v-for="session in visibleSessions" :key="session.id" class="session-item">
             <div class="session-info">
               <strong>{{ session.device_name || '未知设备' }}</strong>
               <span v-if="session.current" class="session-current-badge">当前设备</span>
@@ -96,7 +41,9 @@
               强制退出
             </PButton>
           </li>
-        </ul>
+          </ul>
+          <PButton v-if="sessions.length" type="button" variant="secondary" size="sm" @click="sessionsDetailOpen = true">详情</PButton>
+        </template>
       </div>
     </div>
 
@@ -113,14 +60,40 @@
           <PButton type="button" variant="secondary" size="sm" @click="loadActivities">重试</PButton>
         </div>
         <div v-else-if="!activities.length" class="security-state a-muted text-sm">暂无操作记录</div>
-        <ul v-else class="activities-list">
-          <li v-for="item in activities" :key="item.id" class="activity-item">
+        <template v-else>
+          <ul v-if="activities.length" class="activities-list">
+          <li v-for="item in visibleActivities" :key="item.id" class="activity-item">
             <span>{{ item.action }}</span>
             <small class="a-muted">{{ formatDate(item.created_at) }}</small>
           </li>
-        </ul>
+          </ul>
+          <PButton v-if="activities.length" type="button" variant="secondary" size="sm" @click="activitiesDetailOpen = true">详情</PButton>
+        </template>
       </div>
     </div>
+
+    <PModal v-if="emailModalOpen" title="修改邮箱" size="sm" @close="emailModalOpen = false">
+      <div class="security-modal-form">
+        <div class="email-input-row">
+          <PInput v-model="nextEmail" label="新邮箱" type="email" placeholder="输入新电子邮箱地址" class="email-input-flex" :error="emailError" autocomplete="email" />
+          <PButton type="button" variant="secondary" size="md" class="send-code-btn" :disabled="!nextEmail.trim() || sendingCode || codeCooldown > 0" :loading="sendingCode" loading-text="发送中..." @click="sendCode">{{ codeCooldown > 0 ? `${codeCooldown} 秒后重发` : '发送验证码' }}</PButton>
+        </div>
+        <div class="form-grid-two">
+          <PInput v-model="code" label="验证码" placeholder="6 位数字验证码" inputmode="numeric" maxlength="6" />
+          <PInput v-model="currentPassword" label="当前密码" type="password" placeholder="输入当前账号密码" autocomplete="current-password" />
+        </div>
+        <div class="security-submit-row">
+          <PButton type="button" variant="primary" size="md" :disabled="!nextEmail.trim() || !code.trim() || !currentPassword || changingEmail" :loading="changingEmail" loading-text="修改中..." @click="changeEmail">确认修改邮箱</PButton>
+          <span v-if="message" class="security-message" :class="{ 'security-message--error': messageError }" :role="messageError ? 'alert' : 'status'">{{ message }}</span>
+        </div>
+      </div>
+    </PModal>
+    <PModal v-if="sessionsDetailOpen" title="登录设备详情" size="sm" @close="sessionsDetailOpen = false">
+      <ul class="sessions-list"><li v-for="session in sessions" :key="session.id" class="session-item"><div class="session-info"><strong>{{ session.device_name || '未知设备' }}</strong><span v-if="session.current" class="session-current-badge">当前设备</span></div><PButton v-if="!session.current" type="button" variant="danger" size="sm" @click="requestRevoke(session.id)">强制退出</PButton></li></ul>
+    </PModal>
+    <PModal v-if="activitiesDetailOpen" title="安全日志详情" size="sm" @close="activitiesDetailOpen = false">
+      <ul class="activities-list"><li v-for="item in activities" :key="item.id" class="activity-item"><span>{{ item.action }}</span><small class="a-muted">{{ formatDate(item.created_at) }}</small></li></ul>
+    </PModal>
 
     <PConfirm
       :show="pendingRevoke !== null"
@@ -137,12 +110,13 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PModal from '@/components/ui/PModal.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -171,6 +145,11 @@ const sessionsError = ref('')
 const activitiesError = ref('')
 const pendingRevoke = ref<string | null>(null)
 const revokingId = ref<string | null>(null)
+const emailModalOpen = ref(false)
+const sessionsDetailOpen = ref(false)
+const activitiesDetailOpen = ref(false)
+const visibleSessions = computed(() => sessions.value.slice(0, 3))
+const visibleActivities = computed(() => activities.value.slice(0, 3))
 const base = useApiUrl()
 let cooldownTimer: ReturnType<typeof setInterval> | undefined
 
@@ -344,6 +323,9 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 0.5rem;
 }
+
+.security-summary-control { display: flex; justify-content: flex-end; }
+.security-modal-form { display: grid; gap: 0.85rem; }
 
 .email-input-row {
   display: flex;

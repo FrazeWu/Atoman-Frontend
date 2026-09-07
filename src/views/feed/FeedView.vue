@@ -76,6 +76,7 @@
       @set-subscription-paused="setSubscriptionPaused"
       @reorder-subscription-groups="reorderSubscriptionGroups"
       @reorder-subscriptions="reorderSubscriptions"
+      @save-changes="saveSubscriptionChanges"
       @save-rule="saveSubscriptionRule"
       @move-rule-up="moveSubscriptionRuleUp"
       @move-rule-down="moveSubscriptionRuleDown"
@@ -623,6 +624,7 @@ const {
   setSubscriptionPaused,
   reorderSubscriptionGroups,
   reorderSubscriptions,
+  saveSubscriptionChanges,
   saveSubscriptionRule,
   moveSubscriptionRuleUp,
   moveSubscriptionRuleDown,

@@ -1,12 +1,15 @@
 <template>
-  <form class="password-settings" @submit.prevent="submit">
+  <section class="password-settings">
     <div class="password-settings__copy">
       <strong>{{ hasPassword ? '修改密码' : '设置密码' }}</strong>
       <small>{{ hasPassword ? '修改后，其他设备需要重新登录。' : '设置后可使用用户名和密码登录。' }}</small>
     </div>
-    <div class="password-settings__form">
+    <PButton type="button" variant="secondary" size="sm" @click="modalOpen = true">修改密码</PButton>
+  </section>
+  <PModal v-if="modalOpen" :title="hasPassword ? '修改密码' : '设置密码'" size="sm" @close="modalOpen = false">
+    <form class="password-settings__form" @submit.prevent="submit">
       <PInput
-		v-if="hasPassword"
+        v-if="hasPassword"
         v-model="currentPassword"
         type="password"
         label="当前密码"
@@ -14,29 +17,13 @@
         autocomplete="current-password"
         :error="fieldErrors.current"
       />
-      <PInput
-        v-model="newPassword"
-        type="password"
-        label="新密码"
-        placeholder="输入新密码"
-        autocomplete="new-password"
-        :error="fieldErrors.password"
-      />
-      <PInput
-        v-model="passwordConfirm"
-        type="password"
-        label="确认新密码"
-        placeholder="再次输入新密码"
-        autocomplete="new-password"
-        :error="fieldErrors.confirm"
-      />
+      <PInput v-model="newPassword" type="password" label="新密码" placeholder="输入新密码" autocomplete="new-password" :error="fieldErrors.password" />
+      <PInput v-model="passwordConfirm" type="password" label="确认新密码" placeholder="再次输入新密码" autocomplete="new-password" :error="fieldErrors.confirm" />
       <p v-if="error" class="a-error" role="alert">{{ error }}</p>
       <p v-if="success" class="a-success" role="status">{{ hasPassword ? '密码已修改' : '密码已设置' }}</p>
-      <PButton type="submit" size="lg" :loading="submitting" loading-text="正在修改...">
-        {{ hasPassword ? '修改密码' : '设置密码' }}
-      </PButton>
-    </div>
-  </form>
+      <PButton type="submit" size="lg" :loading="submitting" loading-text="正在修改...">{{ hasPassword ? '修改密码' : '设置密码' }}</PButton>
+    </form>
+  </PModal>
 </template>
 
 <script setup lang="ts">
@@ -45,6 +32,7 @@ import { computed, reactive, ref } from 'vue'
 import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PModal from '@/components/ui/PModal.vue'
 import { useApiUrl } from '@/composables/useApi'
 
 const props = withDefaults(defineProps<{ hasPassword?: boolean }>(), { hasPassword: true })
@@ -56,6 +44,7 @@ const submitting = ref(false)
 const error = ref('')
 const success = ref(false)
 const fieldErrors = reactive({ current: '', password: '', confirm: '' })
+const modalOpen = ref(false)
 
 async function submit() {
   fieldErrors.current = hasPassword.value && !currentPassword.value ? '请输入当前密码' : ''
@@ -98,9 +87,10 @@ async function submit() {
 
 <style scoped>
 .password-settings {
-  display: grid;
-  grid-template-columns: minmax(10rem, 0.75fr) minmax(0, 1.25fr);
-  gap: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 1.25rem 0;
   border-top: 1px solid var(--a-color-border-soft);
 }
@@ -122,7 +112,8 @@ async function submit() {
 
 @media (max-width: 767px) {
   .password-settings {
-    grid-template-columns: 1fr;
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

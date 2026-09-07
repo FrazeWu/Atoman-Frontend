@@ -1190,6 +1190,8 @@ export interface UserProfile {
 	posts_count?: number;
 	quality?: number;
 	contribution_total?: number;
+	private_profile?: boolean;
+	show_relations?: boolean;
 	created_at: string;
 }
 
@@ -1282,6 +1284,7 @@ export interface BlockedUser {
 export interface UserSettings {
 	user_id: string;
 	private_profile: boolean;
+	show_relations?: boolean;
 	dm_permission?: "anyone" | "following_only" | "one_before_reply";
 }
 

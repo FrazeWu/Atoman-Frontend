@@ -23,7 +23,7 @@
             <strong>{{ form.display_name || authStore.user?.username }}</strong>
             <small class="a-muted">@{{ authStore.user?.username }}</small>
           </div>
-          <PButton v-if="authStore.user?.username" :href="profileHref" variant="secondary" size="sm">
+          <PButton v-if="authStore.user?.username" type="button" variant="secondary" size="sm" @click="profileModalOpen = true">
             查看个人主页
           </PButton>
         </div>
@@ -39,31 +39,11 @@
           />
           <div class="avatar-field">
             <span class="avatar-field__label">头像</span>
-            <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }" @click="avatarChangeStarted = true">
+            <PButton type="button" variant="secondary" size="sm" :disabled="uploadingAvatar" @click="avatarModalOpen = true">
               <Camera :size="16" aria-hidden="true" />
-              <span>{{ uploadingAvatar ? '上传中...' : '选择图片' }}</span>
-              <input
-                data-testid="profile-avatar-input"
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                :disabled="uploadingAvatar"
-                @change="selectAvatar"
-              />
-            </label>
-            <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
-            <PButton
-              v-if="avatarChangeStarted && canRestoreAvatar"
-              variant="ghost"
-              size="sm"
-              type="button"
-              :loading="restoringAvatar"
-              loading-text="恢复中..."
-              :disabled="restoringAvatar || uploadingAvatar"
-              @click="restoreAvatar"
-            >
-              <Undo2 :size="14" />
-              恢复上次头像
+              <span>{{ uploadingAvatar ? '上传中...' : '更换头像' }}</span>
             </PButton>
+            <small>支持 JPG、PNG、GIF 或 WebP，最大 10 MB</small>
           </div>
           <div class="form-field-full">
             <PTextarea
@@ -118,6 +98,51 @@
       </form>
     </template>
   </div>
+  <PModal v-if="avatarModalOpen" title="更换头像" size="sm" @close="avatarModalOpen = false">
+    <div class="avatar-modal">
+      <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }">
+        <Camera :size="16" aria-hidden="true" />
+        <span>{{ uploadingAvatar ? '上传中...' : '选择图片' }}</span>
+        <input
+          data-testid="profile-avatar-input"
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          :disabled="uploadingAvatar"
+          @change="selectAvatar"
+        />
+      </label>
+      <PButton
+        v-if="canRestoreAvatar"
+        variant="secondary"
+        size="sm"
+        type="button"
+        :loading="restoringAvatar"
+        loading-text="恢复中..."
+        :disabled="restoringAvatar || uploadingAvatar"
+        @click="restoreAvatar"
+      >
+        <Undo2 :size="14" />
+        恢复上次头像
+      </PButton>
+      <p v-if="error" class="a-error" role="alert">{{ error }}</p>
+    </div>
+  </PModal>
+  <PModal v-if="profileModalOpen" title="个人主页" size="md" @close="profileModalOpen = false">
+    <div class="profile-preview-modal">
+      <div class="profile-preview-modal__identity">
+        <div class="avatar-preview-box">
+          <img v-if="form.avatar_url" :src="resolveMediaURL(form.avatar_url)" alt="当前头像" />
+          <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
+        </div>
+        <div class="identity-info">
+          <strong>{{ form.display_name || authStore.user?.username }}</strong>
+          <small class="a-muted">@{{ authStore.user?.username }}</small>
+        </div>
+      </div>
+      <p class="profile-preview-modal__bio">{{ form.bio || '这个用户还没有填写简介' }}</p>
+      <PButton :href="profileHref" variant="primary" size="sm">打开完整主页</PButton>
+    </div>
+  </PModal>
 </template>
 
 <script setup lang="ts">
@@ -134,6 +159,7 @@ import {
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -158,6 +184,8 @@ const form = ref({
   avatar_url: '',
 })
 const profileHref = computed(() => desktopAppPath(`/users/${authStore.user?.username || ''}`))
+const profileModalOpen = ref(false)
+const avatarModalOpen = ref(false)
 const notificationPrefs = ref({
   like: true,
   interaction: true,
@@ -178,7 +206,6 @@ const profileError = ref('')
 const uploadingAvatar = ref(false)
 const restoringAvatar = ref(false)
 const canRestoreAvatar = ref(false)
-const avatarChangeStarted = ref(false)
 const error = ref('')
 const success = ref(false)
 
@@ -239,7 +266,6 @@ const restoreAvatar = async () => {
     const restored = await restoreUserAvatar()
     form.value.avatar_url = restored.url
     authStore.updateUser({ avatar_url: restored.url })
-    avatarChangeStarted.value = false
   } catch (e) {
     error.value = e instanceof Error ? e.message : '恢复头像失败，请重试'
   } finally {
@@ -379,6 +405,11 @@ onMounted(async () => {
   align-content: start;
   gap: 0.4rem;
 }
+
+.avatar-modal,
+.profile-preview-modal { display: grid; gap: 1rem; }
+.profile-preview-modal__identity { display: flex; align-items: center; gap: 0.75rem; }
+.profile-preview-modal__bio { margin: 0; color: var(--a-color-text-secondary); line-height: 1.6; white-space: pre-wrap; }
 
 .avatar-field__label {
   color: var(--a-color-text);

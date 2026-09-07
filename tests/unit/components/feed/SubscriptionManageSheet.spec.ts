@@ -118,6 +118,27 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.find('[data-test="subscription-priority"]').exists()).toBe(true);
 	});
 
+	it("supports collapsing groups and saving edited names from the top toolbar", async () => {
+		const wrapper = mountSheet();
+
+		const groupTitle = wrapper.get(".group-title");
+		expect(groupTitle.attributes("aria-expanded")).toBe("true");
+		await groupTitle.trigger("click");
+		expect(groupTitle.attributes("aria-expanded")).toBe("false");
+		expect(wrapper.find(".subscription-title").exists()).toBe(false);
+
+		await groupTitle.trigger("click");
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
+		await wrapper.get(".title-input").setValue("Renamed Feed");
+		const saveButton = wrapper.get('[data-test="save-subscription-changes"]');
+		expect(saveButton.attributes("disabled")).toBeUndefined();
+		await saveButton.trigger("click");
+
+		expect(wrapper.emitted("save-changes")).toEqual([[
+			{ subscriptions: [{ id: "sub-1", title: "Renamed Feed" }], groups: [] },
+		]]);
+	});
+
 	it("shows subscription health details without duplicate check actions", async () => {
 		const wrapper = mountSheet();
 		await wrapper

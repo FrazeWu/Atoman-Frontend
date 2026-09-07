@@ -17,6 +17,18 @@
             @change="handleOPMLSelected"
           />
           <div class="manage-toolbar-group">
+            <span class="manage-toolbar-label">编辑</span>
+            <div class="manage-toolbar-actions">
+              <PButton
+                data-test="save-subscription-changes"
+                variant="primary"
+                label="保存"
+                :disabled="busy || !hasDraftChanges"
+                @click="saveDrafts"
+              />
+            </div>
+          </div>
+          <div class="manage-toolbar-group">
             <span class="manage-toolbar-label">数据管理</span>
             <div class="manage-toolbar-actions">
               <PButton
@@ -100,8 +112,6 @@
               class="group-name-input"
               :disabled="busy"
               @input="updateDraftGroupName(group.id, $event)"
-              @blur="submitGroupRename(group)"
-              @keydown.enter.prevent="submitGroupRename(group)"
             />
             <span class="group-manage-count a-muted">
               {{ groupSubscriptionCount(group.id) }} 个订阅源
@@ -172,15 +182,24 @@
 
         <div v-else class="group-list">
           <section v-for="group in displayGroups" :key="group.id" class="group-section">
-            <div class="group-title">
+            <button
+              type="button"
+              class="group-title"
+              :class="{ 'is-collapsed': isGroupCollapsed(group.id) }"
+              :aria-expanded="!isGroupCollapsed(group.id)"
+              :aria-controls="`subscription-group-${group.id}`"
+              @click="toggleGroup(group.id)"
+            >
               <span class="group-label-virtual">{{ group.name }}</span>
-            </div>
+              <ChevronDown :size="16" aria-hidden="true" />
+            </button>
 
-            <div v-if="!group.subscriptions.length" class="group-empty a-muted">
-              此分组暂无订阅源
-            </div>
+            <div v-if="!isGroupCollapsed(group.id)" :id="`subscription-group-${group.id}`">
+              <div v-if="!group.subscriptions.length" class="group-empty a-muted">
+                此分组暂无订阅源
+              </div>
 
-            <div v-else class="subscription-list">
+              <div v-else class="subscription-list">
               <div
                 v-for="sub in group.subscriptions"
                 :key="sub.feed_source_id"
@@ -277,8 +296,6 @@
                       class="title-input"
                       :disabled="busy"
                       @input="updateDraftTitle(sub.id, $event)"
-                      @blur="submitRename(sub)"
-                      @keydown.enter.prevent="submitRename(sub)"
                     />
                   </PField>
 
@@ -328,6 +345,7 @@
                     <Trash :size="17" aria-hidden="true" />
                   </button>
                 </div>
+              </div>
               </div>
             </div>
           </section>
@@ -428,7 +446,7 @@ import type {
   SubscriptionHubType,
   SubscriptionSyncResult,
 } from '@/types'
-import { IconSettings as Settings, IconTrash as Trash } from '@tabler/icons-vue'
+import { IconChevronDown as ChevronDown, IconSettings as Settings, IconTrash as Trash } from '@tabler/icons-vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PField from '@/components/ui/PField.vue'
@@ -491,6 +509,7 @@ const emit = defineEmits<{
   (e: 'set-subscription-paused', id: string, paused: boolean): void
   (e: 'reorder-subscription-groups', ids: string[]): void
   (e: 'reorder-subscriptions', groupId: string, ids: string[]): void
+  (e: 'save-changes', changes: { subscriptions: Array<{ id: string; title: string }>; groups: Array<{ id: string; name: string }> }): void
   (e: 'create-rule'): void
   (e: 'edit-rule', id: string): void
   (e: 'save-rule', payload: { id: string | null; payload: SubscriptionRuleSavePayload }): void
@@ -512,6 +531,7 @@ const batchGroupId = ref('')
 const selectedSubscriptionIds = ref(new Set<string>())
 const expandedSubscriptionSettingIds = ref(new Set<string>())
 const expandedSubscriptionDiagnosticIds = ref(new Set<string>())
+const collapsedGroupIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
@@ -534,6 +554,17 @@ const isDirty = computed(() => (
   || props.groups.some((group) => {
     const draft = draftGroupNames.value[group.id]
     return draft !== undefined && draft !== group.name
+  })
+))
+const hasDraftChanges = computed(() => (
+  props.subscriptions.some((subscription) => {
+    const draft = draftTitles.value[subscription.id]
+    return draft !== undefined && draft.trim() !== subscriptionTitle(subscription)
+  })
+  || props.groups.some((group) => {
+    if (isDefaultGroup(group)) return false
+    const draft = draftGroupNames.value[group.id]
+    return draft !== undefined && draft.trim() !== group.name
   })
 ))
 const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: resetCloseGuard } = useSheetCloseGuard({
@@ -758,8 +789,6 @@ const removeKeyword = (keyword: string) => {
     hiddenKeywords: localFilterRules.value.hiddenKeywords.filter((item) => item !== keyword),
   })
 }
-
-
 const updateDraftTitle = (id: string, event: Event) => {
   draftTitles.value[id] = (event.target as HTMLInputElement).value
 }
@@ -776,18 +805,29 @@ const submitGroup = () => {
   newGroupName.value = ''
 }
 
-const submitRename = (sub: Subscription) => {
-  if (props.busy) return
-  const title = (draftTitles.value[sub.id] ?? subscriptionTitle(sub)).trim()
-  if (!title || title === subscriptionTitle(sub)) return
-  emit('rename-subscription', sub.id, title)
+const saveDrafts = () => {
+  if (props.busy || !hasDraftChanges.value) return
+  const subscriptions = props.subscriptions.flatMap((subscription) => {
+    const title = draftTitles.value[subscription.id]?.trim()
+    return title && title !== subscriptionTitle(subscription)
+      ? [{ id: subscription.id, title }]
+      : []
+  })
+  const groups = props.groups.flatMap((group) => {
+    if (isDefaultGroup(group)) return []
+    const name = draftGroupNames.value[group.id]?.trim()
+    return name && name !== group.name ? [{ id: group.id, name }] : []
+  })
+  if (subscriptions.length || groups.length) emit('save-changes', { subscriptions, groups })
 }
 
-const submitGroupRename = (group: { id: string; name: string; virtual?: boolean }) => {
-  if (props.busy || group.virtual) return
-  const name = (draftGroupNames.value[group.id] ?? group.name).trim()
-  if (!name || name === group.name) return
-  emit('rename-group', group.id, name)
+const isGroupCollapsed = (id: string) => collapsedGroupIds.value.has(id)
+
+const toggleGroup = (id: string) => {
+  const next = new Set(collapsedGroupIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  collapsedGroupIds.value = next
 }
 
 const moveSubscription = (id: string, groupId: string) => {
@@ -1375,7 +1415,29 @@ watch(() => props.filterRules, (rules) => {
   padding-bottom: 0.5rem;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
+  width: 100%;
+  border-inline: 0;
+  border-top: 0;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.group-title:hover,
+.group-title:focus-visible {
+  color: var(--a-color-primary);
+}
+
+.group-title svg {
+  transition: transform 0.15s ease;
+}
+
+.group-title.is-collapsed svg {
+  transform: rotate(-90deg);
 }
 
 .group-name-input {

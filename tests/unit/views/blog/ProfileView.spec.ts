@@ -33,6 +33,9 @@ vi.mock('@/stores/feed', () => ({
     fetchReadingListIds: mocks.fetchReadingListIds,
     togglePostBookmark: mocks.togglePostBookmark,
     toggleReadingListItem: mocks.toggleReadingListItem,
+    isSubscribedToChannel: vi.fn().mockResolvedValue(false),
+    subscribeToChannel: vi.fn().mockResolvedValue(true),
+    unsubscribeFromChannel: vi.fn().mockResolvedValue(true),
   }),
 }))
 vi.mock('@/composables/useApi', () => ({
@@ -46,7 +49,11 @@ vi.mock('@/composables/useApi', () => ({
     },
     rss: { user: (username: string) => `/rss/users/${username}.xml` },
     site: { resolve: (handle: string) => `/site/resolve/${handle}` },
-    blog: {},
+      url: '/api/v1',
+      blog: {
+        channels: '/blog/channels',
+        posts: '/blog/posts',
+      },
   }),
 }))
 vi.mock('@/router/siteContext', () => ({
@@ -101,6 +108,21 @@ function setProfileResponses() {
     if (url === '/users/linmo-id/followers') {
       return { ok: true, data: { data: [] } }
     }
+    if (url === '/blog/channels?user_id=linmo-id') {
+      return { ok: true, data: { data: [
+        { id: 'channel-a', user_id: 'linmo-id', name: '设计观察', slug: 'design', description: '博客与视频', cover_url: '' },
+        { id: 'channel-anonymous', user_id: '', name: '其他频道', slug: 'other', description: '不应显示', cover_url: '' },
+      ] } }
+    }
+    if (url.startsWith('/blog/posts?user_id=linmo-id')) {
+      return { ok: true, data: { data: [{ id: 'post-a', user_id: 'linmo-id', title: '一篇文章', content: '正文', status: 'published', visibility: 'public', pinned: false, created_at: '2026-09-07T08:00:00Z', updated_at: '2026-09-07T08:00:00Z' }] } }
+    }
+    if (url === '/api/v1/videos?channel_id=channel-a&limit=12') {
+      return { ok: true, data: [{ id: 'video-a', user_id: 'linmo-id', title: '一个视频', description: '视频简介', thumbnail_url: '', created_at: '2026-09-07T07:00:00Z' }] }
+    }
+    if (url === '/api/v1/podcast/shows/design/episodes') {
+      return { ok: true, data: { episodes: [{ id: 'episode-a', channel_id: 'channel-a', post: { id: 'post-podcast', user_id: 'linmo-id', title: '一期播客', summary: '播客简介', published_at: '2026-09-07T06:00:00Z' }, episode_cover_url: '', created_at: '2026-09-07T06:00:00Z' }] } }
+    }
     return { ok: true, data: { data: [] } }
   })
 }
@@ -141,15 +163,19 @@ describe('ProfileView', () => {
     setProfileResponses()
   })
 
-  it('renders the compact identity layout without channels or content sections', async () => {
+  it('renders the profile identity, owned channels, and mixed content sections', async () => {
     const wrapper = await mountProfile()
 
     expect(wrapper.text()).toContain('林默')
     expect(wrapper.text()).toContain('信誉分')
     expect(wrapper.text()).toContain('贡献分')
     expect(wrapper.text()).toContain('订阅RSS')
-    expect(wrapper.text()).not.toContain('个频道')
-    expect(wrapper.text()).not.toContain('暂无内容')
+    expect(wrapper.text()).toContain('设计观察')
+    expect(wrapper.text()).toContain('一篇文章')
+    expect(wrapper.text()).toContain('一个视频')
+    expect(wrapper.text()).toContain('一期播客')
+    expect(wrapper.findAll('.profile-channel-card')).toHaveLength(1)
+    expect(wrapper.find('.profile-channel-card__subscribe').exists()).toBe(true)
     expect(wrapper.get('[data-testid="profile-following-count"]').text()).toBe('128')
     expect(wrapper.get('[data-testid="profile-followers-count"]').text()).toBe('1k+')
   })

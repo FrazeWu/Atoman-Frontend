@@ -70,7 +70,7 @@ describe('UserSettingsView UI', () => {
     expect(wrapper.find('.settings-center').exists()).toBe(true)
     expect(wrapper.find('.user-settings__directory-trigger').exists()).toBe(true)
     expect(wrapper.findComponent(PDirectoryNavStub).exists()).toBe(true)
-    expect(wrapper.findAll('.settings-center__section')).toHaveLength(4)
+    expect(wrapper.findAll('.settings-center__section')).toHaveLength(5)
     expect(wrapper.find('.oauth-identities').exists()).toBe(false)
     expect(wrapper.findAll('.settings-block').length).toBeGreaterThanOrEqual(3)
   })
@@ -88,5 +88,14 @@ describe('UserSettingsView UI', () => {
     expect(directory.props('mobileOpen')).toBe(false)
     await wrapper.get('.user-settings__directory-trigger').trigger('click')
     expect(directory.props('mobileOpen')).toBe(true)
+  })
+
+  it('includes module settings and immediate account cancellation area', async () => {
+    const { wrapper } = await mountView()
+
+    expect(wrapper.get('[data-test="module-settings"]').text()).toContain('博客')
+    expect(wrapper.get('[data-test="module-settings"]').text()).toContain('视频')
+    expect(wrapper.get('[data-test="module-settings"]').text()).toContain('播客')
+    expect(wrapper.get('[data-test="delete-account"]').text()).toContain('注销账户')
   })
 })

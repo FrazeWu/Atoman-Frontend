@@ -74,24 +74,24 @@
               </div>
 
               <div v-if="canViewRelations" class="profile-header__relations" aria-label="订阅关系">
-                <div class="profile-header__relation-stat">
+                <button
+                  data-testid="profile-following"
+                  type="button"
+                  class="profile-header__relation-stat"
+                  @click="openRelations('following')"
+                >
                   <strong data-testid="profile-following-count">{{ formatProfileCount(profile.following_count) }}</strong>
-                  <button
-                    data-testid="profile-following"
-                    type="button"
-                    class="profile-header__relation-link"
-                    @click="openRelations('following')"
-                  >订阅中</button>
-                </div>
-                <div class="profile-header__relation-stat">
+                  <span class="profile-header__relation-link">订阅中</span>
+                </button>
+                <button
+                  data-testid="profile-followers"
+                  type="button"
+                  class="profile-header__relation-stat"
+                  @click="openRelations('followers')"
+                >
                   <strong data-testid="profile-followers-count">{{ formatProfileCount(profile.followers_count) }}</strong>
-                  <button
-                    data-testid="profile-followers"
-                    type="button"
-                    class="profile-header__relation-link"
-                    @click="openRelations('followers')"
-                  >被订阅</button>
-                </div>
+                  <span class="profile-header__relation-link">被订阅</span>
+                </button>
               </div>
               <p v-else class="profile-header__relations-private">订阅关系未公开</p>
             </div>
@@ -103,13 +103,95 @@
           </div>
         </div>
       </section>
+
+      <section class="profile-section" aria-labelledby="profile-channels-title">
+        <div class="profile-section__heading">
+          <h2 id="profile-channels-title" class="profile-section__title">频道</h2>
+        </div>
+        <div v-if="channelsLoading" class="profile-channel-grid" aria-label="正在加载频道">
+          <div v-for="index in 2" :key="index" class="a-skeleton profile-channel-card__skeleton" />
+        </div>
+        <PEmpty
+          v-else-if="!channels.length"
+          title="暂无频道"
+          description="该用户还没有创建公开频道。"
+        />
+        <div v-else class="profile-channel-grid">
+          <article v-for="channel in channels" :key="channel.id" class="profile-channel-card">
+            <RouterLink :to="channelUrl(channel.slug || channel.id)" class="profile-channel-card__link">
+              <div class="profile-channel-card__cover">
+                <img v-if="channel.cover_url" :src="channel.cover_url" :alt="channel.name" loading="lazy" />
+                <span v-else aria-hidden="true">{{ channel.name.slice(0, 1).toUpperCase() }}</span>
+              </div>
+              <div class="profile-channel-card__body">
+                <h3>{{ channel.name }}</h3>
+                <p>{{ channel.description || '博客、视频和播客内容' }}</p>
+              </div>
+            </RouterLink>
+            <button
+              v-if="authStore.isAuthenticated && !isSelf"
+              type="button"
+              class="a-toggle-btn profile-channel-card__subscribe"
+              :class="{ 'a-toggle-btn-active': isChannelSubscribed(channel.id) }"
+              :disabled="channelSubscriptionBusy.has(channel.id)"
+              @click="toggleChannelSubscription(channel)"
+            >{{ isChannelSubscribed(channel.id) ? '已订阅' : '订阅' }}</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="profile-section" aria-labelledby="profile-content-title">
+        <h2 id="profile-content-title" class="profile-section__title">内容</h2>
+        <div v-if="contentLoading" class="profile-content__loading" role="status">
+          <div v-for="index in 3" :key="index" class="a-skeleton profile-content__skeleton" />
+        </div>
+        <PEmpty
+          v-else-if="!contentItems.length"
+          title="暂无内容"
+          description="该用户还没有发布公开内容。"
+        />
+        <div v-else class="profile-content__list">
+          <template v-for="item in contentItems" :key="itemKey(item)">
+            <BlogItemCard
+              v-if="item.type === 'post'"
+              :item="item.data"
+              type="post"
+              :bookmarked="bookmarkedPostIds.has(item.data.id)"
+              :in-reading-list="readingListIds.has(item.data.id)"
+              @click="openPost(item.data)"
+              @toggle-bookmark="toggleStar(item.data.id)"
+              @toggle-reading-list="toggleReadingList(item.data.id)"
+            />
+            <RouterLink
+              v-else
+              :to="item.type === 'video' ? `/videos/watch/${item.data.id}` : `/podcasts/episode/${item.data.id}`"
+              class="profile-media-card"
+            >
+              <div class="profile-media-card__cover">
+                <img
+                  v-if="mediaCover(item)"
+                  :src="mediaCover(item)"
+                  :alt="mediaTitle(item)"
+                  loading="lazy"
+                />
+                <span v-else>{{ item.type === 'video' ? '视频' : '播客' }}</span>
+              </div>
+              <div class="profile-media-card__body">
+                <div class="profile-media-card__meta"><span>{{ item.type === 'video' ? '视频' : '播客' }}</span><time :datetime="item.sortKey">{{ formatContentDate(item.sortKey) }}</time></div>
+                <h3>{{ mediaTitle(item) }}</h3>
+                <p v-if="mediaSummary(item)">{{ mediaSummary(item) }}</p>
+              </div>
+            </RouterLink>
+          </template>
+        </div>
+      </section>
     </template>
   </main>
 
   <PModal
     v-if="relationModalOpen"
     :title="relationTitle"
-    size="md"
+    size="sm"
     @close="closeRelations"
   >
     <div data-testid="profile-relations-modal" class="profile-relations-modal">
@@ -167,19 +249,23 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PToast from '@/components/ui/PToast.vue'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import UserSummaryCard from '@/components/user/UserSummaryCard.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
 import { resolveSiteContext } from '@/router/siteContext'
-import { moduleUrl, userUrl } from '@/composables/useSubdomainNav'
+import { channelUrl, moduleUrl, userUrl } from '@/composables/useSubdomainNav'
 import { desktopAppPath } from '@/utils/desktopAppUrl'
-import type { UserProfile } from '@/types'
+import { useBlogSheets } from '@/composables/useBlogSheets'
+import type { Channel, PodcastEpisode, Post, UserProfile, Video } from '@/types'
 
 type RelationTab = 'following' | 'followers'
 
@@ -191,9 +277,16 @@ type RelationEntry = {
   detail?: string
 }
 
+type ProfileContentItem =
+  | { type: 'post'; sortKey: string; data: Post }
+  | { type: 'video'; sortKey: string; data: Video }
+  | { type: 'podcast'; sortKey: string; data: PodcastEpisode }
+
 const route = useRoute()
 const authStore = useAuthStore()
+const feedStore = useFeedStore()
 const api = useApi()
+const blogSheets = useBlogSheets()
 
 const profile = ref<UserProfile | null>(null)
 const loading = ref(true)
@@ -211,6 +304,14 @@ const relationLoading = ref(false)
 const relationError = ref('')
 const relationCache = ref<Record<RelationTab, RelationEntry[]>>({ following: [], followers: [] })
 const relationLoaded = ref<Record<RelationTab, boolean>>({ following: false, followers: false })
+const channels = ref<Channel[]>([])
+const channelsLoading = ref(true)
+const channelSubscriptionIds = ref(new Set<string>())
+const channelSubscriptionBusy = ref(new Set<string>())
+const contentItems = ref<ProfileContentItem[]>([])
+const contentLoading = ref(true)
+const bookmarkedPostIds = computed(() => feedStore.bookmarkedPostIds)
+const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const siteContext = computed(() => resolveSiteContext(
   window.location.hostname,
@@ -247,6 +348,14 @@ function stringValue(value: unknown) {
 function responsePayload(value: unknown): unknown {
   if (!isRecord(value) || !('data' in value)) return value
   return value.data
+}
+
+function listPayload(value: unknown, key = 'data'): unknown[] {
+  const payload = responsePayload(value)
+  if (Array.isArray(payload)) return payload
+  if (!isRecord(payload)) return []
+  const nested = payload[key]
+  return Array.isArray(nested) ? nested : []
 }
 
 function relationRawItems(value: unknown) {
@@ -379,6 +488,126 @@ async function toggleFollow() {
   }
 }
 
+function isChannelSubscribed(channelID: string) {
+  return channelSubscriptionIds.value.has(channelID)
+}
+
+async function loadChannelSubscriptionState(generation = profileLoadSequence) {
+  if (!authStore.isAuthenticated || isSelf.value || !channels.value.length) return
+  const ids = await Promise.all(channels.value.map(async (channel) => {
+    try {
+      return await feedStore.isSubscribedToChannel(channel.id) ? channel.id : ''
+    } catch {
+      return ''
+    }
+  }))
+  if (generation !== profileLoadSequence) return
+  channelSubscriptionIds.value = new Set(ids.filter(Boolean))
+}
+
+async function toggleChannelSubscription(channel: Channel) {
+  if (!authStore.isAuthenticated || isSelf.value || channelSubscriptionBusy.value.has(channel.id)) return
+  channelSubscriptionBusy.value = new Set(channelSubscriptionBusy.value).add(channel.id)
+  const subscribed = isChannelSubscribed(channel.id)
+  try {
+    const success = subscribed
+      ? await feedStore.unsubscribeFromChannel(channel.id)
+      : await feedStore.subscribeToChannel(channel.id)
+    if (!success) throw new Error('subscription failed')
+    const next = new Set(channelSubscriptionIds.value)
+    if (subscribed) next.delete(channel.id)
+    else next.add(channel.id)
+    channelSubscriptionIds.value = next
+    toastMessage.value = subscribed ? '已取消订阅频道' : '已订阅频道'
+  } catch {
+    toastMessage.value = '频道订阅操作失败，请重试'
+  } finally {
+    const nextBusy = new Set(channelSubscriptionBusy.value)
+    nextBusy.delete(channel.id)
+    channelSubscriptionBusy.value = nextBusy
+    toastVisible.value = true
+  }
+}
+
+function contentDate(item: Post | Video | PodcastEpisode) {
+  if ('published_at' in item && item.published_at) return item.published_at
+  if ('post' in item && item.post?.published_at) return item.post.published_at
+  return item.created_at
+}
+
+function itemKey(item: ProfileContentItem) {
+  return `${item.type}-${item.data.id}`
+}
+
+function mediaTitle(item: Exclude<ProfileContentItem, { type: 'post' }>) {
+  return item.type === 'video' ? item.data.title : item.data.post?.title || '未命名单集'
+}
+
+function mediaSummary(item: Exclude<ProfileContentItem, { type: 'post' }>) {
+  return item.type === 'video' ? item.data.description : item.data.post?.summary || ''
+}
+
+function mediaCover(item: Exclude<ProfileContentItem, { type: 'post' }>) {
+  return item.type === 'video' ? item.data.thumbnail_url : item.data.episode_cover_url || item.data.channel?.cover_url || ''
+}
+
+function formatContentDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('zh-CN')
+}
+
+function openPost(post: Post) {
+  blogSheets.openPost(post.id, post.title)
+}
+
+function toggleStar(id: string) {
+  void feedStore.togglePostBookmark(id)
+}
+
+function toggleReadingList(id: string) {
+  void feedStore.toggleReadingListItem(id)
+}
+
+async function loadChannelsAndContent(generation = profileLoadSequence) {
+  if (!profile.value) return
+  const profileID = profile.value.uuid
+  channelsLoading.value = true
+  contentLoading.value = true
+  try {
+    const channelResponse = api.blog.channels
+      ? await apiRequestResult(`${api.blog.channels}?user_id=${encodeURIComponent(profileID)}`)
+      : null
+    const loadedChannels = channelResponse?.ok ? listPayload(channelResponse.data) as Channel[] : []
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
+    channels.value = loadedChannels.filter((channel) => channel.user_id === profileID)
+    void loadChannelSubscriptionState(generation)
+
+    const base = api.url || '/api/v1'
+    const postRequest = api.blog.posts
+      ? apiRequestResult(`${api.blog.posts}?user_id=${encodeURIComponent(profileID)}&status=published&page=1&page_size=12`)
+      : Promise.resolve(null)
+    const videoRequests = channels.value.map((channel) => apiRequestResult(`${base}/videos?channel_id=${encodeURIComponent(channel.id)}&limit=12`))
+    const podcastRequests = channels.value
+      .filter((channel) => Boolean(channel.slug))
+      .map((channel) => apiRequestResult(`${base}/podcast/shows/${encodeURIComponent(channel.slug)}/episodes`))
+    const [postResponse, ...mediaResponses] = await Promise.all([postRequest, ...videoRequests, ...podcastRequests])
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
+    const posts = postResponse?.ok ? listPayload(postResponse.data) as Post[] : []
+    const videos = mediaResponses.slice(0, videoRequests.length).flatMap((response) => response.ok ? listPayload(response.data) as Video[] : [])
+    const podcasts = mediaResponses.slice(videoRequests.length).flatMap((response) => response.ok ? listPayload(response.data, 'episodes') as PodcastEpisode[] : [])
+    const deduped = new Map<string, ProfileContentItem>()
+    posts.forEach((post) => deduped.set(`post-${post.id}`, { type: 'post', sortKey: contentDate(post), data: post }))
+    videos.filter((video) => video.user_id === profileID).forEach((video) => deduped.set(`video-${video.id}`, { type: 'video', sortKey: contentDate(video), data: video }))
+    podcasts.filter((episode) => episode.post?.user_id === profileID).forEach((episode) => deduped.set(`podcast-${episode.id}`, { type: 'podcast', sortKey: contentDate(episode), data: episode }))
+    contentItems.value = [...deduped.values()].sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+  } finally {
+    if (generation === profileLoadSequence && profile.value?.uuid === profileID) {
+      channelsLoading.value = false
+      contentLoading.value = false
+    }
+  }
+}
+
 async function loadRelations(tab: RelationTab, force = false) {
   if (!profile.value || !canViewRelations.value) return
   if (!force && relationLoaded.value[tab]) return
@@ -432,6 +661,11 @@ async function loadProfilePage() {
   resolvedUsername.value = ''
   resolvedChannelSlug.value = ''
   following.value = false
+  channels.value = []
+  contentItems.value = []
+  channelSubscriptionIds.value = new Set()
+  channelsLoading.value = true
+  contentLoading.value = true
   loading.value = true
   resetRelations()
 
@@ -440,6 +674,11 @@ async function loadProfilePage() {
   await fetchProfile(generation)
   if (generation !== profileLoadSequence || !profile.value) return
   void fetchFollowingState(generation)
+  void loadChannelsAndContent(generation)
+  if (authStore.isAuthenticated) {
+    void feedStore.fetchBookmarkedPostIds()
+    void feedStore.fetchReadingListIds()
+  }
 }
 
 watch(() => route.fullPath, () => { void loadProfilePage() })
@@ -532,7 +771,14 @@ onMounted(() => { void loadProfilePage() })
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
+.profile-header__relation-stat:hover,
+.profile-header__relation-stat:focus-visible { border-color: var(--a-color-primary); background: var(--a-color-surface-muted); }
 .profile-header__relation-stat strong {
   color: var(--a-color-text);
   font-size: 1.1rem;
@@ -565,6 +811,32 @@ onMounted(() => { void loadProfilePage() })
   font-size: 0.78rem;
   text-align: right;
 }
+
+.profile-section { margin-top: 2rem; }
+.profile-section__heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.profile-section__title { margin: 0 0 0.75rem; color: var(--a-color-text-secondary); font-size: 0.78rem; font-weight: 650; letter-spacing: 0.04em; }
+.profile-channel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0.75rem; }
+.profile-channel-card { position: relative; min-width: 0; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-surface); overflow: hidden; }
+.profile-channel-card:hover { border-color: var(--a-color-border); }
+.profile-channel-card__link { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); min-height: 7.25rem; color: inherit; text-decoration: none; }
+.profile-channel-card__cover { display: grid; place-items: center; aspect-ratio: 1; background: var(--a-color-surface-muted); color: var(--a-color-text-secondary); font-size: 1.5rem; font-weight: 650; overflow: hidden; }
+.profile-channel-card__cover img { width: 100%; height: 100%; object-fit: cover; }
+.profile-channel-card__body { display: grid; align-content: center; gap: 0.35rem; min-width: 0; padding: 0.85rem; }
+.profile-channel-card__body h3 { margin: 0; color: var(--a-color-text); font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-channel-card__body p { margin: 0; color: var(--a-color-text-secondary); font-size: 0.78rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.profile-channel-card__subscribe { position: absolute; right: 0.65rem; bottom: 0.6rem; min-height: 2rem; padding: 0.25rem 0.65rem; font-size: 0.75rem; }
+.profile-channel-card__skeleton { min-height: 7.25rem; border-radius: var(--a-radius-card); }
+.profile-content__loading { display: grid; gap: 0.5rem; }
+.profile-content__skeleton { height: 6rem; border-radius: var(--a-radius-card); }
+.profile-content__list { display: grid; gap: 0.5rem; }
+.profile-media-card { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 0.9rem; padding: 0.8rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); color: inherit; text-decoration: none; }
+.profile-media-card:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); }
+.profile-media-card__cover { display: grid; place-items: center; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); color: var(--a-color-muted); font-size: 0.78rem; }
+.profile-media-card__cover img { width: 100%; height: 100%; object-fit: cover; }
+.profile-media-card__body { min-width: 0; }
+.profile-media-card__meta { display: flex; gap: 0.65rem; color: var(--a-color-muted); font-size: 0.72rem; }
+.profile-media-card__body h3 { margin: 0.35rem 0; color: var(--a-color-text); font-size: 0.98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-media-card__body p { margin: 0; color: var(--a-color-text-secondary); font-size: 0.8rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 .profile-header__bio-row {
   max-width: 46rem;
@@ -660,12 +932,14 @@ onMounted(() => { void loadProfilePage() })
   .profile-header__actions { justify-content: flex-start; }
   .profile-header__name { font-size: 1.5rem; }
   .profile-header__reputation { margin-top: 0.05rem; }
+  .profile-channel-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
   .profile-header { grid-template-columns: 1fr; }
   .profile-header__avatar { margin: 0; }
   .profile-header__name-row { align-items: center; }
+  .profile-media-card { grid-template-columns: 5.5rem minmax(0, 1fr); }
   .profile-relation-item__link { grid-template-columns: 2.5rem minmax(0, 1fr); }
   .profile-relation-item__detail { grid-column: 2; max-width: none; text-align: left; }
 }

@@ -34,6 +34,11 @@ interface FeedSubscriptionManagerOptions {
 	refreshTimeline: () => Promise<void>;
 }
 
+export interface SubscriptionManageChanges {
+	subscriptions: Array<{ id: string; title: string }>;
+	groups: Array<{ id: string; name: string }>;
+}
+
 export function useFeedSubscriptionManager({
 	currentPage,
 	refreshTimeline,
@@ -632,6 +637,29 @@ export function useFeedSubscriptionManager({
 		feedStore.setAutomationRules(rules);
 	};
 
+	const saveSubscriptionChanges = async (changes: SubscriptionManageChanges) => {
+		if (!changes.subscriptions.length && !changes.groups.length) return;
+		await withManageBusy(async () => {
+			manageError.value = "";
+			for (const change of changes.subscriptions) {
+				const success = await feedStore.updateSubscription(change.id, { title: change.title });
+				if (!success) {
+					setManageError("订阅源保存失败");
+					return;
+				}
+			}
+			for (const change of changes.groups) {
+				const success = await feedStore.updateGroup(change.id, change.name);
+				if (!success) {
+					setManageError("分组保存失败");
+					return;
+				}
+			}
+			manageMessage.value = "订阅设置已保存";
+			await refreshSubscriptionState();
+		});
+	};
+
 	return {
 		addingSubscription,
 		showAddModal,
@@ -683,5 +711,6 @@ export function useFeedSubscriptionManager({
 		deleteSubscriptionRule,
 		updateFilterRules,
 		updateAutomationRules,
+		saveSubscriptionChanges,
 	};
 }

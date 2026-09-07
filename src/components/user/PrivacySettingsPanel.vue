@@ -13,24 +13,42 @@
         重试
       </PButton>
     </div>
-    <div v-else class="settings-block">
-      <div class="settings-block__copy">
-        <strong>公开个人资料</strong>
-        <small>关闭后，其他人无法查看你的个人主页资料。</small>
+    <div v-else class="privacy-settings__list">
+      <div class="settings-block">
+        <div class="settings-block__copy">
+          <strong>设为私密</strong>
+          <small>开启后，其他人无法查看你的个人主页资料。</small>
+        </div>
+        <label class="settings-toggle">
+          <input
+            data-test="private-profile-toggle"
+            v-model="privateProfile"
+            type="checkbox"
+            :disabled="savingKey !== null"
+            @change="save('private_profile')"
+          />
+          <span>{{ privateProfile ? '仅自己可见' : '对所有人公开' }}</span>
+        </label>
       </div>
-      <label class="settings-toggle">
-        <input
-          data-test="private-profile-toggle"
-          v-model="privateProfile"
-          type="checkbox"
-          :disabled="saving"
-          @change="save"
-        />
-        <span>{{ privateProfile ? '仅自己可见' : '对所有人公开' }}</span>
-      </label>
+      <div class="settings-block">
+        <div class="settings-block__copy">
+          <strong>公开订阅关系</strong>
+          <small>允许他人查看你的订阅中和被订阅列表。</small>
+        </div>
+        <label class="settings-toggle">
+          <input
+            data-test="show-relations-toggle"
+            v-model="showRelations"
+            type="checkbox"
+            :disabled="savingKey !== null"
+            @change="save('show_relations')"
+          />
+          <span>{{ showRelations ? '对所有人公开' : '仅自己可见' }}</span>
+        </label>
+      </div>
     </div>
     <p v-if="saveError" class="privacy-settings__inline-error" role="alert">{{ saveError }}</p>
-    <p v-else-if="saved" class="privacy-settings__saved" role="status">个人资料设置已保存</p>
+    <p v-else-if="saved" class="privacy-settings__saved" role="status">{{ savedLabel }}已保存</p>
   </section>
 </template>
 
@@ -45,15 +63,18 @@ import { useAuthStore } from '@/stores/auth'
 const api = useApi()
 const authStore = useAuthStore()
 const privateProfile = ref(false)
+const showRelations = ref(false)
 const loading = ref(true)
-const saving = ref(false)
+const savingKey = ref<SettingKey | null>(null)
 const saved = ref(false)
+const savedLabel = ref('隐私设置')
 const loadError = ref('')
 const saveError = ref('')
 
 type SettingsPayload = {
-  data?: { private_profile?: unknown }
+  data?: { private_profile?: unknown; show_relations?: unknown }
   private_profile?: unknown
+  show_relations?: unknown
 }
 
 function authHeaders() {
@@ -67,6 +88,13 @@ function readPrivateProfile(value: unknown) {
   return typeof nested === 'boolean' ? nested : payload.private_profile === true
 }
 
+function readShowRelations(value: unknown) {
+  if (!value || typeof value !== 'object') return false
+  const payload = value as SettingsPayload
+  const nested = payload.data && typeof payload.data === 'object' ? payload.data.show_relations : undefined
+  return typeof nested === 'boolean' ? nested : payload.show_relations === true
+}
+
 async function load() {
   loading.value = true
   loadError.value = ''
@@ -76,6 +104,7 @@ async function load() {
     const response = await apiRequestResult(api.users.meSettings, { headers: authHeaders() })
     if (!response.ok) throw new Error('隐私设置加载失败，请重试')
     privateProfile.value = readPrivateProfile(response.data)
+    showRelations.value = readShowRelations(response.data)
   } catch (cause) {
     loadError.value = cause instanceof Error ? cause.message : '隐私设置加载失败，请重试'
   } finally {
@@ -83,26 +112,32 @@ async function load() {
   }
 }
 
-async function save() {
-  if (saving.value) return
-  const previous = !privateProfile.value
-  saving.value = true
+type SettingKey = 'private_profile' | 'show_relations'
+
+async function save(key: SettingKey) {
+  if (savingKey.value) return
+  const previous = key === 'private_profile' ? !privateProfile.value : !showRelations.value
+  const value = key === 'private_profile' ? privateProfile.value : showRelations.value
+  savingKey.value = key
   saved.value = false
+  savedLabel.value = key === 'show_relations' ? '订阅关系设置' : '个人资料设置'
   saveError.value = ''
   try {
     const response = await apiRequestResult(api.users.meSettings, {
       method: 'PUT',
       headers: authHeaders(),
-      body: JSON.stringify({ private_profile: privateProfile.value }),
+      body: JSON.stringify({ [key]: value }),
     })
     if (!response.ok) throw new Error('隐私设置保存失败，请重试')
     privateProfile.value = readPrivateProfile(response.data)
+    showRelations.value = readShowRelations(response.data)
     saved.value = true
   } catch (cause) {
-    privateProfile.value = previous
+    if (key === 'private_profile') privateProfile.value = previous
+    else showRelations.value = previous
     saveError.value = cause instanceof Error ? cause.message : '隐私设置保存失败，请重试'
   } finally {
-    saving.value = false
+    savingKey.value = null
   }
 }
 

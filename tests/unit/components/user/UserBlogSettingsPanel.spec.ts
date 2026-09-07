@@ -25,7 +25,10 @@ describe('UserBlogSettingsPanel', () => {
       }
       return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
     })
-    const wrapper = mount(UserBlogSettingsPanel, { props: { includeAccountExtras: false } })
+    const wrapper = mount(UserBlogSettingsPanel, {
+      props: { includeAccountExtras: false },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+    })
     expect(wrapper.find('[data-test="profile-settings-loading"]').exists()).toBe(true)
     expect(wrapper.find('form').exists()).toBe(false)
 
@@ -42,7 +45,10 @@ describe('UserBlogSettingsPanel', () => {
       if (String(input).includes('/users/me')) return new Response(null, { status: 503 })
       return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
     })
-    const wrapper = mount(UserBlogSettingsPanel, { props: { includeAccountExtras: false } })
+    const wrapper = mount(UserBlogSettingsPanel, {
+      props: { includeAccountExtras: false },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+    })
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toContain('资料加载失败')
@@ -71,7 +77,10 @@ describe('UserBlogSettingsPanel', () => {
       return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
     })
 
-    const wrapper = mount(UserBlogSettingsPanel, { props: { includeAccountExtras: false } })
+    const wrapper = mount(UserBlogSettingsPanel, {
+      props: { includeAccountExtras: false },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+    })
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('个人网站')
@@ -105,8 +114,12 @@ describe('UserBlogSettingsPanel', () => {
       return new Response(JSON.stringify({ data: { available: false } }), { status: 200 })
     })
 
-    const wrapper = mount(UserBlogSettingsPanel, { props: { includeAccountExtras: false } })
+    const wrapper = mount(UserBlogSettingsPanel, {
+      props: { includeAccountExtras: false },
+      global: { stubs: { PModal: { template: '<div><slot /></div>' } } },
+    })
     await flushPromises()
+    await wrapper.get('.avatar-field button').trigger('click')
     const input = wrapper.get('[data-testid="profile-avatar-input"]')
     Object.defineProperty(input.element, 'files', {
       value: [new File(['avatar'], 'avatar.png', { type: 'image/png' })],

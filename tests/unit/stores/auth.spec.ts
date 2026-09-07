@@ -120,7 +120,24 @@ describe('auth store cookie session', () => {
 	await auth.logout()
 	expect(auth.isAuthenticated).toBe(false)
 	const [, init] = fetchMock.mock.calls[1]
-	expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('csrf-login')
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('csrf-login')
+  })
+
+  it('deletes the current account and clears the local session', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const auth = useAuthStore()
+    auth.user = user
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+
+    await auth.deleteAccount()
+
+    expect(fetchMock).toHaveBeenCalledWith(`${defaultApiUrl}/users/me`, expect.objectContaining({
+      method: 'DELETE',
+      credentials: 'include',
+    }))
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.user).toBeNull()
   })
 
   it.each([

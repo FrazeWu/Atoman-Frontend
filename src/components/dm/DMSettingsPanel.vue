@@ -44,7 +44,6 @@ const options = computed(() => props.subject.type === 'user'
   ? [
       { value: 'one_before_reply' as const, label: '陌生人仅可发一条' },
       { value: 'following_only' as const, label: '仅我关注的人' },
-      { value: 'anyone' as const, label: '允许连续发送' },
     ]
   : [
       { value: 'one_before_reply' as const, label: '陌生人仅可发一条' },
@@ -62,7 +61,11 @@ async function load() {
     const settings = props.subject.type === 'user'
       ? await getDMSettings()
       : await getDMChannelSettings(props.subject.id)
-    if (generation === requestGeneration) permission.value = settings.permission
+    if (generation === requestGeneration) {
+      permission.value = props.subject.type === 'user' && settings.permission === 'anyone'
+        ? 'following_only'
+        : settings.permission
+    }
   } catch {
     if (generation === requestGeneration) loadError.value = '私信权限加载失败，请重试'
   } finally {

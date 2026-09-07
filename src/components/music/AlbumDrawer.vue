@@ -977,7 +977,7 @@ watch(
         @open-history="openAlbumHistory"
       />
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openComments" :count="discussionCount" />
+    <PDiscussionFAB v-if="isOpen && !commentsOpen" @click="openComments" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
   </PSheet>
 

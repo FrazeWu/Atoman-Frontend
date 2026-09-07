@@ -190,6 +190,7 @@ function currentCommentTime() {
     </div>
 
     <PDiscussionFAB
+      v-if="!commentsOpen"
       :count="commentCount"
       @click="commentsOpen = true"
     />

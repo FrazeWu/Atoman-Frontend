@@ -221,7 +221,7 @@
       </div>
     </template>
     <PDiscussionFAB
-    v-if="article && isFeedItemTimeline(article) && article.feed_item && show && presentation !== 'page'"
+    v-if="article && isFeedItemTimeline(article) && article.feed_item && show && presentation !== 'page' && !commentsOpen"
       :count="commentCount"
       @click="openComments"
     />

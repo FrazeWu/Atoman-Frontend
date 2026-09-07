@@ -85,6 +85,7 @@
       </section>
 
       <PDiscussionFAB
+        v-if="!discussionOpen"
         :count="discussionCount"
         @click="discussionOpen = true"
       />

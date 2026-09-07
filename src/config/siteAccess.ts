@@ -5,7 +5,6 @@ export type ModuleFeatureKey =
   | 'music.submit'
   | 'music.review'
   | 'post.create'
-  | 'channel.manage'
   | 'topic.create'
   | 'category.request'
   | 'debate.create'
@@ -82,7 +81,6 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
   ],
   blog: [
     { key: 'post.create', label: '写文章' },
-    { key: 'channel.manage', label: '频道与合集管理' },
   ],
   books: [
     { key: 'books.submit', label: '提交书目' },
@@ -107,6 +105,9 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
     { key: 'video.publish', label: '上传视频' },
   ],
 }
+
+/** Only modules with an implemented site-level management surface get a detail entry. */
+export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum']
 
 const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {
   const modules = {} as Record<ModuleRoomKey, ModuleAccess>
@@ -155,16 +156,19 @@ export function mergeSiteAccess(input: SiteAccessInput): SiteAccess {
     const partial = input?.modules?.[key]
     if (!partial) continue
 
+    const allowedFeatures = new Set((siteAccessFeatures[key] ?? []).map((feature) => feature.key))
+    const incomingFeatures = Object.fromEntries(
+      Object.entries(partial.features ?? {}).filter(([feature]) => allowedFeatures.has(feature as ModuleFeatureKey)),
+    ) as Partial<Record<ModuleFeatureKey, boolean>>
+
     modules[key] = {
       enabled: partial.enabled ?? partial.visible ?? modules[key].enabled,
       features: {
         ...modules[key].features,
-        ...(partial.features ?? {}),
+        ...incomingFeatures,
       },
     }
   }
-
-  modules.books.enabled = false
 
   if (input?.settings?.feed) {
     settings.feed = {

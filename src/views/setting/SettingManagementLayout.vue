@@ -32,35 +32,42 @@ import { IconListTree as ListTree } from '@tabler/icons-vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
-import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 
 const route = useRoute()
 const router = useRouter()
 const directoryCollapsed = ref(false)
 const mobileDirectoryOpen = ref(false)
-const managementModuleOrder: ModuleRoomKey[] = ['feed', 'music', 'blog', 'forum', 'podcast', 'video']
 const directoryItems = [
+  { id: 'site', label: '站点设置' },
   { id: 'users', label: '用户管理' },
   { id: 'subscriptions', label: '订阅源管理' },
+  { id: 'community', label: '社区管理' },
   { id: 'announcements', label: '公告' },
-  ...managementModuleOrder.map((key) => ({ id: key, label: moduleRooms[key].name }))
 ]
 
 const activeDirectoryItem = computed(() => {
+  if (route.path === '/site/setting' && !route.hash) return 'site'
   if (route.path.endsWith('/users')) return 'users'
   if (route.path.endsWith('/subscriptions')) return 'subscriptions'
+  if (route.path.endsWith('/community')) return 'community'
   if (route.path.endsWith('/announcements')) return 'announcements'
-  if (route.path.endsWith('/community')) return 'forum'
-  return route.hash.replace(/^#(?:module|detail)-/, '') || 'feed'
+  if (route.hash === '#detail-feed' || route.hash === '#module-feed') return 'subscriptions'
+  return 'site'
 })
 
 function selectDirectoryItem(id: string) {
-  if (id === 'users' || id === 'subscriptions' || id === 'announcements') {
+  if (id === 'site') {
+    void router.push('/site/setting')
+    return
+  }
+  if (id === 'subscriptions') {
+    void router.push({ path: '/site/setting', hash: '#detail-feed' })
+    return
+  }
+  if (id === 'users' || id === 'community' || id === 'announcements') {
     void router.push(`/site/setting/${id}`)
     return
   }
-
-  void router.push({ path: '/site/setting', hash: `#module-${id as ModuleRoomKey}` })
 }
 </script>
 

@@ -55,6 +55,7 @@ describe("useResponsiveShell", () => {
 		expect(modules).toEqual([
 			"feed",
 			"blog",
+			"books",
 			"music",
 			"forum",
 			"debate",
@@ -62,6 +63,12 @@ describe("useResponsiveShell", () => {
 			"podcast",
 			"video",
 		]);
+	});
+
+	it("filters disabled modules from the module switcher", () => {
+		const items = getMobileMoreItems((module) => module !== "books");
+
+		expect(items.some((item) => item.module === "books")).toBe(false);
 	});
 
 	it("returns defensive copies for tab and switcher collections", () => {

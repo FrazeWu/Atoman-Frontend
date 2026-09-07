@@ -21,10 +21,9 @@
       @close="closeDetail"
     >
       <div class="setting-access__detail-layout">
-        <aside class="setting-access__detail-directory" aria-label="站点管理目录">
-          <header>站点管理</header>
+        <aside class="setting-access__detail-directory" aria-label="模块详情目录">
+          <header>模块详情</header>
           <nav>
-            <p>设置</p>
             <button
               v-for="key in detailModuleOrder"
               :key="key"
@@ -35,9 +34,6 @@
             >
               {{ moduleRooms[key].name }}
             </button>
-            <p>管理</p>
-            <button type="button" @click="navigateToManagement('users')">用户与权限</button>
-            <button type="button" @click="navigateToManagement('announcements')">公告</button>
           </nav>
         </aside>
 
@@ -79,35 +75,10 @@
             </template>
 
             <template v-else-if="selectedModule === 'music'">
-              <div class="setting-access__detail-settings setting-access__detail-settings--stack">
-                <label>
-                  <span>
-                    <strong>允许提交音乐资料</strong>
-                    <small>控制用户是否可以提交专辑、歌曲和艺人资料。</small>
-                  </span>
-                  <input v-model="draft.modules.music.features['music.submit']" type="checkbox" />
-                </label>
-                <label>
-                  <span>
-                    <strong>允许音乐审核</strong>
-                    <small>控制管理员是否可以处理音乐资料和状态请求。</small>
-                  </span>
-                  <input v-model="draft.modules.music.features['music.review']" type="checkbox" />
-                </label>
-              </div>
-              <SettingMusicReviewPanel />
-            </template>
-
-            <template v-else-if="selectedModule === 'blog'">
-              <div class="setting-access__detail-settings setting-access__detail-settings--stack">
-                <label v-for="mode in blogCommentModes" :key="mode.value">
-                  <span>
-                    <strong>{{ mode.label }}</strong>
-                    <small>{{ mode.description }}</small>
-                  </span>
-                  <input v-model="draft.settings.blog.comment_mode" type="radio" name="blog-comment-mode" :value="mode.value" />
-                </label>
-              </div>
+              <p v-if="!draft.modules.music.enabled || !draft.modules.music.features['music.review']" class="setting-access__detail-disabled" role="status">
+                音乐审核已关闭，请先在站点设置首页开启对应开关。
+              </p>
+              <SettingMusicReviewPanel v-else />
             </template>
 
             <template v-else-if="selectedModule === 'forum'">
@@ -122,10 +93,6 @@
               <PButton variant="secondary" to="/site/setting/community">社区管理</PButton>
             </template>
 
-            <div v-else class="setting-access__detail-empty">
-              <strong>暂无详情设置</strong>
-              <small>当前模块在站点设置中仅支持模块开放开关。</small>
-            </div>
           </div>
         </main>
       </div>
@@ -147,7 +114,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
-import { mergeSiteAccess, type SiteAccess } from '@/config/siteAccess'
+import { mergeSiteAccess, siteAccessDetailModules, type SiteAccess } from '@/config/siteAccess'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 
@@ -161,7 +128,7 @@ const saved = ref(false)
 const error = ref('')
 const selectedModule = ref<ModuleRoomKey | null>(null)
 
-const detailModuleOrder: ModuleRoomKey[] = ['feed', 'music', 'blog', 'forum', 'podcast', 'video']
+const detailModuleOrder = siteAccessDetailModules
 const detailTitleId = 'site-setting-detail-title'
 const moduleDescriptions: Record<ModuleRoomKey, string> = {
   feed: 'RSS、文章聚合与全文抓取',
@@ -185,12 +152,6 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
   podcast: Microphone,
   video: Video,
 }
-const blogCommentModes = [
-  { value: 'all', label: '全部可评论', description: '游客可匿名评论，已登录用户正常署名。' },
-  { value: 'authenticated', label: '仅登录用户可评论', description: '保持当前默认行为。' },
-  { value: 'disabled', label: '关闭评论', description: '全站文章评论入口关闭。' },
-] as const
-
 const selectedModuleTitle = computed(() => selectedModule.value ? `${moduleRooms[selectedModule.value].name}详情` : '')
 
 watch(
@@ -240,11 +201,6 @@ function syncDetailFromRoute() {
     return
   }
   if (selectedModule.value) selectedModule.value = null
-}
-
-function navigateToManagement(id: 'users' | 'announcements') {
-  closeDetail(false)
-  void router?.push(`/site/setting/${id}`)
 }
 
 async function save() {
@@ -297,7 +253,7 @@ async function save() {
 .setting-access__detail-layout {
   display: grid;
   min-height: 0;
-  grid-template-columns: 13.75rem minmax(0, 1fr);
+  grid-template-columns: var(--a-sidebar-width) minmax(0, 1fr);
   gap: 1.25rem;
 }
 
@@ -305,12 +261,12 @@ async function save() {
   position: sticky;
   top: 0;
   display: flex;
-  width: 13.75rem;
+  width: var(--a-sidebar-width);
   max-height: calc(100dvh - var(--a-topbar-height) - 5rem);
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--a-color-border);
-  border-radius: 8px;
+  border-radius: var(--a-radius-card);
   background: var(--a-color-surface);
 }
 
@@ -494,6 +450,13 @@ async function save() {
 }
 
 .setting-access__detail-empty small {
+  color: var(--a-color-text-secondary);
+}
+
+.setting-access__detail-disabled {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-text-secondary);
 }
 

@@ -24,6 +24,10 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { registerSessionReset } from "@/stores/sessionReset";
 import { useAudioPlayerSync } from "@/composables/useAudioPlayerSync";
+import {
+	resolvePlayableAudioURL,
+	resolveUploadedMediaURL,
+} from "@/utils/mediaUrl";
 
 const api = useApi();
 const audioStartPrefetchBytes = 512 * 1024;
@@ -41,27 +45,8 @@ type PersistedPlaybackState = {
 	playbackMode?: PlaybackMode;
 };
 
-function resolveUploadedMediaUrl(url: string) {
-	if (!url.startsWith("/uploads/")) return url;
-	if (!api.url.startsWith("http://") && !api.url.startsWith("https://"))
-		return url;
-	try {
-		return `${new URL(api.url).origin}${url}`;
-	} catch {
-		return url;
-	}
-}
-
 function resolvePlaybackAudioUrl(url: string) {
-	const resolved = resolveUploadedMediaUrl(url);
-	try {
-		const parsed = new URL(resolved);
-		if (parsed.hostname !== "assets.atoman.org") return resolved;
-		parsed.searchParams.set("cors", "1");
-		return parsed.toString();
-	} catch {
-		return resolved;
-	}
+	return resolvePlayableAudioURL(url, api.url);
 }
 
 function normalizePlaybackSong(song: Song) {
@@ -1186,8 +1171,8 @@ export const usePlayerStore = defineStore("player", () => {
 		year: new Date(episode.created_at || "").getFullYear() || 0,
 		release_date: episode.created_at || "",
 		lyrics: episode.post?.content || "",
-		audio_url: resolveUploadedMediaUrl(episode.audio_url),
-		cover_url: resolveUploadedMediaUrl(episodeCover(episode)),
+		audio_url: resolveUploadedMediaURL(episode.audio_url, api.url),
+		cover_url: resolveUploadedMediaURL(episodeCover(episode), api.url),
 		track_number: episode.episode_number,
 		status: "approved",
 	});

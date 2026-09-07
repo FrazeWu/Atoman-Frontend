@@ -50,6 +50,33 @@ describe("useBlogMediaEmbeds", () => {
 		);
 	});
 
+	it("normalizes production audio URLs for browser playback", async () => {
+		const songId = "66666666-6666-6666-6666-666666666666";
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.endsWith(`/music/albums/${songId}`)) return response({}, 404);
+			if (url.endsWith(`/music/songs/${songId}`)) {
+				return response({
+					song: {
+						id: songId,
+						title: "云端单曲",
+						audio_url: "https://assets.atoman.org/music/audio/cloud-song.mp3",
+					},
+					playable: true,
+				});
+			}
+			return response({}, 404);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const embeds = useBlogMediaEmbeds();
+		await embeds.load(`:::music{id="${songId}"}\n:::`);
+
+		expect(embeds.musicEmbeds.value[songId]?.audioSrc).toBe(
+			"https://assets.atoman.org/music/audio/cloud-song.mp3?cors=1",
+		);
+	});
+
 	it("loads a playable video and ignores a late response after a new load", async () => {
 		const firstVideo = new Promise<Response>((resolve) => {
 			setTimeout(() => resolve(response({

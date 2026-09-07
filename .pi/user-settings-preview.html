@@ -7,18 +7,18 @@
   <title>Atoman 账号设置预览</title>
   <style>
     :root {
-      --bg: #f5f6f8;
+      --bg: #f8fafc;
       --paper: #fff;
-      --ink: #17202a;
-      --muted: #687482;
-      --line: #dfe4e9;
-      --soft: #edf1f4;
-      --accent: #2364d2;
-      --accent-soft: #eaf1ff;
-      --danger: #bd3f3f;
-      --danger-soft: #fff1f1;
-      --success: #1f8a63;
-      --radius: 8px;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #cbd5e1;
+      --soft: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --danger: #dc2626;
+      --danger-soft: #fef2f2;
+      --success: #0d9488;
+      --radius: 4px;
       --shadow: 0 18px 45px rgb(17 28 45 / 14%);
     }
     * { box-sizing: border-box; }
@@ -102,7 +102,9 @@
     .sheet-backdrop.open { display: flex; }
     .sheet { width: min(560px, 100%); height: 100%; overflow: auto; padding: 24px; background: var(--paper); box-shadow: var(--shadow); animation: sheet-in .18s ease both; }
     .sheet.narrow { width: min(420px, 100%); }
-    .sheet.wide { width: min(980px, 100%); }
+    .sheet.wide { width: min(900px, 100%); padding: 16px; }
+    .sheet.wide .sheet-head { padding-bottom: 12px; }
+    .sheet.wide .sheet-body { gap: 12px; padding-top: 14px; }
     @keyframes sheet-in { from { transform: translateX(20px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
     .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
     .sheet-head h2 { margin: 0; font-size: 20px; }
@@ -148,35 +150,35 @@
     .diagnostic-item span { color: var(--muted); font-size: 12px; }
     .detail-section { display: grid; gap: 8px; }
     .detail-section > strong { font-size: 13px; }
-    .subscription-batch { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); background: var(--accent-soft); }
+    .subscription-batch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #eff6ff; }
     .subscription-batch label { display: inline-flex; align-items: center; gap: 7px; color: var(--accent); font-size: 12px; font-weight: 700; }
     .subscription-batch span { color: var(--muted); font-size: 12px; }
     .subscription-batch select { width: 170px; min-height: 36px; }
-    .subscription-operations { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); background: #f8fafc; }
+    .subscription-operations { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #f8fafc; }
     .subscription-operations-copy strong { display: block; font-size: 13px; }
     .subscription-operations-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
     .subscription-operation-controls { display: flex; flex-wrap: wrap; gap: 8px; }
-    .subscription-operation-controls select { width: 190px; min-height: 36px; }
-    .subscription-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 24px; min-width: 0; }
-    .subscription-sidebar { min-width: 0; padding-right: 18px; border-right: 1px solid var(--line); }
-    .subscription-new-group { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 52px; padding: 0 14px; border: 1px dashed #bcc6d0; border-radius: 6px; background: var(--paper); color: var(--ink); font-weight: 600; }
-    .subscription-new-group span { font-size: 22px; font-weight: 400; line-height: 1; }
-    .subscription-group-nav { display: grid; gap: 4px; margin-top: 12px; }
-    .subscription-group-link { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); text-align: left; }
-    .subscription-group-link:hover { background: #f4f7fa; }
-    .subscription-group-link.active { background: #08a8df; color: #fff; }
+    .subscription-operation-controls select { width: 190px; min-height: 32px; }
+    .subscription-layout { display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 16px; min-width: 0; }
+    .subscription-main { display: grid; gap: 12px; min-width: 0; }
+    .subscription-sidebar { min-width: 0; padding-right: 14px; border-right: 1px solid var(--line); }
+    .subscription-new-group { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 40px; padding: 0 10px; border: 1px dashed #cbd5e1; border-radius: 4px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 600; }
+    .subscription-new-group span { font-size: 18px; font-weight: 400; line-height: 1; }
+    .subscription-group-nav { display: grid; gap: 2px; margin-top: 10px; }
+    .subscription-group-link { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 38px; padding: 0 9px; border: 0; border-left: 2px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); text-align: left; }
+    .subscription-group-link:hover { background: #f8fafc; }
+    .subscription-group-link.active { border-left-color: #2563eb; background: #eff6ff; color: #2563eb; }
     .subscription-group-link .group-icon { display: grid; flex: 0 0 24px; place-items: center; font-size: 16px; }
     .subscription-group-link strong { flex: 1; font-size: 13px; font-weight: 600; }
     .subscription-group-link small { font-size: 12px; }
-    .subscription-sidebar-note { margin: 18px 10px 0; color: var(--muted); font-size: 12px; }
-    .subscription-main { display: grid; gap: 14px; min-width: 0; }
-    .subscription-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; }
-    .subscription-view-tabs { display: flex; gap: 8px; }
-    .subscription-view-tab { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: #f8fafc; color: var(--muted); font-weight: 600; }
-    .subscription-view-tab.active { border-color: #08a8df; background: #08a8df; color: #fff; }
-    .subscription-search { width: min(280px, 42%); min-height: 40px; }
-    .subscription-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 18px; }
-    .subscription-grid[data-subscription-grid-all] { gap: 20px 22px; }
+    .subscription-sidebar-note { margin: 14px 9px 0; color: var(--muted); font-size: 11px; }
+    .subscription-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+    .subscription-view-tabs { display: flex; gap: 4px; }
+    .subscription-view-tab { min-height: 32px; padding: 0 11px; border: 1px solid var(--line); border-radius: 4px; background: #f8fafc; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .subscription-view-tab.active { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .subscription-search { width: min(240px, 42%); min-height: 34px; padding: 0 10px; font-size: 12px; }
+    .subscription-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+    .subscription-grid[data-subscription-grid-all] { gap: 12px 16px; }
     .subscription-card { display: grid; gap: 8px; min-width: 0; padding: 11px; border: 1px solid var(--line); background: var(--paper); }
     .subscription-card:hover { border-color: #aeb9c5; background: #fafbfc; }
     .subscription-card-head { display: flex; align-items: start; gap: 7px; min-width: 0; }
@@ -193,15 +195,16 @@
     .subscription-card-state.paused, .subscription-card-state.muted { color: #9a6a00; }
     .subscription-card-actions { display: flex; justify-content: flex-end; gap: 6px; padding-top: 2px; border-top: 1px solid var(--soft); }
     .subscription-card-actions .btn { min-height: 30px; padding: 0 9px; font-size: 11px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card { gap: 7px; padding: 8px 0 14px; border: 0; border-bottom: 1px solid var(--soft); background: transparent; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-head { align-items: center; gap: 9px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-mark { width: 62px; height: 62px; border-radius: 50%; font-size: 20px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card strong { font-size: 14px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card small { font-size: 12px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-status { margin-left: 98px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-state { margin-left: 98px; font-size: 11px; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-actions { margin-left: 98px; justify-content: flex-start; border-top: 0; }
-    .subscription-grid[data-subscription-grid-all] .subscription-card-actions .btn { min-height: 34px; padding: 0 12px; border-color: #e2e6ea; background: #f5f7f9; color: var(--muted); font-size: 12px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card { position: relative; gap: 6px; min-height: 96px; padding: 9px 78px 10px 0; border: 0; border-bottom: 1px solid var(--soft); background: transparent; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head { align-items: center; gap: 8px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-mark { width: 40px; height: 40px; border-radius: 4px; font-size: 14px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card strong { font-size: 13px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card small { font-size: 11px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-status { margin-left: 48px; padding: 2px 5px; font-size: 10px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-description { display: block; margin-left: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-state { margin-left: 48px; font-size: 10px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-actions { position: absolute; right: 0; bottom: 12px; justify-content: flex-start; border-top: 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-actions .btn { min-height: 30px; padding: 0 9px; border-color: #e2e8f0; background: #f1f5f9; color: var(--muted); font-size: 11px; }
     .subscription-groups { display: grid; gap: 14px; }
     .subscription-group { overflow: hidden; border: 1px solid var(--line); background: var(--paper); }
     .subscription-group summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; }
@@ -466,6 +469,7 @@
       const visibleSelected = visibleChecks.filter(input => input.checked).length
       subscriptionSelectAll.checked = visibleChecks.length > 0 && visibleSelected === visibleChecks.length
       subscriptionSelectAll.indeterminate = visibleSelected > 0 && visibleSelected < visibleChecks.length
+      document.querySelector('.subscription-operations').hidden = selectedCount === 0
     }
     subscriptionSelectAll.addEventListener('change', () => {
       subscriptionChecks.filter(input => !input.closest('.subscription-card').hidden).forEach(input => { input.checked = subscriptionSelectAll.checked })
@@ -488,6 +492,25 @@
       card.querySelector('[data-source-detail]').textContent = paused ? '已暂停' : '已订阅'
     }
     subscriptionCards.forEach(updateSourceState)
+    const sourceDescriptions = {
+      '技术周刊': '前端、产品与工程实践',
+      '产品通讯': '产品设计与团队观察',
+      '前端周刊': '每周精选前端资讯',
+      '数据观察': '数据与研究动态',
+      '独立开发者': '独立创作与开发经验',
+      '长期主义对谈': '长期主义主题对谈',
+      '开源周报': '开源项目与社区动态',
+      '读写之间': '阅读、写作与思考',
+      '影像研究': '影像文化与视觉研究',
+      '设计观察': '设计趋势与案例分析',
+      '音频随笔': '声音记录与生活观察',
+      '城市漫游': '城市文化与旅行故事',
+    }
+    subscriptionCards.forEach(card => {
+      const description = card.querySelector('.subscription-card-group')
+      description.className = 'subscription-card-description'
+      description.textContent = sourceDescriptions[card.dataset.sourceName] || '订阅源更新'
+    })
     const sourceVisits = [44, 32, 28, 24, 21, 18, 52, 17, 15, 12, 9, 7]
     subscriptionCards.forEach((card, index) => { card.dataset.sourceVisits = sourceVisits[index]; card.dataset.sourceIndex = index })
     let activeSubscriptionFilter = 'all'

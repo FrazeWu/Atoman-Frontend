@@ -56,8 +56,8 @@
           @keydown="handlePanelKeydown"
           @wheel="handleLayerWheel"
         >
-          <div v-if="showLayerRail" class="sheet-layer-rail">
-            <div class="sheet-layer-controls">
+          <div v-if="showLayerRail" class="sheet-layer-rail" @click.self="handleBlankAreaClick">
+            <div class="sheet-layer-controls" @click.stop>
               <button
                 ref="closeButtonRef"
                 class="sheet-close-btn-bookmark"
@@ -138,6 +138,7 @@
 
           <div
             class="sheet-content hide-scrollbar"
+            @click.self="handleBlankAreaClick"
             :class="{
               'sheet-content--compact': !hasHeader,
               'sheet-content--has-close': showHeaderClose,
@@ -282,6 +283,10 @@ const handlePanelKeydown = (event: KeyboardEvent) => {
     event.preventDefault()
     emit('close')
   }
+}
+
+const handleBlankAreaClick = () => {
+  if (props.isTopLayer) emit('close')
 }
 
 const handleLayerWheel = (event: WheelEvent) => {

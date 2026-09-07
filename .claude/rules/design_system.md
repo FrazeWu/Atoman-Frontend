@@ -24,6 +24,8 @@
 
 `partial` 不得使用组件级 `42rem` 等自定义面板宽度冒充推荐区。完整编辑、详情和创建流程使用 `full`；评论、相关推荐和附加信息使用 `partial`。Sheet 通过 Teleport 渲染时，边界仍以外层内容区为准，不能受内层最大宽度影响。
 
+- 桌面右侧 Sheet 的左侧 rail 空白区和内容区外侧空白 padding 都是关闭区；点击只关闭最上层一层。点击正文、表单控件、导航按钮或下层 Sheet 不关闭当前层。
+
 ## Sheet and Drawer Design
 
 - All sheets and drawers (`PSheet.vue`) must use a solid white background:

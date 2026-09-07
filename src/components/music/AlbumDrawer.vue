@@ -638,7 +638,7 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
-    content-max-width="72rem"
+    content-max-width="96rem"
     @close="closeCurrentAlbum"
     @activate="returnCurrentAlbum"
     :is-shifted="shifted || commentsBlockParent"
@@ -1013,11 +1013,11 @@ watch(
   box-shadow: none !important;
 }
 
-.drawer-body { padding: 2rem 0 3rem; }
+.drawer-body { padding: 2rem 0 3rem; container-type: inline-size; }
 
 .album-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  grid-template-columns: minmax(72rem, 72rem) minmax(16rem, 19rem);
   gap: 2rem;
   align-items: start;
 }
@@ -1341,6 +1341,18 @@ watch(
 
   .content-section {
     margin-bottom: 2.25rem;
+  }
+}
+
+@container (max-width: 89.99rem) {
+  .album-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .album-detail-tags {
+    border-top: 1px solid var(--a-color-border-soft);
+    border-left: 0;
+    padding: 1.25rem 0 0;
   }
 }
 

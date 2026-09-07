@@ -3,6 +3,7 @@ import { useMarkdownRenderer } from "../../../src/composables/useMarkdownRendere
 
 const albumId = "22222222-2222-2222-2222-222222222222";
 const videoId = "33333333-3333-3333-3333-333333333333";
+const songId = "55555555-5555-5555-5555-555555555555";
 
 describe("useMarkdownRenderer media embeds", () => {
 
@@ -27,6 +28,30 @@ describe("useMarkdownRenderer media embeds", () => {
 		expect(html).toContain('href="/music/album/' + albumId + '"');
 		expect(html).toContain('src="https://cdn.example.test/cover.jpg"');
 		expect(html).toContain("夜航星");
+	});
+
+	it("renders a playable single-song card without nesting the player in its link", () => {
+		const { renderMarkdown } = useMarkdownRenderer();
+		const html = renderMarkdown(`:::music{id="${songId}"}\n:::`, {
+			musicEmbeds: {
+				[songId]: {
+					id: songId,
+					title: "夜航星",
+					kind: "song",
+					audioSrc: "https://cdn.example.test/song.mp3",
+					href: `/music/song/${songId}`,
+				},
+			},
+		});
+
+		const document = new DOMParser().parseFromString(html, "text/html");
+		const audio = document.querySelector("audio");
+		expect(audio).not.toBeNull();
+		expect(audio?.getAttribute("controls")).toBe("");
+		expect(audio?.getAttribute("preload")).toBe("metadata");
+		expect(audio?.getAttribute("src")).toBe("https://cdn.example.test/song.mp3");
+		expect(audio?.closest("a")).toBeNull();
+		expect(document.querySelector('a[data-atoman-embed="music"]')?.getAttribute("href")).toBe(`/music/song/${songId}`);
 	});
 
 	it("renders video with a non-autoplay player and a detail link", () => {

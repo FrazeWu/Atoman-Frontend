@@ -13,6 +13,7 @@ export type EmbedData = {
   meta?: string;
   href?: string;
   imageUrl?: string;
+  audioSrc?: string;
   videoSrc?: string;
   iframeSrc?: string;
   posterUrl?: string;
@@ -208,17 +209,23 @@ function renderEmbedCard(
     const image = embed.imageUrl
       ? `<img class="atoman-post-embed__image" src="${escapeHtml(embed.imageUrl)}" alt="" loading="lazy">`
       : `<div class="atoman-post-embed__image atoman-post-embed__image--empty" aria-hidden="true">♪</div>`;
+    const audio = musicKind === "song" && embed.audioSrc
+      ? `  <audio class="atoman-post-embed__audio" controls preload="metadata" src="${escapeHtml(embed.audioSrc)}" aria-label="播放 ${title}"></audio>`
+      : "";
     return [
       `<div class="atoman-post-embed atoman-post-embed--music atoman-post-embed--music-${musicKind}${missing ? " atoman-post-embed--missing" : ""}">`,
-      `  <a class="atoman-post-embed__link" data-atoman-embed="music" href="${href}">`,
-      `    ${image}`,
-      `    <div class="atoman-post-embed__content">`,
-      `      <div class="atoman-post-embed__label">${musicKind === "song" ? "单曲引用" : "专辑引用"}</div>`,
-      `      <div class="atoman-post-embed__title">${title}</div>`,
-      `      <div class="atoman-post-embed__summary">${summary}</div>`,
-      meta ? `      <div class="atoman-post-embed__meta">${meta}</div>` : "",
-      "    </div>",
-      "  </a>",
+      `  <div class="atoman-post-embed__music-card">`,
+      `    <a class="atoman-post-embed__link" data-atoman-embed="music" href="${href}">`,
+      `      ${image}`,
+      `      <div class="atoman-post-embed__content">`,
+      `        <div class="atoman-post-embed__label">${musicKind === "song" ? "单曲引用" : "专辑引用"}</div>`,
+      `        <div class="atoman-post-embed__title">${title}</div>`,
+      `        <div class="atoman-post-embed__summary">${summary}</div>`,
+      meta ? `        <div class="atoman-post-embed__meta">${meta}</div>` : "",
+      "      </div>",
+      "    </a>",
+      audio,
+      "  </div>",
       "</div>",
     ].filter(Boolean).join("\n");
   }
@@ -425,7 +432,7 @@ function disambiguateSingleMarkerLines(content: string): string {
 const canonicalOrigin = "https://www.atoman.org";
 const internalOrigins = new Set([canonicalOrigin, "https://atoman.org"]);
 const markdownMediaSanitizeOptions = {
-  ADD_TAGS: ["iframe", "source", "video"],
+  ADD_TAGS: ["audio", "iframe", "source", "video"],
   ADD_ATTR: [
     "allow",
     "allowfullscreen",

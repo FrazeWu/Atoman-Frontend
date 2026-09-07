@@ -24,7 +24,8 @@
 
     <!-- 右侧页面主内容 -->
     <main class="a-main-content">
-      <div class="a-page explore-template">
+      <div class="a-content-frame">
+        <div class="a-page explore-template">
         <PPageHeader title="博客探索范例" accent>
           <template #action>
             <PButton outline to="/posts">返回实际博客</PButton>
@@ -206,6 +207,7 @@
               </div>
             </section>
           </aside>
+        </div>
         </div>
       </div>
     </main>
@@ -439,8 +441,8 @@ const recommendedAuthors = ref([
 /* 主布局 */
 .explore-template__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20rem;
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
+  gap: var(--a-content-column-gap);
   align-items: start;
 }
 
@@ -843,7 +845,7 @@ const recommendedAuthors = ref([
   color: var(--a-color-text-secondary);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1199px) {
   .explore-template__layout {
     grid-template-columns: 1fr;
   }

@@ -196,7 +196,7 @@ describe("AudioPlayer", () => {
 		expect(wrapper.get('.comment-sheet-stub').attributes('data-show')).toBe('true');
 		expect(wrapper.get('.comment-sheet-stub').attributes('data-target-kind')).toBe('music_song');
 		expect(wrapper.get('.comment-sheet-stub').attributes('data-resource-id')).toBe('song-1');
-		expect(wrapper.get('.comment-sheet-stub').attributes('data-partial-width')).toBe('42rem');
+  expect(wrapper.get('.comment-sheet-stub').attributes('data-partial-width')).toBe('var(--a-recommendation-width)');
 		wrapper.unmount();
 	});
 

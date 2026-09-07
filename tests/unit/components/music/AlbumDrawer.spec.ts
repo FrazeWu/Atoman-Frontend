@@ -355,7 +355,7 @@ describe("AlbumDrawer.vue", () => {
 			show: true,
 			title: "专辑评论-Test Album",
 			target: { kind: "music_album", resourceId: "1" },
-			partialWidth: "42rem",
+			partialWidth: "var(--a-recommendation-width)",
 		});
 
 		commentSheet.vm.$emit("count-change", 3);

@@ -2,8 +2,10 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="video" />
     <main class="a-main-content">
-      <ModuleCreateAction module="video" />
-      <router-view />
+      <div class="a-content-frame">
+        <ModuleCreateAction module="video" />
+        <router-view />
+      </div>
     </main>
     <RouterView name="overlay" v-slot="{ Component }">
       <VideoDetailRouteSheet v-if="Component" @close="closeDetailOverlay" />

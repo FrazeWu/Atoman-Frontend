@@ -1022,8 +1022,8 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
 /* 生产 Stream + Rail 布局 */
 .blog-home__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20rem;
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
+  gap: var(--a-content-column-gap);
   align-items: start;
 }
 
@@ -1169,7 +1169,7 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   white-space: nowrap;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1199px) {
   .blog-home__layout {
     grid-template-columns: 1fr;
   }

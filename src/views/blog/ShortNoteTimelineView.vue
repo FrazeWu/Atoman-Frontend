@@ -198,8 +198,8 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 
 .short-note-timeline__layout {
   display: grid;
-  grid-template-columns: minmax(0, 42rem) minmax(16rem, 20rem);
-  gap: 2rem;
+  grid-template-columns: minmax(var(--a-content-main-min-width), 1fr) var(--a-recommendation-width);
+  gap: var(--a-content-column-gap);
   align-items: start;
   margin-top: 1rem;
 }
@@ -370,7 +370,7 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   font-size: 0.875rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1199px) {
   .short-note-timeline {
     max-width: 42rem;
   }

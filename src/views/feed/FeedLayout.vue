@@ -2,17 +2,19 @@
   <div class="a-module-layout feed-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="feed" />
     <main v-show="!isMobileApp || !mobileSourcesOpen" class="a-main-content">
-      <header v-if="authStore.isAuthenticated" class="module-mobile-header">
-        <button
-          type="button"
-          class="module-mobile-header__action a-font-meta"
-          data-testid="feed-mobile-sources-trigger"
-          @click="mobileSourcesOpen = true"
-        >
-          订阅
-        </button>
-      </header>
-      <router-view />
+      <div class="a-content-frame">
+        <header v-if="authStore.isAuthenticated" class="module-mobile-header">
+          <button
+            type="button"
+            class="module-mobile-header__action a-font-meta"
+            data-testid="feed-mobile-sources-trigger"
+            @click="mobileSourcesOpen = true"
+          >
+            订阅
+          </button>
+        </header>
+        <router-view />
+      </div>
     </main>
     <FeedMobileSourcesSheet
       v-if="authStore.isAuthenticated && (!isMobileApp || mobileSourcesOpen)"

@@ -23,18 +23,20 @@
       </div>
 
       <main class="a-main-content" tabindex="-1">
-        <p v-if="studio.loading && !studio.loaded" class="studio-state">加载中...</p>
-        <div v-else-if="studio.error && !studio.loaded" class="studio-state" role="alert">
-          <p>{{ studio.error }}</p>
-          <button type="button" @click="studio.loadState(true)">重试</button>
+        <div class="a-content-frame">
+          <p v-if="studio.loading && !studio.loaded" class="studio-state">加载中...</p>
+          <div v-else-if="studio.error && !studio.loaded" class="studio-state" role="alert">
+            <p>{{ studio.error }}</p>
+            <button type="button" @click="studio.loadState(true)">重试</button>
+          </div>
+          <section v-else-if="studio.loaded && !studio.currentChannel && !isManagementRoute" class="studio-empty">
+            <h1>还没有频道</h1>
+            <RouterLink :to="{ path: '/studio/manage/channel', query: { return_to: route.fullPath } }">创建频道</RouterLink>
+          </section>
+          <RouterView v-else v-slot="{ Component }">
+            <component v-if="Component" :is="Component" />
+          </RouterView>
         </div>
-        <section v-else-if="studio.loaded && !studio.currentChannel && !isManagementRoute" class="studio-empty">
-          <h1>还没有频道</h1>
-          <RouterLink :to="{ path: '/studio/manage/channel', query: { return_to: route.fullPath } }">创建频道</RouterLink>
-        </section>
-        <RouterView v-else v-slot="{ Component }">
-          <component v-if="Component" :is="Component" />
-        </RouterView>
       </main>
     </div>
   </div>

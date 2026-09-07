@@ -113,6 +113,7 @@
         </div>
 
         <PDiscussionFAB
+          v-if="!commentsOpen"
           :count="interactions.commentCount.value"
           @click="commentsOpen = true"
         />

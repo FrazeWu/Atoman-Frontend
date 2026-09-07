@@ -730,7 +730,7 @@ async function toggleChannelSubscription() {
       :show="commentsOpen"
       :title="`视频评论-${video.title}`"
       :partial-anchor="videoContentAnchor"
-      partial-width="42rem"
+      partial-width="var(--a-comment-sheet-width)"
       :target="commentTarget"
       noun="评论"
       :current-time="currentCommentTime"
@@ -744,7 +744,7 @@ async function toggleChannelSubscription() {
 
 <style scoped>
 .vd-page {
-  max-width: 80rem;
+  max-width: var(--a-content-max-width);
   margin: 0 auto;
   padding: 1.5rem 1.5rem 6rem;
 }

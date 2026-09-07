@@ -2,7 +2,8 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="blog" />
     <main class="a-main-content">
-      <div class="a-page blog-template">
+      <div class="a-content-frame">
+        <div class="a-page blog-template">
         <PPageHeader title="博客范例" accent>
           <template #action>
             <PButton outline to="/posts">返回实际博客</PButton>
@@ -155,6 +156,7 @@
         </section>
       </aside>
     </div>
+        </div>
     </div>
     </main>
   </div>
@@ -316,8 +318,8 @@ const weeklyMustRead = [
 /* 主布局 */
 .blog-template__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20rem;
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
+  gap: var(--a-content-column-gap);
   align-items: start;
 }
 
@@ -654,7 +656,7 @@ const weeklyMustRead = [
   gap: 0.25rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1199px) {
   .blog-template__layout {
     grid-template-columns: 1fr;
   }

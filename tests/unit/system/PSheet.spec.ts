@@ -319,6 +319,23 @@ describe("PSheet.vue", () => {
 		expect(panel.style.maxWidth).toBe("none");
 	});
 
+	it("keeps comment sheets on the shared comment width", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/comment/CommentSideSheet.vue"),
+			"utf8",
+		);
+		const audioPlayerSource = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayer.vue"),
+			"utf8",
+		);
+		const styleSource = readFileSync(resolve(process.cwd(), "src/style.css"), "utf8");
+
+		expect(styleSource).toContain("--a-comment-sheet-width: 42rem");
+		expect(source).toContain("partialWidth: 'var(--a-comment-sheet-width)'");
+		expect(audioPlayerSource).toContain('partial-width="var(--a-comment-sheet-width)"');
+		expect(audioPlayerSource).not.toContain('partial-width="42rem"');
+	});
+
 	it("uses compact content spacing when there is no header bar", () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, title: "VIEW" },

@@ -2,11 +2,13 @@
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="music" />
     <main class="a-main-content music-main-content">
-      <router-view v-slot="{ Component }">
-        <KeepAlive :include="detailRouteViews">
-          <component :is="Component" />
-        </KeepAlive>
-      </router-view>
+      <div class="a-content-frame">
+        <router-view v-slot="{ Component }">
+          <KeepAlive :include="detailRouteViews">
+            <component :is="Component" />
+          </KeepAlive>
+        </router-view>
+      </div>
     </main>
     <MusicSheetStack />
   </div>

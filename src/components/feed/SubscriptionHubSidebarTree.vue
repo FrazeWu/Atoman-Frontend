@@ -120,13 +120,12 @@ const typeNodes = computed(() => {
   );
 });
 const sourceRows = computed(() => {
-  const rows = typeNodes.value.flatMap((node) =>
+  return typeNodes.value.flatMap((node) =>
     sources(node).map((membership) => ({
       membership,
       subscriptionType: node.subscription_type,
     })),
   );
-  return rows;
 });
 const shouldRender = computed(
   () =>
@@ -149,6 +148,8 @@ const sourceType = (item: SubscriptionHubMembership) =>
     ? "RSS"
     : item.feed_source?.source_type === "internal_collection"
       ? "合集"
+      : item.feed_source?.source_type === "internal_user"
+        ? "账号"
       : "频道";
 </script>
 

@@ -158,7 +158,7 @@ describe("SubscriptionHubSidebarTree", () => {
 
     expect(sources.map((source) => source.text())).toEqual([
       expect.stringContaining("频道原子谈话3"),
-      expect.stringContaining("频道视频频道2"),
+      expect.stringContaining("账号视频频道2"),
       expect.stringContaining("合集博客作者0"),
       expect.stringContaining("RSS某个 RSS7"),
     ]);
@@ -225,6 +225,64 @@ describe("SubscriptionHubSidebarTree", () => {
 
     expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(1);
     expect(wrapper.text()).toContain("原子谈话");
+  });
+
+  it("renders account and channel rows supplied by the backend", () => {
+    const accountAndChannelTree: SubscriptionHubTree = {
+      types: [
+        {
+          subscription_type: "blog",
+          groups: [
+            {
+              id: "blog-sources",
+              user_id: "viewer",
+              subscription_type: "blog",
+              name: "博客订阅",
+              memberships: [
+                {
+                  id: "account-member",
+                  user_id: "viewer",
+                  subscription_type: "blog",
+                  group_id: "blog-sources",
+                  feed_source_id: "account-source",
+                  title: "admin",
+                  feed_source: {
+                    id: "account-source",
+                    source_type: "internal_user",
+                    hash: "account",
+                    cover_url: "/admin.webp",
+                    created_at: "",
+                  },
+                },
+                {
+                  id: "channel-member",
+                  user_id: "viewer",
+                  subscription_type: "blog",
+                  group_id: "blog-sources",
+                  feed_source_id: "channel-source",
+                  title: "admin",
+                  feed_source: {
+                    id: "channel-source",
+                    source_type: "internal_channel",
+                    hash: "channel",
+                    cover_url: "/admin.webp",
+                    created_at: "",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const wrapper = mount(SubscriptionHubSidebarTree, {
+      props: { tree: accountAndChannelTree, fixedType: "blog" },
+    });
+
+    expect(wrapper.findAll(".subscription-hub-sidebar__source")).toHaveLength(2);
+    expect(wrapper.text()).toContain("账号admin");
+    expect(wrapper.text()).toContain("频道admin");
   });
 
   it("keeps the unified subscription section available when it has no sources", () => {

@@ -977,7 +977,7 @@ watch(
         @open-history="openAlbumHistory"
       />
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openComments" :count="discussionCount" />
+    <PDiscussionFAB v-if="isOpen && !commentsOpen" @click="openComments" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
   </PSheet>
 
@@ -986,7 +986,7 @@ watch(
     :show="commentsOpen"
     :title="`专辑评论-${album.title || album.id}`"
     :target="{ kind: 'music_album', resourceId: String(album.id) }"
-    partial-width="42rem"
+    partial-width="var(--a-comment-sheet-width)"
     noun="讨论"
     :is-top-layer="topLayer"
     :layer-index="sheetIndex + 1"

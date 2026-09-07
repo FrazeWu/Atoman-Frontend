@@ -30,6 +30,20 @@ describe("modern flat UI design-system contract", () => {
 		expect(source).not.toMatch(/transition:\s*all\b/);
 	});
 
+	it("defines the desktop content and recommendation layout contract", () => {
+		const css = read("src/style.css");
+		const rules = read(".claude/rules/design_system.md");
+
+		expect(css).toContain("--a-content-max-width: 80rem;");
+		expect(css).toContain("--a-recommendation-width: 20rem;");
+		expect(css).toContain("--a-content-column-gap: 2rem;");
+		expect(css).toContain(".a-content-frame");
+		expect(css).toContain("max-width: var(--a-content-max-width);");
+		expect(rules).toContain("## Desktop Content Layout");
+		expect(rules).toContain("## Desktop Sheet Scope");
+		expect(rules).toContain("var(--a-recommendation-width)");
+	});
+
 	it("uses neutral semantic tokens and soft geometry", () => {
     const css = read("src/style.css");
 

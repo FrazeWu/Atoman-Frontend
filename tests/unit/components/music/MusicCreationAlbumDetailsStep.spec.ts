@@ -491,6 +491,40 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		]);
 	});
 
+	it("requires confirmation before removing an existing track from the current album version", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({
+			mode: "edit",
+			entity: "album",
+			albumId: "album-1",
+			startStep: "albumDetails",
+		});
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.tracks = [
+			{ id: "track-one", songId: "song-one", sequence: 1, title: "Track One", origin: "existing" },
+			{ id: "track-two", songId: "song-two", sequence: 2, title: "Track Two", origin: "existing" },
+		];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		await wrapper.get('[data-testid="album-track-delete-track-two"]').trigger("click");
+
+		const confirm = wrapper.getComponent({ name: "PConfirm" });
+		expect(confirm.props("show")).toBe(true);
+		expect(confirm.props("message")).toContain("当前专辑版本");
+		expect(flow.draft.tracks).toHaveLength(2);
+
+		confirm.vm.$emit("cancel");
+		await nextTick();
+		expect(flow.draft.tracks).toHaveLength(2);
+
+		await wrapper.get('[data-testid="album-track-delete-track-two"]').trigger("click");
+		wrapper.getComponent({ name: "PConfirm" }).vm.$emit("confirm");
+		await nextTick();
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual(["track-one"]);
+		expect(flow.draft.tracks[0]?.sequence).toBe(1);
+	});
+
 	it("uses the structured lyric editor for an existing album track", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({

@@ -2,7 +2,9 @@
   <div class="a-module-layout books-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="books" />
     <main class="a-main-content books-main-content">
-      <router-view />
+      <div class="a-content-frame">
+        <router-view />
+      </div>
     </main>
   </div>
 </template>

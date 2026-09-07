@@ -11,7 +11,7 @@
 
 - 桌面侧边栏宽度为 `12rem`，折叠桌面宽度为 `4.5rem`；推荐区不参与侧边栏宽度计算。
 - 外层内容区必须填满侧边栏右侧的剩余空间；最大宽度、内边距和居中只属于 `.a-content-frame` 内层容器。
-- 双栏布局使用共享 token：主内容区占剩余空间，推荐区使用 `var(--a-recommendation-width)`（标准值 `20rem`），列间距使用 `var(--a-content-column-gap)`（标准值 `2rem`）。目标视觉比例约为主内容 `70%`、推荐区 `30%`。
+- 双栏布局使用共享 token：主内容区占剩余空间，推荐区使用 `var(--a-recommendation-width)`（标准值 `20rem`），列间距使用 `var(--a-content-column-gap)`（标准值 `2rem`）。目标视觉比例约为主内容 `70%`、推荐区 `30%`。评论/讨论 Sheet 使用 `var(--a-comment-sheet-width)`（标准值 `42rem`），不改变推荐区本身的宽度。
 - 主内容区在可用宽度不足以保持约 `36rem` 的阅读宽度时，推荐区改为单栏内容，不压缩主内容。
 - 页面不得自行引入第三种推荐栏宽度；紧凑导航也使用共享推荐区 token。
 
@@ -20,7 +20,7 @@
 桌面端右侧 `PSheet` 只有两种宽度契约：
 
 1. `full`：从可见侧边栏右侧开始，覆盖整个外层内容区，到窗口右边结束。
-2. `partial`：只覆盖推荐/附加内容区，宽度使用 `var(--a-recommendation-width)` 或由实际推荐栏锚点计算。
+2. `partial`：只覆盖推荐/附加内容区；普通推荐内容使用 `var(--a-recommendation-width)`，评论/讨论内容使用 `var(--a-comment-sheet-width)`，或由实际锚点计算。两者都必须使用共享 token，组件不得自行写死宽度。
 
 `partial` 不得使用组件级 `42rem` 等自定义面板宽度冒充推荐区。完整编辑、详情和创建流程使用 `full`；评论、相关推荐和附加信息使用 `partial`。Sheet 通过 Teleport 渲染时，边界仍以外层内容区为准，不能受内层最大宽度影响。
 

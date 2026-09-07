@@ -114,7 +114,7 @@ describe("PostEditorView", () => {
 			cover_url: "",
 		};
 		studio.channels = [studio.currentChannel];
-		studio.collections.blog = [
+		studio.unifiedCollections = [
 			{
 				id: "collection-1",
 				channel_id: "channel-1",
@@ -149,7 +149,7 @@ describe("PostEditorView", () => {
 				updated_at: "",
 			},
 		];
-		vi.spyOn(studio, "loadCollections").mockResolvedValue();
+		vi.spyOn(studio, "loadUnifiedCollections").mockResolvedValue();
 		vi.spyOn(studio, "loadSettings").mockResolvedValue();
 		editorControl.reset();
 		vi.useRealTimers();
@@ -209,7 +209,7 @@ describe("PostEditorView", () => {
 
 		await flushPromises();
 
-		expect(useStudioStore().loadCollections).toHaveBeenCalledWith("blog");
+		expect(useStudioStore().loadUnifiedCollections).toHaveBeenCalled();
 		expect(router.currentRoute.value.query.channel).toBe("channel-2");
 	});
 
@@ -356,7 +356,6 @@ describe("PostEditorView", () => {
 
 		const editorView = wrapper.findComponent(PostEditorView);
 		expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual([
-			"collection-1",
 			"collection-2",
 		]);
 	});
@@ -1435,11 +1434,10 @@ describe("PostEditorView", () => {
 		await flushPromises();
 		await nextTick();
 
-		expect(useStudioStore().loadCollections).toHaveBeenCalledWith("blog");
+		expect(useStudioStore().loadUnifiedCollections).toHaveBeenCalled();
 
 		const editorView = wrapper.findComponent(PostEditorView);
 		expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual([
-			"collection-1",
 			"collection-3",
 		]);
 	});
@@ -1469,7 +1467,7 @@ describe("PostEditorView", () => {
 			cover_url: "",
 		};
 		studio.channels = [studio.currentChannel];
-		studio.collections.blog = [
+		studio.unifiedCollections = [
 			{
 				id: "collection-1",
 				channel_id: "channel-1",
@@ -1530,7 +1528,6 @@ describe("PostEditorView", () => {
 		const editorView = wrapper.findComponent(PostEditorView);
 		expect(editorView.vm.$.setupState.currentChannelId).toBe("channel-1");
 		expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual([
-			"collection-1",
 			"collection-2",
 		]);
 		editorView.vm.$.setupState.form.title = "Studio 草稿";
@@ -1589,7 +1586,6 @@ describe("PostEditorView", () => {
 		expect(studio.loadSettings).toHaveBeenCalledWith("blog");
 		expect(editor.vm.$.setupState.form.visibility).toBe("private");
 		expect(editor.vm.$.setupState.selectedCollectionIds).toEqual([
-			"collection-1",
 			"collection-2",
 		]);
 		expect(editor.vm.$.setupState.preferredPublishStatus).toBe("draft");

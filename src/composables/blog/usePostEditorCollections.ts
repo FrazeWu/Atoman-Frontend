@@ -74,8 +74,10 @@ export function usePostEditorCollections({
     }
 
     try {
-      await Promise.all([studio.loadCollections('blog'), studio.loadSettings('blog')])
-      channelCollections.value = studio.collections.blog
+      await Promise.all([studio.loadUnifiedCollections(), studio.loadSettings('blog')])
+      channelCollections.value = Array.isArray(studio.unifiedCollections)
+        ? studio.unifiedCollections
+        : []
       if (!isEdit.value) {
         const queryCollection = typeof route.query.collection === 'string' ? route.query.collection : ''
         const settings = studio.settings.blog
@@ -90,12 +92,9 @@ export function usePostEditorCollections({
           queryCollection || settings?.default_collection_id || null,
         )
       } else {
-        const ordinaryCollection = channelCollections.value.find((collection) => (
-          !collection.is_default && existingCollectionIds.value.includes(collection.id)
-        ))
         selectedCollectionIds.value = normalizeBlogCollectionSelection(
           channelCollections.value,
-          ordinaryCollection?.id,
+          existingCollectionIds.value[0],
         )
       }
     } catch (cause) {

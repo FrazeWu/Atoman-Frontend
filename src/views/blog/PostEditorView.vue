@@ -94,7 +94,7 @@
           :mobile-open="mobilePanel === 'sidebar'"
           :desktop-open="sidebarPanelOpen"
           :channel-collections="channelCollections"
-          :selected-collection-id="selectedNonDefaultCollectionId"
+          :selected-collection-id="primaryCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
           :tags="form.tags"

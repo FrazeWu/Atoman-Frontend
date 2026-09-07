@@ -387,8 +387,10 @@ async function submitImport(mode: 'draft' | 'published' | 'scheduled', scheduled
 async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
-  await studio.loadCollections('video')
-  collections.value = studio.collections.video
+  await studio.loadUnifiedCollections()
+  collections.value = Array.isArray(studio.unifiedCollections)
+    ? studio.unifiedCollections
+    : []
   if (!isEdit.value) {
     const queryCollectionId = selectedCollectionFromQuery.value
     selectedCollectionId.value = queryCollectionId && collections.value.some(collection => collection.id === queryCollectionId)

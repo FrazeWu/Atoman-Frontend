@@ -5,15 +5,11 @@ type CollectionOption = {
 
 export function normalizeBlogCollectionSelection(
   collections: CollectionOption[],
-  ordinaryCollectionId: string | null | undefined,
+  selectedCollectionId: string | null | undefined,
 ) {
-  const defaultCollection = collections.find(collection => collection.is_default)
-  if (!defaultCollection) return []
+  const selectedCollection = collections.find(collection => collection.id === selectedCollectionId)
+  if (selectedCollection) return [selectedCollection.id]
 
-  const ordinaryCollection = collections.find(collection => (
-    collection.id === ordinaryCollectionId && !collection.is_default
-  ))
-  return ordinaryCollection
-    ? [defaultCollection.id, ordinaryCollection.id]
-    : [defaultCollection.id]
+  const defaultCollection = collections.find(collection => collection.is_default)
+  return defaultCollection ? [defaultCollection.id] : []
 }

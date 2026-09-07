@@ -1,6 +1,7 @@
 <template>
   <div
     class="music-lyrics-line"
+    :data-lyric-line-key="line.line_key ?? line.id"
     :class="{
       'is-active': active,
       'has-annotations': activeAnnotations.length > 0,
@@ -74,6 +75,7 @@
 import { computed, ref } from 'vue'
 import { IconMessage2 as MessageSquareText, IconPlayerPlay as Play, IconEdit as SquarePen } from '@tabler/icons-vue'
 import type { MusicLyricsAnnotation, MusicSongLyricsLine } from '@/api/musicV1'
+import { resolveLyricsSelection } from '@/utils/musicLyricsAnnotation'
 
 type HighlightSegment = {
   key: string
@@ -91,6 +93,7 @@ const props = withDefaults(defineProps<{
   clickToSeek?: boolean
   showTimeline?: boolean
   disableHoverEffects?: boolean
+  selectionRoot?: HTMLElement | null
 }>(), {
   annotations: () => [],
   active: false,
@@ -100,6 +103,7 @@ const props = withDefaults(defineProps<{
   clickToSeek: false,
   showTimeline: true,
   disableHoverEffects: false,
+  selectionRoot: null,
 })
 
 const emit = defineEmits<{
@@ -108,6 +112,8 @@ const emit = defineEmits<{
     selectedText: string
     startOffset: number
     endOffset: number
+    startLineKey?: string
+    endLineKey?: string
   }]
   'open-annotations': [payload: {
     line: MusicSongLyricsLine
@@ -123,6 +129,8 @@ const selectedTextDraft = ref<{
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 } | null>(null)
 const activeAnnotations = computed(() => props.annotations.filter((annotation) => annotation.status === 'active'))
 const lineTimeMs = computed(() => props.line.time_ms ?? props.line.startTimeMs ?? null)
@@ -177,6 +185,30 @@ function handleMouseUp() {
   if (!selection || !root || selection.rangeCount === 0 || selection.isCollapsed) return
 
   const range = selection.getRangeAt(0)
+
+  if (props.selectionRoot) {
+    const resolved = resolveLyricsSelection(props.selectionRoot, range)
+    if (!resolved) return
+
+    const selectionRect = range.getBoundingClientRect()
+    const contentRect = contentElement.value?.getBoundingClientRect()
+    selectionActionStyle.value = contentRect
+      ? {
+          left: `${Math.max(0, selectionRect.left - contentRect.left)}px`,
+          top: `${selectionRect.bottom - contentRect.top + 8}px`,
+        }
+      : {}
+    selectedTextDraft.value = {
+      line: props.line,
+      selectedText: resolved.selectedText,
+      startOffset: resolved.startOffset,
+      endOffset: resolved.endOffset,
+      startLineKey: resolved.startLineKey === resolved.endLineKey ? undefined : resolved.startLineKey,
+      endLineKey: resolved.startLineKey === resolved.endLineKey ? undefined : resolved.endLineKey,
+    }
+    return
+  }
+
   if (!root.contains(range.commonAncestorContainer)) return
 
   const startRange = document.createRange()

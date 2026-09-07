@@ -1,9 +1,19 @@
 <template>
+  <Transition name="fade" appear>
+    <div
+      v-if="isMobile && show && showBackdrop && isTopLayer"
+      class="p-sheet-mobile-backdrop"
+      aria-hidden="true"
+      @click="$emit('close')"
+    />
+  </Transition>
+
   <Transition :name="transitionName" appear>
     <section
       v-if="isMobile && show"
       class="p-sheet-mobile-page"
-      :class="panelClass"
+      :class="[panelClass, `is-${side}`, `is-${mode}`]"
+      :style="mobileSheetStyle"
       role="region"
       :aria-label="railTitle"
     >
@@ -483,6 +493,15 @@ const sheetStyle = computed(() => {
     'z-index': layerZIndex.value,
   }
 })
+
+const mobileSheetStyle = computed(() => {
+  if (props.mode !== 'partial' || props.side !== 'right') return undefined
+
+  return {
+    width: `min(${props.partialWidth || 'var(--a-recommendation-width)'}, calc(100vw - 1rem))`,
+    'max-width': 'calc(100vw - 1rem)',
+  }
+})
 </script>
 
 <style scoped>
@@ -503,10 +522,45 @@ const sheetStyle = computed(() => {
 }
 
 .p-sheet-mobile-page {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--a-z-sheet);
+  width: min(28rem, 100vw);
+  max-width: 100%;
+  overflow-y: auto;
   display: block;
   min-width: 0;
   padding: 1rem 0 2rem;
+  border-left: 1px solid var(--a-color-border-soft);
   background: #ffffff;
+  box-shadow: -8px 0 18px -16px rgba(0, 0, 0, 0.35);
+}
+
+.p-sheet-mobile-page.is-partial {
+  width: min(var(--a-recommendation-width), calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
+}
+
+.p-sheet-mobile-page.is-left {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: 1px solid var(--a-color-border-soft);
+  box-shadow: 8px 0 18px -16px rgba(0, 0, 0, 0.35);
+}
+
+.p-sheet-mobile-page.is-bottom {
+  top: auto;
+  right: 0;
+  left: 0;
+  width: 100%;
+  max-height: 70dvh;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-right: 0;
+  border-left: 0;
+  box-shadow: none;
 }
 
 .p-sheet-mobile-page__header {
@@ -515,6 +569,7 @@ const sheetStyle = computed(() => {
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+  padding-inline: 1rem;
 }
 
 .p-sheet-mobile-page__header h1 {
@@ -539,6 +594,14 @@ const sheetStyle = computed(() => {
 
 .p-sheet-mobile-page__content {
   min-width: 0;
+  padding-inline: 1rem;
+}
+
+.p-sheet-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--a-z-sheet-backdrop);
+  background: color-mix(in srgb, #000000 12%, transparent);
 }
 
 .p-sheet-layer {

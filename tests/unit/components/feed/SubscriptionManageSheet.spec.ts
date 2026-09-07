@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { describe, expect, it } from "vitest";
@@ -75,7 +77,7 @@ const mountSheet = () =>
 		},
 		global: {
 			stubs: {
-				PSheet: { template: "<div><slot /></div>" },
+				PSheet: { props: ["side", "mode", "partialWidth"], template: '<div data-test="subscription-manage-sheet" :data-side="side" :data-mode="mode" :data-partial-width="partialWidth"><slot /></div>' },
 				PField: {
 					props: ["label"],
 					template: "<label><span>{{ label }}</span><slot /></label>",
@@ -92,6 +94,19 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.find("h2").exists()).toBe(false);
 	});
 
+	it("opens the subscription manager from the right", () => {
+		const wrapper = mountSheet();
+
+		expect(wrapper.get('[data-test="subscription-manage-sheet"]').attributes("data-side")).toBe("right");
+	});
+
+	it("uses the standard full right sheet for the complete manager", () => {
+		const wrapper = mountSheet();
+
+		expect(wrapper.get('[data-test="subscription-manage-sheet"]').attributes("data-mode")).toBe("full");
+		expect(wrapper.get('[data-test="subscription-manage-sheet"]').attributes("data-partial-width")).toBeUndefined();
+	});
+
 	it("shows the source name instead of the raw rss url in subscription cards", async () => {
 		const wrapper = mountSheet();
 
@@ -102,10 +117,11 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.text()).not.toContain("https://example.com/feed.xml");
 	});
 
-	it("keeps batch actions hidden until a subscription is selected", async () => {
+	it("keeps batch actions available at the top before a subscription is selected", async () => {
 		const wrapper = mountSheet();
 
-		expect(wrapper.find(".batch-toolbar").exists()).toBe(false);
+		expect(wrapper.find(".batch-toolbar").exists()).toBe(true);
+		expect(wrapper.get('[data-test="batch-move-subscriptions"]').attributes("disabled")).toBeDefined();
 		await wrapper.get(".subscription-select input").setValue(true);
 		expect(wrapper.find(".batch-toolbar").exists()).toBe(true);
 	});
@@ -250,6 +266,78 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.text()).not.toContain("播客自动整理");
 	});
 
+	it("can merge groups into the source view for user settings", () => {
+		const wrapper = mount(SubscriptionManageSheet, {
+			props: { ...mountSheet().props(), showAdvancedTabs: false },
+			global: {
+				stubs: {
+					PSheet: { props: ["side"], template: '<div data-test="subscription-manage-sheet" :data-side="side"><slot /></div>' },
+					PField: { props: ["label"], template: "<label><span>{{ label }}</span><slot /></label>" },
+					SubscriptionRuleEditorSheet: true,
+				},
+			},
+		});
+
+		expect(wrapper.find('[data-test="subscription-manage-tab-groups"]').exists()).toBe(false);
+		expect(wrapper.find('[data-test="subscription-manage-tab-rules"]').exists()).toBe(false);
+		expect(wrapper.find('[data-test="subscription-manage-tab-keywords"]').exists()).toBe(false);
+		expect(wrapper.find('.group-title').exists()).toBe(true);
+	});
+
+	it("keeps the system group label as 未分组", () => {
+		const wrapper = mount(SubscriptionManageSheet, {
+			props: { ...mountSheet().props(), showAdvancedTabs: false },
+			global: {
+				stubs: {
+					PSheet: { props: ["side"], template: '<div data-test="subscription-manage-sheet" :data-side="side"><slot /></div>' },
+					PField: { props: ["label"], template: "<label><span>{{ label }}</span><slot /></label>" },
+					SubscriptionRuleEditorSheet: true,
+				},
+			},
+		});
+
+		expect(wrapper.get('.group-title').text()).toContain("未分组");
+		expect(wrapper.get('.group-title').text()).not.toContain("默认分组");
+	});
+
+	it("keeps filtering and deep source editing out of the user settings surface", async () => {
+		const wrapper = mountSheet();
+		await wrapper.setProps({ showAdvancedTabs: false });
+		await nextTick();
+
+		expect(wrapper.find('.source-manage-tools').exists()).toBe(false);
+		expect(wrapper.find('.subscription-settings').exists()).toBe(false);
+		expect(wrapper.find('[data-test="sync-subscription"]').exists()).toBe(false);
+		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger('click');
+		expect(wrapper.find('.subscription-settings').exists()).toBe(false);
+		expect(wrapper.find('[data-test="subscription-details-content"]').exists()).toBe(true);
+	});
+
+	it("shows grouped batch operations before the source groups", async () => {
+		const wrapper = mountSheet();
+		await wrapper.setProps({ showAdvancedTabs: false });
+		await nextTick();
+
+		expect(wrapper.find('.batch-operation-toolbar').exists()).toBe(true);
+		expect(wrapper.find('.batch-toolbar').classes()).toContain('batch-toolbar--combined');
+		expect(wrapper.find('.batch-toolbar').element.compareDocumentPosition(wrapper.find('.group-list').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(wrapper.find('.batch-operation-toolbar').element.compareDocumentPosition(wrapper.find('.group-list').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	it("keeps the batch and execute toolbars aligned and shrinkable", () => {
+		const source = readFileSync(resolve(process.cwd(), "src/components/feed/SubscriptionManageSheet.vue"), "utf8");
+
+		expect(source).toMatch(/\.batch-tools--combined\s*\{[\s\S]*?align-items:\s*stretch/);
+		expect(source).toMatch(/\.batch-toolbar\s*\{[\s\S]*?min-width:\s*0/);
+		expect(source).toMatch(/\.batch-operation-toolbar\s*\{[\s\S]*?min-width:\s*0/);
+	});
+
+	it("exposes a global health check action in the source toolbar", () => {
+		const wrapper = mountSheet();
+
+		expect(wrapper.get('[data-test="check-all-subscriptions-health"]').exists()).toBe(true);
+	});
+
 	it("merges hub-only sources by feed source and keeps their content contexts", async () => {
 		const wrapper = mount(SubscriptionManageSheet, {
 			props: {
@@ -302,7 +390,7 @@ describe("SubscriptionManageSheet", () => {
 			},
 			global: {
 				stubs: {
-					PSheet: { template: "<div><slot /></div>" },
+					PSheet: { props: ["side"], template: '<div data-test="subscription-manage-sheet" :data-side="side"><slot /></div>' },
 					PField: { props: ["label"], template: "<label><span>{{ label }}</span><slot /></label>" },
 					SubscriptionRuleEditorSheet: true,
 				},
@@ -318,10 +406,10 @@ describe("SubscriptionManageSheet", () => {
 
 		await channel.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		await channel.get('[data-test="unsubscribe-managed-source"]').trigger("click");
-		const confirmButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>(".p-modal-footer button"))
-			.find((button) => button.textContent?.trim() === "删除");
+		const confirmButton = wrapper.findAll<HTMLButtonElement>("button")
+			.find((button) => button.text().trim() === "删除");
 		expect(confirmButton).toBeDefined();
-		confirmButton!.click();
+		await confirmButton!.trigger("click");
 		await nextTick();
 
 		expect(wrapper.emitted("delete-subscription")).toEqual([["source-2"]]);
@@ -412,13 +500,10 @@ describe("SubscriptionManageSheet", () => {
 			.find((button) => button.text() === "取消订阅")!
 			.trigger("click");
 
-		const confirmButton = Array.from(
-			document.body.querySelectorAll<HTMLButtonElement>(
-				".p-modal-footer button",
-			),
-		).find((button) => button.textContent?.trim() === "删除");
+		const confirmButton = wrapper.findAll<HTMLButtonElement>("button")
+			.find((button) => button.text().trim() === "删除");
 		expect(confirmButton).toBeDefined();
-		confirmButton!.click();
+		await confirmButton!.trigger("click");
 		await nextTick();
 
 		expect(wrapper.emitted("batch-delete-subscriptions")).toEqual([
@@ -688,5 +773,19 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.emitted("update-filter-rules")).toEqual([
 			[{ mutedSourceIds: ["source-1"], hiddenKeywords: [] }],
 		]);
+	});
+
+	it("keeps the combined batch controls aligned at narrow sheet widths", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/feed/SubscriptionManageSheet.vue"),
+			"utf8",
+		);
+
+		expect(source).toMatch(
+			/@media \(max-width: 760px\)[\s\S]*?\.batch-tools--combined\s*\{[\s\S]*?grid-template-columns:\s*1fr/,
+		);
+		expect(source).toMatch(
+			/@media \(max-width: 760px\)[\s\S]*?\.group-heading\s*\{[\s\S]*?flex-direction:\s*column/,
+		);
 	});
 });

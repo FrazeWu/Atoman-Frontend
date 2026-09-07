@@ -1,11 +1,13 @@
 <template>
-  <div class="oauth-identities">
-    <div class="oauth-identities__head">
-      <strong>登录方式</strong>
+  <section class="settings-block oauth-identities">
+    <div class="settings-block__copy oauth-identities__copy">
+      <strong>已连接账号</strong>
+      <small>使用第三方账号登录 Atoman。</small>
     </div>
-    <p v-if="loading" class="oauth-identities__status" role="status">加载中...</p>
-    <p v-else-if="error" class="oauth-identities__error" role="alert">{{ error }}</p>
-    <ul v-else class="oauth-identities__list">
+    <div class="settings-block__control settings-block__control--form oauth-identities__control">
+      <p v-if="loading" class="oauth-identities__status" role="status">加载中...</p>
+      <p v-else-if="error" class="oauth-identities__error" role="alert">{{ error }}</p>
+      <ul v-else class="oauth-identities__list">
       <li
         v-for="provider in providers"
         :key="provider"
@@ -38,7 +40,8 @@
           绑定
         </PButton>
       </li>
-    </ul>
+      </ul>
+    </div>
 
     <PConfirm
       :show="pendingUnlink !== null"
@@ -46,11 +49,12 @@
       :message="pendingUnlink ? `确定取消绑定 ${oauthProviderLabels[pendingUnlink]} 吗？` : ''"
       confirm-text="取消绑定"
       danger
+      side="right"
       :loading="unlinking"
       @confirm="confirmUnlink"
       @cancel="pendingUnlink = null"
     />
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -113,19 +117,13 @@ async function confirmUnlink() {
 
 <style scoped>
 .oauth-identities {
-  display: grid;
-  gap: 0.75rem;
+  min-width: 0;
 }
 
-.oauth-identities__head,
 .oauth-identities__list li,
 .oauth-identities__provider {
   display: flex;
   align-items: center;
-}
-
-.oauth-identities__head {
-  min-height: 2.5rem;
 }
 
 .oauth-identities__list {

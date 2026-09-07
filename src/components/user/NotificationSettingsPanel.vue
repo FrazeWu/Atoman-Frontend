@@ -27,19 +27,21 @@
             <strong>{{ group.label }}</strong>
             <small>{{ group.description }}</small>
           </div>
-          <label class="settings-toggle">
-            <input
-              :data-test="`notification-${group.key}`"
-              v-model="preferences[group.key]"
-              type="checkbox"
-              :disabled="savingKey !== null"
-              @change="savePreference(group.key)"
-            />
-            <span>{{ preferences[group.key] ? '已开启' : '已关闭' }}</span>
-          </label>
+          <div class="settings-block__control">
+            <label class="settings-toggle">
+              <input
+                :data-test="`notification-${group.key}`"
+                v-model="preferences[group.key]"
+                type="checkbox"
+                :disabled="savingKey !== null"
+                @change="savePreference(group.key)"
+              />
+              <span>{{ preferences[group.key] ? '已开启' : '已关闭' }}</span>
+            </label>
+          </div>
         </div>
       </div>
-      <p class="notification-settings__note">账号安全、私信和关键权限变化始终提醒。</p>
+      <p class="notification-settings__note">账号安全和关键权限变化始终提醒。</p>
       <p v-if="saveError" class="notification-settings__error" role="alert">{{ saveError }}</p>
       <p v-if="savedLabel" class="notification-settings__saved" role="status">{{ savedLabel }}已保存</p>
     </template>
@@ -68,7 +70,7 @@ type PreferenceGroup = {
 
 const preferenceGroups: PreferenceGroup[] = [
   { key: 'like', label: '点赞提醒', description: '有人赞了你的内容时提醒。', category: 'like', eventTypes: ['comment_like', 'forum_like'] },
-  { key: 'interaction', label: '互动提醒', description: '关注、标记和话题状态变化时提醒。', category: 'interaction', eventTypes: ['comment_marked', 'forum_follow', 'forum_solved'] },
+  { key: 'interaction', label: '互动提醒', description: '订阅、标记和话题状态变化时提醒。', category: 'interaction', eventTypes: ['comment_marked', 'forum_follow', 'forum_solved'] },
   { key: 'mention', label: '提及提醒', description: '有人在内容中提到你时提醒。', category: 'mention', eventTypes: ['comment_mention'] },
   { key: 'reply', label: '回复提醒', description: '有人回复你的内容时提醒。', category: 'reply', eventTypes: ['comment_reply', 'forum_reply', 'forum_topic_comment'] },
   { key: 'collaboration', label: '协作提醒', description: '协作请求和任务变化时提醒。', category: 'collaboration', eventTypes: ['collaboration.required'] },
@@ -160,6 +162,7 @@ onMounted(load)
 
 .notification-settings__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;

@@ -7,6 +7,11 @@ import { nextTick } from "vue";
 // @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
 import PSheet from "../../../src/components/ui/PSheet.vue";
 
+const directorySource = readFileSync(
+	resolve(process.cwd(), "src/components/ui/PDirectoryNav.vue"),
+	"utf8",
+);
+
 config.global.plugins = [createTestingPinia({ stubActions: false })];
 
 describe("PSheet.vue", () => {
@@ -37,10 +42,35 @@ describe("PSheet.vue", () => {
 		expect(source).toMatch(
 			/\.slide-right-leave-active\s*\{[\s\S]*?transition:\s*transform var\(--a-motion-overlay-exit\)/,
 		);
-		expect(source).toMatch(
+		 expect(source).toMatch(
 			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,
 		);
+		expect(source).toMatch(/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`\]"/);
+		expect(source).toMatch(
+			/\.p-sheet-mobile-page\s*\{[\s\S]*?position:\s*fixed[\s\S]*?right:\s*0[\s\S]*?width:\s*min\(28rem, 100vw\)/,
+		);
 		expect(source).not.toContain("prefers-reduced-motion: reduce");
+	});
+
+	it("keeps mobile directory sheets on the right instead of the bottom", () => {
+		expect(directorySource).toMatch(
+			/\.p-directory-sheet\.p-sheet-mobile-page\.is-right\s*\{[\s\S]*?top:\s*0[;\s\S]*?right:\s*0[;\s\S]*?bottom:\s*0[;\s\S]*?left:\s*auto/,
+		);
+		expect(directorySource).toMatch(
+			/\.p-directory-sheet\.p-sheet-mobile-page\.is-right\s*\{[\s\S]*?border-left:\s*1px/,
+		);
+	});
+
+	it("gives mobile partial sheets a narrow width and backdrop", () => {
+		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
+			/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`\]"/,
+		);
+		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
+			/\.p-sheet-mobile-page\.is-partial\s*\{[\s\S]*?width:\s*min\(var\(--a-recommendation-width\), calc\(100vw - 1rem\)\)/,
+		);
+		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
+			/\.p-sheet-mobile-backdrop\s*\{[\s\S]*?position:\s*fixed[\s\S]*?z-index:/,
+		);
 	});
 
 	it("renders body content and the vertical page rail", () => {

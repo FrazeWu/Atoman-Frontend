@@ -2,12 +2,13 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
-import { getDMSettings, updateDMSettings } from '@/api/dm'
+import { getDMChannelSettings, getDMSettings, updateDMSettings } from '@/api/dm'
 
 vi.mock('@/api/dm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/dm')>()
   return {
     ...actual,
+    getDMChannelSettings: vi.fn(),
     getDMSettings: vi.fn(),
     updateDMSettings: vi.fn(),
   }
@@ -46,6 +47,17 @@ describe('DMSettingsPanel', () => {
   it('does not offer continuous messages for user private messages', async () => {
     vi.mocked(getDMSettings).mockResolvedValue({ permission: 'following_only' })
     const wrapper = mount(DMSettingsPanel, { props: { subject: { type: 'user', id: 'user-1' } } })
+    await flushPromises()
+
+    expect(wrapper.find('.settings-block').exists()).toBe(true)
+    expect(wrapper.text()).toContain('仅我订阅的人')
+    expect(wrapper.text()).not.toContain('允许连续发送')
+    expect(wrapper.find('option[value="anyone"]').exists()).toBe(false)
+  })
+
+  it('does not offer continuous messages for channel private messages', async () => {
+    vi.mocked(getDMChannelSettings).mockResolvedValue({ permission: 'one_before_reply' })
+    const wrapper = mount(DMSettingsPanel, { props: { subject: { type: 'channel', id: 'channel-1' } } })
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('允许连续发送')

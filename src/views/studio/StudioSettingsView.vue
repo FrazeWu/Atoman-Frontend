@@ -1,6 +1,6 @@
 <template>
-  <section class="studio-settings">
-    <header class="studio-settings__header">
+  <section class="studio-settings" :class="{ 'studio-settings--embedded': props.embedded }">
+    <header v-if="!props.embedded" class="studio-settings__header">
       <div>
         <h2>设置</h2>
         <p>配置新内容的默认发布与互动选项。</p>
@@ -59,7 +59,23 @@
           <input v-model="form.autoplay_enabled" data-testid="autoplay-setting" type="checkbox">
         </label>
       </section>
-      <section v-if="studio.currentChannel" class="studio-settings__block">
+      <section v-if="module === 'blog'" class="studio-settings__block">
+        <header>
+          <h3>编辑体验</h3>
+          <p>打开文章编辑器时使用此模式。</p>
+        </header>
+        <PSelect
+          v-model="form.editor_mode"
+          class="studio-settings__field"
+          data-testid="editor-mode-setting"
+          label="默认编辑模式"
+          :options="[
+            { label: 'Markdown', value: 'markdown' },
+            { label: '所见即所得', value: 'visual' },
+          ]"
+        />
+      </section>
+      <section v-if="studio.currentChannel && props.includeDmSettings" class="studio-settings__block">
         <header>
           <h3>私信权限</h3>
           <p>控制频道收到私信的方式。</p>
@@ -82,11 +98,19 @@ import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioModule, StudioPublishStatus, StudioSettingsInput, StudioVisibility } from '@/types'
+import type { StudioEditorMode, StudioModule, StudioPublishStatus, StudioSettingsInput, StudioVisibility } from '@/types'
 
 const route = useRoute()
+const props = withDefaults(defineProps<{
+  module?: StudioModule
+  embedded?: boolean
+  includeDmSettings?: boolean
+}>(), {
+  embedded: false,
+  includeDmSettings: true,
+})
 const studio = useStudioStore()
-const module = computed(() => route.params.module as StudioModule)
+const module = computed(() => props.module || route.params.module as StudioModule)
 const loading = ref(true)
 const saving = ref(false)
 const saved = ref(false)
@@ -96,6 +120,7 @@ const form = reactive({
   default_visibility: 'public' as StudioVisibility,
   default_publish_status: 'draft' as StudioPublishStatus,
   autoplay_enabled: false,
+  editor_mode: 'markdown' as StudioEditorMode,
 })
 
 function applySettings() {
@@ -104,10 +129,15 @@ function applySettings() {
   form.default_visibility = settings?.default_visibility || 'public'
   form.default_publish_status = settings?.default_publish_status || 'draft'
   form.autoplay_enabled = module.value === 'blog' ? false : Boolean(settings?.autoplay_enabled)
+  form.editor_mode = settings?.editor_mode || 'markdown'
 }
 
 async function loadSettings() {
-  if (!studio.currentChannel) return
+  if (!studio.currentChannel) {
+    error.value = '请先创建或选择频道'
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = ''
   try {
@@ -130,6 +160,7 @@ async function save() {
       default_visibility: form.default_visibility,
       default_publish_status: form.default_publish_status,
       autoplay_enabled: module.value === 'blog' ? false : form.autoplay_enabled,
+      ...(module.value === 'blog' ? { editor_mode: form.editor_mode } : {}),
     }
     saved.value = await studio.saveSettings(module.value, input)
   } catch (cause) {
@@ -154,6 +185,7 @@ watch(module, () => void loadSettings())
 
 <style scoped>
 .studio-settings { display: grid; gap: 1.25rem; max-width: 48rem; }
+.studio-settings--embedded { gap: 1rem; max-width: none; }
 .studio-settings__header h2, .studio-settings__header p, .studio-settings__message { margin: 0; }
 .studio-settings__header h2 { font-size: 1.25rem; }
 .studio-settings__header p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8125rem; }
@@ -165,6 +197,7 @@ watch(module, () => void loadSettings())
 .studio-settings__block h3 { font-size: 0.95rem; }
 .studio-settings__block header p { color: var(--a-color-muted); font-size: 0.8rem; }
 .studio-settings__defaults > .studio-settings__field { min-height: 4.5rem; display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(14rem, 1fr); align-items: center; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); }
+.studio-settings--embedded .studio-settings__defaults > .studio-settings__field { grid-template-columns: 1fr; min-height: auto; gap: 0.5rem; padding: 0.75rem 0; }
 .studio-settings__field :deep(.p-field-label) { color: var(--a-color-text); font-size: 0.875rem; font-weight: 600; }
 .studio-settings__toggle { min-height: 4rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); }
 .studio-settings__toggle > span { display: grid; gap: 0.25rem; }

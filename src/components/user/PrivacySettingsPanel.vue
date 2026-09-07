@@ -19,32 +19,36 @@
           <strong>设为私密</strong>
           <small>开启后，其他人无法查看你的个人主页资料。</small>
         </div>
-        <label class="settings-toggle">
-          <input
-            data-test="private-profile-toggle"
-            v-model="privateProfile"
-            type="checkbox"
-            :disabled="savingKey !== null"
-            @change="save('private_profile')"
-          />
-          <span>{{ privateProfile ? '仅自己可见' : '对所有人公开' }}</span>
-        </label>
+        <div class="settings-block__control">
+          <label class="settings-toggle">
+            <input
+              data-test="private-profile-toggle"
+              v-model="privateProfile"
+              type="checkbox"
+              :disabled="savingKey !== null"
+              @change="save('private_profile')"
+            />
+            <span>{{ privateProfile ? '仅自己可见' : '对所有人公开' }}</span>
+          </label>
+        </div>
       </div>
       <div class="settings-block">
         <div class="settings-block__copy">
           <strong>公开订阅关系</strong>
           <small>允许他人查看你的订阅中和被订阅列表。</small>
         </div>
-        <label class="settings-toggle">
-          <input
-            data-test="show-relations-toggle"
-            v-model="showRelations"
-            type="checkbox"
-            :disabled="savingKey !== null"
-            @change="save('show_relations')"
-          />
-          <span>{{ showRelations ? '对所有人公开' : '仅自己可见' }}</span>
-        </label>
+        <div class="settings-block__control">
+          <label class="settings-toggle">
+            <input
+              data-test="show-relations-toggle"
+              v-model="showRelations"
+              type="checkbox"
+              :disabled="savingKey !== null"
+              @change="save('show_relations')"
+            />
+            <span>{{ showRelations ? '对所有人公开' : '仅自己可见' }}</span>
+          </label>
+        </div>
       </div>
     </div>
     <p v-if="saveError" class="privacy-settings__inline-error" role="alert">{{ saveError }}</p>
@@ -77,22 +81,26 @@ type SettingsPayload = {
   show_relations?: unknown
 }
 
+type SettingKey = 'private_profile' | 'show_relations'
+
 function authHeaders() {
   return { Authorization: `Bearer ${authStore.token}`, 'Content-Type': 'application/json' }
 }
 
-function readPrivateProfile(value: unknown) {
-  if (!value || typeof value !== 'object') return false
+function readSetting(value: unknown, key: SettingKey): boolean | undefined {
+  if (!value || typeof value !== 'object') return undefined
   const payload = value as SettingsPayload
-  const nested = payload.data && typeof payload.data === 'object' ? payload.data.private_profile : undefined
-  return typeof nested === 'boolean' ? nested : payload.private_profile === true
+  const source = payload.data && typeof payload.data === 'object' ? payload.data : payload
+  const candidate = source[key]
+  return typeof candidate === 'boolean' ? candidate : undefined
+}
+
+function readPrivateProfile(value: unknown) {
+  return readSetting(value, 'private_profile') ?? false
 }
 
 function readShowRelations(value: unknown) {
-  if (!value || typeof value !== 'object') return false
-  const payload = value as SettingsPayload
-  const nested = payload.data && typeof payload.data === 'object' ? payload.data.show_relations : undefined
-  return typeof nested === 'boolean' ? nested : payload.show_relations === true
+  return readSetting(value, 'show_relations') ?? false
 }
 
 async function load() {
@@ -112,8 +120,6 @@ async function load() {
   }
 }
 
-type SettingKey = 'private_profile' | 'show_relations'
-
 async function save(key: SettingKey) {
   if (savingKey.value) return
   const previous = key === 'private_profile' ? !privateProfile.value : !showRelations.value
@@ -129,8 +135,10 @@ async function save(key: SettingKey) {
       body: JSON.stringify({ [key]: value }),
     })
     if (!response.ok) throw new Error('隐私设置保存失败，请重试')
-    privateProfile.value = readPrivateProfile(response.data)
-    showRelations.value = readShowRelations(response.data)
+    const savedPrivateProfile = readSetting(response.data, 'private_profile')
+    const savedShowRelations = readSetting(response.data, 'show_relations')
+    if (savedPrivateProfile !== undefined) privateProfile.value = savedPrivateProfile
+    if (savedShowRelations !== undefined) showRelations.value = savedShowRelations
     saved.value = true
   } catch (cause) {
     if (key === 'private_profile') privateProfile.value = previous

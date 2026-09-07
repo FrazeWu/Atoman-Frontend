@@ -477,6 +477,10 @@ const {
   error,
 })
 
+const applyEditorModeSetting = () => {
+  contentMode.value = studio.settings.blog?.editor_mode || 'markdown'
+}
+
 const draftContextKey = computed(() => isEdit.value ? `blog:post:${String(route.params.id || '')}` : 'blog:new')
 const draftPayload = computed<EditorDraftPayload>(() => ({
   context_key: draftContextKey.value,
@@ -742,10 +746,14 @@ watch(() => form.value.title, (nv, ov) => {
   emit('title-change', nv.trim())
 })
 
-watch(() => currentChannelId.value, loadChannelCollections)
+watch(() => currentChannelId.value, async () => {
+  await loadChannelCollections()
+  applyEditorModeSetting()
+})
 
 const resetEditorStateForRoute = () => {
   form.value = { title: '', content: '', summary: '', cover_url: '', visibility: 'public', tags: [] }
+  contentMode.value = 'markdown'
   contentSource.value = 'empty'
   loadedPostUpdatedAt.value = 0
   loadedPostUpdatedAtRaw.value = ''
@@ -776,6 +784,7 @@ const initializeEditor = async () => {
     }
     if (!isEdit.value) contentReady.value = true
     await loadChannelCollections()
+    applyEditorModeSetting()
     await startDraftSession()
   } catch {
     contentReady.value = false

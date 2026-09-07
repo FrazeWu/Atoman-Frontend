@@ -1567,6 +1567,7 @@ describe("PostEditorView", () => {
 			default_visibility: "private",
 			default_publish_status: "draft",
 			autoplay_enabled: false,
+			editor_mode: "visual",
 		};
 		vi.stubGlobal(
 			"fetch",
@@ -1589,6 +1590,7 @@ describe("PostEditorView", () => {
 			"collection-2",
 		]);
 		expect(editor.vm.$.setupState.preferredPublishStatus).toBe("draft");
+		expect(editor.vm.$.setupState.contentMode).toBe("visual");
 	});
 
 	it("发布文章遇到无效引用时显示候选选择提示", async () => {

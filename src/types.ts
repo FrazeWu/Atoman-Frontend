@@ -161,6 +161,7 @@ export interface Collection {
 export type StudioModule = "blog" | "podcast" | "video";
 export type StudioVisibility = "public" | "subscribers" | "private";
 export type StudioPublishStatus = "published" | "draft";
+export type StudioEditorMode = "markdown" | "visual";
 export type StudioContentStatus = StudioPublishStatus | "scheduled";
 
 export interface StudioChannel {
@@ -446,6 +447,7 @@ export interface StudioSettingsInput {
 	default_visibility: StudioVisibility;
 	default_publish_status: StudioPublishStatus;
 	autoplay_enabled: boolean;
+	editor_mode?: StudioEditorMode;
 }
 
 export interface StudioSettings extends StudioSettingsInput {
@@ -703,6 +705,8 @@ export interface FeedSource {
 	content_type?: "video" | "project_update";
 	hash: string;
 	title?: string;
+	description?: string;
+	summary?: string;
 	language_code?: string;
 	full_text_enabled?: boolean;
 	status?: "healthy" | "degraded" | "failing" | "disabled";

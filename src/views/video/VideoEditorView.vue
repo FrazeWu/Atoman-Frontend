@@ -120,7 +120,7 @@ async function onStorageTypeChange(value: 'local' | 'external') {
 
 const visibilityOptions = [
   { label: '公开', value: 'public' },
-  { label: '仅关注者', value: 'followers' },
+  { label: '仅订阅者', value: 'followers' },
   { label: '私密', value: 'private' },
 ]
 
@@ -829,7 +829,7 @@ async function duplicateDraft() {
       title="确认发布视频"
       :message="`《${form.title || '未命名视频'}》将对${
         form.visibility === 'public' ? '所有人' :
-        form.visibility === 'followers' ? '关注者' : '仅自己'
+        form.visibility === 'followers' ? '订阅者' : '仅自己'
       }可见，发布后观众可立即观看。`"
       confirm-text="立即发布"
       cancel-text="再想想"

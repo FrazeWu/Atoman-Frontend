@@ -1,17 +1,19 @@
 <template>
   <main class="user-settings settings-center a-page-xl">
-    <PPageHeader title="账号设置" mb="1.5rem" />
-
-    <PButton
-      v-if="isOwnSettingsRoute()"
-      class="user-settings__directory-trigger"
-      variant="secondary"
-      type="button"
-      @click="mobileDirectoryOpen = true"
-    >
-      <ListTree :size="16" aria-hidden="true" />
-      目录
-    </PButton>
+    <PPageHeader title="账号设置" sub="管理你的资料、账号安全、通知和社交权限。" mb="1.5rem">
+      <template #action>
+        <PButton
+          v-if="isOwnSettingsRoute()"
+          class="user-settings__directory-trigger"
+          variant="secondary"
+          type="button"
+          @click="mobileDirectoryOpen = true"
+        >
+          <ListTree :size="16" aria-hidden="true" />
+          目录
+        </PButton>
+      </template>
+    </PPageHeader>
 
     <div v-if="isOwnSettingsRoute()" class="settings-center__shell user-settings__shell">
       <div class="settings-center__sections">
@@ -27,116 +29,72 @@
               <div>
                 <p class="settings-center__kicker">{{ item.kicker }}</p>
                 <h2>{{ item.label }}</h2>
-                <p>{{ item.description }}</p>
               </div>
+              <p>{{ item.description }}</p>
             </div>
 
-            <template v-if="item.key === 'general'">
+            <template v-if="item.key === 'profile'">
               <UserBlogSettingsPanel :include-account-extras="false" />
-              <PasswordSettingsPanel :has-password="authStore.user?.has_password" />
-              <OAuthIdentitySettingsPanel :return-to="route.fullPath" />
-              <AccountSecurityPanel :email="authStore.user?.email || ''" />
-              <div data-test="delete-account" class="account-danger settings-block">
-                <div class="settings-block__copy">
-                  <strong>注销账户</strong>
-                  <small>立即停用账号，已发布内容匿名化保留且无法恢复。</small>
-                </div>
-                <PButton type="button" variant="danger" size="sm" @click="deleteAccountOpen = true">注销账户</PButton>
-              </div>
             </template>
 
-            <template v-else-if="item.key === 'feed'">
+            <template v-else-if="item.key === 'security'">
+              <PasswordSettingsPanel :has-password="authStore.user?.has_password" />
+              <AccountSecurityPanel :email="authStore.user?.email || ''">
+                <template #after-email>
+                  <OAuthIdentitySettingsPanel :return-to="route.fullPath" />
+                </template>
+              </AccountSecurityPanel>
+            </template>
+
+            <NotificationSettingsPanel v-else-if="item.key === 'notification'" />
+
+            <template v-else-if="item.key === 'privacy'">
+              <PrivacySettingsPanel />
+              <DMSettingsPanel :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
+              <BlockedUsersSettingsPanel />
+            </template>
+
+            <template v-else-if="item.key === 'modules'">
               <div v-if="feedLoading" class="settings-state" role="status">正在加载订阅状态...</div>
               <div v-else-if="feedError" class="settings-state settings-state--error" role="alert">
                 <span>{{ feedError }}</span>
                 <PButton variant="secondary" size="sm" type="button" @click="loadFeedSettings">重试</PButton>
               </div>
               <template v-else>
-                <div class="subscription-status settings-block">
-                  <div class="settings-block__copy">
-                    <strong>订阅状态</strong>
-                    <small>{{ activeSubscriptionCount }} 个订阅源运行中，{{ pausedSubscriptionCount }} 个已暂停，{{ feedStore.groups.length }} 个分组。</small>
+                <div data-test="module-settings" class="module-settings-list">
+                  <div class="module-settings-list__item settings-block">
+                    <div class="settings-block__copy">
+                      <strong>订阅</strong>
+                      <small>{{ activeSubscriptionCount }} 个订阅源运行中，{{ pausedSubscriptionCount }} 个已暂停。深度管理在右侧面板完成。</small>
+                    </div>
+                    <div class="settings-block__control">
+                      <span class="subscription-status__badge">{{ pausedSubscriptionCount ? '部分暂停' : '运行正常' }}</span>
+                      <PButton type="button" variant="secondary" size="sm" @click="openManageSheet">管理订阅</PButton>
+                    </div>
                   </div>
-                  <span class="subscription-status__badge">{{ pausedSubscriptionCount ? '部分暂停' : '运行正常' }}</span>
-                </div>
-                <div class="subscription-manage-entry">
-                  <div>
-                    <strong>订阅源与分组</strong>
-                    <small>暂停、静音、同步和批量整理订阅源。</small>
+                  <div v-for="module in moduleSettings" :key="module.key" class="settings-block">
+                    <div class="settings-block__copy">
+                      <strong>{{ module.label }}</strong>
+                      <small>{{ module.description }}</small>
+                    </div>
+                    <div class="settings-block__control">
+                      <PButton type="button" variant="secondary" size="sm" @click="openModuleSettings(module.key)">管理</PButton>
+                    </div>
                   </div>
-                  <PButton type="button" variant="secondary" size="sm" @click="openManageSheet">管理订阅</PButton>
                 </div>
-                <SubscriptionManageSheet
-                  :show="showManageSheet"
-                  :subscriptions="feedStore.subscriptions"
-                  :subscription-hub-tree="feedStore.subscriptionHubTree"
-                  :groups="feedStore.groups"
-                  :subscription-rules="feedStore.subscriptionRules"
-                  :rule-apply-summary="feedStore.ruleApplySummary"
-                  :filter-rules="feedStore.filterRules"
-                  :automation-rules="feedStore.automationRules"
-                  :busy="manageBusy"
-                  :health-checking="feedStore.healthChecking"
-                  :syncing-subscription-ids="feedStore.syncingSubscriptionIds"
-                  :syncing-all-subscriptions="feedStore.syncingAllSubscriptions"
-                  :subscription-sync-results="feedStore.subscriptionSyncResults"
-                  :subscription-diagnostics="subscriptionDiagnostics"
-                  :loading-subscription-diagnostic-ids="loadingSubscriptionDiagnosticIds"
-                  :error="manageError"
-                  :message="manageMessage"
-                  @close="showManageSheet = false"
-                  @create-group="manageCreateSubscriptionGroup"
-                  @rename-subscription="manageRenameSubscription"
-                  @update-subscription="manageUpdateSubscriptionFlags"
-                  @move-subscription="manageMoveSubscription"
-                  @delete-subscription="manageDeleteSubscription"
-                  @rename-group="manageRenameGroup"
-                  @delete-group="manageDeleteGroup"
-                  @check-subscription-health="manageCheckSubscriptionHealth"
-                  @check-all-subscriptions-health="manageCheckAllSubscriptionsHealth"
-                  @sync-subscription="manageSyncSubscription"
-                  @sync-all-subscriptions="manageSyncAllSubscriptions"
-                  @load-subscription-diagnostics="manageLoadSubscriptionDiagnostics"
-                  @batch-update-subscriptions="manageBatchUpdateSubscriptions"
-                  @batch-delete-subscriptions="manageBatchDeleteSubscriptions"
-                  @mark-subscription-read-state="manageMarkSubscriptionReadState"
-                  @set-subscription-paused="manageSetSubscriptionPaused"
-                  @reorder-subscription-groups="manageReorderSubscriptionGroups"
-                  @reorder-subscriptions="manageReorderSubscriptions"
-                  @import-opml="manageImportOPML"
-                  @retry-opml-failure="manageRetryOPMLFailure"
-                  @export-opml="manageExportOPML"
-                  @save-changes="manageSaveSubscriptionChanges"
-                  @save-rule="manageSaveSubscriptionRule"
-                  @move-rule-up="manageMoveSubscriptionRuleUp"
-                  @move-rule-down="manageMoveSubscriptionRuleDown"
-                  @apply-rule="manageApplySubscriptionRule"
-                  @apply-all-rules="manageApplyAllSubscriptionRules"
-                  @delete-rule="manageDeleteSubscriptionRule"
-                  @update-filter-rules="manageUpdateFilterRules"
-                  @update-automation-rules="manageUpdateAutomationRules"
-                />
               </template>
             </template>
 
-            <NotificationSettingsPanel v-else-if="item.key === 'notification'" />
-
-            <template v-else-if="item.key === 'modules'">
-              <div data-test="module-settings" class="module-settings-list">
-                <div v-for="module in moduleSettings" :key="module.key" class="settings-block">
-                  <div class="settings-block__copy">
-                    <strong>{{ module.label }}</strong>
-                    <small>{{ module.description }}</small>
-                  </div>
-                  <PButton :to="module.path" variant="secondary" size="sm">进入设置</PButton>
+            <template v-else-if="item.key === 'danger'">
+              <div data-test="delete-account" class="account-danger settings-block">
+                <div class="settings-block__copy">
+                  <strong>注销账户</strong>
+                  <small>立即停用账号，已发布内容匿名化保留且无法恢复。</small>
+                </div>
+                <div class="settings-block__control">
+                  <PButton type="button" variant="danger" size="sm" @click="deleteAccountOpen = true">注销账户</PButton>
                 </div>
               </div>
-            </template>
-
-            <template v-else-if="item.key === 'privacy'">
-              <PrivacySettingsPanel />
-              <DMSettingsPanel :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
-              <BlockedUsersSettingsPanel />
             </template>
           </PSurface>
         </section>
@@ -147,6 +105,7 @@
         :items="directoryNavItems"
         :active-id="activeSection"
         :mobile-open="mobileDirectoryOpen"
+        mobile-side="right"
         title="目录-账号设置"
         aria-label="设置导航"
         @select="scrollToSection"
@@ -154,12 +113,77 @@
       />
     </div>
 
+    <SubscriptionManageSheet
+      :show="showManageSheet"
+      :subscriptions="feedStore.subscriptions"
+      :subscription-hub-tree="feedStore.subscriptionHubTree"
+      :show-advanced-tabs="false"
+      :groups="feedStore.groups"
+      :subscription-rules="feedStore.subscriptionRules"
+      :rule-apply-summary="feedStore.ruleApplySummary"
+      :filter-rules="feedStore.filterRules"
+      :automation-rules="feedStore.automationRules"
+      :busy="manageBusy"
+      :health-checking="feedStore.healthChecking"
+      :syncing-subscription-ids="feedStore.syncingSubscriptionIds"
+      :syncing-all-subscriptions="feedStore.syncingAllSubscriptions"
+      :subscription-sync-results="feedStore.subscriptionSyncResults"
+      :subscription-diagnostics="subscriptionDiagnostics"
+      :loading-subscription-diagnostic-ids="loadingSubscriptionDiagnosticIds"
+      :error="manageError"
+      :message="manageMessage"
+      @close="showManageSheet = false"
+      @create-group="manageCreateSubscriptionGroup"
+      @rename-subscription="manageRenameSubscription"
+      @update-subscription="manageUpdateSubscriptionFlags"
+      @move-subscription="manageMoveSubscription"
+      @delete-subscription="manageDeleteSubscription"
+      @rename-group="manageRenameGroup"
+      @delete-group="manageDeleteGroup"
+      @check-subscription-health="manageCheckSubscriptionHealth"
+      @check-all-subscriptions-health="manageCheckAllSubscriptionsHealth"
+      @sync-subscription="manageSyncSubscription"
+      @sync-all-subscriptions="manageSyncAllSubscriptions"
+      @load-subscription-diagnostics="manageLoadSubscriptionDiagnostics"
+      @batch-update-subscriptions="manageBatchUpdateSubscriptions"
+      @batch-delete-subscriptions="manageBatchDeleteSubscriptions"
+      @mark-subscription-read-state="manageMarkSubscriptionReadState"
+      @set-subscription-paused="manageSetSubscriptionPaused"
+      @reorder-subscription-groups="manageReorderSubscriptionGroups"
+      @reorder-subscriptions="manageReorderSubscriptions"
+      @import-opml="manageImportOPML"
+      @retry-opml-failure="manageRetryOPMLFailure"
+      @export-opml="manageExportOPML"
+      @save-changes="manageSaveSubscriptionChanges"
+      @save-rule="manageSaveSubscriptionRule"
+      @move-rule-up="manageMoveSubscriptionRuleUp"
+      @move-rule-down="manageMoveSubscriptionRuleDown"
+      @apply-rule="manageApplySubscriptionRule"
+      @apply-all-rules="manageApplyAllSubscriptionRules"
+      @delete-rule="manageDeleteSubscriptionRule"
+      @update-filter-rules="manageUpdateFilterRules"
+      @update-automation-rules="manageUpdateAutomationRules"
+    />
+
+    <PSheet
+      v-if="activeStudioModule"
+      :show="Boolean(activeStudioModule)"
+      :title="`${moduleLabel(activeStudioModule)}设置`"
+      side="right"
+      mode="full"
+      close-type="header"
+      @close="activeStudioModule = null"
+    >
+      <StudioSettingsView :module="activeStudioModule" embedded :include-dm-settings="false" />
+    </PSheet>
+
     <PConfirm
       :show="deleteAccountOpen"
       title="注销账户"
       message="确认立即注销账户吗？账号会被停用，已发布内容将匿名化保留。此操作不可恢复。"
       confirm-text="立即注销"
       danger
+      side="right"
       :loading="deletingAccount"
       loading-text="注销中..."
       @confirm="confirmDeleteAccount"
@@ -186,12 +210,15 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'
+import PSheet from '@/components/ui/PSheet.vue'
+import StudioSettingsView from '@/views/studio/StudioSettingsView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 import { useFeedSubscriptionManager } from '@/composables/feed/useFeedSubscriptionManager'
+import type { StudioModule } from '@/types'
 
-type UserSettingSectionKey = 'general' | 'feed' | 'notification' | 'modules' | 'privacy'
+type UserSettingSectionKey = 'profile' | 'security' | 'notification' | 'privacy' | 'modules' | 'danger'
 
 const settingSections: Array<{
   key: UserSettingSectionKey
@@ -199,29 +226,31 @@ const settingSections: Array<{
   label: string
   description: string
 }> = [
-  { key: 'general', kicker: '01 / GENERAL', label: '通用', description: '个人资料与账号安全。' },
-  { key: 'feed', kicker: '02 / FEED', label: '订阅', description: '查看订阅状态并管理订阅源。' },
-  { key: 'notification', kicker: '03 / NOTIFY', label: '通知', description: '管理互动、提及和协作提醒。' },
-  { key: 'modules', kicker: '04 / MODULES', label: '模块设置', description: '分别管理博客、视频和播客的默认行为。' },
-  { key: 'privacy', kicker: '05 / PRIVACY', label: '隐私与社交', description: '控制个人资料可见范围和私信权限。' },
+  { key: 'profile', kicker: '01 / PROFILE', label: '个人资料', description: '这些资料会显示在你的个人主页和内容中。' },
+  { key: 'security', kicker: '02 / SECURITY', label: '账号与安全', description: '保护登录凭据，查看设备和近期安全活动。' },
+  { key: 'notification', kicker: '03 / NOTIFICATIONS', label: '通知', description: '只接收站内通知；账号安全和关键权限变化始终开启。' },
+  { key: 'privacy', kicker: '04 / PRIVACY', label: '隐私与社交', description: '控制主页可见范围、订阅关系和私信权限。' },
+  { key: 'modules', kicker: '05 / MODULES', label: '模块设置', description: '每个内容模块使用独立设置，互不影响。' },
+  { key: 'danger', kicker: 'DANGER ZONE', label: '注销账户', description: '立即注销，已发布内容会匿名化保留。' },
 ]
 
-const moduleSettings = [
-  { key: 'blog', label: '博客', description: '编辑器模式、封面、摘要、标签、目录和版本历史。', path: '/studio/blog/settings' },
-  { key: 'video', label: '视频', description: '视频发布默认值和播放行为。', path: '/studio/video/settings' },
-  { key: 'podcast', label: '播客', description: '播客发布默认值和播放行为。', path: '/studio/podcast/settings' },
-] as const
+const moduleSettings: Array<{ key: StudioModule; label: string; description: string }> = [
+  { key: 'blog', label: '博客', description: '文章发布和编辑器默认设置。' },
+  { key: 'podcast', label: '播客', description: '节目资料、单集发布和音频默认设置。' },
+  { key: 'video', label: '视频', description: '视频发布、封面和字幕默认设置。' },
+]
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
-const activeSection = ref<UserSettingSectionKey>('general')
+const activeSection = ref<UserSettingSectionKey>('profile')
 const directoryCollapsed = ref(false)
 const mobileDirectoryOpen = ref(false)
 const feedLoading = ref(true)
 const feedError = ref('')
 const subscriptionPage = ref(1)
+const activeStudioModule = ref<StudioModule | null>(null)
 const deleteAccountOpen = ref(false)
 const deletingAccount = ref(false)
 const deleteAccountError = ref('')
@@ -277,6 +306,10 @@ const directoryNavItems = computed(() =>
 
 const activeSubscriptionCount = computed(() => feedStore.subscriptions.filter((subscription) => !subscription.is_paused).length)
 const pausedSubscriptionCount = computed(() => feedStore.subscriptions.filter((subscription) => Boolean(subscription.is_paused)).length)
+const moduleLabel = (module: StudioModule | null) => moduleSettings.find((item) => item.key === module)?.label || ''
+const openModuleSettings = (module: StudioModule) => {
+  activeStudioModule.value = module
+}
 
 const sectionDomId = (key: UserSettingSectionKey) => `user-setting-${key}`
 const validSectionKeys = new Set<UserSettingSectionKey>(settingSections.map((section) => section.key))
@@ -407,7 +440,6 @@ onMounted(async () => {
 <style scoped>
 .user-settings__directory-trigger {
   display: none;
-  margin-bottom: 1rem;
 }
 
 .settings-state {
@@ -436,18 +468,9 @@ onMounted(async () => {
   font-size: 0.75rem;
 }
 
-.subscription-manage-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--a-color-border-soft);
-}
-.subscription-manage-entry > div { display: grid; gap: 0.25rem; }
-.subscription-manage-entry small { color: var(--a-color-muted); }
 .module-settings-list { display: grid; gap: 0; }
+.module-settings-list__item .settings-block__control { justify-content: flex-end; }
+.module-settings-list__item .settings-block__control > span { flex: 0 0 auto; }
 .account-danger { border-top-color: color-mix(in srgb, var(--a-color-accent-destructive) 35%, var(--a-color-border-soft)); }
 .account-danger :deep(.p-button) { flex: 0 0 auto; }
 .account-danger__error { margin: 0.75rem 0 0; color: var(--a-color-accent-destructive); }
@@ -456,5 +479,9 @@ onMounted(async () => {
   .user-settings__directory-trigger {
     display: inline-flex;
   }
+}
+
+@media (max-width: 640px) {
+  .module-settings-list__item .settings-block__control { justify-content: flex-start; }
 }
 </style>

@@ -11,6 +11,8 @@
       </div>
     </div>
 
+    <slot name="after-email" />
+
     <div class="settings-block">
       <div class="settings-block__copy">
         <strong>登录设备</strong>
@@ -31,15 +33,6 @@
               <strong>{{ session.device_name || '未知设备' }}</strong>
               <span v-if="session.current" class="session-current-badge">当前设备</span>
             </div>
-            <PButton
-              v-if="!session.current"
-              type="button"
-              variant="danger"
-              size="sm"
-              @click="requestRevoke(session.id)"
-            >
-              强制退出
-            </PButton>
           </li>
           </ul>
           <PButton v-if="sessions.length" type="button" variant="secondary" size="sm" @click="sessionsDetailOpen = true">详情</PButton>
@@ -72,7 +65,7 @@
       </div>
     </div>
 
-    <PModal v-if="emailModalOpen" title="修改邮箱" size="sm" @close="emailModalOpen = false">
+    <PSheet v-if="emailModalOpen" :show="emailModalOpen" title="修改邮箱" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="emailModalOpen = false">
       <div class="security-modal-form">
         <div class="email-input-row">
           <PInput v-model="nextEmail" label="新邮箱" type="email" placeholder="输入新电子邮箱地址" class="email-input-flex" :error="emailError" autocomplete="email" />
@@ -87,13 +80,13 @@
           <span v-if="message" class="security-message" :class="{ 'security-message--error': messageError }" :role="messageError ? 'alert' : 'status'">{{ message }}</span>
         </div>
       </div>
-    </PModal>
-    <PModal v-if="sessionsDetailOpen" title="登录设备详情" size="sm" @close="sessionsDetailOpen = false">
+    </PSheet>
+    <PSheet v-if="sessionsDetailOpen" :show="sessionsDetailOpen" title="登录设备详情" side="right" mode="full" close-type="header" @close="sessionsDetailOpen = false">
       <ul class="sessions-list"><li v-for="session in sessions" :key="session.id" class="session-item"><div class="session-info"><strong>{{ session.device_name || '未知设备' }}</strong><span v-if="session.current" class="session-current-badge">当前设备</span></div><PButton v-if="!session.current" type="button" variant="danger" size="sm" @click="requestRevoke(session.id)">强制退出</PButton></li></ul>
-    </PModal>
-    <PModal v-if="activitiesDetailOpen" title="安全日志详情" size="sm" @close="activitiesDetailOpen = false">
+    </PSheet>
+    <PSheet v-if="activitiesDetailOpen" :show="activitiesDetailOpen" title="安全日志详情" side="right" mode="full" close-type="header" @close="activitiesDetailOpen = false">
       <ul class="activities-list"><li v-for="item in activities" :key="item.id" class="activity-item"><span>{{ item.action }}</span><small class="a-muted">{{ formatDate(item.created_at) }}</small></li></ul>
-    </PModal>
+    </PSheet>
 
     <PConfirm
       :show="pendingRevoke !== null"
@@ -102,6 +95,7 @@
       confirm-text="确认退出"
       cancel-text="取消"
       danger
+      side="right"
       :loading="Boolean(revokingId)"
       @confirm="confirmRevoke"
       @cancel="pendingRevoke = null"
@@ -116,7 +110,7 @@ import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PModal from '@/components/ui/PModal.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -162,6 +156,15 @@ function authHeaders() {
   return { Authorization: `Bearer ${authStore.token}`, 'Content-Type': 'application/json' }
 }
 
+function responsePayload(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const payload = value as Record<string, unknown>
+  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data as Record<string, unknown>
+  }
+  return payload
+}
+
 function responseError(data: unknown, fallback: string) {
   if (!data || typeof data !== 'object') return fallback
   const payload = data as ErrorPayload
@@ -183,7 +186,7 @@ async function loadSessions() {
   try {
     const response = await apiRequestResult(`${base}/users/me/sessions`, { headers: authHeaders() })
     if (!response.ok) throw new Error('登录设备加载失败，请重试')
-    const data = response.data as { sessions?: unknown }
+    const data = responsePayload(response.data)
     sessions.value = Array.isArray(data.sessions) ? data.sessions as Session[] : []
   } catch (cause) {
     sessionsError.value = cause instanceof Error ? cause.message : '登录设备加载失败，请重试'
@@ -198,7 +201,7 @@ async function loadActivities() {
   try {
     const response = await apiRequestResult(`${base}/users/me/security-activities`, { headers: authHeaders() })
     if (!response.ok) throw new Error('安全日志加载失败，请重试')
-    const data = response.data as { activities?: unknown }
+    const data = responsePayload(response.data)
     activities.value = Array.isArray(data.activities) ? data.activities as Activity[] : []
   } catch (cause) {
     activitiesError.value = cause instanceof Error ? cause.message : '安全日志加载失败，请重试'
@@ -324,7 +327,28 @@ onBeforeUnmount(() => {
   gap: 0.5rem;
 }
 
-.security-summary-control { display: flex; justify-content: flex-end; }
+.security-summary-control {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.account-security .settings-block__control--form {
+  justify-items: end;
+}
+
+.account-security .settings-block__control--form > .sessions-list,
+.account-security .settings-block__control--form > .activities-list,
+.account-security .settings-block__control--form > .security-state {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .account-security .settings-block__control--form {
+    justify-items: stretch;
+  }
+}
+
 .security-modal-form { display: grid; gap: 0.85rem; }
 
 .email-input-row {

@@ -5,14 +5,17 @@
       <span>{{ loadError }}</span>
       <PButton type="button" variant="secondary" size="sm" @click="load">重试</PButton>
     </div>
-    <div v-else class="dm-settings__control">
-      <label>
-        <span>私信权限</span>
-        <select v-model="permission" :disabled="saving">
+    <div v-else class="settings-block dm-settings__row">
+      <div class="settings-block__copy">
+        <strong>私信权限</strong>
+        <small>{{ props.subject.type === 'user' ? '控制陌生人向你发起私信的方式。' : '控制这个频道收到私信的方式。' }}</small>
+      </div>
+      <div class="settings-block__control dm-settings__control">
+        <select v-model="permission" :disabled="saving" aria-label="私信权限">
           <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
-      </label>
-      <PButton type="button" :loading="saving" :disabled="saving" @click="save">保存</PButton>
+        <PButton type="button" :loading="saving" :disabled="saving" @click="save">保存</PButton>
+      </div>
     </div>
     <p v-if="saveError" class="dm-settings__message dm-settings__message--error" role="alert">{{ saveError }}</p>
     <p v-else-if="saved" class="dm-settings__message" role="status">私信权限已保存</p>
@@ -43,11 +46,10 @@ let requestGeneration = 0
 const options = computed(() => props.subject.type === 'user'
   ? [
       { value: 'one_before_reply' as const, label: '陌生人仅可发一条' },
-      { value: 'following_only' as const, label: '仅我关注的人' },
+      { value: 'following_only' as const, label: '仅我订阅的人' },
     ]
   : [
       { value: 'one_before_reply' as const, label: '陌生人仅可发一条' },
-      { value: 'anyone' as const, label: '允许连续发送' },
       { value: 'closed' as const, label: '关闭频道私信' },
     ])
 
@@ -62,9 +64,13 @@ async function load() {
       ? await getDMSettings()
       : await getDMChannelSettings(props.subject.id)
     if (generation === requestGeneration) {
-      permission.value = props.subject.type === 'user' && settings.permission === 'anyone'
-        ? 'following_only'
-        : settings.permission
+      permission.value = settings.permission === 'anyone'
+        ? props.subject.type === 'user' ? 'following_only' : 'one_before_reply'
+        : settings.permission === 'closed'
+          ? 'closed'
+          : settings.permission === 'following_only'
+            ? 'following_only'
+            : 'one_before_reply'
     }
   } catch {
     if (generation === requestGeneration) loadError.value = '私信权限加载失败，请重试'

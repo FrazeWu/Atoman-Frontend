@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { IconTrash as Trash } from '@tabler/icons-vue'
 import {
   addMusicTag,
   deleteMusicTag,
   listMusicTags,
+  searchMusicTags,
   voteMusicTag,
   type MusicTag,
   type MusicTagKind,
+  type MusicTagOption,
 } from '@/api/musicV1'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { reportError } from '@/utils/logger'
@@ -15,7 +17,6 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PInteractionActions from '@/components/ui/PInteractionActions.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
 const props = defineProps<{
   entity: 'song' | 'album'
@@ -27,16 +28,24 @@ const tags = ref<MusicTag[]>([])
 const loading = ref(false)
 const error = ref('')
 const actionError = ref('')
-const tagName = ref('')
-const tagKind = ref<MusicTagKind>('mood')
 const actionTagID = ref('')
 const pendingDelete = ref<MusicTag | null>(null)
 let loadRequestID = 0
+const searchTimers: Record<MusicTagKind, ReturnType<typeof setTimeout> | null> = { mood: null, type: null }
+const searchRequestIDs: Record<MusicTagKind, number> = { mood: 0, type: 0 }
 
-const kindOptions = [
-  { label: '情绪', value: 'mood' as const },
-  { label: '类型', value: 'type' as const },
-]
+type MusicTagSearchState = {
+  query: string
+  options: MusicTagOption[]
+  loading: boolean
+  searched: boolean
+  error: string
+}
+
+const searchStates = reactive<Record<MusicTagKind, MusicTagSearchState>>({
+  mood: { query: '', options: [], loading: false, searched: false, error: '' },
+  type: { query: '', options: [], loading: false, searched: false, error: '' },
+})
 
 const tagGroups = computed(() => [
   { kind: 'mood' as const, label: '情绪', tags: tags.value.filter(tag => tag.kind === 'mood') },
@@ -77,9 +86,61 @@ async function loadTags() {
   }
 }
 
-async function submitTag() {
+function resetSearchState(kind: MusicTagKind) {
+  if (searchTimers[kind]) clearTimeout(searchTimers[kind]!)
+  searchTimers[kind] = null
+  searchRequestIDs[kind] += 1
+  searchStates[kind].query = ''
+  searchStates[kind].options = []
+  searchStates[kind].loading = false
+  searchStates[kind].searched = false
+  searchStates[kind].error = ''
+}
+
+async function runTagSearch(kind: MusicTagKind, query: string, requestID: number) {
+  const state = searchStates[kind]
+  state.loading = true
+  state.error = ''
+  try {
+    const result = await searchMusicTags(kind, query)
+    if (requestID !== searchRequestIDs[kind] || state.query.trim() !== query) return
+    state.options = result
+    state.searched = true
+  } catch (cause) {
+    if (requestID !== searchRequestIDs[kind]) return
+    state.options = []
+    state.searched = true
+    state.error = '标签搜索失败'
+    reportError(cause, '搜索公共音乐标签失败')
+  } finally {
+    if (requestID === searchRequestIDs[kind]) state.loading = false
+  }
+}
+
+function searchTags(kind: MusicTagKind, value: string) {
+  const state = searchStates[kind]
+  state.query = value
+  state.options = []
+  state.searched = false
+  state.error = ''
+  if (searchTimers[kind]) clearTimeout(searchTimers[kind]!)
+  searchTimers[kind] = null
+  const query = value.trim()
+  if (!query) return
+  const requestID = ++searchRequestIDs[kind]
+  searchTimers[kind] = setTimeout(() => {
+    searchTimers[kind] = null
+    void runTagSearch(kind, query, requestID)
+  }, 250)
+}
+
+function isAssigned(option: MusicTagOption) {
+  return tags.value.some(tag => tag.id === option.id && tag.kind === option.kind)
+}
+
+async function addTag(kind: MusicTagKind, rawName: string) {
   if (!requireLogin()) return
-  const name = tagName.value.trim()
+  const name = rawName.trim()
   if (!name) {
     actionError.value = '请输入标签名称'
     return
@@ -90,17 +151,28 @@ async function submitTag() {
   }
 
   actionError.value = ''
-  actionTagID.value = 'new'
+  actionTagID.value = `add:${kind}`
   try {
-    const result = await addMusicTag(props.entity, props.entityId, { kind: tagKind.value, name })
+    const result = await addMusicTag(props.entity, props.entityId, { kind, name })
     replaceTag(result)
-    tagName.value = ''
+    resetSearchState(kind)
   } catch (cause) {
     actionError.value = '标签添加失败'
     reportError(cause, '添加音乐标签失败')
   } finally {
     actionTagID.value = ''
   }
+}
+
+function selectTag(kind: MusicTagKind, option: MusicTagOption) {
+  if (isAssigned(option) || tagLimitReached.value) return
+  void addTag(kind, option.name)
+}
+
+function createTag(kind: MusicTagKind) {
+  const query = searchStates[kind].query.trim()
+  if (!searchStates[kind].searched || searchStates[kind].options.length || !query) return
+  void addTag(kind, query)
 }
 
 async function voteTag(tag: MusicTag, vote: 'up' | 'down' | 'none') {
@@ -140,11 +212,17 @@ async function confirmDelete() {
 }
 
 watch(() => [props.entity, props.entityId], () => {
-  tagName.value = ''
   actionError.value = ''
   pendingDelete.value = null
+  resetSearchState('mood')
+  resetSearchState('type')
   void loadTags()
 }, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (searchTimers.mood) clearTimeout(searchTimers.mood)
+  if (searchTimers.type) clearTimeout(searchTimers.type)
+})
 </script>
 
 <template>
@@ -160,9 +238,17 @@ watch(() => [props.entity, props.entityId], () => {
     <p v-if="error" class="music-tags__error">{{ error }}</p>
     <template v-else>
       <div v-if="!loading && !tags.length" class="music-tags__empty">还没有标签</div>
-      <div v-for="group in tagGroups" :key="group.kind" v-show="group.tags.length" class="music-tags__group" :data-testid="`music-tag-group-${group.kind}`">
-        <h3>{{ group.label }}</h3>
-        <div class="music-tags__items">
+      <div
+        v-for="group in tagGroups"
+        :key="group.kind"
+        class="music-tags__group"
+        :data-testid="`music-tag-group-${group.kind}`"
+      >
+        <div class="music-tags__group-header">
+          <h3>{{ group.label }}</h3>
+          <span v-if="!group.tags.length" class="music-tags__group-empty">暂无{{ group.label }}标签</span>
+        </div>
+        <div v-if="group.tags.length" class="music-tags__items">
           <div v-for="tag in group.tags" :key="tag.assignment_id" class="music-tag" :data-testid="`music-tag-${tag.id}`">
             <RouterLink
               class="music-tag__name"
@@ -197,35 +283,56 @@ watch(() => [props.entity, props.entityId], () => {
             </button>
           </div>
         </div>
+
+        <div class="music-tags__add">
+          <PInput
+            :id="`music-tag-search-${group.kind}`"
+            :model-value="searchStates[group.kind].query"
+            :label="`搜索${group.label}标签`"
+            placeholder="输入关键词搜索已有标签"
+            type="search"
+            maxlength="48"
+            :disabled="actionTagID === `add:${group.kind}`"
+            :data-testid="`music-tag-search-${group.kind}`"
+            @update:model-value="searchTags(group.kind, $event)"
+          />
+          <p v-if="searchStates[group.kind].loading" class="music-tags__hint" role="status" aria-live="polite">正在搜索{{ group.label }}标签...</p>
+          <p v-else-if="searchStates[group.kind].error" class="music-tags__error" role="alert">{{ searchStates[group.kind].error }}</p>
+          <div v-else-if="searchStates[group.kind].options.length" class="music-tags__search-results" role="listbox" :aria-label="`${group.label}标签搜索结果`">
+            <button
+              v-for="option in searchStates[group.kind].options"
+              :key="option.id"
+              type="button"
+              class="music-tags__search-option"
+              :data-testid="`music-tag-option-${option.id}`"
+              :disabled="isAssigned(option) || tagLimitReached || Boolean(actionTagID)"
+              @click="selectTag(group.kind, option)"
+            >
+              <span>{{ option.name }}</span>
+              <small>{{ isAssigned(option) ? '已添加' : '使用此标签' }}</small>
+            </button>
+          </div>
+          <template v-else-if="searchStates[group.kind].searched && searchStates[group.kind].query.trim()">
+            <p class="music-tags__hint" role="status" aria-live="polite">没有找到匹配的{{ group.label }}标签</p>
+            <PButton
+              size="sm"
+              variant="secondary"
+              :disabled="!isAuthenticated || tagLimitReached || Boolean(actionTagID)"
+              :loading="actionTagID === `add:${group.kind}`"
+              :data-testid="`music-tag-create-${group.kind}`"
+              @click="createTag(group.kind)"
+            >
+              创建“{{ searchStates[group.kind].query.trim() }}”
+            </PButton>
+          </template>
+          <p v-else class="music-tags__hint">输入关键词搜索已有标签</p>
+        </div>
       </div>
     </template>
 
-    <form class="music-tags__add" @submit.prevent="submitTag">
-      <div class="music-tags__add-controls">
-        <PInput
-          id="music-tag-name"
-          v-model="tagName"
-          label="添加标签"
-          placeholder="输入标签名称"
-          maxlength="48"
-          :disabled="!isAuthenticated || tagLimitReached || actionTagID === 'new'"
-          :error="actionError"
-          data-testid="music-tag-name-input"
-        />
-        <PSegmentedControl v-model="tagKind" :options="kindOptions" aria-label="标签分类" />
-        <PButton
-          type="submit"
-          size="sm"
-          :disabled="!isAuthenticated || tagLimitReached"
-          :loading="actionTagID === 'new'"
-          data-testid="music-tag-add"
-        >
-          添加
-        </PButton>
-      </div>
-      <p v-if="!isAuthenticated" class="music-tags__hint">登录后可添加和投票</p>
-      <p v-else-if="tagLimitReached" class="music-tags__hint">标签数量已达上限</p>
-    </form>
+    <p v-if="actionError" class="music-tags__error" role="alert">{{ actionError }}</p>
+    <p v-if="!isAuthenticated" class="music-tags__hint">登录后可绑定标签和投票</p>
+    <p v-else-if="tagLimitReached" class="music-tags__hint">标签数量已达上限</p>
 
     <PConfirm
       :show="Boolean(pendingDelete)"
@@ -248,19 +355,14 @@ watch(() => [props.entity, props.entityId], () => {
 
 .music-tags__header,
 .music-tags__header > div,
-.music-tag {
+.music-tag,
+.music-tags__group-header {
   display: flex;
   align-items: center;
 }
 
-.music-tags__add-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
 .music-tags__header,
-.music-tags__add-controls {
+.music-tags__group-header {
   justify-content: space-between;
   gap: 0.75rem;
 }
@@ -269,7 +371,8 @@ watch(() => [props.entity, props.entityId], () => {
 .music-tags__group h3,
 .music-tags__empty,
 .music-tags__hint,
-.music-tags__error {
+.music-tags__error,
+.music-tags__group-empty {
   margin: 0;
 }
 
@@ -284,14 +387,17 @@ watch(() => [props.entity, props.entityId], () => {
 .music-tags__count,
 .music-tags__status,
 .music-tags__hint,
-.music-tags__empty {
+.music-tags__empty,
+.music-tags__group-empty {
   color: var(--a-color-muted);
   font-size: 0.8rem;
 }
 
 .music-tags__group {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.65rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .music-tags__group h3 {
@@ -356,13 +462,52 @@ watch(() => [props.entity, props.entityId], () => {
   padding-top: 0.35rem;
 }
 
-.music-tags__add-controls :deep(.p-field) {
-  grid-column: 1 / -1;
-  min-width: 0;
+.music-tags__search-results {
+  display: grid;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
 }
 
-.music-tags__add-controls :deep(.p-segmented-control) {
+.music-tags__search-option {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.music-tags__search-option:last-child {
+  border-bottom: 0;
+}
+
+.music-tags__search-option:hover:not(:disabled),
+.music-tags__search-option:focus-visible {
+  background: var(--a-color-surface-muted);
+  outline: none;
+}
+
+.music-tags__search-option:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.music-tags__search-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.music-tags__search-option small {
   flex-shrink: 0;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
 }
 
 .music-tags__error {
@@ -371,13 +516,10 @@ watch(() => [props.entity, props.entityId], () => {
 }
 
 @media (max-width: 640px) {
-  .music-tags__add-controls {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .music-tags__add-controls :deep(.p-field) {
-    min-width: 0;
+  .music-tags__group-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 }
 </style>

@@ -40,7 +40,7 @@ describe('MusicLyricsLine', () => {
   })
 
   it('在连续歌词容器中支持跨行选择并提交起止行', async () => {
-    const line = { line_key: 'line-1', text: 'first line', translation: '' }
+    const line = { id: 'id-1', line_key: 'line-1', text: 'first line', translation: '' }
     const wrapper = mount(MusicLyricsLine, {
       props: { line, canSelect: true, canAnnotate: true },
     })
@@ -49,6 +49,7 @@ describe('MusicLyricsLine', () => {
     await wrapper.setProps({ selectionRoot })
     const secondLine = document.createElement('div')
     secondLine.dataset.lyricLineKey = 'line-2'
+    secondLine.dataset.lyricLineId = 'id-2'
     secondLine.innerHTML = '<p class="music-lyrics-line__text">second line</p>'
     selectionRoot.append(secondLine)
 
@@ -75,6 +76,8 @@ describe('MusicLyricsLine', () => {
         endOffset: 6,
         startLineKey: 'line-1',
         endLineKey: 'line-2',
+        startLineId: 'id-1',
+        endLineId: 'id-2',
       },
     ]])
     wrapper.unmount()

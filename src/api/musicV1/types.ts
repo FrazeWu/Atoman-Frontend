@@ -1138,8 +1138,11 @@ export type UpdateMusicSongLyricsInput = {
 
 export type CreateMusicLyricsAnnotationInput = {
 	line_key?: string;
+	line_id?: string;
 	start_line_key?: string;
+	start_line_id?: string;
 	end_line_key?: string;
+	end_line_id?: string;
 	selected_text: string;
 	start_offset: number;
 	end_offset: number;

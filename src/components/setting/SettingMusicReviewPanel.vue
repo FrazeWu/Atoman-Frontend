@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { isAdminRole } from '@/utils/roles'
 import PSelect from '@/components/ui/PSelect.vue'
+import PaginationBar from '@/components/ui/PaginationBar.vue'
 import {
   listMusicEntryStateRequests,
   reviewMusicEntryStateRequest,
@@ -32,6 +33,8 @@ type MusicReviewEntry = {
 
 const entries = ref<MusicReviewEntry[]>([])
 const entriesTotal = ref(0)
+const entriesPage = ref(1)
+const entriesPageSize = 10
 const entriesLoading = ref(false)
 const entriesTypeFilter = ref('all')
 const entriesStatusFilter = ref('all')
@@ -47,6 +50,8 @@ const entriesStatusOptions = [
   { label: '已关闭', value: 'closed' },
 ]
 const stateRequests = ref<MusicEntryStateRequest[]>([])
+const stateRequestsPage = ref(1)
+const stateRequestsPageSize = 10
 const stateRequestsLoading = ref(false)
 const requestDecisionReasons = ref<Record<string, string>>({})
 const requestDecisionBusy = ref('')
@@ -55,6 +60,7 @@ async function fetchStateRequests() {
   stateRequestsLoading.value = true
   try {
     stateRequests.value = await listMusicEntryStateRequests({ status: 'pending' })
+    stateRequestsPage.value = 1
   } catch (error) {
     reportError(error, '加载音乐状态请求失败')
   } finally {
@@ -69,6 +75,7 @@ async function decideStateRequest(request: MusicEntryStateRequest, decision: 'ap
   try {
     await reviewMusicEntryStateRequest(request.id, decision, reason)
     stateRequests.value = stateRequests.value.filter((item) => item.id !== request.id)
+    stateRequestsPage.value = Math.min(stateRequestsPage.value, stateRequestsTotalPages.value)
     const next = { ...requestDecisionReasons.value }
     delete next[request.id]
     requestDecisionReasons.value = next
@@ -93,6 +100,7 @@ const qualityIssues = ref<MusicQualityIssue[]>([])
 const qualityLoading = ref(false)
 const qualityFilter = ref('all')
 const qualityPage = ref(1)
+const qualityPageSize = 10
 const qualityTotal = ref(0)
 const qualityHasMore = ref(false)
 const qualityOptions = [
@@ -109,12 +117,12 @@ const qualityOptions = [
 async function fetchQualityIssues(page = qualityPage.value) {
   qualityLoading.value = true
   try {
-    const response = await apiRequestResult(`${api.music.adminMusicQuality}?type=${qualityFilter.value}&page=${page}&page_size=30`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+    const response = await apiRequestResult(`${api.music.adminMusicQuality}?type=${qualityFilter.value}&page=${page}&page_size=${qualityPageSize}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
     const data = await Promise.resolve(response.data) as { data?: MusicQualityIssue[]; total?: number; has_more?: boolean }
     qualityIssues.value = data.data ?? []
-    qualityPage.value = page
     qualityTotal.value = data.total ?? qualityIssues.value.length
-    qualityHasMore.value = data.has_more ?? false
+    qualityPage.value = Math.min(Math.max(1, page), qualityTotalPages.value)
+    qualityHasMore.value = data.has_more ?? qualityPage.value < qualityTotalPages.value
   } catch (error) {
     reportError(error, '加载音乐资料问题失败')
   } finally {
@@ -133,13 +141,25 @@ function qualityPath(issue: MusicQualityIssue) {
   return '/music/imports'
 }
 
-const fetchEntries = async () => {
+const entriesTotalPages = computed(() => Math.max(1, Math.ceil(entriesTotal.value / entriesPageSize)))
+const stateRequestsTotalPages = computed(() => Math.max(1, Math.ceil(stateRequests.value.length / stateRequestsPageSize)))
+const visibleStateRequests = computed(() => {
+  const start = (stateRequestsPage.value - 1) * stateRequestsPageSize
+  return stateRequests.value.slice(start, start + stateRequestsPageSize)
+})
+const qualityTotalPages = computed(() => Math.max(1, Math.ceil(qualityTotal.value / qualityPageSize)))
+const entriesMeta = computed(() => ({ page: entriesPage.value, page_size: entriesPageSize, total: entriesTotal.value, has_more: entriesPage.value < entriesTotalPages.value }))
+const stateRequestsMeta = computed(() => ({ page: stateRequestsPage.value, page_size: stateRequestsPageSize, total: stateRequests.value.length, has_more: stateRequestsPage.value < stateRequestsTotalPages.value }))
+const qualityMeta = computed(() => ({ page: qualityPage.value, page_size: qualityPageSize, total: qualityTotal.value, has_more: qualityHasMore.value }))
+
+const fetchEntries = async (page = entriesPage.value) => {
   entriesLoading.value = true
   try {
     const params = new URLSearchParams({
       type: entriesTypeFilter.value,
       status: entriesStatusFilter.value,
-      page_size: '30',
+      page: String(page),
+      page_size: String(entriesPageSize),
     })
     const res = await apiRequestResult(`${api.music.adminMusicReview}?${params}`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
@@ -147,11 +167,28 @@ const fetchEntries = async () => {
     const data = await Promise.resolve(res.data) as { data?: MusicReviewEntry[]; total?: number }
     entries.value = data.data || []
     entriesTotal.value = data.total || 0
+    entriesPage.value = Math.min(Math.max(1, page), entriesTotalPages.value)
   } catch (e) {
     reportError(e, '加载音乐审核列表失败')
   } finally {
     entriesLoading.value = false
   }
+}
+
+function changeEntriesPage(page: number) {
+  const nextPage = Math.min(Math.max(1, page), entriesTotalPages.value)
+  if (nextPage === entriesPage.value || entriesLoading.value) return
+  void fetchEntries(nextPage)
+}
+
+function changeStateRequestsPage(page: number) {
+  stateRequestsPage.value = Math.min(Math.max(1, page), stateRequestsTotalPages.value)
+}
+
+function changeQualityPage(page: number) {
+  const nextPage = Math.min(Math.max(1, page), qualityTotalPages.value)
+  if (nextPage === qualityPage.value || qualityLoading.value) return
+  void fetchQualityIssues(nextPage)
 }
 
 const entryStatusLabel = (s: string) => {
@@ -161,7 +198,8 @@ const entryStatusLabel = (s: string) => {
 }
 
 watch([entriesTypeFilter, entriesStatusFilter], () => {
-  if (activeTab.value === 'entries') fetchEntries()
+  entriesPage.value = 1
+  if (activeTab.value === 'entries') void fetchEntries(1)
 })
 
 watch(qualityFilter, () => { qualityPage.value = 1; if (activeTab.value === 'quality') void fetchQualityIssues(1) })
@@ -187,7 +225,7 @@ onMounted(async () => {
           状态请求 ({{ stateRequests.length }})
         </button>
         <button :class="['admin-tab', activeTab === 'quality' ? 'admin-tab-active' : '']" @click="activeTab = 'quality'; fetchQualityIssues()">
-          资料问题 ({{ qualityIssues.length }})
+          资料问题 ({{ qualityTotal }})
         </button>
       </div>
     </div>
@@ -216,12 +254,13 @@ onMounted(async () => {
         </div>
         <div v-if="entries.length === 0" class="text-gray-400 py-8 text-center">暂无条目</div>
       </div>
+      <PaginationBar v-if="entriesTotal > 0" data-test="music-entry-pagination" :meta="entriesMeta" :loading="entriesLoading" @change="changeEntriesPage" />
     </div>
 
     <div v-else-if="activeTab === 'requests'">
       <div v-if="stateRequestsLoading" class="text-center py-12 text-gray-400">加载中...</div>
       <div v-else class="entries-list">
-        <div v-for="request in stateRequests" :key="request.id" class="entry-row state-request-row">
+        <div v-for="request in visibleStateRequests" :key="request.id" class="entry-row state-request-row">
           <div class="entry-info state-request-info">
             <RouterLink :to="musicEntryPath(request.entity_type, request.entity_id)" class="entry-name">{{ stateRequestActionLabel(request.action) }}</RouterLink>
             <span class="entry-type">{{ request.entity_type === 'album' ? '专辑' : request.entity_type === 'artist' ? '艺术家' : '歌曲' }}</span>
@@ -236,6 +275,7 @@ onMounted(async () => {
         </div>
         <div v-if="!stateRequests.length" class="text-gray-400 py-8 text-center">暂无待处理请求</div>
       </div>
+      <PaginationBar v-if="stateRequests.length > 0" data-test="music-requests-pagination" :meta="stateRequestsMeta" :loading="stateRequestsLoading" @change="changeStateRequestsPage" />
     </div>
 
     <div v-else-if="activeTab === 'quality'">
@@ -247,12 +287,8 @@ onMounted(async () => {
           <span class="entry-status entry-status-disputed">{{ qualityLabel(issue.type) }}</span>
         </RouterLink>
         <div v-if="!qualityIssues.length" class="text-gray-400 py-8 text-center">暂无资料问题</div>
-        <div v-if="qualityPage > 1 || qualityHasMore" class="quality-pagination">
-          <button type="button" :disabled="qualityLoading || qualityPage <= 1" @click="fetchQualityIssues(qualityPage - 1)">上一页</button>
-          <span>第 {{ qualityPage }} 页</span>
-          <button type="button" :disabled="qualityLoading || !qualityHasMore" @click="fetchQualityIssues(qualityPage + 1)">下一页</button>
-        </div>
       </div>
+      <PaginationBar v-if="qualityTotal > 0" data-test="music-quality-pagination" :meta="qualityMeta" :loading="qualityLoading" @change="changeQualityPage" />
     </div>
 
   </div>
@@ -343,7 +379,4 @@ onMounted(async () => {
 .entry-disc { font-size: 0.75rem; color: var(--a-color-muted); }
 .entry-editor { font-size: 0.75rem; color: var(--a-color-muted-soft); }
 .entry-date { font-size: 0.75rem; color: var(--a-color-muted-soft); }
-.quality-pagination { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 1rem; color: var(--a-color-muted); font-size: 0.75rem; }
-.quality-pagination button { min-height: 2.75rem; padding: 0.5rem 0.85rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: inherit; cursor: pointer; }
-.quality-pagination button:disabled { cursor: default; opacity: 0.45; }
 </style>

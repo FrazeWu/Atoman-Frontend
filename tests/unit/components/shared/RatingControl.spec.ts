@@ -1,7 +1,14 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 import RatingControl from '@/components/shared/RatingControl.vue'
+
+const ratingControlSource = readFileSync(
+  resolve(process.cwd(), 'src/components/shared/RatingControl.vue'),
+  'utf8',
+)
 
 describe('RatingControl.vue', () => {
   it('shows a public ten-point average from the fifth rating onward', () => {
@@ -31,6 +38,23 @@ describe('RatingControl.vue', () => {
     await scoreNine.trigger('click')
 
     expect(wrapper.emitted('rate')).toEqual([[9]])
+  })
+
+  it('keeps half-star and whole-star targets in place while hovering', async () => {
+    const wrapper = mount(RatingControl)
+    const scoreThree = wrapper.get('button[data-score="3"]')
+    const scoreTargetRule = ratingControlSource.match(
+      /\.rating-control__score-target\s*\{([^}]*)\}/s,
+    )?.[1] ?? ''
+
+    expect(scoreTargetRule).toMatch(/appearance:\s*none/)
+    expect(scoreTargetRule).toMatch(/transform:\s*none/)
+    expect(scoreTargetRule).toMatch(/transition:\s*none/)
+
+    await scoreThree.trigger('mouseenter')
+
+    expect(wrapper.findAll('.rating-control__score-target')).toHaveLength(10)
+    expect(wrapper.get('.rating-control__preview').text()).toContain('1.5 星')
   })
 
   it('moves one point at a time with the keyboard', async () => {

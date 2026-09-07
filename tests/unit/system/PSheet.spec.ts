@@ -383,13 +383,13 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted()).toHaveProperty("close");
 	});
 
-	it("does not close when the top right sheet empty area is clicked", async () => {
+	it("closes the top right sheet when its blank content area is clicked", async () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, side: "right" },
 		});
 
 		await wrapper.get(".sheet-content").trigger("click");
-		expect(wrapper.emitted("close")).toBeUndefined();
+		expect(wrapper.emitted("close")).toHaveLength(1);
 	});
 
 	it("does not close a right sheet when its content is clicked", async () => {
@@ -408,6 +408,15 @@ describe("PSheet.vue", () => {
 		});
 		await wrapper.get(".sheet-close-btn-bookmark").trigger("click");
 		expect(wrapper.emitted()).toHaveProperty("close");
+	});
+
+	it("emits close event when the blank left rail is clicked", async () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, title: "专辑详情" },
+		});
+
+		await wrapper.get(".sheet-layer-rail").trigger("click");
+		expect(wrapper.emitted("close")).toHaveLength(1);
 	});
 
 	it("emits close event when tab is clicked", async () => {
@@ -469,6 +478,8 @@ describe("PSheet.vue", () => {
 
 		await wrapper.get(".sheet-layer-title--action").trigger("click");
 		expect(wrapper.emitted("activate")).toHaveLength(1);
+		await wrapper.get(".sheet-layer-rail").trigger("click");
+		expect(wrapper.emitted("close")).toBeUndefined();
 	});
 
 	it("prevents wheel scrolling on lower sheet layers", () => {

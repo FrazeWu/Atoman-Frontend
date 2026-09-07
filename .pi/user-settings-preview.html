@@ -7,18 +7,18 @@
   <title>Atoman 账号设置预览</title>
   <style>
     :root {
-      --bg: #f5f6f8;
+      --bg: #f8fafc;
       --paper: #fff;
-      --ink: #17202a;
-      --muted: #687482;
-      --line: #dfe4e9;
-      --soft: #edf1f4;
-      --accent: #2364d2;
-      --accent-soft: #eaf1ff;
-      --danger: #bd3f3f;
-      --danger-soft: #fff1f1;
-      --success: #1f8a63;
-      --radius: 8px;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #cbd5e1;
+      --soft: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --danger: #dc2626;
+      --danger-soft: #fef2f2;
+      --success: #0d9488;
+      --radius: 4px;
       --shadow: 0 18px 45px rgb(17 28 45 / 14%);
     }
     * { box-sizing: border-box; }
@@ -49,6 +49,7 @@
     .input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     label.field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
     input, textarea, select { width: 100%; min-height: 40px; padding: 0 11px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); outline: 0; }
+    input[type="checkbox"] { width: auto; min-height: auto; padding: 0; accent-color: var(--accent); }
     textarea { min-height: 86px; padding-top: 9px; resize: vertical; }
     input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .btn { min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); font-weight: 600; }
@@ -101,6 +102,9 @@
     .sheet-backdrop.open { display: flex; }
     .sheet { width: min(560px, 100%); height: 100%; overflow: auto; padding: 24px; background: var(--paper); box-shadow: var(--shadow); animation: sheet-in .18s ease both; }
     .sheet.narrow { width: min(420px, 100%); }
+    .sheet.wide { width: min(900px, 100%); padding: 16px; }
+    .sheet.wide .sheet-head { padding-bottom: 12px; }
+    .sheet.wide .sheet-body { gap: 12px; padding-top: 14px; }
     @keyframes sheet-in { from { transform: translateX(20px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
     .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
     .sheet-head h2 { margin: 0; font-size: 20px; }
@@ -131,60 +135,118 @@
     .detail-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 6px; }
     .detail-item strong { display: block; font-size: 13px; }
     .detail-item small { color: var(--muted); font-size: 12px; }
-    .modules-list { display: grid; gap: 0; }
-    .module-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 15px 0; border-bottom: 1px solid var(--soft); }
-    .module-row:last-child { border-bottom: 0; }
-    .module-row strong { display: block; font-size: 14px; }
-    .module-row small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
-    .module-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 20px 0 0; border: 1px solid var(--line); }
-    .module-tab { min-height: 42px; padding: 0 12px; border: 0; border-right: 1px solid var(--line); background: #f8fafc; color: var(--muted); font-size: 13px; font-weight: 600; }
-    .module-tab:last-child { border-right: 0; }
-    .module-tab.active { background: var(--accent-soft); color: var(--accent); }
-    .module-panel { display: grid; gap: 16px; min-width: 0; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--soft); }
+    .source-detail-identity { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); background: #f8fafc; }
+    .source-detail-identity .subscription-mark { width: 40px; height: 40px; font-size: 15px; }
+    .source-detail-identity strong { display: block; font-size: 15px; }
+    .source-detail-identity small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .source-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .source-action-grid .btn { min-height: 38px; }
+    .source-diagnostic { padding: 12px 13px; border: 1px solid var(--line); background: #f8fafc; }
+    .source-diagnostic strong { display: block; font-size: 12px; }
+    .source-diagnostic small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .diagnostic-list { display: grid; gap: 8px; }
+    .diagnostic-item { display: grid; gap: 3px; padding: 12px 13px; border: 1px solid var(--line); }
+    .diagnostic-item strong { font-size: 13px; }
+    .diagnostic-item span { color: var(--muted); font-size: 12px; }
+    .detail-section { display: grid; gap: 8px; }
+    .detail-section > strong { font-size: 13px; }
+    .subscription-batch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #eff6ff; }
+    .subscription-batch label { display: inline-flex; align-items: center; gap: 7px; color: var(--accent); font-size: 12px; font-weight: 700; }
+    .subscription-batch span { color: var(--muted); font-size: 12px; }
+    .subscription-batch select { width: 170px; min-height: 36px; margin-left: auto; }
+    .subscription-operations { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #f8fafc; }
+    .subscription-operations-copy strong { display: block; font-size: 13px; }
+    .subscription-operations-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .subscription-operation-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+    .subscription-operation-controls select { width: 190px; min-height: 32px; }
+    .subscription-layout { display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 16px; min-width: 0; }
+    .subscription-main { display: grid; gap: 12px; min-width: 0; }
+    .subscription-sidebar { min-width: 0; padding-right: 14px; border-right: 1px solid var(--line); }
+    .subscription-new-group { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 40px; padding: 0 10px; border: 1px dashed #cbd5e1; border-radius: 4px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 600; }
+    .subscription-new-group span { font-size: 18px; font-weight: 400; line-height: 1; }
+    .subscription-group-nav { display: grid; gap: 2px; margin-top: 10px; }
+    .subscription-group-link { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 38px; padding: 0 9px; border: 0; border-left: 2px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); text-align: left; }
+    .subscription-group-link:hover { background: #f8fafc; }
+    .subscription-group-link.active { border-left-color: #2563eb; background: #eff6ff; color: #2563eb; }
+    .subscription-group-link .group-icon { display: grid; flex: 0 0 24px; place-items: center; font-size: 16px; }
+    .subscription-group-link strong { flex: 1; font-size: 13px; font-weight: 600; }
+    .subscription-group-link small { font-size: 12px; }
+    .subscription-sidebar-note { margin: 14px 9px 0; color: var(--muted); font-size: 11px; }
+    .subscription-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+    .subscription-view-tabs { display: flex; gap: 4px; }
+    .subscription-view-tab { min-height: 32px; padding: 0 11px; border: 1px solid var(--line); border-radius: 4px; background: #f8fafc; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .subscription-view-tab.active { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .subscription-search { width: min(240px, 42%); min-height: 34px; padding: 0 10px; font-size: 12px; }
+    .subscription-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+    .subscription-grid[data-subscription-grid-all] { gap: 12px 16px; }
+    .subscription-card { display: grid; gap: 8px; min-width: 0; padding: 11px; border: 1px solid var(--line); background: var(--paper); }
+    .subscription-card:hover { border-color: #aeb9c5; background: #fafbfc; }
+    .subscription-card-head { display: flex; align-items: start; gap: 7px; min-width: 0; }
+    .subscription-card-head input { flex-shrink: 0; margin-top: 3px; }
+    .subscription-card-head > span:last-child { min-width: 0; }
+    .subscription-card strong { display: block; overflow-wrap: anywhere; font-size: 12px; line-height: 1.35; }
+    .subscription-card small { display: block; margin-top: 3px; overflow-wrap: anywhere; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .subscription-mark { display: grid; flex-shrink: 0; width: 28px; height: 28px; place-items: center; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; }
+    .subscription-card-status { display: inline-flex; width: fit-content; padding: 3px 6px; border-radius: 4px; background: #edf8f3; color: var(--success); font-size: 10px; font-weight: 700; }
+    .subscription-card-status.warning { background: #fff8e7; color: #9a6a00; }
+    .subscription-card-status.error { background: var(--danger-soft); color: var(--danger); }
+    .subscription-card-group { color: var(--muted); font-size: 11px; }
+    .subscription-card-state { color: var(--muted); font-size: 10px; }
+    .subscription-card-state.paused, .subscription-card-state.muted { color: #9a6a00; }
+    .subscription-card-actions { display: flex; justify-content: flex-end; gap: 6px; padding-top: 2px; border-top: 1px solid var(--soft); }
+    .subscription-card-actions .btn { min-height: 30px; padding: 0 9px; font-size: 11px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card { display: grid; grid-template-columns: 16px 40px minmax(0, 1fr) auto; grid-template-rows: auto auto auto auto; column-gap: 8px; row-gap: 6px; min-height: 108px; padding: 9px 0 10px; border: 0; border-bottom: 1px solid var(--soft); background: transparent; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head { display: contents; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head input { grid-column: 1; grid-row: 1; align-self: start; margin: 12px 0 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-head > span:last-child { grid-column: 3; grid-row: 1; align-self: center; min-width: 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-mark { grid-column: 2; grid-row: 1 / span 4; align-self: start; width: 40px; height: 40px; border-radius: 4px; font-size: 14px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card strong { font-size: 13px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card small { font-size: 11px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-status { grid-column: 3; grid-row: 2; align-self: start; padding: 2px 5px; font-size: 10px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-description { display: -webkit-box; grid-column: 3 / -1; grid-row: 3; margin: 0; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-state { grid-column: 3 / -1; grid-row: 4; margin: 0; font-size: 10px; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-actions { grid-column: 4; grid-row: 1; align-self: start; justify-content: flex-start; border-top: 0; }
+    .subscription-grid[data-subscription-grid-all] .subscription-card-actions .btn { min-height: 30px; padding: 0 9px; border-color: #e2e8f0; background: #f1f5f9; color: var(--muted); font-size: 11px; }
+    .subscription-groups { display: grid; gap: 14px; }
+    .subscription-group { overflow: hidden; border: 1px solid var(--line); background: var(--paper); }
+    .subscription-group summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; }
+    .subscription-group summary::-webkit-details-marker { display: none; }
+    .subscription-group summary:hover { background: #fafbfc; }
+    .subscription-group summary strong { display: block; font-size: 13px; }
+    .subscription-group summary small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .subscription-group-caret { color: var(--muted); font-size: 16px; transition: transform .15s ease; }
+    .subscription-group[open] .subscription-group-caret { transform: rotate(180deg); }
+    .subscription-group-body { padding: 0 10px 10px; }
+    .sheet-head-actions { display: flex; align-items: center; gap: 8px; }
+    .sheet-head-note { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .module-stack { display: grid; gap: 18px; margin-top: 20px; }
+    .module-block { display: grid; gap: 14px; min-width: 0; padding-top: 18px; border-top: 1px solid var(--soft); }
+    .module-block:first-child { padding-top: 0; border-top: 0; }
     .module-panel-head { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
-    .module-panel-head strong { display: block; font-size: 15px; }
+    .module-panel-head strong { display: block; font-size: 16px; }
     .module-panel-head small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
     .module-badge { flex-shrink: 0; padding: 4px 8px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; }
-    .subscription-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); background: #f8fafc; }
-    .subscription-toolbar-copy strong { display: block; font-size: 13px; }
-    .subscription-toolbar-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
-    .subscription-toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .subscription-tabs { display: flex; overflow-x: auto; gap: 18px; border-bottom: 1px solid var(--line); }
-    .subscription-tab { min-height: 38px; padding: 0 0 8px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
-    .subscription-tab.active { border-bottom-color: var(--accent); color: var(--accent); }
-    .subscription-panel { display: grid; gap: 14px; min-width: 0; }
-    .subscription-filter-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(130px, .6fr)); gap: 10px; }
-    .subscription-health { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-    .subscription-health strong { color: var(--ink); }
-    .subscription-selection { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); background: var(--accent-soft); color: var(--accent); font-size: 12px; }
-    .subscription-selection label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-    .subscription-source-list, .subscription-group-list, .subscription-rule-list-preview { display: grid; gap: 10px; }
-    .subscription-source-item, .subscription-group-item, .subscription-rule-item { display: grid; gap: 10px; min-width: 0; padding: 13px 14px; border: 1px solid var(--line); }
-    .subscription-source-head, .subscription-group-head, .subscription-rule-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
-    .subscription-source-identity { display: flex; align-items: start; gap: 9px; min-width: 0; }
-    .subscription-source-identity input { flex-shrink: 0; margin-top: 4px; }
-    .subscription-source-identity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
-    .source-mark { display: grid; flex-shrink: 0; width: 34px; height: 34px; place-items: center; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 700; }
-    .subscription-source-identity strong, .subscription-group-head strong, .subscription-rule-head strong { display: block; font-size: 13px; }
-    .subscription-source-identity small, .subscription-group-head small, .subscription-rule-head small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
-    .subscription-source-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-top: 10px; border-top: 1px solid var(--soft); }
-    .subscription-source-controls label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
-    .subscription-source-controls select { min-height: 34px; font-size: 12px; }
-    .subscription-item-actions { display: flex; flex-wrap: wrap; gap: 7px; }
-    .subscription-item-actions .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
-    .subscription-group-form { display: flex; gap: 8px; }
-    .subscription-group-form input { flex: 1; }
-    .subscription-group-item { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-    .subscription-group-actions { display: flex; flex-wrap: wrap; gap: 7px; }
-    .subscription-rule-item p { margin: 0; color: var(--muted); font-size: 12px; }
-    .rule-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
-    .rule-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: #f8fafc; color: var(--ink); font-size: 12px; }
-    .rule-chip:hover { border-color: #aeb9c5; background: var(--accent-soft); }
-    .module-setting-grid { display: grid; gap: 0; }
-    .module-setting-row { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(0, 1.2fr); gap: 18px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--soft); }
-    .module-setting-row:last-child { border-bottom: 0; }
-    .module-setting-row strong { display: block; font-size: 13px; }
-    .module-setting-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .module-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); background: #f8fafc; }
+    .module-toolbar-copy strong { display: block; font-size: 13px; }
+    .module-toolbar-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .module-toolbar-actions, .module-item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .module-summary-list { display: grid; gap: 0; border: 1px solid var(--line); }
+    .module-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; padding: 13px 14px; border-bottom: 1px solid var(--soft); }
+    .module-summary-row:last-child { border-bottom: 0; }
+    .module-summary-row strong { display: block; font-size: 13px; }
+    .module-summary-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .module-summary-row .module-item-actions { flex-shrink: 0; }
+    .module-summary-row .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+    .module-quick-grid { display: grid; gap: 0; border: 1px solid var(--line); }
+    .module-quick-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; padding: 13px 14px; border-bottom: 1px solid var(--soft); }
+    .module-quick-row:last-child { border-bottom: 0; }
+    .module-quick-row strong { display: block; font-size: 13px; }
+    .module-quick-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .module-quick-row .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+    .detail-list { display: grid; gap: 8px; }
+    .detail-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 6px; }
+    .detail-item strong { display: block; font-size: 13px; }
+    .detail-item small { color: var(--muted); font-size: 12px; }
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
       .directory { display: none; }
@@ -203,15 +265,32 @@
       .input-grid { grid-template-columns: 1fr; }
       .device { grid-template-columns: 1fr; }
       .device .btn { justify-self: start; }
-      .module-row { align-items: flex-start; flex-direction: column; }
-      .module-tabs { display: flex; overflow-x: auto; }
-      .module-tab { flex: 0 0 auto; min-width: 88px; }
-      .subscription-filter-grid { grid-template-columns: 1fr; }
-      .subscription-toolbar { align-items: stretch; flex-direction: column; }
-      .subscription-toolbar-actions { width: 100%; }
-      .subscription-toolbar-actions .btn { flex: 1 1 0; min-width: 0; padding: 0 8px; font-size: 12px; }
-      .subscription-source-controls, .module-setting-row { grid-template-columns: 1fr; }
-      .subscription-group-item { grid-template-columns: 1fr; }
+      .module-toolbar { align-items: stretch; flex-direction: column; }
+      .module-toolbar-actions { width: 100%; }
+      .module-toolbar-actions .btn { flex: 1 1 0; min-width: 0; padding: 0 8px; font-size: 12px; }
+      .module-summary-row, .module-quick-row { align-items: flex-start; flex-direction: column; }
+      .module-summary-row .module-item-actions, .module-quick-row .module-item-actions { width: 100%; }
+      .module-summary-row .module-item-actions .btn, .module-quick-row .module-item-actions .btn { flex: 1 1 0; }
+      .subscription-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .subscription-batch select { flex: 1 1 170px; }
+      .subscription-operations { align-items: stretch; flex-direction: column; }
+      .subscription-operation-controls { width: 100%; }
+      .subscription-operation-controls select, .subscription-operation-controls .btn { flex: 1 1 0; min-width: 0; }
+      .source-action-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .subscription-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .subscription-layout { grid-template-columns: 1fr; gap: 16px; }
+      .subscription-sidebar { padding-right: 0; padding-bottom: 14px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .subscription-group-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .subscription-view-toolbar { align-items: stretch; flex-direction: column; }
+      .subscription-view-tabs { width: 100%; }
+      .subscription-view-tab { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+      .subscription-search { width: 100%; }
+      .subscription-grid, .subscription-grid[data-subscription-grid-all] { grid-template-columns: 1fr; }
+      .subscription-batch select { margin-left: 0; }
     }
   </style>
 </head>
@@ -251,46 +330,36 @@
 
         <section class="section" id="modules">
           <div class="section-head"><div><p class="kicker">05 / MODULES</p><h2>模块设置</h2></div><p>每个内容模块使用独立设置，互不影响。</p></div>
-          <div class="module-tabs" role="tablist" aria-label="模块设置">
-            <button class="module-tab active" type="button" role="tab" aria-selected="true" data-module-tab="subscription">订阅</button>
-            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module-tab="blog">博客</button>
-            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module-tab="podcast">播客</button>
-            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module-tab="video">视频</button>
-            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module-tab="music">音乐</button>
-          </div>
-
-          <div class="module-panel" data-module-panel="subscription" role="tabpanel">
-            <div class="module-panel-head"><div><strong>订阅</strong><small>订阅源、分组、规则和过滤都在这里完成。</small></div><span class="module-badge">当前模块</span></div>
-            <div class="subscription-toolbar"><div class="subscription-toolbar-copy"><strong>12 个订阅源</strong><small>上次同步：今天 09:42</small></div><div class="subscription-toolbar-actions"><button class="btn" type="button" data-demo-action="已打开 OPML 导入">导入 OPML</button><button class="btn" type="button" data-demo-action="已导出 OPML">导出 OPML</button><button class="btn" type="button" data-demo-action="已开始刷新全部订阅">刷新全部</button></div></div>
-            <span class="sheet-status" data-subscription-status aria-live="polite"></span>
-            <div class="subscription-tabs" role="tablist" aria-label="订阅设置分区">
-              <button class="subscription-tab active" type="button" role="tab" aria-selected="true" data-subscription-tab="sources">订阅源</button>
-              <button class="subscription-tab" type="button" role="tab" aria-selected="false" data-subscription-tab="groups">分组</button>
-              <button class="subscription-tab" type="button" role="tab" aria-selected="false" data-subscription-tab="rules">规则</button>
-              <button class="subscription-tab" type="button" role="tab" aria-selected="false" data-subscription-tab="keywords">过滤</button>
-            </div>
-
-            <div class="subscription-panel" data-subscription-panel="sources" role="tabpanel">
-              <div class="subscription-filter-grid"><label class="field">搜索订阅源<input name="subscriptionSearch" placeholder="名称或 RSS 地址"></label><label class="field">内容类型<select name="subscriptionType"><option>全部类型</option><option>博客</option><option>播客</option><option>视频</option><option>RSS</option></select></label><label class="field">健康状态<select name="subscriptionHealth"><option>全部状态</option><option>正常</option><option>警告</option><option>异常</option></select></label></div>
-              <div class="subscription-health"><span><strong>9</strong> 正常</span><span><strong>2</strong> 等待重试</span><span><strong>1</strong> 异常</span></div>
-              <div class="subscription-selection"><label><input type="checkbox" name="selectVisibleSubscriptions"> 选择当前结果</label><span>已选 0 个</span><select name="batchGroup" aria-label="批量移动到分组"><option>移动到分组</option><option>技术观察</option><option>待读</option></select><button class="btn" type="button" data-demo-action="批量操作已应用">批量操作</button></div>
-              <div class="subscription-source-list">
-                <article class="subscription-source-item"><div class="subscription-source-head"><label class="subscription-source-identity"><input type="checkbox" name="subscriptionTechWeekly"><span class="source-mark">技</span><span><strong>技术周刊</strong><small>https://weekly.example.com/feed.xml · 正常</small></span></label><span class="badge">博客</span></div><div class="subscription-source-controls"><label>分组<select name="techGroup" aria-label="技术周刊分组"><option>技术观察</option><option>未分组</option></select></label><label>优先级<select name="techPriority" aria-label="技术周刊优先级"><option>普通优先</option><option>高优先</option><option>低优先</option></select></label><label><input type="checkbox" name="techMuted"> 静音</label><label><input type="checkbox" name="techAutoRead"> 自动已读</label><label><input type="checkbox" name="techReadingList"> 稍后阅读</label></div><div class="subscription-item-actions"><button class="btn" type="button" data-demo-action="技术周刊已暂停">暂停</button><button class="btn" type="button" data-demo-action="技术周刊已标记全部已读">全部已读</button><button class="btn" type="button" data-demo-action="已展开技术周刊近期记录">近期记录</button><button class="btn" type="button" data-demo-action="技术周刊已取消订阅">取消订阅</button></div></article>
-                <article class="subscription-source-item"><div class="subscription-source-head"><label class="subscription-source-identity"><input type="checkbox" name="subscriptionTalks"><span class="source-mark">谈</span><span><strong>长期主义对谈</strong><small>播客 · 最近更新：今天 08:10</small></span></label><span class="badge">播客</span></div><div class="subscription-source-controls"><label>分组<select name="talksGroup" aria-label="长期主义对谈分组"><option>未分组</option><option>技术观察</option><option>待读</option></select></label><label>优先级<select name="talksPriority" aria-label="长期主义对谈优先级"><option>高优先</option><option>普通优先</option><option>低优先</option></select></label><label><input type="checkbox" name="talksMuted"> 静音</label><label><input type="checkbox" name="talksAutoRead" checked> 自动已读</label><label><input type="checkbox" name="talksReadingList"> 稍后阅读</label></div><div class="subscription-item-actions"><button class="btn" type="button" data-demo-action="长期主义对谈已恢复">恢复</button><button class="btn" type="button" data-demo-action="长期主义对谈已标记全部未读">全部未读</button><button class="btn" type="button" data-demo-action="已展开长期主义对谈近期记录">近期记录</button><button class="btn" type="button" data-demo-action="长期主义对谈已取消订阅">取消订阅</button></div></article>
+          <div class="module-stack">
+            <section class="module-block" id="module-subscription">
+              <div class="module-panel-head"><div><p class="kicker">订阅模块</p><strong>订阅</strong><small>页面只做快速管理，完整设置在弹出层中完成。</small></div><span class="module-badge">12 个订阅源</span></div>
+              <div class="module-toolbar"><div class="module-toolbar-copy"><strong>订阅源状态</strong><small>上次同步：今天 09:42 · 9 个正常，2 个等待重试，1 个异常</small></div><div class="module-toolbar-actions"><button class="btn" type="button" data-subscription-global="sync">同步 RSS</button><button class="btn" type="button" data-subscription-global="health">健康检查</button><button class="btn" type="button" data-subscription-global="diagnostic">查看诊断</button><button class="btn" type="button" data-demo-action="已打开 OPML 导入">导入 OPML</button><button class="btn" type="button" data-demo-action="已导出 OPML">导出 OPML</button></div></div>
+              <span class="sheet-status" data-subscription-status aria-live="polite"></span>
+              <div class="module-summary-list">
+                <div class="module-summary-row"><div><strong>订阅源</strong><small>12 个来源 · 9 个正常，2 个等待重试，1 个异常</small></div><div class="module-item-actions"><button class="btn primary" type="button" data-open-sheet="subscription">管理</button></div></div>
               </div>
-            </div>
+            </section>
 
-            <div class="subscription-panel" data-subscription-panel="groups" role="tabpanel" hidden><form class="subscription-group-form"><input name="newSubscriptionGroup" placeholder="新建分组，例如：技术观察"><button class="btn primary" type="button" data-demo-action="分组已创建">创建分组</button></form><div class="subscription-group-list"><div class="subscription-group-item"><div class="subscription-group-head"><div><strong>技术观察</strong><small>6 个订阅源</small></div><span class="badge">自定义</span></div><div class="subscription-group-actions"><button class="btn" type="button" data-demo-action="分组已上移">上移</button><button class="btn" type="button" data-demo-action="分组已下移">下移</button><button class="btn" type="button" data-demo-action="分组已删除">删除</button></div></div><div class="subscription-group-item"><div class="subscription-group-head"><div><strong>待读</strong><small>3 个订阅源</small></div><span class="badge">自定义</span></div><div class="subscription-group-actions"><button class="btn" type="button" data-demo-action="分组已上移">上移</button><button class="btn" type="button" data-demo-action="分组已下移">下移</button><button class="btn" type="button" data-demo-action="分组已删除">删除</button></div></div><div class="subscription-group-item"><div class="subscription-group-head"><div><strong>未分组</strong><small>3 个订阅源</small></div><span class="badge">系统</span></div></div></div></div>
+            <section class="module-block" id="module-blog">
+              <div class="module-panel-head"><div><p class="kicker">博客模块</p><strong>博客</strong><small>文章发布和编辑器默认设置。</small></div></div>
+              <div class="module-quick-grid"><div class="module-quick-row"><div><strong>当前摘要</strong><small>不预选合集 · 公开 · 草稿 · Markdown</small></div><button class="btn" type="button" data-open-sheet="blog-settings">管理</button></div></div>
+            </section>
 
-            <div class="subscription-panel" data-subscription-panel="rules" role="tabpanel" hidden><div class="subscription-toolbar"><div class="subscription-toolbar-copy"><strong>自动整理规则</strong><small>按来源分类、指定来源或关键词自动处理订阅。</small></div><div class="subscription-toolbar-actions"><button class="btn primary" type="button" data-demo-action="已打开新建规则">新建规则</button><button class="btn" type="button" data-demo-action="已开始重算全部订阅">重算全部订阅</button></div></div><div class="subscription-rule-list-preview"><article class="subscription-rule-item"><div class="subscription-rule-head"><div><strong>播客自动整理</strong><small>已启用 · 条件：来源分类 播客</small></div><span class="badge">规则 01</span></div><p>动作：分组到待读 / 自动稍后阅读</p><div class="subscription-item-actions"><button class="btn" type="button" data-demo-action="规则已上移">上移</button><button class="btn" type="button" data-demo-action="规则已编辑">编辑</button><button class="btn" type="button" data-demo-action="规则已应用">应用到已有订阅</button><button class="btn" type="button" data-demo-action="规则已删除">删除</button></div></article><article class="subscription-rule-item"><div class="subscription-rule-head"><div><strong>技术关键词</strong><small>已停用 · 条件：关键词 架构 / 性能</small></div><span class="badge">规则 02</span></div><p>动作：分组到技术观察 / 自动已读</p><div class="subscription-item-actions"><button class="btn" type="button" data-demo-action="规则已启用">启用规则</button><button class="btn" type="button" data-demo-action="规则已编辑">编辑</button><button class="btn" type="button" data-demo-action="规则已删除">删除</button></div></article></div></div>
+            <section class="module-block" id="module-podcast">
+              <div class="module-panel-head"><div><p class="kicker">播客模块</p><strong>播客</strong><small>节目资料、单集发布和音频默认设置。</small></div></div>
+              <div class="module-quick-grid"><div class="module-quick-row"><div><strong>当前摘要</strong><small>公开 · 自动生成文字稿 · 允许评论</small></div><button class="btn" type="button" data-open-sheet="podcast-settings">管理</button></div></div>
+            </section>
 
-            <div class="subscription-panel" data-subscription-panel="keywords" role="tabpanel" hidden><div class="subscription-group-form"><input name="newHiddenKeyword" placeholder="添加要隐藏的关键词，例如：广告、促销"><button class="btn primary" type="button" data-demo-action="关键词已添加">添加关键词</button></div><div class="rule-chip-list"><button class="rule-chip" type="button" data-demo-action="关键词已移除"><span>剧透</span><span class="a-font-meta">移除关键词</span></button><button class="rule-chip" type="button" data-demo-action="关键词已移除"><span>促销</span><span class="a-font-meta">移除关键词</span></button><button class="rule-chip" type="button" data-demo-action="关键词已移除"><span>广告</span><span class="a-font-meta">移除关键词</span></button></div></div>
+            <section class="module-block" id="module-video">
+              <div class="module-panel-head"><div><p class="kicker">视频模块</p><strong>视频</strong><small>视频发布、封面和字幕默认设置。</small></div></div>
+              <div class="module-quick-grid"><div class="module-quick-row"><div><strong>当前摘要</strong><small>公开 · 自动生成字幕 · 使用上传封面</small></div><button class="btn" type="button" data-open-sheet="video-settings">管理</button></div></div>
+            </section>
+
+            <section class="module-block" id="module-music">
+              <div class="module-panel-head"><div><p class="kicker">音乐模块</p><strong>音乐</strong><small>音乐资料、播放和作品展示设置。</small></div></div>
+              <div class="module-quick-grid"><div class="module-quick-row"><div><strong>当前摘要</strong><small>公开 · 允许连续播放 · 主页展示作品</small></div><button class="btn" type="button" data-open-sheet="music-settings">管理</button></div></div>
+            </section>
           </div>
-
-          <div class="module-panel" data-module-panel="blog" role="tabpanel" hidden><div class="module-panel-head"><div><strong>博客</strong><small>文章发布和编辑器默认设置。</small></div></div><div class="module-setting-grid"><div class="module-setting-row"><div><strong>默认可见性</strong><small>新文章发布时使用的可见范围。</small></div><select name="blogVisibility" aria-label="博客默认可见性"><option>公开</option><option>仅自己</option></select></div><div class="module-setting-row"><div><strong>编辑器</strong><small>新文章默认使用的编辑方式。</small></div><select name="blogEditor" aria-label="博客编辑器"><option>富文本编辑器</option><option>Markdown</option></select></div><div class="module-setting-row"><div><strong>自动保存草稿</strong><small>编辑时自动保存未发布内容。</small></div><label class="switch"><input name="blogAutosave" type="checkbox" checked><i></i></label></div></div></div>
-          <div class="module-panel" data-module-panel="podcast" role="tabpanel" hidden><div class="module-panel-head"><div><strong>播客</strong><small>节目资料、单集发布和音频默认设置。</small></div></div><div class="module-setting-grid"><div class="module-setting-row"><div><strong>单集默认可见性</strong><small>新单集发布时使用的可见范围。</small></div><select name="podcastVisibility" aria-label="播客单集默认可见性"><option>公开</option><option>仅订阅者</option><option>仅自己</option></select></div><div class="module-setting-row"><div><strong>自动生成文字稿</strong><small>发布后为音频生成可搜索文字稿。</small></div><label class="switch"><input name="podcastTranscript" type="checkbox" checked><i></i></label></div><div class="module-setting-row"><div><strong>允许评论</strong><small>允许订阅者在单集下留言。</small></div><label class="switch"><input name="podcastComments" type="checkbox" checked><i></i></label></div></div></div>
-          <div class="module-panel" data-module-panel="video" role="tabpanel" hidden><div class="module-panel-head"><div><strong>视频</strong><small>视频发布、封面和字幕默认设置。</small></div></div><div class="module-setting-grid"><div class="module-setting-row"><div><strong>默认可见性</strong><small>新视频发布时使用的可见范围。</small></div><select name="videoVisibility" aria-label="视频默认可见性"><option>公开</option><option>仅订阅者</option><option>仅自己</option></select></div><div class="module-setting-row"><div><strong>自动生成字幕</strong><small>发布后为视频生成字幕。</small></div><label class="switch"><input name="videoCaptions" type="checkbox" checked><i></i></label></div><div class="module-setting-row"><div><strong>使用首帧封面</strong><small>没有上传封面时使用视频首帧。</small></div><label class="switch"><input name="videoFirstFrame" type="checkbox"><i></i></label></div></div></div>
-          <div class="module-panel" data-module-panel="music" role="tabpanel" hidden><div class="module-panel-head"><div><strong>音乐</strong><small>音乐资料、播放和作品展示设置。</small></div></div><div class="module-setting-grid"><div class="module-setting-row"><div><strong>作品默认可见性</strong><small>新作品发布时使用的可见范围。</small></div><select name="musicVisibility" aria-label="音乐作品默认可见性"><option>公开</option><option>仅订阅者</option><option>仅自己</option></select></div><div class="module-setting-row"><div><strong>允许连续播放</strong><small>播放列表结束后继续播放下一首。</small></div><label class="switch"><input name="musicAutoplay" type="checkbox" checked><i></i></label></div><div class="module-setting-row"><div><strong>主页展示作品</strong><small>在个人主页显示公开音乐作品。</small></div><label class="switch"><input name="musicShowcase" type="checkbox" checked><i></i></label></div></div></div>
         </section>
 
         <section class="section danger-zone" id="danger">
@@ -315,6 +384,39 @@
   <div class="sheet-backdrop" data-overlay="devices" role="dialog" aria-modal="true" aria-labelledby="devices-sheet-title"><aside class="sheet"><div class="sheet-head"><h2 id="devices-sheet-title">登录设备</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">这里显示全部登录会话。退出设备后，该设备需要重新登录。</p><div class="security-list" data-device-details><div class="security-item"><strong>MacBook Pro <span class="badge">当前设备</span></strong><span>Chrome · 上海 · 刚刚</span></div><div class="security-item"><strong>iPhone 15</strong><span>Atoman App · 上海 · 2 小时前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div><div class="security-item"><strong>Windows PC</strong><span>Edge · 杭州 · 3 天前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div><div class="security-item"><strong>iPad Air</strong><span>Safari · 上海 · 8 天前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div><div class="security-item"><strong>Linux 工作站</strong><span>Firefox · 北京 · 14 天前</span><div class="item-actions"><button class="btn" type="button" data-revoke-detail>退出设备</button></div></div></div></div></aside></div>
 
   <div class="sheet-backdrop" data-overlay="logs" role="dialog" aria-modal="true" aria-labelledby="logs-sheet-title"><aside class="sheet"><div class="sheet-head"><h2 id="logs-sheet-title">安全日志</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">记录账号认证、资料变更和第三方账号操作。</p><div class="security-list"><div class="security-item"><strong>修改个人资料</strong><span class="log-detail"><span>今天 09:42</span><small>上海 · 当前设备</small></span></div><div class="security-item"><strong>新设备登录：iPhone 15</strong><span class="log-detail"><span>今天 07:18</span><small>上海 · Atoman App</small></span></div><div class="security-item"><strong>绑定 GitHub</strong><span class="log-detail"><span>5 月 18 日</span><small>网页端 · 上海</small></span></div><div class="security-item"><strong>修改登录邮箱</strong><span class="log-detail"><span>5 月 12 日</span><small>网页端 · 上海</small></span></div><div class="security-item"><strong>退出 Windows PC</strong><span class="log-detail"><span>5 月 08 日</span><small>网页端 · 杭州</small></span></div></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="subscription" role="dialog" aria-modal="true" aria-labelledby="subscription-sheet-title"><aside class="sheet wide"><div class="sheet-head"><div><h2 id="subscription-sheet-title">订阅管理</h2><p class="sheet-head-note">12 个订阅源 · 3 个分组</p></div><div class="sheet-head-actions"><button class="btn primary" type="button" data-demo-action="订阅设置已保存">保存设置</button><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div></div><div class="sheet-body"><p class="sheet-copy">订阅源按分组排列；暂停、同步、健康检查和静音都在这里完成。</p><div class="subscription-layout"><aside class="subscription-sidebar"><button class="subscription-new-group" type="button" data-demo-action="已打开新建订阅分组"><span>＋</span>新建分组</button><nav class="subscription-group-nav" aria-label="订阅分组"><button class="subscription-group-link active" type="button" data-subscription-filter="all"><span class="group-icon">♧</span><strong>全部订阅</strong><small>12</small></button><button class="subscription-group-link" type="button" data-subscription-filter="技术观察"><span class="group-icon">♡</span><strong>技术观察</strong><small>6</small></button><button class="subscription-group-link" type="button" data-subscription-filter="待读"><span class="group-icon">◌</span><strong>待读</strong><small>3</small></button><button class="subscription-group-link" type="button" data-subscription-filter="未分组"><span class="group-icon">◌</span><strong>未分组</strong><small>3</small></button></nav><p class="subscription-sidebar-note">显示全部订阅源</p></aside><div class="subscription-main"><div class="subscription-view-toolbar"><div class="subscription-view-tabs" role="tablist" aria-label="订阅排序"><button class="subscription-view-tab active" type="button" data-subscription-view="recent" role="tab" aria-selected="true">最近订阅</button><button class="subscription-view-tab" type="button" data-subscription-view="popular" role="tab" aria-selected="false">最常访问</button></div><input class="subscription-search" type="search" placeholder="输入关键词" aria-label="搜索订阅源" data-subscription-search></div><div class="subscription-batch"><label><input type="checkbox" data-subscription-select-all> 全选</label><span data-subscription-selected>已选 0 个</span><select data-subscription-group aria-label="选择目标分组"><option>移动到分组</option><option>技术观察</option><option>待读</option><option>未分组</option></select><button class="btn primary" type="button" data-move-subscriptions>移动分组</button></div><div class="subscription-operations"><div class="subscription-operations-copy"><strong>批量操作</strong><small>先选择订阅源，再执行暂停、静音、同步或检查。</small></div><div class="subscription-operation-controls"><select data-subscription-operation aria-label="选择订阅源操作"><option value="">选择操作</option><option value="pause">暂停订阅</option><option value="resume">恢复订阅</option><option value="mute">静音</option><option value="unmute">取消静音</option><option value="sync">手动同步 RSS</option><option value="health">健康检查</option><option value="diagnostic">查看诊断</option></select><button class="btn primary" type="button" data-apply-subscription-operation>执行</button></div></div><span class="sheet-status" data-subscription-detail-status aria-live="polite"></span><div class="subscription-grid" data-subscription-grid-all aria-live="polite"></div></div></div><div class="subscription-groups" hidden aria-hidden="true">
+          <details class="subscription-group" open><summary><span><strong>技术观察</strong><small>6 个订阅源 · 5 个正常，1 个等待重试</small></span><span class="subscription-group-caret" aria-hidden="true">⌃</span></summary><div class="subscription-group-body"><div class="subscription-grid" data-subscription-grid>
+            <label class="subscription-card" data-source-name="技术周刊" data-source-type="博客" data-source-group="技术观察" data-source-mark="技"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">技</span><span><strong>技术周刊</strong><small>博客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">技术观察</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="产品通讯" data-source-type="博客" data-source-group="技术观察" data-source-mark="产"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">产</span><span><strong>产品通讯</strong><small>博客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">技术观察</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="前端周刊" data-source-type="博客" data-source-group="技术观察" data-source-mark="前"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">前</span><span><strong>前端周刊</strong><small>博客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">技术观察</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="数据观察" data-source-type="RSS" data-source-group="技术观察" data-source-mark="数" data-source-rss="true"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">数</span><span><strong>数据观察</strong><small>RSS</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">技术观察</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="独立开发者" data-source-type="播客" data-source-group="技术观察" data-source-mark="独"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">独</span><span><strong>独立开发者</strong><small>播客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">技术观察</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="长期主义对谈" data-source-type="播客" data-source-group="技术观察" data-source-mark="谈"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">谈</span><span><strong>长期主义对谈</strong><small>播客</small></span></span><span class="subscription-card-status warning">等待重试</span><span class="subscription-card-group">技术观察</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+          </div></div></details>
+          <details class="subscription-group" open><summary><span><strong>待读</strong><small>3 个订阅源 · 全部正常</small></span><span class="subscription-group-caret" aria-hidden="true">⌃</span></summary><div class="subscription-group-body"><div class="subscription-grid" data-subscription-grid>
+            <label class="subscription-card" data-source-name="开源周报" data-source-type="RSS" data-source-group="待读" data-source-mark="源" data-source-rss="true"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">源</span><span><strong>开源周报</strong><small>RSS</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">待读</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="读写之间" data-source-type="博客" data-source-group="待读" data-source-mark="读"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">读</span><span><strong>读写之间</strong><small>博客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">待读</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="影像研究" data-source-type="RSS" data-source-group="待读" data-source-mark="影" data-source-rss="true"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">影</span><span><strong>影像研究</strong><small>RSS</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">待读</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+          </div></div></details>
+          <details class="subscription-group" open><summary><span><strong>未分组</strong><small>3 个订阅源 · 2 个正常，1 个异常</small></span><span class="subscription-group-caret" aria-hidden="true">⌃</span></summary><div class="subscription-group-body"><div class="subscription-grid" data-subscription-grid>
+            <label class="subscription-card" data-source-name="设计观察" data-source-type="RSS" data-source-group="未分组" data-source-mark="设" data-source-rss="true"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">设</span><span><strong>设计观察</strong><small>RSS</small></span></span><span class="subscription-card-status error">异常</span><span class="subscription-card-group">未分组</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="音频随笔" data-source-type="播客" data-source-group="未分组" data-source-mark="音"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">音</span><span><strong>音频随笔</strong><small>播客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">未分组</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+            <label class="subscription-card" data-source-name="城市漫游" data-source-type="播客" data-source-group="未分组" data-source-mark="城"><span class="subscription-card-head"><input type="checkbox" data-subscription-check><span class="subscription-mark">城</span><span><strong>城市漫游</strong><small>播客</small></span></span><span class="subscription-card-status">正常</span><span class="subscription-card-group">未分组</span><span class="subscription-card-state" data-source-state>自动同步 · 未静音</span><span class="subscription-card-actions"><button class="btn" type="button" data-source-detail>详情</button></span></label>
+          </div></div></details>
+        </div><div class="sheet-actions"><button class="btn" type="button" data-demo-action="已打开新建订阅分组">新建分组</button></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="blog-settings" role="dialog" aria-modal="true" aria-labelledby="blog-settings-title"><aside class="sheet"><div class="sheet-head"><h2 id="blog-settings-title">博客设置</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">调整博客内容的发布默认值和编辑体验。</p><div class="detail-section"><strong>发布默认值</strong><div class="detail-list"><div class="detail-item"><div><strong>默认合集</strong><small>新建文章时自动选择</small></div><select aria-label="博客默认合集"><option>不预选</option><option>全部文章</option><option>技术观察</option></select></div><div class="detail-item"><div><strong>默认可见范围</strong><small>新建文章时自动使用</small></div><select aria-label="博客默认可见范围"><option>公开</option><option>订阅者</option><option>私密</option></select></div><div class="detail-item"><div><strong>默认发布状态</strong><small>新建文章时自动使用</small></div><select aria-label="博客默认发布状态"><option>草稿</option><option>已发布</option></select></div></div></div><div class="detail-section"><strong>编辑体验</strong><div class="detail-list"><div class="detail-item"><div><strong>默认编辑模式</strong><small>打开文章编辑器时使用</small></div><select aria-label="博客默认编辑模式"><option>Markdown</option><option>所见即所得</option></select></div></div></div><div class="sheet-actions"><button class="btn primary" type="button" data-close-overlay>保存设置</button></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="podcast-settings" role="dialog" aria-modal="true" aria-labelledby="podcast-settings-title"><aside class="sheet"><div class="sheet-head"><h2 id="podcast-settings-title">播客详细设置</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">调整单集发布、文字稿和评论设置。</p><div class="detail-list"><div class="detail-item"><div><strong>单集默认可见性</strong><small>公开</small></div><select aria-label="播客单集默认可见性"><option>公开</option><option>仅订阅者</option><option>仅自己</option></select></div><div class="detail-item"><div><strong>自动生成文字稿</strong><small>发布后生成可搜索文字稿</small></div><label class="switch"><input type="checkbox" checked><i></i></label></div><div class="detail-item"><div><strong>允许评论</strong><small>订阅者可以留言</small></div><label class="switch"><input type="checkbox" checked><i></i></label></div></div><div class="sheet-actions"><button class="btn primary" type="button" data-close-overlay>保存设置</button></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="video-settings" role="dialog" aria-modal="true" aria-labelledby="video-settings-title"><aside class="sheet"><div class="sheet-head"><h2 id="video-settings-title">视频详细设置</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">调整视频发布、封面和字幕设置。</p><div class="detail-list"><div class="detail-item"><div><strong>默认可见性</strong><small>公开</small></div><select aria-label="视频默认可见性"><option>公开</option><option>仅订阅者</option><option>仅自己</option></select></div><div class="detail-item"><div><strong>自动生成字幕</strong><small>发布后生成字幕</small></div><label class="switch"><input type="checkbox" checked><i></i></label></div><div class="detail-item"><div><strong>无封面时使用首帧</strong><small>未上传封面时使用视频首帧</small></div><label class="switch"><input type="checkbox"><i></i></label></div></div><div class="sheet-actions"><button class="btn primary" type="button" data-close-overlay>保存设置</button></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="music-settings" role="dialog" aria-modal="true" aria-labelledby="music-settings-title"><aside class="sheet"><div class="sheet-head"><h2 id="music-settings-title">音乐详细设置</h2><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><p class="sheet-copy">调整作品可见性、连续播放和主页展示设置。</p><div class="detail-list"><div class="detail-item"><div><strong>作品默认可见性</strong><small>公开</small></div><select aria-label="音乐作品默认可见性"><option>公开</option><option>仅订阅者</option><option>仅自己</option></select></div><div class="detail-item"><div><strong>允许连续播放</strong><small>播放列表结束后继续播放下一首</small></div><label class="switch"><input type="checkbox" checked><i></i></label></div><div class="detail-item"><div><strong>主页展示作品</strong><small>在个人主页显示公开音乐作品</small></div><label class="switch"><input type="checkbox" checked><i></i></label></div></div><div class="sheet-actions"><button class="btn primary" type="button" data-close-overlay>保存设置</button></div></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="subscription-source" role="dialog" aria-modal="true" aria-labelledby="subscription-source-title"><aside class="sheet narrow"><div class="sheet-head"><div><h2 id="subscription-source-title">订阅源详情</h2><p class="sheet-head-note">单个订阅源管理</p></div><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><div class="source-detail-identity"><span class="subscription-mark" data-source-detail-mark>源</span><div><strong data-source-detail-name>开源周报</strong><small data-source-detail-type>RSS · 待读</small></div></div><div class="detail-list"><div class="detail-item"><div><strong>订阅状态</strong><small data-source-detail-state>自动同步 · 未静音</small></div><span class="subscription-card-status" data-source-detail-health>正常</span></div><div class="detail-item"><div><strong>最近更新</strong><small data-source-detail-updated>今天 09:42</small></div></div></div><div class="source-action-grid"><button class="btn" type="button" data-source-pause-toggle>暂停订阅</button><button class="btn" type="button" data-source-mute-toggle>静音</button><button class="btn" type="button" data-source-sync>手动同步 RSS</button><button class="btn" type="button" data-source-health>健康检查</button><button class="btn" type="button" data-source-diagnostic>查看诊断</button></div><div class="source-diagnostic" data-source-diagnostic-panel hidden><strong>诊断结果</strong><small data-source-diagnostic-text>尚未运行诊断。</small></div><span class="sheet-status" data-source-detail-status aria-live="polite"></span></div></aside></div>
+
+  <div class="sheet-backdrop" data-overlay="subscription-diagnostics" role="dialog" aria-modal="true" aria-labelledby="subscription-diagnostics-title"><aside class="sheet"><div class="sheet-head"><div><h2 id="subscription-diagnostics-title">订阅诊断</h2><p class="sheet-head-note">最近一次健康检查结果</p></div><button class="sheet-close" type="button" aria-label="关闭" data-close-overlay>×</button></div><div class="sheet-body"><div class="diagnostic-list"><div class="diagnostic-item"><strong>设计观察</strong><span>RSS 返回 502，连续失败 2 次，建议稍后重试。</span></div><div class="diagnostic-item"><strong>长期主义对谈</strong><span>响应时间较长，等待下一次自动重试。</span></div><div class="diagnostic-item"><strong>其余 10 个订阅源</strong><span>连接正常，最近一次抓取已完成。</span></div></div><span class="sheet-status" data-diagnostics-status aria-live="polite"></span><div class="sheet-actions"><button class="btn" type="button" data-close-overlay>关闭</button><button class="btn primary" type="button" data-run-all-health>重新检查全部</button></div></div></aside></div>
 
   <script>
     const body = document.body
@@ -356,26 +458,196 @@
     document.querySelector('[data-go-profile]').addEventListener('click', () => { window.location.href = 'user-profile-preview.html' })
     document.querySelector('[data-save]').addEventListener('click', () => { document.querySelector('[data-save-status]').textContent = '资料已保存' })
     document.querySelectorAll('[data-revoke], [data-revoke-detail]').forEach(button => button.addEventListener('click', () => button.closest('.device, .security-item').remove()))
-    const switchModule = key => {
-      document.querySelectorAll('[data-module-tab]').forEach(button => {
-        const active = button.dataset.moduleTab === key
-        button.classList.toggle('active', active)
-        button.setAttribute('aria-selected', String(active))
-      })
-      document.querySelectorAll('[data-module-panel]').forEach(panel => { panel.hidden = panel.dataset.modulePanel !== key })
+    const subscriptionGridAll = document.querySelector('[data-subscription-grid-all]')
+    document.querySelectorAll('.subscription-card').forEach(card => subscriptionGridAll.append(card))
+    document.querySelectorAll('.subscription-group').forEach(group => { group.hidden = true })
+    const subscriptionChecks = [...document.querySelectorAll('[data-subscription-check]')]
+    const subscriptionSelectAll = document.querySelector('[data-subscription-select-all]')
+    const subscriptionSelected = document.querySelector('[data-subscription-selected]')
+    const updateSubscriptionSelection = () => {
+      const selectedCount = subscriptionChecks.filter(input => input.checked).length
+      const visibleChecks = subscriptionChecks.filter(input => !input.closest('.subscription-card').hidden)
+      subscriptionSelected.textContent = `已选 ${selectedCount} 个`
+      const visibleSelected = visibleChecks.filter(input => input.checked).length
+      subscriptionSelectAll.checked = visibleChecks.length > 0 && visibleSelected === visibleChecks.length
+      subscriptionSelectAll.indeterminate = visibleSelected > 0 && visibleSelected < visibleChecks.length
+      document.querySelector('.subscription-operations').hidden = selectedCount === 0
     }
-    document.querySelectorAll('[data-module-tab]').forEach(button => button.addEventListener('click', () => switchModule(button.dataset.moduleTab)))
-    const switchSubscriptionTab = key => {
-      document.querySelectorAll('[data-subscription-tab]').forEach(button => {
-        const active = button.dataset.subscriptionTab === key
-        button.classList.toggle('active', active)
-        button.setAttribute('aria-selected', String(active))
-      })
-      document.querySelectorAll('[data-subscription-panel]').forEach(panel => { panel.hidden = panel.dataset.subscriptionPanel !== key })
+    subscriptionSelectAll.addEventListener('change', () => {
+      subscriptionChecks.filter(input => !input.closest('.subscription-card').hidden).forEach(input => { input.checked = subscriptionSelectAll.checked })
+      updateSubscriptionSelection()
+    })
+    subscriptionChecks.forEach(input => input.addEventListener('change', updateSubscriptionSelection))
+    const subscriptionCards = [...document.querySelectorAll('.subscription-card')]
+    const subscriptionOperation = document.querySelector('[data-subscription-operation]')
+    const subscriptionDetailStatus = document.querySelector('[data-subscription-detail-status]')
+    const sourceDetailOverlay = document.querySelector('[data-overlay="subscription-source"]')
+    let activeSourceCard = null
+    const selectedSourceCards = () => subscriptionChecks.filter(input => input.checked).map(input => input.closest('.subscription-card'))
+    const updateSourceState = card => {
+      const state = card.querySelector('[data-source-state]')
+      const paused = card.dataset.paused === 'true'
+      const muted = card.dataset.muted === 'true'
+      state.textContent = `${paused ? '已暂停' : '自动同步'} · ${muted ? '已静音' : '未静音'}`
+      state.classList.toggle('paused', paused)
+      state.classList.toggle('muted', muted)
+      card.querySelector('[data-source-detail]').textContent = paused ? '已暂停' : '已订阅'
     }
-    document.querySelectorAll('[data-subscription-tab]').forEach(button => button.addEventListener('click', () => switchSubscriptionTab(button.dataset.subscriptionTab)))
+    subscriptionCards.forEach(updateSourceState)
+    const sourceDescriptions = {
+      '技术周刊': '前端、产品与工程实践的每周精选与案例拆解',
+      '产品通讯': '产品设计、团队协作与增长观察',
+      '前端周刊': '每周精选前端资讯与开发工具更新',
+      '数据观察': '数据研究、行业趋势与公开报告',
+      '独立开发者': '独立创作、开发经验与产品复盘',
+      '长期主义对谈': '长期主义主题对谈与实践记录',
+      '开源周报': '开源项目、社区动态与贡献指南',
+      '读写之间': '阅读、写作与思考方法的长期记录',
+      '影像研究': '影像文化、视觉表达与作品研究',
+      '设计观察': '设计趋势、案例分析与方法总结',
+      '音频随笔': '声音记录、生活观察与访谈内容',
+      '城市漫游': '城市文化、旅行故事与本地发现',
+    }
+    subscriptionCards.forEach(card => {
+      const description = card.querySelector('.subscription-card-group')
+      description.className = 'subscription-card-description'
+      description.textContent = sourceDescriptions[card.dataset.sourceName] || '订阅源更新'
+    })
+    const sourceVisits = [44, 32, 28, 24, 21, 18, 52, 17, 15, 12, 9, 7]
+    subscriptionCards.forEach((card, index) => { card.dataset.sourceVisits = sourceVisits[index]; card.dataset.sourceIndex = index })
+    let activeSubscriptionFilter = 'all'
+    let activeSubscriptionView = 'recent'
+    const applySubscriptionView = () => {
+      const query = document.querySelector('[data-subscription-search]').value.trim().toLowerCase()
+      const cards = [...subscriptionGridAll.querySelectorAll('.subscription-card')]
+      cards.sort((first, second) => activeSubscriptionView === 'popular' ? Number(second.dataset.sourceVisits) - Number(first.dataset.sourceVisits) : Number(first.dataset.sourceIndex) - Number(second.dataset.sourceIndex)).forEach(card => subscriptionGridAll.append(card))
+      cards.forEach(card => {
+        const matchesGroup = activeSubscriptionFilter === 'all' || card.dataset.sourceGroup === activeSubscriptionFilter
+        const searchable = `${card.dataset.sourceName} ${card.dataset.sourceType} ${card.dataset.sourceGroup}`.toLowerCase()
+        card.hidden = !matchesGroup || (query && !searchable.includes(query))
+      })
+      document.querySelector('[data-subscription-search]').setAttribute('aria-label', activeSubscriptionFilter === 'all' ? '搜索全部订阅源' : `搜索${activeSubscriptionFilter}中的订阅源`)
+      document.querySelector('.subscription-sidebar-note').textContent = activeSubscriptionFilter === 'all' ? '显示全部订阅源' : `显示「${activeSubscriptionFilter}」中的订阅源`
+      updateSubscriptionSelection()
+    }
+    document.querySelectorAll('[data-subscription-filter]').forEach(button => button.addEventListener('click', () => {
+      activeSubscriptionFilter = button.dataset.subscriptionFilter
+      document.querySelectorAll('[data-subscription-filter]').forEach(item => item.classList.toggle('active', item === button))
+      applySubscriptionView()
+    }))
+    document.querySelectorAll('[data-subscription-view]').forEach(button => button.addEventListener('click', () => {
+      activeSubscriptionView = button.dataset.subscriptionView
+      document.querySelectorAll('[data-subscription-view]').forEach(item => { item.classList.toggle('active', item === button); item.setAttribute('aria-selected', item === button ? 'true' : 'false') })
+      applySubscriptionView()
+    }))
+    document.querySelector('[data-subscription-search]').addEventListener('input', applySubscriptionView)
+    applySubscriptionView()
+    document.querySelectorAll('[data-source-detail]').forEach(button => button.addEventListener('click', event => {
+      event.preventDefault()
+      event.stopPropagation()
+      activeSourceCard = button.closest('.subscription-card')
+      document.querySelector('[data-source-detail-mark]').textContent = activeSourceCard.dataset.sourceMark
+      document.querySelector('[data-source-detail-name]').textContent = activeSourceCard.dataset.sourceName
+      document.querySelector('[data-source-detail-type]').textContent = `${activeSourceCard.dataset.sourceType} · ${activeSourceCard.dataset.sourceGroup}`
+      document.querySelector('[data-source-detail-state]').textContent = activeSourceCard.querySelector('[data-source-state]').textContent
+      const sourceHealth = activeSourceCard.querySelector('.subscription-card-status')
+      const detailHealth = document.querySelector('[data-source-detail-health]')
+      detailHealth.textContent = sourceHealth.textContent
+      detailHealth.className = sourceHealth.className
+      document.querySelector('[data-source-detail-updated]').textContent = sourceHealth.classList.contains('error') ? '昨天 18:20 · 最近一次失败' : '今天 09:42'
+      document.querySelector('[data-source-pause-toggle]').textContent = activeSourceCard.dataset.paused === 'true' ? '恢复订阅' : '暂停订阅'
+      document.querySelector('[data-source-mute-toggle]').textContent = activeSourceCard.dataset.muted === 'true' ? '取消静音' : '静音'
+      document.querySelector('[data-source-sync]').hidden = activeSourceCard.dataset.sourceRss !== 'true'
+      document.querySelector('[data-source-diagnostic-panel]').hidden = true
+      document.querySelector('[data-source-detail-status]').textContent = ''
+      openOverlay(sourceDetailOverlay)
+    }))
+    document.querySelector('[data-source-pause-toggle]').addEventListener('click', () => {
+      if (!activeSourceCard) return
+      activeSourceCard.dataset.paused = activeSourceCard.dataset.paused !== 'true'
+      updateSourceState(activeSourceCard)
+      document.querySelector('[data-source-detail-state]').textContent = activeSourceCard.querySelector('[data-source-state]').textContent
+      document.querySelector('[data-source-pause-toggle]').textContent = activeSourceCard.dataset.paused === 'true' ? '恢复订阅' : '暂停订阅'
+      document.querySelector('[data-source-detail-status]').textContent = activeSourceCard.dataset.paused === 'true' ? '订阅已暂停' : '订阅已恢复'
+    })
+    document.querySelector('[data-source-mute-toggle]').addEventListener('click', () => {
+      if (!activeSourceCard) return
+      activeSourceCard.dataset.muted = activeSourceCard.dataset.muted !== 'true'
+      updateSourceState(activeSourceCard)
+      document.querySelector('[data-source-detail-state]').textContent = activeSourceCard.querySelector('[data-source-state]').textContent
+      document.querySelector('[data-source-mute-toggle]').textContent = activeSourceCard.dataset.muted === 'true' ? '取消静音' : '静音'
+      document.querySelector('[data-source-detail-status]').textContent = activeSourceCard.dataset.muted === 'true' ? '订阅源已静音' : '已取消静音'
+    })
+    document.querySelector('[data-source-sync]').addEventListener('click', () => {
+      if (!activeSourceCard || activeSourceCard.dataset.sourceRss !== 'true') return
+      document.querySelector('[data-source-detail-status]').textContent = 'RSS 同步已发起'
+      document.querySelector('[data-source-detail-updated]').textContent = '刚刚 · 正在同步'
+    })
+    document.querySelector('[data-source-health]').addEventListener('click', () => {
+      if (!activeSourceCard) return
+      const sourceHealth = activeSourceCard.querySelector('.subscription-card-status')
+      sourceHealth.textContent = '正常'
+      sourceHealth.className = 'subscription-card-status'
+      const detailHealth = document.querySelector('[data-source-detail-health]')
+      detailHealth.textContent = '正常'
+      detailHealth.className = 'subscription-card-status'
+      document.querySelector('[data-source-detail-status]').textContent = '健康检查已完成'
+    })
+    document.querySelector('[data-source-diagnostic]').addEventListener('click', () => {
+      if (!activeSourceCard) return
+      document.querySelector('[data-source-diagnostic-panel]').hidden = false
+      document.querySelector('[data-source-diagnostic-text]').textContent = activeSourceCard.querySelector('.subscription-card-status').classList.contains('error') ? 'RSS 返回 502，建议稍后重试。' : '连接正常，未发现异常。'
+    })
+    document.querySelector('[data-apply-subscription-operation]').addEventListener('click', () => {
+      const operation = subscriptionOperation.value
+      if (!operation) {
+        subscriptionDetailStatus.textContent = '请选择要执行的操作'
+        return
+      }
+      if (operation === 'diagnostic') {
+        openOverlay(document.querySelector('[data-overlay="subscription-diagnostics"]'))
+        return
+      }
+      const cards = selectedSourceCards()
+      if (!cards.length) {
+        subscriptionDetailStatus.textContent = '请先选择订阅源'
+        return
+      }
+      if (operation === 'sync') {
+        const rssCount = cards.filter(card => card.dataset.sourceRss === 'true').length
+        subscriptionDetailStatus.textContent = rssCount ? `已发起 ${rssCount} 个 RSS 订阅源同步` : '所选订阅源中没有 RSS'
+        return
+      }
+      if (operation === 'health') {
+        subscriptionDetailStatus.textContent = `已对 ${cards.length} 个订阅源发起健康检查`
+        return
+      }
+      const stateKey = operation === 'pause' || operation === 'resume' ? 'paused' : 'muted'
+      const stateValue = operation === 'pause' || operation === 'mute'
+      cards.forEach(card => { card.dataset[stateKey] = stateValue; updateSourceState(card) })
+      const labels = { pause: '暂停', resume: '恢复', mute: '静音', unmute: '取消静音' }
+      subscriptionDetailStatus.textContent = `已将 ${cards.length} 个订阅源设为${labels[operation]}`
+    })
+    document.querySelectorAll('[data-subscription-global]').forEach(button => button.addEventListener('click', () => {
+      const status = document.querySelector('[data-subscription-status]')
+      if (button.dataset.subscriptionGlobal === 'diagnostic') {
+        openOverlay(document.querySelector('[data-overlay="subscription-diagnostics"]'))
+        return
+      }
+      status.textContent = button.dataset.subscriptionGlobal === 'sync' ? '已发起全部 RSS 同步' : '已对全部订阅源发起健康检查'
+    }))
+    document.querySelector('[data-run-all-health]').addEventListener('click', () => { document.querySelector('[data-diagnostics-status]').textContent = '全部订阅源健康检查已重新发起' })
+    document.querySelector('[data-move-subscriptions]').addEventListener('click', () => {
+      const selectedCount = subscriptionChecks.filter(input => input.checked).length
+      const group = document.querySelector('[data-subscription-group]').value
+      const status = document.querySelector('[data-subscription-detail-status]')
+      status.textContent = selectedCount && group !== '移动到分组' ? `已将 ${selectedCount} 个订阅源移动到「${group}」` : '请先选择订阅源和目标分组'
+    })
     document.querySelectorAll('[data-demo-action]').forEach(button => button.addEventListener('click', () => {
-      document.querySelector('[data-subscription-status]').textContent = button.dataset.demoAction
+      const localStatus = button.closest('[data-overlay]')?.querySelector('[data-subscription-detail-status]')
+      const globalStatus = document.querySelector('[data-subscription-status]')
+      const status = localStatus || globalStatus
+      if (status) status.textContent = button.dataset.demoAction
     }))
     const links = [...document.querySelectorAll('.directory a')]
     const sections = links.map(link => document.querySelector(link.getAttribute('href')))

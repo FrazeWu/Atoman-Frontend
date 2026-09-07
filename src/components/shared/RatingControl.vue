@@ -60,8 +60,8 @@
     </button>
 
     <div v-if="size !== 'compact'" class="rating-control__meta" aria-live="polite">
-      <span v-if="size !== 'compact' && hoverScore !== null" class="rating-control__preview">{{ formatViewerRating(hoverScore) }}</span>
-      <span v-else-if="size !== 'compact' && viewerRating !== null && viewerRating !== undefined" class="rating-control__mine">
+      <span v-if="hoverScore !== null" class="rating-control__preview">{{ formatViewerRating(hoverScore) }}</span>
+      <span v-else-if="viewerRating !== null && viewerRating !== undefined" class="rating-control__mine">
         我的评分 {{ formatViewerRating(viewerRating) }}
       </span>
       <RouterLink v-else-if="disabled" class="rating-control__login" to="/login">登录后评分</RouterLink>

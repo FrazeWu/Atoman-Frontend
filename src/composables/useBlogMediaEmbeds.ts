@@ -5,7 +5,7 @@ import { getVideo } from '@/api/video'
 import type { MusicAlbumListItem, MusicSongDetail, MusicSongListItem } from '@/api/musicV1/types'
 import type { Post, Video } from '@/types'
 import { useApi } from '@/composables/useApi'
-import { resolveMediaURL } from '@/utils/mediaUrl'
+import { resolveMediaURL, resolvePlayableAudioURL } from '@/utils/mediaUrl'
 import type { EmbedData } from '@/composables/useMarkdownRenderer'
 
 type EmbedKind = 'post' | 'music' | 'video'
@@ -84,7 +84,7 @@ function mapSongEmbed(id: string, song: MusicSongListItem): EmbedData {
     imageUrl: song.cover_url || song.album?.cover_url
       ? resolveMediaURL(song.cover_url || song.album?.cover_url || '')
       : undefined,
-    audioSrc: song.audio_url ? resolveMediaURL(song.audio_url) : undefined,
+    audioSrc: song.audio_url ? resolvePlayableAudioURL(song.audio_url) : undefined,
     href: `/music/song/${id}`,
   }
 }

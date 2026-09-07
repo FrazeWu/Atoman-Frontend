@@ -70,6 +70,7 @@ import SiteFooterSheet from '@/components/system/footer/SiteFooterSheet.vue'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { footbarLinks, type FootbarPanel } from '@/config/moduleRooms'
 import { useAuthStore } from '@/stores/auth'
+import { useSiteAccessStore } from '@/stores/siteAccess'
 
 defineProps<{
   show: boolean
@@ -81,8 +82,9 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const authStore = useAuthStore()
+const siteAccessStore = useSiteAccessStore()
 
-const items = computed(() => getMobileMoreItems())
+const items = computed(() => getMobileMoreItems(siteAccessStore.isModuleVisible))
 const activePanel = ref<FootbarPanel | null>(null)
 
 async function openFooterPanel(panel: FootbarPanel) {

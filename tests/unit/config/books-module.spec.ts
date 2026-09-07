@@ -37,10 +37,13 @@ describe("books module foundation", () => {
     });
   });
 
-  it("does not register public books routes before the module launches", () => {
-    expect(buildAppRoutes().some((route) => route.path === "/books")).toBe(false);
-    expect(getMobilePrimaryTabs("books")).toEqual([]);
-    expect(getMobileMoreItems().some((item) => item.module === "books")).toBe(false);
+  it("keeps books closed by default while retaining its opt-in routes and navigation", () => {
+    const access = mergeSiteAccess(null);
+
+    expect(access.modules.books.enabled).toBe(false);
+    expect(buildAppRoutes().some((route) => route.path === "/books")).toBe(true);
+    expect(getMobilePrimaryTabs("books").length).toBeGreaterThan(0);
+    expect(getMobileMoreItems().some((item) => item.module === "books")).toBe(true);
   });
 
   it("registers public and authenticated book route groups with feature gates", () => {

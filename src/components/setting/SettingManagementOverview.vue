@@ -11,6 +11,7 @@
     <div class="setting-management-overview__list" data-test="module-list">
       <article v-for="key in overviewModuleOrder" :key="key" class="setting-management-overview__row">
         <button
+          v-if="hasDetail(key)"
           type="button"
           class="setting-management-overview__main"
           :aria-label="`打开${moduleRooms[key].name}详情`"
@@ -26,48 +27,62 @@
           </span>
           <ChevronRight class="setting-management-overview__arrow" :size="17" aria-hidden="true" />
         </button>
+        <div v-else class="setting-management-overview__main setting-management-overview__main--static">
+          <span class="setting-management-overview__icon" aria-hidden="true">
+            <component :is="moduleIcons[key]" :size="17" stroke-width="1.8" />
+          </span>
+          <span class="setting-management-overview__copy">
+            <strong>{{ moduleRooms[key].name }}</strong>
+            <small>{{ moduleDescriptions[key] }}</small>
+          </span>
+        </div>
 
         <div class="setting-management-overview__quick">
-          <select
-            v-if="key === 'feed'"
-            v-model="access.settings.feed.full_text_mode"
-            aria-label="订阅全文抓取策略"
-          >
-            <option value="per_source">全文：按源设置</option>
-            <option value="disabled">全文：暂停抓取</option>
-          </select>
+          <div class="setting-management-overview__quick-stack">
+            <label v-for="feature in quickFeatures(key)" :key="feature.key">
+              <input
+                v-model="access.modules[key].features[feature.key]"
+                :data-test="`feature-${feature.key}`"
+                :aria-label="feature.label"
+                type="checkbox"
+                :disabled="!access.modules[key].enabled"
+              />
+              {{ feature.label }}
+            </label>
 
-          <div v-else-if="key === 'music'" class="setting-management-overview__quick-stack">
-            <label>
-              <input v-model="access.modules.music.features['music.submit']" type="checkbox" />
-              允许提交资料
-            </label>
-            <label>
-              <input v-model="access.modules.music.features['music.review']" type="checkbox" />
-              允许音乐审核
-            </label>
+            <select
+              v-if="key === 'feed'"
+              v-model="access.settings.feed.full_text_mode"
+              aria-label="订阅全文抓取策略"
+              :disabled="!access.modules[key].enabled"
+            >
+              <option value="per_source">全文：按源设置</option>
+              <option value="disabled">全文：暂停抓取</option>
+            </select>
+
+            <select
+              v-else-if="key === 'blog'"
+              v-model="access.settings.blog.comment_mode"
+              aria-label="博客评论权限"
+              :disabled="!access.modules[key].enabled"
+            >
+              <option value="all">评论：所有人</option>
+              <option value="authenticated">评论：仅登录用户</option>
+              <option value="disabled">评论：关闭</option>
+            </select>
+
+            <select
+              v-else-if="key === 'forum'"
+              v-model="access.settings.forum.allow_category_request"
+              aria-label="社区分类申请"
+              :disabled="!access.modules[key].enabled"
+            >
+              <option :value="true">分类申请：允许</option>
+              <option :value="false">分类申请：关闭</option>
+            </select>
+
+            <span v-if="quickFeatures(key).length === 0 && !hasQuickSetting(key)" class="setting-management-overview__quick-empty">无额外设置</span>
           </div>
-
-          <select
-            v-else-if="key === 'blog'"
-            v-model="access.settings.blog.comment_mode"
-            aria-label="博客评论权限"
-          >
-            <option value="all">评论：所有人</option>
-            <option value="authenticated">评论：仅登录用户</option>
-            <option value="disabled">评论：关闭</option>
-          </select>
-
-          <select
-            v-else-if="key === 'forum'"
-            v-model="access.settings.forum.allow_category_request"
-            aria-label="社区分类申请"
-          >
-            <option :value="true">分类申请：允许</option>
-            <option :value="false">分类申请：关闭</option>
-          </select>
-
-          <span v-else class="setting-management-overview__quick-empty">无额外设置</span>
         </div>
 
         <div class="setting-management-overview__switch-wrap">
@@ -76,7 +91,7 @@
               v-model="access.modules[key].enabled"
               :data-test="`module-enabled-${key}`"
               type="checkbox"
-              :aria-label="`开启${moduleRooms[key].name}模块`"
+              :aria-label="`${access.modules[key].enabled ? '关闭' : '开启'}${moduleRooms[key].name}模块`"
             />
             <span aria-hidden="true" />
           </label>
@@ -90,8 +105,8 @@
 import { IconBook2 as Book, IconChevronRight as ChevronRight, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
 import { toRef, type Component } from 'vue'
 
-import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
-import type { SiteAccess } from '@/config/siteAccess'
+import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import { siteAccessDetailModules, siteAccessFeatures, type SiteAccess } from '@/config/siteAccess'
 
 const props = defineProps<{
   access: SiteAccess
@@ -102,7 +117,7 @@ const emit = defineEmits<{
 }>()
 
 const access = toRef(props, 'access')
-const overviewModuleOrder: ModuleRoomKey[] = ['feed', 'music', 'blog', 'forum', 'podcast', 'video']
+const overviewModuleOrder = moduleNavOrder
 const moduleDescriptions: Record<ModuleRoomKey, string> = {
   feed: 'RSS、文章聚合与全文抓取',
   music: '音乐资料库与协作编辑',
@@ -128,6 +143,20 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
 
 function openModuleDetail(key: ModuleRoomKey) {
   emit('open-detail', key)
+}
+
+function hasDetail(key: ModuleRoomKey) {
+  return siteAccessDetailModules.includes(key)
+}
+
+function quickFeatures(key: ModuleRoomKey) {
+  return (siteAccessFeatures[key] ?? []).filter((feature) => (
+    key !== 'forum' || feature.key !== 'category.request'
+  ))
+}
+
+function hasQuickSetting(key: ModuleRoomKey) {
+  return key === 'feed' || key === 'blog' || key === 'forum'
 }
 </script>
 
@@ -190,6 +219,10 @@ function openModuleDetail(key: ModuleRoomKey) {
 
 .setting-management-overview__main:hover {
   background: var(--a-color-surface-muted);
+}
+
+.setting-management-overview__main--static {
+  cursor: default;
 }
 
 .setting-management-overview__icon {

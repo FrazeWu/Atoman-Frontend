@@ -18,7 +18,7 @@
 
     <div class="rating-control__stars" role="group" aria-label="选择评分" @mouseleave="hoverScore = null">
       <span v-for="star in 5" :key="star" class="rating-control__star">
-        <Star :size="iconSize" class="rating-control__star-outline" aria-hidden="true" />
+        <StarFilled :size="iconSize" class="rating-control__star-base" aria-hidden="true" />
         <span
           class="rating-control__star-fill"
           :style="{
@@ -27,7 +27,7 @@
           }"
           aria-hidden="true"
         >
-          <Star :size="iconSize" fill="currentColor" />
+          <StarFilled :size="iconSize" fill="currentColor" />
         </span>
         <button
           v-for="score in [star * 2 - 1, star * 2]"
@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconStar as Star, IconX as X } from '@tabler/icons-vue'
+import { IconStarFilled as StarFilled, IconX as X } from '@tabler/icons-vue'
 
 import {
   PUBLIC_RATING_MIN_COUNT,
@@ -196,7 +196,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   color: var(--a-color-border);
 }
 
-.rating-control__star-outline,
+.rating-control__star-base,
 .rating-control__star-fill {
   position: absolute;
   top: 50%;
@@ -205,10 +205,14 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   transform: translate(-50%, -50%);
 }
 
+.rating-control__star-base {
+  color: #d7dbe0;
+}
+
 .rating-control__star-fill {
   left: calc(50% - 11px);
   overflow: hidden;
-  color: #d97706;
+  color: #ff9d24;
   transform: translateY(-50%);
 }
 

@@ -86,8 +86,11 @@ const selectedTextDraft = ref<{
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 } | null>(null)
 const selectedAnnotationIds = ref<string[]>([])
+const lyricsLinesElement = ref<HTMLElement | null>(null)
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 let rebindOperationGeneration = 0
@@ -304,6 +307,8 @@ function handleSelectText(payload: {
   selectedText: string
   startOffset: number
   endOffset: number
+  startLineKey?: string
+  endLineKey?: string
 }) {
   if (!requireLogin()) return
   if (rebindingAnnotation.value) rebindOperationGeneration += 1
@@ -326,9 +331,15 @@ async function handleSaveAnnotation(body: string) {
   if (!selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
+  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+    ? {
+        start_line_key: selectedTextDraft.value.startLineKey,
+        end_line_key: selectedTextDraft.value.endLineKey,
+      }
+    : { line_key: lineKey }
 
   const annotation = await createAnnotation(String(detail.value.song.id), {
-    line_key: lineKey,
+    ...rangeInput,
     selected_text: selectedTextDraft.value.selectedText,
     start_offset: selectedTextDraft.value.startOffset,
     end_offset: selectedTextDraft.value.endOffset,
@@ -366,12 +377,18 @@ async function handleConfirmRebind() {
   if (!detail.value || !authStore.isAuthenticated || !rebindingAnnotation.value || !selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
   if (!lineKey) return
+  const rangeInput = selectedTextDraft.value.startLineKey && selectedTextDraft.value.endLineKey
+    ? {
+        start_line_key: selectedTextDraft.value.startLineKey,
+        end_line_key: selectedTextDraft.value.endLineKey,
+      }
+    : { line_key: lineKey }
   const annotation = rebindingAnnotation.value
   const songId = String(detail.value.song.id)
   const operationGeneration = ++rebindOperationGeneration
   try {
     await updateAnnotation(songId, annotation.id, {
-      line_key: lineKey,
+      ...rangeInput,
       selected_text: selectedTextDraft.value.selectedText,
       start_offset: selectedTextDraft.value.startOffset,
       end_offset: selectedTextDraft.value.endOffset,
@@ -457,7 +474,7 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
-    content-max-width="64rem"
+    content-max-width="96rem"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     :layer-index="layerIndex"
@@ -581,7 +598,7 @@ watch(
               </template>
 
               <p v-if="!lyrics?.lines.length" class="song-detail__state">暂无歌词</p>
-              <div v-else class="song-detail__lyric-lines">
+              <div v-else ref="lyricsLinesElement" class="song-detail__lyric-lines">
                 <MusicLyricsLine
                   v-for="line in lyrics.lines"
                   :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
@@ -591,6 +608,9 @@ watch(
                   :bilingual="lyricsDisplayMode === 'bilingual'"
                   :can-select="authStore.isAuthenticated"
                   :can-annotate="authStore.isAuthenticated"
+                  :show-timeline="false"
+                  :disable-hover-effects="true"
+                  :selection-root="lyricsLinesElement"
                   @select-text="handleSelectText"
                   @open-annotations="handleOpenAnnotations"
                   @seek="player.seek"
@@ -648,7 +668,7 @@ watch(
 </template>
 
 <style scoped>
-.song-detail { max-width: 72rem; margin: 0 auto; padding: 1.5rem; }
+.song-detail { max-width: 96rem; margin: 0 auto; padding: 1.5rem; container-type: inline-size; }
 .song-detail__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem); gap: 1.5rem; align-items: start; }
 .song-detail__primary { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; min-width: 0; }
 .song-detail__tags { min-width: 0; align-self: start; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
@@ -683,11 +703,15 @@ watch(
 .song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 .song-detail__lyrics-layout { min-width: 0; }
 .song-detail__lyrics-layout.has-annotation-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 0; }
-.song-detail__lyric-lines { display: grid; gap: 0.15rem; max-height: 32rem; overflow-y: auto; overflow-x: hidden; }
-.song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; }
-.song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.65; }
-.song-detail__annotation-workspace { align-self: start; min-width: 0; max-height: 32rem; overflow-y: auto; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
+.song-detail__lyric-lines { display: grid; gap: 0; }
+.song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; padding: 0.2rem 0; }
+.song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.45; }
+.song-detail__annotation-workspace { align-self: start; min-width: 0; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
-@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content, .song-detail__primary { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__tags { border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding: 1.25rem 0 0; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-workspace { grid-template-columns: 1fr; } .song-detail__annotation-workspace { max-height: none; border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding-top: 1rem; padding-left: 0; } }
+@container (max-width: 76.5rem) {
+  .song-detail__content { grid-template-columns: 1fr; }
+  .song-detail__tags { border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding: 1.25rem 0 0; }
+}
+@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__primary { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-workspace { grid-template-columns: 1fr; } .song-detail__annotation-workspace { max-height: none; border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding-top: 1rem; padding-left: 0; } }
 </style>

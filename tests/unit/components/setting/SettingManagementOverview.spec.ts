@@ -1,51 +1,33 @@
 import { describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent } from 'vue'
+import { mount } from '@vue/test-utils'
 
 import SettingManagementOverview from '@/components/setting/SettingManagementOverview.vue'
-
-const mocks = vi.hoisted(() => ({
-  listAdminUsers: vi.fn(),
-  fetchSources: vi.fn(),
-}))
-
-vi.mock('@/api/adminUsers', () => ({ listAdminUsers: mocks.listAdminUsers }))
-vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ token: 'admin-token' }) }))
-vi.mock('@/stores/adminFeedFulltext', () => ({
-  useAdminFeedFulltextStore: () => ({
-    sourcesMeta: { total: 3 },
-    fetchSources: mocks.fetchSources,
-  }),
-}))
+import { defaultSiteAccess, mergeSiteAccess } from '@/config/siteAccess'
 
 describe('SettingManagementOverview', () => {
-  it('shows concise user and source previews with detail links', async () => {
-    mocks.listAdminUsers.mockResolvedValue({
-      data: [{
-        uuid: 'user-1', username: 'alice', display_name: 'Alice', is_active: true,
-      }],
-      meta: { page: 1, page_size: 5, total: 8, has_more: true },
-    })
-    mocks.fetchSources.mockResolvedValue([{
-      id: 'source-1', title: 'Example Feed', pending_count: 2, status: 'degraded',
-    }])
-
+  it('shows the prototype module list with one switch per module', async () => {
+    const access = mergeSiteAccess(defaultSiteAccess)
+    const openDetail = vi.fn()
     const wrapper = mount(SettingManagementOverview, {
-      global: {
-        stubs: {
-          PButton: defineComponent({ props: ['to'], template: '<a :href="to"><slot /></a>' }),
-        },
-      },
+      props: { access, onOpenDetail: openDetail },
     })
-    await flushPromises()
 
-    expect(mocks.listAdminUsers).toHaveBeenCalledWith({ page: 1, page_size: 5 })
-    expect(mocks.fetchSources).toHaveBeenCalledWith('admin-token', { page: 1, limit: 5 })
-    expect(wrapper.text()).toContain('8 位用户')
-    expect(wrapper.text()).toContain('Alice')
-    expect(wrapper.text()).toContain('3 个订阅源')
-    expect(wrapper.text()).toContain('Example Feed')
-    expect(wrapper.get('[data-test="user-management-link"]').attributes('href')).toBe('/site/setting/users')
-    expect(wrapper.get('[data-test="subscription-management-link"]').attributes('href')).toBe('/site/setting/subscriptions')
+    expect(wrapper.text()).toContain('模块可用性')
+    expect(wrapper.findAll('[data-test^="module-detail-"]')).toHaveLength(6)
+    expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(8)
+
+    await wrapper.get('[data-test="module-detail-music"]').trigger('click')
+    expect(openDetail).toHaveBeenCalledWith('music')
+  })
+
+  it('updates quick settings on the shared access object', async () => {
+    const access = mergeSiteAccess(defaultSiteAccess)
+    const wrapper = mount(SettingManagementOverview, { props: { access } })
+
+    await wrapper.get('[aria-label="订阅全文抓取策略"]').setValue('disabled')
+    await wrapper.get('[aria-label="博客评论权限"]').setValue('all')
+
+    expect(access.settings.feed.full_text_mode).toBe('disabled')
+    expect(access.settings.blog.comment_mode).toBe('all')
   })
 })

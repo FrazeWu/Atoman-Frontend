@@ -1,215 +1,250 @@
 <template>
   <section class="setting-access settings-center">
-    <PSectionHeader title="站点设置" kicker="SITE ACCESS" description="管理模块开放状态与站点功能。" />
+    <PSectionHeader title="站点设置" kicker="SITE ACCESS" description="控制功能开放范围和各模块的默认策略。" />
 
-    <p v-if="error" class="setting-access__message setting-access__message--error">
+    <p v-if="error" class="setting-access__message setting-access__message--error" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="saved" class="setting-access__message">已保存</p>
+    <p v-else-if="saved" class="setting-access__message" role="status">已保存</p>
 
-    <div class="setting-access__sections settings-center__sections">
-      <SettingManagementOverview />
-
-        <section
-          v-for="key in moduleNavOrder"
-          :id="`module-${key}`"
-          :key="key"
-          class="setting-access__section settings-center__section"
-        >
-          <PSurface :layer="1" class="setting-access__section-card settings-center__section-card">
-            <div class="setting-access__section-head settings-center__section-head">
-              <div>
-                <p class="settings-center__kicker">{{ moduleKeyLabel(key) }}</p>
-                <h2>{{ moduleRooms[key].name }}</h2>
-                <p>{{ moduleRooms[key].homepageSub }}</p>
-              </div>
-              <span class="setting-access__section-state">
-                {{ draft.modules[key].enabled ? '模块开放中' : '模块已关闭' }}
-              </span>
-            </div>
-
-            <p class="setting-access__module-helper">
-              {{ moduleRooms[key].helper }}
-            </p>
-
-            <label class="setting-access__module-enabled settings-block">
-              <div class="settings-block__copy">
-                <strong>模块开放</strong>
-                <small>控制站内入口与相关功能。</small>
-              </div>
-              <div class="settings-block__control">
-                <input
-                  v-model="draft.modules[key].enabled"
-                  :data-test="`module-enabled-${key}`"
-                  type="checkbox"
-                />
-              </div>
-            </label>
-
-            <div v-if="key === 'feed'" class="setting-access__module-body">
-              <div class="setting-access__setting-block settings-block">
-                <div class="setting-access__setting-copy settings-block__copy">
-                  <strong>全文抓取策略</strong>
-                  <small>决定 external_rss 订阅源是否允许逐个开启全文抓取。</small>
-                </div>
-                <div class="setting-access__setting-control settings-block__control settings-block__control--stack">
-                  <label class="setting-access__radio-row">
-                    <input v-model="draft.settings.feed.full_text_mode" type="radio" value="per_source" />
-                    <div>
-                      <strong>按订阅源选择</strong>
-                      <small>由管理员在每个订阅源上单独开关全文抓取。</small>
-                    </div>
-                  </label>
-                  <label class="setting-access__radio-row">
-                    <input v-model="draft.settings.feed.full_text_mode" type="radio" value="disabled" />
-                    <div>
-                      <strong>全局关闭</strong>
-                      <small>所有订阅源都不再做全文抓取。</small>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div class="setting-access__setting-block settings-block">
-                <div class="setting-access__setting-copy settings-block__copy">
-                  <strong>订阅源管理</strong>
-                  <small>管理订阅源、推荐和抓取任务。</small>
-                </div>
-                <div class="setting-access__setting-control settings-block__control">
-                  <PButton
-                    data-test="subscription-management-detail-link"
-                    to="/site/setting/subscriptions"
-                    variant="secondary"
-                    size="sm"
-                  >
-                    查看详情
-                  </PButton>
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="key === 'music'" class="setting-access__module-body">
-              <SettingMusicReviewPanel />
-            </div>
-
-            <div v-else-if="key === 'blog'" class="setting-access__module-body">
-              <div class="setting-access__setting-block settings-block">
-                <div class="setting-access__setting-copy settings-block__copy">
-                  <strong>评论权限</strong>
-                  <small>控制文章评论开放范围。</small>
-                </div>
-                <div class="setting-access__setting-control settings-block__control settings-block__control--stack">
-                  <label v-for="mode in blogCommentModes" :key="mode.value" class="setting-access__radio-row">
-                    <input v-model="draft.settings.blog.comment_mode" type="radio" :value="mode.value" />
-                    <div>
-                      <strong>{{ mode.label }}</strong>
-                      <small>{{ mode.description }}</small>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="key === 'forum'" class="setting-access__module-body">
-              <label class="setting-access__setting-block settings-block">
-                <div class="setting-access__setting-copy settings-block__copy">
-                  <strong>申请分类</strong>
-                  <small>控制普通用户是否可发起新分类申请。</small>
-                </div>
-                <div class="setting-access__setting-control settings-block__control">
-                  <input v-model="draft.settings.forum.allow_category_request" type="checkbox" />
-                </div>
-              </label>
-
-              <SettingForumModeratorPanel v-if="draft.modules.forum.enabled" />
-
-              <PButton variant="secondary" to="/site/setting/community"> 社区管理 </PButton>
-            </div>
-
-            <div v-else class="setting-access__module-body">
-              <div class="setting-access__setting-block settings-block">
-                <div class="setting-access__setting-copy settings-block__copy">
-                  <strong>{{ moduleRooms[key].name }}</strong>
-                  <small>{{ moduleRooms[key].helper }}</small>
-                </div>
-                <div class="setting-access__setting-control settings-block__control">
-                  <span class="setting-access__placeholder settings-placeholder">尚未开放</span>
-                </div>
-              </div>
-            </div>
-          </PSurface>
-        </section>
-    </div>
+    <SettingManagementOverview :access="draft" @open-detail="openDetail" />
 
     <div class="setting-access__actions">
       <PButton variant="secondary" to="/">返回首页</PButton>
       <PButton :loading="saving" loading-text="保存中..." @click="save">保存设置</PButton>
     </div>
+
+    <PSheet
+      :show="selectedModule !== null"
+      :title="selectedModuleTitle"
+      panel-class="setting-access__detail-sheet"
+      @close="closeDetail"
+    >
+      <div class="setting-access__detail-layout">
+        <aside class="setting-access__detail-directory" aria-label="站点管理目录">
+          <header>站点管理</header>
+          <nav>
+            <p>设置</p>
+            <button
+              v-for="key in detailModuleOrder"
+              :key="key"
+              type="button"
+              :class="{ 'is-active': selectedModule === key }"
+              :aria-current="selectedModule === key ? 'page' : undefined"
+              @click="openDetail(key)"
+            >
+              {{ moduleRooms[key].name }}
+            </button>
+            <p>管理</p>
+            <button type="button" @click="navigateToManagement('users')">用户与权限</button>
+            <button type="button" @click="navigateToManagement('announcements')">公告</button>
+          </nav>
+        </aside>
+
+        <main v-if="selectedModule" class="setting-access__detail-main" :aria-labelledby="detailTitleId">
+          <header class="setting-access__detail-header">
+            <div class="setting-access__detail-title">
+              <span class="setting-access__detail-icon" aria-hidden="true">
+                <component :is="moduleIcons[selectedModule]" :size="18" stroke-width="1.8" />
+              </span>
+              <div>
+                <p class="settings-center__kicker">{{ moduleKeyLabel(selectedModule) }}</p>
+                <h2 :id="detailTitleId">{{ selectedModuleTitle }}</h2>
+                <p>{{ moduleDescriptions[selectedModule] }}</p>
+              </div>
+            </div>
+            <PButton variant="ghost" size="sm" title="关闭详情" aria-label="关闭详情" @click="closeDetail">
+              <X :size="18" aria-hidden="true" />
+              关闭
+            </PButton>
+          </header>
+
+          <div class="setting-access__detail-body" aria-live="polite">
+            <template v-if="selectedModule === 'feed'">
+              <div class="setting-access__detail-settings">
+                <div>
+                  <strong>全文抓取策略</strong>
+                  <small>决定 external_rss 订阅源是否允许逐个开启全文抓取。</small>
+                </div>
+                <select v-model="draft.settings.feed.full_text_mode" aria-label="全文抓取策略">
+                  <option value="per_source">按订阅源选择</option>
+                  <option value="disabled">全局关闭</option>
+                </select>
+              </div>
+              <SettingFeedSourcePanel
+                :full-text-mode="draft.settings.feed.full_text_mode"
+                :allow-add-source="draft.settings.feed.allow_add_source"
+                :show-header="false"
+              />
+            </template>
+
+            <template v-else-if="selectedModule === 'music'">
+              <div class="setting-access__detail-settings setting-access__detail-settings--stack">
+                <label>
+                  <span>
+                    <strong>允许提交音乐资料</strong>
+                    <small>控制用户是否可以提交专辑、歌曲和艺人资料。</small>
+                  </span>
+                  <input v-model="draft.modules.music.features['music.submit']" type="checkbox" />
+                </label>
+                <label>
+                  <span>
+                    <strong>允许音乐审核</strong>
+                    <small>控制管理员是否可以处理音乐资料和状态请求。</small>
+                  </span>
+                  <input v-model="draft.modules.music.features['music.review']" type="checkbox" />
+                </label>
+              </div>
+              <SettingMusicReviewPanel />
+            </template>
+
+            <template v-else-if="selectedModule === 'blog'">
+              <div class="setting-access__detail-settings setting-access__detail-settings--stack">
+                <label v-for="mode in blogCommentModes" :key="mode.value">
+                  <span>
+                    <strong>{{ mode.label }}</strong>
+                    <small>{{ mode.description }}</small>
+                  </span>
+                  <input v-model="draft.settings.blog.comment_mode" type="radio" name="blog-comment-mode" :value="mode.value" />
+                </label>
+              </div>
+            </template>
+
+            <template v-else-if="selectedModule === 'forum'">
+              <label class="setting-access__detail-settings">
+                <span>
+                  <strong>允许申请分类</strong>
+                  <small>控制普通用户是否可以发起新分类申请。</small>
+                </span>
+                <input v-model="draft.settings.forum.allow_category_request" type="checkbox" />
+              </label>
+              <SettingForumModeratorPanel v-if="draft.modules.forum.enabled" />
+              <PButton variant="secondary" to="/site/setting/community">社区管理</PButton>
+            </template>
+
+            <div v-else class="setting-access__detail-empty">
+              <strong>暂无详情设置</strong>
+              <small>当前模块在站点设置中仅支持模块开放开关。</small>
+            </div>
+          </div>
+        </main>
+      </div>
+    </PSheet>
   </section>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import PButton from '@/components/ui/PButton.vue'
-import PSurface from '@/components/ui/PSurface.vue'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { IconBook2 as Book, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video, IconX as X } from '@tabler/icons-vue'
+import type { Component } from 'vue'
+
+import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
-import SettingMusicReviewPanel from '@/components/setting/SettingMusicReviewPanel.vue'
 import SettingManagementOverview from '@/components/setting/SettingManagementOverview.vue'
-import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import SettingMusicReviewPanel from '@/components/setting/SettingMusicReviewPanel.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PSheet from '@/components/ui/PSheet.vue'
+import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { mergeSiteAccess, type SiteAccess } from '@/config/siteAccess'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import {
-  getSectionDomId,
-  resolveActiveSectionByScroll,
-  resolveInitialSettingSection
-} from '@/views/setting/settingAccessSections'
 
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const route = useRoute()
+const router = useRouter()
 const draft = ref<SiteAccess>(mergeSiteAccess(siteAccessStore.access))
 const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
+const selectedModule = ref<ModuleRoomKey | null>(null)
 
+const detailModuleOrder: ModuleRoomKey[] = ['feed', 'music', 'blog', 'forum', 'podcast', 'video']
+const detailTitleId = 'site-setting-detail-title'
+const moduleDescriptions: Record<ModuleRoomKey, string> = {
+  feed: 'RSS、文章聚合与全文抓取',
+  music: '音乐资料库与协作编辑',
+  blog: '文章发布与评论',
+  books: '书目与阅读',
+  forum: '话题、分类与讨论',
+  debate: '辩题与论点讨论',
+  timeline: '人物与事件时间线',
+  podcast: '音频节目与单集',
+  video: '视频发布与播放',
+}
+const moduleIcons: Record<ModuleRoomKey, Component> = {
+  feed: Rss,
+  music: Music,
+  blog: Book,
+  books: Book,
+  forum: Messages,
+  debate: Messages,
+  timeline: Book,
+  podcast: Microphone,
+  video: Video,
+}
 const blogCommentModes = [
-  {
-    value: 'all',
-    label: '全部可评论',
-    description: '游客可匿名评论，已登录用户正常署名。'
-  },
-  {
-    value: 'authenticated',
-    label: '仅登录用户可评论',
-    description: '保持当前默认行为。'
-  },
-  {
-    value: 'disabled',
-    label: '关闭评论',
-    description: '全站文章评论入口关闭。'
-  }
+  { value: 'all', label: '全部可评论', description: '游客可匿名评论，已登录用户正常署名。' },
+  { value: 'authenticated', label: '仅登录用户可评论', description: '保持当前默认行为。' },
+  { value: 'disabled', label: '关闭评论', description: '全站文章评论入口关闭。' },
 ] as const
+
+const selectedModuleTitle = computed(() => selectedModule.value ? `${moduleRooms[selectedModule.value].name}详情` : '')
 
 watch(
   () => siteAccessStore.access,
   (access) => {
     draft.value = mergeSiteAccess(access)
   },
-  { deep: true }
+  { deep: true },
 )
 
 watch(
   () => draft.value.settings.forum.allow_category_request,
   (enabled) => {
     draft.value.modules.forum.features['category.request'] = enabled
-  }
+  },
 )
+
+watch(() => route?.hash ?? '', syncDetailFromRoute, { immediate: true })
 
 function moduleKeyLabel(key: ModuleRoomKey) {
   return `/${key.toUpperCase()}`
+}
+
+function isDetailModule(value: string): value is ModuleRoomKey {
+  return detailModuleOrder.includes(value as ModuleRoomKey)
+}
+
+function openDetail(key: ModuleRoomKey, updateRoute = true) {
+  selectedModule.value = key
+  if (updateRoute && route?.hash !== `#detail-${key}`) {
+    void router?.replace({ path: route?.path ?? '/site/setting', query: route?.query, hash: `#detail-${key}` })
+  }
+}
+
+function closeDetail(updateRoute = true) {
+  selectedModule.value = null
+  if (updateRoute && route?.hash) {
+    void router?.replace({ path: route?.path ?? '/site/setting', query: route?.query, hash: '' })
+  }
+}
+
+function syncDetailFromRoute() {
+  const hash = route?.hash ?? ''
+  const match = hash.match(/^#(?:detail|module)-(.+)$/)
+  if (match && isDetailModule(match[1])) {
+    selectedModule.value = match[1]
+    return
+  }
+  if (selectedModule.value) selectedModule.value = null
+}
+
+function navigateToManagement(id: 'users' | 'announcements') {
+  closeDetail(false)
+  void router?.push(`/site/setting/${id}`)
 }
 
 async function save() {
@@ -220,27 +255,13 @@ async function save() {
   try {
     await siteAccessStore.save(mergeSiteAccess(draft.value), authStore.token)
     saved.value = true
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '保存失败'
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '保存失败'
   } finally {
     saving.value = false
   }
 }
 
-onMounted(() => {
-  scrollToRouteSection()
-})
-
-watch(() => route?.hash ?? window.location.hash, scrollToRouteSection)
-
-function scrollToRouteSection() {
-  nextTick(() => {
-    const initialSection = resolveInitialSettingSection(route?.hash ?? window.location.hash)
-    if (initialSection) {
-      document.getElementById(getSectionDomId(initialSection))?.scrollIntoView({ behavior: 'auto', block: 'start' })
-    }
-  })
-}
 </script>
 
 <style scoped>
@@ -248,56 +269,14 @@ function scrollToRouteSection() {
   gap: 1.5rem;
 }
 
-.setting-access__module-enabled input,
-.setting-access__setting-block input,
-.setting-access__radio-row input,
-.setting-access__section-state input,
-.setting-access__module-nav input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--a-color-text);
-}
-
-.setting-access__section-head h2,
-.setting-access__section-head p,
-.setting-access__placeholder,
-.setting-access__module-helper,
 .setting-access__message {
   margin: 0;
+  color: var(--a-color-text);
+  font-weight: var(--a-font-weight-strong);
 }
 
-.setting-access__module-helper,
-.setting-access__placeholder {
-  color: var(--a-color-text-secondary);
-  line-height: 1.6;
-}
-
-.setting-access__section-state {
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.setting-access__module-body {
-  display: grid;
-  gap: 1rem;
-}
-
-.setting-access__setting-copy strong,
-.setting-access__setting-copy small,
-.setting-access__radio-row strong,
-.setting-access__radio-row small {
-  display: block;
-}
-
-.setting-access__radio-row {
-  display: flex;
-  gap: 0.75rem;
-  align-items: start;
+.setting-access__message--error {
+  color: var(--a-color-danger);
 }
 
 .setting-access__actions {
@@ -307,22 +286,259 @@ function scrollToRouteSection() {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1rem 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--a-color-bg) 24%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--a-color-bg) 0%, transparent), var(--a-color-bg) 28%);
 }
 
-.setting-access__message {
-  color: var(--a-color-text);
+.setting-access__detail-sheet :deep(.sheet-content--has-bookmark-close) {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.setting-access__detail-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: 13.75rem minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.setting-access__detail-directory {
+  position: sticky;
+  top: 0;
+  display: flex;
+  width: 13.75rem;
+  max-height: calc(100dvh - var(--a-topbar-height) - 5rem);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--a-color-border);
+  border-radius: 8px;
+  background: var(--a-color-surface);
+}
+
+.setting-access__detail-directory header {
+  min-height: 3.375rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  font-size: var(--a-text-sm);
   font-weight: var(--a-font-weight-strong);
 }
 
-.setting-access__message--error {
-  color: var(--a-color-danger);
+.setting-access__detail-directory nav {
+  display: grid;
+  gap: 0.125rem;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.setting-access__detail-directory nav p {
+  margin: 0;
+  padding: 0.75rem 0.625rem 0.25rem;
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+  font-weight: var(--a-font-weight-strong);
+}
+
+.setting-access__detail-directory button {
+  position: relative;
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.5rem 0.625rem 0.5rem 0.875rem;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-text-secondary);
+  font: inherit;
+  font-size: var(--a-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.setting-access__detail-directory button:hover,
+.setting-access__detail-directory button.is-active {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+}
+
+.setting-access__detail-directory button.is-active {
+  font-weight: var(--a-font-weight-strong);
+}
+
+.setting-access__detail-directory button.is-active::before {
+  position: absolute;
+  left: 0.3125rem;
+  width: 2px;
+  height: 1.125rem;
+  border-radius: 2px;
+  background: var(--a-color-primary);
+  content: "";
+}
+
+.setting-access__detail-main {
+  min-width: 0;
+}
+
+.setting-access__detail-header {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.setting-access__detail-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.setting-access__detail-icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-text-secondary);
+}
+
+.setting-access__detail-title h2,
+.setting-access__detail-title p {
+  margin: 0;
+}
+
+.setting-access__detail-title h2 {
+  font-size: 1.15rem;
+}
+
+.setting-access__detail-title p:last-child {
+  margin-top: 0.25rem;
+  color: var(--a-color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.setting-access__detail-body {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+  padding-top: 1.25rem;
+}
+
+.setting-access__detail-settings {
+  display: flex;
+  min-height: 3.875rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.setting-access__detail-settings > div,
+.setting-access__detail-settings > span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.setting-access__detail-settings strong,
+.setting-access__detail-settings small {
+  display: block;
+}
+
+.setting-access__detail-settings small {
+  color: var(--a-color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.setting-access__detail-settings select {
+  min-height: 2.375rem;
+  min-width: 10rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.setting-access__detail-settings input[type="checkbox"],
+.setting-access__detail-settings input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--a-color-primary);
+}
+
+.setting-access__detail-settings--stack {
+  display: grid;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.setting-access__detail-settings--stack label {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.setting-access__detail-empty {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 0;
+}
+
+.setting-access__detail-empty small {
+  color: var(--a-color-text-secondary);
+}
+
+@media (max-width: 1023px) {
+  .setting-access__detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-access__detail-directory {
+    position: static;
+    width: 100%;
+    max-height: none;
+  }
+
+  .setting-access__detail-directory nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .setting-access__detail-directory nav p {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 640px) {
   .setting-access__actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .setting-access__detail-sheet :deep(.sheet-content--has-bookmark-close) {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .setting-access__detail-header {
+    align-items: flex-start;
+  }
+
+  .setting-access__detail-settings {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .setting-access__detail-settings select {
+    width: 100%;
   }
 }
 </style>

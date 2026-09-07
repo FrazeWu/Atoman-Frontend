@@ -39,6 +39,47 @@ describe('MusicLyricsLine', () => {
     ]])
   })
 
+  it('在连续歌词容器中支持跨行选择并提交起止行', async () => {
+    const line = { line_key: 'line-1', text: 'first line', translation: '' }
+    const wrapper = mount(MusicLyricsLine, {
+      props: { line, canSelect: true, canAnnotate: true },
+    })
+    const selectionRoot = document.createElement('div')
+    selectionRoot.append(wrapper.element)
+    await wrapper.setProps({ selectionRoot })
+    const secondLine = document.createElement('div')
+    secondLine.dataset.lyricLineKey = 'line-2'
+    secondLine.innerHTML = '<p class="music-lyrics-line__text">second line</p>'
+    selectionRoot.append(secondLine)
+
+    const firstText = wrapper.get('.music-lyrics-line__text span').element.firstChild
+    const secondText = secondLine.querySelector('.music-lyrics-line__text')?.firstChild
+    if (!firstText || !secondText) throw new Error('missing lyric text nodes')
+    const range = document.createRange()
+    range.setStart(firstText, 6)
+    range.setEnd(secondText, 6)
+    vi.spyOn(window, 'getSelection').mockReturnValue({
+      rangeCount: 1,
+      isCollapsed: false,
+      getRangeAt: () => range,
+    } as unknown as Selection)
+
+    await wrapper.get('.music-lyrics-line__text').trigger('mouseup')
+    await wrapper.get('[data-testid="lyrics-selection-annotate"]').trigger('click')
+
+    expect(wrapper.emitted('select-text')).toEqual([[
+      {
+        line,
+        selectedText: 'line\nsecond',
+        startOffset: 6,
+        endOffset: 6,
+        startLineKey: 'line-1',
+        endLineKey: 'line-2',
+      },
+    ]])
+    wrapper.unmount()
+  })
+
   it('does not emit text selections when selection is disabled', async () => {
     const wrapper = mount(MusicLyricsLine, {
       props: {
@@ -159,6 +200,19 @@ describe('MusicLyricsLine', () => {
     })
 
     expect(wrapper.find('.music-lyrics-line__seek').exists()).toBe(false)
+  })
+
+  it('详情模式可以隐藏时间轴并关闭行 hover 效果', () => {
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line: { line_key: 'line-1', text: 'Detail line', translation: '', time_ms: 1000 },
+        showTimeline: false,
+        disableHoverEffects: true,
+      },
+    })
+
+    expect(wrapper.find('.music-lyrics-line__time').exists()).toBe(false)
+    expect(wrapper.classes()).toContain('is-static')
   })
 
   it('shows annotation count and opens all active annotations', async () => {

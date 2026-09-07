@@ -105,6 +105,21 @@ describe('RatingControl.vue', () => {
     expect(wrapper.get('.rating-control__star-fill').attributes('style')).toContain('left: calc(50% - 8px)')
   })
 
+  it('keeps compact controls to a fixed summary-and-stars slot', () => {
+    const wrapper = mount(RatingControl, {
+      props: { size: 'compact', viewerRating: 7, disabled: false },
+    })
+    const compactRule = ratingControlSource.match(
+      /\.rating-control--compact\s*\{([^}]*)\}/s,
+    )?.[1] ?? ''
+
+    expect(wrapper.find('.rating-control__meta').exists()).toBe(false)
+    expect(wrapper.find('.rating-control__clear').exists()).toBe(true)
+    expect(compactRule).toMatch(/display:\s*grid/)
+    expect(compactRule).toMatch(/width:\s*20\.75rem/)
+    expect(compactRule).toMatch(/flex:\s*0 0 20\.75rem/)
+  })
+
   it('announces save errors beside the control', () => {
     const wrapper = mount(RatingControl, {
       props: { errorMessage: '评分未保存，请重试' },

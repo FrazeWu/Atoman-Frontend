@@ -59,7 +59,7 @@
       <X :size="15" aria-hidden="true" />
     </button>
 
-    <div class="rating-control__meta" aria-live="polite">
+    <div v-if="size !== 'compact'" class="rating-control__meta" aria-live="polite">
       <span v-if="size !== 'compact' && hoverScore !== null" class="rating-control__preview">{{ formatViewerRating(hoverScore) }}</span>
       <span v-else-if="size !== 'compact' && viewerRating !== null && viewerRating !== undefined" class="rating-control__mine">
         我的评分 {{ formatViewerRating(viewerRating) }}
@@ -298,6 +298,11 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .rating-control--compact {
+  display: grid;
+  width: 20.75rem;
+  flex: 0 0 20.75rem;
+  grid-template-columns: minmax(0, 1fr) 8.75rem 2.75rem;
+  flex-wrap: nowrap;
   gap: 0.2rem 0.35rem;
 }
 
@@ -310,7 +315,24 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .rating-control--compact .rating-control__star {
+  flex: 0 0 28px;
   width: 28px;
+}
+
+.rating-control--compact .rating-control__stars {
+  display: flex;
+  width: 8.75rem;
+  flex: 0 0 8.75rem;
+}
+
+.rating-control--compact .rating-control__summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rating-control--compact .rating-control__clear {
+  grid-column: 3;
 }
 
 .rating-control--compact .rating-control__star-fill {

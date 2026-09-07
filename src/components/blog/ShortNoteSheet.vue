@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { computed, ref, watch, watchEffect } from 'vue'
+import { IconMessage as MessageSquare, IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
@@ -10,7 +10,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import PSheet from '@/components/ui/PSheet.vue'
-import InteractionBar from '@/components/shared/InteractionBar.vue'
+import PInteractionActions from '@/components/ui/PInteractionActions.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
@@ -50,6 +50,9 @@ const mediaUrls = computed(() => note.value?.media.map(m => resolveMediaURL(m.ur
 const noteId = computed(() => props.layer.payload.noteId)
 const replaceCurrentNote = (id: string) => sheets.replaceShortNote(id, '短笺')
 const interactions = useInteractions('blog', 'short_note', noteId)
+const dislikeCount = ref(0)
+const viewerVote = ref<'up' | 'down' | 'none'>('none')
+const votePending = ref(false)
 const commentsOpen = ref(false)
 const commentSheetMode = ref<'full' | 'partial'>('partial')
 const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
@@ -89,8 +92,10 @@ async function loadNote() {
     note.value = res.data
     if (note.value) {
       const synced = getNoteState(requestedNoteId)
-      interactions.liked.value = synced?.liked ?? note.value.liked
+      viewerVote.value = synced?.viewerVote ?? note.value.viewer_vote ?? (note.value.liked ? 'up' : 'none')
+      interactions.liked.value = viewerVote.value === 'up'
       interactions.likeCount.value = synced?.likeCount ?? note.value.likes_count
+      dislikeCount.value = synced?.dislikeCount ?? note.value.dislikes_count ?? 0
       interactions.commentCount.value = synced?.commentCount ?? note.value.comments_count
     }
   } catch {
@@ -102,16 +107,60 @@ async function loadNote() {
   }
 }
 
-function handleLike() {
-  void interactions.like().then(() => {
-    updateNoteState(noteId.value, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
-  })
+watchEffect(() => {
+  const current = note.value
+  if (!current) return
+  const synced = getNoteState(current.id)
+  const nextViewerVote = synced?.viewerVote ?? current.viewer_vote ?? (current.liked ? 'up' : 'none')
+  viewerVote.value = nextViewerVote
+  interactions.liked.value = nextViewerVote === 'up'
+  interactions.likeCount.value = synced?.likeCount ?? current.likes_count
+  dislikeCount.value = synced?.dislikeCount ?? current.dislikes_count ?? 0
+  interactions.commentCount.value = synced?.commentCount ?? current.comments_count
+})
+
+watch(
+  () => [viewerVote.value, interactions.likeCount.value, dislikeCount.value, interactions.commentCount.value],
+  () => {
+    if (note.value) {
+      updateNoteState(note.value.id, {
+        liked: interactions.liked.value,
+        likeCount: interactions.likeCount.value,
+        dislikeCount: dislikeCount.value,
+        viewerVote: viewerVote.value,
+        commentCount: interactions.commentCount.value,
+      })
+    }
+  },
+)
+
+async function setVote(direction: 'up' | 'down' | 'none') {
+  if (votePending.value || !authStore.isAuthenticated) return
+  const requestedNoteId = noteId.value
+  votePending.value = true
+  try {
+    const response = await apiRequestEnvelope<ShortNote>(api.blog.shortNoteVote(requestedNoteId), {
+      method: direction === 'none' ? 'DELETE' : 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+      ...(direction === 'none' ? {} : { body: JSON.stringify({ direction }) }),
+    })
+    if (requestedNoteId !== noteId.value) return
+    const updated = response.data
+    viewerVote.value = updated.viewer_vote ?? 'none'
+    interactions.liked.value = viewerVote.value === 'up'
+    interactions.likeCount.value = updated.likes_count
+    dislikeCount.value = updated.dislikes_count ?? 0
+  } finally {
+    votePending.value = false
+  }
 }
 
-function handleUnlike() {
-  void interactions.unlike().then(() => {
-    updateNoteState(noteId.value, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
-  })
+function handleLikeVote(nextLiked: boolean) {
+  void setVote(nextLiked ? 'up' : 'none')
+}
+
+function handleDislikeVote(nextDisliked: boolean) {
+  void setVote(nextDisliked ? 'down' : 'none')
 }
 
 function handleCommentCountChange(count: number) {
@@ -239,15 +288,21 @@ watch(noteId, () => void loadNote(), { immediate: true })
         </div>
 
         <footer class="short-note-sheet-footer">
-          <InteractionBar
-            :liked="interactions.liked.value"
+          <PInteractionActions
+            :liked="viewerVote === 'up'"
             :like-count="interactions.likeCount.value"
-            :comment-count="interactions.commentCount.value"
-            :disabled="!authStore.isAuthenticated"
-            @like="handleLike"
-            @unlike="handleUnlike"
-            @comment="openComments"
+            :disliked="viewerVote === 'down'"
+            :dislike-count="dislikeCount"
+            :disabled="votePending || !authStore.isAuthenticated"
+            :show-ratio-bar="false"
+            size="sm"
+            @like-change="handleLikeVote"
+            @dislike-change="handleDislikeVote"
           />
+          <button type="button" class="short-note-sheet-comment-button" @click="openComments">
+            <MessageSquare :size="15" aria-hidden="true" />
+            <span>{{ interactions.commentCount.value || 0 }}</span>
+          </button>
         </footer>
       </article>
 
@@ -429,8 +484,32 @@ watch(noteId, () => void loadNote(), { immediate: true })
 }
 
 .short-note-sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--a-color-border-soft);
+}
+
+.short-note-sheet-comment-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.short-note-sheet-comment-button:hover {
+  border-color: var(--a-color-border);
+  color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
 }
 
 </style>

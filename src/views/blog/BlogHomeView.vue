@@ -386,6 +386,7 @@ const deletingNote = ref(false)
 const channels = ref<BlogChannel[]>([])
 const searchCollections = ref<BlogCollection[]>([])
 const collectionsLoading = ref(false)
+let searchCollectionsRequestSequence = 0
 const digest = ref<BlogDigestPayload | null>(null)
 const digestLoading = ref(false)
 const digestError = ref(false)
@@ -622,11 +623,13 @@ const fetchChannels = async () => {
 }
 
 const fetchSearchCollections = async (channelID: string) => {
+  const requestSequence = ++searchCollectionsRequestSequence
   searchCollections.value = []
   if (!channelID) return
   collectionsLoading.value = true
   try {
     const res = await apiRequestResult(api.blog.channelCollections(channelID))
+    if (requestSequence !== searchCollectionsRequestSequence) return
     if (!res.ok) return
     const payload = await Promise.resolve(res.data) as { data?: BlogCollection[] } | BlogCollection[]
     const items = Array.isArray(payload) ? payload : payload.data
@@ -634,7 +637,7 @@ const fetchSearchCollections = async (channelID: string) => {
   } catch (error) {
     reportError(error)
   } finally {
-    collectionsLoading.value = false
+    if (requestSequence === searchCollectionsRequestSequence) collectionsLoading.value = false
   }
 }
 

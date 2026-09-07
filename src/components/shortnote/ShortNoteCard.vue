@@ -150,20 +150,26 @@ const interactions = useInteractions('blog', 'short_note', props.note.id)
 const dislikeCount = ref(0)
 const viewerVote = ref<'up' | 'down' | 'none'>('none')
 const votePending = ref(false)
+const localRead = ref(isNoteRead(props.note.id))
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const voteTotal = computed(() => (interactions.likeCount.value || 0) + dislikeCount.value)
 const likeRate = computed(() => (
   voteTotal.value === 0 ? '0.0' : (((interactions.likeCount.value || 0) / voteTotal.value) * 100).toFixed(1)
 ))
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
-const isRead = computed(() => props.isRead ?? isNoteRead(props.note.id))
+const isRead = computed(() => Boolean(props.isRead || localRead.value || isNoteRead(props.note.id)))
 
 function handleMouseEnter() {
   if (!isRead.value) {
+    localRead.value = true
     markNoteAsRead(props.note.id)
     emit('mark-read')
   }
 }
+
+watch(() => props.note.id, (id) => {
+  localRead.value = isNoteRead(id)
+})
 
 const showLightbox = ref(false)
 const lightboxIndex = ref(0)

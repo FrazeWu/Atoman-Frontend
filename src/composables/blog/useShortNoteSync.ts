@@ -26,6 +26,16 @@ function getInitialReadIds(): Set<string> {
 const readIds = reactive<Set<string>>(getInitialReadIds())
 const syncStore = reactive(new Map<string, ShortNoteStateSync>())
 
+function persistReadIds() {
+	try {
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(readIds)))
+		}
+	} catch {
+		// ignore
+	}
+}
+
 export function useShortNoteSync() {
   function getNoteState(id: string) {
     return syncStore.get(id)
@@ -39,13 +49,7 @@ export function useShortNoteSync() {
     readIds.add(id)
     const current = syncStore.get(id) || {}
     syncStore.set(id, { ...current, read: true })
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(readIds)))
-      }
-    } catch {
-      // ignore
-    }
+    persistReadIds()
   }
 
   function updateNoteState(id: string, state: Partial<ShortNoteStateSync>) {
@@ -53,6 +57,7 @@ export function useShortNoteSync() {
     syncStore.set(id, { ...current, ...state })
     if (state.read) {
       readIds.add(id)
+      persistReadIds()
     }
   }
 

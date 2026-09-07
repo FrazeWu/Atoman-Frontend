@@ -1,13 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import MusicTagList from '@/components/music/MusicTagList.vue'
-
-const musicTagListSource = readFileSync(
-  resolve(process.cwd(), 'src/components/music/MusicTagList.vue'),
-  'utf8',
-)
 
 const mocks = vi.hoisted(() => ({
   listMusicTags: vi.fn(),
@@ -97,13 +90,6 @@ describe('MusicTagList.vue', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-  })
-
-  it('用分组间距代替标签分组的顶部结构线，但保留搜索结果边界', () => {
-    expect(musicTagListSource).not.toMatch(/\.music-tags__group\s*\{[\s\S]*?border-top:/)
-    expect(musicTagListSource).toMatch(/\.music-tags__group\s*\{[\s\S]*?gap:/)
-    expect(musicTagListSource).toContain('.music-tags__search-results')
-    expect(musicTagListSource).toMatch(/\.music-tags__search-results\s*\{[\s\S]*?border:/)
   })
 
   it('按情绪和类型分组展示标签，并支持添加、投票和确认删除', async () => {

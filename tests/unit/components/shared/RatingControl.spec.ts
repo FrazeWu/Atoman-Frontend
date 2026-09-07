@@ -76,6 +76,35 @@ describe('RatingControl.vue', () => {
     expect(wrapper.emitted('clear')).toEqual([[]])
   })
 
+  it('keeps compact ratings to star fills without hover or personal-rating text', async () => {
+    const wrapper = mount(RatingControl, {
+      props: { size: 'compact', viewerRating: 9 },
+    })
+
+    expect(wrapper.find('.rating-control__mine').exists()).toBe(false)
+    expect(wrapper.findAll('.rating-control__star-fill')).toHaveLength(5)
+
+    await wrapper.get('button[data-score="3"]').trigger('mouseenter')
+
+    expect(wrapper.find('.rating-control__preview').exists()).toBe(false)
+    expect(wrapper.find('.rating-control__mine').exists()).toBe(false)
+    expect(wrapper.findAll('.rating-control__star-fill').map((star) => (star.element as HTMLElement).style.width)).toEqual([
+      '16px',
+      '8px',
+      '0px',
+      '0px',
+      '0px',
+    ])
+  })
+
+  it('centers compact star fills on the smaller star outline', () => {
+    const wrapper = mount(RatingControl, {
+      props: { size: 'compact', viewerRating: 1 },
+    })
+
+    expect(wrapper.get('.rating-control__star-fill').attributes('style')).toContain('left: calc(50% - 8px)')
+  })
+
   it('announces save errors beside the control', () => {
     const wrapper = mount(RatingControl, {
       props: { errorMessage: '评分未保存，请重试' },

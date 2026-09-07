@@ -21,7 +21,10 @@
         <Star :size="iconSize" class="rating-control__star-outline" aria-hidden="true" />
         <span
           class="rating-control__star-fill"
-          :style="{ width: `${fillWidth(star)}px` }"
+          :style="{
+            width: `${fillWidth(star)}px`,
+            left: `calc(50% - ${iconSize / 2}px)`,
+          }"
           aria-hidden="true"
         >
           <Star :size="iconSize" fill="currentColor" />
@@ -57,8 +60,8 @@
     </button>
 
     <div class="rating-control__meta" aria-live="polite">
-      <span v-if="hoverScore !== null" class="rating-control__preview">{{ formatViewerRating(hoverScore) }}</span>
-      <span v-else-if="viewerRating !== null && viewerRating !== undefined" class="rating-control__mine">
+      <span v-if="size !== 'compact' && hoverScore !== null" class="rating-control__preview">{{ formatViewerRating(hoverScore) }}</span>
+      <span v-else-if="size !== 'compact' && viewerRating !== null && viewerRating !== undefined" class="rating-control__mine">
         我的评分 {{ formatViewerRating(viewerRating) }}
       </span>
       <RouterLink v-else-if="disabled" class="rating-control__login" to="/login">登录后评分</RouterLink>

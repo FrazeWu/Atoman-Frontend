@@ -5,12 +5,18 @@ import DOMPurify from "dompurify";
 import type { ResolvedReference } from "@/api/references";
 import { applyResolvedReferences } from "@/composables/useReferenceRendering";
 
-type EmbedData = {
+export type EmbedData = {
   id: string;
   title: string;
+  kind?: "post" | "album" | "song" | "video";
   summary?: string;
   meta?: string;
   href?: string;
+  imageUrl?: string;
+  videoSrc?: string;
+  iframeSrc?: string;
+  posterUrl?: string;
+  duration?: number;
 };
 
 type RenderMarkdownOptions = {
@@ -197,9 +203,50 @@ function renderEmbedCard(
   const meta = embed.meta ? escapeHtml(embed.meta) : "";
   const href = escapeHtml(embed.href || "#");
 
+  if (kind === "music") {
+    const musicKind = embed.kind === "song" ? "song" : "album";
+    const image = embed.imageUrl
+      ? `<img class="atoman-post-embed__image" src="${escapeHtml(embed.imageUrl)}" alt="" loading="lazy">`
+      : `<div class="atoman-post-embed__image atoman-post-embed__image--empty" aria-hidden="true">♪</div>`;
+    return [
+      `<div class="atoman-post-embed atoman-post-embed--music atoman-post-embed--music-${musicKind}${missing ? " atoman-post-embed--missing" : ""}">`,
+      `  <a class="atoman-post-embed__link" data-atoman-embed="music" href="${href}">`,
+      `    ${image}`,
+      `    <div class="atoman-post-embed__content">`,
+      `      <div class="atoman-post-embed__label">${musicKind === "song" ? "单曲引用" : "专辑引用"}</div>`,
+      `      <div class="atoman-post-embed__title">${title}</div>`,
+      `      <div class="atoman-post-embed__summary">${summary}</div>`,
+      meta ? `      <div class="atoman-post-embed__meta">${meta}</div>` : "",
+      "    </div>",
+      "  </a>",
+      "</div>",
+    ].filter(Boolean).join("\n");
+  }
+
+  if (kind === "video") {
+    const player = embed.iframeSrc
+      ? `<iframe class="atoman-post-embed__player" src="${escapeHtml(embed.iframeSrc)}" title="${title}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
+      : embed.videoSrc
+        ? `<video class="atoman-post-embed__player" controls preload="none"${embed.posterUrl ? ` poster="${escapeHtml(embed.posterUrl)}"` : ""}><source src="${escapeHtml(embed.videoSrc)}"></video>`
+        : embed.posterUrl
+          ? `<img class="atoman-post-embed__player atoman-post-embed__player--poster" src="${escapeHtml(embed.posterUrl)}" alt="" loading="lazy">`
+          : `<div class="atoman-post-embed__player atoman-post-embed__player--empty">视频暂不可播放</div>`;
+    return [
+      `<div class="atoman-post-embed atoman-post-embed--video${missing ? " atoman-post-embed--missing" : ""}">`,
+      `  <div class="atoman-post-embed__media">${player}</div>`,
+      `  <a class="atoman-post-embed__link atoman-post-embed__link--video" data-atoman-embed="video" href="${href}">`,
+      `    <div class="atoman-post-embed__label">视频引用</div>`,
+      `    <div class="atoman-post-embed__title">${title}</div>`,
+      `    <div class="atoman-post-embed__summary">${summary}</div>`,
+      meta ? `    <div class="atoman-post-embed__meta">${meta}</div>` : "",
+      "  </a>",
+      "</div>",
+    ].filter(Boolean).join("\n");
+  }
+
   return [
     `<div class="atoman-post-embed atoman-post-embed--${kind}${missing ? " atoman-post-embed--missing" : ""}">`,
-    `  <a class="atoman-post-embed__link" href="${href}">`,
+    `  <a class="atoman-post-embed__link" data-atoman-embed="${kind}" href="${href}">`,
     `    <div class="atoman-post-embed__label">${labelMap[kind]}</div>`,
     `    <div class="atoman-post-embed__title">${title}</div>`,
     `    <div class="atoman-post-embed__summary">${summary}</div>`,
@@ -378,10 +425,15 @@ function disambiguateSingleMarkerLines(content: string): string {
 const canonicalOrigin = "https://www.atoman.org";
 const internalOrigins = new Set([canonicalOrigin, "https://atoman.org"]);
 
-function decorateOutboundLinks(html: string): string {
+function decorateOutboundLinks(html: string, preserveSingleRoot = false): string {
   if (typeof document === "undefined") return DOMPurify.sanitize(html);
 
-  const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
+  const fragment = preserveSingleRoot
+    ? DOMPurify.sanitize(
+        `<div data-atoman-sanitize-root="true">\n${html}\n</div>`,
+        { RETURN_DOM_FRAGMENT: true },
+      )
+    : DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
   fragment.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
     try {
       const href = link.getAttribute("href");
@@ -428,7 +480,7 @@ export function useMarkdownRenderer() {
           normalizeLatexMathDelimiters(preprocessDirectives(content, options)),
         ),
       ) as string;
-      return decorateOutboundLinks(html);
+      return decorateOutboundLinks(html, true);
     } catch {
       return `<pre>${escapeHtml(content)}</pre>`;
     }

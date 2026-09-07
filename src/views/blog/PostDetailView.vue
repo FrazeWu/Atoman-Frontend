@@ -53,6 +53,7 @@
           class="prose-blog" 
           :class="{ 'prose-blog-academic': isAcademic }" 
           style="margin-bottom:3rem" 
+          @click="handleRenderedContentClick"
           v-html="renderedContent" 
         />
 
@@ -150,6 +151,7 @@ import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { applyResolvedReferences } from '@/composables/useReferenceRendering'
+import { useBlogMediaEmbeds } from '@/composables/useBlogMediaEmbeds'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useInteractions } from '@/composables/useInteractions'
 import { isAdminRole } from '@/utils/roles'
@@ -157,14 +159,6 @@ import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 import { useFeedStore } from '@/stores/feed'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
-
-type EmbedData = {
-  id: string
-  title: string
-  summary?: string
-  meta?: string
-  href?: string
-}
 
 type PostDetailResponse = Post & {
   liked?: boolean
@@ -186,9 +180,16 @@ const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
 const api = useApi()
 const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
+const { postEmbeds, musicEmbeds, videoEmbeds, load: loadMediaEmbeds } = useBlogMediaEmbeds()
 const { setPageMeta, restorePageMeta } = usePageMeta()
 const interactions = useInteractions('blog', 'post', postId)
 const lifecycle = useContentLifecycle()
+
+const authHeaders = () => {
+  const headers: Record<string, string> = {}
+  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
+  return headers
+}
 
 const post = ref<Post | null>(null)
 const isAcademic = ref(false)
@@ -199,9 +200,6 @@ const ratingLoading = ref(false)
 const ratingError = ref('')
 const channelSubscribed = ref(false)
 const channelSubscriptionBusy = ref(false)
-const postEmbeds = ref<Record<string, EmbedData>>({})
-const musicEmbeds = ref<Record<string, EmbedData>>({})
-const videoEmbeds = ref<Record<string, EmbedData>>({})
 const relatedPosts = ref<BlogRelatedPost[]>([])
 const shareToastVisible = ref(false)
 const shareToastMessage = ref('')
@@ -358,11 +356,8 @@ const fetchPost = async () => {
         }).catch(() => {})
       }
 
-      const embeds = await fetchEmbeds(detail.content)
+      await loadMediaEmbeds(detail.content, authStore.token ?? undefined)
       if (!isCurrentLoad()) return
-      postEmbeds.value = embeds.posts
-      musicEmbeds.value = embeds.music
-      videoEmbeds.value = embeds.videos
 
       // Initialize bookmark state
       if (authStore.isAuthenticated) {
@@ -585,107 +580,13 @@ const sharePost = async () => {
   }
 }
 
-const extractEmbedIds = (content: string, kind: 'post' | 'music' | 'video') => {
-  const patternMap = {
-    post: /:::post\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
-    music: /:::music\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
-    video: /:::video\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
-  }
-
-  const matches = content.matchAll(patternMap[kind])
-  return [...new Set(Array.from(matches, (match) => match[1]))]
-}
-
-const authHeaders = () => {
-  const headers: Record<string, string> = {}
-  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-  return headers
-}
-
-const fetchPostEmbeds = async (content: string) => {
-  const ids = extractEmbedIds(content, 'post')
-  if (!ids.length) return {}
-
-  const entries = await Promise.all(
-    ids.map(async (id) => {
-      try {
-        const res = await apiRequestResult(api.blog.post(id), { headers: authHeaders() })
-        if (!res.ok) return null
-        const payload = await Promise.resolve(res.data)
-        const embedPost = (payload.data || payload) as Post
-        return [
-          id,
-          {
-            id,
-            title: embedPost.title,
-            summary: embedPost.summary,
-            meta: embedPost.channel?.name,
-            href: `/posts/post/${id}`,
-          } satisfies EmbedData,
-        ] as const
-      } catch {
-        return null
-      }
-    }),
-  )
-
-  return Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
-}
-
-const fetchMusicEmbeds = async (content: string) => {
-  const ids = extractEmbedIds(content, 'music')
-  if (!ids.length) return {}
-
-  const entries = await Promise.all(
-    ids.map(async (id) => {
-      try {
-        const res = await apiRequestResult(api.v1.music.album(id), { headers: authHeaders() })
-        if (!res.ok) return null
-        const payload = await Promise.resolve(res.data)
-        const album = (payload.data || payload) as import('@/types').Album
-        return [
-          id,
-          {
-            id,
-            title: album.title,
-            summary: album.release_date ? `发行日期：${album.release_date}` : undefined,
-            meta: [album.artists?.map((artist) => artist.name).join(' / '), album.year ? String(album.year) : ''].filter(Boolean).join(' · '),
-            href: `/music/album/${id}`,
-          } satisfies EmbedData,
-        ] as const
-      } catch {
-        return null
-      }
-    }),
-  )
-
-  return Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
-}
-
-const fetchVideoEmbeds = async (content: string) => {
-  const ids = extractEmbedIds(content, 'video')
-  if (!ids.length) return {}
-
-  return Object.fromEntries(
-    ids.map((id) => [
-      id,
-      {
-        id,
-        title: '引用视频',
-        summary: '视频模块尚未接入真实数据源，当前为可扩展占位。',
-        href: `#video-${id}`,
-      } satisfies EmbedData,
-    ]),
-  )
-}
-
-const fetchEmbeds = async (content: string) => {
-  const [posts, music, videos] = await Promise.all([
-    fetchPostEmbeds(content),
-    fetchMusicEmbeds(content),
-    fetchVideoEmbeds(content),
-  ])
-  return { posts, music, videos }
+function handleRenderedContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const link = target?.closest<HTMLAnchorElement>('a[data-atoman-embed]')
+  const href = link?.getAttribute('href')
+  if (!link || !href || href.startsWith('#')) return
+  event.preventDefault()
+  void router.push(href)
 }
 
 onMounted(() => {
@@ -864,47 +765,6 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 .prose-blog :deep(.hljs-title) { color: #50fa7b; }
 .prose-blog :deep(.hljs-variable),
 .prose-blog :deep(.hljs-attr) { color: #8be9fd; }
-
-
-.prose-blog :deep(.atoman-post-embed) {
-  margin: 1.5rem 0;
-}
-.prose-blog :deep(.atoman-post-embed__link) {
-  display: block;
-  border: var(--a-border);
-  padding: 1rem 1.25rem;
-  text-decoration: none;
-  color: var(--a-color-fg);
-  background: var(--a-color-bg);
-}
-.prose-blog :deep(.atoman-post-embed__link:hover) {
-  box-shadow: var(--a-shadow-dropdown);
-}
-.prose-blog :deep(.atoman-post-embed__label) {
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  color: var(--a-color-muted);
-  margin-bottom: 0.5rem;
-}
-.prose-blog :deep(.atoman-post-embed__title) {
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.3;
-  margin-bottom: 0.4rem;
-}
-.prose-blog :deep(.atoman-post-embed__summary) {
-  font-size: 0.875rem;
-  color: var(--a-color-muted);
-  line-height: 1.6;
-}
-.prose-blog :deep(.atoman-post-embed__meta) {
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--a-color-muted);
-}
 
 /* Like / toggle button */
 .a-toggle-btn {

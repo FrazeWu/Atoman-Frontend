@@ -685,9 +685,9 @@ watch(
 .song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 .song-detail__lyrics-layout { min-width: 0; }
 .song-detail__lyrics-layout.has-annotation-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 0; }
-.song-detail__lyric-lines { display: grid; gap: 0.15rem; }
-.song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; }
-.song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.65; }
+.song-detail__lyric-lines { display: grid; gap: 0; }
+.song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; padding: 0.2rem 0; }
+.song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.45; }
 .song-detail__annotation-workspace { align-self: start; min-width: 0; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }

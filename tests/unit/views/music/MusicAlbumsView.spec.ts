@@ -203,8 +203,8 @@ describe("Music AlbumsView.vue (Album Landing)", () => {
 		await flushPromises();
 
 		expect(mocks.routerPush).toHaveBeenCalledWith({
-			path: "/music/album/album-1",
-			query: { song_id: "song-1", annotation_id: "annotation-1", rebind: "1" },
+			path: "/music/song/song-1",
+			query: { annotation_id: "annotation-1", rebind: "1" },
 		});
 	});
 

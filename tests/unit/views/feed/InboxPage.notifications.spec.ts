@@ -81,7 +81,7 @@ describe("InboxPage notifications", () => {
         expect(wrapper.text()).toContain("因为歌词修改影响了你的注释");
     });
 
-    it("将歌词重绑通知跳转到专辑并携带歌曲和注释焦点", async () => {
+    it("将歌词重绑通知跳转到单曲详情并携带歌曲和注释焦点", async () => {
         const store = useNotificationStore();
         store.notifications = [
             {
@@ -108,9 +108,8 @@ describe("InboxPage notifications", () => {
         await wrapper.vm.$nextTick();
         await wrapper.get(".detail-actions button").trigger("click");
         expect(routerPush).toHaveBeenCalledWith({
-            path: "/music/album/album-1",
+            path: "/music/song/song-1",
             query: {
-                song_id: "song-1",
                 annotation_id: "annotation-1",
                 rebind: "1",
             },

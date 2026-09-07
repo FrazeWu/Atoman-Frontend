@@ -310,8 +310,8 @@ const notificationTargetPath = (notification: Notification): RouteLocationRaw | 
     const { album_id: albumId, song_id: songId, annotation_id: annotationId } = notification.meta
     if (typeof albumId === 'string' && typeof songId === 'string' && typeof annotationId === 'string') {
       return {
-        path: `/music/album/${albumId}`,
-        query: { song_id: songId, annotation_id: annotationId, rebind: '1' },
+        path: `/music/song/${songId}`,
+        query: { annotation_id: annotationId, rebind: '1' },
       }
     }
   }

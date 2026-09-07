@@ -19,12 +19,21 @@ describe('SongDrawer 歌词注释入口', () => {
     expect(source).not.toContain('MusicSongLyricsEditorDrawer')
   })
 
-  it('允许已登录用户选择歌词，并在紧贴歌词的编辑区创建注释', () => {
+  it('允许已登录用户在详情页使用完整注释工作区', () => {
     expect(source).toContain(':can-select="authStore.isAuthenticated"')
     expect(source).toContain(':can-annotate="authStore.isAuthenticated"')
     expect(source).toContain('@select-text="handleSelectText"')
-    expect(source).toContain('class="song-detail__lyrics-layout"')
-    expect(source).toContain('grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem)')
+    expect(source).toContain('<MusicAnnotationWorkspace')
+    expect(source).toContain('@vote="handleVoteAnnotation"')
+    expect(source).toContain('@edit="handleEditAnnotation"')
+    expect(source).toContain('@delete="handleDeleteAnnotation"')
+    expect(source).toContain('@rebind="handleRebindAnnotation"')
+  })
+
+  it('消费歌曲层传入的注释焦点并自动进入重绑状态', () => {
+    expect(source).toContain('focusAnnotationId')
+    expect(source).toContain('startRebind')
+    expect(source).toContain('handleRebindAnnotation(annotation)')
   })
 
   it('仅为 LRCLIB 自动匹配歌词显示来源与编辑状态', () => {

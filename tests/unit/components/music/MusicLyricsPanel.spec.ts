@@ -341,16 +341,43 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1 条注释')
   })
 
-  it('播放器歌词模式只读并显示歌词注解入口', async () => {
+  it('播放器歌词模式只读，点击带注释的歌词后仅显示该句注释', async () => {
     const wrapper = await mountPanel({ mode: 'player' })
     await flushPromises()
 
-    const trigger = wrapper.get('[data-testid="lyrics-annotations-trigger"]')
-    expect(trigger.text()).toContain('歌词注解')
+    const trigger = wrapper.get('[data-testid="lyrics-open-song-detail"]')
+    expect(trigger.text()).toContain('编辑注释')
     expect(wrapper.get('[data-line-id="line-1"]').attributes('data-can-select')).toBe('false')
-    expect(wrapper.find('.music-lyrics-panel__sidebar').exists()).toBe(false)
+    expect(wrapper.find('.music-lyrics-panel__sidebar').exists()).toBe(true)
+    expect(wrapper.find('.music-annotation-card').exists()).toBe(false)
     expect(wrapper.find('[data-testid="lyrics-edit-trigger"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="lyrics-versions-trigger"]').exists()).toBe(false)
+
+    await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
+
+    expect(wrapper.get('.music-annotation-card__body').text()).toContain('第一句的意象')
+    expect(wrapper.find('.music-annotation-card__actions').exists()).toBe(false)
+    expect(wrapper.find('.music-annotation-card__vote').exists()).toBe(false)
+  })
+
+  it('播放器点击没有注释的歌词后隐藏上一句注释', async () => {
+    const wrapper = await mountPanel({ mode: 'player' })
+    await flushPromises()
+
+    await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
+    expect(wrapper.find('.music-annotation-card').exists()).toBe(true)
+
+    await wrapper.get('[data-line-id="line-2"] .open-annotations').trigger('click')
+    expect(wrapper.find('.music-annotation-card').exists()).toBe(false)
+  })
+
+  it('播放器歌词页的唯一注释入口打开单曲详情事件', async () => {
+    const wrapper = await mountPanel({ mode: 'player' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-open-song-detail"]').trigger('click')
+
+    expect(wrapper.emitted('open-song-detail')).toEqual([[]])
   })
 
   it('在歌词正文前展示歌曲名与已有署名', async () => {

@@ -84,6 +84,7 @@ function mapSongEmbed(id: string, song: MusicSongListItem): EmbedData {
     imageUrl: song.cover_url || song.album?.cover_url
       ? resolveMediaURL(song.cover_url || song.album?.cover_url || '')
       : undefined,
+    audioSrc: song.audio_url ? resolveMediaURL(song.audio_url) : undefined,
     href: `/music/song/${id}`,
   }
 }

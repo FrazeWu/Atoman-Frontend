@@ -20,4 +20,10 @@ describe('SongDrawer 单曲详情布局', () => {
     expect(source).not.toContain('稍后播放')
     expect(source).not.toContain('Clock3')
   })
+
+  it('提供复制单曲 UUID 的操作', () => {
+    expect(source).toContain('data-testid="song-detail-copy-uuid"')
+    expect(source).toContain('@click="copySongUuid"')
+    expect(source).toContain('UUID 已复制')
+  })
 })

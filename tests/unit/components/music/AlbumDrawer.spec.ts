@@ -585,6 +585,22 @@ describe("AlbumDrawer.vue", () => {
 		);
 	});
 
+	it("copies the album UUID from the detail action", async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		Object.defineProperty(navigator, "clipboard", {
+			configurable: true,
+			value: { writeText },
+		});
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+		await wrapper.get('[data-testid="album-copy-uuid"]').trigger("click");
+		await flushPromises();
+
+		expect(writeText).toHaveBeenCalledWith("1");
+		expect(document.body.textContent).toContain("UUID 已复制");
+	});
+
 	it("does not show hard-coded discussion count or fake track durations when data is absent", async () => {
 		const wrapper = mount(AlbumDrawer, {});
 

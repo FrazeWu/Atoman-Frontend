@@ -724,6 +724,21 @@ describe("VideoDetailView shared interactions", () => {
 		expect(wrapper.text()).toContain("链接已复制");
 	});
 
+	it("copies the video UUID from the detail actions", async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		Object.defineProperty(navigator, "clipboard", {
+			configurable: true,
+			value: { writeText },
+		});
+
+		const { wrapper } = await mountVideoDetail();
+		await wrapper.get('[data-testid="video-copy-uuid"]').trigger("click");
+		await flushPromises();
+
+		expect(writeText).toHaveBeenCalledWith("video-1");
+		expect(wrapper.text()).toContain("UUID 已复制");
+	});
+
 	it("路由 id 快速切换时忽略过期详情响应", async () => {
 		const firstVideo = deferred<Response>();
 		const firstRecommended = deferred<Response>();

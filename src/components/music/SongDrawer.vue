@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconHeart as Heart, IconHistory as History, IconPlaylistAdd as ListPlus, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPlayerTrackNext as StepForward } from '@tabler/icons-vue'
+import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconCopy as Copy, IconHeart as Heart, IconHistory as History, IconPlaylistAdd as ListPlus, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPlayerTrackNext as StepForward } from '@tabler/icons-vue'
 import { deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem } from '@/api/musicV1'
 import MusicAnnotationEditor from '@/components/music/MusicAnnotationEditor.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
@@ -143,6 +143,18 @@ const appleMusicSource = computed(() => effectiveSources.value.find(source =>
 function showToast(message: string) {
   toastMessage.value = message
   toastVisible.value = true
+}
+
+async function copySongUuid() {
+  const id = detail.value?.song.id
+  if (!id) return
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(String(id))
+    showToast('UUID 已复制')
+  } catch {
+    showToast('复制 UUID 失败')
+  }
 }
 
 function applyRating(summary: { rating_score: number; rating_count: number; viewer_rating?: number | null }) {
@@ -387,6 +399,7 @@ watch(
           <PButton variant="secondary" :disabled="!detail.playable" aria-label="下一首" title="下一首" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" /></PButton>
           <PButton variant="secondary" :disabled="!detail.playable" aria-label="加入队列" title="加入队列" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" /></PButton>
           <PButton variant="secondary" aria-label="版本记录" title="版本记录" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本</PButton>
+          <PButton variant="secondary" data-testid="song-detail-copy-uuid" aria-label="复制歌曲 UUID" title="复制 UUID" @click="copySongUuid"><Copy :size="16" aria-hidden="true" />复制 UUID</PButton>
         </div>
         <MusicDescriptionPreview
           v-if="detail.song.description"

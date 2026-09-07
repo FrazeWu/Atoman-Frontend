@@ -65,6 +65,8 @@ export const musicV1Endpoints = {
 	search: () => `${apiV1Base()}/music/search`,
 	searchInteractions: () => `${apiV1Base()}/music/search/interactions`,
 	songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,
+	songTags: (songId: string) => `${apiV1Base()}/music/songs/${songId}/tags`,
+	songTagVote: (songId: string, tagId: string) => `${apiV1Base()}/music/songs/${songId}/tags/${tagId}/vote`,
 	songApplePreview: (songId: string) =>
 		`${apiV1Base()}/music/songs/${songId}/apple-preview`,
 	albumRating: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}/rating`,
@@ -91,6 +93,8 @@ export const musicV1Endpoints = {
 	laterPlaylistSong: (songId: string) =>
 		`${apiV1Base()}/music/playlists/later/${songId}`,
 	album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
+	albumTags: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}/tags`,
+	albumTagVote: (albumId: string, tagId: string) => `${apiV1Base()}/music/albums/${albumId}/tags/${tagId}/vote`,
 	albumToSongConversion: (albumId: string) =>
 		`${apiV1Base()}/music/albums/${albumId}/convert-to-song`,
 	albumMerge: (albumId: string) =>

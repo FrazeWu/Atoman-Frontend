@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
 import { IconCirclePlus as CirclePlus, IconExternalLink as ExternalLink, IconInfoCircle as Info, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play, IconSearch as Search } from '@tabler/icons-vue';
-import { recordMusicSearchInteraction, searchMusic, listMusicPlaylistSongs, getMusicArtist, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
+import { useRoute, useRouter } from 'vue-router';
+import { recordMusicSearchInteraction, searchMusic, listMusicAlbums, listMusicPlaylistSongs, listMusicSongs, getMusicArtist, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";
@@ -14,7 +15,17 @@ import PEmpty from "@/components/ui/PEmpty.vue";
 import PButton from "@/components/ui/PButton.vue";
 import PaginationBar from "@/components/ui/PaginationBar.vue";
 
-const query = ref(typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("q") || "" : "");
+const route = useRoute();
+const router = useRouter();
+const queryValue = (value: unknown) => typeof value === 'string' ? value : '';
+const tagEntityValue = (value: unknown): "" | "song" | "album" => {
+  const entity = queryValue(value);
+  return entity === 'song' || entity === 'album' ? entity : '';
+};
+const query = ref(queryValue(route.query.q));
+const tagID = ref(queryValue(route.query.tag_id));
+const tagEntity = ref<"" | "song" | "album">(tagEntityValue(route.query.tag_entity));
+const tagName = ref(queryValue(route.query.tag_name));
 const selectedType = ref<"" | MusicSearchKind>("");
 const searchTypeOptions = [
   { label: "全部", value: "" },
@@ -38,6 +49,52 @@ let controller: AbortController | undefined;
 const page = ref(1);
 const searchMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false });
 
+function applyTagResults(
+  nextSongs: MusicSongListItem[],
+  nextAlbums: Awaited<ReturnType<typeof listMusicAlbums>>['data'],
+  targetPage: number,
+  total: number,
+  hasMore: boolean,
+) {
+  songs.value = nextSongs;
+  albums.value = nextAlbums;
+  artists.value = [];
+  playlists.value = [];
+  page.value = targetPage;
+  searchMeta.value = { page: targetPage, page_size: 20, total, has_more: hasMore };
+}
+
+async function runTagSearch(targetPage: number) {
+  const filters = {
+    tag_id: tagID.value,
+    page: targetPage,
+    page_size: 20,
+    sort: '-release_date' as const,
+  };
+  if (tagEntity.value === 'song') {
+    const result = await listMusicSongs(filters);
+    applyTagResults(result.data, [], targetPage, result.meta.total, result.meta.has_more);
+    return;
+  }
+  if (tagEntity.value === 'album') {
+    const result = await listMusicAlbums(filters);
+    applyTagResults([], result.data, targetPage, result.meta.total, result.meta.has_more);
+    return;
+  }
+
+  const [songResult, albumResult] = await Promise.all([
+    listMusicSongs(filters),
+    listMusicAlbums(filters),
+  ]);
+  applyTagResults(
+    songResult.data,
+    albumResult.data,
+    targetPage,
+    songResult.meta.total + albumResult.meta.total,
+    songResult.meta.has_more || albumResult.meta.has_more,
+  );
+}
+
 function trackSearchClick(entityType: MusicSearchKind, entityId: string) {
   if (!authStore?.isAuthenticated) return;
   void recordMusicSearchInteraction({ query: query.value.trim(), entity_type: entityType, entity_id: entityId }).catch(() => undefined);
@@ -45,13 +102,18 @@ function trackSearchClick(entityType: MusicSearchKind, entityId: string) {
 
 async function runSearch(targetPage = 1) {
   const keyword = query.value.trim();
-  if (!keyword) return;
+  if (!keyword && !tagID.value) return;
   controller?.abort();
   controller = new AbortController();
   const current = ++requestID;
   loading.value = true;
   error.value = "";
   try {
+    if (tagID.value) {
+      await runTagSearch(targetPage);
+      if (current !== requestID) return;
+      return;
+    }
     const result = await searchMusic(keyword, { type: selectedType.value || undefined, page: targetPage, page_size: 20, signal: controller.signal });
     if (current !== requestID) return;
     songs.value = result.songs;
@@ -72,6 +134,12 @@ async function runSearch(targetPage = 1) {
   } finally {
     if (current === requestID) loading.value = false;
   }
+}
+
+function clearTagFilter() {
+	const nextQuery: Record<string, string> = {};
+	if (query.value.trim()) nextQuery.q = query.value.trim();
+	void router.replace({ path: route.path, query: nextQuery });
 }
 
 function asSong(song: MusicSongListItem): Song {
@@ -141,20 +209,34 @@ async function playArtistResult(artist: Awaited<ReturnType<typeof searchMusic>>[
   player.playAlbum(tracks);
 }
 
-watch([query, selectedType], ([value]) => {
-  window.clearTimeout(timer);
-  controller?.abort();
-  const keyword = value.trim();
-  if (!keyword) {
+watch(
+	() => [route.query.q, route.query.tag_id, route.query.tag_entity, route.query.tag_name],
+	([routeQuery, routeTagID, routeTagEntity, routeTagName]) => {
+		query.value = queryValue(routeQuery);
+		tagID.value = queryValue(routeTagID);
+		tagEntity.value = tagEntityValue(routeTagEntity);
+		tagName.value = queryValue(routeTagName);
+	},
+);
+
+watch([query, selectedType, tagID, tagEntity], ([value]) => {
+	window.clearTimeout(timer);
+	controller?.abort();
+	const keyword = value.trim();
+	if (!keyword && !tagID.value) {
     songs.value = [];
     albums.value = [];
     artists.value = [];
     playlists.value = [];
     error.value = "";
     searchMeta.value = { page: 1, page_size: 20, total: 0, has_more: false };
-    return;
-  }
-  timer = window.setTimeout(() => void runSearch(1), 250);
+		return;
+	}
+	if (tagID.value) {
+		void runSearch(1);
+		return;
+	}
+	timer = window.setTimeout(() => void runSearch(1), 250);
 }, { immediate: true });
 
 onBeforeUnmount(() => {
@@ -165,8 +247,9 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="songs-view">
-    <PPageHeader title="歌曲检索" mb="1.25rem">
+    <PPageHeader :title="tagName ? `标签：${tagName}` : '歌曲检索'" mb="1.25rem">
       <template #action>
+        <PButton v-if="tagID" size="sm" variant="secondary" @click="clearTagFilter">清除标签筛选</PButton>
         <PSegmentedControl v-model="selectedType" :options="searchTypeOptions" />
       </template>
     </PPageHeader>
@@ -181,7 +264,7 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Default empty guidance state -->
-    <div v-if="!query.trim() && !loading" class="songs-view__default-empty">
+    <div v-if="!query.trim() && !tagID && !loading" class="songs-view__default-empty">
       <PEmpty title="搜索全库音乐资源" description="支持输入歌曲名称、专辑名、艺术家或歌单名称进行全量检索。">
         <template #icon>
           <Search :size="32" style="color: var(--a-color-muted);" />
@@ -193,7 +276,7 @@ onBeforeUnmount(() => {
     <p v-else-if="error" class="state error">{{ error }}</p>
     <PEmpty
       v-else-if="
-        query.trim() &&
+        (query.trim() || tagID) &&
         !songs.length &&
         !albums.length &&
         !artists.length &&

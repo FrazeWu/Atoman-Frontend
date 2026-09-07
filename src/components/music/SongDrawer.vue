@@ -7,6 +7,7 @@ import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
+import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
@@ -341,8 +342,9 @@ watch(
       <p v-if="loading" class="song-detail__state">正在加载</p>
       <p v-else-if="error" class="song-detail__state song-detail__state--error">{{ error }}</p>
       <section v-else-if="detail" class="song-detail__content">
-        <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
-        <div class="song-detail__main">
+        <div class="song-detail__primary">
+          <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
+          <div class="song-detail__main">
           <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
           <p v-else class="song-detail__album">{{ standaloneReleaseLabel }}</p>
           <h1>{{ detail.song.title }}</h1>
@@ -368,35 +370,35 @@ watch(
             :edit-status="detail.song.edit_status"
             @submitted="loadDetail(detail.song.id)"
           />
-        </div>
-        <div class="song-detail__actions song-detail__actions--primary">
-          <PButton class="song-detail__play" data-testid="song-detail-play" :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
-          <PButton data-testid="song-detail-edit" variant="secondary" :disabled="detail.song.edit_status !== undefined && (detail.song.edit_status !== 'development' || detail.song.album?.edit_status === 'closed')" aria-label="编辑歌曲" title="编辑歌曲" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
-          <PButton variant="secondary" :loading="actionBusy === 'favorite'" :aria-label="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" :title="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></PButton>
-          <PDropdown position="right">
-            <template #trigger>
-              <PButton variant="secondary" aria-label="添加到歌单" title="添加到歌单" @click="preparePlaylistMenu"><Plus :size="16" aria-hidden="true" /></PButton>
-            </template>
-            <template #default="{ close }">
-              <div class="song-detail__playlist-menu">
-                <p v-if="!playlists.length">暂无歌单</p>
-                <button v-for="playlist in playlists" :key="playlist.id" type="button" @click="addToPlaylist(String(playlist.id), close)">{{ playlist.name }}</button>
-              </div>
-            </template>
-          </PDropdown>
-          <PButton variant="secondary" :disabled="!detail.playable" aria-label="下一首" title="下一首" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" /></PButton>
-          <PButton variant="secondary" :disabled="!detail.playable" aria-label="加入队列" title="加入队列" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" /></PButton>
-          <PButton variant="secondary" aria-label="版本记录" title="版本记录" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本</PButton>
-        </div>
-        <MusicDescriptionPreview
-          v-if="detail.song.description"
-          class="song-detail__description"
-          :description="detail.song.description"
-          content-id="song-description"
-          test-id="song-description-toggle"
-          max-width="42rem"
-        />
-        <section class="song-detail__lyrics">
+          </div>
+          <div class="song-detail__actions song-detail__actions--primary">
+            <PButton class="song-detail__play" data-testid="song-detail-play" :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
+            <PButton data-testid="song-detail-edit" variant="secondary" :disabled="detail.song.edit_status !== undefined && (detail.song.edit_status !== 'development' || detail.song.album?.edit_status === 'closed')" aria-label="编辑歌曲" title="编辑歌曲" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
+            <PButton variant="secondary" :loading="actionBusy === 'favorite'" :aria-label="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" :title="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></PButton>
+            <PDropdown position="right">
+              <template #trigger>
+                <PButton variant="secondary" aria-label="添加到歌单" title="添加到歌单" @click="preparePlaylistMenu"><Plus :size="16" aria-hidden="true" /></PButton>
+              </template>
+              <template #default="{ close }">
+                <div class="song-detail__playlist-menu">
+                  <p v-if="!playlists.length">暂无歌单</p>
+                  <button v-for="playlist in playlists" :key="playlist.id" type="button" @click="addToPlaylist(String(playlist.id), close)">{{ playlist.name }}</button>
+                </div>
+              </template>
+            </PDropdown>
+            <PButton variant="secondary" :disabled="!detail.playable" aria-label="下一首" title="下一首" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" /></PButton>
+            <PButton variant="secondary" :disabled="!detail.playable" aria-label="加入队列" title="加入队列" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" /></PButton>
+            <PButton variant="secondary" aria-label="版本记录" title="版本记录" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本</PButton>
+          </div>
+          <MusicDescriptionPreview
+            v-if="detail.song.description"
+            class="song-detail__description"
+            :description="detail.song.description"
+            content-id="song-description"
+            test-id="song-description-toggle"
+            max-width="42rem"
+          />
+          <section class="song-detail__lyrics">
           <header class="song-detail__lyrics-header">
             <h2 class="song-detail__lyrics-title">
               歌词
@@ -488,6 +490,10 @@ watch(
           <RouterLink v-if="detail.previous" :to="`/music/song/${detail.previous.id}`"><ChevronLeft :size="16" aria-hidden="true" />{{ detail.previous.title }}</RouterLink>
           <RouterLink v-if="detail.next" :to="`/music/song/${detail.next.id}`">{{ detail.next.title }}<ChevronRight :size="16" aria-hidden="true" /></RouterLink>
         </nav>
+        </div>
+        <aside class="song-detail__tags" aria-label="歌曲标签">
+          <MusicTagList entity="song" :entity-id="String(detail.song.id)" />
+        </aside>
       </section>
       <PToast v-model="toastVisible" :message="toastMessage" type="success" />
     </main>
@@ -495,8 +501,10 @@ watch(
 </template>
 
 <style scoped>
-.song-detail { max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
-.song-detail__content { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; }
+.song-detail { max-width: 72rem; margin: 0 auto; padding: 1.5rem; }
+.song-detail__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem); gap: 1.5rem; align-items: start; }
+.song-detail__primary { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; min-width: 0; }
+.song-detail__tags { min-width: 0; align-self: start; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
 .song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--a-color-bg-subtle); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
 .song-detail__main h1, .song-detail__album, .song-detail__release-date { margin: 0; }
@@ -534,5 +542,5 @@ watch(
 .song-detail__annotation-editor { align-self: start; border-radius: 0; border-width: 0 0 0 1px; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
-@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-editor { grid-template-columns: 1fr; } .song-detail__annotation-editor { border-width: 1px 0 0; } }
+@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content, .song-detail__primary { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__tags { border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding: 1.25rem 0 0; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-editor { grid-template-columns: 1fr; } .song-detail__annotation-editor { border-width: 1px 0 0; } }
 </style>

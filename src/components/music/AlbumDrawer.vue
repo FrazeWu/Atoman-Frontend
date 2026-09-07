@@ -15,6 +15,7 @@ import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vu
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
+import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import { IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconFileText as FileText, IconHeart as Heart, IconHistory as History, IconGitMerge as Merge, IconDots as MoreHorizontal, IconPlayerPause as Pause, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconUser as UserRound } from '@tabler/icons-vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -709,8 +710,10 @@ watch(
         @submitted="loadAlbum(String(album.id))"
       />
 
-      <div v-if="!loading && album" class="album-meta-row">
-        <div class="album-cover">
+      <div v-if="!loading && album" class="album-detail-layout">
+        <div class="album-detail-main">
+          <div class="album-meta-row">
+            <div class="album-cover">
           <div class="album-cover-frame">
             <img
               v-if="coverUrl && !isCoverBroken"
@@ -721,8 +724,8 @@ watch(
             >
             <span v-else class="album-cover-empty">暂无封面</span>
           </div>
-        </div>
-        <div class="album-info">
+            </div>
+            <div class="album-info">
           <div class="album-type">{{ formatAlbumTypeLabel(album?.album_type) }}</div>
           <h2 class="album-title">{{ album?.title || `Album ${albumId}` }}</h2>
           <div class="meta-tags">
@@ -801,10 +804,10 @@ watch(
               </template>
             </PDropdown>
           </div>
-        </div>
-      </div>
+            </div>
+          </div>
 
-      <div v-if="!loading" class="content-section">
+          <div v-if="!loading" class="content-section">
         <div class="section-title section-title--tracks">
           <span>曲目</span>
           <span
@@ -946,11 +949,11 @@ watch(
             </div>
           </div>
         </div>
-      </div>
+          </div>
 
-	  <section v-if="!loading && albumCreatorCredits.length" class="content-section album-artists-section">
-		<div class="section-title">创作者</div>
-        <div class="artist-cards-grid">
+          <section v-if="!loading && albumCreatorCredits.length" class="content-section album-artists-section">
+            <div class="section-title">创作者</div>
+            <div class="artist-cards-grid">
           <button
 			v-for="artist in albumCreatorCredits"
             :key="artist.id || artist.name"
@@ -968,14 +971,19 @@ watch(
 			  <span class="artist-card-role">{{ artist.roles }}</span>
             </div>
           </button>
+            </div>
+          </section>
+          <MusicContributorsBlock
+            v-if="!loading"
+            :contributors="contributors"
+            :total="contributorTotal"
+            @open-history="openAlbumHistory"
+          />
         </div>
-      </section>
-      <MusicContributorsBlock
-        v-if="!loading"
-        :contributors="contributors"
-        :total="contributorTotal"
-        @open-history="openAlbumHistory"
-      />
+        <aside class="album-detail-tags" aria-label="专辑标签">
+          <MusicTagList entity="album" :entity-id="String(album.id)" />
+        </aside>
+      </div>
     </div>
     <PDiscussionFAB v-if="isOpen && !commentsOpen" @click="openComments" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
@@ -1006,6 +1014,24 @@ watch(
 }
 
 .drawer-body { padding: 2rem 0 3rem; }
+
+.album-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  gap: 2rem;
+  align-items: start;
+}
+
+.album-detail-main {
+  min-width: 0;
+}
+
+.album-detail-tags {
+  min-width: 0;
+  align-self: start;
+  border-left: 1px solid var(--a-color-border-soft);
+  padding-left: 1rem;
+}
 
 .album-meta-row {
   display: flex;
@@ -1258,6 +1284,17 @@ watch(
   .drawer-body {
     margin: 0;
     padding: 1rem 0;
+  }
+
+  .album-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .album-detail-tags {
+    border-top: 1px solid var(--a-color-border-soft);
+    border-left: 0;
+    padding: 1.25rem 0 0;
   }
 
   .album-meta-row {

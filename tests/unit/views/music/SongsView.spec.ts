@@ -1,10 +1,13 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMemoryHistory, createRouter } from "vue-router";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import SongsView from "../../../../src/views/music/SongsView.vue";
 
 const mocks = vi.hoisted(() => ({
 	searchMusic: vi.fn(),
+	listMusicSongs: vi.fn(),
+	listMusicAlbums: vi.fn(),
 	listMusicPlaylistSongs: vi.fn(),
 	getMusicArtist: vi.fn(),
 	recordMusicSearchInteraction: vi.fn(),
@@ -18,6 +21,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/api/musicV1", () => ({
 	searchMusic: mocks.searchMusic,
+	listMusicSongs: mocks.listMusicSongs,
+	listMusicAlbums: mocks.listMusicAlbums,
 	listMusicPlaylistSongs: mocks.listMusicPlaylistSongs,
 	getMusicArtist: mocks.getMusicArtist,
 	recordMusicSearchInteraction: mocks.recordMusicSearchInteraction,
@@ -37,10 +42,35 @@ vi.mock("@/stores/player", () => ({
 	}),
 }));
 
+async function mountView(query: Record<string, string> = {}) {
+	const router = createRouter({
+		history: createMemoryHistory(),
+		routes: [{ path: "/music/songs", component: SongsView }],
+	});
+	await router.push({ path: "/music/songs", query });
+	await router.isReady();
+	return mount(SongsView, {
+		global: {
+			plugins: [router],
+			stubs: {
+				RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
+			},
+		},
+	});
+}
+
 describe("SongsView", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		Object.values(mocks).forEach((mock) => mock.mockReset());
+		mocks.listMusicSongs.mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 20, total: 0, has_more: false },
+		});
+		mocks.listMusicAlbums.mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 20, total: 0, has_more: false },
+		});
 		mocks.searchMusic.mockResolvedValue({
 			songs: [
 				{
@@ -67,13 +97,7 @@ describe("SongsView", () => {
 	afterEach(() => vi.useRealTimers());
 
 	it("links the song and opens its artist and album details", async () => {
-		const wrapper = mount(SongsView, {
-			global: {
-				stubs: {
-					RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
-				},
-			},
-		});
+		const wrapper = await mountView();
 		await wrapper.get('input[type="search"]').setValue("Song");
 		await vi.advanceTimersByTimeAsync(250);
 		await flushPromises();
@@ -148,13 +172,7 @@ describe("SongsView", () => {
 			],
 		});
 
-		const wrapper = mount(SongsView, {
-			global: {
-				stubs: {
-					RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
-				},
-			},
-		});
+		const wrapper = await mountView();
 		await wrapper.get('input[type="search"]').setValue("Album");
 		await vi.advanceTimersByTimeAsync(250);
 		await flushPromises();
@@ -212,13 +230,7 @@ describe("SongsView", () => {
 				});
 			},
 		);
-		const wrapper = mount(SongsView, {
-			global: {
-				stubs: {
-					RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
-				},
-			},
-		});
+		const wrapper = await mountView();
 		await wrapper.get('input[type="search"]').setValue("First");
 		await vi.advanceTimersByTimeAsync(250);
 		await wrapper.get('input[type="search"]').setValue("Second");
@@ -229,5 +241,34 @@ describe("SongsView", () => {
 			"Second",
 			expect.objectContaining({ page: 1, page_size: 20 }),
 		);
+	});
+
+	it("按标签查询歌曲时使用标签列表接口", async () => {
+		mocks.listMusicSongs.mockResolvedValueOnce({
+			data: [{
+				id: "tagged-song",
+				title: "治愈歌曲",
+				audio_url: "/tagged-song.mp3",
+				entry_status: "open",
+			}],
+			meta: { page: 1, page_size: 20, total: 1, has_more: false },
+		});
+
+		const wrapper = await mountView({
+			tag_id: "tag-1",
+			tag_entity: "song",
+			tag_name: "治愈",
+		});
+		await flushPromises();
+
+		expect(mocks.listMusicSongs).toHaveBeenCalledWith({
+			tag_id: "tag-1",
+			page: 1,
+			page_size: 20,
+			sort: "-release_date",
+		});
+		expect(mocks.searchMusic).not.toHaveBeenCalled();
+		expect(wrapper.text()).toContain("治愈");
+		expect(wrapper.text()).toContain("治愈歌曲");
 	});
 });

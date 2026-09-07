@@ -53,6 +53,8 @@ import type {
 	MusicSearchResults,
 	MusicSearchKind,
 	MusicSongDetail,
+	MusicTag,
+	MusicTagKind,
 	MusicSongRatingSummary,
 	MusicAlbumRatingSummary,
 	MusicAppleSongPreview,
@@ -132,6 +134,47 @@ export async function getMusicSongDetail(
 	songId: string,
 ): Promise<MusicSongDetail> {
 	return apiGet<MusicSongDetail>(musicV1Endpoints.songDetail(songId));
+}
+
+export async function listMusicTags(entity: "song" | "album", entityId: string): Promise<MusicTag[]> {
+	const endpoint = entity === "song"
+		? musicV1Endpoints.songTags(entityId)
+		: musicV1Endpoints.albumTags(entityId)
+	return apiGet<MusicTag[]>(endpoint)
+}
+
+export async function addMusicTag(
+	entity: "song" | "album",
+	entityId: string,
+	input: { kind: MusicTagKind; name: string },
+): Promise<MusicTag> {
+	const endpoint = entity === "song"
+		? musicV1Endpoints.songTags(entityId)
+		: musicV1Endpoints.albumTags(entityId)
+	return apiPostJson<MusicTag>(endpoint, input)
+}
+
+export async function deleteMusicTag(
+	entity: "song" | "album",
+	entityId: string,
+	tagId: string,
+): Promise<{ deleted: boolean }> {
+	const endpoint = entity === "song"
+		? `${musicV1Endpoints.songTags(entityId)}/${tagId}`
+		: `${musicV1Endpoints.albumTags(entityId)}/${tagId}`
+	return apiDeleteJson<{ deleted: boolean }>(endpoint)
+}
+
+export async function voteMusicTag(
+	entity: "song" | "album",
+	entityId: string,
+	tagId: string,
+	vote: "up" | "down" | "none",
+): Promise<MusicTag> {
+	const endpoint = entity === "song"
+		? musicV1Endpoints.songTagVote(entityId, tagId)
+		: musicV1Endpoints.albumTagVote(entityId, tagId)
+	return apiPutJson<MusicTag>(endpoint, { vote })
 }
 
 export async function getMusicAppleSongPreview(
@@ -263,6 +306,7 @@ export async function getMusicSong(
 export async function listMusicSongs(
 	filters: {
 		artist_id?: string;
+		tag_id?: string;
 		release_type?: MusicStandaloneSongType | "single,leak_song" | "single,leak";
 		sort?: "-release_date" | "release_date" | "hot";
 		page?: number;

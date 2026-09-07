@@ -227,7 +227,7 @@ function renderEmbedCard(
     const player = embed.iframeSrc
       ? `<iframe class="atoman-post-embed__player" src="${escapeHtml(embed.iframeSrc)}" title="${title}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
       : embed.videoSrc
-        ? `<video class="atoman-post-embed__player" controls preload="none"${embed.posterUrl ? ` poster="${escapeHtml(embed.posterUrl)}"` : ""}><source src="${escapeHtml(embed.videoSrc)}"></video>`
+        ? `<video class="atoman-post-embed__player" controls preload="metadata" playsinline src="${escapeHtml(embed.videoSrc)}"${embed.posterUrl ? ` poster="${escapeHtml(embed.posterUrl)}"` : ""}></video>`
         : embed.posterUrl
           ? `<img class="atoman-post-embed__player atoman-post-embed__player--poster" src="${escapeHtml(embed.posterUrl)}" alt="" loading="lazy">`
           : `<div class="atoman-post-embed__player atoman-post-embed__player--empty">视频暂不可播放</div>`;
@@ -424,16 +424,30 @@ function disambiguateSingleMarkerLines(content: string): string {
 
 const canonicalOrigin = "https://www.atoman.org";
 const internalOrigins = new Set([canonicalOrigin, "https://atoman.org"]);
+const markdownMediaSanitizeOptions = {
+  ADD_TAGS: ["iframe", "source", "video"],
+  ADD_ATTR: [
+    "allow",
+    "allowfullscreen",
+    "controls",
+    "loading",
+    "playsinline",
+    "poster",
+    "preload",
+    "src",
+    "title",
+  ],
+};
 
 function decorateOutboundLinks(html: string, preserveSingleRoot = false): string {
-  if (typeof document === "undefined") return DOMPurify.sanitize(html);
+  if (typeof document === "undefined") return DOMPurify.sanitize(html, markdownMediaSanitizeOptions);
 
   const fragment = preserveSingleRoot
     ? DOMPurify.sanitize(
         `<div data-atoman-sanitize-root="true">\n${html}\n</div>`,
-        { RETURN_DOM_FRAGMENT: true },
+        { ...markdownMediaSanitizeOptions, RETURN_DOM_FRAGMENT: true },
       )
-    : DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
+    : DOMPurify.sanitize(html, { ...markdownMediaSanitizeOptions, RETURN_DOM_FRAGMENT: true });
   fragment.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
     try {
       const href = link.getAttribute("href");

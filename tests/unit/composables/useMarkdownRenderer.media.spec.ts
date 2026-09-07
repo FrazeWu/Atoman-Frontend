@@ -47,11 +47,30 @@ describe("useMarkdownRenderer media embeds", () => {
 		expect(html).toContain("atoman-post-embed--video");
 		expect(html).toContain("<video");
 		expect(html).toContain('controls=""');
-		expect(html).toContain('preload="none"');
+		expect(html).toContain('preload="metadata"');
 		expect(html).toContain('src="/media/demo.mp4"');
 		expect(html).toContain('poster="/media/demo.jpg"');
 		expect(html).toContain('data-atoman-embed="video"');
 		expect(html).toContain('href="/videos/watch/' + videoId + '"');
 		expect(html).not.toContain("autoplay");
+	});
+
+	it("keeps the video element after markdown sanitization", () => {
+		const { renderMarkdown } = useMarkdownRenderer();
+		const html = renderMarkdown(`:::video{id="${videoId}"}\n:::`, {
+			videoEmbeds: {
+				[videoId]: {
+					id: videoId,
+					title: "可播放视频",
+					kind: "video",
+					videoSrc: "/media/demo.mp4",
+					href: `/videos/watch/${videoId}`,
+				},
+			},
+		});
+
+		const document = new DOMParser().parseFromString(html, "text/html");
+		expect(document.querySelector("video")).not.toBeNull();
+		expect(document.querySelector("video")?.getAttribute("src")).toBe("/media/demo.mp4");
 	});
 });

@@ -22,9 +22,19 @@ describe("shared card shells", () => {
     expect(card.element.tagName).toBe("ARTICLE");
     expect(card.attributes("role")).toBe("button");
     expect(card.attributes("aria-label")).toBe("打开频道");
+    expect(card.get(".p-identity-card__arrow").text()).toBe("→");
 
     await card.trigger("keydown", { key: "Enter" });
     expect(wrapper.emitted("activate")).toHaveLength(1);
+  });
+
+  it("marks interactive cards with a horizontal arrow", () => {
+    const wrapper = mount(PInteractionCard, {
+      props: { interactive: true },
+      slots: { default: "辩题内容" },
+    });
+
+    expect(wrapper.get(".p-interaction-card__arrow").text()).toBe("→");
   });
 
   it("keeps media variants explicit for square and landscape content", () => {

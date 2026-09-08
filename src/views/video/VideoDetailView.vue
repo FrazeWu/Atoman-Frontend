@@ -10,6 +10,7 @@ import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/compo
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
+import PLink from '@/components/ui/PLink.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoCollectionPlaylist from '@/components/video/VideoCollectionPlaylist.vue'
@@ -605,7 +606,7 @@ async function toggleChannelSubscription() {
             </div>
           </template>
           <div v-else class="vd-external">
-            <a :href="video.video_url" target="_blank" rel="noopener noreferrer" class="vd-external-link">在外部平台观看</a>
+            <PLink :href="video.video_url" external class="vd-external-link">在外部平台观看</PLink>
           </div>
         </template>
         <template v-if="video.storage_type === 'local'" #timeline-preview>
@@ -622,7 +623,7 @@ async function toggleChannelSubscription() {
 
       <section class="vd-channel-info" aria-label="视频频道信息">
         <div class="vd-meta-row">
-          <RouterLink v-if="video.channel" :to="`/channels/${video.channel.slug || video.channel_id}`" class="vd-author">
+          <a v-if="video.channel" :href="`/channels/${video.channel.slug || video.channel_id}`" class="vd-author">
             <span class="vd-author-avatar" aria-hidden="true">
               <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
               <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
@@ -631,7 +632,8 @@ async function toggleChannelSubscription() {
               <strong>{{ video.channel.name }}</strong>
               <small v-if="video.user?.username">@{{ video.user.username }}</small>
             </span>
-          </RouterLink>
+            <span class="vd-author__arrow" aria-hidden="true">→</span>
+          </a>
           <div class="vd-stats">
             <span>{{ video.view_count.toLocaleString() }} 次播放</span>
             <span>{{ fmtDate(video.created_at) }}</span>
@@ -903,9 +905,13 @@ async function toggleChannelSubscription() {
 }
 
 .vd-external-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--a-color-fg);
   font-size: 0.9rem;
   font-weight: 600;
+  text-decoration: none;
 }
 
 .vd-channel-info {
@@ -933,6 +939,10 @@ async function toggleChannelSubscription() {
   min-width: 0;
   align-items: center;
   gap: 0.5rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  font-weight: inherit;
   color: inherit;
   text-decoration: none;
 }
@@ -976,6 +986,20 @@ async function toggleChannelSubscription() {
 .vd-stats {
   color: var(--a-color-muted);
   font-size: 0.75rem;
+}
+
+.vd-author__arrow {
+  flex: 0 0 auto;
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.vd-author:hover .vd-author__arrow,
+.vd-author:focus-visible .vd-author__arrow {
+  color: var(--a-color-primary);
+  transform: translateX(2px);
 }
 
 .vd-stats {

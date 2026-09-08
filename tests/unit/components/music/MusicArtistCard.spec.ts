@@ -18,6 +18,7 @@ describe('MusicArtistCard', () => {
     const avatarAction = wrapper.get('.avatar-action')
     expect(avatarAction.attributes('type')).toBe('button')
     expect(avatarAction.attributes('aria-label')).toBe('打开艺人 测试艺人')
+    expect(wrapper.get('.artist-info__arrow').text()).toBe('→')
 
     await avatarAction.trigger('click')
     expect(wrapper.emitted('click')).toHaveLength(1)

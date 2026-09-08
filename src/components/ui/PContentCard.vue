@@ -39,6 +39,7 @@
         </div>
         
       </div>
+      <span class="p-entry__arrow" aria-hidden="true">→</span>
     </div>
   </div>
 </template>
@@ -81,6 +82,22 @@ defineEmits(['click'])
   align-items: flex-start;
   position: relative;
   min-width: 0;
+}
+
+.p-entry__arrow {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.p-entry:hover .p-entry__arrow,
+.p-entry:focus-within .p-entry__arrow,
+.p-entry.is-open .p-entry__arrow {
+  color: var(--a-color-primary-hover);
+  transform: translateX(2px);
 }
 
 .p-entry:hover {

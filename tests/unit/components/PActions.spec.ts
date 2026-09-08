@@ -42,15 +42,32 @@ describe('P action components', () => {
     expect(wrapper.emitted('click')).toBeUndefined()
   })
 
-  it('renders PLink as a router link with an index arrow', () => {
+  it('renders PLink as a router link with a horizontal arrow', () => {
     const wrapper = mount(PLink, {
       global: { plugins: [router] },
       props: { to: '/target', label: 'View Channel' },
     })
 
     expect(wrapper.text()).toContain('View Channel')
-    expect(wrapper.text()).toContain('↗')
+    expect(wrapper.text()).toContain('→')
     expect(wrapper.findComponent({ name: 'RouterLink' }).exists()).toBe(true)
+  })
+
+  it('renders an external PLink with a diagonal arrow and safe rel', () => {
+    const wrapper = mount(PLink, {
+      props: {
+        href: 'https://example.com/source',
+        external: true,
+        label: '前往源站',
+      },
+    })
+
+    expect(wrapper.element.tagName).toBe('A')
+    expect(wrapper.text()).toContain('前往源站')
+    expect(wrapper.text()).toContain('↗')
+    expect(wrapper.attributes('target')).toBe('_blank')
+    expect(wrapper.attributes('rel')).toContain('noopener')
+    expect(wrapper.attributes('rel')).toContain('noreferrer')
   })
 
   it('renders PReject as a destructive action and still emits click', async () => {

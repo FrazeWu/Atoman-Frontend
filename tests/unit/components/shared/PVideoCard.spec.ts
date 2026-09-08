@@ -74,6 +74,7 @@ describe('PVideoCard.vue', () => {
     expect(wrapper.text()).toContain('1:30')
     expect(wrapper.get('button[aria-label="稍后看 Video Title"]')).toBeTruthy()
     expect(wrapper.get('.vc-thumb').classes()).toContain('vc-thumb')
+    expect(wrapper.get('.vc-info__arrow').text()).toBe('→')
   })
 
   it('does not nest the watch-later button inside a link', () => {

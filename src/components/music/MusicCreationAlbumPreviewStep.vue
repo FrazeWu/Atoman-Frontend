@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
-import { IconExternalLink as ExternalLink } from '@tabler/icons-vue'
+import PLink from '@/components/ui/PLink.vue'
 
 const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
@@ -92,10 +92,9 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
     </p>
     <p v-if="albumImport.metadataSourceUrl" class="album-preview-step__source" data-testid="album-import-metadata-source">
       已自动匹配专辑信息、曲序和歌词。
-      <a :href="albumImport.metadataSourceUrl" target="_blank" rel="noopener noreferrer">
+      <PLink :href="albumImport.metadataSourceUrl" external>
         查看 {{ metadataSourceLabel }} 来源
-        <ExternalLink :size="14" aria-hidden="true" />
-      </a>
+      </PLink>
     </p>
     <p v-if="albumImport.missingArtists?.length" class="album-preview-step__source" role="status">
       还需补充艺术家：{{ albumImport.missingArtists.join('、') }}

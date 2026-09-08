@@ -131,7 +131,7 @@
         <h2>资料来源</h2>
         <ul class="books-source-list">
           <li v-for="source in work.sources" :key="source.url">
-            <a :href="source.url" target="_blank" rel="noreferrer noopener">{{ source.title || source.url }}</a>
+            <PLink :href="source.url" external>{{ source.title || source.url }}</PLink>
           </li>
         </ul>
       </section>
@@ -154,6 +154,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { IconBookmark as Bookmark, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
+import PLink from '@/components/ui/PLink.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import RatingControl from '@/components/shared/RatingControl.vue'

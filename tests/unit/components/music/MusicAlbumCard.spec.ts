@@ -47,6 +47,7 @@ describe("MusicAlbumCard", () => {
 		expect(wrapper.get(".artist-link").attributes("href")).toBe(
 			"/music/artist/artist-1",
 		);
+		expect(wrapper.get(".music-info__arrow").text()).toBe("→");
 
 		await wrapper.get(".cover-action").trigger("click");
 		await wrapper.get(".album-title-btn").trigger("click");

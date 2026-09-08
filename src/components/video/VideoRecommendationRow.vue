@@ -45,7 +45,10 @@ function markThumbnailFailed(videoID: string) {
           <span v-else class="vrr__placeholder" aria-hidden="true" />
           <time v-if="item.duration_sec" class="vrr__duration">{{ fmtDuration(item.duration_sec) }}</time>
         </div>
-        <h3 class="vrr__title">{{ item.title }}</h3>
+        <div class="vrr__title-row">
+          <h3 class="vrr__title">{{ item.title }}</h3>
+          <span class="vrr__arrow" aria-hidden="true">→</span>
+        </div>
         <p v-if="sourceLabel(item)" class="vrr__source">{{ sourceLabel(item) }}</p>
       </RouterLink>
     </div>
@@ -136,6 +139,27 @@ function markThumbnailFailed(videoID: string) {
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.vrr__title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.vrr__arrow {
+  flex: 0 0 auto;
+  color: var(--a-color-muted);
+  font-size: 0.95rem;
+  line-height: 1.35;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.vrr__card:hover .vrr__arrow,
+.vrr__card:focus-visible .vrr__arrow {
+  color: var(--a-color-primary);
+  transform: translateX(2px);
 }
 
 .vrr__source {

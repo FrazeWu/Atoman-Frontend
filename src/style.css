@@ -334,6 +334,9 @@ body:has(.studio-layout) {
 	}
 }
 .a-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
 	font-weight: var(--a-font-weight-black);
 	font-size: var(--a-text-xs);
 	text-transform: uppercase;
@@ -343,7 +346,12 @@ body:has(.studio-layout) {
 	color: var(--a-color-fg);
 }
 .a-link:hover {
+	color: var(--a-color-primary);
 	text-decoration: underline;
+}
+.a-link:focus-visible {
+	outline: 2px solid var(--a-color-primary);
+	outline-offset: 3px;
 }
 
 /* ─── Settings Center ─────────────────────────────────── */

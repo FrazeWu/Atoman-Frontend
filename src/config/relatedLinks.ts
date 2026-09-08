@@ -38,19 +38,4 @@ export const relatedLinks: readonly RelatedLink[] = [
 		label: "COOLSHELL",
 		href: "https://coolshell.cn/",
 	},
-	{
-		label: "更新 Issue",
-		href: "https://github.com/FrazeWu/Atoman-Frontend/issues",
-		action: "github-issues",
-	},
-	{
-		label: "Telegram 社区",
-		href: "https://t.me/+D7TjmjdFTV44MzI0",
-		action: "telegram-community",
-	},
-	{
-		label: "Discord 社区",
-		href: "https://discord.gg/FJsMmceNB",
-		action: "discord-community",
-	},
 ] as const;

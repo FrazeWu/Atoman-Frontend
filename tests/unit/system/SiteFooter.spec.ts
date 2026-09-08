@@ -65,9 +65,6 @@ describe("SiteFooter", () => {
 			"稀土掘金",
 			"码农周刊",
 			"COOLSHELL",
-			"更新 Issue",
-			"Telegram 社区",
-			"Discord 社区",
 		]);
 		expect(wrapper.get(".site-footer-center").text()).toContain(
 			"Docker 镜像加速",
@@ -94,15 +91,6 @@ describe("SiteFooter", () => {
 		expect(
 			wrapper.get('[data-footer-action="docker-proxy"]').attributes("rel"),
 		).toBe("noopener noreferrer");
-		expect(
-			wrapper.get('[data-footer-related-link="更新 Issue"]').attributes("href"),
-		).toBe("https://github.com/FrazeWu/Atoman-Frontend/issues");
-		expect(
-			wrapper.get('[data-footer-action="telegram-community"]').attributes("href"),
-		).toBe("https://t.me/+D7TjmjdFTV44MzI0");
-		expect(
-			wrapper.get('[data-footer-action="discord-community"]').attributes("href"),
-		).toBe("https://discord.gg/FJsMmceNB");
 		expect(wrapper.get(".site-footer-secondary").text()).toContain(
 			`© ${new Date().getFullYear()} 凹凸庵`,
 		);
@@ -219,6 +207,24 @@ describe("SiteFooter", () => {
 		expect(
 			wrapper.get('[data-footer-action="message-owner"]').attributes("href"),
 		).toBe("/inbox?tab=dm&user=fazong");
+	});
+
+	it("keeps community links in the contact sheet", async () => {
+		const wrapper = mountFooter();
+
+		expect(wrapper.find('[data-footer-related-link="Telegram 社区"]').exists()).toBe(false);
+		expect(wrapper.find('[data-footer-related-link="Discord 社区"]').exists()).toBe(false);
+
+		await wrapper.get('[data-footer-panel="contact"]').trigger("click");
+		for (const [action, href] of [
+			["telegram-community", "https://t.me/+D7TjmjdFTV44MzI0"],
+			["discord-community", "https://discord.gg/FJsMmceNB"],
+		] as const) {
+			const link = wrapper.get(`[data-footer-action="${action}"]`);
+			expect(link.attributes("href")).toBe(href);
+			expect(link.attributes("target")).toBe("_blank");
+			expect(link.attributes("rel")).toBe("noopener noreferrer");
+		}
 	});
 
 	it("copies the support email from the contact sheet", async () => {

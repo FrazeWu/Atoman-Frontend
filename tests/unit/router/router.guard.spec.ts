@@ -300,7 +300,7 @@ describe("router auth guards", () => {
 		expect(router.currentRoute.value.path).toBe("/site/setting");
 	});
 
-	it("keeps site setting child routes reachable even when feed is disabled", async () => {
+	it("does not rewrite removed site setting child URLs", async () => {
 		const router = await createGuardRouter("music");
 		const auth = useAuthStore();
 		const siteAccess = useSiteAccessStore();
@@ -312,6 +312,8 @@ describe("router auth guards", () => {
 		await router.push("/site/setting/users");
 
 		expect(router.currentRoute.value.path).toBe("/site/setting/users");
+		expect(router.currentRoute.value.hash).toBe("");
+		expect(router.currentRoute.value.matched.at(-1)?.path).toBe("/:pathMatch(.*)*");
 	});
 
 	it("redirects non-owner admins to the existing site setting route", async () => {

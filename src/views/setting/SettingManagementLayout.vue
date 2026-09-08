@@ -1,84 +1,13 @@
 <template>
   <section class="setting-management-layout a-page-xl">
-    <PButton
-      class="setting-management-layout__directory-trigger"
-      variant="secondary"
-      size="sm"
-      @click="mobileDirectoryOpen = true"
-    >
-      <ListTree :size="16" aria-hidden="true" />
-      目录
-    </PButton>
-
-    <div class="setting-management-layout__shell">
-      <RouterView />
-      <PDirectoryNav
-        v-model:collapsed="directoryCollapsed"
-        :items="directoryItems"
-        :active-id="activeDirectoryItem"
-        :mobile-open="mobileDirectoryOpen"
-        mobile-side="right"
-        title="目录-站点管理"
-        aria-label="站点管理目录"
-        @select="selectDirectoryItem"
-        @close-mobile="mobileDirectoryOpen = false"
-      />
-    </div>
+    <RouterView />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { IconListTree as ListTree } from '@tabler/icons-vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
-import PButton from '@/components/ui/PButton.vue'
-import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
-
-const route = useRoute()
-const router = useRouter()
-const directoryCollapsed = ref(false)
-const mobileDirectoryOpen = ref(false)
-const directoryItems = [
-  { id: 'site', label: '站点设置' },
-  { id: 'users', label: '用户管理' },
-  { id: 'subscriptions', label: '订阅源管理' },
-  { id: 'community', label: '社区管理' },
-  { id: 'announcements', label: '公告' },
-]
-
-const activeDirectoryItem = computed(() => {
-  if (route.path === '/site/setting' && !route.hash) return 'site'
-  if (route.path.endsWith('/users')) return 'users'
-  if (route.path.endsWith('/subscriptions')) return 'subscriptions'
-  if (route.path.endsWith('/community')) return 'community'
-  if (route.path.endsWith('/announcements')) return 'announcements'
-  if (route.hash === '#detail-feed' || route.hash === '#module-feed') return 'subscriptions'
-  return 'site'
-})
-
-function selectDirectoryItem(id: string) {
-  if (id === 'site') {
-    void router.push('/site/setting')
-    return
-  }
-  if (id === 'subscriptions') {
-    void router.push({ path: '/site/setting', hash: '#detail-feed' })
-    return
-  }
-  if (id === 'users' || id === 'community' || id === 'announcements') {
-    void router.push(`/site/setting/${id}`)
-    return
-  }
-}
+import { RouterView } from 'vue-router'
 </script>
 
 <style scoped>
 .setting-management-layout { display: grid; gap: 1.5rem; padding-bottom: 8rem; }
-.setting-management-layout__shell { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.25rem; align-items: start; }
-.setting-management-layout__directory-trigger { display: none; align-self: start; }
-
-@media (max-width: 1023px) {
-  .setting-management-layout__shell { grid-template-columns: 1fr; }
-  .setting-management-layout__directory-trigger { display: inline-flex; }
-}
 </style>

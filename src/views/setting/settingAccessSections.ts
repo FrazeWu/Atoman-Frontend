@@ -10,8 +10,9 @@ export function getSectionDomId(key: ModuleRoomKey) {
 }
 
 export function resolveInitialSettingSection(hash: string) {
-  const key = hash.replace(/^#module-/, '') as ModuleRoomKey
-  return hash.startsWith('#module-') && key ? key : null
+  const match = hash.match(/^#(?:module|detail)-(.+)$/)
+  const key = match?.[1] as ModuleRoomKey | undefined
+  return key || null
 }
 
 export function resolveActiveSectionByScroll(

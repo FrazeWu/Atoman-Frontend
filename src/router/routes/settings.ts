@@ -7,14 +7,6 @@ export const settingRoutes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, authLayout: true },
     children: [
       { path: '', component: () => import('@/views/setting/SettingAccessView.vue'), meta: { requiresAdmin: true } },
-      { path: 'community', component: () => import('@/views/setting/SettingCommunityView.vue'), meta: { requiresModerator: true } },
-      { path: 'users', component: () => import('@/views/setting/SettingUsersView.vue'), meta: { requiresAdmin: true } },
-      {
-        path: 'subscriptions',
-        redirect: { path: '/site/setting', hash: '#detail-feed' },
-        meta: { requiresAdmin: true },
-      },
-      { path: 'announcements', component: () => import('@/views/setting/SettingAnnouncementsView.vue'), meta: { requiresAdmin: true } },
     ],
   },
 ]

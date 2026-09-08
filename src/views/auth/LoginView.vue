@@ -238,6 +238,7 @@ const sendingCode = ref(false)
 const countdown = ref(0)
 const errorMsg = ref('')
 const loading = ref(false)
+const hasSubmitted = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const turnstileToken = ref('')
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -268,7 +269,7 @@ const turnstileVisible = computed(() => shouldRenderTurnstileForRegisterStep(
   turnstileSiteKey,
   currentStep.value,
 ))
-const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
+const visibleError = computed(() => errorMsg.value || (hasSubmitted.value ? authStore.lastAuthError : '') || '')
 const emailChecking = computed(() => emailAvailability.value.status === 'checking')
 const usernameChecking = computed(() => usernameAvailability.value.status === 'checking')
 const emailHint = computed(() => {
@@ -491,6 +492,7 @@ const goNextStep = () => {
 }
 
 const handleSubmit = async () => {
+  hasSubmitted.value = true
   authStore.lastAuthError = null
   errorMsg.value = ''
   fieldErrors.value = {}
@@ -599,6 +601,7 @@ watch(passwordConfirm, () => {
 
 watch(() => route.path, () => {
   currentStep.value = 1
+  hasSubmitted.value = false
   errorMsg.value = ''
   authStore.lastAuthError = null
   fieldErrors.value = {}

@@ -99,6 +99,40 @@ describe("LoginView redirect", () => {
     expect(forgotPasswordLink.classes()).toContain("auth-footer__forgot");
   });
 
+  it("does not show a session restore error before login is submitted", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const router = createRouter({ history: createMemoryHistory(), routes });
+    await router.push("/login");
+    const authStore = useAuthStore();
+    authStore.lastAuthError = "无法连接服务器，请检查网络后重试";
+
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } });
+
+    expect(wrapper.find(".auth-error").exists()).toBe(false);
+  });
+
+  it("shows a login error after the login request fails", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const router = createRouter({ history: createMemoryHistory(), routes });
+    await router.push("/login");
+    const authStore = useAuthStore();
+    vi.spyOn(authStore, "loginWithPassword").mockRejectedValue(
+      new Error("无法连接服务器，请检查网络后重试"),
+    );
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } });
+
+    await wrapper.findAll("input")[0].setValue("alice@example.com");
+    await wrapper.findAll("input")[1].setValue("secret");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.get(".auth-error").text()).toContain(
+      "无法连接服务器，请检查网络后重试",
+    );
+  });
+
   it("aligns the smaller password reset link to the right side of the footer", () => {
     const footerStyles = loginViewSource.match(
       /\.auth-footer\s*\{([^}]*)\}/,

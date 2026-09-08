@@ -55,10 +55,9 @@ const stubs = {
     emits: ['click'],
     template: '<button @click="$emit(\'click\')"><slot /></button>',
   }),
-  PSheet: defineComponent({
-    props: ['show'],
-    template: '<div v-if="show" data-test="detail-sheet"><slot /></div>',
-  }),
+  SettingUsersView: defineComponent({ template: '<div data-test="users-management">用户管理</div>' }),
+  SettingCommunityView: defineComponent({ template: '<div data-test="community-management">社区管理</div>' }),
+  SettingAnnouncementsView: defineComponent({ template: '<div data-test="announcements-management">公告管理</div>' }),
   SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源面板</div>' }),
   SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
   SettingMusicReviewPanel: defineComponent({ template: '<div data-test="music-review-panel">音乐审核面板</div>' }),
@@ -81,10 +80,11 @@ describe('SettingAccessView section sync', () => {
 
   it('resolves module hashes from the route', () => {
     expect(resolveInitialSettingSection('#module-music')).toBe('music')
+    expect(resolveInitialSettingSection('#detail-feed')).toBe('feed')
     expect(resolveInitialSettingSection('')).toBeNull()
   })
 
-  it('opens the real music review panel from the module list detail action', async () => {
+  it('scrolls to the real music management section from the module list', async () => {
     const wrapper = mount(SettingAccessView, {
       global: {
         stubs: {
@@ -97,8 +97,21 @@ describe('SettingAccessView section sync', () => {
     await wrapper.get('[data-test="module-detail-music"]').trigger('click')
     expect(overview.emitted('open-detail')).toEqual([['music']])
     await wrapper.vm.$nextTick()
-    expect(wrapper.get('[data-test="detail-sheet"]').text()).toContain('音乐审核面板')
+    expect(wrapper.get('#module-music').text()).toContain('音乐审核面板')
     expect(routerMocks.replace).toHaveBeenCalled()
+  })
+
+  it('keeps the requested single-page management order', () => {
+    const wrapper = mount(SettingAccessView, { global: { stubs } })
+    const sections = wrapper.findAll('.setting-access__management-section')
+    expect(sections.map((section) => section.attributes('id'))).toEqual([
+      'module-access',
+      'users',
+      'community',
+      'announcements',
+      'module-management',
+    ])
+    expect(wrapper.findAll('.setting-access__module-section').map((section) => section.attributes('id'))).toHaveLength(9)
   })
 
   it('keeps a unified switch for podcast and saves its visibility', async () => {

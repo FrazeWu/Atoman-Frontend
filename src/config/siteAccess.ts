@@ -106,7 +106,7 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
   ],
 }
 
-/** Only modules with an implemented site-level management surface get a detail entry. */
+/** Modules with a dedicated management panel in addition to the shared permission rows. */
 export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum']
 
 const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {

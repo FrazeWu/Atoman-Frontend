@@ -4,17 +4,16 @@
       <div>
         <p class="settings-center__kicker">MODULES</p>
         <h2 id="management-overview-title">模块可用性</h2>
-        <p>在这里直接调整模块开关和常用策略，复杂管理进入详情。</p>
+        <p>在这里直接调整模块开关和常用策略，点击模块名称可跳转到下方管理区块。</p>
       </div>
     </div>
 
     <div class="setting-management-overview__list" data-test="module-list">
       <article v-for="key in overviewModuleOrder" :key="key" class="setting-management-overview__row">
         <button
-          v-if="hasDetail(key)"
           type="button"
           class="setting-management-overview__main"
-          :aria-label="`打开${moduleRooms[key].name}详情`"
+          :aria-label="`跳转到${moduleRooms[key].name}管理`"
           :data-test="`module-detail-${key}`"
           @click="openModuleDetail(key)"
         >
@@ -27,16 +26,6 @@
           </span>
           <ChevronRight class="setting-management-overview__arrow" :size="17" aria-hidden="true" />
         </button>
-        <div v-else class="setting-management-overview__main setting-management-overview__main--static">
-          <span class="setting-management-overview__icon" aria-hidden="true">
-            <component :is="moduleIcons[key]" :size="17" stroke-width="1.8" />
-          </span>
-          <span class="setting-management-overview__copy">
-            <strong>{{ moduleRooms[key].name }}</strong>
-            <small>{{ moduleDescriptions[key] }}</small>
-          </span>
-        </div>
-
         <div class="setting-management-overview__quick">
           <div class="setting-management-overview__quick-stack">
             <label v-for="feature in quickFeatures(key)" :key="feature.key">
@@ -106,7 +95,7 @@ import { IconBook2 as Book, IconChevronRight as ChevronRight, IconMessages as Me
 import { toRef, type Component } from 'vue'
 
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
-import { siteAccessDetailModules, siteAccessFeatures, type SiteAccess } from '@/config/siteAccess'
+import { siteAccessFeatures, type SiteAccess } from '@/config/siteAccess'
 
 const props = defineProps<{
   access: SiteAccess
@@ -143,10 +132,6 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
 
 function openModuleDetail(key: ModuleRoomKey) {
   emit('open-detail', key)
-}
-
-function hasDetail(key: ModuleRoomKey) {
-  return siteAccessDetailModules.includes(key)
 }
 
 function quickFeatures(key: ModuleRoomKey) {

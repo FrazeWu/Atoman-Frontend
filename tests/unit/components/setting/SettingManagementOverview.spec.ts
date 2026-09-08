@@ -6,7 +6,7 @@ import { defaultSiteAccess, mergeSiteAccess } from '@/config/siteAccess'
 import { moduleNavOrder } from '@/config/moduleRooms'
 
 describe('SettingManagementOverview', () => {
-  it('shows the module list and opens implemented detail modules', async () => {
+  it('shows the module list and opens every module management anchor', async () => {
     const access = mergeSiteAccess(defaultSiteAccess)
     const openDetail = vi.fn()
     const wrapper = mount(SettingManagementOverview, {
@@ -14,7 +14,7 @@ describe('SettingManagementOverview', () => {
     })
 
     expect(wrapper.text()).toContain('模块可用性')
-    expect(wrapper.findAll('[data-test^="module-detail-"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-test^="module-detail-"]')).toHaveLength(moduleNavOrder.length)
     expect(wrapper.findAll('input[data-test^="module-enabled-"]')).toHaveLength(moduleNavOrder.length)
 
     await wrapper.get('[data-test="module-detail-music"]').trigger('click')
@@ -41,8 +41,8 @@ describe('SettingManagementOverview', () => {
     expect(wrapper.findAll('[data-test="module-list"] > article')).toHaveLength(moduleNavOrder.length)
     expect(wrapper.findAll('input[data-test^="module-enabled-"]')).toHaveLength(moduleNavOrder.length)
     expect((wrapper.get('[data-test="module-enabled-books"]').element as HTMLInputElement).checked).toBe(true)
-    expect(wrapper.find('[data-test="module-detail-books"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="module-detail-video"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="module-detail-books"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="module-detail-video"]').exists()).toBe(true)
   })
 
   it('keeps module feature switches visible beside module quick settings', () => {

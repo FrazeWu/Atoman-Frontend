@@ -141,6 +141,17 @@ describe('host-scoped route tables', () => {
       path: '/site/setting',
       hash: '#detail-feed',
     })
+    expect(settingRoutes[0]?.children?.find((route) => route.path === 'users')?.redirect).toEqual({
+      path: '/site/setting',
+      hash: '#users',
+    })
+    expect(settingRoutes[0]?.children?.find((route) => route.path === 'community')?.meta).toMatchObject({
+      requiresModerator: true,
+    })
+    expect(settingRoutes[0]?.children?.find((route) => route.path === 'announcements')?.redirect).toEqual({
+      path: '/site/setting',
+      hash: '#announcements',
+    })
     expect(appRoutePaths).not.toEqual(expect.arrayContaining(['/setting', '/admin/site', '/settings']))
     expect(flattenPaths(moduleRoutes.blog)).not.toContain('settings')
     expect(flattenPaths(moduleRoutes.feed)).not.toContain('settings')

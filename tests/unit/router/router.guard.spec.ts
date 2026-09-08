@@ -311,7 +311,8 @@ describe("router auth guards", () => {
 
 		await router.push("/site/setting/users");
 
-		expect(router.currentRoute.value.path).toBe("/site/setting/users");
+		expect(router.currentRoute.value.path).toBe("/site/setting");
+		expect(router.currentRoute.value.hash).toBe("#users");
 	});
 
 	it("redirects non-owner admins to the existing site setting route", async () => {

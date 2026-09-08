@@ -536,17 +536,20 @@ const selectRecommendationMode = (value: string) => {
 }
 
 const homeQuery = (search = activeQuery.value) => {
+  const query: Record<string, string> = {}
   if (search) {
-    const query: Record<string, string> = { q: search }
-    if (searchAuthorID.value) query.author_id = searchAuthorID.value
-    if (searchChannelID.value) query.channel_id = searchChannelID.value
-    if (searchCollectionID.value) query.collection_id = searchCollectionID.value
+    query.q = search
+  } else if (activeTag.value) {
+    query.tag = activeTag.value
+  } else {
+    if (typeFilter.value !== 'all') query.type = typeFilter.value
+    if (typeFilter.value !== 'note' && recommendationMode.value !== 'hot') query.mode = recommendationMode.value
     return query
   }
-  if (activeTag.value) return { tag: activeTag.value }
-  const query: Record<string, string> = {}
-  if (typeFilter.value !== 'all') query.type = typeFilter.value
-  if (typeFilter.value !== 'note' && recommendationMode.value !== 'hot') query.mode = recommendationMode.value
+
+  if (searchAuthorID.value) query.author_id = searchAuthorID.value
+  if (searchChannelID.value) query.channel_id = searchChannelID.value
+  if (searchCollectionID.value) query.collection_id = searchCollectionID.value
   return query
 }
 

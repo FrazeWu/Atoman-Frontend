@@ -163,7 +163,7 @@ describe("BlogPostSheet", () => {
 
 	it("保留详情头部，并将学术正文限制在 A4 纸张内", async () => {
 		const source = readFileSync(
-			resolve(__dirname, "../../../../src/components/blog/BlogPostSheet.vue"),
+			resolve(__dirname, "../../../../src/components/blog/BlogPostReader.vue"),
 			"utf8",
 		);
 
@@ -174,7 +174,7 @@ describe("BlogPostSheet", () => {
 
 	it("学术正文不使用段落首行缩进", () => {
 		const source = readFileSync(
-			resolve(__dirname, "../../../../src/views/blog/PostDetailView.vue"),
+			resolve(__dirname, "../../../../src/components/blog/BlogPostReader.vue"),
 			"utf8",
 		);
 

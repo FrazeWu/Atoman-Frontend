@@ -212,7 +212,7 @@ export function usePostEditorPublication({
 			loadedPostUpdatedAtRaw.value = typeof savedPost.updated_at === "string" ? savedPost.updated_at : "";
 			const savedID = String(savedPost.id);
 			savedPostId.value = savedID;
-			if (!wasEdit && markdownImportID.value) {
+			if (markdownImportID.value) {
 				const confirmResponse = await apiRequestResult(
 					api.blog.markdownImportConfirm(markdownImportID.value),
 					{

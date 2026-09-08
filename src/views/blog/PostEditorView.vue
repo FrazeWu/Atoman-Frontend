@@ -32,6 +32,7 @@
               :preview-open="previewOpen"
               :sidebar-open="sidebarPanelOpen || mobilePanel === 'sidebar'"
               @import-file="handleFileUpload"
+              @open-draft-manager="openDraftManager"
               @export-markdown="handleMarkdownExport"
               @go-back="goBack"
               @toggle-sidebar="toggleSidebarPanel"
@@ -223,7 +224,7 @@
 
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { hasAppHistory, studioContentLocation } from '@/router/studioEditor'
@@ -379,6 +380,11 @@ const editorBody = computed({
   },
 })
 
+const replaceCollaborativeDocumentFromForm = () => {
+  if (!shouldEnableCollab.value) return
+  editorRef.value?.replaceDocument(`# ${form.value.title}\n${form.value.content}`)
+}
+
 // ── 目录提取 ─────────────────────────────────────────────
 const outline = computed((): OutlineItem[] => {
   const lines = form.value.content.split('\n')
@@ -525,6 +531,7 @@ const {
   keepCurrentContentLabel,
   hasMeaningfulDraft,
   formatSavedTime,
+  openDraftManager,
   keepCurrentContent,
   closeDraftManager,
   restorePendingDraft,
@@ -624,12 +631,14 @@ const handleVersionRestored = async () => {
   versionHistoryOpen.value = false
   savedPostId.value = null
   contentReady.value = false
+  await clearAllDrafts()
   const loaded = await loadPost()
   if (!loaded) {
     contentReady.value = false
     editorLoadFailed.value = true
     return
   }
+  replaceCollaborativeDocumentFromForm()
 }
 
 const handleCoverUpload = async (event: Event) => {
@@ -711,12 +720,15 @@ const handleFileUpload = async (event: Event) => {
     if (!res.ok || !data) {
       throw new Error(data?.error || '导入 Markdown 失败')
     }
-    form.value.title = data.title || file.name.replace(/\.(md|markdown|txt)$/i, '')
-    form.value.summary = data.summary || ''
-    form.value.content = data.content || ''
-    markdownImportID.value = data.import_id || null
-    markdownImportDiagnostics.value = Array.isArray(data.diagnostics) ? data.diagnostics : []
+    const payload = data.data || data
+    form.value.title = payload.title || file.name.replace(/\.(md|markdown|txt)$/i, '')
+    form.value.summary = payload.summary || ''
+    form.value.content = payload.content || ''
+    markdownImportID.value = payload.import_id || null
+    markdownImportDiagnostics.value = Array.isArray(payload.diagnostics) ? payload.diagnostics : []
     contentSource.value = 'imported'
+    await nextTick()
+    replaceCollaborativeDocumentFromForm()
   } catch (e) {
     error.value = '读取文件失败'
   } finally {

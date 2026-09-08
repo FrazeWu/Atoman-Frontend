@@ -50,6 +50,9 @@
                 <Upload :size="16" aria-hidden="true" />
                 {{ contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown' }}
               </button>
+              <button type="button" class="editor-topbar__menu-item" @click="$emit('open-draft-manager'); close()">
+                草稿管理
+              </button>
               <button v-if="isEdit" type="button" class="editor-topbar__menu-item" :disabled="exporting" @click="$emit('export-markdown'); close()">
                 <Download :size="16" aria-hidden="true" />
                 导出 Markdown
@@ -107,6 +110,7 @@ defineEmits<{
   (event: 'toggle-preview'): void
   (event: 'update:content-mode', value: 'markdown' | 'visual'): void
   (event: 'import-file', eventValue: Event): void
+  (event: 'open-draft-manager'): void
   (event: 'export-markdown'): void
   (event: 'open-version-history'): void
   (event: 'save-draft'): void

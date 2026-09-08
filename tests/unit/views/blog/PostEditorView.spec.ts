@@ -213,6 +213,241 @@ describe("PostEditorView", () => {
 		expect(router.currentRoute.value.query.channel).toBe("channel-2");
 	});
 
+	it("导入 Markdown 应解包后端 data 响应并恢复导入元数据", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts/post/new", component: PostEditorView }],
+		});
+
+		await router.push("/posts/post/new");
+		await router.isReady();
+
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.user = { uuid: "user-1", username: "demo", role: "user" } as never;
+		auth.isAuthenticated = true;
+
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.includes("/users/me/default-channels")) {
+				return makeJsonResponse({ data: { blog: null, podcast: null, video: null } });
+			}
+			if (url.includes("/blog/channels?")) return makeJsonResponse({ data: [] });
+			if (url.includes("/blog/channels/channel-1/collections")) {
+				return makeJsonResponse({
+					data: [{ id: "collection-1", channel_id: "channel-1", is_default: true }],
+				});
+			}
+			if (url.includes("/blog/drafts?context_key=")) return makeJsonResponse({ data: null });
+			if (url.includes("/blog/imports/markdown")) {
+				return makeJsonResponse({
+					data: {
+						title: "导入标题",
+						summary: "导入摘要",
+						content: "导入正文",
+						import_id: "import-1",
+						diagnostics: [{ code: "frontmatter", line: 2, message: "已读取元数据" }],
+					},
+				});
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{
+				global: {
+					plugins: [router],
+					stubs: {
+						PButton: { template: "<button><slot /></button>" },
+						PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+					},
+				},
+			},
+		);
+
+		await flushPromises();
+		const input = wrapper.get('input[type="file"]');
+		const file = new File(["# 导入标题\n导入正文"], "article.md", { type: "text/markdown" });
+		Object.defineProperty(input.element, "files", { value: [file] });
+		await input.trigger("change");
+		await flushPromises();
+
+		const editor = wrapper.findComponent(PostEditorView);
+		expect(editor.vm.$.setupState.form.title).toBe("导入标题");
+		expect(editor.vm.$.setupState.form.summary).toBe("导入摘要");
+		expect(editor.vm.$.setupState.form.content).toBe("导入正文");
+		expect(editor.vm.$.setupState.markdownImportID).toBe("import-1");
+		expect(editor.vm.$.setupState.markdownImportDiagnostics).toEqual([
+			{ code: "frontmatter", line: 2, message: "已读取元数据" },
+		]);
+	});
+
+	it("版本恢复后应更新协作文档并清理旧草稿", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts/post/:id/edit", component: PostEditorView }],
+		});
+		await router.push("/posts/post/post-1/edit?channel=channel-1");
+		await router.isReady();
+
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.user = { uuid: "user-1", username: "demo", role: "user" } as never;
+		auth.isAuthenticated = true;
+
+		let postLoadCount = 0;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes("/users/me/default-channels")) {
+				return makeJsonResponse({ data: { blog: null, podcast: null, video: null } });
+			}
+			if (url.includes("/blog/channels?")) return makeJsonResponse({ data: [] });
+			if (url.includes("/blog/channels/channel-1/collections")) {
+				return makeJsonResponse({
+					data: [{ id: "collection-1", channel_id: "channel-1", is_default: true }],
+				});
+			}
+			if (url.includes("/blog/drafts?context_key=")) {
+				return init?.method === "DELETE" ? makeJsonResponse({ data: null }) : makeJsonResponse({ data: null });
+			}
+			if (url.includes("/content/blog/post-1/schedule")) return makeJsonResponse({ data: null });
+			if (url.includes("/blog/posts/post-1") && (!init?.method || init.method === "GET")) {
+				postLoadCount += 1;
+				return makeJsonResponse({
+					data: postLoadCount === 1
+						? {
+								id: "post-1",
+								title: "旧标题",
+								content: "旧正文",
+								summary: "",
+								cover_url: "",
+								updated_at: "2026-07-01T12:00:00.000Z",
+								channel_id: "channel-1",
+								collection_id: "collection-1",
+							}
+						: {
+								id: "post-1",
+							title: "恢复标题",
+								content: "恢复正文",
+							summary: "",
+								cover_url: "",
+								updated_at: "2026-07-01T13:00:00.000Z",
+								channel_id: "channel-1",
+								collection_id: "collection-1",
+							},
+				});
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{
+				global: {
+					plugins: [router],
+					stubs: {
+						PButton: { template: "<button><slot /></button>" },
+						PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+					},
+				},
+			},
+		);
+		await flushPromises();
+
+		const editor = wrapper.findComponent(PostEditorView);
+		await editorControl.emitCollabReady?.("# 旧标题\n旧正文");
+		await flushPromises();
+		await editor.vm.$.setupState.handleVersionRestored();
+		await flushPromises();
+
+		expect(editorControl.replaceDocument).toHaveBeenCalledWith("# 恢复标题\n恢复正文");
+		expect(fetchMock.mock.calls.some(([input, request]) =>
+			String(input).includes("/blog/drafts?context_key=") && request?.method === "DELETE",
+		)).toBe(true);
+	});
+
+	it("编辑已有文章导入 Markdown 后保存也应确认导入记录", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts/post/:id/edit", component: PostEditorView }],
+		});
+		await router.push("/posts/post/post-1/edit?channel=channel-1");
+		await router.isReady();
+
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.user = { uuid: "user-1", username: "demo", role: "user" } as never;
+		auth.isAuthenticated = true;
+
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes("/users/me/default-channels")) {
+				return makeJsonResponse({ data: { blog: null, podcast: null, video: null } });
+			}
+			if (url.includes("/blog/channels?")) return makeJsonResponse({ data: [] });
+			if (url.includes("/blog/channels/channel-1/collections")) {
+				return makeJsonResponse({
+					data: [{ id: "collection-1", channel_id: "channel-1", is_default: true }],
+				});
+			}
+			if (url.includes("/blog/drafts?context_key=")) return makeJsonResponse({ data: null });
+			if (url.includes("/content/blog/post-1/schedule")) return makeJsonResponse({ data: null });
+			if (url.includes("/blog/imports/markdown/import-1/confirm")) {
+				return makeJsonResponse({ data: { status: "confirmed" } });
+			}
+			if (url.includes("/blog/posts/post-1") && init?.method === "PUT") {
+				return makeJsonResponse({
+					data: { id: "post-1", updated_at: "2026-07-01T13:00:00.000Z" },
+				});
+			}
+			if (url.includes("/blog/posts/post-1")) {
+				return makeJsonResponse({
+					data: {
+						id: "post-1",
+						title: "旧标题",
+						content: "旧正文",
+						summary: "",
+						cover_url: "",
+						updated_at: "2026-07-01T12:00:00.000Z",
+						channel_id: "channel-1",
+						collection_id: "collection-1",
+					},
+				});
+			}
+			if (url.includes("/blog/drafts?context_key=") && init?.method === "DELETE") return makeJsonResponse({ data: null });
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{
+				global: {
+					plugins: [router],
+					stubs: {
+						PButton: { template: "<button><slot /></button>" },
+						PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+					},
+				},
+			},
+		);
+		await flushPromises();
+
+		const editor = wrapper.findComponent(PostEditorView);
+		editor.vm.$.setupState.form.title = "导入标题";
+		editor.vm.$.setupState.form.content = "导入正文";
+		editor.vm.$.setupState.markdownImportID = "import-1";
+		await editor.vm.$.setupState.save("draft", false);
+		await flushPromises();
+
+		expect(fetchMock.mock.calls.some(([input, request]) =>
+			String(input).includes("/blog/imports/markdown/import-1/confirm") && request?.method === "POST",
+		)).toBe(true);
+	});
+
 	it("新建文章补默认频道时，应保留已注册的编辑器路由前缀", async () => {
 		const router = createRouter({
 			history: createMemoryHistory(),

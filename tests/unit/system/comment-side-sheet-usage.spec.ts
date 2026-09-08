@@ -3,13 +3,12 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const commentSideSheetHosts = [
-  'src/components/blog/BlogPostSheet.vue',
+  'src/components/blog/BlogPostReader.vue',
   'src/components/blog/ShortNoteSheet.vue',
   'src/components/debate/DebateDiscussionSheet.vue',
   'src/components/feed/FeedArticleSheet.vue',
   'src/components/shortnote/ShortNoteCard.vue',
   'src/components/music/AlbumDrawer.vue',
-  'src/views/blog/PostDetailView.vue',
   'src/views/books/BookWorkView.vue',
   'src/views/forum/ForumTopicView.vue',
   'src/views/podcast/PodcastEpisodeView.vue',

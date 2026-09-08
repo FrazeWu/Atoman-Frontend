@@ -192,7 +192,7 @@ describe("module style contract", () => {
 	});
 
 	it("hides the KaTeX display scrollbar without disabling overflow", () => {
-		const source = read("src/views/blog/PostDetailView.vue");
+		const source = read("src/components/blog/BlogPostReader.vue");
 		const displayRule = source.match(
 			/\.prose-blog :deep\(\.katex-display\)\s*\{([^}]*)\}/,
 		)?.[1] ?? "";

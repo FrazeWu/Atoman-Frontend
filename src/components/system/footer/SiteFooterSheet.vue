@@ -60,6 +60,32 @@ async function copyEmail() {
           {{ copied ? '邮箱已复制' : '复制邮箱' }}
         </button>
       </div>
+      <section class="footer-community">
+        <h3>社区</h3>
+        <p>加入 Telegram 或 Discord，参与交流和获取更新。</p>
+        <div class="footer-sheet-actions">
+          <a
+            class="footer-sheet-action"
+            data-footer-action="telegram-community"
+            href="https://t.me/+D7TjmjdFTV44MzI0"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Telegram 社区
+            <ExternalLink :size="16" aria-hidden="true" />
+          </a>
+          <a
+            class="footer-sheet-action"
+            data-footer-action="discord-community"
+            href="https://discord.gg/FJsMmceNB"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Discord 社区
+            <ExternalLink :size="16" aria-hidden="true" />
+          </a>
+        </div>
+      </section>
       <p class="footer-sheet-note">功能异常或改进建议，请使用「问题反馈」。</p>
     </article>
 
@@ -186,6 +212,33 @@ async function copyEmail() {
   color: var(--a-color-muted);
   font-size: var(--a-text-sm);
   line-height: 1.6;
+}
+
+.footer-community {
+  margin-top: var(--a-space-6);
+  padding-top: var(--a-space-5);
+  border-top: var(--a-border);
+}
+
+.footer-community h3,
+.footer-community p {
+  margin: 0;
+}
+
+.footer-community h3 {
+  font-size: var(--a-text-md);
+  font-weight: var(--a-font-weight-black);
+}
+
+.footer-community p {
+  margin-top: var(--a-space-2);
+  color: var(--a-color-text-secondary);
+  font-size: var(--a-text-sm);
+  line-height: 1.6;
+}
+
+.footer-community .footer-sheet-actions {
+  margin-top: var(--a-space-4);
 }
 
 .footer-feedback-channels {

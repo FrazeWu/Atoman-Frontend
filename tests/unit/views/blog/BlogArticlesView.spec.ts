@@ -26,7 +26,7 @@ describe('BlogArticlesView', () => {
       if (url.includes('/blog/channels')) {
         return response({ data: [{ id: 'channel-1', name: '技术笔记' }] })
       }
-      if (url.includes('/blog/posts')) {
+      if (url.includes('/blog/search')) {
         return response({
           data: [{
             id: 'post-1',
@@ -73,7 +73,8 @@ describe('BlogArticlesView', () => {
 
     const postRequest = fetchMock.mock.calls
       .map(([input]) => String(input))
-      .find((url) => url.includes('/blog/posts'))
+      .find((url) => url.includes('/blog/search'))
+    expect(postRequest).toContain('/blog/search?')
     expect(postRequest).toContain('q=%E7%8B%AC%E7%AB%8B')
     expect(postRequest).toContain('channel_id=channel-1')
     expect(postRequest).toContain('page=1')
@@ -82,5 +83,55 @@ describe('BlogArticlesView', () => {
 
     await wrapper.get('article').trigger('click')
     expect(openPost).toHaveBeenCalledWith('post-1', '独立博文页面')
+  })
+
+  it('将作者、频道、合集、标签和排序组合为结构化搜索条件', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return response({ data: [{ id: 'collection-1', name: '前端专题' }] })
+      }
+      if (url === '/api/v1/blog/channels') {
+        return response({ data: [{ id: 'channel-1', name: '技术笔记', user: { uuid: 'author-1', username: 'alice' } }] })
+      }
+      if (url.includes('/blog/search')) {
+        return response({ data: [], meta: { has_more: false, total: 0 } })
+      }
+      throw new Error(`unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/posts/articles', component: BlogArticlesView }],
+    })
+    await router.push('/posts/articles?q=独立&tag=vue&author_id=author-1&channel_id=channel-1&collection_id=collection-1&sort=recent')
+    await router.isReady()
+
+    mount(BlogArticlesView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PPageHeader: true,
+          PInput: true,
+          PSegmentedControl: true,
+          PSelect: true,
+          PButton: true,
+          PEmpty: true,
+          BlogItemCard: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    const searchRequest = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .find((url) => url.includes('/blog/search'))
+    expect(searchRequest).toContain('q=%E7%8B%AC%E7%AB%8B')
+    expect(searchRequest).toContain('tag=vue')
+    expect(searchRequest).toContain('author_id=author-1')
+    expect(searchRequest).toContain('channel_id=channel-1')
+    expect(searchRequest).toContain('collection_id=collection-1')
+    expect(searchRequest).toContain('sort=recent')
   })
 })

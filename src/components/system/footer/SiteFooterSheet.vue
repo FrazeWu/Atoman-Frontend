@@ -75,7 +75,7 @@ async function copyEmail() {
           <a
             class="footer-sheet-action footer-sheet-action--primary"
             data-footer-action="github-issues"
-            href="https://github.com/FrazeWu/Atoman/issues"
+            href="https://github.com/FrazeWu/Atoman-Frontend/issues"
             target="_blank"
             rel="noopener noreferrer"
           >

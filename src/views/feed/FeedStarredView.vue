@@ -56,7 +56,7 @@
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle?.feed_item?.id === item.id"
           :is-read="item.is_read === true"
-          :source-title="item.source_title || item.feed_source?.title || 'RSS'"
+          :source-title="item.source_title || 'RSS'"
           :type-label="getExternalBadge(item)"
           starred
           @click="openArticleSheet(item, index)"

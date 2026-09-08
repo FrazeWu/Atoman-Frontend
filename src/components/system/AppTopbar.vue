@@ -12,9 +12,7 @@
           <Menu :size="18" aria-hidden="true" />
         </button>
         <a href="/" class="brand-logo-link" @click.prevent="handleBrandClick">
-          <div class="logo-box">
-            <div class="logo-inner"></div>
-          </div>
+          <img class="logo-image" src="/favicon.png" alt="Atoman" />
           <span class="logo-block">
             <span class="logo-copy">
               <span class="logo-text">ATOMAN</span>
@@ -321,20 +319,13 @@ html.dark .topbar--auth {
   text-decoration: none;
   color: var(--a-color-fg);
 }
-.logo-box {
+.logo-image {
   width: 32px;
   height: 32px;
-  background-color: var(--a-color-fg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
   box-shadow: var(--a-shadow-sm);
-}
-.logo-inner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--a-color-bg);
-  transform: rotate(45deg);
 }
 .logo-text {
   font-weight: 500;
@@ -491,7 +482,7 @@ html.dark .topbar--auth {
     padding: 0 0.75rem;
   }
 
-  .brand-link--mobile-visible .logo-box {
+  .brand-link--mobile-visible .logo-image {
     width: 30px;
     height: 30px;
   }

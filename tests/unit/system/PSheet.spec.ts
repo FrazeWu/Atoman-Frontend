@@ -15,18 +15,16 @@ const directorySource = readFileSync(
 config.global.plugins = [createTestingPinia({ stubActions: false })];
 
 describe("PSheet.vue", () => {
-	it("keeps the desktop sidebar outside of the sheet backdrop", () => {
+	it("uses the full viewport as the desktop sheet backdrop", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
 			"utf8",
 		);
 
 		expect(source).toMatch(
-			/\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*var\(--a-sidebar-width\)/,
+			/\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*0/,
 		);
-		expect(source).toMatch(
-			/@media \(max-width: 767px\)[\s\S]*?\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*0/,
-		);
+		expect(source).not.toMatch(/\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*var\(--a-sidebar-width\)/);
 		expect(source).toMatch(
 			/\.p-sheet-panel\s*\{[\s\S]*?transition:\s*left var\(--a-motion-state\)/,
 		);
@@ -413,13 +411,13 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted()).toHaveProperty("close");
 	});
 
-	it("closes the top right sheet when its blank content area is clicked", async () => {
+	it("does not close the top right sheet when its blank content area is clicked", async () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, side: "right" },
 		});
 
 		await wrapper.get(".sheet-content").trigger("click");
-		expect(wrapper.emitted("close")).toHaveLength(1);
+		expect(wrapper.emitted("close")).toBeUndefined();
 	});
 
 	it("does not close a right sheet when its content is clicked", async () => {
@@ -440,13 +438,13 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted()).toHaveProperty("close");
 	});
 
-	it("emits close event when the blank left rail is clicked", async () => {
+	it("does not close when the sheet rail is clicked", async () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, title: "专辑详情" },
 		});
 
 		await wrapper.get(".sheet-layer-rail").trigger("click");
-		expect(wrapper.emitted("close")).toHaveLength(1);
+		expect(wrapper.emitted("close")).toBeUndefined();
 	});
 
 	it("emits close event when tab is clicked", async () => {

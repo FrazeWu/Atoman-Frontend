@@ -231,31 +231,7 @@
 
         <div v-else class="group-list">
           <section v-for="group in displayGroups" :key="group.id" class="group-section">
-            <div class="group-heading">
-              <button
-                type="button"
-                class="group-title"
-                :class="{ 'is-collapsed': isGroupCollapsed(group.id) }"
-                :aria-expanded="!isGroupCollapsed(group.id)"
-                :aria-controls="`subscription-group-${group.id}`"
-                @click="toggleGroup(group.id)"
-              >
-                <span class="group-label-virtual">{{ isDefaultGroup(group) ? '未分组' : (draftGroupNames[group.id] ?? group.name) }}</span>
-                <ChevronDown :size="16" aria-hidden="true" />
-              </button>
-              <div v-if="!group.virtual && !isDefaultGroup(group)" class="group-heading-actions">
-                <PInput
-                  :model-value="draftGroupNames[group.id] ?? group.name"
-                  class="group-name-input"
-                  :disabled="busy"
-                  aria-label="分组名称"
-                  @input="updateDraftGroupName(group.id, $event)"
-                />
-                <PButton variant="secondary" label="删除分组" :disabled="busy" @click="requestDelete('group', group.id)" />
-              </div>
-            </div>
-
-            <div v-if="!isGroupCollapsed(group.id)" :id="`subscription-group-${group.id}`">
+            <div :id="`subscription-group-${group.id}`">
               <div v-if="!group.subscriptions.length" class="group-empty a-muted">
                 此分组暂无订阅源
               </div>
@@ -612,7 +588,7 @@ import type {
   SubscriptionHubType,
   SubscriptionSyncResult,
 } from '@/types'
-import { IconChevronDown as ChevronDown, IconSettings as Settings, IconTrash as Trash } from '@tabler/icons-vue'
+import { IconSettings as Settings, IconTrash as Trash } from '@tabler/icons-vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PField from '@/components/ui/PField.vue'
@@ -702,7 +678,6 @@ const selectedSubscriptionIds = ref(new Set<string>())
 const activeSubscriptionId = ref<string | null>(null)
 const expandedSubscriptionSettingIds = ref(new Set<string>())
 const expandedSubscriptionDiagnosticIds = ref(new Set<string>())
-const collapsedGroupIds = ref(new Set<string>())
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
@@ -745,9 +720,9 @@ const { discardPending, requestClose, cancelDiscard, confirmDiscard, reset: rese
 })
 
 const allManageTabs: Array<{ key: 'groups' | 'sources' | 'rules' | 'keywords'; label: string }> = [
-  { key: 'groups', label: '分组' },
   { key: 'sources', label: '订阅源' },
-  { key: 'rules', label: '规则' },
+  { key: 'groups', label: '整理分组' },
+  { key: 'rules', label: '自动规则' },
   { key: 'keywords', label: '过滤' },
 ]
 const manageTabs = computed(() => allManageTabs.filter(tab => props.showAdvancedTabs || tab.key === 'sources'))
@@ -871,23 +846,12 @@ const filteredSubscriptions = computed(() => {
 })
 
 const displayGroups = computed(() => {
-  const unassigned = filteredSubscriptions.value.filter(sub => !sub.subscription_group_id)
-  const groups = props.groups.map(group => ({
-    id: group.id,
-    name: isDefaultGroup(group) ? '未分组' : group.name,
-    virtual: false,
-    subscriptions: [
-      ...filteredSubscriptions.value.filter(sub => sub.subscription_group_id === group.id),
-      ...(isDefaultGroup(group) ? unassigned : []),
-    ],
-  }))
-
-  if (!props.groups.some(isDefaultGroup)) {
-    groups.push({ id: 'unassigned', name: '未分组', virtual: true, subscriptions: unassigned })
-  }
-
-  return groups.filter(group => group.subscriptions.length > 0
-    || (!sourceSearch.value && !sourceTypeFilter.value && !healthFilter.value))
+  return [{
+    id: 'sources',
+    name: '订阅源',
+    virtual: true,
+    subscriptions: filteredSubscriptions.value,
+  }]
 })
 
 const visibleSubscriptionIds = computed(() => displayGroups.value.flatMap(group =>
@@ -1011,15 +975,6 @@ const saveDrafts = () => {
     return name && name !== group.name ? [{ id: group.id, name }] : []
   })
   if (subscriptions.length || groups.length) emit('save-changes', { subscriptions, groups })
-}
-
-const isGroupCollapsed = (id: string) => collapsedGroupIds.value.has(id)
-
-const toggleGroup = (id: string) => {
-  const next = new Set(collapsedGroupIds.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  collapsedGroupIds.value = next
 }
 
 const moveSubscription = (id: string, groupId: string) => {
@@ -1647,63 +1602,10 @@ watch(() => props.filterRules, (rules) => {
   gap: 0.75rem;
 }
 
-.group-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-
-.group-heading-actions {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.group-title {
-  border-bottom: 0;
-  padding-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  width: auto;
-  flex: 1;
-  border-inline: 0;
-  border-top: 0;
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.group-title:hover,
-.group-title:focus-visible {
-  color: var(--a-color-primary);
-}
-
-.group-title svg {
-  transition: transform 0.15s ease;
-}
-
-.group-title.is-collapsed svg {
-  transform: rotate(-90deg);
-}
-
 .group-name-input {
   max-width: 12rem;
   font-weight: 500;
   font-size: 0.8rem;
-}
-
-.group-label-virtual {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--a-color-fg);
-  letter-spacing: 0.01em;
 }
 
 .group-manage-list {
@@ -2190,17 +2092,6 @@ watch(() => props.filterRules, (rules) => {
     min-width: 0;
   }
 
-  .group-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding-bottom: 0.5rem;
-  }
-
-  .group-heading-actions {
-    width: 100%;
-  }
-
   .group-name-input {
     max-width: none;
     flex: 1 1 auto;
@@ -2228,17 +2119,6 @@ watch(() => props.filterRules, (rules) => {
   .group-system-name {
     flex: 1 1 100%;
     max-width: none;
-  }
-
-  .group-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding-bottom: 0.5rem;
-  }
-
-  .group-heading-actions {
-    width: 100%;
   }
 
   .group-manage-count {

@@ -117,6 +117,13 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.text()).not.toContain("https://example.com/feed.xml");
 	});
 
+	it("keeps the source browsing list flat without group headings", () => {
+		const wrapper = mountSheet();
+
+		expect(wrapper.get(".subscription-title").text()).toBe("Example Feed");
+		expect(wrapper.find(".group-title").exists()).toBe(false);
+	});
+
 	it("keeps batch actions available at the top before a subscription is selected", async () => {
 		const wrapper = mountSheet();
 
@@ -134,16 +141,11 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.find('[data-test="subscription-priority"]').exists()).toBe(true);
 	});
 
-	it("supports collapsing groups and saving edited names from the top toolbar", async () => {
+	it("keeps the source list flat and saves edited names from the top toolbar", async () => {
 		const wrapper = mountSheet();
 
-		const groupTitle = wrapper.get(".group-title");
-		expect(groupTitle.attributes("aria-expanded")).toBe("true");
-		await groupTitle.trigger("click");
-		expect(groupTitle.attributes("aria-expanded")).toBe("false");
-		expect(wrapper.find(".subscription-title").exists()).toBe(false);
-
-		await groupTitle.trigger("click");
+		expect(wrapper.find(".group-title").exists()).toBe(false);
+		expect(wrapper.find(".subscription-title").exists()).toBe(true);
 		await wrapper.get('[data-test="subscription-settings-toggle"]').trigger("click");
 		await wrapper.get(".title-input").setValue("Renamed Feed");
 		const saveButton = wrapper.get('[data-test="save-subscription-changes"]');
@@ -281,12 +283,12 @@ describe("SubscriptionManageSheet", () => {
 		expect(wrapper.find('[data-test="subscription-manage-tab-groups"]').exists()).toBe(false);
 		expect(wrapper.find('[data-test="subscription-manage-tab-rules"]').exists()).toBe(false);
 		expect(wrapper.find('[data-test="subscription-manage-tab-keywords"]').exists()).toBe(false);
-		expect(wrapper.find('.group-title').exists()).toBe(true);
+		expect(wrapper.find('.group-title').exists()).toBe(false);
 	});
 
-	it("keeps the system group label as 未分组", () => {
+	it("keeps the system group label as 未分组", async () => {
 		const wrapper = mount(SubscriptionManageSheet, {
-			props: { ...mountSheet().props(), showAdvancedTabs: false },
+			props: { ...mountSheet().props() },
 			global: {
 				stubs: {
 					PSheet: { props: ["side"], template: '<div data-test="subscription-manage-sheet" :data-side="side"><slot /></div>' },
@@ -296,8 +298,9 @@ describe("SubscriptionManageSheet", () => {
 			},
 		});
 
-		expect(wrapper.get('.group-title').text()).toContain("未分组");
-		expect(wrapper.get('.group-title').text()).not.toContain("默认分组");
+		await wrapper.get('[data-test="subscription-manage-tab-groups"]').trigger("click");
+		expect(wrapper.get('.group-system-name').text()).toContain("未分组");
+		expect(wrapper.get('.group-system-name').text()).not.toContain("默认分组");
 	});
 
 	it("keeps filtering and deep source editing out of the user settings surface", async () => {
@@ -784,8 +787,6 @@ describe("SubscriptionManageSheet", () => {
 		expect(source).toMatch(
 			/@media \(max-width: 760px\)[\s\S]*?\.batch-tools--combined\s*\{[\s\S]*?grid-template-columns:\s*1fr/,
 		);
-		expect(source).toMatch(
-			/@media \(max-width: 760px\)[\s\S]*?\.group-heading\s*\{[\s\S]*?flex-direction:\s*column/,
-		);
+		expect(source).not.toContain(".group-heading");
 	});
 });

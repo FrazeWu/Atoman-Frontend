@@ -150,6 +150,10 @@ export async function searchMusicTags(kind: MusicTagKind, query: string): Promis
 	)
 }
 
+export async function getMusicTag(tagId: string): Promise<MusicTagOption> {
+	return apiGet<MusicTagOption>(musicV1Endpoints.tagDetail(tagId))
+}
+
 export async function addMusicTag(
 	entity: "song" | "album",
 	entityId: string,

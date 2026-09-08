@@ -252,8 +252,8 @@ onBeforeUnmount(() => {
           <div v-for="tag in group.tags" :key="tag.assignment_id" class="music-tag" :data-testid="`music-tag-${tag.id}`">
             <RouterLink
               class="music-tag__name"
-              :to="{ path: '/music/songs', query: { tag_id: tag.id, tag_entity: entity, tag_name: tag.name } }"
-              :title="`按标签筛选：${tag.name}`"
+              :to="{ path: `/music/tags/${tag.id}`, query: { view: entity === 'album' ? 'albums' : 'songs' } }"
+              :title="`查看标签：${tag.name}`"
             >
               {{ tag.name }}
             </RouterLink>

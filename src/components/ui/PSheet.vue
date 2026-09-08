@@ -66,7 +66,7 @@
           @keydown="handlePanelKeydown"
           @wheel="handleLayerWheel"
         >
-          <div v-if="showLayerRail" class="sheet-layer-rail" @click.self="handleBlankAreaClick">
+          <div v-if="showLayerRail" class="sheet-layer-rail">
             <div class="sheet-layer-controls" @click.stop>
               <button
                 ref="closeButtonRef"
@@ -148,7 +148,6 @@
 
           <div
             class="sheet-content hide-scrollbar"
-            @click.self="handleBlankAreaClick"
             :class="{
               'sheet-content--compact': !hasHeader,
               'sheet-content--has-close': showHeaderClose,
@@ -293,10 +292,6 @@ const handlePanelKeydown = (event: KeyboardEvent) => {
     event.preventDefault()
     emit('close')
   }
-}
-
-const handleBlankAreaClick = () => {
-  if (props.isTopLayer) emit('close')
 }
 
 const handleLayerWheel = (event: WheelEvent) => {
@@ -635,7 +630,7 @@ const mobileSheetStyle = computed(() => {
 
 .p-sheet-backdrop {
   position: fixed;
-  left: var(--a-sidebar-width);
+  left: 0;
   right: 0;
   bottom: var(--a-content-bottom-offset);
   background: transparent;
@@ -915,10 +910,6 @@ const mobileSheetStyle = computed(() => {
 }
 
 @media (max-width: 767px) {
-  .p-sheet-backdrop {
-    left: 0;
-  }
-
   .p-sheet-layer {
     width: 100% !important;
     max-width: 100% !important;

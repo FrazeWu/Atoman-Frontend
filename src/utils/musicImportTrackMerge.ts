@@ -10,6 +10,7 @@ type TrackWithIdentity = {
 	fileId?: string;
 	importFileId?: string;
 	audioKey?: string;
+	audioAssetId?: string;
 	discNumber?: number;
 	trackNumber?: number;
 	originalDiscNumber?: number;
@@ -34,6 +35,12 @@ export function importTrackAliases(track: TrackWithIdentity): string[] {
 			: "",
 	];
 	return [...new Set(aliases.filter(Boolean))];
+}
+
+function stableTrackAliases(track: TrackWithIdentity): string[] {
+	return importTrackAliases(track).filter((alias) =>
+		alias.startsWith("file:") || alias.startsWith("audio:"),
+	);
 }
 
 export function rememberDeletedImportedTrack(
@@ -80,8 +87,10 @@ function trackFromImport(
 	const preserveSequence = current?.sequenceCustomized === true;
 	const lyricDraft = lyricsDraftFromTrack(track);
 	const manuallyChanged = preserveTitle || preserveSequence;
+	const audioKey = track.audioKey || current?.audioKey;
+	const audioUrl = track.audioUrl || current?.audioUrl;
 	return {
-		id: current?.id ?? `import-track-${track.fileId || track.audioKey || index + 1}`,
+		id: current?.id ?? `import-track-${index + 1}`,
 		...(track.songId ? { songId: track.songId } : {}),
 		...(track.fileId ? { importFileId: track.fileId } : {}),
 		sequence: preserveSequence ? current!.sequence : track.trackNumber ?? index + 1,
@@ -91,8 +100,9 @@ function trackFromImport(
 				? { discNumber: track.discNumber }
 				: {}),
 		title: preserveTitle ? current!.title : track.title,
-		audioKey: track.audioKey || current?.audioKey,
-		audioUrl: track.audioUrl || current?.audioUrl,
+		...(audioKey ? { audioKey } : {}),
+		...(current?.audioAssetId ? { audioAssetId: current.audioAssetId } : {}),
+		...(audioUrl ? { audioUrl } : {}),
 		origin: current?.origin === "manual" ? current.origin : track.origin,
 		...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
 		...(track.originalDiscNumber
@@ -131,6 +141,25 @@ function findCurrentTrack(
 	used: Set<string>,
 ) {
 	const aliases = importTrackAliases(track);
+	const stableAliases = stableTrackAliases(track);
+	if (stableAliases.length > 0) {
+		const stableMatch = current.find((candidate) => {
+			if (used.has(candidate.id)) return false;
+			return stableTrackAliases(candidate).some((alias) => stableAliases.includes(alias));
+		});
+		if (stableMatch) return stableMatch;
+	}
+	const originalPositionAliases = aliases.filter((alias) =>
+		alias === `position:${track.originalDiscNumber}:${track.originalTrackNumber}`,
+	);
+	if (originalPositionAliases.length > 0) {
+		const originalMatch = current.find((candidate) => {
+			if (used.has(candidate.id)) return false;
+			return importTrackAliases(candidate).some((alias) => originalPositionAliases.includes(alias));
+		});
+		if (originalMatch) return originalMatch;
+	}
+	if (stableAliases.length > 0) return undefined;
 	return current.find((candidate) => {
 		if (used.has(candidate.id)) return false;
 		return importTrackAliases(candidate).some((alias) => aliases.includes(alias));
@@ -148,12 +177,20 @@ export function mergeImportedTracksIntoDraft(
 	const imported = derivedTracks.filter((track) =>
 		!importTrackAliases(track).some((alias) => deleted.has(alias)),
 	);
-	const mergedImported = imported.map((track, index) => {
+	const mergedImported = imported.flatMap((track, index) => {
 		const existing = findCurrentTrack(track, current, used);
+		if (!existing && flow.tracksCustomized) return [];
 		if (existing) used.add(existing.id);
-		return trackFromImport(track, index, existing);
+		return [trackFromImport(track, index, existing)];
 	});
-	const preserved = current.filter((track) => !used.has(track.id));
+	const preserved = current.filter((track) => {
+		if (used.has(track.id)) return false;
+		if (flow.tracksCustomized) return true;
+		return Boolean(
+			track.songId || track.importFileId || track.audioKey ||
+			track.origin?.startsWith("manual") || track.titleCustomized || track.sequenceCustomized,
+		);
+	});
 	const hasSequenceOverride = current.some(
 		(track) => track.sequenceCustomized === true,
 	);

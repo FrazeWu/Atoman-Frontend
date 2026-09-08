@@ -153,6 +153,7 @@ function restoreCommittedAlbumImportDraft(
 	flow.draft.albumDetails.musicBrainzMatched =
 		isMusicBrainzSource(request.album_source) ||
 		hasMusicBrainzSource(request.album_sources);
+	flow.deletedImportTrackKeys = [...new Set(request.deleted_import_track_keys ?? [])];
 	if (request.artists?.length) {
 		flow.draft.albumDetails.contributors = request.artists.map(
 			(contributor, index) => ({
@@ -173,10 +174,23 @@ function restoreCommittedAlbumImportDraft(
 	flow.draft.tracks = request.album.tracks.map((track, index) => ({
 		id: `import-track-${index + 1}`,
 		...(track.song_id ? { songId: track.song_id } : {}),
+		...(track.file_id ? { importFileId: track.file_id } : {}),
 		sequence: track.track_number || index + 1,
 		discNumber: track.disc_number || 1,
 		title: track.title,
 		origin: "import",
+		...(track.audio_key ? { audioKey: track.audio_key } : {}),
+		...(track.audio_asset_id ? { audioAssetId: track.audio_asset_id } : {}),
+		...(track.original_title ? { originalTitle: track.original_title } : {}),
+		...(track.original_disc_number ? { originalDiscNumber: track.original_disc_number } : {}),
+		...(track.original_track_number ? { originalTrackNumber: track.original_track_number } : {}),
+		...(track.match_status ? { matchStatus: track.match_status } : {}),
+		...(track.match_provider ? { matchProvider: track.match_provider } : {}),
+		...(track.match_external_id ? { matchExternalId: track.match_external_id } : {}),
+		...(track.match_source_url ? { matchSourceUrl: track.match_source_url } : {}),
+		...(track.match_confidence !== undefined ? { matchConfidence: track.match_confidence } : {}),
+		...(track.title_customized ? { titleCustomized: true } : {}),
+		...(track.sequence_customized ? { sequenceCustomized: true } : {}),
 		...(track.audio_url ? { audioUrl: track.audio_url } : {}),
 		...(track.lyrics
 			? {

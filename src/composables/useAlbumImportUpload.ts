@@ -19,6 +19,7 @@ import {
 	type MusicAlbumImportInputMode,
 	type MusicAlbumImportTrack,
 } from "@/api/musicV1";
+import * as musicApi from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { runMultipartUpload } from "@/api/multipartUpload";
 import {
@@ -38,6 +39,7 @@ type AlbumImportUploadState = {
 	uploadStartedAt: number;
 	operationGeneration: number;
 	pollingGeneration: number;
+	serverDerivedSnapshotApplied: boolean;
 	selectedFiles: Map<string, File>;
 	abortControllers: Set<AbortController>;
 };
@@ -108,6 +110,7 @@ function uploadStateFor(flow: MusicCreationFlowState) {
 		uploadStartedAt: 0,
 		operationGeneration: 0,
 		pollingGeneration: 0,
+		serverDerivedSnapshotApplied: false,
 		selectedFiles: new Map(),
 		abortControllers: new Set(),
 	};
@@ -145,6 +148,23 @@ export function useAlbumImportUpload() {
 		const draft = flow.draft.albumImport;
 		if (draft.importId !== expectedImportId) return false;
 		const derivedTracks = snapshot.derivedTracks ?? [];
+		const uploadState = uploadStateFor(flow);
+		const serverDerivedDataAvailable =
+			derivedTracks.length > 0 ||
+			Boolean(
+				snapshot.derivedAlbumTitle?.trim() ||
+					snapshot.derivedCover?.trim() ||
+					snapshot.derivedReleaseDate?.trim() ||
+					snapshot.derivedAlbumType?.trim() ||
+					snapshot.metadataSourceUrl?.trim() ||
+					snapshot.metadataSource?.trim() ||
+					snapshot.metadataExternalId?.trim() ||
+					snapshot.metadataMatchStatus?.trim() ||
+					snapshot.metadataMatched,
+			);
+		if (serverDerivedDataAvailable) {
+			uploadState.serverDerivedSnapshotApplied = true;
+		}
 		const previousDerivedAlbumType = draft.derivedAlbumType;
 		const previousMetadataSourceURL = draft.metadataSourceUrl;
 
@@ -165,21 +185,25 @@ export function useAlbumImportUpload() {
 		}
 		draft.coverUrl = snapshot.coverUrl;
 		draft.coverKey = snapshot.coverKey;
-		draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
-		if (snapshot.derivedCover) draft.derivedCover = snapshot.derivedCover;
+		if (serverDerivedDataAvailable) {
+			draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
+			draft.derivedCover = snapshot.derivedCover;
+		}
 		if (derivedTracks.length > 0) {
 			draft.derivedTracks = derivedTracks;
 			mergeImportedTracksIntoDraft(flow, derivedTracks);
 		}
-		draft.derivedReleaseDate = snapshot.derivedReleaseDate;
-		draft.derivedAlbumType = snapshot.derivedAlbumType;
-		draft.metadataSourceUrl = snapshot.metadataSourceUrl;
-		draft.metadataSource = snapshot.metadataSource;
-		draft.metadataExternalId = snapshot.metadataExternalId;
-		draft.metadataMatchStatus = snapshot.metadataMatchStatus;
-		draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
-		draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
-		draft.missingArtists = snapshot.missingArtists ?? [];
+		if (serverDerivedDataAvailable) {
+			draft.derivedReleaseDate = snapshot.derivedReleaseDate;
+			draft.derivedAlbumType = snapshot.derivedAlbumType;
+			draft.metadataSourceUrl = snapshot.metadataSourceUrl;
+			draft.metadataSource = snapshot.metadataSource;
+			draft.metadataExternalId = snapshot.metadataExternalId;
+			draft.metadataMatchStatus = snapshot.metadataMatchStatus;
+			draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
+			draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
+			draft.missingArtists = snapshot.missingArtists ?? [];
+		}
 		draft.lastSyncedAt = snapshot.lastSyncedAt;
 		draft.errorMessage =
 			snapshot.errorMessage || snapshot.errors?.[0]?.message || "";
@@ -464,6 +488,7 @@ export function useAlbumImportUpload() {
 		if (!flow || !draft) return;
 		const uploadState = uploadStateFor(flow);
 		const generation = beginUploadOperation(uploadState);
+		uploadState.serverDerivedSnapshotApplied = false;
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		const files = Array.from(fileList).filter((file) => {
 			const relativePath =
@@ -531,11 +556,12 @@ export function useAlbumImportUpload() {
 						/\.(?:aac|aif|aiff|alac|ape|flac|m4a|mp3|ogg|opus|wav|wma)$/i.test(
 							file.name,
 						),
-				);
+					);
+		let localPreviewPromise: Promise<void> | null = null;
 		if (previewFile) {
-			void readAlbumImportPreview(previewFile)
-				.then((preview) => {
-					if (!isCurrent()) return;
+			localPreviewPromise = readAlbumImportPreview(previewFile)
+				.then(async (preview) => {
+					if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
 					if (files.length === 1) {
 						const localTracks: MusicAlbumImportTrack[] = preview.tracks.map((title, index) => ({
 							title,
@@ -546,15 +572,30 @@ export function useAlbumImportUpload() {
 							originalTrackNumber: index + 1,
 							matchStatus: "unmatched",
 						}));
-						draft.metadataMatched = false;
-						draft.metadataSourceUrl = undefined;
-						draft.metadataSource = undefined;
-						draft.metadataExternalId = undefined;
-						draft.metadataMatchStatus = "unmatched";
-						draft.metadataMatchConfidence = 0;
+						let matchedTracks = localTracks;
+						let metadataPreview: Awaited<ReturnType<typeof musicApi.previewMusicAlbumImportMetadata>> | null = null;
+						try {
+							metadataPreview = await musicApi.previewMusicAlbumImportMetadata({
+								albumTitle: preview.title,
+								artist: artistName,
+								trackTitles: preview.tracks,
+							});
+							if (metadataPreview.tracks.length > 0) {
+								matchedTracks = metadataPreview.tracks;
+							}
+						} catch {
+							// 后端正式分析会再次匹配，先使用本地解析结果。
+						}
+						if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
+						draft.metadataMatched = metadataPreview?.matched === true;
+						draft.metadataSourceUrl = metadataPreview?.sourceUrl || undefined;
+						draft.metadataSource = metadataPreview?.metadataSource;
+						draft.metadataExternalId = metadataPreview?.externalId;
+						draft.metadataMatchStatus = metadataPreview?.matchStatus || "unmatched";
+						draft.metadataMatchConfidence = metadataPreview?.matchConfidence ?? 0;
 						draft.derivedAlbumTitle = preview.title;
-						draft.derivedTracks = localTracks;
-						mergeImportedTracksIntoDraft(flow, localTracks);
+						draft.derivedTracks = matchedTracks;
+						mergeImportedTracksIntoDraft(flow, matchedTracks);
 						if (!flow.titleCustomized) {
 							flow.draft.albumDetails.title = preview.title;
 						}
@@ -631,6 +672,7 @@ export function useAlbumImportUpload() {
 			if (isCurrent() && draft.importId === session.importId) {
 				refreshWhenFilesUploaded(flow, completed, session.importId);
 			}
+			if (localPreviewPromise) await localPreviewPromise;
 		} catch (error) {
 			if (!isCurrent()) return;
 			draft.status = "failed";
@@ -770,6 +812,7 @@ export function useAlbumImportUpload() {
 		if (!flow || !draft?.importId) return;
 		const uploadState = uploadStateFor(flow);
 		const generation = beginUploadOperation(uploadState);
+		uploadState.serverDerivedSnapshotApplied = false;
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		try {
 			await cancelMusicAlbumImportSession(draft.importId);

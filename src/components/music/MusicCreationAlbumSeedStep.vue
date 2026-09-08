@@ -32,8 +32,8 @@ function renumberTracks() {
   if (!creationFlow.value) return
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track, index) => ({
     ...track,
-    sequence: index + 1,
-    sequenceCustomized: true,
+    ...(track.sequence !== index + 1 ? { sequence: index + 1, sequenceCustomized: true } : {}),
+    ...(track.sequence !== index + 1 && track.matchStatus === 'matched' ? { matchStatus: 'manual' as const } : {}),
   }))
 }
 
@@ -57,7 +57,12 @@ function updateTrackTitle(trackId: string, title: string) {
   creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
     track.id === trackId
-      ? { ...track, title, titleCustomized: true }
+      ? {
+          ...track,
+          title,
+          titleCustomized: true,
+          ...(track.matchStatus === 'matched' ? { matchStatus: 'manual' as const } : {}),
+        }
       : track
   ))
 }

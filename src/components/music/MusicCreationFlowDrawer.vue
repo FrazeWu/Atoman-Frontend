@@ -591,8 +591,8 @@ function trackNumberWithinDisc(tracks: Array<{ discNumber?: number }>, index: nu
   return tracks.slice(0, index + 1).filter((track) => (track.discNumber ?? 1) === discNumber).length
 }
 
-function hasTrackAudio(track: { audioUrl?: string; audioKey?: string }) {
-  return !!track.audioUrl?.trim() || !!track.audioKey?.trim()
+function hasTrackAudio(track: { audioUrl?: string; audioKey?: string; audioAssetId?: string }) {
+  return !!track.audioUrl?.trim() || !!track.audioKey?.trim() || !!track.audioAssetId?.trim()
 }
 
 function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
@@ -605,6 +605,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const artistSource = resolvedArtistSource(flow)
   const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
   const isStandaloneSong = ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase())
+  const deletedImportTrackKeys = flow.deletedImportTrackKeys ?? []
 
   return {
 		...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
@@ -635,21 +636,25 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
-			tracks: flow.draft.tracks.map((track, index) => ({
-				...(track.songId ? { song_id: track.songId } : {}),
-				...(track.audioKey ? { audio_key: track.audioKey } : {}),
-				title: isStandaloneSong ? flow.draft.albumDetails.title.trim() : track.title.trim(),
-				disc_number: track.discNumber ?? 1,
-				track_number: trackNumberWithinDisc(flow.draft.tracks, index),
-				...(track.originalTitle ? { original_title: track.originalTitle } : {}),
-				...(track.originalDiscNumber ? { original_disc_number: track.originalDiscNumber } : {}),
-				...(track.originalTrackNumber ? { original_track_number: track.originalTrackNumber } : {}),
-				...(track.matchStatus ? { match_status: track.matchStatus } : {}),
-				...(track.matchProvider ? { match_provider: track.matchProvider } : {}),
-				...(track.matchExternalId ? { match_external_id: track.matchExternalId } : {}),
-				...(track.matchSourceUrl ? { match_source_url: track.matchSourceUrl } : {}),
-				...(track.matchConfidence !== undefined ? { match_confidence: track.matchConfidence } : {}),
-			...(track.lyricsDraft ? {
+      tracks: flow.draft.tracks.map((track, index) => ({
+        ...(track.songId ? { song_id: track.songId } : {}),
+        ...(track.importFileId ? { file_id: track.importFileId } : {}),
+        ...(track.audioAssetId ? { audio_asset_id: track.audioAssetId } : {}),
+        ...(track.audioKey ? { audio_key: track.audioKey } : {}),
+        title: isStandaloneSong ? flow.draft.albumDetails.title.trim() : track.title.trim(),
+        disc_number: track.discNumber ?? 1,
+        track_number: trackNumberWithinDisc(flow.draft.tracks, index),
+        ...(track.originalTitle ? { original_title: track.originalTitle } : {}),
+        ...(track.originalDiscNumber ? { original_disc_number: track.originalDiscNumber } : {}),
+        ...(track.originalTrackNumber ? { original_track_number: track.originalTrackNumber } : {}),
+        ...(track.matchStatus ? { match_status: track.matchStatus } : {}),
+        ...(track.matchProvider ? { match_provider: track.matchProvider } : {}),
+        ...(track.matchExternalId ? { match_external_id: track.matchExternalId } : {}),
+        ...(track.matchSourceUrl ? { match_source_url: track.matchSourceUrl } : {}),
+        ...(track.matchConfidence !== undefined ? { match_confidence: track.matchConfidence } : {}),
+        ...(track.titleCustomized ? { title_customized: true } : {}),
+        ...(track.sequenceCustomized ? { sequence_customized: true } : {}),
+        ...(track.lyricsDraft ? {
           lyrics: {
             content: track.lyricsDraft.content,
             translation: track.lyricsDraft.translation,
@@ -658,9 +663,12 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
             edit_summary: track.lyricsDraft.editSummary,
           },
         } : {}),
-			...(track.lyricsSource ? { lyrics_source: track.lyricsSource } : {}),
+        ...(track.lyricsSource ? { lyrics_source: track.lyricsSource } : {}),
       })),
     },
+    ...(deletedImportTrackKeys.length > 0
+      ? { deleted_import_track_keys: [...deletedImportTrackKeys] }
+      : {}),
     album_source: albumSource,
     ...(albumSource ? { album_sources: [buildSource(albumSource)] } : {}),
   }

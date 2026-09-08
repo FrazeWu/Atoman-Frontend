@@ -113,6 +113,8 @@ export type MusicAlbumImportCommitStageName = {
 
 export type MusicAlbumImportCommitTrack = {
 	song_id?: string;
+	file_id?: string;
+	audio_asset_id?: string;
 	audio_key?: string;
 	audio_url?: string;
 	title: string;
@@ -126,6 +128,8 @@ export type MusicAlbumImportCommitTrack = {
 	match_external_id?: string;
 	match_source_url?: string;
 	match_confidence?: number;
+	title_customized?: boolean;
+	sequence_customized?: boolean;
 	lyrics?: {
 		content: string;
 		translation: string;
@@ -232,6 +236,7 @@ export type MusicAlbumImportCommitInput = {
 		release_year: number;
 		tracks: MusicAlbumImportCommitTrack[];
 	};
+	deleted_import_track_keys?: string[];
 	album_source?: string;
 	album_sources?: MusicSource[];
 };

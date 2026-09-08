@@ -28,20 +28,24 @@ export function useMusicAlbumTrackEditor() {
 	) {
 		if (!creationFlow.value) return;
 		creationFlow.value.tracksCustomized = true;
-		creationFlow.value.draft.tracks = mutator(
-			creationFlow.value.draft.tracks,
-		).map((track, index) => ({
-			...track,
-			...(metadataEdit === "sequence"
-				? { sequence: index + 1, sequenceCustomized: true }
-				: {}),
-			...(metadataEdit === "title"
-				? { titleCustomized: true }
-				: {}),
-			...(metadataEdit && track.matchStatus === "matched"
-				? { matchStatus: "manual" as const }
-				: {}),
-		}));
+		const previousTracks = creationFlow.value.draft.tracks;
+		const previousByID = new Map(previousTracks.map((track) => [track.id, track]));
+		creationFlow.value.draft.tracks = mutator(previousTracks).map((track, index) => {
+			const previous = previousByID.get(track.id);
+			const sequenceChanged = metadataEdit === "sequence" && previous?.sequence !== index + 1;
+			const titleChanged = metadataEdit === "title" && previous?.title !== track.title;
+			const metadataChanged = sequenceChanged || titleChanged || !previous;
+			return {
+				...track,
+				...(sequenceChanged || (!previous && metadataEdit === "sequence")
+					? { sequence: index + 1, sequenceCustomized: true }
+					: {}),
+				...(titleChanged ? { titleCustomized: true } : {}),
+				...(metadataChanged && track.matchStatus === "matched"
+					? { matchStatus: "manual" as const }
+					: {}),
+			};
+		});
 	}
 
 	function addPendingTrack(fileName: string, title: string) {

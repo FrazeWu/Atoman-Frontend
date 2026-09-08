@@ -78,6 +78,7 @@
           <span aria-hidden="true"> · </span>{{ albumYear }}
         </p>
       </div>
+      <span class="music-info__arrow" aria-hidden="true">→</span>
     </div>
   </PMediaCard>
 </template>
@@ -338,8 +339,23 @@ const albumYear = computed(() => {
 
 .music-info {
   display: flex;
+  align-items: center;
   gap: 10px;
   padding: 10px 0 0;
+}
+
+.music-info__arrow {
+  flex: 0 0 auto;
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.music-album-card:hover .music-info__arrow,
+.music-album-card:focus-within .music-info__arrow {
+  color: var(--a-color-primary);
+  transform: translateX(2px);
 }
 
 .music-text {

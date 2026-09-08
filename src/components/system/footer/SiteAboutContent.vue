@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconExternalLink as ExternalLink } from '@tabler/icons-vue'
+import PLink from '@/components/ui/PLink.vue'
 
 withDefaults(defineProps<{
   headingLevel?: 'h1' | 'h2'
@@ -26,16 +26,14 @@ withDefaults(defineProps<{
     <section class="site-info-section">
       <h3>开放源代码</h3>
       <p>项目遵循 GPL v3 协议，源代码公开在 GitHub。</p>
-      <a
+      <PLink
         class="site-info-action"
         data-footer-action="source"
         href="https://github.com/FrazeWu/Atoman"
-        target="_blank"
-        rel="noopener noreferrer"
+        external
       >
         查看源代码
-        <ExternalLink :size="16" aria-hidden="true" />
-      </a>
+      </PLink>
     </section>
   </article>
 </template>

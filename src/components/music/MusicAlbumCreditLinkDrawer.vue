@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconExternalLink as ExternalLink } from '@tabler/icons-vue'
 import {
 	getMusicAlbum,
 	listMusicAlbumLinkSuggestions,
@@ -242,7 +241,7 @@ onBeforeUnmount(() => {
 								<strong>{{ release.title }}</strong>
 								<span>{{ [release.release_date?.slice(0, 4), release.artist_names?.join('、')].filter(Boolean).join(' · ') }}</span>
 							</span>
-							<ExternalLink :size="16" aria-hidden="true" />
+							<span aria-hidden="true">↗</span>
 						</a>
 					</div>
 				</section>

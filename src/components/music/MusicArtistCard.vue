@@ -60,6 +60,7 @@
           <span v-if="birthYear" class="birth-year">· {{ birthYear }}</span>
         </RouterLink>
       </h3>
+      <span class="artist-info__arrow" aria-hidden="true">→</span>
     </div>
   </PMediaCard>
 </template>
@@ -286,9 +287,24 @@ const formattedSubscribers = computed(() => {
 /* Artist Info below image */
 .artist-info {
   display: flex;
+  align-items: center;
   gap: 8px;
   padding: 10px 0 0;
   text-align: left;
+}
+
+.artist-info__arrow {
+  flex: 0 0 auto;
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.music-artist-card:hover .artist-info__arrow,
+.music-artist-card:focus-within .artist-info__arrow {
+  color: var(--a-color-primary);
+  transform: translateX(2px);
 }
 
 .artist-title {

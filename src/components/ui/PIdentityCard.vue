@@ -23,8 +23,9 @@
         <slot name="description" />
       </div>
 
-      <div v-if="$slots.actions" class="p-identity-card__actions">
+      <div v-if="$slots.actions || interactive" class="p-identity-card__actions">
         <slot name="actions" />
+        <span v-if="interactive" class="p-identity-card__arrow" aria-hidden="true">→</span>
       </div>
     </header>
 
@@ -144,7 +145,24 @@ function handleActivate() {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
+  gap: 0.55rem;
   min-width: 0;
+}
+
+.p-identity-card__arrow {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.p-identity-card[role='button']:hover .p-identity-card__arrow,
+.p-identity-card[role='button']:focus-visible .p-identity-card__arrow,
+.p-identity-card.is-active .p-identity-card__arrow {
+  color: var(--a-color-primary);
+  transform: translateX(2px);
 }
 
 .p-identity-card__previews,

@@ -42,12 +42,12 @@
         </template>
 
         <template v-else>
-          <a :href="userUrl(post.user?.username || '')" class="post-header__author-link">
+          <PLink :to="userUrl(post.user?.username || '')" variant="nav" class="post-header__author-link">
             <div class="post-header__avatar">
               {{ avatarInitial }}
             </div>
             <span class="post-header__author-name">{{ authorName }}</span>
-          </a>
+          </PLink>
           <span class="a-label a-muted">{{ formatDate(post.created_at) }}</span>
           <div class="post-header__right-actions">
             <button
@@ -82,6 +82,7 @@
 import { computed } from 'vue'
 import { IconBook2 as BookOpen, IconLayoutSidebarRight as PanelRight } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
+import PLink from '@/components/ui/PLink.vue'
 import { userUrl } from '@/composables/useSubdomainNav'
 import type { Post } from '@/types'
 
@@ -163,6 +164,10 @@ function formatDate(value?: string) {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  font-weight: inherit;
   text-decoration: none;
   color: inherit;
   transition: opacity 0.2s ease;

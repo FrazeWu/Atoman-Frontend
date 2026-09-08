@@ -112,6 +112,7 @@ const avatarLetter = () =>
           </div>
         </div>
       </div>
+      <span class="vc-info__arrow" aria-hidden="true">→</span>
     </RouterLink>
   </PMediaCard>
 </template>
@@ -272,6 +273,19 @@ const avatarLetter = () =>
   padding: 12px 0 0;
   color: inherit;
   text-decoration: none;
+}
+.vc-info__arrow {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+.vc-info:hover .vc-info__arrow,
+.vc-info:focus-visible .vc-info__arrow {
+  color: var(--a-color-primary-hover);
+  transform: translateX(2px);
 }
 .vc-avatar {
   flex-shrink: 0;

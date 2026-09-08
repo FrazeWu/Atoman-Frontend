@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import SiteFooterSheet from './footer/SiteFooterSheet.vue'
 import SiteVisitStats from './SiteVisitStats.vue'
+import PLink from '@/components/ui/PLink.vue'
 
 type FooterSheetLayer = {
   key: FootbarPanel
@@ -46,16 +47,15 @@ function openPanel(panel: FootbarPanel, label: string) {
           <nav class="site-footer-related" aria-label="相关链接">
             <span class="site-footer-section-label">相关链接</span>
             <div class="site-footer-related-grid">
-              <a
+              <PLink
                 v-for="link in relatedLinks"
                 :key="link.href"
                 class="site-footer-link site-footer-link--related"
                 :data-footer-related-link="link.label"
                 :data-footer-action="link.action"
                 :href="link.href"
-                target="_blank"
-                rel="noopener noreferrer"
-              >{{ link.label }}</a>
+                external
+              >{{ link.label }}</PLink>
             </div>
           </nav>
         </div>

@@ -21,7 +21,7 @@
         <h2>资料来源</h2>
         <ul class="books-source-list">
           <li v-for="source in detail.sources" :key="source.url">
-            <a :href="source.url" target="_blank" rel="noreferrer noopener">{{ source.title || source.url }}</a>
+            <PLink :href="source.url" external>{{ source.title || source.url }}</PLink>
           </li>
         </ul>
       </section>
@@ -33,6 +33,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PLink from '@/components/ui/PLink.vue'
 import { getPublicBookEdition, type BookPublicEditionDetail } from '@/api/books'
 
 const route = useRoute()

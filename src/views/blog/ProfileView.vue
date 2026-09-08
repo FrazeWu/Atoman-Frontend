@@ -270,7 +270,8 @@
               <strong>{{ entry.name }}</strong>
               <small>@{{ entry.username }}</small>
             </span>
-            <small v-if="entry.detail" class="profile-relation-item__detail">{{ entry.detail }}</small>
+            <small class="profile-relation-item__detail">{{ entry.detail }}</small>
+            <span class="profile-relation-item__arrow" aria-hidden="true">→</span>
           </RouterLink>
           <div v-else class="profile-relation-item__link">
             <PAvatar :src="entry.avatarUrl" :name="entry.name" :alt="entry.name" size="md" />
@@ -1017,7 +1018,7 @@ onMounted(() => { void loadProfilePage() })
 .profile-relation-item:last-child { border-bottom: 0; }
 .profile-relation-item__link {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  grid-template-columns: 3rem minmax(0, 1fr) auto auto;
   gap: 0.75rem;
   align-items: center;
   min-width: 0;
@@ -1038,6 +1039,16 @@ onMounted(() => { void loadProfilePage() })
 .profile-relation-item__identity small,
 .profile-relation-item__detail { color: var(--a-color-muted); font-size: 0.76rem; }
 .profile-relation-item__detail { max-width: 12rem; text-align: right; }
+.profile-relation-item__arrow {
+  color: var(--a-color-muted);
+  font-size: 1rem;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+.profile-relation-item__link:hover .profile-relation-item__arrow,
+.profile-relation-item__link:focus-visible .profile-relation-item__arrow {
+  color: var(--a-color-primary);
+  transform: translateX(2px);
+}
 
 @media (max-width: 900px) {
   .profile-header__identity-row {
@@ -1085,7 +1096,7 @@ onMounted(() => { void loadProfilePage() })
   .profile-header { grid-template-columns: 1fr; }
   .profile-header__avatar { margin: 0; }
   .profile-header__name-row { align-items: center; }
-  .profile-relation-item__link { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .profile-relation-item__link { grid-template-columns: 2.5rem minmax(0, 1fr) auto; }
   .profile-relation-item__detail { grid-column: 2; max-width: none; text-align: left; }
 }
 </style>

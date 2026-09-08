@@ -51,15 +51,15 @@
           :aria-label="`查看 ${sourceTitle} 的所有文章`"
           @click.stop="emit('open-source')"
         >{{ sourceTitle }}</button>
-        <a
+        <PLink
           v-else-if="postItem?.channel"
-          :href="channelUrl(postItem.channel.slug || postItem.channel.id)"
+          :to="channelUrl(postItem.channel.slug || postItem.channel.id)"
           class="blog-item-card__channel"
           @click.stop
         >
           《{{ postItem.channel.name }}》
-        </a>
-        <a v-else-if="sourcePath" :href="sourcePath" class="blog-item-card__source blog-item-card__source-link" @click.stop>{{ sourceTitle }}</a>
+        </PLink>
+        <PLink v-else-if="sourcePath" :href="sourcePath" class="blog-item-card__source blog-item-card__source-link" @click.stop>{{ sourceTitle }}</PLink>
         <span v-else class="blog-item-card__source">{{ sourceTitle }}</span>
       </template>
 
@@ -112,16 +112,14 @@
 
         <slot name="source-action" />
 
-        <a
+        <PLink
           v-if="cardType === 'feed_item' && feedItem?.link"
           :href="feedItem.link"
-          target="_blank"
-          rel="noopener noreferrer"
           class="blog-item-card__external-link"
           @click.stop
         >
-          ↗ 原文
-        </a>
+          原文
+        </PLink>
       </slot>
     </template>
   </PContentCard>
@@ -135,6 +133,7 @@ import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
+import PLink from '@/components/ui/PLink.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { formatPublicRating, hasPublicRating } from '@/utils/rating'

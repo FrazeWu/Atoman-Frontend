@@ -90,6 +90,7 @@ describe('video detail supporting components', () => {
 
     expect(wrapper.get('a').attributes('href')).toBe('/videos/watch/video-3')
     expect(wrapper.text()).toContain('设计观察室 · atoman')
+    expect(wrapper.get('.vrr__arrow').text()).toBe('→')
   })
 
   it('uses the media URL resolver for object-storage recommendation covers', () => {

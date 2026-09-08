@@ -25,7 +25,7 @@
               title="复制 RSS 订阅地址"
               @click="copyCollectionRssLink"
             />
-            <PLink :href="`/posts/channel/${channelId}`" label="返回频道" />
+            <PLink :to="`/posts/channel/${channelId}`" label="返回频道" />
           </div>
         </template>
       </PPageHeader>
@@ -33,7 +33,7 @@
       <PCard class="collection-meta-card">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">所属频道</p>
-          <PLink :href="`/posts/channel/${channelId}`">
+          <PLink :to="`/posts/channel/${channelId}`">
             {{ channel?.name || '加载中...' }}
           </PLink>
         </div>

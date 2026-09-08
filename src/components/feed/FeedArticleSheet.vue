@@ -30,6 +30,7 @@
         </button>
         <a :href="userUrl(article.post.user?.username || '')" class="a-label a-muted" @click.stop>
           {{ article.post.user?.display_name || article.post.user?.username || '未知作者' }}
+          <span aria-hidden="true">→</span>
         </a>
         <span style="color:var(--a-color-muted-soft)">{{ formatDate(article.published_at) }}</span>
       </div>
@@ -132,17 +133,14 @@
       </div>
       <h1 class="article-title">{{ article.feed_item.title }}</h1>
       <div class="article-toolbar">
-        <a
+        <PLink
           v-if="article.feed_item.link"
           :href="article.feed_item.link"
-          target="_blank"
-          rel="noopener noreferrer"
           class="article-source-link"
           aria-label="在源站查看"
           title="在源站查看"
-        >
-          <ExternalLink :size="16" aria-hidden="true" />
-        </a>
+          label="前往源站"
+        />
         <button
           v-if="isPlayablePodcast"
           type="button"
@@ -213,7 +211,7 @@
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span>{{ item.title }}</span>
+              <span>{{ item.title }} <span aria-hidden="true">↗</span></span>
               <small>{{ formatDate(item.published_at) }}</small>
             </a>
           </section>
@@ -251,11 +249,12 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconBookmark as Bookmark, IconClock as Clock, IconExternalLink as ExternalLink, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconClock as Clock, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PLink from '@/components/ui/PLink.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
@@ -871,8 +870,8 @@ const emitPlayPodcast = () => {
 }
 
 .article-source-link {
-  width: 44px;
-  padding: 0.4rem;
+  width: auto;
+  padding: 0.4rem 0.7rem;
 }
 
 .article-source-link:hover,

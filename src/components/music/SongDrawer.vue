@@ -10,6 +10,7 @@ import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
 import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PLink from '@/components/ui/PLink.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
@@ -658,7 +659,7 @@ watch(
           <div v-if="effectiveSources.length" class="song-detail__sources">
             <span>来源</span>
             <template v-for="(source, index) in effectiveSources" :key="`${source.url || source.title}-${index}`">
-              <a v-if="source.url" :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title || source.url }}</a>
+              <PLink v-if="source.url" :href="source.url" external>{{ source.title || source.url }}</PLink>
               <span v-else>{{ source.title }}</span>
             </template>
           </div>

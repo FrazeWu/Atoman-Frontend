@@ -1,6 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import MusicTagList from '@/components/music/MusicTagList.vue'
+
+const musicTagListSource = readFileSync(
+  resolve(process.cwd(), 'src/components/music/MusicTagList.vue'),
+  'utf8',
+)
 
 const mocks = vi.hoisted(() => ({
   listMusicTags: vi.fn(),
@@ -90,6 +97,12 @@ describe('MusicTagList.vue', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('removes borders from tag groups and tag pills while keeping search result framing', () => {
+    expect(musicTagListSource).not.toMatch(/\.music-tags__group\s*\{[\s\S]*?border-top:/)
+    expect(musicTagListSource).toMatch(/\.music-tag\s*\{[\s\S]*?border:\s*0;/)
+    expect(musicTagListSource).toMatch(/\.music-tags__search-results\s*\{[\s\S]*?border:/)
   })
 
   it('按情绪和类型分组展示标签，并支持添加、投票和确认删除', async () => {

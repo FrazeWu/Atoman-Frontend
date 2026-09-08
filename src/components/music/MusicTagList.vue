@@ -397,7 +397,6 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 0.65rem;
   padding-top: 0.4rem;
-  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .music-tags__group h3 {
@@ -415,7 +414,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   gap: 0.45rem;
   padding: 0.25rem 0.35rem 0.25rem 0.6rem;
-  border: 1px solid var(--a-color-border-soft);
+  border: 0;
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
 }

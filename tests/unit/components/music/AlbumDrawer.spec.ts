@@ -226,6 +226,16 @@ describe("AlbumDrawer.vue", () => {
 		expect(albumDrawerSource).toContain("@container (max-width: 89.99rem)");
 	});
 
+	it("保留曲目列表三组必要分隔线", () => {
+		expect(albumDrawerSource).not.toMatch(/\.section-title--tracks\s*\{[^}]*border-bottom:/);
+		expect(albumDrawerSource).not.toMatch(/\.album-artists-section\s*\{[^}]*border-top:/);
+		expect(albumDrawerSource).not.toMatch(/\.album-detail-tags\s*\{[^}]*border-left:/);
+		expect(albumDrawerSource).not.toMatch(/\.track\s*\{[^}]*border-left:/);
+		expect(albumDrawerSource).toContain("border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent)");
+		expect(albumDrawerSource).toMatch(/\.content-section--tracks\s*\{[^}]*border-top: 2px solid var\(--a-color-text\);/);
+		expect(albumDrawerSource).toMatch(/\.content-section--tracks\s*\{[^}]*border-bottom: 2px solid var\(--a-color-text\);/);
+	});
+
 	it("does not render redundant sheet headings", () => {
 		const wrapper = mount(AlbumDrawer, {});
 		expect(wrapper.text()).not.toContain("Album Notes");

@@ -682,7 +682,7 @@ watch(
             </div>
           </div>
         </div>
-        <div class="content-section" aria-hidden="true">
+        <div class="content-section content-section--tracks" aria-hidden="true">
           <div class="section-title">曲目</div>
           <div v-for="index in 5" :key="index" class="track album-skeleton-track">
             <PSkeleton class="album-skeleton-track-play" variant="circle" width="2rem" height="2rem" />
@@ -807,7 +807,7 @@ watch(
             </div>
           </div>
 
-          <div v-if="!loading" class="content-section">
+          <div v-if="!loading" class="content-section content-section--tracks">
         <div class="section-title section-title--tracks">
           <span>曲目</span>
           <span
@@ -1029,7 +1029,6 @@ watch(
 .album-detail-tags {
   min-width: 0;
   align-self: start;
-  border-left: 1px solid var(--a-color-border-soft);
   padding-left: 1rem;
 }
 
@@ -1079,8 +1078,6 @@ watch(
 .album-skeleton-track { cursor: default; }
 .album-skeleton-track:hover {
   background: transparent;
-  border-left-color: transparent;
-  box-shadow: none;
 }
 .album-info {
   flex: 1;
@@ -1151,7 +1148,6 @@ watch(
 .album-artists-section {
   margin-top: 2.25rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .artist-cards-grid {
@@ -1280,6 +1276,12 @@ watch(
   margin-bottom: 3rem;
 }
 
+.content-section--tracks {
+  padding: 1.25rem 0;
+  border-top: 2px solid var(--a-color-text);
+  border-bottom: 2px solid var(--a-color-text);
+}
+
 @media (max-width: 767px) {
   .drawer-body {
     margin: 0;
@@ -1292,8 +1294,6 @@ watch(
   }
 
   .album-detail-tags {
-    border-top: 1px solid var(--a-color-border-soft);
-    border-left: 0;
     padding: 1.25rem 0 0;
   }
 
@@ -1350,8 +1350,6 @@ watch(
   }
 
   .album-detail-tags {
-    border-top: 1px solid var(--a-color-border-soft);
-    border-left: 0;
     padding: 1.25rem 0 0;
   }
 }
@@ -1361,7 +1359,6 @@ watch(
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
   padding-bottom: 0.5rem;
   margin-bottom: 1.25rem;
   color: var(--a-color-muted);
@@ -1404,17 +1401,14 @@ watch(
   align-items: center;
   gap: 0.65rem;
   padding: 0.4rem 0.5rem;
-  border-left: 4px solid transparent;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
   font-size: 0.9rem;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease;
 }
 .track:last-child { border-bottom: none; }
 .track:hover,
 .track:focus-within {
   background-color: var(--a-color-surface-muted);
-  border-left-color: var(--a-color-text);
-  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
 }
 .track-play-btn {
   width: 2rem;

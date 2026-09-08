@@ -37,4 +37,10 @@ describe('SongDrawer 单曲详情布局', () => {
     expect(source).toContain(':deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.45; }')
     expect(source).toContain('.song-detail__lyric-lines { display: grid; gap: 0; }')
   })
+
+  it('提供复制单曲 UUID 的操作', () => {
+    expect(source).toContain('data-testid="song-detail-copy-uuid"')
+    expect(source).toContain('@click="copySongUuid"')
+    expect(source).toContain('UUID 已复制')
+  })
 })

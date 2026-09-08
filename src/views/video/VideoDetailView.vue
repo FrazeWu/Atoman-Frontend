@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { deleteVideoRating, getRecommendedVideos, getVideo, getVideoResource, recordVideoView, setVideoRating, type VideoRatingSummary } from '@/api/video'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconMessage as MessageSquare, IconPlayerPlay as Play, IconShare2 as Share2 } from '@tabler/icons-vue'
+import { IconCopy as Copy, IconMessage as MessageSquare, IconPlayerPlay as Play, IconShare2 as Share2 } from '@tabler/icons-vue'
 import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import type { CommentTargetRef } from '@/api/comments'
 import type { Collection, Video } from '@/types'
@@ -429,6 +429,19 @@ async function shareVideo() {
   }
 }
 
+async function copyVideoUuid() {
+  if (!video.value) return
+  actionFeedback.value = ''
+  actionError.value = ''
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(String(video.value.id))
+    actionFeedback.value = 'UUID 已复制'
+  } catch {
+    actionError.value = '复制 UUID 失败'
+  }
+}
+
 function toggleTheaterMode() {
   theaterMode.value = !theaterMode.value
   saveStoredTheaterMode(theaterMode.value)
@@ -684,6 +697,17 @@ async function toggleChannelSubscription() {
             @click="shareVideo"
           >
             <Share2 :size="16" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            class="vd-comment-action"
+            title="复制 UUID"
+            aria-label="复制视频 UUID"
+            data-testid="video-copy-uuid"
+            @click="copyVideoUuid"
+          >
+            <Copy :size="16" aria-hidden="true" />
+            复制 UUID
           </button>
           <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
             <MessageSquare :size="16" aria-hidden="true" />

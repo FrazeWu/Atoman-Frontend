@@ -17,7 +17,7 @@ import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEdito
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
-import { IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconFileText as FileText, IconHeart as Heart, IconHistory as History, IconGitMerge as Merge, IconDots as MoreHorizontal, IconPlayerPause as Pause, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconUser as UserRound } from '@tabler/icons-vue'
+import { IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconCopy as Copy, IconFileText as FileText, IconHeart as Heart, IconHistory as History, IconGitMerge as Merge, IconDots as MoreHorizontal, IconPlayerPause as Pause, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconUser as UserRound } from '@tabler/icons-vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -295,6 +295,19 @@ function toggleTrackDetails(trackId: string) {
 
 function handleCoverError() {
   isCoverBroken.value = true
+}
+
+async function copyAlbumUuid() {
+  const id = album.value?.id ?? albumId.value
+  if (!id) return
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(String(id))
+    toastMessage.value = 'UUID 已复制'
+  } catch {
+    toastMessage.value = '复制 UUID 失败'
+  }
+  toastVisible.value = true
 }
 
 async function loadPlaylists(page = 1) {
@@ -780,6 +793,16 @@ watch(
               @click="toggleAlbumBookmark"
             >
               {{ isBookmarked ? '已订阅' : '订阅' }}
+            </PButton>
+            <PButton
+              variant="secondary"
+              data-testid="album-copy-uuid"
+              aria-label="复制专辑 UUID"
+              title="复制 UUID"
+              @click="copyAlbumUuid"
+            >
+              <Copy :size="16" aria-hidden="true" />
+              复制 UUID
             </PButton>
             <PDropdown class="album-more-dropdown" position="right">
               <template #trigger>

@@ -218,6 +218,21 @@ const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
 const summarize = (content: string) =>
   content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\x5b\x5d()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
 
+function responseData<T>(payload: unknown): T {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+    return (payload as { data: T }).data
+  }
+  return payload as T
+}
+
+function responseMeta(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload) || !('meta' in payload)) return undefined
+  const meta = (payload as { meta?: unknown }).meta
+  return meta && typeof meta === 'object' && !Array.isArray(meta)
+    ? meta as { total?: unknown; has_more?: unknown }
+    : undefined
+}
+
 const fetchChannel = async (param: string, slug: boolean, generation: number) => {
   try {
     const url = slug
@@ -227,7 +242,7 @@ const fetchChannel = async (param: string, slug: boolean, generation: number) =>
     if (generation !== loadGeneration || !res.ok) return null
     const data = await Promise.resolve(res.data)
     if (generation !== loadGeneration) return null
-    const loadedChannel = (data.data || null) as Channel | null
+    const loadedChannel = responseData<Channel | null>(data) || null
     channel.value = loadedChannel
 
     if (authStore.isAuthenticated && loadedChannel) {
@@ -252,7 +267,10 @@ const fetchCollections = async (loadedChannel: Channel, param: string, slug: boo
     const res = await apiRequestResult(url)
     if (!res.ok || generation !== loadGeneration) return
     const data = await Promise.resolve(res.data)
-    if (generation === loadGeneration) collections.value = data.data || []
+    if (generation === loadGeneration) {
+      const nextCollections = responseData<Collection[]>(data)
+      collections.value = Array.isArray(nextCollections) ? nextCollections : []
+    }
   } catch {
     return
   }
@@ -274,11 +292,12 @@ const fetchPosts = async (loadedChannel: Channel, generation: number, page = 1, 
     if (generation !== loadGeneration || requestId !== postsRequestId || !res.ok) return
     const data = await Promise.resolve(res.data)
     if (generation !== loadGeneration || requestId !== postsRequestId) return
-    const nextPosts = (data.data || []) as Post[]
-    channelPosts.value = append ? [...channelPosts.value, ...nextPosts] : nextPosts
+    const nextPosts = responseData<Post[]>(data)
+    const normalizedPosts = Array.isArray(nextPosts) ? nextPosts : []
+    channelPosts.value = append ? [...channelPosts.value, ...normalizedPosts] : normalizedPosts
     postsPage.value = page
-    postsTotal.value = Number(data.meta?.total ?? channelPosts.value.length)
-    postsHasMore.value = Boolean(data.meta?.has_more)
+    postsTotal.value = Number(responseMeta(data)?.total ?? channelPosts.value.length)
+    postsHasMore.value = Boolean(responseMeta(data)?.has_more)
   } catch {
     return
   } finally {

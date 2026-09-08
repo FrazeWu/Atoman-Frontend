@@ -77,6 +77,42 @@ describe("ChannelView", () => {
 		authStore.isAuthenticated = true;
 	});
 
+	it("频道详情接口返回裸对象时仍加载频道及其内容", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (
+				url.includes("/blog/channels/slug/channel-1") &&
+				!url.includes("/collections")
+			) {
+				return response(channel("channel-1", "频道 A"));
+			}
+			if (url.includes("/blog/channels/slug/channel-1/collections")) {
+				return response([collection("collection-1", "合集 A")]);
+			}
+			if (url.includes("/blog/posts?") && url.includes("channel_id=channel-1")) {
+				return response([post("post-1", "channel-1", "文章 A")]);
+			}
+			if (url.includes("/feed/subscribe/channel/channel-1/status"))
+				return response({ subscribed: false });
+			if (url.includes("/blog/bookmarks")) return response({ data: [] });
+			if (url.includes("/feed/reading-list")) return response({ items: [] });
+			throw new Error(`unexpected request: ${url}`);
+		});
+
+		const wrapper = mount(ChannelView);
+		await flushPromises();
+
+		const state = wrapper.vm.$.setupState;
+		const channelName = state.channel?.name;
+		const collectionName = state.collections[0]?.name;
+		const postTitle = state.channelPosts[0]?.title;
+		wrapper.unmount();
+
+		expect(channelName).toBe("频道 A");
+		expect(collectionName).toBe("合集 A");
+		expect(postTitle).toBe("文章 A");
+	});
+
 	it("路由从 A 切到 B 时重新请求并立即清空 A 的频道派生状态", async () => {
 		const channelB = deferred<Response>();
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {

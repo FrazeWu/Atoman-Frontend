@@ -1,22 +1,14 @@
 <template>
   <section class="setting-management-overview" aria-labelledby="management-overview-title">
     <div class="setting-management-overview__heading">
-      <div>
-        <p class="settings-center__kicker">MODULES</p>
-        <h2 id="management-overview-title">模块可用性</h2>
-        <p>在这里直接调整模块开关和常用策略，点击模块名称可跳转到下方管理区块。</p>
-      </div>
+      <p class="settings-center__kicker">MODULES</p>
+      <h2 id="management-overview-title">模块开关</h2>
+      <p>控制各模块是否在站点开放，详细管理请到下方模块管理区。</p>
     </div>
 
     <div class="setting-management-overview__list" data-test="module-list">
       <article v-for="key in overviewModuleOrder" :key="key" class="setting-management-overview__row">
-        <button
-          type="button"
-          class="setting-management-overview__main"
-          :aria-label="`跳转到${moduleRooms[key].name}管理`"
-          :data-test="`module-detail-${key}`"
-          @click="openModuleDetail(key)"
-        >
+        <div class="setting-management-overview__main">
           <span class="setting-management-overview__icon" aria-hidden="true">
             <component :is="moduleIcons[key]" :size="17" stroke-width="1.8" />
           </span>
@@ -24,55 +16,11 @@
             <strong>{{ moduleRooms[key].name }}</strong>
             <small>{{ moduleDescriptions[key] }}</small>
           </span>
-          <ChevronRight class="setting-management-overview__arrow" :size="17" aria-hidden="true" />
-        </button>
-        <div class="setting-management-overview__quick">
-          <div class="setting-management-overview__quick-stack">
-            <label v-for="feature in quickFeatures(key)" :key="feature.key">
-              <input
-                v-model="access.modules[key].features[feature.key]"
-                :data-test="`feature-${feature.key}`"
-                :aria-label="feature.label"
-                type="checkbox"
-                :disabled="!access.modules[key].enabled"
-              />
-              {{ feature.label }}
-            </label>
-
-            <select
-              v-if="key === 'feed'"
-              v-model="access.settings.feed.full_text_mode"
-              aria-label="订阅全文抓取策略"
-              :disabled="!access.modules[key].enabled"
-            >
-              <option value="per_source">全文：按源设置</option>
-              <option value="disabled">全文：暂停抓取</option>
-            </select>
-
-            <select
-              v-else-if="key === 'blog'"
-              v-model="access.settings.blog.comment_mode"
-              aria-label="博客评论权限"
-              :disabled="!access.modules[key].enabled"
-            >
-              <option value="all">评论：所有人</option>
-              <option value="authenticated">评论：仅登录用户</option>
-              <option value="disabled">评论：关闭</option>
-            </select>
-
-            <select
-              v-else-if="key === 'forum'"
-              v-model="access.settings.forum.allow_category_request"
-              aria-label="社区分类申请"
-              :disabled="!access.modules[key].enabled"
-            >
-              <option :value="true">分类申请：允许</option>
-              <option :value="false">分类申请：关闭</option>
-            </select>
-
-            <span v-if="quickFeatures(key).length === 0 && !hasQuickSetting(key)" class="setting-management-overview__quick-empty">无额外设置</span>
-          </div>
         </div>
+
+        <span class="setting-management-overview__state" :class="{ 'is-disabled': !access.modules[key].enabled }">
+          {{ access.modules[key].enabled ? '已开启' : '已关闭' }}
+        </span>
 
         <div class="setting-management-overview__switch-wrap">
           <label class="setting-management-overview__switch" :title="`${access.modules[key].enabled ? '关闭' : '开启'}${moduleRooms[key].name}模块`">
@@ -91,18 +39,14 @@
 </template>
 
 <script setup lang="ts">
-import { IconBook2 as Book, IconChevronRight as ChevronRight, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
+import { IconBook2 as Book, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
 import { toRef, type Component } from 'vue'
 
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
-import { siteAccessFeatures, type SiteAccess } from '@/config/siteAccess'
+import type { SiteAccess } from '@/config/siteAccess'
 
 const props = defineProps<{
   access: SiteAccess
-}>()
-
-const emit = defineEmits<{
-  'open-detail': [key: ModuleRoomKey]
 }>()
 
 const access = toRef(props, 'access')
@@ -128,20 +72,6 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
   timeline: Book,
   podcast: Microphone,
   video: Video,
-}
-
-function openModuleDetail(key: ModuleRoomKey) {
-  emit('open-detail', key)
-}
-
-function quickFeatures(key: ModuleRoomKey) {
-  return (siteAccessFeatures[key] ?? []).filter((feature) => (
-    key !== 'forum' || feature.key !== 'category.request'
-  ))
-}
-
-function hasQuickSetting(key: ModuleRoomKey) {
-  return key === 'feed' || key === 'blog' || key === 'forum'
 }
 </script>
 
@@ -179,9 +109,9 @@ function hasQuickSetting(key: ModuleRoomKey) {
 
 .setting-management-overview__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, 14rem) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   min-height: 4.125rem;
-  align-items: stretch;
+  align-items: center;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
@@ -195,19 +125,6 @@ function hasQuickSetting(key: ModuleRoomKey) {
   align-items: center;
   gap: 0.75rem;
   padding: 0.65rem 1rem;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.setting-management-overview__main:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.setting-management-overview__main--static {
-  cursor: default;
 }
 
 .setting-management-overview__icon {
@@ -240,56 +157,15 @@ function hasQuickSetting(key: ModuleRoomKey) {
   white-space: nowrap;
 }
 
-.setting-management-overview__arrow {
-  margin-left: auto;
-  color: var(--a-color-muted);
-}
-
-.setting-management-overview__quick {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0.6rem 0.5rem;
-}
-
-.setting-management-overview__quick select {
-  width: 100%;
-  min-height: 2.375rem;
-  padding: 0 0.65rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-text-secondary);
-  font: inherit;
-  font-size: 0.75rem;
-}
-
-.setting-management-overview__quick-stack {
-  display: grid;
-  width: 100%;
-  gap: 0.3rem;
-}
-
-.setting-management-overview__quick-stack label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--a-color-text-secondary);
-  font-size: 0.7rem;
+.setting-management-overview__state {
+  color: var(--a-color-success);
+  font-size: 0.78rem;
+  font-weight: var(--a-font-weight-strong);
   white-space: nowrap;
 }
 
-.setting-management-overview__quick-stack input {
-  width: 0.9rem;
-  height: 0.9rem;
-  margin: 0;
-  accent-color: var(--a-color-primary);
-}
-
-.setting-management-overview__quick-empty {
+.setting-management-overview__state.is-disabled {
   color: var(--a-color-muted);
-  font-size: 0.75rem;
 }
 
 .setting-management-overview__switch-wrap {
@@ -347,20 +223,13 @@ function hasQuickSetting(key: ModuleRoomKey) {
   outline-offset: 2px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .setting-management-overview__row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .setting-management-overview__quick {
-    grid-column: 1 / -1;
-    justify-content: stretch;
-    padding: 0 1rem 0.75rem 4rem;
-  }
-
-  .setting-management-overview__quick select,
-  .setting-management-overview__quick-stack {
-    max-width: 18rem;
+  .setting-management-overview__state {
+    display: none;
   }
 }
 </style>

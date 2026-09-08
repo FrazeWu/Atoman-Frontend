@@ -61,6 +61,10 @@ const stubs = {
   SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源面板</div>' }),
   SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
   SettingMusicReviewPanel: defineComponent({ template: '<div data-test="music-review-panel">音乐审核面板</div>' }),
+  PSheet: defineComponent({
+    props: ['show'],
+    template: '<div v-if="show" data-test="detail-sheet"><slot /></div>',
+  }),
 }
 
 describe('SettingAccessView section sync', () => {
@@ -84,7 +88,7 @@ describe('SettingAccessView section sync', () => {
     expect(resolveInitialSettingSection('')).toBeNull()
   })
 
-  it('scrolls to the real music management section from the module list', async () => {
+  it('opens module details from the lower management area', async () => {
     const wrapper = mount(SettingAccessView, {
       global: {
         stubs: {
@@ -93,12 +97,19 @@ describe('SettingAccessView section sync', () => {
       },
     })
 
-    const overview = wrapper.findComponent(SettingManagementOverview)
-    await wrapper.get('[data-test="module-detail-music"]').trigger('click')
-    expect(overview.emitted('open-detail')).toEqual([['music']])
+    expect(wrapper.findAll('.setting-access__module-card')).toHaveLength(9)
+    expect(wrapper.findAll('.setting-access__module-body')).toHaveLength(0)
+    await wrapper.get('[data-test="module-manage-music"]').trigger('click')
     await wrapper.vm.$nextTick()
-    expect(wrapper.get('#module-music').text()).toContain('音乐审核面板')
+    expect(wrapper.get('[data-test="detail-sheet"]').text()).toContain('音乐审核面板')
     expect(routerMocks.replace).toHaveBeenCalled()
+  })
+
+  it('keeps the top section limited to module switches', () => {
+    const wrapper = mount(SettingAccessView, { global: { stubs } })
+
+    expect(wrapper.findComponent(SettingManagementOverview).findAll('.setting-management-overview__quick')).toHaveLength(0)
+    expect(wrapper.findComponent(SettingManagementOverview).findAll('[data-test^="module-detail-"]')).toHaveLength(0)
   })
 
   it('keeps the requested single-page management order', () => {
@@ -111,7 +122,7 @@ describe('SettingAccessView section sync', () => {
       'announcements',
       'module-management',
     ])
-    expect(wrapper.findAll('.setting-access__module-section').map((section) => section.attributes('id'))).toHaveLength(9)
+    expect(wrapper.findAll('.setting-access__module-card').map((section) => section.attributes('id'))).toHaveLength(9)
   })
 
   it('keeps a unified switch for podcast and saves its visibility', async () => {

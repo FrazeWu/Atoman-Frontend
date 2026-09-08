@@ -575,6 +575,29 @@ describe("music v1 adapter", () => {
 		});
 	});
 
+	it("loads public music tag details by ID", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({
+							data: { id: "tag-1", name: "治愈", kind: "mood" },
+						}),
+						{ status: 200, headers: { "Content-Type": "application/json" } },
+					),
+			),
+		);
+
+		const result = await musicV1.getMusicTag("tag-1");
+
+		expect(result).toEqual({ id: "tag-1", name: "治愈", kind: "mood" });
+		expect(fetch).toHaveBeenCalledWith("/api/v1/music/tags/tag-1", {
+			credentials: "include",
+			headers: { Accept: "application/json" },
+		});
+	});
+
 	it("keeps album hot_score available to discovery views", async () => {
 		vi.stubGlobal(
 			"fetch",

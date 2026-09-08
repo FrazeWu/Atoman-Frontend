@@ -50,46 +50,19 @@
 
     <div v-if="!loading && !errorMessage && items.length" class="feed-timeline">
       <template v-for="(item, index) in items" :key="item.id">
-        <PContentCard
+        <BlogItemCard
+          :item="item"
+          type="feed_item"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle?.feed_item?.id === item.id"
-          :is-read="false"
-          class="content-stream-entry"
+          :is-read="item.is_read === true"
+          :source-title="item.source_title || item.feed_source?.title || 'RSS'"
+          :type-label="getExternalBadge(item)"
+          starred
           @click="openArticleSheet(item, index)"
-          :title="item.title"
-          :summary="stripHtml(item.summary || '')"
+          @toggle-star="unstar(item.id)"
         >
-          <template #visual>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PBadge type="external" fill>外部</PBadge>
-              <PBadge type="external">{{ getExternalBadge(item) }}</PBadge>
-            </div>
-          </template>
-
-          <template #meta>
-            <a 
-              v-if="getFeedSourceHomeUrl(item)"
-              :href="getFeedSourceHomeUrl(item)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="a-label a-muted feed-source-link"
-              @click.stop
-            >
-              {{ item.source_title || 'RSS' }} ↗
-            </a>
-            <span v-else class="a-label a-muted">{{ item.source_title || 'RSS' }}</span>
-            <span v-if="item.author" class="a-label a-muted">· {{ item.author }}</span>
-            <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
-          </template>
-
-          <template #actions>
-            <PClip
-              active
-              label="取消收藏"
-              @click="unstar(item.id)"
-            />
-            
-            <!-- Move to group dropdown -->
+          <template #source-action>
             <select 
               v-if="starGroups.length > 1"
               class="star-group-select a-font-meta"
@@ -105,13 +78,8 @@
                 {{ g.name }}
               </option>
             </select>
-
-            <div style="flex:1"></div>
-            <a v-if="item.link" :href="item.link" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
-              ↗ 原文
-            </a>
           </template>
-        </PContentCard>
+        </BlogItemCard>
       </template>
 
       <FeedTimelineFooter
@@ -147,11 +115,9 @@ import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PContentCard from '@/components/ui/PContentCard.vue'
-import PBadge from '@/components/ui/PBadge.vue'
-import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedReadingListView from '@/views/feed/FeedReadingListView.vue'
@@ -305,11 +271,6 @@ const openNextArticle = () => {
   openArticleSheet(item, selectedArticleIndex.value + 1, true)
 }
 
-const formatDate = (d?: string) => {
-  if (!d) return ''
-  return new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
 const getExternalBadge = (item: StarredFeedItem) => {
   if (item.enclosure_url) {
     if (item.enclosure_type?.startsWith('audio/')) return '播客'
@@ -317,18 +278,6 @@ const getExternalBadge = (item: StarredFeedItem) => {
   }
   return '文章'
 }
-
-const getFeedSourceHomeUrl = (item: StarredFeedItem) => {
-  if (!item.link) return ''
-  try {
-    return new URL(item.link).origin
-  } catch {
-    return item.link
-  }
-}
-
-const stripHtml = (html: string) =>
-  html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
 
 const isPodcastPlaying = (feedItem: FeedItem) =>
   playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
@@ -540,7 +489,7 @@ onUnmounted(() => {
 .feed-timeline {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0;
 }
 
 .feed-skeleton {
@@ -548,24 +497,4 @@ onUnmounted(() => {
 }
 
 
-.feed-item-external-link {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  font-family: var(--a-font-sans);
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--a-color-fg);
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  text-decoration: none;
-  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
-}
-
-.feed-item-external-link:hover {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-text);
-  box-shadow: var(--a-shadow-sm);
-}
 </style>

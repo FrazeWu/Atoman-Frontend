@@ -21,6 +21,18 @@ const { routeQuery, routerPush, routerReplace, player } = vi.hoisted(() => ({
 	},
 }));
 
+const blogItemCardStub = {
+	name: "BlogItemCard",
+	props: {
+		item: { type: Object, required: true },
+		type: { type: String, default: "" },
+		sourceTitle: { type: String, default: "" },
+		starred: { type: Boolean, default: false },
+	},
+	emits: ["click", "toggle-star"],
+	template: '<article class="p-entry" @click="$emit(\'click\')"><h3>{{ item.title }}</h3><button data-test="toggle-star" @click.stop="$emit(\'toggle-star\')">取消收藏</button><slot name="source-action" /></article>',
+};
+
 vi.mock("vue-router", () => ({
 	useRoute: () => ({ query: routeQuery }),
 	useRouter: () => ({ push: routerPush, replace: routerReplace }),
@@ -38,6 +50,7 @@ describe("FeedStarredView", () => {
 		pinia = createPinia();
 		setActivePinia(pinia);
 		config.global.plugins = [pinia];
+		config.global.stubs = { BlogItemCard: blogItemCardStub };
 
 		const feedStore = useFeedStore();
 		vi.spyOn(feedStore, "fetchStarGroups").mockResolvedValue(undefined);
@@ -128,6 +141,27 @@ describe("FeedStarredView", () => {
 		await vi.waitFor(() =>
 			expect(feedStore.starredItemIds.has("feed-item-1")).toBe(false),
 		);
+	});
+
+	it("renders RSS favorites through the shared feed item card", async () => {
+		vi.spyOn(globalThis, "fetch")
+			.mockResolvedValueOnce(new Response(JSON.stringify({
+				items: [{
+					id: "feed-item-card-1", feed_source_id: "source-1", guid: "feed-item-card-1",
+					title: "统一卡片收藏", source_title: "统一来源", summary: "摘要",
+					published_at: "2026-09-06T00:00:00Z", fetched_at: "2026-09-06T00:00:00Z",
+				}], total: 1,
+			}), { status: 200 }))
+			.mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }));
+
+		const wrapper = mount(FeedStarredView);
+		await flushPromises();
+
+		const card = wrapper.findComponent({ name: "BlogItemCard" });
+		expect(card.exists()).toBe(true);
+		expect(card.props("type")).toBe("feed_item");
+		expect(card.props("sourceTitle")).toBe("统一来源");
+		expect(card.props("starred")).toBe(true);
 	});
 
 	it("plays a podcast from the starred article sheet", async () => {

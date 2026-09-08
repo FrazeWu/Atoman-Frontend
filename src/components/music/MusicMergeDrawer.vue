@@ -113,6 +113,7 @@ async function merge() {
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    mode="full"
     content-max-width="42rem"
     :index="layerIndex"
     :layer-index="layerIndex"

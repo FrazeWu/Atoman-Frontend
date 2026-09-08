@@ -2,6 +2,7 @@
   <PSheet
     :show="show"
     :title="`编辑-${debate.title || '辩题'}`"
+    mode="full"
     close-type="header"
     @close="requestClose"
   >

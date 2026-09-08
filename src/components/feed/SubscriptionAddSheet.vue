@@ -2,6 +2,7 @@
   <PSheet
     :show="show"
     :title="resolvedSourceTitle ? `添加-${resolvedSourceTitle}` : '添加-订阅'"
+    mode="full"
     close-type="header"
     :top="top"
     @close="requestClose"

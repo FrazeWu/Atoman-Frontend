@@ -406,8 +406,7 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :is-shifted="sheets.isShifted(layer.key) || commentsBlockParent"
     :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     side="right"
-    mode="partial"
-    partial-width="var(--a-comment-sheet-width)"
+    mode="full"
     reading-mode
     close-type="both"
     :navigation="navigation"

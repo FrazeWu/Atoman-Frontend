@@ -448,6 +448,7 @@ watch([releaseType, albumSortMode], () => {
     content-max-width="64rem"
     :show="isOpen"
     :title="sheetTitle"
+    mode="full"
     @close="closeCurrentArtist"
     @activate="returnCurrentArtist"
     :is-shifted="shifted"

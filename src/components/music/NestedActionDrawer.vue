@@ -498,6 +498,7 @@ async function submitEdit() {
   <PSheet
     :show="isOpen"
     :title="displayTitle"
+    mode="full"
     @close="closeCurrentAction"
     @activate="returnCurrentAction"
     :index="sheetIndex"

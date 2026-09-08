@@ -135,7 +135,7 @@
       <p v-if="error" class="a-error" role="alert">{{ error }}</p>
     </div>
   </PSheet>
-  <PSheet v-if="profileModalOpen" :show="profileModalOpen" title="个人主页" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="profileModalOpen = false">
+  <PSheet v-if="profileModalOpen" :show="profileModalOpen" title="个人主页" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="profileModalOpen = false">
     <div class="profile-preview-modal">
       <div class="profile-preview-modal__identity">
         <div class="avatar-preview-box">

@@ -638,6 +638,7 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    mode="full"
     content-max-width="96rem"
     @close="closeCurrentAlbum"
     @activate="returnCurrentAlbum"

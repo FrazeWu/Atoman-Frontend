@@ -1193,6 +1193,7 @@ async function completeCreation() {
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    mode="full"
     :index="sheetIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

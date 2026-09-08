@@ -2,6 +2,7 @@
   <PSheet
     :show="show"
     :title="sourceTitle ? `订阅源-${sourceTitle}` : '订阅源-来源'"
+    mode="full"
     :layer-index="layerIndex"
     :stack-size="stackSize"
     :is-shifted="isShifted"

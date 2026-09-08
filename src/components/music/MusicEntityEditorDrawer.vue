@@ -410,6 +410,7 @@ async function handleSongEditSubmit() {
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    mode="full"
     content-max-width="64rem"
     :index="sheetIndex"
     :layer-index="layerIndex"

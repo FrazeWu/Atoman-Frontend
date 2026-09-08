@@ -2,6 +2,7 @@
   <PSheet
     :show="show"
     :title="sheetTitle"
+    mode="full"
     close-type="header"
     @close="requestClose"
   >

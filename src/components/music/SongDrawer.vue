@@ -489,6 +489,7 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    mode="full"
     content-max-width="96rem"
     :is-shifted="shifted"
     :is-top-layer="topLayer"

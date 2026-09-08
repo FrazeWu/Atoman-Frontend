@@ -74,7 +74,7 @@ describe("BlogPostSheet", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("uses a right-side partial sheet for contextual article reading", async () => {
+	it("uses a right-side full sheet for primary article reading", async () => {
 		const pinia = createPinia();
 		setActivePinia(pinia);
 		const router = createRouter({
@@ -98,8 +98,8 @@ describe("BlogPostSheet", () => {
 		});
 		await flushPromises();
 
-		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-mode")).toBe("partial");
-		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-partial-width")).toBe("var(--a-comment-sheet-width)");
+		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-mode")).toBe("full");
+		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-partial-width")).toBeUndefined();
 		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-side")).toBe("right");
 	});
 

@@ -97,6 +97,7 @@ watch(channelId, () => void loadChannel(), { immediate: true })
   <PSheet
     :show="sheets.isActive(layer.key)"
     :title="`频道-${channel?.name || layer.title || '未命名'}`"
+    mode="full"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

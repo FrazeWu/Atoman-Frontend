@@ -161,6 +161,6 @@ describe('AccountSecurityPanel', () => {
 
     await wrapper.findAll('button').find(button => button.text() === '详情')!.trigger('click')
     expect(wrapper.findAllComponents(PSheetStub)).toHaveLength(2)
-    expect(wrapper.findAllComponents(PSheetStub).map(component => component.props('mode'))).toContain('full')
+    expect(wrapper.findAllComponents(PSheetStub).map(component => component.props('mode'))).toEqual(['partial', 'partial'])
   })
 })

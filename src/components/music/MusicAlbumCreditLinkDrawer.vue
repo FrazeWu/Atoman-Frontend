@@ -174,6 +174,7 @@ onBeforeUnmount(() => {
 	<PSheet
 		:show="props.layer ? isLayerActive(props.layer.key) : false"
 		title="关联-专辑"
+		mode="full"
 		content-max-width="48rem"
 		:index="layerIndex"
 		:layer-index="layerIndex"

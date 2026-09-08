@@ -14,7 +14,6 @@ import {
 	replaceMusicAlbumImportFile,
 	deleteMusicAlbumImportFile,
 	cancelMusicAlbumImportSession,
-	previewMusicAlbumImportMetadata,
 	type MusicAlbumImport,
 	type MusicAlbumImportFile,
 	type MusicAlbumImportInputMode,
@@ -26,10 +25,10 @@ import {
 	readAlbumImportPreview,
 	shouldIgnoreAlbumImportPath,
 } from "@/utils/musicImportPreview";
-import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
 import { parsePartialDateParts } from "@/components/music/birthDateMask";
 import type { MusicCreationFlowState } from "@/components/music/musicCreationTypes";
 import { useMusicCreationFlow } from "@/components/music/musicCreationFlowContext";
+import { mergeImportedTracksIntoDraft } from "@/utils/musicImportTrackMerge";
 
 type AlbumImportUploadState = {
 	uploading: Ref<boolean>;
@@ -168,7 +167,10 @@ export function useAlbumImportUpload() {
 		draft.coverKey = snapshot.coverKey;
 		draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
 		if (snapshot.derivedCover) draft.derivedCover = snapshot.derivedCover;
-		if (derivedTracks.length > 0) draft.derivedTracks = derivedTracks;
+		if (derivedTracks.length > 0) {
+			draft.derivedTracks = derivedTracks;
+			mergeImportedTracksIntoDraft(flow, derivedTracks);
+		}
 		draft.derivedReleaseDate = snapshot.derivedReleaseDate;
 		draft.derivedAlbumType = snapshot.derivedAlbumType;
 		draft.metadataSourceUrl = snapshot.metadataSourceUrl;
@@ -207,48 +209,6 @@ export function useAlbumImportUpload() {
 				flow.draft.albumDetails.source === previousMetadataSourceURL)
 		) {
 			flow.draft.albumDetails.source = snapshot.metadataSourceUrl;
-		}
-
-		if (!flow.tracksCustomized && derivedTracks.length > 0) {
-			flow.draft.tracks = derivedTracks.map((track, index) => ({
-				id: `import-track-${index + 1}`,
-				...(track.songId ? { songId: track.songId } : {}),
-				sequence: track.trackNumber ?? index + 1,
-					...(track.discNumber ? { discNumber: track.discNumber } : {}),
-					title: track.title,
-					audioKey: track.audioKey,
-					origin: track.origin,
-					...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
-					...(track.originalDiscNumber ? { originalDiscNumber: track.originalDiscNumber } : {}),
-					...(track.originalTrackNumber ? { originalTrackNumber: track.originalTrackNumber } : {}),
-					...(track.matchStatus ? { matchStatus: track.matchStatus } : {}),
-					...(track.matchProvider ? { matchProvider: track.matchProvider } : {}),
-					...(track.matchExternalId ? { matchExternalId: track.matchExternalId } : {}),
-					...(track.matchSourceUrl ? { matchSourceUrl: track.matchSourceUrl } : {}),
-					...(track.matchConfidence !== undefined ? { matchConfidence: track.matchConfidence } : {}),
-				...(track.lyrics
-					? {
-							lyrics: track.lyrics.content,
-							lyricsDraft: {
-								content: track.lyrics.content,
-								translation: track.lyrics.translation || "",
-								format: track.lyrics.format,
-								language: track.lyrics.language || "",
-								editSummary: track.lyrics.edit_summary || "自动匹配歌词",
-								lines: parseMusicLyricDraft(
-									track.lyrics.content,
-									track.lyrics.translation || "",
-									track.lyrics.format,
-								).map((row) => ({
-									line_key: row.lineKey,
-									text: row.original,
-									translation: row.translation,
-									time_ms: row.timeMs,
-								})),
-							},
-						}
-					: {}),
-			}));
 		}
 		return true;
 	}
@@ -574,7 +534,7 @@ export function useAlbumImportUpload() {
 				);
 		if (previewFile) {
 			void readAlbumImportPreview(previewFile)
-				.then(async (preview) => {
+				.then((preview) => {
 					if (!isCurrent()) return;
 					if (files.length === 1) {
 						const localTracks: MusicAlbumImportTrack[] = preview.tracks.map((title, index) => ({
@@ -586,53 +546,17 @@ export function useAlbumImportUpload() {
 							originalTrackNumber: index + 1,
 							matchStatus: "unmatched",
 						}));
-						let matchedTracks = localTracks;
 						draft.metadataMatched = false;
 						draft.metadataSourceUrl = undefined;
 						draft.metadataSource = undefined;
 						draft.metadataExternalId = undefined;
 						draft.metadataMatchStatus = "unmatched";
 						draft.metadataMatchConfidence = 0;
-						try {
-							const matched = await previewMusicAlbumImportMetadata({
-								albumTitle: preview.title,
-								artist: preview.artist || artistName,
-								trackTitles: preview.tracks,
-							});
-							if (matched.matched && matched.tracks.length > 0) {
-								matchedTracks = matched.tracks;
-								draft.metadataMatched = true;
-								draft.metadataSourceUrl = matched.sourceUrl;
-								draft.metadataSource = matched.metadataSource;
-								draft.metadataExternalId = matched.externalId;
-								draft.metadataMatchStatus = matched.matchStatus;
-								draft.metadataMatchConfidence = matched.matchConfidence;
-							}
-						} catch {
-							// 匹配服务不可用时保持本地预览，不阻塞上传。
-						}
-						if (!isCurrent()) return;
 						draft.derivedAlbumTitle = preview.title;
-						draft.derivedTracks = matchedTracks;
+						draft.derivedTracks = localTracks;
+						mergeImportedTracksIntoDraft(flow, localTracks);
 						if (!flow.titleCustomized) {
 							flow.draft.albumDetails.title = preview.title;
-						}
-						if (!flow.tracksCustomized && matchedTracks.length > 0) {
-							flow.draft.tracks = matchedTracks.map((track, index) => ({
-									id: `preview-track-${index + 1}`,
-									sequence: track.trackNumber ?? index + 1,
-									discNumber: track.discNumber ?? 1,
-									title: track.title,
-									origin: track.origin,
-									...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
-									...(track.originalDiscNumber ? { originalDiscNumber: track.originalDiscNumber } : {}),
-									...(track.originalTrackNumber ? { originalTrackNumber: track.originalTrackNumber } : {}),
-									...(track.matchStatus ? { matchStatus: track.matchStatus } : {}),
-									...(track.matchProvider ? { matchProvider: track.matchProvider } : {}),
-									...(track.matchExternalId ? { matchExternalId: track.matchExternalId } : {}),
-									...(track.matchSourceUrl ? { matchSourceUrl: track.matchSourceUrl } : {}),
-									...(track.matchConfidence !== undefined ? { matchConfidence: track.matchConfidence } : {}),
-							}));
 						}
 					}
 					if (preview.albumCoverFile) {

@@ -28,6 +28,7 @@ export interface MusicCreationTrackDraft {
 	title: string;
 	audioUrl?: string;
 	audioKey?: string;
+	importFileId?: string;
 	audioAssetId?: string;
 	audioFileName?: string;
 	uploadProgress?: number;
@@ -43,6 +44,8 @@ export interface MusicCreationTrackDraft {
 	matchExternalId?: string;
 	matchSourceUrl?: string;
 	matchConfidence?: number;
+	titleCustomized?: boolean;
+	sequenceCustomized?: boolean;
 	lyrics?: string;
 	lyricsDraft?: MusicCreationLyricsDraft;
 	lyricsSource?: string;
@@ -119,8 +122,10 @@ export interface MusicCreationAlbumImportDraft {
 	derivedCover: string;
 	derivedTracks: Array<{
 		songId?: string;
+		fileId?: string;
 		title: string;
 		audioKey: string;
+		audioUrl?: string;
 		origin: string;
 		discNumber?: number;
 		trackNumber?: number;
@@ -210,6 +215,7 @@ export interface MusicCreationFlowState {
 	step: MusicCreationFlowStep;
 	draft: MusicCreationDraft;
 	tracksCustomized: boolean;
+	deletedImportTrackKeys: string[];
 	titleCustomized: boolean;
 	dirty: boolean;
 	assetUploading: boolean;

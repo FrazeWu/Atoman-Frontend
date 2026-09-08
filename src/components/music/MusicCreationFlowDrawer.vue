@@ -17,6 +17,7 @@ import { albumArtistCreditsFromContributors, albumContributorsFromResponse, hasV
 import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
 import { hasMusicBrainzSource, normalizeMusicImportSource } from '@/utils/musicImportSource'
+import { mergeImportedTracksIntoDraft } from '@/utils/musicImportTrackMerge'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -754,52 +755,7 @@ function syncReadyImportToDraft() {
     }
   }
 
-  if (!flow.tracksCustomized && derivedTracks.length > 0) {
-    const existingTracks = flow.draft.tracks
-    flow.draft.tracks = derivedTracks.map((track, index) => {
-      const id = `import-track-${index + 1}`
-      const existing = existingTracks.find(item => (
-        (track.songId && item.songId === track.songId)
-        || item.id === id
-        || (item.sequence === (track.trackNumber ?? index + 1) && item.title.trim() === track.title.trim())
-      ))
-      return {
-        id,
-        ...(track.songId ? { songId: track.songId } : {}),
-        sequence: track.trackNumber ?? index + 1,
-        ...(track.discNumber ? { discNumber: track.discNumber } : {}),
-			title: track.title,
-			audioKey: track.audioKey,
-			origin: track.origin,
-			...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
-			...(track.originalDiscNumber ? { originalDiscNumber: track.originalDiscNumber } : {}),
-			...(track.originalTrackNumber ? { originalTrackNumber: track.originalTrackNumber } : {}),
-			...(track.matchStatus ? { matchStatus: track.matchStatus } : {}),
-			...(track.matchProvider ? { matchProvider: track.matchProvider } : {}),
-			...(track.matchExternalId ? { matchExternalId: track.matchExternalId } : {}),
-			...(track.matchSourceUrl ? { matchSourceUrl: track.matchSourceUrl } : {}),
-			...(track.matchConfidence !== undefined ? { matchConfidence: track.matchConfidence } : {}),
-        ...(existing?.lyrics ? { lyrics: existing.lyrics } : {}),
-		...(track.lyricsSource ? { lyricsSource: track.lyricsSource } : {}),
-        ...(existing?.lyricsDraft ? { lyricsDraft: existing.lyricsDraft } : track.lyrics ? {
-          lyrics: track.lyrics.content,
-          lyricsDraft: {
-            content: track.lyrics.content,
-            translation: track.lyrics.translation || '',
-            format: track.lyrics.format,
-            language: track.lyrics.language || '',
-            editSummary: track.lyrics.edit_summary || '自动匹配歌词',
-            lines: parseMusicLyricDraft(track.lyrics.content, track.lyrics.translation || '', track.lyrics.format).map(row => ({
-              line_key: row.lineKey,
-              text: row.original,
-              translation: row.translation,
-              time_ms: row.timeMs,
-            })),
-          },
-        } : {}),
-      }
-    })
-  }
+  if (derivedTracks.length > 0) mergeImportedTracksIntoDraft(flow, derivedTracks)
 }
 
 watch(

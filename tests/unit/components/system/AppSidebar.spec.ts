@@ -167,7 +167,7 @@ describe('AppSidebar feed navigation', () => {
     wrapper.findComponent(SubscriptionHubSidebarTreeStub).vm.$emit('manage')
     await flushPromises()
 
-    expect(router.currentRoute.value.fullPath).toBe('/users/fafa/settings#feed')
+    expect(router.currentRoute.value.fullPath).toBe('/users/fafa/settings#modules')
   })
 
   it('uses the unified subscription tree and keeps selections in the feed route', async () => {

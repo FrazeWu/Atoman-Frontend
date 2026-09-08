@@ -21,7 +21,10 @@ describe('ModuleSubscriptionSourcesPicker', () => {
 
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/videos/subscriptions', component: { template: '<div />' } }],
+      routes: [
+        { path: '/videos/subscriptions', component: { template: '<div />' } },
+        { path: '/users/:handle/settings', component: { template: '<div />' } },
+      ],
     })
     await router.push('/videos/subscriptions')
     await router.isReady()
@@ -53,5 +56,39 @@ describe('ModuleSubscriptionSourcesPicker', () => {
       hub_group_id: 'video-group',
       hub_membership_id: 'video-member',
     })
+  })
+
+  it('opens subscription management in user settings', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const authStore = useAuthStore()
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { username: 'alice', email: 'alice@example.com' }
+    const feedStore = useFeedStore()
+    feedStore.subscriptionHubTree = { types: [] }
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/videos/subscriptions', component: { template: '<div />' } },
+        { path: '/users/:handle/settings', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/videos/subscriptions')
+    await router.isReady()
+
+    const wrapper = mount(ModuleSubscriptionSourcesPicker, {
+      props: {
+        subscriptionType: 'video',
+        subscriptionPath: '/videos/subscriptions',
+      },
+      global: { plugins: [pinia, router] },
+    })
+    await wrapper.get('[data-testid="module-subscription-sources-trigger"]').trigger('click')
+    wrapper.findComponent(FeedMobileSourcesSheet).vm.$emit('manage')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/users/alice/settings#modules')
   })
 })

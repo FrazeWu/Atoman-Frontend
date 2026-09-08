@@ -363,7 +363,7 @@ const openSubscriptionManagement = () => {
   if (!router || !authStore?.user?.username) return
   void router.push({
     path: `/users/${authStore.user.username}/settings`,
-    hash: '#feed',
+    hash: '#modules',
   })
 }
 

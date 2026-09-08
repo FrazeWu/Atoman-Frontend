@@ -93,12 +93,10 @@ const selectContext = (selection: SubscriptionHubSelection) => {
 
 const openManagement = () => {
   open.value = false
+  if (!authStore.user?.username) return
   void router.push({
-    path: '/feed/sources',
-    query: {
-      manage_subscriptions: '1',
-      manage_tab: 'sources',
-    },
+    path: `/users/${authStore.user.username}/settings`,
+    hash: '#modules',
   })
 }
 </script>

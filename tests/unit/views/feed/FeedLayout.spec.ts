@@ -186,7 +186,7 @@ describe("FeedLayout", () => {
     expect(pushSpy).toHaveBeenCalledWith(
       {
         path: "/users/fafa/settings",
-        hash: "#feed",
+        hash: "#modules",
       },
     );
   });

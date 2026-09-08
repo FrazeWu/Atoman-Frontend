@@ -2697,7 +2697,7 @@ describe("FeedView", () => {
     ).toBe(false);
   });
 
-  it("opens subscription management from manage_subscriptions query and clears the query flag", async () => {
+  it("redirects legacy subscription management query to user settings", async () => {
     routeQuery.manage_subscriptions = "1";
     routeQuery.page = "2";
 
@@ -2731,8 +2731,11 @@ describe("FeedView", () => {
 
     expect(
       wrapper.get('[data-test="manage-sheet"]').attributes("data-show"),
-    ).toBe("true");
-    expect(routerReplace).toHaveBeenCalledWith({ query: { page: "2" } });
+    ).toBe("false");
+    expect(routerReplace).toHaveBeenCalledWith({
+      path: "/users/fafa/settings",
+      hash: "#modules",
+    });
   });
 
   it("closes add subscription sheet when opening subscription management", async () => {
@@ -3278,8 +3281,9 @@ describe("FeedView", () => {
     },
   );
 
-  it("clears manage_subscriptions query without opening management for unauthenticated users", async () => {
+  it("clears legacy subscription management query for unauthenticated users", async () => {
     routeQuery.manage_subscriptions = "1";
+    routeQuery.manage_tab = "sources";
     routeQuery.page = "2";
 
     const authStore = useAuthStore();

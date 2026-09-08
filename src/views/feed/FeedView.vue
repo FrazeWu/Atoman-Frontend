@@ -425,6 +425,7 @@ const hasExternalRSSSubscription = computed(() => subscriptions.value.some((subs
   subscription.feed_source?.source_type === 'external_rss'
 )))
 const onboardingReady = ref(false)
+const manageInitialTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>('sources')
 const showOnboardingRecommendations = computed(() => (
   onboardingReady.value
   && authStore.isAuthenticated
@@ -714,23 +715,19 @@ const scrollToTop = async () => {
 }
 
 
-const manageInitialTab = ref<'groups' | 'sources' | 'rules' | 'keywords'>('sources')
-
 watch(() => route.query.manage_subscriptions, async (value) => {
   if (value !== '1') return
-  const query = { ...route.query }
-  const tab = query.manage_tab
-  delete query.manage_subscriptions
-  delete query.manage_tab
-  await router.replace({ query })
-  if (authStore.isAuthenticated) {
-    if (tab === 'sources' || tab === 'rules' || tab === 'keywords' || tab === 'groups') {
-      manageInitialTab.value = tab
-    } else {
-      manageInitialTab.value = 'sources'
-    }
-    showManageSheet.value = true
+  if (!authStore.isAuthenticated || !authStore.user?.username) {
+    const query = { ...route.query }
+    delete query.manage_subscriptions
+    delete query.manage_tab
+    await router.replace({ query })
+    return
   }
+  await router.replace({
+    path: `/users/${authStore.user.username}/settings`,
+    hash: '#modules',
+  })
 }, { immediate: true })
 
 watch(hasExternalRSSSubscription, (hasExternalRSS) => {

@@ -212,6 +212,36 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumDetails.source).toBe("人工来源");
 	});
 
+	it("终态空快照会清理过期导入曲目并重置匹配状态", () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.metadataMatched = true;
+		flow.draft.albumImport.derivedTracks = [{
+			title: "旧曲目",
+			audioKey: "audio-old",
+			origin: "archive",
+		}];
+		flow.draft.tracks = [{
+			id: "import-track-1",
+			sequence: 1,
+			title: "旧曲目",
+			audioKey: "audio-old",
+			origin: "archive",
+		}];
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "failed",
+			stage: "failed",
+			derivedTracks: [],
+			metadataSourceUrl: "",
+		}));
+
+		expect(flow.draft.albumImport.metadataMatched).toBe(false);
+		expect(flow.draft.albumImport.derivedTracks).toEqual([]);
+		expect(flow.draft.tracks).toEqual([]);
+	});
+
 	it("通过统一文件入口以 archive 自动模式注册并逐文件上传", async () => {
 		const archive = new File(["zip"], "graduation.zip", {
 			type: "application/zip",

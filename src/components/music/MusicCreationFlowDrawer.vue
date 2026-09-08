@@ -88,8 +88,24 @@ const closeCurrentCreationFlow = () => {
   closeMusicCreationFlow(props.layer?.key)
 }
 const loadedEditKey = ref('')
+const editDraftBaseline = ref('')
 const closePending = ref(false)
 onUnmounted(invalidateImportAutosave)
+
+function snapshotDraft(flow: NonNullable<typeof creationFlow.value>) {
+  return JSON.stringify(flow.draft)
+}
+
+function captureEditDraftBaseline(flow: NonNullable<typeof creationFlow.value>) {
+  if (flow.mode !== 'edit') return
+  editDraftBaseline.value = snapshotDraft(flow)
+  flow.dirty = false
+}
+
+function syncEditDraftDirty(flow: NonNullable<typeof creationFlow.value> | null) {
+  if (!flow || flow.mode !== 'edit' || !editDraftBaseline.value) return
+  flow.dirty = snapshotDraft(flow) !== editDraftBaseline.value
+}
 
 function parseStageNames(raw: string | undefined, fallbackName: string) {
   try {
@@ -185,6 +201,7 @@ async function loadEditDraft() {
         source: '',
         existingSources: artist.sources ?? [],
       }
+      captureEditDraftBaseline(flow)
       return
     }
 
@@ -225,6 +242,7 @@ async function loadEditDraft() {
       }]
       flow.tracksCustomized = true
       flow.titleCustomized = true
+      captureEditDraftBaseline(flow)
       return
     }
 
@@ -263,6 +281,7 @@ async function loadEditDraft() {
       }))
     flow.tracksCustomized = true
     flow.titleCustomized = true
+    captureEditDraftBaseline(flow)
   } catch (error) {
     loadedEditKey.value = ''
     flow.errorMessage = error instanceof Error ? error.message : '加载资料失败'
@@ -275,10 +294,20 @@ watch(() => [creationFlow.value?.mode, creationFlow.value?.entity, creationFlow.
   const flow = creationFlow.value
   if (!flow?.mode || !flow.entity || !flow.targetId?.trim()) {
     loadedEditKey.value = ''
+    editDraftBaseline.value = ''
     return
+  }
+  if (loadedEditKey.value !== `${flow.entity}:${flow.targetId.trim()}`) {
+    editDraftBaseline.value = ''
   }
   void loadEditDraft()
 }, { immediate: true })
+
+watch(
+  () => creationFlow.value?.draft,
+  () => syncEditDraftDirty(creationFlow.value),
+  { deep: true },
+)
 
 type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails' | 'preview'
 
@@ -297,6 +326,8 @@ function deriveYearFromParts(parts?: { year: string; month: string; day: string 
 }
 
 function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
+  if (flow.mode === 'edit') return flow.dirty
+
   const { artist, albumImport, albumDetails, tracks } = flow.draft
 
   return (

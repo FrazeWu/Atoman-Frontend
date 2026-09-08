@@ -148,6 +148,13 @@ export function useAlbumImportUpload() {
 		const draft = flow.draft.albumImport;
 		if (draft.importId !== expectedImportId) return false;
 		const derivedTracks = snapshot.derivedTracks ?? [];
+		const isTerminalSnapshot = [
+			"ready",
+			"needs_attention",
+			"failed",
+			"canceled",
+			"committed",
+		].includes(snapshot.status);
 		const uploadState = uploadStateFor(flow);
 		const serverDerivedDataAvailable =
 			derivedTracks.length > 0 ||
@@ -189,11 +196,15 @@ export function useAlbumImportUpload() {
 			draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
 			draft.derivedCover = snapshot.derivedCover;
 		}
-		if (derivedTracks.length > 0) {
+		if (derivedTracks.length > 0 || isTerminalSnapshot) {
 			draft.derivedTracks = derivedTracks;
-			mergeImportedTracksIntoDraft(flow, derivedTracks);
+			if (derivedTracks.length > 0) {
+				mergeImportedTracksIntoDraft(flow, derivedTracks);
+			} else if (!flow.tracksCustomized) {
+				flow.draft.tracks = [];
+			}
 		}
-		if (serverDerivedDataAvailable) {
+		if (serverDerivedDataAvailable || isTerminalSnapshot) {
 			draft.derivedReleaseDate = snapshot.derivedReleaseDate;
 			draft.derivedAlbumType = snapshot.derivedAlbumType;
 			draft.metadataSourceUrl = snapshot.metadataSourceUrl;

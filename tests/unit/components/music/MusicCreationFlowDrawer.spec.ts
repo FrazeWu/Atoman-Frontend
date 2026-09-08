@@ -2022,6 +2022,48 @@ describe("MusicCreationFlowDrawer", () => {
 		wrapper.unmount();
 	});
 
+	it("编辑资料加载完成后未修改内容，关闭不提示未保存", async () => {
+		const base = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			mode: "edit",
+			entity: "album",
+			targetId: "album-unchanged",
+			step: "albumDetails",
+			draft: {
+				...base.draft,
+				albumImport: {
+					...base.draft.albumImport,
+					importId: null,
+					archiveName: "",
+				},
+			},
+		});
+		getMusicAlbumMock.mockResolvedValue({
+			id: "album-unchanged",
+			title: "Unchanged Album",
+			cover_url: "https://img.test/album.jpg",
+			release_date: "2002-01-01",
+			release_date_precision: "day",
+			album_type: "album",
+			description: "Album bio",
+			artists: [{ id: "artist-1", name: "Artist" }],
+			songs: [{
+				id: "song-1",
+				title: "Track One",
+				track_number: 1,
+				status: "open",
+				artist_credits: [],
+			}],
+		} as never);
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await flushPromises();
+		await wrapper.get('[data-testid="music-creation-close-button"]').trigger("click");
+
+		expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalled();
+		expect(wrapper.getComponent({ name: "PConfirm" }).props("show")).toBe(false);
+	});
+
 	it("仅填写新的生日分段字段时，关闭前仍会视为有未保存内容", async () => {
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "artist",

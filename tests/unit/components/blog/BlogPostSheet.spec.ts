@@ -74,6 +74,35 @@ describe("BlogPostSheet", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("uses a right-side partial sheet for contextual article reading", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/users/:handle", component: { template: "<div />" } }],
+		});
+		await router.push("/users/author");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					PSheet: {
+						props: ["mode", "partialWidth", "side"],
+						template: '<section data-test="post-sheet" :data-mode="mode" :data-partial-width="partialWidth" :data-side="side"><slot /></section>',
+					},
+				},
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-mode")).toBe("partial");
+		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-partial-width")).toBe("var(--a-comment-sheet-width)");
+		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-side")).toBe("right");
+	});
+
 	it("在弹层中切换为带页眉页脚的学术双栏阅读", async () => {
 		const pinia = createPinia();
 		setActivePinia(pinia);

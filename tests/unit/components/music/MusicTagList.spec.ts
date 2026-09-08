@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import MusicTagList from '@/components/music/MusicTagList.vue'
 
 const musicTagListSource = readFileSync(
@@ -151,6 +152,35 @@ describe('MusicTagList.vue', () => {
     await flushPromises()
     expect(mocks.deleteMusicTag).toHaveBeenCalledWith('song', 'song-1', 'tag-mood')
     expect(wrapper.find('[data-testid="music-tag-delete-tag-mood"]').exists()).toBe(false)
+  })
+
+  it('将标签名称链接到独立标签页，并按当前资源类型设置默认视图', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div />' } }] })
+    await router.push('/')
+    await router.isReady()
+    const wrapper = mount(MusicTagList, {
+      props: { entity: 'album', entityId: 'album-1' },
+      global: {
+        plugins: [router],
+        stubs: {
+          RouterLink: {
+            props: ['to'],
+            computed: {
+              href() { return this.$router.resolve(this.to).href },
+            },
+            template: '<a :href="href"><slot /></a>',
+          },
+          PInteractionActions: true,
+          PConfirm: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    const link = wrapper.get('[data-testid="music-tag-tag-mood"] .music-tag__name')
+    expect(link.attributes('href')).toContain('/music/tags/tag-mood')
+    expect(link.attributes('href')).toContain('view=albums')
+    expect(link.attributes('href')).not.toContain('tag_entity=album')
   })
 
   it('分别搜索情绪和类型标签，已有结果可选择，无结果才显示创建入口', async () => {

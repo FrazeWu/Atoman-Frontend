@@ -65,6 +65,7 @@ export const musicV1Endpoints = {
 	search: () => `${apiV1Base()}/music/search`,
 	searchInteractions: () => `${apiV1Base()}/music/search/interactions`,
 	tags: () => `${apiV1Base()}/music/tags`,
+	tagDetail: (tagId: string) => `${apiV1Base()}/music/tags/${tagId}`,
 	songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,
 	songTags: (songId: string) => `${apiV1Base()}/music/songs/${songId}/tags`,
 	songTagVote: (songId: string, tagId: string) => `${apiV1Base()}/music/songs/${songId}/tags/${tagId}/vote`,

@@ -13,6 +13,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
+import { rememberDeletedImportedTrack } from '@/utils/musicImportTrackMerge'
 
 const { state, setMusicCreationStep } = useMusicDrawers()
 const coverInputRef = ref<HTMLInputElement | null>(null)
@@ -32,6 +33,7 @@ function renumberTracks() {
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track, index) => ({
     ...track,
     sequence: index + 1,
+    sequenceCustomized: true,
   }))
 }
 
@@ -45,6 +47,7 @@ function addTrack() {
       sequence: creationFlow.value.draft.tracks.length + 1,
       title: '',
       origin: 'manual',
+      sequenceCustomized: true,
     },
   ]
 }
@@ -54,7 +57,7 @@ function updateTrackTitle(trackId: string, title: string) {
   creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
     track.id === trackId
-      ? { ...track, title }
+      ? { ...track, title, titleCustomized: true }
       : track
   ))
 }
@@ -62,6 +65,8 @@ function updateTrackTitle(trackId: string, title: string) {
 function removeTrack(trackId: string) {
   if (!creationFlow.value) return
   creationFlow.value.tracksCustomized = true
+  const track = creationFlow.value.draft.tracks.find((item) => item.id === trackId)
+  if (track) rememberDeletedImportedTrack(creationFlow.value, track)
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.filter((track) => track.id !== trackId)
   renumberTracks()
 }

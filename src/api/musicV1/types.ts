@@ -63,8 +63,10 @@ export type MusicAlbumImportStatus =
 
 export type MusicAlbumImportTrack = {
 	songId?: string;
+	fileId?: string;
 	title: string;
 	audioKey: string;
+	audioUrl?: string;
 	origin: string;
 	discNumber?: number;
 	trackNumber?: number;

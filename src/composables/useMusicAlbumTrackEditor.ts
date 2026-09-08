@@ -4,6 +4,9 @@ import type { UploadAsset } from "@/api/types";
 import type { MusicCreationLyricsDraft } from "@/components/music/musicCreationTypes";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { useMusicCreationFlow } from "@/components/music/musicCreationFlowContext";
+import { rememberDeletedImportedTrack } from "@/utils/musicImportTrackMerge";
+
+type TrackMetadataEdit = false | "title" | "sequence";
 
 export function useMusicAlbumTrackEditor() {
 	const { state } = useMusicDrawers();
@@ -21,7 +24,7 @@ export function useMusicAlbumTrackEditor() {
 
 	function updateTracks(
 		mutator: (tracks: typeof tracksDraft.value) => typeof tracksDraft.value,
-		markMetadataManual = false,
+		metadataEdit: TrackMetadataEdit = false,
 	) {
 		if (!creationFlow.value) return;
 		creationFlow.value.tracksCustomized = true;
@@ -29,8 +32,13 @@ export function useMusicAlbumTrackEditor() {
 			creationFlow.value.draft.tracks,
 		).map((track, index) => ({
 			...track,
-			sequence: index + 1,
-			...(markMetadataManual && track.matchStatus === "matched"
+			...(metadataEdit === "sequence"
+				? { sequence: index + 1, sequenceCustomized: true }
+				: {}),
+			...(metadataEdit === "title"
+				? { titleCustomized: true }
+				: {}),
+			...(metadataEdit && track.matchStatus === "matched"
 				? { matchStatus: "manual" as const }
 				: {}),
 		}));
@@ -48,7 +56,7 @@ export function useMusicAlbumTrackEditor() {
 				uploadProgress: 0,
 				origin: "manual",
 			},
-		]);
+		], "sequence");
 		return id;
 	}
 
@@ -115,7 +123,7 @@ export function useMusicAlbumTrackEditor() {
 				audioFileName: fileName,
 				origin: "manual",
 			},
-		]);
+		], "sequence");
 	}
 
 	function replaceTrackAudio(
@@ -144,7 +152,7 @@ export function useMusicAlbumTrackEditor() {
 				tracks.map((track) =>
 					track.id === trackId ? { ...track, title } : track,
 				),
-			true,
+			"title",
 		);
 	}
 
@@ -156,7 +164,7 @@ export function useMusicAlbumTrackEditor() {
 			const [track] = next.splice(index, 1);
 			next.splice(target, 0, track);
 			return next;
-		}, true);
+		}, "sequence");
 	}
 
 	function handleTrackDragStart(trackId: string, event: DragEvent) {
@@ -198,11 +206,15 @@ export function useMusicAlbumTrackEditor() {
 				sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex;
 			next.splice(targetIndex, 0, sourceTrack);
 			return next;
-		}, true);
+		}, "sequence");
 	}
 
-	const removeTrack = (trackId: string) =>
-		updateTracks((tracks) => tracks.filter((track) => track.id !== trackId), true);
+	function removeTrack(trackId: string) {
+		const flow = creationFlow.value;
+		const track = flow?.draft.tracks.find((item) => item.id === trackId);
+		if (flow && track) rememberDeletedImportedTrack(flow, track);
+		updateTracks((tracks) => tracks.filter((track) => track.id !== trackId), "sequence");
+	}
 	const openTrackLyrics = (trackId: string) => {
 		lyricTrackId.value = trackId;
 	};

@@ -129,7 +129,7 @@ watch(() => [props.entityType, props.entityId, authStore.isAuthenticated] as con
 </template>
 
 <style scoped>
-.music-entry-state { display: flex; align-items: center; gap: 0.65rem; min-height: 2.5rem; border-block: 1px solid var(--a-color-border-soft); padding: 0.45rem 0; font-size: 0.78rem; flex-wrap: wrap; }
+.music-entry-state { display: flex; align-items: center; gap: 0.65rem; min-height: 2.5rem; padding: 0.45rem 0; font-size: 0.78rem; flex-wrap: wrap; }
 .music-entry-state__status, .music-entry-state__pending { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--a-color-muted); }
 .music-entry-state button { min-height: 2rem; border: 1px solid var(--a-color-border-soft); background: transparent; color: inherit; padding: 0.25rem 0.55rem; cursor: pointer; }
 .music-entry-state button:disabled { opacity: 0.5; cursor: default; }

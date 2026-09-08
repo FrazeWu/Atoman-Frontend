@@ -1,6 +1,13 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
+
+const contributorsSource = readFileSync(
+  resolve(process.cwd(), 'src/components/music/MusicContributorsBlock.vue'),
+  'utf8',
+)
 
 const contributors = Array.from({ length: 12 }, (_, index) => ({
   user_id: `user-${index}`,
@@ -12,6 +19,11 @@ const contributors = Array.from({ length: 12 }, (_, index) => ({
 }))
 
 describe('MusicContributorsBlock', () => {
+  it('uses one separator between creators and contributors', () => {
+    expect(contributorsSource).toMatch(/\.music-contributors\s*\{[\s\S]*?border-top: 2px solid var\(--a-color-text\);/)
+    expect(contributorsSource).not.toMatch(/\.music-contributors\s*\{[\s\S]*?border-bottom:/)
+  })
+
   it('shows at most ten overlapping contributors and opens history', async () => {
     const wrapper = mount(MusicContributorsBlock, {
       props: { contributors, total: 12 },

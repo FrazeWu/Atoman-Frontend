@@ -961,14 +961,14 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
           artistName: primaryName,
           artistLegalName: flow.draft.artist.legalName,
           artistSource: flow.draft.artist.source,
-          startStep: 'albumDetails',
+          startStep: 'albumImport',
           parentKey: props.layer.key,
         }, { artistDraft: flow.draft.artist })
         ensurePrimaryArtistContributor(childFlow)
         return
       }
       ensurePrimaryArtistContributor(flow)
-      setMusicCreationStep('albumDetails')
+      setMusicCreationStep('albumImport')
     } catch (error) {
       flow.errorMessage = error instanceof Error ? error.message : '创建艺术家草稿失败'
     } finally {

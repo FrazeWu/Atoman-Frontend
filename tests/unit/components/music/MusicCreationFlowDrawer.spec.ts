@@ -571,7 +571,7 @@ describe("MusicCreationFlowDrawer", () => {
 		await nextTick();
 
 		expect(createMusicArtistMock).not.toHaveBeenCalled();
-		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumImport");
 		expect(
 			drawerMocks.state.value.creationFlow?.draft.albumDetails.contributors[0],
 		).toEqual(
@@ -634,7 +634,7 @@ describe("MusicCreationFlowDrawer", () => {
 
 		expect(drawerMocks.openMusicCreationFlow).toHaveBeenCalledWith(
 			expect.objectContaining({
-				startStep: "albumDetails",
+				startStep: "albumImport",
 				parentKey,
 			}),
 			expect.objectContaining({ artistDraft: parentFlow.draft.artist }),

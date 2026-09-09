@@ -248,7 +248,13 @@ export function useAlbumImportUpload() {
 		const processingFinished = ["ready", "needs_attention"].includes(snapshot.status) || (
 			snapshot.status === "failed" && snapshot.stage !== "upload"
 		);
-		if (flow.step === "albumImport" && processingFinished) {
+		if (
+			flow.step === "albumImport" &&
+			flow.artistBeforeMatch &&
+			snapshot.status === "uploaded"
+		) {
+			flow.step = "artist";
+		} else if (flow.step === "albumImport" && processingFinished) {
 			flow.step = "albumDetails";
 		}
 		return true;
@@ -591,17 +597,19 @@ export function useAlbumImportUpload() {
 						}));
 						let matchedTracks = localTracks;
 						let metadataPreview: Awaited<ReturnType<typeof musicApi.previewMusicAlbumImportMetadata>> | null = null;
-						try {
-							metadataPreview = await musicApi.previewMusicAlbumImportMetadata({
-								albumTitle: preview.title,
-								artist: artistName,
-								trackTitles: preview.tracks,
-							});
-							if (metadataPreview.tracks.length > 0) {
-								matchedTracks = metadataPreview.tracks;
+						if (artistName || !flow.artistBeforeMatch) {
+							try {
+								metadataPreview = await musicApi.previewMusicAlbumImportMetadata({
+									albumTitle: preview.title,
+									artist: artistName,
+									trackTitles: preview.tracks,
+								});
+								if (metadataPreview.tracks.length > 0) {
+									matchedTracks = metadataPreview.tracks;
+								}
+							} catch {
+								// 后端正式分析会再次匹配，先使用本地解析结果。
 							}
-						} catch {
-							// 后端正式分析会再次匹配，先使用本地解析结果。
 						}
 						if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
 						draft.metadataMatched = metadataPreview?.matched === true;
@@ -616,8 +624,8 @@ export function useAlbumImportUpload() {
 						if (!flow.titleCustomized) {
 							flow.draft.albumDetails.title = preview.title;
 						}
-						if (metadataPreview && flow.step === "albumImport") {
-							flow.step = "albumDetails";
+						if (flow.step === "albumImport") {
+							flow.step = flow.artistBeforeMatch ? "artist" : "albumDetails";
 						}
 					}
 					if (preview.albumCoverFile) {

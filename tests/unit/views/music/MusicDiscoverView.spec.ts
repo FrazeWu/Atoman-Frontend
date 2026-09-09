@@ -372,7 +372,8 @@ describe("Music DiscoverView.vue", () => {
 		await wrapper.get('[data-testid="add-album"]').trigger("click");
 
 		expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({
-			startStep: "albumDetails",
+			startStep: "albumImport",
+			artistBeforeMatch: true,
 		});
 	});
 

@@ -588,6 +588,8 @@ export function useMusicDrawers() {
 			parentKey: seed.parentKey,
 			loading: false,
 			step: seed.startStep ?? "albumImport",
+			artistBeforeMatch: seed.artistBeforeMatch === true,
+			directAlbumCreation: seed.artistBeforeMatch === true,
 			draft: createEmptyDraft(seed),
 			tracksCustomized: false,
 			deletedImportTrackKeys: [],

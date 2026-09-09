@@ -4,12 +4,13 @@
     :title="sheetTitle"
     mode="partial"
     partial-width="var(--a-comment-sheet-width)"
+    top="calc(var(--a-topbar-height) + 12rem)"
     close-type="header"
     above-player
     :aria-label="sheetTitle"
     @close="$emit('close')"
   >
-    <form class="publication-sheet" @submit.prevent="$emit('confirm')">
+    <div class="publication-sheet">
       <p class="publication-sheet__intro">
         发布前确认文章归属和展示信息，正文内容会保留在编辑器中。
       </p>
@@ -102,24 +103,7 @@
         <p>这些建议不会阻止发布。</p>
       </section>
 
-    </form>
-
-    <template #footer>
-      <div class="publication-sheet__footer">
-        <PButton type="button" variant="secondary" @click="$emit('close')">返回编辑</PButton>
-        <PButton
-          data-testid="publication-confirm"
-          type="button"
-          variant="primary"
-          :disabled="!canConfirm || Boolean(saving) || scheduling || coverUploading"
-          :loading="Boolean(saving) || scheduling"
-          :loading-text="intent === 'schedule' ? '设置中…' : '发布中…'"
-          @click="$emit('confirm')"
-        >
-          {{ intent === 'schedule' ? '确认定时发布' : '确认发布' }}
-        </PButton>
-      </div>
-    </template>
+    </div>
   </PSheet>
 </template>
 
@@ -127,7 +111,6 @@
 import { computed, ref } from 'vue'
 
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
-import PButton from '@/components/ui/PButton.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -160,12 +143,10 @@ const props = defineProps<{
   warnings: PublicationWarning[]
   blockingErrors: string[]
   error: string
-  canConfirm: boolean
 }>()
 
 const emit = defineEmits<{
   (event: 'close'): void
-  (event: 'confirm'): void
   (event: 'select-collection', id: string): void
   (event: 'update:summary', value: string): void
   (event: 'update:visibility', value: Visibility): void
@@ -307,13 +288,6 @@ const triggerCoverUpload = () => coverInput.value?.click()
 
 .publication-sheet__hidden-input {
   display: none;
-}
-
-.publication-sheet__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.65rem;
-  padding: 0 1.25rem 1.25rem;
 }
 
 </style>

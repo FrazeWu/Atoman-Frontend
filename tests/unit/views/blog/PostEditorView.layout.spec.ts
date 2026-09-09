@@ -30,8 +30,9 @@ describe("PostEditorView layout", () => {
 	it("starts focused and opens one right sidebar from the topbar", () => {
 		expect(source).toContain("const sidebarPanelOpen = ref(true)");
 		expect(source).toContain('@toggle-sidebar="toggleSidebarPanel"');
-		expect(source).toContain('@save-published="requestPublication(\'publish\')"');
-		expect(source).toContain('@confirm="confirmPublication"');
+		expect(source).toContain('@save-published="handlePublishAction"');
+		expect(source).not.toContain('@confirm="confirmPublication"');
+		expect(source).toContain(':publication-open="publicationReviewVisible"');
 		expect(cssRules(".editor-layout")).toContain(
 			"grid-template-columns: minmax(0, 1fr) 0",
 		);
@@ -42,6 +43,8 @@ describe("PostEditorView layout", () => {
 
 	it("uses one Markdown document for source, visual editing, and preview", () => {
 		expect(source).toContain("PostEditorFormattingToolbar");
+		expect(source).toContain('<div class="editor-format-row">');
+		expect(source).toContain('<div class="editor-top-info"');
 		expect(source).not.toContain("PostEditorRichText");
 		expect(source).toContain(
 			"const contentMode = ref<'markdown' | 'visual'>('markdown')",

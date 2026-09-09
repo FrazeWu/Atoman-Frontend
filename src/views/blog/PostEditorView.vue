@@ -31,6 +31,9 @@
               :content-mode="contentMode"
               :preview-open="previewOpen"
               :sidebar-open="sidebarPanelOpen || mobilePanel === 'sidebar'"
+              :publication-open="publicationReviewVisible"
+              :publication-can-confirm="canConfirmPublication"
+              :publication-busy="Boolean(saving) || scheduling || coverUploading"
               @import-file="handleFileUpload"
               @open-draft-manager="openDraftManager"
               @export-markdown="handleMarkdownExport"
@@ -40,17 +43,32 @@
               @update:content-mode="contentMode = $event"
               @open-version-history="versionHistoryOpen = true"
               @save-draft="saveDraft"
-              @save-published="requestPublication('publish')"
+              @save-published="handlePublishAction"
               @schedule-publish="requestPublication('schedule')"
             />
 
+            <div class="editor-top-info" role="status" aria-live="polite">
+              <div class="editor-top-info__group">
+                <span class="editor-top-info__sync" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
+                <span>{{ editorCharacterCount }} 字</span>
+                <span>{{ editorReadingTime }}</span>
+              </div>
+              <div class="editor-top-info__group editor-top-info__group--secondary">
+                <span>{{ contentMode === 'markdown' ? 'Markdown' : '所见即所得' }}</span>
+                <span>{{ lineNumbersVisible ? '行号已开启' : '行号已关闭' }}</span>
+              </div>
+            </div>
+
+            <div class="editor-format-row">
+              <PostEditorFormattingToolbar
+                :line-numbers="lineNumbersVisible"
+                @command="executeFormattingCommand"
+                @update:line-numbers="lineNumbersVisible = $event"
+              />
+            </div>
+
             <div class="editor-workspace">
               <section class="editor-canvas" :class="{ 'is-preview-open': previewOpen }">
-                <PostEditorFormattingToolbar
-                  :line-numbers="lineNumbersVisible"
-                  @command="executeFormattingCommand"
-                  @update:line-numbers="lineNumbersVisible = $event"
-                />
                 <div class="editor-body">
                   <PEditor
                     :key="collabRoomId || 'new'"
@@ -112,9 +130,7 @@
       :warnings="publicationWarnings"
       :blocking-errors="publicationBlockingErrors"
       :error="error"
-      :can-confirm="canConfirmPublication"
       @close="closePublicationReview"
-      @confirm="confirmPublication"
       @select-collection="onCollectionSelect"
       @update:summary="(value) => (form.summary = value)"
       @update:visibility="(value) => (form.visibility = value)"
@@ -365,6 +381,14 @@ const publicationWarnings = computed(() => evaluateBlogPublicationQuality({
   content: form.value.content,
 }))
 
+const editorCharacterCount = computed(() => (
+  `${(form.value.title + form.value.content).replace(/\s/g, '').length.toLocaleString('zh-CN')}`
+))
+
+const editorReadingTime = computed(() => (
+  `预计阅读 ${Math.max(1, Math.ceil((form.value.title + form.value.content).replace(/\s/g, '').length / 400))} 分钟`
+))
+
 // ── Title-in-editor binding ──────────────────────────────
 const editorBody = computed({
   get: () => `# ${form.value.title}\n${form.value.content}`,
@@ -598,6 +622,14 @@ const requestPublication = (intent: 'publish' | 'schedule') => {
   error.value = ''
   publicationIntent.value = intent
   publicationReviewVisible.value = true
+}
+
+const handlePublishAction = () => {
+  if (publicationReviewVisible.value) {
+    confirmPublication()
+    return
+  }
+  requestPublication('publish')
 }
 
 const closePublicationReview = () => {
@@ -920,6 +952,50 @@ onMounted(() => { void initializeEditor() })
   flex-direction: column;
 }
 
+.editor-top-info {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1rem;
+  border-top: var(--a-border);
+  background: var(--a-color-surface);
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-top-info__group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
+}
+
+.editor-top-info__group span {
+  white-space: nowrap;
+}
+
+.editor-top-info__sync.is-ok {
+  color: var(--a-color-success);
+}
+
+.editor-top-info__sync.is-warn {
+  color: var(--a-color-danger);
+}
+
+.editor-format-row {
+  flex: 0 0 auto;
+  min-width: 0;
+  border-bottom: var(--a-border);
+  background: var(--a-color-bg);
+}
+
+.editor-format-row :deep(.post-format-toolbar) {
+  border-bottom: 0;
+}
+
 .editor-canvas {
   display: flex;
   min-height: 0;
@@ -1089,10 +1165,6 @@ onMounted(() => { void initializeEditor() })
     min-height: 0;
   }
 
-  .editor-canvas.is-preview-open :deep(.post-format-toolbar) {
-    display: none;
-  }
-
   .editor-body :deep(.p-editor.mode-split .sv-source) {
     display: none;
   }
@@ -1115,6 +1187,28 @@ onMounted(() => { void initializeEditor() })
 
   .draft-manager-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-top-info {
+    min-height: 2.75rem;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+    padding-block: 0.35rem;
+  }
+
+  .editor-top-info__group {
+    gap: 0.7rem;
+  }
+
+  .editor-top-info__group--secondary {
+    display: none;
+  }
+
+  .editor-format-row :deep(.post-format-toolbar) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 }
 </style>

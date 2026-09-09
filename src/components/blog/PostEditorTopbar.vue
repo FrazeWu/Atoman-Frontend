@@ -76,8 +76,17 @@
         <CalendarClock :size="16" aria-hidden="true" />
         定时发布
       </PButton>
-      <PButton type="button" variant="primary" size="sm" :loading="saving === 'published'" :disabled="Boolean(saving)" loading-text="发布中…" @click="$emit('save-published')">
-        发布
+      <PButton
+        type="button"
+        variant="primary"
+        size="sm"
+        :loading="saving === 'published' || (publicationOpen && publicationBusy)"
+        :disabled="Boolean(saving) || (publicationOpen && !publicationCanConfirm)"
+        :loading-text="publicationOpen ? '处理中…' : '发布中…'"
+        data-testid="editor-publish-action"
+        @click="$emit('save-published')"
+      >
+        {{ publicationOpen ? '确认' : '发布' }}
       </PButton>
       <span class="editor-topbar__publish-status" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
     </div>
@@ -102,6 +111,9 @@ defineProps<{
   contentMode: 'markdown' | 'visual'
   previewOpen?: boolean
   sidebarOpen?: boolean
+  publicationOpen?: boolean
+  publicationCanConfirm?: boolean
+  publicationBusy?: boolean
 }>()
 
 defineEmits<{

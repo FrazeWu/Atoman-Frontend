@@ -7,6 +7,9 @@ import type {
 	MusicEntryStatus,
 	MusicSource,
 } from "@/api/musicV1";
+import {
+	createEmptyMusicArtistDraft,
+} from "@/components/music/musicCreationTypes";
 import type {
 	MusicCreationDraft,
 	MusicCreationFlowState,
@@ -223,33 +226,12 @@ function restoreCommittedAlbumImportDraft(
 function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
 	return {
 		artist: {
+			...createEmptyMusicArtistDraft({
+				name: seed?.artistName ?? "",
+				legalName: seed?.artistLegalName ?? "",
+				source: seed?.artistSource?.trim() ?? "",
+			}),
 			id: seed?.artistId ?? null,
-			disambiguation: "",
-			avatarUrl: "",
-			avatarAsset: null,
-			kind: "person",
-			legalName: seed?.artistLegalName ?? "",
-			stageNames: [
-				{
-					id: "stage-name-primary",
-					name: seed?.artistName ?? "",
-					isPrimary: true,
-					startDateParts: createEmptyDateParts(),
-					endDateParts: createEmptyDateParts(),
-					startDateText: "",
-					endDateText: "",
-				},
-			],
-			members: [],
-			nationality: "",
-			birthPlace: "",
-			birthDateParts: createEmptyDateParts(),
-			activeStartDateParts: createEmptyDateParts(),
-			activeEndDateParts: createEmptyDateParts(),
-			birthDate: "",
-			bio: "",
-			source: seed?.artistSource?.trim() ?? "",
-			existingSources: [],
 		},
 		albumImport: {
 			importId: null,

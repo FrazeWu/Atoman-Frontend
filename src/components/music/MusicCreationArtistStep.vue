@@ -11,16 +11,20 @@ import { createMusicArtist, listMusicArtists, uploadMusicAsset, type MusicArtist
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
+import { activeArtistRequiresFullProfile, activeMusicArtistDraft } from './musicCreationTypes'
 
 const { state } = useMusicDrawers()
 
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
-const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
+const artistDraft = computed(() => creationFlow.value ? activeMusicArtistDraft(creationFlow.value) : null)
 const isGroup = computed(() => artistDraft.value?.kind === 'group')
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
-const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '来源*')
+const requiresFullProfile = computed(() => creationFlow.value ? activeArtistRequiresFullProfile(creationFlow.value) : true)
+const isEditingContributor = computed(() => !!creationFlow.value?.editingContributorId)
+const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : requiresFullProfile.value ? '来源*' : '来源')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写来源')
+const artistStepTitle = computed(() => isEditingContributor.value ? '新建创作者' : '新建艺术家')
 const avatarUploading = ref(false)
 const avatarErrorMessage = ref('')
 const stageNameErrorMessage = ref('')
@@ -247,7 +251,12 @@ function validateAndExpose() {
     }
   }
 
-  if (draft.kind === 'group') {
+  if (!requiresFullProfile.value) {
+    if (!draft.stageNames[0]?.name.trim()) {
+      stageNameErrorMessage.value = '请填写创作者名称'
+      return false
+    }
+  } else if (draft.kind === 'group') {
     const namedMembers = draft.members.filter((member) => member.name.trim())
     if (namedMembers.length < 2) {
       membersErrorMessage.value = '组合至少需要 2 名成员'
@@ -302,7 +311,7 @@ defineExpose({
         <div class="artist-hero__meta">
           <p class="hero-step">第 1 步 / 艺术家信息</p>
         </div>
-        <h4>新建艺术家</h4>
+        <h4>{{ artistStepTitle }}</h4>
       </header>
 
       <section class="artist-card artist-kind-card" data-testid="artist-kind-section">
@@ -325,7 +334,7 @@ defineExpose({
         <div class="artist-profile-grid">
           <div class="avatar-upload-section">
             <div class="field-group avatar-label-group">
-              <span class="field-label">{{ !isGroup ? requiredLabel('头像') : '头像' }}</span>
+              <span class="field-label">{{ requiresFullProfile && !isGroup ? requiredLabel('头像') : '头像' }}</span>
               <span class="field-hint">建议大于 600×600</span>
             </div>
             <div
@@ -373,7 +382,7 @@ defineExpose({
                 data-testid="artist-legal-name-input"
                 type="text"
                 placeholder="例如 Kanye Omari West"
-                :label="requiredLabel('本名')"
+                :label="requiresFullProfile ? requiredLabel('本名') : '本名'"
               />
             </div>
             <div v-if="artistDraft.stageNames.length" class="field-group single-line-field">
@@ -381,7 +390,7 @@ defineExpose({
                 v-model="artistDraft.stageNames[0].name"
                 :data-testid="isGroup ? 'artist-group-name-input' : 'artist-stage-name-input-0'"
                 type="text"
-                :label="isGroup ? requiredLabel('组合名') : requiredLabel('主艺名')"
+                :label="isGroup ? (requiresFullProfile ? requiredLabel('组合名') : '组合名') : requiredLabel('主艺名')"
                 :placeholder="isGroup ? '例如 Daft Punk' : '例如 Kanye West / Ye'"
                 @update:model-value="() => { stageNameErrorMessage = ''; groupErrorMessage = '' }"
               />
@@ -389,7 +398,7 @@ defineExpose({
             <div v-if="!isGroup" class="field-group single-line-field">
               <PCountryRegionField
                 v-model="artistDraft.nationality"
-                :label="requiredLabel('国籍')"
+                :label="requiresFullProfile ? requiredLabel('国籍') : '国籍'"
                 placeholder="选择国家或地区"
                 trigger-test-id="artist-country-trigger"
                 search-test-id="artist-country-search"
@@ -397,12 +406,12 @@ defineExpose({
               />
             </div>
             <div v-if="!isGroup" class="single-line-field">
-              <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiredLabel('生日')" testId="artist-birth-input" />
+              <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiresFullProfile ? requiredLabel('生日') : '生日'" testId="artist-birth-input" />
             </div>
             <div v-if="isGroup" class="single-line-field">
               <PMaskedDateInput
                 v-model="artistDraft.activeStartDateParts"
-                :label="requiredLabel('成立时间')"
+                :label="requiresFullProfile ? requiredLabel('成立时间') : '成立时间'"
                 testId="artist-group-start-date-input"
               />
             </div>
@@ -570,7 +579,11 @@ defineExpose({
 
             <div class="member-card__dates">
               <div class="single-line-field">
-                <PMaskedDateInput v-model="member.joinDateParts" :label="requiredLabel('加入时间')" :testId="`artist-member-join-input-${index}`" />
+                <PMaskedDateInput
+                  v-model="member.joinDateParts"
+                  :label="requiresFullProfile ? requiredLabel('加入时间') : '加入时间'"
+                  :testId="`artist-member-join-input-${index}`"
+                />
               </div>
               <div class="single-line-field">
                 <PMaskedDateInput v-model="member.leaveDateParts" label="退出时间" :testId="`artist-member-leave-input-${index}`" present-when-empty />

@@ -79,7 +79,6 @@ const {
   updateAnnotation,
   deleteAnnotation,
   voteAnnotation,
-  currentLine: currentLyricLine,
 } = useMusicLyrics()
 const lyricsDisplayMode = ref<'original' | 'bilingual'>('original')
 const selectedTextDraft = ref<{
@@ -141,12 +140,6 @@ const lyricsMatchSource = computed(() => lyrics.value?.source === 'lrclib'
       status: lyrics.value?.is_edited ? '已编辑' : '已核验',
     }
   : null)
-const activeLyricLineId = computed(() => {
-  if (!detail.value || String(player.currentSong?.id ?? '') !== String(detail.value.song.id)) return ''
-  const line = currentLyricLine(player.currentTime ?? 0)
-  return line?.line_key ?? line?.id ?? ''
-})
-
 const standaloneReleaseLabel = computed(() => formatAlbumTypeLabel(detail.value?.song.release_type))
 const formattedReleaseDate = computed(() => {
   const song = detail.value?.song
@@ -634,16 +627,15 @@ watch(
                   :key="line.line_key ?? line.id ?? `${line.line_index}-${line.text}`"
                   :line="line"
                   :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
-                  :active="activeLyricLineId === (line.line_key ?? line.id ?? '')"
                   :bilingual="lyricsDisplayMode === 'bilingual'"
                   :can-select="authStore.isAuthenticated"
                   :can-annotate="authStore.isAuthenticated"
+                  :click-to-seek="false"
                   :show-timeline="false"
                   :disable-hover-effects="true"
                   :selection-root="lyricsLinesElement"
                   @select-text="handleSelectText"
                   @open-annotations="handleOpenAnnotations"
-                  @seek="player.seek"
                 />
               </div>
             </PContentProgress>

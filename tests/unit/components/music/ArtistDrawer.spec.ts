@@ -599,7 +599,7 @@ describe("ArtistDrawer.vue", () => {
 			artistName: "Ye",
 			artistLegalName: "Kanye Omari West",
 			artistSource: "",
-			startStep: "albumDetails",
+			startStep: "albumImport",
 		});
 		expect(musicDrawerMocks.openMusicEditor).not.toHaveBeenCalled();
 	});

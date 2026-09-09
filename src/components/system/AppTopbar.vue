@@ -325,7 +325,6 @@ html.dark .topbar--auth {
   display: block;
   object-fit: contain;
   flex-shrink: 0;
-  box-shadow: var(--a-shadow-sm);
 }
 .logo-text {
   font-weight: 500;

@@ -17,36 +17,54 @@
       <div class="settings-block">
         <div class="settings-block__copy">
           <strong>设为私密</strong>
-          <small>开启后，其他人无法查看你的个人主页资料。</small>
+          <small>开启后，只有你能查看个人主页资料。</small>
         </div>
         <div class="settings-block__control">
-          <label class="settings-toggle">
+          <label class="privacy-switch" :class="{ 'privacy-switch--disabled': savingKey !== null }">
             <input
               data-test="private-profile-toggle"
               v-model="privateProfile"
               type="checkbox"
+              class="privacy-switch__input"
+              role="switch"
+              :aria-checked="privateProfile"
+              :aria-label="`${privateProfile ? '关闭' : '开启'}设为私密`"
               :disabled="savingKey !== null"
               @change="save('private_profile')"
             />
-            <span>{{ privateProfile ? '仅自己可见' : '对所有人公开' }}</span>
+            <span class="privacy-switch__track" aria-hidden="true">
+              <span class="privacy-switch__thumb" />
+            </span>
+            <span data-test="private-profile-state" class="privacy-switch__state">
+              {{ privateProfile ? '开启' : '关闭' }}
+            </span>
           </label>
         </div>
       </div>
       <div class="settings-block">
         <div class="settings-block__copy">
           <strong>公开订阅关系</strong>
-          <small>允许他人查看你的订阅中和被订阅列表。</small>
+          <small>开启后，其他人可以查看你的订阅中和被订阅列表。</small>
         </div>
         <div class="settings-block__control">
-          <label class="settings-toggle">
+          <label class="privacy-switch" :class="{ 'privacy-switch--disabled': savingKey !== null }">
             <input
               data-test="show-relations-toggle"
               v-model="showRelations"
               type="checkbox"
+              class="privacy-switch__input"
+              role="switch"
+              :aria-checked="showRelations"
+              :aria-label="`${showRelations ? '关闭' : '开启'}公开订阅关系`"
               :disabled="savingKey !== null"
               @change="save('show_relations')"
             />
-            <span>{{ showRelations ? '对所有人公开' : '仅自己可见' }}</span>
+            <span class="privacy-switch__track" aria-hidden="true">
+              <span class="privacy-switch__thumb" />
+            </span>
+            <span data-test="show-relations-state" class="privacy-switch__state">
+              {{ showRelations ? '开启' : '关闭' }}
+            </span>
           </label>
         </div>
       </div>
@@ -158,12 +176,75 @@ onMounted(load)
   gap: 0.75rem;
 }
 
-.settings-toggle {
+.privacy-switch {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+}
+
+.privacy-switch--disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.privacy-switch__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.privacy-switch__track {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.5rem;
+  align-items: center;
+  border: 1px solid var(--a-color-border);
+  border-radius: 999px;
+  background: var(--a-color-surface-muted);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.privacy-switch__thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-left: 0.15rem;
+  border-radius: 50%;
+  background: var(--a-color-text-secondary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.privacy-switch__input:checked + .privacy-switch__track {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-primary);
+}
+
+.privacy-switch__input:checked + .privacy-switch__track .privacy-switch__thumb {
+  background: #fff;
+  transform: translateX(1.2rem);
+}
+
+.privacy-switch__input:focus-visible + .privacy-switch__track {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+.privacy-switch__state {
+  min-width: 2.25rem;
+  color: var(--a-color-text-secondary);
+  font-size: var(--a-text-sm);
+  text-align: left;
+}
+
+.privacy-switch__input:checked ~ .privacy-switch__state {
+  color: var(--a-color-primary);
 }
 
 .privacy-settings__state,

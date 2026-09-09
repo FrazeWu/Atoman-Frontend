@@ -185,6 +185,7 @@ describe('UserBlogSettingsPanel', () => {
     expect(rows[0]!.text()).not.toContain('显示名称')
     expect(rows[1]!.text()).toContain('基本信息')
     expect(rows[1]!.text()).toContain('显示名称')
+    expect(rows[1]!.classes()).toContain('user-blog-settings-panel__form--wide')
     expect(rows[2]!.text()).toContain('主页预览')
     expect(rows[2]!.text()).not.toContain('个人简介')
   })

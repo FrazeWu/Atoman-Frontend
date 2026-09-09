@@ -29,7 +29,7 @@
         </div>
       </div>
 
-      <form class="settings-block user-blog-settings-panel__form" @submit.prevent="save">
+      <form class="settings-block user-blog-settings-panel__form user-blog-settings-panel__form--wide" @submit.prevent="save">
         <div class="settings-block__copy">
           <strong>基本信息</strong>
           <small>显示名和简介会公开展示。</small>
@@ -467,6 +467,15 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+/* The profile form has enough room for a wider control column on desktop. */
+.user-blog-settings-panel__form--wide {
+  grid-template-columns: minmax(14rem, 0.8fr) minmax(0, 1.2fr);
+}
+
+.user-blog-settings-panel__form--wide .user-blog-settings-panel__form-fields {
+  width: 100%;
+}
+
 .form-field-full {
   grid-column: 1 / -1;
 }
@@ -525,6 +534,12 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .user-blog-settings-panel__identity { align-items: flex-start; }
+}
+
+@media (max-width: 768px) {
+  .user-blog-settings-panel__form--wide {
+    grid-template-columns: 1fr;
+  }
 }
 
 .profile-settings-state {

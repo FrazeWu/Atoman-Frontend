@@ -211,13 +211,7 @@
 }
 
 .feed-reader-content code {
-	font-family: var(
-		--a-font-mono,
-		ui-monospace,
-		SFMono-Regular,
-		Consolas,
-		monospace
-	);
+	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 	font-size: 0.9em;
 }
 

@@ -11,8 +11,9 @@ describe('SongDrawer 歌词注释入口', () => {
   it('将标签放在歌曲详情右侧栏，而不是详情主体整行', () => {
     expect(source).toContain('<div class="song-detail__primary">')
     expect(source).toContain('<aside class="song-detail__tags"')
-    expect(source).toContain('content-max-width="80rem"')
-    expect(source).toContain('grid-template-columns: minmax(56rem, 56rem) minmax(16rem, 19rem);')
+    expect(source).toContain('content-max-width="96rem"')
+    expect(source).toContain('grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);')
+    expect(source).toContain('grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);')
     expect(source).toContain('@container (max-width: 76.5rem)')
   })
 

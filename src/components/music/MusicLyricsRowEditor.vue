@@ -423,7 +423,7 @@ function describedByForField(
 .lyric-index {
   color: var(--a-color-muted, #60646c);
   font-variant-numeric: tabular-nums;
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.82rem;
   font-weight: 600;
   text-align: center;
@@ -481,7 +481,7 @@ function describedByForField(
   color: var(--a-color-muted, #60646c);
   font: inherit;
   font-variant-numeric: tabular-nums;
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   text-align: left;
   cursor: pointer;
   transition: color 0.2s ease;

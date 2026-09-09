@@ -59,12 +59,12 @@ describe("PSheet.vue", () => {
 		);
 	});
 
-	it("gives mobile partial sheets a narrow width and backdrop", () => {
+	it("gives mobile partial sheets the shared width and backdrop", () => {
 		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
 			/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`\]"/,
 		);
 		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
-			/\.p-sheet-mobile-page\.is-partial\s*\{[\s\S]*?width:\s*min\(var\(--a-recommendation-width\), calc\(100vw - 1rem\)\)/,
+			/\.p-sheet-mobile-page\.is-partial\s*\{[\s\S]*?width:\s*min\(var\(--a-comment-sheet-width\), calc\(100vw - 1rem\)\)/,
 		);
 		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
 			/\.p-sheet-mobile-backdrop\s*\{[\s\S]*?position:\s*fixed[\s\S]*?z-index:/,
@@ -240,7 +240,7 @@ describe("PSheet.vue", () => {
 		).toBe("calc(var(--a-z-sheet) + 1)");
 	});
 
-	it("keeps a partial sheet in the lower sheet's right gutter without a backdrop", async () => {
+	it("keeps a 42rem partial sheet in the lower sheet's right gutter without a backdrop", async () => {
 		const originalWidth = window.innerWidth;
 		const originalHeight = window.innerHeight;
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 1000 });
@@ -271,7 +271,7 @@ describe("PSheet.vue", () => {
 
 		const panel = wrapper.get(".p-sheet-panel").element as HTMLElement;
 		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
-		expect(panel.style.left).toBe("740px");
+		expect(panel.style.left).toContain("var(--a-comment-sheet-width)");
 		expect(panel.style.right).toBe("0px");
 		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(false);
 
@@ -281,7 +281,7 @@ describe("PSheet.vue", () => {
 		Object.defineProperty(window, "innerHeight", { configurable: true, value: originalHeight });
 	});
 
-	it("uses a standalone content anchor for a partial sheet", async () => {
+	it("uses the shared width with a standalone content anchor for a partial sheet", async () => {
 		const originalWidth = window.innerWidth;
 		const originalHeight = window.innerHeight;
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
@@ -302,7 +302,7 @@ describe("PSheet.vue", () => {
 
 		const panel = wrapper.get(".p-sheet-panel").element as HTMLElement;
 		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
-		expect(panel.style.left).toBe("839.2px");
+		expect(panel.style.left).toContain("var(--a-comment-sheet-width)");
 		expect(panel.style.right).toBe("0px");
 		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(false);
 

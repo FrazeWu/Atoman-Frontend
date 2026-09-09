@@ -230,7 +230,7 @@ const props = withDefaults(defineProps<{
   title: '',
   mode: 'full',
   partialAnchor: null,
-  partialWidth: '',
+  partialWidth: 'var(--a-comment-sheet-width)',
   width: '100%',
   top: '56px',
   side: 'right',
@@ -499,7 +499,7 @@ const mobileSheetStyle = computed(() => {
   if (props.mode !== 'partial' || props.side !== 'right') return undefined
 
   return {
-    width: `min(${props.partialWidth || 'var(--a-recommendation-width)'}, calc(100vw - 1rem))`,
+    width: `min(${props.partialWidth || 'var(--a-comment-sheet-width)'}, calc(100vw - 1rem))`,
     'max-width': 'calc(100vw - 1rem)',
   }
 })
@@ -541,7 +541,7 @@ const mobileSheetStyle = computed(() => {
 }
 
 .p-sheet-mobile-page.is-partial {
-  width: min(var(--a-recommendation-width), calc(100vw - 1rem));
+  width: min(var(--a-comment-sheet-width), calc(100vw - 1rem));
   max-width: calc(100vw - 1rem);
 }
 

@@ -36,12 +36,14 @@ describe("modern flat UI design-system contract", () => {
 
 		expect(css).toContain("--a-content-max-width: 80rem;");
 		expect(css).toContain("--a-recommendation-width: 20rem;");
+		expect(css).toContain("--a-comment-sheet-width: 42rem;");
 		expect(css).toContain("--a-content-column-gap: 2rem;");
 		expect(css).toContain(".a-content-frame");
 		expect(css).toContain("max-width: var(--a-content-max-width);");
 		expect(rules).toContain("## Desktop Content Layout");
 		expect(rules).toContain("## Desktop Sheet Scope");
 		expect(rules).toContain("var(--a-recommendation-width)");
+		expect(rules).toContain("所有 partial Sheet 都必须使用这个共享 token");
 	});
 
 	it("uses neutral semantic tokens and soft geometry", () => {

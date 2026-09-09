@@ -30,7 +30,7 @@
     :title="title"
     side="right"
     mode="partial"
-    partial-width="var(--a-recommendation-width)"
+    partial-width="var(--a-comment-sheet-width)"
     close-type="header"
     :above-player="abovePlayer"
     @close="cancel"

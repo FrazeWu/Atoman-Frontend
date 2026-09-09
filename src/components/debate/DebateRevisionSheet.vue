@@ -3,7 +3,7 @@
     :show="show"
     :title="`版本-${debateTitle || '辩题'}`"
     mode="partial"
-    partial-width="var(--a-recommendation-width)"
+    partial-width="var(--a-comment-sheet-width)"
     close-type="header"
     @close="closeSheet"
   >

@@ -106,7 +106,7 @@
 
     </template>
   </div>
-  <PSheet v-if="avatarModalOpen" :show="avatarModalOpen" title="更换头像" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="avatarModalOpen = false">
+  <PSheet v-if="avatarModalOpen" :show="avatarModalOpen" title="更换头像" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="avatarModalOpen = false">
     <div class="avatar-modal">
       <label class="avatar-field__picker" :class="{ 'is-disabled': uploadingAvatar }">
         <Camera :size="16" aria-hidden="true" />
@@ -135,7 +135,7 @@
       <p v-if="error" class="a-error" role="alert">{{ error }}</p>
     </div>
   </PSheet>
-  <PSheet v-if="profileModalOpen" :show="profileModalOpen" title="个人主页" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="profileModalOpen = false">
+  <PSheet v-if="profileModalOpen" :show="profileModalOpen" title="个人主页" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="profileModalOpen = false">
     <div class="profile-preview-modal">
       <div class="profile-preview-modal__identity">
         <div class="avatar-preview-box">

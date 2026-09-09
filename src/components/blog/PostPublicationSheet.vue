@@ -3,7 +3,7 @@
     :show="show"
     :title="sheetTitle"
     mode="partial"
-    partial-width="var(--a-recommendation-width)"
+    partial-width="var(--a-comment-sheet-width)"
     close-type="header"
     above-player
     :aria-label="sheetTitle"

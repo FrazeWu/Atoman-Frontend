@@ -320,8 +320,8 @@ html.dark .topbar--auth {
   color: var(--a-color-fg);
 }
 .logo-image {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: block;
   object-fit: contain;
   flex-shrink: 0;
@@ -482,8 +482,8 @@ html.dark .topbar--auth {
   }
 
   .brand-link--mobile-visible .logo-image {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
   }
 
   .brand-link--mobile-visible .logo-meta {

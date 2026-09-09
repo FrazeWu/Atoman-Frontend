@@ -3,7 +3,7 @@
     <div class="notification-settings__header">
       <div class="settings-block__copy">
         <strong>通知偏好</strong>
-        <small>选择你希望收到的互动提醒。</small>
+        <small>控制哪些互动事件会出现在通知中心。</small>
       </div>
       <PButton to="/inbox" variant="secondary" size="md">打开通知详情</PButton>
     </div>
@@ -28,20 +28,29 @@
             <small>{{ group.description }}</small>
           </div>
           <div class="settings-block__control">
-            <label class="settings-toggle">
+            <label class="notification-switch" :class="{ 'notification-switch--disabled': savingKey !== null }">
               <input
                 :data-test="`notification-${group.key}`"
                 v-model="preferences[group.key]"
                 type="checkbox"
+                class="notification-switch__input"
+                role="switch"
+                :aria-checked="preferences[group.key]"
+                :aria-label="`${preferences[group.key] ? '关闭' : '开启'}${group.label}`"
                 :disabled="savingKey !== null"
                 @change="savePreference(group.key)"
               />
-              <span>{{ preferences[group.key] ? '已开启' : '已关闭' }}</span>
+              <span class="notification-switch__track" aria-hidden="true">
+                <span class="notification-switch__thumb" />
+              </span>
+              <span :data-test="`notification-${group.key}-state`" class="notification-switch__state">
+                {{ preferences[group.key] ? '开启' : '关闭' }}
+              </span>
             </label>
           </div>
         </div>
       </div>
-      <p class="notification-settings__note">账号安全和关键权限变化始终提醒。</p>
+      <p class="notification-settings__note">账号安全和关键权限变化始终通知你，无法关闭。</p>
       <p v-if="saveError" class="notification-settings__error" role="alert">{{ saveError }}</p>
       <p v-if="savedLabel" class="notification-settings__saved" role="status">{{ savedLabel }}已保存</p>
     </template>
@@ -69,11 +78,11 @@ type PreferenceGroup = {
 }
 
 const preferenceGroups: PreferenceGroup[] = [
-  { key: 'like', label: '点赞提醒', description: '有人赞了你的内容时提醒。', category: 'like', eventTypes: ['comment_like', 'forum_like'] },
-  { key: 'interaction', label: '互动提醒', description: '订阅、标记和话题状态变化时提醒。', category: 'interaction', eventTypes: ['comment_marked', 'forum_follow', 'forum_solved'] },
-  { key: 'mention', label: '提及提醒', description: '有人在内容中提到你时提醒。', category: 'mention', eventTypes: ['comment_mention'] },
-  { key: 'reply', label: '回复提醒', description: '有人回复你的内容时提醒。', category: 'reply', eventTypes: ['comment_reply', 'forum_reply', 'forum_topic_comment'] },
-  { key: 'collaboration', label: '协作提醒', description: '协作请求和任务变化时提醒。', category: 'collaboration', eventTypes: ['collaboration.required'] },
+  { key: 'like', label: '点赞提醒', description: '有人点赞你的评论或话题时通知你。', category: 'like', eventTypes: ['comment_like', 'forum_like'] },
+  { key: 'interaction', label: '互动提醒', description: '订阅、标记或话题状态发生变化时通知你。', category: 'interaction', eventTypes: ['comment_marked', 'forum_follow', 'forum_solved'] },
+  { key: 'mention', label: '提及提醒', description: '有人在评论或话题中提到你时通知你。', category: 'mention', eventTypes: ['comment_mention'] },
+  { key: 'reply', label: '回复提醒', description: '有人回复你的评论或话题时通知你。', category: 'reply', eventTypes: ['comment_reply', 'forum_reply', 'forum_topic_comment'] },
+  { key: 'collaboration', label: '协作提醒', description: '收到协作邀请或任务变更时通知你。', category: 'collaboration', eventTypes: ['collaboration.required'] },
 ]
 
 const preferences = reactive<Record<PreferenceGroup['key'], boolean>>({
@@ -175,12 +184,75 @@ onMounted(load)
   gap: 0;
 }
 
-.settings-toggle {
+.notification-switch {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+}
+
+.notification-switch--disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.notification-switch__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.notification-switch__track {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.5rem;
+  align-items: center;
+  border: 1px solid var(--a-color-border);
+  border-radius: 999px;
+  background: var(--a-color-surface-muted);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.notification-switch__thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-left: 0.15rem;
+  border-radius: 50%;
+  background: var(--a-color-text-secondary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.notification-switch__input:checked + .notification-switch__track {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-primary);
+}
+
+.notification-switch__input:checked + .notification-switch__track .notification-switch__thumb {
+  background: #fff;
+  transform: translateX(1.2rem);
+}
+
+.notification-switch__input:focus-visible + .notification-switch__track {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+.notification-switch__state {
+  min-width: 2.25rem;
+  color: var(--a-color-text-secondary);
+  font-size: var(--a-text-sm);
+  text-align: left;
+}
+
+.notification-switch__input:checked ~ .notification-switch__state {
+  color: var(--a-color-primary);
 }
 
 .notification-settings__state,

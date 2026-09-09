@@ -47,6 +47,7 @@ describe('PostPublicationSheet', () => {
       global: {
         stubs: {
           PSheet: sheetStub,
+          PSegmentedControl: { template: '<div class="publication-mode"><button v-for="option in options" :key="option.value">{{ option.label }}</button></div>', props: ['options', 'modelValue'] },
           PSelect: { template: '<select />' },
           PTextarea: { props: ['label'], template: '<label>{{ label }}</label><textarea />' },
           PInput: { template: '<input />' },
@@ -60,7 +61,9 @@ describe('PostPublicationSheet', () => {
     expect(sheet.props('partialWidth')).toBe('var(--a-comment-sheet-width)')
     expect(sheet.props('abovePlayer')).toBe(true)
     expect(wrapper.text()).toContain('摘要（可选）')
-    expect(sheet.props('top')).toBe('calc(var(--a-topbar-height) + 12rem)')
+    expect(sheet.props('top')).toBe('calc(var(--a-topbar-height) + 7rem)')
+    expect(wrapper.text()).toContain('立即发布')
+    expect(wrapper.text()).toContain('定时发布')
     expect(wrapper.find('.publication-sheet__footer').exists()).toBe(false)
     expect(wrapper.find('[data-testid="publication-confirm"]').exists()).toBe(false)
   })
@@ -75,6 +78,7 @@ describe('PostPublicationSheet', () => {
       global: {
         stubs: {
           PSheet: sheetStub,
+          PSegmentedControl: { template: '<div class="publication-mode"><button v-for="option in options" :key="option.value">{{ option.label }}</button></div>', props: ['options', 'modelValue'] },
           PSelect: { template: '<select />' },
           PTextarea: { props: ['label'], template: '<label>{{ label }}</label><textarea />' },
           PInput: { template: '<input />' },

@@ -18,7 +18,6 @@
       <div
         v-if="!editorLoadFailed"
         class="editor-layout"
-        :class="{ 'has-sidebar-panel': sidebarPanelOpen }"
       >
         <main class="col-center a-card-sm">
           <template v-if="contentReady">
@@ -30,7 +29,6 @@
               :exporting="exporting"
               :content-mode="contentMode"
               :preview-open="previewOpen"
-              :sidebar-open="sidebarPanelOpen || mobilePanel === 'sidebar'"
               :publication-open="publicationReviewVisible"
               :publication-can-confirm="canConfirmPublication"
               :publication-busy="Boolean(saving) || scheduling || coverUploading"
@@ -38,13 +36,11 @@
               @open-draft-manager="openDraftManager"
               @export-markdown="handleMarkdownExport"
               @go-back="goBack"
-              @toggle-sidebar="toggleSidebarPanel"
               @toggle-preview="togglePreview"
               @update:content-mode="contentMode = $event"
               @open-version-history="versionHistoryOpen = true"
               @save-draft="saveDraft"
               @save-published="handlePublishAction"
-              @schedule-publish="requestPublication('schedule')"
             />
 
             <div class="editor-top-info" role="status" aria-live="polite">
@@ -54,7 +50,7 @@
                 <span>{{ editorReadingTime }}</span>
               </div>
               <div class="editor-top-info__group editor-top-info__group--secondary">
-                <span>{{ contentMode === 'markdown' ? 'Markdown' : '所见即所得' }}</span>
+                <span>{{ contentMode === 'markdown' ? 'Markdown' : 'Visual' }}</span>
                 <span>{{ lineNumbersVisible ? '行号已开启' : '行号已关闭' }}</span>
               </div>
             </div>
@@ -88,7 +84,6 @@
                     :line-numbers="lineNumbersVisible"
                     :show-whitespace="true"
                     @update:line-numbers="lineNumbersVisible = $event"
-                    @active-heading-change="activeHeadingLine = $event"
                     @collab-ready="handleCollabReady"
                   />
                 </div>
@@ -98,16 +93,6 @@
 
           <div v-else class="editor-loading">加载中…</div>
         </main>
-
-        <PostEditorSidebar
-          :mobile-open="mobilePanel === 'sidebar'"
-          :desktop-open="sidebarPanelOpen"
-          :outline-count="outline.length"
-          :flattened-outline="flattenedOutline"
-          :active-heading-line="activeHeadingLine"
-          @jump-to-heading="jumpToHeading"
-          @close="mobilePanel = null"
-        />
       </div>
     </div>
 
@@ -131,6 +116,7 @@
       :blocking-errors="publicationBlockingErrors"
       :error="error"
       @close="closePublicationReview"
+      @update:intent="publicationIntent = $event"
       @select-collection="onCollectionSelect"
       @update:summary="(value) => (form.summary = value)"
       @update:visibility="(value) => (form.visibility = value)"
@@ -248,7 +234,6 @@ import { hasAppHistory, studioContentLocation } from '@/router/studioEditor'
 import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorFormattingToolbar from '@/components/blog/PostEditorFormattingToolbar.vue'
 import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
-import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
@@ -280,28 +265,9 @@ const emit = defineEmits<{
   'title-change': [title: string]
 }>()
 
-// ── 布局 ─────────────────────────────────────────────────
-type OutlineItem = {
-  id: string
-  level: number
-  text: string
-  line: number
-  parentId: string | null
-}
-
-type FlattenedOutlineNode = OutlineItem & {
-  depth: number
-  hasChildren: boolean
-  isExpanded: boolean
-  isActiveBranch: boolean
-}
-
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
-const activeHeadingLine = ref<number | null>(null)
 const lineNumbersVisible = ref(true)
 const previewOpen = ref(false)
-const mobilePanel = ref<'sidebar' | null>(null)
-const sidebarPanelOpen = ref(true)
 const contentMode = ref<'markdown' | 'visual'>('markdown')
 const exporting = ref(false)
 const markdownImportID = ref<string | null>(null)
@@ -311,21 +277,8 @@ const executeFormattingCommand = (command: PostEditorCommand) => {
   editorRef.value?.executeCommand(command)
 }
 
-const isCompactEditor = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 960px)').matches
-
-const toggleSidebarPanel = () => {
-  if (isCompactEditor()) {
-    const opening = mobilePanel.value !== 'sidebar'
-    mobilePanel.value = opening ? 'sidebar' : null
-    if (opening) previewOpen.value = false
-    return
-  }
-  sidebarPanelOpen.value = !sidebarPanelOpen.value
-}
-
 const togglePreview = () => {
   previewOpen.value = !previewOpen.value
-  if (previewOpen.value && isCompactEditor()) mobilePanel.value = null
 }
 
 const goBack = () => {
@@ -407,72 +360,6 @@ const editorBody = computed({
 const replaceCollaborativeDocumentFromForm = () => {
   if (!shouldEnableCollab.value) return
   editorRef.value?.replaceDocument(`# ${form.value.title}\n${form.value.content}`)
-}
-
-// ── 目录提取 ─────────────────────────────────────────────
-const outline = computed((): OutlineItem[] => {
-  const lines = form.value.content.split('\n')
-  const items: OutlineItem[] = []
-  const levelStack: { level: number; id: string }[] = []
-
-  for (let idx = 0; idx < lines.length; idx++) {
-    const m = lines[idx].match(/^(#{2,})\s+(.+)/)
-    if (!m) continue
-
-    const level = m[1].length
-    const text = m[2].trim()
-    const line = idx + 2
-    const id = `heading-${line}`
-
-    while (levelStack.length > 0 && levelStack[levelStack.length - 1].level >= level) {
-      levelStack.pop()
-    }
-    const parentId = levelStack.length > 0 ? levelStack[levelStack.length - 1].id : null
-    levelStack.push({ level, id })
-    items.push({ id, level, text, line, parentId })
-  }
-
-  return items
-})
-
-const flattenedOutline = computed((): FlattenedOutlineNode[] => {
-  const items = outline.value
-  if (!items.length) return []
-
-  const minLevel = Math.min(...items.map(item => item.level))
-
-  const activeItem = activeHeadingLine.value !== null
-    ? [...items].reverse().find(item => item.line <= activeHeadingLine.value!)
-    : null
-
-  const activeBranchIds = new Set<string>()
-  if (activeItem) {
-    activeBranchIds.add(activeItem.id)
-    let parentId = activeItem.parentId
-    while (parentId) {
-      activeBranchIds.add(parentId)
-      const parent = items.find(item => item.id === parentId)
-      parentId = parent?.parentId ?? null
-    }
-  }
-
-  return items
-    .filter(item => !item.parentId || activeBranchIds.has(item.parentId))
-    .map(item => {
-      const idx = items.indexOf(item)
-      const hasChildren = idx + 1 < items.length && items[idx + 1].level > item.level
-      return {
-        ...item,
-        depth: item.level - minLevel,
-        hasChildren,
-        isExpanded: hasChildren && activeBranchIds.has(item.id),
-        isActiveBranch: activeBranchIds.has(item.id),
-      }
-    })
-})
-
-const jumpToHeading = (line: number) => {
-  editorRef.value?.scrollToHeadingLine?.(line)
 }
 
 const {
@@ -868,12 +755,7 @@ onMounted(() => { void initializeEditor() })
 
 .editor-page {
   position: relative;
-  height: calc(
-    100dvh -
-    var(--a-topbar-height, 3.5rem) -
-    3.75rem -
-    clamp(2rem, 6vw, 4rem)
-  );
+  height: calc(100dvh - var(--a-topbar-height, 3.5rem) - var(--a-content-bottom-offset) - 0.75rem);
   min-height: 0;
   background: var(--a-color-bg);
   overflow: hidden;
@@ -914,15 +796,10 @@ onMounted(() => { void initializeEditor() })
 .editor-layout {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 0;
+  grid-template-columns: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  transition: grid-template-columns 160ms ease;
-}
-
-.editor-layout.has-sidebar-panel {
-  grid-template-columns: minmax(0, 1fr) 17.5rem;
 }
 
 .col-center {
@@ -950,6 +827,7 @@ onMounted(() => { void initializeEditor() })
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .editor-top-info {
@@ -1010,14 +888,23 @@ onMounted(() => { void initializeEditor() })
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .editor-body > * {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.editor-body :deep(.cm-editor) {
+  height: 100%;
 }
 
 .editor-body :deep(.cm-scroller) {
+  height: 100%;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
   font-family: var(--a-font-sans, ui-sans-serif, system-ui, sans-serif) !important;
   font-size: 1.0625rem;
   line-height: 1.45 !important;
@@ -1136,28 +1023,13 @@ onMounted(() => { void initializeEditor() })
   margin: 0;
 }
 
-@media (max-width: 1200px) {
-  .editor-layout.has-sidebar-panel {
-    grid-template-columns: minmax(0, 1fr) 17.5rem;
-  }
-}
-
 @media (max-width: 960px) {
-  .editor-page {
-    height: calc(
-      100dvh -
-      var(--a-topbar-height, 3.5rem) -
-      3.75rem -
-      clamp(2rem, 6vw, 4rem)
-    );
-  }
-
   .editor-layout {
     display: flex;
     height: 100%;
     min-height: 0;
     flex-direction: column;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .col-center {

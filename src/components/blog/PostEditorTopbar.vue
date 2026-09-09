@@ -19,26 +19,39 @@
           type="button"
           variant="ghost"
           size="sm"
-          :aria-label="previewOpen ? '关闭预览' : '打开预览'"
-          :title="previewOpen ? '关闭预览' : '打开预览'"
+          class="editor-topbar__preview-button"
+          :aria-label="previewOpen ? '关闭实时预览' : '实时预览'"
+          :title="previewOpen ? '关闭实时预览' : '实时预览'"
           :aria-pressed="previewOpen"
           @click="$emit('toggle-preview')"
         >
           <EyeOff v-if="previewOpen" :size="17" aria-hidden="true" />
           <Eye v-else :size="17" aria-hidden="true" />
+          <span>{{ previewOpen ? '关闭实时预览' : '实时预览' }}</span>
         </PButton>
         <PButton
           type="button"
           variant="ghost"
           size="sm"
-          aria-label="文档目录"
-          title="文档目录"
-          :aria-pressed="sidebarOpen"
-          @click="$emit('toggle-sidebar')"
+          :aria-label="contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown'"
+          :title="contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown'"
+          @click="handleImport"
         >
-          <PanelRight :size="17" aria-hidden="true" />
+          <Upload :size="17" aria-hidden="true" />
+          <span>{{ contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown' }}</span>
         </PButton>
-        <PDropdown position="right" label="更多操作">
+        <PButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="草稿管理"
+          title="草稿管理"
+          @click="$emit('open-draft-manager')"
+        >
+          <FileText :size="17" aria-hidden="true" />
+          <span>草稿管理</span>
+        </PButton>
+        <PDropdown v-if="isEdit" position="right" label="更多操作">
           <template #trigger>
             <PButton type="button" variant="ghost" size="sm" aria-label="更多操作" title="更多操作">
               <Ellipsis :size="18" aria-hidden="true" />
@@ -46,13 +59,6 @@
           </template>
           <template #default="{ close }">
             <div class="editor-topbar__menu">
-              <button type="button" class="editor-topbar__menu-item" @click="handleImport(); close()">
-                <Upload :size="16" aria-hidden="true" />
-                {{ contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown' }}
-              </button>
-              <button type="button" class="editor-topbar__menu-item" @click="$emit('open-draft-manager'); close()">
-                草稿管理
-              </button>
               <button v-if="isEdit" type="button" class="editor-topbar__menu-item" :disabled="exporting" @click="$emit('export-markdown'); close()">
                 <Download :size="16" aria-hidden="true" />
                 导出 Markdown
@@ -69,33 +75,31 @@
     </div>
 
     <div class="editor-topbar__publish-row">
-      <PButton type="button" variant="secondary" size="sm" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="$emit('save-draft')">
-        存草稿
-      </PButton>
-      <PButton type="button" variant="secondary" size="sm" :disabled="Boolean(saving)" @click="$emit('schedule-publish')">
-        <CalendarClock :size="16" aria-hidden="true" />
-        定时发布
-      </PButton>
-      <PButton
-        type="button"
-        variant="primary"
-        size="sm"
-        :loading="saving === 'published' || (publicationOpen && publicationBusy)"
-        :disabled="Boolean(saving) || (publicationOpen && !publicationCanConfirm)"
-        :loading-text="publicationOpen ? '处理中…' : '发布中…'"
-        data-testid="editor-publish-action"
-        @click="$emit('save-published')"
-      >
-        {{ publicationOpen ? '确认' : '发布' }}
-      </PButton>
       <span class="editor-topbar__publish-status" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
+      <div class="editor-topbar__publish-actions">
+        <PButton type="button" variant="secondary" size="sm" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="$emit('save-draft')">
+          存草稿
+        </PButton>
+        <PButton
+          type="button"
+          variant="primary"
+          size="sm"
+          :loading="saving === 'published' || (publicationOpen && publicationBusy)"
+          :disabled="Boolean(saving) || (publicationOpen && !publicationCanConfirm)"
+          :loading-text="publicationOpen ? '处理中…' : '发布中…'"
+          data-testid="editor-publish-action"
+          @click="$emit('save-published')"
+        >
+          {{ publicationOpen ? '确认' : '发布' }}
+        </PButton>
+      </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { IconArrowLeft as ArrowLeft, IconCalendarClock as CalendarClock, IconDownload as Download, IconDots as Ellipsis, IconEye as Eye, IconEyeOff as EyeOff, IconHistory as History, IconLayoutSidebarRight as PanelRight, IconUpload as Upload } from '@tabler/icons-vue'
+import { IconArrowLeft as ArrowLeft, IconDownload as Download, IconDots as Ellipsis, IconEye as Eye, IconEyeOff as EyeOff, IconFileText as FileText, IconHistory as History, IconUpload as Upload } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -110,7 +114,6 @@ defineProps<{
   exporting: boolean
   contentMode: 'markdown' | 'visual'
   previewOpen?: boolean
-  sidebarOpen?: boolean
   publicationOpen?: boolean
   publicationCanConfirm?: boolean
   publicationBusy?: boolean
@@ -118,7 +121,6 @@ defineProps<{
 
 defineEmits<{
   (event: 'go-back'): void
-  (event: 'toggle-sidebar'): void
   (event: 'toggle-preview'): void
   (event: 'update:content-mode', value: 'markdown' | 'visual'): void
   (event: 'import-file', eventValue: Event): void
@@ -127,12 +129,11 @@ defineEmits<{
   (event: 'open-version-history'): void
   (event: 'save-draft'): void
   (event: 'save-published'): void
-  (event: 'schedule-publish'): void
 }>()
 
 const contentModeOptions: Array<{ label: string; value: 'markdown' | 'visual' }> = [
   { label: 'Markdown', value: 'markdown' },
-  { label: '所见即所得', value: 'visual' },
+  { label: 'Visual', value: 'visual' },
 ]
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -209,13 +210,23 @@ const handleImport = () => fileInput.value?.click()
 }
 
 .editor-topbar__publish-row {
+  width: 100%;
   min-height: 3.25rem;
+  justify-content: flex-end;
   padding: 0.4rem 1rem;
   border-top: var(--a-border);
 }
 
 .editor-topbar__publish-status {
-  margin-left: 0.2rem;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.editor-topbar__publish-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .editor-topbar__menu {
@@ -273,8 +284,8 @@ const handleImport = () => fileInput.value?.click()
   }
 
   .editor-topbar__publish-status {
-    flex: 1 1 100%;
-    margin: 0;
+    flex: 1 1 auto;
+    margin-right: auto;
   }
 
   .editor-topbar :deep(.p-segmented-control-item) {

@@ -16,10 +16,13 @@ describe('PostEditorTopbar', () => {
   const stubs = {
     PButton: { inheritAttrs: false, template: '<button v-bind="$attrs"><slot /></button>' },
     PDropdown: { template: '<div><slot name="trigger" /><slot :close="() => {}" /></div>' },
-    PSegmentedControl: true,
+    PSegmentedControl: {
+      props: ['options', 'modelValue'],
+      template: '<div><button v-for="option in options" :key="option.value">{{ option.label }}</button></div>',
+    },
   }
 
-  it('提供草稿管理入口', () => {
+  it('在顶部提供导入和草稿管理入口', () => {
     const wrapper = mount(PostEditorTopbar, {
       props: baseProps,
       global: {
@@ -27,7 +30,10 @@ describe('PostEditorTopbar', () => {
       },
     })
 
-    expect(wrapper.findAll('.editor-topbar__menu-item').some(item => item.text() === '草稿管理')).toBe(true)
+    expect(wrapper.find('[aria-label="导入 Markdown"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="草稿管理"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="文档目录"]').exists()).toBe(false)
+    expect(wrapper.findAll('.editor-topbar__menu-item').length).toBe(2)
   })
 
   it('打开发布 sheet 后将顶部操作切换为确认', () => {
@@ -44,5 +50,16 @@ describe('PostEditorTopbar', () => {
     expect(publishButton.exists()).toBe(true)
     expect(publishButton.text()).toBe('确认')
     expect(publishButton.attributes('disabled')).toBeUndefined()
+  })
+
+  it('使用英文 Visual 模式和明显的实时预览入口', () => {
+    const wrapper = mount(PostEditorTopbar, {
+      props: baseProps,
+      global: { stubs },
+    })
+
+    expect(wrapper.text()).toContain('实时预览')
+    expect(wrapper.text()).toContain('Visual')
+    expect(wrapper.find('[title="实时预览"]').exists()).toBe(true)
   })
 })

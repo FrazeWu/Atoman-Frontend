@@ -4,7 +4,7 @@
     :title="sheetTitle"
     mode="partial"
     partial-width="var(--a-comment-sheet-width)"
-    top="calc(var(--a-topbar-height) + 12rem)"
+    top="calc(var(--a-topbar-height) + 7rem)"
     close-type="header"
     above-player
     :aria-label="sheetTitle"
@@ -14,6 +14,15 @@
       <p class="publication-sheet__intro">
         发布前确认文章归属和展示信息，正文内容会保留在编辑器中。
       </p>
+
+      <section class="publication-sheet__section publication-sheet__mode-section">
+        <div class="publication-sheet__section-title">发布方式</div>
+        <PSegmentedControl
+          :model-value="intent"
+          :options="intentOptions"
+          @update:model-value="$emit('update:intent', String($event) as PublicationIntent)"
+        />
+      </section>
 
       <p v-if="error" class="publication-sheet__error" role="alert">{{ error }}</p>
 
@@ -114,6 +123,7 @@ import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PostCoverField from '@/components/blog/PostCoverField.vue'
@@ -147,6 +157,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'close'): void
+  (event: 'update:intent', value: PublicationIntent): void
   (event: 'select-collection', id: string): void
   (event: 'update:summary', value: string): void
   (event: 'update:visibility', value: Visibility): void
@@ -158,6 +169,10 @@ const emit = defineEmits<{
 
 const coverInput = ref<HTMLInputElement | null>(null)
 const sheetTitle = computed(() => props.intent === 'schedule' ? '定时发布准备' : '发布前准备')
+const intentOptions: Array<{ label: string; value: PublicationIntent }> = [
+  { label: '立即发布', value: 'publish' },
+  { label: '定时发布', value: 'schedule' },
+]
 const collectionOptions = computed(() => props.channelCollections.map(collection => ({
   label: collection.name,
   value: collection.id,

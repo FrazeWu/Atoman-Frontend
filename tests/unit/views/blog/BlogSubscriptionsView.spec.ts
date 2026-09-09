@@ -109,6 +109,14 @@ describe('BlogSubscriptionsView', () => {
       subscriptionPath: '/posts/subscriptions',
     })
 
+    await wrapper.get('[data-test="subscription-inbox-unread"]').trigger('click')
+    await flushPromises()
+    const unreadRequest = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((url) => url.includes('/feed/subscription-hub/updates'))
+      .at(-1)
+    expect(unreadRequest).toContain('is_read=false')
+
     await router.push('/posts/subscriptions?hub_group_id=next-group')
     await flushPromises()
     const latestRequest = fetchMock.mock.calls

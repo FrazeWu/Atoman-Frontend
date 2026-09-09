@@ -1,4 +1,4 @@
-import { config, flushPromises, mount } from "@vue/test-utils";
+import { config, enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "../../../../src/stores/auth";
@@ -90,6 +90,8 @@ vi.mock("@/stores/player", () => ({
 }));
 
 describe("Music DiscoverView.vue", () => {
+	enableAutoUnmount(afterEach);
+
 	afterEach(() => {
 		config.global.plugins = [];
 		setActivePinia(undefined);
@@ -449,15 +451,23 @@ describe("Music DiscoverView.vue", () => {
 		const input = wrapper.find('[data-testid="music-explore-search-input"]');
 		await input.trigger("focus");
 		await input.setValue("ye");
+		await vi.waitFor(() => {
+			expect(mocks.listMusicAlbums).toHaveBeenCalledWith({
+				q: "ye",
+				page: 1,
+				page_size: 10,
+				sort: "hot",
+			});
+		});
 		await flushPromises();
 
-		expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({
+		expect(mocks.listMusicAlbums).toHaveBeenCalledWith({
 			q: "ye",
 			page: 1,
 			page_size: 10,
 			sort: "hot",
 		});
-		expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({
+		expect(mocks.listMusicArtists).toHaveBeenCalledWith({
 			q: "ye",
 			page: 1,
 			page_size: 10,
@@ -473,6 +483,14 @@ describe("Music DiscoverView.vue", () => {
 
 		await input.trigger("focus");
 		await input.setValue("ye");
+		await vi.waitFor(() => {
+			expect(mocks.listMusicAlbums).toHaveBeenCalledWith({
+				q: "ye",
+				page: 1,
+				page_size: 10,
+				sort: "hot",
+			});
+		});
 		await flushPromises();
 		const reopenedButtons = wrapper.findAll("button.search-result");
 		await reopenedButtons[1].trigger("mousedown");

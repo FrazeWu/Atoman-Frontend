@@ -863,7 +863,10 @@ describe("feed store", () => {
       "/api/v1/feed/timeline/mark-unread",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ feed_item_ids: ["feed-item-1"] }),
+        body: JSON.stringify({
+          feed_item_ids: ["feed-item-1"],
+          short_note_ids: [],
+        }),
       }),
     );
   });

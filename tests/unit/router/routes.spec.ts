@@ -109,7 +109,8 @@ describe('host-scoped route tables', () => {
     const detailRoute = children.find((route) => route.path === 'watch/:id')
 
     expect(detailRoute).toBeTruthy()
-    expect(lazyImportPath(detailRoute?.component)).toContain('VideoDetailView.vue')
+    expect(lazyImportPath(detailRoute?.components?.default)).toContain('VideoHomeView.vue')
+    expect(lazyImportPath(detailRoute?.components?.overlay)).toContain('VideoDetailRouteSheet.vue')
   })
 
   it('registers the approved video destinations', () => {

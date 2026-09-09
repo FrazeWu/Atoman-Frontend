@@ -608,7 +608,7 @@ describe("FeedView", () => {
     expect(markUnread).toHaveBeenCalledWith([
       "cluster-primary",
       "cluster-copy",
-    ]);
+    ], []);
   });
 
   it("marks the whole cluster read when podcast playback starts", async () => {
@@ -1750,6 +1750,10 @@ describe("FeedView", () => {
         );
       }
 
+      if (url.includes("/music/playback-session") || url.includes("/music/playback-progress")) {
+        return new Response(JSON.stringify({ data: null }), { status: 200 });
+      }
+
       return new Response(JSON.stringify({ error: "unexpected" }), {
         status: 404,
       });
@@ -1805,7 +1809,10 @@ describe("FeedView", () => {
       expect.stringContaining("/feed/timeline/mark-read"),
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ feed_item_ids: ["feed-item-auto-read-1"] }),
+        body: JSON.stringify({
+          feed_item_ids: ["feed-item-auto-read-1"],
+          short_note_ids: [],
+        }),
       }),
     );
     const autoReadEntry = wrapper
@@ -2048,6 +2055,10 @@ describe("FeedView", () => {
         );
       }
 
+      if (url.includes("/music/playback-session") || url.includes("/music/playback-progress")) {
+        return new Response(JSON.stringify({ data: null }), { status: 200 });
+      }
+
       return new Response(JSON.stringify({ error: "unexpected" }), {
         status: 404,
       });
@@ -2101,7 +2112,10 @@ describe("FeedView", () => {
       expect.stringContaining("/feed/timeline/mark-read"),
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ feed_item_ids: ["feed-item-late-auto-read-1"] }),
+        body: JSON.stringify({
+          feed_item_ids: ["feed-item-late-auto-read-1"],
+          short_note_ids: [],
+        }),
       }),
     );
     expect(wrapper.find(".p-entry").classes()).toContain("is-read");

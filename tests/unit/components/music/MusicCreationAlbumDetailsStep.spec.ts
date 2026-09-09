@@ -19,6 +19,7 @@ vi.mock("@/api/musicV1", () => ({
 	listMusicArtists: vi.fn(),
 	SUPPORTED_ARCHIVE_ACCEPT: ".zip,.rar,.7z",
 	SUPPORTED_AUDIO_ACCEPT: ".mp3,.flac,.wav",
+	SUPPORTED_VIDEO_ACCEPT: ".mp4,.mkv",
 }));
 
 vi.mock("music-metadata-browser", () => ({

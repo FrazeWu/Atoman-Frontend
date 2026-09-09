@@ -508,7 +508,7 @@ export function useAlbumImportUpload() {
 			return !shouldIgnoreAlbumImportPath(relativePath);
 		});
 		if (files.length === 0) {
-			uploadState.errorMessage.value = "未发现可导入的音频文件";
+			uploadState.errorMessage.value = "未发现可导入的音频或视频文件";
 			return;
 		}
 		const emptyFile = files.find((file) => file.size <= 0);

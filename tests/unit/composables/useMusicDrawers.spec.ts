@@ -148,6 +148,22 @@ describe("useMusicDrawers", () => {
 		expect(isMainShifted.value).toBe(true);
 	});
 
+	it("keeps the artist, album, song, and editor full-sheet path", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.openArtist("artist-1");
+		drawers.openAlbum("album-1");
+		drawers.openSong("song-1");
+		drawers.openMusicEditor({ entity: "song", mode: "edit", id: "song-1" });
+
+		expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.key)).toEqual([
+			"artist:artist-1",
+			"album:album-1",
+			"song:song-1",
+			"editor:song:edit:song-1",
+		]);
+	});
+
 	it("computes isArtistShifted correctly with add_album", () => {
 		const { isArtistShifted, openNestedAction } = useMusicDrawers();
 		expect(isArtistShifted.value).toBe(false);
@@ -176,16 +192,17 @@ describe("useMusicDrawers", () => {
 		expect(state.value.playlistRefreshToken).toBe(1);
 	});
 
-	it("rebuilds the shortest path when opening a fourth sheet", () => {
+	it("rebuilds the shortest path when opening a fifth sheet", () => {
 		const drawers = useMusicDrawers();
 		drawers.openArtist("artist-1");
 		drawers.openAlbum("album-1");
 		drawers.openNestedAction("revise", { albumId: "album-1" });
 		drawers.openNestedAction("history", { albumId: "album-1" });
+		drawers.openNestedAction("merge_album", { albumId: "album-1" });
 
 		expect(
 			drawers.layers.value.map((layer: MusicSheetLayer) => layer.key),
-		).toEqual(["album:album-1", "action:history:album-1"]);
+		).toEqual(["album:album-1", "action:merge_album:album-1"]);
 	});
 });
 

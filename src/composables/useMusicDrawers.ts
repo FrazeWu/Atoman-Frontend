@@ -358,7 +358,7 @@ function syncActiveCreationFlow() {
 }
 
 const sheetStack = createSheetStack<MusicSheetLayer>({
-	maxLayers: 3,
+	maxLayers: 4,
 	resolveOverflow: resolveShortestMusicPath,
 	overflowTransitionMs: 300,
 });

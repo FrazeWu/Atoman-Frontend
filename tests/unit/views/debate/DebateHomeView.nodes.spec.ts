@@ -8,8 +8,13 @@ import type { Debate } from "@/types";
 import DebateHomeView from "@/views/debate/DebateHomeView.vue";
 
 const routerPush = vi.hoisted(() => vi.fn());
+const routerReplace = vi.hoisted(() => vi.fn());
+const routeQuery = vi.hoisted(() => ({ status: "", tag: "" }));
 
-vi.mock("vue-router", () => ({ useRouter: () => ({ push: routerPush }) }));
+vi.mock("vue-router", () => ({
+  useRoute: () => ({ query: routeQuery }),
+  useRouter: () => ({ push: routerPush, replace: routerReplace }),
+}));
 
 const debateRow = {
   id: "debate-1",
@@ -92,6 +97,9 @@ describe("DebateHomeView node wording", () => {
     const auth = useAuthStore();
     auth.isAuthenticated = true;
     routerPush.mockReset();
+    routerReplace.mockReset();
+    routeQuery.status = "";
+    routeQuery.tag = "";
     createResponse = {
       ...debateRow,
       id: "debate-created",
@@ -137,6 +145,20 @@ describe("DebateHomeView node wording", () => {
     expect(wrapper.text()).not.toContain("进行中");
     expect(wrapper.text()).not.toContain("论点 9");
     expect(wrapper.text()).not.toContain("发起辩论");
+  });
+
+  it("loads filters from the URL", async () => {
+    routeQuery.status = "archived";
+    routeQuery.tag = "神学";
+
+    mountView();
+    await flushPromises();
+
+    const request = vi.mocked(fetch).mock.calls.find(([input]) =>
+      String(input).includes("/debate/topics"),
+    );
+    expect(String(request?.[0])).toContain("status=archived");
+    expect(String(request?.[0])).toContain("tag=%E7%A5%9E%E5%AD%A6");
   });
 
   it("创建时只提交标题、正文、标签并用空描述", async () => {

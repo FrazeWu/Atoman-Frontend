@@ -97,7 +97,7 @@ const albumSortOptions = [
   { label: '按热度排序', value: 'hot-desc' },
 ]
 
-function albumSortQuery(mode: AlbumSortMode) {
+function albumSortQuery(mode: AlbumSortMode): '-release_date' | 'release_date' | 'hot' {
   if (mode === 'date-asc') return 'release_date'
   if (mode === 'hot-desc') return 'hot'
   return '-release_date'
@@ -125,23 +125,26 @@ function albumTrackCount(album: MusicAlbumListItem) {
   return 0
 }
 
+function compareAlbumReleaseDate(a: MusicAlbumListItem, b: MusicAlbumListItem, descending = false) {
+  const dateA = a.release_date || (a.year ? `${a.year}-01-01` : '')
+  const dateB = b.release_date || (b.year ? `${b.year}-01-01` : '')
+  const dateOrder = dateA.localeCompare(dateB)
+  if (dateOrder !== 0) return descending ? -dateOrder : dateOrder
+
+  const trackOrder = albumTrackCount(b) - albumTrackCount(a)
+  if (trackOrder !== 0) return trackOrder
+  return (b.created_at || '').localeCompare(a.created_at || '')
+}
+
 const sortedAlbums = computed(() => {
   const list = [...albums.value]
   if (albumSortMode.value === 'date-asc') {
-    return list.sort((a, b) => {
-      const dateA = a.release_date || (a.year ? `${a.year}-01-01` : '')
-      const dateB = b.release_date || (b.year ? `${b.year}-01-01` : '')
-      return dateA.localeCompare(dateB)
-    })
+    return list.sort((a, b) => compareAlbumReleaseDate(a, b))
   } else if (albumSortMode.value === 'hot-desc') {
     return list.sort((a, b) => (b.hot_score ?? b.play_count ?? 0) - (a.hot_score ?? a.play_count ?? 0))
   } else {
     // date-desc (最新发布在前面)
-    return list.sort((a, b) => {
-      const dateA = a.release_date || (a.year ? `${a.year}-01-01` : '')
-      const dateB = b.release_date || (b.year ? `${b.year}-01-01` : '')
-      return dateB.localeCompare(dateA)
-    })
+    return list.sort((a, b) => compareAlbumReleaseDate(a, b, true))
   }
 })
 
@@ -244,22 +247,29 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
   const requestedType = releaseType.value
   const requestedSort = albumSortMode.value
   const isCurrentLoad = () => isCurrent() && artistId.value === targetArtistId
+  const forceRefresh = state.value.artistRefreshToken > 0
   releaseLoading.value = true
   releaseErrorMessage.value = ''
   try {
     if (requestedType === 'album') {
-      const response = await listMusicAlbums({ artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize })
+      const filters = { artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize }
+      const response = forceRefresh
+        ? await listMusicAlbums(filters, { force: true })
+        : await listMusicAlbums(filters)
       if (!isCurrentLoad()) return
       releaseMeta.value = response.meta
       albums.value = response.data
     } else {
-      const response = await listMusicSongs({
+      const filters = {
         artist_id: targetArtistId,
-        release_type: 'single,leak',
+        release_type: 'single,leak' as const,
         sort: albumSortQuery(requestedSort),
         page,
         page_size: artistAlbumPageSize,
-      })
+      }
+      const response = forceRefresh
+        ? await listMusicSongs(filters, { force: true })
+        : await listMusicSongs(filters)
       if (!isCurrentLoad()) return
       releaseMeta.value = response.meta
       songs.value = response.data

@@ -1224,6 +1224,7 @@ describe("MusicCreationFlowDrawer", () => {
 		await flushPromises();
 
 		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-seeded");
+		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
 	});
 
 	it("新建艺人的专辑提交成功后关闭父流程并进入艺术家详情", async () => {

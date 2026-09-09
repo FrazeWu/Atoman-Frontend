@@ -860,6 +860,7 @@ const mobileSheetStyle = computed(() => {
 
 .sheet-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 2.5rem;

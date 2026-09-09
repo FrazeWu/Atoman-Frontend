@@ -97,7 +97,17 @@ describe("PSheet.vue", () => {
 			},
 		});
 
-		expect(wrapper.get(".p-sheet-footer").text()).toContain("确认发布");
+		const content = wrapper.get(".sheet-content").element;
+		const footer = wrapper.get(".p-sheet-footer").element;
+		expect(footer.textContent).toContain("确认发布");
+		expect(footer.parentElement).toBe(content.parentElement);
+		expect(content.contains(footer)).toBe(false);
+
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
+			"utf8",
+		);
+		expect(source).toMatch(/\.sheet-content\s*\{[\s\S]*?min-height:\s*0/);
 	});
 
 	it("renders previous and next navigation in the title rail", async () => {

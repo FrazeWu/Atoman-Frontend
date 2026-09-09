@@ -28,6 +28,9 @@
       <div class="p-sheet-mobile-page__content">
         <slot />
       </div>
+      <footer v-if="slots.footer" class="p-sheet-footer">
+        <slot name="footer" />
+      </footer>
     </section>
   </Transition>
 
@@ -170,6 +173,9 @@
               </div>
             </Transition>
           </div>
+          <footer v-if="slots.footer" class="p-sheet-footer">
+            <slot name="footer" />
+          </footer>
         </div>
       </Transition>
     </div>
@@ -524,8 +530,9 @@ const mobileSheetStyle = computed(() => {
   z-index: var(--a-z-sheet);
   width: min(28rem, 100vw);
   max-width: 100%;
-  overflow-y: auto;
-  display: block;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 1rem 0 2rem;
   border-left: 1px solid var(--a-color-border-soft);
@@ -588,7 +595,10 @@ const mobileSheetStyle = computed(() => {
 }
 
 .p-sheet-mobile-page__content {
+  flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   padding-inline: 1rem;
 }
 
@@ -857,6 +867,16 @@ const mobileSheetStyle = computed(() => {
   flex-direction: column;
 }
 
+.p-sheet-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
+  padding: 0.75rem 2.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  background: #ffffff;
+}
+
 .sheet-content--compact {
   padding-top: 1.5rem;
 }
@@ -939,6 +959,10 @@ const mobileSheetStyle = computed(() => {
   .p-sheet-panel.is-right .sheet-content,
   .p-sheet-panel.is-left .sheet-content {
     padding: 4rem 1rem 1rem;
+  }
+
+  .p-sheet-footer {
+    padding-inline: 1rem;
   }
 
   .sheet-content--has-close {

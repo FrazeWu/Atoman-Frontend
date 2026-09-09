@@ -3,7 +3,7 @@ import type { ModuleRoomKey } from "@/config/moduleRooms";
 import { settingRoutes } from "@/router/routes/settings";
 
 const videoHomeView = () => import("@/views/video/VideoHomeView.vue");
-const videoDetailRouteSheet = () => import("@/components/video/VideoDetailRouteSheet.vue");
+const videoDetailRouteSheet = () => import("@/views/video/VideoDetailRouteSheet.vue");
 
 function musicBookmarksPath(path: string) {
 	return path.startsWith("/music/") ? "/music/bookmarks" : "/bookmarks";

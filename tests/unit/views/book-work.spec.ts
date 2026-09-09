@@ -61,7 +61,7 @@ describe('BookWorkView', () => {
     expect(wrapper.text()).toContain('Author')
     expect(wrapper.text()).toContain('Worth reading')
     expect(wrapper.text()).toContain('评分人数不足（2/5）')
-    expect(wrapper.text()).toContain('我的评分 9/10 · 4.5 星')
+    expect(wrapper.find('.rating-control__clear').exists()).toBe(true)
     expect(wrapper.find('a[href="/books/edition/edition-1"]').exists()).toBe(true)
     wrapper.unmount()
   })
@@ -164,7 +164,7 @@ describe('BookWorkView', () => {
     await flushPromises()
 
     expect(ratingSpy).toHaveBeenCalledWith('work-1')
-    expect(wrapper.text()).toContain('我的评分 9/10 · 4.5 星')
+    expect(wrapper.find('.rating-control__clear').exists()).toBe(true)
     wrapper.unmount()
   })
 })

@@ -279,7 +279,7 @@ function createArtistFromQuery() {
   display: grid;
   gap: 0.65rem;
   padding: 0.85rem;
-  border: 1px dashed var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
 }
 

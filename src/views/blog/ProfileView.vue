@@ -914,7 +914,7 @@ onMounted(() => { void loadProfilePage() })
 
 .profile-section { margin-top: 2rem; }
 .profile-section__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--a-color-border-soft); }
-.profile-section__kicker { margin: 0 0 0.2rem; color: var(--a-color-primary); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; }
+.profile-section__kicker { margin: 0 0 0.2rem; color: var(--a-color-primary); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; }
 .profile-section__title { margin: 0; color: var(--a-color-text); font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
 .profile-section__note { margin: 0; color: var(--a-color-muted); font-size: 0.78rem; line-height: 1.45; text-align: right; }
 .profile-channel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }

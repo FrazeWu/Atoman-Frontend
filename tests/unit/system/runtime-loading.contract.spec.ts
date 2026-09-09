@@ -121,8 +121,8 @@ describe("runtime loading boundaries", () => {
 		const playerSource = readSource("src/stores/player.ts");
 
 		expect(albumsSource).not.toContain("player.fetchSongs()");
-		expect(albumsSource).toContain(
-			'<DiscoverView page-title="专辑" content-mode="albums" />',
+		expect(albumsSource).toMatch(
+			/<DiscoverView\s+v-if="props\.loadContent"\s+page-title="专辑"\s+content-mode="albums"\s*\/>/,
 		);
 		expect(discoverSource).toContain("getMusicHome");
 		expect(discoverSource).toContain("listMusicAlbums");

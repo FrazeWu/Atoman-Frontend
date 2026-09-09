@@ -777,7 +777,7 @@ onMounted(() => {
 
 .setting-users__date {
   color: var(--a-color-text-secondary);
-  font-family: var(--a-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 11px;
 }
 

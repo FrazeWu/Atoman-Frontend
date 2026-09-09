@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
 
-import VideoDetailRouteSheet from '@/components/video/VideoDetailRouteSheet.vue'
+import VideoDetailRouteSheet from '@/views/video/VideoDetailRouteSheet.vue'
 
 const PSheetStub = defineComponent({
   name: 'PSheet',

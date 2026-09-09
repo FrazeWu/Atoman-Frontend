@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useMusicDrawers } from "../../../src/composables/useMusicDrawers";
 import type { MusicSheetLayer } from "../../../src/components/music/musicSheetTypes";
+import type { MusicAlbumImport } from "../../../src/api/musicV1";
 
 describe("useMusicDrawers", () => {
 	beforeEach(() => {
@@ -457,6 +458,78 @@ describe("useMusicDrawers music creation flow", () => {
 		).toEqual([]);
 		expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([
 			expect.objectContaining({ title: "Intro", audioKey: "track-1" }),
+		]);
+	});
+
+	it("restores processed audio bindings when the saved draft predates media processing", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.resumeMusicCreationFlow({
+			importId: "import-restored",
+			targetAlbumId: "",
+			artistId: "artist-1",
+			albumTitle: "Album",
+			status: "needs_attention",
+			inputMode: "archive",
+			stage: "ready",
+			progress: { current: 1, total: 1 },
+			files: [],
+			errors: [],
+			archiveName: "Album.zip",
+			uploadProgress: 100,
+			uploadSpeed: 0,
+			coverUrl: "",
+			coverKey: "",
+			derivedAlbumTitle: "Album",
+			derivedCover: "",
+			derivedTracks: [{
+				fileId: "file-1",
+				audioKey: "audio-1",
+				audioUrl: "https://cdn.example.com/track-1.mp3",
+				title: "Server title",
+				origin: "archive",
+				discNumber: 1,
+				trackNumber: 1,
+				originalDiscNumber: 1,
+				originalTrackNumber: 1,
+			}],
+			lastSyncedAt: "",
+			errorMessage: "",
+			commitRequest: {
+				artist_id: "artist-1",
+				artist: {
+					name: "Artist",
+					legal_name: "Artist",
+					bio: "",
+					nationality: "",
+					birth_date: "",
+					stage_names: [],
+					birth_place: "",
+				},
+				album: {
+					title: "Album",
+					description: "",
+					album_type: "album",
+					release_year: 2020,
+					tracks: [{
+						title: "用户改名",
+						disc_number: 1,
+						track_number: 1,
+						original_disc_number: 1,
+						original_track_number: 1,
+						title_customized: true,
+					}],
+				},
+			},
+		} as unknown as MusicAlbumImport);
+
+		expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([
+			expect.objectContaining({
+				title: "用户改名",
+				importFileId: "file-1",
+				audioKey: "audio-1",
+				audioUrl: "https://cdn.example.com/track-1.mp3",
+			}),
 		]);
 	});
 

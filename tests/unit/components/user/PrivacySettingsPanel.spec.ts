@@ -26,14 +26,20 @@ describe('PrivacySettingsPanel', () => {
     const wrapper = mount(PrivacySettingsPanel)
     await flushPromises()
 
+    expect(wrapper.text()).toContain('开启后，只有你能查看个人主页资料。')
+    expect(wrapper.text()).toContain('开启后，其他人可以查看你的订阅中和被订阅列表。')
     expect(wrapper.find('[data-test="private-profile-toggle"]').element.parentElement?.parentElement?.classList.contains('settings-block__control')).toBe(true)
     const toggle = wrapper.get('[data-test="private-profile-toggle"]')
     expect((toggle.element as HTMLInputElement).checked).toBe(true)
-    expect(wrapper.text()).toContain('仅自己可见')
+    expect(toggle.attributes('role')).toBe('switch')
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-test="private-profile-state"]').text()).toBe('开启')
 
     await toggle.setValue(false)
     await flushPromises()
 
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    expect(wrapper.get('[data-test="private-profile-state"]').text()).toBe('关闭')
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/users/me/settings', expect.objectContaining({
       method: 'PUT',
       body: JSON.stringify({ private_profile: false }),
@@ -54,9 +60,14 @@ describe('PrivacySettingsPanel', () => {
     expect(wrapper.find('[data-test="show-relations-toggle"]').element.parentElement?.parentElement?.classList.contains('settings-block__control')).toBe(true)
     const toggle = wrapper.get('[data-test="show-relations-toggle"]')
     expect((toggle.element as HTMLInputElement).checked).toBe(false)
+    expect(toggle.attributes('role')).toBe('switch')
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    expect(wrapper.get('[data-test="show-relations-state"]').text()).toBe('关闭')
     await toggle.setValue(true)
     await flushPromises()
 
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-test="show-relations-state"]').text()).toBe('开启')
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/users/me/settings', expect.objectContaining({
       method: 'PUT',
       body: JSON.stringify({ show_relations: true }),

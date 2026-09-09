@@ -17,3 +17,7 @@ tests/e2e/.auth/music-isolated.json
 .claude/
 .gstack/
 .worktrees/
+
+# Local show-me preview artifacts
+.pi/show-me/blog-editor-ui-preview.html
+.pi/show-me/blog-publication-ui-preview.html

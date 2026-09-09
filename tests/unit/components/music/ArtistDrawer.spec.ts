@@ -491,6 +491,10 @@ describe("ArtistDrawer.vue", () => {
 		expect(listMusicAlbums.mock.calls.length).toBeGreaterThan(
 			albumCallsBeforeRefresh,
 		);
+		expect(listMusicAlbums).toHaveBeenLastCalledWith(
+			expect.objectContaining({ artist_id: "1" }),
+			{ force: true },
+		);
 		wrapper.unmount();
 	});
 
@@ -513,6 +517,35 @@ describe("ArtistDrawer.vue", () => {
 
 		expect(wrapper.text()).toContain("Reconsider");
 		expect(wrapper.text()).not.toContain("Stale Album");
+		wrapper.unmount();
+	});
+
+	it("prioritizes populated albums when release dates are identical", async () => {
+		listMusicAlbums.mockResolvedValueOnce({
+			data: [
+				{
+					id: "empty-album",
+					title: "untitled unmastered_",
+					release_date: "2016-03-04",
+					song_count: 0,
+					created_at: "2026-09-01T10:00:00Z",
+				},
+				{
+					id: "populated-album",
+					title: "untitled unmastered_",
+					release_date: "2016-03-04",
+					song_count: 8,
+					created_at: "2026-09-02T10:00:00Z",
+				},
+			],
+			meta: { page: 1, page_size: 24, total: 2, has_more: false },
+		});
+
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+
+		await wrapper.findAll(".album-row")[0]?.trigger("click");
+		expect(musicDrawerMocks.openAlbum).toHaveBeenCalledWith("populated-album");
 		wrapper.unmount();
 	});
 

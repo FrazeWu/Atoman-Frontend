@@ -1169,6 +1169,7 @@ async function completeCreation() {
     toastVisible.value = true
     const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     refreshArtist()
+    refreshAlbum()
     refreshSong()
     invalidateImportAutosave()
     closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)

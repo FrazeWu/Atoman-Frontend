@@ -547,6 +547,7 @@ export type MusicAlbumListItem = {
 	rating_score?: number;
 	rating_count?: number;
 	viewer_rating?: number | null;
+	created_at?: string;
 	songs?: Array<{
 		id: string;
 		title: string;

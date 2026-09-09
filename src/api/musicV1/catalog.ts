@@ -323,6 +323,7 @@ export async function listMusicSongs(
 		page?: number;
 		page_size?: number;
 	} = {},
+	options?: { force?: boolean },
 ): Promise<MusicListResponse<MusicSongListItem>> {
 	return queryCache.fetchWithCache(
 		musicListCacheKey("songs", filters),
@@ -332,12 +333,13 @@ export async function listMusicSongs(
 			);
 			return listResponseWithPaginationFallback(response, filters);
 		},
-		{ staleTime: musicListStaleTime },
+		{ staleTime: musicListStaleTime, ...options },
 	);
 }
 
 export async function listMusicAlbums(
 	filters: MusicListFilters = {},
+	options?: { force?: boolean },
 ): Promise<MusicListResponse<MusicAlbumListItem>> {
 	return queryCache.fetchWithCache(
 		musicListCacheKey("albums", filters),
@@ -347,7 +349,7 @@ export async function listMusicAlbums(
 			);
 			return listResponseWithPaginationFallback(response, filters);
 		},
-		{ staleTime: musicListStaleTime },
+		{ staleTime: musicListStaleTime, ...options },
 	);
 }
 

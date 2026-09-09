@@ -392,7 +392,7 @@ const shouldShowFinishButton = computed(() => {
   if (!flow) return false
   return flow.mode === 'edit' || flow.step === 'preview'
 })
-const showFooterActions = computed(() => true)
+const showFooterActions = computed(() => creationFlow.value?.step !== 'albumImport')
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
   if (creationFlow.value?.submitting && creationFlow.value.step === 'preview') return '提交中…'
@@ -1158,12 +1158,12 @@ async function completeCreation() {
 
     if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
     await flushImportAutosave()
-    const committedImport = await commitMusicAlbumImport(importId, buildCommitInput(flow))
+    let committedImport = await commitMusicAlbumImport(importId, buildCommitInput(flow))
     const uploadsComplete = committedImport.status === 'uploading'
       && committedImport.files.length > 0
       && committedImport.files.every((file) => file.uploadStatus === 'uploaded')
     if (uploadsComplete) {
-      await musicApi.completeMusicAlbumImportSession(importId)
+      committedImport = await musicApi.completeMusicAlbumImportSession(importId)
     }
     toastMessage.value = '已提交至导入中心，后台将继续处理'
     toastVisible.value = true
@@ -1173,7 +1173,11 @@ async function completeCreation() {
     refreshSong()
     invalidateImportAutosave()
     closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
-    await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
+    await router.push(
+      committedImport.status === 'committed' && artistId
+        ? `/music/artist/${artistId}`
+        : '/music/imports',
+    )
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

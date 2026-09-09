@@ -104,18 +104,18 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("renders the seed-step description as a normal editable field", async () => {
-		const flow = useMusicDrawers().state.value.creationFlow;
-		if (!flow) throw new Error("creation flow missing");
-		flow.draft.albumDetails.bio = "Seed description";
+	it("上传页只显示上传与处理状态，不提前显示专辑表单", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 
-		expect(wrapper.find('[data-testid="album-seed-bio-toggle"]').exists()).toBe(
+		expect(wrapper.get('[data-testid="album-import-upload-page"]').exists()).toBe(
+			true,
+		);
+		expect(wrapper.find('[data-testid="album-details-title-input"]').exists()).toBe(
 			false,
 		);
-		expect(
-			wrapper.get('[data-testid="album-details-bio-input"]').element,
-		).toHaveProperty("value", "Seed description");
+		expect(wrapper.find('[data-testid="album-import-track-title-input"]').exists()).toBe(
+			false,
+		);
 	});
 
 	it("allows selecting video files as album tracks", () => {
@@ -125,40 +125,15 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(fileInput(wrapper).attributes("accept")).toContain(".mkv");
 	});
 
-	it("在曲目列表旁显示已匹配状态", () => {
-		const flow = useMusicDrawers().state.value.creationFlow;
-		if (!flow) throw new Error("creation flow missing");
-		flow.draft.albumImport.metadataMatched = true;
-		flow.draft.tracks = [{
-			id: "preview-track-1",
-			sequence: 1,
-			discNumber: 1,
-			title: "IGOR'S THEME",
-			origin: "local_preview",
-		}];
-
+	it("上传页显示独立的上传与元信息匹配进度", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 
-		expect(wrapper.get('[data-testid="album-import-matched-status"]').text()).toContain("已匹配");
-	});
-
-	it("在上传页修改已匹配曲目时保留用户曲目状态", async () => {
-		const flow = useMusicDrawers().state.value.creationFlow;
-		if (!flow) throw new Error("creation flow missing");
-		flow.draft.albumImport.metadataMatched = true;
-		flow.draft.tracks = [{
-			id: "preview-track-1",
-			sequence: 1,
-			title: "IGOR'S THEME",
-			origin: "local_preview",
-		}];
-
-		const wrapper = mount(MusicCreationAlbumSeedStep);
-		await wrapper
-			.get('[data-testid="album-import-track-title-input"]')
-			.setValue("用户修改后的曲目");
-
-		expect(flow.tracksCustomized).toBe(true);
+		expect(wrapper.get('[data-testid="album-import-parallel-progress"]').text()).toContain(
+			"元信息匹配",
+		);
+		expect(wrapper.get('[data-testid="album-import-parallel-progress"]').text()).toContain(
+			"上传文件",
+		);
 	});
 
 	it("本地预览匹配成功后按匹配曲序显示曲目", async () => {
@@ -197,6 +172,59 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumImport.metadataMatched).toBe(true);
 		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["IGOR'S THEME", "EARFQUAKE"]);
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
+	});
+
+	it("元信息匹配完成后立即进入表单，不等待音频上传结束", async () => {
+		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
+		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
+			title: "IGOR",
+			tracks: ["EARFQUAKE"],
+		});
+		let resolveMetadata!: (value: Awaited<ReturnType<typeof musicApi.previewMusicAlbumImportMetadata>>) => void;
+		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockReturnValue(
+			new Promise((resolve) => {
+				resolveMetadata = resolve;
+			}),
+		);
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
+			inputMode: "archive",
+			files: [importFile({ role: "archive", fileName: archive.name, relativePath: archive.name, detectedFormat: "zip" })],
+		}));
+		vi.spyOn(musicApi, "createMusicAlbumImportFilePartUpload").mockResolvedValue({
+			partNumber: 1,
+			uploadUrl: "https://upload.test/part-1",
+		});
+		let resolveUpload!: (etag: string) => void;
+		vi.spyOn(musicApi, "uploadMusicAlbumImportFilePart").mockReturnValue(
+			new Promise((resolve) => {
+				resolveUpload = resolve;
+			}),
+		);
+		vi.spyOn(musicApi, "completeMusicAlbumImportFilePart").mockResolvedValue(importFile());
+		vi.spyOn(musicApi, "completeMusicAlbumImportFile").mockResolvedValue(importFile());
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued", inputMode: "archive" }),
+		);
+
+		const uploadPromise = useAlbumImportUpload().handleFilesUpload(
+			{ 0: archive, length: 1, item: () => archive } as unknown as FileList,
+		);
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		await vi.waitFor(() => expect(musicApi.createMusicAlbumImport).toHaveBeenCalled());
+		expect(flow.step).toBe("albumImport");
+
+		resolveMetadata({
+			matched: true,
+			sourceUrl: "https://discogs.com/master/igor",
+			tracks: [{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 1 }],
+		});
+		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
+		expect(flow.step).toBe("albumDetails");
+		expect(flow.draft.albumImport.metadataMatched).toBe(true);
+
+		resolveUpload("etag-1");
+		await uploadPromise;
 	});
 
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {
@@ -328,7 +356,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"import-1",
 			expect.objectContaining({ signal: expect.any(Object) }),
 		);
-		expect(useMusicDrawers().state.value.creationFlow?.step).toBe("albumDetails");
+		expect(useMusicDrawers().state.value.creationFlow?.step).toBe("albumImport");
 	});
 
 	it("关闭创建抽屉后继续完成已开始的上传", async () => {
@@ -704,38 +732,11 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.waitFor(() => expect(completeSession).toHaveBeenCalledTimes(1));
 	});
 
-	it("手动封面与识别封面同时存在时明确显示手动封面", async () => {
-		const drawers = useMusicDrawers();
-		const flow = drawers.state.value.creationFlow;
-		if (!flow) throw new Error("creation flow missing");
-
-		flow.draft.albumImport.derivedCover =
-			"https://img.example/imported-cover.jpg";
-		vi.spyOn(musicApi, "uploadMusicAsset").mockResolvedValue({
-			key: "music/manual-cover.jpg",
-			url: "https://img.example/manual-cover.jpg",
-			content_type: "image/jpeg",
-			size: 5,
-		});
-
+	it("上传页不显示专辑封面表单", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
-		const input = wrapper.get('[data-testid="album-details-cover-input"]');
-		setFiles(input.element as HTMLInputElement, [
-			new File(["cover"], "manual-cover.jpg", { type: "image/jpeg" }),
-		]);
-		await input.trigger("change");
-		await flushPromises();
 
-		expect(
-			wrapper.get('[data-testid="album-import-cover-preview"]').attributes("src"),
-		).toBe("https://img.example/imported-cover.jpg");
-		expect(
-			wrapper
-				.get('[data-testid="album-selected-cover-preview"]')
-				.attributes("src"),
-		).toBe("https://img.example/manual-cover.jpg");
-		expect(flow.draft.albumDetails.coverUrl).toBe(
-			"https://img.example/manual-cover.jpg",
+		expect(wrapper.find('[data-testid="album-details-cover-input"]').exists()).toBe(
+			false,
 		);
 	});
 

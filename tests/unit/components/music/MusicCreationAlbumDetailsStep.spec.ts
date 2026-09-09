@@ -654,7 +654,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			wrapper
 				.findAll('[data-testid="album-details-step-label"]')
 				.map((node) => node.text()),
-		).toEqual(["1 创建艺术家", "2 专辑名 + 批量上传", "3 详细信息"]);
+		).toEqual(["1 创建艺术家", "2 上传与匹配", "3 完善专辑"]);
 		expect(
 			wrapper.get('[data-testid="album-details-title-input"]').element,
 		).toHaveValue("Late Registration");

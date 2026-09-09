@@ -305,6 +305,9 @@ describe("MusicCreationFlowDrawer", () => {
 				.find('[data-testid="music-creation-start-another-album"]')
 				.exists(),
 		).toBe(false);
+		expect(wrapper.find('[data-testid="creation-flow-footer"]').exists()).toBe(
+			false,
+		);
 	});
 
 	it("回填 ready import 的专辑标题和曲目", async () => {
@@ -1196,7 +1199,7 @@ describe("MusicCreationFlowDrawer", () => {
 		wrapper.unmount();
 	});
 
-	it("提交排队后返回已有艺术家的详情页", async () => {
+	it("提交排队后进入导入中心", async () => {
 		commitMusicAlbumImportMock.mockResolvedValue({
 			importId: "import-1",
 			targetAlbumId: "album-1",
@@ -1223,11 +1226,10 @@ describe("MusicCreationFlowDrawer", () => {
 			.trigger("click");
 		await flushPromises();
 
-		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-seeded");
-		expect(drawerMocks.refreshAlbum).toHaveBeenCalled();
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
 	});
 
-	it("新建艺人的专辑提交成功后关闭父流程并进入艺术家详情", async () => {
+	it("新建艺术家的专辑排队后关闭父流程并进入导入中心", async () => {
 		const parentKey = "creation:create:album:new";
 		const childKey = `${parentKey}:child:${parentKey}`;
 		commitMusicAlbumImportMock.mockResolvedValue({
@@ -1267,7 +1269,7 @@ describe("MusicCreationFlowDrawer", () => {
 		await flushPromises();
 
 		expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledWith(parentKey);
-		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-created");
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
 	});
 
 	it("提交时携带已上传的艺人头像和专辑封面", async () => {
@@ -1486,13 +1488,11 @@ describe("MusicCreationFlowDrawer", () => {
 			);
 			expect(completeMusicAlbumImportSessionMock).not.toHaveBeenCalled();
 			expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalled();
-			expect(drawerMocks.routerPush).toHaveBeenCalledWith(
-				"/music/artist/artist-seeded",
-			);
+			expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
 		},
 	);
 
-	it("提前提交时所有文件已上传则立即完成上传会话", async () => {
+	it("提前提交时所有文件已上传则立即完成上传会话并进入导入中心", async () => {
 		commitMusicAlbumImportMock.mockResolvedValue({
 			importId: "import-1",
 			status: "uploading",
@@ -1524,9 +1524,7 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(completeMusicAlbumImportSessionMock).toHaveBeenCalledWith(
 			"import-1",
 		);
-		expect(drawerMocks.routerPush).toHaveBeenCalledWith(
-			"/music/artist/artist-seeded",
-		);
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
 	});
 
 	it("从已有艺术家进入时提交 artist_id 复用现有艺术家", async () => {

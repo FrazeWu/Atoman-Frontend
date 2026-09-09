@@ -1,12 +1,8 @@
 const canonicalOrigin = "https://www.atoman.org";
 const browserAgent =
 	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/127.0 Safari/537.36";
-const spoofedCrawlerAgents = {
-	googlebot:
-		"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-	bingbot:
-		"Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
-};
+const inspectionAgent =
+	process.env.SEO_CRAWLER_USER_AGENT?.trim() || "Google-InspectionTool/1.0";
 
 const failures = [];
 
@@ -120,18 +116,7 @@ else
 	);
 
 for (const url of pages) await inspectHtml(url, "browser", browserAgent);
-
-for (const [agentName, userAgent] of Object.entries(spoofedCrawlerAgents)) {
-	const response = await request(`${canonicalOrigin}/`, userAgent);
-	if (!response) continue;
-	console.log(
-		`spoof:${agentName.padEnd(7)} ${response.status} ${canonicalOrigin}/`,
-	);
-	check(
-		response.status === 403,
-		`${agentName} User-Agent spoof expected 403, received ${response.status}`,
-	);
-}
+await inspectHtml(`${canonicalOrigin}/`, "inspection", inspectionAgent);
 
 if (failures.length) {
 	console.error(`\nSEO crawl check failed (${failures.length}):`);

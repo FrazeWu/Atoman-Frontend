@@ -53,6 +53,11 @@ const noIndexPrefixes = [
 	"/auth",
 	"/studio",
 	"/site/setting",
+	"/feed/sources",
+	"/feed/subscriptions",
+	"/feed/stats",
+	"/feed/starred",
+	"/feed/reading-list",
 ];
 
 function escapeHtml(value: string) {

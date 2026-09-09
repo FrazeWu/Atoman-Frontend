@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import { addPodcastEpisodeBookmark } from '@/api/podcast'
 import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
+import SubscriptionInboxToolbar from '@/components/feed/SubscriptionInboxToolbar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -15,6 +16,9 @@ import type { PodcastEpisode } from '@/types'
 const authStore = useAuthStore()
 const player = usePlayerStore()
 const timeline = useModuleSubscriptionTimeline('podcast')
+const unreadOnly = timeline.unreadOnly
+const markingAllRead = timeline.markingAllRead
+const lastSyncedAt = timeline.lastSyncedAt
 const episodes = computed(() => timeline.items.value
   .filter((item) => item.type === 'podcast_episode' && item.podcast_episode)
   .map((item) => item.podcast_episode as PodcastEpisode))
@@ -66,6 +70,15 @@ async function listenLater(episode: PodcastEpisode) {
     </div>
 
     <template v-else>
+      <SubscriptionInboxToolbar
+        :unread-only="unreadOnly"
+        :marking-all-read="markingAllRead"
+        :refreshing="timeline.loading.value"
+        :last-synced-at="lastSyncedAt"
+        @toggle-unread="timeline.toggleUnread"
+        @refresh="timeline.refresh"
+        @mark-all-read="timeline.markAllRead"
+      />
       <p v-if="message" class="psub-message">{{ message }}</p>
       <div v-if="timeline.loading.value && !episodes.length" class="psub-state">加载中...</div>
       <PEmpty v-else-if="timeline.error.value && !episodes.length" title="订阅内容加载失败">

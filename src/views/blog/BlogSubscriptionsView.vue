@@ -10,6 +10,15 @@
     <PEmpty v-if="!authStore.isAuthenticated" title="请先登录" description="登录后查看订阅内容" />
 
     <section v-else class="subscription-posts">
+      <SubscriptionInboxToolbar
+        :unread-only="unreadOnly"
+        :marking-all-read="markingAllRead"
+        :refreshing="loading"
+        :last-synced-at="lastSyncedAt"
+        @toggle-unread="toggleUnread"
+        @refresh="refresh"
+        @mark-all-read="markAllRead"
+      />
       <div v-if="loading && !subscriptionItems.length" class="a-grid-2">
         <div v-for="index in 6" :key="index" class="a-skeleton" style="height:12rem" />
       </div>
@@ -29,6 +38,7 @@
             v-if="item.type === 'post' && item.post"
             :item="item.post"
             type="post"
+            :is-read="item.is_read"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
             :bookmarked="starredIds.has(item.post.id)"
             :in-reading-list="readingListIds.has(item.post.id)"
@@ -57,6 +67,7 @@
 import { computed, onMounted, watch } from 'vue'
 
 import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
+import SubscriptionInboxToolbar from '@/components/feed/SubscriptionInboxToolbar.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -86,8 +97,14 @@ const subscriptionItems = computed(() => timeline.items.value.filter((item) =>
 const loading = timeline.loading
 const loadError = timeline.error
 const hasMore = timeline.hasMore
+const unreadOnly = timeline.unreadOnly
+const markingAllRead = timeline.markingAllRead
+const lastSyncedAt = timeline.lastSyncedAt
 const retry = () => { void timeline.retry() }
 const loadMore = () => { void timeline.loadMore() }
+const toggleUnread = () => { timeline.toggleUnread() }
+const refresh = () => { void timeline.refresh() }
+const markAllRead = () => { void timeline.markAllRead() }
 
 const toggleStar = (id: string) => {
   void feedStore.togglePostBookmark(id)

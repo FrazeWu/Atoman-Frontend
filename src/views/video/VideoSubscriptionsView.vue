@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptionSourcesPicker.vue'
+import SubscriptionInboxToolbar from '@/components/feed/SubscriptionInboxToolbar.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -12,6 +13,9 @@ import type { Video } from '@/types'
 
 const authStore = useAuthStore()
 const timeline = useModuleSubscriptionTimeline('video')
+const unreadOnly = timeline.unreadOnly
+const markingAllRead = timeline.markingAllRead
+const lastSyncedAt = timeline.lastSyncedAt
 const videos = computed(() => timeline.items.value
   .filter((item) => item.type === 'video' && item.video)
   .map((item) => item.video as Video))
@@ -37,6 +41,15 @@ const pageMeta = computed(() => ({
     </div>
 
     <template v-else>
+      <SubscriptionInboxToolbar
+        :unread-only="unreadOnly"
+        :marking-all-read="markingAllRead"
+        :refreshing="timeline.loading.value"
+        :last-synced-at="lastSyncedAt"
+        @toggle-unread="timeline.toggleUnread"
+        @refresh="timeline.refresh"
+        @mark-all-read="timeline.markAllRead"
+      />
       <p v-if="timeline.loading.value && !videos.length" class="video-subscriptions-state">正在加载...</p>
       <PEmpty v-else-if="timeline.error.value && !videos.length" title="订阅内容加载失败">
         <template #action>

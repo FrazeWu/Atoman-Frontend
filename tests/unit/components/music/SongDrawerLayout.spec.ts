@@ -26,6 +26,14 @@ describe('SongDrawer 单曲详情布局', () => {
     expect(source).toContain(':disable-hover-effects="true"')
   })
 
+  it('详情歌词与播放器解耦，仅作为纯文本注释区域', () => {
+    expect(source).not.toContain('currentLyricLine')
+    expect(source).not.toContain('activeLyricLineId')
+    expect(source).not.toContain(':active=')
+    expect(source).not.toContain('@seek="player.seek"')
+    expect(source).toContain(':click-to-seek="false"')
+  })
+
   it('详情歌词和注释区域交给外层页面滚动', () => {
     expect(source).not.toContain('max-height: 32rem')
     expect(source).not.toContain('overflow-y: auto')

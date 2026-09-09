@@ -107,11 +107,12 @@ describe("MusicSheetStack", () => {
 		drawers.openAlbum("album-1");
 		drawers.openNestedAction("revise", { albumId: "album-1" });
 		drawers.openNestedAction("history", { albumId: "album-1" });
+		drawers.openNestedAction("merge_album", { albumId: "album-1" });
 		await nextTick();
 
-		const selector = '[data-layer-key="action:history:album-1"]';
+		const selector = '[data-layer-key="action:merge_album:album-1"]';
 		const topBeforeSwitch = wrapper.get(selector).element;
-		expect(wrapper.findAll(".sheet-layer-stub")).toHaveLength(4);
+		expect(wrapper.findAll(".sheet-layer-stub")).toHaveLength(5);
 
 		await vi.advanceTimersByTimeAsync(300);
 		await nextTick();

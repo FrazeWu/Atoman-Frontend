@@ -4,7 +4,7 @@ import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import type { BlogSheetLayer } from "@/components/blog/blogSheetTypes";
 
 const stack = createSheetStack<BlogSheetLayer>({
-	maxLayers: 2,
+	maxLayers: 3,
 	resolveOverflow: (next, current) => {
 		const collection = current.find((layer) => layer.kind === "collection");
 		return collection ? [collection, next] : [next];

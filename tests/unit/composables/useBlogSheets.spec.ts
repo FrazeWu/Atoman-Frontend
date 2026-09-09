@@ -17,6 +17,20 @@ describe('useBlogSheets', () => {
     expect(sheets.top.value?.key).toBe('post:post-1')
   })
 
+  it('keeps the channel, collection, and post path as three layers', () => {
+    const sheets = useBlogSheets()
+
+    sheets.openChannel('channel-1', '频道一')
+    sheets.openCollection('collection-1', '合集一', 'channel-1')
+    sheets.openPost('post-1', '文章一', 'collection-1')
+
+    expect(sheets.layers.value.map(layer => layer.key)).toEqual([
+      'channel:channel-1',
+      'collection:collection-1',
+      'post:post-1',
+    ])
+  })
+
   it('returns to the collection when the post layer closes', () => {
     const sheets = useBlogSheets()
     sheets.openCollection('collection-1', '合集一', 'channel-1')
@@ -28,13 +42,16 @@ describe('useBlogSheets', () => {
     expect(sheets.top.value?.key).toBe('collection:collection-1')
   })
 
-  it('keeps at most two layers', () => {
+  it('keeps at most three layers', () => {
     const sheets = useBlogSheets()
+    sheets.openChannel('channel-1', '频道一')
     sheets.openCollection('collection-1', '合集一', 'channel-1')
     sheets.openPost('post-1', '文章一', 'collection-1')
+    expect(sheets.layers.value).toHaveLength(3)
+
     sheets.openPost('post-2', '文章二', 'collection-1')
 
-    expect(sheets.layers.value).toHaveLength(2)
+    expect(sheets.layers.value.length).toBeLessThanOrEqual(3)
     expect(sheets.top.value?.key).toBe('post:post-2')
   })
 

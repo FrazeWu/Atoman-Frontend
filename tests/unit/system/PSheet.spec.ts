@@ -88,6 +88,28 @@ describe("PSheet.vue", () => {
 		);
 	});
 
+	it("renders footer actions below the scrollable sheet content", () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, title: "发布前准备" },
+			slots: {
+				default: "<p>Publication details</p>",
+				footer: "<button>确认发布</button>",
+			},
+		});
+
+		const content = wrapper.get(".sheet-content").element;
+		const footer = wrapper.get(".p-sheet-footer").element;
+		expect(footer.textContent).toContain("确认发布");
+		expect(footer.parentElement).toBe(content.parentElement);
+		expect(content.contains(footer)).toBe(false);
+
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
+			"utf8",
+		);
+		expect(source).toMatch(/\.sheet-content\s*\{[\s\S]*?min-height:\s*0/);
+	});
+
 	it("renders previous and next navigation in the title rail", async () => {
 		const wrapper = mount(PSheet, {
 			props: {

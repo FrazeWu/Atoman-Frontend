@@ -60,4 +60,29 @@ describe('MusicCreationContributorPicker.vue', () => {
     expect(wrapper.text()).toContain('Latest Artist')
     expect(wrapper.text()).not.toContain('Stale Artist')
   })
+
+  it('offers to create an artist when the search has no result', async () => {
+    vi.mocked(listMusicArtists).mockResolvedValue({
+      data: [],
+      meta: { page: 1, page_size: 20, total: 0, has_more: false },
+    } as never)
+
+    const createArtist = vi.fn()
+    const wrapper = mount(MusicCreationContributorPicker, {
+      props: {
+        modelValue: [],
+        allowCreate: true,
+        onCreateArtist: createArtist,
+      },
+    })
+
+    await wrapper.get('[data-testid="album-contributor-search-input"]').setValue('New Producer')
+    await flushPromises()
+
+    const button = wrapper.get('[data-testid="album-contributor-create-new"]')
+    expect(button.text()).toContain('New Producer')
+    await button.trigger('click')
+
+    expect(createArtist).toHaveBeenCalledWith('New Producer')
+  })
 })

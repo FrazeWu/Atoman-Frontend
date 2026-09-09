@@ -3,6 +3,9 @@ import { computed, nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
 import MusicCreationFlowDrawer from "../../../../src/components/music/MusicCreationFlowDrawer.vue";
+import {
+	createEmptyMusicArtistDraft,
+} from "../../../../src/components/music/musicCreationTypes";
 import type { MusicCreationFlowState } from "../../../../src/components/music/musicCreationTypes";
 import * as musicApi from "../../../../src/api/musicV1";
 
@@ -1632,6 +1635,116 @@ describe("MusicCreationFlowDrawer", () => {
 				album_source: "资料来源",
 			}),
 		);
+	});
+
+	it("非主创作者只填写名称即可返回专辑草稿", async () => {
+		const base = createFlowState();
+		const contributor = {
+			id: "new-contributor-producer",
+			artistId: null,
+			name: "New Producer",
+			avatarUrl: "",
+			kind: "person" as const,
+			locked: false,
+			newArtistDraft: createEmptyMusicArtistDraft({ name: "New Producer" }),
+			roles: [{ id: "role-producer", role: "producer" as const, label: "" }],
+		};
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "artist",
+			draft: {
+				...base.draft,
+				albumDetails: {
+					...base.draft.albumDetails,
+					contributors: [...base.draft.albumDetails.contributors, contributor],
+				},
+			},
+			editingContributorId: contributor.id,
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await flushPromises();
+
+		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(drawerMocks.state.value.creationFlow?.editingContributorId).toBeNull();
+		expect(
+			drawerMocks.state.value.creationFlow?.draft.albumDetails.contributors.find(
+				(item) => item.id === contributor.id,
+			)?.name,
+		).toBe("New Producer");
+	});
+
+	it("提交多个新创作者时分别使用各自的资料草稿", async () => {
+		commitMusicAlbumImportMock.mockResolvedValue({
+			importId: "import-1",
+			status: "committed",
+		});
+		const base = createFlowState();
+		const producerDraft = createEmptyMusicArtistDraft({
+			name: "Producer One",
+			legalName: "Producer One Legal",
+		});
+		producerDraft.bio = "Producer bio";
+		const writerDraft = createEmptyMusicArtistDraft({
+			name: "Writer Two",
+			legalName: "Writer Two Legal",
+		});
+		writerDraft.nationality = "US";
+		const newContributors = [
+			{
+				id: "new-producer",
+				artistId: null,
+				name: "Producer One",
+				avatarUrl: "",
+				kind: "person" as const,
+				locked: false,
+				newArtistDraft: producerDraft,
+				roles: [{ id: "role-producer", role: "producer" as const, label: "" }],
+			},
+			{
+				id: "new-writer",
+				artistId: null,
+				name: "Writer Two",
+				avatarUrl: "",
+				kind: "person" as const,
+				locked: false,
+				newArtistDraft: writerDraft,
+				roles: [{ id: "role-writer", role: "writer" as const, label: "" }],
+			},
+		];
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "preview",
+			draft: {
+				...base.draft,
+				albumImport: {
+					...base.draft.albumImport,
+					status: "ready",
+				},
+				albumDetails: {
+					...base.draft.albumDetails,
+					title: "Credit Test Album",
+					contributors: [...base.draft.albumDetails.contributors, ...newContributors],
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+
+		const input = commitMusicAlbumImportMock.mock.calls[0]?.[1];
+		expect(input.artists).toEqual(expect.arrayContaining([
+			expect.objectContaining({
+				name: "Producer One",
+				legal_name: "Producer One Legal",
+				bio: "Producer bio",
+			}),
+			expect.objectContaining({
+				name: "Writer Two",
+				legal_name: "Writer Two Legal",
+				nationality: "US",
+			}),
+		]));
 	});
 
 	it("填写发行日期时会同时提交 release_date 和推导后的 release_year", async () => {

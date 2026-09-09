@@ -105,6 +105,43 @@ export interface MusicCreationArtistDraft {
 	existingSources?: MusicSource[];
 }
 
+export function createEmptyMusicArtistDraft(seed: {
+	name?: string;
+	legalName?: string;
+	source?: string;
+	kind?: MusicArtistKind;
+} = {}): MusicCreationArtistDraft {
+	return {
+		id: null,
+		disambiguation: "",
+		avatarUrl: "",
+		avatarAsset: null,
+		kind: seed.kind ?? "person",
+		legalName: seed.legalName ?? "",
+		stageNames: [
+			{
+				id: "stage-name-primary",
+				name: seed.name ?? "",
+				isPrimary: true,
+				startDateParts: { year: "", month: "", day: "" },
+				endDateParts: { year: "", month: "", day: "" },
+				startDateText: "",
+				endDateText: "",
+			},
+		],
+		members: [],
+		nationality: "",
+		birthPlace: "",
+		birthDateParts: { year: "", month: "", day: "" },
+		activeStartDateParts: { year: "", month: "", day: "" },
+		activeEndDateParts: { year: "", month: "", day: "" },
+		birthDate: "",
+		bio: "",
+		source: seed.source ?? "",
+		existingSources: [],
+	};
+}
+
 export interface MusicCreationAlbumImportDraft {
 	importId: string | null;
 	inputMode: MusicAlbumImportInputMode;
@@ -176,6 +213,7 @@ export interface MusicCreationAlbumContributorDraft {
 	entryStatus?: MusicEntryStatus;
 	kind: MusicArtistKind;
 	locked: boolean;
+	newArtistDraft?: MusicCreationArtistDraft;
 	roles: Array<{
 		id: string;
 		role: MusicAlbumArtistRole;
@@ -221,4 +259,19 @@ export interface MusicCreationFlowState {
 	assetUploading: boolean;
 	submitting: boolean;
 	errorMessage: string;
+	editingContributorId?: string | null;
+}
+
+export function musicCreationContributorForFlow(flow: MusicCreationFlowState) {
+	if (!flow.editingContributorId) return null;
+	return flow.draft.albumDetails.contributors.find((item) => item.id === flow.editingContributorId) ?? null;
+}
+
+export function activeMusicArtistDraft(flow: MusicCreationFlowState) {
+	return musicCreationContributorForFlow(flow)?.newArtistDraft ?? flow.draft.artist;
+}
+
+export function activeArtistRequiresFullProfile(flow: MusicCreationFlowState) {
+	const contributor = musicCreationContributorForFlow(flow);
+	return !contributor || contributor.roles.some((role) => role.role === "primary");
 }

@@ -7,12 +7,16 @@ import PInput from '@/components/ui/PInput.vue'
 import MusicAlbumCreditRolesEditor from './MusicAlbumCreditRolesEditor.vue'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: MusicCreationAlbumContributorDraft[]
-}>()
+  allowCreate?: boolean
+}>(), {
+  allowCreate: false,
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: MusicCreationAlbumContributorDraft[]): void
+  (e: 'create-artist', name: string): void
 }>()
 
 const query = ref('')
@@ -110,6 +114,14 @@ function updateContributorRoles(contributorId: string, roles: MusicCreationAlbum
 function formatKindLabel(kind: MusicArtistKind) {
   return kind === 'group' ? '组合' : '个人'
 }
+
+function createArtistFromQuery() {
+  const name = query.value.trim()
+  if (!name) return
+  emit('create-artist', name)
+  query.value = ''
+  options.value = []
+}
 </script>
 
 <template>
@@ -159,7 +171,18 @@ function formatKindLabel(kind: MusicArtistKind) {
 
     <div v-if="query.trim()" class="picker-results">
       <p v-if="loading" class="picker-state">搜索中…</p>
-      <p v-else-if="!options.length" class="picker-state">没有匹配的艺人</p>
+      <div v-else-if="!options.length" class="picker-empty">
+        <p class="picker-state">没有匹配的艺人</p>
+        <button
+          v-if="props.allowCreate"
+          data-testid="album-contributor-create-new"
+          type="button"
+          class="picker-create"
+          @click="createArtistFromQuery"
+        >
+          新建“{{ query.trim() }}”
+        </button>
+      </div>
       <button
         v-for="contributor in options"
         v-else
@@ -250,5 +273,31 @@ function formatKindLabel(kind: MusicArtistKind) {
 
 .picker-state {
   margin: 0;
+}
+
+.picker-empty {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+}
+
+.picker-create {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--a-color-text);
+  border-radius: 0;
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-create:hover {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
 }
 </style>

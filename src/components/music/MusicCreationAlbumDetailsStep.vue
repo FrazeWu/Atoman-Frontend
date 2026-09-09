@@ -21,6 +21,7 @@ import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vu
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
+import { createEmptyMusicArtistDraft } from './musicCreationTypes'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
@@ -336,6 +337,29 @@ function goBack() {
   setMusicCreationStep('artist')
 }
 
+function createNewContributor(name: string) {
+  const flow = creationFlow.value
+  const details = albumDetailsDraft.value
+  if (!flow || !details || !name.trim()) return
+
+  const hasPrimary = details.contributors.some((item) => item.roles.some((role) => role.role === 'primary'))
+  const id = `new-contributor-${Date.now()}`
+  details.contributors.push({
+    id,
+    artistId: null,
+    name: name.trim(),
+    avatarUrl: '',
+    kind: 'person',
+    locked: false,
+    newArtistDraft: createEmptyMusicArtistDraft({ name: name.trim() }),
+    roles: hasPrimary
+      ? [{ id: `role-${id}-featured`, role: 'featured', label: '' }]
+      : [primaryAlbumRole(`role-${id}-primary`)],
+  })
+  flow.editingContributorId = id
+  setMusicCreationStep('artist')
+}
+
 watch(
   () => [
     creationFlow.value?.draft.artist.id ?? '',
@@ -555,7 +579,11 @@ watch(
 
       <section class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
         <span class="field-label">创作者</span>
-        <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
+        <MusicCreationContributorPicker
+          v-model="albumDetailsDraft.contributors"
+          allow-create
+          @create-artist="createNewContributor"
+        />
       </section>
 
       <!-- 下一行：曲目列表 -->

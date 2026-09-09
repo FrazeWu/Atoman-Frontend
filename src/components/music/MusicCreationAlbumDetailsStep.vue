@@ -23,7 +23,6 @@ import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
-const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
@@ -387,17 +386,17 @@ watch(
     <section class="progress-card">
       <div class="progress-copy">
         <p class="progress-label" data-testid="album-details-progress-label">
-          {{ isEditMode ? (isSongEdit ? '编辑歌曲' : '编辑专辑') : isTest ? '第 3 步 / 完善专辑' : standaloneTypeSelected ? '第 2 步 / 新建歌曲' : '第 2 步 / 新建专辑' }}
+          {{ isEditMode ? (isSongEdit ? '编辑歌曲' : '编辑专辑') : '第 3 步 / 完善专辑' }}
         </p>
       </div>
       <p class="progress-value" data-testid="album-details-progress-value">
-        {{ isTest ? '3 / 3' : '2 / 2' }}
+        3 / 3
       </p>
       <div class="progress-steps">
         <span class="progress-step" data-testid="album-details-step-label">1 创建艺术家</span>
-        <span v-if="isTest" class="progress-step" data-testid="album-details-step-label">2 专辑名 + 批量上传</span>
+        <span class="progress-step" data-testid="album-details-step-label">2 上传与匹配</span>
         <span class="progress-step progress-step--active" data-testid="album-details-step-label">
-          {{ isTest ? '3 详细信息' : standaloneTypeSelected ? '2 新建歌曲' : '2 新建专辑' }}
+          {{ standaloneTypeSelected ? '3 新建歌曲' : '3 完善专辑' }}
         </span>
       </div>
       <div class="progress-track" aria-hidden="true">

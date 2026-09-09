@@ -90,6 +90,44 @@ const stageLabelMap: Record<string, string> = {
   ready: '已就绪',
 }
 
+const totalUploadProgress = computed(() => {
+  const draft = albumImportDraft.value
+  if (!draft) return 0
+  if (
+    draft.files.length > 0 &&
+    draft.files.every((file) => file.uploadStatus === 'uploaded' || file.uploadStatus === 'completing')
+  ) {
+    return 100
+  }
+  if (draft.totalBytesTotal > 0) {
+    return Math.max(0, Math.min(100, Math.round((draft.totalBytesLoaded / draft.totalBytesTotal) * 100)))
+  }
+  return Math.max(0, Math.min(100, draft.uploadProgress || 0))
+})
+
+const metadataMatchLabel = computed(() => {
+  const draft = albumImportDraft.value
+  if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
+  if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') return '已匹配'
+  if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
+  if (['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) {
+    return stageLabelMap[draft.stage] ?? '处理中'
+  }
+  if (draft.status === 'uploading') return '读取与匹配中'
+  return '等待结果'
+})
+const metadataMatchState = computed(() => {
+  const draft = albumImportDraft.value
+  if (!draft) return 'idle'
+  if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched' || draft.metadataMatchStatus === 'unmatched') {
+    return 'done'
+  }
+  if (['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) {
+    return 'active'
+  }
+  return 'idle'
+})
+
 function formatUploadSpeed(bytesPerSecond: number) {
   if (bytesPerSecond >= 1024 * 1024) {
     return `${(bytesPerSecond / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')}M`
@@ -194,6 +232,30 @@ function formatUploadSpeed(bytesPerSecond: number) {
       </template>
       <template v-else>上传后将自动匹配专辑信息、曲序和歌词。</template>
     </p>
+    <div class="parallel-progress" data-testid="album-import-parallel-progress">
+      <div class="parallel-progress__lane">
+        <div class="parallel-progress__heading">
+          <span>上传文件</span>
+          <strong>{{ totalUploadProgress }}%</strong>
+        </div>
+        <div class="parallel-progress__track" aria-hidden="true">
+          <span :style="{ width: `${totalUploadProgress}%` }" />
+        </div>
+        <small>{{ albumImportDraft.files.length ? `${albumImportDraft.files.length} 个文件` : '等待选择文件' }}</small>
+      </div>
+      <div class="parallel-progress__lane parallel-progress__lane--matching">
+        <div class="parallel-progress__heading">
+          <span>元信息匹配</span>
+          <strong>{{ metadataMatchLabel }}</strong>
+        </div>
+        <div class="parallel-progress__steps" aria-hidden="true">
+          <span :class="{ 'is-done': metadataMatchState === 'active' || metadataMatchState === 'done' }" />
+          <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
+          <span :class="{ 'is-done': metadataMatchState === 'done' }" />
+        </div>
+        <small>上传进行时同步读取和匹配</small>
+      </div>
+    </div>
     <p
       v-if="['ready', 'needs_attention'].includes(albumImportDraft.status)"
       class="metadata-artist-hint"
@@ -334,6 +396,68 @@ function formatUploadSpeed(bytesPerSecond: number) {
   font-weight: 800;
   text-decoration: underline;
   text-underline-offset: 0.18em;
+}
+.parallel-progress {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+.parallel-progress__lane {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+}
+.parallel-progress__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--a-color-text);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.parallel-progress__heading strong {
+  color: var(--a-color-muted);
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.parallel-progress__track {
+  height: 0.3rem;
+  overflow: hidden;
+  background: var(--a-color-surface-3);
+}
+.parallel-progress__track span {
+  display: block;
+  height: 100%;
+  background: var(--a-color-text);
+  transition: width 0.2s ease;
+}
+.parallel-progress__lane small {
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+}
+.parallel-progress__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  height: 0.3rem;
+}
+.parallel-progress__steps span {
+  background: var(--a-color-surface-3);
+  transition: background-color 0.2s ease;
+}
+.parallel-progress__steps .is-done {
+  background: var(--a-color-text);
+}
+.parallel-progress__steps .is-active {
+  background: var(--a-color-accent-blue);
 }
 .state-line {
   margin: 0;
@@ -503,5 +627,11 @@ function formatUploadSpeed(bytesPerSecond: number) {
 .stage-hint {
   color: var(--a-color-muted);
   font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .parallel-progress {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -119,7 +119,7 @@ function uploadStateFor(flow: MusicCreationFlowState) {
 }
 
 export function useAlbumImportUpload() {
-	const { state, setMusicCreationStep } = useMusicDrawers();
+	const { state } = useMusicDrawers();
 
 	const creationFlowFallback = computed(() => state.value.creationFlow);
 	const creationFlow = useMusicCreationFlow(creationFlowFallback);
@@ -244,6 +244,12 @@ export function useAlbumImportUpload() {
 				flow.draft.albumDetails.source === previousMetadataSourceURL)
 		) {
 			flow.draft.albumDetails.source = snapshot.metadataSourceUrl;
+		}
+		const processingFinished = ["ready", "needs_attention"].includes(snapshot.status) || (
+			snapshot.status === "failed" && snapshot.stage !== "upload"
+		);
+		if (flow.step === "albumImport" && processingFinished) {
+			flow.step = "albumDetails";
 		}
 		return true;
 	}
@@ -610,6 +616,9 @@ export function useAlbumImportUpload() {
 						if (!flow.titleCustomized) {
 							flow.draft.albumDetails.title = preview.title;
 						}
+						if (metadataPreview && flow.step === "albumImport") {
+							flow.step = "albumDetails";
+						}
 					}
 					if (preview.albumCoverFile) {
 						draft.derivedCover = URL.createObjectURL(preview.albumCoverFile);
@@ -626,11 +635,10 @@ export function useAlbumImportUpload() {
 				...(artistName ? { artistName } : {}),
 				inputMode: autoMode,
 			});
-			if (!isCurrent()) return;
-			draft.importId = session.importId;
-			if (creationFlow.value === flow) setMusicCreationStep("albumDetails");
+				if (!isCurrent()) return;
+				draft.importId = session.importId;
 
-			const fileInputs = files.map((file) => ({
+				const fileInputs = files.map((file) => ({
 				relativePath:
 					(file as File & { webkitRelativePath?: string }).webkitRelativePath ||
 					file.name,

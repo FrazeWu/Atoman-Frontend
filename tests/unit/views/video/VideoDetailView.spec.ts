@@ -417,6 +417,29 @@ describe("VideoDetailView shared interactions", () => {
 		expect(wrapper.get("track").attributes("src")).toBe("/__object-storage/atoman-dev/video/subtitles/source.vtt");
 	});
 
+	it("没有视频源时不渲染可播放控件", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = String(input);
+				if (init?.method === "POST" && url.endsWith("/view")) return makeJsonResponse({});
+				if (url.endsWith("/videos/video-1")) {
+					return makeJsonResponse(makeVideo("video-1", "缺少视频源", {
+						storage_type: "local",
+						video_url: "",
+					}));
+				}
+				if (url.endsWith("/videos/video-1/recommended")) return makeJsonResponse([]);
+				throw new Error(`unexpected fetch: ${url}`);
+			}),
+		);
+
+		const { wrapper } = await mountVideoDetail();
+
+		expect(wrapper.find("video").exists()).toBe(false);
+		expect(wrapper.text()).toContain("视频源不可用");
+	});
+
 	it("本地保存的中段进度要求用户选择继续或从头播放", async () => {
 		vi.stubGlobal(
 			"fetch",

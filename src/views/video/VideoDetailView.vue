@@ -574,7 +574,7 @@ async function toggleChannelSubscription() {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen
           />
-          <template v-else-if="video.storage_type === 'local'">
+          <template v-else-if="video.storage_type === 'local' && nativeVideoUrl">
             <video
               ref="videoElement"
               :src="nativeVideoUrl"
@@ -618,11 +618,15 @@ async function toggleChannelSubscription() {
               <button type="button" @click="cancelAutoNext">取消</button>
             </div>
           </template>
-          <div v-else class="vd-external">
+          <div v-else-if="video.video_url" class="vd-external">
             <PLink :href="video.video_url" external class="vd-external-link">在外部平台观看</PLink>
           </div>
+          <div v-else class="vd-player-error" role="alert">
+            <p>视频源不可用</p>
+            <button type="button" @click="load(videoId)">重试加载</button>
+          </div>
         </template>
-        <template v-if="video.storage_type === 'local'" #timeline-preview>
+        <template v-if="video.storage_type === 'local' && nativeVideoUrl" #timeline-preview>
           <VideoPlayerControls
             :video-element="videoElement"
             :duration-sec="video.duration_sec"

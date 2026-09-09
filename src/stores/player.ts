@@ -53,6 +53,10 @@ function normalizePlaybackSong(song: Song) {
 	return { ...song, audio_url: resolvePlaybackAudioUrl(song.audio_url) };
 }
 
+function hasPlayableAudio(song: Song | null | undefined) {
+	return Boolean(song?.audio_url?.trim());
+}
+
 function compactPlaybackSong(song: Song): Song {
 	const { lyrics: _lyrics, waveform_peaks: _waveformPeaks, ...compact } = song;
 	return compact as Song;
@@ -786,12 +790,19 @@ export const usePlayerStore = defineStore("player", () => {
 			playbackMode.value = state.playbackMode || "loop";
 			currentTime.value =
 				typeof state.currentTime === "number" ? state.currentTime : 0;
-			currentSong.value = state.song ? normalizePlaybackSong(state.song) : null;
-			queue.value = Array.isArray(state.queue)
-				? state.queue
-				: state.song
-					? [state.song]
+			const restoredSong = hasPlayableAudio(state.song)
+				? normalizePlaybackSong(state.song!)
+				: null;
+			const restoredQueue = Array.isArray(state.queue)
+				? state.queue.filter(hasPlayableAudio).map(normalizePlaybackSong)
+				: restoredSong
+					? [restoredSong]
 					: [];
+			if (restoredSong && !restoredQueue.some((song) => playbackItemKey(song) === playbackItemKey(restoredSong))) {
+				restoredQueue.unshift(restoredSong);
+			}
+			currentSong.value = restoredSong;
+			queue.value = restoredQueue;
 			currentAlbum.value = null;
 			isPlaying.value = false;
 		} catch (error) {
@@ -865,12 +876,20 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const startSong = (song: Song, startAt?: number, persistPrevious = true) => {
+		const normalizedSong = normalizePlaybackSong(song);
+		if (!hasPlayableAudio(normalizedSong)) {
+			currentSong.value = null;
+			queue.value = queue.value.filter(hasPlayableAudio);
+			isPlaying.value = false;
+			isLoading.value = false;
+			playbackError.value = "当前曲目没有可用音频源";
+			return;
+		}
 		savePodcastProgress();
 		if (persistPrevious) saveMusicProgress(false, true);
 		resetListening(song);
 		currentSongStartCached = false;
 		const player = ensureAudio();
-		const normalizedSong = normalizePlaybackSong(song);
 		const generation = ++playGeneration;
 		currentSong.value = normalizedSong;
 		playbackError.value = "";

@@ -34,17 +34,25 @@ describe('NotificationSettingsPanel', () => {
     const wrapper = mount(NotificationSettingsPanel, { global: { stubs: { PButton: PButtonStub } } })
     await flushPromises()
 
-    expect(wrapper.text()).toContain('订阅、标记和话题状态变化时提醒。')
+    expect(wrapper.text()).toContain('控制哪些互动事件会出现在通知中心。')
+    expect(wrapper.text()).toContain('有人点赞你的评论或话题时通知你。')
+    expect(wrapper.text()).toContain('账号安全和关键权限变化始终通知你，无法关闭。')
+    expect(wrapper.get('[data-test="notification-like-state"]').text()).toBe('开启')
     expect(wrapper.text()).not.toContain('关注、标记和话题状态变化时提醒。')
     expect(wrapper.text()).not.toContain('私信')
     expect(wrapper.find('[data-test="notification-mention"]').element.parentElement?.parentElement?.classList.contains('settings-block__control')).toBe(true)
     const mentionToggle = wrapper.get('[data-test="notification-mention"]')
     expect((mentionToggle.element as HTMLInputElement).checked).toBe(false)
+    expect(mentionToggle.attributes('role')).toBe('switch')
+    expect(mentionToggle.attributes('aria-checked')).toBe('false')
+    expect(wrapper.get('[data-test="notification-mention-state"]').text()).toBe('关闭')
 
     const likeToggle = wrapper.get('[data-test="notification-like"]')
     await likeToggle.setValue(false)
     await flushPromises()
 
+    expect(likeToggle.attributes('aria-checked')).toBe('false')
+    expect(wrapper.get('[data-test="notification-like-state"]').text()).toBe('关闭')
     expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/notifications/preferences', expect.objectContaining({
       method: 'PUT',
       body: expect.stringContaining('comment_like'),

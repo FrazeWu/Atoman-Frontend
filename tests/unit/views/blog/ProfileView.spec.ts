@@ -277,6 +277,13 @@ describe('ProfileView', () => {
     await followingCard.trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="profile-relations-modal"]').exists()).toBe(true)
+	})
+
+	it('uses 用户设置 for the owned profile action', async () => {
+    mocks.auth.user = { username: 'linmo', uuid: 'linmo-id' }
+    const wrapper = await mountProfile()
+
+    expect(wrapper.get('[data-testid="edit-profile"]').text()).toBe('用户设置')
   })
 
   it('hides non-identity content on a private profile viewed by another user', async () => {

@@ -547,6 +547,21 @@ export const SUPPORTED_AUDIO_EXTENSIONS = [
 
 export const SUPPORTED_AUDIO_ACCEPT = SUPPORTED_AUDIO_EXTENSIONS.join(",");
 
+export const SUPPORTED_VIDEO_EXTENSIONS = [
+	".mp4",
+	".mov",
+	".mkv",
+	".webm",
+	".avi",
+	".m4v",
+	".mpg",
+	".mpeg",
+	".ts",
+	".3gp",
+];
+
+export const SUPPORTED_VIDEO_ACCEPT = SUPPORTED_VIDEO_EXTENSIONS.join(",");
+
 export async function startMusicAlbumImportMultipart(
 	importId: string,
 	input: StartMusicAlbumImportMultipartInput,

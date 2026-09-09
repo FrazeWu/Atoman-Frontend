@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { SUPPORTED_ARCHIVE_ACCEPT, SUPPORTED_AUDIO_ACCEPT } from '@/api/musicV1'
+import { SUPPORTED_ARCHIVE_ACCEPT, SUPPORTED_AUDIO_ACCEPT, SUPPORTED_VIDEO_ACCEPT } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { useAlbumImportUpload } from '@/composables/useAlbumImportUpload'
@@ -107,7 +107,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
         ref="filesInputRef"
         data-testid="album-import-files-input"
         type="file"
-        :accept="SUPPORTED_ARCHIVE_ACCEPT + ',' + SUPPORTED_AUDIO_ACCEPT + ',.cue,.lrc,.txt,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
+        :accept="SUPPORTED_ARCHIVE_ACCEPT + ',' + SUPPORTED_AUDIO_ACCEPT + ',' + SUPPORTED_VIDEO_ACCEPT + ',.cue,.lrc,.txt,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
         multiple
         :disabled="uploading"
         style="display: none"
@@ -150,7 +150,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
               <template v-else-if="albumImportDraft.files.length > 0">已选择 {{ albumImportDraft.files.length }} 个文件</template>
               <template v-else>点击选择文件</template>
             </span>
-            <span class="file-picker-subtitle">压缩包（ZIP/RAR/7Z）、音频文件或封面图片</span>
+            <span class="file-picker-subtitle">压缩包、音频或视频文件，也可以添加封面图片</span>
           </div>
           <PButton
             type="button"

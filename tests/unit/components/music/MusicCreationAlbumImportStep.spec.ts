@@ -118,6 +118,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		).toHaveProperty("value", "Seed description");
 	});
 
+	it("allows selecting video files as album tracks", () => {
+		const wrapper = mount(MusicCreationAlbumUploadZone);
+
+		expect(fileInput(wrapper).attributes("accept")).toContain(".mp4");
+		expect(fileInput(wrapper).attributes("accept")).toContain(".mkv");
+	});
+
 	it("在曲目列表旁显示已匹配状态", () => {
 		const flow = useMusicDrawers().state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");

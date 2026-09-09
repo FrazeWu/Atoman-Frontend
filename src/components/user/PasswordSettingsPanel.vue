@@ -8,7 +8,7 @@
       <PButton type="button" variant="secondary" size="sm" @click="modalOpen = true">{{ hasPassword ? '修改密码' : '设置密码' }}</PButton>
     </div>
   </section>
-  <PSheet v-if="modalOpen" :show="modalOpen" :title="hasPassword ? '修改密码' : '设置密码'" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="modalOpen = false">
+  <PSheet v-if="modalOpen" :show="modalOpen" :title="hasPassword ? '修改密码' : '设置密码'" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="modalOpen = false">
     <form class="password-settings__form" @submit.prevent="submit">
       <PInput
         v-if="hasPassword"

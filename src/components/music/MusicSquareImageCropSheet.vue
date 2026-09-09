@@ -233,6 +233,7 @@ onBeforeUnmount(() => {
     :show="show"
     :title="title || '裁剪-图片'"
     mode="partial"
+    partial-width="var(--a-comment-sheet-width)"
     content-max-width="36rem"
     close-type="header"
     @close="$emit('cancel')"

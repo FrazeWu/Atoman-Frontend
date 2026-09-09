@@ -162,7 +162,7 @@ describe('UserBlogSettingsPanel', () => {
     const sheet = wrapper.findComponent(PSheetStub)
     expect(sheet.props('side')).toBe('right')
     expect(sheet.props('mode')).toBe('partial')
-    expect(sheet.props('partialWidth')).toBe('var(--a-recommendation-width)')
+    expect(sheet.props('partialWidth')).toBe('var(--a-comment-sheet-width)')
   })
 
   it('按头像、基本信息、主页预览的顺序排列资料设置', async () => {

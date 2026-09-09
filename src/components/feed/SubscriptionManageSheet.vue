@@ -455,7 +455,7 @@
     :title="`${subscriptionTitle(activeSubscription)}设置`"
     side="right"
     mode="partial"
-    partial-width="var(--a-recommendation-width)"
+    partial-width="var(--a-comment-sheet-width)"
     close-type="header"
     @close="activeSubscriptionId = null"
   >

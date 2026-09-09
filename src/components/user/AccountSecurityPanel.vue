@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <PSheet v-if="emailModalOpen" :show="emailModalOpen" title="修改邮箱" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="emailModalOpen = false">
+    <PSheet v-if="emailModalOpen" :show="emailModalOpen" title="修改邮箱" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="emailModalOpen = false">
       <div class="security-modal-form">
         <div class="email-input-row">
           <PInput v-model="nextEmail" label="新邮箱" type="email" placeholder="输入新电子邮箱地址" class="email-input-flex" :error="emailError" autocomplete="email" />
@@ -81,10 +81,10 @@
         </div>
       </div>
     </PSheet>
-    <PSheet v-if="sessionsDetailOpen" :show="sessionsDetailOpen" title="登录设备详情" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="sessionsDetailOpen = false">
+    <PSheet v-if="sessionsDetailOpen" :show="sessionsDetailOpen" title="登录设备详情" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="sessionsDetailOpen = false">
       <ul class="sessions-list"><li v-for="session in sessions" :key="session.id" class="session-item"><div class="session-info"><strong>{{ session.device_name || '未知设备' }}</strong><span v-if="session.current" class="session-current-badge">当前设备</span></div><PButton v-if="!session.current" type="button" variant="danger" size="sm" @click="requestRevoke(session.id)">强制退出</PButton></li></ul>
     </PSheet>
-    <PSheet v-if="activitiesDetailOpen" :show="activitiesDetailOpen" title="安全日志详情" side="right" mode="partial" partial-width="var(--a-recommendation-width)" close-type="header" @close="activitiesDetailOpen = false">
+    <PSheet v-if="activitiesDetailOpen" :show="activitiesDetailOpen" title="安全日志详情" side="right" mode="partial" partial-width="var(--a-comment-sheet-width)" close-type="header" @close="activitiesDetailOpen = false">
       <ul class="activities-list"><li v-for="item in activities" :key="item.id" class="activity-item"><span>{{ item.action }}</span><small class="a-muted">{{ formatDate(item.created_at) }}</small></li></ul>
     </PSheet>
 

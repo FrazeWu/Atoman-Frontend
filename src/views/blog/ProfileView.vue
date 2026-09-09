@@ -71,7 +71,7 @@
                   :href="desktopAppPath(`/users/${profile.username}/settings`)"
                   size="sm"
                   variant="secondary"
-                >编辑资料</PButton>
+                >用户设置</PButton>
               </div>
 
               <div v-if="canViewRelations" class="profile-header__relations" aria-label="订阅关系">

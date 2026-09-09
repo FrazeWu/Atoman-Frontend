@@ -120,6 +120,8 @@ describe("AppTopbarAuthControls", () => {
 		).not.toContain("◌");
 		expect(wrapper.find('[data-testid="notification-link"] .tabler-icon-mail').exists()).toBe(true);
 		expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true);
+		expect(wrapper.text()).toContain("用户设置");
+		expect(wrapper.text()).not.toContain("编辑资料");
 		expect(wrapper.find('a[href="/posts/bookmarks"]').exists()).toBe(false);
 		expect(
 			wrapper.findAll('a[href="/users/alice/settings"]').length,

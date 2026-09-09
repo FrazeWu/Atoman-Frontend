@@ -28,6 +28,7 @@ import {
 	isMusicBrainzSource,
 	normalizeMusicImportSource,
 } from "@/utils/musicImportSource";
+import { mergeImportedTracksIntoDraft } from "@/utils/musicImportTrackMerge";
 
 export type {
 	MusicEditorEntity,
@@ -721,6 +722,7 @@ export function useMusicDrawers() {
 				snapshot.commitRequest,
 				flow.draft.artist.id || "",
 			);
+			mergeImportedTracksIntoDraft(flow, snapshot.derivedTracks);
 			if (resolvedArtistSource) flow.draft.artist.source = resolvedArtistSource;
 		}
 		if (contributors.length > 0 && !snapshot.commitRequest) {

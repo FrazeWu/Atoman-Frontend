@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useBlogSheets } from '@/composables/useBlogSheets'
@@ -12,11 +12,22 @@ const sheets = useBlogSheets()
 const postId = computed(() => String(route.params.id || ''))
 const isMobile = isStandaloneMobileApp()
 
-onMounted(() => {
-  if (isMobile || !postId.value) return
+const layerKey = computed(() => `post:${postId.value}`)
+
+const openPost = () => {
+  if (isMobile || !postId.value || sheets.isActive(layerKey.value)) return
   sheets.openPost(postId.value, '文章')
-  void router.replace({ path: '/posts', query: route.query })
-})
+}
+
+onMounted(openPost)
+watch(postId, openPost)
+watch(
+  () => sheets.isActive(layerKey.value),
+  (active) => {
+    if (isMobile || active || !route.path.startsWith('/posts/post/')) return
+    void router.replace({ path: '/posts', query: route.query })
+  },
+)
 </script>
 
 <template>

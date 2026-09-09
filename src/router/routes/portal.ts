@@ -5,9 +5,9 @@ import PortalView from '@/views/portal/PortalView.vue'
 export const portalRoutes: RouteRecordRaw[] = [
   { path: '/', component: PortalView },
   ...settingRoutes,
-  { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-  { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-  { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
+  { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true, guestOnly: true } },
+  { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true, guestOnly: true } },
+  { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true, guestOnly: true } },
   { path: '/auth/oauth/callback', component: () => import('@/views/auth/OAuthCallbackView.vue'), meta: { authLayout: true } },
   { path: '/auth/oauth/verify-email', component: () => import('@/views/auth/OAuthVerifyEmailView.vue'), meta: { authLayout: true } },
   { path: '/auth/oauth/complete-profile', component: () => import('@/views/auth/OAuthCompleteProfileView.vue'), meta: { authLayout: true } },

@@ -14,6 +14,7 @@ const studioFeatureGates = {
 const publicSystemPaths = new Set([
 	"/login",
 	"/register",
+	"/forgot-password",
 	"/auth/oauth/callback",
 	"/auth/oauth/verify-email",
 	"/auth/oauth/complete-profile",
@@ -25,6 +26,15 @@ const publicSystemPaths = new Set([
 	"/__not_found__",
 	disabledTarget.path,
 ]);
+const guestOnlyPaths = new Set(["/login", "/register", "/forgot-password"]);
+
+function resolveGuestRedirect(value: unknown) {
+	if (typeof value !== "string") return "/feed";
+	if (!value.startsWith("/") || value.startsWith("//")) return "/feed";
+	if (/[^\x20-\x7E]/.test(value)) return "/feed";
+	const pathname = value.split(/[?#]/, 1)[0];
+	return guestOnlyPaths.has(pathname) ? "/feed" : value;
+}
 
 export function installRouteGuards(router: Router) {
 	router.beforeEach(async (to, _from) => {
@@ -34,13 +44,14 @@ export function installRouteGuards(router: Router) {
 		const isSettingRoute =
 			to.path === "/site/setting" || to.path.startsWith("/site/setting/");
 		const isPublicSystemRoute = publicSystemPaths.has(to.path);
+		const isGuestOnlyRoute = Boolean(to.meta.guestOnly);
 		const requiresMusicEditorAuth =
 			to.path === "/music" &&
 			(to.query.editor === "artist-create" || to.query.editor === "album-edit");
 		const requiresAuth = Boolean(to.meta.requiresAuth) || requiresMusicEditorAuth;
 		const hasValidSession =
 			authStore.validateSession() ||
-			(requiresAuth ? await authStore.restoreSession() : false);
+			(requiresAuth || isGuestOnlyRoute ? await authStore.restoreSession() : false);
 
 		if (hasValidSession) {
 			onboardingStore.initialize(authStore.user);
@@ -64,6 +75,10 @@ export function installRouteGuards(router: Router) {
 
 		if (requiresAuth && !hasValidSession) {
 			return { path: "/login", query: { redirect: to.fullPath } };
+		}
+
+		if (isGuestOnlyRoute && hasValidSession) {
+			return resolveGuestRedirect(to.query.redirect);
 		}
 
 		if (to.meta.requiresModerator && !isModeratorRole(authStore.user?.role)) {

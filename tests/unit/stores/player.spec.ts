@@ -320,6 +320,33 @@ describe("player store", () => {
 		vi.useRealTimers();
 	});
 
+	it("does not restore persisted songs without an audio source", () => {
+		localStorage.clear();
+		localStorage.setItem(
+			"playbackState",
+			JSON.stringify({
+				song: { id: "missing-source", title: "Missing source", audio_url: "" },
+				queue: [{ id: "missing-source", title: "Missing source", audio_url: "" }],
+			}),
+		);
+
+		const player = usePlayerStore();
+
+		expect(player.currentSong).toBeNull();
+		expect(player.queue).toEqual([]);
+	});
+
+	it("rejects playback when a song has no audio source", () => {
+		const player = usePlayerStore();
+
+		player.playSong({ id: "missing-source", title: "Missing source", audio_url: "" } as any);
+
+		expect(player.currentSong).toBeNull();
+		expect(player.isLoading).toBe(false);
+		expect(player.playbackError).toBe("当前曲目没有可用音频源");
+		expect(audioInstances).toHaveLength(0);
+	});
+
 	it("toggles lyrics", () => {
 		const player = usePlayerStore();
 		expect(player.showLyrics).toBe(false);

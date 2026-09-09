@@ -147,8 +147,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
 import PReferenceField from '@/components/shared/PReferenceField.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -165,6 +165,7 @@ import { moduleRooms } from '@/config/moduleRooms'
 import PContentCard from '@/components/ui/PContentCard.vue'
 
 const router = useRouter()
+const route = useRoute()
 const debateStore = useDebateStore()
 const authStore = useAuthStore()
 
@@ -173,8 +174,17 @@ const debatesTotal = computed(() => debateStore.debatesTotal)
 const loading = computed(() => debateStore.loading)
 const error = computed(() => debateStore.error)
 
-const filterStatus = ref<'' | 'active' | 'archived'>('')
-const filterTag = ref('')
+const queryValue = (value: unknown) => {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return typeof candidate === 'string' ? candidate : ''
+}
+const routeStatus = computed<'' | 'active' | 'archived'>(() => {
+  const value = queryValue(route.query.status)
+  return value === 'active' || value === 'archived' ? value : ''
+})
+const routeTag = computed(() => queryValue(route.query.tag).trim())
+const filterStatus = ref<'' | 'active' | 'archived'>(routeStatus.value)
+const filterTag = ref(routeTag.value)
 const appliedStatus = ref<'' | 'active' | 'archived'>('')
 const appliedTag = ref('')
 const currentPage = ref(1)
@@ -205,7 +215,7 @@ const conclusionLabels: Record<string, string> = {
   no: '否',
 }
 
-const loadDebates = async () => {
+const fetchDebates = async () => {
   const requestedStatus = filterStatus.value
   const requestedTag = filterTag.value.trim()
   const succeeded = await debateStore.fetchDebates({
@@ -219,6 +229,21 @@ const loadDebates = async () => {
     appliedStatus.value = requestedStatus
     appliedTag.value = requestedTag
   }
+}
+
+const loadDebates = () => {
+  const query = { ...route.query }
+  if (filterStatus.value) query.status = filterStatus.value
+  else delete query.status
+  const tag = filterTag.value.trim()
+  if (tag) query.tag = tag
+  else delete query.tag
+
+  if (routeStatus.value === filterStatus.value && routeTag.value === tag) {
+    void fetchDebates()
+    return
+  }
+  void router.replace({ query })
 }
 
 const loadMore = async () => {
@@ -275,7 +300,15 @@ const formatDate = (dateString: string) => {
 
 onMounted(async () => {
   if (!authStore.isAuthenticated) await authStore.restoreSession()
-  loadDebates()
+  filterStatus.value = routeStatus.value
+  filterTag.value = routeTag.value
+  void fetchDebates()
+})
+
+watch([routeStatus, routeTag], ([status, tag]) => {
+  filterStatus.value = status
+  filterTag.value = tag
+  void fetchDebates()
 })
 </script>
 

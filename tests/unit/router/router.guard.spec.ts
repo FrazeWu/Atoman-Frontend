@@ -378,6 +378,21 @@ describe("router auth guards", () => {
 		expect(router.currentRoute.value.path).toBe("/login");
 	});
 
+	it.each(["/login", "/register", "/forgot-password"])(
+		"redirects authenticated users away from guest-only route %s",
+		async (path) => {
+			const router = await createGuardRouter("blog");
+			const auth = useAuthStore();
+			auth.token = makeToken(3600);
+			auth.user = { username: "member", role: "user" } as never;
+			auth.isAuthenticated = true;
+
+			await router.push({ path, query: { redirect: "/posts" } });
+
+			expect(router.currentRoute.value.fullPath).toBe("/posts");
+		},
+	);
+
 	it("initializes onboarding after restoring authenticated session", async () => {
 		const auth = useAuthStore();
 		const onboarding = useOnboardingStore();

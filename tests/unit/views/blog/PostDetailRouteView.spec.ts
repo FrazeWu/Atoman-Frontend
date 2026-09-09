@@ -9,7 +9,7 @@ import { useBlogSheets } from '../../../../src/composables/useBlogSheets'
 describe('PostDetailRouteView', () => {
   beforeEach(() => useBlogSheets().closeAll())
 
-  it('在桌面端将直达文章链接收敛为同一个文章弹层', async () => {
+  it('在桌面端保持直达文章链接并打开文章弹层', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -23,9 +23,14 @@ describe('PostDetailRouteView', () => {
     mount(PostDetailRouteView, { global: { plugins: [router] } })
     await flushPromises()
 
-    expect(router.currentRoute.value.fullPath).toBe('/posts?source=continue')
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1?source=continue')
     expect(useBlogSheets().layers.value).toEqual([
       expect.objectContaining({ kind: 'post', payload: { postId: 'post-1' } }),
     ])
+
+    useBlogSheets().closeTop()
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/posts?source=continue')
   })
 })

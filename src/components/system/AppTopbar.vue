@@ -12,7 +12,7 @@
           <Menu :size="18" aria-hidden="true" />
         </button>
         <a href="/" class="brand-logo-link" @click.prevent="handleBrandClick">
-          <img class="logo-image" src="/favicon.png" alt="Atoman" />
+          <img class="logo-image" src="/atoman-house.svg" alt="Atoman" />
           <span class="logo-block">
             <span class="logo-copy">
               <span class="logo-text">ATOMAN</span>

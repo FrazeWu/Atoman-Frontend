@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useQueryCache } from "@/composables/useQueryCache";
+
 import {
 	listAlbumBookmarks,
 	listArtistBookmarks,
@@ -45,6 +47,7 @@ describe("music v1 starred and playlist adapters", () => {
 			value: localStorageMock,
 			configurable: true,
 		});
+		useQueryCache().clear();
 	});
 
 	afterEach(() => {

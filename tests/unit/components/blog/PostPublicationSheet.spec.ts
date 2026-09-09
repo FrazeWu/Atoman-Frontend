@@ -26,7 +26,6 @@ const baseProps = {
   warnings: [{ code: 'missing_summary', message: '摘要为空，可补充' }],
   blockingErrors: [],
   error: '',
-  canConfirm: true,
 }
 
 describe('PostPublicationSheet', () => {
@@ -36,12 +35,13 @@ describe('PostPublicationSheet', () => {
       title: String,
       mode: String,
       partialWidth: String,
+      top: String,
       abovePlayer: Boolean,
     },
     template: '<div><slot /><slot name="footer" /></div>',
   }
 
-  it('使用窄 partial sheet，摘要为空仍允许确认发布', () => {
+  it('使用窄 partial sheet，正文区域不再渲染底部操作区', () => {
     const wrapper = mount(PostPublicationSheet, {
       props: baseProps,
       global: {
@@ -51,7 +51,6 @@ describe('PostPublicationSheet', () => {
           PTextarea: { props: ['label'], template: '<label>{{ label }}</label><textarea />' },
           PInput: { template: '<input />' },
           PostCoverField: true,
-          PButton: { template: '<button :disabled="disabled"><slot /></button>', props: ['disabled'] },
         },
       },
     })
@@ -61,7 +60,9 @@ describe('PostPublicationSheet', () => {
     expect(sheet.props('partialWidth')).toBe('var(--a-comment-sheet-width)')
     expect(sheet.props('abovePlayer')).toBe(true)
     expect(wrapper.text()).toContain('摘要（可选）')
-    expect(wrapper.find('[data-testid="publication-confirm"]').attributes('disabled')).toBeUndefined()
+    expect(sheet.props('top')).toBe('calc(var(--a-topbar-height) + 12rem)')
+    expect(wrapper.find('.publication-sheet__footer').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="publication-confirm"]').exists()).toBe(false)
   })
 
   it('缺少合集时阻止确认，并展示阻断原因', () => {
@@ -70,7 +71,6 @@ describe('PostPublicationSheet', () => {
         ...baseProps,
         selectedCollectionId: '',
         blockingErrors: ['请选择一个合集'],
-        canConfirm: false,
       },
       global: {
         stubs: {
@@ -79,30 +79,11 @@ describe('PostPublicationSheet', () => {
           PTextarea: { props: ['label'], template: '<label>{{ label }}</label><textarea />' },
           PInput: { template: '<input />' },
           PostCoverField: true,
-          PButton: { template: '<button :disabled="disabled"><slot /></button>', props: ['disabled'] },
         },
       },
     })
 
     expect(wrapper.text()).toContain('请选择一个合集')
-    expect(wrapper.find('[data-testid="publication-confirm"]').attributes('disabled')).toBeDefined()
-  })
-
-  it('定时发布使用同一个确认按钮文案', () => {
-    const wrapper = mount(PostPublicationSheet, {
-      props: { ...baseProps, intent: 'schedule' },
-      global: {
-        stubs: {
-          PSheet: sheetStub,
-          PSelect: { template: '<select />' },
-          PTextarea: { props: ['label'], template: '<label>{{ label }}</label><textarea />' },
-          PInput: { template: '<input />' },
-          PostCoverField: true,
-          PButton: { template: '<button :disabled="disabled"><slot /></button>', props: ['disabled'] },
-        },
-      },
-    })
-
-    expect(wrapper.get('[data-testid="publication-confirm"]').text()).toContain('确认定时发布')
+    expect(wrapper.find('[data-testid="publication-confirm"]').exists()).toBe(false)
   })
 })

@@ -8,8 +8,8 @@ describe("PostEditorView layering", () => {
       "utf8",
     );
 
-    expect(source).toContain("PostEditorSidebar");
     expect(source).toContain("PostEditorTopbar");
+    expect(source).not.toContain("PostEditorSidebar");
     expect(source).not.toContain(
       '<section class="left-section publish-section">',
     );

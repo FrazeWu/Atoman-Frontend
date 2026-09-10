@@ -32,6 +32,7 @@ describe('MusicContributorsBlock', () => {
     expect(wrapper.findAll('.music-contributors__avatar')).toHaveLength(10)
     expect(wrapper.text()).toContain('12 人参与')
     expect(wrapper.get('button').attributes('aria-label')).toContain('12 位贡献者')
+    expect(wrapper.get('[role="heading"]').attributes('aria-level')).toBe('3')
 
     await wrapper.get('button').trigger('click')
     expect(wrapper.emitted('open-history')).toHaveLength(1)

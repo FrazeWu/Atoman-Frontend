@@ -7,7 +7,7 @@
       :aria-label="`查看全部修改历史，共 ${total} 位贡献者`"
       @click="emit('open-history')"
     >
-      <span class="music-contributors__label">贡献者</span>
+      <span class="music-contributors__label" role="heading" aria-level="3">贡献者</span>
       <span class="music-contributors__avatars" aria-hidden="true">
         <span
           v-for="(contributor, index) in visibleContributors"

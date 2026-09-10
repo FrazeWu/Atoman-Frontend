@@ -444,7 +444,6 @@ watch(
     <!-- 导入进度与封面并排 -->
     <div class="album-details-step__upload-cover-grid">
       <section
-        v-if="isEditMode"
         class="album-card album-card--primary album-import-status-card"
         data-testid="album-import-status"
       >

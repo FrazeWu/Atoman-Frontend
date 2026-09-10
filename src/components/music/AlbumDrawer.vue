@@ -810,10 +810,12 @@ watch(
             <PButton
               variant="secondary"
               :disabled="bookmarkLoading"
+              :loading="bookmarkLoading"
+              :aria-busy="bookmarkLoading ? 'true' : undefined"
               data-testid="album-bookmark-toggle"
               @click="toggleAlbumBookmark"
             >
-              {{ isBookmarked ? '已订阅' : '订阅' }}
+              {{ bookmarkLoading ? '处理中...' : isBookmarked ? '已订阅' : '订阅' }}
             </PButton>
             <PButton
               variant="secondary"
@@ -853,7 +855,7 @@ watch(
           </div>
 
           <div v-if="!loading" class="content-section content-section--tracks">
-        <div class="section-title section-title--tracks">
+        <h3 class="section-title section-title--tracks">
           <span>曲目列表</span>
           <span
             v-if="albumMatchBadge"
@@ -866,7 +868,7 @@ watch(
             <span class="album-tracks-musicbrainz-status__divider" aria-hidden="true"></span>
             <span>{{ albumMatchBadge.status }}</span>
           </span>
-        </div>
+        </h3>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="track in tracks" :key="track.id" class="track">
           <button
@@ -998,7 +1000,7 @@ watch(
           </div>
 
           <section v-if="!loading && albumCreatorCredits.length" class="content-section album-artists-section">
-            <div class="section-title">创作者</div>
+            <h3 class="section-title">创作者</h3>
             <div class="artist-cards-grid">
           <button
 			v-for="artist in albumCreatorCredits"
@@ -1194,6 +1196,7 @@ watch(
 .album-artists-section {
   margin-top: 2.25rem;
   padding-top: 1.5rem;
+  border-top: 2px solid var(--a-color-text);
 }
 
 .artist-cards-grid {
@@ -1324,7 +1327,6 @@ watch(
 
 .content-section--tracks {
   padding: 1.25rem 0;
-  border-top: 2px solid var(--a-color-text);
   border-bottom: 2px solid var(--a-color-text);
 }
 
@@ -1405,8 +1407,8 @@ watch(
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0;
+  margin: 0 0 1.25rem;
   padding-bottom: 0.5rem;
-  margin-bottom: 1.25rem;
   color: var(--a-color-muted);
   font-weight: 500;
 }
@@ -1604,10 +1606,10 @@ watch(
   background: transparent;
   border: 0;
   color: var(--a-color-muted);
-  opacity: 0.4;
+  opacity: 0.64;
   cursor: pointer;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1628,10 +1630,10 @@ watch(
   background: transparent;
   border: 0;
   color: var(--a-color-muted);
-  opacity: 0.4;
+  opacity: 0.64;
   cursor: pointer;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;

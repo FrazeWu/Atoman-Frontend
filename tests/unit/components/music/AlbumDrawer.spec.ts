@@ -228,14 +228,21 @@ describe("AlbumDrawer.vue", () => {
 
 	it("使用曲目列表标题并保留曲目区域分隔线", () => {
 		expect(albumDrawerSource).toContain('<div class="section-title section-title--tracks">曲目列表</div>');
+		expect(albumDrawerSource).toContain('<h3 class="section-title section-title--tracks">');
 		expect(albumDrawerSource).toContain("<span>曲目列表</span>");
-		expect(albumDrawerSource).not.toMatch(/\.album-artists-section\s*\{[^}]*border-top:/);
+		expect(albumDrawerSource).toContain('<h3 class="section-title">创作者</h3>');
+		expect(albumDrawerSource).toMatch(/\.album-artists-section\s*\{[^}]*border-top: 2px solid var\(--a-color-text\);/);
 		expect(albumDrawerSource).not.toMatch(/\.album-detail-tags\s*\{[^}]*border-left:/);
 		expect(albumDrawerSource).not.toMatch(/\.track\s*\{[^}]*border-left:/);
 		expect(albumDrawerSource).toContain("border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent)");
 		expect(albumDrawerSource).toMatch(/\.section-title--tracks\s*\{[^}]*border-bottom: 2px solid var\(--a-color-text\);/);
-		expect(albumDrawerSource).toMatch(/\.content-section--tracks\s*\{[^}]*border-top: 2px solid var\(--a-color-text\);/);
+		expect(albumDrawerSource).not.toMatch(/\.content-section--tracks\s*\{[^}]*border-top:/);
 		expect(albumDrawerSource).toMatch(/\.content-section--tracks\s*\{[^}]*border-bottom: 2px solid var\(--a-color-text\);/);
+	});
+
+	it("让曲目次要操作保持可发现且有稳定点击区", () => {
+		expect(albumDrawerSource).toMatch(/\.track-fav-btn\s*\{[^}]*opacity: 0\.64;[\s\S]*?width: 2rem;[\s\S]*?height: 2rem;/);
+		expect(albumDrawerSource).toMatch(/\.track-add-btn\s*\{[^}]*opacity: 0\.64;[\s\S]*?width: 2rem;[\s\S]*?height: 2rem;/);
 	});
 
 	it("does not render redundant sheet headings", () => {
@@ -924,6 +931,30 @@ describe("AlbumDrawer.vue", () => {
 		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain(
 			"已订阅",
 		);
+	});
+
+	it("shows a loading state while updating album subscription", async () => {
+		let resolveBookmark!: () => void;
+		createAlbumBookmark.mockReturnValueOnce(
+			new Promise<void>((resolve) => {
+				resolveBookmark = resolve;
+			}),
+		);
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+		const bookmarkButton = wrapper.get('[data-testid="album-bookmark-toggle"]');
+
+		await bookmarkButton.trigger("click");
+		await flushPromises();
+
+		expect(bookmarkButton.attributes("disabled")).toBeDefined();
+		expect(bookmarkButton.attributes("aria-busy")).toBe("true");
+		expect(bookmarkButton.text()).toContain("处理中...");
+
+		resolveBookmark();
+		await flushPromises();
+		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').attributes("aria-busy")).toBeUndefined();
 	});
 
 	it("keeps the latest album visible when an earlier request finishes later", async () => {

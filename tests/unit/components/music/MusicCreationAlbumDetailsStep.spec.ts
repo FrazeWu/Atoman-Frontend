@@ -155,6 +155,15 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		createWrapper.unmount();
 	});
 
+	it("在创建流程中始终显示导入卡片", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+
+		expect(wrapper.get('[data-testid="album-import-status"]').exists()).toBe(true);
+	});
+
 	it("在创建流程的曲目列表旁显示预匹配状态和用户修改状态", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });

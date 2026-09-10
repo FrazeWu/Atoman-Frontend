@@ -6,7 +6,7 @@ export type DMPartyType = 'user' | 'channel'
 export type DMPermission = 'one_before_reply' | 'following_only' | 'anyone' | 'closed'
 
 export type DMParty = { type: DMPartyType; id: string; display_name: string; avatar_url?: string }
-export type DMMailbox = { type: DMPartyType; id: string; display_name: string; unread_count: number }
+export type DMMailbox = { type: DMPartyType; id: string; display_name: string; avatar_url?: string; unread_count: number }
 export type DMConversation = {
   id: string; mailbox: DMMailbox; other_party: DMParty; last_message_at: string | null
   last_message_preview: string; unread_count: number; blocked: boolean; reply_as: DMParty

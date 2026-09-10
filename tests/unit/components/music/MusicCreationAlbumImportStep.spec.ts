@@ -822,7 +822,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 					relativePath: "album.zip",
 					fileName: "album.zip",
 					role: "archive",
-					detectedFormat: "zip",
+					detectedFormat: "rar",
 					size: 1024,
 					uploadStatus: "uploading",
 					processingStatus: "pending",
@@ -837,6 +837,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumUploadZone);
 
 		const speed = wrapper.get('[data-testid="album-import-speed"]');
+		expect(wrapper.get(".import-file-format").text()).toBe("速度：");
 		expect(speed.text()).toBe("3.3M");
 		expect(speed.element.nextElementSibling).toBe(
 			wrapper.get(".import-file-progress").element,

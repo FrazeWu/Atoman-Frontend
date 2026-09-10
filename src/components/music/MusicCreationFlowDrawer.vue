@@ -228,7 +228,7 @@ async function loadEditDraft() {
         bio: song.description ?? '',
         source: '',
         existingSources: song.sources ?? [],
-        musicBrainzMatched: song.album?.musicbrainz_matched === true || hasMusicBrainzSource(song.sources) || hasMusicBrainzSource(song.album?.sources),
+        musicBrainzMatched: ['matched', 'manual'].includes(String(song.match_status ?? '').toLowerCase()) || ['matched', 'manual'].includes(String(song.album?.match_status ?? '').toLowerCase()) || song.album?.musicbrainz_matched === true || hasMusicBrainzSource(song.sources) || hasMusicBrainzSource(song.album?.sources),
       }
       flow.draft.tracks = [{
         id: `edit-track-${song.id}`,
@@ -260,7 +260,7 @@ async function loadEditDraft() {
       bio: album.description ?? '',
       source: '',
       existingSources: album.sources ?? [],
-      musicBrainzMatched: album.musicbrainz_matched === true || hasMusicBrainzSource(album.sources),
+      musicBrainzMatched: ['matched', 'manual'].includes(String(album.match_status ?? '').toLowerCase()) || album.musicbrainz_matched === true || hasMusicBrainzSource(album.sources),
     }
     flow.draft.tracks = (album.songs ?? [])
       .filter((song) => song.status !== 'closed')

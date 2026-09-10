@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { IconAlertTriangle as AlertTriangle } from '@tabler/icons-vue'
+
+const props = withDefaults(defineProps<{ provider?: string }>(), { provider: 'musicbrainz' })
+const providerLabel = () => props.provider?.toLowerCase() === 'discogs' ? 'Discogs' : 'MusicBrainz'
 </script>
 
 <template>
-  <aside class="musicbrainz-edit-notice" role="note" aria-label="MusicBrainz 匹配提示">
+  <aside class="musicbrainz-edit-notice" role="note" :aria-label="`${providerLabel()} 匹配提示`">
     <AlertTriangle :size="18" stroke-width="2" aria-hidden="true" />
     <div class="musicbrainz-edit-notice__content">
-      <strong>已通过 MusicBrainz 匹配</strong>
+      <strong>已通过 {{ providerLabel() }} 匹配</strong>
       <p>这份资料已经经过匹配，请谨慎修改。</p>
     </div>
   </aside>

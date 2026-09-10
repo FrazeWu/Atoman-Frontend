@@ -201,6 +201,27 @@ const discussionCount = computed(() => {
 })
 type AlbumTrack = NonNullable<MusicAlbumListItem['songs']>[number]
 
+const albumMatchBadge = computed(() => {
+  const current = album.value
+  const matched = ['matched', 'manual'].includes(String(current?.match_status ?? '').toLowerCase()) || current?.musicbrainz_matched === true
+  if (!current || !matched) return null
+  const provider = String(current.match_provider ?? '').toLowerCase() === 'discogs' ? 'Discogs' : 'MusicBrainz'
+  return { provider, status: current.match_user_overridden ? '已编辑' : '已核验' }
+})
+
+function formatTrackNumber(track: AlbumTrack) {
+  const disc = Number(track.disc_number ?? 1)
+  const number = Number(track.track_number ?? 0)
+  if (disc > 1) return `${disc}-${number || '-'}`
+  return String(number || '-')
+}
+
+function trackMatchBadge(track: AlbumTrack) {
+  if (!['matched', 'manual'].includes(String(track.match_status ?? '').toLowerCase())) return ''
+  const provider = String(track.match_provider ?? '').toLowerCase() === 'discogs' ? 'Discogs' : 'MusicBrainz'
+  return `${provider} · ${track.match_user_overridden ? '已编辑' : '已核验'}`
+}
+
 function openComments() {
   commentSheetMode.value = 'partial'
   commentsOpen.value = true
@@ -835,19 +856,19 @@ watch(
         <div class="section-title section-title--tracks">
           <span>曲目</span>
           <span
-            v-if="album?.musicbrainz_matched"
+            v-if="albumMatchBadge"
             class="album-tracks-musicbrainz-status"
-            aria-label="MusicBrainz 已匹配"
+            :aria-label="`${albumMatchBadge.provider} 已匹配`"
             data-testid="album-tracks-musicbrainz-status"
           >
             <img src="https://musicbrainz.org/static/images/favicons/favicon-32x32.png" alt="" aria-hidden="true">
-            <b>MusicBrainz</b>
+            <b>{{ albumMatchBadge.provider }}</b>
             <span class="album-tracks-musicbrainz-status__divider" aria-hidden="true"></span>
-            <span>已核验</span>
+            <span>{{ albumMatchBadge.status }}</span>
           </span>
         </div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
-        <div v-for="(track, index) in tracks" :key="track.id" class="track">
+        <div v-for="track in tracks" :key="track.id" class="track">
           <button
             class="track-play-btn"
             type="button"
@@ -856,12 +877,13 @@ watch(
             @click="playTrack(track)"
             :aria-label="`${isTrackPlaying(track) ? '暂停' : '播放'} ${track.title}`"
           >
-            <span class="track-num">{{ index + 1 }}</span>
+            <span class="track-num">{{ formatTrackNumber(track) }}</span>
             <Pause v-if="isTrackPlaying(track)" class="track-play-icon" :size="14" fill="currentColor" />
             <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
           <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
           <div class="track-meta">
+            <span v-if="trackMatchBadge(track)" class="track-match-status">{{ trackMatchBadge(track) }}</span>
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
             <SongRatingControl
               class="track-rating"
@@ -1488,6 +1510,7 @@ watch(
   gap: 0.75rem;
   flex-shrink: 0;
 }
+.track-match-status { color: var(--a-text-muted); font-size: 0.6875rem; white-space: nowrap; }
 .track-detail-btn {
   display: inline-grid;
   width: 1.75rem;

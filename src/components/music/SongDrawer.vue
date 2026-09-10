@@ -140,6 +140,14 @@ const lyricsMatchSource = computed(() => lyrics.value?.source === 'lrclib'
       status: lyrics.value?.is_edited ? '已编辑' : '已核验',
     }
   : null)
+const matchBadge = computed(() => {
+  const song = detail.value?.song
+  if (!song || !['matched', 'manual'].includes(String(song.match_status ?? '').toLowerCase())) return null
+  return {
+    provider: String(song.match_provider ?? '').toLowerCase() === 'discogs' ? 'Discogs' : 'MusicBrainz',
+    status: song.match_user_overridden ? '已编辑' : '已核验',
+  }
+})
 const standaloneReleaseLabel = computed(() => formatAlbumTypeLabel(detail.value?.song.release_type))
 const formattedReleaseDate = computed(() => {
   const song = detail.value?.song
@@ -521,6 +529,9 @@ watch(
           <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
           <p v-else class="song-detail__album">{{ standaloneReleaseLabel }}</p>
           <h1>{{ detail.song.title }}</h1>
+          <span v-if="matchBadge" class="song-detail__match-badge">
+            {{ matchBadge.provider }} · {{ matchBadge.status }}
+          </span>
           <p v-if="formattedReleaseDate" class="song-detail__release-date">{{ formattedReleaseDate }}</p>
           <div v-for="[role, artists] in roleGroups" :key="role" class="song-detail__artists">
             <span>{{ roleLabels[role] || role }}</span>
@@ -697,6 +708,7 @@ watch(
 .song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--a-color-bg-subtle); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
 .song-detail__main h1, .song-detail__album, .song-detail__release-date { margin: 0; }
+.song-detail__match-badge { color: var(--a-text-muted); font-size: 0.6875rem; font-weight: 600; }
 .song-detail__album, .song-detail__release-date, .song-detail__artists span, .song-detail__state { color: var(--a-color-muted); }
 .song-detail__sources { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--a-color-muted); font-size: 0.85rem; }
 .song-detail__sources a { color: inherit; overflow-wrap: anywhere; }

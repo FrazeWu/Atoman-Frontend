@@ -7,6 +7,7 @@ import {
   getMusicAlbum,
   getMusicArtist,
   getMusicSongDetail,
+  getMusicAlbumImport,
   listMusicAlbumImports,
   repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
@@ -32,6 +33,7 @@ const imports = ref<MusicAlbumImport[]>([]);
 const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
+const importSnapshots = ref<Record<string, MusicAlbumImport>>({})
 const actionBusy = ref<string | null>(null);
 const pendingConfirmation = ref<{ kind: 'record' | 'file' | 'cancel'; importId: string; fileId?: string } | null>(null)
 const page = ref(1)
@@ -62,7 +64,8 @@ const importGroups = computed(() => {
 
 const visibleImports = computed(() => importGroups.value[activeGroup.value])
 const selectedImport = computed(
-  () => visibleImports.value.find((item) => item.importId === selectedId.value) ?? null,
+  () => visibleImports.value.find((item) => item.importId === selectedId.value)
+    ?? (selectedId.value ? importSnapshots.value[selectedId.value] ?? null : null),
 )
 
 watch(activeGroup, () => {
@@ -129,15 +132,39 @@ async function loadImports(silent = false, nextPage = page.value) {
   try {
     const response = await listMusicAlbumImports({ page: nextPage, page_size: 50 })
     if (!request.isCurrent()) return
-    imports.value = uniqueMusicAlbumImports(response.data)
+    const nextImports = uniqueMusicAlbumImports(response.data)
+    imports.value = nextImports
+    importSnapshots.value = nextImports.reduce<Record<string, MusicAlbumImport>>(
+      (snapshots, item) => {
+        snapshots[item.importId] = item
+        return snapshots
+      },
+      { ...importSnapshots.value },
+    )
     page.value = nextPage
     importsMeta.value = response.meta
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
     if (selected) {
       activeGroup.value = musicImportGroupForStatus(selected.status)
     }
-    if (!visibleImports.value.some((item) => item.importId === selectedId.value)) {
+    if (
+      !visibleImports.value.some((item) => item.importId === selectedId.value)
+      && (!selectedId.value || !importSnapshots.value[selectedId.value])
+    ) {
       selectedId.value = visibleImports.value[0]?.importId ?? null;
+    }
+    if (selectedId.value && !albumImports.value.some((item) => item.importId === selectedId.value)) {
+      try {
+        const detail = await getMusicAlbumImport(selectedId.value)
+        if (request.isCurrent() && detail) {
+          importSnapshots.value = {
+            ...importSnapshots.value,
+            [detail.importId]: detail,
+          }
+        }
+      } catch {
+        // The last known snapshot keeps the detail pane usable during a transient list/detail mismatch.
+      }
     }
   } catch {
     if (request.isCurrent() && !silent) errorMessage.value = "导入记录加载失败";
@@ -163,6 +190,9 @@ async function confirmPendingAction() {
     try {
       await deleteMusicAlbumImportRecord(pending.importId)
       selectedId.value = null
+      const snapshots = { ...importSnapshots.value }
+      delete snapshots[pending.importId]
+      importSnapshots.value = snapshots
       await loadImports(true)
     } catch {
       errorMessage.value = '删除记录失败'
@@ -204,7 +234,7 @@ function checkPollState() {
   }
   const hasProcessing = imports.value.some((item) =>
     ['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(item.status)
-  )
+  ) || ['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(selectedImport.value?.status ?? '')
   if (hasProcessing) {
     pollTimer = setTimeout(() => {
       pollTimer = null
@@ -296,6 +326,7 @@ async function repairImport() {
   try {
     const session = await repairMusicAlbumImport(selectedImport.value.importId)
     imports.value = imports.value.map((item) => item.importId === session.importId ? session : item)
+    importSnapshots.value = { ...importSnapshots.value, [session.importId]: session }
     await resumeImport(session)
   } catch {
     errorMessage.value = '无法开始修复'

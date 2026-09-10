@@ -718,7 +718,7 @@ watch(
           </div>
         </div>
         <div class="content-section content-section--tracks" aria-hidden="true">
-          <div class="section-title">曲目</div>
+          <div class="section-title section-title--tracks">曲目列表</div>
           <div v-for="index in 5" :key="index" class="track album-skeleton-track">
             <PSkeleton class="album-skeleton-track-play" variant="circle" width="2rem" height="2rem" />
             <PSkeleton width="min(24rem, 80%)" height="1rem" />
@@ -854,7 +854,7 @@ watch(
 
           <div v-if="!loading" class="content-section content-section--tracks">
         <div class="section-title section-title--tracks">
-          <span>曲目</span>
+          <span>曲目列表</span>
           <span
             v-if="albumMatchBadge"
             class="album-tracks-musicbrainz-status"
@@ -1414,6 +1414,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border-bottom: 2px solid var(--a-color-text);
 }
 .album-tracks-musicbrainz-status {
   display: inline-flex;

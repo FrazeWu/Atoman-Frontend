@@ -5,6 +5,7 @@ import ImportsView from "@/views/music/ImportsView.vue";
 
 const mocks = vi.hoisted(() => ({
 	listMusicAlbumImports: vi.fn(),
+	getMusicAlbumImport: vi.fn(),
 	getMusicAlbum: vi.fn(),
 	getMusicArtist: vi.fn(),
 	resumeMusicCreationFlow: vi.fn(),
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/api/musicV1", () => ({
 	listMusicAlbumImports: mocks.listMusicAlbumImports,
+	getMusicAlbumImport: mocks.getMusicAlbumImport,
 	cancelMusicAlbumImportSession: vi.fn(),
 	deleteMusicAlbumImportRecord: vi.fn(),
 	deleteMusicAlbumImportFile: vi.fn(),
@@ -74,7 +76,8 @@ function response(status: TestImportStatus) {
 describe("Music ImportsView", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
-		mocks.listMusicAlbumImports.mockReset();
+	mocks.listMusicAlbumImports.mockReset();
+		mocks.getMusicAlbumImport.mockReset();
 		mocks.getMusicAlbum.mockReset();
 		mocks.getMusicArtist.mockReset();
 		mocks.resumeMusicCreationFlow.mockReset();
@@ -236,6 +239,46 @@ describe("Music ImportsView", () => {
 			page: 2,
 			page_size: 50,
 		});
+		wrapper.unmount();
+	});
+
+	it("keeps the selected import details when polling moves it off the current page", async () => {
+		const selectedImport = {
+			...importRecord("uploaded", "import-1"),
+			albumTitle: "选中的导入",
+		};
+		const otherImport = {
+			...importRecord("uploaded", "import-2"),
+			albumTitle: "另一条导入",
+		};
+		mocks.listMusicAlbumImports
+			.mockResolvedValueOnce({
+				data: [selectedImport],
+				meta: { page: 1, page_size: 50, total: 51, has_more: true },
+			})
+			.mockResolvedValueOnce({
+				data: [otherImport],
+				meta: { page: 2, page_size: 50, total: 51, has_more: true },
+			})
+			.mockResolvedValue({
+				data: [otherImport],
+				meta: { page: 2, page_size: 50, total: 51, has_more: true },
+			});
+		mocks.getMusicAlbumImport.mockResolvedValue({
+			...selectedImport,
+			status: "ready",
+		});
+
+		const wrapper = mount(ImportsView);
+		await flushPromises();
+		const nextPageButton = wrapper
+			.findAll("button")
+			.find((button) => button.attributes("title") === "下一页");
+		await nextPageButton!.trigger("click");
+		await flushPromises();
+
+		expect(wrapper.find(".music-imports-view__detail h2").text()).toContain("选中的导入");
+		expect(mocks.getMusicAlbumImport).toHaveBeenCalledWith("import-1");
 		wrapper.unmount();
 	});
 

@@ -23,7 +23,7 @@ export type DMSettings = { permission: DMPermission }
 export type DMReportInput = { reason: string; detail: string }
 export type DMReport = { id: string; message_id: string; reporter_user_id: string; reported_actor_user_id: string; reason: string; detail: string; snapshot_content: string; has_snapshot_image: boolean; conversation_context: string; status: string; created_at: string }
 
-export type DMRawParty = { type: DMPartyType; id: string; name: string; avatar_url: string }
+export type DMRawParty = { type: DMPartyType; id: string; name?: string; display_name?: string; avatar_url?: string }
 export type DMRawMailbox = { party: DMRawParty; unread: number }
 export type DMRawConversation = { id: string; participant_a: DMRawParty; participant_b: DMRawParty; last_message_at?: string | null; last_message_preview: string; unread: number; blocked: boolean }
 export type DMRawMessage = { id: string; conversation_id: string; sender_type: DMPartyType; sender_id: string; client_message_id: string; content: string; image_id?: string; image_url?: string; created_at: string }
@@ -53,14 +53,15 @@ const query = (values: Record<string, string | number | undefined>) => {
   Object.entries(values).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)) })
   return params.size ? `?${params}` : ''
 }
-const party = (value: DMRawParty): DMParty => ({ type: value.type, id: value.id, display_name: value.name || value.id, ...(value.avatar_url ? { avatar_url: value.avatar_url } : {}) })
-const mailbox = (value: DMRawMailbox): DMMailbox => ({ type: value.party.type, id: value.party.id, display_name: value.party.name || value.party.id, unread_count: value.unread })
+const partyName = (value: Pick<DMRawParty, 'name' | 'display_name' | 'id'>) => value.name?.trim() || value.display_name?.trim() || value.id
+const party = (value: DMRawParty): DMParty => ({ type: value.type, id: value.id, display_name: partyName(value), ...(value.avatar_url ? { avatar_url: value.avatar_url } : {}) })
+const mailbox = (value: DMRawMailbox): DMMailbox => ({ type: value.party.type, id: value.party.id, display_name: partyName(value.party), unread_count: value.unread, ...(value.party.avatar_url ? { avatar_url: value.party.avatar_url } : {}) })
 const sameParty = (left: Pick<DMTarget, 'type' | 'id'>, right: DMRawParty) => left.type === right.type && left.id === right.id
 const normalizeConversation = (value: DMRawConversation, targetMailbox?: DMMailbox): DMConversation => {
   const current = targetMailbox ?? party(value.participant_a)
   const other = sameParty(current, value.participant_a) ? value.participant_b : value.participant_a
   const normalizedMailbox: DMMailbox = targetMailbox ?? { type: current.type, id: current.id, display_name: current.display_name, unread_count: 0 }
-  const replyAs: DMParty = targetMailbox ? { type: targetMailbox.type, id: targetMailbox.id, display_name: targetMailbox.display_name } : current
+  const replyAs: DMParty = targetMailbox ? { type: targetMailbox.type, id: targetMailbox.id, display_name: targetMailbox.display_name, ...(targetMailbox.avatar_url ? { avatar_url: targetMailbox.avatar_url } : {}) } : current
   return { id: value.id, mailbox: normalizedMailbox, other_party: party(other), last_message_at: value.last_message_at ?? null, last_message_preview: value.last_message_preview, unread_count: value.unread, blocked: value.blocked, reply_as: replyAs }
 }
 const normalizeMessage = (value: DMRawMessage): DMMessage => ({
@@ -110,7 +111,7 @@ export const getTargetConversation = async (target: DMTarget): Promise<DMConvers
   const conversation = await apiGetOptional<DMRawConversation>(`${base()}/targets/${partyPath(target)}/conversation`)
   if (!conversation) return null
   const ownParty = sameParty(target, conversation.participant_a) ? conversation.participant_b : conversation.participant_a
-  return normalizeConversation(conversation, { type: ownParty.type, id: ownParty.id, display_name: ownParty.name, unread_count: 0 })
+  return normalizeConversation(conversation, { type: ownParty.type, id: ownParty.id, display_name: partyName(ownParty), unread_count: 0, ...(ownParty.avatar_url ? { avatar_url: ownParty.avatar_url } : {}) })
 }
 export const listMessages = async (conversationID: string, before?: string, limit = 30): Promise<DMPaged<DMMessage>> => {
   const page = await apiGet<RawPage<DMRawMessage>>(`${base()}/conversations/${encodeURIComponent(conversationID)}/messages${query({ before, limit })}`)

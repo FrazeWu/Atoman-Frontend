@@ -323,6 +323,7 @@ async function fetchPersonalizedHome() {
     if (!request.isCurrent()) return
     musicHome.value = response
     forYouBatchIndex.value = 0
+    ensureDiscoverAlbumPageFilled()
     const requestId = response.request_id?.trim()
     if (requestId) {
       response.for_you.forEach((album, index) => {
@@ -449,12 +450,22 @@ async function loadDiscoverSection(
   discoverSectionLoading[section] = true
   try {
     if (section === 'album') {
-      const response = await listMusicAlbums({ page: targetPage, page_size: discoverAlbumPageSize, sort: 'hot' })
-      if (!isCurrent()) return
-      const albums = response.data.map((album) => ({ ...album, reason: '近期热门专辑' }))
-      discoverAlbums.value = append ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
-      discoverSectionMeta.album = response.meta
-      return
+      let page = targetPage
+      let shouldAppend = append
+      while (true) {
+        const response = await listMusicAlbums({ page, page_size: discoverAlbumPageSize, sort: 'hot' })
+        if (!isCurrent()) return
+        const albums = response.data.map((album) => ({ ...album, reason: '近期热门专辑' }))
+        discoverAlbums.value = shouldAppend ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
+        discoverSectionMeta.album = response.meta
+        if (
+          filteredDiscoverAlbums.value.length >= discoverAlbumPageSize
+          || !response.meta.has_more
+          || response.data.length < discoverAlbumPageSize
+        ) return
+        page = response.meta.page + 1
+        shouldAppend = true
+      }
     }
 
     if (section === 'artist') {
@@ -483,6 +494,17 @@ async function loadDiscoverSection(
   } finally {
     if (isCurrent()) discoverSectionLoading[section] = false
   }
+}
+
+function ensureDiscoverAlbumPageFilled() {
+  const meta = discoverSectionMeta.album
+  if (
+    discoverSectionLoading.album
+    || !meta.has_more
+    || filteredDiscoverAlbums.value.length >= discoverAlbumPageSize
+  ) return
+  const generation = musicHomeRequests.currentGeneration()
+  void loadDiscoverSection('album', meta.page + 1, true, () => musicHomeRequests.isCurrent(generation))
 }
 
 function loadMoreDiscoverSection(section: DiscoverSection) {

@@ -597,6 +597,55 @@ describe("Music DiscoverView.vue", () => {
 		await flushPromises();
 	});
 
+	it("fills the album section after recommendations remove duplicate albums", async () => {
+		let resolveHome!: (value: Record<string, unknown>) => void;
+		mocks.getMusicHome.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveHome = resolve;
+				}),
+		);
+		mocks.listMusicAlbums
+			.mockReset()
+			.mockResolvedValueOnce({
+				data: Array.from({ length: 12 }, (_, index) => ({
+					id: `album-${index + 1}`,
+					title: `Album ${index + 1}`,
+					artists: [],
+				})),
+				meta: { page: 1, page_size: 12, total: 15, has_more: true },
+			})
+			.mockResolvedValueOnce({
+				data: Array.from({ length: 3 }, (_, index) => ({
+					id: `album-${index + 13}`,
+					title: `Album ${index + 13}`,
+					artists: [],
+				})),
+				meta: { page: 2, page_size: 12, total: 15, has_more: false },
+			});
+
+		const wrapper = mount(DiscoverView);
+		await flushPromises();
+
+		resolveHome({
+			personalized: true,
+			recently_played: [],
+			for_you: [
+				{ id: "album-1", title: "Recommended 1" },
+				{ id: "album-2", title: "Recommended 2" },
+				{ id: "album-3", title: "Recommended 3" },
+			],
+		});
+		await flushPromises();
+
+		expect(mocks.listMusicAlbums).toHaveBeenNthCalledWith(2, {
+			page: 2,
+			page_size: 12,
+			sort: "hot",
+		});
+		expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(12);
+	});
+
 	it("loads more items for only the selected discovery section", async () => {
 		mocks.listMusicAlbums
 			.mockResolvedValueOnce({

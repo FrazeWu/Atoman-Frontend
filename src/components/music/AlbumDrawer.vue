@@ -1324,7 +1324,6 @@ watch(
 
 .content-section--tracks {
   padding: 1.25rem 0;
-  border-top: 2px solid var(--a-color-text);
   border-bottom: 2px solid var(--a-color-text);
 }
 

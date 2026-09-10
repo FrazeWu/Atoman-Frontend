@@ -234,7 +234,7 @@ describe("AlbumDrawer.vue", () => {
 		expect(albumDrawerSource).not.toMatch(/\.track\s*\{[^}]*border-left:/);
 		expect(albumDrawerSource).toContain("border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent)");
 		expect(albumDrawerSource).toMatch(/\.section-title--tracks\s*\{[^}]*border-bottom: 2px solid var\(--a-color-text\);/);
-		expect(albumDrawerSource).toMatch(/\.content-section--tracks\s*\{[^}]*border-top: 2px solid var\(--a-color-text\);/);
+		expect(albumDrawerSource).not.toMatch(/\.content-section--tracks\s*\{[^}]*border-top:/);
 		expect(albumDrawerSource).toMatch(/\.content-section--tracks\s*\{[^}]*border-bottom: 2px solid var\(--a-color-text\);/);
 	});
 

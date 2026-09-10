@@ -95,6 +95,7 @@ const songSubmitting = ref(false);
 const songErrorMessage = ref("");
 const standaloneSong = ref(false);
 const musicBrainzMatched = ref(false);
+const matchProvider = ref("musicbrainz");
 const parentAlbum = ref<{ id: string; title: string } | null>(null);
 const coverInput = ref<HTMLInputElement | null>(null);
 const audioInput = ref<HTMLInputElement | null>(null);
@@ -159,6 +160,7 @@ function resetSongState() {
   songErrorMessage.value = "";
   standaloneSong.value = false;
   musicBrainzMatched.value = false;
+  matchProvider.value = "musicbrainz";
   parentAlbum.value = null;
   songDraft.title = "";
   songDraft.description = "";
@@ -201,9 +203,12 @@ async function loadSong(songId: string) {
       detail.song.release_type === "single" ||
       detail.song.release_type === "leak";
     musicBrainzMatched.value =
+      ['matched', 'manual'].includes(String(detail.song.match_status ?? '').toLowerCase()) ||
+      ['matched', 'manual'].includes(String(detail.song.album?.match_status ?? '').toLowerCase()) ||
       detail.song.album?.musicbrainz_matched === true ||
       hasMusicBrainzSource(detail.song.sources) ||
       hasMusicBrainzSource(detail.song.album?.sources);
+    matchProvider.value = detail.song.match_provider || detail.song.album?.match_provider || "musicbrainz";
     parentAlbum.value = detail.song.album?.id
       ? { id: String(detail.song.album.id), title: detail.song.album.title }
       : null;
@@ -449,6 +454,7 @@ async function handleSongEditSubmit() {
 
         <MusicBrainzEditNotice
           v-if="musicBrainzMatched"
+          :provider="matchProvider"
           data-testid="musicbrainz-edit-notice"
         />
 

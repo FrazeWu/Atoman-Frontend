@@ -528,6 +528,12 @@ export type MusicAlbumListItem = {
 	id: string;
 	title: string;
 	musicbrainz_matched?: boolean;
+	match_status?: string;
+	match_provider?: string;
+	match_external_id?: string;
+	match_source_url?: string;
+	match_confidence?: number;
+	match_user_overridden?: boolean;
 	sources?: MusicSource[];
 	status?: string;
 	importSession?: MusicAlbumImport;
@@ -551,6 +557,12 @@ export type MusicAlbumListItem = {
 	songs?: Array<{
 		id: string;
 		title: string;
+		match_status?: string;
+		match_provider?: string;
+		match_external_id?: string;
+		match_source_url?: string;
+		match_confidence?: number;
+		match_user_overridden?: boolean;
 		track_number?: number;
 		disc_number?: number;
 		audio_url?: string;
@@ -676,10 +688,22 @@ export type MusicSongListItem = {
 	rating_score?: number;
 	rating_count?: number;
 	viewer_rating?: number | null;
+	match_status?: string;
+	match_provider?: string;
+	match_external_id?: string;
+	match_source_url?: string;
+	match_confidence?: number;
+	match_user_overridden?: boolean;
 	album?: {
 		id: string;
 		title: string;
 		musicbrainz_matched?: boolean;
+		match_status?: string;
+		match_provider?: string;
+		match_external_id?: string;
+		match_source_url?: string;
+		match_confidence?: number;
+		match_user_overridden?: boolean;
 		cover_url?: string;
 		album_type?: MusicAlbumType;
 		sources?: MusicSource[];

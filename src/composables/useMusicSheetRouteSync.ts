@@ -10,6 +10,9 @@ interface RouteSyncRegistration {
 const registrations = new WeakMap<Router, RouteSyncRegistration>()
 const musicEntityRoutePattern = /^\/music\/(?:artist|album|song|playlist)\/[^/]+$/
 
+const retainedRoute = (layers: readonly { route?: string }[]) =>
+  [...layers].reverse().find(layer => layer.route)?.route ?? '/music'
+
 export function useMusicSheetRouteSync(router: Router) {
   const drawers = useMusicDrawers()
 
@@ -18,7 +21,7 @@ export function useMusicSheetRouteSync(router: Router) {
 
     const stopLayersWatch = watch(drawers.layers, async (layers, previousLayers) => {
       const top = layers.at(-1)
-      const currentPath = router.currentRoute.value.path
+      const currentPath = router.currentRoute.value.fullPath
 
       if (layers.length < previousLayers.length) {
         const removedLayers = previousLayers
@@ -32,7 +35,7 @@ export function useMusicSheetRouteSync(router: Router) {
 
         if (currentRouteWasRemoved && removedRouteLayers.length > 0) {
           if (!canReturnThroughHistory) {
-            await router.replace('/music')
+            await router.replace(retainedRoute(layers))
             return
           }
           router.go(-removedRouteLayers.length)
@@ -43,15 +46,16 @@ export function useMusicSheetRouteSync(router: Router) {
       if (top?.route && top.route !== currentPath) {
         await router.push(top.route)
         if (!drawers.layers.value.some(layer => layer.key === top.key)) {
-          await router.replace('/music')
+          await router.replace(retainedRoute(drawers.layers.value))
           return
         }
         pushedLayerKeys.add(top.key)
       }
     })
 
-    const stopRouteWatch = watch(() => router.currentRoute.value.path, (path) => {
-      const matchingLayer = drawers.layers.value.find(layer => layer.route === path)
+    const stopRouteWatch = watch(() => router.currentRoute.value.fullPath, (fullPath) => {
+      const path = router.currentRoute.value.path
+      const matchingLayer = drawers.layers.value.find(layer => layer.route === fullPath)
       if (matchingLayer) {
         drawers.popToLayer(matchingLayer.key)
         return
@@ -90,7 +94,7 @@ export function useMusicSheetRouteSync(router: Router) {
   function syncEntityRoute(key: string, open: () => void) {
     if (drawers.layers.value.some(layer => layer.key === key)) {
       drawers.popToLayer(key)
-    } else if (drawers.layers.value.some(layer => layer.route === router.currentRoute.value.path)) {
+    } else if (drawers.layers.value.some(layer => layer.route === router.currentRoute.value.fullPath)) {
       // Current-sheet navigation updates the layer route while preserving its key.
       // The route view must reuse that layer instead of opening a duplicate one.
       return

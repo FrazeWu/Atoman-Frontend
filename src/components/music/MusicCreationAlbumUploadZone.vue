@@ -281,7 +281,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
         :class="`import-file-item--${f.uploadStatus}`"
       >
         <span class="import-file-name">{{ f.fileName }}</span>
-        <span class="import-file-format">{{ f.detectedFormat }}</span>
+        <span class="import-file-format">{{ f.uploadStatus === 'uploading' ? '速度：' : f.detectedFormat }}</span>
         <span
           v-if="f.uploadStatus === 'uploading' && albumImportDraft.uploadSpeed > 0"
           class="import-file-speed"

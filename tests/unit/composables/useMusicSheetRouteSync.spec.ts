@@ -122,6 +122,58 @@ describe('useMusicSheetRouteSync', () => {
     expect(drawers.layers.value).toHaveLength(0)
   })
 
+  it('preserves the retained parent layer when closing a routed child layer', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/artist/:artistId', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    const { syncEntityRoute } = useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music')
+    drawers.openArtist('artist-1')
+    await flushPromises()
+
+    await router.push('/music/album/album-2')
+    syncEntityRoute('album:album-2', () => drawers.openAlbum('album-2'))
+    await flushPromises()
+
+    drawers.closeAlbum()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music/artist/artist-1')
+    expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.key)).toEqual([
+      'artist:artist-1',
+    ])
+  })
+
+  it('keeps an entity layer mounted when only its query parameters change', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/song/:songId', component: { template: '<div />' } },
+      ],
+    })
+    useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music/song/song-1?annotation_id=annotation-1')
+    drawers.openSong('song-1', { focusAnnotationId: 'annotation-1' })
+    await flushPromises()
+
+    await router.replace('/music/song/song-1?annotation_id=annotation-2')
+    await flushPromises()
+
+    expect(drawers.layers.value.map((layer: MusicSheetLayer) => layer.key)).toEqual([
+      'song:song-1',
+    ])
+  })
+
   it('returns to the music root when a routed layer closes before navigation completes', async () => {
     const router = createRouter({
       history: createMemoryHistory(),

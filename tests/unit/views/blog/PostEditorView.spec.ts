@@ -1274,12 +1274,12 @@ describe("PostEditorView", () => {
 
 		const visualMode = wrapper
 			.findAll("button")
-			.find((button) => button.text().includes("所见即所得"));
+			.find((button) => button.text().includes("Visual"));
 		expect(visualMode).toBeDefined();
 		await visualMode!.trigger("click");
 		expect(editor.attributes("data-live-preview")).toBe("true");
 
-		await wrapper.get('[title="打开预览"]').trigger("click");
+		await wrapper.get('[title="实时预览"]').trigger("click");
 		expect(editor.attributes("data-mode")).toBe("split");
 	});
 

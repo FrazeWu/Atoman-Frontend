@@ -174,6 +174,45 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
 	});
 
+	it("直接创建专辑上传后先填写艺术家，不使用空艺术家名匹配", async () => {
+		const drawers = useMusicDrawers();
+		drawers.closeAll();
+		drawers.openMusicCreationFlow({
+			startStep: "albumImport",
+			artistBeforeMatch: true,
+		});
+		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
+		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
+			title: "IGOR",
+			tracks: ["EARFQUAKE", "IGOR'S THEME"],
+		});
+		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata");
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
+			inputMode: "archive",
+			files: [importFile({ role: "archive", fileName: archive.name, relativePath: archive.name, detectedFormat: "zip", uploadStatus: "uploaded" })],
+		}));
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(snapshot({
+			status: "uploaded",
+			inputMode: "archive",
+			archiveName: archive.name,
+			files: [importFile({ role: "archive", fileName: archive.name, relativePath: archive.name, detectedFormat: "zip", uploadStatus: "uploaded" })],
+		}));
+
+		await useAlbumImportUpload().handleFilesUpload(
+			{ 0: archive, length: 1, item: () => archive } as unknown as FileList,
+		);
+
+		const flow = drawers.state.value.creationFlow!;
+		expect(flow.step).toBe("artist");
+		expect(flow.draft.tracks.map((track) => track.title)).toEqual([
+			"EARFQUAKE",
+			"IGOR'S THEME",
+		]);
+		expect(metadataPreview).not.toHaveBeenCalled();
+	});
+
 	it("元信息匹配完成后立即进入表单，不等待音频上传结束", async () => {
 		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
 		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
@@ -977,6 +1016,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		drawers.setMusicCreationStep("albumDetails");
 		if (!drawers.state.value.creationFlow)
 			throw new Error("creation flow missing");
+		drawers.state.value.creationFlow.mode = "edit";
+		drawers.state.value.creationFlow.entity = "album";
 		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
 			importId: "import-1",
 			status: "failed",

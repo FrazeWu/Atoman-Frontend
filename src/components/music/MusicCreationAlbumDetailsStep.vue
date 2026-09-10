@@ -27,6 +27,7 @@ const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers(
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
+const directAlbumCreation = computed(() => creationFlow.value?.directAlbumCreation === true)
 const isSongEdit = computed(() => isEditMode.value && creationFlow.value?.entity === 'song')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const standaloneTypeSelected = computed(() => ['single', 'leak'].includes(albumDetailsDraft.value?.type ?? 'album'))
@@ -410,18 +411,28 @@ watch(
     <section class="progress-card">
       <div class="progress-copy">
         <p class="progress-label" data-testid="album-details-progress-label">
-          {{ isEditMode ? (isSongEdit ? '编辑歌曲' : '编辑专辑') : '第 3 步 / 完善专辑' }}
+          {{ isEditMode ? (isSongEdit ? '编辑歌曲' : '编辑专辑') : directAlbumCreation ? '第 4 步 / 完善专辑' : '第 3 步 / 完善专辑' }}
         </p>
       </div>
       <p class="progress-value" data-testid="album-details-progress-value">
-        3 / 3
+        {{ directAlbumCreation ? '4 / 4' : '3 / 3' }}
       </p>
       <div class="progress-steps">
-        <span class="progress-step" data-testid="album-details-step-label">1 创建艺术家</span>
-        <span class="progress-step" data-testid="album-details-step-label">2 上传与匹配</span>
-        <span class="progress-step progress-step--active" data-testid="album-details-step-label">
-          {{ standaloneTypeSelected ? '3 新建歌曲' : '3 完善专辑' }}
-        </span>
+        <template v-if="directAlbumCreation">
+          <span class="progress-step progress-step--done" data-testid="album-details-step-label">1 上传专辑</span>
+          <span class="progress-step progress-step--done" data-testid="album-details-step-label">2 填写艺术家</span>
+          <span class="progress-step progress-step--done" data-testid="album-details-step-label">3 匹配</span>
+          <span class="progress-step progress-step--active" data-testid="album-details-step-label">
+            {{ standaloneTypeSelected ? '4 新建歌曲' : '4 完善专辑' }}
+          </span>
+        </template>
+        <template v-else>
+          <span class="progress-step" data-testid="album-details-step-label">1 创建艺术家</span>
+          <span class="progress-step" data-testid="album-details-step-label">2 上传与匹配</span>
+          <span class="progress-step progress-step--active" data-testid="album-details-step-label">
+            {{ standaloneTypeSelected ? '3 新建歌曲' : '3 完善专辑' }}
+          </span>
+        </template>
       </div>
       <div class="progress-track" aria-hidden="true">
         <div class="progress-bar" />
@@ -432,7 +443,11 @@ watch(
 
     <!-- 导入进度与封面并排 -->
     <div class="album-details-step__upload-cover-grid">
-      <section class="album-card album-card--primary album-import-status-card" data-testid="album-import-status">
+      <section
+        v-if="isEditMode"
+        class="album-card album-card--primary album-import-status-card"
+        data-testid="album-import-status"
+      >
         <div class="card-header">
           <div>
             <p class="card-kicker">导入进度</p>

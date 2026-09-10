@@ -644,6 +644,56 @@ describe("MusicCreationFlowDrawer", () => {
 		);
 	});
 
+	it("直接创建专辑填写艺术家后才开始匹配", async () => {
+		const flow = createFlowState({
+			step: "artist",
+			artistBeforeMatch: true,
+			draft: {
+				...createFlowState().draft,
+				artist: {
+					...createFlowState().draft.artist,
+					id: null,
+					avatarUrl: "https://img.test/artist.jpg",
+					legalName: "Tyler Okonma",
+					nationality: "US",
+					birthDateParts: { year: "1991", month: "03", day: "06" },
+					stageNames: [{
+						...createFlowState().draft.artist.stageNames[0],
+						name: "Tyler, The Creator",
+					}],
+				},
+				albumImport: {
+					...createFlowState().draft.albumImport,
+					status: "uploaded",
+					stage: "upload",
+					derivedAlbumTitle: "IGOR",
+					archiveName: "IGOR.zip",
+				},
+			},
+		});
+		drawerMocks.state.value.creationFlow = flow;
+		commitMusicAlbumImportMock.mockResolvedValue({
+			...({} as musicApi.MusicAlbumImport),
+			importId: "import-1",
+			status: "queued",
+			stage: "queued",
+		} as musicApi.MusicAlbumImport);
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await flushPromises();
+
+		expect(commitMusicAlbumImportMock).toHaveBeenCalledWith(
+			"import-1",
+			expect.objectContaining({
+				artist: expect.objectContaining({ name: "Tyler, The Creator" }),
+				album: expect.objectContaining({ title: "IGOR", tracks: [] }),
+			}),
+		);
+		expect(flow.artistBeforeMatch).toBe(false);
+		expect(flow.step).toBe("albumImport");
+	});
+
 	it("修改艺术家复用创建表单并提交完整修订", async () => {
 		drawerMocks.state.value.creationFlow = createFlowState({
 			mode: "edit",

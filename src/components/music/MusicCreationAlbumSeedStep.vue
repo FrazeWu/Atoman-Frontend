@@ -8,19 +8,28 @@ const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
+const directAlbumCreation = computed(() => creationFlow.value?.directAlbumCreation === true)
 </script>
 
 <template>
   <div v-if="albumImportDraft" class="album-import-step" data-testid="album-import-upload-page">
     <section class="progress-card" aria-label="创建专辑进度">
       <div class="progress-copy">
-        <p class="progress-label">第 2 步 / 上传与匹配</p>
-        <p class="progress-value">2 / 3</p>
+        <p class="progress-label">{{ directAlbumCreation ? (creationFlow?.artistBeforeMatch ? '第 1 步 / 上传专辑' : '第 3 步 / 匹配') : '第 2 步 / 上传与匹配' }}</p>
+        <p class="progress-value">{{ directAlbumCreation ? (creationFlow?.artistBeforeMatch ? '1 / 4' : '3 / 4') : '2 / 3' }}</p>
       </div>
       <div class="progress-steps">
-        <span class="progress-step progress-step--done">1 创建艺术家</span>
-        <span class="progress-step progress-step--active">2 上传与匹配</span>
-        <span class="progress-step">3 完善专辑信息</span>
+        <template v-if="directAlbumCreation">
+          <span class="progress-step progress-step--done">1 上传专辑</span>
+          <span class="progress-step" :class="{ 'progress-step--done': !creationFlow?.artistBeforeMatch, 'progress-step--active': creationFlow?.artistBeforeMatch }">2 填写艺术家</span>
+          <span class="progress-step" :class="{ 'progress-step--active': !creationFlow?.artistBeforeMatch }">3 匹配</span>
+          <span class="progress-step">4 完善专辑信息</span>
+        </template>
+        <template v-else>
+          <span class="progress-step progress-step--done">1 创建艺术家</span>
+          <span class="progress-step progress-step--active">2 上传与匹配</span>
+          <span class="progress-step">3 完善专辑信息</span>
+        </template>
       </div>
       <div class="progress-track" aria-hidden="true">
         <div class="progress-bar" />

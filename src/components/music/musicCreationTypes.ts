@@ -251,6 +251,8 @@ export interface MusicCreationFlowState {
 	parentKey?: string;
 	loading?: boolean;
 	step: MusicCreationFlowStep;
+	artistBeforeMatch?: boolean;
+	directAlbumCreation?: boolean;
 	draft: MusicCreationDraft;
 	tracksCustomized: boolean;
 	deletedImportTrackKeys: string[];

@@ -1084,7 +1084,13 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 	it("上传中仍展示详情表单且不重复显示汇总进度", () => {
 		const drawers = useMusicDrawers();
-		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.openMusicCreationFlow({
+			mode: "edit",
+			entity: "album",
+			albumId: "album-1",
+			artistId: "artist-seeded",
+			startStep: "albumDetails",
+		});
 		drawers.setMusicCreationStep("albumDetails");
 
 		const flow = drawers.state.value.creationFlow;

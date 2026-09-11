@@ -263,6 +263,7 @@ export interface MusicCreationFlowState {
 	parentKey?: string;
 	loading?: boolean;
 	step: MusicCreationFlowStep;
+	artistFirstFlow?: boolean;
 	artistBeforeMatch?: boolean;
 	directAlbumCreation?: boolean;
 	draft: MusicCreationDraft;

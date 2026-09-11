@@ -299,6 +299,22 @@ describe("useMusicDrawers music creation flow", () => {
 		expect(drawers.isArtistShifted.value).toBe(true);
 	});
 
+	it("keeps the artist-first path after the new artist receives an ID", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.openMusicCreationFlow({
+			entity: "album",
+			startStep: "artist",
+		});
+		drawers.state.value.creationFlow!.draft.artist.id = "artist-created";
+		drawers.setMusicCreationStep("albumImport");
+
+		expect(drawers.state.value.creationFlow).toMatchObject({
+			step: "albumImport",
+			artistFirstFlow: true,
+		});
+	});
+
 	it("opens a standalone song edit in the shared release flow", () => {
 		const drawers = useMusicDrawers();
 

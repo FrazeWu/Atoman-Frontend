@@ -36,6 +36,7 @@ export interface MusicCreationFlowSeed {
 	artistName?: string;
 	artistLegalName?: string;
 	artistSource?: string;
+	artistFirstFlow?: boolean;
 	artistBeforeMatch?: boolean;
 	startStep?: MusicCreationFlowStep;
 	parentKey?: string;

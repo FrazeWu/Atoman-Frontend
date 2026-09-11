@@ -588,6 +588,9 @@ export function useMusicDrawers() {
 			parentKey: seed.parentKey,
 			loading: false,
 			step: seed.startStep ?? "albumImport",
+			artistFirstFlow:
+				seed.artistFirstFlow ??
+				(seed.startStep === "artist" && !seed.artistId && seed.entity !== "song"),
 			artistBeforeMatch: seed.artistBeforeMatch === true,
 			directAlbumCreation: seed.artistBeforeMatch === true,
 			draft: createEmptyDraft(seed),

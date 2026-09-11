@@ -315,6 +315,7 @@ describe("MusicCreationFlowDrawer", () => {
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "artist",
 			entity: "album",
+			artistFirstFlow: true,
 			draft: {
 				...createFlowState().draft,
 				artist: {
@@ -331,6 +332,38 @@ describe("MusicCreationFlowDrawer", () => {
 		).toContain("创建艺术家");
 		expect(
 			wrapper.get('[data-testid="creation-flow-progress-step-artist"]').attributes("data-state"),
+		).toBe("active");
+	});
+
+	it("创建艺术家写入后仍保留完整流程线", () => {
+		const baseFlow = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "albumImport",
+			entity: "album",
+			artistFirstFlow: true,
+			draft: {
+				...baseFlow.draft,
+				artist: {
+					...baseFlow.draft.artist,
+					id: "artist-created",
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+
+		expect(wrapper.get('[data-testid="creation-flow-progress"]').exists()).toBe(
+			true,
+		);
+		expect(
+			wrapper
+				.get('[data-testid="creation-flow-progress-step-artist"]')
+				.attributes("data-state"),
+		).toBe("done");
+		expect(
+			wrapper
+				.get('[data-testid="creation-flow-progress-step-upload"]')
+				.attributes("data-state"),
 		).toBe("active");
 	});
 

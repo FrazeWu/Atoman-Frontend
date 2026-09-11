@@ -398,11 +398,9 @@ const showFullAlbumCreationProgress = computed(() => {
   const flow = creationFlow.value
   return Boolean(
     flow
-      && flow.mode !== 'edit'
-      && flow.entity !== 'song'
-      && !flow.editingContributorId
-      && !flow.directAlbumCreation
-      && !flow.draft.artist.id,
+    && flow.mode !== 'edit'
+    && !flow.editingContributorId
+    && flow.artistFirstFlow,
   )
 })
 const fullAlbumCreationProgressSteps = [
@@ -1088,6 +1086,7 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
           artistName: primaryName,
           artistLegalName: flow.draft.artist.legalName,
           artistSource: flow.draft.artist.source,
+          artistFirstFlow: flow.artistFirstFlow,
           startStep: 'albumImport',
           parentKey: props.layer.key,
         }, { artistDraft: flow.draft.artist })

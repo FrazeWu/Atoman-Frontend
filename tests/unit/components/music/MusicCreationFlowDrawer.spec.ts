@@ -311,6 +311,25 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(wrapper.get('[data-testid="creation-flow-footer"]').text()).toContain("开始匹配");
 	});
 
+	it("元信息请求失败后保留本地曲目并进入填写页", async () => {
+		const previewMetadata = vi
+			.spyOn(musicApi, "previewMusicAlbumImportMetadata")
+			.mockRejectedValue(new TypeError("NetworkError when attempting to fetch resource."));
+		const flow = createFlowState();
+		drawerMocks.state.value.creationFlow = flow;
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await flushPromises();
+
+		expect(flow.step).toBe("albumDetails");
+		expect(flow.draft.tracks).toEqual([{ id: "track-default", sequence: 1, title: "Default Track" }]);
+		expect(flow.draft.albumImport.metadataMatchStatus).toBe("unmatched");
+		expect(flow.draft.albumImport.metadataError).toContain("外部元数据服务暂时不可用");
+
+		previewMetadata.mockRestore();
+	});
+
 	it("从创建艺术家入口开始时显示统一流程的第一步", () => {
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "artist",

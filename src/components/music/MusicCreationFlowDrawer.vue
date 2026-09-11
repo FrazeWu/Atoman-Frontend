@@ -1105,7 +1105,11 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
     try {
       await previewAlbumImportMetadata(flow)
     } catch (error) {
-      flow.errorMessage = error instanceof Error ? error.message : '元信息匹配失败，请重试'
+      flow.draft.albumImport.metadataMatched = false
+      flow.draft.albumImport.metadataMatchStatus = 'unmatched'
+      flow.draft.albumImport.metadataError = '外部元数据服务暂时不可用，已保留本地曲目，请继续填写专辑信息后稍后重试'
+      flow.errorMessage = flow.draft.albumImport.metadataError
+      setMusicCreationStep('albumDetails')
     } finally {
       flow.submitting = false
     }

@@ -7,6 +7,8 @@ import MusicCreationAlbumSeedStep from "../../../../src/components/music/MusicCr
 import MusicCreationAlbumDetailsStep from "../../../../src/components/music/MusicCreationAlbumDetailsStep.vue";
 // @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
 import MusicCreationAlbumUploadZone from "../../../../src/components/music/MusicCreationAlbumUploadZone.vue";
+// @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
+import MusicCreationFlowDrawer from "../../../../src/components/music/MusicCreationFlowDrawer.vue";
 import * as musicApi from "../../../../src/api/musicV1";
 import * as musicImportPreview from "../../../../src/utils/musicImportPreview";
 import { useMusicDrawers } from "../../../../src/composables/useMusicDrawers";
@@ -136,20 +138,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
-	it("本地预览匹配成功后按匹配曲序显示曲目", async () => {
+	it("本地预览只回填曲目，不自动请求外部匹配", async () => {
 		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
 		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
 			title: "IGOR",
 			tracks: ["EARFQUAKE", "IGOR'S THEME"],
 		});
-		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: true,
-			sourceUrl: "https://musicbrainz.org/release/igor-release",
-			tracks: [
-				{ title: "IGOR'S THEME", audioKey: "", origin: "local_preview:2", trackNumber: 1 },
-				{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 2 },
-			],
-		});
+		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata");
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
 			inputMode: "archive",
@@ -160,17 +155,11 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		const files = { 0: archive, length: 1, item: () => archive } as unknown as FileList;
 		await useAlbumImportUpload().handleFilesUpload(files);
-		await vi.waitFor(() => {
-			expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith({
-				albumTitle: "IGOR",
-				artist: "",
-				trackTitles: ["EARFQUAKE", "IGOR'S THEME"],
-			});
-		});
-
 		const flow = useMusicDrawers().state.value.creationFlow!;
-		expect(flow.draft.albumImport.metadataMatched).toBe(true);
-		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["IGOR'S THEME", "EARFQUAKE"]);
+		expect(metadataPreview).not.toHaveBeenCalled();
+		expect(flow.step).toBe("albumImport");
+		expect(flow.draft.albumImport.metadataMatched).not.toBe(true);
+		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["EARFQUAKE", "IGOR'S THEME"]);
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
 	});
 
@@ -213,18 +202,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(metadataPreview).not.toHaveBeenCalled();
 	});
 
-	it("元信息匹配完成后立即进入表单，不等待音频上传结束", async () => {
+	it("上传完成后仍停留在上传页，等待用户开始匹配", async () => {
 		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
 		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
 			title: "IGOR",
 			tracks: ["EARFQUAKE"],
 		});
-		let resolveMetadata!: (value: Awaited<ReturnType<typeof musicApi.previewMusicAlbumImportMetadata>>) => void;
-		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockReturnValue(
-			new Promise((resolve) => {
-				resolveMetadata = resolve;
-			}),
-		);
+		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata");
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
 			inputMode: "archive",
@@ -253,17 +237,62 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.waitFor(() => expect(musicApi.createMusicAlbumImport).toHaveBeenCalled());
 		expect(flow.step).toBe("albumImport");
 
-		resolveMetadata({
-			matched: true,
-			sourceUrl: "https://discogs.com/master/igor",
-			tracks: [{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 1 }],
-		});
-		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
-		expect(flow.step).toBe("albumDetails");
-		expect(flow.draft.albumImport.metadataMatched).toBe(true);
-
 		resolveUpload("etag-1");
 		await uploadPromise;
+		expect(flow.step).toBe("albumImport");
+		expect(metadataPreview).not.toHaveBeenCalled();
+	});
+
+	it("点击开始匹配后回填完整发行版元信息，不等待音频处理", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.derivedAlbumTitle = "IGOR";
+		flow.draft.albumImport.derivedTracks = [
+			{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 1 },
+			{ title: "IGOR'S THEME", audioKey: "", origin: "local_preview:2", trackNumber: 2 },
+		];
+		flow.draft.tracks = flow.draft.albumImport.derivedTracks.map((track, index) => ({
+			id: `track-${index + 1}`,
+			sequence: index + 1,
+			title: track.title,
+			origin: track.origin,
+		}));
+		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
+			matched: true,
+			albumTitle: "IGOR",
+			releaseDate: "2019-05-17",
+			coverUrl: "https://cover.test/igor.jpg",
+			albumType: "album",
+			sourceUrl: "https://www.discogs.com/release/igor",
+			metadataSource: "discogs",
+			externalId: "igor",
+			matchStatus: "matched",
+			matchConfidence: 0.95,
+			sources: [
+				{ provider: "discogs", status: "matched", selected: true, selectedTitle: "IGOR", candidateCount: 3 },
+				{ provider: "musicbrainz", status: "matched", selected: false, selectedTitle: "IGOR" },
+			],
+			tracks: [
+				{ title: "IGOR'S THEME", audioKey: "", origin: "local_preview:2", trackNumber: 1 },
+				{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 2 },
+			],
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
+
+		expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith({
+			albumTitle: "IGOR",
+			artist: "",
+			trackTitles: ["EARFQUAKE", "IGOR'S THEME"],
+		});
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({ year: "2019", month: "05", day: "17" });
+		expect(flow.draft.albumDetails.coverUrl).toBe("https://cover.test/igor.jpg");
+		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["IGOR'S THEME", "EARFQUAKE"]);
+		expect(flow.draft.albumImport.metadataSources?.map((source) => source.selected)).toEqual([true, false]);
+		expect(wrapper.text()).toContain("检索 3 个候选");
+		expect(wrapper.text()).toContain("已选中 IGOR");
 	});
 
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {
@@ -844,7 +873,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
-	it("提示自动匹配并在成功后显示 MusicBrainz 来源", async () => {
+	it("提示手动开始匹配并在成功后显示 MusicBrainz 来源", async () => {
 		const drawers = useMusicDrawers();
 		if (!drawers.state.value.creationFlow)
 			throw new Error("creation flow missing");
@@ -852,7 +881,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		expect(
 			wrapper.get('[data-testid="album-import-metadata-hint"]').text(),
-		).toContain("上传后将自动匹配专辑信息、曲序和歌词");
+		).toContain("点击“开始匹配”后再核对专辑信息和曲序");
 
 		drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl =
 			"https://musicbrainz.org/release/release-id";

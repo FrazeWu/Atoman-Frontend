@@ -3,12 +3,20 @@ import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
+import PInput from '@/components/ui/PInput.vue'
 
 const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const directAlbumCreation = computed(() => creationFlow.value?.directAlbumCreation === true)
+const artistName = computed({
+  get: () => creationFlow.value?.draft.artist.stageNames.find((item) => item.isPrimary)?.name ?? '',
+  set: (value: string) => {
+    const artist = creationFlow.value?.draft.artist.stageNames.find((item) => item.isPrimary)
+    if (artist) artist.name = value
+  },
+})
 </script>
 
 <template>
@@ -48,9 +56,16 @@ const directAlbumCreation = computed(() => creationFlow.value?.directAlbumCreati
       <div class="card-header">
         <div>
           <p class="card-kicker">上传与匹配</p>
-          <p class="card-copy">可以在上传进行时等待匹配结果，不需要提前填写专辑表单。</p>
+          <p class="card-copy">文件选择后立即上传。填写艺术家可提高匹配成功率，点击下方“开始匹配”后才会请求外部资料。</p>
         </div>
       </div>
+      <PInput
+        v-model="artistName"
+        label="艺术家（可选）"
+        placeholder="输入或补充艺术家名称"
+        data-testid="album-import-artist-input"
+      />
+      <p class="archive-hint">建议优先上传 ZIP、RAR 或 TAR，以便尽早读取曲目目录与元信息。</p>
       <MusicCreationAlbumUploadZone />
     </section>
   </div>
@@ -111,6 +126,12 @@ const directAlbumCreation = computed(() => creationFlow.value?.directAlbumCreati
   width: 66.666%;
   height: 100%;
   background: var(--a-color-text);
+}
+.archive-hint {
+  margin: -0.25rem 0 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
 }
 
 .album-import-step__header {

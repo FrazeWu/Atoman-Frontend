@@ -289,7 +289,7 @@ describe("MusicCreationFlowDrawer", () => {
 		drawerMocks.state.value.creationFlow = null;
 	});
 
-	it("导入进行时不展示新建专辑入口", () => {
+	it("导入进行时保留开始匹配入口", () => {
 		const baseFlow = createFlowState();
 		drawerMocks.state.value.creationFlow = createFlowState({
 			draft: {
@@ -308,9 +308,7 @@ describe("MusicCreationFlowDrawer", () => {
 				.find('[data-testid="music-creation-start-another-album"]')
 				.exists(),
 		).toBe(false);
-		expect(wrapper.find('[data-testid="creation-flow-footer"]').exists()).toBe(
-			false,
-		);
+		expect(wrapper.get('[data-testid="creation-flow-footer"]').text()).toContain("开始匹配");
 	});
 
 	it("从创建艺术家入口开始时显示统一流程的第一步", () => {

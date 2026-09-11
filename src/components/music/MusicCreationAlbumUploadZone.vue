@@ -106,15 +106,12 @@ const totalUploadProgress = computed(() => {
 })
 
 const metadataMatchLabel = computed(() => {
-  const draft = albumImportDraft.value
-  if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
-  if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') return '已匹配'
-  if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
-  if (['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) {
-    return stageLabelMap[draft.stage] ?? '处理中'
-  }
-  if (draft.status === 'uploading') return '读取与匹配中'
-  return '等待结果'
+	const draft = albumImportDraft.value
+	if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
+	if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') return '已匹配'
+	if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
+	if (draft.metadataMatchStatus === 'matching') return '正在匹配'
+	return '等待开始匹配'
 })
 const metadataMatchState = computed(() => {
   const draft = albumImportDraft.value
@@ -122,8 +119,8 @@ const metadataMatchState = computed(() => {
   if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched' || draft.metadataMatchStatus === 'unmatched') {
     return 'done'
   }
-  if (['uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) {
-    return 'active'
+	if (draft.metadataMatchStatus === 'matching') {
+		return 'active'
   }
   return 'idle'
 })
@@ -230,7 +227,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <ExternalLink :size="14" aria-hidden="true" />
         </a>
       </template>
-      <template v-else>上传后将自动匹配专辑信息、曲序和歌词。</template>
+		<template v-else>上传会立即读取本地元信息；点击“开始匹配”后再核对专辑信息和曲序。</template>
     </p>
     <div class="parallel-progress" data-testid="album-import-parallel-progress">
       <div class="parallel-progress__lane">
@@ -253,9 +250,19 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-        <small>上传进行时同步读取和匹配</small>
-      </div>
-    </div>
+		<small>{{ albumImportDraft.metadataMatchStatus === 'matching' ? '正在并行检索 Discogs 与 MusicBrainz' : '填写艺术家后开始匹配，可提高准确率' }}</small>
+		</div>
+	</div>
+	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">
+		<p v-for="source in albumImportDraft.metadataSources" :key="source.provider" class="metadata-source-row">
+			<strong>{{ source.provider === 'discogs' ? 'Discogs' : 'MusicBrainz' }}</strong>
+			<span v-if="source.candidateCount !== undefined">检索 {{ source.candidateCount }} 个候选</span>
+			<span v-if="source.selected">已选中 {{ source.selectedTitle || '安全发行版' }}</span>
+			<span v-else-if="source.status === 'matched'">发现 {{ source.selectedTitle || '安全发行版' }}，未采用</span>
+			<span v-else>未找到可安全采用的发行版</span>
+		</p>
+	</div>
+	<p v-if="albumImportDraft.metadataError" class="metadata-artist-hint" role="status">{{ albumImportDraft.metadataError }}</p>
     <p
       v-if="['ready', 'needs_attention'].includes(albumImportDraft.status)"
       class="metadata-artist-hint"
@@ -383,11 +390,20 @@ function formatUploadSpeed(bytesPerSecond: number) {
   color: var(--a-color-muted);
   font-size: 0.82rem;
 }
-.metadata-artist-hint {
+	.metadata-artist-hint {
   margin: -0.25rem 0 0;
   color: var(--a-color-text-secondary);
   font-size: 0.8rem;
-}
+	}
+	.metadata-sources {
+		display: grid;
+		gap: 0.35rem;
+		padding: 0.8rem;
+		border-left: 2px solid var(--a-color-text);
+		background: var(--a-color-surface-muted);
+	}
+	.metadata-source-row { display: flex; gap: 0.45rem; margin: 0; color: var(--a-color-muted); font-size: 0.78rem; }
+	.metadata-source-row strong { color: var(--a-color-text); }
 .metadata-match-hint a {
   display: inline-flex;
   align-items: center;

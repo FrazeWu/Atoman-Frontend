@@ -19,7 +19,6 @@ import {
 	type MusicAlbumImportInputMode,
 	type MusicAlbumImportTrack,
 } from "@/api/musicV1";
-import * as musicApi from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { runMultipartUpload } from "@/api/multipartUpload";
 import {
@@ -595,37 +594,12 @@ export function useAlbumImportUpload() {
 							originalTrackNumber: index + 1,
 							matchStatus: "unmatched",
 						}));
-						let matchedTracks = localTracks;
-						let metadataPreview: Awaited<ReturnType<typeof musicApi.previewMusicAlbumImportMetadata>> | null = null;
-						if (artistName || !flow.artistBeforeMatch) {
-							try {
-								metadataPreview = await musicApi.previewMusicAlbumImportMetadata({
-									albumTitle: preview.title,
-									artist: artistName,
-									trackTitles: preview.tracks,
-								});
-								if (metadataPreview.tracks.length > 0) {
-									matchedTracks = metadataPreview.tracks;
-								}
-							} catch {
-								// 后端正式分析会再次匹配，先使用本地解析结果。
-							}
-						}
 						if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
-						draft.metadataMatched = metadataPreview?.matched === true;
-						draft.metadataSourceUrl = metadataPreview?.sourceUrl || undefined;
-						draft.metadataSource = metadataPreview?.metadataSource;
-						draft.metadataExternalId = metadataPreview?.externalId;
-						draft.metadataMatchStatus = metadataPreview?.matchStatus || "unmatched";
-						draft.metadataMatchConfidence = metadataPreview?.matchConfidence ?? 0;
 						draft.derivedAlbumTitle = preview.title;
-						draft.derivedTracks = matchedTracks;
-						mergeImportedTracksIntoDraft(flow, matchedTracks);
+						draft.derivedTracks = localTracks;
+						mergeImportedTracksIntoDraft(flow, localTracks);
 						if (!flow.titleCustomized) {
 							flow.draft.albumDetails.title = preview.title;
-						}
-						if (flow.step === "albumImport") {
-							flow.step = flow.artistBeforeMatch ? "artist" : "albumDetails";
 						}
 					}
 					if (preview.albumCoverFile) {

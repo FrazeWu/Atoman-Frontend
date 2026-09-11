@@ -313,6 +313,42 @@ describe("MusicCreationFlowDrawer", () => {
 		);
 	});
 
+	it("从创建艺术家入口开始时显示统一流程的第一步", () => {
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "artist",
+			entity: "album",
+			draft: {
+				...createFlowState().draft,
+				artist: {
+					...createFlowState().draft.artist,
+					id: null,
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+
+		expect(
+			wrapper.get('[data-testid="creation-flow-progress-step-artist"]').text(),
+		).toContain("创建艺术家");
+		expect(
+			wrapper.get('[data-testid="creation-flow-progress-step-artist"]').attributes("data-state"),
+		).toBe("active");
+	});
+
+	it("已有艺术家添加专辑时不显示创建艺术家步骤", () => {
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "albumImport",
+			entity: "album",
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+
+		expect(wrapper.find('[data-testid="creation-flow-progress"]').exists()).toBe(
+			false,
+		);
+	});
+
 	it("回填 ready import 的专辑标题和曲目", async () => {
 		const wrapper = mount(MusicCreationFlowDrawer);
 

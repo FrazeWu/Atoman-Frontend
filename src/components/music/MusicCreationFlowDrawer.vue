@@ -394,6 +394,37 @@ const shouldShowFinishButton = computed(() => {
   return flow.mode === 'edit' || flow.step === 'preview'
 })
 const showFooterActions = computed(() => creationFlow.value?.step !== 'albumImport')
+const showFullAlbumCreationProgress = computed(() => {
+  const flow = creationFlow.value
+  return Boolean(
+    flow
+      && flow.mode !== 'edit'
+      && flow.entity !== 'song'
+      && !flow.editingContributorId
+      && !flow.directAlbumCreation
+      && !flow.draft.artist.id,
+  )
+})
+const fullAlbumCreationProgressSteps = [
+  { key: 'artist', label: '创建艺术家' },
+  { key: 'upload', label: '上传专辑' },
+  { key: 'match', label: '匹配' },
+  { key: 'details', label: '完善信息' },
+  { key: 'submit', label: '提交' },
+] as const
+const fullAlbumCreationProgressIndex = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return -1
+  if (flow.step === 'artist') return 0
+  if (flow.step === 'albumImport') {
+    return flow.draft.albumImport.metadataMatched
+      || flow.draft.albumImport.metadataMatchStatus === 'matched'
+      ? 2
+      : 1
+  }
+  if (flow.step === 'albumDetails') return 3
+  return 4
+})
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
   if (creationFlow.value?.step === 'artist' && creationFlow.value.artistBeforeMatch) {
@@ -1290,6 +1321,28 @@ async function completeCreation() {
     @activate="props.layer && returnToLayer(props.layer.key)"
   >
     <div v-if="creationFlow" class="creation-flow">
+      <nav
+        v-if="showFullAlbumCreationProgress"
+        class="creation-progress"
+        aria-label="创建专辑流程"
+        data-testid="creation-flow-progress"
+      >
+        <ol class="creation-progress__list">
+          <li
+            v-for="(progressStep, index) in fullAlbumCreationProgressSteps"
+            :key="progressStep.key"
+            :class="{
+              'is-active': fullAlbumCreationProgressIndex === index,
+              'is-done': fullAlbumCreationProgressIndex > index,
+            }"
+            :data-testid="`creation-flow-progress-step-${progressStep.key}`"
+            :data-state="fullAlbumCreationProgressIndex > index ? 'done' : fullAlbumCreationProgressIndex === index ? 'active' : 'upcoming'"
+          >
+            <span class="creation-progress__index">{{ index + 1 }}</span>
+            <span>{{ progressStep.label }}</span>
+          </li>
+        </ol>
+      </nav>
       <div class="drawer-body">
         <p
           v-if="creationFlow.errorMessage"
@@ -1379,6 +1432,57 @@ async function completeCreation() {
 
 <style scoped>
 .creation-flow { display: flex; flex-direction: column; min-height: 100%; }
+.creation-progress {
+  width: 100%;
+  padding: 1rem 0 0;
+}
+.creation-progress__list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.creation-progress__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.creation-progress__list li::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  min-width: 0.5rem;
+  background: var(--a-color-border-soft);
+}
+.creation-progress__list li:last-child::after { display: none; }
+.creation-progress__list li.is-active,
+.creation-progress__list li.is-done { color: var(--a-color-text); }
+.creation-progress__index {
+  display: grid;
+  flex: 0 0 1.45rem;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 50%;
+  font-size: 0.68rem;
+}
+.creation-progress__list li.is-active .creation-progress__index {
+  border-color: var(--a-color-text);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+}
+.creation-progress__list li.is-done .creation-progress__index {
+  border-color: var(--a-color-text);
+}
 .drawer-body {
   display: flex;
   flex: 1;
@@ -1433,5 +1537,9 @@ async function completeCreation() {
   background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
+}
+@media (max-width: 48rem) {
+  .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
+  .creation-progress__list li::after { display: none; }
 }
 </style>

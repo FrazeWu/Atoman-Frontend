@@ -191,6 +191,18 @@ export interface MusicCreationAlbumImportDraft {
 	metadataMatchStatus?: string;
 	metadataMatchConfidence?: number;
 	metadataMatched?: boolean;
+	metadataError?: string;
+	metadataSources?: Array<{
+		provider: string;
+		status: string;
+		selected?: boolean;
+		sourceUrl?: string;
+		externalId?: string;
+		selectedTitle?: string;
+		matchConfidence?: number;
+		candidateCount?: number;
+		error?: string;
+	}>;
 	missingArtists?: string[];
 	lastSyncedAt: string;
 	errorMessage: string;

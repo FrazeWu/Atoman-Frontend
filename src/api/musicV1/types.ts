@@ -90,11 +90,27 @@ export type MusicAlbumImportTrack = {
 
 export type MusicAlbumImportMetadataPreview = {
 	matched: boolean;
+	albumTitle?: string;
+	releaseDate?: string;
+	coverUrl?: string;
+	albumType?: string;
 	sourceUrl: string;
 	metadataSource?: string;
 	externalId?: string;
 	matchStatus?: string;
 	matchConfidence?: number;
+	metadataError?: string;
+	sources?: Array<{
+		provider: string;
+		status: "matched" | "unmatched" | string;
+		selected?: boolean;
+		sourceUrl?: string;
+		externalId?: string;
+		selectedTitle?: string;
+		matchConfidence?: number;
+		candidateCount?: number;
+		error?: string;
+	}>;
 	tracks: MusicAlbumImportTrack[];
 };
 

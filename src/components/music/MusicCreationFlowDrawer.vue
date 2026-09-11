@@ -364,7 +364,7 @@ const stepCopy: Record<CreationStepKey, { cta: string }> = {
     cta: '创建专辑/歌曲',
   },
   albumImport: {
-    cta: '继续',
+    cta: '开始匹配',
   },
   albumDetails: {
     cta: '继续',
@@ -393,7 +393,7 @@ const shouldShowFinishButton = computed(() => {
   if (!flow) return false
   return flow.mode === 'edit' || flow.step === 'preview'
 })
-const showFooterActions = computed(() => creationFlow.value?.step !== 'albumImport')
+const showFooterActions = computed(() => true)
 const showFullAlbumCreationProgress = computed(() => {
   const flow = creationFlow.value
   return Boolean(
@@ -973,6 +973,57 @@ async function startAlbumImportMatching(flow: NonNullable<typeof creationFlow.va
   setMusicCreationStep('albumImport')
 }
 
+async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.value>) {
+  const albumImport = flow.draft.albumImport
+  const trackTitles = (albumImport.derivedTracks.length
+    ? albumImport.derivedTracks
+    : flow.draft.tracks
+  ).map((track) => track.title.trim()).filter(Boolean)
+  if (!trackTitles.length) throw new Error('请先选择包含音频文件的专辑')
+
+  const artist = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
+    || flow.draft.artist.stageNames.find((item) => item.name.trim())?.name.trim()
+    || flow.draft.artist.legalName.trim()
+  const albumTitle = albumImport.derivedAlbumTitle.trim()
+    || albumImport.archiveName.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, '').trim()
+  albumImport.metadataMatchStatus = 'matching'
+  albumImport.metadataError = ''
+  const preview = await musicApi.previewMusicAlbumImportMetadata({ albumTitle, artist, trackTitles })
+
+  albumImport.metadataMatched = preview.matched
+	albumImport.derivedAlbumTitle = preview.albumTitle?.trim() || albumImport.derivedAlbumTitle
+	albumImport.derivedReleaseDate = preview.releaseDate?.trim() || albumImport.derivedReleaseDate
+	albumImport.derivedAlbumType = preview.albumType?.trim() || albumImport.derivedAlbumType
+	albumImport.derivedCover = preview.coverUrl?.trim() || albumImport.derivedCover
+  albumImport.metadataSourceUrl = preview.sourceUrl || undefined
+  albumImport.metadataSource = preview.metadataSource
+  albumImport.metadataExternalId = preview.externalId
+  albumImport.metadataMatchStatus = preview.matchStatus || 'unmatched'
+  albumImport.metadataMatchConfidence = preview.matchConfidence ?? 0
+	albumImport.metadataError = preview.metadataError || ''
+	albumImport.metadataSources = preview.sources ?? []
+	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
+		flow.draft.albumDetails.title = preview.albumTitle.trim()
+	}
+	if (preview.releaseDate?.trim() && !hasDatePartsValue(flow.draft.albumDetails.releaseDateParts)) {
+		flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(preview.releaseDate)
+	}
+	if (preview.coverUrl?.trim() && !flow.draft.albumDetails.coverUrl.trim()) {
+		flow.draft.albumDetails.coverUrl = preview.coverUrl.trim()
+	}
+	if (preview.albumType?.trim() && flow.draft.albumDetails.type === 'album') {
+		flow.draft.albumDetails.type = preview.albumType.trim()
+	}
+	if (preview.sourceUrl && !flow.draft.albumDetails.source.trim()) {
+		flow.draft.albumDetails.source = normalizeMusicImportSource(preview.sourceUrl)
+	}
+  if (preview.tracks.length) {
+    albumImport.derivedTracks = preview.tracks
+    mergeImportedTracksIntoDraft(flow, preview.tracks)
+  }
+  setMusicCreationStep('albumDetails')
+}
+
 async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_album' = 'create_album') {
   const flow = creationFlow.value
   if (!flow) return
@@ -1051,7 +1102,14 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
       flow.submitting = false
     }
   } else if (flow.step === 'albumImport') {
-    setMusicCreationStep('albumDetails')
+    flow.submitting = true
+    try {
+      await previewAlbumImportMetadata(flow)
+    } catch (error) {
+      flow.errorMessage = error instanceof Error ? error.message : '元信息匹配失败，请重试'
+    } finally {
+      flow.submitting = false
+    }
   } else if (flow.step === 'albumDetails') {
     setMusicCreationStep('preview')
   }

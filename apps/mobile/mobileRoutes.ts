@@ -156,6 +156,14 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				path: "discover",
 				component: () => import("@/views/music/DiscoverView.vue"),
 			},
+			{
+				path: "tags",
+				component: () => import("@/views/music/MusicTagsView.vue"),
+			},
+			{
+				path: "tags/:tagId",
+				component: () => import("@/views/music/MusicTagView.vue"),
+			},
 			{ path: "songs", component: () => import("@/views/music/SongsView.vue") },
 			{
 				path: "playlists",

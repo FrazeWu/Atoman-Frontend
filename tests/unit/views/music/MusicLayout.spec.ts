@@ -7,7 +7,7 @@ vi.mock("@/components/system/AppSidebar.vue", () => ({
 	default: {
 		template: `<nav>
       <div class="sidebar-item" data-to="/music/discover">发现</div>
-      <div class="sidebar-item" data-to="/music/albums">专辑</div>
+      <div class="sidebar-item" data-to="/music/tags">标签</div>
       <div class="sidebar-item" data-to="/music/artists">艺人</div>
       <div class="sidebar-item" data-to="/music/bookmarks">收藏</div>
       <div class="sidebar-item" data-to="/music/history">历史</div>
@@ -49,8 +49,8 @@ describe("MusicLayout.vue", () => {
 		expect(items).toHaveLength(6);
 		expect(items[0].text()).toContain("发现");
 		expect(items[0].attributes("data-to")).toBe("/music/discover");
-		expect(items[1].text()).toContain("专辑");
-		expect(items[1].attributes("data-to")).toBe("/music/albums");
+		expect(items[1].text()).toContain("标签");
+		expect(items[1].attributes("data-to")).toBe("/music/tags");
 		expect(items[2].text()).toContain("艺人");
 		expect(items[2].attributes("data-to")).toBe("/music/artists");
 		expect(items[3].text()).toContain("收藏");

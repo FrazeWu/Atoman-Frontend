@@ -29,6 +29,7 @@ export const mobileScreenshotRoutes = [
 	"/users/demo/channels",
 	"/music",
 	"/music/discover",
+	"/music/tags",
 	"/music/songs",
 	"/music/playlists",
 	"/music/bookmarks",

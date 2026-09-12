@@ -117,6 +117,50 @@ describe("Music ImportsView", () => {
 		wrapper.unmount();
 	});
 
+	it("restores the existing artist as the import contributor", async () => {
+		const pendingImport = {
+			...importRecord("pending_upload"),
+			artistId: "artist-1",
+		};
+		const flow = {
+			draft: {
+				artist: { source: "" },
+				albumDetails: { contributors: [] },
+			},
+		};
+		mocks.listMusicAlbumImports.mockResolvedValue({
+			data: [pendingImport],
+			meta: { page: 1, page_size: 50, total: 1, has_more: false },
+		});
+		mocks.resumeMusicCreationFlow.mockReturnValue(flow);
+		mocks.getMusicArtist.mockResolvedValue({
+			id: "artist-1",
+			name: "Known Artist",
+			display_name: "Known Artist",
+			image_url: "https://cdn.example.test/artist.jpg",
+			artist_form: "person",
+			sources: [],
+		});
+		const wrapper = mount(ImportsView);
+		await flushPromises();
+
+		const continueButton = wrapper
+			.findAll("button")
+			.find((button) => button.text() === "继续导入");
+		await continueButton!.trigger("click");
+		await flushPromises();
+
+		expect(flow.draft.albumDetails.contributors).toEqual([
+			expect.objectContaining({
+				artistId: "artist-1",
+				name: "Known Artist",
+				avatarUrl: "https://cdn.example.test/artist.jpg",
+				locked: true,
+			}),
+		]);
+		wrapper.unmount();
+	});
+
 	it("uses the saved draft without loading album or artist details again", async () => {
 		const savedImport = {
 			...importRecord("ready"),

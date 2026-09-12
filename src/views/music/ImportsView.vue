@@ -341,13 +341,15 @@ function sourceValue(sources?: MusicSource[]) {
 }
 
 async function resumeImport(snapshot: MusicAlbumImport) {
+  const artistId = snapshot.artistId?.trim()
+    || snapshot.commitRequest?.artist_id?.trim()
+    || snapshot.commitRequest?.artists?.find((artist) => artist.artist_id?.trim())?.artist_id?.trim()
+    || ''
   const flow = resumeMusicCreationFlow(snapshot)
   if (snapshot.commitRequest || !flow) return
 
-  const artistSourceRequest = snapshot.artistId?.trim()
-    ? getMusicArtist(snapshot.artistId)
-      .then((artist) => sourceValue(artist.sources))
-      .catch(() => '')
+  const artistRequest = artistId
+    ? getMusicArtist(artistId).catch(() => null)
     : Promise.resolve('')
   const albumRequest = snapshot.targetAlbumId?.trim()
     ? getMusicAlbum(snapshot.targetAlbumId).catch(() => null)
@@ -355,10 +357,37 @@ async function resumeImport(snapshot: MusicAlbumImport) {
   const songRequest = snapshot.targetSongId?.trim()
     ? getMusicSongDetail(snapshot.targetSongId).catch(() => null)
     : Promise.resolve(null)
-  const [artistSource, album, songDetail] = await Promise.all([artistSourceRequest, albumRequest, songRequest])
+  const [artist, album, songDetail] = await Promise.all([artistRequest, albumRequest, songRequest])
+  const artistSource = artist && typeof artist !== 'string' ? sourceValue(artist.sources) : ''
 
   if (!flow.draft.artist.source.trim() && artistSource) {
     flow.draft.artist.source = artistSource
+  }
+  if (artist && typeof artist !== 'string') {
+    const contributorName = artist.display_name || artist.name
+    const existingContributor = flow.draft.albumDetails.contributors.find(
+      (contributor) => contributor.artistId === artist.id,
+    )
+    if (existingContributor) {
+      existingContributor.name = contributorName
+      existingContributor.avatarUrl = artist.image_url ?? ''
+      existingContributor.kind = artist.artist_form === 'group' ? 'group' : 'person'
+      existingContributor.locked = true
+      if (artistSource) existingContributor.source = artistSource
+      if (artist.entry_status) existingContributor.entryStatus = artist.entry_status
+    } else if (!flow.draft.albumDetails.contributors.length) {
+      flow.draft.albumDetails.contributors = [{
+        id: `contributor-${artist.id}`,
+        artistId: artist.id,
+        name: contributorName,
+        avatarUrl: artist.image_url ?? '',
+        ...(artistSource ? { source: artistSource } : {}),
+        ...(artist.entry_status ? { entryStatus: artist.entry_status } : {}),
+        kind: artist.artist_form === 'group' ? 'group' : 'person',
+        locked: true,
+        roles: [{ id: `role-${artist.id}-primary`, role: 'primary', label: '' }],
+      }]
+    }
   }
   if (flow.draft.albumDetails.contributors.length) return
   if (songDetail) {

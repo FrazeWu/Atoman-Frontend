@@ -356,7 +356,7 @@ describe("PSheet.vue", () => {
 			"calc(var(--a-sidebar-width) + 64px)",
 		);
 		expect((top.get(".p-sheet-panel").element as HTMLElement).style.top).toBe(
-			"calc(64px)",
+			"calc(var(--a-topbar-height) + 8px)",
 		);
 	});
 
@@ -367,6 +367,16 @@ describe("PSheet.vue", () => {
 		const panel = wrapper.find(".p-sheet-panel").element as HTMLElement;
 		expect(panel.style.width).toBe("auto");
 		expect(panel.style.maxWidth).toBe("none");
+	});
+
+	it("pins desktop right sheets from the topbar to the viewport bottom", () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, side: "right" },
+		});
+		const panel = wrapper.get(".p-sheet-panel").element as HTMLElement;
+
+		expect(panel.style.top).toBe("calc(var(--a-topbar-height) + 0px)");
+		expect(panel.style.bottom).toBe("0px");
 	});
 
 	it("keeps comment sheets on the shared comment width", () => {

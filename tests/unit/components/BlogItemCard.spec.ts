@@ -1,8 +1,15 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // @ts-expect-error Vue SFC resolution is provided by vue-tsc and Vitest.
 import BlogItemCard from "../../../src/components/shared/BlogItemCard.vue";
+
+const blogItemCardSource = readFileSync(
+  resolve(process.cwd(), "src/components/shared/BlogItemCard.vue"),
+  "utf8",
+);
 
 const entryStub = {
   props: ["summary"],
@@ -23,6 +30,15 @@ const post = {
 };
 
 describe("BlogItemCard", () => {
+  it("keeps the short note renderer out of synchronous imports", () => {
+    expect(blogItemCardSource).not.toContain(
+      "import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'",
+    );
+    expect(blogItemCardSource).toContain(
+      "defineAsyncComponent(() => import('@/components/shortnote/ShortNoteCard.vue'))",
+    );
+  });
+
   it("uses the explicit summary when it is available", () => {
     const wrapper = mount(BlogItemCard, {
       props: { item: { ...post, summary: "Curated summary" }, type: "post" },

@@ -41,6 +41,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
+import { scheduleGoogleAnalytics } from '@/utils/analytics'
 
 declare global {
   interface Window {
@@ -74,10 +75,18 @@ const reportPageView = (sendAnalytics = true) => {
   }
 }
 
+const reportAnalyticsPageView = () => {
+  const ga = window.gtag
+  if (typeof ga === 'function') {
+    ga('event', 'page_view', { page_path: route.fullPath, page_location: window.location.href })
+  }
+}
+
 watch(() => route.fullPath, () => reportPageView())
 
 onMounted(() => {
   reportPageView(false)
+  scheduleGoogleAnalytics(reportAnalyticsPageView)
   if (localStorage.getItem('atoman_transition_relay')) {
     checkRelay()
   }

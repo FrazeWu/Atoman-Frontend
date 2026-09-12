@@ -601,8 +601,8 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__tag--blog {
-  background: color-mix(in srgb, #16a34a 12%, transparent);
-  color: #16a34a;
+  background: color-mix(in srgb, var(--a-color-blog) 12%, transparent);
+  color: var(--a-color-blog);
 }
 
 .portal-hot__tag--music {

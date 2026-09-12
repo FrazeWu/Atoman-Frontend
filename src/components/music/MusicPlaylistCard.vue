@@ -12,11 +12,14 @@
         :aria-label="`打开歌单 ${displayTitle}`"
       >
         <img
-          v-if="coverUrl"
-          :src="coverUrl"
+          v-if="optimizedCoverUrl"
+          :src="optimizedCoverUrl"
           :alt="playlist.title"
           class="cover-image"
+          width="320"
+          height="320"
           loading="lazy"
+          decoding="async"
         />
         <span v-else class="cover-placeholder">
           <Music2 :size="28" aria-hidden="true" />
@@ -69,6 +72,7 @@ import { computed } from 'vue'
 import { IconBookmark as Bookmark, IconHeadphones as Headphones, IconMusic as Music2 } from '@tabler/icons-vue'
 
 import PMediaCard from '@/components/ui/PMediaCard.vue'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 export interface MusicPlaylistCardItem {
   id: string
@@ -96,6 +100,7 @@ defineEmits<{
 }>()
 
 const coverUrl = computed(() => props.playlist.cover_url || '')
+const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 320 }) : '')
 
 const displayTitle = computed(() => {
   const owner = props.playlist.owner_username?.trim()

@@ -149,6 +149,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -233,6 +234,25 @@ function responseMeta(payload: unknown) {
     : undefined
 }
 
+function normalizeCollection(payload: unknown): Collection | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  const item = payload as Record<string, unknown>
+  const id = item.id ?? item.ID
+  const name = item.name ?? item.Name
+  if (id === undefined || name === undefined) return null
+  return {
+    ...(item as Partial<Collection>),
+    id: String(id),
+    channel_id: String(item.channel_id ?? item.ChannelID ?? ''),
+    name: String(name),
+    description: String(item.description ?? item.Description ?? ''),
+    cover_url: String(item.cover_url ?? item.CoverURL ?? ''),
+    created_at: String(item.created_at ?? item.CreatedAt ?? ''),
+    updated_at: String(item.updated_at ?? item.UpdatedAt ?? ''),
+    is_default: Boolean(item.is_default ?? item.IsDefault),
+  }
+}
+
 const fetchChannel = async (param: string, slug: boolean, generation: number) => {
   try {
     const url = slug
@@ -268,8 +288,10 @@ const fetchCollections = async (loadedChannel: Channel, param: string, slug: boo
     if (!res.ok || generation !== loadGeneration) return
     const data = await Promise.resolve(res.data)
     if (generation === loadGeneration) {
-      const nextCollections = responseData<Collection[]>(data)
-      collections.value = Array.isArray(nextCollections) ? nextCollections : []
+      const nextCollections = responseData<unknown>(data)
+      collections.value = Array.isArray(nextCollections)
+        ? nextCollections.map(normalizeCollection).filter((item): item is Collection => Boolean(item))
+        : []
     }
   } catch {
     return

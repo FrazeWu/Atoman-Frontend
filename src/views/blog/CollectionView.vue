@@ -12,13 +12,16 @@
       <PPageHeader :title="collection.name" accent :sub="collection.description || ''" mb="1.5rem">
         <template #action>
           <div class="ui-actions-row">
-            <PClip
-              v-if="authStore.isAuthenticated && !isOwner"
-              :disabled="collectionSubscribeLoading"
-              @click="toggleCollectionSubscribe"
-            >
-              {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
-            </PClip>
+            <div class="collection-action">
+              <PClip
+                v-if="authStore.isAuthenticated && !isOwner"
+                :disabled="collectionSubscribeLoading"
+                @click="toggleCollectionSubscribe"
+              >
+                {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
+              </PClip>
+              <PActionFeedback v-if="actionType === 'subscribe'" :message="actionError" />
+            </div>
             <PClip
               data-testid="collection-rss"
               label="RSS"
@@ -75,9 +78,12 @@
           <PTextarea v-model="form.description" label="合集描述" placeholder="简短介绍这个合集" :rows="3" />
           <div class="modal-actions">
             <PButton label="取消" variant="secondary" @click="editModalOpen = false" />
-            <PButton :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
-              更新
-            </PButton>
+            <div class="collection-action">
+              <PButton :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
+                更新
+              </PButton>
+              <PActionFeedback v-if="actionType === 'save'" :message="actionError" />
+            </div>
           </div>
         </div>
       </PModal>
@@ -88,7 +94,10 @@
           <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？只能删除没有文章的合集。</p>
           <div class="modal-actions">
             <PButton label="取消" variant="secondary" @click="deleteModalOpen = false" />
-            <PReject label="删除" @click="deleteCollection" />
+            <div class="collection-action">
+              <PReject label="删除" @click="deleteCollection" />
+              <PActionFeedback v-if="actionType === 'delete'" :message="actionError" />
+            </div>
           </div>
         </div>
       </PModal>
@@ -97,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
+import { errorMessage, reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -112,6 +121,7 @@ import PClip from '@/components/ui/PClip.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PReject from '@/components/ui/PReject.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -151,6 +161,8 @@ const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const actionError = ref('')
+const actionType = ref<'subscribe' | 'save' | 'delete' | ''>('')
 let collectionRequestId = 0
 let postsRequestId = 0
 
@@ -322,17 +334,20 @@ const saveCollection = async () => {
   if (!form.value.name.trim() || !collection.value) return
 
   saving.value = true
+  actionType.value = 'save'
+  actionError.value = ''
   try {
     const res = await apiRequestResult(api.blog.collection(collection.value.id), {
       method: 'PUT',
       headers: { ...authHeader.value, 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     })
-    if (!res.ok) return
+    if (!res.ok) throw new Error('合集保存失败，请重试')
     editModalOpen.value = false
     await fetchCollection()
   } catch (e) {
     reportError(e, 'Failed to save collection:')
+    actionError.value = errorMessage(e, '合集保存失败，请重试')
   } finally {
     saving.value = false
   }
@@ -345,22 +360,27 @@ const confirmDelete = () => {
 const deleteCollection = async () => {
   if (!collection.value) return
 
+  actionType.value = 'delete'
+  actionError.value = ''
   try {
     const res = await apiRequestResult(api.blog.collection(collection.value.id), {
       method: 'DELETE',
       headers: authHeader.value
     })
-    if (!res.ok) return
+    if (!res.ok) throw new Error('合集删除失败，请重试')
     deleteModalOpen.value = false
     router.push(`/posts/channel/${channelId.value}`)
   } catch (e) {
     reportError(e, 'Failed to delete collection:')
+    actionError.value = errorMessage(e, '合集删除失败，请重试')
   }
 }
 
 const toggleCollectionSubscribe = async () => {
   if (!collection.value) return
   collectionSubscribeLoading.value = true
+  actionType.value = 'subscribe'
+  actionError.value = ''
   try {
     let success = false
     if (collectionSubscribed.value) {
@@ -371,9 +391,12 @@ const toggleCollectionSubscribe = async () => {
 
     if (success) {
       collectionSubscribed.value = !collectionSubscribed.value
+    } else {
+      actionError.value = '合集订阅状态更新失败，请重试'
     }
   } catch (e) {
     reportError(e, 'Failed to toggle collection subscription:')
+    actionError.value = errorMessage(e, '合集订阅状态更新失败，请重试')
   } finally {
     collectionSubscribeLoading.value = false
   }
@@ -395,6 +418,12 @@ onMounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
+}
+
+.collection-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .modal-actions {

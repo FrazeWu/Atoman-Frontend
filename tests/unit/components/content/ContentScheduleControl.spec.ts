@@ -24,4 +24,14 @@ describe('ContentScheduleControl', () => {
     await wrapper.get('[data-testid="retry-schedule"]').trigger('click')
     expect(wrapper.emitted('retry')).toHaveLength(1)
   })
+
+  it('renders action errors below the schedule button', () => {
+    const wrapper = mount(ContentScheduleControl, {
+      props: { modelValue: '2026-09-03T12:00', error: '排期失败，请重试' },
+    })
+
+    const action = wrapper.get('.schedule-control__action')
+    expect(action.get('button').text()).toContain('定时发布')
+    expect(action.get('[role="alert"]').text()).toBe('排期失败，请重试')
+  })
 })

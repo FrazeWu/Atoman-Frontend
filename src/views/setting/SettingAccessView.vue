@@ -2,17 +2,14 @@
   <section class="setting-access settings-center">
     <PSectionHeader title="站点设置" kicker="SITE ACCESS" description="控制功能开放范围和各模块的默认策略。" />
 
-    <p v-if="error" class="setting-access__message setting-access__message--error" role="alert">
-      {{ error }}
-    </p>
-    <p v-else-if="saved" class="setting-access__message" role="status">已保存</p>
-
     <section id="module-access" class="setting-access__management-section" aria-label="模块开关">
       <SettingManagementOverview :access="draft" />
 
       <div class="setting-access__actions">
         <PButton variant="secondary" to="/">返回首页</PButton>
         <PButton :loading="saving" loading-text="保存中..." @click="save">保存设置</PButton>
+        <PActionFeedback class="setting-access__message" :message="error" />
+        <PActionFeedback class="setting-access__message" :message="saved ? '已保存' : ''" tone="success" />
       </div>
     </section>
 
@@ -221,8 +218,10 @@ import SettingManagementOverview from '@/components/setting/SettingManagementOve
 import SettingMusicReviewPanel from '@/components/setting/SettingMusicReviewPanel.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { mergeSiteAccess, siteAccessDetailModules, type SiteAccess } from '@/config/siteAccess'
+import { errorMessage } from '@/utils/logger'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { getSectionDomId, resolveInitialSettingSection } from '@/views/setting/settingAccessSections'
 import { useAuthStore } from '@/stores/auth'
@@ -346,7 +345,7 @@ async function save() {
     await siteAccessStore.save(mergeSiteAccess(draft.value), authStore.token)
     saved.value = true
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '保存失败'
+    error.value = errorMessage(cause, '保存失败')
   } finally {
     saving.value = false
   }

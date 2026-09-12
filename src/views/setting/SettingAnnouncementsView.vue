@@ -35,11 +35,10 @@
             :error="pathError"
           />
 
-          <p v-if="error" class="setting-announcements__message setting-announcements__message--error" role="alert">{{ error }}</p>
-          <p v-else-if="success" class="setting-announcements__message" role="status">{{ success }}</p>
-
           <div class="setting-announcements__actions">
             <PButton type="submit" :loading="publishing" loading-text="发布中...">发布公告</PButton>
+            <PActionFeedback class="setting-announcements__message" :message="error" />
+            <PActionFeedback class="setting-announcements__message" :message="success" tone="success" />
           </div>
         </form>
       </PSurface>
@@ -148,6 +147,7 @@
       cancel-text="取消"
       :loading="publishing"
       loading-text="发布中..."
+      :error="error"
       @confirm="publish"
       @cancel="confirmOpen = false"
     />
@@ -162,8 +162,10 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSurface from '@/components/ui/PSurface.vue'
+import { errorMessage } from '@/utils/logger'
 import PTab from '@/components/ui/PTab.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
@@ -225,7 +227,7 @@ const publish = async () => {
     view.value = 'history'
     await loadAnnouncements(1)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '公告暂时无法发布，请稍后重试。'
+    error.value = errorMessage(cause, '公告暂时无法发布，请稍后重试。')
   } finally {
     publishing.value = false
   }
@@ -244,7 +246,7 @@ async function loadAnnouncements(page = meta.value.page) {
     announcements.value = response.data
     meta.value = response.meta ?? { ...meta.value, page, total: response.data.length, has_more: false }
   } catch (cause) {
-    historyError.value = cause instanceof Error ? cause.message : '加载公告记录失败，请重试。'
+    historyError.value = errorMessage(cause, '加载公告记录失败，请重试。')
   } finally {
     loading.value = false
   }

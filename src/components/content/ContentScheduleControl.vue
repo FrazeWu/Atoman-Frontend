@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { IconCalendarClock as CalendarClock } from '@tabler/icons-vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
 
-const props = defineProps<{ modelValue: string; busy?: boolean; disabled?: boolean; schedule?: BlogScheduleStatus | null }>()
+const props = defineProps<{ modelValue: string; busy?: boolean; disabled?: boolean; schedule?: BlogScheduleStatus | null; error?: string }>()
 defineEmits<{ 'update:modelValue': [value: string]; schedule: []; retry: [] }>()
 
 const scheduleMessage = computed(() => {
@@ -29,10 +30,13 @@ const scheduleMessage = computed(() => {
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
     </label>
-    <button type="button" :disabled="busy || disabled || !modelValue" @click="$emit('schedule')">
-      <CalendarClock :size="16" aria-hidden="true" />
-      {{ busy ? '设置中…' : '定时发布' }}
-    </button>
+    <div class="schedule-control__action">
+      <button type="button" :disabled="busy || disabled || !modelValue" @click="$emit('schedule')">
+        <CalendarClock :size="16" aria-hidden="true" />
+        {{ busy ? '设置中…' : '定时发布' }}
+      </button>
+      <PActionFeedback :message="error" />
+    </div>
     <p v-if="scheduleMessage" class="schedule-control__state" :class="{ 'schedule-control__state--failed': schedule?.status === 'failed' }" role="status">
       {{ scheduleMessage }}
     </p>
@@ -46,6 +50,7 @@ const scheduleMessage = computed(() => {
 .schedule-control { display: flex; align-items: end; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--a-color-border-soft); }
 .schedule-control label { display: grid; gap: 0.35rem; }
 .schedule-control label span { color: var(--a-color-muted); font-size: 0.75rem; }
+.schedule-control__action { display: grid; justify-items: end; gap: 0.35rem; }
 .schedule-control input, .schedule-control button { min-height: 2.75rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: var(--a-color-fg); font: inherit; }
 .schedule-control input { padding: 0 0.75rem; }
 .schedule-control button { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0 1rem; cursor: pointer; }

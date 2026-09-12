@@ -7,12 +7,15 @@
       </div>
       <div class="settings-block__control manage-toolbar">
         <PButton variant="secondary" label="新建规则" :disabled="busy" @click="openCreateRule" />
-        <PButton
-          variant="secondary"
-          label="重算全部订阅"
-          :disabled="busy || !subscriptionRules.length"
-          @click="applyAllRules"
-        />
+        <div class="rule-apply-action">
+          <PButton
+            variant="secondary"
+            label="重算全部订阅"
+            :disabled="busy || !subscriptionRules.length"
+            @click="applyAllRules"
+          />
+          <PActionFeedback v-if="!showRuleEditor" :message="saveError" />
+        </div>
       </div>
     </div>
 
@@ -67,10 +70,11 @@
   <SubscriptionRuleEditorSheet
     :show="showRuleEditor"
     :mode="ruleEditorMode"
-    :groups="groups"
-    :subscriptions="subscriptions"
-    :rule="editingRule"
-    @close="closeRuleEditor"
+      :groups="groups"
+      :subscriptions="subscriptions"
+      :rule="editingRule"
+      :error="saveError"
+      @close="closeRuleEditor"
     @submit="submitRuleEditor"
   />
 
@@ -90,6 +94,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import SubscriptionRuleEditorSheet from '@/components/feed/SubscriptionRuleEditorSheet.vue'
 import type {
@@ -265,6 +270,12 @@ const confirmDeleteRule = () => {
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: flex-end;
+}
+
+.rule-apply-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .subscription-rule-list {

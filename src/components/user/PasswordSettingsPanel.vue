@@ -21,9 +21,9 @@
       />
       <PInput v-model="newPassword" type="password" label="新密码" placeholder="输入新密码" autocomplete="new-password" :error="fieldErrors.password" />
       <PInput v-model="passwordConfirm" type="password" label="确认新密码" placeholder="再次输入新密码" autocomplete="new-password" :error="fieldErrors.confirm" />
-      <p v-if="error" class="a-error" role="alert">{{ error }}</p>
-      <p v-if="success" class="a-success" role="status">{{ hasPassword ? '密码已修改' : '密码已设置' }}</p>
       <PButton type="submit" size="lg" :loading="submitting" loading-text="正在修改...">{{ hasPassword ? '修改密码' : '设置密码' }}</PButton>
+      <PActionFeedback :message="error" />
+      <PActionFeedback :message="success ? (hasPassword ? '密码已修改' : '密码已设置') : ''" tone="success" />
     </form>
   </PSheet>
 </template>
@@ -32,10 +32,12 @@
 import { computed, reactive, ref } from 'vue'
 
 import { apiRequestResult } from '@/api/client'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useApiUrl } from '@/composables/useApi'
+import { errorMessage } from '@/utils/logger'
 
 const props = withDefaults(defineProps<{ hasPassword?: boolean }>(), { hasPassword: true })
 const hasPassword = computed(() => props.hasPassword)
@@ -80,7 +82,7 @@ async function submit() {
     passwordConfirm.value = ''
     success.value = true
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '修改密码失败'
+    error.value = errorMessage(cause, '修改密码失败')
   } finally {
     submitting.value = false
   }

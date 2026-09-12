@@ -21,29 +21,6 @@
       />
 
       <form @submit.prevent="handleSubmit" class="auth-form">
-        <!-- Error Banner -->
-        <Transition name="fade-slide">
-          <div v-if="visibleError" class="a-error auth-error" role="alert">
-            <span class="error-text">{{ visibleError }}</span>
-            <button type="button" class="error-close-btn" @click="clearGeneralError" aria-label="关闭提示">
-              <svg class="error-close-svg" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-        </Transition>
-
-        <Transition name="fade-slide">
-          <div
-            v-if="turnstileConfigMissing"
-            class="a-error auth-error"
-            role="alert"
-          >
-            <span class="error-text">当前无法完成验证，请稍后再试</span>
-          </div>
-        </Transition>
-
         <!-- LOGIN VIEW -->
         <div v-if="!isRegister" class="auth-step-container">
           <div v-if="route.query.reset === 'success'" class="auth-success" role="status">
@@ -186,6 +163,23 @@
           </div>
         </div>
       </form>
+
+      <Transition name="fade-slide">
+        <div v-if="visibleError" class="a-error auth-error" role="alert">
+          <span class="error-text">{{ visibleError }}</span>
+          <button type="button" class="error-close-btn" @click="clearGeneralError" aria-label="关闭提示">
+            <svg class="error-close-svg" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </Transition>
+      <Transition name="fade-slide">
+        <div v-if="turnstileConfigMissing" class="a-error auth-error" role="alert">
+          <span class="error-text">当前无法完成验证，请稍后再试</span>
+        </div>
+      </Transition>
 
       <div class="auth-footer">
         <span v-if="isRegister">

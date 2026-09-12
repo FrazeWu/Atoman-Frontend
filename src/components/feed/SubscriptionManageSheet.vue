@@ -20,7 +20,7 @@
           />
           <div class="manage-toolbar-group">
             <span class="manage-toolbar-label">编辑</span>
-            <div class="manage-toolbar-actions">
+            <div class="manage-toolbar-actions manage-toolbar-actions--feedback">
               <PButton
                 data-test="save-subscription-changes"
                 variant="primary"
@@ -28,46 +28,59 @@
                 :disabled="busy || !hasDraftChanges"
                 @click="saveDrafts"
               />
+              <PActionFeedback v-if="errorAction === 'save'" :message="error" />
             </div>
           </div>
           <div class="manage-toolbar-group">
             <span class="manage-toolbar-label">数据管理</span>
             <div class="manage-toolbar-actions">
-              <PButton
-                variant="secondary"
-                label="导入 OPML"
-                :disabled="busy || healthChecking"
-                @click="openOPMLPicker"
-              />
-              <PButton
-                variant="secondary"
-                label="导出 OPML"
-                :disabled="busy || healthChecking || !externalSubscriptions.length"
-                @click="exportOPML"
-              />
+              <div class="manage-toolbar-action">
+                <PButton
+                  variant="secondary"
+                  label="导入 OPML"
+                  :disabled="busy || healthChecking"
+                  @click="openOPMLPicker"
+                />
+                <PActionFeedback v-if="errorAction === 'import'" :message="error" />
+              </div>
+              <div class="manage-toolbar-action">
+                <PButton
+                  variant="secondary"
+                  label="导出 OPML"
+                  :disabled="busy || healthChecking || !externalSubscriptions.length"
+                  @click="exportOPML"
+                />
+                <PActionFeedback v-if="errorAction === 'export'" :message="error" />
+              </div>
             </div>
           </div>
           <div class="manage-toolbar-group">
             <span class="manage-toolbar-label">来源状态</span>
             <div class="manage-toolbar-actions">
-              <PButton
-                data-test="check-all-subscriptions-health"
-                variant="secondary"
-                label="健康检查"
-                :disabled="busy || healthChecking || !externalSubscriptions.length"
-                @click="checkAllSubscriptionsHealth"
-              />
-              <PButton
-                data-test="sync-all-subscriptions"
-                variant="secondary"
-                :label="syncingAllSubscriptions ? '同步中...' : '同步全部 RSS'"
-                :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
-                @click="syncAllSubscriptions"
-              />
+              <div class="manage-toolbar-action">
+                <PButton
+                  data-test="check-all-subscriptions-health"
+                  variant="secondary"
+                  label="健康检查"
+                  :disabled="busy || healthChecking || !externalSubscriptions.length"
+                  @click="checkAllSubscriptionsHealth"
+                />
+                <PActionFeedback v-if="errorAction === 'health'" :message="error" />
+              </div>
+              <div class="manage-toolbar-action">
+                <PButton
+                  data-test="sync-all-subscriptions"
+                  variant="secondary"
+                  :label="syncingAllSubscriptions ? '同步中...' : '同步全部 RSS'"
+                  :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
+                  @click="syncAllSubscriptions"
+                />
+                <PActionFeedback v-if="errorAction === 'sync'" :message="error" />
+              </div>
             </div>
           </div>
         </div>
-        <p v-if="error" class="manage-error" role="alert">{{ error }}</p>
+        <PActionFeedback v-if="errorAction === 'general'" :message="error" />
         <p v-if="message" class="manage-message" role="status">{{ message }}</p>
         <ul v-if="opmlImportResult?.failed_sources?.length" class="opml-failure-list">
           <li v-for="failure in opmlImportResult.failed_sources" :key="failure.url" class="opml-failure-row">
@@ -191,6 +204,7 @@
               />
             </div>
           </div>
+          <PActionFeedback v-if="errorAction === 'batch'" :message="error" />
         </div>
 
         <div v-if="showAdvancedTabs && managedSubscriptions.length" class="source-manage-tools">
@@ -402,6 +416,7 @@
         :subscription-rules="subscriptionRules"
         :rule-apply-summary="ruleApplySummary"
         :busy="busy"
+        :save-error="errorAction === 'rule' ? error : ''"
         :above-player="true"
         @create-rule="$emit('create-rule')"
         @edit-rule="$emit('edit-rule', $event)"
@@ -594,6 +609,7 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
@@ -625,10 +641,12 @@ const props = withDefaults(defineProps<{
   subscriptionDiagnostics?: Record<string, FeedSourceDiagnostic[]>
   loadingSubscriptionDiagnosticIds?: Set<string>
   error?: string
+  errorAction?: 'general' | 'save' | 'import' | 'export' | 'health' | 'sync' | 'batch' | 'rule'
   message?: string
   opmlImportResult?: FeedOPMLImportResult | null
 }>(), {
   showAdvancedTabs: true,
+  errorAction: 'general',
 })
 
 const emit = defineEmits<{
@@ -1376,6 +1394,13 @@ watch(() => props.filterRules, (rules) => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.manage-toolbar-actions--feedback,
+.manage-toolbar-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .opml-input {

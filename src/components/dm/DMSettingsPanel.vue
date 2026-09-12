@@ -14,11 +14,13 @@
         <select v-model="permission" :disabled="saving" aria-label="私信权限">
           <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
-        <PButton type="button" :loading="saving" :disabled="saving" @click="save">保存</PButton>
+        <div class="dm-settings__save-action">
+          <PButton type="button" :loading="saving" :disabled="saving" @click="save">保存</PButton>
+          <PActionFeedback :message="saveError" />
+          <PActionFeedback :message="saved ? '私信权限已保存' : ''" tone="success" />
+        </div>
       </div>
     </div>
-    <p v-if="saveError" class="dm-settings__message dm-settings__message--error" role="alert">{{ saveError }}</p>
-    <p v-else-if="saved" class="dm-settings__message" role="status">私信权限已保存</p>
   </section>
 </template>
 
@@ -26,6 +28,8 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
+import { errorMessage } from '@/utils/logger'
 import {
   getDMChannelSettings,
   getDMSettings,
@@ -72,8 +76,8 @@ async function load() {
             ? 'following_only'
             : 'one_before_reply'
     }
-  } catch {
-    if (generation === requestGeneration) loadError.value = '私信权限加载失败，请重试'
+  } catch (cause) {
+    if (generation === requestGeneration) loadError.value = errorMessage(cause, '私信权限加载失败，请重试')
   } finally {
     if (generation === requestGeneration) loading.value = false
   }
@@ -93,8 +97,8 @@ async function save() {
       permission.value = result.permission
       saved.value = true
     }
-  } catch {
-    if (generation === requestGeneration) saveError.value = '私信权限保存失败，请重试'
+  } catch (cause) {
+    if (generation === requestGeneration) saveError.value = errorMessage(cause, '私信权限保存失败，请重试')
   } finally {
     if (generation === requestGeneration) saving.value = false
   }

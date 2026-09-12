@@ -126,6 +126,27 @@ describe('PodcastEditorView Studio integration', () => {
     expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
   })
 
+  it('places save failures below the save action', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/podcast/episodes')) throw new Error('保存失败')
+      if (url.includes('/users/me/default-channels') || url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      return makeJsonResponse({ data: [] })
+    }))
+    const { wrapper } = await setup('/studio/podcast/new')
+    const form = wrapper.vm.$.setupState.form as { title: string; audio_url: string }
+    form.title = '测试单集'
+    form.audio_url = 'https://cdn.example.com/audio.mp3'
+    wrapper.vm.$.setupState.uploadStarted = true
+    wrapper.vm.$.setupState.currentStep = 3
+
+    await wrapper.vm.$.setupState.saveDraft()
+    await wrapper.vm.$nextTick()
+
+    const saveAction = wrapper.get('.pe-publish-actions').element.children[0]
+    expect((saveAction as HTMLElement).querySelector('.p-action-feedback')?.textContent).toContain('保存失败')
+  })
+
   it('blocks editing when an existing episode cannot be loaded', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'not found' }), {
       status: 404,

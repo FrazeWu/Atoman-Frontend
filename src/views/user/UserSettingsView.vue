@@ -131,6 +131,7 @@
       :subscription-diagnostics="subscriptionDiagnostics"
       :loading-subscription-diagnostic-ids="loadingSubscriptionDiagnosticIds"
       :error="manageError"
+      :error-action="manageErrorAction"
       :message="manageMessage"
       @close="showManageSheet = false"
       @create-group="manageCreateSubscriptionGroup"
@@ -186,10 +187,10 @@
       side="right"
       :loading="deletingAccount"
       loading-text="注销中..."
+      :error="deleteAccountError"
       @confirm="confirmDeleteAccount"
       @cancel="deleteAccountOpen = false"
     />
-    <p v-if="deleteAccountError" class="account-danger__error" role="alert">{{ deleteAccountError }}</p>
   </main>
 </template>
 
@@ -217,6 +218,7 @@ import { useFeedStore } from '@/stores/feed'
 import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 import { useFeedSubscriptionManager } from '@/composables/feed/useFeedSubscriptionManager'
 import type { StudioModule } from '@/types'
+import { errorMessage } from '@/utils/logger'
 
 type UserSettingSectionKey = 'profile' | 'security' | 'notification' | 'privacy' | 'modules' | 'danger'
 
@@ -261,6 +263,7 @@ const {
   showManageSheet,
   manageBusy,
   manageError,
+  manageErrorAction,
   manageMessage,
   subscriptionDiagnostics,
   loadingSubscriptionDiagnosticIds,
@@ -389,7 +392,7 @@ const loadFeedSettings = async () => {
     ])
     if (results.some((result) => !result)) throw new Error('订阅状态加载失败')
   } catch (cause) {
-    feedError.value = cause instanceof Error ? cause.message : '订阅状态加载失败，请重试'
+    feedError.value = errorMessage(cause, '订阅状态加载失败，请重试')
   } finally {
     feedLoading.value = false
   }
@@ -404,7 +407,7 @@ const confirmDeleteAccount = async () => {
     deleteAccountOpen.value = false
     await router.push('/')
   } catch (cause) {
-    deleteAccountError.value = cause instanceof Error ? cause.message : '注销失败，请重试'
+    deleteAccountError.value = errorMessage(cause, '注销失败，请重试')
   } finally {
     deletingAccount.value = false
   }

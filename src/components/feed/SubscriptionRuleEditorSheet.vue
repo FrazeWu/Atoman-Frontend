@@ -95,11 +95,14 @@
 
       <div class="rule-editor-actions">
         <PButton variant="secondary" label="取消" @click="requestClose" />
-        <PButton
-          label="保存规则"
-          :disabled="!canSubmit"
-          @click="submitRule"
-        />
+        <div class="rule-editor-save-action">
+          <PButton
+            label="保存规则"
+            :disabled="!canSubmit"
+            @click="submitRule"
+          />
+          <PActionFeedback :message="error" />
+        </div>
       </div>
     </div>
   </PSheet>
@@ -122,6 +125,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -144,8 +148,10 @@ const props = withDefaults(defineProps<{
   groups: SubscriptionGroup[]
   subscriptions: Subscription[]
   rule?: FeedSubscriptionRule | null
+  error?: string
 }>(), {
   subscriptions: () => [],
+  error: '',
 })
 
 const emit = defineEmits<{
@@ -415,5 +421,11 @@ const submitRule = () => {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.rule-editor-save-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 </style>

@@ -4,6 +4,7 @@ import { IconChevronLeft as ChevronLeft, IconClock as Clock, IconDownload as Dow
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -27,6 +28,7 @@ const props = withDefaults(defineProps<{
   translation?: string
   format?: MusicLyricsFormat
   saving?: boolean
+  saveError?: string
   songTitle?: string
   currentTimeSeconds?: number
   lines?: MusicSongLyricsLine[]
@@ -40,6 +42,7 @@ const props = withDefaults(defineProps<{
   translation: '',
   format: 'plain',
   saving: false,
+  saveError: '',
   songTitle: '',
   currentTimeSeconds: 0,
   lines: () => [],
@@ -686,16 +689,19 @@ function handleSave() {
         <PButton type="button" variant="secondary" :disabled="saving" @click="emit('close')">
           取消
         </PButton>
-        <PButton
-          data-testid="lyrics-save"
-          type="button"
-          :disabled="!canSave"
-          :loading="saving"
-          loading-text="保存中..."
-          @click="handleSave"
-        >
-          保存
-        </PButton>
+        <div class="music-lyric-editor-drawer__save-action">
+          <PButton
+            data-testid="lyrics-save"
+            type="button"
+            :disabled="!canSave"
+            :loading="saving"
+            loading-text="保存中..."
+            @click="handleSave"
+          >
+            保存
+          </PButton>
+          <PActionFeedback :message="saveError" />
+        </div>
       </div>
     </div>
   </component>
@@ -716,6 +722,8 @@ function handleSave() {
   align-items: center;
   gap: 0.5rem;
 }
+
+.music-lyric-editor-drawer__save-action { display: grid; justify-items: end; gap: 0.35rem; }
 
 .music-lyric-editor-drawer__workflow {
   display: flex;

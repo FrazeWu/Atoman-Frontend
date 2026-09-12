@@ -52,6 +52,7 @@
       :subscription-diagnostics="subscriptionDiagnostics"
       :loading-subscription-diagnostic-ids="loadingSubscriptionDiagnosticIds"
       :error="manageError"
+      :error-action="manageErrorAction"
       :message="manageMessage"
       :opml-import-result="opmlImportResult"
       @close="showManageSheet = false"
@@ -588,6 +589,7 @@ const {
   showManageSheet,
   manageBusy,
   manageError,
+  manageErrorAction,
   manageMessage,
   opmlImportResult,
   addSubscriptionError,

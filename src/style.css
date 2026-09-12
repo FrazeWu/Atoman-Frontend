@@ -1002,6 +1002,21 @@ body:has(.studio-layout) {
 	font-weight: var(--a-font-weight-strong);
 	font-size: var(--a-text-sm);
 }
+
+.p-action-feedback {
+	margin: 0;
+	font-size: var(--a-text-sm);
+	line-height: 1.5;
+}
+.p-action-feedback--error {
+	color: var(--a-color-danger);
+}
+.p-action-feedback--success {
+	color: var(--a-color-success);
+}
+.p-action-feedback--info {
+	color: var(--a-color-muted);
+}
 .a-success {
 	border: 2px solid #16a34a;
 	background: #f0fdf4;

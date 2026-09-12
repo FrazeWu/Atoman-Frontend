@@ -46,4 +46,15 @@ describe("PConfirm.vue", () => {
     expect(sheet.props("side")).toBe("right");
     expect(sheet.props("mode")).toBe("partial");
   });
+
+  it("renders an operation error below the confirmation actions", () => {
+    const wrapper = mount(PConfirm, {
+      props: { show: true, title: "删除内容", message: "确认删除吗？", error: "删除失败，请重试" },
+    });
+
+    const alert = document.querySelector<HTMLElement>('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert!.textContent).toContain("删除失败，请重试");
+    expect(alert!.parentElement?.classList.contains("p-modal-footer")).toBe(true);
+  });
 });

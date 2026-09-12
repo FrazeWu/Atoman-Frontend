@@ -5,16 +5,19 @@
         <h3 class="a-subtitle">版主管理</h3>
         <p class="a-muted">为版主分配负责分类，并独立控制审核分类、置顶、锁帖权限。</p>
       </div>
-      <PButton
-        variant="secondary"
-        size="sm"
-        :disabled="loading"
-        :loading="loading"
-        loading-text="刷新中..."
-        @click="refresh"
-      >
-        刷新
-      </PButton>
+      <div class="setting-forum-moderator__header-action">
+        <PButton
+          variant="secondary"
+          size="sm"
+          :disabled="loading"
+          :loading="loading"
+          loading-text="刷新中..."
+          @click="refresh"
+        >
+          刷新
+        </PButton>
+        <PActionFeedback :message="loadError" />
+      </div>
     </div>
 
     <div class="setting-forum-moderator__form">
@@ -29,6 +32,7 @@
       >
         搜索用户
       </PButton>
+      <PActionFeedback :message="searchError" />
 
       <PSelect
         v-model="selectedUserId"
@@ -76,12 +80,11 @@
         >
           取消编辑
         </PButton>
+        <PActionFeedback :message="saveError" />
       </div>
     </div>
 
     <p v-if="message" class="setting-forum-moderator__message">{{ message }}</p>
-    <p v-if="error" class="setting-forum-moderator__message setting-forum-moderator__message--error">{{ error }}</p>
-
     <div v-if="assignments.length" class="setting-forum-moderator__list">
       <div
         v-for="assignment in assignments"
@@ -110,6 +113,7 @@
           >
             删除
           </PButton>
+          <PActionFeedback v-if="deleteErrorId === assignment.id" :message="deleteError" />
         </div>
       </div>
     </div>
@@ -123,10 +127,12 @@ import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { errorMessage } from '@/utils/logger'
 
 type ForumCategory = {
   id: string
@@ -173,7 +179,11 @@ const categories = ref<ForumCategory[]>([])
 const users = ref<SearchUser[]>([])
 const assignments = ref<ForumModeratorAssignment[]>([])
 const message = ref('')
-const error = ref('')
+const loadError = ref('')
+const searchError = ref('')
+const saveError = ref('')
+const deleteError = ref('')
+const deleteErrorId = ref('')
 const draft = ref({
   can_review_category_request: false,
   can_pin_topic: false,
@@ -218,7 +228,7 @@ function resetForm() {
 
 async function refresh() {
   loading.value = true
-  error.value = ''
+  loadError.value = ''
   try {
     const [categoryRes, assignmentRes] = await Promise.all([
       apiRequestResult(api.v1.forum.categories),
@@ -240,7 +250,7 @@ async function refresh() {
     categories.value = categoryData.data || []
     assignments.value = assignmentData.data || []
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '加载版主分配失败'
+    loadError.value = errorMessage(err, '加载版主分配失败')
   } finally {
     loading.value = false
   }
@@ -249,7 +259,7 @@ async function refresh() {
 async function searchUsers() {
   if (!query.value.trim()) return
   searching.value = true
-  error.value = ''
+  searchError.value = ''
   try {
     const params = new URLSearchParams({
       q: query.value.trim(),
@@ -264,7 +274,7 @@ async function searchUsers() {
     }
     users.value = data.data || []
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '搜索用户失败'
+    searchError.value = errorMessage(err, '搜索用户失败')
   } finally {
     searching.value = false
   }
@@ -273,7 +283,7 @@ async function searchUsers() {
 async function saveAssignment() {
   if (!selectedUserId.value) return
   saving.value = true
-  error.value = ''
+  saveError.value = ''
   message.value = ''
   try {
     const payload = {
@@ -303,7 +313,7 @@ async function saveAssignment() {
     resetForm()
     await refresh()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '保存版主分配失败'
+    saveError.value = errorMessage(err, '保存版主分配失败')
   } finally {
     saving.value = false
   }
@@ -334,7 +344,8 @@ function startEdit(assignment: ForumModeratorAssignment) {
 
 async function removeAssignment(id: string) {
   deletingId.value = id
-  error.value = ''
+  deleteError.value = ''
+  deleteErrorId.value = ''
   message.value = ''
   try {
     const response = await apiRequestResult(api.v1.forum.moderator(id), {
@@ -351,7 +362,8 @@ async function removeAssignment(id: string) {
     }
     await refresh()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '删除版主分配失败'
+    deleteError.value = errorMessage(err, '删除版主分配失败')
+    deleteErrorId.value = id
   } finally {
     deletingId.value = ''
   }
@@ -373,6 +385,12 @@ onMounted(() => {
   justify-content: space-between;
   gap: 1rem;
   align-items: start;
+}
+
+.setting-forum-moderator__header-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .setting-forum-moderator__header h3,

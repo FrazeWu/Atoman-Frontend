@@ -31,4 +31,16 @@ describe('logger', () => {
     expect(errorMessage({ error: '权限不足' }, '操作失败')).toBe('权限不足')
     expect(errorMessage(null, '操作失败')).toBe('操作失败')
   })
+
+  it('translates known backend error codes into Chinese user-facing messages', () => {
+    expect(errorMessage({ error: { code: 'site_access_conflict' } }, '操作失败'))
+      .toBe('站点设置已被其他管理员更新，请刷新后重试')
+    expect(errorMessage({ error: { code: 'system.internal_error' } }, '操作失败'))
+      .toBe('系统暂时无法完成操作，请稍后重试')
+  })
+
+  it('falls back to Chinese copy for unknown English errors', () => {
+    expect(errorMessage(new Error('offline'), '操作失败，请重试')).toBe('操作失败，请重试')
+    expect(errorMessage({ error: { message: 'upstream timeout' } }, '操作失败，请重试')).toBe('操作失败，请重试')
+  })
 })

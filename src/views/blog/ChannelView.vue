@@ -125,16 +125,19 @@
       </div>
       <div class="modal-actions">
         <PButton label="取消" variant="secondary" @click="collectionModalOpen = false" />
-        <PButton :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
-          {{ editingCollection ? '更新' : '创建' }}
-        </PButton>
+        <div class="collection-action">
+          <PButton :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
+            {{ editingCollection ? '更新' : '创建' }}
+          </PButton>
+          <PActionFeedback :message="collectionActionError" />
+        </div>
       </div>
     </PModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
+import { errorMessage, reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -153,6 +156,7 @@ import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PTab from '@/components/ui/PTab.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
@@ -179,6 +183,7 @@ const collectionModalOpen = ref(false)
 const editingCollection = ref<Collection | null>(null)
 const collectionForm = ref({ name: '', description: '' })
 const collectionSaving = ref(false)
+const collectionActionError = ref('')
 
 const channelSubscribed = ref(false)
 const channelSubscribeLoading = ref(false)
@@ -345,6 +350,7 @@ const openCollectionModal = (collection?: Collection) => {
 const saveCollection = async () => {
   if (!collectionForm.value.name.trim() || !channel.value) return
   collectionSaving.value = true
+  collectionActionError.value = ''
   try {
     let res: Awaited<ReturnType<typeof apiRequestResult>>
     if (editingCollection.value) {
@@ -360,10 +366,13 @@ const saveCollection = async () => {
         body: JSON.stringify(collectionForm.value)
       })
     }
-    if (!res.ok) return
+    if (!res.ok) throw new Error('合集保存失败，请重试')
     collectionModalOpen.value = false
     await fetchCollections(channel.value, routeParam.value, isSlug.value, loadGeneration)
-  } catch (e) { reportError(e) } finally { collectionSaving.value = false }
+  } catch (e) {
+    reportError(e)
+    collectionActionError.value = errorMessage(e, '合集保存失败，请重试')
+  } finally { collectionSaving.value = false }
 }
 
 const toggleChannelSubscribe = async () => {

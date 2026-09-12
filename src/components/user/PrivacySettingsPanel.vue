@@ -39,6 +39,11 @@
               {{ privateProfile ? '开启' : '关闭' }}
             </span>
           </label>
+          <PActionFeedback
+            v-if="saveErrorKey === 'private_profile'"
+            class="privacy-settings__inline-error"
+            :message="saveError"
+          />
         </div>
       </div>
       <div class="settings-block">
@@ -66,11 +71,15 @@
               {{ showRelations ? '开启' : '关闭' }}
             </span>
           </label>
+          <PActionFeedback
+            v-if="saveErrorKey === 'show_relations'"
+            class="privacy-settings__inline-error"
+            :message="saveError"
+          />
         </div>
       </div>
     </div>
-    <p v-if="saveError" class="privacy-settings__inline-error" role="alert">{{ saveError }}</p>
-    <p v-else-if="saved" class="privacy-settings__saved" role="status">{{ savedLabel }}已保存</p>
+    <p v-if="saved" class="privacy-settings__saved" role="status">{{ savedLabel }}已保存</p>
   </section>
 </template>
 
@@ -79,8 +88,10 @@ import { onMounted, ref } from 'vue'
 
 import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { errorMessage } from '@/utils/logger'
 
 const api = useApi()
 const authStore = useAuthStore()
@@ -92,6 +103,7 @@ const saved = ref(false)
 const savedLabel = ref('隐私设置')
 const loadError = ref('')
 const saveError = ref('')
+const saveErrorKey = ref<SettingKey | null>(null)
 
 type SettingsPayload = {
   data?: { private_profile?: unknown; show_relations?: unknown }
@@ -125,6 +137,7 @@ async function load() {
   loading.value = true
   loadError.value = ''
   saveError.value = ''
+  saveErrorKey.value = null
   saved.value = false
   try {
     const response = await apiRequestResult(api.users.meSettings, { headers: authHeaders() })
@@ -132,7 +145,7 @@ async function load() {
     privateProfile.value = readPrivateProfile(response.data)
     showRelations.value = readShowRelations(response.data)
   } catch (cause) {
-    loadError.value = cause instanceof Error ? cause.message : '隐私设置加载失败，请重试'
+    loadError.value = errorMessage(cause, '隐私设置加载失败，请重试')
   } finally {
     loading.value = false
   }
@@ -146,6 +159,7 @@ async function save(key: SettingKey) {
   saved.value = false
   savedLabel.value = key === 'show_relations' ? '订阅关系设置' : '个人资料设置'
   saveError.value = ''
+  saveErrorKey.value = null
   try {
     const response = await apiRequestResult(api.users.meSettings, {
       method: 'PUT',
@@ -161,7 +175,8 @@ async function save(key: SettingKey) {
   } catch (cause) {
     if (key === 'private_profile') privateProfile.value = previous
     else showRelations.value = previous
-    saveError.value = cause instanceof Error ? cause.message : '隐私设置保存失败，请重试'
+    saveError.value = errorMessage(cause, '隐私设置保存失败，请重试')
+    saveErrorKey.value = key
   } finally {
     savingKey.value = null
   }

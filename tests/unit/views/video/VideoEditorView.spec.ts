@@ -379,6 +379,26 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.showPublishConfirm).toBe(true)
   })
 
+  it('places save failures below the save action', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/videos')) throw new Error('保存失败')
+      return makeJsonResponse({ data: [] })
+    }))
+    const { wrapper } = await setup('/studio/video/new')
+    const form = wrapper.vm.$.setupState.form as { storage_type: string; title: string; video_url: string }
+    form.storage_type = 'external'
+    form.title = '测试视频'
+    form.video_url = 'https://example.com/video'
+    wrapper.vm.$.setupState.currentStep = 3
+
+    await wrapper.vm.$.setupState.saveDraft()
+    await wrapper.vm.$nextTick()
+
+    const saveAction = wrapper.get('.ve-publish-actions').element.children[0]
+    expect((saveAction as HTMLElement).querySelector('.p-action-feedback')?.textContent).toContain('保存失败')
+  })
+
   it('switches Studio state for an edited video before loading collections', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)

@@ -17,6 +17,7 @@ import type { PodcastEpisode, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useStudioStore } from '@/stores/studio'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useMediaCreationSteps } from '@/composables/useMediaCreationSteps'
 import { errorMessage } from '@/utils/logger'
@@ -40,6 +41,9 @@ const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
 const errorMsg = ref('')
+const saveError = ref('')
+const publishError = ref('')
+const scheduleError = ref('')
 const editorLoadFailed = ref(false)
 const titleError = ref('')
 const audioError = ref('')
@@ -410,7 +414,7 @@ onMounted(async () => {
 async function saveDraft() {
   if (!validate('draft')) return
   savingDraft.value = true
-  errorMsg.value = ''
+  saveError.value = ''
   draftSaved.value = false
   try {
     await apiSave(buildPayload('draft'))
@@ -421,7 +425,7 @@ async function saveDraft() {
     })
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e) {
-    errorMsg.value = errorMessage(e, '保存失败，请重试')
+    saveError.value = errorMessage(e, '保存失败，请重试')
   } finally {
     savingDraft.value = false
   }
@@ -429,18 +433,19 @@ async function saveDraft() {
 
 function requestPublish() {
   if (!validate('published')) return
+  publishError.value = ''
   showPublishConfirm.value = true
 }
 
 async function doPublish() {
   showPublishConfirm.value = false
   publishing.value = true
-  errorMsg.value = ''
+  publishError.value = ''
   try {
     const ep = await apiSave(buildPayload('published'))
     router.push(`/podcasts/episode/${isEdit.value ? route.params.id : ep.id}`)
   } catch (e) {
-    errorMsg.value = errorMessage(e, '发布失败，请重试')
+    publishError.value = errorMessage(e, '发布失败，请重试')
   } finally {
     publishing.value = false
   }
@@ -450,17 +455,17 @@ async function schedulePublish() {
   if (!validate('published')) return
   const publishAt = new Date(scheduledAt.value)
   if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
-    errorMsg.value = '请选择未来的发布时间'
+    scheduleError.value = '请选择未来的发布时间'
     return
   }
   scheduling.value = true
-  errorMsg.value = ''
+  scheduleError.value = ''
   try {
     const episode = await apiSave(buildPayload('draft'))
     await lifecycle.schedule('podcast', episode.id, publishAt.toISOString())
     await router.push({ path: '/studio/podcast/content', query: { status: 'scheduled' } })
   } catch (e) {
-    errorMsg.value = errorMessage(e, '设置失败，请重试')
+    scheduleError.value = errorMessage(e, '设置失败，请重试')
   } finally {
     scheduling.value = false
   }
@@ -647,6 +652,7 @@ async function schedulePublish() {
         v-model="scheduledAt"
         :busy="scheduling"
         :disabled="publishing || savingDraft || audioBusy || !form.audio_url"
+        :error="scheduleError"
         @schedule="schedulePublish"
       />
 
@@ -656,24 +662,30 @@ async function schedulePublish() {
           上一步
         </PButton>
         <div class="pe-publish-actions">
-		  <PButton
-			:variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
+          <div class="pe-publish-action">
+            <PButton
+			      :variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
             :loading="savingDraft"
             loading-text="保存中…"
             :disabled="publishing || audioBusy || !form.audio_url"
             @click="saveDraft"
-          >
-            保存草稿
-          </PButton>
-		  <PButton
-			:variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
+            >
+              保存草稿
+            </PButton>
+            <PActionFeedback :message="saveError" />
+          </div>
+          <div class="pe-publish-action">
+            <PButton
+			      :variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
             :loading="publishing"
             loading-text="发布中…"
             :disabled="savingDraft || audioBusy || !form.audio_url"
             @click="requestPublish"
-          >
-            立即发布
-          </PButton>
+            >
+              立即发布
+            </PButton>
+            <PActionFeedback :message="publishError" />
+          </div>
         </div>
       </div>
     </section>
@@ -926,6 +938,12 @@ async function schedulePublish() {
   display: flex;
   align-items: center;
   gap: var(--a-space-3);
+}
+
+.pe-publish-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .pe-step-actions {

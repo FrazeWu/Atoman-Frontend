@@ -3,7 +3,7 @@ import { useApi } from "@/composables/useApi";
 import { ref, watch, type Ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useFeedStore, type FeedOPMLImportResult } from "@/stores/feed";
-import { reportError } from "@/utils/logger";
+import { errorMessage, reportError } from "@/utils/logger";
 import {
 	useOnboardingStore,
 	type OnboardingFeedRecommendation,
@@ -53,6 +53,7 @@ export function useFeedSubscriptionManager({
 	const showManageSheet = ref(false);
 	const manageBusy = ref(false);
 	const manageError = ref("");
+	const manageErrorAction = ref<'general' | 'save' | 'import' | 'export' | 'health' | 'sync' | 'batch' | 'rule'>('general');
 	const manageMessage = ref("");
 	const opmlImportResult = ref<FeedOPMLImportResult | null>(null);
 	const addSubscriptionError = ref("");
@@ -103,6 +104,7 @@ export function useFeedSubscriptionManager({
 		showAddModal.value = false;
 		addSubscriptionError.value = "";
 		manageError.value = "";
+		manageErrorAction.value = 'general';
 		manageMessage.value = "";
 		showManageSheet.value = true;
 	};
@@ -123,7 +125,7 @@ export function useFeedSubscriptionManager({
 			}
 		} catch (error) {
 			addSubscriptionError.value =
-				error instanceof Error ? error.message : "添加失败";
+				errorMessage(error, "添加失败，请检查地址是否正确");
 		} finally {
 			addingSubscription.value = false;
 		}
@@ -182,8 +184,9 @@ export function useFeedSubscriptionManager({
 		}
 	};
 
-	const setManageError = (fallback: string) => {
-		manageError.value = feedStore.error || fallback;
+	const setManageError = (fallback: string, action: typeof manageErrorAction.value = 'general') => {
+		manageError.value = errorMessage(feedStore.error, fallback);
+		manageErrorAction.value = action;
 	};
 
 	const refreshSubscriptionState = () =>
@@ -311,7 +314,7 @@ export function useFeedSubscriptionManager({
 			)
 				return;
 			if (!response.ok) {
-				manageError.value = "无法加载近期抓取记录";
+				setManageError("无法加载近期抓取记录", 'health');
 				return;
 			}
 			const payload = response.data as { data?: FeedSourceDiagnostic[] };
@@ -325,7 +328,7 @@ export function useFeedSubscriptionManager({
 				sessionGeneration === diagnosticsSessionGeneration &&
 				token === authStore.token
 			) {
-				manageError.value = "无法加载近期抓取记录";
+				setManageError("无法加载近期抓取记录", 'health');
 			}
 		} finally {
 			if (
@@ -342,27 +345,30 @@ export function useFeedSubscriptionManager({
 	const checkSubscriptionHealth = async (id: string) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'health';
 			const success = await feedStore.checkSubscriptionHealth(id);
-			if (!success) setManageError("检查失败");
+			if (!success) setManageError("检查失败", 'health');
 		});
 	};
 
 	const checkAllSubscriptionsHealth = async () => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'health';
 			const success = await feedStore.checkAllSubscriptionsHealth();
-			if (!success) setManageError("检查失败");
+			if (!success) setManageError("检查失败", 'health');
 		});
 	};
 
 	const syncSubscription = async (id: string) => {
 		manageError.value = "";
+		manageErrorAction.value = 'sync';
 		const result = await feedStore.syncSubscription(id);
 		if (!result) {
-			setManageError("刷新失败");
+			setManageError("刷新失败", 'sync');
 			return;
 		}
-		if (!result.success) setManageError(result.error || "刷新失败");
+		if (!result.success) setManageError(result.error || "刷新失败", 'sync');
 		if (result.success || result.new_items > 0) {
 			currentPage.value = 1;
 			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
@@ -371,12 +377,13 @@ export function useFeedSubscriptionManager({
 
 	const syncAllSubscriptions = async () => {
 		manageError.value = "";
+		manageErrorAction.value = 'sync';
 		const result = await feedStore.syncAllSubscriptions();
 		if (!result) {
-			setManageError("刷新失败");
+			setManageError("刷新失败", 'sync');
 			return;
 		}
-		if (result.failed > 0) setManageError(`${result.failed} 个来源刷新失败`);
+		if (result.failed > 0) setManageError(`${result.failed} 个来源刷新失败`, 'sync');
 		currentPage.value = 1;
 		await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 	};
@@ -419,6 +426,7 @@ export function useFeedSubscriptionManager({
 	const importOPML = async (file: File) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'import';
 			manageMessage.value = "";
 			const result = await feedStore.importOPML(file);
 			opmlImportResult.value = result;
@@ -427,7 +435,7 @@ export function useFeedSubscriptionManager({
 				currentPage.value = 1;
 				await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 			} else {
-				manageError.value = feedStore.error || "导入失败";
+				manageError.value = errorMessage(feedStore.error, "导入失败，请重试");
 			}
 		});
 	};
@@ -470,10 +478,11 @@ export function useFeedSubscriptionManager({
 	) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'batch';
 			manageMessage.value = "";
 			const success = await feedStore.batchUpdateSubscriptions(ids, payload);
 			if (!success) {
-				setManageError("批量更新失败");
+				setManageError("批量更新失败", 'batch');
 				return;
 			}
 			manageMessage.value = `已更新 ${ids.length} 个订阅源`;
@@ -484,12 +493,13 @@ export function useFeedSubscriptionManager({
 	const batchDeleteSubscriptions = async (ids: string[]) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'batch';
 			manageMessage.value = "";
 			const results = await Promise.all(ids.map((id) =>
 				feedStore.unsubscribeSubscriptionHubSource(id),
 			));
 			if (!results.every(Boolean)) {
-				setManageError("批量取消订阅失败");
+				setManageError("批量取消订阅失败", 'batch');
 				await refreshSubscriptionState();
 				return;
 			}
@@ -516,6 +526,7 @@ export function useFeedSubscriptionManager({
 	const exportOPML = async () => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'export';
 			try {
 				const blob = await feedStore.exportOPML();
 				const url = URL.createObjectURL(blob);
@@ -527,7 +538,8 @@ export function useFeedSubscriptionManager({
 				link.remove();
 				URL.revokeObjectURL(url);
 			} catch (error) {
-				manageError.value = error instanceof Error ? error.message : "导出失败";
+				manageError.value = errorMessage(error, "导出失败，请重试");
+				manageErrorAction.value = 'export';
 			}
 		});
 	};
@@ -553,11 +565,12 @@ export function useFeedSubscriptionManager({
 	const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'rule';
 			const success = saved.id
 				? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
 				: await feedStore.createSubscriptionRule(saved.payload);
 			if (!success) {
-				manageError.value = feedStore.error || "保存失败";
+				setManageError(feedStore.error || "保存失败", 'rule');
 				return;
 			}
 			await confirmApplySavedRule(findSavedRuleId(saved));
@@ -568,8 +581,9 @@ export function useFeedSubscriptionManager({
 	const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'rule';
 			const success = await feedStore.reorderSubscriptionRules(nextRuleIds);
-			if (!success) setManageError("排序失败");
+			if (!success) setManageError("排序失败", 'rule');
 		});
 	};
 
@@ -594,9 +608,10 @@ export function useFeedSubscriptionManager({
 	const applySubscriptionRule = async (id: string) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'rule';
 			const success = await feedStore.applySubscriptionRules({ rule_id: id });
 			if (!success) {
-				setManageError("应用失败");
+				setManageError("应用失败", 'rule');
 				return;
 			}
 			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
@@ -606,9 +621,10 @@ export function useFeedSubscriptionManager({
 	const applyAllSubscriptionRules = async () => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'rule';
 			const success = await feedStore.applySubscriptionRules({ all: true });
 			if (!success) {
-				setManageError("应用失败");
+				setManageError("应用失败", 'rule');
 				return;
 			}
 			await refreshTimeline();
@@ -618,8 +634,9 @@ export function useFeedSubscriptionManager({
 	const deleteSubscriptionRule = async (id: string) => {
 		await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'rule';
 			const success = await feedStore.deleteSubscriptionRule(id);
-			if (!success) setManageError("删除失败");
+			if (!success) setManageError("删除失败", 'rule');
 		});
 	};
 
@@ -639,19 +656,20 @@ export function useFeedSubscriptionManager({
 
 	const saveSubscriptionChanges = async (changes: SubscriptionManageChanges) => {
 		if (!changes.subscriptions.length && !changes.groups.length) return;
-		await withManageBusy(async () => {
+	await withManageBusy(async () => {
 			manageError.value = "";
+			manageErrorAction.value = 'save';
 			for (const change of changes.subscriptions) {
 				const success = await feedStore.updateSubscription(change.id, { title: change.title });
 				if (!success) {
-					setManageError("订阅源保存失败");
+					setManageError("订阅源保存失败", 'save');
 					return;
 				}
 			}
 			for (const change of changes.groups) {
 				const success = await feedStore.updateGroup(change.id, change.name);
 				if (!success) {
-					setManageError("分组保存失败");
+					setManageError("分组保存失败", 'save');
 					return;
 				}
 			}
@@ -666,6 +684,7 @@ export function useFeedSubscriptionManager({
 		showManageSheet,
 		manageBusy,
 		manageError,
+		manageErrorAction,
 		manageMessage,
 		opmlImportResult,
 		addSubscriptionError,

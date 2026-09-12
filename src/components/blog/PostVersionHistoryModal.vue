@@ -13,16 +13,19 @@
           <span>{{ formatDate(version.created_at) }}</span>
           <p v-if="version.summary">{{ version.summary }}</p>
         </div>
-        <PButton
-          type="button"
-          size="sm"
-          variant="secondary"
-          :loading="restoringVersion === version.version"
-          :disabled="restoringVersion !== null"
-          @click="restore(version.version)"
-        >
-          恢复
-        </PButton>
+        <div class="version-history__restore-action">
+          <PButton
+            type="button"
+            size="sm"
+            variant="secondary"
+            :loading="restoringVersion === version.version"
+            :disabled="restoringVersion !== null"
+            @click="restore(version.version)"
+          >
+            恢复
+          </PButton>
+          <PActionFeedback v-if="restoreErrorVersion === version.version" :message="restoreError" />
+        </div>
       </li>
     </ol>
   </PModal>
@@ -35,8 +38,10 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { BlogPostVersion } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
+import { errorMessage } from '@/utils/logger'
 
 const props = withDefaults(defineProps<{ postId: string; abovePlayer?: boolean }>(), {
   abovePlayer: false,
@@ -48,6 +53,8 @@ const versions = ref<BlogPostVersion[]>([])
 const loading = ref(true)
 const error = ref('')
 const restoringVersion = ref<number | null>(null)
+const restoreError = ref('')
+const restoreErrorVersion = ref<number | null>(null)
 
 const headers = (): Record<string, string> => {
   const value: Record<string, string> = {}
@@ -64,7 +71,7 @@ const loadVersions = async () => {
     const payload = response.data as { data?: BlogPostVersion[] }
     versions.value = payload.data || []
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '版本加载失败'
+    error.value = errorMessage(cause, '版本加载失败，请重试')
   } finally {
     loading.value = false
   }
@@ -72,7 +79,8 @@ const loadVersions = async () => {
 
 const restore = async (version: number) => {
   restoringVersion.value = version
-  error.value = ''
+  restoreError.value = ''
+  restoreErrorVersion.value = null
   try {
     const response = await apiRequestResult(api.blog.postVersionRestore(props.postId, version), {
       method: 'POST',
@@ -81,7 +89,8 @@ const restore = async (version: number) => {
     if (!response.ok) throw new Error('版本恢复失败')
     emit('restored')
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '版本恢复失败'
+    restoreError.value = errorMessage(cause, '版本恢复失败，请重试')
+    restoreErrorVersion.value = version
   } finally {
     restoringVersion.value = null
   }
@@ -101,6 +110,7 @@ onMounted(() => { void loadVersions() })
 .version-history__item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
 .version-history__item:last-child { border-bottom: 0; }
 .version-history__content { min-width: 0; display: grid; gap: 0.25rem; }
+.version-history__restore-action { display: grid; justify-items: end; gap: 0.35rem; }
 .version-history__content strong { overflow-wrap: anywhere; }
 .version-history__content span, .version-history__content p { margin: 0; color: var(--a-color-muted); font-size: 0.8rem; }
 </style>

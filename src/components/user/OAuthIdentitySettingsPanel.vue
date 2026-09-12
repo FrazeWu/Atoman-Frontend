@@ -51,8 +51,9 @@
       danger
       side="right"
       :loading="unlinking"
+      :error="unlinkError"
       @confirm="confirmUnlink"
-      @cancel="pendingUnlink = null"
+      @cancel="cancelUnlink"
     />
   </section>
 </template>
@@ -63,6 +64,7 @@ import { onMounted, ref } from 'vue'
 import OAuthBrandIcon from '@/components/auth/OAuthBrandIcon.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import { errorMessage } from '@/utils/logger'
 import {
   listOAuthIdentities,
   listOAuthProviders,
@@ -80,6 +82,7 @@ const loading = ref(true)
 const error = ref('')
 const pendingUnlink = ref<OAuthProvider | null>(null)
 const unlinking = ref(false)
+const unlinkError = ref('')
 
 function identityFor(provider: OAuthProvider) {
   return identities.value.find(identity => identity.provider === provider)
@@ -92,7 +95,7 @@ onMounted(async () => {
       listOAuthIdentities(),
     ])
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '无法加载登录方式'
+    error.value = errorMessage(cause, '无法加载登录方式')
   } finally {
     loading.value = false
   }
@@ -102,16 +105,22 @@ async function confirmUnlink() {
   if (!pendingUnlink.value) return
   const provider = pendingUnlink.value
   unlinking.value = true
-  error.value = ''
+  unlinkError.value = ''
   try {
     await unlinkOAuthIdentity(provider)
     identities.value = identities.value.filter(identity => identity.provider !== provider)
     pendingUnlink.value = null
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '无法取消绑定'
+    unlinkError.value = errorMessage(cause, '无法取消绑定')
   } finally {
     unlinking.value = false
   }
+}
+
+function cancelUnlink() {
+  if (unlinking.value) return
+  pendingUnlink.value = null
+  unlinkError.value = ''
 }
 </script>
 

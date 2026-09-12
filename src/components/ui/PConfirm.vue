@@ -21,6 +21,7 @@
         :loading-text="loadingText"
         @click="confirm"
       />
+      <PActionFeedback class="p-confirm__feedback" :message="error" />
     </template>
   </PModal>
 
@@ -47,11 +48,13 @@
         @click="confirm"
       />
     </div>
+    <PActionFeedback :message="error" />
   </PSheet>
 </template>
 
 <script setup lang="ts">
 import PButton from './PButton.vue'
+import PActionFeedback from './PActionFeedback.vue'
 import PModal from './PModal.vue'
 import PSheet from './PSheet.vue'
 
@@ -66,6 +69,7 @@ const props = withDefaults(defineProps<{
   loadingText?: string
   abovePlayer?: boolean
   side?: 'right'
+  error?: string
 }>(), {
   title: '请确认操作',
   message: '该操作不可撤销，是否继续？',
@@ -76,6 +80,7 @@ const props = withDefaults(defineProps<{
   loadingText: '处理中...',
   abovePlayer: false,
   side: undefined,
+  error: '',
 })
 
 const emit = defineEmits<{
@@ -104,4 +109,6 @@ const cancel = () => {
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+.p-confirm__feedback { flex-basis: 100%; text-align: right; }
 </style>

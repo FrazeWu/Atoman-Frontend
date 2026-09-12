@@ -15,11 +15,13 @@
         @update:model-value="query = $event.trim()"
         @keydown.enter.prevent="loadUsers"
       />
-      <PButton :loading="loading" loading-text="搜索中..." @click="loadUsers">搜索</PButton>
+      <div class="setting-roles__search-action">
+        <PButton :loading="loading" loading-text="搜索中..." @click="loadUsers">搜索</PButton>
+        <PActionFeedback :message="searchError" />
+      </div>
     </div>
 
-    <p v-if="error" class="setting-roles__message setting-roles__message--error">{{ error }}</p>
-    <p v-else-if="message" class="setting-roles__message">{{ message }}</p>
+    <p v-if="message" class="setting-roles__message" role="status">{{ message }}</p>
 
     <PCard v-if="users.length === 0 && !loading">
       <p class="setting-roles__empty">没有找到可管理的用户。</p>
@@ -35,21 +37,24 @@
             <small>当前角色：{{ roleLabel(user.role) }}</small>
           </div>
           <div class="setting-roles__actions">
-            <PButton
-              v-if="user.role !== 'admin'"
-              size="sm"
-              :loading="pendingUserId === user.uuid"
-              loading-text="处理中..."
-              @click="updateRole(user.uuid, 'admin')"
-            >设为管理员</PButton>
-            <PButton
-              v-else
-              size="sm"
-              variant="secondary"
-              :loading="pendingUserId === user.uuid"
-              loading-text="处理中..."
-              @click="updateRole(user.uuid, 'user')"
-            >取消管理员</PButton>
+            <div class="setting-roles__role-action">
+              <PButton
+                v-if="user.role !== 'admin'"
+                size="sm"
+                :loading="pendingUserId === user.uuid"
+                loading-text="处理中..."
+                @click="updateRole(user.uuid, 'admin')"
+              >设为管理员</PButton>
+              <PButton
+                v-else
+                size="sm"
+                variant="secondary"
+                :loading="pendingUserId === user.uuid"
+                loading-text="处理中..."
+                @click="updateRole(user.uuid, 'user')"
+              >取消管理员</PButton>
+              <PActionFeedback v-if="roleErrorUserId === user.uuid" :message="roleError" />
+            </div>
           </div>
         </div>
       </PCard>
@@ -63,8 +68,10 @@ import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { errorMessage } from '@/utils/logger'
 
 type RoleManagedUser = {
   uuid: string
@@ -83,7 +90,9 @@ const query = ref('')
 const users = ref<RoleManagedUser[]>([])
 const loading = ref(false)
 const pendingUserId = ref('')
-const error = ref('')
+const searchError = ref('')
+const roleError = ref('')
+const roleErrorUserId = ref('')
 const message = ref('')
 
 function roleLabel(role: RoleManagedUser['role']) {
@@ -94,7 +103,7 @@ function roleLabel(role: RoleManagedUser['role']) {
 
 async function loadUsers() {
   loading.value = true
-  error.value = ''
+  searchError.value = ''
   message.value = ''
 
   try {
@@ -115,7 +124,7 @@ async function loadUsers() {
 
     users.value = (data.data || []).filter((user: RoleManagedUser) => user.role !== 'owner')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '加载用户失败'
+    searchError.value = errorMessage(err, '加载用户失败')
   } finally {
     loading.value = false
   }
@@ -123,7 +132,8 @@ async function loadUsers() {
 
 async function updateRole(userUUID: string, role: 'user' | 'admin') {
   pendingUserId.value = userUUID
-  error.value = ''
+  roleError.value = ''
+  roleErrorUserId.value = ''
   message.value = ''
 
   try {
@@ -146,7 +156,8 @@ async function updateRole(userUUID: string, role: 'user' | 'admin') {
     ))
     message.value = role === 'admin' ? '已授予管理员权限' : '已取消管理员权限'
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '更新角色失败'
+    roleError.value = errorMessage(err, '更新角色失败')
+    roleErrorUserId.value = userUUID
   } finally {
     pendingUserId.value = ''
   }
@@ -167,6 +178,13 @@ onMounted(() => {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+}
+
+.setting-roles__search-action,
+.setting-roles__role-action {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
 }
 
 .setting-roles__search {

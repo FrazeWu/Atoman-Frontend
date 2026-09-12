@@ -5,7 +5,6 @@ import type { MusicLyricsFormat, MusicLyricsSaveTarget, MusicSongLyrics, UpdateM
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
-import PToast from '@/components/ui/PToast.vue'
 
 const props = defineProps<{
   show: boolean
@@ -21,8 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const { lyrics, loading, saving, load, save } = useMusicLyrics()
-const toastVisible = ref(false)
-const toastMessage = ref('')
+const saveError = ref('')
 const editorDirty = ref(false)
 const pendingClose = ref(false)
 const pendingInput = ref<UpdateMusicSongLyricsInput | null>(null)
@@ -40,6 +38,7 @@ watch(() => props.show, (show) => {
   if (!show) {
     editorDirty.value = false
     pendingClose.value = false
+    saveError.value = ''
   }
 })
 
@@ -84,6 +83,7 @@ async function handleSave(payload: {
     edit_summary: payload.editSummary,
   }
   try {
+    saveError.value = ''
     const updated = await save(props.songId, input)
     editorDirty.value = false
     emit('saved', updated)
@@ -99,10 +99,9 @@ async function handleSave(payload: {
         return
       }
     }
-    toastMessage.value = error instanceof ApiErrorResponseError && error.code === 'music.lyrics_version_conflict'
+    saveError.value = error instanceof ApiErrorResponseError && error.code === 'music.lyrics_version_conflict'
       ? '歌词已被其他用户更新，请重新打开'
-      : '歌词保存失败'
-    toastVisible.value = true
+      : '歌词保存失败，请重试'
   }
 }
 
@@ -118,13 +117,13 @@ async function confirmAnnotationConflict() {
   pendingInput.value = null
   conflictingAnnotationIds.value = []
   try {
+    saveError.value = ''
     const updated = await save(props.songId, input)
     editorDirty.value = false
     emit('saved', updated)
     emit('close')
   } catch {
-    toastMessage.value = '歌词保存失败'
-    toastVisible.value = true
+    saveError.value = '歌词保存失败，请重试'
   }
 }
 
@@ -145,6 +144,7 @@ function cancelAnnotationConflict() {
     :version="lyrics?.version ?? 0"
     :translation-language="lyrics?.translation_language ?? ''"
     :source="lyrics?.source ?? ''"
+    :save-error="saveError"
     :current-time-seconds="currentTimeSeconds"
     :saving="saving || loading"
     @close="requestClose"
@@ -174,5 +174,4 @@ function cancelAnnotationConflict() {
     @confirm="confirmAnnotationConflict"
     @cancel="cancelAnnotationConflict"
   />
-  <PToast v-model="toastVisible" :message="toastMessage" type="error" />
 </template>

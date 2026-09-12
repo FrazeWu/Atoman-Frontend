@@ -38,4 +38,9 @@ describe('logger', () => {
     expect(errorMessage({ error: { code: 'system.internal_error' } }, '操作失败'))
       .toBe('系统暂时无法完成操作，请稍后重试')
   })
+
+  it('falls back to Chinese copy for unknown English errors', () => {
+    expect(errorMessage(new Error('offline'), '操作失败，请重试')).toBe('操作失败，请重试')
+    expect(errorMessage({ error: { message: 'upstream timeout' } }, '操作失败，请重试')).toBe('操作失败，请重试')
+  })
 })

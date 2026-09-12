@@ -591,10 +591,4 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .music-tag,
-  .music-tag__actions {
-    transition: none;
-  }
-}
 </style>

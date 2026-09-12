@@ -16,6 +16,7 @@ import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCircleChe
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Collection } from '@/types'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useMediaCreationSteps } from '@/composables/useMediaCreationSteps'
 import { useVideoImportUpload } from '@/composables/useVideoImportUpload'
@@ -42,6 +43,10 @@ const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
 const errorMsg = ref('')
+const saveError = ref('')
+const publishError = ref('')
+const scheduleError = ref('')
+const duplicateError = ref('')
 const editorLoadFailed = ref(false)
 const titleError = ref('')
 const urlError = ref('')
@@ -479,7 +484,7 @@ onMounted(async () => {
 async function saveDraft() {
   if (!validate('draft')) return
   savingDraft.value = true
-  errorMsg.value = ''
+  saveError.value = ''
   draftSaved.value = false
   try {
     if (!isEdit.value && form.value.storage_type === 'local') {
@@ -495,7 +500,7 @@ async function saveDraft() {
     })
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e) {
-    errorMsg.value = errorMessage(e, '保存失败，请重试')
+    saveError.value = errorMessage(e, '保存失败，请重试')
   } finally {
     savingDraft.value = false
   }
@@ -503,13 +508,14 @@ async function saveDraft() {
 
 function requestPublish() {
   if (!validate('published')) return
+  publishError.value = ''
   showPublishConfirm.value = true
 }
 
 async function doPublish() {
   showPublishConfirm.value = false
   publishing.value = true
-  errorMsg.value = ''
+  publishError.value = ''
   try {
     if (!isEdit.value && form.value.storage_type === 'local') {
       await submitImport('published')
@@ -519,7 +525,7 @@ async function doPublish() {
     const v = await apiSave(buildPayload('published'))
     router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
   } catch (e) {
-    errorMsg.value = errorMessage(e, '发布失败，请重试')
+    publishError.value = errorMessage(e, '发布失败，请重试')
   } finally {
     publishing.value = false
   }
@@ -529,11 +535,11 @@ async function schedulePublish() {
   if (!validate('published')) return
   const publishAt = new Date(scheduledAt.value)
   if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
-    errorMsg.value = '请选择未来的发布时间'
+    scheduleError.value = '请选择未来的发布时间'
     return
   }
   scheduling.value = true
-  errorMsg.value = ''
+  scheduleError.value = ''
   try {
     if (!isEdit.value && form.value.storage_type === 'local') {
       await submitImport('scheduled', publishAt.toISOString())
@@ -544,7 +550,7 @@ async function schedulePublish() {
     await lifecycle.schedule('video', video.id, publishAt.toISOString())
     await router.push({ path: '/studio/video/content', query: { status: 'scheduled' } })
   } catch (e) {
-    errorMsg.value = errorMessage(e, '设置失败，请重试')
+    scheduleError.value = errorMessage(e, '设置失败，请重试')
   } finally {
     scheduling.value = false
   }
@@ -553,12 +559,12 @@ async function schedulePublish() {
 async function duplicateDraft() {
   if (!isEdit.value || duplicating.value) return
   duplicating.value = true
-  errorMsg.value = ''
+  duplicateError.value = ''
   try {
     const copied = await duplicateVideo(String(route.params.id), authStore.token ?? undefined)
     await router.push(`/studio/video/${copied.id}/edit`)
   } catch (cause) {
-    errorMsg.value = errorMessage(cause, '复制草稿失败，请重试')
+    duplicateError.value = errorMessage(cause, '复制草稿失败，请重试')
   } finally {
     duplicating.value = false
   }
@@ -569,7 +575,10 @@ async function duplicateDraft() {
   <div class="ve-wrap">
     <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent mb="1.5rem">
       <template v-if="isEdit" #action>
-        <PButton variant="secondary" :loading="duplicating" @click="duplicateDraft"><Copy :size="16" aria-hidden="true" />复制为草稿</PButton>
+        <div class="ve-header-action">
+          <PButton variant="secondary" :loading="duplicating" @click="duplicateDraft"><Copy :size="16" aria-hidden="true" />复制为草稿</PButton>
+          <PActionFeedback :message="duplicateError" />
+        </div>
       </template>
     </PPageHeader>
 
@@ -778,6 +787,7 @@ async function duplicateDraft() {
             v-model="scheduledAt"
             :busy="scheduling"
             :disabled="publishing || savingDraft"
+            :error="scheduleError"
             @schedule="schedulePublish"
           />
 
@@ -787,24 +797,30 @@ async function duplicateDraft() {
               上一步
             </PButton>
             <div class="ve-publish-actions">
-		  <PButton
-			:variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
+              <div class="ve-publish-action">
+                <PButton
+			      :variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
                 :loading="savingDraft"
                 loading-text="保存中…"
                 :disabled="publishing"
                 @click="saveDraft"
-              >
-                保存草稿
-              </PButton>
-		  <PButton
-			:variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
+                >
+                  保存草稿
+                </PButton>
+                <PActionFeedback :message="saveError" />
+              </div>
+              <div class="ve-publish-action">
+                <PButton
+			      :variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
                 :loading="publishing"
                 loading-text="发布中…"
                 :disabled="savingDraft"
                 @click="requestPublish"
-              >
-                立即发布
-              </PButton>
+                >
+                  立即发布
+                </PButton>
+                <PActionFeedback :message="publishError" />
+              </div>
             </div>
           </div>
         </section>
@@ -1085,6 +1101,13 @@ async function duplicateDraft() {
   display: flex;
   align-items: center;
   gap: var(--a-space-3);
+}
+
+.ve-publish-action,
+.ve-header-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .ve-step-actions {

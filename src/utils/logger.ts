@@ -26,24 +26,29 @@ function translateErrorCode(value: unknown): string | undefined {
   return typeof value === 'string' ? userFacingErrorMessages[value] : undefined
 }
 
+function chineseMessageOrFallback(value: unknown, fallback: string): string {
+  if (typeof value !== 'string' || !value) return fallback
+  return translateErrorCode(value) || (/[㐀-鿿]/.test(value) ? value : fallback)
+}
+
 export function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) {
-    return translateErrorCode(error.message) || error.message
+    return chineseMessageOrFallback(error.message, fallback)
   }
   if (!error || typeof error !== 'object') return fallback
 
   const value = error as { error?: unknown; message?: unknown }
   if (typeof value.error === 'string' && value.error) {
-    return translateErrorCode(value.error) || value.error
+    return chineseMessageOrFallback(value.error, fallback)
   }
   if (value.error && typeof value.error === 'object') {
     const nested = value.error as { code?: unknown; message?: unknown }
     const nestedCodeMessage = translateErrorCode(nested.code)
     if (nestedCodeMessage) return nestedCodeMessage
     const nestedMessage = nested.message
-    if (typeof nestedMessage === 'string' && nestedMessage) return nestedMessage
+    if (typeof nestedMessage === 'string' && nestedMessage) return chineseMessageOrFallback(nestedMessage, fallback)
   }
   const codeMessage = translateErrorCode((value as { code?: unknown }).code)
   if (codeMessage) return codeMessage
-  return typeof value.message === 'string' && value.message ? value.message : fallback
+  return chineseMessageOrFallback(value.message, fallback)
 }

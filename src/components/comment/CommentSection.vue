@@ -15,19 +15,21 @@
       />
     </header>
 
-    <CommentComposer
-      v-if="authStore.isAuthenticated && !readonly"
-      ref="rootComposer"
-      compact
-      :compact-avatar-src="authStore.user?.avatar_url || ''"
-      :compact-avatar-name="authStore.user?.display_name || authStore.user?.username || '我'"
-      :placeholder="`写下${noun}`"
-      :initial-content="rootDraftContent"
-      :current-time="currentTime"
-      :submitting="creating"
-      @submit="createRoot"
-      @content-change="scheduleRootDraft"
-    />
+    <template v-if="authStore.isAuthenticated && !readonly">
+      <CommentComposer
+        ref="rootComposer"
+        compact
+        :compact-avatar-src="authStore.user?.avatar_url || ''"
+        :compact-avatar-name="authStore.user?.display_name || authStore.user?.username || '我'"
+        :placeholder="`写下${noun}`"
+        :initial-content="rootDraftContent"
+        :current-time="currentTime"
+        :submitting="creating"
+        @submit="createRoot"
+        @content-change="scheduleRootDraft"
+      />
+      <PActionFeedback :message="rootMutationError" />
+    </template>
     <div v-else-if="readonly" class="comment-section__login">评论已关闭</div>
     <div v-else class="comment-section__login">
       <MessageSquare :size="18" aria-hidden="true" />
@@ -86,6 +88,7 @@ import { IconMessage as MessageSquare } from '@tabler/icons-vue'
 
 import type { CommentDTO, CommentTargetRef, CreateCommentInput, ReportCommentInput } from '@/api/comments'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useComments } from '@/composables/useComments'
 import { commentDraftKey, useCommentDraft } from '@/composables/useCommentDraft'
@@ -131,6 +134,7 @@ const comments = useComments(() => props.target)
 const commentDraft = useCommentDraft()
 const creating = ref(false)
 const mutationError = ref('')
+const rootMutationError = ref('')
 const rootComposer = ref<{ reset: () => void; setContent?: (value: string) => void } | null>(null)
 const rootDraftContent = ref('')
 const pendingActions = reactive(new Set<string>())
@@ -211,6 +215,7 @@ watch(() => [
     rootDraftContent.value = ''
     rootComposer.value?.reset()
     mutationError.value = ''
+    rootMutationError.value = ''
   }
   const request = ++focusRequest
   const shouldLoad = !previous || previous[0] !== targetKey || comments.page.value === 0
@@ -290,7 +295,7 @@ async function createRoot(input: CreateCommentInput) {
   const requestedTargetKey = targetKey(props.target)
   const requestedTargetGeneration = targetGeneration
   creating.value = true
-  mutationError.value = ''
+  rootMutationError.value = ''
   try {
     await comments.create(input)
     if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
@@ -301,7 +306,7 @@ async function createRoot(input: CreateCommentInput) {
     emitCount()
   } catch (error) {
     if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) {
-      mutationError.value = referencePublishErrorMessage(error, '发布失败，请重试')
+      rootMutationError.value = referencePublishErrorMessage(error, '发布失败，请重试')
     }
   } finally {
     if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) creating.value = false

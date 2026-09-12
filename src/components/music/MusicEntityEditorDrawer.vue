@@ -16,6 +16,7 @@ import MusicCreationContributorPicker from "@/components/music/MusicCreationCont
 import MusicSongLyricsEditorDrawer from "@/components/music/MusicSongLyricsEditorDrawer.vue";
 import MusicBrainzEditNotice from "@/components/music/MusicBrainzEditNotice.vue";
 import PMaskedDateInput from "@/components/ui/PMaskedDateInput.vue";
+import PActionFeedback from "@/components/ui/PActionFeedback.vue";
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
 import PSelect from "@/components/ui/PSelect.vue";
@@ -92,7 +93,8 @@ let songCoverObjectURL = "";
 
 const songLoading = ref(false);
 const songSubmitting = ref(false);
-const songErrorMessage = ref("");
+const songLoadError = ref("");
+const songActionError = ref("");
 const standaloneSong = ref(false);
 const musicBrainzMatched = ref(false);
 const matchProvider = ref("musicbrainz");
@@ -157,7 +159,8 @@ watch(
 function resetSongState() {
   songLoading.value = false;
   songSubmitting.value = false;
-  songErrorMessage.value = "";
+  songLoadError.value = "";
+  songActionError.value = "";
   standaloneSong.value = false;
   musicBrainzMatched.value = false;
   matchProvider.value = "musicbrainz";
@@ -243,7 +246,7 @@ async function loadSong(songId: string) {
     songDraft.contributors = [...contributors.values()];
   } catch (error) {
     reportError(error, "Failed to load song:");
-    songErrorMessage.value = "加载歌曲失败";
+    songLoadError.value = "加载歌曲失败，请重试";
   } finally {
     songLoading.value = false;
   }
@@ -326,12 +329,12 @@ async function handleSongEditSubmit() {
     return;
   const validationMessage = validateSongDraft();
   if (validationMessage) {
-    songErrorMessage.value = validationMessage;
+    songActionError.value = validationMessage;
     return;
   }
 
   songSubmitting.value = true;
-  songErrorMessage.value = "";
+  songActionError.value = "";
   let metadataSaved = false;
   let convertedToAlbum = false;
   try {
@@ -401,9 +404,9 @@ async function handleSongEditSubmit() {
       refreshAlbum();
       refreshSong();
       if (convertedToAlbum) await loadSong(current.id);
-      songErrorMessage.value = "歌曲资料已保存，但音频替换提交失败，请重试";
+      songActionError.value = "歌曲资料已保存，但音频替换提交失败，请重试";
     } else {
-      songErrorMessage.value = "保存失败，请稍后重试";
+      songActionError.value = "保存失败，请稍后重试";
     }
   } finally {
     songSubmitting.value = false;
@@ -435,8 +438,8 @@ async function handleSongEditSubmit() {
         :song-title="songDraft.title"
         @close="closeLyricsEditor"
       />
-      <p v-if="songErrorMessage" class="song-editor__error">
-        {{ songErrorMessage }}
+      <p v-if="songLoadError" class="song-editor__error" role="alert">
+        {{ songLoadError }}
       </p>
       <p v-else-if="songLoading" class="song-editor__state">
         正在加载歌曲资料...
@@ -573,13 +576,16 @@ async function handleSongEditSubmit() {
             @click="closeMusicEditor(props.layer?.key)"
             >取消</PButton
           >
-          <PButton
-            variant="warning"
-            :loading="songSubmitting"
-            loading-text="正在保存..."
-            @click="handleSongEditSubmit"
-            >{{ submitLabel }}</PButton
-          >
+          <div class="song-editor__save-action">
+            <PButton
+              variant="warning"
+              :loading="songSubmitting"
+              loading-text="正在保存..."
+              @click="handleSongEditSubmit"
+              >{{ submitLabel }}</PButton
+            >
+            <PActionFeedback :message="songActionError" />
+          </div>
         </div>
       </template>
     </div>
@@ -597,6 +603,7 @@ async function handleSongEditSubmit() {
   color: var(--a-color-accent-destructive);
   font-size: 0.92rem;
 }
+.song-editor__save-action { display: grid; justify-items: end; gap: 0.35rem; }
 .song-editor__state {
   margin: 0;
   color: var(--a-color-muted);

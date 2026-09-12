@@ -14,9 +14,6 @@
       </div>
 
       <form class="auth-form" @submit.prevent="resetPassword">
-        <div v-if="errorMessage" class="auth-error" role="alert">{{ errorMessage }}</div>
-        <div v-if="turnstileConfigMissing" class="auth-error" role="alert">当前无法完成验证，请稍后再试</div>
-
         <template v-if="step === 1">
           <div class="auth-step-container">
             <div class="p-field">
@@ -98,6 +95,9 @@
         </template>
       </form>
 
+      <div v-if="errorMessage" class="auth-error" role="alert">{{ errorMessage }}</div>
+      <div v-if="turnstileConfigMissing" class="auth-error" role="alert">当前无法完成验证，请稍后再试</div>
+
       <div class="auth-footer">
         想起密码了？ <RouterLink to="/login" class="toggle-link">返回登录</RouterLink>
       </div>
@@ -118,6 +118,7 @@ import {
   resolveTurnstileErrorMessage,
   shouldDisplayTurnstileError,
 } from '@/views/auth/turnstileConfig'
+import { errorMessage as resolveErrorMessage } from '@/utils/logger'
 
 const api = useApi()
 const router = useRouter()
@@ -174,7 +175,7 @@ const sendCode = async () => {
     await responseMessage(response, '发送验证码失败')
     turnstileToken.value = ''
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '发送验证码失败'
+    errorMessage.value = resolveErrorMessage(error, '发送验证码失败')
     turnstileToken.value = ''
     turnstileRef.value?.reset()
   } finally {
@@ -229,7 +230,7 @@ const resetPassword = async () => {
 	  await router.push({ path: '/login', query: { reset: 'success' } })
 	}
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '重置密码失败'
+    errorMessage.value = resolveErrorMessage(error, '重置密码失败')
   } finally {
     submitting.value = false
   }

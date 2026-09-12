@@ -72,17 +72,18 @@
         </PField>
       </div>
 
-      <div v-if="addError" class="a-error mb-6">{{ addError }}</div>
-
       <div class="form-actions">
         <PButton variant="secondary" label="取消" @click="$emit('close')" />
-        <PButton
-          :loading="submitting"
-          loading-text="处理中..."
-          label="确认订阅"
-          :disabled="!canSubmit"
-          @click="submitSubscription"
-        />
+        <div class="form-submit-action">
+          <PButton
+            :loading="submitting"
+            loading-text="处理中..."
+            label="确认订阅"
+            :disabled="!canSubmit"
+            @click="submitSubscription"
+          />
+          <PActionFeedback :message="addError" />
+        </div>
       </div>
     </div>
   </PSheet>
@@ -111,6 +112,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useFeedStore } from '@/stores/feed'
@@ -414,6 +416,12 @@ watch(() => props.resetKey, () => {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
+}
+
+.form-submit-action {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
 }
 
 .mb-8 { margin-bottom: 2rem; }

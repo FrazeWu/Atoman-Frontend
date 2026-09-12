@@ -97,8 +97,9 @@
       danger
       side="right"
       :loading="Boolean(revokingId)"
+      :error="revokeError"
       @confirm="confirmRevoke"
-      @cancel="pendingRevoke = null"
+      @cancel="cancelRevoke"
     />
   </section>
 </template>
@@ -113,6 +114,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { errorMessage } from '@/utils/logger'
 
 type Session = { id: string; device_name: string; current: boolean }
 type Activity = { id: string; action: string; created_at: string }
@@ -137,6 +139,7 @@ const sessionsLoading = ref(true)
 const activitiesLoading = ref(true)
 const sessionsError = ref('')
 const activitiesError = ref('')
+const revokeError = ref('')
 const pendingRevoke = ref<string | null>(null)
 const revokingId = ref<string | null>(null)
 const emailModalOpen = ref(false)
@@ -189,7 +192,7 @@ async function loadSessions() {
     const data = responsePayload(response.data)
     sessions.value = Array.isArray(data.sessions) ? data.sessions as Session[] : []
   } catch (cause) {
-    sessionsError.value = cause instanceof Error ? cause.message : '登录设备加载失败，请重试'
+    sessionsError.value = errorMessage(cause, '登录设备加载失败，请重试')
   } finally {
     sessionsLoading.value = false
   }
@@ -204,7 +207,7 @@ async function loadActivities() {
     const data = responsePayload(response.data)
     activities.value = Array.isArray(data.activities) ? data.activities as Activity[] : []
   } catch (cause) {
-    activitiesError.value = cause instanceof Error ? cause.message : '安全日志加载失败，请重试'
+    activitiesError.value = errorMessage(cause, '安全日志加载失败，请重试')
   } finally {
     activitiesLoading.value = false
   }
@@ -242,7 +245,7 @@ async function sendCode() {
     setMessage('验证码已发送至新邮箱')
     startCooldown()
   } catch (cause) {
-    setMessage(cause instanceof Error ? cause.message : '验证码发送失败，请重试', true)
+    setMessage(errorMessage(cause, '验证码发送失败，请重试'), true)
   } finally {
     sendingCode.value = false
   }
@@ -278,21 +281,30 @@ async function changeEmail() {
     setMessage('邮箱已成功修改')
     await Promise.all([loadSessions(), loadActivities()])
   } catch (cause) {
-    setMessage(cause instanceof Error ? cause.message : '邮箱修改失败，请重试', true)
+    setMessage(errorMessage(cause, '邮箱修改失败，请重试'), true)
   } finally {
     changingEmail.value = false
   }
 }
 
 function requestRevoke(id: string) {
-  if (!revokingId.value) pendingRevoke.value = id
+  if (!revokingId.value) {
+    revokeError.value = ''
+    pendingRevoke.value = id
+  }
+}
+
+function cancelRevoke() {
+  if (revokingId.value) return
+  pendingRevoke.value = null
+  revokeError.value = ''
 }
 
 async function confirmRevoke() {
   const id = pendingRevoke.value
   if (!id || revokingId.value) return
   revokingId.value = id
-  sessionsError.value = ''
+  revokeError.value = ''
   try {
     const response = await apiRequestResult(`${base}/users/me/sessions/${id}`, {
       method: 'DELETE',
@@ -302,7 +314,7 @@ async function confirmRevoke() {
     pendingRevoke.value = null
     await loadSessions()
   } catch (cause) {
-    sessionsError.value = cause instanceof Error ? cause.message : '退出设备失败，请重试'
+    revokeError.value = errorMessage(cause, '退出设备失败，请重试')
   } finally {
     revokingId.value = null
   }

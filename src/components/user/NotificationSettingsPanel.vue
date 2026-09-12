@@ -47,11 +47,15 @@
                 {{ preferences[group.key] ? '开启' : '关闭' }}
               </span>
             </label>
+            <PActionFeedback
+              v-if="saveErrorKey === group.key"
+              class="notification-settings__error"
+              :message="saveError"
+            />
           </div>
         </div>
       </div>
       <p class="notification-settings__note">账号安全和关键权限变化始终通知你，无法关闭。</p>
-      <p v-if="saveError" class="notification-settings__error" role="alert">{{ saveError }}</p>
       <p v-if="savedLabel" class="notification-settings__saved" role="status">{{ savedLabel }}已保存</p>
     </template>
   </section>
@@ -62,8 +66,10 @@ import { onMounted, reactive, ref } from 'vue'
 
 import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
+import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { errorMessage } from '@/utils/logger'
 import type { NotificationCategory, NotificationPreference } from '@/types'
 
 const api = useApi()
@@ -95,6 +101,7 @@ const preferences = reactive<Record<PreferenceGroup['key'], boolean>>({
 const loading = ref(true)
 const loadError = ref('')
 const saveError = ref('')
+const saveErrorKey = ref<PreferenceGroup['key'] | null>(null)
 const savingKey = ref<PreferenceGroup['key'] | null>(null)
 const savedLabel = ref('')
 
@@ -117,6 +124,7 @@ async function load() {
   loading.value = true
   loadError.value = ''
   saveError.value = ''
+  saveErrorKey.value = null
   savedLabel.value = ''
   try {
     const response = await apiRequestResult(api.notifications.preferences, { headers: authHeaders() })
@@ -126,7 +134,7 @@ async function load() {
       preferences[group.key] = group.eventTypes.every((eventType) => byType.get(eventType) !== false)
     }
   } catch (cause) {
-    loadError.value = cause instanceof Error ? cause.message : '通知偏好加载失败，请重试'
+    loadError.value = errorMessage(cause, '通知偏好加载失败，请重试')
   } finally {
     loading.value = false
   }
@@ -139,6 +147,7 @@ async function savePreference(key: PreferenceGroup['key']) {
   savingKey.value = key
   savedLabel.value = ''
   saveError.value = ''
+  saveErrorKey.value = null
   try {
     const items = preferenceGroups.flatMap((item) => item.eventTypes.map((eventType) => ({
       category: item.category,
@@ -154,7 +163,8 @@ async function savePreference(key: PreferenceGroup['key']) {
     savedLabel.value = group.label
   } catch (cause) {
     preferences[key] = !nextValue
-    saveError.value = cause instanceof Error ? cause.message : '通知偏好保存失败，请重试'
+    saveError.value = errorMessage(cause, '通知偏好保存失败，请重试')
+    saveErrorKey.value = key
   } finally {
     savingKey.value = null
   }

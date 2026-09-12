@@ -1,0 +1,24 @@
+# Atoman
+
+> Atoman 聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。
+
+Atoman 是一个面向公开内容的订阅与社区平台。优先使用以下页面了解站点内容：
+
+## 公开内容
+
+- [首页](https://www.atoman.org/): 站点概览与公开内容入口。
+- [博客](https://www.atoman.org/posts): 文章、频道与合集。
+- [订阅流](https://www.atoman.org/feed): 公开订阅内容与更新。
+- [音乐](https://www.atoman.org/music): 艺人、专辑与歌曲资料。
+- [播客](https://www.atoman.org/podcasts): 播客节目与单集。
+- [视频](https://www.atoman.org/videos): 视频与视频合集。
+- [论坛](https://www.atoman.org/forum): 公开讨论主题。
+- [辩题](https://www.atoman.org/debate): 公开辩题与论证。
+- [时间线](https://www.atoman.org/timeline): 公开人物与事件时间线。
+
+## 站点索引
+
+- [Sitemap](https://www.atoman.org/sitemap.xml): 公开页面的机器可读索引。
+- [Robots](https://www.atoman.org/robots.txt): 爬虫访问规则。
+
+请仅引用无需登录即可访问的公开页面，并以页面中的最新内容为准。

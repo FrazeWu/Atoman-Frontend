@@ -54,6 +54,11 @@ const tagGroups = computed(() => [
 
 const tagLimitReached = computed(() => tags.value.length >= 12)
 
+function tagLikePercentage(tag: MusicTag) {
+  const totalVotes = tag.upvotes + tag.downvotes
+  return totalVotes > 0 ? Math.round((tag.upvotes / totalVotes) * 100) : 0
+}
+
 function replaceTag(nextTag: MusicTag) {
   const index = tags.value.findIndex(tag => tag.assignment_id === nextTag.assignment_id)
   if (index < 0) {
@@ -249,7 +254,13 @@ onBeforeUnmount(() => {
           <span v-if="!group.tags.length" class="music-tags__group-empty">暂无{{ group.label }}标签</span>
         </div>
         <div v-if="group.tags.length" class="music-tags__items">
-          <div v-for="tag in group.tags" :key="tag.assignment_id" class="music-tag" :data-testid="`music-tag-${tag.id}`">
+          <div
+            v-for="tag in group.tags"
+            :key="tag.assignment_id"
+            class="music-tag"
+            :data-testid="`music-tag-${tag.id}`"
+            :style="{ '--music-tag-like-ratio': `${tagLikePercentage(tag)}%` }"
+          >
             <RouterLink
               class="music-tag__name"
               :to="{ path: `/music/tags/${tag.id}`, query: { view: entity === 'album' ? 'albums' : 'songs' } }"
@@ -258,6 +269,7 @@ onBeforeUnmount(() => {
               {{ tag.name }}
             </RouterLink>
             <PInteractionActions
+              class="music-tag__actions"
               size="sm"
               variant="subtle"
               :liked="tag.viewer_vote === 'up'"
@@ -355,7 +367,6 @@ onBeforeUnmount(() => {
 
 .music-tags__header,
 .music-tags__header > div,
-.music-tag,
 .music-tags__group-header {
   display: flex;
   align-items: center;
@@ -406,30 +417,80 @@ onBeforeUnmount(() => {
 }
 
 .music-tags__items {
-  display: grid;
-  gap: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .music-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   min-width: 0;
-  gap: 0.45rem;
-  padding: 0.25rem 0.35rem 0.25rem 0.6rem;
-  border: 0;
+  max-width: 100%;
+  gap: 0.25rem;
+  padding: 0.1rem 0.25rem 0.1rem 0.45rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-bottom-color: transparent;
   border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
+  background-color: var(--a-color-bg);
+  background-image: linear-gradient(
+    to right,
+    var(--a-color-primary) var(--music-tag-like-ratio, 0%),
+    var(--a-color-border-soft) var(--music-tag-like-ratio, 0%)
+  );
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.music-tag:hover,
+.music-tag:focus-within {
+  border-color: var(--a-color-border);
+  border-bottom-color: transparent;
+  background-color: var(--a-color-surface-muted);
+  background-image: linear-gradient(
+    to right,
+    var(--a-color-primary) var(--music-tag-like-ratio, 0%),
+    var(--a-color-border) var(--music-tag-like-ratio, 0%)
+  );
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 7%);
 }
 
 .music-tag__name {
   min-width: 0;
-  flex: 1;
+  max-width: 12rem;
+  flex: 0 1 auto;
   overflow-wrap: anywhere;
   color: var(--a-color-text);
-  font-size: 0.85rem;
+  padding: 0.35rem 0.1rem 0.4rem 0;
+  font-size: 0.78rem;
+  line-height: 1.1;
   text-decoration: none;
 }
 
 .music-tag__name:hover {
   text-decoration: underline;
+}
+
+.music-tag .music-tag__actions {
+  flex: 0 0 auto;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-width 0.15s ease, opacity 0.12s ease;
+}
+
+.music-tag:hover .music-tag__actions,
+.music-tag:focus-within .music-tag__actions {
+  max-width: 8rem;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .music-tag__delete {
@@ -519,6 +580,21 @@ onBeforeUnmount(() => {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.2rem;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .music-tag .music-tag__actions {
+    max-width: 8rem;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-tag,
+  .music-tag__actions {
+    transition: none;
   }
 }
 </style>

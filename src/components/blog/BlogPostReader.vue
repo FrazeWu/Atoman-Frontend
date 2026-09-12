@@ -16,6 +16,7 @@ import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
+import BlogMediaContent from '@/components/blog/BlogMediaContent.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -133,6 +134,7 @@ const renderedContent = computed(() => {
     postEmbeds: postEmbeds.value,
     musicEmbeds: musicEmbeds.value,
     videoEmbeds: videoEmbeds.value,
+    interactiveMedia: true,
   })
 })
 
@@ -626,11 +628,23 @@ defineExpose({
         <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
       </div>
       <BlogPostUpdateNotice :variant="isSheet ? 'compact' : 'default'" :updated-at="post.updated_at" />
-      <template v-if="!isAcademic"><div class="prose-blog post-sheet-content" v-html="renderedContent" /></template>
+      <template v-if="!isAcademic">
+        <BlogMediaContent
+          class="prose-blog post-sheet-content"
+          :html="renderedContent"
+          :music-embeds="musicEmbeds"
+          :video-embeds="videoEmbeds"
+        />
+      </template>
       <div v-else class="academic-reader">
         <section v-for="(page, index) in academicPages" :key="index" class="academic-paper">
           <header class="academic-paper__header"><span>Atoman</span><span :title="post.title">{{ post.title }}</span></header>
-          <div class="academic-paper__body prose-blog prose-blog-academic" v-html="page" />
+          <BlogMediaContent
+            class="academic-paper__body prose-blog prose-blog-academic"
+            :html="page"
+            :music-embeds="musicEmbeds"
+            :video-embeds="videoEmbeds"
+          />
           <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(post.created_at) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
         </section>
       </div>

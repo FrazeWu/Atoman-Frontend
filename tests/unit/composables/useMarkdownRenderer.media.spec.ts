@@ -98,4 +98,39 @@ describe("useMarkdownRenderer media embeds", () => {
 		expect(document.querySelector("video")).not.toBeNull();
 		expect(document.querySelector("video")?.getAttribute("src")).toBe("/media/demo.mp4");
 	});
+
+	it("renders interactive media hooks for Vue components", () => {
+		const { renderMarkdown } = useMarkdownRenderer();
+		const html = renderMarkdown(`:::music{id="${songId}"}\n:::`, {
+			interactiveMedia: true,
+			musicEmbeds: {
+				[songId]: {
+					id: songId,
+					title: "可播放单曲",
+					kind: "song",
+					playbackSongs: [{ id: songId } as never],
+				},
+			},
+		});
+
+		expect(html).toContain('data-atoman-embed-play="music"');
+		expect(html).toContain(`data-atoman-embed-id="${songId}"`);
+		expect(html).not.toContain("<audio");
+
+		const videoHtml = renderMarkdown(`:::video{id="${videoId}"}\n:::`, {
+			interactiveMedia: true,
+			videoEmbeds: {
+				[videoId]: {
+					id: videoId,
+					title: "可播放视频",
+					kind: "video",
+					videoSrc: "/media/demo.mp4",
+					video: {} as never,
+				},
+			},
+		});
+
+		expect(videoHtml).toContain(`data-atoman-video-embed="${videoId}"`);
+		expect(videoHtml).not.toContain("<video");
+	});
 });

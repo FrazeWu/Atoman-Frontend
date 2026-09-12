@@ -494,6 +494,56 @@ describe("useMusicDrawers music creation flow", () => {
 		]);
 	});
 
+	it("restores the deferred commit artist as the primary contributor", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.resumeMusicCreationFlow({
+			importId: "import-deferred-artist",
+			targetAlbumId: "",
+			artistId: "",
+			status: "ready",
+			inputMode: "archive",
+			stage: "ready",
+			progress: { current: 1, total: 1 },
+			files: [],
+			errors: [],
+			archiveName: "Album.zip",
+			uploadProgress: 100,
+			uploadSpeed: 0,
+			coverUrl: "",
+			coverKey: "",
+			derivedAlbumTitle: "Album",
+			derivedCover: "",
+			derivedTracks: [],
+			lastSyncedAt: "",
+			errorMessage: "",
+			commitRequest: {
+				artist_id: "artist-1",
+				artist: {
+					name: "Known Artist",
+					legal_name: "Known Artist",
+					bio: "",
+					nationality: "",
+					birth_date: "",
+					stage_names: [],
+					birth_place: "",
+				},
+				album: { title: "Album", release_year: 2020, tracks: [] },
+			},
+		} as unknown as MusicAlbumImport);
+
+		expect(drawers.state.value.creationFlow?.draft.artist.id).toBe("artist-1");
+		expect(
+			drawers.state.value.creationFlow?.draft.albumDetails.contributors,
+		).toEqual([
+			expect.objectContaining({
+				artistId: "artist-1",
+				name: "Known Artist",
+				locked: true,
+			}),
+		]);
+	});
+
 	it("restores processed audio bindings when the saved draft predates media processing", () => {
 		const drawers = useMusicDrawers();
 

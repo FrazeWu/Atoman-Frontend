@@ -88,6 +88,25 @@ function musicSourceValue(sources?: MusicSource[]) {
 	);
 }
 
+function importedArtistID(snapshot: MusicAlbumImport, contributors: Array<{ id: string }> = []) {
+	return (
+		snapshot.artistId?.trim() ||
+		snapshot.commitRequest?.artist_id?.trim() ||
+		snapshot.commitRequest?.artists?.find((artist) => artist.artist_id?.trim())?.artist_id?.trim() ||
+		contributors[0]?.id ||
+		""
+	);
+}
+
+function importedArtistName(snapshot: MusicAlbumImport, contributors: Array<{ name: string }> = []) {
+	return (
+		contributors[0]?.name?.trim() ||
+		snapshot.commitRequest?.artists?.find((artist) => artist.name?.trim())?.name?.trim() ||
+		snapshot.commitRequest?.artist.name?.trim() ||
+		""
+	);
+}
+
 function restoreCommittedAlbumImportDraft(
 	flow: MusicCreationFlowState,
 	request: MusicAlbumImportCommitInput,
@@ -639,14 +658,21 @@ export function useMusicDrawers() {
 			normalizeMusicImportSource(snapshot.artistSource) ||
 			normalizeMusicImportSource(snapshot.commitRequest?.artist_source) ||
 			musicSourceValue(snapshot.commitRequest?.artist_sources);
+		const resolvedArtistID = importedArtistID(snapshot, contributors);
 		openMusicCreationFlow({
-			artistId: snapshot.artistId?.trim() || contributors[0]?.id || undefined,
-			artistName: contributors[0]?.name ?? "",
+			artistId: resolvedArtistID || undefined,
+			artistName: importedArtistName(snapshot, contributors),
 			artistSource: resolvedArtistSource,
 			startStep: "albumDetails",
 		});
 		const flow = state.value.creationFlow;
 		if (!flow) return;
+		if (resolvedArtistID) {
+			const seededContributor = flow.draft.albumDetails.contributors.find(
+				(contributor) => contributor.artistId === resolvedArtistID,
+			);
+			if (seededContributor) seededContributor.locked = true;
+		}
 		flow.draft.albumDetails.musicBrainzMatched =
 			isMusicBrainzSource(snapshot.metadataSourceUrl) ||
 			isMusicBrainzSource(snapshot.albumSource) ||

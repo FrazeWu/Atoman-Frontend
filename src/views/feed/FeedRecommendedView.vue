@@ -1502,8 +1502,8 @@ onMounted(() => {
   line-height: 1.5;
 }
 .feed-type-tag--blog {
-  background: color-mix(in srgb, #16a34a 12%, transparent);
-  color: #16a34a;
+  background: color-mix(in srgb, var(--a-color-blog) 12%, transparent);
+  color: var(--a-color-blog);
 }
 .feed-type-tag--rss {
   background: color-mix(in srgb, #2563eb 12%, transparent);

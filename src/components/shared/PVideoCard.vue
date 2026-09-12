@@ -7,7 +7,7 @@ import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
-import { resolveMediaURL } from '@/utils/mediaUrl'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   video: Video
@@ -21,12 +21,17 @@ const watchLaterError = ref('')
 const thumbnailFailed = ref(false)
 const avatarUrl = computed(() => {
   const url = props.video.channel?.cover_url?.trim() || props.video.user?.avatar_url?.trim() || ''
-  return url ? resolveMediaURL(url) : ''
+  return url ? resolveMediaImageURL(url, { width: 64 }) : ''
 })
 const thumbnailUrl = computed(() => {
   if (thumbnailFailed.value) return ''
   const url = props.video.thumbnail_url?.trim() || ''
-  return url ? resolveMediaURL(url) : ''
+  return url ? resolveMediaImageURL(url, { width: 640 }) : ''
+})
+
+const thumbnailLabel = computed(() => {
+  const duration = props.video.duration_sec ? `，时长 ${fmtDuration(props.video.duration_sec)}` : ''
+  return `${props.video.title}${duration}`
 })
 
 watch(() => props.video.thumbnail_url, () => { thumbnailFailed.value = false })
@@ -70,8 +75,8 @@ const avatarLetter = () =>
 <template>
   <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
-      <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="video.title">
-        <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="video.title" class="vc-img" loading="lazy" @error="thumbnailFailed = true" />
+      <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="thumbnailLabel">
+        <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 
         <!-- 悬浮微渐变与居中播放徽标 -->
@@ -100,7 +105,7 @@ const avatarLetter = () =>
 
     <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-info">
       <div class="vc-avatar" aria-hidden="true">
-        <img v-if="avatarUrl" :src="avatarUrl" :alt="video.channel?.name || video.user?.username || ''" />
+        <img v-if="avatarUrl" :src="avatarUrl" :alt="video.channel?.name || video.user?.username || ''" width="64" height="64" loading="lazy" decoding="async" />
         <span v-else>{{ avatarLetter() }}</span>
       </div>
       <div class="vc-text">

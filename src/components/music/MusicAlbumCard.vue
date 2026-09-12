@@ -3,12 +3,15 @@
     <div class="cover-frame">
       <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
         <img
-          v-if="coverUrl"
-          :src="coverUrl"
+          v-if="optimizedCoverUrl"
+          :src="optimizedCoverUrl"
           :alt="album.title"
           class="cover-image"
+          width="320"
+          height="320"
           :loading="priority ? 'eager' : 'lazy'"
           :fetchpriority="priority ? 'high' : 'auto'"
+          decoding="async"
         />
         <span v-else class="cover-placeholder">
           <Disc3 :size="28" aria-hidden="true" />
@@ -87,6 +90,7 @@
 import { computed } from 'vue'
 import { IconBookmark as Bookmark, IconDisc as Disc3, IconHeadphones as Headphones, IconUsers as Users } from '@tabler/icons-vue'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 export interface MusicAlbumCardItem {
   id: string
@@ -157,6 +161,8 @@ const coverUrl = computed(() => {
   }
   return ''
 })
+
+const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 320 }) : '')
 
 const artistNames = computed(() => {
   if (props.album.artists && props.album.artists.length) {

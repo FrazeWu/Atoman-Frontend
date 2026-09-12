@@ -48,7 +48,11 @@ describe("AppTopbarGlobalSearch", () => {
   it("opens from the topbar and from the global keyboard shortcut", async () => {
     const { wrapper } = await mountSearch();
 
-    await wrapper.find('[data-testid="topbar-search-pill"]').trigger("click");
+    const trigger = wrapper.get('[data-testid="topbar-search-pill"]')
+    expect(trigger.attributes('aria-label')?.replace(/\s/g, ''))
+      .toContain(trigger.text().replace(/\s/g, ''))
+
+    await trigger.trigger("click");
     expect(
       wrapper.find('[data-testid="topbar-search-dropdown"]').exists(),
     ).toBe(true);

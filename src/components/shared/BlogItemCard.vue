@@ -126,9 +126,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { IconBookmark as Bookmark, IconEye as Eye, IconGauge as Gauge } from '@tabler/icons-vue'
-import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
@@ -138,6 +137,8 @@ import type { Post, ShortNote, FeedItem } from '@/types'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { formatPublicRating, hasPublicRating } from '@/utils/rating'
 import { channelUrl } from '@/router/siteUrls'
+
+const ShortNoteCard = defineAsyncComponent(() => import('@/components/shortnote/ShortNoteCard.vue'))
 
 export type BlogItemType = 'post' | 'short_note' | 'feed_item'
 
@@ -357,8 +358,8 @@ function formatCount(value?: number) {
   line-height: 1.5;
 }
 .feed-type-tag--blog {
-  background: color-mix(in srgb, #16a34a 12%, transparent);
-  color: #16a34a;
+  background: color-mix(in srgb, var(--a-color-blog) 12%, transparent);
+  color: var(--a-color-blog);
 }
 .feed-type-tag--rss {
   background: color-mix(in srgb, #2563eb 12%, transparent);

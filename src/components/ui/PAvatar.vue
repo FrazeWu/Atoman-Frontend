@@ -1,13 +1,23 @@
 <template>
   <div class="p-avatar" :class="[`is-size-${size}`]" :style="avatarStyle">
-    <img v-if="avatarSrc && !imageFailed" :src="avatarSrc" :alt="alt" class="avatar-img" @error="imageFailed = true" />
+    <img
+      v-if="avatarSrc && !imageFailed"
+      :src="avatarSrc"
+      :alt="alt"
+      :width="avatarSize"
+      :height="avatarSize"
+      class="avatar-img"
+      loading="lazy"
+      decoding="async"
+      @error="imageFailed = true"
+    />
     <span v-else class="avatar-fallback">{{ initials }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { resolveMediaURL } from '@/utils/mediaUrl'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   src?: string
@@ -25,7 +35,8 @@ const initials = computed(() => {
   return props.name.charAt(0).toUpperCase()
 })
 
-const avatarSrc = computed(() => props.src ? resolveMediaURL(props.src) : '')
+const avatarSize = computed(() => ({ xs: 64, sm: 96, md: 144, lg: 240, xl: 384 })[props.size])
+const avatarSrc = computed(() => props.src ? resolveMediaImageURL(props.src, { width: avatarSize.value }) : '')
 const imageFailed = ref(false)
 
 watch(avatarSrc, () => {

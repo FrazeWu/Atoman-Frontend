@@ -314,8 +314,12 @@
             <div class="feed-media-entry__thumbnail">
               <img
                 v-if="item.podcast_episode.episode_cover_url"
-                :src="item.podcast_episode.episode_cover_url"
+                :src="feedImageURL(item.podcast_episode.episode_cover_url, 320)"
                 :alt="item.podcast_episode.post?.title || '单集封面'"
+                width="320"
+                height="180"
+                loading="lazy"
+                decoding="async"
               >
               <span v-else>播客</span>
             </div>
@@ -338,7 +342,15 @@
             data-test="feed-video-timeline-entry"
           >
             <div class="feed-media-entry__thumbnail">
-              <img v-if="item.video.thumbnail_url" :src="item.video.thumbnail_url" :alt="item.video.title">
+              <img
+                v-if="item.video.thumbnail_url"
+                :src="feedImageURL(item.video.thumbnail_url, 640)"
+                :alt="item.video.title"
+                width="640"
+                height="360"
+                loading="lazy"
+                decoding="async"
+              >
               <span v-else>视频</span>
             </div>
             <div class="feed-media-entry__content">
@@ -409,6 +421,7 @@ import {
 import { IconChevronDown as ChevronDown, IconStar as Star, IconClock as Clock, IconBookmark as Bookmark, IconExternalLink as ExternalLink, IconPlayerPlay as Play, IconSquare as Square } from '@tabler/icons-vue'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const route = useRoute()
 const router = useRouter()
@@ -416,6 +429,8 @@ const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const onboardingStore = useOnboardingStore()
 const uiStore = useUIStore()
+
+const feedImageURL = (url: string, width: number) => resolveMediaImageURL(url, { width })
 
 const feedCopy = {
   name: '订阅',

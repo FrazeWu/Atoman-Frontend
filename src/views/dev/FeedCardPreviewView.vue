@@ -859,7 +859,7 @@ const mockChannels = ref([
 .feed-timeline-box { border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); overflow: hidden; background: var(--a-color-bg); }
 .feed-meta-stat { display: inline-flex; align-items: center; gap: 0.2rem; color: var(--a-color-muted-soft); font-size: 0.72rem; }
 .feed-type-tag { display: inline-flex; padding: 0.1em 0.45em; border-radius: 999px; font-size: 0.65rem; font-weight: 600; }
-.feed-type-tag--blog { background: color-mix(in srgb, #16a34a 12%, transparent); color: #16a34a; }
+.feed-type-tag--blog { background: color-mix(in srgb, var(--a-color-blog) 12%, transparent); color: var(--a-color-blog); }
 .feed-type-tag--rss { background: color-mix(in srgb, #2563eb 12%, transparent); color: #2563eb; }
 .mock-clip-btn { border: none; background: transparent; padding: 0.2rem; color: var(--a-color-muted); cursor: pointer; }
 

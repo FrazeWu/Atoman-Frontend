@@ -8,7 +8,8 @@
 	--a-color-border: #cbd5e1;
 	--a-color-border-soft: #e2e8f0;
 	--a-color-muted: #64748b;
-	--a-color-muted-soft: #94a3b8;
+	--a-color-muted-soft: #475569;
+	--a-color-blog: #166534;
 	--a-color-primary: #2563eb;
 	--a-color-primary-hover: #1d4ed8;
 	--a-color-primary-pressed: #1e40af;
@@ -1536,7 +1537,8 @@ html.dark {
 	--a-color-text: #f1f5f9;
 	--a-color-text-secondary: #94a3b8;
 	--a-color-muted: #64748b;
-	--a-color-muted-soft: #475569;
+	--a-color-muted-soft: #94a3b8;
+	--a-color-blog: #34d399;
 
 	/* 3. 微光半透明边框 (Subtle Luminescent Borders) */
 	--a-color-border-soft: rgba(255, 255, 255, 0.08);

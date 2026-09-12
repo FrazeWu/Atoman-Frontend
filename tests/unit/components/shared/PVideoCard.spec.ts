@@ -72,6 +72,7 @@ describe('PVideoCard.vue', () => {
     const wrapper = mountCard()
     expect(wrapper.text()).toContain('12')
     expect(wrapper.text()).toContain('1:30')
+    expect(wrapper.get('.vc-thumb-link').attributes('aria-label')).toContain('1:30')
     expect(wrapper.get('button[aria-label="稍后看 Video Title"]')).toBeTruthy()
     expect(wrapper.get('.vc-thumb').classes()).toContain('vc-thumb')
     expect(wrapper.get('.vc-info__arrow').text()).toBe('→')

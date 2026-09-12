@@ -232,7 +232,7 @@ const props = withDefaults(defineProps<{
   partialAnchor: null,
   partialWidth: 'var(--a-comment-sheet-width)',
   width: '100%',
-  top: '56px',
+  top: 'var(--a-topbar-height)',
   side: 'right',
   closeType: 'bookmark',
   readingMode: false,
@@ -389,7 +389,7 @@ const updatePartialBounds = () => {
 
   const top = panelRect ? `${panelRect.top}px` : props.top
   const right = `${window.innerWidth - containerRight}px`
-  const bottom = panelRect ? `${window.innerHeight - panelRect.bottom}px` : 'var(--a-content-bottom-offset)'
+  const bottom = panelRect ? `${window.innerHeight - panelRect.bottom}px` : '0px'
   if (props.partialWidth) {
     const minimumLeft = panelRect
       ? `${panelRect.left}px`
@@ -480,6 +480,7 @@ const sheetStyle = computed(() => {
       width: 'auto',
       'max-width': 'none',
       top: layerTop.value,
+      bottom: '0px',
       left: `calc(var(--a-sidebar-width) + ${layerInset.value}px)`,
       right: 0,
       'z-index': layerZIndex.value,
@@ -621,6 +622,7 @@ const mobileSheetStyle = computed(() => {
 
 .p-sheet-layer.is-right {
   right: 0;
+  bottom: 0;
   border-left: 1px solid var(--a-color-border-soft);
   box-shadow: -8px 0 18px -16px rgba(0, 0, 0, 0.35);
 }

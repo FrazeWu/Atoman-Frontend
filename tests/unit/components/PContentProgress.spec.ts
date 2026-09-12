@@ -58,4 +58,13 @@ describe('PContentProgress', () => {
     await retryBtn.trigger('click')
     expect(retryFn).toHaveBeenCalledTimes(1)
   })
+
+  it('announces load failures as alerts while keeping retry beside the message', () => {
+    const wrapper = mount(PContentProgress, {
+      props: { error: '内容加载失败', retry: vi.fn() },
+    })
+
+    expect(wrapper.get('.p-content-progress__loader').attributes('role')).toBe('alert')
+    expect(wrapper.get('.p-content-progress__retry-link').text()).toBe('重新加载')
+  })
 })

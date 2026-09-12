@@ -8,7 +8,12 @@
       </div>
 
       <!-- 居中加载区 -->
-      <div class="p-content-progress__loader" role="status" aria-label="正在加载">
+      <div
+        class="p-content-progress__loader"
+        :role="error ? 'alert' : 'status'"
+        :aria-live="error ? 'assertive' : 'polite'"
+        :aria-label="error ? '加载失败' : '正在加载'"
+      >
         <template v-if="loading && !error">
           <div class="p-content-progress__track">
             <div class="p-content-progress__bar" />

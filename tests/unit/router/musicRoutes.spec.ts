@@ -17,6 +17,9 @@ describe('music module routes', () => {
     expect(children.find((route) => route.path === 'discover')).toBeTruthy()
     expect(lazyImportPath(children.find((route) => route.path === 'discover')?.component)).toContain('DiscoverView.vue')
 
+    expect(children.find((route) => route.path === 'tags')).toBeTruthy()
+    expect(lazyImportPath(children.find((route) => route.path === 'tags')?.component)).toContain('MusicTagsView.vue')
+
     expect(children.find((route) => route.path === 'artists')).toBeTruthy()
     expect(lazyImportPath(children.find((route) => route.path === 'artists')?.component)).toContain('ArtistsView.vue')
 

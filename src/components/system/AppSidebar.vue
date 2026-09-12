@@ -221,7 +221,7 @@
 import { computed, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
-import { IconRss as Rss, IconCompass as Compass, IconBookmark as Bookmark, IconDisc as Disc3, IconUsers as Users, IconHistory as History, IconMessage as MessageSquare, IconFolder as Folder, IconArchive as Archive, IconBook2 as BookOpen, IconClock as Clock, IconMicrophone as Mic, IconLibrary as Library, IconSearch as Search, IconUpload as Upload, IconClipboardCheck as ClipboardCheck, IconLayoutDashboard as LayoutDashboard, IconFileText as FileText, IconMicrophone2 as Mic2, IconSettings2 as Settings2, IconVideo as Video } from '@tabler/icons-vue'
+import { IconRss as Rss, IconCompass as Compass, IconBookmark as Bookmark, IconTags as Tags, IconUsers as Users, IconHistory as History, IconMessage as MessageSquare, IconFolder as Folder, IconArchive as Archive, IconBook2 as BookOpen, IconClock as Clock, IconMicrophone as Mic, IconLibrary as Library, IconSearch as Search, IconUpload as Upload, IconClipboardCheck as ClipboardCheck, IconLayoutDashboard as LayoutDashboard, IconFileText as FileText, IconMicrophone2 as Mic2, IconSettings2 as Settings2, IconVideo as Video } from '@tabler/icons-vue'
 
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
@@ -402,7 +402,7 @@ const booksNavItems: { to: string; label: string; icon: Component; exact?: boole
 // 5. Music Navigation Items
 const musicNavItems: { to: string; label: string; icon: Component; exact?: boolean; active?: (path: string) => boolean }[] = [
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass, active: path => path === '/music' || path === '/music/discover' },
-  { to: modulePathUrl('music', '/albums'), label: '专辑', icon: Disc3 },
+  { to: modulePathUrl('music', '/tags'), label: '标签', icon: Tags },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
   { to: modulePathUrl('music', '/bookmarks'), label: '收藏', icon: Bookmark },
   { to: modulePathUrl('music', '/history'), label: '历史', icon: History },

@@ -61,6 +61,8 @@ describe("mobile app route boundary", () => {
 				"/users/:handle/settings",
 				"/collection/:id",
 				"/music",
+				"/music/tags",
+				"/music/tags/:tagId",
 				"/music/player",
 				"/music/lyrics",
 				"/music/playlists",

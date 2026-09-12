@@ -101,6 +101,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					component: () => import("@/views/music/SongsView.vue"),
 				},
 				{
+					path: "tags",
+					component: () => import("@/views/music/MusicTagsView.vue"),
+				},
+				{
 					path: "tags/:tagId",
 					component: () => import("@/views/music/MusicTagView.vue"),
 				},

@@ -332,6 +332,27 @@ describe("PEditor", () => {
 		expect(wrapper.find(".cm-content").text()).toContain("replaced from api");
 	});
 
+	it("inserts media embeds on one line and renders their live preview", async () => {
+		const wrapper = await mountEditor({
+			modelValue: "",
+			mode: FUTURE_NORMAL_MODE,
+			livePreview: true,
+		});
+		const view = EditorView.findFromDOM(
+			wrapper.get(".cm-content").element as HTMLElement,
+		)!;
+		Object.defineProperty(window, "prompt", {
+			configurable: true,
+			value: vi.fn(() => ALBUM_ID),
+		});
+
+		wrapper.vm.executeCommand("musicEmbed");
+		await nextTick();
+
+		expect(view.state.doc.toString()).toBe(`\n:::music{id="${ALBUM_ID}"}:::\n`);
+		expect(wrapper.find(".cm-markdown-widget").exists()).toBe(true);
+	});
+
 	it("keeps the built-in line-number toggle uncontrolled for other editors", async () => {
 		const wrapper = await mountEditor({
 			modelValue: "first\nsecond",

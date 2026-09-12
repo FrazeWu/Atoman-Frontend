@@ -56,4 +56,20 @@ describe('site access store', () => {
 
     expect(store.isModuleVisible('forum')).toBe(false)
   })
+
+  it('keeps the server revision when saving a loaded access matrix', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ modules: {}, revision: 7 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ modules: {}, revision: 8 }), { status: 200 }))
+
+    const store = useSiteAccessStore()
+    await store.load()
+    await store.save(store.access, 'admin-token')
+
+    const loadedAccess = store.access as unknown as { revision?: number }
+    expect(loadedAccess.revision).toBe(8)
+
+    const saveRequest = vi.mocked(fetch).mock.calls[1]?.[1] as RequestInit | undefined
+    expect(JSON.parse(String(saveRequest?.body))).toMatchObject({ revision: 7 })
+  })
 })

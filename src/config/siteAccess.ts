@@ -45,6 +45,8 @@ export type SiteAccessSettings = {
 
 export type SiteAccess = {
   version: 1
+  revision?: number
+  updated_at?: string
   modules: Record<ModuleRoomKey, ModuleAccess>
   settings: SiteAccessSettings
 }
@@ -67,6 +69,8 @@ type SiteAccessSettingsInput = Partial<{
 
 export type SiteAccessInput = {
   version?: number
+  revision?: number
+  updated_at?: string
   modules?: Partial<Record<ModuleRoomKey, LegacyModuleAccessInput>>
   settings?: SiteAccessSettingsInput
 } | null | undefined
@@ -203,7 +207,13 @@ export function mergeSiteAccess(input: SiteAccessInput): SiteAccess {
     modules.forum.features['category.request'] = settings.forum.allow_category_request
   }
 
-  return { version: 1, modules, settings }
+  return {
+    version: 1,
+    ...(typeof input?.revision === 'number' ? { revision: input.revision } : {}),
+    ...(typeof input?.updated_at === 'string' ? { updated_at: input.updated_at } : {}),
+    modules,
+    settings,
+  }
 }
 
 export function getVisibleModuleKeys(access: SiteAccess): ModuleRoomKey[] {

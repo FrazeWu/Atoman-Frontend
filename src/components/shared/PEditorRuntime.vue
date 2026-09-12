@@ -618,6 +618,11 @@ function buildBlockPreviewDecos(state: EditorState): DecorationSet {
   for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
     const line = state.doc.line(lineNumber)
     const trimmed = line.text.trim()
+    const singleLineEmbed = /^:::(post|music|video)\{[^}\n]*\}\s*:::$/u.test(trimmed)
+    if (singleLineEmbed) {
+      addRange(line.from, line.to)
+      continue
+    }
     if (trimmed === '$$' || /^:::(post|music|video)\{/.test(trimmed)) {
       const closingLine = findClosingLine(state.doc, lineNumber, trimmed === '$$' ? '$$' : ':::')
       if (closingLine) {
@@ -984,7 +989,7 @@ function insertEmbed(kind: 'post' | 'music' | 'video') {
   const id = window.prompt(`输入要引用的${labels[kind]} UUID`)?.trim()
   if (!id) return
   const { from } = getCmSelection()
-  const md = `\n:::${kind}{id="${id}"}\n:::\n`
+  const md = `\n:::${kind}{id="${id}"}:::\n`
   cmInsert(from, from, md)
 }
 

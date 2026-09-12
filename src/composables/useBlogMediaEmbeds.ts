@@ -3,7 +3,7 @@ import { apiRequestResult } from '@/api/client'
 import { getMusicAlbum, getMusicSongDetail } from '@/api/musicV1'
 import { getVideo } from '@/api/video'
 import type { MusicAlbumListItem, MusicSongDetail, MusicSongListItem } from '@/api/musicV1/types'
-import type { Post, Video } from '@/types'
+import type { Post, Song, Video } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { resolveMediaURL, resolvePlayableAudioURL } from '@/utils/mediaUrl'
 import type { EmbedData } from '@/composables/useMarkdownRenderer'
@@ -43,6 +43,45 @@ function formatArtists(artists?: Array<{ name: string }>): string {
   return artists?.map((artist) => artist.name).filter(Boolean).join(' / ') || ''
 }
 
+function toPlaybackSong(
+  source: {
+    id: string
+    title: string
+    audio_url?: string
+    cover_url?: string
+    lyrics?: string
+    track_number?: number
+    disc_number?: number
+    artists?: Array<{ id: string; name: string }>
+  },
+  album?: {
+    id: string
+    title: string
+    year?: number
+    release_date?: string
+    cover_url?: string
+    artists?: Array<{ id: string; name: string }>
+  },
+): Song {
+  const artists = source.artists?.length ? source.artists : album?.artists
+  return {
+    id: source.id,
+    title: source.title,
+    artist: formatArtists(artists) || '未知艺术家',
+    album: album?.title || '',
+    album_id: album?.id || '',
+    year: album?.year || 0,
+    release_date: album?.release_date || '',
+    lyrics: source.lyrics || '',
+    audio_url: source.audio_url ? resolvePlayableAudioURL(source.audio_url) : '',
+    cover_url: source.cover_url || album?.cover_url || '',
+    track_number: source.track_number,
+    disc_number: source.disc_number,
+    artists,
+    status: 'open',
+  }
+}
+
 function mapPostEmbed(id: string, post: Post): EmbedData {
   return {
     id,
@@ -59,6 +98,17 @@ function mapAlbumEmbed(id: string, album: MusicAlbumListItem): EmbedData {
   const details = [artists, album.year ? String(album.year) : album.release_date, album.songs?.length ? `${album.songs.length} 首` : '']
     .filter(Boolean)
     .join(' · ')
+  const albumInfo = {
+    id: album.id,
+    title: album.title,
+    year: album.year,
+    release_date: album.release_date,
+    cover_url: album.cover_url,
+    artists: album.artists,
+  }
+  const playbackSongs = (album.songs || [])
+    .map((song) => toPlaybackSong(song, albumInfo))
+    .filter((song) => Boolean(song.audio_url))
   return {
     id,
     kind: 'album',
@@ -67,6 +117,7 @@ function mapAlbumEmbed(id: string, album: MusicAlbumListItem): EmbedData {
     meta: details || '专辑',
     imageUrl: album.cover_url ? resolveMediaURL(album.cover_url) : undefined,
     href: `/music/album/${id}`,
+    playbackSongs,
   }
 }
 
@@ -86,6 +137,7 @@ function mapSongEmbed(id: string, song: MusicSongListItem): EmbedData {
       : undefined,
     audioSrc: song.audio_url ? resolvePlayableAudioURL(song.audio_url) : undefined,
     href: `/music/song/${id}`,
+    playbackSongs: song.audio_url ? [toPlaybackSong(song, song.album)] : [],
   }
 }
 
@@ -114,6 +166,7 @@ function mapVideoEmbed(id: string, video: Video): EmbedData {
     iframeSrc,
     posterUrl: poster,
     duration: video.duration_sec,
+    video,
   }
 }
 

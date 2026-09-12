@@ -50,6 +50,32 @@ describe("useBlogMediaEmbeds", () => {
 		);
 	});
 
+	it("maps playable album songs for the global player queue", async () => {
+		vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.endsWith(`/music/albums/${albumId}`)) {
+				return response({
+					id: albumId,
+					title: "可播放专辑",
+					artists: [{ id: "artist-1", name: "作者" }],
+					cover_url: "/album.jpg",
+					songs: [
+						{ id: "song-1", title: "第一首", audio_url: songAudioUrl, track_number: 1 },
+						{ id: "song-2", title: "没有音频" },
+					],
+				});
+			}
+			return response({}, 404);
+		}));
+
+		const embeds = useBlogMediaEmbeds();
+		await embeds.load(`:::music{id="${albumId}"}\n:::`);
+
+		expect(embeds.musicEmbeds.value[albumId]?.playbackSongs).toMatchObject([
+			{ id: "song-1", title: "第一首", audio_url: songAudioUrl, album: "可播放专辑" },
+		]);
+	});
+
 	it("normalizes production audio URLs for browser playback", async () => {
 		const songId = "66666666-6666-6666-6666-666666666666";
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {

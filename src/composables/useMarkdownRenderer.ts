@@ -4,6 +4,7 @@ import { marked, type Token } from "marked";
 import DOMPurify from "dompurify";
 import type { ResolvedReference } from "@/api/references";
 import { applyResolvedReferences } from "@/composables/useReferenceRendering";
+import type { Song, Video } from "@/types";
 
 export type EmbedData = {
   id: string;
@@ -18,6 +19,8 @@ export type EmbedData = {
   iframeSrc?: string;
   posterUrl?: string;
   duration?: number;
+  playbackSongs?: Song[];
+  video?: Video;
 };
 
 type RenderMarkdownOptions = {
@@ -26,6 +29,7 @@ type RenderMarkdownOptions = {
   videoEmbeds?: Record<string, EmbedData>;
   references?: ResolvedReference[];
   referenceField?: string;
+  interactiveMedia?: boolean;
 };
 
 type MarkdownRuntimeState = "idle" | "loading" | "ready";
@@ -187,6 +191,7 @@ function renderEmbedCard(
   kind: "post" | "music" | "video",
   embed: EmbedData,
   missing = false,
+  interactiveMedia = false,
 ): string {
   const labelMap = {
     post: "文章引用",
@@ -209,7 +214,10 @@ function renderEmbedCard(
     const image = embed.imageUrl
       ? `<img class="atoman-post-embed__image" src="${escapeHtml(embed.imageUrl)}" alt="" loading="lazy">`
       : `<div class="atoman-post-embed__image atoman-post-embed__image--empty" aria-hidden="true">♪</div>`;
-    const audio = musicKind === "song" && embed.audioSrc
+    const playButton = interactiveMedia && !missing && embed.playbackSongs?.length
+      ? `  <button class="atoman-post-embed__play" type="button" data-atoman-embed-play="music" data-atoman-embed-id="${escapeHtml(embed.id)}" aria-label="播放 ${title}">播放</button>`
+      : "";
+    const audio = !interactiveMedia && musicKind === "song" && embed.audioSrc
       ? `  <audio class="atoman-post-embed__audio" controls preload="metadata" src="${escapeHtml(embed.audioSrc)}" aria-label="播放 ${title}"></audio>`
       : "";
     return [
@@ -224,6 +232,7 @@ function renderEmbedCard(
       meta ? `        <div class="atoman-post-embed__meta">${meta}</div>` : "",
       "      </div>",
       "    </a>",
+      playButton,
       audio,
       "  </div>",
       "</div>",
@@ -231,13 +240,16 @@ function renderEmbedCard(
   }
 
   if (kind === "video") {
-    const player = embed.iframeSrc
+    const interactivePlayer = interactiveMedia && embed.video && (embed.iframeSrc || embed.videoSrc)
+      ? `<div data-atoman-video-embed="${escapeHtml(embed.id)}"></div>`
+      : "";
+    const player = interactivePlayer || (embed.iframeSrc
       ? `<iframe class="atoman-post-embed__player" src="${escapeHtml(embed.iframeSrc)}" title="${title}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
       : embed.videoSrc
         ? `<video class="atoman-post-embed__player" controls preload="metadata" playsinline src="${escapeHtml(embed.videoSrc)}"${embed.posterUrl ? ` poster="${escapeHtml(embed.posterUrl)}"` : ""}></video>`
         : embed.posterUrl
           ? `<img class="atoman-post-embed__player atoman-post-embed__player--poster" src="${escapeHtml(embed.posterUrl)}" alt="" loading="lazy">`
-          : `<div class="atoman-post-embed__player atoman-post-embed__player--empty">视频暂不可播放</div>`;
+          : `<div class="atoman-post-embed__player atoman-post-embed__player--empty">视频暂不可播放</div>`);
     return [
       `<div class="atoman-post-embed atoman-post-embed--video${missing ? " atoman-post-embed--missing" : ""}">`,
       `  <div class="atoman-post-embed__media">${player}</div>`,
@@ -271,6 +283,7 @@ function replaceDirective(
   pattern: RegExp,
   embeds: Record<string, EmbedData> | undefined,
   fallbackHref: (id: string) => string,
+  interactiveMedia: boolean,
 ): string {
   return content.replace(pattern, (_match, id: string) => {
     const embed = embeds?.[id];
@@ -279,10 +292,11 @@ function replaceDirective(
         kind,
         { id, title: labelText(kind), href: fallbackHref(id) },
         true,
+        interactiveMedia,
       );
     }
 
-    return renderEmbedCard(kind, embed);
+    return renderEmbedCard(kind, embed, false, interactiveMedia);
   });
 }
 
@@ -309,6 +323,7 @@ function preprocessDirectives(
     /:::post\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.postEmbeds,
     (id) => `/posts/post/${id}`,
+    Boolean(options?.interactiveMedia),
   );
 
   next = replaceDirective(
@@ -317,6 +332,7 @@ function preprocessDirectives(
     /:::music\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.musicEmbeds,
     (id) => `/music/album/${id}`,
+    Boolean(options?.interactiveMedia),
   );
 
   next = replaceDirective(
@@ -325,6 +341,7 @@ function preprocessDirectives(
     /:::video\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.videoEmbeds,
     (id) => `/videos/watch/${id}`,
+    Boolean(options?.interactiveMedia),
   );
 
   return next;

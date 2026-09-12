@@ -100,10 +100,32 @@ describe('MusicTagList.vue', () => {
     vi.useRealTimers()
   })
 
-  it('removes borders from tag groups and tag pills while keeping search result framing', () => {
+  it('keeps the tag border and search result framing without adding group separators', () => {
     expect(musicTagListSource).not.toMatch(/\.music-tags__group\s*\{[\s\S]*?border-top:/)
-    expect(musicTagListSource).toMatch(/\.music-tag\s*\{[\s\S]*?border:\s*0;/)
+    expect(musicTagListSource).toMatch(/\.music-tag\s*\{[\s\S]*?border:\s*1px\s+solid\s+var\(--a-color-border-soft\)/)
     expect(musicTagListSource).toMatch(/\.music-tags__search-results\s*\{[\s\S]*?border:/)
+  })
+
+  it('复用现有投票组件，并在紧凑标签底边显示点赞比例', async () => {
+    expect(musicTagListSource).toMatch(/class="music-tag__actions"/)
+    expect(musicTagListSource).toMatch(/--music-tag-like-ratio/)
+    expect(musicTagListSource).toMatch(/@media\s*\(hover:\s*none\),\s*\(pointer:\s*coarse\)/)
+    expect(musicTagListSource).toMatch(/background-image:\s*linear-gradient\(/)
+
+    const wrapper = mount(MusicTagList, {
+      props: { entity: 'song', entityId: 'song-1' },
+      global: {
+        stubs: {
+          RouterLink: { template: '<a><slot /></a>' },
+          PInteractionActions: { template: '<div><slot /></div>' },
+          PConfirm: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="music-tag-tag-mood"]').attributes('style')).toContain('--music-tag-like-ratio: 67%')
+    expect(wrapper.get('[data-testid="music-tag-tag-mood"] .music-tag__actions')).toBeTruthy()
   })
 
   it('按情绪和类型分组展示标签，并支持添加、投票和确认删除', async () => {

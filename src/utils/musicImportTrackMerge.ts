@@ -7,6 +7,7 @@ import type {
 import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
 
 type TrackWithIdentity = {
+	songId?: string;
 	fileId?: string;
 	importFileId?: string;
 	audioKey?: string;
@@ -26,6 +27,7 @@ function positionKey(track: TrackWithIdentity) {
 
 export function importTrackAliases(track: TrackWithIdentity): string[] {
 	const aliases = [
+		track.songId ? `song:${track.songId}` : "",
 		track.fileId ? `file:${track.fileId}` : "",
 		track.importFileId ? `file:${track.importFileId}` : "",
 		track.audioKey ? `audio:${track.audioKey}` : "",

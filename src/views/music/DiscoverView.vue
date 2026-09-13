@@ -41,6 +41,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { getMountedPinia } from '@/utils/pinia'
+import { hasPlayableMusicAudio } from '@/utils/musicMedia'
 import {
   claimMusicRecommendationImpression,
   getMusicRecommendationAlbumContext,
@@ -395,7 +396,7 @@ function resetDiscoverSections() {
 }
 
 function toPlayableSong(song: MusicSongListItem): Song | null {
-  if (!song.audio_url) return null
+  if (!hasPlayableMusicAudio(song)) return null
   return {
     id: song.id,
     title: song.title,
@@ -405,7 +406,8 @@ function toPlayableSong(song: MusicSongListItem): Song | null {
     year: 0,
     release_date: '',
     lyrics: song.lyrics || '',
-    audio_url: song.audio_url,
+    audio_url: song.audio_url || '',
+    audio_status: song.audio_status,
     waveform_peaks: song.waveform_peaks,
     cover_url: song.cover_url || song.album?.cover_url || '',
     track_number: song.track_number || 0,
@@ -799,7 +801,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             :key="item.id"
             class="recently-played-item"
           >
-            <button type="button" class="recently-played-item__play" :disabled="!item.song.audio_url" :aria-label="`${item.isContinue ? '从进度继续播放' : '播放'} ${item.song.title}`" :data-testid="item.isContinue ? 'continue-song-play' : 'recent-song-play'" @click="playRecentSong(item.song, item.positionSeconds)">
+            <button type="button" class="recently-played-item__play" :disabled="!hasPlayableMusicAudio(item.song)" :aria-label="`${item.isContinue ? '从进度继续播放' : '播放'} ${item.song.title}`" :data-testid="item.isContinue ? 'continue-song-play' : 'recent-song-play'" @click="playRecentSong(item.song, item.positionSeconds)">
               <img v-if="item.song.cover_url || item.song.album?.cover_url" :src="item.song.cover_url || item.song.album?.cover_url" :alt="item.song.title" />
               <span v-else class="recently-played-item__cover" aria-hidden="true" />
             </button>

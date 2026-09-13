@@ -133,6 +133,7 @@ export type MusicAlbumImportCommitTrack = {
 	audio_asset_id?: string;
 	audio_key?: string;
 	audio_url?: string;
+	audio_status?: string;
 	title: string;
 	disc_number: number;
 	track_number: number;
@@ -582,6 +583,7 @@ export type MusicAlbumListItem = {
 		track_number?: number;
 		disc_number?: number;
 		audio_url?: string;
+		audio_status?: string;
 		cover_url?: string;
 		lyrics?: string;
 		status?: string;
@@ -691,6 +693,7 @@ export type MusicSongListItem = {
 	track_number?: number;
 	disc_number?: number;
 	audio_url?: string;
+	audio_status?: string;
 	duration_sec?: number;
 	waveform_peaks?: number[];
 	cover_url?: string;

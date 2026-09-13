@@ -29,6 +29,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 import { getMountedPinia } from '@/utils/pinia'
+import { hasPlayableMusicAudio } from '@/utils/musicMedia'
 
 type LibraryKind = 'album' | 'artist' | 'playlist' | 'later'
 type LibrarySongEnvelope = { song?: MusicSongListItem }
@@ -53,7 +54,7 @@ const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = getMountedPinia() ? useAuthStore() : { isAuthenticated: true }
 const requests = useRequestGeneration()
-const playableSongs = computed(() => songs.value.filter(song => Boolean(song.audio_url)).map(playable))
+const playableSongs = computed(() => songs.value.filter(hasPlayableMusicAudio).map(playable))
 
 const options = [
   { label: '专辑', value: 'album' }, { label: '艺人', value: 'artist' },
@@ -63,7 +64,7 @@ const options = [
 let queryTimer: ReturnType<typeof setTimeout> | undefined
 
 function playable(song: MusicSongListItem): Song {
-  return { id: song.id, title: song.title, artist: song.artists?.map(item => item.name).join(' / ') || '未知艺术家', album: song.album?.title || '', album_id: song.album?.id || '', year: 0, release_date: '', lyrics: song.lyrics || '', audio_url: song.audio_url || '', waveform_peaks: song.waveform_peaks, cover_url: song.cover_url || song.album?.cover_url || '', status: 'open' }
+  return { id: song.id, title: song.title, artist: song.artists?.map(item => item.name).join(' / ') || '未知艺术家', album: song.album?.title || '', album_id: song.album?.id || '', year: 0, release_date: '', lyrics: song.lyrics || '', audio_url: song.audio_url || '', audio_status: song.audio_status, waveform_peaks: song.waveform_peaks, cover_url: song.cover_url || song.album?.cover_url || '', status: 'open' }
 }
 
 function playlistCardItem(playlist: MusicPlaylistSummary) {
@@ -88,7 +89,7 @@ async function playAllLater() {
       })
       const nextSongs = response.data.map(item => item.song).filter((song): song is MusicSongListItem => Boolean(song))
       allSongs.push(...nextSongs)
-      nextSongs.filter(song => Boolean(song.audio_url)).map(playable).forEach(song => player.addToQueue(song))
+      nextSongs.filter(hasPlayableMusicAudio).map(playable).forEach(song => player.addToQueue(song))
       more = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
       nextPage += 1
     }
@@ -263,10 +264,10 @@ onUnmounted(() => clearTimeout(queryTimer))
       <div v-else class="music-library__cards">
         <article v-for="song in songs" v-if="kind === 'later'" :key="song.id" class="music-library__song-card" data-testid="library-song-card">
           <div class="music-library__song-cover">
-            <button type="button" class="music-library__song-play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))">
+            <button type="button" class="music-library__song-play" :disabled="!hasPlayableMusicAudio(song)" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))">
               <img v-if="song.cover_url || song.album?.cover_url" :src="song.cover_url || song.album?.cover_url" :alt="song.title" loading="lazy" />
               <span v-else class="music-library__song-placeholder" aria-hidden="true"><Music2 :size="28" /></span>
-              <span v-if="song.audio_url" class="music-library__play-indicator" aria-hidden="true"><Play :size="18" fill="currentColor" /></span>
+              <span v-if="hasPlayableMusicAudio(song)" class="music-library__play-indicator" aria-hidden="true"><Play :size="18" fill="currentColor" /></span>
             </button>
             <button
               type="button"

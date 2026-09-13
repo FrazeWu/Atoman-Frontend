@@ -195,13 +195,9 @@ export function useAlbumImportUpload() {
 			draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
 			draft.derivedCover = snapshot.derivedCover;
 		}
-		if (derivedTracks.length > 0 || isTerminalSnapshot) {
+		if (derivedTracks.length > 0) {
 			draft.derivedTracks = derivedTracks;
-			if (derivedTracks.length > 0) {
-				mergeImportedTracksIntoDraft(flow, derivedTracks);
-			} else if (!flow.tracksCustomized) {
-				flow.draft.tracks = [];
-			}
+			mergeImportedTracksIntoDraft(flow, derivedTracks);
 		}
 		if (serverDerivedDataAvailable || isTerminalSnapshot) {
 			draft.derivedReleaseDate = snapshot.derivedReleaseDate;

@@ -19,6 +19,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { hasPlayableMusicAudio } from '@/utils/musicMedia'
 
 type TagView = 'songs' | 'albums'
 
@@ -110,7 +111,7 @@ function changeView(value: TagView) {
 }
 
 function playSong(song: MusicSongListItem) {
-  if (!song.audio_url) return
+  if (!hasPlayableMusicAudio(song)) return
   player.playSong({
     id: song.id,
     title: song.title,
@@ -120,7 +121,8 @@ function playSong(song: MusicSongListItem) {
     year: song.album?.year || 0,
     release_date: song.album?.release_date || '',
     lyrics: song.lyrics || '',
-    audio_url: song.audio_url,
+    audio_url: song.audio_url || '',
+    audio_status: song.audio_status,
     cover_url: song.cover_url || song.album?.cover_url || '',
     status: 'approved',
     track_number: song.track_number,
@@ -203,7 +205,7 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="tag-song-play"
-              :disabled="!song.audio_url"
+              :disabled="!hasPlayableMusicAudio(song)"
               :aria-label="`播放 ${song.title}`"
               :title="`播放 ${song.title}`"
               @click="playSong(song)"

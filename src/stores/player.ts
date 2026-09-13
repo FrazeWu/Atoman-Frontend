@@ -28,6 +28,7 @@ import {
 	resolvePlayableAudioURL,
 	resolveUploadedMediaURL,
 } from "@/utils/mediaUrl";
+import { hasPlayableMusicAudio } from "@/utils/musicMedia";
 
 const api = useApi();
 const audioStartPrefetchBytes = 512 * 1024;
@@ -54,7 +55,11 @@ function normalizePlaybackSong(song: Song) {
 }
 
 function hasPlayableAudio(song: Song | null | undefined) {
-	return Boolean(song?.audio_url?.trim());
+	if (!song) return false;
+	if (song.source_type && song.source_type !== "music") {
+		return Boolean(song.audio_url?.trim());
+	}
+	return hasPlayableMusicAudio(song);
 }
 
 function compactPlaybackSong(song: Song): Song {
@@ -248,6 +253,7 @@ export const usePlayerStore = defineStore("player", () => {
 		artists?: Array<{ name: string }>;
 		album?: { id: string; title: string; cover_url?: string };
 		audio_url?: string;
+		audio_status?: string;
 		cover_url?: string;
 		lyrics?: string;
 		waveform_peaks?: number[];
@@ -261,6 +267,7 @@ export const usePlayerStore = defineStore("player", () => {
 			album: source.album?.title || "",
 			album_id: source.album?.id || "",
 			audio_url: source.audio_url || "",
+			audio_status: source.audio_status,
 			cover_url: source.cover_url || source.album?.cover_url || "",
 			lyrics: source.lyrics || "",
 			waveform_peaks: source.waveform_peaks,
@@ -272,7 +279,6 @@ export const usePlayerStore = defineStore("player", () => {
 		if (!authStore.isAuthenticated || musicSessionRestored) return false;
 		const generation = musicAccountGeneration;
 		const userID = authStore.user?.uuid;
-		musicSessionRestored = true;
 		try {
 			const session = await getMusicPlaybackSession();
 			if (
@@ -281,20 +287,27 @@ export const usePlayerStore = defineStore("player", () => {
 				authStore.user?.uuid !== userID
 			)
 				return false;
-			if (!session?.queue?.length) return false;
+			if (!session?.queue?.length) {
+				musicSessionRestored = true;
+				return false;
+			}
 			const restoredQueue = session.queue
-				.filter((song) => Boolean(song.audio_url))
-				.map(musicSongFromAPI);
+				.map(musicSongFromAPI)
+				.filter(hasPlayableAudio);
 			const restoredCurrentSong = restoredQueue.find(
 				(song) => String(song.id) === session.current_song_id,
 			);
-			if (!restoredCurrentSong) return false;
+			if (!restoredCurrentSong) {
+				musicSessionRestored = true;
+				return false;
+			}
 			queue.value = restoredQueue;
 			currentAlbum.value = null;
 			currentSong.value = restoredCurrentSong;
 			currentTime.value = session.position_seconds;
 			playbackMode.value = session.playback_mode;
 			isPlaying.value = false;
+			musicSessionRestored = true;
 			return true;
 		} catch (error) {
 			reportError(error, "Failed to restore music playback session:");
@@ -306,7 +319,6 @@ export const usePlayerStore = defineStore("player", () => {
 		if (!authStore.isAuthenticated || musicProgressRestored) return;
 		const generation = musicAccountGeneration;
 		const userID = authStore.user?.uuid;
-		musicProgressRestored = true;
 		try {
 			const progress = await getMusicPlaybackProgress();
 			if (
@@ -315,15 +327,23 @@ export const usePlayerStore = defineStore("player", () => {
 				authStore.user?.uuid !== userID
 			)
 				return;
-			if (!progress?.song?.audio_url || progress.completed) return;
+			if (!progress?.song?.audio_url || progress.completed) {
+				musicProgressRestored = true;
+				return;
+			}
 			const source = progress.song;
 			const song = musicSongFromAPI(source);
+			if (!hasPlayableAudio(song)) {
+				musicProgressRestored = true;
+				return;
+			}
 			currentSong.value = song;
 			queue.value = [song];
 			currentAlbum.value = null;
 			currentTime.value = progress.position_seconds;
 			duration.value = progress.duration_seconds;
 			isPlaying.value = false;
+			musicProgressRestored = true;
 		} catch (error) {
 			reportError(error, "Failed to restore music playback progress:");
 		}
@@ -532,7 +552,7 @@ export const usePlayerStore = defineStore("player", () => {
 			...new Set(
 				queue.value
 					.filter(
-						(song) => playbackItemKey(song) !== currentKey && Boolean(song.audio_url),
+						(song) => playbackItemKey(song) !== currentKey && hasPlayableAudio(song),
 					)
 					.map((song) => resolvePlaybackAudioUrl(song.audio_url))
 					.filter((url) => !prefetchedAudioStartUrls.has(url)),
@@ -1054,6 +1074,10 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const togglePlay = () => {
 		if (!currentSong.value) return;
+		if (!hasPlayableAudio(currentSong.value)) {
+			playbackError.value = "当前曲目没有可用音频源";
+			return;
+		}
 
 		const player = ensureAudio();
 		if (!player.src) {

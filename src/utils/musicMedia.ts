@@ -38,6 +38,17 @@ export function resolveAlbumCoverUrl(
 	return fallbackCover || "";
 }
 
+export function hasPlayableMusicAudio(song: {
+	audio_url?: string | null;
+	audio_status?: string | null;
+}): boolean {
+	return Boolean(
+		typeof song.audio_url === "string" &&
+			song.audio_url.trim() &&
+			(!song.audio_status || song.audio_status === "ready"),
+	);
+}
+
 export function buildPlayableSongsFromAlbum(album: MusicAlbumListItem): Song[] {
 	const artistText =
 		album.artists?.map((artist) => artist.name).join(", ") || "未知艺术家";
@@ -46,7 +57,7 @@ export function buildPlayableSongsFromAlbum(album: MusicAlbumListItem): Song[] {
 	return (album.songs || [])
 		.filter(
 			(song): song is MusicAlbumSongLike & { audio_url: string } =>
-				typeof song.audio_url === "string" && song.audio_url.trim().length > 0,
+				hasPlayableMusicAudio(song),
 		)
 		.sort(compareAlbumTracks)
 		.map((song) => ({

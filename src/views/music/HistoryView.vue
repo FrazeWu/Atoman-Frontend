@@ -22,6 +22,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
+import { hasPlayableMusicAudio } from '@/utils/musicMedia'
 
 const pageSize = 20
 const player = usePlayerStore()
@@ -41,7 +42,7 @@ const toastMessage = ref('')
 const clearPending = ref(false)
 
 const playableSongs = computed<Song[]>(() => historyItems.value
-  .filter((item) => Boolean(item.song.audio_url))
+  .filter((item) => hasPlayableMusicAudio(item.song))
   .map((item) => ({
     id: item.song.id,
     title: item.song.title,
@@ -52,6 +53,7 @@ const playableSongs = computed<Song[]>(() => historyItems.value
     release_date: '',
     lyrics: item.song.lyrics || '',
     audio_url: item.song.audio_url || '',
+    audio_status: item.song.audio_status,
     waveform_peaks: item.song.waveform_peaks,
     cover_url: item.song.cover_url || item.song.album?.cover_url || '',
     track_number: item.song.track_number,
@@ -255,7 +257,7 @@ watch(
               type="button"
               class="history-cover"
               :data-testid="`history-play-${item.song.id}`"
-              :disabled="!item.song.audio_url"
+              :disabled="!hasPlayableMusicAudio(item.song)"
               :aria-label="`播放 ${item.song.title}`"
               @click="playHistorySong(String(item.song.id))"
             >
@@ -265,7 +267,7 @@ watch(
                 :alt="item.song.title"
               />
               <span v-else class="history-cover__empty" aria-hidden="true" />
-              <span v-if="item.song.audio_url" class="history-play-icon" aria-hidden="true">
+              <span v-if="hasPlayableMusicAudio(item.song)" class="history-play-icon" aria-hidden="true">
                 <Play :size="15" fill="currentColor" />
               </span>
             </button>
@@ -294,8 +296,8 @@ watch(
             <PDropdown position="right">
               <template #trigger><button type="button" :aria-label="`${item.song.title} 的更多操作`" title="更多操作"><MoreHorizontal :size="17" aria-hidden="true" /></button></template>
               <div class="history-action-menu">
-                <button type="button" :disabled="!item.song.audio_url" @click="queueHistorySong(String(item.song.id), true)"><StepForward :size="16" aria-hidden="true" />下一首播放</button>
-                <button type="button" :disabled="!item.song.audio_url" @click="queueHistorySong(String(item.song.id), false)"><ListPlus :size="16" aria-hidden="true" />加入队列</button>
+                <button type="button" :disabled="!hasPlayableMusicAudio(item.song)" @click="queueHistorySong(String(item.song.id), true)"><StepForward :size="16" aria-hidden="true" />下一首播放</button>
+                <button type="button" :disabled="!hasPlayableMusicAudio(item.song)" @click="queueHistorySong(String(item.song.id), false)"><ListPlus :size="16" aria-hidden="true" />加入队列</button>
                 <button type="button" :disabled="actionBusy === `later:${item.song.id}`" @click="addHistoryToLater(String(item.song.id))"><Clock3 :size="16" aria-hidden="true" />稍后播放</button>
               </div>
             </PDropdown>

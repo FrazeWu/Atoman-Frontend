@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";
 import type { Song } from "@/types";
 import { getMountedPinia } from "@/utils/pinia";
+import { hasPlayableMusicAudio } from "@/utils/musicMedia";
 import PPageHeader from "@/components/ui/PPageHeader.vue";
 import PInput from "@/components/ui/PInput.vue";
 import PSegmentedControl from "@/components/ui/PSegmentedControl.vue";
@@ -153,6 +154,7 @@ function asSong(song: MusicSongListItem): Song {
     release_date: "",
     lyrics: song.lyrics || "",
     audio_url: song.audio_url || "",
+    audio_status: song.audio_status,
     waveform_peaks: song.waveform_peaks,
     cover_url: song.cover_url || song.album?.cover_url || "",
     status: "approved",
@@ -176,6 +178,7 @@ function asAlbumSong(song: NonNullable<Awaited<ReturnType<typeof searchMusic>>["
     release_date: album.release_date || "",
     lyrics: song.lyrics || "",
     audio_url: song.audio_url || "",
+    audio_status: song.audio_status,
     cover_url: song.cover_url || album.cover_url || "",
     status: "approved",
     track_number: song.track_number,
@@ -183,7 +186,7 @@ function asAlbumSong(song: NonNullable<Awaited<ReturnType<typeof searchMusic>>["
 }
 
 function playableAlbumSongs(album: Awaited<ReturnType<typeof searchMusic>>["albums"][number]) {
-  return (album.songs || []).filter((song) => song.audio_url).map((song) => asAlbumSong(song, album));
+  return (album.songs || []).filter(hasPlayableMusicAudio).map((song) => asAlbumSong(song, album));
 }
 
 function playAlbumResult(album: Awaited<ReturnType<typeof searchMusic>>["albums"][number]) {
@@ -195,7 +198,7 @@ function playAlbumResult(album: Awaited<ReturnType<typeof searchMusic>>["albums"
 
 async function playPlaylistResult(playlist: Awaited<ReturnType<typeof searchMusic>>["playlists"][number]) {
   const result = await listMusicPlaylistSongs(String(playlist.id), { page: 1, page_size: 200 });
-  const tracks = result.data.filter((song) => song.audio_url).map(asSong);
+  const tracks = result.data.filter(hasPlayableMusicAudio).map(asSong);
   if (!tracks.length) return;
   trackSearchClick("playlist", String(playlist.id));
   player.playAlbum(tracks);
@@ -291,7 +294,7 @@ onBeforeUnmount(() => {
         <h2>歌曲</h2>
         <div v-for="song in songs" :key="song.id" class="song-result">
           <a
-            v-if="!song.audio_url && appleMusicURL(song)"
+            v-if="!hasPlayableMusicAudio(song) && appleMusicURL(song)"
             class="song-play"
             :href="appleMusicURL(song)"
             target="_blank"
@@ -305,7 +308,7 @@ onBeforeUnmount(() => {
             v-else
             type="button"
             class="song-play"
-            :disabled="!song.audio_url"
+            :disabled="!hasPlayableMusicAudio(song)"
             :aria-label="`播放 ${song.title}`"
             @click="trackSearchClick('song', String(song.id)); player.playSong(asSong(song))"
           >
@@ -330,7 +333,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="song-action-btn"
-            :disabled="!song.audio_url"
+            :disabled="!hasPlayableMusicAudio(song)"
             :title="`加入队列：${song.title}`"
             :aria-label="`加入队列：${song.title}`"
             @click="trackSearchClick('song', String(song.id)); player.addToQueue(asSong(song))"
@@ -340,7 +343,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="song-action-btn"
-            :disabled="!song.audio_url"
+            :disabled="!hasPlayableMusicAudio(song)"
             :title="`下一首播放：${song.title}`"
             :aria-label="`下一首播放：${song.title}`"
             @click="trackSearchClick('song', String(song.id)); player.addToQueue(asSong(song), true)"

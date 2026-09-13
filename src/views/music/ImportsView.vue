@@ -37,7 +37,8 @@ const importSnapshots = ref<Record<string, MusicAlbumImport>>({})
 const actionBusy = ref<string | null>(null);
 const pendingConfirmation = ref<{ kind: 'record' | 'file' | 'cancel'; importId: string; fileId?: string } | null>(null)
 const page = ref(1)
-const importsMeta = ref({ page: 1, page_size: 50, total: 0, has_more: false })
+const importPageSize = 50
+const importsMeta = ref({ page: 1, page_size: importPageSize, total: 0, has_more: false })
 const activeGroup = ref<MusicImportGroup>('in_progress')
 const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
@@ -130,11 +131,21 @@ async function loadImports(silent = false, nextPage = page.value) {
   if (!silent) loading.value = true;
   errorMessage.value = "";
   try {
-    const response = await listMusicAlbumImports({ page: nextPage, page_size: 50 })
-    if (!request.isCurrent()) return
-    const nextImports = uniqueMusicAlbumImports(response.data)
+    const rawImports: MusicAlbumImport[] = []
+    let rawPage = 1
+    let rawHasMore = true
+    while (rawHasMore) {
+      const response = await listMusicAlbumImports({ page: rawPage, page_size: 100 })
+      if (!request.isCurrent()) return
+      rawImports.push(...response.data)
+      rawHasMore = response.meta.has_more
+      rawPage += 1
+    }
+    const allImports = uniqueMusicAlbumImports(rawImports)
+    const start = (nextPage - 1) * importPageSize
+    const nextImports = allImports.slice(start, start + importPageSize)
     imports.value = nextImports
-    importSnapshots.value = nextImports.reduce<Record<string, MusicAlbumImport>>(
+    importSnapshots.value = allImports.reduce<Record<string, MusicAlbumImport>>(
       (snapshots, item) => {
         snapshots[item.importId] = item
         return snapshots
@@ -142,7 +153,12 @@ async function loadImports(silent = false, nextPage = page.value) {
       { ...importSnapshots.value },
     )
     page.value = nextPage
-    importsMeta.value = response.meta
+    importsMeta.value = {
+      page: nextPage,
+      page_size: importPageSize,
+      total: allImports.length,
+      has_more: start + importPageSize < allImports.length,
+    }
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
     if (selected) {
       activeGroup.value = musicImportGroupForStatus(selected.status)

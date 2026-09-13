@@ -386,6 +386,47 @@ describe("MusicCreationFlowDrawer", () => {
 		).toBe("active");
 	});
 
+	it("从独立创建入口提交艺术家后直接打开艺术家详情", async () => {
+		const baseFlow = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "artist",
+			entity: "artist",
+			draft: {
+				...baseFlow.draft,
+				artist: {
+					...baseFlow.draft.artist,
+					id: null,
+					avatarUrl: "https://img.test/tyler.jpg",
+					legalName: "Tyler Okonma",
+					stageNames: [{
+						...baseFlow.draft.artist.stageNames[0],
+						name: "Tyler, The Creator",
+					}],
+					nationality: "美国",
+					birthDateParts: { year: "1991", month: "03", day: "06" },
+					source: "https://example.test/tyler",
+				},
+			},
+		});
+		createMusicArtistMock.mockResolvedValue({
+			id: "artist-tyler",
+			name: "Tyler, The Creator",
+		} as never);
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+
+		expect(wrapper.get('[data-testid="artist-next-button"]').text()).toBe("创建艺术家");
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await flushPromises();
+
+		expect(createMusicArtistMock).toHaveBeenCalledWith(
+			expect.objectContaining({ name: "Tyler, The Creator" }),
+		);
+		expect(drawerMocks.refreshArtist).toHaveBeenCalledTimes(1);
+		expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1);
+		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/artist/artist-tyler");
+	});
+
 	it("已有艺术家添加专辑时不显示创建艺术家步骤", () => {
 		drawerMocks.state.value.creationFlow = createFlowState({
 			step: "albumImport",

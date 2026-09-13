@@ -74,6 +74,6 @@ test.describe('Music', () => {
     expect(url.searchParams.get('editor')).toBe('artist-create')
     expect(url.searchParams.get('name')).toBe('test_artist')
     await expect(creationDialog.getByRole('textbox', { name: '主艺名*' })).toHaveValue('test_artist')
-    await expect(creationDialog.getByRole('button', { name: '创建专辑/歌曲' })).toBeVisible()
+    await expect(creationDialog.getByRole('button', { name: '创建艺术家' })).toBeVisible()
   })
 })

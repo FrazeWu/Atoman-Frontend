@@ -331,7 +331,7 @@ describe("Music ArtistsView.vue", () => {
 
 		expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1);
 		expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({
-			entity: "album",
+			entity: "artist",
 			startStep: "artist",
 		});
 	});

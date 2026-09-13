@@ -609,7 +609,10 @@ export function useMusicDrawers() {
 			step: seed.startStep ?? "albumImport",
 			artistFirstFlow:
 				seed.artistFirstFlow ??
-				(seed.startStep === "artist" && !seed.artistId && seed.entity !== "song"),
+				(seed.startStep === "artist"
+					&& !seed.artistId
+					&& seed.entity !== "song"
+					&& seed.entity !== "artist"),
 			artistBeforeMatch: seed.artistBeforeMatch === true,
 			directAlbumCreation: seed.artistBeforeMatch === true,
 			draft: createEmptyDraft(seed),

@@ -175,6 +175,7 @@ describe("Music AlbumsView.vue (Album Landing)", () => {
 		mountHome();
 
 		expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({
+			entity: "artist",
 			startStep: "artist",
 			artistName: "Seed Artist",
 		});

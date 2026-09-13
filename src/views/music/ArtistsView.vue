@@ -255,7 +255,7 @@ function openArtistCard(artistId: string) {
 
 function startArtistCreation() {
   if (!requireLogin()) return
-  openMusicCreationFlow({ entity: 'album', startStep: 'artist' })
+  openMusicCreationFlow({ entity: 'artist', startStep: 'artist' })
 }
 
 onMounted(() => {

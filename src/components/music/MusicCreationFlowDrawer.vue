@@ -400,6 +400,7 @@ const showFullAlbumCreationProgress = computed(() => {
     flow
     && flow.mode !== 'edit'
     && !flow.editingContributorId
+    && flow.entity !== 'artist'
     && flow.artistFirstFlow,
   )
 })
@@ -425,6 +426,9 @@ const fullAlbumCreationProgressIndex = computed(() => {
 })
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
+  if (creationFlow.value?.entity === 'artist' && creationFlow.value.step === 'artist') {
+    return creationFlow.value.submitting ? '创建中…' : '创建艺术家'
+  }
   if (creationFlow.value?.step === 'artist' && creationFlow.value.artistBeforeMatch) {
     return creationFlow.value.submitting ? '匹配中…' : '开始匹配'
   }
@@ -1047,6 +1051,15 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         setMusicCreationStep('albumDetails')
         return
       }
+      if (flow.entity === 'artist') {
+        const artist = await musicApi.createMusicArtist(buildCreateArtistInput(flow))
+        if (!artist.id?.trim()) throw new Error('创建艺术家失败')
+        flow.draft.artist.id = artist.id
+        refreshArtist()
+        closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
+        await router.push(`/music/artist/${artist.id}`)
+        return
+      }
       if (flow.artistBeforeMatch) {
         ensurePrimaryArtistContributor(flow)
         await startAlbumImportMatching(flow)
@@ -1456,7 +1469,7 @@ async function completeCreation() {
             返回专辑
           </button>
           <button
-            v-if="creationFlow.mode !== 'edit' && creationFlow.step === 'artist' && !creationFlow.editingContributorId"
+            v-if="creationFlow.mode !== 'edit' && creationFlow.entity !== 'artist' && creationFlow.step === 'artist' && !creationFlow.editingContributorId"
             data-testid="artist-link-album-button"
             type="button"
             class="ui-action"

@@ -214,7 +214,7 @@ test.describe("Music Wiki Real", () => {
       creationDialog.getByRole("textbox", { name: "本名*" }),
     ).toBeVisible();
     await expect(
-      creationDialog.getByRole("button", { name: "创建专辑/歌曲" }),
+      creationDialog.getByRole("button", { name: "创建艺术家" }),
     ).toBeVisible();
   });
 });

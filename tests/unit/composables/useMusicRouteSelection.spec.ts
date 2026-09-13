@@ -52,4 +52,17 @@ describe("useMusicRouteSelection", () => {
     expect(handlers.closeMusicEditor).toHaveBeenCalledTimes(1);
     expect(handlers.closeMusicCreationFlow).toHaveBeenCalledTimes(1);
   });
+
+  it("opens the direct artist creation route as an artist-only flow", () => {
+    const handlers = createHandlers();
+    const { applyRouteSelection } = useMusicRouteSelection(handlers);
+
+    applyRouteSelection({ editor: "artist-create", name: "Tyler, The Creator" });
+
+    expect(handlers.openMusicCreationFlow).toHaveBeenCalledWith({
+      entity: "artist",
+      startStep: "artist",
+      artistName: "Tyler, The Creator",
+    });
+  });
 });

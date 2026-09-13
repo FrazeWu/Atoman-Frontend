@@ -65,6 +65,7 @@ export function useMusicRouteSelection(handlers: MusicRouteSelectionHandlers) {
     if (typeof editor === "string" && nextEditorKey !== lastRouteEditor) {
       if (editor === "artist-create") {
         handlers.openMusicCreationFlow({
+          entity: "artist",
           startStep: "artist",
           artistName:
             typeof name === "string" && name.trim() ? name.trim() : undefined,

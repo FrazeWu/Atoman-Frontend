@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const useLocalServers = !process.env.PLAYWRIGHT_BASE_URL;
+const skipBackendServer = process.env.PLAYWRIGHT_SKIP_BACKEND_SERVER === "1";
 const frontendPort = Number(process.env.PLAYWRIGHT_PORT || 5175);
 const backendPort = Number(process.env.E2E_BACKEND_PORT || 8081);
 const baseURL =
@@ -24,12 +25,16 @@ export default defineConfig({
 	},
 	webServer: useLocalServers
 		? [
-				{
-					command: `cd ../Atoman-Backend && PORT=${backendPort} OWNER_USERNAME=e2e-owner OWNER_EMAIL=e2e-owner@example.test OWNER_PASSWORD=e2e-password go run ./cmd/start_server --mode dev`,
-					url: `http://127.0.0.1:${backendPort}/api/v1/auth/session`,
-					reuseExistingServer: false,
-					timeout: 120000,
-				},
+				...(!skipBackendServer
+					? [
+							{
+								command: `cd ../Atoman-Backend && PORT=${backendPort} OWNER_USERNAME=e2e-owner OWNER_EMAIL=e2e-owner@example.test OWNER_PASSWORD=e2e-password go run ./cmd/start_server --mode dev`,
+								url: `http://127.0.0.1:${backendPort}/api/v1/auth/session`,
+								reuseExistingServer: false,
+								timeout: 120000,
+							},
+						]
+					: []),
 				{
 					command: `bun --bun vite --mode development --host 0.0.0.0 --port ${frontendPort}`,
 					url: `${baseURL}/`,
@@ -39,8 +44,12 @@ export default defineConfig({
 						...process.env,
 						NODE_ENV: "development",
 						VITE_API_URL: "/api",
-						VITE_DEV_PROXY_TARGET: `http://127.0.0.1:${backendPort}`,
-						VITE_DEV_PROXY_ORIGIN: baseURL,
+						...(!skipBackendServer
+							? {
+									VITE_DEV_PROXY_TARGET: `http://127.0.0.1:${backendPort}`,
+									VITE_DEV_PROXY_ORIGIN: baseURL,
+								}
+							: {}),
 					},
 				},
 			]

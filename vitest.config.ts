@@ -48,6 +48,23 @@ export default defineConfig({
 	},
 	test: {
 		maxWorkers: 4,
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "json-summary"],
+			include: [
+				"src/api/**/*.ts",
+				"src/router/**/*.ts",
+				"src/stores/auth.ts",
+				"src/stores/siteAccess.ts",
+				"src/composables/useSidebar.ts",
+			],
+			thresholds: {
+				lines: 30,
+				functions: 30,
+				branches: 20,
+				statements: 30,
+			},
+		},
 		projects: [
 			{
 				plugins: [vue()],

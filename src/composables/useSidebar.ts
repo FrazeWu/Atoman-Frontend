@@ -1,15 +1,12 @@
-import { ref } from 'vue'
-
-const sidebarCollapsed = ref(localStorage.getItem('atoman.global.sidebar.collapsed') === 'true')
+import { storeToRefs } from 'pinia'
+import { useUIStore } from '@/stores/ui'
 
 export function useSidebar() {
-  const toggleSidebar = () => {
-    sidebarCollapsed.value = !sidebarCollapsed.value
-    localStorage.setItem('atoman.global.sidebar.collapsed', String(sidebarCollapsed.value))
-  }
+  const uiStore = useUIStore()
+  const { sidebarCollapsed } = storeToRefs(uiStore)
 
   return {
     sidebarCollapsed,
-    toggleSidebar
+    toggleSidebar: uiStore.toggleSidebar,
   }
 }

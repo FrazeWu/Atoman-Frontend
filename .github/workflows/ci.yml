@@ -3,6 +3,8 @@ name: Frontend CI
 on:
   push:
     paths:
+      - "apps/**"
+      - "packages/**"
       - "src/**"
       - "functions/**"
       - "tests/**"
@@ -15,12 +17,15 @@ on:
       - "tsconfig.json"
       - "tsconfig.check.json"
       - "vite.config.ts"
+      - "vite.mobile.config.ts"
       - "vitest.config.ts"
       - "playwright.config.ts"
       - "wrangler.toml"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
+      - "apps/**"
+      - "packages/**"
       - "src/**"
       - "functions/**"
       - "tests/**"
@@ -33,10 +38,13 @@ on:
       - "tsconfig.json"
       - "tsconfig.check.json"
       - "vite.config.ts"
+      - "vite.mobile.config.ts"
       - "vitest.config.ts"
       - "playwright.config.ts"
       - "wrangler.toml"
       - ".github/workflows/ci.yml"
+  schedule:
+    - cron: "0 2 * * *"
 
 permissions:
   contents: read
@@ -90,7 +98,7 @@ jobs:
       - run: bun run test:unit:changed
 
   unit-full:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -113,3 +121,49 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
       - run: bun install --frozen-lockfile
       - run: bun run test:unit:ci --shard=${{ matrix.shard }}
+
+  coverage-core:
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bun run test:coverage:core
+
+  e2e-smoke:
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e:smoke
+        env:
+          PLAYWRIGHT_SKIP_GLOBAL_SETUP: "1"
+          PLAYWRIGHT_SKIP_BACKEND_SERVER: "1"

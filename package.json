@@ -20,7 +20,9 @@
     "check:serial": "bun run type-check && bun run test:unit:changed && bun run build",
     "test:unit:watch": "NODE_ENV=test ./node_modules/.bin/vitest",
     "test:coverage": "NODE_ENV=test ./node_modules/.bin/vitest run --coverage",
+    "test:coverage:core": "NODE_ENV=test ./node_modules/.bin/vitest run --coverage tests/unit/api tests/unit/router tests/unit/stores/auth.spec.ts tests/unit/stores/siteAccess.spec.ts tests/unit/composables/useSidebar.spec.ts",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/specs/smoke.mock.spec.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
   },
@@ -72,6 +74,7 @@
     "@types/node": "^22.14.0",
     "@types/sortablejs": "^1.15.9",
     "@vitejs/plugin-vue": "^6.0.3",
+    "@vitest/coverage-v8": "4.1.8",
     "@vue/test-utils": "^2.4.10",
     "glob": "^13.0.6",
     "happy-dom": "^20.11.2",

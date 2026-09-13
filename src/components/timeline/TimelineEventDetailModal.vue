@@ -38,10 +38,14 @@ import type { TimelineEvent } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProposal.vue'
+import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
 
 defineProps<{ event: TimelineEvent; canEdit: boolean; formatDatetime: (value: string) => string }>()
 const emit = defineEmits<{ close: []; edit: []; history: []; delete: []; decided: [] }>()
-const renderContent = (content: string) => content.replace(/\n/g, '<br>')
+const renderContent = (content: string) => {
+  const rendered = renderCommentMarkdown(content)
+  return rendered.ok ? rendered.html : ''
+}
 </script>
 
 <style scoped>

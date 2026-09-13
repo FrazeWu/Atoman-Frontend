@@ -20,11 +20,36 @@ describe('TimelineEventDetailModal', () => {
     })
 
     expect(wrapper.text()).toContain('历史事件')
-    expect(wrapper.html()).toContain('第一行<br>第二行')
+    expect(wrapper.text()).toContain('第一行')
+    expect(wrapper.text()).toContain('第二行')
     await wrapper.get('button').trigger('click')
     await wrapper.get('[data-test="timeline-detail-edit"]').trigger('click')
 
     expect(wrapper.emitted('close')).toHaveLength(1)
     expect(wrapper.emitted('edit')).toHaveLength(1)
+  })
+
+  it('sanitizes rendered event html content', () => {
+    const wrapper = mount(TimelineEventDetailModal, {
+      props: {
+        event: {
+          ...event,
+          content: '<img src=x onerror=alert(1) /><script>alert(1)</script>[x](javascript:alert(1))',
+        },
+        canEdit: false,
+        formatDatetime: () => '2026-01-01',
+      },
+      global: {
+        stubs: {
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          TimelineRevisionProposal: true,
+        },
+      },
+    })
+
+    const html = wrapper.html()
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('onerror=')
+    expect(html).not.toContain('javascript:alert')
   })
 })

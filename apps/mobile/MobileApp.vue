@@ -23,7 +23,14 @@ import { useTransitionStore } from '@/stores/transition'
 import { usePlayerStore } from '@/stores/player'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
+import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import MobileTopbar from './MobileTopbar.vue'
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void
+  }
+}
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -40,12 +47,24 @@ const reportPageView = () => {
   void apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }).catch(() => {})
 }
 
-watch(() => route.fullPath, reportPageView)
+const reportAnalyticsPageView = () => {
+  if (isAuthRoute.value) return
+  const ga = window.gtag
+  if (typeof ga === 'function') {
+    ga('event', 'page_view', { page_path: route.fullPath, page_location: window.location.href })
+  }
+}
+
+watch(() => route.fullPath, () => {
+  reportPageView()
+  reportAnalyticsPageView()
+})
 
 onMounted(() => {
   void authStore.restoreSession()
   void siteAccessStore.load().catch(() => {})
   reportPageView()
+  scheduleGoogleAnalytics(reportAnalyticsPageView)
 })
 </script>
 

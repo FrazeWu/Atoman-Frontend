@@ -174,7 +174,6 @@ function openPanel(panel: FootbarPanel, label: string) {
 .site-footer-brand--disabled {
   color: var(--a-color-muted);
   cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .site-footer-brand--disabled:hover {

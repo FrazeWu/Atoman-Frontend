@@ -83,6 +83,7 @@ describe('PVideoCard.vue', () => {
     vi.stubEnv('PROD', 'true')
     const wrapper = mountCard({ thumbnail_url: 'https://assets.atoman.org/video/covers/video-1.jpg' })
 
+    expect(wrapper.get('.vc-img').attributes('src')).toContain('width=384')
     expect(wrapper.get('.vc-img').attributes('srcset')).toContain('width=384')
     expect(wrapper.get('.vc-thumb picture source').attributes('srcset')).toContain('width=384')
     expect(wrapper.get('.vc-img').attributes('sizes')).toBe('(max-width: 768px) calc(100vw - 2rem), 640px')

@@ -495,7 +495,7 @@ onMounted(loadHotContent)
 
 .portal-hot__tag--debate {
   background: color-mix(in srgb, #6366f1 10%, transparent);
-  color: #4f46e5;
+  color: #3730a3;
 }
 
 .portal-hot__debate-title {

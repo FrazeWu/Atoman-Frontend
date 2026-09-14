@@ -118,6 +118,11 @@ describe("SiteFooter", () => {
 		expect(footerSource).not.toContain("+ 96px");
 	});
 
+	it("keeps the disabled brand text at readable contrast", () => {
+		expect(footerSource).toContain(".site-footer-brand--disabled");
+		expect(footerSource).not.toContain("opacity: 0.45");
+	});
+
 	it("follows the page content instead of floating at the viewport bottom", () => {
 		expect(footerSource).toContain("position: relative");
 		expect(footerSource).not.toContain("position: fixed");

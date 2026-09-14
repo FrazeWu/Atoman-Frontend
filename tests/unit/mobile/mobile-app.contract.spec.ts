@@ -9,6 +9,18 @@ import {
 } from "../../../apps/mobile/mobileRoutes";
 
 const indexHtml = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
+const mobileIndexHtml = readFileSync(
+	resolve(process.cwd(), "apps/mobile/index.html"),
+	"utf8",
+);
+const mobileAppSource = readFileSync(
+	resolve(process.cwd(), "apps/mobile/MobileApp.vue"),
+	"utf8",
+);
+const portalSource = readFileSync(
+	resolve(process.cwd(), "src/views/portal/PortalView.vue"),
+	"utf8",
+);
 
 function routePaths(routes = mobileRoutes, parentPath = ""): string[] {
 	return routes.flatMap((route) => {
@@ -87,5 +99,16 @@ describe("mobile app route boundary", () => {
 		expect(indexHtml).toMatch(
 			/<meta\s+name="viewport"\s+content="[^"]*viewport-fit=cover[^"]*"\s*\/?>/,
 		);
+	});
+
+	it("defers analytics loading until the app scheduler runs", () => {
+		expect(mobileIndexHtml).not.toContain("googletagmanager.com/gtag/js");
+		expect(mobileIndexHtml).not.toContain("G-1FLNTZ469W");
+		expect(mobileAppSource).toContain("scheduleGoogleAnalytics");
+	});
+
+	it("keeps the portal debate tag text at accessible contrast", () => {
+		expect(portalSource).toContain("color: #3730a3;");
+		expect(portalSource).not.toContain("color: #4f46e5;");
 	});
 });

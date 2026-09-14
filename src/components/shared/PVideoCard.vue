@@ -26,7 +26,7 @@ const avatarUrl = computed(() => {
 const thumbnailUrl = computed(() => {
   if (thumbnailFailed.value) return ''
   const url = props.video.thumbnail_url?.trim() || ''
-  return url ? resolveMediaImageURL(url, { width: 640 }) : ''
+  return url ? resolveMediaImageURL(url, { width: 384 }) : ''
 })
 const thumbnailSrcSet = computed(() => {
   const url = props.video.thumbnail_url?.trim() || ''

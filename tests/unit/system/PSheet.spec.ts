@@ -240,7 +240,7 @@ describe("PSheet.vue", () => {
 		).toBe("calc(var(--a-z-sheet) + 1)");
 	});
 
-	it("keeps a 42rem partial sheet in the lower sheet's right gutter without a backdrop", async () => {
+	it("keeps a 42rem partial sheet in the lower sheet's right gutter with a transparent backdrop", async () => {
 		const originalWidth = window.innerWidth;
 		const originalHeight = window.innerHeight;
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 1000 });
@@ -273,7 +273,10 @@ describe("PSheet.vue", () => {
 		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
 		expect(panel.style.left).toContain("var(--a-comment-sheet-width)");
 		expect(panel.style.right).toBe("0px");
-		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(false);
+		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(true);
+		expect((wrapper.get(".p-sheet-backdrop").element as HTMLElement).style.zIndex).toBe(
+			"calc(var(--a-z-sheet) + 1)",
+		);
 
 		wrapper.unmount();
 		parentPanel.remove();
@@ -304,7 +307,7 @@ describe("PSheet.vue", () => {
 		expect(wrapper.get(".p-sheet-root").classes()).toContain("p-sheet-root--partial");
 		expect(panel.style.left).toContain("var(--a-comment-sheet-width)");
 		expect(panel.style.right).toBe("0px");
-		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(false);
+		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(true);
 
 		wrapper.unmount();
 		anchor.remove();
@@ -540,6 +543,22 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted("activate")).toHaveLength(1);
 		await wrapper.get(".sheet-layer-rail").trigger("click");
 		expect(wrapper.emitted("close")).toBeUndefined();
+	});
+
+	it("places a top-layer backdrop above lower panels and keeps lower panels from intercepting clicks", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
+			"utf8",
+		);
+		expect(source).toMatch(
+			/\.p-sheet-panel\.is-shifted\s*\{[\s\S]*?pointer-events:\s*none/,
+		);
+		expect(source).toMatch(
+			/\.p-sheet-panel\.is-shifted\s+\.sheet-layer-rail\s*\{[\s\S]*?pointer-events:\s*auto/,
+		);
+		expect(source).toMatch(
+			/:style="\{ top: top, zIndex: layerZIndex \}"/,
+		);
 	});
 
 	it("prevents wheel scrolling on lower sheet layers", () => {

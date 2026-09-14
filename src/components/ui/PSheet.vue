@@ -44,7 +44,12 @@
     >
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade" appear>
-        <div v-if="show && showBackdrop && isTopLayer && !isPartial" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
+        <div
+          v-if="show && showBackdrop && isTopLayer"
+          class="p-sheet-backdrop"
+          :style="{ top: top, zIndex: layerZIndex }"
+          @click="$emit('close')"
+        />
       </Transition>
 
       <Transition :name="transitionName" appear>
@@ -517,10 +522,11 @@ const mobileSheetStyle = computed(() => {
 
 .p-sheet-panel.is-shifted {
   opacity: 1;
+  pointer-events: none;
 }
 
-.p-sheet-panel.is-shifted .sheet-content {
-  pointer-events: none;
+.p-sheet-panel.is-shifted .sheet-layer-rail {
+  pointer-events: auto;
 }
 
 .p-sheet-mobile-page {

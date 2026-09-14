@@ -2,19 +2,21 @@
   <PMediaCard variant="square" class="music-album-card">
     <div class="cover-frame">
       <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
-        <img
-          v-if="optimizedCoverUrl"
-          :src="optimizedCoverUrl"
-          :srcset="coverSrcSet || undefined"
-          sizes="(max-width: 768px) calc((100vw - 3rem) / 2), 320px"
-          :alt="album.title"
-          class="cover-image"
-          width="320"
-          height="320"
-          :loading="priority ? 'eager' : 'lazy'"
-          :fetchpriority="priority ? 'high' : 'auto'"
-          decoding="async"
-        />
+        <picture v-if="optimizedCoverUrl">
+          <source media="(max-width: 768px)" :srcset="coverMobileSrcSet || optimizedCoverUrl" sizes="calc((100vw - 3rem) / 2)" />
+          <img
+            :src="optimizedCoverUrl"
+            :srcset="coverSrcSet || undefined"
+            sizes="(max-width: 768px) calc((100vw - 3rem) / 2), 320px"
+            :alt="album.title"
+            class="cover-image"
+            width="320"
+            height="320"
+            :loading="priority ? 'eager' : 'lazy'"
+            :fetchpriority="priority ? 'high' : 'auto'"
+            decoding="async"
+          />
+        </picture>
         <span v-else class="cover-placeholder">
           <Disc3 :size="28" aria-hidden="true" />
         </span>
@@ -166,6 +168,7 @@ const coverUrl = computed(() => {
 
 const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 320 }) : '')
 const coverSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180, 320]) : '')
+const coverMobileSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180]) : '')
 
 const artistNames = computed(() => {
   if (props.album.artists && props.album.artists.length) {

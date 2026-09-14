@@ -32,10 +32,15 @@ const thumbnailSrcSet = computed(() => {
   const url = props.video.thumbnail_url?.trim() || ''
   return url ? resolveMediaImageSrcSet(url, [384, 640]) : ''
 })
+const thumbnailMobileSrcSet = computed(() => {
+  const url = props.video.thumbnail_url?.trim() || ''
+  return url ? resolveMediaImageSrcSet(url, [384]) : ''
+})
 
 const thumbnailLabel = computed(() => {
+  const details = [`${fmtViews(props.video.view_count)} 次播放`]
   const duration = props.video.duration_sec ? `，时长 ${fmtDuration(props.video.duration_sec)}` : ''
-  return `${props.video.title}${duration}`
+  return `${props.video.title}，${details.join('，')}${duration}`
 })
 
 watch(() => props.video.thumbnail_url, () => { thumbnailFailed.value = false })
@@ -80,7 +85,10 @@ const avatarLetter = () =>
   <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="thumbnailLabel">
-        <img v-if="thumbnailUrl" :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 640px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
+        <picture v-if="thumbnailUrl">
+          <source media="(max-width: 768px)" :srcset="thumbnailMobileSrcSet || thumbnailUrl" sizes="calc(100vw - 2rem)" />
+          <img :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 640px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
+        </picture>
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 
         <!-- 悬浮微渐变与居中播放徽标 -->

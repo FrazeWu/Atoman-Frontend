@@ -362,8 +362,8 @@ function formatCount(value?: number) {
   color: var(--a-color-blog);
 }
 .feed-type-tag--rss {
-  background: color-mix(in srgb, #2563eb 12%, transparent);
-  color: #2563eb;
+  background: color-mix(in srgb, #1e40af 12%, transparent);
+  color: #1e40af;
 }
 
 .blog-item-card__external-link {

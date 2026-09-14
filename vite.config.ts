@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
+import { deferInitialStylesheetPlugin } from "./scripts/deferStylesheet";
 
 let packageVersion: { version?: string } = {};
 try {
@@ -98,7 +99,7 @@ export default defineConfig(({ mode }) => {
 				},
 			},
 		},
-		plugins: [tailwindcss(), vue()],
+		plugins: [tailwindcss(), vue(), deferInitialStylesheetPlugin()],
 		resolve: {
 			alias: {
 				"@": path.resolve(__dirname, "./src"),

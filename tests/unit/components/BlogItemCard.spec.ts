@@ -39,6 +39,13 @@ describe("BlogItemCard", () => {
     );
   });
 
+  it("uses a readable RSS tag color", () => {
+    expect(blogItemCardSource).toContain(
+      "background: color-mix(in srgb, #1e40af 12%, transparent);",
+    );
+    expect(blogItemCardSource).toContain("color: #1e40af;");
+  });
+
   it("uses the explicit summary when it is available", () => {
     const wrapper = mount(BlogItemCard, {
       props: { item: { ...post, summary: "Curated summary" }, type: "post" },

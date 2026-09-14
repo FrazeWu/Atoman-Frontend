@@ -7,7 +7,7 @@ type ImageTransform = {
   height?: number
   fit?: 'cover' | 'contain' | 'scale-down'
   quality?: number
-  format: 'auto'
+  format: 'webp'
 }
 
 type CloudflareImageRequestInit = RequestInit & {
@@ -55,7 +55,7 @@ function imageTransform(request: Request): ImageTransform | null {
     ...(height ? { height } : {}),
     ...(fit ? { fit: fit as ImageTransform['fit'] } : {}),
     quality,
-    format: 'auto',
+    format: 'webp',
   }
 }
 

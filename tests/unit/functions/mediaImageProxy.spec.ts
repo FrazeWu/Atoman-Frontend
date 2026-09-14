@@ -23,7 +23,7 @@ describe('media image proxy', () => {
       new URL('https://assets.atoman.org/music/covers/cover.jpg'),
       expect.objectContaining({
         headers: { Accept: 'image/avif,image/webp,image/png,image/jpeg' },
-        cf: { image: { width: 320, quality: 75, format: 'auto' } },
+        cf: { image: { width: 320, quality: 75, format: 'webp' } },
       }),
     )
     expect(response.status).toBe(200)

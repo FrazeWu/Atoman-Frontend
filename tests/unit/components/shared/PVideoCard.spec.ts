@@ -72,6 +72,7 @@ describe('PVideoCard.vue', () => {
     const wrapper = mountCard()
     expect(wrapper.text()).toContain('12')
     expect(wrapper.text()).toContain('1:30')
+    expect(wrapper.get('.vc-thumb-link').attributes('aria-label')).toContain('12 次播放')
     expect(wrapper.get('.vc-thumb-link').attributes('aria-label')).toContain('1:30')
     expect(wrapper.get('button[aria-label="稍后看 Video Title"]')).toBeTruthy()
     expect(wrapper.get('.vc-thumb').classes()).toContain('vc-thumb')
@@ -83,6 +84,7 @@ describe('PVideoCard.vue', () => {
     const wrapper = mountCard({ thumbnail_url: 'https://assets.atoman.org/video/covers/video-1.jpg' })
 
     expect(wrapper.get('.vc-img').attributes('srcset')).toContain('width=384')
+    expect(wrapper.get('.vc-thumb picture source').attributes('srcset')).toContain('width=384')
     expect(wrapper.get('.vc-img').attributes('sizes')).toBe('(max-width: 768px) calc(100vw - 2rem), 640px')
     vi.unstubAllEnvs()
   })

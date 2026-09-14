@@ -1506,8 +1506,8 @@ onMounted(() => {
   color: var(--a-color-blog);
 }
 .feed-type-tag--rss {
-  background: color-mix(in srgb, #2563eb 12%, transparent);
-  color: #2563eb;
+  background: color-mix(in srgb, #1e40af 12%, transparent);
+  color: #1e40af;
 }
 
 /* 频道流容器：与文章流保持无外框的信息流样式 */

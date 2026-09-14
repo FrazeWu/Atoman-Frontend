@@ -76,6 +76,7 @@ describe("MusicAlbumCard", () => {
 		});
 
 		expect(wrapper.get("img").attributes("srcset")).toContain("width=180");
+		expect(wrapper.get("source").attributes("srcset")).toContain("width=180");
 		expect(wrapper.get("img").attributes("sizes")).toContain("calc((100vw - 3rem) / 2)");
 		vi.unstubAllEnvs();
 	});

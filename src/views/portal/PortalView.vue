@@ -495,7 +495,7 @@ onMounted(loadHotContent)
 
 .portal-hot__tag--debate {
   background: color-mix(in srgb, #6366f1 10%, transparent);
-  color: #6366f1;
+  color: #4f46e5;
 }
 
 .portal-hot__debate-title {
@@ -531,12 +531,12 @@ onMounted(loadHotContent)
 
 .portal-hot__stance-pro {
   width: 58%;
-  background: #3b82f6;
+  background: #1d4ed8;
 }
 
 .portal-hot__stance-con {
   width: 42%;
-  background: #ef4444;
+  background: #b91c1c;
 }
 
 .portal-hot__stance-info {
@@ -547,12 +547,12 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__stance-badge--pro {
-  color: #3b82f6;
+  color: #1d4ed8;
   font-weight: 500;
 }
 
 .portal-hot__stance-badge--con {
-  color: #ef4444;
+  color: #b91c1c;
   font-weight: 500;
 }
 
@@ -597,7 +597,7 @@ onMounted(loadHotContent)
 
 .portal-hot__tag--feed {
   background: color-mix(in srgb, #2563eb 12%, transparent);
-  color: #2563eb;
+  color: #1d4ed8;
 }
 
 .portal-hot__tag--blog {
@@ -607,12 +607,12 @@ onMounted(loadHotContent)
 
 .portal-hot__tag--music {
   background: color-mix(in srgb, #8b5cf6 12%, transparent);
-  color: #8b5cf6;
+  color: #6d28d9;
 }
 
 .portal-hot__tag--video {
   background: color-mix(in srgb, #ea580c 12%, transparent);
-  color: #ea580c;
+  color: #c2410c;
 }
 
 .portal-hot__score {

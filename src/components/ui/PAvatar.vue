@@ -3,6 +3,8 @@
     <img
       v-if="avatarSrc && !imageFailed"
       :src="avatarSrc"
+      :srcset="avatarSrcSet || undefined"
+      :sizes="`${avatarSize}px`"
       :alt="alt"
       :width="avatarSize"
       :height="avatarSize"
@@ -17,7 +19,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { resolveMediaImageURL } from '@/utils/mediaUrl'
+import { resolveMediaImageSrcSet, resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   src?: string
@@ -35,8 +37,9 @@ const initials = computed(() => {
   return props.name.charAt(0).toUpperCase()
 })
 
-const avatarSize = computed(() => ({ xs: 64, sm: 96, md: 144, lg: 240, xl: 384 })[props.size])
+const avatarSize = computed(() => ({ xs: 20, sm: 32, md: 48, lg: 80, xl: 128 })[props.size])
 const avatarSrc = computed(() => props.src ? resolveMediaImageURL(props.src, { width: avatarSize.value }) : '')
+const avatarSrcSet = computed(() => props.src ? resolveMediaImageSrcSet(props.src, [avatarSize.value, avatarSize.value * 2]) : '')
 const imageFailed = ref(false)
 
 watch(avatarSrc, () => {

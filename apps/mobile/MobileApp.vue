@@ -80,11 +80,11 @@ body {
   --a-color-surface-muted: #e5e5ea;
   --a-color-border: #c6c6c8;
   --a-color-border-soft: #d1d1d6;
-  --a-color-muted: #8e8e93;
-  --a-color-muted-soft: #aeaeb2;
-  --a-color-primary: #007aff;
-  --a-color-primary-hover: #006ee6;
-  --a-color-primary-pressed: #005ecb;
+  --a-color-muted: #5c5c60;
+  --a-color-muted-soft: #48484a;
+  --a-color-primary: #0066cc;
+  --a-color-primary-hover: #005bb5;
+  --a-color-primary-pressed: #004c99;
   --a-color-primary-contrast: #ffffff;
   --a-radius-base: 8px;
   --a-radius-control: 8px;

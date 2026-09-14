@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import MusicAlbumCard from "@/components/music/MusicAlbumCard.vue";
 
 const RouterLinkStub = {
@@ -60,5 +60,23 @@ describe("MusicAlbumCard", () => {
 		await wrapper.get(".bookmark-btn").trigger("click");
 		expect(wrapper.emitted("toggle-bookmark")).toHaveLength(1);
 		expect(wrapper.emitted("click")).toHaveLength(2);
+	});
+
+	it("provides a smaller responsive cover candidate on mobile", () => {
+		vi.stubEnv("PROD", "true");
+		const wrapper = mount(MusicAlbumCard, {
+			props: {
+				album: {
+					id: "album-1",
+					title: "Album One",
+					cover_url: "https://assets.atoman.org/music/covers/album-1.jpg",
+				},
+			},
+			global: { stubs: { RouterLink: RouterLinkStub } },
+		});
+
+		expect(wrapper.get("img").attributes("srcset")).toContain("width=180");
+		expect(wrapper.get("img").attributes("sizes")).toContain("calc((100vw - 3rem) / 2)");
+		vi.unstubAllEnvs();
 	});
 });

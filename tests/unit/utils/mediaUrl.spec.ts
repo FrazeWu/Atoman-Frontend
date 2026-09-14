@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { resolveMediaImageURL, resolveMediaURL, resolvePlayableAudioURL } from '@/utils/mediaUrl'
+import { resolveMediaImageSrcSet, resolveMediaImageURL, resolveMediaURL, resolvePlayableAudioURL } from '@/utils/mediaUrl'
 
 describe('resolveMediaURL', () => {
   beforeEach(() => {
@@ -29,6 +29,11 @@ describe('resolveMediaURL', () => {
   it('routes trusted asset images through the size-aware image proxy', () => {
     expect(resolveMediaImageURL('https://assets.atoman.org/music/covers/album.png', { width: 320 }))
       .toBe('/media/image?url=https%3A%2F%2Fassets.atoman.org%2Fmusic%2Fcovers%2Falbum.png&width=320')
+  })
+
+  it('builds responsive candidates for trusted asset images', () => {
+    expect(resolveMediaImageSrcSet('https://assets.atoman.org/music/covers/album.png', [180, 320]))
+      .toBe('/media/image?url=https%3A%2F%2Fassets.atoman.org%2Fmusic%2Fcovers%2Falbum.png&width=180 180w, /media/image?url=https%3A%2F%2Fassets.atoman.org%2Fmusic%2Fcovers%2Falbum.png&width=320 320w')
   })
 
   it('does not proxy images from external hosts', () => {

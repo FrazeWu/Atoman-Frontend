@@ -78,6 +78,15 @@ describe('PVideoCard.vue', () => {
     expect(wrapper.get('.vc-info__arrow').text()).toBe('→')
   })
 
+  it('provides a mobile-sized thumbnail candidate', () => {
+    vi.stubEnv('PROD', 'true')
+    const wrapper = mountCard({ thumbnail_url: 'https://assets.atoman.org/video/covers/video-1.jpg' })
+
+    expect(wrapper.get('.vc-img').attributes('srcset')).toContain('width=384')
+    expect(wrapper.get('.vc-img').attributes('sizes')).toBe('(max-width: 768px) calc(100vw - 2rem), 640px')
+    vi.unstubAllEnvs()
+  })
+
   it('does not nest the watch-later button inside a link', () => {
     const wrapper = mountCard()
     expect(wrapper.find('a button').exists()).toBe(false)

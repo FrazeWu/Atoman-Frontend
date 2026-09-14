@@ -41,6 +41,19 @@ export function resolveMediaImageURL(url: string, options: MediaImageOptions) {
   }
 }
 
+export function resolveMediaImageSrcSet(url: string, widths: number[]) {
+  const resolved = resolveMediaURL(url)
+  const candidates = [...new Set(widths)]
+    .filter((width) => width > 0)
+    .map((width) => ({
+      url: resolveMediaImageURL(url, { width }),
+      width,
+    }))
+
+  if (!candidates.some((candidate) => candidate.url !== resolved)) return ''
+  return candidates.map((candidate) => `${candidate.url} ${candidate.width}w`).join(', ')
+}
+
 export function resolveUploadedMediaURL(url: string, apiURL = '') {
   if (!url.startsWith('/uploads/')) return url
   if (!apiURL.startsWith('http://') && !apiURL.startsWith('https://')) return url

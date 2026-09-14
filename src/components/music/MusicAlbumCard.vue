@@ -5,6 +5,8 @@
         <img
           v-if="optimizedCoverUrl"
           :src="optimizedCoverUrl"
+          :srcset="coverSrcSet || undefined"
+          sizes="(max-width: 768px) calc((100vw - 3rem) / 2), 320px"
           :alt="album.title"
           class="cover-image"
           width="320"
@@ -90,7 +92,7 @@
 import { computed } from 'vue'
 import { IconBookmark as Bookmark, IconDisc as Disc3, IconHeadphones as Headphones, IconUsers as Users } from '@tabler/icons-vue'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
-import { resolveMediaImageURL } from '@/utils/mediaUrl'
+import { resolveMediaImageSrcSet, resolveMediaImageURL } from '@/utils/mediaUrl'
 
 export interface MusicAlbumCardItem {
   id: string
@@ -163,6 +165,7 @@ const coverUrl = computed(() => {
 })
 
 const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 320 }) : '')
+const coverSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180, 320]) : '')
 
 const artistNames = computed(() => {
   if (props.album.artists && props.album.artists.length) {

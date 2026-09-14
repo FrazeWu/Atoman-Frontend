@@ -7,7 +7,7 @@ import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
-import { resolveMediaImageURL } from '@/utils/mediaUrl'
+import { resolveMediaImageSrcSet, resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   video: Video
@@ -27,6 +27,10 @@ const thumbnailUrl = computed(() => {
   if (thumbnailFailed.value) return ''
   const url = props.video.thumbnail_url?.trim() || ''
   return url ? resolveMediaImageURL(url, { width: 640 }) : ''
+})
+const thumbnailSrcSet = computed(() => {
+  const url = props.video.thumbnail_url?.trim() || ''
+  return url ? resolveMediaImageSrcSet(url, [384, 640]) : ''
 })
 
 const thumbnailLabel = computed(() => {
@@ -76,7 +80,7 @@ const avatarLetter = () =>
   <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="thumbnailLabel">
-        <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
+        <img v-if="thumbnailUrl" :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 640px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 
         <!-- 悬浮微渐变与居中播放徽标 -->

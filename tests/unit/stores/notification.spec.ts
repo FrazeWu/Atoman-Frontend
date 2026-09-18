@@ -377,6 +377,22 @@ describe("notification store", () => {
     ).toBe(true);
   });
 
+  it("does not mark type notifications read when one mark-all request fails", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    const store = useNotificationStore();
+    store.notifications = [
+      makeNotification("comment-failed", "reply", null, "forum_topic_comment"),
+      makeNotification("follow-succeeded", "reply", null, "forum_follow"),
+    ];
+
+    await store.markAllRead(["forum_topic_comment", "forum_follow"]);
+
+    expect(store.notifications.find(({ id }) => id === "comment-failed")?.read_at).toBeNull();
+    expect(store.notifications.find(({ id }) => id === "follow-succeeded")?.read_at).toBeNull();
+  });
+
   it("clears forum realtime filters when resetting the store", async () => {
     vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(

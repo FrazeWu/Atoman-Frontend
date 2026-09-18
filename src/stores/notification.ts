@@ -166,9 +166,10 @@ export const useNotificationStore = defineStore('notification', () => {
     const generation = requestGeneration
     const token = authStore.token
     if (isTypeSelection(selection)) {
-      await Promise.all(selection.map((type) => apiRequestResult(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
+      const responses = await Promise.all(selection.map((type) => apiRequestResult(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
         method: 'PUT', headers: authHeaders(),
       })))
+      if (responses.some((res) => !res.ok)) return
     } else {
       const res = await apiRequestResult(`${api.notifications.markAllRead}?category=${encodeURIComponent(selection)}`, {
         method: 'PUT',

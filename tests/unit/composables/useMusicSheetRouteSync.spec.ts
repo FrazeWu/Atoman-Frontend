@@ -233,6 +233,31 @@ describe('useMusicSheetRouteSync', () => {
     expect(drawers.layers.value[0]?.payload).toEqual({ albumId: 'album-2' })
   })
 
+  it('does not reopen the previous entity after replacing and closing a routed layer', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music')
+    drawers.openAlbum('album-1')
+    await flushPromises()
+    drawers.replaceAlbum('album-2')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music/album/album-2')
+    drawers.closeAlbum()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music')
+    expect(drawers.layers.value).toHaveLength(0)
+  })
+
   it('registers route cleanup again after the music layout is remounted', async () => {
     const router = createRouter({
       history: createMemoryHistory(),

@@ -142,6 +142,27 @@ describe('AccountSecurityPanel', () => {
 		expect(wrapper.text()).toContain('嵌套登录')
 	})
 
+	it('shows the nested API error message when sending an email code fails', async () => {
+		vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+			const url = String(input)
+			if (url.endsWith('/sessions')) return response({ sessions: [] })
+			if (url.endsWith('/security-activities')) return response({ activities: [] })
+			return response({ error: { code: 'email.already_bound', message: '该邮箱已绑定其他账号' } }, 400)
+		})
+		const wrapper = mount(AccountSecurityPanel, {
+			props: { email: 'alice@example.com' },
+			global: { stubs: { PConfirm: PConfirmStub, PSheet: PSheetStub } },
+		})
+		await flushPromises()
+
+		await wrapper.findAll('button').find(button => button.text() === '修改邮箱')!.trigger('click')
+		await wrapper.find('input[type="email"]').setValue('new@example.com')
+		await wrapper.findAll('button').find(button => button.text() === '发送验证码')!.trigger('click')
+		await flushPromises()
+
+		expect(wrapper.text()).toContain('该邮箱已绑定其他账号')
+	})
+
 	it('opens email and detail panels from the right', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)

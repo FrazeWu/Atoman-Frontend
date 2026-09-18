@@ -171,7 +171,12 @@ function responsePayload(value: unknown): Record<string, unknown> {
 function responseError(data: unknown, fallback: string) {
   if (!data || typeof data !== 'object') return fallback
   const payload = data as ErrorPayload
-  return typeof payload.error === 'string' ? payload.error : typeof payload.message === 'string' ? payload.message : fallback
+  if (typeof payload.error === 'string' && payload.error) return payload.error
+  if (payload.error && typeof payload.error === 'object') {
+    const nestedMessage = (payload.error as { message?: unknown }).message
+    if (typeof nestedMessage === 'string' && nestedMessage) return nestedMessage
+  }
+  return typeof payload.message === 'string' && payload.message ? payload.message : fallback
 }
 
 function setMessage(value: string, isError = false) {

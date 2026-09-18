@@ -20,4 +20,13 @@ function sourceText(directory: string): string {
 			"prefers-reduced-motion: reduce",
 		);
 	});
+
+	it("keeps music tag arrow animation independent of the OS motion preference", () => {
+		const musicTagsView = readFileSync(
+			resolve(process.cwd(), "src/views/music/MusicTagsView.vue"),
+			"utf8",
+		);
+
+		expect(musicTagsView).not.toContain("prefers-reduced-motion: reduce");
+	});
 });

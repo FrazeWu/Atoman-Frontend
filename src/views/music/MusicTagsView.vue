@@ -470,9 +470,4 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .music-tags-view__tag-arrow {
-    transition: none;
-  }
-}
 </style>

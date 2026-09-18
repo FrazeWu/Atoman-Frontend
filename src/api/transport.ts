@@ -2,6 +2,7 @@ import * as apiConfig from '@/composables/useApi'
 import type { ApiSessionPayload } from './types'
 
 let csrfToken = ''
+let csrfRefreshInFlight: Promise<boolean> | null = null
 
 const getApiBaseURL = () => {
   try {
@@ -89,6 +90,23 @@ async function hasCSRFError(response: Response) {
   return payload?.error?.code === 'auth.csrf_invalid' || payload?.code === 'auth.csrf_invalid'
 }
 
+async function refreshCSRFToken() {
+  if (csrfRefreshInFlight) return csrfRefreshInFlight
+  csrfRefreshInFlight = (async () => {
+    const base = getApiBaseURL()
+    const sessionResponse = await request(`${base}/auth/session`, { credentials: 'include' })
+    if (!sessionResponse.ok) return false
+    const session = await sessionResponse.json().catch(() => null) as ApiSessionPayload | null
+    const sessionToken = session?.csrf_token ?? session?.data?.csrf_token
+    if (!sessionToken) return false
+    setCSRFToken(sessionToken)
+    return true
+  })().finally(() => {
+    csrfRefreshInFlight = null
+  })
+  return csrfRefreshInFlight
+}
+
 async function request(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const prepared = prepareInit(input, init)
   return globalThis.fetch(input, prepared)
@@ -98,13 +116,7 @@ async function execute(input: RequestInfo | URL, init: RequestInit = {}, retry =
   const response = await request(input, init)
   if (!retry || !isAtomanAPI(input) || !await hasCSRFError(response)) return response
 
-  const base = getApiBaseURL()
-  const sessionResponse = await request(`${base}/auth/session`, { credentials: 'include' })
-  if (!sessionResponse.ok) return response
-  const session = await sessionResponse.json().catch(() => null) as ApiSessionPayload | null
-  const sessionToken = session?.csrf_token ?? session?.data?.csrf_token
-  if (!sessionToken) return response
-  setCSRFToken(sessionToken)
+  if (!await refreshCSRFToken()) return response
   return execute(input, init, false)
 }
 

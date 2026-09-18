@@ -308,4 +308,14 @@ describe('auth store cookie session', () => {
 	await expect(auth.loginWithPassword('cookie@example.com', 'wrong')).rejects.toThrow('密码不正确')
 	expect(auth.lastAuthError).toBe('密码不正确')
   })
+
+  it('maps the standard nested API error returned by login', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      error: { code: 'auth.password_not_set', message: 'password is not set' },
+    }), { status: 401 }))
+    const auth = useAuthStore()
+
+    await expect(auth.loginWithPassword('cookie@example.com', 'secret123')).rejects.toThrow('请使用第三方账号登录')
+    expect(auth.lastAuthError).toBe('请使用第三方账号登录')
+  })
 })

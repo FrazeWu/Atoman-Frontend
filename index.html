@@ -61,9 +61,7 @@
     </script>
     <link rel="icon" type="image/svg+xml" href="/atoman-house.svg" />
     <link rel="preconnect" href="https://api.atoman.org" crossorigin />
-    <link rel="preconnect" href="https://assets.atoman.org" crossorigin />
     <link rel="dns-prefetch" href="//api.atoman.org" />
-    <link rel="dns-prefetch" href="//assets.atoman.org" />
     <script>
       if (window.location.pathname === "/") {
         document.documentElement.dataset.portalPrerender = "";
@@ -193,6 +191,7 @@
   </head>
   <body>
     <div id="app">
+      <!-- seo-prerender-start -->
       <div class="portal-prerender">
         <div class="portal-prerender__topbar"></div>
         <header class="portal-prerender__hero">
@@ -214,6 +213,7 @@
           </div>
         </header>
       </div>
+      <!-- seo-prerender-end -->
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -27,7 +27,7 @@ describe('blog SEO helpers', () => {
   })
 
   it('injects escaped article metadata and script-safe JSON-LD', () => {
-    const html = buildArticleHtml('<html><head><title>Atoman</title></head><body></body></html>', post, 'https://atoman.org')
+    const html = buildArticleHtml('<html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><div class="portal-prerender">首页</div><!-- seo-prerender-end --></div></body></html>', post, 'https://atoman.org')
 
     expect(html).toContain('<title data-page-meta="article">安全 &lt;标题&gt; &amp; &quot;引号&quot; | Atoman</title>')
     expect(html).toContain('property="og:type" content="article"')
@@ -39,6 +39,9 @@ describe('blog SEO helpers', () => {
     expect(html).toContain('"@type":"BlogPosting"')
     expect(html).toContain('\\u003c/script\\u003e\\u003cscript\\u003ealert(1)\\u003c/script\\u003e')
     expect(html).not.toContain('</script><script>alert(1)</script>')
+    expect(html).toContain('<main data-seo-fallback="article">')
+    expect(html).toContain('<h1>安全 &lt;标题&gt; &amp; &quot;引号&quot;</h1>')
+    expect(html).not.toContain('portal-prerender')
   })
 
   it('uses the site share image when an article has no cover', () => {

@@ -60,6 +60,29 @@ describe("public content SEO", () => {
 		expect(html).not.toContain('content="old"');
 	});
 
+	it("renders crawlable video content in the HTML body", () => {
+		const html = buildPublicContentHtml(
+			'<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><div class="portal-prerender">首页</div><!-- seo-prerender-end --></div></body></html>',
+			{
+				path: "/videos/watch/video-1",
+				title: "视频标题 | 视频 | Atoman",
+				description: "视频简介",
+				imageUrl: "https://assets.atoman.org/video-cover.jpg",
+				structuredData: {
+					"@type": "VideoObject",
+					name: "视频标题",
+					contentUrl: "https://assets.atoman.org/video.mp4",
+				},
+			},
+		);
+
+		expect(html).toContain('<main data-seo-fallback="content">');
+		expect(html).toContain("<h1>视频标题</h1>");
+		expect(html).toContain('src="https://assets.atoman.org/video.mp4"');
+		expect(html).toContain('poster="https://assets.atoman.org/video-cover.jpg"');
+		expect(html).not.toContain("portal-prerender");
+	});
+
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
 		const html = buildAggregatedContentHtml(shell);
 

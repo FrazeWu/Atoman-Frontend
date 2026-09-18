@@ -1,4 +1,8 @@
-import { resolveApiBase, type SitemapItem } from "./blogSeo";
+import {
+	injectSeoFallbackHtml,
+	resolveApiBase,
+	type SitemapItem,
+} from "./blogSeo";
 
 export type PublicContentSeo = {
 	path: string;
@@ -493,6 +497,17 @@ function metaTag(attribute: "name" | "property", key: string, value: string) {
 	return `<meta data-page-meta="content" ${attribute}="${escapeHtml(key)}" content="${escapeHtml(value)}">`;
 }
 
+function directVideoSource(value: unknown) {
+	const url = text(value);
+	if (!url) return undefined;
+	try {
+		const pathname = new URL(url).pathname;
+		return /\.(?:mp4|m4v|webm|ogg|m3u8)$/i.test(pathname) ? url : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 function cleanDefaultMetadata(html: string) {
 	return html
 		.replace(/<title[^>]*>[\s\S]*?<\/title>/i, "")
@@ -528,7 +543,22 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		metaTag("name", "twitter:image", image),
 		`<script data-page-meta="content" type="application/ld+json">${jsonLd}</script>`,
 	].join("\n    ");
-	return cleanDefaultMetadata(html).replace(
+	const structuredTitle =
+		text(item.structuredData.name) ||
+		text(item.structuredData.headline) ||
+		item.title;
+	const fallbackHtml = injectSeoFallbackHtml(cleanDefaultMetadata(html), {
+		kind: "content",
+		title: structuredTitle,
+		description: item.description,
+		canonical,
+		imageUrl: image,
+		mediaUrl:
+			item.structuredData["@type"] === "VideoObject"
+				? directVideoSource(item.structuredData.contentUrl)
+				: undefined,
+	});
+	return fallbackHtml.replace(
 		/<\/head>/i,
 		`    ${tags}\n  </head>`,
 	);

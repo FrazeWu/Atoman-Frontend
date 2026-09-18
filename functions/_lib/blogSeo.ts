@@ -14,6 +14,15 @@ export type SitemapItem = {
   last_modified?: string
 }
 
+export type SeoFallbackOptions = {
+  kind: string
+  title: string
+  description: string
+  canonical: string
+  imageUrl?: string
+  mediaUrl?: string
+}
+
 const canonicalSitemapPathPatterns = [
   /^\/posts\/post\/[^/?#]+$/,
   /^\/music\/(?:artist|album|song)\/[^/?#]+$/,
@@ -42,6 +51,31 @@ const escapeHtml = (value: string) => value
   .replace(/'/g, '&#39;')
 
 const escapeXml = escapeHtml
+
+export function injectSeoFallbackHtml(html: string, options: SeoFallbackOptions) {
+  const media = options.mediaUrl
+    ? `<video controls preload="metadata"${options.imageUrl ? ` poster="${escapeHtml(options.imageUrl)}"` : ""}><source src="${escapeHtml(options.mediaUrl)}"></video>`
+    : ""
+  const image = options.imageUrl
+    ? `<img src="${escapeHtml(options.imageUrl)}" alt="${escapeHtml(options.title)}" loading="eager">`
+    : ""
+  const fallback = [
+    `<main data-seo-fallback="${escapeHtml(options.kind)}">`,
+    `<h1>${escapeHtml(options.title)}</h1>`,
+    `<p>${escapeHtml(options.description)}</p>`,
+    image,
+    media,
+    `<a href="${escapeHtml(options.canonical)}">查看完整内容</a>`,
+    "</main>",
+  ].join("")
+  const cleanHtml = html.replace(
+    /<!--\s*seo-prerender-start\s*-->[\s\S]*?<!--\s*seo-prerender-end\s*-->/gi,
+    "",
+  )
+  const appMarker = /<div id=["']app["']>/i
+  if (appMarker.test(cleanHtml)) return cleanHtml.replace(appMarker, (marker) => `${marker}${fallback}`)
+  return cleanHtml.replace(/<\/body>/i, `${fallback}</body>`)
+}
 
 const articleUrl = (origin: string, id: string) => `${origin}/posts/post/${encodeURIComponent(id)}`
 
@@ -87,7 +121,14 @@ export function buildArticleHtml(html: string, post: BlogSeoPost, origin: string
   const cleanHtml = html
     .replace(/<title[^>]*>[\s\S]*?<\/title>/i, '')
     .replace(/\s*<(?:meta|link)[^>]*data-default-meta[^>]*>/gi, '')
-  return cleanHtml.replace(/<\/head>/i, `    ${tags}\n  </head>`)
+  const fallbackHtml = injectSeoFallbackHtml(cleanHtml, {
+    kind: 'article',
+    title: post.title,
+    description: post.description,
+    canonical,
+    imageUrl: image,
+  })
+  return fallbackHtml.replace(/<\/head>/i, `    ${tags}\n  </head>`)
 }
 
 export function buildSitemapXml(items: SitemapItem[], origin: string) {

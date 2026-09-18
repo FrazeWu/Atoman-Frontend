@@ -30,10 +30,17 @@ function clearLegacyStoredAuth() {
 }
 
 function toAuthApiError(payload: AuthApiPayload): AuthApiError {
+  const nestedError = payload.error && typeof payload.error === 'object'
+    ? payload.error as { code?: unknown; message?: unknown }
+    : undefined
   return {
-    code: typeof payload.code === 'string' ? payload.code : undefined,
+    code: typeof nestedError?.code === 'string'
+      ? nestedError.code
+      : typeof payload.code === 'string' ? payload.code : undefined,
     error: typeof payload.error === 'string' ? payload.error : undefined,
-    message: typeof payload.message === 'string' ? payload.message : undefined,
+    message: typeof nestedError?.message === 'string'
+      ? nestedError.message
+      : typeof payload.message === 'string' ? payload.message : undefined,
   }
 }
 

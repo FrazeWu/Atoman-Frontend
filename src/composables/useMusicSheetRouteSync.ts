@@ -44,12 +44,18 @@ export function useMusicSheetRouteSync(router: Router) {
       }
 
       if (top?.route && top.route !== currentPath) {
-        await router.push(top.route)
+        // Navigation arrows replace the payload while retaining the sheet key.
+        // Replacing the current history entry prevents closing the sheet from
+        // navigating back into the entity that was replaced.
+        const previousTop = previousLayers.at(-1)
+        const isNewLayer = previousTop?.key !== top.key
+        const navigate = isNewLayer ? router.push : router.replace
+        await navigate(top.route)
         if (!drawers.layers.value.some(layer => layer.key === top.key)) {
           await router.replace(retainedRoute(drawers.layers.value))
           return
         }
-        pushedLayerKeys.add(top.key)
+        if (isNewLayer) pushedLayerKeys.add(top.key)
       }
     })
 

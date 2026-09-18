@@ -1,3 +1,5 @@
+import { isCanonicalSitemapPath } from "./blogSeo";
+
 type StaticPageMeta = {
 	title: string;
 	description: string;
@@ -86,8 +88,7 @@ export function buildStaticPageHtml(
 		noIndexPrefixes.some(
 			(prefix) => path === prefix || path.startsWith(`${prefix}/`),
 		);
-
-	if (!meta && !noIndex) return html;
+	if (!meta && !noIndex && isCanonicalSitemapPath(path)) return html;
 
 	const tags: string[] = [];
 	if (meta) {
@@ -114,9 +115,10 @@ export function buildStaticPageHtml(
 				.replace(/<title[^>]*>[\s\S]*?<\/title>/i, "")
 				.replace(/\s*<(?:meta|link)[^>]*data-default-meta[^>]*>/gi, "")
 		: html.replace(
-				/\s*<link(?=[^>]*data-default-meta)(?=[^>]*rel=["']canonical["'])[^>]*>/gi,
+				/\s*<(?:meta|link)(?=[^>]*data-default-meta)(?=[^>]*(?:rel=["']canonical["']|property=["']og:url["']))[^>]*>/gi,
 				"",
 			);
+	if (!tags.length) return cleanHtml;
 	return cleanHtml.replace(
 		/<\/head>/i,
 		`    ${tags.join("\n    ")}\n  </head>`,

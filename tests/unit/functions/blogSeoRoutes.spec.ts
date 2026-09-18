@@ -83,6 +83,27 @@ describe('blog SEO Pages Functions', () => {
     expect(xml).toContain('<loc>https://www.atoman.org/posts/post/post-1</loc>')
   })
 
+  it('filters redirects, private paths, query strings, and unknown paths from sitemap data', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      data: [
+        { path: '/posts/post/post-1', last_modified: '2026-07-14T09:30:00Z' },
+        { path: '/podcast/episode/legacy', last_modified: '2026-07-14T09:30:00Z' },
+        { path: '/feed/starred', last_modified: '2026-07-14T09:30:00Z' },
+        { path: '/posts/post/post-2?utm_source=google', last_modified: '2026-07-14T09:30:00Z' },
+        { path: 'https://www.atoman.org/posts/post/post-3', last_modified: '2026-07-14T09:30:00Z' },
+      ],
+    }))))
+
+    const response = await sitemapHandler({ request: new Request('https://atoman.org/sitemap.xml'), env: {} })
+
+    const xml = await response.text()
+    expect(xml).toContain('<loc>https://www.atoman.org/posts/post/post-1</loc>')
+    expect(xml).not.toContain('legacy')
+    expect(xml).not.toContain('/feed/starred')
+    expect(xml).not.toContain('utm_source')
+    expect(xml).not.toContain('post-3')
+  })
+
   it('serves static public pages when the backend data set is empty', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ data: [] }))))
 

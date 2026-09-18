@@ -76,6 +76,13 @@ describe("static page SEO", () => {
 		).toBe(shell);
 	});
 
+	it("does not give unknown SPA routes the homepage canonical", () => {
+		const html = buildStaticPageHtml(shell, "/unknown-route", "www.atoman.org");
+
+		expect(html).not.toContain('rel="canonical"');
+		expect(html).not.toContain('https://www.atoman.org/"');
+	});
+
 	it("redirects legacy singular public module URLs to their canonical routes", async () => {
 		const next = vi.fn(async () => new Response(shell));
 		const response = await pageMiddleware({

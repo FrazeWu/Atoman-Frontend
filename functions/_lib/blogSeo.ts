@@ -14,11 +14,24 @@ export type SitemapItem = {
   last_modified?: string
 }
 
+const canonicalSitemapPathPatterns = [
+  /^\/posts\/post\/[^/?#]+$/,
+  /^\/music\/(?:artist|album|song)\/[^/?#]+$/,
+  /^\/forum\/topic\/[^/?#]+$/,
+  /^\/debate\/(?!rules$)[^/?#]+$/,
+  /^\/podcasts\/(?:show|episode)\/[^/?#]+$/,
+  /^\/videos\/(?:watch|collections)\/[^/?#]+$/,
+]
+
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
 
 export function resolveApiBase(configuredUrl: string | undefined, origin: string) {
   const base = trimTrailingSlash(configuredUrl?.trim() || `${origin}/api/v1`)
   return base.endsWith('/api') ? `${base}/v1` : base
+}
+
+export function isCanonicalSitemapPath(path: string) {
+  return canonicalSitemapPathPatterns.some((pattern) => pattern.test(path))
 }
 
 const escapeHtml = (value: string) => value

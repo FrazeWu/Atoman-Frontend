@@ -103,6 +103,8 @@ export async function onRequest(context: MiddlewareContext) {
 			context.env?.VITE_API_URL,
 			requestUrl.origin,
 		);
+		const missingPublicContent =
+			lookup.matched && !lookup.content && !lookup.retryable;
 		const transformedHtml = isAggregatedFeedItemPath(requestUrl.pathname)
 			? buildAggregatedContentHtml(staticHtml)
 			: lookup.content
@@ -115,9 +117,13 @@ export async function onRequest(context: MiddlewareContext) {
 		const headers = new Headers(response.headers);
 		headers.delete("content-length");
 		headers.delete("content-encoding");
+		if (missingPublicContent) {
+			headers.set("cache-control", "no-store");
+			headers.set("x-robots-tag", "noindex, nofollow");
+		}
 		return new Response(transformedHtml, {
-			status: response.status,
-			statusText: response.statusText,
+			status: missingPublicContent ? 404 : response.status,
+			statusText: missingPublicContent ? "Not Found" : response.statusText,
 			headers,
 		});
 	} catch {

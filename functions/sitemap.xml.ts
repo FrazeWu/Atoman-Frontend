@@ -1,5 +1,6 @@
 import {
 	buildSitemapXml,
+	isCanonicalSitemapPath,
 	resolveApiBase,
 	type SitemapItem,
 } from "./_lib/blogSeo";
@@ -36,6 +37,10 @@ function isSitemapItems(value: unknown): value is SitemapItem[] {
 	);
 }
 
+function isAllowedSitemapPath(path: string) {
+	return staticPages.some((item) => item.path === path) || isCanonicalSitemapPath(path);
+}
+
 function unavailable() {
 	return new Response("Sitemap temporarily unavailable\n", {
 		status: 503,
@@ -57,7 +62,9 @@ export async function onRequest(context: SitemapContext) {
 		const payload = (await response.json()) as { data?: unknown };
 		if (!isSitemapItems(payload.data)) return unavailable();
 		const itemsByPath = new Map(staticPages.map((item) => [item.path, item]));
-		payload.data.forEach((item) => itemsByPath.set(item.path, item));
+		payload.data
+			.filter((item) => isAllowedSitemapPath(item.path))
+			.forEach((item) => itemsByPath.set(item.path, item));
 		const publicItems = await collectPublicSitemapItems(apiBase);
 		publicItems.forEach((item) => {
 			const existing = itemsByPath.get(item.path);

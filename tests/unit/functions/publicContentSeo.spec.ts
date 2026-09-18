@@ -68,7 +68,7 @@ describe("public content SEO", () => {
 		expect(html).not.toContain("noindex, nofollow");
 	});
 
-	it("marks a matched but unavailable detail route as noindex", async () => {
+	it("returns a 404 for a matched but unavailable detail route", async () => {
 		const fetcher = vi.fn(async () =>
 			json({ error: "not found" }, 404),
 		) as unknown as typeof fetch;
@@ -83,6 +83,16 @@ describe("public content SEO", () => {
 		const html = buildMissingPublicContentHtml(shell);
 		expect(html).toContain('<meta name="robots" content="noindex, nofollow">');
 		expect(html).not.toContain('rel="canonical"');
+
+		vi.stubGlobal("fetch", vi.fn(async () => json({ error: "not found" }, 404)));
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/videos/watch/private-video"),
+			next: async () =>
+				new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		expect(response.status).toBe(404);
+		expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+		expect(response.headers.get("cache-control")).toBe("no-store");
 	});
 
 	it("does not noindex a valid route when its SEO source fails temporarily", async () => {

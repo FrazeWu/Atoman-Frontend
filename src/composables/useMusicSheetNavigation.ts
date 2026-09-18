@@ -25,43 +25,60 @@ export function useMusicSheetNavigation(
 	enabled: MaybeRefOrGetter<boolean> = true,
 ) {
 	const loadItems = async (): Promise<SheetNavigationItem[]> => {
-		switch (kind) {
-			case "artist": {
-				const response = await listMusicArtists({ page: 1, page_size: pageSize });
-				return response.data.map((item: MusicArtistListItem) => ({
-					id: String(item.id),
-					label: item.display_name || item.name || "未命名艺术家",
-				}));
+		const requestedId = toValue(currentId) || "";
+		const items: SheetNavigationItem[] = [];
+		let page = 1;
+
+		while (true) {
+			let response: {
+				data: unknown[];
+				meta?: { has_more?: boolean };
+			};
+			switch (kind) {
+				case "artist":
+					response = await listMusicArtists({ page, page_size: pageSize });
+					items.push(...(response.data as MusicArtistListItem[]).map((item) => ({
+						id: String(item.id),
+						label: item.display_name || item.name || "未命名艺术家",
+					})));
+					break;
+				case "album":
+					response = await listMusicAlbums({
+						page,
+						page_size: pageSize,
+						sort: "-release_date",
+					});
+					items.push(...(response.data as MusicAlbumListItem[]).map((item) => ({
+						id: String(item.id),
+						label: item.title || "未命名专辑",
+					})));
+					break;
+				case "song":
+					response = await listMusicSongs({
+						page,
+						page_size: pageSize,
+						sort: "-release_date",
+					});
+					items.push(...(response.data as MusicSongListItem[]).map((item) => ({
+						id: String(item.id),
+						label: item.title || "未命名歌曲",
+					})));
+					break;
+				case "playlist":
+					response = await listMusicPlaylists({ page, page_size: pageSize });
+					items.push(...(response.data as MusicPlaylistSummary[]).map((item) => ({
+						id: String(item.id),
+						label: item.name || "未命名歌单",
+					})));
+					break;
 			}
-			case "album": {
-				const response = await listMusicAlbums({
-					page: 1,
-					page_size: pageSize,
-					sort: "-release_date",
-				});
-				return response.data.map((item: MusicAlbumListItem) => ({
-					id: String(item.id),
-					label: item.title || "未命名专辑",
-				}));
+
+			const currentIndex = items.findIndex((item) => item.id === requestedId);
+			const hasMore = response.meta?.has_more === true;
+			if (!hasMore || response.data.length === 0 || (currentIndex >= 0 && currentIndex < items.length - 1)) {
+				return items;
 			}
-			case "song": {
-				const response = await listMusicSongs({
-					page: 1,
-					page_size: pageSize,
-					sort: "-release_date",
-				});
-				return response.data.map((item: MusicSongListItem) => ({
-					id: String(item.id),
-					label: item.title || "未命名歌曲",
-				}));
-			}
-			case "playlist": {
-				const response = await listMusicPlaylists({ page: 1, page_size: pageSize });
-				return response.data.map((item: MusicPlaylistSummary) => ({
-					id: String(item.id),
-					label: item.name || "未命名歌单",
-				}));
-			}
+			page += 1;
 		}
 	};
 

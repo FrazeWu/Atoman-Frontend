@@ -239,8 +239,14 @@ export const useAuthStore = defineStore('auth', () => {
     if (!response.ok) {
       let message = '注销失败，请重试'
       try {
-        const payload = await response.clone().json() as { error?: string; message?: string }
-        message = payload.error || payload.message || message
+        const payload = await response.clone().json() as {
+          error?: string | { message?: unknown }
+          message?: unknown
+        }
+        const nestedMessage = payload.error && typeof payload.error === 'object' ? payload.error.message : undefined
+        if (typeof nestedMessage === 'string' && nestedMessage) message = nestedMessage
+        else if (typeof payload.error === 'string' && payload.error) message = payload.error
+        else if (typeof payload.message === 'string' && payload.message) message = payload.message
       } catch {
         // Keep the stable fallback for empty or non-JSON error responses.
       }

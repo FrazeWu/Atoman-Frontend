@@ -49,4 +49,24 @@ describe('PasswordSettingsPanel', () => {
     expect(wrapper.get('.settings-block').text()).toContain('修改密码')
     expect(wrapper.get('.settings-block__control').text()).toContain('修改密码')
   })
+
+  it('shows the nested API error message when changing the password fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      error: { code: 'auth.password_mismatch', message: '当前密码不正确' },
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } }))
+    const wrapper = mount(PasswordSettingsPanel, {
+      global: { stubs: { PSheet: PSheetStub } },
+    })
+
+    await wrapper.get('button').trigger('click')
+    const inputs = wrapper.findAll('input')
+    await inputs[0].setValue('old-password')
+    await inputs[1].setValue('new-password')
+    await inputs[2].setValue('new-password')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('当前密码不正确')
+    expect(wrapper.text()).not.toContain('[object Object]')
+  })
 })

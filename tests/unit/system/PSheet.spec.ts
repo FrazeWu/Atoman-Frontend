@@ -275,7 +275,7 @@ describe("PSheet.vue", () => {
 		expect(panel.style.right).toBe("0px");
 		expect(wrapper.find(".p-sheet-backdrop").exists()).toBe(true);
 		expect((wrapper.get(".p-sheet-backdrop").element as HTMLElement).style.zIndex).toBe(
-			"calc(var(--a-z-sheet) + 1)",
+			"calc(var(--a-z-sheet) + 1 - 2)",
 		);
 
 		wrapper.unmount();
@@ -545,7 +545,7 @@ describe("PSheet.vue", () => {
 		expect(wrapper.emitted("close")).toBeUndefined();
 	});
 
-	it("places a top-layer backdrop above lower panels and keeps lower panels from intercepting clicks", () => {
+	it("places a top-layer backdrop between lower panels and the active panel", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
 			"utf8",
@@ -557,7 +557,17 @@ describe("PSheet.vue", () => {
 			/\.p-sheet-panel\.is-shifted\s+\.sheet-layer-rail\s*\{[\s\S]*?pointer-events:\s*auto/,
 		);
 		expect(source).toMatch(
-			/:style="\{ top: top, zIndex: layerZIndex \}"/,
+			/:style="\{ top: top, zIndex: backdropZIndex \}"/,
+		);
+	});
+
+	it("keeps the top backdrop below the lower sheet rail", () => {
+		const wrapper = mount(PSheet, {
+			props: { show: true, isTopLayer: true, layerIndex: 1 },
+		});
+
+		expect((wrapper.get(".p-sheet-backdrop").element as HTMLElement).style.zIndex).toBe(
+			"calc(var(--a-z-sheet) + 1 - 2)",
 		);
 	});
 

@@ -47,7 +47,7 @@
         <div
           v-if="show && showBackdrop && isTopLayer"
           class="p-sheet-backdrop"
-          :style="{ top: top, zIndex: layerZIndex }"
+          :style="{ top: top, zIndex: backdropZIndex }"
           @click="$emit('close')"
         />
       </Transition>
@@ -457,6 +457,11 @@ const layerTop = computed(() => `calc(${props.top} + ${effectiveLayerIndex.value
 const layerZIndex = computed(() => {
   const base = props.abovePlayer ? '--a-z-player-sheet' : '--a-z-sheet'
   return `calc(var(${base}) + ${effectiveLayerIndex.value})`
+})
+
+const backdropZIndex = computed(() => {
+  const base = props.abovePlayer ? '--a-z-player-sheet' : '--a-z-sheet'
+  return `calc(var(${base}) + ${effectiveLayerIndex.value} - 2)`
 })
 
 const sheetStyle = computed(() => {

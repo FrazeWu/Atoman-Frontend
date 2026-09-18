@@ -74,8 +74,21 @@ async function submit() {
       }),
     })
     if (!response.ok) {
-      const payload = await Promise.resolve(response.data).catch(() => ({})) as { error?: string }
-      throw new Error(payload.error || '修改密码失败')
+      const payload = await Promise.resolve(response.data).catch(() => ({})) as {
+        error?: unknown
+        message?: unknown
+      }
+      const nestedMessage = payload.error && typeof payload.error === 'object'
+        ? (payload.error as { message?: unknown }).message
+        : undefined
+      const message = typeof nestedMessage === 'string' && nestedMessage
+        ? nestedMessage
+        : typeof payload.error === 'string' && payload.error
+          ? payload.error
+          : typeof payload.message === 'string' && payload.message
+            ? payload.message
+            : '修改密码失败'
+      throw new Error(message)
     }
     currentPassword.value = ''
     newPassword.value = ''

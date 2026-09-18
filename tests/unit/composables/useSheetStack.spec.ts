@@ -99,7 +99,7 @@ describe("createSheetStack", () => {
 		]);
 	});
 
-	it("ignores another push while the overflow transition is running", async () => {
+	it("applies the latest push while the overflow transition is running", async () => {
 		vi.useFakeTimers();
 		const stack = createSheetStack<TestLayer>({
 			maxLayers: 3,
@@ -112,11 +112,11 @@ describe("createSheetStack", () => {
 		stack.push(layer("history", "3"));
 		stack.push(layer("history", "4"));
 		stack.push(layer("history", "5"));
-		expect(stack.top.value?.key).toBe("history:4");
+		expect(stack.top.value?.key).toBe("history:5");
 
 		await vi.advanceTimersByTimeAsync(300);
-		stack.push(layer("history", "5"));
 		expect(stack.top.value?.key).toBe("history:5");
+		expect(stack.renderLayers.value.map((item) => item.key)).toEqual(["history:4", "history:5"]);
 		vi.useRealTimers();
 	});
 

@@ -71,9 +71,11 @@ export function createSheetStack<T extends BaseSheetLayer>(
 					...renderLayers.value.filter((item) => item.key !== next.key),
 					next,
 				];
+				renderTransitionCanBeInterrupted = true;
 				renderTimer = window.setTimeout(() => {
 					renderLayers.value = layers.value;
 					renderTimer = null;
+					renderTransitionCanBeInterrupted = false;
 				}, transitionMs);
 			} else {
 				renderLayers.value = layers.value;

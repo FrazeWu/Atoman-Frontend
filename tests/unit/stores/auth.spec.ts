@@ -318,4 +318,16 @@ describe('auth store cookie session', () => {
     await expect(auth.loginWithPassword('cookie@example.com', 'secret123')).rejects.toThrow('请使用第三方账号登录')
     expect(auth.lastAuthError).toBe('请使用第三方账号登录')
   })
+
+  it('shows the nested API error message when account deletion fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      error: { code: 'auth.csrf_invalid', message: '请求已失效，请刷新页面后重试' },
+    }), { status: 403 }))
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.user = user
+    auth.isAuthenticated = true
+
+    await expect(auth.deleteAccount()).rejects.toThrow('请求已失效，请刷新页面后重试')
+  })
 })

@@ -29,6 +29,10 @@ export function useBlogSheetNavigation(
 	currentId: MaybeRefOrGetter<string | null | undefined>,
 	onNavigate: (id: string) => void,
 	enabled: MaybeRefOrGetter<boolean> = true,
+	scope?: {
+		channelId?: MaybeRefOrGetter<string | null | undefined>;
+		collectionId?: MaybeRefOrGetter<string | null | undefined>;
+	},
 ) {
 	const api = useApi();
 	const authStore = useAuthStore();
@@ -44,6 +48,10 @@ export function useBlogSheetNavigation(
 		while (true) {
 			const params = new URLSearchParams({ page: String(page), page_size: "100" });
 			if (kind === "post") params.set("status", "published");
+			const channelId = scope?.channelId ? toValue(scope.channelId) : "";
+			const collectionId = scope?.collectionId ? toValue(scope.collectionId) : "";
+			if (channelId && (kind === "post" || kind === "collection")) params.set("channel_id", channelId);
+			if (collectionId && kind === "post") params.set("collection_id", collectionId);
 			const response = await apiRequestResult(`${url}?${params.toString()}`, {
 				headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
 			});

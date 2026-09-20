@@ -27,7 +27,8 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
   'post',
   postId,
   replaceCurrentPost,
-  isTopSheet,
+	isTopSheet,
+	{ collectionId: () => props.layer.payload.collectionId },
 )
 </script>
 

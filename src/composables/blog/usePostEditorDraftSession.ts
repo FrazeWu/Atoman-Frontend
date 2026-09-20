@@ -96,6 +96,8 @@ export function usePostEditorDraftSession({
 	const leaveConfirmVisible = ref(false);
 	const serverDraftState = ref<DraftSyncState>("idle");
 	const serverDraftSavedAt = ref<number | null>(null);
+	const serverDraftUpdatedAt = ref<string | null>(null);
+	let draftSyncSequence = 0;
 	const draftWatchEnabled = ref(false);
 	const isApplyingDraft = ref(false);
 	const pendingLeavePath = ref<string | null>(null);
@@ -276,7 +278,7 @@ export function usePostEditorDraftSession({
 		summary: draft.summary || "",
 		cover_url: draft.cover_url || "",
 		visibility: draft.visibility || "public",
-		tags: [],
+		tags: Array.isArray(draft.tags) ? draft.tags : [],
 		channel_id: draft.channel_id,
 		collection_id: draft.collection_id,
 	});
@@ -318,6 +320,7 @@ export function usePostEditorDraftSession({
 			if (hasMeaningfulDraft(payload)) {
 				const savedAt = parseDraftTimestamp(serverDraft.updated_at);
 				serverDraftSavedAt.value = savedAt || serverDraftSavedAt.value;
+				serverDraftUpdatedAt.value = serverDraft.updated_at || null;
 				candidates.push({ source: "server", payload, savedAt });
 			}
 		}
@@ -335,6 +338,7 @@ export function usePostEditorDraftSession({
 		clearServerSyncTimer();
 		serverDraftState.value = "idle";
 		serverDraftSavedAt.value = null;
+		serverDraftUpdatedAt.value = null;
 		if (!authStore.token) return;
 		try {
 			await apiRequestResult(
@@ -357,20 +361,25 @@ export function usePostEditorDraftSession({
 		}
 
 		serverDraftState.value = "syncing";
+		const sequence = ++draftSyncSequence;
+		const baseUpdatedAt = serverDraftUpdatedAt.value;
 		try {
 			const res = await apiRequestResult(api.blog.draft, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json", ...authHeaders() },
-				body: JSON.stringify(payload),
+				body: JSON.stringify({ ...payload, base_updated_at: baseUpdatedAt || undefined }),
 			});
 			if (!res.ok) throw new Error("Failed to sync draft");
 			const data = res.data;
 			const draft = (data.data || null) as BlogDraft | null;
+			if (sequence !== draftSyncSequence) return;
 			serverDraftSavedAt.value = draft
 				? parseDraftTimestamp(draft.updated_at)
 				: Date.now();
+			serverDraftUpdatedAt.value = draft?.updated_at || serverDraftUpdatedAt.value;
 			serverDraftState.value = "synced";
 		} catch (error) {
+			if (sequence !== draftSyncSequence) return;
 			reportError(error, "Failed to sync blog draft:");
 			serverDraftState.value = "error";
 		}

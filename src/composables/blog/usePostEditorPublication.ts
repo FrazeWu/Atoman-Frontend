@@ -87,10 +87,10 @@ export function usePostEditorPublication({
 	const studio = useStudioStore();
 	const lifecycle = useContentLifecycle();
 
-	const loadPost = async (): Promise<boolean> => {
+	const loadPost = async (expectedPostID = String(route.params.id || "")): Promise<boolean> => {
 		if (!isEdit.value) return true;
 		try {
-			const postId = String(route.params.id || "");
+			const postId = expectedPostID;
 			if (!postId) return false;
 			const response = await apiRequestResult(api.blog.post(postId), {
 				headers: authStore.token
@@ -104,6 +104,11 @@ export function usePostEditorPublication({
 
 			const data = response.data;
 			const post = data.data || data;
+			const contentChannelId = post.channel_id;
+			if (contentChannelId && studio.currentChannel?.id !== contentChannelId) {
+				await studio.selectChannel(contentChannelId);
+			}
+			if (String(route.params.id || "") !== postId) return false;
 			form.value = {
 				title: post.title,
 				content: post.content || "",
@@ -119,10 +124,6 @@ export function usePostEditorPublication({
 			loadedPostUpdatedAtRaw.value = typeof post.updated_at === "string" ? post.updated_at : "";
 			hasPostConflict.value = false;
 			contentSource.value = "manual";
-			const contentChannelId = post.channel_id;
-			if (contentChannelId && studio.currentChannel?.id !== contentChannelId) {
-				await studio.selectChannel(contentChannelId);
-			}
 			const collectionId = String(post.collection_id || "");
 			existingCollectionIds.value = collectionId ? [collectionId] : [];
 			selectedCollectionIds.value = [...existingCollectionIds.value];
@@ -131,13 +132,14 @@ export function usePostEditorPublication({
 			} catch {
 				scheduleInfo.value = null;
 			}
+			if (String(route.params.id || "") !== postId) return false;
 			return true;
 		} catch (cause) {
 			reportError(cause);
 			error.value = "文章加载失败，请刷新重试";
 			return false;
 		} finally {
-			contentReady.value = true;
+			if (String(route.params.id || "") === expectedPostID) contentReady.value = true;
 			await nextTick();
 		}
 	};
@@ -275,7 +277,8 @@ export function usePostEditorPublication({
 		scheduling.value = true;
 		error.value = "";
 		try {
-			const postId = await save("draft", false);
+			// 新文章先切换到已保存文章的编辑路由，排期失败时重试不会再次创建文章。
+			const postId = await save("draft", false, true);
 			if (!postId) return;
 			const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 			await lifecycle.schedule("blog", postId, publishAt.toISOString(), timezone);

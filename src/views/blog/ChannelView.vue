@@ -5,12 +5,15 @@
       <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
     </div>
 
+    <PEmpty v-else-if="loadError" title="加载失败" :description="loadError">
+      <template #action><PButton variant="secondary" size="sm" @click="loadChannel">重试</PButton></template>
+    </PEmpty>
     <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
 
     <template v-else>
       <section class="channel-identity-card" aria-labelledby="channel-title">
         <div class="channel-identity-card__cover" aria-hidden="true">
-          <img v-if="channel.cover_url" :src="channel.cover_url" alt="" />
+          <img v-if="channel.cover_url" :src="resolveMediaURL(channel.cover_url)" alt="" />
           <span v-else>{{ channel.name.slice(0, 1).toUpperCase() }}</span>
         </div>
 
@@ -161,6 +164,7 @@ import PTab from '@/components/ui/PTab.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()
@@ -170,6 +174,7 @@ const feedStore = useFeedStore()
 const blogSheets = useBlogSheets()
 
 const loading = ref(true)
+const loadError = ref('')
 const channel = ref<Channel | null>(null)
 const collections = ref<Collection[]>([])
 const channelPosts = ref<Post[]>([])
@@ -264,7 +269,10 @@ const fetchChannel = async (param: string, slug: boolean, generation: number) =>
       ? api.blog.channelBySlug(param)
       : api.blog.channel(param)
     const res = await apiRequestResult(url)
-    if (generation !== loadGeneration || !res.ok) return null
+    if (generation !== loadGeneration || !res.ok) {
+      if (generation === loadGeneration && res.status !== 404) loadError.value = '频道加载失败，请重试'
+      return null
+    }
     const data = await Promise.resolve(res.data)
     if (generation !== loadGeneration) return null
     const loadedChannel = responseData<Channel | null>(data) || null
@@ -279,7 +287,10 @@ const fetchChannel = async (param: string, slug: boolean, generation: number) =>
     }
     return loadedChannel
   } catch {
-    if (generation === loadGeneration) channelSubscribeLoading.value = false
+    if (generation === loadGeneration) {
+      channelSubscribeLoading.value = false
+      loadError.value = '频道加载失败，请重试'
+    }
     return null
   }
 }
@@ -290,7 +301,10 @@ const fetchCollections = async (loadedChannel: Channel, param: string, slug: boo
       ? api.blog.channelCollectionsBySlug(param)
       : api.blog.channelCollections(loadedChannel.id)
     const res = await apiRequestResult(url)
-    if (!res.ok || generation !== loadGeneration) return
+    if (!res.ok || generation !== loadGeneration) {
+      if (generation === loadGeneration && !res.ok) loadError.value = '频道合集加载失败，请重试'
+      return
+    }
     const data = await Promise.resolve(res.data)
     if (generation === loadGeneration) {
       const nextCollections = responseData<unknown>(data)
@@ -299,7 +313,7 @@ const fetchCollections = async (loadedChannel: Channel, param: string, slug: boo
         : []
     }
   } catch {
-    return
+    if (generation === loadGeneration) loadError.value = '频道合集加载失败，请重试'
   }
 }
 
@@ -316,7 +330,10 @@ const fetchPosts = async (loadedChannel: Channel, generation: number, page = 1, 
     })
     if (activeCollectionId.value) params.set('collection_id', activeCollectionId.value)
     const res = await apiRequestResult(`${api.blog.posts}?${params}`, { headers })
-    if (generation !== loadGeneration || requestId !== postsRequestId || !res.ok) return
+    if (generation !== loadGeneration || requestId !== postsRequestId || !res.ok) {
+      if (generation === loadGeneration && requestId === postsRequestId && !res.ok) loadError.value = '频道文章加载失败，请重试'
+      return
+    }
     const data = await Promise.resolve(res.data)
     if (generation !== loadGeneration || requestId !== postsRequestId) return
     const nextPosts = responseData<Post[]>(data)
@@ -326,7 +343,7 @@ const fetchPosts = async (loadedChannel: Channel, generation: number, page = 1, 
     postsTotal.value = Number(responseMeta(data)?.total ?? channelPosts.value.length)
     postsHasMore.value = Boolean(responseMeta(data)?.has_more)
   } catch {
-    return
+    if (generation === loadGeneration && requestId === postsRequestId) loadError.value = '频道文章加载失败，请重试'
   } finally {
     if (generation === loadGeneration && requestId === postsRequestId) postsLoading.value = false
   }
@@ -414,6 +431,7 @@ const loadChannel = async () => {
   const param = routeParam.value
   const slug = isSlug.value
   loading.value = true
+  loadError.value = ''
   channel.value = null
   collections.value = []
   channelPosts.value = []

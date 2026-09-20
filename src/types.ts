@@ -548,6 +548,7 @@ export interface BlogDraft {
 	allow_comments?: boolean;
 	channel_id?: string;
 	collection_id?: string;
+	tags?: string[];
 	created_at: string;
 	updated_at: string;
 }

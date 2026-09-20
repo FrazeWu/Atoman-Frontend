@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { Collection, Post } from '@/types'
 import type { BlogCollectionLayer } from '@/components/blog/blogSheetTypes'
 import { useBlogSheetNavigation } from '@/composables/useBlogSheetNavigation'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   layer: BlogCollectionLayer
@@ -28,6 +29,9 @@ const sheets = useBlogSheets()
 
 const collection = ref<Collection | null>(null)
 const posts = ref<Post[]>([])
+const postsPage = ref(1)
+const postsHasMore = ref(false)
+const postsLoading = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const filter = ref<'all' | 'published' | 'draft'>('all')
@@ -49,7 +53,7 @@ const visiblePosts = computed(() => (
 const publishedCount = computed(() => posts.value.filter(post => post.status !== 'draft').length)
 const draftCount = computed(() => posts.value.filter(post => post.status === 'draft').length)
 const isTopSheet = computed(() => sheets.isTop(props.layer.key))
-const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('collection', collectionId, replaceCurrentCollection, isTopSheet)
+const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('collection', collectionId, replaceCurrentCollection, isTopSheet, { channelId })
 let loadSequence = 0
 
 const sortTime = (post: Post) => Date.parse(post.updated_at || post.created_at || '') || 0
@@ -65,13 +69,15 @@ async function loadCollection() {
     const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     const [collectionRes, publishedRes] = await Promise.all([
       apiRequestResult(api.blog.collection(requestedCollectionId), { headers }),
-      apiRequestResult(`${api.blog.posts}?collection_id=${requestedCollectionId}`, { headers }),
+      apiRequestResult(`${api.blog.posts}?collection_id=${requestedCollectionId}&page=1&page_size=20`, { headers }),
     ])
     if (requestSequence !== loadSequence || requestedCollectionId !== collectionId.value) return
     if (!collectionRes.ok || !publishedRes.ok) throw new Error('load failed')
 
     collection.value = collectionRes.data.data
     const published = (publishedRes.data.data || []) as Post[]
+    postsPage.value = 1
+    postsHasMore.value = Boolean(publishedRes.data.meta?.has_more)
     let drafts: Post[] = []
     if (authStore.isAuthenticated) {
       const draftsRes = await apiRequestResult(api.blog.drafts, { headers })
@@ -90,6 +96,25 @@ async function loadCollection() {
     errorMessage.value = '合集内容加载失败，请重试'
   } finally {
     if (requestSequence === loadSequence && requestedCollectionId === collectionId.value) loading.value = false
+  }
+}
+
+async function loadMorePosts() {
+  if (!postsHasMore.value || postsLoading.value || !collectionId.value) return
+  postsLoading.value = true
+  const nextPage = postsPage.value + 1
+  try {
+    const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+    const response = await apiRequestResult(`${api.blog.posts}?collection_id=${collectionId.value}&page=${nextPage}&page_size=20`, { headers })
+    if (!response.ok) throw new Error('post load failed')
+    const payload = await Promise.resolve(response.data)
+    posts.value = [...posts.value, ...((payload.data || []) as Post[])]
+    postsPage.value = nextPage
+    postsHasMore.value = Boolean(payload.meta?.has_more)
+  } catch {
+    errorMessage.value = '合集文章加载失败，请重试'
+  } finally {
+    postsLoading.value = false
   }
 }
 
@@ -118,7 +143,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
     <template #header>
       <div class="collection-sheet-header">
         <div class="collection-sheet-visual">
-          <img v-if="collection?.cover_url" :src="collection.cover_url" :alt="collection.name" />
+          <img v-if="collection?.cover_url" :src="resolveMediaURL(collection.cover_url)" :alt="collection.name" />
           <span v-else aria-hidden="true">{{ (collection?.name || layer.title).slice(0, 1).toUpperCase() }}</span>
         </div>
         <div class="collection-sheet-heading">
@@ -166,6 +191,9 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
             <span class="collection-post-date">{{ new Date(post.updated_at || post.created_at).toLocaleDateString('zh-CN') }}</span>
           </div>
         </article>
+      </div>
+      <div v-if="postsHasMore" class="collection-sheet-load-more">
+        <PButton variant="secondary" :loading="postsLoading" @click="loadMorePosts">加载更多</PButton>
       </div>
     </div>
   </PSheet>

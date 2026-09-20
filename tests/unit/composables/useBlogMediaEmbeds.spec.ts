@@ -76,6 +76,28 @@ describe("useBlogMediaEmbeds", () => {
 		]);
 	});
 
+	it("does not expose processing audio as playable", async () => {
+		const processingSongId = "77777777-7777-7777-7777-777777777777";
+		vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.endsWith(`/music/albums/${processingSongId}`)) return response({}, 404);
+			if (url.endsWith(`/music/songs/${processingSongId}`)) {
+				return response({ song: {
+					id: processingSongId,
+					title: "处理中",
+					audio_url: songAudioUrl,
+					audio_status: "processing",
+				} });
+			}
+			return response({}, 404);
+		}));
+
+		const embeds = useBlogMediaEmbeds();
+		await embeds.load(`:::music{id="${processingSongId}"}\n:::`);
+
+		expect(embeds.musicEmbeds.value[processingSongId]).toMatchObject({ kind: "song", audioSrc: undefined, playbackSongs: [] });
+	});
+
 	it("normalizes production audio URLs for browser playback", async () => {
 		const songId = "66666666-6666-6666-6666-666666666666";
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {

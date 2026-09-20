@@ -14,6 +14,7 @@ import { useFeedStore } from '@/stores/feed'
 import type { Channel, Post } from '@/types'
 import type { BlogChannelLayer } from '@/components/blog/blogSheetTypes'
 import { useBlogSheetNavigation } from '@/composables/useBlogSheetNavigation'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   layer: BlogChannelLayer
@@ -30,6 +31,9 @@ const feedStore = useFeedStore()
 const sheets = useBlogSheets()
 const channel = ref<Channel | null>(null)
 const posts = ref<Post[]>([])
+const postsPage = ref(1)
+const postsHasMore = ref(false)
+const postsLoading = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const subscribed = ref(false)
@@ -62,6 +66,8 @@ async function loadChannel() {
     const postPayload = await Promise.resolve(postResponse.data)
     if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     posts.value = Array.isArray(postPayload.data) ? postPayload.data : []
+    postsPage.value = 1
+    postsHasMore.value = Boolean(postPayload.meta?.has_more)
     if (authStore.isAuthenticated && channel.value?.id) {
       const nextSubscribed = await feedStore.isSubscribedToChannel(channel.value.id)
       if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
@@ -74,6 +80,24 @@ async function loadChannel() {
     errorMessage.value = '频道内容加载失败，请重试'
   } finally {
     if (requestSequence === loadSequence && requestedChannelId === channelId.value) loading.value = false
+  }
+}
+
+async function loadMorePosts() {
+  if (!postsHasMore.value || postsLoading.value || !channelId.value) return
+  postsLoading.value = true
+  const nextPage = postsPage.value + 1
+  try {
+    const response = await apiRequestResult(`${api.blog.posts}?channel_id=${encodeURIComponent(channelId.value)}&page=${nextPage}&page_size=20`)
+    if (!response.ok) throw new Error('post load failed')
+    const payload = await Promise.resolve(response.data)
+    posts.value = [...posts.value, ...(Array.isArray(payload.data) ? payload.data : [])]
+    postsPage.value = nextPage
+    postsHasMore.value = Boolean(payload.meta?.has_more)
+  } catch {
+    errorMessage.value = '频道文章加载失败，请重试'
+  } finally {
+    postsLoading.value = false
   }
 }
 
@@ -123,7 +147,7 @@ watch(channelId, () => void loadChannel(), { immediate: true })
     </PEmpty>
     <article v-else-if="channel" class="channel-sheet">
       <div class="channel-sheet-visual">
-        <img v-if="channel.cover_url" :src="channel.cover_url" :alt="channel.name" />
+        <img v-if="channel.cover_url" :src="resolveMediaURL(channel.cover_url)" :alt="channel.name" />
         <span v-else aria-hidden="true">{{ channel.name.slice(0, 1).toUpperCase() }}</span>
       </div>
       <div class="channel-sheet-heading">
@@ -158,6 +182,9 @@ watch(channelId, () => void loadChannel(), { immediate: true })
           @toggle-bookmark="feedStore.togglePostBookmark(post.id)"
           @toggle-reading-list="feedStore.toggleReadingListItem(post.id)"
         />
+      </div>
+      <div v-if="postsHasMore" class="channel-sheet-load-more">
+        <PButton variant="secondary" :loading="postsLoading" @click="loadMorePosts">加载更多</PButton>
       </div>
     </article>
   </PSheet>

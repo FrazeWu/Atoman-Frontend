@@ -36,12 +36,14 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 const bootstrap = async () => {
-  const appModule = mobileRuntime
-    ? await import("../apps/mobile/MobileApp.vue")
-    : await import("./App.vue");
-  const routerModule = mobileRuntime
-    ? await import("../apps/mobile/router")
-    : await import("./router");
+  const [appModule, routerModule] = await Promise.all([
+    mobileRuntime
+      ? import("../apps/mobile/MobileApp.vue")
+      : import("./App.vue"),
+    mobileRuntime
+      ? import("../apps/mobile/router")
+      : import("./router"),
+  ]);
 
   const rootComponent = appModule.default;
   const appRouter = routerModule.default;

@@ -6,6 +6,14 @@ const readSource = (relativePath: string) =>
 	readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
 
 describe("runtime loading boundaries", () => {
+	it("starts the app and router chunks in parallel", () => {
+		const source = readSource("src/main.ts");
+
+		expect(source).toContain("const [appModule, routerModule] = await Promise.all([");
+		expect(source).not.toContain("const appModule = mobileRuntime");
+		expect(source).not.toContain("const routerModule = mobileRuntime");
+	});
+
 	it("loads the audio player only when a track is active", () => {
 		const source = readSource("src/App.vue");
 

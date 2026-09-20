@@ -159,7 +159,7 @@ const isScrolled = ref(false)
 const handleScroll = (event: Event) => {
   const target = event.target
   if (target === document || target === window) {
-    isScrolled.value = (window.scrollY || document.documentElement.scrollTop) > 0
+    isScrolled.value = window.scrollY > 0
   } else if (target instanceof HTMLElement && target.classList.contains('a-main-content')) {
     isScrolled.value = target.scrollTop > 0
   }

@@ -35,4 +35,9 @@ describe('AppTopbar auth loading', () => {
     expect(navRightRule).toContain('.nav-right')
     expect(navRightRule).not.toContain('overflow: hidden;')
   })
+
+  it('reads the window scroll position without forcing a document layout read', () => {
+    expect(topbarSource).toContain('isScrolled.value = window.scrollY > 0')
+    expect(topbarSource).not.toContain('window.scrollY || document.documentElement.scrollTop')
+  })
 })

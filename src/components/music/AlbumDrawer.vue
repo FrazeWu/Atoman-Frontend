@@ -1196,7 +1196,6 @@ watch(
 .album-artists-section {
   margin-top: 2.25rem;
   padding-top: 1.5rem;
-  border-top: 2px solid var(--a-color-text);
 }
 
 .artist-cards-grid {

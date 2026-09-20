@@ -864,6 +864,45 @@ function syncReadyImportToDraft() {
 }
 
 watch(
+  () => {
+    const flow = creationFlow.value
+    if (!flow) return ''
+    return [
+      flow.step,
+      flow.draft.albumImport.importId ?? '',
+      flow.draft.albumImport.derivedTracks.length,
+      flow.draft.albumImport.status,
+    ].join(':')
+  },
+  () => {
+    const flow = creationFlow.value
+    const albumImport = flow?.draft.albumImport
+    if (
+      !flow ||
+      flow.step !== 'albumImport' ||
+      albumImport?.metadataMatchingStarted ||
+      !albumImport?.derivedTracks.length
+    ) return
+
+    albumImport.metadataMatchingStarted = true
+    flow.submitting = true
+    void previewAlbumImportMetadata(flow)
+      .catch((error) => {
+        albumImport.metadataMatched = false
+        albumImport.metadataMatchStatus = 'unmatched'
+        albumImport.metadataError = error instanceof Error
+          ? error.message
+          : '外部元数据服务暂时不可用，已保留本地曲目'
+        setMusicCreationStep('albumDetails')
+      })
+      .finally(() => {
+        if (creationFlow.value === flow) flow.submitting = false
+      })
+  },
+  { immediate: true },
+)
+
+watch(
   () => creationFlow.value?.draft.albumImport.status,
   () => {
     syncReadyImportToDraft()

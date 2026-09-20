@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	addMusicTag,
+	createMusicTag,
+	listMusicTagOptions,
 	listMusicTags,
 	searchMusicTags,
 	musicV1Endpoints,
@@ -32,6 +34,31 @@ describe('music tag endpoints', () => {
 			{ id: 'tag-1', name: '治愈', kind: 'mood' },
 		])
 		expect(fetch).toHaveBeenCalledWith('/api/v1/music/tags?kind=mood&q=%E6%B2%BB%E6%84%88', expect.anything())
+	})
+
+	it('lists a tag hierarchy and creates a tag with its parent', async () => {
+		vi.stubGlobal('fetch', vi.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'tag-child', name: 'House', kind: 'type', parent_id: 'tag-root', depth: 2, child_count: 0 }] }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			}))
+			.mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'tag-new', name: '夜晚', kind: 'scene', depth: 1 } }), {
+				status: 201,
+				headers: { 'Content-Type': 'application/json' },
+			})),
+		)
+
+		await expect(listMusicTagOptions({ kind: 'type', parentId: 'tag-root', root: true })).resolves.toEqual([
+			{ id: 'tag-child', name: 'House', kind: 'type', parent_id: 'tag-root', depth: 2, child_count: 0 },
+		])
+		await expect(createMusicTag({ kind: 'scene', name: '夜晚', parent_id: undefined })).resolves.toEqual({
+			id: 'tag-new', name: '夜晚', kind: 'scene', depth: 1,
+		})
+		expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/music/tags?kind=type&parent_id=tag-root&root=true', expect.anything())
+		expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/music/tags', expect.objectContaining({
+			method: 'POST',
+			body: JSON.stringify({ kind: 'scene', name: '夜晚' }),
+		}))
 	})
 
   it('lists, adds and votes on a song tag', async () => {

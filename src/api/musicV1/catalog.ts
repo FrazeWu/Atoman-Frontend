@@ -144,10 +144,34 @@ export async function listMusicTags(entity: "song" | "album", entityId: string):
 	return apiGet<MusicTag[]>(endpoint)
 }
 
-export async function searchMusicTags(kind: MusicTagKind, query: string): Promise<MusicTagOption[]> {
+export type MusicTagCatalogFilters = {
+	kind?: MusicTagKind;
+	query?: string;
+	parentId?: string;
+	root?: boolean;
+}
+
+export async function listMusicTagOptions(filters: MusicTagCatalogFilters = {}): Promise<MusicTagOption[]> {
 	return apiGet<MusicTagOption[]>(
-		`${musicV1Endpoints.tags()}${queryString({ kind, q: query })}`,
+		`${musicV1Endpoints.tags()}${queryString({
+			kind: filters.kind,
+			q: filters.query,
+			parent_id: filters.parentId,
+			root: filters.root ? "true" : undefined,
+		})}`,
 	)
+}
+
+export async function searchMusicTags(kind: MusicTagKind, query: string): Promise<MusicTagOption[]> {
+	return listMusicTagOptions({ kind, query })
+}
+
+export async function createMusicTag(input: {
+	kind: MusicTagKind;
+	name: string;
+	parent_id?: string | null;
+}): Promise<MusicTagOption> {
+	return apiPostJson<MusicTagOption>(musicV1Endpoints.tags(), input)
 }
 
 export async function getMusicTag(tagId: string): Promise<MusicTagOption> {
@@ -157,7 +181,7 @@ export async function getMusicTag(tagId: string): Promise<MusicTagOption> {
 export async function addMusicTag(
 	entity: "song" | "album",
 	entityId: string,
-	input: { kind: MusicTagKind; name: string },
+	input: { kind: MusicTagKind; name: string; parent_id?: string | null },
 ): Promise<MusicTag> {
 	const endpoint = entity === "song"
 		? musicV1Endpoints.songTags(entityId)

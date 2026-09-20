@@ -164,7 +164,7 @@ describe('MusicTagList.vue', () => {
     expect(mocks.addMusicTag).toHaveBeenCalledWith('song', 'song-1', { kind: 'mood', name: '夜晚' })
     expect(wrapper.get('[data-testid="music-tag-group-mood"]').text()).toContain('夜晚')
 
-    await wrapper.get('[data-testid="vote-up"]').trigger('click')
+    await wrapper.get('[data-testid="music-tag-group-mood"] [data-testid="vote-up"]').trigger('click')
     await flushPromises()
     expect(mocks.voteMusicTag).toHaveBeenCalledWith('song', 'song-1', 'tag-mood', 'up')
 
@@ -206,9 +206,11 @@ describe('MusicTagList.vue', () => {
   })
 
   it('分别搜索情绪和类型标签，已有结果可选择，无结果才显示创建入口', async () => {
-    mocks.searchMusicTags.mockImplementation(async (kind: string) => kind === 'mood'
+    mocks.searchMusicTags.mockImplementation(async (kind: string, query: string) => kind === 'mood'
       ? [{ id: 'tag-existing', name: '温柔', kind: 'mood' }]
-      : [])
+      : query === 'House'
+        ? [{ id: 'tag-child', name: 'House', kind: 'type', parent_id: 'tag-root' }]
+        : [])
     const wrapper = mount(MusicTagList, {
       props: { entity: 'song', entityId: 'song-1' },
       global: {
@@ -235,6 +237,13 @@ describe('MusicTagList.vue', () => {
     await wrapper.get('[data-testid="music-tag-option-tag-existing"]').trigger('click')
     await flushPromises()
     expect(mocks.addMusicTag).toHaveBeenCalledWith('song', 'song-1', { kind: 'mood', name: '温柔' })
+
+    await wrapper.get('[data-testid="music-tag-search-type"]').setValue('House')
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    await wrapper.get('[data-testid="music-tag-option-tag-child"]').trigger('click')
+    await flushPromises()
+    expect(mocks.addMusicTag).toHaveBeenCalledWith('song', 'song-1', { kind: 'type', name: 'House', parent_id: 'tag-root' })
 
     await wrapper.get('[data-testid="music-tag-search-type"]').setValue('概念专辑')
     await vi.advanceTimersByTimeAsync(250)

@@ -92,7 +92,7 @@
         class="setting-forum-moderator__row"
       >
         <div class="setting-forum-moderator__meta">
-          <strong>{{ assignment.user?.display_name || assignment.user?.username || assignment.user_id }}</strong>
+          <strong>{{ assignment.user?.display_name || assignment.user?.username || '未知用户' }}</strong>
           <small>@{{ assignment.user?.username || 'unknown' }}</small>
           <small>负责范围：{{ assignment.category?.name || '全站分类' }}</small>
           <small>

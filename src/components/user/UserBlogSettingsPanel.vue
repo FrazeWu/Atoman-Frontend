@@ -99,7 +99,7 @@
         <h3 class="section-title">已拉黑用户</h3>
         <div v-if="userBlocksStore.blockedUsers.length === 0" class="a-muted text-sm">暂无拉黑用户</div>
         <div v-for="item in userBlocksStore.blockedUsers" :key="item.id" class="blocked-user-row">
-          <span>{{ item.blocked?.display_name || item.blocked?.username || item.blocked_id }}</span>
+          <span>{{ item.blocked?.display_name || item.blocked?.username || '未知用户' }}</span>
           <PButton variant="secondary" size="sm" type="button" @click="userBlocksStore.unblockUser(item.blocked_id)">取消拉黑</PButton>
         </div>
       </section>

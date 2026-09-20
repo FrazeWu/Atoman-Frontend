@@ -4,7 +4,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { registerSessionReset } from '@/stores/sessionReset'
 
 import {
-  blockConversation, getTargetConversation, listConversations, listMailboxes, listMessages, mailboxKey,
+  blockConversation, getTargetConversation, getTargetParty, listConversations, listMailboxes, listMessages, mailboxKey,
   markConversationRead, normalizeDMRealtimeEvent, reportDMMessage, sendInConversation, sendToTarget, unblockConversation, uploadDMImage,
   type DMConversation, type DMMailbox, type DMMessage, type DMRealtimeEvent, type DMTarget,
 } from '@/api/dm'
@@ -185,6 +185,11 @@ export const useDMStore = defineStore('dm', () => {
       applyConversation(conversation)
       await openConversation(conversation.id)
     } else {
+      const party = await getTargetParty(target)
+      if (generation !== requestGeneration.value || activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return
+      if (party && party.id === target.id) {
+        activeTarget.value = { ...target, display_name: party.name?.trim() || party.display_name?.trim() || (target.type === 'channel' ? '未知频道' : '未知用户'), ...(party.avatar_url ? { avatar_url: party.avatar_url } : {}) }
+      }
       activeConversationId.value = ''
     }
   }
@@ -215,14 +220,15 @@ export const useDMStore = defineStore('dm', () => {
       content,
       image_id: imageID ?? null,
     }
+    const targetRef = target ? { type: target.type, id: target.id } : null
     const message = conversationID
       ? await sendInConversation(conversationID, input)
-      : activeTarget.value ? await sendToTarget(activeTarget.value, input) : null
+      : targetRef ? await sendToTarget(targetRef, input) : null
     if (!message) throw new Error('请先选择会话')
     if (generation !== requestGeneration.value || (target && (activeTarget.value?.type !== target.type || activeTarget.value?.id !== target.id))) return message
     mergeMessages(message.conversation_id, [message])
-    if (!conversationID && activeTarget.value) {
-      const conversation = await getTargetConversation(activeTarget.value)
+    if (!conversationID && activeTarget.value && targetRef) {
+      const conversation = await getTargetConversation(targetRef)
       if (generation !== requestGeneration.value || !target || activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return message
       if (conversation) applyConversation(conversation)
       activeConversationId.value = message.conversation_id

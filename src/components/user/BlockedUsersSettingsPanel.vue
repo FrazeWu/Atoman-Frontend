@@ -14,7 +14,7 @@
         <div v-else-if="!userBlocksStore.blockedUsers.length" class="blocked-users__state a-muted text-sm">暂无拉黑用户</div>
         <ul v-else class="blocked-users__list">
           <li v-for="item in userBlocksStore.blockedUsers" :key="item.id">
-            <span>{{ item.blocked?.display_name || item.blocked?.username || item.blocked_id }}</span>
+            <span>{{ item.blocked?.display_name || item.blocked?.username || '未知用户' }}</span>
             <PButton
               type="button"
               variant="secondary"

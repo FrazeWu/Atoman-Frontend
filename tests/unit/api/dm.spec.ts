@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { blockConversation, getTargetConversation, listConversations, listDMReports, listMailboxes, sendToTarget } from '@/api/dm'
+import { blockConversation, getTargetConversation, getTargetParty, listConversations, listDMReports, listMailboxes, normalizeDMRealtimeEvent, sendToTarget } from '@/api/dm'
 import { setCSRFToken } from '@/api/transport'
 
 describe('dm api', () => {
@@ -18,6 +18,36 @@ describe('dm api', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0]
     expect(init).toMatchObject({ credentials: 'include' })
     expect(new Headers((init as RequestInit).headers).get('Accept')).toBe('application/json')
+  })
+
+  it('loads the target party name when a target has no existing conversation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      data: { type: 'user', id: 'user-1', name: 'Alice', avatar_url: '' },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+
+    await expect(getTargetParty({ type: 'user', id: 'user-1' })).resolves.toEqual({
+      type: 'user', id: 'user-1', name: 'Alice', avatar_url: '',
+    })
+  })
+
+  it('uses the participant name for raw realtime messages', () => {
+    const event = normalizeDMRealtimeEvent({
+      event: 'dm.message.created',
+      data: {
+        message: { id: 'message-1', conversation_id: 'conversation-1', sender_type: 'user', sender_id: 'alice', client_message_id: 'client-1', content: 'hello', created_at: '2026-07-23T00:00:00Z' },
+        conversation: {
+          id: 'conversation-1',
+          participant_a: { type: 'user', id: 'me', name: 'Me' },
+          participant_b: { type: 'user', id: 'alice', name: 'Alice' },
+          last_message_preview: 'hello', unread: 1, blocked: false,
+        },
+        mailbox: { party: { type: 'user', id: 'me', name: 'Me' }, unread: 1 },
+        dm_unread: 1,
+        total_unread: 1,
+      },
+    })
+
+    expect(event?.event === 'dm.message.created' ? event.data.message.sender.display_name : '').toBe('Alice')
   })
 
   it('sends a target message through the cookie and csrf transport', async () => {

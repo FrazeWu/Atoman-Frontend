@@ -66,7 +66,7 @@
           panel-class="inbox-mobile-conversation-sheet"
           @close="closeMobileConversation"
         >
-          <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
+          <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.display_name || '新会话'" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
             <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
           </DMConversationPane>
         </PSheet>
@@ -96,7 +96,7 @@
 
           <template v-else>
             <div v-if="!mobileConversationOpen && (dmStore.activeConversation || dmStore.activeTarget)" class="detail-card detail-card-dm">
-              <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
+              <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.display_name || '新会话'" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
                 <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
               </DMConversationPane>
             </div>
@@ -166,7 +166,7 @@ const isMobile = ref(viewportMatchesMobile())
 const updateViewport = () => { isMobile.value = viewportMatchesMobile() }
 const mobileConversationOpen = computed(() => isMobile.value && Boolean(dmStore.activeConversation || dmStore.activeTarget))
 const mobileConversationTitle = computed(() => {
-  const name = dmStore.activeConversation?.other_party.display_name || dmStore.activeTarget?.id || '会话'
+  const name = dmStore.activeConversation?.other_party.display_name || dmStore.activeTarget?.display_name || '新会话'
   return `私信-${name}`
 })
 const dmMailboxes = computed(() => dmStore.mailboxOrder.map(key => dmStore.mailboxesByKey[key]).filter(Boolean))

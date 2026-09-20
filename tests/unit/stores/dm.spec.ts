@@ -6,6 +6,7 @@ vi.mock('@/api/dm', async (importOriginal) => {
   return {
     ...actual,
     getTargetConversation: vi.fn(),
+    getTargetParty: vi.fn(),
     listMessages: vi.fn(),
     markConversationRead: vi.fn(),
     sendInConversation: vi.fn(),
@@ -14,7 +15,7 @@ vi.mock('@/api/dm', async (importOriginal) => {
 })
 
 import { useDMStore } from '@/stores/dm'
-import { getTargetConversation, listMessages, markConversationRead, sendInConversation, sendToTarget } from '@/api/dm'
+import { getTargetConversation, getTargetParty, listMessages, markConversationRead, sendInConversation, sendToTarget } from '@/api/dm'
 import { useNotificationStore } from '@/stores/notification'
 import type { DMConversation, DMMailbox, DMMessage } from '@/api/dm'
 
@@ -232,6 +233,7 @@ describe('dm store', () => {
 
   it('keeps cached messages when a target has no conversation', async () => {
     vi.mocked(getTargetConversation).mockResolvedValue(null)
+    vi.mocked(getTargetParty).mockResolvedValue({ type: 'user', id: 'new-user', name: 'New User' })
     const store = useDMStore()
     store.reconcile({
       mailboxes: [userMailbox],
@@ -243,6 +245,7 @@ describe('dm store', () => {
     await store.openTarget({ type: 'user', id: 'new-user' })
 
     expect(store.activeConversationId).toBe('')
+    expect(store.activeTarget).toMatchObject({ id: 'new-user', display_name: 'New User' })
     expect(store.messagesByConversation['conversation-1'].map((message) => message.id)).toEqual(['cached'])
   })
 

@@ -16,7 +16,7 @@ export type DMMessage = {
   image_id?: string; image_url?: string; read_at?: string | null; created_at: string
 }
 export type DMPaged<T> = { items: T[]; next_cursor?: string }
-export type DMTarget = { type: DMPartyType; id: string }
+export type DMTarget = { type: DMPartyType; id: string; display_name?: string; avatar_url?: string }
 export type DMReadResult = { conversation_unread: number; mailbox_unread: number; dm_unread: number; total_unread: number }
 export type DMImage = { id: string; url: string }
 export type DMSettings = { permission: DMPermission }
@@ -53,7 +53,8 @@ const query = (values: Record<string, string | number | undefined>) => {
   Object.entries(values).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)) })
   return params.size ? `?${params}` : ''
 }
-const partyName = (value: Pick<DMRawParty, 'name' | 'display_name' | 'id'>) => value.name?.trim() || value.display_name?.trim() || value.id
+const fallbackPartyName = (type: DMPartyType) => type === 'channel' ? '未知频道' : '未知用户'
+const partyName = (value: Pick<DMRawParty, 'type' | 'name' | 'display_name'>) => value.name?.trim() || value.display_name?.trim() || fallbackPartyName(value.type)
 const party = (value: DMRawParty): DMParty => ({ type: value.type, id: value.id, display_name: partyName(value), ...(value.avatar_url ? { avatar_url: value.avatar_url } : {}) })
 const mailbox = (value: DMRawMailbox): DMMailbox => ({ type: value.party.type, id: value.party.id, display_name: partyName(value.party), unread_count: value.unread, ...(value.party.avatar_url ? { avatar_url: value.party.avatar_url } : {}) })
 const sameParty = (left: Pick<DMTarget, 'type' | 'id'>, right: DMRawParty) => left.type === right.type && left.id === right.id
@@ -64,9 +65,13 @@ const normalizeConversation = (value: DMRawConversation, targetMailbox?: DMMailb
   const replyAs: DMParty = targetMailbox ? { type: targetMailbox.type, id: targetMailbox.id, display_name: targetMailbox.display_name, ...(targetMailbox.avatar_url ? { avatar_url: targetMailbox.avatar_url } : {}) } : current
   return { id: value.id, mailbox: normalizedMailbox, other_party: party(other), last_message_at: value.last_message_at ?? null, last_message_preview: value.last_message_preview, unread_count: value.unread, blocked: value.blocked, reply_as: replyAs }
 }
-const normalizeMessage = (value: DMRawMessage): DMMessage => ({
+const senderName = (value: DMRawMessage, conversation?: DMRawConversation) => {
+  const participant = conversation && [conversation.participant_a, conversation.participant_b].find((item) => item.type === value.sender_type && item.id === value.sender_id)
+  return participant ? partyName(participant) : fallbackPartyName(value.sender_type)
+}
+const normalizeMessage = (value: DMRawMessage, conversation?: DMRawConversation): DMMessage => ({
   id: value.id, conversation_id: value.conversation_id, client_message_id: value.client_message_id,
-  sender: { type: value.sender_type, id: value.sender_id, display_name: value.sender_id }, content: value.content,
+  sender: { type: value.sender_type, id: value.sender_id, display_name: senderName(value, conversation) }, content: value.content,
   ...(value.image_id ? { image_id: value.image_id } : {}), ...(value.image_url ? { image_url: value.image_url } : {}), created_at: value.created_at,
 })
 
@@ -86,7 +91,7 @@ export const normalizeDMRealtimeEvent = (value: unknown): DMRealtimeEvent | null
     return {
       event: value.event,
       data: {
-        message: rawMessage ? normalizeMessage(data.message as DMRawMessage) : data.message as DMMessage,
+        message: rawMessage ? normalizeMessage(data.message as DMRawMessage, rawConversation ? data.conversation as DMRawConversation : undefined) : data.message as DMMessage,
         conversation: rawConversation ? normalizeConversation(data.conversation as DMRawConversation, currentMailbox) : data.conversation as DMConversation,
         mailbox: currentMailbox,
         dm_unread: Number(data.dm_unread ?? 0), total_unread: Number(data.total_unread ?? 0),
@@ -113,9 +118,10 @@ export const getTargetConversation = async (target: DMTarget): Promise<DMConvers
   const ownParty = sameParty(target, conversation.participant_a) ? conversation.participant_b : conversation.participant_a
   return normalizeConversation(conversation, { type: ownParty.type, id: ownParty.id, display_name: partyName(ownParty), unread_count: 0, ...(ownParty.avatar_url ? { avatar_url: ownParty.avatar_url } : {}) })
 }
+export const getTargetParty = (target: DMTarget) => apiGet<DMRawParty>(`${base()}/targets/${partyPath(target)}`)
 export const listMessages = async (conversationID: string, before?: string, limit = 30): Promise<DMPaged<DMMessage>> => {
   const page = await apiGet<RawPage<DMRawMessage>>(`${base()}/conversations/${encodeURIComponent(conversationID)}/messages${query({ before, limit })}`)
-  return { items: page.items.map(normalizeMessage), ...(page.next_cursor ? { next_cursor: page.next_cursor } : {}) }
+  return { items: page.items.map((item) => normalizeMessage(item)), ...(page.next_cursor ? { next_cursor: page.next_cursor } : {}) }
 }
 
 export type DMSendInput = { client_message_id: string; content: string; image_id?: string | null }

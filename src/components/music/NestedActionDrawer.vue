@@ -348,7 +348,7 @@ async function viewRevisionDiff(revision: MusicRevisionSummary) {
 }
 
 function formatRevisionEditor(revision: MusicRevisionSummary) {
-  return revision.editor?.display_name || revision.editor?.username || revision.editor_id
+  return revision.editor?.display_name || revision.editor?.username || '未知用户'
 }
 
 function formatRevisionTime(value: string) {

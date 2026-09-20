@@ -336,7 +336,7 @@
               <span style="font-size:.75rem;font-weight: 500">{{ rev.title }}</span>
               <span style="font-size:.65rem;color:var(--a-color-muted)">{{ formatDatetime(rev.created_at) }}</span>
             </div>
-            <div style="font-size:.7rem;color:var(--a-color-muted)">编辑者: {{ rev.editor?.display_name || rev.editor?.username || rev.editor_id }}</div>
+            <div style="font-size:.7rem;color:var(--a-color-muted)">编辑者: {{ rev.editor?.display_name || rev.editor?.username || '未知用户' }}</div>
             <div style="font-size:.7rem;color:var(--a-color-muted)">事件日期: {{ rev.event_date }}</div>
           </div>
         </div>

@@ -52,7 +52,7 @@
 			</div>
 			<div v-if="selectedGroup.members?.length" class="forum-group-panel__member-list">
 			  <div v-for="member in selectedGroup.members" :key="member.user_id" class="forum-group-panel__member">
-				<span><strong>{{ member.user?.display_name || member.user?.username || member.user_id }}</strong><small v-if="member.user?.username">@{{ member.user.username }}</small></span>
+				<span><strong>{{ member.user?.display_name || member.user?.username || '未知用户' }}</strong><small v-if="member.user?.username">@{{ member.user.username }}</small></span>
 				<PButton size="sm" variant="secondary" @click="removeMember(member.user_id)">移除</PButton>
 			  </div>
 			</div>

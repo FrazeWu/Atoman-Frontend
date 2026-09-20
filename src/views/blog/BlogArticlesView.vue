@@ -204,7 +204,9 @@ const authorOptions = computed(() => {
   for (const channel of channels.value) {
     const id = channel.user?.uuid
     if (!id || authors.has(id)) continue
-    authors.set(id, channel.user?.display_name || channel.user?.username || id)
+    const name = channel.user?.display_name || channel.user?.username
+    if (!name) continue
+    authors.set(id, name)
   }
   return [
     { label: '全部作者', value: '' },

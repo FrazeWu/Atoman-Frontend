@@ -29,6 +29,7 @@ import { useInteractions } from '@/composables/useInteractions'
 import { isAdminRole } from '@/utils/roles'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 import type { Post } from '@/types'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 type Presentation = 'page' | 'sheet'
 
@@ -354,7 +355,7 @@ async function fetchBookmarkState(contentId: string): Promise<boolean | null> {
     if (!response.ok) return null
     const payload = await Promise.resolve(response.data)
     const items = payload.data || []
-    return items.some((item: { post_id: string }) => item.post_id === contentId)
+    return items.some((item: { content_id?: string; post_id?: string }) => (item.content_id || item.post_id) === contentId)
   } catch (error) {
     reportError(error)
     return null
@@ -611,7 +612,7 @@ defineExpose({
         <PButton v-else variant="secondary" size="sm" @click="editPost"><Pencil :size="15" aria-hidden="true" />编辑</PButton>
       </div>
       <RouterLink v-if="!isSheet" to="/posts" class="a-link post-reader-breadcrumb">← 文章</RouterLink>
-      <img v-if="post.cover_url" :src="post.cover_url" :alt="post.title" class="post-sheet-cover" />
+      <img v-if="post.cover_url" :src="resolveMediaURL(post.cover_url)" :alt="post.title" class="post-sheet-cover" />
       <div class="post-sheet-byline">
         <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
         <div class="post-sheet-author-info">

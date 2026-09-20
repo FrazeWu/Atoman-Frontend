@@ -331,7 +331,7 @@ function preprocessDirectives(
     "music",
     /:::music\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.musicEmbeds,
-    (id) => `/music/album/${id}`,
+    (id) => `/music/songs?q=${encodeURIComponent(id)}`,
     Boolean(options?.interactiveMedia),
   );
 

@@ -226,7 +226,7 @@
 
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { hasAppHistory, studioContentLocation } from '@/router/studioEditor'
@@ -709,11 +709,16 @@ const resetEditorStateForRoute = () => {
   contentReady.value = !isEdit.value
 }
 
+let initializeSequence = 0
 const initializeEditor = async () => {
+  const sequence = ++initializeSequence
+  const routePostID = String(route.params.id || '')
   resetEditorStateForRoute()
   try {
     await studio.loadState()
-    const loaded = await loadPost()
+    if (sequence !== initializeSequence) return
+    const loaded = await loadPost(routePostID)
+    if (sequence !== initializeSequence) return
     if (!loaded) {
       contentReady.value = false
       editorLoadFailed.value = true
@@ -721,6 +726,7 @@ const initializeEditor = async () => {
     }
     if (!isEdit.value) contentReady.value = true
     await loadChannelCollections()
+    if (sequence !== initializeSequence) return
     applyEditorModeSetting()
     await startDraftSession()
   } catch {
@@ -730,8 +736,7 @@ const initializeEditor = async () => {
   }
 }
 
-watch(() => route.params.id, () => { void initializeEditor() })
-onMounted(() => { void initializeEditor() })
+watch(() => route.params.id, () => { void initializeEditor() }, { immediate: true })
 </script>
 
 <style scoped>

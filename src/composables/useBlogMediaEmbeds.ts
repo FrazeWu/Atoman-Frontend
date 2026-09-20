@@ -6,6 +6,7 @@ import type { MusicAlbumListItem, MusicSongDetail, MusicSongListItem } from '@/a
 import type { Post, Song, Video } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { resolveMediaURL, resolvePlayableAudioURL } from '@/utils/mediaUrl'
+import { hasPlayableMusicAudio } from '@/utils/musicMedia'
 import type { EmbedData } from '@/composables/useMarkdownRenderer'
 
 type EmbedKind = 'post' | 'music' | 'video'
@@ -48,6 +49,7 @@ function toPlaybackSong(
     id: string
     title: string
     audio_url?: string
+    audio_status?: string
     cover_url?: string
     lyrics?: string
     track_number?: number
@@ -73,7 +75,7 @@ function toPlaybackSong(
     year: album?.year || 0,
     release_date: album?.release_date || '',
     lyrics: source.lyrics || '',
-    audio_url: source.audio_url ? resolvePlayableAudioURL(source.audio_url) : '',
+    audio_url: hasPlayableMusicAudio(source) ? resolvePlayableAudioURL(source.audio_url || '') : '',
     cover_url: source.cover_url || album?.cover_url || '',
     track_number: source.track_number,
     disc_number: source.disc_number,
@@ -135,9 +137,9 @@ function mapSongEmbed(id: string, song: MusicSongListItem): EmbedData {
     imageUrl: song.cover_url || song.album?.cover_url
       ? resolveMediaURL(song.cover_url || song.album?.cover_url || '')
       : undefined,
-    audioSrc: song.audio_url ? resolvePlayableAudioURL(song.audio_url) : undefined,
+    audioSrc: hasPlayableMusicAudio(song) ? resolvePlayableAudioURL(song.audio_url || '') : undefined,
     href: `/music/song/${id}`,
-    playbackSongs: song.audio_url ? [toPlaybackSong(song, song.album)] : [],
+    playbackSongs: hasPlayableMusicAudio(song) ? [toPlaybackSong(song, song.album)] : [],
   }
 }
 

@@ -6,6 +6,9 @@
       <div class="a-skeleton" style="height:2rem;width:50%" />
     </div>
 
+    <PEmpty v-else-if="loadError" title="加载失败" :description="loadError">
+      <template #action><PButton variant="secondary" size="sm" @click="fetchCollection">重试</PButton></template>
+    </PEmpty>
     <PEmpty v-else-if="!collection" text="合集不存在或已被删除" />
 
     <template v-else>
@@ -52,7 +55,10 @@
           <span class="a-muted" style="font-size:.875rem">{{ postsTotal }} 篇</span>
         </div>
 
-        <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
+        <PEmpty v-if="postsError" title="文章加载失败" :description="postsError">
+          <template #action><PButton variant="secondary" size="sm" @click="fetchPosts()">重试</PButton></template>
+        </PEmpty>
+        <PEmpty v-else-if="!posts.length" text="当前合集暂无文章" />
         <div v-else class="post-list feed-timeline-box">
           <BlogItemCard
             v-for="post in posts"
@@ -145,6 +151,8 @@ const sheetStore = useSheetStore()
 const blogSheets = useBlogSheets()
 
 const loading = ref(true)
+const loadError = ref('')
+const postsError = ref('')
 const collection = ref<Collection | null>(null)
 const channel = ref<Channel | null>(null)
 const posts = ref<Post[]>([])
@@ -240,6 +248,8 @@ const fetchCollection = async () => {
   postsPage.value = 1
   postsTotal.value = 0
   postsHasMore.value = false
+  loadError.value = ''
+  postsError.value = ''
   try {
     const res = await apiRequestResult(api.blog.collection(requestedCollectionId))
     if (requestId !== collectionRequestId || requestedCollectionId !== collectionId.value) return
@@ -263,8 +273,11 @@ const fetchCollection = async () => {
       if (props.id && collection.value) {
         sheetStore.updateSheetTitle(props.id, 'collection', collection.value.name)
       }
+    } else if (res.status !== 404) {
+      loadError.value = '合集加载失败，请重试'
     }
   } catch (e) {
+    loadError.value = '合集加载失败，请重试'
     reportError(e, 'Failed to fetch collection:')
   } finally {
     if (requestId === collectionRequestId) loading.value = false
@@ -291,6 +304,7 @@ const fetchPosts = async (page = 1, append = false) => {
   if (!collectionId.value || (append && postsLoading.value)) return
   const requestedCollectionId = collectionId.value
   const requestId = ++postsRequestId
+  postsError.value = ''
   postsLoading.value = true
   try {
     const params = new URLSearchParams({
@@ -311,6 +325,7 @@ const fetchPosts = async (page = 1, append = false) => {
     postsTotal.value = Number(data.meta?.total ?? posts.value.length)
     postsHasMore.value = Boolean(data.meta?.has_more)
   } catch (e) {
+    postsError.value = '合集文章加载失败，请重试'
     reportError(e, 'Failed to fetch posts:')
   } finally {
     if (requestId === postsRequestId) postsLoading.value = false

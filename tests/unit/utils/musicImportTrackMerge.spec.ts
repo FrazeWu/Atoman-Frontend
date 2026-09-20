@@ -57,4 +57,35 @@ describe("mergeImportedTracksIntoDraft", () => {
 
 		expect(flow.draft.tracks.map((track) => track.id)).toEqual(["import-track-1", "manual"]);
 	});
+
+	it("preserves processed audio when metadata preview renames an imported track", () => {
+		const flow = flowWithTracks([
+			{
+				id: "imported-track",
+				sequence: 1,
+				title: "Kendrick Lamar - Celebration",
+				origin: "import",
+				importFileId: "file-celebration",
+				audioKey: "audio-celebration",
+				audioUrl: "https://assets.example.test/celebration.mp3",
+			},
+		]);
+
+		mergeImportedTracksIntoDraft(flow, [{
+			title: "Celebration",
+			audioKey: "",
+			originalTitle: "Kendrick Lamar - Celebration",
+			trackNumber: 1,
+			originalTrackNumber: 1,
+			origin: "local_preview:1",
+		}]);
+
+		expect(flow.draft.tracks).toHaveLength(1);
+		expect(flow.draft.tracks[0]).toMatchObject({
+			title: "Celebration",
+			importFileId: "file-celebration",
+			audioKey: "audio-celebration",
+			audioUrl: "https://assets.example.test/celebration.mp3",
+		});
+	});
 });

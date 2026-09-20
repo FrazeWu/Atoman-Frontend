@@ -12,11 +12,17 @@ type TrackWithIdentity = {
 	importFileId?: string;
 	audioKey?: string;
 	audioAssetId?: string;
+	title?: string;
+	originalTitle?: string;
 	discNumber?: number;
 	trackNumber?: number;
 	originalDiscNumber?: number;
 	originalTrackNumber?: number;
 };
+
+function normalizedTrackTitle(title?: string) {
+	return title?.trim().replace(/\s+/g, " ").toLocaleLowerCase() || "";
+}
 
 function positionKey(track: TrackWithIdentity) {
 	const disc = track.discNumber ?? track.originalDiscNumber;
@@ -89,12 +95,14 @@ function trackFromImport(
 	const preserveSequence = current?.sequenceCustomized === true;
 	const lyricDraft = lyricsDraftFromTrack(track);
 	const manuallyChanged = preserveTitle || preserveSequence;
+	const songId = track.songId || current?.songId;
+	const importFileId = track.fileId || current?.importFileId;
 	const audioKey = track.audioKey || current?.audioKey;
 	const audioUrl = track.audioUrl || current?.audioUrl;
 	return {
 		id: current?.id ?? `import-track-${index + 1}`,
-		...(track.songId ? { songId: track.songId } : {}),
-		...(track.fileId ? { importFileId: track.fileId } : {}),
+		...(songId ? { songId } : {}),
+		...(importFileId ? { importFileId } : {}),
 		sequence: preserveSequence ? current!.sequence : track.trackNumber ?? index + 1,
 		...(preserveSequence
 			? { discNumber: current!.discNumber }
@@ -106,13 +114,19 @@ function trackFromImport(
 		...(current?.audioAssetId ? { audioAssetId: current.audioAssetId } : {}),
 		...(audioUrl ? { audioUrl } : {}),
 		origin: current?.origin === "manual" ? current.origin : track.origin,
-		...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
+		...(track.originalTitle || current?.originalTitle
+			? { originalTitle: track.originalTitle || current?.originalTitle }
+			: {}),
 		...(track.originalDiscNumber
 			? { originalDiscNumber: track.originalDiscNumber }
-			: {}),
+			: current?.originalDiscNumber
+				? { originalDiscNumber: current.originalDiscNumber }
+				: {}),
 		...(track.originalTrackNumber
 			? { originalTrackNumber: track.originalTrackNumber }
-			: {}),
+			: current?.originalTrackNumber
+				? { originalTrackNumber: current.originalTrackNumber }
+				: {}),
 		...(manuallyChanged && track.matchStatus === "matched"
 			? { matchStatus: "manual" as const }
 			: track.matchStatus
@@ -160,6 +174,16 @@ function findCurrentTrack(
 			return importTrackAliases(candidate).some((alias) => originalPositionAliases.includes(alias));
 		});
 		if (originalMatch) return originalMatch;
+	}
+	const originalTitle = normalizedTrackTitle(track.originalTitle);
+	if (originalTitle) {
+		const titleMatches = current.filter((candidate) => {
+			if (used.has(candidate.id)) return false;
+			return [candidate.title, candidate.originalTitle].some(
+				(title) => normalizedTrackTitle(title) === originalTitle,
+			);
+		});
+		if (titleMatches.length === 1) return titleMatches[0];
 	}
 	if (stableAliases.length > 0) return undefined;
 	return current.find((candidate) => {

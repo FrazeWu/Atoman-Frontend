@@ -41,10 +41,15 @@ const viewOptions = [
 ]
 
 const tagID = computed(() => typeof route.params.tagId === 'string' ? route.params.tagId : '')
+const tagKindLabels: Record<string, string> = {
+  type: '类型标签',
+  mood: '情绪标签',
+  scene: '场景标签',
+  theme: '主题标签',
+  instrument: '乐器标签',
+}
 const kindLabel = computed(() => {
-  if (tag.value?.kind === 'type') return '类型标签'
-  if (tag.value?.kind === 'mood') return '情绪标签'
-  return '音乐标签'
+  return tagKindLabels[tag.value?.kind || ''] || '音乐标签'
 })
 const currentLabel = computed(() => selectedView.value === 'albums' ? '专辑' : '歌曲')
 const hasResults = computed(() => selectedView.value === 'albums' ? albums.value.length > 0 : songs.value.length > 0)

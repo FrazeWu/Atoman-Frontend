@@ -616,13 +616,15 @@ export type MusicAlbumListItem = {
 	redirect_to?: string | null;
 };
 
-export type MusicTagKind = "mood" | "type";
+export type MusicTagKind = "mood" | "type" | "scene" | "theme" | "instrument";
 
 export type MusicTag = {
 	id: string;
 	assignment_id: string;
 	name: string;
 	kind: MusicTagKind;
+	parent_id?: string | null;
+	depth?: number;
 	upvotes: number;
 	downvotes: number;
 	score: number;
@@ -634,6 +636,10 @@ export type MusicTagOption = {
 	id: string;
 	name: string;
 	kind: MusicTagKind;
+	parent_id?: string | null;
+	depth?: number;
+	assignment_count?: number;
+	child_count?: number;
 };
 
 export type MusicAlbumLinkSuggestion = {

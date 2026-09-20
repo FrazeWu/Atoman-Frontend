@@ -31,8 +31,27 @@ const actionError = ref('')
 const actionTagID = ref('')
 const pendingDelete = ref<MusicTag | null>(null)
 let loadRequestID = 0
-const searchTimers: Record<MusicTagKind, ReturnType<typeof setTimeout> | null> = { mood: null, type: null }
-const searchRequestIDs: Record<MusicTagKind, number> = { mood: 0, type: 0 }
+const tagGroupOptions: Array<{ kind: MusicTagKind; label: string }> = [
+  { kind: 'type', label: '类型' },
+  { kind: 'mood', label: '情绪' },
+  { kind: 'scene', label: '场景' },
+  { kind: 'theme', label: '主题' },
+  { kind: 'instrument', label: '乐器' },
+]
+const searchTimers: Record<MusicTagKind, ReturnType<typeof setTimeout> | null> = {
+  type: null,
+  mood: null,
+  scene: null,
+  theme: null,
+  instrument: null,
+}
+const searchRequestIDs: Record<MusicTagKind, number> = {
+  type: 0,
+  mood: 0,
+  scene: 0,
+  theme: 0,
+  instrument: 0,
+}
 
 type MusicTagSearchState = {
   query: string
@@ -43,14 +62,17 @@ type MusicTagSearchState = {
 }
 
 const searchStates = reactive<Record<MusicTagKind, MusicTagSearchState>>({
-  mood: { query: '', options: [], loading: false, searched: false, error: '' },
   type: { query: '', options: [], loading: false, searched: false, error: '' },
+  mood: { query: '', options: [], loading: false, searched: false, error: '' },
+  scene: { query: '', options: [], loading: false, searched: false, error: '' },
+  theme: { query: '', options: [], loading: false, searched: false, error: '' },
+  instrument: { query: '', options: [], loading: false, searched: false, error: '' },
 })
 
-const tagGroups = computed(() => [
-  { kind: 'mood' as const, label: '情绪', tags: tags.value.filter(tag => tag.kind === 'mood') },
-  { kind: 'type' as const, label: '类型', tags: tags.value.filter(tag => tag.kind === 'type') },
-])
+const tagGroups = computed(() => tagGroupOptions.map(group => ({
+  ...group,
+  tags: tags.value.filter(tag => tag.kind === group.kind),
+})))
 
 const tagLimitReached = computed(() => tags.value.length >= 12)
 
@@ -143,7 +165,7 @@ function isAssigned(option: MusicTagOption) {
   return tags.value.some(tag => tag.id === option.id && tag.kind === option.kind)
 }
 
-async function addTag(kind: MusicTagKind, rawName: string) {
+async function addTag(kind: MusicTagKind, rawName: string, parentID?: string | null) {
   if (!requireLogin()) return
   const name = rawName.trim()
   if (!name) {
@@ -158,7 +180,11 @@ async function addTag(kind: MusicTagKind, rawName: string) {
   actionError.value = ''
   actionTagID.value = `add:${kind}`
   try {
-    const result = await addMusicTag(props.entity, props.entityId, { kind, name })
+    const result = await addMusicTag(props.entity, props.entityId, {
+      kind,
+      name,
+      ...(parentID ? { parent_id: parentID } : {}),
+    })
     replaceTag(result)
     resetSearchState(kind)
   } catch (cause) {
@@ -171,7 +197,7 @@ async function addTag(kind: MusicTagKind, rawName: string) {
 
 function selectTag(kind: MusicTagKind, option: MusicTagOption) {
   if (isAssigned(option) || tagLimitReached.value) return
-  void addTag(kind, option.name)
+  void addTag(kind, option.name, option.parent_id)
 }
 
 function createTag(kind: MusicTagKind) {
@@ -219,14 +245,14 @@ async function confirmDelete() {
 watch(() => [props.entity, props.entityId], () => {
   actionError.value = ''
   pendingDelete.value = null
-  resetSearchState('mood')
-  resetSearchState('type')
+  tagGroupOptions.forEach(group => resetSearchState(group.kind))
   void loadTags()
 }, { immediate: true })
 
 onBeforeUnmount(() => {
-  if (searchTimers.mood) clearTimeout(searchTimers.mood)
-  if (searchTimers.type) clearTimeout(searchTimers.type)
+  tagGroupOptions.forEach(group => {
+    if (searchTimers[group.kind]) clearTimeout(searchTimers[group.kind]!)
+  })
 })
 </script>
 

@@ -71,6 +71,15 @@ describe("PSheet.vue", () => {
 		);
 	});
 
+	it("keeps an explicit top when a partial sheet is layered over another sheet", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
+			"utf8",
+		);
+
+		expect(source).toMatch(/const top = props\.top/);
+	});
+
 	it("renders body content and the vertical page rail", () => {
 		const wrapper = mount(PSheet, {
 			props: { show: true, title: "TEST TITLE" },

@@ -100,6 +100,12 @@ export type MusicAlbumImportMetadataPreview = {
 	matchStatus?: string;
 	matchConfidence?: number;
 	metadataError?: string;
+	genres?: string[];
+	styles?: string[];
+	labels?: string[];
+	country?: string;
+	formats?: string[];
+	missingArtists?: string[];
 	sources?: Array<{
 		provider: string;
 		status: "matched" | "unmatched" | string;
@@ -249,9 +255,16 @@ export type MusicAlbumImportCommitInput = {
 		description: string;
 		album_type: string;
 		cover_url?: string;
-		release_date?: string;
-		release_year: number;
-		tracks: MusicAlbumImportCommitTrack[];
+	release_date?: string;
+	release_year: number;
+	metadata?: {
+		genres?: string[];
+		styles?: string[];
+		labels?: string[];
+		country?: string;
+		formats?: string[];
+	};
+	tracks: MusicAlbumImportCommitTrack[];
 	};
 	deleted_import_track_keys?: string[];
 	album_source?: string;
@@ -288,6 +301,11 @@ export type MusicAlbumImport = {
 	metadataMatchConfidence?: number;
 	metadataMatched?: boolean;
 	metadataError?: string;
+	metadataGenres?: string[];
+	metadataStyles?: string[];
+	metadataLabels?: string[];
+	metadataCountry?: string;
+	metadataFormats?: string[];
 	metadataSources?: Array<{
 		provider: string;
 		status: string;

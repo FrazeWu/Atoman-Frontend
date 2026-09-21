@@ -41,7 +41,7 @@ describe("PostEditorView layout", () => {
 	it("uses one Markdown document for source, visual editing, and preview", () => {
 		expect(source).toContain("PostEditorFormattingToolbar");
 		expect(source).toContain('<div class="editor-format-row">');
-		expect(source).toContain('<div class="editor-top-info"');
+		expect(source).toContain('class="editor-top-info"');
 		expect(source).not.toContain("PostEditorRichText");
 		expect(source).toContain(
 			"const contentMode = ref<'markdown' | 'visual'>('markdown')",
@@ -81,5 +81,10 @@ describe("PostEditorView layout", () => {
 		expect(source).toContain("<PostPublicationSheet");
 		expect(source).toContain(":show=\"publicationReviewVisible\"");
 		expect(source).toContain('@update:intent="publicationIntent = $event"');
+	});
+
+	it("anchors the publication sheet below the editor topbar", () => {
+		expect(source).toContain('ref="publicationSheetTopAnchor"');
+		expect(source).toContain(':partial-top-anchor="publicationSheetTopAnchor"');
 	});
 });

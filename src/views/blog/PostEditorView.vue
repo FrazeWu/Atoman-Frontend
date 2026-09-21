@@ -43,7 +43,7 @@
               @save-published="handlePublishAction"
             />
 
-            <div class="editor-top-info" role="status" aria-live="polite">
+            <div ref="publicationSheetTopAnchor" class="editor-top-info" role="status" aria-live="polite">
               <div class="editor-top-info__group">
                 <span class="editor-top-info__sync" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
                 <span>{{ editorCharacterCount }} 字</span>
@@ -99,6 +99,7 @@
     <PostPublicationSheet
       :show="publicationReviewVisible"
       :intent="publicationIntent || 'publish'"
+      :partial-top-anchor="publicationSheetTopAnchor"
       :channel-name="studio.currentChannel?.name || ''"
       :channel-collections="channelCollections"
       :selected-collection-id="primaryCollectionId"
@@ -266,6 +267,7 @@ const emit = defineEmits<{
 }>()
 
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
+const publicationSheetTopAnchor = ref<HTMLElement | null>(null)
 const lineNumbersVisible = ref(true)
 const previewOpen = ref(false)
 const contentMode = ref<'markdown' | 'visual'>('markdown')

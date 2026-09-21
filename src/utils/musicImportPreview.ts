@@ -44,6 +44,29 @@ function trackTitle(fileName: string, expectedTrack = 0): string {
 	return base
 }
 
+function compactMusicText(value: string): string {
+	return value.normalize("NFKC").toLocaleLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "")
+}
+
+export function normalizeImportedTrackTitle(title: string, artist = ""): string {
+	const normalizedTitle = title.trim()
+	const normalizedArtist = artist.trim()
+	if (!normalizedTitle || !normalizedArtist) return normalizedTitle
+	const parts = normalizedTitle.split(/\s*(?:-|–|—)\s*/, 2)
+	if (parts.length !== 2) return normalizedTitle
+	const [left, right] = parts.map((part) => part.trim())
+	if (compactMusicText(left) === compactMusicText(normalizedArtist)) return right
+	if (compactMusicText(right) === compactMusicText(normalizedArtist)) return left
+	return normalizedTitle
+}
+
+function inferCommonTrackArtist(titles: string[]): string {
+	const prefixes = titles.map((title) => title.match(/^\s*(.+?)\s+(?:-|–|—)\s+.+$/)?.[1]?.trim() || "")
+	if (prefixes.length < 2 || prefixes.some((prefix) => !prefix)) return ""
+	const first = compactMusicText(prefixes[0])
+	return prefixes.every((prefix) => compactMusicText(prefix) === first) ? prefixes[0] : ""
+}
+
 function isAudioPath(fileName: string): boolean {
 	const extension = fileName.split(".").pop()?.toLowerCase();
 	return !!extension && audioExtensions.has(extension);
@@ -125,9 +148,9 @@ function archiveTrackDisc(fileName: string): number {
 	return match?.[1] ? Number(match[1]) || 1 : 1
 }
 
-function archiveTracks(paths: string[]): string[] {
+function archiveTracks(paths: string[], artist = ""): string[] {
 	const nextTrackByDisc = new Map<number, number>()
-	return paths
+	const titles = paths
 		.filter(isAudioPath)
 		.sort((left, right) => trackPathCollator.compare(left, right))
 		.map((entry) => {
@@ -137,11 +160,14 @@ function archiveTracks(paths: string[]): string[] {
 			return trackTitle(entry.split(/[\\/]/).pop() ?? entry, expectedTrack)
 		})
 		.filter(Boolean)
+	const knownArtist = artist || inferCommonTrackArtist(titles)
+	return titles.map((title) => normalizeImportedTrackTitle(title, knownArtist))
 }
 
 async function readRarAlbumImportPreview(
 	file: File,
 	title: string,
+	artist = "",
 ): Promise<MusicAlbumImportPreview> {
 	if (file.size > maxRarPreviewBytes) return { title, tracks: [] };
 
@@ -163,7 +189,7 @@ async function readRarAlbumImportPreview(
 		.filter((entry) => !entry.flags.directory)
 		.map((entry) => entry.name)
 		.filter((entry) => !shouldIgnoreAlbumImportPath(entry));
-	return { title, tracks: archiveTracks(paths) };
+	return { title, tracks: archiveTracks(paths, artist) };
 }
 
 export type MusicAlbumImportPreview = {
@@ -175,34 +201,35 @@ export type MusicAlbumImportPreview = {
 
 export async function readAlbumImportPreview(
 	file: File,
+	artist = "",
 ): Promise<MusicAlbumImportPreview> {
 	const title = nameWithoutExtension(file.name);
 
 	if (isAudioPath(file.name)) {
 		try {
 			const metadata = await parseBlob(file);
-			const trackTitle = metadata.common.title || title;
+			const metadataArtist = metadata.common.artist || metadata.common.albumartist || "";
+			const trackTitle = normalizeImportedTrackTitle(metadata.common.title || title, artist || metadataArtist);
 			const albumTitle = metadata.common.album || trackTitle;
 
 			const albumCoverFile = coverFileFromPicture(metadata.common.picture?.[0]);
 
-			const artist =
-				metadata.common.artist || metadata.common.albumartist || "";
+			const detectedArtist = metadataArtist;
 			return {
 				title: albumTitle,
 				tracks: [trackTitle],
-				...(artist ? { artist } : {}),
+				...(detectedArtist ? { artist: detectedArtist } : {}),
 				...(albumCoverFile ? { albumCoverFile } : {}),
 			};
 		} catch (e) {
 			console.warn("ID3 parse failed", e);
 		}
-		return { title, tracks: [title] };
+		return { title, tracks: [normalizeImportedTrackTitle(title, artist)] };
 	}
 
 	const lowerFileName = file.name.toLowerCase();
 	if (lowerFileName.endsWith(".rar")) {
-		return readRarAlbumImportPreview(file, title);
+		return readRarAlbumImportPreview(file, title, artist);
 	}
 	if (!lowerFileName.endsWith(".zip")) return { title, tracks: [] };
 
@@ -213,7 +240,7 @@ export async function readAlbumImportPreview(
 	const audioEntries = entries
 		.filter((entry) => isAudioPath(entry.name))
 		.sort((left, right) => trackPathCollator.compare(left.name, right.name));
-	const tracks = archiveTracks(audioEntries.map((entry) => entry.name));
+	const tracks = archiveTracks(audioEntries.map((entry) => entry.name), artist);
 
 	const imageEntries = entries
 		.map((entry) => ({ entry, contentType: imageContentType(entry.name) }))

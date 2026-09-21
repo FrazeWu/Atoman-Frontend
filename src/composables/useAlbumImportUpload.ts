@@ -586,7 +586,7 @@ export function useAlbumImportUpload() {
 					);
 		let localPreviewPromise: Promise<void> | null = null;
 		if (previewFile) {
-			localPreviewPromise = readAlbumImportPreview(previewFile)
+			localPreviewPromise = readAlbumImportPreview(previewFile, artistName)
 				.then(async (preview) => {
 					if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
 					if (files.length === 1) {

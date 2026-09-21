@@ -56,7 +56,7 @@ const artistName = computed({
       <div class="card-header">
         <div>
           <p class="card-kicker">上传与匹配</p>
-          <p class="card-copy">文件选择后立即上传。填写艺术家可提高匹配成功率，点击下方“开始匹配”后才会请求外部资料。</p>
+          <p class="card-copy">文件选择后立即上传。填写艺术家可提高匹配成功率；读取到曲目后会自动请求外部资料。</p>
         </div>
       </div>
       <PInput

@@ -433,6 +433,11 @@ const albumImportMatching = computed(() => {
 })
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
+  if (creationFlow.value?.draft.albumImport.metadataMatchStatus === 'matching') return '匹配中…'
+  if (
+    creationFlow.value?.draft.albumImport.metadataMatchingStarted
+    && !['matched', 'unmatched'].includes(creationFlow.value.draft.albumImport.metadataMatchStatus ?? '')
+  ) return '匹配中…'
   if (creationFlow.value?.entity === 'artist' && creationFlow.value.step === 'artist') {
     return creationFlow.value.submitting ? '创建中…' : '创建艺术家'
   }

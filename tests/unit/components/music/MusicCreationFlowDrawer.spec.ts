@@ -289,7 +289,7 @@ describe("MusicCreationFlowDrawer", () => {
 		drawerMocks.state.value.creationFlow = null;
 	});
 
-	it("导入进行时保留开始匹配入口", () => {
+	it("匹配进行时显示匹配中状态并禁用主按钮", () => {
 		const baseFlow = createFlowState();
 		drawerMocks.state.value.creationFlow = createFlowState({
 			draft: {
@@ -297,6 +297,7 @@ describe("MusicCreationFlowDrawer", () => {
 				albumImport: {
 					...baseFlow.draft.albumImport,
 					status: "uploading",
+					metadataMatchStatus: "matching",
 				},
 			},
 		});
@@ -308,7 +309,8 @@ describe("MusicCreationFlowDrawer", () => {
 				.find('[data-testid="music-creation-start-another-album"]')
 				.exists(),
 		).toBe(false);
-		expect(wrapper.get('[data-testid="creation-flow-footer"]').text()).toContain("开始匹配");
+		expect(wrapper.get('[data-testid="creation-flow-footer"]').text()).toContain("匹配中…");
+		expect(wrapper.get('[data-testid="artist-next-button"]').attributes("disabled")).toBeDefined();
 	});
 
 	it("元信息请求失败后保留本地曲目并进入填写页", async () => {

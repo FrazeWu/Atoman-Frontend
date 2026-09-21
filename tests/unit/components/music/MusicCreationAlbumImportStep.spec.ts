@@ -202,7 +202,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(metadataPreview).not.toHaveBeenCalled();
 	});
 
-	it("上传完成后仍停留在上传页，等待用户开始匹配", async () => {
+	it("上传完成后仍停留在上传页，等待曲目解析后自动匹配", async () => {
 		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
 		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
 			title: "IGOR",
@@ -243,7 +243,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(metadataPreview).not.toHaveBeenCalled();
 	});
 
-	it("点击开始匹配后回填完整发行版元信息，不等待音频处理", async () => {
+	it("自动匹配后回填完整发行版元信息，不等待音频处理", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";
 		flow.draft.albumImport.derivedAlbumTitle = "IGOR";
@@ -873,7 +873,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
-	it("提示手动开始匹配并在成功后显示 MusicBrainz 来源", async () => {
+	it("提示自动匹配并在成功后显示 MusicBrainz 来源", async () => {
 		const drawers = useMusicDrawers();
 		if (!drawers.state.value.creationFlow)
 			throw new Error("creation flow missing");
@@ -881,7 +881,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		expect(
 			wrapper.get('[data-testid="album-import-metadata-hint"]').text(),
-		).toContain("点击“开始匹配”后再核对专辑信息和曲序");
+		).toContain("读取到曲目后会自动开始匹配");
 
 		drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl =
 			"https://musicbrainz.org/release/release-id";

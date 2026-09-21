@@ -392,7 +392,9 @@ const updatePartialBounds = () => {
     return
   }
 
-  const top = panelRect ? `${panelRect.top}px` : props.top
+  // Partial sheets may intentionally start below their parent sheet, so the
+  // caller's explicit top must remain authoritative when a parent is present.
+  const top = props.top
   const right = `${window.innerWidth - containerRight}px`
   const bottom = panelRect ? `${window.innerHeight - panelRect.bottom}px` : '0px'
   if (props.partialWidth) {

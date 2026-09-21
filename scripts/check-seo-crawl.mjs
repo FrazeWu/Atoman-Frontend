@@ -29,8 +29,32 @@ function check(condition, message) {
 }
 
 function containsNoindex(html) {
-	return /<meta[^>]+name=["']robots["'][^>]+content=["'][^"']*noindex/i.test(
-		html,
+	return [...html.matchAll(/<meta\b[^>]*>/gi)].some((match) => {
+		const tag = match[0];
+		return /\bname=["']robots["']/i.test(tag) &&
+			/\bcontent=["'][^"']*noindex/i.test(tag);
+	});
+}
+
+function canonicalHref(html) {
+	const tag = html.match(
+		/<link\b[^>]*\brel=["'][^"']*canonical[^"']*["'][^>]*>/i,
+	)?.[0];
+	return tag?.match(/\bhref=["']([^"']+)["']/i)?.[1] || "";
+}
+
+function decodeXml(value) {
+	return value
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&apos;/g, "'");
+}
+
+function sitemapUrls(sitemapBody) {
+	return [...sitemapBody.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) =>
+		decodeXml(match[1].trim()),
 	);
 }
 
@@ -45,6 +69,10 @@ async function inspectHtml(url, agentName, userAgent) {
 	);
 	check(!containsNoindex(body), `${agentName} received noindex for ${url}`);
 	check(
+		!/noindex/i.test(response.headers.get("x-robots-tag") || ""),
+		`${agentName} received an x-robots-tag noindex for ${url}`,
+	);
+	check(
 		/<title[^>]*>[^<]+<\/title>/i.test(body),
 		`${url} is missing a server-rendered title`,
 	);
@@ -56,15 +84,27 @@ async function inspectHtml(url, agentName, userAgent) {
 		/<link[^>]+rel=["']canonical["']/i.test(body),
 		`${url} is missing a server-rendered canonical`,
 	);
+	check(
+		canonicalHref(body) === url,
+		`${url} has canonical ${canonicalHref(body) || "nothing"}`,
+	);
 }
 
-async function discoverContentUrl(sitemapBody) {
+function discoverContentUrl(urls) {
 	const configured = process.env.SEO_CONTENT_URL?.trim();
 	if (configured) return new URL(configured, canonicalOrigin).toString();
-	const urls = [...sitemapBody.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
-		(match) => match[1],
-	);
 	return urls.find((url) => /\/posts\/post\//.test(url)) || "";
+}
+
+async function inspectPages(urls) {
+	const pending = [...urls];
+	const workers = Array.from({ length: Math.min(4, pending.length) }, async () => {
+		while (pending.length) {
+			const url = pending.shift();
+			if (url) await inspectHtml(url, "sitemap", browserAgent);
+		}
+	});
+	await Promise.all(workers);
 }
 
 const apex = await request("https://atoman.org/", browserAgent);
@@ -93,6 +133,7 @@ if (robots) {
 
 const sitemap = await request(`${canonicalOrigin}/sitemap.xml`, browserAgent);
 let sitemapBody = "";
+let indexedUrls = [];
 if (sitemap) {
 	sitemapBody = await sitemap.text();
 	console.log(`browser   ${sitemap.status} ${canonicalOrigin}/sitemap.xml`);
@@ -105,17 +146,34 @@ if (sitemap) {
 		sitemapBody.includes(`<loc>${canonicalOrigin}/</loc>`),
 		"sitemap.xml is missing the homepage",
 	);
+	indexedUrls = sitemapUrls(sitemapBody);
+	check(indexedUrls.length > 0, "sitemap.xml does not contain any URLs");
+	check(
+		new Set(indexedUrls).size === indexedUrls.length,
+		"sitemap.xml contains duplicate URLs",
+	);
+	indexedUrls.forEach((url) => {
+		try {
+			const parsed = new URL(url);
+			check(
+				parsed.origin === canonicalOrigin && !parsed.search && !parsed.hash,
+				`sitemap URL is not a clean canonical URL: ${url}`,
+			);
+		} catch {
+			failures.push(`sitemap contains an invalid URL: ${url}`);
+		}
+	});
 }
 
-const contentUrl = await discoverContentUrl(sitemapBody);
-const pages = [`${canonicalOrigin}/`, `${canonicalOrigin}/feed`];
-if (contentUrl) pages.push(contentUrl);
+const contentUrl = discoverContentUrl(indexedUrls);
+const pages = new Set([`${canonicalOrigin}/`, `${canonicalOrigin}/feed`, ...indexedUrls]);
+if (contentUrl) pages.add(contentUrl);
 else
 	failures.push(
 		"No public content URL found; set SEO_CONTENT_URL to inspect a published content page",
 	);
 
-for (const url of pages) await inspectHtml(url, "browser", browserAgent);
+await inspectPages([...pages]);
 await inspectHtml(`${canonicalOrigin}/`, "inspection", inspectionAgent);
 
 if (failures.length) {

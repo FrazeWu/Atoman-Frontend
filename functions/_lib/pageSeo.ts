@@ -46,6 +46,18 @@ const pageMeta: Record<string, StaticPageMeta> = {
 		title: "视频 | Atoman",
 		description: "发现视频内容并参与相关讨论。",
 	},
+	"/about": {
+		title: "关于 Atoman",
+		description: "了解 Atoman 的定位、内容与社区。",
+	},
+	"/terms": {
+		title: "服务条款 | Atoman",
+		description: "Atoman 服务条款。",
+	},
+	"/privacy": {
+		title: "隐私政策 | Atoman",
+		description: "Atoman 隐私政策。",
+	},
 };
 
 const noIndexPrefixes = [
@@ -55,11 +67,37 @@ const noIndexPrefixes = [
 	"/auth",
 	"/studio",
 	"/site/setting",
+	"/inbox",
+	"/dev",
+	"/__disabled__",
+	"/__not_found__",
 	"/feed/sources",
 	"/feed/subscriptions",
 	"/feed/stats",
 	"/feed/starred",
 	"/feed/reading-list",
+];
+
+const publicRoutePrefixes = [
+	"/feed",
+	"/posts",
+	"/music",
+	"/books",
+	"/forum",
+	"/debate",
+	"/timeline",
+	"/podcasts",
+	"/videos",
+	"/users",
+	"/channels",
+	"/channel",
+	"/collection",
+	"/post",
+	"/notes",
+	"/bookmarks",
+	"/about",
+	"/terms",
+	"/privacy",
 ];
 
 function escapeHtml(value: string) {
@@ -74,6 +112,20 @@ function escapeHtml(value: string) {
 function normalizePath(pathname: string) {
 	if (pathname === "/") return pathname;
 	return pathname.replace(/\/+$/, "");
+}
+
+export function isKnownPagePath(pathname: string) {
+	const path = normalizePath(pathname);
+	if (pageMeta[path] || isCanonicalSitemapPath(path)) return true;
+	if (
+		noIndexPrefixes.some(
+			(prefix) => path === prefix || path.startsWith(`${prefix}/`),
+		)
+	)
+		return true;
+	return publicRoutePrefixes.some(
+		(prefix) => path === prefix || path.startsWith(`${prefix}/`),
+	);
 }
 
 export function buildStaticPageHtml(

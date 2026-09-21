@@ -47,7 +47,7 @@
         <div
           v-if="show && showBackdrop && isTopLayer"
           class="p-sheet-backdrop"
-          :style="{ top: top, zIndex: backdropZIndex }"
+          :style="{ top: backdropTop, zIndex: backdropZIndex }"
           @click="$emit('close')"
         />
       </Transition>
@@ -205,6 +205,7 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string
   mode?: 'full' | 'partial'
   partialAnchor?: HTMLElement | null
+  partialTopAnchor?: HTMLElement | null
   partialWidth?: string
   width?: string
   maxWidth?: string
@@ -235,6 +236,7 @@ const props = withDefaults(defineProps<{
   title: '',
   mode: 'full',
   partialAnchor: null,
+  partialTopAnchor: null,
   partialWidth: 'var(--a-comment-sheet-width)',
   width: '100%',
   top: 'var(--a-topbar-height)',
@@ -378,6 +380,7 @@ const updatePartialBounds = () => {
 
   const contentRect = contentAnchor?.getBoundingClientRect()
   const panelRect = parentPanel?.getBoundingClientRect()
+  const topAnchorRect = props.partialTopAnchor?.getBoundingClientRect()
   const containerLeft = panelRect?.left ?? contentRect?.left ?? 0
   const containerRight = panelRect?.right ?? window.innerWidth
   const containerWidth = Math.max(0, containerRight - containerLeft)
@@ -394,9 +397,16 @@ const updatePartialBounds = () => {
 
   // Partial sheets may intentionally start below their parent sheet, so the
   // caller's explicit top must remain authoritative when a parent is present.
-  const top = props.top
+  const top = topAnchorRect ? `${topAnchorRect.top}px` : props.top
   const right = `${window.innerWidth - containerRight}px`
   const bottom = panelRect ? `${window.innerHeight - panelRect.bottom}px` : '0px'
+  if (typeof ResizeObserver !== 'undefined') {
+    partialResizeObserver = new ResizeObserver(updatePartialBounds)
+    if (contentAnchor) partialResizeObserver.observe(contentAnchor)
+    if (parentPanel) partialResizeObserver.observe(parentPanel)
+    if (props.partialTopAnchor) partialResizeObserver.observe(props.partialTopAnchor)
+  }
+
   if (props.partialWidth) {
     const minimumLeft = panelRect
       ? `${panelRect.left}px`
@@ -420,12 +430,6 @@ const updatePartialBounds = () => {
   }
   partialResolved.value = true
   emit('mode-change', 'partial')
-
-  if (typeof ResizeObserver !== 'undefined') {
-    partialResizeObserver = new ResizeObserver(updatePartialBounds)
-    if (contentAnchor) partialResizeObserver.observe(contentAnchor)
-    if (parentPanel) partialResizeObserver.observe(parentPanel)
-  }
 }
 
 const handlePartialEscape = (event: KeyboardEvent) => {
@@ -436,7 +440,13 @@ const handlePartialEscape = (event: KeyboardEvent) => {
 }
 
 watch(
-  [partialRequested, effectiveLayerIndex, () => props.partialAnchor, () => props.partialWidth],
+  [
+    partialRequested,
+    effectiveLayerIndex,
+    () => props.partialAnchor,
+    () => props.partialTopAnchor,
+    () => props.partialWidth,
+  ],
   () => {
     void nextTick(updatePartialBounds)
   },
@@ -464,6 +474,12 @@ const layerZIndex = computed(() => {
 const backdropZIndex = computed(() => {
   const base = props.abovePlayer ? '--a-z-player-sheet' : '--a-z-sheet'
   return `calc(var(${base}) + ${effectiveLayerIndex.value} - 2)`
+})
+
+const backdropTop = computed(() => {
+  if (isPartial.value && partialBounds.value) return partialBounds.value.top
+  const top = props.partialTopAnchor?.getBoundingClientRect().top
+  return typeof top === 'number' ? `${top}px` : props.top
 })
 
 const sheetStyle = computed(() => {

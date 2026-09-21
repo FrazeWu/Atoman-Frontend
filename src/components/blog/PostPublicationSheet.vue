@@ -3,6 +3,7 @@
     :show="show"
     :title="sheetTitle"
     mode="partial"
+    :partial-top-anchor="partialTopAnchor"
     partial-width="var(--a-comment-sheet-width)"
     top="calc(var(--a-topbar-height) + 7rem)"
     close-type="header"
@@ -136,6 +137,7 @@ type PublicationWarning = { code: string; message: string }
 const props = defineProps<{
   show: boolean
   intent: PublicationIntent
+  partialTopAnchor?: HTMLElement | null
   channelName: string
   channelCollections: CollectionOption[]
   selectedCollectionId: string

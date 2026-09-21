@@ -77,7 +77,9 @@ describe("PSheet.vue", () => {
 			"utf8",
 		);
 
-		expect(source).toMatch(/const top = props\.top/);
+		expect(source).toMatch(/const top = topAnchorRect \? `\$\{topAnchorRect\.top\}px` : props\.top/);
+		expect(source).toContain("partialTopAnchor?: HTMLElement | null");
+		expect(source).toContain("props.partialTopAnchor?.getBoundingClientRect()");
 	});
 
 	it("renders body content and the vertical page rail", () => {
@@ -566,7 +568,7 @@ describe("PSheet.vue", () => {
 			/\.p-sheet-panel\.is-shifted\s+\.sheet-layer-rail\s*\{[\s\S]*?pointer-events:\s*auto/,
 		);
 		expect(source).toMatch(
-			/:style="\{ top: top, zIndex: backdropZIndex \}"/,
+			/:style="\{ top: backdropTop, zIndex: backdropZIndex \}"/,
 		);
 	});
 

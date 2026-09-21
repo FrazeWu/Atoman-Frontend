@@ -55,8 +55,11 @@ export function normalizeImportedTrackTitle(title: string, artist = ""): string 
 	const parts = normalizedTitle.split(/\s*(?:-|–|—)\s*/, 2)
 	if (parts.length !== 2) return normalizedTitle
 	const [left, right] = parts.map((part) => part.trim())
-	if (compactMusicText(left) === compactMusicText(normalizedArtist)) return right
-	if (compactMusicText(right) === compactMusicText(normalizedArtist)) return left
+	const artistKey = compactMusicText(normalizedArtist)
+	const leftKey = compactMusicText(left)
+	const rightKey = compactMusicText(right)
+	if (leftKey === artistKey || leftKey.startsWith(artistKey) && leftKey.length > artistKey.length) return right
+	if (rightKey === artistKey || rightKey.startsWith(artistKey) && rightKey.length > artistKey.length) return left
 	return normalizedTitle
 }
 

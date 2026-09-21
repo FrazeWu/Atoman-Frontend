@@ -193,6 +193,11 @@ export interface MusicCreationAlbumImportDraft {
 	metadataMatched?: boolean;
 	metadataMatchingStarted?: boolean;
 	metadataError?: string;
+	metadataGenres?: string[];
+	metadataStyles?: string[];
+	metadataLabels?: string[];
+	metadataCountry?: string;
+	metadataFormats?: string[];
 	metadataSources?: Array<{
 		provider: string;
 		status: string;

@@ -750,6 +750,13 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
+      metadata: {
+        genres: flow.draft.albumImport.metadataGenres ?? [],
+        styles: flow.draft.albumImport.metadataStyles ?? [],
+        labels: flow.draft.albumImport.metadataLabels ?? [],
+        country: flow.draft.albumImport.metadataCountry ?? '',
+        formats: flow.draft.albumImport.metadataFormats ?? [],
+      },
       tracks: flow.draft.tracks.map((track, index) => ({
         ...(track.songId ? { song_id: track.songId } : {}),
         ...(track.importFileId ? { file_id: track.importFileId } : {}),
@@ -1002,6 +1009,33 @@ function ensurePrimaryArtistContributor(flow: NonNullable<typeof creationFlow.va
   ]
 }
 
+function compactArtistName(value: string) {
+  return value.normalize('NFKC').toLocaleLowerCase().replace(/[\s\p{P}\p{S}]+/gu, '')
+}
+
+async function attachKnownImportedArtists(flow: NonNullable<typeof creationFlow.value>, names: string[]) {
+  const current = flow.draft.albumDetails.contributors
+  const known = new Set(current.map((item) => compactArtistName(item.name)))
+  for (const name of names) {
+    const result = await musicApi.listMusicArtists({ q: name, page: 1, page_size: 10 })
+    const matches = result.data.filter((artist) => compactArtistName(artist.name) === compactArtistName(name))
+    if (matches.length !== 1 || known.has(compactArtistName(name))) continue
+    const artist = matches[0]
+    current.push({
+      id: `contributor-${artist.id}`,
+      artistId: artist.id,
+      name: artist.display_name || artist.name,
+      avatarUrl: artist.image_url || '',
+      source: artist.sources?.find((source) => source.url || source.title)?.url || '',
+      entryStatus: artist.entry_status,
+      kind: artist.artist_form === 'group' ? 'group' : 'person',
+      locked: false,
+      roles: [{ id: `role-${artist.id}-featured`, role: 'featured', label: '' }],
+    })
+    known.add(compactArtistName(name))
+  }
+}
+
 function albumImportUploadFinished(flow: NonNullable<typeof creationFlow.value>) {
   return ['uploaded', 'ready', 'needs_attention'].includes(flow.draft.albumImport.status)
 }
@@ -1060,6 +1094,12 @@ async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.
   albumImport.metadataMatchStatus = preview.matchStatus || 'unmatched'
   albumImport.metadataMatchConfidence = preview.matchConfidence ?? 0
 	albumImport.metadataError = preview.metadataError || ''
+	albumImport.metadataGenres = preview.genres ?? []
+	albumImport.metadataStyles = preview.styles ?? []
+	albumImport.metadataLabels = preview.labels ?? []
+	albumImport.metadataCountry = preview.country ?? ''
+	albumImport.metadataFormats = preview.formats ?? []
+	albumImport.missingArtists = preview.missingArtists ?? []
 	albumImport.metadataSources = preview.sources ?? []
 	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
 		flow.draft.albumDetails.title = preview.albumTitle.trim()
@@ -1076,11 +1116,14 @@ async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.
 	if (preview.sourceUrl && !flow.draft.albumDetails.source.trim()) {
 		flow.draft.albumDetails.source = normalizeMusicImportSource(preview.sourceUrl)
 	}
-  if (preview.tracks.length) {
+	if (preview.tracks.length) {
     albumImport.derivedTracks = preview.tracks
     mergeImportedTracksIntoDraft(flow, preview.tracks)
-  }
-  setMusicCreationStep('albumDetails')
+	}
+	if (preview.missingArtists?.length) {
+		await attachKnownImportedArtists(flow, preview.missingArtists)
+	}
+	setMusicCreationStep('albumDetails')
 }
 
 async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_album' = 'create_album') {

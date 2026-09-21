@@ -424,6 +424,13 @@ const fullAlbumCreationProgressIndex = computed(() => {
   if (flow.step === 'albumDetails') return 3
   return 4
 })
+const albumImportMatching = computed(() => {
+  const flow = creationFlow.value
+  if (!flow || flow.step !== 'albumImport') return false
+  const draft = flow.draft.albumImport
+  return draft.metadataMatchStatus === 'matching'
+    || (draft.metadataMatchingStarted === true && !['matched', 'unmatched'].includes(draft.metadataMatchStatus ?? ''))
+})
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
   if (creationFlow.value?.entity === 'artist' && creationFlow.value.step === 'artist') {
@@ -431,6 +438,12 @@ const finishButtonLabel = computed(() => {
   }
   if (creationFlow.value?.step === 'artist' && creationFlow.value.artistBeforeMatch) {
     return creationFlow.value.submitting ? '匹配中…' : '开始匹配'
+  }
+  if (creationFlow.value?.step === 'albumImport') {
+    if (albumImportMatching.value || creationFlow.value.submitting) return '匹配中…'
+    if (creationFlow.value.draft.albumImport.metadataMatchStatus === 'matched') return '已匹配'
+    if (creationFlow.value.draft.albumImport.metadataMatchStatus === 'unmatched') return '继续填写'
+    return '读取曲目中…'
   }
   if (creationFlow.value?.step === 'artist' && creationFlow.value.editingContributorId) return '完成创作者'
   if (creationFlow.value?.submitting && creationFlow.value.step === 'preview') return '提交中…'
@@ -1521,7 +1534,7 @@ async function completeCreation() {
             :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="primary-action"
-            :disabled="creationFlow.submitting"
+            :disabled="creationFlow.submitting || albumImportMatching"
             @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction('create_album')"
           >
             {{ finishButtonLabel }}

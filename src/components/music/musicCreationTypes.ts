@@ -191,6 +191,7 @@ export interface MusicCreationAlbumImportDraft {
 	metadataMatchStatus?: string;
 	metadataMatchConfidence?: number;
 	metadataMatched?: boolean;
+	metadataMatchingStarted?: boolean;
 	metadataError?: string;
 	metadataSources?: Array<{
 		provider: string;
@@ -203,6 +204,7 @@ export interface MusicCreationAlbumImportDraft {
 		candidateCount?: number;
 		error?: string;
 	}>;
+	metadataFieldSources?: Record<string, string>;
 	missingArtists?: string[];
 	lastSyncedAt: string;
 	errorMessage: string;

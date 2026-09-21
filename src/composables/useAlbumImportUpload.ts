@@ -206,8 +206,14 @@ export function useAlbumImportUpload() {
 			draft.metadataSource = snapshot.metadataSource;
 			draft.metadataExternalId = snapshot.metadataExternalId;
 			draft.metadataMatchStatus = snapshot.metadataMatchStatus;
-			draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
-			draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
+				draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
+				draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
+				if (snapshot.metadataMatchStatus?.trim()) {
+					draft.metadataMatchingStarted = true;
+				}
+			draft.metadataError = snapshot.metadataError || "";
+			draft.metadataSources = snapshot.metadataSources ?? [];
+			draft.metadataFieldSources = snapshot.metadataFieldSources ?? {};
 			draft.missingArtists = snapshot.missingArtists ?? [];
 		}
 		draft.lastSyncedAt = snapshot.lastSyncedAt;
@@ -546,6 +552,9 @@ export function useAlbumImportUpload() {
 		uploadState.selectedFiles.clear();
 		draft.status = "uploading";
 		draft.errorMessage = "";
+		draft.metadataMatchingStarted = false;
+		draft.metadataError = "";
+		draft.metadataSources = [];
 		let autoMode: MusicAlbumImportInputMode = "files";
 		if (isArchive) {
 			autoMode = "archive";

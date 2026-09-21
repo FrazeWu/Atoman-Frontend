@@ -90,6 +90,32 @@ describe("readAlbumImportPreview", () => {
 		expect(preview.albumCoverFile?.type).toBe("image/jpeg");
 	});
 
+	it("预览曲目会移除已知艺术家前缀", async () => {
+		const zip = new JSZip();
+		zip.file("01 - 交工乐队 - 两代人.mp3", "audio");
+		zip.file("02 - 交工乐队 - 县道184(卷首诗).mp3", "audio");
+		const file = new File(
+			[await zip.generateAsync({ type: "uint8array" })],
+			"菊花夜行军.zip",
+			{ type: "application/zip" },
+		);
+
+		await expect(readAlbumImportPreview(file, "交工乐队")).resolves.toMatchObject({
+			tracks: ["两代人", "县道184(卷首诗)"],
+		});
+	});
+
+	it("多首曲目共享作者前缀时无需提前填写艺术家", async () => {
+		const zip = new JSZip();
+		zip.file("01 - 交工乐队 - 两代人.mp3", "audio");
+		zip.file("02 - 交工乐队 - 县道184(卷首诗).mp3", "audio");
+		const file = new File([await zip.generateAsync({ type: "uint8array" })], "菊花夜行军.zip", { type: "application/zip" });
+
+		await expect(readAlbumImportPreview(file)).resolves.toMatchObject({
+			tracks: ["两代人", "县道184(卷首诗)"],
+		});
+	});
+
 	it("识别常见系统元数据路径", () => {
 		for (const path of [
 			"Album/._01.flac",

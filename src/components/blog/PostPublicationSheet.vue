@@ -6,7 +6,6 @@
     partial-width="var(--a-comment-sheet-width)"
     top="calc(var(--a-topbar-height) + 7rem)"
     close-type="header"
-    above-player
     :aria-label="sheetTitle"
     @close="$emit('close')"
   >

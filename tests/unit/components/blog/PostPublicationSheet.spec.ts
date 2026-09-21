@@ -59,7 +59,7 @@ describe('PostPublicationSheet', () => {
     const sheet = wrapper.findComponent(PSheet)
     expect(sheet.props('mode')).toBe('partial')
     expect(sheet.props('partialWidth')).toBe('var(--a-comment-sheet-width)')
-    expect(sheet.props('abovePlayer')).toBe(true)
+    expect(sheet.props('abovePlayer')).toBe(false)
     expect(wrapper.text()).toContain('摘要（可选）')
     expect(sheet.props('top')).toBe('calc(var(--a-topbar-height) + 7rem)')
     expect(wrapper.text()).toContain('立即发布')

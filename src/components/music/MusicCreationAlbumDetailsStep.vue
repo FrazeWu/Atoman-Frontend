@@ -42,6 +42,16 @@ const importMetadataSourceLabel = computed(() => albumImportDraft.value?.metadat
 const importMetadataModified = computed(() => importMetadataMatched.value && (
   creationFlow.value?.tracksCustomized === true || creationFlow.value?.titleCustomized === true
 ))
+const importedMetadata = computed(() => {
+  const importDraft = albumImportDraft.value
+  if (!importDraft) return []
+  return [
+    ['标签', [...(importDraft.metadataGenres ?? []), ...(importDraft.metadataStyles ?? [])].join('、')],
+    ['厂牌', (importDraft.metadataLabels ?? []).join('、')],
+    ['国家/地区', importDraft.metadataCountry ?? ''],
+    ['格式', (importDraft.metadataFormats ?? []).join('、')],
+  ].filter(([, value]) => value)
+})
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
@@ -587,6 +597,13 @@ watch(
               aria-label="简介"
             />
           </div>
+
+          <dl v-if="importedMetadata.length" class="imported-metadata" data-testid="album-imported-metadata">
+            <div v-for="([label, value]) in importedMetadata" :key="label" class="imported-metadata__item">
+              <dt>{{ label }}</dt>
+              <dd>{{ value }}</dd>
+            </div>
+          </dl>
         </div>
       </div>
 
@@ -1656,6 +1673,39 @@ watch(
   color: var(--a-color-muted-soft);
   margin-top: 0.15rem;
   line-height: 1.3;
+}
+
+.imported-metadata {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.imported-metadata__item {
+  min-width: 0;
+}
+
+.imported-metadata dt {
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.imported-metadata dd {
+  margin: 0.2rem 0 0;
+  color: var(--a-color-text);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .imported-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 </style>

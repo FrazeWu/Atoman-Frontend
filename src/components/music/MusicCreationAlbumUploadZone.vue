@@ -227,7 +227,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <ExternalLink :size="14" aria-hidden="true" />
         </a>
       </template>
-		<template v-else>上传会立即读取本地元信息；读取到曲目后会自动核对专辑信息和曲序。</template>
+		<template v-else>上传会立即读取本地元信息；读取到曲目后会自动开始匹配，完成后进入信息确认。</template>
     </p>
     <div class="parallel-progress" data-testid="album-import-parallel-progress">
       <div class="parallel-progress__lane">
@@ -250,7 +250,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-		<small>{{ albumImportDraft.metadataMatchStatus === 'matching' ? '正在并行检索 Discogs 与 MusicBrainz' : '填写艺术家后会自动开始匹配，可提高准确率' }}</small>
+		<small>{{ albumImportDraft.metadataMatchStatus === 'matching' ? '正在并行检索 Discogs 与 MusicBrainz，完成后进入信息确认' : '填写艺术家后会自动开始匹配，可提高准确率' }}</small>
 		</div>
 	</div>
 	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">

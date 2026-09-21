@@ -254,4 +254,30 @@ describe("public content SEO", () => {
 			"/videos/watch/video-1",
 		]);
 	});
+
+	it("collects every page from a paginated public source", async () => {
+		const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.includes("/music/artists")) {
+				const page = new URL(url).searchParams.get("page");
+				return json({
+					data: [{ id: `artist-${page}` }],
+					meta: { page: Number(page), page_size: 1, total: 2, has_more: page === "1" },
+				});
+			}
+			return json([]);
+		}) as unknown as typeof fetch;
+
+		const items = await collectPublicSitemapItems(
+			"https://api.atoman.org/api/v1",
+			fetcher,
+		);
+
+		expect(items.map((item) => item.path)).toContain("/music/artist/artist-1");
+		expect(items.map((item) => item.path)).toContain("/music/artist/artist-2");
+		expect(fetcher).toHaveBeenCalledWith(
+			"https://api.atoman.org/api/v1/music/artists?page=2&page_size=1000",
+			expect.any(Object),
+		);
+	});
 });

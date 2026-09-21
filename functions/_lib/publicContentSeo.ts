@@ -589,19 +589,59 @@ export function buildMissingPublicContentHtml(html: string) {
 	);
 }
 
+type ListPage = {
+	items: Record<string, unknown>[];
+	hasMore: boolean;
+};
+
 function list(payload: JsonValue): Record<string, unknown>[] {
 	return array(unwrap(payload))
 		.map(record)
 		.filter((value): value is Record<string, unknown> => Boolean(value));
 }
 
-async function fetchList(apiBase: string, path: string, fetcher: Fetcher) {
+function listPage(payload: JsonValue): ListPage {
+	const envelope = record(payload);
+	const meta = record(envelope?.meta);
+	return {
+		items: list(payload),
+		hasMore: meta?.has_more === true,
+	};
+}
+
+function pagePath(path: string, page: number) {
+	const url = new URL(path, "https://seo.atoman.invalid");
+	url.searchParams.set("page", String(page));
+	return `${url.pathname}${url.search}`;
+}
+
+async function fetchListPage(
+	apiBase: string,
+	path: string,
+	fetcher: Fetcher,
+): Promise<ListPage> {
 	const response = await fetcher(`${apiBase}${path}`, {
 		headers: { Accept: "application/json" },
 	});
 	if (!response.ok)
 		throw new Error(`Public sitemap source unavailable: ${path}`);
-	return list(parseJsonValue(await response.json()));
+	return listPage(parseJsonValue(await response.json()));
+}
+
+async function fetchList(apiBase: string, path: string, fetcher: Fetcher) {
+	const pathUrl = new URL(path, "https://seo.atoman.invalid");
+	const firstPage = await fetchListPage(apiBase, path, fetcher);
+	const items = [...firstPage.items];
+	if (!firstPage.hasMore || !pathUrl.searchParams.has("page")) return items;
+
+	let page = Number(pathUrl.searchParams.get("page")) || 1;
+	for (let requestCount = 0; requestCount < 100; requestCount += 1) {
+		page += 1;
+		const nextPage = await fetchListPage(apiBase, pagePath(path, page), fetcher);
+		items.push(...nextPage.items);
+		if (!nextPage.hasMore) break;
+	}
+	return items;
 }
 
 export async function collectPublicSitemapItems(
@@ -614,7 +654,7 @@ export async function collectPublicSitemapItems(
 		fetchList(apiBase, "/forum/topics?page=1&page_size=1000", fetcher),
 		fetchList(apiBase, "/debate/topics?page=1&page_size=1000", fetcher),
 		fetchList(apiBase, "/podcast/episodes", fetcher),
-		fetchList(apiBase, "/videos?sort=latest", fetcher),
+		fetchList(apiBase, "/videos?sort=latest&page=1&page_size=1000", fetcher),
 	]);
 	const fulfilled = (index: number) =>
 		sources[index].status === "fulfilled"

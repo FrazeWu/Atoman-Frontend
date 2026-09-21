@@ -116,6 +116,16 @@ describe("readAlbumImportPreview", () => {
 		});
 	});
 
+	it("预览曲目会移除合作艺术家前缀", async () => {
+		const zip = new JSZip();
+		zip.file("01 - Kendrick Lamar,SZA - Loved Ones.mp3", "audio");
+		const file = new File([await zip.generateAsync({ type: "uint8array" })], "Unfinished Unreleased.zip", { type: "application/zip" });
+
+		await expect(readAlbumImportPreview(file, "Kendrick Lamar")).resolves.toMatchObject({
+			tracks: ["Loved Ones"],
+		});
+	});
+
 	it("识别常见系统元数据路径", () => {
 		for (const path of [
 			"Album/._01.flac",

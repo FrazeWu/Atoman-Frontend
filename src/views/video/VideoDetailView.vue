@@ -86,7 +86,10 @@ const isDescriptionTruncated = computed(() => {
   const description = video.value?.description || ''
   return description.length > 180 || description.split('\n').length > 3
 })
-const posterUrl = computed(() => video.value?.thumbnail_url ? resolveMediaURL(video.value.thumbnail_url) : undefined)
+const posterUrl = computed(() => {
+  const thumbnail = video.value?.thumbnail_url || video.value?.preview_thumbnails?.[0]?.url || ''
+  return thumbnail ? resolveMediaURL(thumbnail) : undefined
+})
 const nativeVideoUrl = computed(() => video.value?.video_url ? resolveMediaURL(video.value.video_url) : '')
 const subtitleUrl = computed(() => video.value?.subtitle_url ? resolveMediaURL(video.value.subtitle_url) : '')
 const channelCoverUrl = computed(() => {

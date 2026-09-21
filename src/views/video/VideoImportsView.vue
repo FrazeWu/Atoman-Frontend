@@ -6,6 +6,7 @@ import { IconExternalLink as ExternalLink, IconPencil as Pencil, IconRefresh as 
 import {
   cancelVideoImport,
   deleteVideoImportRecord,
+  getVideo,
   getVideoImport,
   listVideoImports,
   retryVideoImport,
@@ -33,6 +34,7 @@ const error = ref('')
 const pendingConfirmation = ref<'cancel' | 'delete' | null>(null)
 const activeGroup = ref<ImportGroup>('active')
 const selectedId = ref(typeof route.query.task === 'string' ? route.query.task : '')
+const processingStatuses = ref<Record<string, string>>({})
 const resumeInput = ref<HTMLInputElement | null>(null)
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -59,6 +61,10 @@ const statusLabels: Record<VideoImportStatus, string> = {
 }
 
 function statusDescription(task: VideoImportTask) {
+  const processingStatus = processingStatuses.value[task.id]
+  if (task.target_video_id && processingStatus === 'pending') return '视频已发布，正在准备封面和播放预览'
+  if (task.target_video_id && processingStatus === 'processing') return '视频已发布，正在准备封面和播放预览'
+  if (task.target_video_id && processingStatus === 'failed') return '视频已发布，但封面或播放预览处理失败，可以重试'
   if (task.status === 'awaiting_submit') return '文件已上传，可以继续编辑或发布'
   if (task.status === 'publishing') return '资料已提交，正在创建视频'
   if (task.status === 'published') return '视频已发布，后台会继续生成播放预览'
@@ -77,6 +83,16 @@ async function loadImports(silent = false) {
   error.value = ''
   try {
     imports.value = await listVideoImports(auth.token ?? undefined)
+    const nextProcessingStatuses: Record<string, string> = {}
+    await Promise.all(imports.value.filter(task => task.target_video_id).map(async task => {
+      try {
+        const video = await getVideo(task.target_video_id as string, auth.token ?? undefined)
+        if (video.processing_status) nextProcessingStatuses[task.id] = video.processing_status
+      } catch {
+        // The import record remains useful even while the video endpoint is unavailable.
+      }
+    }))
+    processingStatuses.value = nextProcessingStatuses
     imports.value.forEach(uploader.applyTask)
     const selectedTask = mergedImports.value.find(task => task.id === selectedId.value)
     if (selectedTask) activeGroup.value = groupFor(selectedTask.status)
@@ -95,7 +111,10 @@ async function loadImports(silent = false) {
 
 function schedulePoll() {
   if (pollTimer) clearTimeout(pollTimer)
-  const hasActive = mergedImports.value.some(task => ['pending_upload', 'uploading', 'completing', 'publishing'].includes(task.status))
+  const hasActive = mergedImports.value.some(task => (
+    ['pending_upload', 'uploading', 'completing', 'publishing'].includes(task.status)
+    || ['pending', 'processing'].includes(processingStatuses.value[task.id] || '')
+  ))
   if (hasActive) pollTimer = setTimeout(() => void loadImports(true), 3000)
 }
 
@@ -219,6 +238,14 @@ function progressOf(task?: VideoImportTask) {
   return task.progress_total ? Math.round((task.progress_current / task.progress_total) * 100) : 0
 }
 
+function statusLabel(task: VideoImportTask) {
+  const processingStatus = processingStatuses.value[task.id]
+  if (task.target_video_id && processingStatus === 'pending') return '处理中'
+  if (task.target_video_id && processingStatus === 'processing') return '处理中'
+  if (task.target_video_id && processingStatus === 'failed') return '处理失败'
+  return statusLabels[task.status]
+}
+
 function formatSize(bytes: number) {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`
   return `${(bytes / 1024 ** 2).toFixed(1)} MB`
@@ -267,14 +294,14 @@ function formatDate(value: string) {
           @click="selectedId = task.id"
         >
           <span class="video-imports__list-main"><strong>{{ task.payload.title || task.file_name }}</strong><small>{{ task.file_name }}</small></span>
-          <span class="video-imports__list-meta"><span>{{ statusLabels[task.status] }}</span><time>{{ formatDate(task.updated_at) }}</time></span>
+          <span class="video-imports__list-meta"><span>{{ statusLabel(task) }}</span><time>{{ formatDate(task.updated_at) }}</time></span>
         </button>
       </div>
 
       <section v-if="selected" class="video-imports__detail" aria-live="polite">
         <header>
           <div><h2>{{ selected.payload.title || selected.file_name }}</h2><p>{{ selected.file_name }} · {{ formatSize(selected.file_size) }}</p></div>
-          <strong>{{ statusLabels[selected.status] }}</strong>
+          <strong>{{ statusLabel(selected) }}</strong>
         </header>
 
         <p v-if="statusDescription(selected)" class="video-imports__status-hint">
@@ -302,7 +329,8 @@ function formatDate(value: string) {
           <PButton v-if="!selected.publish_requested_at && selected.status !== 'canceled'" variant="secondary" @click="router.push(`/studio/video/new?import=${selected.id}`)"><Pencil :size="16" aria-hidden="true" />继续编辑</PButton>
           <PButton v-if="selected.upload_completed_at && !selected.publish_requested_at && selected.status !== 'canceled'" :loading="actionBusy === 'publish'" @click="publishTask"><Upload :size="16" aria-hidden="true" />立即发布</PButton>
           <PButton v-if="selected.status === 'failed' && !selected.upload_completed_at" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重新开始上传</PButton>
-          <PButton v-if="selected.status === 'failed' && selected.upload_completed_at && selected.publish_requested_at" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重试发布</PButton>
+          <PButton v-if="selected.status === 'failed' && selected.upload_completed_at && selected.publish_requested_at && processingStatuses[selected.id] !== 'failed'" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重试发布</PButton>
+          <PButton v-if="selected.upload_completed_at && selected.publish_requested_at && processingStatuses[selected.id] === 'failed'" :loading="actionBusy === 'retry'" @click="retryTask"><RefreshCw :size="16" aria-hidden="true" />重试处理</PButton>
           <PButton v-if="selected.target_video_id" variant="secondary" :to="`/videos/watch/${selected.target_video_id}`"><ExternalLink :size="16" aria-hidden="true" />查看视频</PButton>
           <PButton v-if="!selected.target_video_id && selected.status !== 'canceled'" variant="danger" :loading="actionBusy === 'cancel'" @click="cancelTask"><XCircle :size="16" aria-hidden="true" />取消任务</PButton>
           <PButton v-if="['published', 'draft', 'scheduled', 'canceled'].includes(selected.status)" variant="secondary" :loading="actionBusy === 'delete'" @click="deleteRecord"><Trash2 :size="16" aria-hidden="true" />删除记录</PButton>

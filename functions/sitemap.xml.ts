@@ -22,6 +22,9 @@ const staticPages: SitemapItem[] = [
 	{ path: "/timeline" },
 	{ path: "/podcasts" },
 	{ path: "/videos" },
+	{ path: "/about" },
+	{ path: "/terms" },
+	{ path: "/privacy" },
 ];
 
 function isSitemapItems(value: unknown): value is SitemapItem[] {
@@ -32,7 +35,9 @@ function isSitemapItems(value: unknown): value is SitemapItem[] {
 				Boolean(item) &&
 				typeof item === "object" &&
 				typeof (item as SitemapItem).path === "string" &&
-				typeof (item as SitemapItem).last_modified === "string",
+				((item as SitemapItem).last_modified === undefined ||
+					(item as SitemapItem).last_modified === null ||
+					typeof (item as SitemapItem).last_modified === "string"),
 		)
 	);
 }

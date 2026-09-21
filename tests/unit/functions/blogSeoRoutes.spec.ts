@@ -83,6 +83,17 @@ describe('blog SEO Pages Functions', () => {
     expect(xml).toContain('<loc>https://www.atoman.org/posts/post/post-1</loc>')
   })
 
+  it('accepts sitemap entries without a last modified value', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      data: [{ path: '/posts/post/post-1' }],
+    }))))
+
+    const response = await sitemapHandler({ request: new Request('https://atoman.org/sitemap.xml'), env: {} })
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<loc>https://www.atoman.org/posts/post/post-1</loc>')
+  })
+
   it('filters redirects, private paths, query strings, and unknown paths from sitemap data', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
       data: [

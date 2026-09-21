@@ -83,6 +83,33 @@ describe("static page SEO", () => {
 		expect(html).not.toContain('https://www.atoman.org/"');
 	});
 
+	it("returns a noindex 404 for an unknown SPA route", async () => {
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/unknown-route"),
+			next: async () =>
+				new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+
+		expect(response.status).toBe(404);
+		expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+		const html = await response.text();
+		expect(html).toContain('<meta name="robots" content="noindex, nofollow">');
+		expect(html).not.toContain('rel="canonical"');
+	});
+
+	it("keeps known private application routes out of unknown-route handling", async () => {
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/inbox"),
+			next: async () =>
+				new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain(
+			'<meta name="robots" content="noindex, nofollow">',
+		);
+	});
+
 	it("redirects legacy singular public module URLs to their canonical routes", async () => {
 		const next = vi.fn(async () => new Response(shell));
 		const response = await pageMiddleware({

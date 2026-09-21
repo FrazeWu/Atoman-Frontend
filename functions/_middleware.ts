@@ -1,4 +1,4 @@
-import { buildStaticPageHtml } from "./_lib/pageSeo";
+import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
 import {
 	buildAggregatedContentHtml,
 	buildMissingPublicContentHtml,
@@ -103,27 +103,28 @@ export async function onRequest(context: MiddlewareContext) {
 			context.env?.VITE_API_URL,
 			requestUrl.origin,
 		);
-		const missingPublicContent =
-			lookup.matched && !lookup.content && !lookup.retryable;
+		const missingSeoPage =
+			(lookup.matched && !lookup.content && !lookup.retryable) ||
+			(!lookup.matched && !isKnownPagePath(requestUrl.pathname));
 		const transformedHtml = isAggregatedFeedItemPath(requestUrl.pathname)
 			? buildAggregatedContentHtml(staticHtml)
 			: lookup.content
 				? buildPublicContentHtml(staticHtml, lookup.content)
 				: lookup.retryable
 					? buildUnresolvedPublicContentHtml(staticHtml)
-					: lookup.matched
-						? buildMissingPublicContentHtml(staticHtml)
-						: staticHtml;
+				: missingSeoPage
+					? buildMissingPublicContentHtml(staticHtml)
+					: staticHtml;
 		const headers = new Headers(response.headers);
 		headers.delete("content-length");
 		headers.delete("content-encoding");
-		if (missingPublicContent) {
+		if (missingSeoPage) {
 			headers.set("cache-control", "no-store");
 			headers.set("x-robots-tag", "noindex, nofollow");
 		}
 		return new Response(transformedHtml, {
-			status: missingPublicContent ? 404 : response.status,
-			statusText: missingPublicContent ? "Not Found" : response.statusText,
+			status: missingSeoPage ? 404 : response.status,
+			statusText: missingSeoPage ? "Not Found" : response.statusText,
 			headers,
 		});
 	} catch {

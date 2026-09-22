@@ -305,5 +305,6 @@ export function activeMusicArtistDraft(flow: MusicCreationFlowState) {
 
 export function activeArtistRequiresFullProfile(flow: MusicCreationFlowState) {
 	const contributor = musicCreationContributorForFlow(flow);
+	if (flow.artistBeforeMatch && flow.draft.artist.id) return false;
 	return !contributor || contributor.roles.some((role) => role.role === "primary");
 }

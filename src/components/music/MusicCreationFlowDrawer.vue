@@ -1114,10 +1114,10 @@ async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.
 	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
 		flow.draft.albumDetails.title = preview.albumTitle.trim()
 	}
-	if (preview.releaseDate?.trim() && !hasDatePartsValue(flow.draft.albumDetails.releaseDateParts)) {
+	if (preview.releaseDate?.trim() && !flow.releaseDateCustomized) {
 		flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(preview.releaseDate)
 	}
-	if (preview.coverUrl?.trim() && !flow.draft.albumDetails.coverUrl.trim()) {
+	if (preview.coverUrl?.trim() && !flow.coverCustomized) {
 		flow.draft.albumDetails.coverUrl = preview.coverUrl.trim()
 	}
 	if (preview.albumType?.trim() && flow.draft.albumDetails.type === 'album') {

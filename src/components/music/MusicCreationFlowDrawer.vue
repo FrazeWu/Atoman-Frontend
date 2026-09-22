@@ -1692,7 +1692,7 @@ async function completeCreation() {
   padding-bottom: 1rem;
 }
 /* The fixed player can cover the drawer's lower edge, so reserve its actual height. */
-:global(html[data-player-active="true"]) .footer-actions {
+:global(html[data-player-active="true"] .footer-actions) {
   padding-bottom: calc(var(--a-player-height) + 2.5rem);
 }
 .forward-block-reason {
@@ -1737,7 +1737,7 @@ async function completeCreation() {
 @media (max-width: 48rem) {
   .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
   .creation-progress__list li::after { display: none; }
-  :global(html[data-player-active="true"]) .footer-actions {
+  :global(html[data-player-active="true"] .footer-actions) {
     padding-bottom: calc(var(--a-mobile-player-height) + var(--a-mobile-nav-reserved-height) + 1rem);
   }
 }

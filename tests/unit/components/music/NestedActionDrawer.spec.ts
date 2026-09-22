@@ -198,6 +198,7 @@ describe('NestedActionDrawer.vue', () => {
     expect(wrapper.text()).toContain('地区')
     expect(wrapper.text()).toContain('出生年月日')
     expect(wrapper.text()).toContain('编辑摘要')
+    expect(wrapper.get('[data-test="music-edit-submit"]').classes()).toContain('wiki-form--player-safe')
 
     await wrapper.get('[data-test="artist-name-input"]').setValue('Revised Artist')
     await wrapper.get('[data-test="artist-bio-input"]').setValue('revised biography')

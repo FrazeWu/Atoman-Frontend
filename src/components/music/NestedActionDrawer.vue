@@ -509,7 +509,7 @@ async function submitEdit() {
     :content-max-width="contentMaxWidth"
   >
     <div class="drawer-body">
-      <form v-if="isArtistForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
+      <form v-if="isArtistForm" data-test="music-edit-submit" class="wiki-form wiki-form--player-safe" @submit.prevent="submitEdit">
         <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
@@ -638,7 +638,7 @@ async function submitEdit() {
         <PButton variant="warning" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
       </form>
 
-      <form v-else-if="isAlbumForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
+      <form v-else-if="isAlbumForm" data-test="music-edit-submit" class="wiki-form wiki-form--player-safe" @submit.prevent="submitEdit">
         <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
@@ -820,6 +820,10 @@ async function submitEdit() {
 .drawer-body { padding: 1.6rem 0 2rem; }
 
 .wiki-form { display: flex; flex-direction: column; gap: 1.1rem; }
+/* 资料编辑表单在播放器上方滚动，末尾必须留出可滚动的安全空间。 */
+:global(html[data-player-active="true"] .wiki-form--player-safe) {
+  padding-bottom: calc(var(--a-player-height) + 2.5rem);
+}
 .form-section {
   display: flex;
   flex-direction: column;
@@ -957,5 +961,11 @@ async function submitEdit() {
   .form-grid,
   .artist-search-row,
   .source-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  :global(html[data-player-active="true"] .wiki-form--player-safe) {
+    padding-bottom: calc(var(--a-mobile-player-height) + var(--a-mobile-nav-reserved-height) + 1rem);
+  }
 }
 </style>

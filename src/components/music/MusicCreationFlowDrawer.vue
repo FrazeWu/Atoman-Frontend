@@ -1682,7 +1682,19 @@ async function completeCreation() {
   font-size: 0.82rem;
   font-weight: 800;
 }
-.footer-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: auto; }
+.footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: auto;
+  padding-bottom: 1rem;
+}
+/* The fixed player can cover the drawer's lower edge, so reserve its actual height. */
+:global(html[data-player-active="true"]) .footer-actions {
+  padding-bottom: calc(var(--a-player-height) + 2.5rem);
+}
 .forward-block-reason {
   margin: 0 auto 0 0;
   color: var(--a-color-muted);
@@ -1725,5 +1737,8 @@ async function completeCreation() {
 @media (max-width: 48rem) {
   .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
   .creation-progress__list li::after { display: none; }
+  :global(html[data-player-active="true"]) .footer-actions {
+    padding-bottom: calc(var(--a-mobile-player-height) + var(--a-mobile-nav-reserved-height) + 1rem);
+  }
 }
 </style>

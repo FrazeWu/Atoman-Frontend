@@ -762,7 +762,7 @@ watch(() => route.params.id, () => { void initializeEditor() }, { immediate: tru
 
 .editor-page {
   position: relative;
-  height: calc(100dvh - var(--a-topbar-height, 3.5rem) - var(--a-content-bottom-offset) - 0.75rem);
+  height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 0.75rem);
   min-height: 0;
   background: var(--a-color-bg);
   overflow: hidden;

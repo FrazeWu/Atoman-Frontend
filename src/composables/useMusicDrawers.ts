@@ -706,6 +706,14 @@ export function useMusicDrawers() {
 			metadataMatchStatus: snapshot.metadataMatchStatus,
 			metadataMatchConfidence: snapshot.metadataMatchConfidence,
 			metadataMatched: snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl),
+			metadataError: snapshot.metadataError,
+			metadataGenres: snapshot.metadataGenres ?? [],
+			metadataStyles: snapshot.metadataStyles ?? [],
+			metadataLabels: snapshot.metadataLabels ?? [],
+			metadataCountry: snapshot.metadataCountry ?? "",
+			metadataFormats: snapshot.metadataFormats ?? [],
+			metadataSources: snapshot.metadataSources ?? [],
+			metadataFieldSources: snapshot.metadataFieldSources ?? {},
 			missingArtists: snapshot.missingArtists ?? [],
 			lastSyncedAt: snapshot.lastSyncedAt,
 			errorMessage: snapshot.errorMessage,
@@ -721,6 +729,12 @@ export function useMusicDrawers() {
 			flow.draft.albumDetails.type = snapshot.derivedAlbumType;
 		if (snapshot.derivedCover)
 			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
+		if (!flow.draft.albumDetails.tags.length) {
+			flow.draft.albumDetails.tags = [
+				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
+				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+			];
+		}
 		if (snapshot.metadataSourceUrl)
 			flow.draft.albumDetails.source = normalizeMusicImportSource(
 				snapshot.metadataSourceUrl,

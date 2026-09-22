@@ -315,6 +315,39 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumDetails.source).toBe("人工来源");
 	});
 
+	it("轮询快照匹配成功后回填专辑元信息和匹配标签", () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "ready",
+			stage: "processing",
+			derivedAlbumTitle: "菊花夜行军",
+			derivedReleaseDate: "2001",
+			derivedCover: "https://cover.test/chrysanthemum.jpg",
+			metadataSourceUrl: "https://www.discogs.com/release/2926685",
+			metadataSource: "discogs",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+			metadataGenres: ["摇滚"],
+			metadataStyles: ["民谣摇滚"],
+			metadataLabels: ["大大树系列"],
+			metadataCountry: "台湾",
+			metadataFormats: ["CD", "Album"],
+		}));
+
+		expect(flow.draft.albumDetails.title).toBe("菊花夜行军");
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({ year: "2001", month: "", day: "" });
+		expect(flow.draft.albumDetails.coverUrl).toBe("https://cover.test/chrysanthemum.jpg");
+		expect(flow.draft.albumImport.metadataGenres).toEqual(["摇滚"]);
+		expect(flow.draft.albumImport.metadataStyles).toEqual(["民谣摇滚"]);
+		expect(flow.draft.albumDetails.tags).toEqual([
+			{ name: "摇滚", kind: "type", source: "matched" },
+			{ name: "民谣摇滚", kind: "mood", source: "matched" },
+		]);
+	});
+
 	it("终态空快照会清理过期导入曲目并重置匹配状态", () => {
 		const drawers = useMusicDrawers();
 		const flow = drawers.state.value.creationFlow!;

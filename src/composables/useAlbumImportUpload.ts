@@ -205,16 +205,21 @@ export function useAlbumImportUpload() {
 			draft.metadataSourceUrl = snapshot.metadataSourceUrl;
 			draft.metadataSource = snapshot.metadataSource;
 			draft.metadataExternalId = snapshot.metadataExternalId;
-			draft.metadataMatchStatus = snapshot.metadataMatchStatus;
+				draft.metadataMatchStatus = snapshot.metadataMatchStatus;
 				draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
 				draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
 				if (snapshot.metadataMatchStatus?.trim()) {
 					draft.metadataMatchingStarted = true;
 				}
-			draft.metadataError = snapshot.metadataError || "";
-			draft.metadataSources = snapshot.metadataSources ?? [];
-			draft.metadataFieldSources = snapshot.metadataFieldSources ?? {};
-			draft.missingArtists = snapshot.missingArtists ?? [];
+				draft.metadataError = snapshot.metadataError || "";
+				draft.metadataGenres = snapshot.metadataGenres ?? [];
+				draft.metadataStyles = snapshot.metadataStyles ?? [];
+				draft.metadataLabels = snapshot.metadataLabels ?? [];
+				draft.metadataCountry = snapshot.metadataCountry ?? "";
+				draft.metadataFormats = snapshot.metadataFormats ?? [];
+				draft.metadataSources = snapshot.metadataSources ?? [];
+				draft.metadataFieldSources = snapshot.metadataFieldSources ?? {};
+				draft.missingArtists = snapshot.missingArtists ?? [];
 		}
 		draft.lastSyncedAt = snapshot.lastSyncedAt;
 		draft.errorMessage =
@@ -231,6 +236,15 @@ export function useAlbumImportUpload() {
 			flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
 				snapshot.derivedReleaseDate,
 			);
+		}
+		if (snapshot.derivedCover && !flow.draft.albumDetails.coverUrl.trim()) {
+			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
+		}
+		if (!flow.draft.albumDetails.tags.length) {
+			flow.draft.albumDetails.tags = [
+				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
+				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+			];
 		}
 		if (
 			snapshot.derivedAlbumType &&

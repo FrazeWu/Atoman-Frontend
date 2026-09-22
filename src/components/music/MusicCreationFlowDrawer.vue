@@ -226,6 +226,7 @@ async function loadEditDraft() {
         type: song.release_type,
         releaseYear: song.release_date?.slice(0, 4) || '',
         bio: song.description ?? '',
+        tags: [],
         source: '',
         existingSources: song.sources ?? [],
         musicBrainzMatched: ['matched', 'manual'].includes(String(song.match_status ?? '').toLowerCase()) || ['matched', 'manual'].includes(String(song.album?.match_status ?? '').toLowerCase()) || song.album?.musicbrainz_matched === true || hasMusicBrainzSource(song.sources) || hasMusicBrainzSource(song.album?.sources),
@@ -258,6 +259,7 @@ async function loadEditDraft() {
       type: album.album_type?.trim() || 'album',
       releaseYear: album.release_date?.slice(0, 4) || '',
       bio: album.description ?? '',
+      tags: [],
       source: '',
       existingSources: album.sources ?? [],
       musicBrainzMatched: ['matched', 'manual'].includes(String(album.match_status ?? '').toLowerCase()) || album.musicbrainz_matched === true || hasMusicBrainzSource(album.sources),
@@ -354,6 +356,7 @@ function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
     (albumDetails.contributors?.length ?? 0) > 0 ||
     hasDatePartsValue(albumDetails.releaseDateParts) ||
     !!albumDetails.bio.trim() ||
+    albumDetails.tags.length > 0 ||
     !!albumDetails.source.trim() ||
     tracks.length > 0
   )
@@ -757,6 +760,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
         country: flow.draft.albumImport.metadataCountry ?? '',
         formats: flow.draft.albumImport.metadataFormats ?? [],
       },
+      tags: flow.draft.albumDetails.tags.map(({ kind, name }) => ({ kind, name })),
       tracks: flow.draft.tracks.map((track, index) => ({
         ...(track.songId ? { song_id: track.songId } : {}),
         ...(track.importFileId ? { file_id: track.importFileId } : {}),
@@ -1101,6 +1105,12 @@ async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.
 	albumImport.metadataFormats = preview.formats ?? []
 	albumImport.missingArtists = preview.missingArtists ?? []
 	albumImport.metadataSources = preview.sources ?? []
+	if (!flow.draft.albumDetails.tags.length) {
+		flow.draft.albumDetails.tags = [
+			...(preview.genres ?? []).map((name) => ({ name, kind: 'type' as const, source: 'matched' as const })),
+			...(preview.styles ?? []).map((name) => ({ name, kind: 'mood' as const, source: 'matched' as const })),
+		]
+	}
 	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
 		flow.draft.albumDetails.title = preview.albumTitle.trim()
 	}

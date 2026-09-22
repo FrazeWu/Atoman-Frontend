@@ -8,6 +8,7 @@ import type {
 	MusicSource,
 } from "@/api/musicV1";
 import type { MusicAlbumArtistRole } from "@/api/musicV1";
+import type { MusicTagKind } from "@/api/musicV1";
 
 export type MusicCreationFlowStep =
 	| "artist"
@@ -240,6 +241,12 @@ export interface MusicCreationAlbumContributorDraft {
 	}>;
 }
 
+export interface MusicCreationAlbumTagDraft {
+	name: string;
+	kind: MusicTagKind;
+	source: "matched" | "custom";
+}
+
 export interface MusicCreationAlbumDetailsDraft {
 	coverUrl: string;
 	coverAsset?: UploadAsset | null;
@@ -250,6 +257,7 @@ export interface MusicCreationAlbumDetailsDraft {
 	type: string;
 	releaseYear: string;
 	bio: string;
+	tags: MusicCreationAlbumTagDraft[];
 	source: string;
 	existingSources?: MusicSource[];
 	musicBrainzMatched?: boolean;

@@ -91,6 +91,7 @@ const bookmarkFolders = ref<Array<{ id: string; name: string }>>([])
 const bookmarkFoldersLoading = ref(false)
 const newBookmarkFolderName = ref('')
 const creatingBookmarkFolder = ref(false)
+const bookmarkFolderError = ref('')
 
 let loadSequence = 0
 let ratingOperationSequence = 0
@@ -482,13 +483,18 @@ async function sharePost() {
 
 async function loadBookmarkFolders() {
   if (!authStore.isAuthenticated || bookmarkFoldersLoading.value) return
+  bookmarkFolderError.value = ''
   bookmarkFoldersLoading.value = true
   try {
     const response = await apiRequestResult(`${api.url}/blog/bookmark-folders`, { headers: authHeaders() })
     if (response.ok) {
       const payload = response.data as { data?: Array<{ id: string; name: string }> }
       bookmarkFolders.value = payload.data || []
+    } else {
+      bookmarkFolderError.value = response.error?.message || '收藏夹加载失败，请重试'
     }
+  } catch {
+    bookmarkFolderError.value = '收藏夹加载失败，请重试'
   } finally {
     bookmarkFoldersLoading.value = false
   }
@@ -510,6 +516,7 @@ async function addBookmark(folderId: string) {
 async function createBookmarkFolder(close: () => void) {
   const name = newBookmarkFolderName.value.trim()
   if (!name || creatingBookmarkFolder.value) return
+  bookmarkFolderError.value = ''
   creatingBookmarkFolder.value = true
   try {
     const response = await apiRequestResult(`${api.url}/blog/bookmark-folders`, {
@@ -518,11 +525,20 @@ async function createBookmarkFolder(close: () => void) {
       body: JSON.stringify({ name }),
     })
     const payload = response.data as { data?: { id: string; name: string } }
-    if (response.ok && payload.data && await addBookmark(payload.data.id)) {
-      bookmarkFolders.value = [...bookmarkFolders.value, payload.data]
-      newBookmarkFolderName.value = ''
-      close()
+    if (!response.ok || !payload.data) {
+      bookmarkFolderError.value = response.error?.message || '收藏夹创建失败，请重试'
+      return
     }
+
+    bookmarkFolders.value = [...bookmarkFolders.value, payload.data]
+    newBookmarkFolderName.value = ''
+    if (await addBookmark(payload.data.id)) {
+      close()
+    } else {
+      bookmarkFolderError.value = '收藏夹已创建，但文章收藏失败，请重试'
+    }
+  } catch {
+    bookmarkFolderError.value = '收藏夹创建失败，请重试'
   } finally {
     creatingBookmarkFolder.value = false
   }
@@ -651,9 +667,38 @@ defineExpose({
       </div>
       <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :disabled="!authStore.isAuthenticated" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />
       <div class="post-sheet-actions-row">
-        <PDropdown v-if="isSheet && !bookmarked" position="right">
+        <PDropdown v-if="isSheet && !bookmarked" class="post-bookmark-dropdown" position="right">
           <template #trigger><PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="loadBookmarkFolders"><Bookmark :size="15" aria-hidden="true" />收藏</PButton></template>
-          <template #default="{ close }"><div class="post-bookmark-menu"><button v-for="folder in bookmarkFolders" :key="folder.id" type="button" @click="addBookmark(folder.id).then(saved => saved && close())">{{ folder.name }}</button><form @submit.prevent="createBookmarkFolder(close)"><input v-model="newBookmarkFolderName" aria-label="新收藏夹名称" placeholder="新建收藏夹" /><PButton size="sm" type="submit" :loading="creatingBookmarkFolder">新建</PButton></form></div></template>
+          <template #default="{ close }">
+            <div class="post-bookmark-menu">
+              <div class="post-bookmark-menu__folders" role="group" aria-label="收藏夹列表">
+                <button
+                  v-for="folder in bookmarkFolders"
+                  :key="folder.id"
+                  type="button"
+                  class="post-bookmark-menu__folder"
+                  :disabled="creatingBookmarkFolder"
+                  @click="addBookmark(folder.id).then(saved => saved && close())"
+                >
+                  {{ folder.name }}
+                </button>
+                <p v-if="bookmarkFoldersLoading" class="post-bookmark-menu__state" aria-live="polite">正在加载收藏夹...</p>
+              </div>
+              <form class="post-bookmark-menu__create-form" @submit.prevent="createBookmarkFolder(close)">
+                <div class="post-bookmark-menu__create-row">
+                  <input
+                    v-model="newBookmarkFolderName"
+                    aria-label="新收藏夹名称"
+                    placeholder="新建收藏夹"
+                    maxlength="80"
+                    :disabled="creatingBookmarkFolder"
+                  />
+                  <PButton size="sm" type="submit" :loading="creatingBookmarkFolder">新建</PButton>
+                </div>
+                <p v-if="bookmarkFolderError" class="post-bookmark-menu__error" role="alert">{{ bookmarkFolderError }}</p>
+              </form>
+            </div>
+          </template>
         </PDropdown>
         <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Bookmark :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
         <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleReadingList"><Clock :size="15" aria-hidden="true" />{{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}</PButton>
@@ -681,6 +726,86 @@ defineExpose({
 .post-sheet-actions, .post-sheet-byline { display: flex; align-items: center; gap: 1rem; width: 100%; }
 .post-sheet-actions { justify-content: flex-end; margin-bottom: 1rem; }
 .post-sheet-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 1rem; }
+.post-bookmark-dropdown :deep(.p-dropdown-panel) {
+  width: min(20rem, calc(100vw - 2rem));
+  min-width: 0;
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem;
+}
+.post-bookmark-menu {
+  display: grid;
+  width: 100%;
+  gap: 0.5rem;
+}
+.post-bookmark-menu__folders {
+  display: grid;
+  max-height: 12rem;
+  gap: 0.25rem;
+  overflow-y: auto;
+}
+.post-bookmark-menu__folder {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.post-bookmark-menu__folder:hover,
+.post-bookmark-menu__folder:focus-visible {
+  border-color: var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+  outline: none;
+}
+.post-bookmark-menu__folder:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.post-bookmark-menu__create-form {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+.post-bookmark-menu__create-row {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+.post-bookmark-menu__create-row input {
+  min-width: 0;
+  width: 100%;
+  min-height: var(--a-control-height-sm);
+  flex: 1;
+  padding: 0 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font: inherit;
+}
+.post-bookmark-menu__create-row input:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+.post-bookmark-menu__create-row input:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.post-bookmark-menu__state,
+.post-bookmark-menu__error {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.post-bookmark-menu__state { color: var(--a-color-muted); }
+.post-bookmark-menu__error { color: var(--a-color-danger); }
 .post-detail-toolbar__rss { margin-left: auto; white-space: nowrap; }
 .post-sheet-detail-toolbar { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 1rem; margin: 0 0 1.5rem; }
 .post-sheet-cover { width: 100%; max-height: 22rem; margin-bottom: 2rem; object-fit: cover; }

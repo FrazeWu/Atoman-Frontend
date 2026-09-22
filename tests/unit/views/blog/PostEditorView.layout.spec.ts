@@ -27,6 +27,13 @@ describe("PostEditorView layout", () => {
 		expect(cssRules(".editor-canvas")).toContain("flex: 1");
 	});
 
+	it("extends the editor to the viewport bottom without player spacing", () => {
+		expect(cssRules(".editor-page")).toContain(
+		"height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 0.75rem)",
+	);
+		expect(cssRules(".editor-page")).not.toContain("var(--a-content-bottom-offset)");
+	});
+
 	it("keeps a single editor column and exposes publication actions from the topbar", () => {
 		expect(source).not.toContain("PostEditorSidebar");
 		expect(source).not.toContain('@toggle-sidebar="toggleSidebarPanel"');

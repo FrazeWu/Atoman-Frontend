@@ -163,6 +163,11 @@ export type MusicAlbumImportCommitTrack = {
 	lyrics_source?: "lrclib" | string;
 };
 
+export type MusicAlbumImportTag = {
+	kind: MusicTagKind;
+	name: string;
+};
+
 export type MusicAlbumImportCommitMember = {
 	artist_id: string;
 	name?: string;
@@ -264,6 +269,7 @@ export type MusicAlbumImportCommitInput = {
 		country?: string;
 		formats?: string[];
 	};
+	tags?: MusicAlbumImportTag[];
 	tracks: MusicAlbumImportCommitTrack[];
 	};
 	deleted_import_track_keys?: string[];

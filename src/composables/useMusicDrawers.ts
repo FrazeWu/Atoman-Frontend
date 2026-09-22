@@ -620,6 +620,8 @@ export function useMusicDrawers() {
 			tracksCustomized: false,
 			deletedImportTrackKeys: [],
 			titleCustomized: false,
+			releaseDateCustomized: false,
+			coverCustomized: false,
 			dirty: false,
 			assetUploading: false,
 			submitting: false,

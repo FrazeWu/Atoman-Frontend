@@ -263,6 +263,15 @@ const titleModel = computed({
   },
 })
 
+const releaseDateModel = computed({
+	get: () => albumDetailsDraft.value?.releaseDateParts ?? createEmptyDateParts(),
+	set: (value: { year: string; month: string; day: string }) => {
+		if (!albumDetailsDraft.value || !creationFlow.value) return
+		creationFlow.value.releaseDateCustomized = true
+		albumDetailsDraft.value.releaseDateParts = value
+	},
+})
+
 function handleTitleBlur() {
   const val = titleModel.value.trim()
   if (albumImportDraft.value && val) {
@@ -577,7 +586,7 @@ watch(
 
             <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
               <PMaskedDateInput
-                v-model="albumDetailsDraft.releaseDateParts"
+                v-model="releaseDateModel"
                 :label="requiredLabel('日期')"
                 testId="album-details-date-input"
               />

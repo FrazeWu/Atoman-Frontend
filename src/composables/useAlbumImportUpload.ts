@@ -158,7 +158,8 @@ export function useAlbumImportUpload() {
 		const serverDerivedDataAvailable =
 			derivedTracks.length > 0 ||
 			Boolean(
-				snapshot.derivedAlbumTitle?.trim() ||
+				snapshot.coverUrl?.trim() ||
+					snapshot.derivedAlbumTitle?.trim() ||
 					snapshot.derivedCover?.trim() ||
 					snapshot.derivedReleaseDate?.trim() ||
 					snapshot.derivedAlbumType?.trim() ||
@@ -229,16 +230,14 @@ export function useAlbumImportUpload() {
 			flow.draft.albumDetails.title =
 				snapshot.derivedAlbumTitle || flow.draft.albumDetails.title;
 		}
-		if (
-			snapshot.derivedReleaseDate &&
-			!flow.draft.albumDetails.releaseDate.trim()
-		) {
+		if (snapshot.derivedReleaseDate && !flow.releaseDateCustomized) {
 			flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
 				snapshot.derivedReleaseDate,
 			);
 		}
-		if (snapshot.derivedCover && !flow.draft.albumDetails.coverUrl.trim()) {
-			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
+		const importedCover = snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
+		if (importedCover && !flow.coverCustomized) {
+			flow.draft.albumDetails.coverUrl = importedCover;
 		}
 		if (!flow.draft.albumDetails.tags.length) {
 			flow.draft.albumDetails.tags = [

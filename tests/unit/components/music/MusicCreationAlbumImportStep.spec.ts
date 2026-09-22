@@ -246,6 +246,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 	it("自动匹配后回填完整发行版元信息，不等待音频处理", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumDetails.releaseDateParts = { year: "2013", month: "", day: "" };
+		flow.draft.albumDetails.releaseDate = "2013/--/--";
 		flow.draft.albumImport.derivedAlbumTitle = "IGOR";
 		flow.draft.albumImport.derivedTracks = [
 			{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 1 },
@@ -319,6 +321,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const drawers = useMusicDrawers();
 		const flow = drawers.state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumDetails.releaseDateParts = { year: "2013", month: "", day: "" };
+		flow.draft.albumDetails.releaseDate = "2013/--/--";
 
 		useAlbumImportUpload().applyImportSnapshot(snapshot({
 			status: "ready",

@@ -285,6 +285,8 @@ export interface MusicCreationFlowState {
 	tracksCustomized: boolean;
 	deletedImportTrackKeys: string[];
 	titleCustomized: boolean;
+	releaseDateCustomized?: boolean;
+	coverCustomized?: boolean;
 	dirty: boolean;
 	assetUploading: boolean;
 	submitting: boolean;

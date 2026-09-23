@@ -1105,11 +1105,13 @@ async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.
 	albumImport.metadataFormats = preview.formats ?? []
 	albumImport.missingArtists = preview.missingArtists ?? []
 	albumImport.metadataSources = preview.sources ?? []
-	if (!flow.draft.albumDetails.tags.length) {
-		flow.draft.albumDetails.tags = [
-			...(preview.genres ?? []).map((name) => ({ name, kind: 'type' as const, source: 'matched' as const })),
-			...(preview.styles ?? []).map((name) => ({ name, kind: 'mood' as const, source: 'matched' as const })),
-		]
+	const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === 'custom')
+	const matchedTags = [
+		...(preview.genres ?? []).map((name) => ({ name, kind: 'type' as const, source: 'matched' as const })),
+		...(preview.styles ?? []).map((name) => ({ name, kind: 'mood' as const, source: 'matched' as const })),
+	]
+	if (matchedTags.length || customTags.length) {
+		flow.draft.albumDetails.tags = [...matchedTags, ...customTags]
 	}
 	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
 		flow.draft.albumDetails.title = preview.albumTitle.trim()

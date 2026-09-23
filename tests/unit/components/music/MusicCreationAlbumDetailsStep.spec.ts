@@ -181,6 +181,36 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(wrapper.get('[data-testid="album-details-matched-status"]').text()).toContain("已修改");
 	});
 
+	it("shows an imported cover before the user confirms cropping", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumImport.derivedCover = "https://cover.example/imported.jpg";
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+
+		expect(wrapper.get('img[alt="封面预览"]').attributes("src")).toBe(
+			"https://cover.example/imported.jpg",
+		);
+	});
+
+	it("keeps matched and custom tags in separate stable rows", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumDetails.tags = [
+			{ name: "摇滚", kind: "type", source: "matched" },
+			{ name: "现场", kind: "scene", source: "custom" },
+		];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+
+		expect(wrapper.get('[data-testid="album-tags-editor"]').findAll(".album-tags-editor__row")).toHaveLength(2);
+		expect(wrapper.get('[data-testid="album-tag-input"]').element.closest(".album-tags-editor__custom-content")).not.toBeNull();
+	});
+
 	it("keeps text editing separate from drag sorting", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

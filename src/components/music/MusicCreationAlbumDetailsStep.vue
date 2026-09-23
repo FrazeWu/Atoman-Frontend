@@ -971,12 +971,20 @@ watch(
 .album-tag button:hover { color: var(--a-color-text); }
 
 .album-tags-editor__custom-content {
-  display: grid;
-  gap: 0.55rem;
-  min-width: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.55rem 0.75rem;
+	min-width: 0;
 }
 
-.album-tags-editor__input { max-width: 30rem; }
+.album-tags-editor__custom-content .album-tags-editor__items {
+	min-height: 0;
+}
+
+.album-tags-editor__input {
+	width: min(100%, 30rem);
+}
 
 .album-details-step__form {
   display: flex;

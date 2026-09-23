@@ -32,7 +32,12 @@ export function useMusicAlbumCoverEditor() {
 		return next && handledImportedCoverUrl.value !== next ? next : "";
 	});
 	const coverDisplayUrl = computed(
-		() => coverPreviewUrl.value || albumDetailsDraft.value?.coverUrl || "",
+		() =>
+			coverPreviewUrl.value ||
+			albumDetailsDraft.value?.coverUrl ||
+			albumImportDraft.value?.derivedCover ||
+			albumImportDraft.value?.coverUrl ||
+			"",
 	);
 
 	function clearCoverPreviewUrl() {

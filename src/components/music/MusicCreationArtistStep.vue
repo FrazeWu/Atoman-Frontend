@@ -25,6 +25,7 @@ const isEditingContributor = computed(() => !!creationFlow.value?.editingContrib
 const artistSearchRequired = computed(() => !!creationFlow.value?.artistBeforeMatch
   && !!artistDraft.value
   && !artistDraft.value.id
+  && !creationFlow.value?.artistLookupCompleted
   && !artistSearchDraft.value)
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : requiresFullProfile.value ? '来源*' : '来源')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写来源')

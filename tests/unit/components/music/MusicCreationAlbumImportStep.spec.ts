@@ -120,6 +120,36 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
+	it("上传页输入艺术家名称时搜索并绑定已有艺术家", async () => {
+		vi.useFakeTimers();
+		vi.spyOn(musicApi, "listMusicArtists").mockResolvedValue({
+			data: [{
+				id: "artist-kanye",
+				name: "Kanye West",
+				display_name: "Kanye West",
+				artist_form: "person",
+				image_url: "https://img.test/kanye.jpg",
+			}],
+			meta: { page: 1, page_size: 8, total: 1, has_more: false },
+		} as never);
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.directAlbumCreation = true;
+		flow.artistBeforeMatch = true;
+		flow.draft.artist.id = null;
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		await wrapper.get('[data-testid="album-import-artist-input"]').setValue("kanye");
+		await vi.advanceTimersByTimeAsync(300);
+		await flushPromises();
+
+		const option = wrapper.get('[data-testid="album-import-artist-option-artist-kanye"]');
+		expect(option.text()).toContain("Kanye West");
+		await option.trigger("mousedown");
+
+		expect(flow.draft.artist.id).toBe("artist-kanye");
+		expect(flow.draft.artist.stageNames[0]?.name).toBe("Kanye West");
+	});
+
 	it("allows selecting video files as album tracks", () => {
 		const wrapper = mount(MusicCreationAlbumUploadZone);
 

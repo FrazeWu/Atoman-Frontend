@@ -280,6 +280,7 @@ export interface MusicCreationFlowState {
 	step: MusicCreationFlowStep;
 	artistFirstFlow?: boolean;
 	artistBeforeMatch?: boolean;
+	artistLookupCompleted?: boolean;
 	directAlbumCreation?: boolean;
 	draft: MusicCreationDraft;
 	tracksCustomized: boolean;

@@ -4,6 +4,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
 
 const { state } = useMusicDrawers()
@@ -154,9 +155,9 @@ function createArtistDraft() {
         </template>
         <div v-else class="artist-search-empty">
           <p class="artist-search-state">没有找到已有艺术家</p>
-          <button data-testid="album-import-artist-create-draft" type="button" class="ui-action ui-action--inline" @click="createArtistDraft">
+          <PButton data-testid="album-import-artist-create-draft" type="button" variant="secondary" size="sm" @click="createArtistDraft">
             使用“{{ artistName.trim() }}”创建草稿
-          </button>
+          </PButton>
         </div>
       </div>
       <p class="archive-hint">建议优先上传 ZIP、RAR 或 TAR，以便尽早读取曲目目录与元信息。</p>

@@ -150,6 +150,25 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.artist.stageNames[0]?.name).toBe("Kanye West");
 	});
 
+	it("上传页的艺术家草稿按钮使用统一按钮样式", async () => {
+		vi.useFakeTimers();
+		vi.spyOn(musicApi, "listMusicArtists").mockResolvedValue({
+			data: [],
+			meta: { page: 1, page_size: 8, total: 0, has_more: false },
+		} as never);
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.directAlbumCreation = true;
+		flow.artistBeforeMatch = true;
+		flow.draft.artist.id = null;
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		await wrapper.get('[data-testid="album-import-artist-input"]').setValue("Unknown Artist");
+		await vi.advanceTimersByTimeAsync(300);
+		await flushPromises();
+
+		expect(wrapper.get('[data-testid="album-import-artist-create-draft"]').classes()).toContain("p-button");
+	});
+
 	it("allows selecting video files as album tracks", () => {
 		const wrapper = mount(MusicCreationAlbumUploadZone);
 

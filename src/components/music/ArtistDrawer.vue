@@ -413,6 +413,8 @@ function createAlbum() {
     artistId: artistId.value,
     artistName: artist.value?.name || '',
     artistLegalName: artist.value?.legal_name || '',
+    artistKind: artist.value?.artist_form === 'group' ? 'group' : 'person',
+    artistAvatarUrl: artist.value?.image_url || '',
     artistSource: artistSource?.url?.trim() || artistSource?.title?.trim() || '',
     startStep: 'albumImport',
   })

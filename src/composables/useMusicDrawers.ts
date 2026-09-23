@@ -71,8 +71,8 @@ function createSeededContributors(seed?: MusicCreationFlowSeed) {
 			id: `contributor-${seed.artistId}`,
 			artistId: seed.artistId,
 			name: seed.artistName ?? "",
-			avatarUrl: "",
-			kind: "person" as const,
+			avatarUrl: seed.artistAvatarUrl ?? "",
+			kind: seed.artistKind ?? "person",
 			locked: false,
 			roles: [primaryAlbumRole(`role-${seed.artistId}-primary`)],
 		},
@@ -248,6 +248,7 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
 			...createEmptyMusicArtistDraft({
 				name: seed?.artistName ?? "",
 				legalName: seed?.artistLegalName ?? "",
+				kind: seed?.artistKind,
 				source: seed?.artistSource?.trim() ?? "",
 			}),
 			id: seed?.artistId ?? null,

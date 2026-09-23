@@ -155,6 +155,32 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		expect(flow.draft.artist.id).toBe("artist-kanye");
 		expect(flow.draft.artist.stageNames[0]?.name).toBe("Kanye West");
+		wrapper.unmount();
+	});
+
+	it("从艺术家主页进入时保留已有艺术家绑定，不显示创建草稿提示", async () => {
+		const drawers = useMusicDrawers();
+		drawers.closeAll();
+		drawers.openMusicCreationFlow({
+			artistId: "artist-jamg",
+			artistName: "交工乐队",
+			artistKind: "group",
+			startStep: "albumImport",
+		});
+		drawers.setMusicCreationStep("albumImport");
+		const flow = drawers.state.value.creationFlow!;
+		const search = vi.spyOn(musicApi, "listMusicArtists");
+
+		const wrapper = mount(MusicCreationAlbumSeedStep);
+		await flushPromises();
+
+		expect(flow.draft.artist.id).toBe("artist-jamg");
+		expect(flow.artistLookupCompleted).toBe(true);
+		expect(flow.draft.artist.kind).toBe("group");
+		expect(wrapper.find('[data-testid="album-import-artist-create-draft"]').exists()).toBe(false);
+		expect(wrapper.get('[data-testid="album-import-selected-artist"]').text()).toContain("组合");
+		expect(search).not.toHaveBeenCalled();
+		wrapper.unmount();
 	});
 
 	it("上传页的艺术家草稿按钮使用统一按钮样式", async () => {

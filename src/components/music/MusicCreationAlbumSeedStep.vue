@@ -19,6 +19,18 @@ const artistSearchBusy = ref(false)
 const artistSearchError = ref('')
 const artistSearchRequestId = ref(0)
 const selectedArtistName = ref('')
+const initialArtistBinding = ref(
+  creationFlow.value?.draft.artist.id
+    ? {
+        id: creationFlow.value.draft.artist.id,
+        name: creationFlow.value.draft.artist.stageNames.find((item) => item.isPrimary)?.name ?? '',
+      }
+    : null,
+)
+if (initialArtistBinding.value && creationFlow.value) {
+  selectedArtistName.value = initialArtistBinding.value.name
+  creationFlow.value.artistLookupCompleted = true
+}
 let artistSearchTimer: ReturnType<typeof setTimeout> | null = null
 
 onBeforeUnmount(() => {
@@ -33,14 +45,25 @@ const artistName = computed({
 })
 
 watch(artistName, (value, previousValue) => {
-  if (creationFlow.value?.step !== 'albumImport') return
+  const flow = creationFlow.value
+  if (flow?.step !== 'albumImport') return
+  const seededArtist = initialArtistBinding.value
+  initialArtistBinding.value = null
+  if (seededArtist && flow.draft.artist.id === seededArtist.id && value === seededArtist.name) {
+    selectedArtistName.value = value
+    flow.artistLookupCompleted = true
+    artistSearchResults.value = []
+    artistSearchBusy.value = false
+    artistSearchError.value = ''
+    return
+  }
   if (selectedArtistName.value && value === selectedArtistName.value) {
     selectedArtistName.value = ''
     return
   }
   if (value !== previousValue) {
-    creationFlow.value.draft.artist.id = null
-    creationFlow.value.artistLookupCompleted = false
+    flow.draft.artist.id = null
+    flow.artistLookupCompleted = false
   }
   if (artistSearchTimer) clearTimeout(artistSearchTimer)
   const query = value.trim()
@@ -152,7 +175,18 @@ function formatArtistPeriod(artist: MusicArtistListItem) {
         placeholder="输入或补充艺术家名称"
         data-testid="album-import-artist-input"
       />
-      <div v-if="artistName.trim()" class="artist-search-results" data-testid="album-import-artist-results">
+      <div v-if="creationFlow?.draft.artist.id" class="artist-search-selected" data-testid="album-import-selected-artist">
+        <PAvatar
+          :src="creationFlow.draft.artist.avatarUrl || undefined"
+          :name="artistName"
+          size="sm"
+        />
+        <span>
+          <strong>{{ artistName }}</strong>
+          <small>{{ creationFlow.draft.artist.kind === 'group' ? '组合' : '个人' }} · 已关联主页艺术家</small>
+        </span>
+      </div>
+      <div v-else-if="artistName.trim()" class="artist-search-results" data-testid="album-import-artist-results">
         <p v-if="artistSearchBusy" class="artist-search-state">搜索中…</p>
         <p v-else-if="artistSearchError" class="artist-search-state artist-search-state--error">{{ artistSearchError }}</p>
         <template v-else-if="artistSearchResults.length">
@@ -308,6 +342,28 @@ function formatArtistPeriod(artist: MusicArtistListItem) {
   border-top: 1px solid var(--a-color-border-soft);
   padding-top: 0.75rem;
 }
+
+.artist-search-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 0.75rem;
+}
+
+.artist-search-selected > span {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.artist-search-selected strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artist-search-selected small { color: var(--a-color-muted); }
 
 .artist-search-option {
   display: grid;

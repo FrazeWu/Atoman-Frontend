@@ -154,6 +154,22 @@ export function useAlbumImportUpload() {
 			"canceled",
 			"committed",
 		].includes(snapshot.status);
+		const metadataMatchStatus = snapshot.metadataMatchStatus?.trim() ?? "";
+		const hasMetadataResult = Boolean(
+			snapshot.metadataSource?.trim() ||
+			snapshot.metadataSourceUrl?.trim() ||
+			snapshot.metadataExternalId?.trim() ||
+			snapshot.metadataMatched === true ||
+			snapshot.metadataError?.trim() ||
+			["matched", "unmatched", "ambiguous", "manual"].includes(metadataMatchStatus) ||
+			(snapshot.metadataGenres?.length ?? 0) > 0 ||
+			(snapshot.metadataStyles?.length ?? 0) > 0 ||
+			(snapshot.metadataLabels?.length ?? 0) > 0 ||
+			(snapshot.metadataCountry?.trim() ?? "") !== "" ||
+			(snapshot.metadataFormats?.length ?? 0) > 0
+		);
+		const shouldApplyMetadata =
+			hasMetadataResult || ["failed", "canceled"].includes(snapshot.status);
 		const uploadState = uploadStateFor(flow);
 		const serverDerivedDataAvailable =
 			derivedTracks.length > 0 ||
@@ -200,7 +216,7 @@ export function useAlbumImportUpload() {
 			draft.derivedTracks = derivedTracks;
 			mergeImportedTracksIntoDraft(flow, derivedTracks);
 		}
-		if (serverDerivedDataAvailable || isTerminalSnapshot) {
+		if (shouldApplyMetadata) {
 			draft.derivedReleaseDate = snapshot.derivedReleaseDate;
 			draft.derivedAlbumType = snapshot.derivedAlbumType;
 			draft.metadataSourceUrl = snapshot.metadataSourceUrl;
@@ -222,6 +238,19 @@ export function useAlbumImportUpload() {
 				draft.metadataFieldSources = snapshot.metadataFieldSources ?? {};
 				draft.missingArtists = snapshot.missingArtists ?? [];
 		}
+		if (isTerminalSnapshot && derivedTracks.length === 0) {
+			draft.derivedTracks = [];
+			flow.draft.tracks = flow.draft.tracks.filter(
+				(track) =>
+					track.origin === "manual" ||
+					Boolean(
+						track.songId ||
+						track.audioAssetId ||
+						track.titleCustomized ||
+						track.sequenceCustomized,
+					),
+			);
+		}
 		draft.lastSyncedAt = snapshot.lastSyncedAt;
 		draft.errorMessage =
 			snapshot.errorMessage || snapshot.errors?.[0]?.message || "";
@@ -235,16 +264,17 @@ export function useAlbumImportUpload() {
 				snapshot.derivedReleaseDate,
 			);
 		}
-		const importedCover = snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
+		const importedCover =
+			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
 		if (importedCover && !flow.coverCustomized) {
 			flow.draft.albumDetails.coverUrl = importedCover;
 		}
-		const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
-		const matchedTags = [
-			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
-			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
-		];
-		if (matchedTags.length || customTags.length) {
+		if (shouldApplyMetadata) {
+			const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
+			const matchedTags = [
+				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
+				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+			];
 			flow.draft.albumDetails.tags = [...matchedTags, ...customTags];
 		}
 		if (

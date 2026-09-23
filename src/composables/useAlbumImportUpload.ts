@@ -239,11 +239,13 @@ export function useAlbumImportUpload() {
 		if (importedCover && !flow.coverCustomized) {
 			flow.draft.albumDetails.coverUrl = importedCover;
 		}
-		if (!flow.draft.albumDetails.tags.length) {
-			flow.draft.albumDetails.tags = [
-				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
-				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
-			];
+		const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
+		const matchedTags = [
+			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
+			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+		];
+		if (matchedTags.length || customTags.length) {
+			flow.draft.albumDetails.tags = [...matchedTags, ...customTags];
 		}
 		if (
 			snapshot.derivedAlbumType &&

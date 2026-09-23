@@ -5,7 +5,9 @@ import { useMusicCreationFlow } from './musicCreationFlowContext'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
+import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 
 const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
@@ -89,6 +91,19 @@ function createArtistDraft() {
   artistSearchResults.value = []
   artistSearchError.value = ''
 }
+
+function formatArtistDate(value?: string, precision?: string) {
+  return formatStoredPartialDate(value, precision)
+    .replace(/\/--\/--$/, '')
+    .replace(/\/--$/, '')
+}
+
+function formatArtistPeriod(artist: MusicArtistListItem) {
+  const start = formatArtistDate(artist.active_start_date, artist.active_start_date_precision)
+  const end = formatArtistDate(artist.active_end_date, artist.active_end_date_precision)
+  if (!start && !end) return ''
+  return `${start || '未知'}–${end || '至今'}`
+}
 </script>
 
 <template>
@@ -149,8 +164,23 @@ function createArtistDraft() {
             class="artist-search-option"
             @mousedown.prevent="selectArtist(artist)"
           >
-            <span>{{ artist.display_name || artist.name }}</span>
-            <small>{{ artist.artist_form === 'group' ? '组合' : '个人' }}</small>
+            <PAvatar
+              :src="artist.image_url || undefined"
+              :name="artist.display_name || artist.name"
+              size="sm"
+            />
+            <span class="artist-search-option__body">
+              <strong>{{ artist.display_name || artist.name }}</strong>
+              <small>
+                {{ artist.artist_form === 'group' ? '组合' : '个人' }}
+                <template v-if="formatArtistPeriod(artist)">
+                  · {{ formatArtistPeriod(artist) }}
+                </template>
+              </small>
+              <small v-if="artist.disambiguation" class="artist-search-option__description">
+                {{ artist.disambiguation }}
+              </small>
+            </span>
           </button>
         </template>
         <div v-else class="artist-search-empty">
@@ -280,8 +310,8 @@ function createArtistDraft() {
 }
 
 .artist-search-option {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 1rem;
   align-items: center;
   width: 100%;
@@ -294,8 +324,27 @@ function createArtistDraft() {
 }
 
 .artist-search-option:hover { border-color: var(--a-color-text); }
+.artist-search-option__body {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.artist-search-option__body strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--a-font-sans);
+  font-size: 0.9rem;
+}
+
 .artist-search-option small,
 .artist-search-state { color: var(--a-color-muted); }
+.artist-search-option__description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .artist-search-state { margin: 0; font-size: 0.82rem; }
 .artist-search-state--error { color: var(--a-color-accent-destructive); }
 .artist-search-empty { display: grid; gap: 0.6rem; justify-items: start; }

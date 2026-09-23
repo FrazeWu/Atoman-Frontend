@@ -35,6 +35,8 @@ export interface MusicCreationFlowSeed {
 	songId?: string | null;
 	artistName?: string;
 	artistLegalName?: string;
+	artistKind?: "person" | "group";
+	artistAvatarUrl?: string;
 	artistSource?: string;
 	artistFirstFlow?: boolean;
 	artistBeforeMatch?: boolean;

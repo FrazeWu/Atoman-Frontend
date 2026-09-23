@@ -129,6 +129,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 				display_name: "Kanye West",
 				artist_form: "person",
 				image_url: "https://img.test/kanye.jpg",
+				active_start_date: "2004-01-01",
+				active_start_date_precision: "year",
+				disambiguation: "Chicago producer",
 			}],
 			meta: { page: 1, page_size: 8, total: 1, has_more: false },
 		} as never);
@@ -144,6 +147,10 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		const option = wrapper.get('[data-testid="album-import-artist-option-artist-kanye"]');
 		expect(option.text()).toContain("Kanye West");
+		expect(option.text()).toContain("个人");
+		expect(option.text()).toContain("2004–至今");
+		expect(option.text()).toContain("Chicago producer");
+		expect(option.find(".p-avatar").exists()).toBe(true);
 		await option.trigger("mousedown");
 
 		expect(flow.draft.artist.id).toBe("artist-kanye");

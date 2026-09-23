@@ -434,6 +434,71 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		]);
 	});
 
+	it("本地封面存在时仍回填外部匹配封面和专辑元信息", () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.coverKey = "music/album-imports/local-cover.webp";
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "ready",
+			stage: "processing",
+			derivedReleaseDate: "2019-05-17",
+			derivedCover: "https://cover.test/matched-cover.jpg",
+			metadataSource: "discogs",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+			metadataGenres: ["Hip Hop"],
+			metadataStyles: ["Conscious"],
+		}));
+
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({
+			year: "2019",
+			month: "05",
+			day: "17",
+		});
+		expect(flow.draft.albumDetails.coverUrl).toBe(
+			"https://cover.test/matched-cover.jpg",
+		);
+		expect(flow.draft.albumDetails.tags).toEqual([
+			{ name: "Hip Hop", kind: "type", source: "matched" },
+			{ name: "Conscious", kind: "mood", source: "matched" },
+		]);
+	});
+
+	it("解析中的中间快照不会清空已经回填的匹配元信息", () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+
+		const upload = useAlbumImportUpload();
+		upload.applyImportSnapshot(snapshot({
+			status: "ready",
+			stage: "processing",
+			derivedReleaseDate: "2019-05-17",
+			derivedCover: "https://cover.test/matched-cover.jpg",
+			metadataSource: "discogs",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+			metadataGenres: ["Hip Hop"],
+			metadataStyles: ["Conscious"],
+		}));
+
+		upload.applyImportSnapshot(snapshot({
+			status: "analyzing",
+			stage: "processing",
+			derivedTracks: [{ title: "Track 1", audioKey: "audio-1", origin: "archive" }],
+		}));
+
+		expect(flow.draft.albumImport.metadataSource).toBe("discogs");
+		expect(flow.draft.albumImport.metadataGenres).toEqual(["Hip Hop"]);
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({
+			year: "2019",
+			month: "05",
+			day: "17",
+		});
+	});
+
 	it("终态空快照会清理过期导入曲目并重置匹配状态", () => {
 		const drawers = useMusicDrawers();
 		const flow = drawers.state.value.creationFlow!;

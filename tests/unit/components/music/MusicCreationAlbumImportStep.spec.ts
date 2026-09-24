@@ -120,42 +120,11 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
-	it("上传页输入艺术家名称时搜索并绑定已有艺术家", async () => {
-		vi.useFakeTimers();
-		vi.spyOn(musicApi, "listMusicArtists").mockResolvedValue({
-			data: [{
-				id: "artist-kanye",
-				name: "Kanye West",
-				display_name: "Kanye West",
-				artist_form: "person",
-				image_url: "https://img.test/kanye.jpg",
-				active_start_date: "2004-01-01",
-				active_start_date_precision: "year",
-				disambiguation: "Chicago producer",
-			}],
-			meta: { page: 1, page_size: 8, total: 1, has_more: false },
-		} as never);
-		const flow = useMusicDrawers().state.value.creationFlow!;
-		flow.directAlbumCreation = true;
-		flow.artistBeforeMatch = true;
-		flow.draft.artist.id = null;
-
+	it("上传页不显示上传前艺术家输入", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
-		await wrapper.get('[data-testid="album-import-artist-input"]').setValue("kanye");
-		await vi.advanceTimersByTimeAsync(300);
-		await flushPromises();
 
-		const option = wrapper.get('[data-testid="album-import-artist-option-artist-kanye"]');
-		expect(option.text()).toContain("Kanye West");
-		expect(option.text()).toContain("个人");
-		expect(option.text()).toContain("2004–至今");
-		expect(option.text()).toContain("Chicago producer");
-		expect(option.find(".p-avatar").exists()).toBe(true);
-		await option.trigger("mousedown");
-
-		expect(flow.draft.artist.id).toBe("artist-kanye");
-		expect(flow.draft.artist.stageNames[0]?.name).toBe("Kanye West");
-		wrapper.unmount();
+		expect(wrapper.find('[data-testid="album-import-artist-input"]').exists()).toBe(false);
+		expect(wrapper.find('[data-testid="album-import-artist-results"]').exists()).toBe(false);
 	});
 
 	it("从艺术家主页进入时保留已有艺术家绑定，不显示创建草稿提示", async () => {
@@ -175,31 +144,23 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await flushPromises();
 
 		expect(flow.draft.artist.id).toBe("artist-jamg");
-		expect(flow.artistLookupCompleted).toBe(true);
 		expect(flow.draft.artist.kind).toBe("group");
 		expect(wrapper.find('[data-testid="album-import-artist-create-draft"]').exists()).toBe(false);
-		expect(wrapper.get('[data-testid="album-import-selected-artist"]').text()).toContain("组合");
+		expect(wrapper.find('[data-testid="album-import-selected-artist"]').exists()).toBe(false);
 		expect(search).not.toHaveBeenCalled();
 		wrapper.unmount();
 	});
 
-	it("上传页的艺术家草稿按钮使用统一按钮样式", async () => {
-		vi.useFakeTimers();
-		vi.spyOn(musicApi, "listMusicArtists").mockResolvedValue({
-			data: [],
-			meta: { page: 1, page_size: 8, total: 0, has_more: false },
-		} as never);
+	it("从艺术家主页进入时仍隐藏绑定信息但保留艺术家 ID", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
-		flow.directAlbumCreation = true;
-		flow.artistBeforeMatch = true;
-		flow.draft.artist.id = null;
-
+		flow.draft.artist.id = "artist-seeded";
 		const wrapper = mount(MusicCreationAlbumSeedStep);
-		await wrapper.get('[data-testid="album-import-artist-input"]').setValue("Unknown Artist");
-		await vi.advanceTimersByTimeAsync(300);
+
 		await flushPromises();
 
-		expect(wrapper.get('[data-testid="album-import-artist-create-draft"]').classes()).toContain("p-button");
+		expect(flow.draft.artist.id).toBe("artist-seeded");
+		expect(wrapper.find('[data-testid="album-import-selected-artist"]').exists()).toBe(false);
+		wrapper.unmount();
 	});
 
 	it("allows selecting video files as album tracks", () => {
@@ -245,13 +206,10 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
 	});
 
-	it("直接创建专辑上传后先填写艺术家，不使用空艺术家名匹配", async () => {
+	it("直接创建专辑上传后不跳转到艺术家步骤", async () => {
 		const drawers = useMusicDrawers();
 		drawers.closeAll();
-		drawers.openMusicCreationFlow({
-			startStep: "albumImport",
-			artistBeforeMatch: true,
-		});
+		drawers.openMusicCreationFlow({ startStep: "albumImport" });
 		const archive = new File(["zip"], "IGOR.zip", { type: "application/zip" });
 		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({
 			title: "IGOR",
@@ -276,7 +234,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 
 		const flow = drawers.state.value.creationFlow!;
-		expect(flow.step).toBe("artist");
+		expect(flow.step).toBe("albumImport");
 		expect(flow.draft.tracks.map((track) => track.title)).toEqual([
 			"EARFQUAKE",
 			"IGOR'S THEME",
@@ -363,7 +321,6 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		});
 
 		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
 		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
 
 		expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith({

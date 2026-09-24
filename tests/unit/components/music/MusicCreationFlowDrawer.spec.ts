@@ -773,54 +773,45 @@ describe("MusicCreationFlowDrawer", () => {
 		);
 	});
 
-	it("直接创建专辑填写艺术家后才开始匹配", async () => {
+	it("直接创建专辑不显示艺术家步骤并使用空艺术家匹配", async () => {
 		const flow = createFlowState({
-			step: "artist",
-			artistBeforeMatch: true,
+			step: "albumImport",
 			draft: {
 				...createFlowState().draft,
 				artist: {
 					...createFlowState().draft.artist,
 					id: null,
-					avatarUrl: "https://img.test/artist.jpg",
-					legalName: "Tyler Okonma",
-					nationality: "US",
-					birthDateParts: { year: "1991", month: "03", day: "06" },
+					legalName: "",
 					stageNames: [{
 						...createFlowState().draft.artist.stageNames[0],
-						name: "Tyler, The Creator",
+						name: "",
 					}],
 				},
 				albumImport: {
 					...createFlowState().draft.albumImport,
-					status: "uploaded",
-					stage: "upload",
 					derivedAlbumTitle: "IGOR",
-					archiveName: "IGOR.zip",
+					derivedTracks: [{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1" }],
 				},
 			},
 		});
+		flow.draft.tracks = [{ id: "track-1", sequence: 1, title: "EARFQUAKE", origin: "local_preview:1" }];
 		drawerMocks.state.value.creationFlow = flow;
-		commitMusicAlbumImportMock.mockResolvedValue({
-			...({} as musicApi.MusicAlbumImport),
-			importId: "import-1",
-			status: "queued",
-			stage: "queued",
-		} as musicApi.MusicAlbumImport);
+		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
+			matched: false,
+			albumTitle: "IGOR",
+			matchStatus: "unmatched",
+			tracks: [],
+		} as never);
 
-		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		mount(MusicCreationFlowDrawer);
 		await flushPromises();
 
-		expect(commitMusicAlbumImportMock).toHaveBeenCalledWith(
-			"import-1",
-			expect.objectContaining({
-				artist: expect.objectContaining({ name: "Tyler, The Creator" }),
-				album: expect.objectContaining({ title: "IGOR", tracks: [] }),
-			}),
-		);
-		expect(flow.artistBeforeMatch).toBe(false);
-		expect(flow.step).toBe("albumImport");
+		expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith(expect.objectContaining({
+			albumTitle: "IGOR",
+			artist: "",
+			trackTitles: ["EARFQUAKE"],
+		}));
+		expect(flow.step).toBe("albumDetails");
 	});
 
 	it("修改艺术家复用创建表单并提交完整修订", async () => {

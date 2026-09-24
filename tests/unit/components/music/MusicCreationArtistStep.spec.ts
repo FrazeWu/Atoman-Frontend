@@ -81,51 +81,11 @@ describe("MusicCreationArtistStep.vue", () => {
 		});
 	});
 
-	it("创建专辑时先搜索已有艺术家并绑定结果", async () => {
-		const drawers = useMusicDrawers();
-		drawers.state.value.creationFlow!.artistBeforeMatch = true;
-		drawers.state.value.creationFlow!.draft.albumImport.status = "uploaded";
-		vi.mocked(listMusicArtists).mockResolvedValue({
-			data: [{
-				id: "artist-tyler",
-				name: "Tyler, The Creator",
-				display_name: "Tyler, The Creator",
-				artist_form: "person",
-				image_url: "https://img.test/tyler.jpg",
-			}],
-			meta: { page: 1, page_size: 8, total: 1, has_more: false },
-		} as never);
-
+	it("创建艺术家页不显示上传前的艺术家搜索", () => {
 		const wrapper = mountArtistStep();
-		await wrapper.get('[data-testid="artist-primary-search-input"]').setValue("Tyler");
-		await new Promise((resolve) => setTimeout(resolve, 300));
-		await flushPromises();
 
-		await wrapper.get('[data-testid="artist-primary-search-option-artist-tyler"]').trigger("mousedown");
-
-		expect(drawers.state.value.creationFlow?.draft.artist.id).toBe("artist-tyler");
-		expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0]?.name).toBe("Tyler, The Creator");
-		expect(wrapper.find('[data-testid="artist-primary-selected"]').exists()).toBe(true);
-		expect(wrapper.find('[data-testid="artist-legal-name-input"]').exists()).toBe(false);
-	});
-
-	it("创建专辑时没有搜索结果后进入艺术家草稿表单", async () => {
-		const drawers = useMusicDrawers();
-		drawers.state.value.creationFlow!.artistBeforeMatch = true;
-		drawers.state.value.creationFlow!.draft.albumImport.status = "uploaded";
-		vi.mocked(listMusicArtists).mockResolvedValue({
-			data: [],
-			meta: { page: 1, page_size: 8, total: 0, has_more: false },
-		} as never);
-
-		const wrapper = mountArtistStep();
-		await wrapper.get('[data-testid="artist-primary-search-input"]').setValue("New Artist");
-		await new Promise((resolve) => setTimeout(resolve, 300));
-		await flushPromises();
-		await wrapper.get('[data-testid="artist-primary-create-draft"]').trigger("click");
-
-		expect(drawers.state.value.creationFlow?.draft.artist.id).toBeNull();
-		expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0]?.name).toBe("New Artist");
+		expect(wrapper.find('[data-testid="artist-primary-search-input"]').exists()).toBe(false);
+		expect(wrapper.find('[data-testid="artist-primary-create-draft"]').exists()).toBe(false);
 		expect(wrapper.find('[data-testid="artist-legal-name-input"]').exists()).toBe(true);
 	});
 

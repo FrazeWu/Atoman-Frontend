@@ -1,152 +1,32 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
-import PInput from '@/components/ui/PInput.vue'
-import PButton from '@/components/ui/PButton.vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
-import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
-import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 
 const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
-const directAlbumCreation = computed(() => creationFlow.value?.directAlbumCreation === true)
-const artistSearchResults = ref<MusicArtistListItem[]>([])
-const artistSearchBusy = ref(false)
-const artistSearchError = ref('')
-const artistSearchRequestId = ref(0)
-const selectedArtistName = ref('')
-const initialArtistBinding = ref(
-  creationFlow.value?.draft.artist.id
-    ? {
-        id: creationFlow.value.draft.artist.id,
-        name: creationFlow.value.draft.artist.stageNames.find((item) => item.isPrimary)?.name ?? '',
-      }
-    : null,
-)
-if (initialArtistBinding.value && creationFlow.value) {
-  selectedArtistName.value = initialArtistBinding.value.name
-  creationFlow.value.artistLookupCompleted = true
-}
-let artistSearchTimer: ReturnType<typeof setTimeout> | null = null
-
-onBeforeUnmount(() => {
-  if (artistSearchTimer) clearTimeout(artistSearchTimer)
-})
-const artistName = computed({
-  get: () => creationFlow.value?.draft.artist.stageNames.find((item) => item.isPrimary)?.name ?? '',
-  set: (value: string) => {
-    const artist = creationFlow.value?.draft.artist.stageNames.find((item) => item.isPrimary)
-    if (artist) artist.name = value
-  },
-})
-
-watch(artistName, (value, previousValue) => {
-  const flow = creationFlow.value
-  if (flow?.step !== 'albumImport') return
-  const seededArtist = initialArtistBinding.value
-  initialArtistBinding.value = null
-  if (seededArtist && flow.draft.artist.id === seededArtist.id && value === seededArtist.name) {
-    selectedArtistName.value = value
-    flow.artistLookupCompleted = true
-    artistSearchResults.value = []
-    artistSearchBusy.value = false
-    artistSearchError.value = ''
-    return
-  }
-  if (selectedArtistName.value && value === selectedArtistName.value) {
-    selectedArtistName.value = ''
-    return
-  }
-  if (value !== previousValue) {
-    flow.draft.artist.id = null
-    flow.artistLookupCompleted = false
-  }
-  if (artistSearchTimer) clearTimeout(artistSearchTimer)
-  const query = value.trim()
-  artistSearchError.value = ''
-  if (!query) {
-    artistSearchResults.value = []
-    artistSearchBusy.value = false
-    return
-  }
-  artistSearchTimer = setTimeout(() => void searchArtists(query), 250)
-})
-
-async function searchArtists(query: string) {
-  const requestId = artistSearchRequestId.value + 1
-  artistSearchRequestId.value = requestId
-  artistSearchBusy.value = true
-  try {
-    const result = await listMusicArtists({ q: query, page: 1, page_size: 8 })
-    if (requestId !== artistSearchRequestId.value) return
-    artistSearchResults.value = result.data
-  } catch (error) {
-    if (requestId !== artistSearchRequestId.value) return
-    artistSearchResults.value = []
-    artistSearchError.value = error instanceof Error ? error.message : '搜索艺术家失败'
-  } finally {
-    if (requestId === artistSearchRequestId.value) artistSearchBusy.value = false
-  }
-}
-
-function selectArtist(artist: MusicArtistListItem) {
-  const flow = creationFlow.value
-  if (!flow) return
-  flow.draft.artist.id = artist.id
-  flow.draft.artist.kind = artist.artist_form === 'group' ? 'group' : 'person'
-  flow.draft.artist.avatarUrl = artist.image_url ?? ''
-  selectedArtistName.value = artist.display_name || artist.name
-  flow.draft.artist.stageNames[0].name = selectedArtistName.value
-  flow.artistLookupCompleted = true
-  artistSearchResults.value = []
-  artistSearchError.value = ''
-}
-
-function createArtistDraft() {
-  const flow = creationFlow.value
-  if (!flow || !artistName.value.trim()) return
-  flow.draft.artist.id = null
-  flow.artistLookupCompleted = true
-  artistSearchResults.value = []
-  artistSearchError.value = ''
-}
-
-function formatArtistDate(value?: string, precision?: string) {
-  return formatStoredPartialDate(value, precision)
-    .replace(/\/--\/--$/, '')
-    .replace(/\/--$/, '')
-}
-
-function formatArtistPeriod(artist: MusicArtistListItem) {
-  const start = formatArtistDate(artist.active_start_date, artist.active_start_date_precision)
-  const end = formatArtistDate(artist.active_end_date, artist.active_end_date_precision)
-  if (!start && !end) return ''
-  return `${start || '未知'}–${end || '至今'}`
-}
+const artistFirstFlow = computed(() => creationFlow.value?.artistFirstFlow === true)
 </script>
 
 <template>
   <div v-if="albumImportDraft" class="album-import-step" data-testid="album-import-upload-page">
     <section class="progress-card" aria-label="创建专辑进度">
       <div class="progress-copy">
-        <p class="progress-label">{{ directAlbumCreation ? (creationFlow?.artistBeforeMatch ? '第 1 步 / 上传专辑' : '第 3 步 / 匹配') : '第 2 步 / 上传与匹配' }}</p>
-        <p class="progress-value">{{ directAlbumCreation ? (creationFlow?.artistBeforeMatch ? '1 / 4' : '3 / 4') : '2 / 3' }}</p>
+        <p class="progress-label">{{ artistFirstFlow ? '第 2 步 / 上传与匹配' : '第 1 步 / 上传与匹配' }}</p>
+        <p class="progress-value">{{ artistFirstFlow ? '2 / 3' : '1 / 2' }}</p>
       </div>
       <div class="progress-steps">
-        <template v-if="directAlbumCreation">
-          <span class="progress-step progress-step--done">1 上传专辑</span>
-          <span class="progress-step" :class="{ 'progress-step--done': !creationFlow?.artistBeforeMatch, 'progress-step--active': creationFlow?.artistBeforeMatch }">2 填写艺术家</span>
-          <span class="progress-step" :class="{ 'progress-step--active': !creationFlow?.artistBeforeMatch }">3 匹配</span>
-          <span class="progress-step">4 完善专辑信息</span>
-        </template>
-        <template v-else>
+        <template v-if="artistFirstFlow">
           <span class="progress-step progress-step--done">1 创建艺术家</span>
           <span class="progress-step progress-step--active">2 上传与匹配</span>
           <span class="progress-step">3 完善专辑信息</span>
+        </template>
+        <template v-else>
+          <span class="progress-step progress-step--active">1 上传与匹配</span>
+          <span class="progress-step">2 完善专辑信息</span>
         </template>
       </div>
       <div class="progress-track" aria-hidden="true">
@@ -166,62 +46,7 @@ function formatArtistPeriod(artist: MusicArtistListItem) {
       <div class="card-header">
         <div>
           <p class="card-kicker">上传与匹配</p>
-          <p class="card-copy">文件选择后立即上传。填写艺术家可提高匹配成功率；读取到曲目后会自动请求外部资料。</p>
-        </div>
-      </div>
-      <PInput
-        v-model="artistName"
-        label="艺术家（可选）"
-        placeholder="输入或补充艺术家名称"
-        data-testid="album-import-artist-input"
-      />
-      <div v-if="creationFlow?.draft.artist.id" class="artist-search-selected" data-testid="album-import-selected-artist">
-        <PAvatar
-          :src="creationFlow.draft.artist.avatarUrl || undefined"
-          :name="artistName"
-          size="sm"
-        />
-        <span>
-          <strong>{{ artistName }}</strong>
-          <small>{{ creationFlow.draft.artist.kind === 'group' ? '组合' : '个人' }} · 已关联主页艺术家</small>
-        </span>
-      </div>
-      <div v-else-if="artistName.trim()" class="artist-search-results" data-testid="album-import-artist-results">
-        <p v-if="artistSearchBusy" class="artist-search-state">搜索中…</p>
-        <p v-else-if="artistSearchError" class="artist-search-state artist-search-state--error">{{ artistSearchError }}</p>
-        <template v-else-if="artistSearchResults.length">
-          <button
-            v-for="artist in artistSearchResults"
-            :key="artist.id"
-            :data-testid="`album-import-artist-option-${artist.id}`"
-            type="button"
-            class="artist-search-option"
-            @mousedown.prevent="selectArtist(artist)"
-          >
-            <PAvatar
-              :src="artist.image_url || undefined"
-              :name="artist.display_name || artist.name"
-              size="sm"
-            />
-            <span class="artist-search-option__body">
-              <strong>{{ artist.display_name || artist.name }}</strong>
-              <small>
-                {{ artist.artist_form === 'group' ? '组合' : '个人' }}
-                <template v-if="formatArtistPeriod(artist)">
-                  · {{ formatArtistPeriod(artist) }}
-                </template>
-              </small>
-              <small v-if="artist.disambiguation" class="artist-search-option__description">
-                {{ artist.disambiguation }}
-              </small>
-            </span>
-          </button>
-        </template>
-        <div v-else class="artist-search-empty">
-          <p class="artist-search-state">没有找到已有艺术家</p>
-          <PButton data-testid="album-import-artist-create-draft" type="button" variant="secondary" size="sm" @click="createArtistDraft">
-            使用“{{ artistName.trim() }}”创建草稿
-          </PButton>
+          <p class="card-copy">文件选择后立即上传。读取到曲目和内嵌元信息后会自动请求外部资料。</p>
         </div>
       </div>
       <p class="archive-hint">建议优先上传 ZIP、RAR 或 TAR，以便尽早读取曲目目录与元信息。</p>
@@ -282,7 +107,7 @@ function formatArtistPeriod(artist: MusicArtistListItem) {
 }
 
 .progress-bar {
-  width: 66.666%;
+  width: 50%;
   height: 100%;
   background: var(--a-color-text);
 }

@@ -444,9 +444,6 @@ const finishButtonLabel = computed(() => {
   if (creationFlow.value?.entity === 'artist' && creationFlow.value.step === 'artist') {
     return creationFlow.value.submitting ? '创建中…' : '创建艺术家'
   }
-  if (creationFlow.value?.step === 'artist' && creationFlow.value.artistBeforeMatch) {
-    return creationFlow.value.submitting ? '匹配中…' : '开始匹配'
-  }
   if (creationFlow.value?.step === 'albumImport') {
     if (albumImportMatching.value || creationFlow.value.submitting) return '匹配中…'
     if (creationFlow.value.draft.albumImport.metadataMatchStatus === 'matched') return '已匹配'
@@ -466,7 +463,6 @@ const forwardBlockReason = computed(() => {
     const artist = activeMusicArtistDraft(flow)
     if (!activeArtistRequiresFullProfile(flow)) {
       if (!artist.stageNames[0]?.name.trim()) return '请填写创作者名称'
-      if (flow.artistBeforeMatch && !albumImportUploadFinished(flow)) return '等待文件上传完成'
       return ''
     }
     if (artist.kind === 'group') {
@@ -477,7 +473,6 @@ const forwardBlockReason = computed(() => {
       if (namedMembers.some((member) => !member.artistId)) return '请选择已有艺术家或创建成员草稿'
       if (namedMembers.some((member) => !member.joinDateParts.year.trim())) return '请填写成员加入年份'
       if (!artist.source.trim()) return '请填写资料来源'
-      if (flow.artistBeforeMatch && !albumImportUploadFinished(flow)) return '等待文件上传完成'
       return ''
     }
     if (!artist.avatarUrl.trim()) return '请上传头像'
@@ -486,7 +481,6 @@ const forwardBlockReason = computed(() => {
     if (!artist.nationality.trim()) return '请选择国籍'
     if (!formatDateFromParts(artist.birthDateParts)) return '请填写出生日期'
     if (!artist.source.trim()) return '请填写资料来源'
-    if (flow.artistBeforeMatch && !albumImportUploadFinished(flow)) return '等待文件上传完成'
     return ''
   }
   if (!['albumDetails', 'preview'].includes(flow.step)) return ''
@@ -515,7 +509,6 @@ const canGoForward = computed(() => {
     const artist = activeMusicArtistDraft(flow)
     if (!activeArtistRequiresFullProfile(flow)) {
       return !!artist.stageNames[0]?.name.trim()
-        && (!flow.artistBeforeMatch || albumImportUploadFinished(flow))
     }
     if (artist.kind === 'group') {
       const namedMembers = artist.members.filter((member) => member.name.trim())
@@ -526,7 +519,6 @@ const canGoForward = computed(() => {
         && namedMembers.every((member) => !!member.artistId)
         && !hasMissingJoinDate
         && !!artist.source.trim()
-        && (!flow.artistBeforeMatch || albumImportUploadFinished(flow))
     }
 
     return !!artist.avatarUrl.trim()
@@ -535,7 +527,6 @@ const canGoForward = computed(() => {
       && !!artist.nationality.trim()
       && !!formatDateFromParts(artist.birthDateParts)
       && !!artist.source.trim()
-      && (!flow.artistBeforeMatch || albumImportUploadFinished(flow))
   }
 	if (flow.step === 'albumImport') {
 		return !!flow.draft.albumImport.importId
@@ -1043,36 +1034,6 @@ async function attachKnownImportedArtists(flow: NonNullable<typeof creationFlow.
   }
 }
 
-function albumImportUploadFinished(flow: NonNullable<typeof creationFlow.value>) {
-  return ['uploaded', 'ready', 'needs_attention'].includes(flow.draft.albumImport.status)
-}
-
-function matchingAlbumTitle(flow: NonNullable<typeof creationFlow.value>) {
-  const derivedTitle = flow.draft.albumImport.derivedAlbumTitle.trim()
-  if (derivedTitle) return derivedTitle
-  const archiveName = flow.draft.albumImport.archiveName.trim()
-  if (archiveName) return archiveName.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, '')
-  return '未命名专辑'
-}
-
-async function startAlbumImportMatching(flow: NonNullable<typeof creationFlow.value>) {
-  const importId = flow.draft.albumImport.importId?.trim()
-  if (!importId) throw new Error('文件上传尚未完成，请稍候')
-  const input = buildCommitInput(flow)
-  input.album = {
-    ...input.album,
-    title: input.album.title.trim() || matchingAlbumTitle(flow),
-    tracks: [],
-  }
-  const matched = await musicApi.commitMusicAlbumImport(importId, input)
-  flow.draft.albumImport.status = matched.status
-  flow.draft.albumImport.stage = matched.stage
-  flow.draft.albumImport.errorMessage = matched.errorMessage ?? ''
-  flow.draft.albumImport.files = matched.files ?? flow.draft.albumImport.files
-  flow.artistBeforeMatch = false
-  setMusicCreationStep('albumImport')
-}
-
 async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.value>) {
   const albumImport = flow.draft.albumImport
   const trackTitles = (albumImport.derivedTracks.length
@@ -1173,11 +1134,6 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         refreshArtist()
         closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
         await router.push(`/music/artist/${artist.id}`)
-        return
-      }
-      if (flow.artistBeforeMatch) {
-        ensurePrimaryArtistContributor(flow)
-        await startAlbumImportMatching(flow)
         return
       }
       if (artistNextAction === 'link_album' && !flow.draft.artist.id) {

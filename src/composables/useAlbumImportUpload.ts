@@ -294,13 +294,7 @@ export function useAlbumImportUpload() {
 		const processingFinished = ["ready", "needs_attention"].includes(snapshot.status) || (
 			snapshot.status === "failed" && snapshot.stage !== "upload"
 		);
-		if (
-			flow.step === "albumImport" &&
-			flow.artistBeforeMatch &&
-			snapshot.status === "uploaded"
-		) {
-			flow.step = "artist";
-		} else if (flow.step === "albumImport" && processingFinished) {
+		if (flow.step === "albumImport" && processingFinished) {
 			flow.step = "albumDetails";
 		}
 		return true;

@@ -22,11 +22,6 @@ const isGroup = computed(() => artistDraft.value?.kind === 'group')
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const requiresFullProfile = computed(() => creationFlow.value ? activeArtistRequiresFullProfile(creationFlow.value) : true)
 const isEditingContributor = computed(() => !!creationFlow.value?.editingContributorId)
-const artistSearchRequired = computed(() => !!creationFlow.value?.artistBeforeMatch
-  && !!artistDraft.value
-  && !artistDraft.value.id
-  && !creationFlow.value?.artistLookupCompleted
-  && !artistSearchDraft.value)
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : requiresFullProfile.value ? '来源*' : '来源')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写来源')
 const artistStepTitle = computed(() => isEditingContributor.value ? '新建创作者' : '新建艺术家')
@@ -41,12 +36,6 @@ const pendingAvatarFile = ref<File | null>(null)
 const avatarPreviewUrl = ref('')
 const memberResults = ref<Record<string, MusicArtistListItem[]>>({})
 const memberBusyId = ref('')
-const artistSearchQuery = ref('')
-const artistSearchResults = ref<MusicArtistListItem[]>([])
-const artistSearchBusy = ref(false)
-const artistSearchError = ref('')
-const artistSearchDraft = ref(false)
-let artistSearchTimer: ReturnType<typeof setTimeout> | null = null
 let memberSearchTimer: ReturnType<typeof setTimeout> | null = null
 const artistKindOptions = [
   { label: '个人', value: 'person' as const, testid: 'artist-kind-person-button' },
@@ -109,111 +98,9 @@ function replaceAvatarPreviewUrl(file: File) {
 }
 
 onBeforeUnmount(() => {
-  if (artistSearchTimer) clearTimeout(artistSearchTimer)
   if (memberSearchTimer) clearTimeout(memberSearchTimer)
   if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
 })
-
-watch(
-  () => artistDraft.value?.id,
-  (id) => {
-    if (id) artistSearchDraft.value = false
-  },
-  { immediate: true },
-)
-
-watch(artistSearchQuery, (value) => {
-  if (artistSearchTimer) clearTimeout(artistSearchTimer)
-  const query = value.trim()
-  artistSearchError.value = ''
-  if (!query || !artistSearchRequired.value) {
-    artistSearchResults.value = []
-    artistSearchBusy.value = false
-    return
-  }
-  artistSearchTimer = setTimeout(() => void searchPrimaryArtist(query), 250)
-})
-
-async function searchPrimaryArtist(query: string) {
-  artistSearchBusy.value = true
-  try {
-    const result = await listMusicArtists({ q: query, page: 1, page_size: 8 })
-    artistSearchResults.value = result.data
-  } catch (error) {
-    artistSearchResults.value = []
-    artistSearchError.value = error instanceof Error ? error.message : '搜索艺术家失败'
-  } finally {
-    artistSearchBusy.value = false
-  }
-}
-
-function artistSource(artist: MusicArtistListItem) {
-  const source = artist.sources?.find((item) => item.url?.trim() || item.title?.trim())
-  return source?.url?.trim() || source?.title?.trim() || ''
-}
-
-function artistStageNames(artist: MusicArtistListItem) {
-  try {
-    const parsed = artist.stage_names_json ? JSON.parse(artist.stage_names_json) : []
-    if (Array.isArray(parsed)) {
-      const names = parsed.filter((item): item is { name: string; is_primary?: boolean; start_date_text?: string; end_date_text?: string } => (
-        !!item && typeof item.name === 'string' && item.name.trim().length > 0
-      ))
-      if (names.length) {
-        return names.map((item, index) => ({
-          id: `stage-name-${artist.id}-${index}`,
-          name: item.name,
-          isPrimary: item.is_primary === true || index === 0,
-          startDateParts: createEmptyDateParts(),
-          endDateParts: createEmptyDateParts(),
-          startDateText: item.start_date_text ?? '',
-          endDateText: item.end_date_text ?? '',
-        }))
-      }
-    }
-  } catch {
-    // 使用列表接口的主名称作为回退。
-  }
-  return [{
-    id: `stage-name-${artist.id}-0`,
-    name: artist.display_name || artist.name,
-    isPrimary: true,
-    startDateParts: createEmptyDateParts(),
-    endDateParts: createEmptyDateParts(),
-    startDateText: '',
-    endDateText: '',
-  }]
-}
-
-function selectPrimaryArtist(artist: MusicArtistListItem) {
-  const draft = artistDraft.value
-  if (!draft) return
-  draft.id = artist.id
-  draft.kind = artist.artist_form === 'group' ? 'group' : 'person'
-  draft.legalName = artist.legal_name ?? ''
-  draft.stageNames = artistStageNames(artist)
-  draft.nationality = artist.nationality ?? ''
-  draft.birthPlace = artist.birth_place ?? ''
-  draft.birthDateParts = parsePartialDateParts(artist.birth_date ?? (artist.birth_year ? String(artist.birth_year) : ''))
-  draft.birthDate = serializePartialDate(draft.birthDateParts)
-  draft.activeStartDateParts = parsePartialDateParts(artist.active_start_date ?? '')
-  draft.activeEndDateParts = parsePartialDateParts(artist.active_end_date ?? '')
-  draft.bio = artist.bio ?? ''
-  draft.avatarUrl = artist.image_url ?? ''
-  draft.source = artistSource(artist)
-  artistSearchQuery.value = artist.display_name || artist.name
-  artistSearchResults.value = []
-  artistSearchError.value = ''
-}
-
-function createPrimaryArtistDraft() {
-  const name = artistSearchQuery.value.trim()
-  if (!name || !artistDraft.value) return
-  artistDraft.value.stageNames[0].name = name
-  artistSearchDraft.value = true
-  artistSearchResults.value = []
-  artistSearchError.value = ''
-}
 
 function triggerFileInput() {
   fileInputRef.value?.click()
@@ -426,62 +313,6 @@ defineExpose({
         </div>
         <h4>{{ artistStepTitle }}</h4>
       </header>
-
-      <section v-if="artistSearchRequired" class="artist-card artist-search-card" data-testid="artist-primary-search">
-        <div class="card-header">
-          <div>
-            <p class="card-kicker">关联已有艺术家</p>
-            <p class="card-copy">先搜索已有艺术家；找不到时可以创建一个艺术家草稿。</p>
-          </div>
-        </div>
-        <PInput
-          v-model="artistSearchQuery"
-          data-testid="artist-primary-search-input"
-          type="search"
-          label="艺术家名称"
-          placeholder="搜索艺术家"
-        />
-        <div v-if="artistSearchQuery.trim()" class="artist-search-results">
-          <p v-if="artistSearchBusy" class="state-line">搜索中…</p>
-          <p v-else-if="artistSearchError" class="state-line state-line--error">{{ artistSearchError }}</p>
-          <template v-else-if="artistSearchResults.length">
-            <button
-              v-for="artist in artistSearchResults"
-              :key="artist.id"
-              :data-testid="`artist-primary-search-option-${artist.id}`"
-              type="button"
-              class="artist-search-result"
-              @mousedown.prevent="selectPrimaryArtist(artist)"
-            >
-              <PAvatar :src="artist.image_url || undefined" :name="artist.display_name || artist.name" size="sm" />
-              <span>{{ artist.display_name || artist.name }}</span>
-              <small>{{ artist.artist_form === 'group' ? '组合' : '个人' }}</small>
-            </button>
-          </template>
-          <div v-else class="artist-search-empty">
-            <p class="state-line">没有找到匹配的艺术家</p>
-            <button
-              data-testid="artist-primary-create-draft"
-              type="button"
-              class="ui-action ui-action--inline"
-              @click="createPrimaryArtistDraft"
-            >
-              创建“{{ artistSearchQuery.trim() }}”草稿
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section v-if="creationFlow?.artistBeforeMatch && artistDraft.id && !artistSearchRequired" class="artist-card artist-selected-card" data-testid="artist-primary-selected">
-        <PAvatar :src="artistDraft.avatarUrl || undefined" :name="artistDraft.stageNames[0]?.name || artistDraft.legalName" size="lg" />
-        <div>
-          <p class="card-kicker">已关联艺术家</p>
-          <strong>{{ artistDraft.stageNames[0]?.name || artistDraft.legalName }}</strong>
-          <p class="card-copy">将使用这个艺术家进行专辑匹配</p>
-        </div>
-      </section>
-
-      <template v-if="!artistSearchRequired && !(creationFlow?.artistBeforeMatch && artistDraft.id)">
 
       <section class="artist-card artist-kind-card" data-testid="artist-kind-section">
         <p class="card-kicker">类型</p>
@@ -812,8 +643,6 @@ defineExpose({
           />
         </div>
       </section>
-
-      </template>
 
     </div>
   </div>

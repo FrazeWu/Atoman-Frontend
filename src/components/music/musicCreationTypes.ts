@@ -279,9 +279,6 @@ export interface MusicCreationFlowState {
 	loading?: boolean;
 	step: MusicCreationFlowStep;
 	artistFirstFlow?: boolean;
-	artistBeforeMatch?: boolean;
-	artistLookupCompleted?: boolean;
-	directAlbumCreation?: boolean;
 	draft: MusicCreationDraft;
 	tracksCustomized: boolean;
 	deletedImportTrackKeys: string[];
@@ -306,6 +303,5 @@ export function activeMusicArtistDraft(flow: MusicCreationFlowState) {
 
 export function activeArtistRequiresFullProfile(flow: MusicCreationFlowState) {
 	const contributor = musicCreationContributorForFlow(flow);
-	if (flow.artistBeforeMatch && flow.draft.artist.id) return false;
 	return !contributor || contributor.roles.some((role) => role.role === "primary");
 }

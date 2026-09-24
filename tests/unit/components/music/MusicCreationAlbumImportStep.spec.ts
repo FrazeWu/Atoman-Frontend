@@ -379,6 +379,47 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(wrapper.text()).toContain("已选中 IGOR");
 	});
 
+	it("后端已进入信息页但没有外部结果时仍会触发一次匹配", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
+			matched: true,
+			albumTitle: "菊花夜行军",
+			releaseDate: "2001",
+			coverUrl: "https://cover.test/chrysanthemum.jpg",
+			albumType: "album",
+			sourceUrl: "https://www.discogs.com/release/2926685",
+			metadataSource: "discogs",
+			matchStatus: "matched",
+			genres: ["摇滚"],
+			styles: ["民谣摇滚"],
+			tracks: [{ title: "两代人", audioKey: "", origin: "archive", trackNumber: 1 }],
+		});
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "ready",
+			stage: "ready",
+			derivedAlbumTitle: "菊花夜行军",
+			derivedReleaseDate: "2013",
+			derivedTracks: [{ title: "两代人", audioKey: "audio-1", origin: "archive", trackNumber: 1 }],
+		}));
+
+		mount(MusicCreationFlowDrawer);
+		await vi.waitFor(() => expect(metadataPreview).toHaveBeenCalledWith({
+			albumTitle: "菊花夜行军",
+			artist: "",
+			trackTitles: ["两代人"],
+		}));
+		await vi.waitFor(() => expect(flow.draft.albumDetails.coverUrl).toBe(
+			"https://cover.test/chrysanthemum.jpg",
+		));
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({
+			year: "2001",
+			month: "",
+			day: "",
+		});
+	});
+
 	it("轮询快照不会覆盖手动修改的来源和专辑类型", () => {
 		const drawers = useMusicDrawers();
 		const flow = drawers.state.value.creationFlow!;

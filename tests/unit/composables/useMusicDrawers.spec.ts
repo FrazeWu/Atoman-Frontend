@@ -494,6 +494,55 @@ describe("useMusicDrawers music creation flow", () => {
 		]);
 	});
 
+	it("resumes a matched import with the API cover and metadata fields", () => {
+		const drawers = useMusicDrawers();
+
+		drawers.resumeMusicCreationFlow({
+			importId: "import-matched",
+			targetAlbumId: "",
+			status: "ready",
+			inputMode: "archive",
+			stage: "ready",
+			progress: { current: 1, total: 1 },
+			files: [],
+			errors: [],
+			archiveName: "IGOR.zip",
+			uploadProgress: 100,
+			uploadSpeed: 0,
+			coverUrl: "https://cover.test/matched-cover.jpg",
+			coverKey: "",
+			derivedAlbumTitle: "IGOR",
+			derivedCover: "",
+			derivedTracks: [],
+			derivedReleaseDate: "2019-05-17",
+			metadataSourceUrl: "https://www.discogs.com/release/123",
+			metadataSource: "discogs",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+			metadataGenres: ["Hip Hop"],
+			metadataStyles: ["Conscious"],
+			metadataLabels: ["Columbia"],
+			metadataCountry: "US",
+			metadataFormats: ["Album"],
+			lastSyncedAt: "",
+			errorMessage: "",
+		});
+
+		const flow = drawers.state.value.creationFlow;
+		expect(flow?.draft.albumDetails.coverUrl).toBe(
+			"https://cover.test/matched-cover.jpg",
+		);
+		expect(flow?.draft.albumDetails.releaseDateParts).toEqual({
+			year: "2019",
+			month: "05",
+			day: "17",
+		});
+		expect(flow?.draft.albumDetails.tags).toEqual([
+			{ name: "Hip Hop", kind: "type", source: "matched" },
+			{ name: "Conscious", kind: "mood", source: "matched" },
+		]);
+	});
+
 	it("restores the deferred commit artist as the primary contributor", () => {
 		const drawers = useMusicDrawers();
 

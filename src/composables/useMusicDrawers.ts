@@ -730,13 +730,16 @@ export function useMusicDrawers() {
 		}
 		if (snapshot.derivedAlbumType)
 			flow.draft.albumDetails.type = snapshot.derivedAlbumType;
-		if (snapshot.derivedCover)
-			flow.draft.albumDetails.coverUrl = snapshot.derivedCover;
-		if (!flow.draft.albumDetails.tags.length) {
-			flow.draft.albumDetails.tags = [
-				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
-				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
-			];
+		const importedCover =
+			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
+		if (importedCover) flow.draft.albumDetails.coverUrl = importedCover;
+		const matchedTags = [
+			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
+			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+		];
+		if (matchedTags.length) {
+			const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
+			flow.draft.albumDetails.tags = [...matchedTags, ...customTags];
 		}
 		if (snapshot.metadataSourceUrl)
 			flow.draft.albumDetails.source = normalizeMusicImportSource(

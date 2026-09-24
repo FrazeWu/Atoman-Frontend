@@ -16,7 +16,12 @@ type CloudflareImageRequestInit = RequestInit & {
   }
 }
 
-const ASSET_HOST = 'assets.atoman.org'
+const IMAGE_SOURCE_HOSTS = new Set([
+  'assets.atoman.org',
+  'is1-ssl.mzstatic.com',
+  'lh3.googleusercontent.com',
+  'www.designmadeingermany.de',
+])
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/png,image/jpeg'
 
 function resolveImageUrl(request: Request) {
@@ -25,7 +30,7 @@ function resolveImageUrl(request: Request) {
 
   try {
     const url = new URL(value)
-    if (url.protocol !== 'https:' || url.hostname !== ASSET_HOST || url.port || url.username || url.password) {
+    if (url.protocol !== 'https:' || !IMAGE_SOURCE_HOSTS.has(url.hostname) || url.port || url.username || url.password) {
       return null
     }
     return url

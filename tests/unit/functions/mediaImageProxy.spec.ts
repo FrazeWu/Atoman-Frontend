@@ -46,4 +46,26 @@ describe('media image proxy', () => {
     expect(response.status).toBe(400)
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it.each([
+    'https://is1-ssl.mzstatic.com/image/thumb/Music211/cover/1200x1200bb.jpg',
+    'https://www.designmadeingermany.de/avatar.webp',
+    'https://lh3.googleusercontent.com/a/avatar=s96-c',
+  ])('accepts supported external image sources: %s', async (url) => {
+    const upstream = new Response('optimized-image', {
+      headers: { 'content-type': 'image/webp' },
+    })
+    const fetchMock = vi.fn().mockResolvedValue(upstream)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await onRequestGet({
+      request: new Request(`https://www.atoman.org/media/image?url=${encodeURIComponent(url)}&width=40`),
+    })
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL(url),
+      expect.objectContaining({ cf: { image: { width: 40, quality: 75, format: 'webp' } } }),
+    )
+  })
 })

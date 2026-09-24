@@ -36,7 +36,16 @@ describe('resolveMediaURL', () => {
       .toBe('/media/image?url=https%3A%2F%2Fassets.atoman.org%2Fmusic%2Fcovers%2Falbum.png&width=180 180w, /media/image?url=https%3A%2F%2Fassets.atoman.org%2Fmusic%2Fcovers%2Falbum.png&width=320 320w')
   })
 
-  it('does not proxy images from external hosts', () => {
+  it('proxies supported external image hosts through the size-aware image proxy', () => {
+    expect(resolveMediaImageURL('https://is1-ssl.mzstatic.com/image/thumb/Music211/cover/1200x1200bb.jpg', { width: 320 }))
+      .toBe('/media/image?url=https%3A%2F%2Fis1-ssl.mzstatic.com%2Fimage%2Fthumb%2FMusic211%2Fcover%2F1200x1200bb.jpg&width=320')
+    expect(resolveMediaImageURL('https://www.designmadeingermany.de/avatar.webp', { width: 40 }))
+      .toBe('/media/image?url=https%3A%2F%2Fwww.designmadeingermany.de%2Favatar.webp&width=40')
+    expect(resolveMediaImageURL('https://lh3.googleusercontent.com/a/avatar=s96-c', { width: 32 }))
+      .toBe('/media/image?url=https%3A%2F%2Flh3.googleusercontent.com%2Fa%2Favatar%3Ds96-c&width=32')
+  })
+
+  it('does not proxy images from unknown external hosts', () => {
     expect(resolveMediaImageURL('https://cdn.example.test/cover.jpg', { width: 320 }))
       .toBe('https://cdn.example.test/cover.jpg')
   })

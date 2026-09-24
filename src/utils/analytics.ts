@@ -1,4 +1,5 @@
 const GOOGLE_ANALYTICS_ID = 'G-1FLNTZ469W'
+const ANALYTICS_DELAY_MS = 10000
 
 declare global {
   interface Window {
@@ -44,10 +45,5 @@ export function scheduleGoogleAnalytics(onReady?: () => void) {
     void loadGoogleAnalytics().then(() => onReady?.())
   }
 
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(load, { timeout: 5000 })
-    return
-  }
-
-  globalThis.setTimeout(load, 3000)
+  globalThis.setTimeout(load, ANALYTICS_DELAY_MS)
 }

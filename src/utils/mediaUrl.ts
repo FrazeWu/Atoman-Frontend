@@ -1,5 +1,10 @@
 const localObjectStorageHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0'])
-const publicAssetHost = 'assets.atoman.org'
+const imageProxyHosts = new Set([
+  'assets.atoman.org',
+  'is1-ssl.mzstatic.com',
+  'lh3.googleusercontent.com',
+  'www.designmadeingermany.de',
+])
 
 export type MediaImageOptions = {
   width: number
@@ -26,7 +31,7 @@ export function resolveMediaImageURL(url: string, options: MediaImageOptions) {
 
   try {
     const parsed = new URL(resolved)
-    if (parsed.protocol !== 'https:' || parsed.hostname !== publicAssetHost) return resolved
+    if (parsed.protocol !== 'https:' || !imageProxyHosts.has(parsed.hostname)) return resolved
 
     const params = new URLSearchParams({
       url: parsed.toString(),

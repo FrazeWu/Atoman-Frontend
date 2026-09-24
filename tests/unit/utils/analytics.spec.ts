@@ -20,10 +20,18 @@ describe('Google Analytics loader', () => {
     expect(document.head.querySelector('script[data-atoman-analytics]')).toBeNull()
   })
 
-  it('loads analytics after the browser is idle', async () => {
+  it('keeps analytics out of the initial performance window', async () => {
     scheduleGoogleAnalytics()
 
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(document.head.querySelector('script[data-atoman-analytics]')).toBeNull()
+  })
+
+  it('loads analytics after the delayed start', async () => {
+    scheduleGoogleAnalytics()
+
+    await vi.advanceTimersByTimeAsync(10000)
 
     const script = document.head.querySelector<HTMLScriptElement>('script[data-atoman-analytics]')
     expect(script?.async).toBe(true)

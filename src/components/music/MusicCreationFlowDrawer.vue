@@ -906,9 +906,12 @@ watch(
   () => {
     const flow = creationFlow.value
     const albumImport = flow?.draft.albumImport
+    const canRecoverMatchingResult =
+      flow?.step === 'albumImport' ||
+      (flow?.step === 'albumDetails' && ['ready', 'needs_attention'].includes(albumImport?.status ?? ''))
     if (
       !flow ||
-      flow.step !== 'albumImport' ||
+      !canRecoverMatchingResult ||
       albumImport?.metadataMatchingStarted ||
       !albumImport?.derivedTracks.length
     ) return

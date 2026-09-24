@@ -373,7 +373,6 @@ describe("Music DiscoverView.vue", () => {
 
 		expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({
 			startStep: "albumImport",
-			artistBeforeMatch: true,
 		});
 	});
 

@@ -615,8 +615,6 @@ export function useMusicDrawers() {
 					&& !seed.artistId
 					&& seed.entity !== "song"
 					&& seed.entity !== "artist"),
-			artistBeforeMatch: seed.artistBeforeMatch === true,
-			directAlbumCreation: seed.artistBeforeMatch === true,
 			draft: createEmptyDraft(seed),
 			tracksCustomized: false,
 			deletedImportTrackKeys: [],

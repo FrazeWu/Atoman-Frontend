@@ -250,7 +250,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-		<small>{{ albumImportDraft.metadataMatchStatus === 'matching' ? '正在并行检索 Discogs 与 MusicBrainz，完成后进入信息确认' : '读取到曲目后会自动开始匹配，填写艺术家可提高准确率' }}</small>
+		<small>{{ albumImportDraft.metadataMatchStatus === 'matching' ? '正在并行检索 Discogs 与 MusicBrainz，完成后进入信息确认' : '读取到曲目和内嵌元信息后会自动开始匹配' }}</small>
 		</div>
 	</div>
 	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">
@@ -269,7 +269,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
       data-testid="album-import-artist-metadata-hint"
       role="status"
     >
-      音频标签中没有艺术家信息时不会自动识别，请在下方手动选择艺术家。
+      音频标签中没有艺术家信息时不会自动识别，请在专辑信息页补充艺术家。
     </p>
     <p v-if="albumImportDraft.missingArtists?.length" class="metadata-artist-hint" role="status">
       该发行版还包括 {{ albumImportDraft.missingArtists.join('、') }}，请在专辑信息中补充艺术家。

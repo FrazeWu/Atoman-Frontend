@@ -652,7 +652,7 @@ function openArtistResult(artist: MusicArtistListItem) {
 
 function startAlbumCreation() {
   if (!requireLogin()) return
-  openMusicCreationFlow({ startStep: 'albumImport', artistBeforeMatch: true })
+  openMusicCreationFlow({ startStep: 'albumImport' })
 }
 
 function handleSearchFocus() {

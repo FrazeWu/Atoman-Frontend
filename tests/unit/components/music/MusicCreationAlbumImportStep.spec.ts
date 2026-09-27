@@ -567,6 +567,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({
 			artistId: "artist-seeded",
+			archiveName: "graduation.zip",
 			inputMode: "archive",
 		});
 		expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith(

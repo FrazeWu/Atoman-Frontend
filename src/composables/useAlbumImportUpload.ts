@@ -659,6 +659,7 @@ export function useAlbumImportUpload() {
 			const session = await createMusicAlbumImport({
 				artistId: flow.draft.artist.id,
 				...(artistName ? { artistName } : {}),
+				...(isArchive ? { archiveName: files[0].name } : {}),
 				inputMode: autoMode,
 			});
 				if (!isCurrent()) return;

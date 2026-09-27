@@ -349,6 +349,7 @@ export type MusicAlbumImportMultipartPart = {
 export type CreateMusicAlbumImportInput = {
 	artistId?: string | null;
 	artistName?: string;
+	archiveName?: string;
 	inputMode?: MusicAlbumImportInputMode;
 };
 

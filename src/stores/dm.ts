@@ -188,7 +188,7 @@ export const useDMStore = defineStore('dm', () => {
       const party = await getTargetParty(target)
       if (generation !== requestGeneration.value || activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return
       if (party && party.id === target.id) {
-        activeTarget.value = { ...target, display_name: party.name?.trim() || party.display_name?.trim() || (target.type === 'channel' ? '未知频道' : '未知用户'), ...(party.avatar_url ? { avatar_url: party.avatar_url } : {}) }
+        activeTarget.value = { ...target, display_name: party.name?.trim() || party.display_name?.trim() || target.id, ...(party.avatar_url ? { avatar_url: party.avatar_url } : {}) }
       }
       activeConversationId.value = ''
     }

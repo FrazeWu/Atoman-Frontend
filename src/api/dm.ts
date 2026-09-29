@@ -53,8 +53,8 @@ const query = (values: Record<string, string | number | undefined>) => {
   Object.entries(values).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)) })
   return params.size ? `?${params}` : ''
 }
-const fallbackPartyName = (type: DMPartyType) => type === 'channel' ? '未知频道' : '未知用户'
-const partyName = (value: Pick<DMRawParty, 'type' | 'name' | 'display_name'>) => value.name?.trim() || value.display_name?.trim() || fallbackPartyName(value.type)
+const fallbackPartyName = (type: DMPartyType, id?: string) => id?.trim() || (type === 'channel' ? '未知频道' : '未知用户')
+const partyName = (value: Pick<DMRawParty, 'type' | 'id' | 'name' | 'display_name'>) => value.name?.trim() || value.display_name?.trim() || fallbackPartyName(value.type, value.id)
 const party = (value: DMRawParty): DMParty => ({ type: value.type, id: value.id, display_name: partyName(value), ...(value.avatar_url ? { avatar_url: value.avatar_url } : {}) })
 const mailbox = (value: DMRawMailbox): DMMailbox => ({ type: value.party.type, id: value.party.id, display_name: partyName(value.party), unread_count: value.unread, ...(value.party.avatar_url ? { avatar_url: value.party.avatar_url } : {}) })
 const sameParty = (left: Pick<DMTarget, 'type' | 'id'>, right: DMRawParty) => left.type === right.type && left.id === right.id
@@ -67,7 +67,7 @@ const normalizeConversation = (value: DMRawConversation, targetMailbox?: DMMailb
 }
 const senderName = (value: DMRawMessage, conversation?: DMRawConversation) => {
   const participant = conversation && [conversation.participant_a, conversation.participant_b].find((item) => item.type === value.sender_type && item.id === value.sender_id)
-  return participant ? partyName(participant) : fallbackPartyName(value.sender_type)
+  return participant ? partyName(participant) : fallbackPartyName(value.sender_type, value.sender_id)
 }
 const normalizeMessage = (value: DMRawMessage, conversation?: DMRawConversation): DMMessage => ({
   id: value.id, conversation_id: value.conversation_id, client_message_id: value.client_message_id,

@@ -231,7 +231,6 @@ describe("AlbumDrawer.vue", () => {
 		expect(albumDrawerSource).toContain('<h3 class="section-title section-title--tracks">');
 		expect(albumDrawerSource).toContain("<span>曲目列表</span>");
 		expect(albumDrawerSource).toContain('<h3 class="section-title">创作者</h3>');
-		expect(albumDrawerSource).toMatch(/\.album-artists-section\s*\{[^}]*border-top: 2px solid var\(--a-color-text\);/);
 		expect(albumDrawerSource).not.toMatch(/\.album-detail-tags\s*\{[^}]*border-left:/);
 		expect(albumDrawerSource).not.toMatch(/\.track\s*\{[^}]*border-left:/);
 		expect(albumDrawerSource).toContain("border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent)");

@@ -685,15 +685,15 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		expect(
 			wrapper.get('[data-testid="album-details-progress-label"]').text(),
-		).toContain("第 3 步");
+		).toContain("第 2 步");
 		expect(
 			wrapper.get('[data-testid="album-details-progress-value"]').text(),
-		).toContain("3 / 3");
+		).toContain("2 / 2");
 		expect(
 			wrapper
 				.findAll('[data-testid="album-details-step-label"]')
 				.map((node) => node.text()),
-		).toEqual(["1 创建艺术家", "2 上传与匹配", "3 完善专辑"]);
+		).toEqual(["1 上传与匹配", "2 完善专辑"]);
 		expect(
 			wrapper.get('[data-testid="album-details-title-input"]').element,
 		).toHaveValue("Late Registration");

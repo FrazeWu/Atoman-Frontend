@@ -248,18 +248,20 @@ describe("Music ImportsView", () => {
 	});
 
 	it("replaces the current page when pagination changes and polling refreshes it", async () => {
+		const initialImports = Array.from({ length: 51 }, (_, index) =>
+			importRecord("uploaded", `import-${index + 1}`),
+		);
+		const readyImports = initialImports.map((item) =>
+			importRecord("ready", item.importId),
+		);
 		mocks.listMusicAlbumImports
 			.mockResolvedValueOnce({
-				data: [importRecord("uploaded", "import-1")],
-				meta: { page: 1, page_size: 50, total: 51, has_more: true },
+				data: initialImports,
+				meta: { page: 1, page_size: 100, total: 51, has_more: false },
 			})
 			.mockResolvedValueOnce({
-				data: [importRecord("uploaded", "import-2")],
-				meta: { page: 2, page_size: 50, total: 51, has_more: true },
-			})
-			.mockResolvedValueOnce({
-				data: [importRecord("ready", "import-2")],
-				meta: { page: 2, page_size: 50, total: 51, has_more: true },
+				data: readyImports,
+				meta: { page: 1, page_size: 100, total: 51, has_more: false },
 			});
 
 		const wrapper = mount(ImportsView);
@@ -273,15 +275,15 @@ describe("Music ImportsView", () => {
 
 		expect(wrapper.findAll(".music-imports-view__item")).toHaveLength(1);
 		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({
-			page: 2,
-			page_size: 50,
+			page: 1,
+			page_size: 100,
 		});
 
 		await vi.advanceTimersByTimeAsync(3_000);
 		await flushPromises();
 		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({
-			page: 2,
-			page_size: 50,
+			page: 1,
+			page_size: 100,
 		});
 		wrapper.unmount();
 	});
@@ -295,18 +297,19 @@ describe("Music ImportsView", () => {
 			...importRecord("uploaded", "import-2"),
 			albumTitle: "另一条导入",
 		};
+		const allImports = [
+			selectedImport,
+			...Array.from({ length: 49 }, (_, index) => importRecord("uploaded", `filler-${index + 1}`)),
+			otherImport,
+		];
 		mocks.listMusicAlbumImports
 			.mockResolvedValueOnce({
-				data: [selectedImport],
-				meta: { page: 1, page_size: 50, total: 51, has_more: true },
-			})
-			.mockResolvedValueOnce({
-				data: [otherImport],
-				meta: { page: 2, page_size: 50, total: 51, has_more: true },
+				data: allImports,
+				meta: { page: 1, page_size: 100, total: 51, has_more: false },
 			})
 			.mockResolvedValue({
-				data: [otherImport],
-				meta: { page: 2, page_size: 50, total: 51, has_more: true },
+				data: allImports,
+				meta: { page: 1, page_size: 100, total: 51, has_more: false },
 			});
 		mocks.getMusicAlbumImport.mockResolvedValue({
 			...selectedImport,

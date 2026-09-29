@@ -108,6 +108,7 @@ const createFlowState = (
 			releaseDate: "",
 			type: "album",
 			releaseYear: "",
+			tags: [],
 			bio: "",
 			source: "资料来源",
 		},
@@ -1538,6 +1539,8 @@ describe("MusicCreationFlowDrawer", () => {
 					...createFlowState().draft.albumImport,
 					importId: "import-1",
 					status: "ready",
+					metadataMatchingStarted: true,
+					metadataMatchStatus: "matched",
 					coverUrl: "https://img.test/cover.jpg",
 					metadataSourceUrl: "https://musicbrainz.org/release/release-id",
 					derivedTracks: [

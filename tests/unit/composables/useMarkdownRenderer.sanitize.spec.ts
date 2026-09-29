@@ -125,7 +125,7 @@ describe("useMarkdownRenderer sanitize", () => {
     );
 
     expect(html).toContain(`href="/posts/post/${postId}"`);
-    expect(html).toContain(`href="/music/album/${albumId}"`);
+    expect(html).toContain(`href="/music/songs?q=${albumId}"`);
     expect(html).not.toContain(`href="/post/${postId}"`);
     expect(html).not.toContain(`href="/music/albums/${albumId}"`);
   });

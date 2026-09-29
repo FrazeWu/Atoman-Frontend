@@ -951,8 +951,6 @@ watch(
   line-height: 1.2;
 }
 
-.album-tag--custom { border-style: dashed; }
-
 .album-tag button {
   display: inline-flex;
   align-items: center;

@@ -598,6 +598,8 @@ describe("ArtistDrawer.vue", () => {
 			artistId: "1",
 			artistName: "Ye",
 			artistLegalName: "Kanye Omari West",
+			artistKind: "group",
+			artistAvatarUrl: "",
 			artistSource: "",
 			startStep: "albumImport",
 		});

@@ -79,14 +79,14 @@ describe('PVideoCard.vue', () => {
     expect(wrapper.get('.vc-info__arrow').text()).toBe('→')
   })
 
-  it('provides a mobile-sized thumbnail candidate', () => {
+  it('uses the rendered card width for desktop thumbnail selection', () => {
     vi.stubEnv('PROD', 'true')
     const wrapper = mountCard({ thumbnail_url: 'https://assets.atoman.org/video/covers/video-1.jpg' })
 
     expect(wrapper.get('.vc-img').attributes('src')).toContain('width=384')
     expect(wrapper.get('.vc-img').attributes('srcset')).toContain('width=384')
     expect(wrapper.get('.vc-thumb picture source').attributes('srcset')).toContain('width=384')
-    expect(wrapper.get('.vc-img').attributes('sizes')).toBe('(max-width: 768px) calc(100vw - 2rem), 640px')
+    expect(wrapper.get('.vc-img').attributes('sizes')).toBe('(max-width: 768px) calc(100vw - 2rem), 384px')
     vi.unstubAllEnvs()
   })
 

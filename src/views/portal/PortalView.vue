@@ -493,7 +493,7 @@ onMounted(loadHotContent)
   gap: 0.5rem;
 }
 
-.portal-hot__tag--debate {
+.portal-hot__tag.portal-hot__tag--debate {
   background: color-mix(in srgb, #6366f1 10%, transparent);
   color: #3730a3;
 }

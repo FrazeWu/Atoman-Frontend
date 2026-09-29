@@ -129,6 +129,14 @@ describe("module style contract", () => {
 		expect(portal).not.toMatch(/(?:linear|radial)-gradient\(/);
 	});
 
+	it("keeps debate tags readable on the light surface", () => {
+		const portal = read("src/views/portal/PortalView.vue");
+
+		expect(portal).toMatch(
+			/\.portal-hot__tag\.portal-hot__tag--debate\s*\{[^}]*background:\s*color-mix\([^}]*\)[^}]*color:\s*#3730a3/s,
+		);
+	});
+
 	it("keeps the debate graph link focus ring inside its clipped node", () => {
 		const source = read("src/components/debate/DebateGraphNode.vue");
 		const nodeRule = source.match(/\.debate-node\s*\{([^}]*)\}/)?.[1] ?? "";

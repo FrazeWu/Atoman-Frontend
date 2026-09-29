@@ -20,6 +20,7 @@ const IMAGE_SOURCE_HOSTS = new Set([
   'assets.atoman.org',
   'is1-ssl.mzstatic.com',
   'lh3.googleusercontent.com',
+  'blogger.googleusercontent.com',
   'www.designmadeingermany.de',
 ])
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/png,image/jpeg'

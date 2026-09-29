@@ -43,6 +43,8 @@ describe('resolveMediaURL', () => {
       .toBe('/media/image?url=https%3A%2F%2Fwww.designmadeingermany.de%2Favatar.webp&width=40')
     expect(resolveMediaImageURL('https://lh3.googleusercontent.com/a/avatar=s96-c', { width: 32 }))
       .toBe('/media/image?url=https%3A%2F%2Flh3.googleusercontent.com%2Fa%2Favatar%3Ds96-c&width=32')
+    expect(resolveMediaImageURL('https://blogger.googleusercontent.com/img/avatar.jpg', { width: 40 }))
+      .toBe('/media/image?url=https%3A%2F%2Fblogger.googleusercontent.com%2Fimg%2Favatar.jpg&width=40')
   })
 
   it('does not proxy images from unknown external hosts', () => {

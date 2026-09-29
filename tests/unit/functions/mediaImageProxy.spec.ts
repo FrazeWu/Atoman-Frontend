@@ -51,6 +51,7 @@ describe('media image proxy', () => {
     'https://is1-ssl.mzstatic.com/image/thumb/Music211/cover/1200x1200bb.jpg',
     'https://www.designmadeingermany.de/avatar.webp',
     'https://lh3.googleusercontent.com/a/avatar=s96-c',
+    'https://blogger.googleusercontent.com/img/avatar.jpg',
   ])('accepts supported external image sources: %s', async (url) => {
     const upstream = new Response('optimized-image', {
       headers: { 'content-type': 'image/webp' },

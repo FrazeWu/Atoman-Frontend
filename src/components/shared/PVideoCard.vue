@@ -87,7 +87,7 @@ const avatarLetter = () =>
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="thumbnailLabel">
         <picture v-if="thumbnailUrl">
           <source media="(max-width: 768px)" :srcset="thumbnailMobileSrcSet || thumbnailUrl" sizes="calc(100vw - 2rem)" />
-          <img :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 640px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
+          <img :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 384px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
         </picture>
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 

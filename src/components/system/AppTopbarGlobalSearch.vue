@@ -5,7 +5,6 @@
       class="search-pill"
       type="button"
       data-testid="topbar-search-pill"
-      :aria-label="`搜索... ${isMac ? '⌘K' : 'Ctrl K'}`"
       @click="openSearch"
     >
       <Search :size="14" class="search-pill-icon" aria-hidden="true" />

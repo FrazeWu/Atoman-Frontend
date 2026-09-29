@@ -49,8 +49,8 @@ describe("AppTopbarGlobalSearch", () => {
     const { wrapper } = await mountSearch();
 
     const trigger = wrapper.get('[data-testid="topbar-search-pill"]')
-    expect(trigger.attributes('aria-label')?.replace(/\s/g, ''))
-      .toContain(trigger.text().replace(/\s/g, ''))
+    expect(trigger.attributes('aria-label')).toBeUndefined()
+    expect(trigger.text().replace(/\s/g, '')).toBe('搜索...CtrlK')
 
     await trigger.trigger("click");
     expect(

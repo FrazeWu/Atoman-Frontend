@@ -47,6 +47,17 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
+	it("keeps the mobile portal prerender large enough to remain the LCP candidate", () => {
+		const source = readSource("index.html");
+
+		expect(source).toMatch(
+			/@media \(max-width: 600px\) \{\s+\.portal-prerender h1 \{\s+font-size: 32px;/,
+		);
+		expect(source).toMatch(
+			/\.portal-prerender h1 \{[\s\S]*?line-height: 1\.2;/,
+		);
+	});
+
 	it("defers non-critical shell work until the browser is idle", () => {
 		expect(readSource("src/App.vue")).toContain("scheduleIdleTask");
 		expect(readSource("src/views/portal/PortalView.vue")).toContain(
@@ -128,10 +139,13 @@ describe("runtime loading boundaries", () => {
 	it("defers the secondary mobile route manifest until navigation needs it", () => {
 		const routerSource = readSource("apps/mobile/router.ts");
 		const initialRoutesSource = readSource("apps/mobile/mobileInitialRoutes.ts");
+		const mobileTopbarSource = readSource("apps/mobile/MobileTopbar.vue");
 
 		expect(routerSource).toContain("mobileInitialRoutes");
 		expect(routerSource).not.toContain("import { mobileRoutes } from './mobileRoutes'");
 		expect(routerSource).toContain("import('./mobileRoutes')");
+		expect(mobileTopbarSource).toContain("from './mobileInitialRoutes'");
+		expect(mobileTopbarSource).not.toContain("from './mobileRoutes'");
 		expect(initialRoutesSource).toContain("PortalView");
 		expect(initialRoutesSource).not.toContain("FeedLayout");
 	});

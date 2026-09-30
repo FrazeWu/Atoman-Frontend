@@ -40,7 +40,7 @@ import { moduleUrl } from '@/router/siteUrls'
 import { desktopAppBaseUrl } from '@/utils/desktopAppUrl'
 import { resolveSiteContext } from '@/router/siteContext'
 import type { ModuleRoomKey } from '@atoman/module-config'
-import { MOBILE_MODULES } from './mobileRoutes'
+import { MOBILE_MODULES } from './mobileInitialRoutes'
 
 const availableModules: ModuleRoomKey[] = [...MOBILE_MODULES]
 const availableModuleSet = new Set<ModuleRoomKey>(availableModules)

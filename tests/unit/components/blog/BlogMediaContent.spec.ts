@@ -1,5 +1,5 @@
 import { nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Song, Video } from '@/types'
 
@@ -16,6 +16,8 @@ import BlogMediaContent from '@/components/blog/BlogMediaContent.vue'
 import BlogMediaEmbed from '@/components/blog/BlogMediaEmbed.vue'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
+
+enableAutoUnmount(afterEach)
 
 const song = {
   id: 'song-1',

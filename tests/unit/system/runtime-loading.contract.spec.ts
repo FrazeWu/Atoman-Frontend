@@ -6,12 +6,16 @@ const readSource = (relativePath: string) =>
 	readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
 
 describe("runtime loading boundaries", () => {
-	it("starts the app and router chunks in parallel", () => {
+	it("keeps mobile and desktop bootstrap preloads in separate branches", () => {
 		const source = readSource("src/main.ts");
 
-		expect(source).toContain("const [appModule, routerModule] = await Promise.all([");
-		expect(source).not.toContain("const appModule = mobileRuntime");
-		expect(source).not.toContain("const routerModule = mobileRuntime");
+		expect(source).toMatch(
+			/if \(mobileRuntime\) \{\s+const \[appModule, routerModule\] = await Promise\.all\(\[\s+import\("\.\.\/apps\/mobile\/MobileApp\.vue"\),\s+import\("\.\.\/apps\/mobile\/router"\),/,
+		);
+		expect(source).toMatch(
+			/\} else \{\s+const \[appModule, routerModule\] = await Promise\.all\(\[\s+import\("\.\/App\.vue"\),\s+import\("\.\/router"\),/,
+		);
+		expect(source).not.toContain("mobileRuntime\n\t\t\t? import(");
 	});
 
 	it("loads the audio player only when a track is active", () => {
@@ -37,6 +41,23 @@ describe("runtime loading boundaries", () => {
 			expect(source).not.toContain(`import ${importPath}`);
 			expect(source).toContain(`import('${importPath}')`);
 		}
+	});
+
+	it("keeps mobile chrome and player behind async boundaries", () => {
+		const source = readSource("apps/mobile/MobileApp.vue");
+
+		expect(source).not.toContain(
+			"import MobileBottomNav from '@/components/system/MobileBottomNav.vue'",
+		);
+		expect(source).not.toContain(
+			"import MobileAudioPlayer from './MobileAudioPlayer.vue'",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))",
+		);
 	});
 
 	it("keeps portal content cards behind async boundaries", () => {

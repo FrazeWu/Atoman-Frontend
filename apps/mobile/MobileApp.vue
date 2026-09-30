@@ -13,10 +13,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
-import MobileAudioPlayer from './MobileAudioPlayer.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
@@ -25,6 +23,9 @@ import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import MobileTopbar from './MobileTopbar.vue'
+
+const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
+const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
 
 declare global {
   interface Window {

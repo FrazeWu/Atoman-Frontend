@@ -1,5 +1,6 @@
-import { createApp } from "vue";
+import { createApp, type Component } from "vue";
 import { createPinia } from "pinia";
+import type { Router } from "vue-router";
 import "./style.css";
 import "./assets/editor.css";
 import "./assets/feed-reader.css";
@@ -36,17 +37,24 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 const bootstrap = async () => {
-  const [appModule, routerModule] = await Promise.all([
-    mobileRuntime
-      ? import("../apps/mobile/MobileApp.vue")
-      : import("./App.vue"),
-    mobileRuntime
-      ? import("../apps/mobile/router")
-      : import("./router"),
-  ]);
+  let rootComponent: Component;
+  let appRouter: Router;
 
-  const rootComponent = appModule.default;
-  const appRouter = routerModule.default;
+  if (mobileRuntime) {
+    const [appModule, routerModule] = await Promise.all([
+      import("../apps/mobile/MobileApp.vue"),
+      import("../apps/mobile/router"),
+    ]);
+    rootComponent = appModule.default;
+    appRouter = routerModule.default;
+  } else {
+    const [appModule, routerModule] = await Promise.all([
+      import("./App.vue"),
+      import("./router"),
+    ]);
+    rootComponent = appModule.default;
+    appRouter = routerModule.default;
+  }
 
   const app = createApp(rootComponent);
   app.config.errorHandler = (error, _instance, info) => {

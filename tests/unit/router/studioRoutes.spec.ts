@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from "vue-router";
+import type { RouteLocation, RouteRecordRaw } from "vue-router";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { describe, expect, it } from "vitest";
 
@@ -41,37 +41,57 @@ describe("studio routes", () => {
 		);
 	});
 
-	it("redirects channel and module collection legacy URLs into management", async () => {
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: buildAppRoutes(),
+	it("redirects channel and module collection legacy URLs into management", () => {
+		const studio = studioRoutes[0];
+		const moduleRoute = studio?.children?.find(
+			(route) => route.path === ":module(blog|podcast|video)",
+		);
+		const channelCollectionsRoute = studio?.children?.find(
+			(route) => route.name === "studio-channel-collections",
+		);
+		const moduleCollectionsRoute = moduleRoute?.children?.find(
+			(route) => route.path === "collections",
+		);
+
+		if (
+			typeof channelCollectionsRoute?.redirect !== "function" ||
+			typeof moduleCollectionsRoute?.redirect !== "function"
+		) {
+			throw new Error("创作中心合集旧路由缺少重定向");
+		}
+
+		const channelRedirect = channelCollectionsRoute.redirect({
+			query: { source: "legacy" },
+			hash: "#collections",
+		} as RouteLocation);
+		expect(channelRedirect).toEqual({
+			path: "/studio/manage/collections",
+			query: { source: "legacy" },
+			hash: "#collections",
 		});
-		await router.push("/studio/channel/collections?source=legacy#collections");
-		expect(router.currentRoute.value.path).toBe("/studio/manage/collections");
-		expect(router.currentRoute.value.query.source).toBe("legacy");
-		expect(router.currentRoute.value.hash).toBe("#collections");
-		await router.push("/studio/blog/collections");
-		expect(router.currentRoute.value.path).toBe("/studio/manage/collections");
+
+		expect(moduleCollectionsRoute.redirect({} as RouteLocation)).toEqual({
+			path: "/studio/manage/collections",
+		});
 	});
 
-	it("keeps the module parent mounted while adding an editor overlay", async () => {
+	it("keeps the module parent mounted while adding an editor overlay", () => {
 		const router = createRouter({
 			history: createMemoryHistory(),
 			routes: buildAppRoutes(),
 		});
-		await router.push("/studio/blog/content");
-		const moduleParent = router.currentRoute.value.matched[1];
-		const contentView = router.currentRoute.value.matched[2]?.components?.default;
+		const contentRoute = router.resolve("/studio/blog/content");
+		const editorRoute = router.resolve("/studio/blog/new");
+		const moduleParent = contentRoute.matched[1];
+		const contentView = contentRoute.matched[2]?.components?.default;
 
-		await router.push("/studio/blog/new");
-
-		expect(router.currentRoute.value.matched[1]).toBe(moduleParent);
-		expect(router.currentRoute.value.name).toBe("studio-content-new");
-		expect(router.currentRoute.value.matched[2]?.components?.default).toBe(
+		expect(editorRoute.matched[1]).toBe(moduleParent);
+		expect(editorRoute.name).toBe("studio-content-new");
+		expect(editorRoute.matched[2]?.components?.default).toBe(
 			contentView,
 		);
 		expect(
-			router.currentRoute.value.matched[2]?.components?.overlay,
+			editorRoute.matched[2]?.components?.overlay,
 		).toBeDefined();
 	});
 

@@ -88,7 +88,6 @@ import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
-import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 
 const { toggleSidebar } = useSidebar()
@@ -101,6 +100,7 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const sheetStore = useSheetStore()
 const playerPresence = usePlayerPresenceStore()
 const { navigateTo } = useModuleNav()
+const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
 
 const handleBrandClick = () => {

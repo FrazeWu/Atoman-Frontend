@@ -593,7 +593,7 @@ onMounted(loadHotContent)
   font-size: 0.65rem;
   font-weight: 600;
   background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
+  color: var(--a-color-muted-soft);
 }
 
 .portal-hot__tag--feed {

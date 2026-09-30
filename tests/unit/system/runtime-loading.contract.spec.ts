@@ -43,6 +43,17 @@ describe("runtime loading boundaries", () => {
 		}
 	});
 
+	it("defers the global search panel from the initial shell", () => {
+		const source = readSource("src/components/system/AppTopbar.vue");
+
+		expect(source).not.toContain(
+			"import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))",
+		);
+	});
+
 	it("keeps mobile chrome and player behind async boundaries", () => {
 		const source = readSource("apps/mobile/MobileApp.vue");
 

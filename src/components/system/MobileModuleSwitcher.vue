@@ -3,7 +3,6 @@
     to="/modules"
     class="mobile-module-switcher"
     data-testid="mobile-module-switcher"
-    :aria-label="`打开模块：${label}`"
     @click="emit('navigate')"
   >
     <span class="mobile-module-switcher__label">{{ label }}</span>

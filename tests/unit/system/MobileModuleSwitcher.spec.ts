@@ -40,7 +40,8 @@ describe("MobileModuleSwitcher", () => {
 		const link = wrapper.get('[data-testid="mobile-module-switcher"]');
 		expect(link.element.tagName).toBe("A");
 		expect(link.attributes("href")).toBe("/modules");
-		expect(link.attributes("aria-label")).toBe("打开模块：音乐");
+		expect(link.attributes("aria-label")).toBeUndefined();
+		expect(link.text()).toContain("音乐");
 		expect(wrapper.find('[data-testid="mobile-module-sheet"]').exists()).toBe(
 			false,
 		);

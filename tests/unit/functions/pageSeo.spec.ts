@@ -201,4 +201,23 @@ describe("static page SEO", () => {
 		});
 		expect(untouched).toBe(xmlResponse);
 	});
+
+	it("keeps HTML transform protection when rewriting fails", async () => {
+		const upstream = {
+			body: null,
+			headers: new Headers({ "content-type": "text/html" }),
+			status: 200,
+			statusText: "OK",
+			clone: () => {
+				throw new Error("HTML body unavailable");
+			},
+		} as unknown as Response;
+
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/feed"),
+			next: async () => upstream,
+		});
+
+		expect(response.headers.get("cache-control")).toBe("no-transform");
+	});
 });

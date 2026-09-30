@@ -481,7 +481,7 @@ describe("MusicCreationFlowDrawer", () => {
 		const flow = drawerMocks.state.value.creationFlow;
 		expect(flow?.draft.albumDetails.title).toBe("Imported Album");
 		expect(flow?.draft.albumDetails.coverUrl).toBe(
-			"https://img.test/default-cover.jpg",
+			"https://img.test/cover.jpg",
 		);
 		expect(flow?.draft.albumImport.derivedCover).toBe(
 			"https://img.test/cover.jpg",
@@ -2294,7 +2294,7 @@ describe("MusicCreationFlowDrawer", () => {
 		const flow = drawerMocks.state.value.creationFlow;
 		expect(flow?.draft.albumDetails.title).toBe("Imported Album");
 		expect(flow?.draft.albumDetails.coverUrl).toBe(
-			"https://img.test/default-cover.jpg",
+			"https://img.test/cover.jpg",
 		);
 		expect(flow?.draft.albumImport.derivedCover).toBe(
 			"https://img.test/cover.jpg",

@@ -26,6 +26,7 @@ import {
 	shouldIgnoreAlbumImportPath,
 } from "@/utils/musicImportPreview";
 import { parsePartialDateParts } from "@/components/music/birthDateMask";
+import { localizedMusicCountry } from "@/utils/musicImportMetadata";
 import type { MusicCreationFlowState } from "@/components/music/musicCreationTypes";
 import { useMusicCreationFlow } from "@/components/music/musicCreationFlowContext";
 import { mergeImportedTracksIntoDraft } from "@/utils/musicImportTrackMerge";
@@ -289,7 +290,7 @@ export function useAlbumImportUpload() {
 				draft.metadataGenres = snapshot.metadataGenres ?? [];
 				draft.metadataStyles = snapshot.metadataStyles ?? [];
 				draft.metadataLabels = snapshot.metadataLabels ?? [];
-				draft.metadataCountry = snapshot.metadataCountry ?? "";
+				draft.metadataCountry = localizedMusicCountry(snapshot.metadataCountry);
 				draft.metadataFormats = snapshot.metadataFormats ?? [];
 				draft.metadataSources = snapshot.metadataSources ?? [];
 				draft.metadataFieldSources = snapshot.metadataFieldSources ?? {};

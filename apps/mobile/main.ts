@@ -6,8 +6,6 @@ import {
 	recoverStaleViteChunk,
 } from "@/utils/staleViteChunkRecovery";
 import "../../src/style.css";
-import "../../src/assets/editor.css";
-import "../../src/assets/feed-reader.css";
 
 installStaleViteChunkRecovery();
 document.documentElement.dataset.atomanApp = "mobile";

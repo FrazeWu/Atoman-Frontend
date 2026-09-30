@@ -60,6 +60,28 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
+	it("keeps editor and feed reader styles out of the initial entries", () => {
+		for (const source of [readSource("src/main.ts"), readSource("apps/mobile/main.ts")]) {
+			expect(source).not.toContain('assets/editor.css');
+			expect(source).not.toContain('assets/feed-reader.css');
+		}
+		expect(readSource("src/components/shared/PEditorRuntime.vue")).toContain(
+			"@/assets/editor.css",
+		);
+		expect(readSource("src/components/blog/BlogPostReader.vue")).toContain(
+			"@/assets/editor.css",
+		);
+		expect(readSource("src/components/feed/FeedArticleSheet.vue")).toContain(
+			"@/assets/editor.css",
+		);
+		expect(readSource("src/components/feed/FeedArticleSheet.vue")).toContain(
+			"@/assets/feed-reader.css",
+		);
+		expect(readSource("src/components/feed/FeedReaderContent.vue")).toContain(
+			"@/assets/feed-reader.css",
+		);
+	});
+
 	it("keeps the studio route manifest out of the initial desktop router", () => {
 		const routerSource = readSource("src/router.ts");
 		const initialRoutesSource = readSource("src/router/buildInitialRoutes.ts");
@@ -101,6 +123,17 @@ describe("runtime loading boundaries", () => {
 		expect(source).toContain(
 			"scheduleIdleTask(() => authStore.restoreSession())",
 		);
+	});
+
+	it("defers the secondary mobile route manifest until navigation needs it", () => {
+		const routerSource = readSource("apps/mobile/router.ts");
+		const initialRoutesSource = readSource("apps/mobile/mobileInitialRoutes.ts");
+
+		expect(routerSource).toContain("mobileInitialRoutes");
+		expect(routerSource).not.toContain("import { mobileRoutes } from './mobileRoutes'");
+		expect(routerSource).toContain("import('./mobileRoutes')");
+		expect(initialRoutesSource).toContain("PortalView");
+		expect(initialRoutesSource).not.toContain("FeedLayout");
 	});
 
 	it("keeps portal content cards behind async boundaries", () => {

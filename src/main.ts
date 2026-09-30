@@ -2,8 +2,6 @@ import { createApp, type Component } from "vue";
 import { createPinia } from "pinia";
 import type { Router } from "vue-router";
 import "./style.css";
-import "./assets/editor.css";
-import "./assets/feed-reader.css";
 import { reportError } from "./utils/logger";
 import {
   installStaleViteChunkRecovery,

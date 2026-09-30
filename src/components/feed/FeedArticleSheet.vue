@@ -248,6 +248,8 @@
 </template>
 
 <script setup lang="ts">
+import '@/assets/editor.css'
+import '@/assets/feed-reader.css'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { IconBookmark as Bookmark, IconClock as Clock, IconPlayerPlay as Play } from '@tabler/icons-vue'
 import { apiRequestResult } from '@/api/client'

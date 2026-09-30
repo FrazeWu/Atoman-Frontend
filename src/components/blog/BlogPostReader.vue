@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/editor.css'
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'

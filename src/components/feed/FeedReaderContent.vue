@@ -8,6 +8,7 @@
 </template>
 
 <script setup lang="ts">
+import '@/assets/feed-reader.css'
 import DOMPurify from 'dompurify'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 

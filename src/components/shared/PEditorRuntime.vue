@@ -126,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+import '@/assets/editor.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { IconAt as AtSign, IconQuote as Quote } from '@tabler/icons-vue'
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType, highlightActiveLine, highlightActiveLineGutter, highlightWhitespace, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'

@@ -81,7 +81,7 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { IconMenu as Menu, IconSun as Sun, IconMoon as Moon, IconArrowLeft as ArrowLeft } from '@tabler/icons-vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
@@ -99,7 +99,7 @@ const route = useRoute()
 
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
-const player = usePlayerStore()
+const playerPresence = usePlayerPresenceStore()
 const { navigateTo } = useModuleNav()
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
 
@@ -112,7 +112,7 @@ const handleBrandClick = () => {
 }
 
 const requestLyricsClose = () => {
-  player.requestLyricsClose()
+  playerPresence.requestLyricsClose()
 }
 
 const handleModuleNavigation = (key: ModuleRoomKey) => {

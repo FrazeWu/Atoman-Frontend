@@ -34,7 +34,7 @@ import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import AppTopbar from '@/components/system/AppTopbar.vue'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
@@ -54,7 +54,7 @@ const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/M
 const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFooter.vue'))
 
 const route = useRoute()
-const player = usePlayerStore()
+const playerPresence = usePlayerPresenceStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const { checkRelay } = useTransitionRelay()
@@ -62,7 +62,7 @@ const apiUrl = useApiUrl()
 
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
-const hasActiveTrack = computed(() => Boolean(player.currentSong))
+const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
 
 const reportPageView = (sendAnalytics = true) => {

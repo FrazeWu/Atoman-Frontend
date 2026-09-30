@@ -18,7 +18,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
@@ -37,11 +37,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
-const player = usePlayerStore()
+const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio') && !route.path.startsWith('/videos/watch/'))
-const showMobilePlayer = computed(() => Boolean(player.currentSong) && showMobileBottomNav.value && route.path !== '/music/player')
+const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
 
 const reportPageView = () => {
   if (isAuthRoute.value) return

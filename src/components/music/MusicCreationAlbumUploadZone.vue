@@ -108,6 +108,7 @@ const totalUploadProgress = computed(() => {
 const metadataMatchLabel = computed(() => {
 	const draft = albumImportDraft.value
 	if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
+	if (draft.status === 'canceled') return '已取消'
 	if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') return '已匹配'
 	if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
 	if (draft.metadataMatchStatus === 'matching') return '正在匹配'

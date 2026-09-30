@@ -58,4 +58,15 @@ describe('Google Analytics loader', () => {
     expect(script?.async).toBe(true)
     expect(script?.src).toContain('googletagmanager.com/gtag/js?id=G-1FLNTZ469W')
   })
+
+  it('resolves when the environment blocks external script insertion', async () => {
+    vi.resetModules()
+    const appendChild = vi.spyOn(document.head, 'appendChild').mockImplementation(() => {
+      throw new Error('external scripts are disabled')
+    })
+    const { loadGoogleAnalytics: load } = await import('@/utils/analytics')
+
+    await expect(load()).resolves.toBeUndefined()
+    appendChild.mockRestore()
+  })
 })

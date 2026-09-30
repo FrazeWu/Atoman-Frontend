@@ -33,7 +33,11 @@ export function loadGoogleAnalytics() {
     script.src = `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`
     script.onload = () => resolve()
     script.onerror = () => resolve()
-    document.head.appendChild(script)
+    try {
+      document.head.appendChild(script)
+    } catch {
+      resolve()
+    }
   })
 
   return analyticsLoadPromise

@@ -228,22 +228,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
 
-import BlogItemCard from '@/components/shared/BlogItemCard.vue'
-import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
-import PContentCard from '@/components/ui/PContentCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApi } from '@/composables/useApi'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
+
+const BlogItemCard = defineAsyncComponent(() => import('@/components/shared/BlogItemCard.vue'))
+const MusicAlbumCard = defineAsyncComponent(() => import('@/components/music/MusicAlbumCard.vue'))
+const PContentCard = defineAsyncComponent(() => import('@/components/ui/PContentCard.vue'))
+const PVideoCard = defineAsyncComponent(() => import('@/components/shared/PVideoCard.vue'))
 
 interface PortalMusicArtist {
   id: string

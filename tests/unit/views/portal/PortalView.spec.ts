@@ -73,6 +73,12 @@ const featured = [
   },
 ]
 
+const flushPortal = async () => {
+  await flushPromises()
+  await vi.dynamicImportSettled()
+  await flushPromises()
+}
+
 describe('PortalView', () => {
   beforeEach(() => {
     routerReplace.mockReset()
@@ -108,7 +114,7 @@ describe('PortalView', () => {
       },
     })
 
-    await flushPromises()
+    await flushPortal()
 
     expect(wrapper.find('.portal-hot__recommendations').exists()).toBe(false)
     expect(wrapper.findAll('.portal-hot__section')).toHaveLength(2)
@@ -161,7 +167,7 @@ describe('PortalView', () => {
         },
       },
     })
-    await flushPromises()
+    await flushPortal()
 
     const card = wrapper.get('.portal-hot__music-grid .music-album-card')
     expect(card.get('.artist-link').text()).toBe('真实艺人')
@@ -206,7 +212,7 @@ describe('PortalView', () => {
         },
       },
     })
-    await flushPromises()
+    await flushPortal()
 
     expect(wrapper.get('img[alt="频道作者 的头像"]').attributes('src')).toContain('/channel-owner.png')
   })
@@ -257,7 +263,7 @@ describe('PortalView', () => {
         },
       },
     })
-    await flushPromises()
+    await flushPortal()
 
     expect(wrapper.get('img[alt="门户作者 的头像"]').attributes('src')).toContain('/portal-author.png')
     expect(wrapper.get('img[alt="技术周刊 的网站图标"]').attributes('src')).toContain('/weekly.png')
@@ -295,7 +301,7 @@ describe('PortalView', () => {
         },
       },
     })
-    await flushPromises()
+    await flushPortal()
 
     expect(wrapper.findAll('.portal-hot__card-link')).toHaveLength(4)
     expect(wrapper.findAll('.portal-hot__section-head h2').map((heading) => heading.text())).toEqual(['博客', '音乐'])
@@ -312,7 +318,7 @@ describe('PortalView', () => {
         stubs: { PButton: true, RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } },
       },
     })
-    await flushPromises()
+    await flushPortal()
 
     expect(routerReplace).not.toHaveBeenCalled()
   })

@@ -3,7 +3,6 @@ const imageProxyHosts = new Set([
   'assets.atoman.org',
   'is1-ssl.mzstatic.com',
   'lh3.googleusercontent.com',
-  'blogger.googleusercontent.com',
   'www.designmadeingermany.de',
 ])
 

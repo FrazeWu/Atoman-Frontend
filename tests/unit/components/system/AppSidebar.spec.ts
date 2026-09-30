@@ -8,6 +8,7 @@ import AppSidebar from '@/components/system/AppSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { useUIStore } from '@/stores/ui'
 
 const SubscriptionHubSidebarTreeStub = defineComponent({
   name: 'SubscriptionHubSidebarTree',
@@ -157,6 +158,32 @@ describe('AppSidebar blog navigation', () => {
 
     expect(discoveryItem?.props('routerActive')).toBe(true)
     expect(postsItem?.props('routerActive')).toBe(true)
+  })
+
+  it('supports keyboard focus and Enter navigation on non-feed modules', async () => {
+    const { wrapper, router } = await mountSidebar(moduleCases[0])
+    useUIStore().focusSidebar()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', cancelable: true }))
+    await flushPromises()
+
+    const discoveryItem = wrapper.findAllComponents(PSidebarItem).find((item) => item.text().trim() === '发现')
+    expect(discoveryItem?.props('isFocused')).toBe(true)
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/posts')
+  })
+
+  it('opens the first sidebar item after the global H focus shortcut', async () => {
+    const { router } = await mountSidebar(moduleCases[0])
+    useUIStore().focusSidebar()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/posts')
   })
 })
 

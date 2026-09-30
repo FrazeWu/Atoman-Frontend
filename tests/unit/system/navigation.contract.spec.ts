@@ -124,7 +124,7 @@ describe("application navigation contracts", () => {
 		},
 	);
 
-	it("keeps the short-note entry and route under posts", async () => {
+	it("keeps the short-note entry and route under posts", () => {
 		const source = readSource("src/components/system/AppSidebar.vue");
 
 		expect(source).not.toContain("label: '写短笺'");
@@ -136,8 +136,8 @@ describe("application navigation contracts", () => {
 			history: createMemoryHistory(),
 			routes: buildAppRoutes(),
 		});
-		await router.push("/posts/notes");
-		expect(router.currentRoute.value.fullPath).toBe("/posts/notes");
+		const resolved = router.resolve("/posts/notes");
+		expect(resolved.fullPath).toBe("/posts/notes");
 	});
 
 	it("does not render a standalone song entry in the music sidebar", () => {

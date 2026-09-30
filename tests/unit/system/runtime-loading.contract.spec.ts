@@ -116,6 +116,19 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
+	it("does not load the mobile-only switcher in the desktop shell", () => {
+		const source = readSource("src/components/system/AppTopbar.vue");
+
+		expect(source).not.toContain(
+			"import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))",
+		);
+		expect(source).toContain('v-if="showMobileModuleSwitcher && !isAuthRoute"');
+		expect(source).toContain("matchMedia?.('(max-width: 720px)')");
+	});
+
 	it("keeps mobile chrome and player behind async boundaries", () => {
 		const source = readSource("apps/mobile/MobileApp.vue");
 

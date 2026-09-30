@@ -38,7 +38,7 @@
       </button>
 
       <MobileModuleSwitcher
-        v-if="!isAuthRoute"
+        v-if="showMobileModuleSwitcher && !isAuthRoute"
         :label="mobileModuleLabel"
         :current-module="mobileModule"
         @navigate="requestLyricsClose"
@@ -88,7 +88,6 @@ import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
-import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 
 const { toggleSidebar } = useSidebar()
@@ -101,9 +100,12 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const sheetStore = useSheetStore()
 const playerPresence = usePlayerPresenceStore()
 const { navigateTo } = useModuleNav()
+const MobileModuleSwitcher = defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))
 const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
 const searchReady = ref(false)
+const showMobileModuleSwitcher = ref(false)
+let mobileViewportQuery: MediaQueryList | null = null
 let cancelSearchIdleTask = () => {}
 let cancelSessionRestoreIdleTask = () => {}
 
@@ -169,6 +171,12 @@ const handleScroll = (event: Event) => {
   }
 }
 
+const syncMobileViewport = (event?: MediaQueryListEvent) => {
+  showMobileModuleSwitcher.value = mobileViewportQuery === null
+    ? true
+    : event?.matches ?? mobileViewportQuery.matches
+}
+
 onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark'
   if (isDark.value) {
@@ -184,6 +192,10 @@ onMounted(() => {
     ? mainContent.scrollTop > 0
     : window.scrollY > 0
 
+  mobileViewportQuery = window.matchMedia?.('(max-width: 720px)') ?? null
+  syncMobileViewport()
+  mobileViewportQuery?.addEventListener('change', syncMobileViewport)
+
   cancelSearchIdleTask = scheduleIdleTask(() => {
     searchReady.value = true
   })
@@ -192,6 +204,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   cancelSearchIdleTask()
   cancelSessionRestoreIdleTask()
+  mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
   window.removeEventListener('scroll', handleScroll, { capture: true })
 })
 

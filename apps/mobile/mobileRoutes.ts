@@ -7,6 +7,7 @@ const requiresAuth = { requiresAuth: true };
 const portalHomeRoute: RouteRecordRaw = {
 	path: "/",
 	component: PortalView,
+	meta: { portalHome: true },
 };
 
 export const MOBILE_MODULES = ["feed", "blog", "music"] as const;

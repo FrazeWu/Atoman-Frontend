@@ -90,7 +90,7 @@ onMounted(() => {
   if (localStorage.getItem('atoman_transition_relay')) {
     checkRelay()
   }
-  siteAccessStore.load()
+  void siteAccessStore.load().catch(() => {})
 })
 </script>
 

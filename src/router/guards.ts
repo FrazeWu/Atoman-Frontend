@@ -49,6 +49,7 @@ export function installRouteGuards(router: Router) {
 			to.path === "/music" &&
 			(to.query.editor === "artist-create" || to.query.editor === "album-edit");
 		const requiresAuth = Boolean(to.meta.requiresAuth) || requiresMusicEditorAuth;
+		const isPortalHome = to.meta.portalHome === true;
 		const hasValidSession =
 			authStore.validateSession() ||
 			(requiresAuth || isGuestOnlyRoute ? await authStore.restoreSession() : false);
@@ -60,10 +61,10 @@ export function installRouteGuards(router: Router) {
 		}
 
 		if (
+			!isPortalHome &&
 			!isSettingRoute &&
 			!isPublicSystemRoute &&
-			!siteAccessStore.loaded &&
-			!siteAccessStore.loading
+			!siteAccessStore.loaded
 		) {
 			try {
 				await siteAccessStore.load();

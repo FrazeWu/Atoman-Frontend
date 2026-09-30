@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, nextTick, type Ref } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, watch, type Ref } from "vue";
 import { getMountedPinia } from "@/utils/pinia";
 import { useUIStore } from "@/stores/ui";
 
@@ -13,6 +13,17 @@ interface KeyboardListOptions<T> {
 export function useKeyboardList<T>(options: KeyboardListOptions<T>) {
 	const focusedIndex = ref(-1);
 	const uiStore = getMountedPinia() ? useUIStore() : null;
+	const stopSidebarFocusSync = options.section === "sidebar" && uiStore
+		? watch(
+				[() => uiStore.focusedSection, () => uiStore.focusedSidebarIndex],
+				([section, index]) => {
+					if (section === "sidebar" && focusedIndex.value === -1 && index >= 0) {
+						focusedIndex.value = index;
+					}
+				},
+				{ immediate: true },
+			)
+		: undefined;
 
 	const scrollToFocused = () => {
 		nextTick(() => {
@@ -80,6 +91,7 @@ export function useKeyboardList<T>(options: KeyboardListOptions<T>) {
 
 	onUnmounted(() => {
 		window.removeEventListener("keydown", handleKeyDown);
+		stopSidebarFocusSync?.();
 	});
 
 	return {

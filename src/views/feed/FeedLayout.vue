@@ -43,7 +43,6 @@ import AppSidebar from '@/components/system/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'
-import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
 import type { SubscriptionHubSelection, SubscriptionHubType } from '@/types'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
@@ -52,9 +51,6 @@ const route = useRoute()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const isMobileApp = isStandaloneMobileApp()
-
-// Setup global area switching (H/L)
-useKeyboardLayout()
 
 const { sidebarCollapsed } = useSidebar()
 const mobileSourcesOpen = ref(false)

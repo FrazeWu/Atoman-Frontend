@@ -27,6 +27,7 @@
         :exact="item.exact"
         :active="item.active?.()"
         :router-active="item.routerActive ?? true"
+        :is-focused="isSidebarFocused(index)"
       >
         {{ item.label }}
       </PSidebarItem>
@@ -42,6 +43,7 @@
         :icon="item.icon"
         :exact="item.exact"
         router-active
+        :is-focused="isSidebarFocused(index)"
       >
         {{ item.label }}
       </PSidebarItem>
@@ -57,6 +59,7 @@
         :icon="item.icon"
         :exact="item.exact"
         router-active
+        :is-focused="isSidebarFocused(index)"
       >
         {{ item.label }}
       </PSidebarItem>
@@ -70,6 +73,7 @@
         :icon="MessageSquare"
         :active="Boolean(route && !$route.query.category_id && !$route.query.tag)"
         exact
+        :is-focused="isSidebarFocused(0)"
       >
         所有话题
       </PSidebarItem>
@@ -77,10 +81,11 @@
         <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
         <div class="p-sidebar-label">分类</div>
         <PSidebarItem
-          v-for="cat in forumStore.categories"
+          v-for="(cat, index) in forumStore.categories"
           :key="cat.id"
           :icon="Folder"
           :active="Boolean(route && $route.query.category_id === String(cat.id))"
+          :is-focused="isSidebarFocused(index + 1)"
           @click="selectCategory(cat.id)"
         >
           <span class="sidebar-cat-dot" :style="{ background: cat.color || 'var(--a-color-fg)' }" />
@@ -113,6 +118,7 @@
         :icon="MessageSquare"
         :active="Boolean(route && !$route.query.status)"
         exact
+        :is-focused="isSidebarFocused(0)"
       >
         全部辩题
       </PSidebarItem>
@@ -121,6 +127,7 @@
         :index="2"
         :icon="Archive"
         :active="Boolean(route && $route.query.status === 'archived')"
+        :is-focused="isSidebarFocused(1)"
       >
         已归档
       </PSidebarItem>
@@ -129,6 +136,7 @@
         :index="3"
         :icon="BookOpen"
         :active="Boolean(route && route.path === '/debate/rules')"
+        :is-focused="isSidebarFocused(2)"
       >
         规则
       </PSidebarItem>
@@ -136,17 +144,17 @@
 
     <!-- 6. TIMELINE MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'timeline'">
-      <PSidebarItem to="/timeline" :index="1" :icon="Clock" exact router-active>
+      <PSidebarItem to="/timeline" :index="1" :icon="Clock" exact router-active :is-focused="isSidebarFocused(0)">
         时间轴首页
       </PSidebarItem>
-      <PSidebarItem to="/timeline/persons" :index="2" :icon="Users" router-active>
+      <PSidebarItem to="/timeline/persons" :index="2" :icon="Users" router-active :is-focused="isSidebarFocused(1)">
         人物志
       </PSidebarItem>
     </template>
 
     <!-- 7. STUDIO MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'studio'">
-      <PSidebarItem to="/studio" :index="1" :icon="LayoutDashboard" exact router-active>
+      <PSidebarItem to="/studio" :index="1" :icon="LayoutDashboard" exact router-active :is-focused="isSidebarFocused(0)">
         概览
       </PSidebarItem>
       <PSidebarItem
@@ -155,39 +163,40 @@
         :icon="Settings2"
         :active="Boolean(route && route.path.startsWith('/studio/manage'))"
         router-active
+        :is-focused="isSidebarFocused(1)"
       >
         管理
       </PSidebarItem>
-      <PSidebarItem to="/studio/blog" :index="3" :icon="FileText" router-active>
+      <PSidebarItem to="/studio/blog" :index="3" :icon="FileText" router-active :is-focused="isSidebarFocused(2)">
         博客
       </PSidebarItem>
-      <PSidebarItem to="/studio/podcast" :index="4" :icon="Mic2" router-active>
+      <PSidebarItem to="/studio/podcast" :index="4" :icon="Mic2" router-active :is-focused="isSidebarFocused(3)">
         播客
       </PSidebarItem>
-      <PSidebarItem to="/studio/video" :index="5" :icon="Video" router-active>
+      <PSidebarItem to="/studio/video" :index="5" :icon="Video" router-active :is-focused="isSidebarFocused(4)">
         视频
       </PSidebarItem>
     </template>
 
     <!-- 8. PODCAST MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'podcast'">
-      <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact router-active>
+      <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact router-active :is-focused="isSidebarFocused(0)">
         播客大厅
       </PSidebarItem>
-      <PSidebarItem to="/podcasts/subscriptions" :index="2" :icon="Rss" router-active>
+      <PSidebarItem to="/podcasts/subscriptions" :index="2" :icon="Rss" router-active :is-focused="isSidebarFocused(1)">
         订阅
       </PSidebarItem>
     </template>
 
     <!-- 9. VIDEO MODULE SIDEBAR -->
     <template v-else-if="currentModule === 'video'">
-      <PSidebarItem to="/videos" :index="1" :icon="Compass" exact router-active>
+      <PSidebarItem to="/videos" :index="1" :icon="Compass" exact router-active :is-focused="isSidebarFocused(0)">
         探索
       </PSidebarItem>
-      <PSidebarItem to="/videos/subscriptions" :index="2" :icon="Rss" router-active>
+      <PSidebarItem to="/videos/subscriptions" :index="2" :icon="Rss" router-active :is-focused="isSidebarFocused(1)">
         订阅
       </PSidebarItem>
-      <PSidebarItem to="/videos/favorites" :index="3" :icon="Bookmark" router-active>
+      <PSidebarItem to="/videos/favorites" :index="3" :icon="Bookmark" router-active :is-focused="isSidebarFocused(2)">
         收藏
       </PSidebarItem>
     </template>
@@ -218,7 +227,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, type Component } from 'vue'
+import { computed, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import { IconRss as Rss, IconCompass as Compass, IconBookmark as Bookmark, IconTags as Tags, IconUsers as Users, IconHistory as History, IconMessage as MessageSquare, IconFolder as Folder, IconArchive as Archive, IconBook2 as BookOpen, IconClock as Clock, IconMicrophone as Mic, IconLibrary as Library, IconSearch as Search, IconUpload as Upload, IconClipboardCheck as ClipboardCheck, IconLayoutDashboard as LayoutDashboard, IconFileText as FileText, IconMicrophone2 as Mic2, IconSettings2 as Settings2, IconVideo as Video } from '@tabler/icons-vue'
@@ -272,6 +281,7 @@ const currentModule = computed(() => {
   if (path.startsWith('/forum')) return 'forum'
   if (path.startsWith('/debate')) return 'debate'
   if (path.startsWith('/timeline')) return 'timeline'
+  if (path.startsWith('/studio')) return 'studio'
   if (path.startsWith('/podcasts')) return 'podcast'
   if (path.startsWith('/videos')) return 'video'
   return 'feed'
@@ -298,11 +308,6 @@ const feedNavItems = [
   { to: modulePathUrl('feed', '/subscriptions'), label: '订阅', icon: Rss },
   { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Bookmark },
 ]
-
-const { focusedIndex: focusedSidebarIndex } = useKeyboardList({
-  items: ref(feedNavItems),
-  section: 'sidebar'
-})
 
 const subscriptionHubTree = computed(() => feedStore ? feedStore.subscriptionHubTree : { types: [] })
 const loadingSubscriptionHubTree = computed(() => feedStore?.loadingSubscriptionHubTree ?? false)
@@ -439,6 +444,86 @@ const selectTag = (tag: string) => {
     }
   }
 }
+
+type SidebarNavItem = {
+  to?: string
+  label: string
+  icon?: Component
+  onEnter?: () => void
+}
+
+const sidebarNavItems = computed<SidebarNavItem[]>(() => {
+  switch (currentModule.value) {
+    case 'feed':
+      return feedNavItems
+    case 'blog':
+      return blogNavItems
+    case 'books':
+      return booksNavItems
+    case 'music':
+      return musicNavItems
+    case 'forum':
+      return [
+        { to: moduleUrl('forum'), label: '所有话题', icon: MessageSquare },
+        ...(forumStore?.categories ?? []).map((category) => ({
+          label: category.name,
+          icon: Folder,
+          onEnter: () => selectCategory(category.id),
+        })),
+      ]
+    case 'debate':
+      return [
+        { to: '/debate', label: '全部辩题', icon: MessageSquare },
+        { to: '/debate?status=archived', label: '已归档', icon: Archive },
+        { to: '/debate/rules', label: '规则', icon: BookOpen },
+      ]
+    case 'timeline':
+      return [
+        { to: '/timeline', label: '时间轴首页', icon: Clock },
+        { to: '/timeline/persons', label: '人物志', icon: Users },
+      ]
+    case 'studio':
+      return [
+        { to: '/studio', label: '概览', icon: LayoutDashboard },
+        { to: '/studio/manage/channel', label: '管理', icon: Settings2 },
+        { to: '/studio/blog', label: '博客', icon: FileText },
+        { to: '/studio/podcast', label: '播客', icon: Mic2 },
+        { to: '/studio/video', label: '视频', icon: Video },
+      ]
+    case 'podcast':
+      return [
+        { to: '/podcasts', label: '播客大厅', icon: Mic },
+        { to: '/podcasts/subscriptions', label: '订阅', icon: Rss },
+      ]
+    case 'video':
+      return [
+        { to: '/videos', label: '探索', icon: Compass },
+        { to: '/videos/subscriptions', label: '订阅', icon: Rss },
+        { to: '/videos/favorites', label: '收藏', icon: Bookmark },
+      ]
+    default:
+      return []
+  }
+})
+
+const { focusedIndex: focusedSidebarIndex } = useKeyboardList({
+  items: sidebarNavItems,
+  section: 'sidebar',
+  onEnter: (item) => {
+    if (item.onEnter) {
+      item.onEnter()
+    } else if (router && item.to) {
+      void router.push(item.to)
+    }
+  },
+})
+
+const isSidebarFocused = (index: number) =>
+  Boolean(uiStore?.focusedSection === 'sidebar' && focusedSidebarIndex.value === index)
+
+watch(currentModule, () => {
+  focusedSidebarIndex.value = -1
+})
 
 watch(
   currentModule,

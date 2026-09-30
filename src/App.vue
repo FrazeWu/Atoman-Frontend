@@ -25,11 +25,12 @@
       <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="!isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
+      <PShortcutHints v-if="!isAuthRoute" v-model="shortcutHelpOpen" :hints="shortcutHints" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
@@ -37,10 +38,13 @@ import AppTopbar from '@/components/system/AppTopbar.vue'
 import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
+import PShortcutHints, { type ShortcutHint } from '@/components/ui/PShortcutHints.vue'
 import { usePlayerStore } from '@/stores/player'
+import { useUIStore } from '@/stores/ui'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
+import { useKeyboardShortcuts, type KeyboardShortcut } from '@/composables/useKeyboardShortcuts'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
 
 declare global {
@@ -55,6 +59,7 @@ const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/Blog
 
 const route = useRoute()
 const player = usePlayerStore()
+const uiStore = useUIStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const { checkRelay } = useTransitionRelay()
@@ -64,6 +69,50 @@ const hasSidebar = computed(() => route.matched.some((record) => record.meta.has
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => Boolean(player.currentSong))
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
+const shortcutHelpOpen = ref(false)
+const isMediaModule = computed(() => /^\/(music|podcasts|videos)(\/|$)/.test(route.path))
+
+const commonShortcutHints: ShortcutHint[] = [
+  { key: 'H', label: '聚焦侧边栏' },
+  { key: 'L', label: '聚焦内容区' },
+  { key: 'J / K', label: '上下选择项目' },
+  { key: 'Enter', label: '打开当前项目' },
+  { key: '/', label: '打开全局搜索' },
+  { key: '?', label: '打开快捷键说明' },
+]
+
+const shortcutHints = computed<ShortcutHint[]>(() => {
+  const path = route.path
+  const hints = [...commonShortcutHints]
+  if (path.startsWith('/feed') || path.startsWith('/posts')) {
+    hints.push(
+      { key: 'S', label: '收藏/取消收藏' },
+      { key: 'M', label: '标记已读/未读' },
+      { key: 'V', label: '查看原文' },
+    )
+  } else if (path.startsWith('/forum')) {
+    hints.push(
+      { key: 'N', label: '发起新话题' },
+    )
+  } else if (isMediaModule.value) {
+    hints.push(
+      { key: 'Space', label: '播放/暂停' },
+      { key: 'Alt + ← / →', label: '上一首/下一首' },
+      { key: '← / →', label: '快退/快进 5 秒' },
+      { key: 'M', label: '静音' },
+      { key: 'Shift + F', label: '打开歌词' },
+    )
+  }
+  return hints
+})
+
+const globalShortcuts = computed<KeyboardShortcut[]>(() => [
+  { key: 'h', description: '聚焦侧边栏', handler: () => uiStore.focusSidebar() },
+  ...(!player.currentSong ? [{ key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() }] : []),
+  { key: '?', shift: true, description: '打开快捷键说明', handler: () => { shortcutHelpOpen.value = true } },
+])
+
+useKeyboardShortcuts(globalShortcuts)
 
 const reportPageView = (sendAnalytics = true) => {
   if (isAuthRoute.value) return

@@ -55,15 +55,21 @@ describe("runtime loading boundaries", () => {
 		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
 			"searchReady && !isAuthRoute",
 		);
+		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
+			"scheduleIdleTask(() => authStore.restoreSession())",
+		);
 	});
 
 	it("keeps the studio route manifest out of the initial desktop router", () => {
 		const routerSource = readSource("src/router.ts");
 		const initialRoutesSource = readSource("src/router/buildInitialRoutes.ts");
+		const mobileRoutesSource = readSource("apps/mobile/mobileRoutes.ts");
 
 		expect(routerSource).toContain("buildInitialRoutes");
 		expect(routerSource).not.toContain("buildAppRoutes");
 		expect(initialRoutesSource).not.toContain("routes/studio");
+		expect(mobileRoutesSource).not.toContain("routes/studio");
+		expect(mobileRoutesSource).not.toContain("...studioRoutes");
 	});
 
 	it("defers the global search panel from the initial shell", () => {
@@ -91,6 +97,9 @@ describe("runtime loading boundaries", () => {
 		);
 		expect(source).toContain(
 			"defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))",
+		);
+		expect(source).toContain(
+			"scheduleIdleTask(() => authStore.restoreSession())",
 		);
 	});
 

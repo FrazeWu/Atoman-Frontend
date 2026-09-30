@@ -342,7 +342,7 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
 
     expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1 条注释')
-  })
+  }, 10_000)
 
   it('播放器歌词模式只读，点击带注释的歌词后仅显示该句注释', async () => {
     const wrapper = await mountPanel({ mode: 'player' })

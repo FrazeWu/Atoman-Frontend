@@ -105,6 +105,7 @@ const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/sy
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
 const searchReady = ref(false)
 let cancelSearchIdleTask = () => {}
+let cancelSessionRestoreIdleTask = () => {}
 
 const handleBrandClick = () => {
   requestLyricsClose()
@@ -174,7 +175,7 @@ onMounted(() => {
     document.documentElement.classList.add('dark')
   }
   if (!isAuthRoute.value) {
-    void authStore.restoreSession()
+    cancelSessionRestoreIdleTask = scheduleIdleTask(() => authStore.restoreSession())
   }
 
   window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
@@ -190,6 +191,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelSearchIdleTask()
+  cancelSessionRestoreIdleTask()
   window.removeEventListener('scroll', handleScroll, { capture: true })
 })
 

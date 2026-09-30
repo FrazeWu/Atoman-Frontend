@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -22,6 +22,7 @@ import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import MobileTopbar from './MobileTopbar.vue'
 
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
@@ -61,11 +62,26 @@ watch(() => route.fullPath, () => {
   reportAnalyticsPageView()
 })
 
+let cancelStartupTasks: (() => void) | undefined
+
 onMounted(() => {
-  void authStore.restoreSession()
-  void siteAccessStore.load().catch(() => {})
-  reportPageView()
+  const cancelRestoreSession = scheduleIdleTask(() => authStore.restoreSession())
+  const cancelSiteAccessLoad = scheduleIdleTask(() => {
+    void siteAccessStore.load().catch(() => {})
+  })
+  const cancelPageView = scheduleIdleTask(reportPageView)
+
+  cancelStartupTasks = () => {
+    cancelRestoreSession()
+    cancelSiteAccessLoad()
+    cancelPageView()
+  }
+
   scheduleGoogleAnalytics(reportAnalyticsPageView)
+})
+
+onBeforeUnmount(() => {
+  cancelStartupTasks?.()
 })
 </script>
 

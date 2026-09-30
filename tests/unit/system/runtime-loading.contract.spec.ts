@@ -34,13 +34,36 @@ describe("runtime loading boundaries", () => {
 		const source = readSource("src/App.vue");
 
 		for (const importPath of [
-			"@/components/system/NotificationToastStack.vue",
 			"@/components/system/MobileBottomNav.vue",
 			"@/components/system/SiteFooter.vue",
 		]) {
 			expect(source).not.toContain(`import ${importPath}`);
 			expect(source).toContain(`import('${importPath}')`);
 		}
+		expect(source).toContain('v-if="sheetStore.stack.length > 0"');
+		expect(source).not.toContain("NotificationToastStack");
+		expect(readSource("src/components/system/AppTopbarAuthControls.vue")).toContain(
+			"NotificationToastStack",
+		);
+	});
+
+	it("defers non-critical shell work until the browser is idle", () => {
+		expect(readSource("src/App.vue")).toContain("scheduleIdleTask");
+		expect(readSource("src/views/portal/PortalView.vue")).toContain(
+			"scheduleIdleTask(loadHotContent)",
+		);
+		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
+			"searchReady && !isAuthRoute",
+		);
+	});
+
+	it("keeps the studio route manifest out of the initial desktop router", () => {
+		const routerSource = readSource("src/router.ts");
+		const initialRoutesSource = readSource("src/router/buildInitialRoutes.ts");
+
+		expect(routerSource).toContain("buildInitialRoutes");
+		expect(routerSource).not.toContain("buildAppRoutes");
+		expect(initialRoutesSource).not.toContain("routes/studio");
 	});
 
 	it("defers the global search panel from the initial shell", () => {

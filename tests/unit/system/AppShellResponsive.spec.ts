@@ -165,7 +165,7 @@ describe("App responsive shell", () => {
 	});
 
 	it("mounts SiteFooter only once from the app shell", () => {
-		expect(appSource).toContain('<SiteFooter v-if="!isAuthRoute" />');
+		expect(appSource).toContain('<SiteFooter v-if="showDeferredShell && !isAuthRoute" />');
 		for (const source of moduleLayoutSources) {
 			expect(source).not.toContain("<SiteFooter");
 			expect(source).not.toContain(

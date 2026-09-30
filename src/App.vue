@@ -20,16 +20,15 @@
           </Transition>
         </RouterView>
       </main>
-      <BlogSheetStack />
-      <NotificationToastStack v-if="!isAuthRoute" />
-      <MobileBottomNav v-if="showMobileBottomNav" />
-      <SiteFooter v-if="!isAuthRoute" />
+      <BlogSheetStack v-if="sheetStore.stack.length > 0" />
+      <MobileBottomNav v-if="showDeferredShell && showMobileBottomNav" />
+      <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
@@ -39,6 +38,8 @@ import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
+import { useSheetStore } from '@/stores/sheet'
 
 declare global {
   interface Window {
@@ -49,11 +50,11 @@ declare global {
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
-const NotificationToastStack = defineAsyncComponent(() => import('@/components/system/NotificationToastStack.vue'))
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFooter.vue'))
 
 const route = useRoute()
+const sheetStore = useSheetStore()
 const playerPresence = usePlayerPresenceStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
@@ -64,6 +65,7 @@ const hasSidebar = computed(() => route.matched.some((record) => record.meta.has
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
+const showDeferredShell = ref(false)
 
 const reportPageView = (sendAnalytics = true) => {
   if (isAuthRoute.value) return
@@ -84,14 +86,21 @@ const reportAnalyticsPageView = () => {
 
 watch(() => route.fullPath, () => reportPageView())
 
+let cancelIdleWork = () => {}
+
 onMounted(() => {
-  reportPageView(false)
-  scheduleGoogleAnalytics(reportAnalyticsPageView)
-  if (localStorage.getItem('atoman_transition_relay')) {
-    checkRelay()
-  }
-  void siteAccessStore.load().catch(() => {})
+  cancelIdleWork = scheduleIdleTask(() => {
+    showDeferredShell.value = true
+    reportPageView(false)
+    scheduleGoogleAnalytics(reportAnalyticsPageView)
+    if (localStorage.getItem('atoman_transition_relay')) {
+      checkRelay()
+    }
+    void siteAccessStore.load().catch(() => {})
+  })
 })
+
+onBeforeUnmount(() => cancelIdleWork())
 </script>
 
 <style scoped>

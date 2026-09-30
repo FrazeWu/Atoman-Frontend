@@ -58,7 +58,7 @@
       </nav>
 
       <div class="nav-right">
-        <AppTopbarGlobalSearch v-if="!isAuthRoute" />
+        <AppTopbarGlobalSearch v-if="searchReady && !isAuthRoute" />
         <button
           type="button"
           class="theme-toggle-btn"
@@ -89,6 +89,7 @@ import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } fr
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 
 const { toggleSidebar } = useSidebar()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
@@ -102,6 +103,8 @@ const playerPresence = usePlayerPresenceStore()
 const { navigateTo } = useModuleNav()
 const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
+const searchReady = ref(false)
+let cancelSearchIdleTask = () => {}
 
 const handleBrandClick = () => {
   requestLyricsClose()
@@ -179,9 +182,14 @@ onMounted(() => {
   isScrolled.value = mainContent instanceof HTMLElement
     ? mainContent.scrollTop > 0
     : window.scrollY > 0
+
+  cancelSearchIdleTask = scheduleIdleTask(() => {
+    searchReady.value = true
+  })
 })
 
 onBeforeUnmount(() => {
+  cancelSearchIdleTask()
   window.removeEventListener('scroll', handleScroll, { capture: true })
 })
 

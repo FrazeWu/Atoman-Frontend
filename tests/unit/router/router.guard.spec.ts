@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModuleRoomKey } from "../../../src/config/moduleRooms";
 import { installRouteGuards } from "../../../src/router/guards";
 import { buildAppRoutes } from "../../../src/router/buildAppRoutes";
+import { buildInitialRoutes } from "../../../src/router/buildInitialRoutes";
 import { moduleRoutes } from "../../../src/router/routes/modules";
 import { portalRoutes } from "../../../src/router/routes/portal";
 import { useAuthStore } from "../../../src/stores/auth";
@@ -86,6 +87,23 @@ describe("router auth guards", () => {
 			return new Response("", { status: 401 });
 		});
 		setActivePinia(createPinia());
+	});
+
+	it("registers Studio routes when the initial router enters the workspace", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: buildInitialRoutes(),
+		});
+		installRouteGuards(router);
+		const auth = useAuthStore();
+		auth.user = { id: 1, username: "alice", email: "alice@example.com", role: "user" };
+		auth.isAuthenticated = true;
+
+		expect(router.hasRoute("studio-dashboard")).toBe(false);
+		await router.push("/studio");
+
+		expect(router.hasRoute("studio-dashboard")).toBe(true);
+		expect(router.currentRoute.value.path).toBe("/studio");
 	});
 
 	it("redirects unauthenticated user to login for protected short routes", async () => {

@@ -139,6 +139,59 @@ export function useAlbumImportUpload() {
 			currentUploadState.value?.fileProgress.value ?? new Map<string, number>(),
 	);
 
+	function clearExternalMetadata(flow: MusicCreationFlowState) {
+		const draft = flow.draft.albumImport;
+		const albumDetails = flow.draft.albumDetails;
+		const previousSourceURL = draft.metadataSourceUrl;
+		const previousDerivedAlbumType = draft.derivedAlbumType;
+
+		draft.derivedCover = "";
+		draft.derivedReleaseDate = "";
+		draft.derivedAlbumType = "";
+		draft.metadataSourceUrl = "";
+		draft.metadataSource = "";
+		draft.metadataExternalId = "";
+		draft.metadataMatchStatus = "";
+		draft.metadataMatchConfidence = 0;
+		draft.metadataMatched = false;
+		draft.metadataMatchingStarted = false;
+		draft.metadataError = "";
+		draft.metadataGenres = [];
+		draft.metadataStyles = [];
+		draft.metadataLabels = [];
+		draft.metadataCountry = "";
+		draft.metadataFormats = [];
+		draft.metadataSources = [];
+		draft.metadataFieldSources = {};
+		draft.missingArtists = [];
+		draft.coverUrl = "";
+		draft.derivedTracks = [];
+		flow.draft.tracks = flow.draft.tracks.filter(
+			(track) =>
+				track.origin === "manual" ||
+				Boolean(
+					track.songId ||
+					track.audioAssetId ||
+					track.titleCustomized ||
+					track.sequenceCustomized,
+				),
+		);
+
+		if (!flow.releaseDateCustomized) {
+			albumDetails.releaseDateParts = { year: "", month: "", day: "" };
+			albumDetails.releaseDate = "";
+			albumDetails.releaseYear = "";
+		}
+		if (!flow.coverCustomized) albumDetails.coverUrl = "";
+		if (previousDerivedAlbumType && albumDetails.type === previousDerivedAlbumType) {
+			albumDetails.type = "album";
+		}
+		if (!albumDetails.source.trim() || albumDetails.source === previousSourceURL) {
+			albumDetails.source = "";
+		}
+		albumDetails.tags = albumDetails.tags.filter((tag) => tag.source === "custom");
+	}
+
 	function applyImportSnapshotToFlow(
 		flow: MusicCreationFlowState,
 		snapshot: MusicAlbumImport,
@@ -154,6 +207,7 @@ export function useAlbumImportUpload() {
 			"canceled",
 			"committed",
 		].includes(snapshot.status);
+		const isCanceledSnapshot = snapshot.status === "canceled";
 		const metadataMatchStatus = snapshot.metadataMatchStatus?.trim() ?? "";
 		const hasMetadataResult = Boolean(
 			snapshot.metadataSource?.trim() ||
@@ -206,17 +260,20 @@ export function useAlbumImportUpload() {
 		} else {
 			draft.uploadSpeed = 0;
 		}
-		draft.coverUrl = snapshot.coverUrl;
+		if (!isCanceledSnapshot) draft.coverUrl = snapshot.coverUrl;
 		draft.coverKey = snapshot.coverKey;
-		if (serverDerivedDataAvailable) {
-			draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
+		if (!isCanceledSnapshot && serverDerivedDataAvailable) {
+				draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
 			draft.derivedCover = snapshot.derivedCover;
 		}
-		if (derivedTracks.length > 0) {
+		if (!isCanceledSnapshot && derivedTracks.length > 0) {
 			draft.derivedTracks = derivedTracks;
 			mergeImportedTracksIntoDraft(flow, derivedTracks);
 		}
-		if (shouldApplyMetadata) {
+		if (isCanceledSnapshot) {
+			clearExternalMetadata(flow);
+			draft.derivedTracks = [];
+		} else if (shouldApplyMetadata) {
 			draft.derivedReleaseDate = snapshot.derivedReleaseDate;
 			draft.derivedAlbumType = snapshot.derivedAlbumType;
 			draft.metadataSourceUrl = snapshot.metadataSourceUrl;
@@ -255,21 +312,21 @@ export function useAlbumImportUpload() {
 		draft.errorMessage =
 			snapshot.errorMessage || snapshot.errors?.[0]?.message || "";
 		draft.files = snapshot.files ?? [];
-		if (!flow.titleCustomized) {
+		if (!isCanceledSnapshot && !flow.titleCustomized) {
 			flow.draft.albumDetails.title =
 				snapshot.derivedAlbumTitle || flow.draft.albumDetails.title;
 		}
-		if (snapshot.derivedReleaseDate && !flow.releaseDateCustomized) {
+		if (!isCanceledSnapshot && snapshot.derivedReleaseDate && !flow.releaseDateCustomized) {
 			flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
 				snapshot.derivedReleaseDate,
 			);
 		}
 		const importedCover =
 			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
-		if (importedCover && !flow.coverCustomized) {
+		if (!isCanceledSnapshot && importedCover && !flow.coverCustomized) {
 			flow.draft.albumDetails.coverUrl = importedCover;
 		}
-		if (shouldApplyMetadata) {
+		if (!isCanceledSnapshot && shouldApplyMetadata) {
 			const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
 			const matchedTags = [
 				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
@@ -278,6 +335,7 @@ export function useAlbumImportUpload() {
 			flow.draft.albumDetails.tags = [...matchedTags, ...customTags];
 		}
 		if (
+			!isCanceledSnapshot &&
 			snapshot.derivedAlbumType &&
 			(!previousDerivedAlbumType ||
 				flow.draft.albumDetails.type === previousDerivedAlbumType)
@@ -285,6 +343,7 @@ export function useAlbumImportUpload() {
 			flow.draft.albumDetails.type = snapshot.derivedAlbumType;
 		}
 		if (
+			!isCanceledSnapshot &&
 			snapshot.metadataSourceUrl &&
 			(!flow.draft.albumDetails.source.trim() ||
 				flow.draft.albumDetails.source === previousMetadataSourceURL)
@@ -593,7 +652,7 @@ export function useAlbumImportUpload() {
 		draft.errorMessage = "";
 		draft.metadataMatchingStarted = false;
 		draft.metadataError = "";
-		draft.metadataSources = [];
+		clearExternalMetadata(flow);
 		let autoMode: MusicAlbumImportInputMode = "files";
 		if (isArchive) {
 			autoMode = "archive";
@@ -646,9 +705,12 @@ export function useAlbumImportUpload() {
 							flow.draft.albumDetails.title = preview.title;
 						}
 					}
-					if (preview.albumCoverFile) {
-						draft.derivedCover = URL.createObjectURL(preview.albumCoverFile);
-					}
+						if (preview.albumCoverFile) {
+							draft.derivedCover = URL.createObjectURL(preview.albumCoverFile);
+							if (!flow.coverCustomized) {
+								flow.draft.albumDetails.coverUrl = draft.derivedCover;
+							}
+						}
 				})
 				.catch(() => {
 					// 后台提取会在上传完成后提供完整信息。

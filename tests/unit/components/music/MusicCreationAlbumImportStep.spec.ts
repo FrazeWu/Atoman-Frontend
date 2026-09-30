@@ -527,6 +527,82 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.tracks).toEqual([]);
 	});
 
+	it("开始新的上传时不会保留上一次的匹配结果", async () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "old-import";
+		flow.draft.albumImport.metadataMatched = true;
+		flow.draft.albumImport.metadataSource = "musicbrainz";
+		flow.draft.albumImport.metadataSourceUrl = "https://musicbrainz.org/release/old";
+		flow.draft.albumImport.metadataSources = [{
+			provider: "musicbrainz",
+			status: "matched",
+			selected: true,
+			selectedTitle: "旧专辑",
+		}];
+		flow.draft.albumDetails.releaseDateParts = { year: "2001", month: "", day: "" };
+		flow.draft.albumDetails.coverUrl = "https://cover.test/old.jpg";
+		flow.draft.albumDetails.tags = [{ name: "旧标签", kind: "type", source: "matched" }];
+
+		const archive = new File(["zip"], "菊花夜行军.zip", { type: "application/zip" });
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(
+			snapshot({ inputMode: "archive", files: [importFile({ role: "archive", fileName: archive.name })] }),
+		);
+		mockUploadTransport();
+		vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(
+			snapshot({ status: "queued", inputMode: "archive" }),
+		);
+
+		await useAlbumImportUpload().handleFilesUpload(
+			{ 0: archive, length: 1, item: () => archive } as unknown as FileList,
+		);
+
+		expect(flow.draft.albumImport.metadataMatched).toBe(false);
+		expect(flow.draft.albumImport.metadataSource).toBe("");
+		expect(flow.draft.albumImport.metadataSources).toEqual([]);
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({ year: "", month: "", day: "" });
+		expect(flow.draft.albumDetails.coverUrl).toBe("");
+		expect(flow.draft.albumDetails.tags).toEqual([]);
+	});
+
+	it("取消快照不会重新应用旧的外部匹配结果", () => {
+		const drawers = useMusicDrawers();
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.metadataMatched = true;
+		flow.draft.albumImport.metadataSource = "musicbrainz";
+		flow.draft.albumImport.metadataSourceUrl = "https://musicbrainz.org/release/old";
+		flow.draft.albumImport.metadataSources = [{
+			provider: "musicbrainz",
+			status: "matched",
+			selected: true,
+		}];
+		flow.draft.albumDetails.releaseDateParts = { year: "2001", month: "", day: "" };
+		flow.draft.albumDetails.coverUrl = "https://cover.test/old.jpg";
+		flow.draft.albumDetails.tags = [{ name: "旧标签", kind: "type", source: "matched" }];
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "canceled",
+			stage: "canceled",
+			metadataMatched: true,
+			metadataMatchStatus: "matched",
+			metadataSource: "musicbrainz",
+			metadataSourceUrl: "https://musicbrainz.org/release/old",
+			derivedReleaseDate: "2001",
+			derivedCover: "https://cover.test/old.jpg",
+			metadataGenres: ["旧标签"],
+			metadataSources: [{ provider: "musicbrainz", status: "matched", selected: true }],
+		}));
+
+		expect(flow.draft.albumImport.metadataMatched).toBe(false);
+		expect(flow.draft.albumImport.metadataSource).toBe("");
+		expect(flow.draft.albumImport.metadataSources).toEqual([]);
+		expect(flow.draft.albumDetails.releaseDateParts).toEqual({ year: "", month: "", day: "" });
+		expect(flow.draft.albumDetails.coverUrl).toBe("");
+		expect(flow.draft.albumDetails.tags).toEqual([]);
+	});
+
 	it("通过统一文件入口以 archive 自动模式注册并逐文件上传", async () => {
 		const archive = new File(["zip"], "graduation.zip", {
 			type: "application/zip",

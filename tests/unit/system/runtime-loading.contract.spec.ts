@@ -18,6 +18,12 @@ describe("runtime loading boundaries", () => {
 		expect(source).not.toContain("mobileRuntime\n\t\t\t? import(");
 	});
 
+	it("lets the portal prerender paint before either runtime mounts", () => {
+		for (const source of [readSource("src/main.ts"), readSource("apps/mobile/main.ts")]) {
+			expect(source).toContain("waitForInitialPaint");
+		}
+	});
+
 	it("loads the audio player only when a track is active", () => {
 		const source = readSource("src/App.vue");
 

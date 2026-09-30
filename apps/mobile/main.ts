@@ -5,12 +5,15 @@ import {
 	installStaleViteChunkRecovery,
 	recoverStaleViteChunk,
 } from "@/utils/staleViteChunkRecovery";
+import { waitForInitialPaint } from "@/utils/waitForInitialPaint";
 import "../../src/style.css";
 
 installStaleViteChunkRecovery();
 document.documentElement.dataset.atomanApp = "mobile";
 
 const bootstrap = async () => {
+	await waitForInitialPaint();
+
 	const [{ default: MobileApp }, { default: router }] = await Promise.all([
 		import("./MobileApp.vue"),
 		import("./router"),

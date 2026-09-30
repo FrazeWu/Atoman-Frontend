@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import type { Router } from "vue-router";
 import "./style.css";
 import { reportError } from "./utils/logger";
+import { waitForInitialPaint } from "./utils/waitForInitialPaint";
 import {
   installStaleViteChunkRecovery,
   recoverStaleViteChunk,
@@ -35,6 +36,8 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 const bootstrap = async () => {
+  await waitForInitialPaint();
+
   let rootComponent: Component;
   let appRouter: Router;
 

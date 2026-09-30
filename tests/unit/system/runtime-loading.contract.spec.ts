@@ -51,7 +51,7 @@ describe("runtime loading boundaries", () => {
 		const source = readSource("index.html");
 
 		expect(source).toMatch(
-			/@media \(max-width: 600px\) \{\s+\.portal-prerender h1 \{\s+font-size: 32px;/,
+			/@media \(max-width: 600px\) \{\s+\.portal-prerender h1 \{\s+font-size: 36px;/,
 		);
 		expect(source).toMatch(
 			/\.portal-prerender h1 \{[\s\S]*?line-height: 1\.2;/,

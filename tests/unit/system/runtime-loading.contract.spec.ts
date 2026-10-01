@@ -26,6 +26,33 @@ describe("runtime loading boundaries", () => {
 		expect(source).toContain('v-if="hasActiveTrack"');
 	});
 
+	it("keeps below-the-fold shell layers behind async boundaries", () => {
+		const source = readSource("src/App.vue");
+
+		for (const importPath of [
+			"@/components/system/NotificationToastStack.vue",
+			"@/components/system/MobileBottomNav.vue",
+			"@/components/system/SiteFooter.vue",
+		]) {
+			expect(source).not.toContain(`import ${importPath}`);
+			expect(source).toContain(`import('${importPath}')`);
+		}
+	});
+
+	it("keeps portal content cards behind async boundaries", () => {
+		const source = readSource("src/views/portal/PortalView.vue");
+
+		for (const importPath of [
+			"@/components/shared/BlogItemCard.vue",
+			"@/components/music/MusicAlbumCard.vue",
+			"@/components/shared/PVideoCard.vue",
+			"@/components/ui/PContentCard.vue",
+		]) {
+			expect(source).not.toContain(`import ${importPath}`);
+			expect(source).toContain(`import('${importPath}')`);
+		}
+	});
+
 	it("loads top-level layouts through route-level dynamic imports", () => {
 		const source = readSource("src/router/routes/modules.ts");
 		const layouts = [

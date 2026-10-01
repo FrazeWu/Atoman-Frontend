@@ -35,9 +35,6 @@ import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import AppTopbar from '@/components/system/AppTopbar.vue'
-import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
-import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
-import SiteFooter from '@/components/system/SiteFooter.vue'
 import PShortcutHints, { type ShortcutHint } from '@/components/ui/PShortcutHints.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
@@ -56,6 +53,9 @@ declare global {
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
+const NotificationToastStack = defineAsyncComponent(() => import('@/components/system/NotificationToastStack.vue'))
+const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
+const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFooter.vue'))
 
 const route = useRoute()
 const player = usePlayerStore()

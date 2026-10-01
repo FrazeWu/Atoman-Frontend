@@ -103,6 +103,7 @@ const mountAppAt = async (path: string) => {
 	});
 
 	await flushPromises();
+	await vi.dynamicImportSettled();
 	return { wrapper, router };
 };
 

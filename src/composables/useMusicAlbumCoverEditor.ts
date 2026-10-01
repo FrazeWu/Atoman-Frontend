@@ -49,10 +49,6 @@ export function useMusicAlbumCoverEditor() {
 	function queueImportedCoverCrop(sourceUrl: string) {
 		const flow = creationFlow.value;
 		if (!flow || !sourceUrl.trim()) return;
-		if (flow.draft.albumDetails.coverUrl === sourceUrl) {
-			flow.draft.albumDetails.coverUrl = "";
-			flow.draft.albumDetails.coverAsset = null;
-		}
 		pendingCoverCrop.value = { kind: "imported", sourceUrl };
 	}
 

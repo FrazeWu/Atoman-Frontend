@@ -19,6 +19,7 @@ import { formatStoredPartialDate, parsePartialDateParts, serializePartialDate } 
 import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
 import { hasMusicBrainzSource, normalizeMusicImportSource } from '@/utils/musicImportSource'
 import { mergeImportedTracksIntoDraft } from '@/utils/musicImportTrackMerge'
+import { localizedMusicCountry } from '@/utils/musicImportMetadata'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -880,6 +881,16 @@ function syncReadyImportToDraft() {
     }
   }
 
+  if (albumImport.derivedReleaseDate?.trim() && !flow.releaseDateCustomized) {
+    albumDetails.releaseDateParts = parsePartialDateParts(albumImport.derivedReleaseDate)
+  }
+  if (albumImport.derivedCover.trim() && !flow.coverCustomized) {
+    albumDetails.coverUrl = albumImport.derivedCover.trim()
+  }
+  if (albumImport.derivedAlbumType?.trim() && albumDetails.type === 'album') {
+    albumDetails.type = albumImport.derivedAlbumType.trim()
+  }
+
   if (derivedTracks.length > 0) mergeImportedTracksIntoDraft(flow, derivedTracks)
 }
 
@@ -1016,9 +1027,13 @@ async function attachKnownImportedArtists(flow: NonNullable<typeof creationFlow.
   const known = new Set(current.map((item) => compactArtistName(item.name)))
   for (const name of names) {
     const result = await musicApi.listMusicArtists({ q: name, page: 1, page_size: 10 })
-    const matches = result.data.filter((artist) => compactArtistName(artist.name) === compactArtistName(name))
+    const matches = result.data.filter((artist) => (
+      compactArtistName(artist.name) === compactArtistName(name)
+      || compactArtistName(artist.display_name ?? '') === compactArtistName(name)
+    ))
     if (matches.length !== 1 || known.has(compactArtistName(name))) continue
     const artist = matches[0]
+    const hasPrimary = current.some((item) => item.roles.some((role) => role.role === 'primary'))
     current.push({
       id: `contributor-${artist.id}`,
       artistId: artist.id,
@@ -1027,8 +1042,10 @@ async function attachKnownImportedArtists(flow: NonNullable<typeof creationFlow.
       source: artist.sources?.find((source) => source.url || source.title)?.url || '',
       entryStatus: artist.entry_status,
       kind: artist.artist_form === 'group' ? 'group' : 'person',
-      locked: false,
-      roles: [{ id: `role-${artist.id}-featured`, role: 'featured', label: '' }],
+      locked: true,
+      roles: [hasPrimary
+        ? { id: `role-${artist.id}-featured`, role: 'featured', label: '' }
+        : primaryAlbumRole(`role-${artist.id}-primary`)],
     })
     known.add(compactArtistName(name))
   }
@@ -1065,7 +1082,7 @@ async function previewAlbumImportMetadata(flow: NonNullable<typeof creationFlow.
 	albumImport.metadataGenres = preview.genres ?? []
 	albumImport.metadataStyles = preview.styles ?? []
 	albumImport.metadataLabels = preview.labels ?? []
-	albumImport.metadataCountry = preview.country ?? ''
+	albumImport.metadataCountry = localizedMusicCountry(preview.country)
 	albumImport.metadataFormats = preview.formats ?? []
 	albumImport.missingArtists = preview.missingArtists ?? []
 	albumImport.metadataSources = preview.sources ?? []

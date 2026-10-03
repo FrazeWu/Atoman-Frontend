@@ -7,6 +7,41 @@ import { useAuthStore } from '@/stores/auth'
 
 const { routerReplace } = vi.hoisted(() => ({ routerReplace: vi.fn() }))
 
+type ObserverCallback = (entries: IntersectionObserverEntry[]) => void
+
+let observeImmediately = true
+let activeObserver: TestIntersectionObserver | undefined
+
+class TestIntersectionObserver {
+  private readonly callback: ObserverCallback
+  private readonly targets = new Set<Element>()
+
+  constructor(callback: ObserverCallback) {
+    this.callback = callback
+    activeObserver = this
+  }
+
+  observe(target: Element) {
+    this.targets.add(target)
+    if (observeImmediately) this.trigger()
+  }
+
+  unobserve(target: Element) {
+    this.targets.delete(target)
+  }
+
+  disconnect() {
+    this.targets.clear()
+  }
+
+  trigger() {
+    this.callback([...this.targets].map((target) => ({
+      isIntersecting: true,
+      target,
+    } as IntersectionObserverEntry)))
+  }
+}
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({ replace: routerReplace }),
   RouterLink: {
@@ -82,6 +117,9 @@ const flushPortal = async () => {
 describe('PortalView', () => {
   beforeEach(() => {
     routerReplace.mockReset()
+    observeImmediately = true
+    activeObserver = undefined
+    vi.stubGlobal('IntersectionObserver', TestIntersectionObserver)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -99,6 +137,33 @@ describe('PortalView', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('只在模块接近视口时挂载内容卡片', async () => {
+    observeImmediately = false
+
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: {
+          PButton: true,
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+
+    await flushPortal()
+
+    expect(wrapper.findAll('.portal-hot__section-placeholder')).toHaveLength(2)
+    expect(wrapper.findAll('.portal-hot__card-link')).toHaveLength(0)
+
+    activeObserver?.trigger()
+    await flushPromises()
+
+    expect(wrapper.findAll('.portal-hot__section-placeholder')).toHaveLength(0)
+    expect(wrapper.text()).toContain('第一篇文章')
   })
 
   it('不渲染焦点精选，并在模块区保留后端返回的内容', async () => {

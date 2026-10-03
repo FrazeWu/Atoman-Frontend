@@ -183,6 +183,14 @@ describe("runtime loading boundaries", () => {
 		}
 	});
 
+	it("defers offscreen portal card mounting until sections approach the viewport", () => {
+		const source = readSource("src/views/portal/PortalView.vue");
+
+		expect(source).toContain("IntersectionObserver");
+		expect(source).toContain('v-if="isSectionReady(section.module)"');
+		expect(source).toContain("portal-hot__section-placeholder");
+	});
+
 	it("loads top-level layouts through route-level dynamic imports", () => {
 		const source = readSource("src/router/routes/modules.ts");
 		const layouts = [

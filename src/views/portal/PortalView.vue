@@ -239,7 +239,6 @@ import { useApi } from '@/composables/useApi'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import type { Video } from '@/types'
 
 const BlogItemCard = defineAsyncComponent(() => import('@/components/shared/BlogItemCard.vue'))
@@ -385,7 +384,7 @@ function extractYear(dateStr?: string): number | undefined {
   }
 }
 
-onMounted(() => scheduleIdleTask(loadHotContent))
+onMounted(loadHotContent)
 </script>
 
 <style scoped>

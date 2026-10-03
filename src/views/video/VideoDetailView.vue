@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { deleteVideoRating, getRecommendedVideos, getVideo, getVideoResource, recordVideoView, setVideoRating, type VideoRatingSummary } from '@/api/video'
+import { deleteVideoRating, getRecommendedVideos, getVideo, getVideoResource, recordVideoView, reprocessVideo, setVideoRating, type VideoRatingSummary } from '@/api/video'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { IconCopy as Copy, IconMessage as MessageSquare, IconPlayerPlay as Play, IconShare2 as Share2 } from '@tabler/icons-vue'
 import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { videoAvatarSource, videoThumbnailSource } from '@/utils/videoPresentation'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
 type VideoDetailResponse = Video & {
@@ -87,15 +88,26 @@ const isDescriptionTruncated = computed(() => {
   return description.length > 180 || description.split('\n').length > 3
 })
 const posterUrl = computed(() => {
-  const thumbnail = video.value?.thumbnail_url || video.value?.preview_thumbnails?.[0]?.url || ''
+  const thumbnail = video.value ? videoThumbnailSource(video.value) : ''
   return thumbnail ? resolveMediaURL(thumbnail) : undefined
 })
 const nativeVideoUrl = computed(() => video.value?.video_url ? resolveMediaURL(video.value.video_url) : '')
 const subtitleUrl = computed(() => video.value?.subtitle_url ? resolveMediaURL(video.value.subtitle_url) : '')
 const channelCoverUrl = computed(() => {
-  const url = video.value?.channel?.cover_url || video.value?.user?.avatar_url || ''
+  const url = video.value ? videoAvatarSource(video.value) : ''
   return url ? resolveMediaURL(url) : ''
 })
+const processingMessage = computed(() => {
+  if (!video.value || video.value.storage_type !== 'local') return ''
+  if (video.value.processing_status === 'pending' || video.value.processing_status === 'processing') return '正在生成封面和播放预览，完成后会自动刷新。'
+  if (video.value.processing_status === 'failed') return video.value.processing_error || '封面和播放预览处理失败，可以重试。'
+  return ''
+})
+const canReprocessVideo = computed(() => Boolean(
+  video.value?.processing_status === 'failed'
+  && authStore.isAuthenticated
+  && authStore.user?.uuid === video.value?.user_id,
+))
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const currentPlaybackTime = ref(0)
@@ -103,6 +115,7 @@ const timestampHint = ref('')
 let lastProgressSave = 0
 let loadSeq = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
+let processingRefreshTimer: ReturnType<typeof setTimeout> | null = null
 
 function getFirstStringQueryValue(value: unknown): string | undefined {
   const firstValue = Array.isArray(value) ? value[0] : value
@@ -122,6 +135,41 @@ function saveStoredTheaterMode(value: boolean) {
     localStorage.setItem('atoman:video-theater-mode', value ? 'on' : 'off')
   } catch {
     // Storage may be disabled by the browser.
+  }
+}
+
+function stopProcessingRefresh() {
+  if (processingRefreshTimer) clearTimeout(processingRefreshTimer)
+  processingRefreshTimer = null
+}
+
+function scheduleProcessingRefresh() {
+  stopProcessingRefresh()
+  const current = video.value
+  if (!current || current.storage_type !== 'local' || !['pending', 'processing'].includes(current.processing_status || '')) return
+  processingRefreshTimer = setTimeout(async () => {
+    if (!video.value || video.value.id !== current.id) return
+    try {
+      const refreshed = await getVideo(current.id, authStore.token ?? undefined)
+      if (video.value?.id !== current.id) return
+      video.value = { ...video.value, ...refreshed }
+    } catch {
+      // Keep the current state visible and retry on the next interval.
+    }
+    scheduleProcessingRefresh()
+  }, 4000)
+}
+
+async function retryVideoProcessing() {
+  if (!video.value || !canReprocessVideo.value) return
+  actionFeedback.value = ''
+  actionError.value = ''
+  try {
+    await reprocessVideo(video.value.id, authStore.token ?? undefined)
+    video.value = { ...video.value, processing_status: 'pending', processing_error: '' }
+    scheduleProcessingRefresh()
+  } catch {
+    actionError.value = '重新处理失败，请稍后再试'
   }
 }
 
@@ -206,6 +254,7 @@ function playLocalVideo() {
 async function load(id: string) {
   const seq = ++loadSeq
   cancelAutoNext()
+  stopProcessingRefresh()
   loading.value = true
   error.value = ''
   video.value = null
@@ -233,6 +282,7 @@ async function load(id: string) {
     if (seq !== loadSeq) return
 
     video.value = detail
+    scheduleProcessingRefresh()
     const context = await resolveCollectionContext(detail, seq)
     if (seq !== loadSeq) return
     activeCollection.value = context?.collection ?? null
@@ -273,8 +323,16 @@ async function load(id: string) {
   }
 }
 
-onMounted(() => load(videoId.value))
-onBeforeUnmount(() => { if (autoNextTimer) clearInterval(autoNextTimer) })
+onMounted(() => {
+  void load(videoId.value)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+onBeforeUnmount(() => {
+  flushServerProgress()
+  if (autoNextTimer) clearInterval(autoNextTimer)
+  stopProcessingRefresh()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 watch(() => route.params.id, (id) => { if (id) load(id as string) })
 
 function syncCurrentPlaybackTime() {
@@ -288,6 +346,23 @@ function syncCurrentPlaybackTime() {
   if (Date.now() - lastProgressSave < 5000) return
   lastProgressSave = Date.now()
   saveVideoProgress(video.value.id, current, Math.floor(duration))
+}
+
+function flushServerProgress(completed = false) {
+  if (!authStore.token || !video.value || video.value.storage_type !== 'local') return
+  const duration = Math.floor(playbackDuration())
+  if (duration <= 0) return
+  const position = completed ? duration : Math.min(duration, Math.floor(videoElement.value?.currentTime ?? currentPlaybackTime.value))
+  const progress = completed ? 1 : position / duration
+  void lifecycle.saveProgress({
+    module: 'video', content_id: video.value.id, position_sec: position,
+    duration_sec: duration, progress, completed: completed || progress >= 0.95,
+    source: getFirstStringQueryValue(route.query.source) || 'direct',
+  }).catch(() => undefined)
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'hidden') flushServerProgress()
 }
 
 async function recordVideoViewOnce(id: string) {
@@ -367,12 +442,14 @@ function handlePauseOrUnload() {
   const duration = videoElement.value?.duration
   if (!video.value || !videoElement.value || typeof duration !== 'number' || !Number.isFinite(duration)) return
   saveVideoProgress(video.value.id, videoElement.value.currentTime, duration)
+  flushServerProgress()
 }
 
 function handleVideoEnded() {
   if (!video.value) return
   clearVideoProgress(video.value.id)
   consumptionTracker?.update(1)
+  flushServerProgress(true)
   const current = collectionVideos.value.findIndex(item => item.id === video.value?.id)
   if (current >= 0 && collectionVideos.value[current + 1]) {
     autoNextSeconds.value = 3
@@ -641,9 +718,14 @@ async function toggleChannelSubscription() {
         </template>
       </PVideoPlayerShell>
 
+      <section v-if="processingMessage" class="vd-processing-status" :class="{ 'vd-processing-status--error': video.processing_status === 'failed' }" role="status">
+        <span>{{ processingMessage }}</span>
+        <button v-if="canReprocessVideo" type="button" @click="retryVideoProcessing">重新处理</button>
+      </section>
+
       <section class="vd-channel-info" aria-label="视频频道信息">
         <div class="vd-meta-row">
-          <a v-if="video.channel" :href="`/channels/${video.channel.slug || video.channel_id}`" class="vd-author">
+          <RouterLink v-if="video.channel" :to="`/channels/${video.channel.slug || video.channel_id}`" class="vd-author">
             <span class="vd-author-avatar" aria-hidden="true">
               <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
               <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
@@ -653,7 +735,7 @@ async function toggleChannelSubscription() {
               <small v-if="video.user?.username">@{{ video.user.username }}</small>
             </span>
             <span class="vd-author__arrow" aria-hidden="true">→</span>
-          </a>
+          </RouterLink>
           <div class="vd-stats">
             <span>{{ video.view_count.toLocaleString() }} 次播放</span>
             <span>{{ fmtDate(video.created_at) }}</span>
@@ -825,6 +907,7 @@ async function toggleChannelSubscription() {
 }
 
 .vd-main--compact { width: 75%; }
+.vd-layout--theater .vd-main--compact { width: 100%; }
 
 .vd-layout {
   display: grid;
@@ -943,6 +1026,34 @@ async function toggleChannelSubscription() {
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
+}
+
+.vd-processing-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--a-color-primary);
+  color: var(--a-color-muted);
+  background: var(--a-color-surface);
+  font-size: 0.78rem;
+}
+
+.vd-processing-status--error {
+  border-left-color: var(--a-color-danger);
+  color: var(--a-color-danger);
+}
+
+.vd-processing-status button {
+  flex: 0 0 auto;
+  min-height: 2rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid currentColor;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 
 .vd-channel-info {

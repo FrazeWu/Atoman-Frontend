@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { IconVolume2 as Volume2, IconVolume as Volume1, IconVolumeOff as VolumeX, IconPlayerPlay as Play, IconPlayerPause as Pause, IconMaximize as Maximize, IconMinimize as Minimize, IconSettings as Settings, IconDeviceTv as Tv, IconSubtitles as Captions } from '@tabler/icons-vue'
+import { IconVolume2 as Volume2, IconVolume as Volume1, IconVolumeOff as VolumeX, IconPlayerPlay as Play, IconPlayerPause as Pause, IconMaximize as Maximize, IconMinimize as Minimize, IconSettings as Settings, IconDeviceTv as Tv, IconSubtitles as Captions, IconPictureInPicture as PictureInPicture } from '@tabler/icons-vue'
 import type { VideoPreviewThumbnail } from '@/types'
 import { formatTimestampLabel } from '@/composables/useMediaTimeAnchors'
 
@@ -30,6 +30,7 @@ const hoverTime = ref<number | null>(null)
 const isSeeking = ref(false)
 const isFullscreen = ref(false)
 const subtitlesEnabled = ref(false)
+const isPictureInPicture = ref(false)
 
 let syncTimer: number | undefined
 const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -78,6 +79,7 @@ function syncState() {
   playbackRate.value = video.playbackRate || 1
   subtitlesEnabled.value = video.textTracks?.[0]?.mode === 'showing'
   isFullscreen.value = Boolean(document.fullscreenElement)
+  isPictureInPicture.value = document.pictureInPictureElement === video
 }
 
 async function togglePlay() {
@@ -181,19 +183,43 @@ async function toggleFullscreen() {
   }
 }
 
+const pictureInPictureAvailable = computed(() => {
+  const video = props.videoElement as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null
+  return Boolean(video && !video.disablePictureInPicture && document.pictureInPictureEnabled && typeof video.requestPictureInPicture === 'function')
+})
+
+async function togglePictureInPicture() {
+  const video = props.videoElement as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null
+  if (!video || !pictureInPictureAvailable.value) return
+  if (document.pictureInPictureElement) {
+    if (typeof document.exitPictureInPicture === 'function') await document.exitPictureInPicture().catch(() => {})
+  } else {
+    await video.requestPictureInPicture?.().catch(() => {})
+  }
+  syncState()
+}
+
 function handleFullscreenChange() {
   isFullscreen.value = Boolean(document.fullscreenElement)
+}
+
+function handlePictureInPictureChange() {
+  isPictureInPicture.value = document.pictureInPictureElement === props.videoElement
 }
 
 onMounted(() => {
   syncState()
   syncTimer = window.setInterval(syncState, 250)
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+  document.addEventListener('enterpictureinpicture', handlePictureInPictureChange)
+  document.addEventListener('leavepictureinpicture', handlePictureInPictureChange)
 })
 
 onUnmounted(() => {
   if (syncTimer) window.clearInterval(syncTimer)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  document.removeEventListener('enterpictureinpicture', handlePictureInPictureChange)
+  document.removeEventListener('leavepictureinpicture', handlePictureInPictureChange)
 })
 </script>
 
@@ -309,6 +335,17 @@ onUnmounted(() => {
         <!-- 设置 -->
         <button class="vpc-icon-button" type="button" data-control="settings" title="播放器设置暂不可用" aria-label="播放器设置暂不可用" disabled>
           <Settings :size="18" />
+        </button>
+
+        <button
+          v-if="pictureInPictureAvailable"
+          class="vpc-icon-button"
+          type="button"
+          :title="isPictureInPicture ? '退出画中画' : '画中画'"
+          :aria-label="isPictureInPicture ? '退出画中画' : '画中画'"
+          @click="togglePictureInPicture"
+        >
+          <PictureInPicture :size="18" />
         </button>
 
         <!-- 宽屏/剧院模式 -->

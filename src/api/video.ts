@@ -58,6 +58,11 @@ export interface VideoSubscriptionPage {
   meta: { page: number; page_size: number; total: number; has_more: boolean }
 }
 
+export interface VideoPage {
+  data: Video[]
+  meta: { page: number; page_size: number; total: number; has_more: boolean }
+}
+
 export interface VideoRecommendationPage<T> {
   data: T[]
   meta: { page: number; page_size: number; total: number; has_more: boolean }
@@ -79,6 +84,11 @@ export interface VideoRatingSummary {
 }
 
 export const listVideos = (sort: string) => apiRequestJson<Video[]>(videoUrl(`?${queryString({ sort })}`))
+export const listVideoPage = (sort: string, page = 1, pageSize = 12, token?: string) => (
+  apiRequestJson<VideoPage>(videoUrl(`?${new URLSearchParams({ sort, page: String(page), limit: String(pageSize), format: 'page' })}`), {
+    headers: authHeaders(token),
+  })
+)
 export const getVideo = <T = Video>(id: string, token?: string) => (
   apiRequestJson<T>(videoUrl(`/${pathSegment(id)}`), token ? { headers: authHeaders(token) } : undefined)
 )
@@ -140,6 +150,13 @@ export function saveVideo(payload: VideoSavePayload, token?: string, id?: string
 
 export function duplicateVideo(id: string, token?: string) {
   return apiRequestJson<Video>(videoUrl(`/${pathSegment(id)}/duplicate`), {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+}
+
+export function reprocessVideo(id: string, token?: string) {
+  return apiRequestJson<{ ok: boolean }>(videoUrl(`/${pathSegment(id)}/reprocess`), {
     method: 'POST',
     headers: authHeaders(token),
   })

@@ -8,6 +8,7 @@ import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
 import { resolveMediaImageSrcSet, resolveMediaImageURL } from '@/utils/mediaUrl'
+import { videoAvatarSource, videoThumbnailSource } from '@/utils/videoPresentation'
 
 const props = defineProps<{
   video: Video
@@ -20,24 +21,25 @@ const bookmarks = useVideoBookmarks()
 const watchLaterError = ref('')
 const thumbnailFailed = ref(false)
 const avatarUrl = computed(() => {
-  const url = props.video.channel?.cover_url?.trim() || props.video.user?.avatar_url?.trim() || ''
+  const url = videoAvatarSource(props.video)
   return url ? resolveMediaImageURL(url, { width: 64 }) : ''
 })
+const thumbnailSource = computed(() => videoThumbnailSource(props.video))
 const thumbnailUrl = computed(() => {
   if (thumbnailFailed.value) return ''
-  const url = props.video.thumbnail_url?.trim() || ''
+  const url = thumbnailSource.value
   return url ? resolveMediaImageURL(url, { width: 384 }) : ''
 })
 const thumbnailSrcSet = computed(() => {
-  const url = props.video.thumbnail_url?.trim() || ''
+  const url = thumbnailSource.value
   return url ? resolveMediaImageSrcSet(url, [384, 640]) : ''
 })
 const thumbnailMobileSrcSet = computed(() => {
-  const url = props.video.thumbnail_url?.trim() || ''
+  const url = thumbnailSource.value
   return url ? resolveMediaImageSrcSet(url, [384]) : ''
 })
 
-watch(() => props.video.thumbnail_url, () => { thumbnailFailed.value = false })
+watch(thumbnailSource, () => { thumbnailFailed.value = false })
 
 async function toggleWatchLater() {
   if (!authStore.isAuthenticated) {
@@ -117,7 +119,7 @@ const avatarLetter = () =>
       <div class="vc-text">
         <h3 class="vc-title a-clamp-2">{{ video.title }}</h3>
         <div class="vc-meta">
-          <span v-if="video.channel" class="vc-channel">《{{ video.channel.name }}》</span>
+          <span v-if="video.channel" class="vc-channel">{{ video.channel.name }}</span>
           <div class="vc-stats">
             <span>{{ fmtDate(video.created_at) }}</span>
           </div>

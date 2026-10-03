@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createVideoRecommendationFeedback, getVideoRecommendations, listVideos, type VideoRecommendationFeedbackScope } from '@/api/video'
+import { createVideoRecommendationFeedback, getVideoRecommendations, listVideoPage, type VideoRecommendationFeedbackScope } from '@/api/video'
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -29,6 +29,7 @@ const recommendationLoading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const recommendationMeta = ref({ page: 1, page_size: 8, total: 0, has_more: false })
+const videoMeta = ref({ page: 1, page_size: 12, total: 0, has_more: false })
 const recommendationOptions = [
   { label: '热度', value: 'hot' },
   { label: '精选', value: 'featured' },
@@ -48,15 +49,23 @@ function openVideoSearchTarget(target: ReferenceTarget) {
   void router.push(modulePathUrl('video', target.path))
 }
 
-async function fetchVideos() {
+async function fetchVideos(page = videoMeta.value.page) {
   const seq = ++fetchVideosSeq
   loading.value = true
   try {
-    const data = await listVideos(sort.value)
-    if (seq === fetchVideosSeq) videos.value = data
+    const data = await listVideoPage(sort.value, page, videoMeta.value.page_size, authStore.token ?? undefined)
+    if (seq === fetchVideosSeq) {
+      videos.value = data.data
+      videoMeta.value = data.meta
+    }
   } finally {
     if (seq === fetchVideosSeq) loading.value = false
   }
+}
+
+function changeVideoPage(page: number) {
+  if (page < 1 || page === videoMeta.value.page || loading.value) return
+  void fetchVideos(page)
 }
 
 async function fetchRecommendedVideos() {
@@ -99,10 +108,13 @@ async function submitRecommendationFeedback(scope: VideoRecommendationFeedbackSc
 }
 
 onMounted(() => {
-  void fetchVideos()
+  void fetchVideos(1)
   void fetchRecommendedVideos()
 })
-watch(sort, fetchVideos)
+watch(sort, () => {
+  videoMeta.value = { ...videoMeta.value, page: 1 }
+  void fetchVideos(1)
+})
 </script>
 
 <template>
@@ -216,6 +228,12 @@ watch(sort, fetchVideos)
       <div v-else class="vh-grid">
         <PVideoCard v-for="video in videos" :key="video.id" :video="video" />
       </div>
+      <PaginationBar
+        v-if="videoMeta.total > videoMeta.page_size"
+        :meta="videoMeta"
+        :loading="loading"
+        @change="changeVideoPage"
+      />
     </PContentProgress>
   </div>
 </template>

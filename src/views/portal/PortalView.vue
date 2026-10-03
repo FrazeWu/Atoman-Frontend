@@ -14,7 +14,7 @@
           聚合博客、播客、音乐与讨论，不用在多个平台反复筛选。
         </p>
         <div class="portal-hot__hero-actions">
-          <PButton variant="primary" size="md" :to="moduleUrl('feed')">
+          <PButton variant="primary" size="md" :to="modulePathUrl('feed', '/explore')">
             浏览今日精选
           </PButton>
           <a href="#sections" class="portal-hot__secondary-btn">
@@ -270,7 +270,7 @@ import PVideoCard from '@/components/shared/PVideoCard.vue'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 import { useApiUrl } from '@/composables/useApiUrl'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
-import { moduleUrl } from '@/router/siteUrls'
+import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'

@@ -304,7 +304,7 @@ const showSubscriptionHubSidebar = computed(() => Boolean(
 
 // 2. Feed Navigation Items & Logic
 const feedNavItems = [
-  { to: moduleUrl('feed'), label: '发现', icon: Compass, exact: true },
+  { to: modulePathUrl('feed', '/explore'), label: '发现', icon: Compass, exact: false },
   { to: modulePathUrl('feed', '/subscriptions'), label: '订阅', icon: Rss },
   { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Bookmark },
 ]

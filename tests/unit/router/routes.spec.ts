@@ -60,9 +60,18 @@ describe('host-scoped route tables', () => {
     const feedPaths = flattenPaths(moduleRoutes.feed)
     const forumPaths = flattenPaths(moduleRoutes.forum)
     expect(feedPaths).toContain('reading-list')
+    expect(feedPaths).toContain('explore')
     expect(feedPaths).not.toContain('inbox')
     expect(forumPaths).toContain('topic/:id')
     expect(forumPaths).not.toContain('/forum')
+  })
+
+  it('keeps the feed explore route on the discovery view', () => {
+    const feedRoot = moduleRoutes.feed.find((route) => route.path === '/')
+    const exploreRoute = feedRoot?.children?.find((route) => route.path === 'explore')
+
+    expect(exploreRoute?.redirect).toBeUndefined()
+    expect(lazyImportPath(exploreRoute?.component)).toContain('FeedRecommendedView.vue')
   })
 
   it('registers public debate rules before the dynamic debate route', () => {

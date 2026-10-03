@@ -109,6 +109,8 @@ const featured = [
 ]
 
 const flushPortal = async () => {
+  await vi.advanceTimersByTimeAsync(7000)
+  await vi.runOnlyPendingTimersAsync()
   await flushPromises()
   await vi.dynamicImportSettled()
   await flushPromises()
@@ -116,6 +118,7 @@ const flushPortal = async () => {
 
 describe('PortalView', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     routerReplace.mockReset()
     observeImmediately = true
     activeObserver = undefined
@@ -137,6 +140,7 @@ describe('PortalView', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('只在模块接近视口时挂载内容卡片', async () => {

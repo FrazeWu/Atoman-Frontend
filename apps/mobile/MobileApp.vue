@@ -15,7 +15,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
@@ -35,7 +34,6 @@ declare global {
 }
 
 const route = useRoute()
-const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const playerPresence = usePlayerPresenceStore()
@@ -65,14 +63,12 @@ watch(() => route.fullPath, () => {
 let cancelStartupTasks: (() => void) | undefined
 
 onMounted(() => {
-  const cancelRestoreSession = scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)
   const cancelSiteAccessLoad = scheduleIdleTask(() => {
     void siteAccessStore.load().catch(() => {})
   }, 5000, 8000)
   const cancelPageView = scheduleIdleTask(reportPageView, 5000, 8000)
 
   cancelStartupTasks = () => {
-    cancelRestoreSession()
     cancelSiteAccessLoad()
     cancelPageView()
   }

@@ -237,6 +237,9 @@ describe("runtime loading boundaries", () => {
 	it("reserves stable space for every deferred portal section", () => {
 		const source = readSource("src/views/portal/PortalView.vue");
 
+		expect(source).toContain("portal-hot__loading-sections");
+		expect(source).toContain("portal-hot__loading-section");
+		expect(source).toContain("portal-hot__section--${section.module}");
 		for (const module of ["blog", "feed", "music", "video", "debate"]) {
 			expect(source).toContain(`.portal-hot__section-placeholder--${module}`);
 		}

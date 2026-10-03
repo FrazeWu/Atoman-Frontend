@@ -143,6 +143,29 @@ describe('PortalView', () => {
     vi.useRealTimers()
   })
 
+  it('在热门内容加载期间预留每个模块的稳定区块', () => {
+    observeImmediately = false
+
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: {
+          PButton: true,
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('.portal-hot__loading-sections').exists()).toBe(true)
+    expect(wrapper.findAll('.portal-hot__loading-section')).toHaveLength(5)
+    expect(wrapper.find('.portal-hot__loading-section--video').exists()).toBe(true)
+    expect(wrapper.find('.portal-hot__section-placeholder--video').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   it('只在模块接近视口时挂载内容卡片', async () => {
     observeImmediately = false
 

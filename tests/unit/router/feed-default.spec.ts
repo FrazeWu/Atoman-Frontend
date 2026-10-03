@@ -13,6 +13,7 @@ describe("feed default route", () => {
 		const root = moduleRoutes.feed.find((route) => route.path === "/");
 		const children = root?.children || [];
 		const defaultRoute = children.find((route) => route.path === "");
+		const exploreRoute = children.find((route) => route.path === "explore");
 		const sourceRoute = children.find((route) => route.path === "sources");
 		const subscriptionRoute = children.find(
 			(route) => route.path === "subscriptions",
@@ -21,6 +22,10 @@ describe("feed default route", () => {
 		expect(lazyImportPath(defaultRoute?.component)).toContain(
 			"FeedRecommendedView.vue",
 		);
+		expect(lazyImportPath(exploreRoute?.component)).toContain(
+			"FeedRecommendedView.vue",
+		);
+		expect(exploreRoute?.redirect).toBeUndefined();
 		expect(subscriptionRoute?.meta).toMatchObject({ requiresAuth: true });
 
 		expect(lazyImportPath(subscriptionRoute?.component)).toContain(
@@ -41,7 +46,7 @@ describe("feed default route", () => {
 		await router.push("/feed/explore?category=tech#sources");
 
 		expect(router.currentRoute.value.fullPath).toBe(
-			"/feed?category=tech#sources",
+			"/feed/explore?category=tech#sources",
 		);
 	}, 20_000);
 });

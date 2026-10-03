@@ -4,6 +4,7 @@ import { settingRoutes } from "@/router/routes/settings";
 
 const videoHomeView = () => import("@/views/video/VideoHomeView.vue");
 const videoDetailRouteSheet = () => import("@/views/video/VideoDetailRouteSheet.vue");
+const feedRecommendedView = () => import("@/views/feed/FeedRecommendedView.vue");
 
 function musicBookmarksPath(path: string) {
 	return path.startsWith("/music/") ? "/music/bookmarks" : "/bookmarks";
@@ -251,7 +252,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				// Exploration is the public feed landing; subscriptions remain available explicitly.
 				{
 					path: "",
-					component: () => import("@/views/feed/FeedRecommendedView.vue"),
+					component: feedRecommendedView,
 				},
 				{
 					path: "sources",
@@ -265,11 +266,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "explore",
-					redirect: (to) => ({
-						path: to.path.replace(/\/explore$/, "") || "/",
-						query: to.query,
-						hash: to.hash,
-					}),
+					component: feedRecommendedView,
 				},
 
 				{

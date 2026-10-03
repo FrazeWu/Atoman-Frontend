@@ -869,6 +869,10 @@ describe("feed store", () => {
         }),
       }),
     );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/feed/subscription-hub/tree",
+      expect.anything(),
+    );
   });
 
   it("reports failed read state writes", async () => {

@@ -96,7 +96,7 @@ export function useModuleSubscriptionTimeline(subscriptionType: SubscriptionHubT
       })
       if (!response.ok) throw new Error('mark all read failed')
       items.value.forEach((item) => { item.is_read = true })
-      await Promise.all([fetchPage(1), feedStore.fetchSubscriptions()])
+      await Promise.all([fetchPage(1), feedStore.fetchSubscriptions(), feedStore.fetchSubscriptionHubTree()])
       return true
     } catch {
       error.value = '标记已读失败，请重试'

@@ -38,7 +38,7 @@
       </button>
 
       <MobileModuleSwitcher
-        v-if="!isAuthRoute"
+        v-if="showMobileModuleSwitcher && !isAuthRoute"
         :label="mobileModuleLabel"
         :current-module="mobileModule"
         @navigate="requestLyricsClose"
@@ -58,7 +58,7 @@
       </nav>
 
       <div class="nav-right">
-        <AppTopbarGlobalSearch v-if="!isAuthRoute" />
+        <AppTopbarGlobalSearch v-if="searchReady && !isAuthRoute" />
         <button
           type="button"
           class="theme-toggle-btn"
@@ -81,15 +81,14 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { IconMenu as Menu, IconSun as Sun, IconMoon as Moon, IconArrowLeft as ArrowLeft } from '@tabler/icons-vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
-import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
-import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 
 const { toggleSidebar } = useSidebar()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
@@ -99,9 +98,16 @@ const route = useRoute()
 
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
-const player = usePlayerStore()
+const playerPresence = usePlayerPresenceStore()
 const { navigateTo } = useModuleNav()
+const MobileModuleSwitcher = defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))
+const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
+const searchReady = ref(false)
+const showMobileModuleSwitcher = ref(false)
+let mobileViewportQuery: MediaQueryList | null = null
+let cancelSearchIdleTask = () => {}
+let cancelSessionRestoreIdleTask = () => {}
 
 const handleBrandClick = () => {
   requestLyricsClose()
@@ -112,7 +118,7 @@ const handleBrandClick = () => {
 }
 
 const requestLyricsClose = () => {
-  player.requestLyricsClose()
+  playerPresence.requestLyricsClose()
 }
 
 const handleModuleNavigation = (key: ModuleRoomKey) => {
@@ -165,13 +171,19 @@ const handleScroll = (event: Event) => {
   }
 }
 
+const syncMobileViewport = (event?: MediaQueryListEvent) => {
+  showMobileModuleSwitcher.value = mobileViewportQuery === null
+    ? true
+    : event?.matches ?? mobileViewportQuery.matches
+}
+
 onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark'
   if (isDark.value) {
     document.documentElement.classList.add('dark')
   }
   if (!isAuthRoute.value) {
-    void authStore.restoreSession()
+    cancelSessionRestoreIdleTask = scheduleIdleTask(() => authStore.restoreSession())
   }
 
   window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
@@ -179,9 +191,20 @@ onMounted(() => {
   isScrolled.value = mainContent instanceof HTMLElement
     ? mainContent.scrollTop > 0
     : window.scrollY > 0
+
+  mobileViewportQuery = window.matchMedia?.('(max-width: 720px)') ?? null
+  syncMobileViewport()
+  mobileViewportQuery?.addEventListener('change', syncMobileViewport)
+
+  cancelSearchIdleTask = scheduleIdleTask(() => {
+    searchReady.value = true
+  })
 })
 
 onBeforeUnmount(() => {
+  cancelSearchIdleTask()
+  cancelSessionRestoreIdleTask()
+  mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
   window.removeEventListener('scroll', handleScroll, { capture: true })
 })
 

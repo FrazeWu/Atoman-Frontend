@@ -37,12 +37,6 @@ const thumbnailMobileSrcSet = computed(() => {
   return url ? resolveMediaImageSrcSet(url, [384]) : ''
 })
 
-const thumbnailLabel = computed(() => {
-  const details = [`${fmtViews(props.video.view_count)} 次播放`]
-  const duration = props.video.duration_sec ? `，时长 ${fmtDuration(props.video.duration_sec)}` : ''
-  return `${props.video.title}，${details.join('，')}${duration}`
-})
-
 watch(() => props.video.thumbnail_url, () => { thumbnailFailed.value = false })
 
 async function toggleWatchLater() {
@@ -84,7 +78,7 @@ const avatarLetter = () =>
 <template>
   <PMediaCard variant="landscape" class="vc-card">
     <div class="vc-thumb">
-      <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="thumbnailLabel">
+      <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link">
         <picture v-if="thumbnailUrl">
           <source media="(max-width: 768px)" :srcset="thumbnailMobileSrcSet || thumbnailUrl" sizes="calc(100vw - 2rem)" />
           <img :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 384px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />

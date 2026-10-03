@@ -7,6 +7,7 @@ import {
 	mobileRoutes,
 	MOBILE_MODULES,
 } from "../../../apps/mobile/mobileRoutes";
+import { studioRoutes } from "../../../src/router/routes/studio";
 
 const indexHtml = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
 const mobileIndexHtml = readFileSync(
@@ -22,7 +23,7 @@ const portalSource = readFileSync(
 	"utf8",
 );
 
-function routePaths(routes = mobileRoutes, parentPath = ""): string[] {
+function routePaths(routes = [...mobileRoutes, ...studioRoutes], parentPath = ""): string[] {
 	return routes.flatMap((route) => {
 		const path =
 			route.path === ""

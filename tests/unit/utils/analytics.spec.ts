@@ -31,12 +31,42 @@ describe('Google Analytics loader', () => {
   it('loads analytics after the delayed start', async () => {
     scheduleGoogleAnalytics()
 
-    await vi.advanceTimersByTimeAsync(10000)
+    await vi.advanceTimersByTimeAsync(29999)
+
+    expect(document.head.querySelector('script[data-atoman-analytics]')).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(1)
 
     const script = document.head.querySelector<HTMLScriptElement>('script[data-atoman-analytics]')
     expect(script?.async).toBe(true)
     expect(script?.src).toContain('googletagmanager.com/gtag/js?id=G-1FLNTZ469W')
     expect(window.dataLayer).toBeDefined()
     expect(window.gtag).toBeTypeOf('function')
+  })
+
+  it('loads analytics when the visitor first interacts', async () => {
+    vi.resetModules()
+    const { scheduleGoogleAnalytics: schedule } = await import('@/utils/analytics')
+
+    schedule()
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(document.head.querySelector('script[data-atoman-analytics]')).toBeNull()
+
+    window.dispatchEvent(new Event('pointerdown'))
+
+    const script = document.head.querySelector<HTMLScriptElement>('script[data-atoman-analytics]')
+    expect(script?.async).toBe(true)
+    expect(script?.src).toContain('googletagmanager.com/gtag/js?id=G-1FLNTZ469W')
+  })
+
+  it('resolves when the environment blocks external script insertion', async () => {
+    vi.resetModules()
+    const appendChild = vi.spyOn(document.head, 'appendChild').mockImplementation(() => {
+      throw new Error('external scripts are disabled')
+    })
+    const { loadGoogleAnalytics: load } = await import('@/utils/analytics')
+
+    await expect(load()).resolves.toBeUndefined()
+    appendChild.mockRestore()
   })
 })

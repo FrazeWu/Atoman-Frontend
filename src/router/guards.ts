@@ -1,4 +1,4 @@
-import type { Router } from "vue-router";
+import type { RouteRecordRaw, Router } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useOnboardingStore } from "@/stores/onboarding";
 import { useSiteAccessStore } from "@/stores/siteAccess";
@@ -27,6 +27,17 @@ const publicSystemPaths = new Set([
 	disabledTarget.path,
 ]);
 const guestOnlyPaths = new Set(["/login", "/register", "/forgot-password"]);
+let studioRoutesPromise: Promise<RouteRecordRaw[]> | null = null;
+
+const isStudioPath = (path: string) => path === "/studio" || path.startsWith("/studio/");
+
+async function ensureStudioRoutes(router: Router) {
+	if (router.hasRoute("studio-dashboard")) return;
+	studioRoutesPromise ??= import("@/router/routes/studio").then(({ studioRoutes }) => studioRoutes);
+	for (const route of await studioRoutesPromise) {
+		router.addRoute(route);
+	}
+}
 
 function resolveGuestRedirect(value: unknown) {
 	if (typeof value !== "string") return "/feed";
@@ -38,6 +49,11 @@ function resolveGuestRedirect(value: unknown) {
 
 export function installRouteGuards(router: Router) {
 	router.beforeEach(async (to, _from) => {
+		if (isStudioPath(to.path) && !router.hasRoute("studio-dashboard")) {
+			await ensureStudioRoutes(router);
+			return to.fullPath;
+		}
+
 		const authStore = useAuthStore();
 		const onboardingStore = useOnboardingStore();
 		const siteAccessStore = useSiteAccessStore();
@@ -49,6 +65,7 @@ export function installRouteGuards(router: Router) {
 			to.path === "/music" &&
 			(to.query.editor === "artist-create" || to.query.editor === "album-edit");
 		const requiresAuth = Boolean(to.meta.requiresAuth) || requiresMusicEditorAuth;
+		const isPortalHome = to.meta.portalHome === true;
 		const hasValidSession =
 			authStore.validateSession() ||
 			(requiresAuth || isGuestOnlyRoute ? await authStore.restoreSession() : false);
@@ -60,10 +77,10 @@ export function installRouteGuards(router: Router) {
 		}
 
 		if (
+			!isPortalHome &&
 			!isSettingRoute &&
 			!isPublicSystemRoute &&
-			!siteAccessStore.loaded &&
-			!siteAccessStore.loading
+			!siteAccessStore.loaded
 		) {
 			try {
 				await siteAccessStore.load();

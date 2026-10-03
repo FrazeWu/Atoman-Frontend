@@ -20,29 +20,30 @@
           </Transition>
         </RouterView>
       </main>
-      <BlogSheetStack />
-      <NotificationToastStack v-if="!isAuthRoute" />
-      <MobileBottomNav v-if="showMobileBottomNav" />
-      <SiteFooter v-if="!isAuthRoute" />
+      <BlogSheetStack v-if="sheetStore.stack.length > 0" />
+      <MobileBottomNav v-if="showDeferredShell && showMobileBottomNav" />
+      <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
       <PShortcutHints v-if="!isAuthRoute" v-model="shortcutHelpOpen" :hints="shortcutHints" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import PShortcutHints, { type ShortcutHint } from '@/components/ui/PShortcutHints.vue'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useUIStore } from '@/stores/ui'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
 import { useKeyboardShortcuts, type KeyboardShortcut } from '@/composables/useKeyboardShortcuts'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
+import { useSheetStore } from '@/stores/sheet'
 
 declare global {
   interface Window {
@@ -53,12 +54,12 @@ declare global {
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
-const NotificationToastStack = defineAsyncComponent(() => import('@/components/system/NotificationToastStack.vue'))
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFooter.vue'))
 
 const route = useRoute()
-const player = usePlayerStore()
+const sheetStore = useSheetStore()
+const playerPresence = usePlayerPresenceStore()
 const uiStore = useUIStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
@@ -67,8 +68,9 @@ const apiUrl = useApiUrl()
 
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
-const hasActiveTrack = computed(() => Boolean(player.currentSong))
+const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
+const showDeferredShell = ref(false)
 const shortcutHelpOpen = ref(false)
 const isMediaModule = computed(() => /^\/(music|podcasts|videos)(\/|$)/.test(route.path))
 
@@ -108,7 +110,7 @@ const shortcutHints = computed<ShortcutHint[]>(() => {
 
 const globalShortcuts = computed<KeyboardShortcut[]>(() => [
   { key: 'h', description: '聚焦侧边栏', handler: () => uiStore.focusSidebar() },
-  ...(!player.currentSong ? [{ key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() }] : []),
+  ...(!playerPresence.hasCurrentTrack ? [{ key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() }] : []),
   { key: '?', shift: true, description: '打开快捷键说明', handler: () => { shortcutHelpOpen.value = true } },
 ])
 
@@ -133,14 +135,21 @@ const reportAnalyticsPageView = () => {
 
 watch(() => route.fullPath, () => reportPageView())
 
+let cancelIdleWork = () => {}
+
 onMounted(() => {
-  reportPageView(false)
-  scheduleGoogleAnalytics(reportAnalyticsPageView)
-  if (localStorage.getItem('atoman_transition_relay')) {
-    checkRelay()
-  }
-  siteAccessStore.load()
+  cancelIdleWork = scheduleIdleTask(() => {
+    showDeferredShell.value = true
+    reportPageView(false)
+    scheduleGoogleAnalytics(reportAnalyticsPageView)
+    if (localStorage.getItem('atoman_transition_relay')) {
+      checkRelay()
+    }
+    void siteAccessStore.load().catch(() => {})
+  })
 })
+
+onBeforeUnmount(() => cancelIdleWork())
 </script>
 
 <style scoped>

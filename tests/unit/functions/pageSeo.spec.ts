@@ -190,6 +190,7 @@ describe("static page SEO", () => {
 		expect(await response.text()).toContain(
 			"<title data-default-meta>订阅流 | Atoman</title>",
 		);
+		expect(response.headers.get("cache-control")).toContain("no-transform");
 
 		const xmlResponse = new Response("<urlset/>", {
 			headers: { "content-type": "application/xml" },
@@ -199,5 +200,24 @@ describe("static page SEO", () => {
 			next: async () => xmlResponse,
 		});
 		expect(untouched).toBe(xmlResponse);
+	});
+
+	it("keeps HTML transform protection when rewriting fails", async () => {
+		const upstream = {
+			body: null,
+			headers: new Headers({ "content-type": "text/html" }),
+			status: 200,
+			statusText: "OK",
+			clone: () => {
+				throw new Error("HTML body unavailable");
+			},
+		} as unknown as Response;
+
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/feed"),
+			next: async () => upstream,
+		});
+
+		expect(response.headers.get("cache-control")).toBe("no-transform");
 	});
 });

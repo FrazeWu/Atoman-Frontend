@@ -1,33 +1,12 @@
 // pi-lens-ignore: typescript:2307
 import type { RouteRecordRaw } from "vue-router";
-import PortalView from "@/views/portal/PortalView.vue";
-import { studioRoutes } from "@/router/routes/studio";
+import { mobileInitialRoutes } from "./mobileInitialRoutes";
 
 const requiresAuth = { requiresAuth: true };
-const portalHomeRoute: RouteRecordRaw = {
-	path: "/",
-	component: PortalView,
-};
-
-export const MOBILE_MODULES = ["feed", "blog", "music"] as const;
+export { MOBILE_MODULES } from "./mobileInitialRoutes";
 
 export const mobileRoutes: RouteRecordRaw[] = [
-	portalHomeRoute,
-	{
-		path: "/login",
-		component: () => import("@/views/auth/LoginView.vue"),
-		meta: { authLayout: true },
-	},
-	{
-		path: "/register",
-		component: () => import("@/views/auth/LoginView.vue"),
-		meta: { authLayout: true },
-	},
-	{
-		path: "/forgot-password",
-		component: () => import("@/views/auth/ForgotPasswordView.vue"),
-		meta: { authLayout: true },
-	},
+	...mobileInitialRoutes.filter((route) => route.path !== "/:pathMatch(.*)*"),
 	{
 		path: "/modules",
 		component: () => import("./MobileModuleDirectoryView.vue"),
@@ -211,10 +190,5 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/videos/watch/:id",
 		component: () => import("@/views/video/VideoDetailView.vue"),
-	},
-	...studioRoutes,
-	{
-		path: "/:pathMatch(.*)*",
-		component: () => import("@/views/system/NotFoundView.vue"),
 	},
 ];

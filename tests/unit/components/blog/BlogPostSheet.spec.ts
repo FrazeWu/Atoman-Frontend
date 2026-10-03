@@ -25,6 +25,8 @@ const response = (data: unknown) =>
 const errorResponse = (status: number, code: string, message: string) =>
 	new Response(JSON.stringify({ error: { code, message } }), { status });
 
+const mountedWrappers: Array<ReturnType<typeof mount>> = [];
+
 function deferred<T>() {
 	let resolve!: (value: T | PromiseLike<T>) => void;
 	const promise = new Promise<T>((nextResolve) => {
@@ -54,8 +56,11 @@ describe("BlogPostSheet", () => {
 	beforeEach(() => {
 		vi.stubGlobal(
 			"fetch",
-			vi.fn(async () =>
-				response({
+			vi.fn(async (input: RequestInfo | URL) => {
+				const url = String(input);
+				if (url.endsWith("/blog/bookmarks")) return response([]);
+				if (url.includes("/content/events")) return response({ recorded: true });
+				return response({
 					id: "post-1",
 					user_id: "user-1",
 					user: { uuid: "user-1", username: "author" },
@@ -64,12 +69,13 @@ describe("BlogPostSheet", () => {
 					content: "正文",
 					created_at: "2026-07-12T00:00:00Z",
 					updated_at: "2026-07-13T00:00:00Z",
-				}),
-			),
+				});
+			}),
 		);
 	});
 
 	afterEach(() => {
+		mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
 		useBlogSheets().closeAll();
 		vi.unstubAllGlobals();
 	});
@@ -96,6 +102,7 @@ describe("BlogPostSheet", () => {
 				},
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 
 		expect(wrapper.get('[data-test="post-sheet"]').attributes("data-mode")).toBe("full");
@@ -120,6 +127,7 @@ describe("BlogPostSheet", () => {
 				stubs: { PSheet: { template: "<section><slot /></section>" } },
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 
 		expect(wrapper.get('[data-test="post-reading-single"]').text()).toBe("单栏");
@@ -152,6 +160,7 @@ describe("BlogPostSheet", () => {
 				stubs: { PSheet: { template: "<section><slot /></section>" } },
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 
 		expect(wrapper.find(".post-sheet-author-avatar").exists()).toBe(true);
@@ -218,6 +227,7 @@ describe("BlogPostSheet", () => {
 				},
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 
 		expect(wrapper.get('[role="note"]').text()).toContain("最近更新时间：");
@@ -251,13 +261,14 @@ describe("BlogPostSheet", () => {
 		await router.push("/posts");
 		await router.isReady();
 
-		mount(BlogPostSheet, {
+		const wrapper = mount(BlogPostSheet, {
 			props: { layer },
 			global: {
 				plugins: [pinia, router],
 				stubs: { PSheet: { template: "<section><slot /></section>" } },
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 
 		const eventRequest = fetchMock.mock.calls.find(([input]) =>
@@ -277,6 +288,7 @@ describe("BlogPostSheet", () => {
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 			const url = String(input);
 			if (url.includes("/related")) return response([]);
+			if (url.endsWith("/blog/bookmarks")) return response([]);
 			if (url.endsWith("/rating"))
 				return errorResponse(
 					403,
@@ -316,6 +328,7 @@ describe("BlogPostSheet", () => {
 				},
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 		await wrapper.get('[data-test="rate"]').trigger("click");
 		await flushPromises();
@@ -328,6 +341,7 @@ describe("BlogPostSheet", () => {
 		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
 			if (url.includes("/related")) return response([]);
+			if (url.endsWith("/blog/bookmarks")) return response([]);
 			if (url.endsWith("/rating") && init?.method === "DELETE") {
 				return response({ rating_score: 0, rating_count: 0 });
 			}
@@ -363,6 +377,7 @@ describe("BlogPostSheet", () => {
 				},
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 		await wrapper.get('[data-test="clear-rating"]').trigger("click");
 		await flushPromises();
@@ -407,6 +422,7 @@ describe("BlogPostSheet", () => {
 				},
 			},
 		});
+		mountedWrappers.push(wrapper);
 		await flushPromises();
 
 		expect(wrapper.find('[data-test="comments"]').exists()).toBe(false);
@@ -452,6 +468,7 @@ describe("BlogPostSheet", () => {
 				},
 			},
 		});
+		mountedWrappers.push(wrapper);
 
 		const nextLayer: BlogPostLayer = {
 			...layer,

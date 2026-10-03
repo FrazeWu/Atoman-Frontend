@@ -3,7 +3,7 @@ import { settingRoutes } from '@/router/routes/settings'
 import PortalView from '@/views/portal/PortalView.vue'
 
 export const portalRoutes: RouteRecordRaw[] = [
-  { path: '/', component: PortalView },
+  { path: '/', component: PortalView, meta: { portalHome: true } },
   ...settingRoutes,
   { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true, guestOnly: true } },
   { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true, guestOnly: true } },

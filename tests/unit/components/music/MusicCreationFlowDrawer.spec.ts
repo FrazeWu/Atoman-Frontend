@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { computed, nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Vue SFC declarations are unavailable to the standalone TypeScript server.
@@ -8,6 +8,8 @@ import {
 } from "../../../../src/components/music/musicCreationTypes";
 import type { MusicCreationFlowState } from "../../../../src/components/music/musicCreationTypes";
 import * as musicApi from "../../../../src/api/musicV1";
+
+enableAutoUnmount(afterEach);
 
 const createFlowState = (
 	overrides: Partial<MusicCreationFlowState> = {},

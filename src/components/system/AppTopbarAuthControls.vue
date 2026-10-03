@@ -20,6 +20,8 @@
     <span>创作</span>
   </RouterLink>
 
+  <NotificationToastStack />
+
   <div class="dropdown-wrap" :class="{ 'is-open': activeDropdown === 'user' }" data-dropdown="user">
     <button class="user-btn" @click="toggleDropdown('user')">
       <span class="user-avatar">
@@ -50,6 +52,7 @@ import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { IconMail as Mail, IconPencil as PencilLine } from '@tabler/icons-vue'
+import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()

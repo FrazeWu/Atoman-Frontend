@@ -57,6 +57,20 @@ function archivedAssetKey(request: Request) {
 	}
 }
 
+function ensureNoTransform(headers: Headers) {
+	const cacheControl = headers.get("cache-control") || "";
+	if (
+		!cacheControl
+			.split(",")
+			.some((directive) => directive.trim().toLowerCase() === "no-transform")
+	) {
+		headers.set(
+			"cache-control",
+			cacheControl ? `${cacheControl}, no-transform` : "no-transform",
+		);
+	}
+}
+
 async function serveArchivedAsset(context: MiddlewareContext, key: string) {
 	if (!context.env?.FRONTEND_RELEASE_ASSETS) return undefined;
 
@@ -122,12 +136,21 @@ export async function onRequest(context: MiddlewareContext) {
 			headers.set("cache-control", "no-store");
 			headers.set("x-robots-tag", "noindex, nofollow");
 		}
+		if (!missingSeoPage) {
+			ensureNoTransform(headers);
+		}
 		return new Response(transformedHtml, {
 			status: missingSeoPage ? 404 : response.status,
 			statusText: missingSeoPage ? "Not Found" : response.statusText,
 			headers,
 		});
 	} catch {
-		return response;
+		const headers = new Headers(response.headers);
+		ensureNoTransform(headers);
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers,
+		});
 	}
 }

@@ -1,11 +1,11 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // @ts-expect-error The isolated test TS project does not load Vue's SFC shim.
 import AppTopbar from "@/components/system/AppTopbar.vue";
-import { usePlayerStore } from "@/stores/player";
+import { usePlayerPresenceStore } from "@/stores/playerPresence";
 
 const makeRouter = async () => {
 	const router = createRouter({
@@ -31,6 +31,10 @@ const activeNavText = (wrapper: ReturnType<typeof mount>) =>
 describe("AppTopbar route reactivity", () => {
 	beforeEach(() => {
 		setActivePinia(createPinia());
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it("updates the active room after SPA navigation changes route path", async () => {
@@ -67,8 +71,10 @@ describe("AppTopbar route reactivity", () => {
 
 	it("requests lyrics closure before topbar navigation", async () => {
 		const router = await makeRouter();
-		const player = usePlayerStore();
-		player.showLyrics = true;
+		const playerPresence = usePlayerPresenceStore();
+		const player = {
+			showLyrics: true,
+		};
 
 		const wrapper = mount(AppTopbar, {
 			global: { plugins: [router] },
@@ -76,18 +82,25 @@ describe("AppTopbar route reactivity", () => {
 
 		await wrapper.get(".brand-logo-link").trigger("click");
 
-		expect(player.lyricsCloseRequest).toBe(1);
+		expect(playerPresence.lyricsCloseRequest).toBe(1);
 		expect(player.showLyrics).toBe(true);
 	});
 
 	it("shows a mobile detail back action while retaining the module context", async () => {
 		const router = await makeRouter();
 		await router.push("/music/song/track-1");
+		vi.stubGlobal("matchMedia", () => ({
+			matches: true,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+		}));
 		const wrapper = mount(AppTopbar, {
 			global: {
 				plugins: [router],
 			},
 		});
+		await vi.dynamicImportSettled();
+		await flushPromises();
 
 		expect(wrapper.find('[data-testid="mobile-back-button"]').exists()).toBe(
 			true,

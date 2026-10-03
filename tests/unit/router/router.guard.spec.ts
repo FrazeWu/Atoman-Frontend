@@ -9,7 +9,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModuleRoomKey } from "../../../src/config/moduleRooms";
 import { installRouteGuards } from "../../../src/router/guards";
 import { buildAppRoutes } from "../../../src/router/buildAppRoutes";
+import { buildInitialRoutes } from "../../../src/router/buildInitialRoutes";
 import { moduleRoutes } from "../../../src/router/routes/modules";
+import { portalRoutes } from "../../../src/router/routes/portal";
 import { useAuthStore } from "../../../src/stores/auth";
 import { useOnboardingStore } from "../../../src/stores/onboarding";
 import { useSiteAccessStore } from "../../../src/stores/siteAccess";
@@ -87,6 +89,23 @@ describe("router auth guards", () => {
 		setActivePinia(createPinia());
 	});
 
+	it("registers Studio routes when the initial router enters the workspace", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: buildInitialRoutes(),
+		});
+		installRouteGuards(router);
+		const auth = useAuthStore();
+		auth.user = { id: 1, username: "alice", email: "alice@example.com", role: "user" };
+		auth.isAuthenticated = true;
+
+		expect(router.hasRoute("studio-dashboard")).toBe(false);
+		await router.push("/studio");
+
+		expect(router.hasRoute("studio-dashboard")).toBe(true);
+		expect(router.currentRoute.value.path).toBe("/studio");
+	});
+
 	it("redirects unauthenticated user to login for protected short routes", async () => {
 		const router = await createGuardRouter("blog");
 		const auth = useAuthStore();
@@ -136,6 +155,29 @@ describe("router auth guards", () => {
 		expect(navigationFinished).toBe(true);
 		expect(router.currentRoute.value.path).toBe("/");
 		expect(restoreSessionSpy).not.toHaveBeenCalled();
+	});
+
+	it("does not block the portal home route on pending site access", async () => {
+		window.history.replaceState(null, "", "/");
+		const siteAccess = useSiteAccessStore();
+		const loadSpy = vi
+			.spyOn(siteAccess, "load")
+			.mockReturnValue(createPendingPromise<void>());
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: stubRouteComponents(portalRoutes),
+		});
+		installRouteGuards(router);
+
+		let navigationFinished = false;
+		void router.push("/").then(() => {
+			navigationFinished = true;
+		});
+
+		await new Promise((resolve) => setTimeout(resolve, 20));
+
+		expect(navigationFinished).toBe(true);
+		expect(loadSpy).not.toHaveBeenCalled();
 	});
 
 	it("continues to wait for session restoration on protected music routes", async () => {

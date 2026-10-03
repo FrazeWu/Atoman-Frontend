@@ -1,7 +1,7 @@
 import { reportError } from "@/utils/logger";
 import { apiRequestResult } from "@/api/client";
 import { defineStore, getActivePinia } from "pinia";
-import { onScopeDispose, ref, watch } from "vue";
+import { computed, onScopeDispose, ref, watch } from "vue";
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
 import { isPlayableFeedPodcast } from "@/utils/feedPodcast";
 import { useApi } from "@/composables/useApi";
@@ -22,6 +22,7 @@ import {
 	useContentLifecycle,
 } from "@/composables/useContentLifecycle";
 import { useAuthStore } from "@/stores/auth";
+import { usePlayerPresenceStore } from "@/stores/playerPresence";
 import { registerSessionReset } from "@/stores/sessionReset";
 import { useAudioPlayerSync } from "@/composables/useAudioPlayerSync";
 import {
@@ -84,6 +85,7 @@ export const usePlayerStore = defineStore("player", () => {
 	} = useAudioPlayerSync();
 	const songs = ref<Song[]>([]);
 	const currentSong = ref<Song | null>(null);
+	const playerPresence = usePlayerPresenceStore();
 	const isPlaying = ref(false);
 	const isShuffled = ref(false);
 	const repeatMode = ref<RepeatMode>("all");
@@ -97,11 +99,17 @@ export const usePlayerStore = defineStore("player", () => {
 	const songLibraryBootstrapped = ref(false);
 	const songLibraryLoaded = ref(false);
 	const showLyrics = ref(false);
-	const lyricsCloseRequest = ref(0);
+	const lyricsCloseRequest = computed(() => playerPresence.lyricsCloseRequest);
 	const showQueue = ref(false);
 	const isPinned = ref(
 		typeof localStorage === "undefined" ||
 			localStorage.getItem("playerPinned") !== "false",
+	);
+
+	watch(
+		currentSong,
+		(song) => playerPresence.setHasCurrentTrack(Boolean(song)),
+		{ immediate: true },
 	);
 
 	watch(isPinned, (value) => {
@@ -1313,7 +1321,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const requestLyricsClose = () => {
-		lyricsCloseRequest.value += 1;
+		playerPresence.requestLyricsClose();
 	};
 
 	const closeLyrics = () => {

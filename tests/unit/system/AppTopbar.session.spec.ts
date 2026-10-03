@@ -24,6 +24,8 @@ describe("AppTopbar session restoration", () => {
 		await router.isReady();
 		const wrapper = mount(AppTopbar, { global: { plugins: [pinia, router] } });
 		await flushPromises();
+		await vi.dynamicImportSettled();
+		await flushPromises();
 
 		expect(wrapper.find('[data-testid="topbar-search-pill"]').exists()).toBe(
 			true,

@@ -6,12 +6,22 @@ const readSource = (relativePath: string) =>
 	readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
 
 describe("runtime loading boundaries", () => {
-	it("starts the app and router chunks in parallel", () => {
+	it("keeps mobile and desktop bootstrap preloads in separate branches", () => {
 		const source = readSource("src/main.ts");
 
-		expect(source).toContain("const [appModule, routerModule] = await Promise.all([");
-		expect(source).not.toContain("const appModule = mobileRuntime");
-		expect(source).not.toContain("const routerModule = mobileRuntime");
+		expect(source).toMatch(
+			/if \(mobileRuntime\) \{\s+const \[appModule, routerModule\] = await Promise\.all\(\[\s+import\("\.\.\/apps\/mobile\/MobileApp\.vue"\),\s+import\("\.\.\/apps\/mobile\/router"\),/,
+		);
+		expect(source).toMatch(
+			/\} else \{\s+const \[appModule, routerModule\] = await Promise\.all\(\[\s+import\("\.\/App\.vue"\),\s+import\("\.\/router"\),/,
+		);
+		expect(source).not.toContain("mobileRuntime\n\t\t\t? import(");
+	});
+
+	it("lets the portal prerender paint before either runtime mounts", () => {
+		for (const source of [readSource("src/main.ts"), readSource("apps/mobile/main.ts")]) {
+			expect(source).toContain("waitForInitialPaint");
+		}
 	});
 
 	it("loads the audio player only when a track is active", () => {
@@ -30,13 +40,133 @@ describe("runtime loading boundaries", () => {
 		const source = readSource("src/App.vue");
 
 		for (const importPath of [
-			"@/components/system/NotificationToastStack.vue",
 			"@/components/system/MobileBottomNav.vue",
 			"@/components/system/SiteFooter.vue",
 		]) {
 			expect(source).not.toContain(`import ${importPath}`);
 			expect(source).toContain(`import('${importPath}')`);
 		}
+		expect(source).toContain('v-if="sheetStore.stack.length > 0"');
+		expect(source).not.toContain("NotificationToastStack");
+		expect(readSource("src/components/system/AppTopbarAuthControls.vue")).toContain(
+			"NotificationToastStack",
+		);
+	});
+
+	it("keeps the mobile portal prerender large enough to remain the LCP candidate", () => {
+		const source = readSource("index.html");
+
+		expect(source).toMatch(
+			/@media \(max-width: 600px\) \{\s+\.portal-prerender h1 \{\s+font-size: 36px;/,
+		);
+		expect(source).toMatch(
+			/\.portal-prerender h1 \{[\s\S]*?line-height: 1\.2;/,
+		);
+	});
+
+	it("defers non-critical shell work until the browser is idle", () => {
+		expect(readSource("src/App.vue")).toContain("scheduleIdleTask");
+		expect(readSource("src/views/portal/PortalView.vue")).toContain(
+			"scheduleIdleTask(loadHotContent)",
+		);
+		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
+			"searchReady && !isAuthRoute",
+		);
+		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
+			"scheduleIdleTask(() => authStore.restoreSession())",
+		);
+	});
+
+	it("keeps editor and feed reader styles out of the initial entries", () => {
+		for (const source of [readSource("src/main.ts"), readSource("apps/mobile/main.ts")]) {
+			expect(source).not.toContain('assets/editor.css');
+			expect(source).not.toContain('assets/feed-reader.css');
+		}
+		expect(readSource("src/components/shared/PEditorRuntime.vue")).toContain(
+			"@/assets/editor.css",
+		);
+		expect(readSource("src/components/blog/BlogPostReader.vue")).toContain(
+			"@/assets/editor.css",
+		);
+		expect(readSource("src/components/feed/FeedArticleSheet.vue")).toContain(
+			"@/assets/editor.css",
+		);
+		expect(readSource("src/components/feed/FeedArticleSheet.vue")).toContain(
+			"@/assets/feed-reader.css",
+		);
+		expect(readSource("src/components/feed/FeedReaderContent.vue")).toContain(
+			"@/assets/feed-reader.css",
+		);
+	});
+
+	it("keeps the studio route manifest out of the initial desktop router", () => {
+		const routerSource = readSource("src/router.ts");
+		const initialRoutesSource = readSource("src/router/buildInitialRoutes.ts");
+		const mobileRoutesSource = readSource("apps/mobile/mobileRoutes.ts");
+
+		expect(routerSource).toContain("buildInitialRoutes");
+		expect(routerSource).not.toContain("buildAppRoutes");
+		expect(initialRoutesSource).not.toContain("routes/studio");
+		expect(mobileRoutesSource).not.toContain("routes/studio");
+		expect(mobileRoutesSource).not.toContain("...studioRoutes");
+	});
+
+	it("defers the global search panel from the initial shell", () => {
+		const source = readSource("src/components/system/AppTopbar.vue");
+
+		expect(source).not.toContain(
+			"import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))",
+		);
+	});
+
+	it("does not load the mobile-only switcher in the desktop shell", () => {
+		const source = readSource("src/components/system/AppTopbar.vue");
+
+		expect(source).not.toContain(
+			"import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))",
+		);
+		expect(source).toContain('v-if="showMobileModuleSwitcher && !isAuthRoute"');
+		expect(source).toContain("matchMedia?.('(max-width: 720px)')");
+	});
+
+	it("keeps mobile chrome and player behind async boundaries", () => {
+		const source = readSource("apps/mobile/MobileApp.vue");
+
+		expect(source).not.toContain(
+			"import MobileBottomNav from '@/components/system/MobileBottomNav.vue'",
+		);
+		expect(source).not.toContain(
+			"import MobileAudioPlayer from './MobileAudioPlayer.vue'",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))",
+		);
+		expect(source).toContain(
+			"defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))",
+		);
+		expect(source).toContain(
+			"scheduleIdleTask(() => authStore.restoreSession())",
+		);
+	});
+
+	it("defers the secondary mobile route manifest until navigation needs it", () => {
+		const routerSource = readSource("apps/mobile/router.ts");
+		const initialRoutesSource = readSource("apps/mobile/mobileInitialRoutes.ts");
+		const mobileTopbarSource = readSource("apps/mobile/MobileTopbar.vue");
+
+		expect(routerSource).toContain("mobileInitialRoutes");
+		expect(routerSource).not.toContain("import { mobileRoutes } from './mobileRoutes'");
+		expect(routerSource).toContain("import('./mobileRoutes')");
+		expect(mobileTopbarSource).toContain("from './mobileInitialRoutes'");
+		expect(mobileTopbarSource).not.toContain("from './mobileRoutes'");
+		expect(initialRoutesSource).toContain("PortalView");
+		expect(initialRoutesSource).not.toContain("FeedLayout");
 	});
 
 	it("keeps portal content cards behind async boundaries", () => {

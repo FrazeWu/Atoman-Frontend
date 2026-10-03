@@ -1,11 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { installRouteGuards } from '@/router/guards'
-import { buildAppRoutes } from '@/router/buildAppRoutes'
+import { buildInitialRoutes } from '@/router/buildInitialRoutes'
 import { installChunkLoadRecovery } from '@/router/chunkLoadRecovery'
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: buildAppRoutes(),
+  routes: buildInitialRoutes(),
   scrollBehavior(_to, _from, savedPosition) {
     return savedPosition ?? { top: 0 }
   },

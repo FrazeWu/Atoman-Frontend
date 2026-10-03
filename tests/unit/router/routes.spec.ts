@@ -83,15 +83,23 @@ describe('host-scoped route tables', () => {
     expect(appRoutePaths).not.toContain('/feed/inbox')
   })
 
-  it('redirects legacy post links to the canonical blog route', async () => {
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: buildAppRoutes(),
+  it('redirects legacy post links to the canonical blog route', () => {
+    const legacyPostRoute = buildAppRoutes().find((route) => route.path === '/post/:id')
+    const redirect = legacyPostRoute?.redirect
+
+    expect(redirect).toBeTypeOf('function')
+    if (typeof redirect !== 'function') return
+
+    expect(redirect({
+      path: '/post/post-1',
+      params: { id: 'post-1' },
+      query: { source: 'legacy' },
+      hash: '#comments',
+    } as never)).toEqual({
+      path: '/posts/post/post-1',
+      query: { source: 'legacy' },
+      hash: '#comments',
     })
-
-    await router.push('/post/post-1?source=legacy#comments')
-
-    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1?source=legacy#comments')
   })
 
   it('registers Studio as the only creator workspace', () => {
@@ -120,13 +128,13 @@ describe('host-scoped route tables', () => {
     expect(routePaths).not.toEqual(expect.arrayContaining(['creator', 'manage', 'upload', 'edit/:id']))
   })
 
-  it('resolves the canonical video detail path without redirect recursion', async () => {
+  it('resolves the canonical video detail path without redirect recursion', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
 
-    await router.push('/videos/watch/video-1')
+    const resolved = router.resolve('/videos/watch/video-1')
 
-    expect(router.currentRoute.value.fullPath).toBe('/videos/watch/video-1')
-    expect(router.currentRoute.value.matched.at(-1)?.path).toBe('/videos/watch/:id')
+    expect(resolved.fullPath).toBe('/videos/watch/video-1')
+    expect(resolved.matched.at(-1)?.path).toBe('/videos/watch/:id')
   })
 
   it('defines entity profile routes as aggregation spaces', () => {

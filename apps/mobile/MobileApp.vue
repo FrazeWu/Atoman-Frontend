@@ -13,18 +13,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
-import MobileAudioPlayer from './MobileAudioPlayer.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import MobileTopbar from './MobileTopbar.vue'
+
+const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
+const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
 
 declare global {
   interface Window {
@@ -36,11 +38,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
-const player = usePlayerStore()
+const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio') && !route.path.startsWith('/videos/watch/'))
-const showMobilePlayer = computed(() => Boolean(player.currentSong) && showMobileBottomNav.value && route.path !== '/music/player')
+const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
 
 const reportPageView = () => {
   if (isAuthRoute.value) return
@@ -60,11 +62,26 @@ watch(() => route.fullPath, () => {
   reportAnalyticsPageView()
 })
 
+let cancelStartupTasks: (() => void) | undefined
+
 onMounted(() => {
-  void authStore.restoreSession()
-  void siteAccessStore.load().catch(() => {})
-  reportPageView()
+  const cancelRestoreSession = scheduleIdleTask(() => authStore.restoreSession())
+  const cancelSiteAccessLoad = scheduleIdleTask(() => {
+    void siteAccessStore.load().catch(() => {})
+  })
+  const cancelPageView = scheduleIdleTask(reportPageView)
+
+  cancelStartupTasks = () => {
+    cancelRestoreSession()
+    cancelSiteAccessLoad()
+    cancelPageView()
+  }
+
   scheduleGoogleAnalytics(reportAnalyticsPageView)
+})
+
+onBeforeUnmount(() => {
+  cancelStartupTasks?.()
 })
 </script>
 

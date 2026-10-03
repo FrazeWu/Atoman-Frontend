@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { nextTick } from "vue";
-import { flushPromises, mount } from "@vue/test-utils";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -51,6 +51,8 @@ vi.mock("@/components/music/MusicSongLyricsEditorDrawer.vue", () => ({
 }));
 
 describe("MusicCreationAlbumDetailsStep.vue", () => {
+	enableAutoUnmount(afterEach);
+
 	beforeEach(() => {
 		const drawers = useMusicDrawers();
 		drawers.closeAll();

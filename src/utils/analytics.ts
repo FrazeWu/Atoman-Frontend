@@ -1,5 +1,6 @@
 const GOOGLE_ANALYTICS_ID = 'G-1FLNTZ469W'
-const ANALYTICS_DELAY_MS = 10000
+const ANALYTICS_DELAY_MS = 30000
+const ANALYTICS_INTENT_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'scroll'] as const
 
 declare global {
   interface Window {
@@ -32,7 +33,11 @@ export function loadGoogleAnalytics() {
     script.src = `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`
     script.onload = () => resolve()
     script.onerror = () => resolve()
-    document.head.appendChild(script)
+    try {
+      document.head.appendChild(script)
+    } catch {
+      resolve()
+    }
   })
 
   return analyticsLoadPromise
@@ -41,9 +46,29 @@ export function loadGoogleAnalytics() {
 export function scheduleGoogleAnalytics(onReady?: () => void) {
   if (typeof window === 'undefined') return
 
+  let started = false
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const removeIntentListeners = () => {
+    for (const eventName of ANALYTICS_INTENT_EVENTS) {
+      window.removeEventListener(eventName, load)
+    }
+  }
+
+  const cleanup = () => {
+    if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId)
+    removeIntentListeners()
+  }
+
   const load = () => {
+    if (started) return
+    started = true
+    cleanup()
     void loadGoogleAnalytics().then(() => onReady?.())
   }
 
-  globalThis.setTimeout(load, ANALYTICS_DELAY_MS)
+  for (const eventName of ANALYTICS_INTENT_EVENTS) {
+    window.addEventListener(eventName, load, { once: true, passive: true })
+  }
+  timeoutId = globalThis.setTimeout(load, ANALYTICS_DELAY_MS)
 }

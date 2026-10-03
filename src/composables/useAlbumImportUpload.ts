@@ -383,9 +383,14 @@ export function useAlbumImportUpload() {
 		const uploadState = uploadStateFor(flow);
 		if (uploadState.pollTimer) clearTimeout(uploadState.pollTimer);
 		const generation = ++uploadState.pollingGeneration;
+		const isTrackedFlow = () =>
+			Object.values(state.value.creationFlows).some(
+				(candidate) => candidate === flow,
+			);
 		const poll = async () => {
 			if (
 				generation !== uploadState.pollingGeneration ||
+				!isTrackedFlow() ||
 				flow.draft.albumImport.importId !== importId
 			) {
 				uploadState.pollTimer = null;

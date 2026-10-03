@@ -166,7 +166,7 @@ const coverUrl = computed(() => {
   return ''
 })
 
-const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 320 }) : '')
+const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 180 }) : '')
 const coverSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180, 320]) : '')
 const coverMobileSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180]) : '')
 

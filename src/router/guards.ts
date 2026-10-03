@@ -3,7 +3,10 @@ import { useAuthStore } from "@/stores/auth";
 import { useOnboardingStore } from "@/stores/onboarding";
 import { useSiteAccessStore } from "@/stores/siteAccess";
 import { resolveSiteContext } from "@/router/siteContext";
-import { isAdminRole, isModeratorRole, isOwnerRole } from "@/utils/roles";
+
+const isAdminRole = (role?: string) => role === "admin" || role === "owner";
+const isModeratorRole = (role?: string) => role === "moderator" || isAdminRole(role);
+const isOwnerRole = (role?: string) => role === "owner";
 
 const disabledTarget = { path: "/__disabled__" };
 const studioFeatureGates = {

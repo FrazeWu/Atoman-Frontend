@@ -18,6 +18,15 @@ describe("runtime loading boundaries", () => {
 		expect(source).not.toContain("mobileRuntime\n\t\t\t? import(");
 	});
 
+	it("keeps portal route guards independent from the deferred roles chunk", () => {
+		const source = readSource("src/router/guards.ts");
+
+		expect(source).not.toContain('from "@/utils/roles"');
+		expect(source).toContain("role === \"admin\"");
+		expect(source).toContain("role === \"moderator\"");
+		expect(source).toContain("role === \"owner\"");
+	});
+
 	it("lets the portal prerender paint before either runtime mounts", () => {
 		for (const source of [readSource("src/main.ts"), readSource("apps/mobile/main.ts")]) {
 			expect(source).toContain("waitForInitialPaint");

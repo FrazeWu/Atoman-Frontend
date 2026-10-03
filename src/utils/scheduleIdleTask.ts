@@ -5,14 +5,36 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (handle: number) => void
 }
 
-export function scheduleIdleTask(task: () => void, timeout = 2000): () => void {
+export function scheduleIdleTask(task: () => void, timeout = 2000, minimumDelay = 0): () => void {
   const idleWindow = typeof window === 'undefined' ? undefined : window as IdleWindow
+  let cancelled = false
+  let timerHandle: ReturnType<typeof globalThis.setTimeout> | undefined
+  let idleHandle: number | undefined
 
-  if (idleWindow?.requestIdleCallback) {
-    const handle = idleWindow.requestIdleCallback(() => task(), { timeout })
-    return () => idleWindow.cancelIdleCallback?.(handle)
+  const schedule = () => {
+    if (cancelled) return
+
+    if (idleWindow?.requestIdleCallback) {
+      idleHandle = idleWindow.requestIdleCallback(() => {
+        if (!cancelled) task()
+      }, { timeout })
+      return
+    }
+
+    timerHandle = globalThis.setTimeout(() => {
+      if (!cancelled) task()
+    }, 0)
   }
 
-  const handle = globalThis.setTimeout(task, 0)
-  return () => globalThis.clearTimeout(handle)
+  if (minimumDelay > 0) {
+    timerHandle = globalThis.setTimeout(schedule, minimumDelay)
+  } else {
+    schedule()
+  }
+
+  return () => {
+    cancelled = true
+    if (timerHandle !== undefined) globalThis.clearTimeout(timerHandle)
+    if (idleHandle !== undefined) idleWindow?.cancelIdleCallback?.(idleHandle)
+  }
 }

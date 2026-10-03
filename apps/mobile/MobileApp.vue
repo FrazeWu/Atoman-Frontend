@@ -65,11 +65,11 @@ watch(() => route.fullPath, () => {
 let cancelStartupTasks: (() => void) | undefined
 
 onMounted(() => {
-  const cancelRestoreSession = scheduleIdleTask(() => authStore.restoreSession())
+  const cancelRestoreSession = scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)
   const cancelSiteAccessLoad = scheduleIdleTask(() => {
     void siteAccessStore.load().catch(() => {})
-  })
-  const cancelPageView = scheduleIdleTask(reportPageView)
+  }, 5000, 8000)
+  const cancelPageView = scheduleIdleTask(reportPageView, 5000, 8000)
 
   cancelStartupTasks = () => {
     cancelRestoreSession()

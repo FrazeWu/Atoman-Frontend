@@ -169,7 +169,7 @@ describe("runtime loading boundaries", () => {
 		expect(initialRoutesSource).not.toContain("FeedLayout");
 	});
 
-	it("keeps portal content cards behind async boundaries", () => {
+	it("loads portal content cards synchronously to prevent layout shifts", () => {
 		const source = readSource("src/views/portal/PortalView.vue");
 
 		for (const importPath of [
@@ -178,8 +178,8 @@ describe("runtime loading boundaries", () => {
 			"@/components/shared/PVideoCard.vue",
 			"@/components/ui/PContentCard.vue",
 		]) {
-			expect(source).not.toContain(`import ${importPath}`);
-			expect(source).toContain(`import('${importPath}')`);
+			expect(source).toContain(`from '${importPath}'`);
+			expect(source).not.toContain(`import('${importPath}')`);
 		}
 	});
 

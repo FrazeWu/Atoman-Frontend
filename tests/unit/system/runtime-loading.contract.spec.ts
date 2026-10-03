@@ -78,9 +78,9 @@ describe("runtime loading boundaries", () => {
 		const portalSource = readSource("src/views/portal/PortalView.vue");
 		expect(portalSource).toContain("onMounted(loadHotContent)");
 		expect(portalSource).not.toContain("scheduleIdleTask(loadHotContent)");
-		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
-			"searchReady && !isAuthRoute",
-		);
+		const topbarSource = readSource("src/components/system/AppTopbar.vue");
+		expect(topbarSource).toContain('v-if="!isAuthRoute" class="topbar-search-slot"');
+		expect(topbarSource).toContain('v-if="searchReady"');
 		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
 			"scheduleIdleTask(() => authStore.restoreSession())",
 		);

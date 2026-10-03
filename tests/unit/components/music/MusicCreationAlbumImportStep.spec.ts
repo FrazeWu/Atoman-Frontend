@@ -299,35 +299,31 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			title: track.title,
 			origin: track.origin,
 		}));
-		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: true,
-			albumTitle: "IGOR",
-			releaseDate: "2019-05-17",
-			coverUrl: "https://cover.test/igor.jpg",
-			albumType: "album",
-			sourceUrl: "https://www.discogs.com/release/igor",
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "ready",
+			stage: "processing",
+			derivedAlbumTitle: "IGOR",
+			derivedReleaseDate: "2019-05-17",
+			derivedCover: "https://cover.test/igor.jpg",
+			derivedAlbumType: "album",
+			metadataSourceUrl: "https://www.discogs.com/release/igor",
 			metadataSource: "discogs",
-			externalId: "igor",
-			matchStatus: "matched",
-			matchConfidence: 0.95,
-			sources: [
+			metadataExternalId: "igor",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+			metadataSources: [
 				{ provider: "discogs", status: "matched", selected: true, selectedTitle: "IGOR", candidateCount: 3 },
 				{ provider: "musicbrainz", status: "matched", selected: false, selectedTitle: "IGOR" },
 			],
-			tracks: [
+			derivedTracks: [
 				{ title: "IGOR'S THEME", audioKey: "", origin: "local_preview:2", trackNumber: 1 },
 				{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1", trackNumber: 2 },
 			],
-		});
+		}));
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
 
-		expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith({
-			albumTitle: "IGOR",
-			artist: "",
-			trackTitles: ["EARFQUAKE", "IGOR'S THEME"],
-		});
 		expect(flow.draft.albumDetails.releaseDateParts).toEqual({ year: "2019", month: "05", day: "17" });
 		expect(flow.draft.albumDetails.coverUrl).toBe("https://cover.test/igor.jpg");
 		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["IGOR'S THEME", "EARFQUAKE"]);
@@ -336,37 +332,26 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(wrapper.text()).toContain("已选中 IGOR");
 	});
 
-	it("后端已进入信息页但没有外部结果时仍会触发一次匹配", async () => {
+	it("后端已进入信息页时使用快照中的匹配结果", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";
-		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: true,
-			albumTitle: "菊花夜行军",
-			releaseDate: "2001",
-			coverUrl: "https://cover.test/chrysanthemum.jpg",
-			albumType: "album",
-			sourceUrl: "https://www.discogs.com/release/2926685",
-			metadataSource: "discogs",
-			matchStatus: "matched",
-			genres: ["摇滚"],
-			styles: ["民谣摇滚"],
-			tracks: [{ title: "两代人", audioKey: "", origin: "archive", trackNumber: 1 }],
-		});
 
 		useAlbumImportUpload().applyImportSnapshot(snapshot({
 			status: "ready",
 			stage: "ready",
 			derivedAlbumTitle: "菊花夜行军",
-			derivedReleaseDate: "2013",
+			derivedReleaseDate: "2001",
+			derivedCover: "https://cover.test/chrysanthemum.jpg",
+			metadataSourceUrl: "https://www.discogs.com/release/2926685",
+			metadataSource: "discogs",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+			metadataGenres: ["摇滚"],
+			metadataStyles: ["民谣摇滚"],
 			derivedTracks: [{ title: "两代人", audioKey: "audio-1", origin: "archive", trackNumber: 1 }],
 		}));
 
 		mount(MusicCreationFlowDrawer);
-		await vi.waitFor(() => expect(metadataPreview).toHaveBeenCalledWith({
-			albumTitle: "菊花夜行军",
-			artist: "",
-			trackTitles: ["两代人"],
-		}));
 		await vi.waitFor(() => expect(flow.draft.albumDetails.coverUrl).toBe(
 			"https://cover.test/chrysanthemum.jpg",
 		));

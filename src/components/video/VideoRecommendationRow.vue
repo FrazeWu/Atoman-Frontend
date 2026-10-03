@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import type { Video } from '@/types'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'
+import { videoThumbnailSource } from '@/utils/videoPresentation'
 
 const props = defineProps<{
   videos: Video[]
@@ -25,7 +26,8 @@ function sourceLabel(video: Video) {
 
 function thumbnailUrl(video: Video) {
   if (failedThumbnailIds.value.has(video.id)) return ''
-  return video.thumbnail_url ? resolveMediaImageURL(video.thumbnail_url, { width: 640 }) : ''
+  const source = videoThumbnailSource(video)
+  return source ? resolveMediaImageURL(source, { width: 640 }) : ''
 }
 
 function videoLinkLabel(video: Video) {

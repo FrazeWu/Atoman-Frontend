@@ -46,6 +46,7 @@
             <article
               v-for="section in displaySections"
               :key="section.module"
+              :ref="(element) => registerSection(element, section.module)"
               class="portal-hot__section"
             >
               <div class="portal-hot__section-head">
@@ -58,6 +59,10 @@
                 </RouterLink>
               </div>
 
+              <div
+                v-if="isSectionReady(section.module)"
+                class="portal-hot__section-body"
+              >
               <!-- 🎵 音乐专区：直接引用现有 MusicAlbumCard 组件 -->
               <div v-if="section.module === 'music'" class="portal-hot__music-grid">
                 <div
@@ -193,6 +198,8 @@
                   </PContentCard>
                 </RouterLink>
               </div>
+              </div>
+              <div v-else class="portal-hot__section-placeholder" aria-hidden="true" />
             </article>
           </section>
 
@@ -228,7 +235,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, type ComponentPublicInstance } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
 
@@ -292,6 +299,43 @@ const error = ref('')
 const hotContent = ref<PortalHotResponse>({ featured: [], sections: [] })
 const sectionItemLimit = 4
 const homeModuleOrder = ['blog', 'feed', 'music', 'video', 'debate']
+const readySections = ref(new Set<string>())
+const sectionElements = new Map<Element, string>()
+let sectionObserver: IntersectionObserver | null = null
+
+function handleSectionIntersect(entries: IntersectionObserverEntry[]) {
+  const nextReadySections = new Set(readySections.value)
+
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue
+    const module = sectionElements.get(entry.target)
+    if (!module) continue
+
+    nextReadySections.add(module)
+    sectionObserver?.unobserve(entry.target)
+  }
+
+  if (nextReadySections.size !== readySections.value.size) {
+    readySections.value = nextReadySections
+  }
+}
+
+function registerSection(element: Element | ComponentPublicInstance | null, module: string) {
+  if (!element || !sectionObserver || !('nodeType' in element)) return
+  const target = element as Element
+  sectionElements.set(target, module)
+  sectionObserver.observe(target)
+}
+
+function isSectionReady(module: string) {
+  return !sectionObserver || readySections.value.has(module)
+}
+
+if (typeof IntersectionObserver !== 'undefined') {
+  sectionObserver = new IntersectionObserver(handleSectionIntersect, {
+    rootMargin: '600px 0px',
+  })
+}
 
 const visibleRooms = computed(() => (
   moduleNavOrder
@@ -384,6 +428,12 @@ function extractYear(dateStr?: string): number | undefined {
 }
 
 onMounted(loadHotContent)
+
+onBeforeUnmount(() => {
+  sectionObserver?.disconnect()
+  sectionObserver = null
+  sectionElements.clear()
+})
 </script>
 
 <style scoped>
@@ -638,6 +688,10 @@ onMounted(loadHotContent)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.portal-hot__section-placeholder {
+  min-height: 22rem;
 }
 
 .portal-hot__section-head h2 {

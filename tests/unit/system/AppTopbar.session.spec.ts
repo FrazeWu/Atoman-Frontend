@@ -8,6 +8,13 @@ import { useAuthStore } from "@/stores/auth";
 
 describe("AppTopbar session restoration", () => {
 	it("keeps global search available when no session is restored", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("requestIdleCallback", (callback: () => void) =>
+			globalThis.setTimeout(callback, 0) as unknown as number,
+		);
+		vi.stubGlobal("cancelIdleCallback", (handle: ReturnType<typeof setTimeout>) =>
+			globalThis.clearTimeout(handle),
+		);
 		const pinia = createPinia();
 		setActivePinia(pinia);
 		const authStore = useAuthStore();
@@ -24,6 +31,8 @@ describe("AppTopbar session restoration", () => {
 		await router.isReady();
 		const wrapper = mount(AppTopbar, { global: { plugins: [pinia, router] } });
 		await flushPromises();
+		await vi.advanceTimersByTimeAsync(3000);
+		await vi.runOnlyPendingTimersAsync();
 		await vi.dynamicImportSettled();
 		await flushPromises();
 
@@ -32,9 +41,18 @@ describe("AppTopbar session restoration", () => {
 		);
 		expect(wrapper.find('a[href="/login"]').exists()).toBe(true);
 		wrapper.unmount();
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
 	});
 
 	it("switches to authenticated controls after restoring a session on a public route", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("requestIdleCallback", (callback: () => void) =>
+			globalThis.setTimeout(callback, 0) as unknown as number,
+		);
+		vi.stubGlobal("cancelIdleCallback", (handle: ReturnType<typeof setTimeout>) =>
+			globalThis.clearTimeout(handle),
+		);
 		const pinia = createPinia();
 		setActivePinia(pinia);
 		const authStore = useAuthStore();
@@ -69,6 +87,8 @@ describe("AppTopbar session restoration", () => {
 		await router.isReady();
 		const wrapper = mount(AppTopbar, { global: { plugins: [pinia, router] } });
 		await flushPromises();
+		await vi.advanceTimersByTimeAsync(3000);
+		await vi.runOnlyPendingTimersAsync();
 		await vi.dynamicImportSettled();
 		await flushPromises();
 
@@ -78,6 +98,8 @@ describe("AppTopbar session restoration", () => {
 			false,
 		);
 		wrapper.unmount();
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
 	});
 
 	it("does not restore a session when mounted on an auth layout route", async () => {

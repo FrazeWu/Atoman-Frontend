@@ -23,14 +23,46 @@ describe('scheduleIdleTask', () => {
     expect(run).not.toHaveBeenCalled()
   })
 
-  it('falls back to a timer when requestIdleCallback is unavailable', async () => {
-    vi.useFakeTimers()
-    const run = vi.fn()
+	it('falls back to a timer when requestIdleCallback is unavailable', async () => {
+		vi.useFakeTimers()
+		const run = vi.fn()
 
     scheduleIdleTask(run)
     expect(run).not.toHaveBeenCalled()
 
-    await vi.runAllTimersAsync()
-    expect(run).toHaveBeenCalledOnce()
-  })
+		await vi.runAllTimersAsync()
+		expect(run).toHaveBeenCalledOnce()
+	})
+
+	it('waits for the minimum delay before scheduling idle work', () => {
+		vi.useFakeTimers()
+		const run = vi.fn()
+		const request = vi.fn(() => 7)
+		vi.stubGlobal('requestIdleCallback', request)
+
+		const cancelTask = scheduleIdleTask(run, 1200, 3000)
+
+		vi.advanceTimersByTime(2999)
+		expect(request).not.toHaveBeenCalled()
+
+		vi.advanceTimersByTime(1)
+		expect(request).toHaveBeenCalledWith(expect.any(Function), { timeout: 1200 })
+
+		cancelTask()
+		expect(run).not.toHaveBeenCalled()
+	})
+
+	it('cancels delayed work before the idle callback is scheduled', () => {
+		vi.useFakeTimers()
+		const run = vi.fn()
+		const request = vi.fn(() => 7)
+		vi.stubGlobal('requestIdleCallback', request)
+
+		const cancelTask = scheduleIdleTask(run, 1200, 3000)
+		cancelTask()
+		vi.advanceTimersByTime(3000)
+
+		expect(request).not.toHaveBeenCalled()
+		expect(run).not.toHaveBeenCalled()
+	})
 })

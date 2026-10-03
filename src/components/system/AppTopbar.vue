@@ -185,7 +185,7 @@ onMounted(() => {
     document.documentElement.classList.add('dark')
   }
   if (!isAuthRoute.value) {
-    cancelSessionRestoreIdleTask = scheduleIdleTask(() => authStore.restoreSession())
+    cancelSessionRestoreIdleTask = scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)
   }
 
   window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
@@ -200,7 +200,7 @@ onMounted(() => {
 
   cancelSearchIdleTask = scheduleIdleTask(() => {
     searchReady.value = true
-  })
+  }, 3000, 3000)
 })
 
 onBeforeUnmount(() => {

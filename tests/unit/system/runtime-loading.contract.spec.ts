@@ -82,7 +82,7 @@ describe("runtime loading boundaries", () => {
 		expect(topbarSource).toContain('v-if="!isAuthRoute" class="topbar-search-slot"');
 		expect(topbarSource).toContain('v-if="searchReady"');
 		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
-			"scheduleIdleTask(() => authStore.restoreSession())",
+			"scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)",
 		);
 	});
 
@@ -198,7 +198,7 @@ describe("runtime loading boundaries", () => {
 			"defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))",
 		);
 		expect(source).toContain(
-			"scheduleIdleTask(() => authStore.restoreSession())",
+			"scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)",
 		);
 	});
 

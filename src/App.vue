@@ -21,7 +21,7 @@
         </RouterView>
       </main>
       <BlogSheetStack v-if="sheetStore.stack.length > 0" />
-      <MobileBottomNav v-if="showDeferredShell && showMobileBottomNav" />
+      <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
       <PShortcutHints v-if="!isAuthRoute" v-model="shortcutHelpOpen" :hints="shortcutHints" />
@@ -146,7 +146,7 @@ onMounted(() => {
       checkRelay()
     }
     void siteAccessStore.load().catch(() => {})
-  })
+  }, 5000, 8000)
 })
 
 onBeforeUnmount(() => cancelIdleWork())

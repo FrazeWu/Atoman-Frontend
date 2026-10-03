@@ -82,7 +82,16 @@ const makeRouter = () =>
 		],
 	});
 
-const mountAppAt = async (path: string) => {
+const mountAppAt = async (path: string, settleDeferred = false) => {
+	if (settleDeferred) {
+		vi.useFakeTimers();
+		vi.stubGlobal("requestIdleCallback", (callback: () => void) =>
+			globalThis.setTimeout(callback, 0) as unknown as number,
+		);
+		vi.stubGlobal("cancelIdleCallback", (handle: ReturnType<typeof setTimeout>) =>
+			globalThis.clearTimeout(handle),
+		);
+	}
 	const pinia = createPinia();
 	setActivePinia(pinia);
 
@@ -103,7 +112,16 @@ const mountAppAt = async (path: string) => {
 	});
 
 	await flushPromises();
+	if (settleDeferred) {
+		await vi.advanceTimersByTimeAsync(8000);
+		await vi.runOnlyPendingTimersAsync();
+		await flushPromises();
+	}
 	await vi.dynamicImportSettled();
+	if (settleDeferred) {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+	}
 	return { wrapper, router };
 };
 
@@ -147,13 +165,13 @@ describe("App responsive shell", () => {
 	});
 
 	it("keeps the footer on sidebar module routes", async () => {
-		const { wrapper } = await mountAppAt("/");
+		const { wrapper } = await mountAppAt("/", true);
 
 		expect(wrapper.find(".site-footer-stub").exists()).toBe(true);
 	});
 
 	it("keeps the footer on non-sidebar routes", async () => {
-		const { wrapper } = await mountAppAt("/plain");
+		const { wrapper } = await mountAppAt("/plain", true);
 
 		expect(wrapper.find(".site-footer-stub").exists()).toBe(true);
 	});

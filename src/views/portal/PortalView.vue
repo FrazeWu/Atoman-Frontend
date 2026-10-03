@@ -31,13 +31,29 @@
         :retry="loadHotContent"
       >
         <template #skeleton>
-          <div class="portal-hot__loading-stream feed-timeline-box">
-            <div v-for="index in 4" :key="index" style="padding: 1rem; border-bottom: 1px solid var(--a-color-border-soft);">
-              <PSkeleton width="40%" height="16px" style="margin-bottom: 8px;" />
-              <PSkeleton width="80%" height="20px" style="margin-bottom: 8px;" />
-              <PSkeleton width="100%" height="14px" />
-            </div>
-          </div>
+          <section class="portal-hot__sections portal-hot__loading-sections" aria-hidden="true">
+            <article
+              v-for="module in loadingModules"
+              :key="module"
+              :class="[
+                'portal-hot__section',
+                'portal-hot__loading-section',
+                `portal-hot__loading-section--${module}`,
+                `portal-hot__section--${module}`,
+              ]"
+            >
+              <div class="portal-hot__section-head">
+                <h2>{{ moduleLabel(module) }}</h2>
+                <span class="portal-hot__module-link">查看全部 <span aria-hidden="true">→</span></span>
+              </div>
+              <div
+                :class="[
+                  'portal-hot__section-placeholder',
+                  `portal-hot__section-placeholder--${module}`,
+                ]"
+              />
+            </article>
+          </section>
         </template>
 
         <template v-if="hasContent">
@@ -47,7 +63,7 @@
               v-for="section in displaySections"
               :key="section.module"
               :ref="(element) => registerSection(element, section.module)"
-              class="portal-hot__section"
+              :class="['portal-hot__section', `portal-hot__section--${section.module}`]"
             >
               <div class="portal-hot__section-head">
                 <h2>{{ moduleLabel(section.module) }}</h2>
@@ -252,7 +268,6 @@ import PButton from '@/components/ui/PButton.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
-import PSkeleton from '@/components/ui/PSkeleton.vue'
 import { useApiUrl } from '@/composables/useApiUrl'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
@@ -306,7 +321,7 @@ const loading = ref(true)
 const error = ref('')
 const hotContent = ref<PortalHotResponse>({ featured: [], sections: [] })
 const sectionItemLimit = 4
-const homeModuleOrder = ['blog', 'feed', 'music', 'video', 'debate']
+const homeModuleOrder: ModuleRoomKey[] = ['blog', 'feed', 'music', 'video', 'debate']
 const readySections = ref(new Set<string>())
 const sectionElements = new Map<Element, string>()
 let sectionObserver: IntersectionObserver | null = null
@@ -351,6 +366,8 @@ const visibleRooms = computed(() => (
     .filter((key) => siteAccessStore.isModuleVisible(key))
     .map((key) => moduleRooms[key])
 ))
+
+const loadingModules = computed(() => homeModuleOrder.filter((module) => siteAccessStore.isModuleVisible(module)))
 
 const visibleSections = computed(() => (
   hotContent.value.sections.filter((section) => (
@@ -404,6 +421,7 @@ function moduleLabel(value: string) {
 }
 
 function modulePriority(module: string) {
+  if (!isModuleRoomKey(module)) return homeModuleOrder.length
   const index = homeModuleOrder.indexOf(module)
   return index === -1 ? homeModuleOrder.length : index
 }
@@ -695,6 +713,10 @@ onBeforeUnmount(() => {
   gap: 48px;
 }
 
+.portal-hot :deep(.p-content-progress__content) {
+  padding-top: 4.5rem;
+}
+
 .portal-hot__section-head {
   display: flex;
   align-items: center;
@@ -710,6 +732,16 @@ onBeforeUnmount(() => {
   min-height: 30.625rem;
 }
 
+.portal-hot__section--blog > .portal-hot__section-body,
+.portal-hot__section-placeholder--blog {
+  min-height: 30.625rem;
+}
+
+.portal-hot__section-placeholder--feed {
+  min-height: 30.625rem;
+}
+
+.portal-hot__section--feed > .portal-hot__section-body,
 .portal-hot__section-placeholder--feed {
   min-height: 30.625rem;
 }
@@ -718,10 +750,25 @@ onBeforeUnmount(() => {
   min-height: 16.625rem;
 }
 
+.portal-hot__section--music > .portal-hot__section-body,
+.portal-hot__section-placeholder--music {
+  min-height: 16.625rem;
+}
+
 .portal-hot__section-placeholder--video {
   min-height: 37.875rem;
 }
 
+.portal-hot__section--video > .portal-hot__section-body,
+.portal-hot__section-placeholder--video {
+  min-height: 37.875rem;
+}
+
+.portal-hot__section-placeholder--debate {
+  min-height: 9.8125rem;
+}
+
+.portal-hot__section--debate > .portal-hot__section-body,
 .portal-hot__section-placeholder--debate {
   min-height: 9.8125rem;
 }
@@ -731,6 +778,16 @@ onBeforeUnmount(() => {
     min-height: 49.4375rem;
   }
 
+  .portal-hot__section--blog > .portal-hot__section-body,
+  .portal-hot__section-placeholder--blog {
+    min-height: 49.4375rem;
+  }
+
+  .portal-hot__section-placeholder--feed {
+    min-height: 46.75rem;
+  }
+
+  .portal-hot__section--feed > .portal-hot__section-body,
   .portal-hot__section-placeholder--feed {
     min-height: 46.75rem;
   }
@@ -739,10 +796,25 @@ onBeforeUnmount(() => {
     min-height: 28.875rem;
   }
 
+  .portal-hot__section--music > .portal-hot__section-body,
+  .portal-hot__section-placeholder--music {
+    min-height: 28.875rem;
+  }
+
   .portal-hot__section-placeholder--video {
     min-height: 74.3125rem;
   }
 
+  .portal-hot__section--video > .portal-hot__section-body,
+  .portal-hot__section-placeholder--video {
+    min-height: 74.3125rem;
+  }
+
+  .portal-hot__section-placeholder--debate {
+    min-height: 9.8125rem;
+  }
+
+  .portal-hot__section--debate > .portal-hot__section-body,
   .portal-hot__section-placeholder--debate {
     min-height: 9.8125rem;
   }

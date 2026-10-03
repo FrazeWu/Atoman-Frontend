@@ -258,6 +258,7 @@ import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/module
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
+import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 
 interface PortalMusicArtist {
   id: string
@@ -309,6 +310,7 @@ const homeModuleOrder = ['blog', 'feed', 'music', 'video', 'debate']
 const readySections = ref(new Set<string>())
 const sectionElements = new Map<Element, string>()
 let sectionObserver: IntersectionObserver | null = null
+let cancelHotContentLoad = () => {}
 
 function handleSectionIntersect(entries: IntersectionObserverEntry[]) {
   const nextReadySections = new Set(readySections.value)
@@ -434,9 +436,12 @@ function extractYear(dateStr?: string): number | undefined {
   }
 }
 
-onMounted(loadHotContent)
+onMounted(() => {
+  cancelHotContentLoad = scheduleIdleTask(loadHotContent, 5000, 2000)
+})
 
 onBeforeUnmount(() => {
+  cancelHotContentLoad()
   sectionObserver?.disconnect()
   sectionObserver = null
   sectionElements.clear()

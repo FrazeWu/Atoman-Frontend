@@ -73,17 +73,15 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
-	it("defers non-critical shell work while loading portal content immediately", () => {
+	it("defers non-critical shell work and portal content until after the initial paint", () => {
 		expect(readSource("src/App.vue")).toContain("scheduleIdleTask");
 		const portalSource = readSource("src/views/portal/PortalView.vue");
-		expect(portalSource).toContain("onMounted(loadHotContent)");
-		expect(portalSource).not.toContain("scheduleIdleTask(loadHotContent)");
+		expect(portalSource).toContain("scheduleIdleTask(loadHotContent, 5000, 2000)");
+		expect(portalSource).not.toContain("onMounted(loadHotContent)");
 		const topbarSource = readSource("src/components/system/AppTopbar.vue");
 		expect(topbarSource).toContain('v-if="!isAuthRoute" class="topbar-search-slot"');
 		expect(topbarSource).toContain('v-if="searchReady"');
-		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
-			"scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)",
-		);
+		expect(topbarSource).not.toContain("scheduleIdleTask(() => authStore.restoreSession()");
 	});
 
 	it("keeps the portal initial chunk on the API URL helper only", () => {
@@ -197,9 +195,7 @@ describe("runtime loading boundaries", () => {
 		expect(source).toContain(
 			"defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))",
 		);
-		expect(source).toContain(
-			"scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)",
-		);
+		expect(source).not.toContain("authStore.restoreSession");
 	});
 
 	it("defers the secondary mobile route manifest until navigation needs it", () => {

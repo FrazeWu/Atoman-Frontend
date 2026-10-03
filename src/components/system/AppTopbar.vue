@@ -109,7 +109,6 @@ const searchReady = ref(false)
 const showMobileModuleSwitcher = ref(false)
 let mobileViewportQuery: MediaQueryList | null = null
 let cancelSearchIdleTask = () => {}
-let cancelSessionRestoreIdleTask = () => {}
 
 const handleBrandClick = () => {
   requestLyricsClose()
@@ -184,10 +183,6 @@ onMounted(() => {
   if (isDark.value) {
     document.documentElement.classList.add('dark')
   }
-  if (!isAuthRoute.value) {
-    cancelSessionRestoreIdleTask = scheduleIdleTask(() => authStore.restoreSession(), 3000, 3000)
-  }
-
   window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
   const mainContent = document.querySelector('.a-main-content')
   isScrolled.value = mainContent instanceof HTMLElement
@@ -205,7 +200,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelSearchIdleTask()
-  cancelSessionRestoreIdleTask()
   mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
   window.removeEventListener('scroll', handleScroll, { capture: true })
 })

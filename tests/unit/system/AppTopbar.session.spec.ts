@@ -45,7 +45,7 @@ describe("AppTopbar session restoration", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("switches to authenticated controls after restoring a session on a public route", async () => {
+		it("does not restore a session during public route startup", async () => {
 		vi.useFakeTimers();
 		vi.stubGlobal("requestIdleCallback", (callback: () => void) =>
 			globalThis.setTimeout(callback, 0) as unknown as number,
@@ -92,11 +92,8 @@ describe("AppTopbar session restoration", () => {
 		await vi.dynamicImportSettled();
 		await flushPromises();
 
-		expect(restoreSession).toHaveBeenCalledOnce();
-		expect(wrapper.find(".user-btn").text()).toContain("alice");
-		expect(wrapper.find('[data-test="topbar-add-subscription"]').exists()).toBe(
-			false,
-		);
+		expect(restoreSession).not.toHaveBeenCalled();
+		expect(wrapper.find('a[href="/login"]').exists()).toBe(true);
 		wrapper.unmount();
 		vi.useRealTimers();
 		vi.unstubAllGlobals();

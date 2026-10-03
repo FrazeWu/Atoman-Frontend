@@ -157,6 +157,7 @@ describe('PortalView', () => {
     await flushPortal()
 
     expect(wrapper.findAll('.portal-hot__section-placeholder')).toHaveLength(2)
+    expect(wrapper.find('.portal-hot__section-placeholder--blog').exists()).toBe(true)
     expect(wrapper.findAll('.portal-hot__card-link')).toHaveLength(0)
 
     activeObserver?.trigger()

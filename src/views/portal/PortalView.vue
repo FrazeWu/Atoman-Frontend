@@ -199,7 +199,14 @@
                 </RouterLink>
               </div>
               </div>
-              <div v-else class="portal-hot__section-placeholder" aria-hidden="true" />
+              <div
+                v-else
+                :class="[
+                  'portal-hot__section-placeholder',
+                  `portal-hot__section-placeholder--${section.module}`,
+                ]"
+                aria-hidden="true"
+              />
             </article>
           </section>
 
@@ -333,7 +340,7 @@ function isSectionReady(module: string) {
 
 if (typeof IntersectionObserver !== 'undefined') {
   sectionObserver = new IntersectionObserver(handleSectionIntersect, {
-    rootMargin: '600px 0px',
+    rootMargin: '300px 0px',
   })
 }
 
@@ -692,6 +699,20 @@ onBeforeUnmount(() => {
 
 .portal-hot__section-placeholder {
   min-height: 22rem;
+}
+
+@media (max-width: 720px) {
+  .portal-hot__section-placeholder--blog {
+    min-height: 50rem;
+  }
+
+  .portal-hot__section-placeholder--feed {
+    min-height: 47rem;
+  }
+
+  .portal-hot__section-placeholder--music {
+    min-height: 30rem;
+  }
 }
 
 .portal-hot__section-head h2 {

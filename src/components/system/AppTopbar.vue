@@ -58,7 +58,9 @@
       </nav>
 
       <div class="nav-right">
-        <AppTopbarGlobalSearch v-if="searchReady && !isAuthRoute" />
+        <div v-if="!isAuthRoute" class="topbar-search-slot">
+          <AppTopbarGlobalSearch v-if="searchReady" />
+        </div>
         <button
           type="button"
           class="theme-toggle-btn"
@@ -449,6 +451,13 @@ html.dark .topbar--auth {
   overflow: visible;
 }
 
+.topbar-search-slot {
+  display: flex;
+  align-items: center;
+  flex: 0 0 9.375rem;
+  min-width: 0;
+}
+
 @media (max-width: 1280px) {
   .topbar-inner {
     padding-right: 1rem;
@@ -524,6 +533,10 @@ html.dark .topbar--auth {
   .nav-right {
     gap: 0.35rem;
     overflow: visible;
+  }
+
+  .topbar-search-slot {
+    flex-basis: 0;
   }
 }
 

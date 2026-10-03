@@ -13,6 +13,15 @@ describe('AppTopbar auth loading', () => {
     expect(topbarSource).toContain('v-if="showAuthControls"')
   })
 
+  it('keeps a stable public slot for the deferred search control', () => {
+    expect(topbarSource).toMatch(
+      /class="topbar-search-slot"/,
+    )
+    expect(topbarSource).toMatch(
+      /\.topbar-search-slot\s*\{[^}]*flex:\s*0 0 9\.375rem/s,
+    )
+  })
+
   it('renders the configured app version in a left-aligned meta row under the brand text', () => {
     expect(topbarSource).toContain("import { appVersion } from '@/config/appVersion'")
     expect(topbarSource).toContain('class="logo-copy"')

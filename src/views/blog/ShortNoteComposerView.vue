@@ -10,7 +10,7 @@
 
     <div v-if="loading" class="a-skeleton short-note-composer-view__skeleton" />
     <ShortNoteComposer
-      v-else
+      v-else-if="!error"
       :initial-content="note?.content"
       :initial-media-urls="note?.media.map((item) => item.url)"
       :submitting="submitting"
@@ -138,4 +138,3 @@ onMounted(() => void load())
   font-size: 0.875rem;
 }
 </style>
-

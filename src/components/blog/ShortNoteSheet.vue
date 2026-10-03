@@ -53,6 +53,7 @@ const interactions = useInteractions('blog', 'short_note', noteId)
 const dislikeCount = ref(0)
 const viewerVote = ref<'up' | 'down' | 'none'>('none')
 const votePending = ref(false)
+const voteError = ref('')
 const commentsOpen = ref(false)
 const commentSheetMode = ref<'full' | 'partial'>('partial')
 const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
@@ -138,6 +139,7 @@ async function setVote(direction: 'up' | 'down' | 'none') {
   if (votePending.value || !authStore.isAuthenticated) return
   const requestedNoteId = noteId.value
   votePending.value = true
+  voteError.value = ''
   try {
     const response = await apiRequestEnvelope<ShortNote>(api.blog.shortNoteVote(requestedNoteId), {
       method: direction === 'none' ? 'DELETE' : 'PUT',
@@ -150,6 +152,8 @@ async function setVote(direction: 'up' | 'down' | 'none') {
     interactions.liked.value = viewerVote.value === 'up'
     interactions.likeCount.value = updated.likes_count
     dislikeCount.value = updated.dislikes_count ?? 0
+  } catch {
+    voteError.value = '投票失败，请重试'
   } finally {
     votePending.value = false
   }
@@ -299,6 +303,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
             @like-change="handleLikeVote"
             @dislike-change="handleDislikeVote"
           />
+          <p v-if="voteError" class="short-note-sheet-error" role="alert">{{ voteError }}</p>
           <button type="button" class="short-note-sheet-comment-button" @click="openComments">
             <MessageSquare :size="15" aria-hidden="true" />
             <span>{{ interactions.commentCount.value || 0 }}</span>
@@ -490,6 +495,12 @@ watch(noteId, () => void loadNote(), { immediate: true })
   gap: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--a-color-border-soft);
+}
+
+.short-note-sheet-error {
+  margin: 0.5rem 0 0;
+  color: var(--a-color-danger);
+  font-size: 0.8rem;
 }
 
 .short-note-sheet-comment-button {

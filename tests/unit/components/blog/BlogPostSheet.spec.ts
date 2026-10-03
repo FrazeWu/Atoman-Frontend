@@ -68,6 +68,7 @@ describe("BlogPostSheet", () => {
 					title: "文章一",
 					content: "正文",
 					created_at: "2026-07-12T00:00:00Z",
+					published_at: "2026-07-14T00:00:00Z",
 					updated_at: "2026-07-13T00:00:00Z",
 				});
 			}),
@@ -167,6 +168,7 @@ describe("BlogPostSheet", () => {
 		expect(wrapper.get(".post-sheet-author").text()).toContain("author");
 		expect(wrapper.get(".post-sheet-author-handle").text()).toBe("@author");
 		expect(wrapper.get(".post-sheet-reading-time").text()).toBe("约 1 分钟阅读");
+		expect(wrapper.get(".post-sheet-publishing-meta").text()).toContain("2026/7/14");
 		expect(wrapper.get('[role="note"]').classes()).toContain("post-update-notice--compact");
 	});
 

@@ -40,6 +40,7 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
+        <p v-else-if="loadError && filteredBookmarks.length" class="a-error" role="alert">{{ loadError }}</p>
         <PEmpty v-else-if="loadError" title="收藏加载失败" :description="loadError">
           <template #action>
             <PButton variant="secondary" size="sm" @click="fetchAll">重试</PButton>
@@ -121,11 +122,16 @@ const bookmarks = ref<Bookmark[]>([])
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const removeBookmark = async (bookmark: Bookmark) => {
-  const res = await apiRequestResult(api.blog.bookmark(bookmark.id), {
-    method: 'DELETE',
-    headers: authHeader.value,
-  })
-  if (res.ok) bookmarks.value = bookmarks.value.filter((item) => item.id !== bookmark.id)
+  try {
+    const res = await apiRequestResult(api.blog.bookmark(bookmark.id), {
+      method: 'DELETE',
+      headers: authHeader.value,
+    })
+    if (res.ok) bookmarks.value = bookmarks.value.filter((item) => item.id !== bookmark.id)
+    else loadError.value = res.error?.message || '取消收藏失败，请重试'
+  } catch {
+    loadError.value = '取消收藏失败，请重试'
+  }
 }
 
 const toggleReadingList = (postId: string) => {

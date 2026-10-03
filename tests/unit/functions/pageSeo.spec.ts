@@ -190,7 +190,8 @@ describe("static page SEO", () => {
 		expect(await response.text()).toContain(
 			"<title data-default-meta>订阅流 | Atoman</title>",
 		);
-		expect(response.headers.get("cache-control")).toContain("no-transform");
+		expect(response.headers.get("cache-control") ?? "").not.toContain("no-transform");
+		expect(response.headers.get("content-encoding")).toBeNull();
 
 		const xmlResponse = new Response("<urlset/>", {
 			headers: { "content-type": "application/xml" },

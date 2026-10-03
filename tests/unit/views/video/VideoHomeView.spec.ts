@@ -12,6 +12,11 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+const makeVideoPage = (data: unknown[], page = 1, total = data.length) => ({
+  data,
+  meta: { page, page_size: 12, total, has_more: page * 12 < total },
+})
+
 const makeJsonResponse = (data: unknown) =>
   new Response(JSON.stringify(data), {
     status: 200,
@@ -29,8 +34,8 @@ describe('VideoHomeView', () => {
 
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.endsWith('/videos?sort=latest')) return latest.promise
-      if (url.endsWith('/videos?sort=popular')) return popular.promise
+      if (url.endsWith('/videos?sort=latest&page=1&limit=12&format=page')) return latest.promise
+      if (url.endsWith('/videos?sort=popular&page=1&limit=12&format=page')) return popular.promise
       if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
         return Promise.resolve(makeJsonResponse({ data: [], meta: { page: 1, page_size: 8, total: 0, has_more: false } }))
       }
@@ -52,11 +57,11 @@ describe('VideoHomeView', () => {
 
     await wrapper.findAll('button').find(button => button.text() === '最热播放')!.trigger('click')
 
-    popular.resolve(makeJsonResponse([{ id: 'popular-1', title: '最热视频' }]))
+    popular.resolve(makeJsonResponse(makeVideoPage([{ id: 'popular-1', title: '最热视频' }])))
     await flushPromises()
     expect(wrapper.text()).toContain('最热视频')
 
-    latest.resolve(makeJsonResponse([{ id: 'latest-1', title: '旧的最新视频' }]))
+    latest.resolve(makeJsonResponse(makeVideoPage([{ id: 'latest-1', title: '旧的最新视频' }])))
     await flushPromises()
 
     expect(wrapper.text()).toContain('最热视频')
@@ -66,8 +71,8 @@ describe('VideoHomeView', () => {
   it('加载推荐视频并在模式切换时请求对应接口', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.endsWith('/videos?sort=latest')) {
-        return makeJsonResponse([{ id: 'latest-1', title: '最新视频' }])
+      if (url.endsWith('/videos?sort=latest&page=1&limit=12&format=page')) {
+        return makeJsonResponse(makeVideoPage([{ id: 'latest-1', title: '最新视频' }]))
       }
       if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
         return makeJsonResponse({
@@ -119,7 +124,7 @@ describe('VideoHomeView', () => {
   it('推荐列表翻页时请求下一页', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.endsWith('/videos?sort=latest')) return makeJsonResponse([])
+      if (url.endsWith('/videos?sort=latest&page=1&limit=12&format=page')) return makeJsonResponse(makeVideoPage([]))
       if (url.includes('/videos/recommend/items?mode=hot&page=1&page_size=8')) {
         return makeJsonResponse({
           data: [{ id: 'rec-1', title: '第一页', video: { id: 'rec-1', title: '第一页' } }],

@@ -316,23 +316,20 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(wrapper.get('[data-testid="artist-next-button"]').attributes("disabled")).toBeDefined();
 	});
 
-	it("元信息请求失败后保留本地曲目并进入填写页", async () => {
-		const previewMetadata = vi
-			.spyOn(musicApi, "previewMusicAlbumImportMetadata")
-			.mockRejectedValue(new TypeError("NetworkError when attempting to fetch resource."));
-		const flow = createFlowState();
+	it("导入匹配失败后保留本地曲目并停留填写页", async () => {
+		const flow = createFlowState({ step: "albumDetails" });
+		flow.draft.albumImport.status = "failed";
+		flow.draft.albumImport.metadataMatchStatus = "unmatched";
+		flow.draft.albumImport.metadataError = "外部元数据服务暂时不可用";
 		drawerMocks.state.value.creationFlow = flow;
 
-		const wrapper = mount(MusicCreationFlowDrawer);
-		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		mount(MusicCreationFlowDrawer);
 		await flushPromises();
 
 		expect(flow.step).toBe("albumDetails");
 		expect(flow.draft.tracks).toEqual([{ id: "track-default", sequence: 1, title: "Default Track" }]);
 		expect(flow.draft.albumImport.metadataMatchStatus).toBe("unmatched");
 		expect(flow.draft.albumImport.metadataError).toContain("外部元数据服务暂时不可用");
-
-		previewMetadata.mockRestore();
 	});
 
 	it("从创建艺术家入口开始时显示统一流程的第一步", () => {
@@ -776,9 +773,9 @@ describe("MusicCreationFlowDrawer", () => {
 		);
 	});
 
-	it("直接创建专辑不显示艺术家步骤并使用空艺术家匹配", async () => {
+	it("直接创建专辑不显示艺术家步骤并保留后端匹配状态", async () => {
 		const flow = createFlowState({
-			step: "albumImport",
+			step: "albumDetails",
 			draft: {
 				...createFlowState().draft,
 				artist: {
@@ -794,26 +791,17 @@ describe("MusicCreationFlowDrawer", () => {
 					...createFlowState().draft.albumImport,
 					derivedAlbumTitle: "IGOR",
 					derivedTracks: [{ title: "EARFQUAKE", audioKey: "", origin: "local_preview:1" }],
-				},
+					},
 			},
 		});
+		flow.draft.albumImport.status = "ready";
+		flow.draft.albumImport.metadataMatchStatus = "unmatched";
 		flow.draft.tracks = [{ id: "track-1", sequence: 1, title: "EARFQUAKE", origin: "local_preview:1" }];
 		drawerMocks.state.value.creationFlow = flow;
-		vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: false,
-			albumTitle: "IGOR",
-			matchStatus: "unmatched",
-			tracks: [],
-		} as never);
 
 		mount(MusicCreationFlowDrawer);
 		await flushPromises();
 
-		expect(musicApi.previewMusicAlbumImportMetadata).toHaveBeenCalledWith(expect.objectContaining({
-			albumTitle: "IGOR",
-			artist: "",
-			trackTitles: ["EARFQUAKE"],
-		}));
 		expect(flow.step).toBe("albumDetails");
 	});
 

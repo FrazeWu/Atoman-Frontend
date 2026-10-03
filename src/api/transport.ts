@@ -1,4 +1,4 @@
-import * as apiConfig from '@/composables/useApi'
+import { useApiUrl } from '@/composables/useApiUrl'
 import type { ApiSessionPayload } from './types'
 
 let csrfToken = ''
@@ -6,7 +6,7 @@ let csrfRefreshInFlight: Promise<boolean> | null = null
 
 const getApiBaseURL = () => {
   try {
-    return typeof apiConfig.useApiUrl === 'function' ? apiConfig.useApiUrl() : '/api/v1'
+    return typeof useApiUrl === 'function' ? useApiUrl() : '/api/v1'
   } catch {
     return '/api/v1'
   }

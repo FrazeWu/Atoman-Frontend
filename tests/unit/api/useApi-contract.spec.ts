@@ -20,6 +20,7 @@ afterEach(() => {
 const projectRoot = process.cwd();
 const allowedApiFiles = new Set([
 	"src/composables/useApi.ts",
+	"src/composables/useApiUrl.ts",
 	"src/api/client.ts",
 	"src/api/musicV1.ts",
 ]);

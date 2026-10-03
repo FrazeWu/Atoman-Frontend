@@ -253,7 +253,7 @@ import PContentCard from '@/components/ui/PContentCard.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import { useApi } from '@/composables/useApi'
+import { useApiUrl } from '@/composables/useApiUrl'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { moduleUrl } from '@/router/siteUrls'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -297,7 +297,7 @@ interface PortalHotResponse {
   sections: PortalHotSection[]
 }
 
-const api = useApi()
+const apiUrl = useApiUrl()
 const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
 
@@ -374,7 +374,7 @@ async function loadHotContent() {
   loading.value = true
   error.value = ''
   try {
-    const response = await apiRequestResult(`${api.url}/portal/hot?limit=6&spotlight_offset=0`, {
+    const response = await apiRequestResult(`${apiUrl}/portal/hot?limit=6&spotlight_offset=0`, {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })

@@ -64,11 +64,11 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
-	it("defers non-critical shell work until the browser is idle", () => {
+	it("defers non-critical shell work while loading portal content immediately", () => {
 		expect(readSource("src/App.vue")).toContain("scheduleIdleTask");
-		expect(readSource("src/views/portal/PortalView.vue")).toContain(
-			"scheduleIdleTask(loadHotContent)",
-		);
+		const portalSource = readSource("src/views/portal/PortalView.vue");
+		expect(portalSource).toContain("onMounted(loadHotContent)");
+		expect(portalSource).not.toContain("scheduleIdleTask(loadHotContent)");
 		expect(readSource("src/components/system/AppTopbar.vue")).toContain(
 			"searchReady && !isAuthRoute",
 		);

@@ -4,7 +4,7 @@ import { ref } from 'vue'
 
 import { apiRequest } from '@/api/client'
 import { clearCSRFToken, setCSRFToken } from '@/api/transport'
-import { useApiUrl } from '@/composables/useApi'
+import { useApiUrl } from '@/composables/useApiUrl'
 import type { User } from '@/types'
 
 const API_URL = useApiUrl()

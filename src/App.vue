@@ -32,7 +32,7 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
-import { useApiUrl } from '@/composables/useApi'
+import { useApiUrl } from '@/composables/useApiUrl'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import PShortcutHints, { type ShortcutHint } from '@/components/ui/PShortcutHints.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'

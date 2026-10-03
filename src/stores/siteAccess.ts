@@ -9,7 +9,7 @@ import {
   type SiteAccess,
   type SiteAccessInput,
 } from '@/config/siteAccess'
-import { useApi } from '@/composables/useApi'
+import { useApiUrl } from '@/composables/useApiUrl'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 
 export const useSiteAccessStore = defineStore('siteAccess', () => {
@@ -23,8 +23,8 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
 
     pendingLoad = (async () => {
       loading.value = true
-      const api = useApi()
-      const response = await apiRequestResult(api.site.access)
+      const apiUrl = useApiUrl()
+      const response = await apiRequestResult(`${apiUrl}/site/access`)
       if (!response.ok) {
         throw new Error(`站点访问配置加载失败 (${response.status})`)
       }
@@ -39,8 +39,8 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
   }
 
   async function save(nextAccess: SiteAccessInput, token: string | null) {
-    const api = useApi()
-    const response = await apiRequestResult(api.settings.siteAccess, {
+    const apiUrl = useApiUrl()
+    const response = await apiRequestResult(`${apiUrl}/settings/site-access`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

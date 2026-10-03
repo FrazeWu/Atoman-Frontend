@@ -86,6 +86,44 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
+	it("keeps the portal initial chunk on the API URL helper only", () => {
+		const source = readSource("src/views/portal/PortalView.vue");
+
+		expect(source).toContain("import { useApiUrl } from '@/composables/useApiUrl'");
+		expect(source).not.toContain("from '@/composables/useApi'");
+		expect(source).toContain("const apiUrl = useApiUrl()");
+		expect(source).not.toContain("const api = useApi()");
+		expect(source).toContain("`${apiUrl}/portal/hot?limit=6&spotlight_offset=0`");
+	});
+
+	it("keeps site access loading on the API URL helper only", () => {
+		const source = readSource("src/stores/siteAccess.ts");
+
+		expect(source).toContain("import { useApiUrl } from '@/composables/useApiUrl'");
+		expect(source).not.toContain("from '@/composables/useApi'");
+		expect(source).toContain("`${apiUrl}/site/access`");
+		expect(source).toContain("`${apiUrl}/settings/site-access`");
+		expect(source).not.toContain("useApi()");
+	});
+
+	it("keeps URL-only bootstrap modules independent from the endpoint registry", () => {
+		for (const relativePath of [
+			"src/App.vue",
+			"apps/mobile/MobileApp.vue",
+			"src/stores/auth.ts",
+			"src/stores/siteAccess.ts",
+			"src/views/portal/PortalView.vue",
+		]) {
+			const source = readSource(relativePath);
+			expect(source).toContain("@/composables/useApiUrl");
+			expect(source).not.toContain("@/composables/useApi'");
+		}
+
+		const transportSource = readSource("src/api/transport.ts");
+		expect(transportSource).toContain("@/composables/useApiUrl");
+		expect(transportSource).not.toContain("@/composables/useApi'");
+	});
+
 	it("keeps editor and feed reader styles out of the initial entries", () => {
 		for (const source of [readSource("src/main.ts"), readSource("apps/mobile/main.ts")]) {
 			expect(source).not.toContain('assets/editor.css');

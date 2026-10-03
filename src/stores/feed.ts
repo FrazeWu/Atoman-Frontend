@@ -357,7 +357,9 @@ export const useFeedStore = defineStore("feed", () => {
 				},
 				body: JSON.stringify({ feed_item_ids: feedItemIds, short_note_ids: shortNoteIds }),
 			});
-			return res.ok;
+			if (!res.ok) return false;
+			await fetchSubscriptionHubTree();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to mark items read");
 		}
@@ -379,7 +381,9 @@ export const useFeedStore = defineStore("feed", () => {
 					body: JSON.stringify({ feed_item_ids: feedItemIds, short_note_ids: shortNoteIds }),
 				},
 			);
-			return res.ok;
+			if (!res.ok) return false;
+			await fetchSubscriptionHubTree();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to mark items unread");
 		}
@@ -399,7 +403,9 @@ export const useFeedStore = defineStore("feed", () => {
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			return res.ok;
+			if (!res.ok) return false;
+			await fetchSubscriptionHubTree();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to mark subscription read");
 		}
@@ -419,7 +425,9 @@ export const useFeedStore = defineStore("feed", () => {
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			return res.ok;
+			if (!res.ok) return false;
+			await fetchSubscriptionHubTree();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to mark subscription unread");
 		}
@@ -436,7 +444,9 @@ export const useFeedStore = defineStore("feed", () => {
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			return res.ok;
+			if (!res.ok) return false;
+			await fetchSubscriptionHubTree();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to mark all read");
 		}
@@ -453,7 +463,9 @@ export const useFeedStore = defineStore("feed", () => {
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			return res.ok;
+			if (!res.ok) return false;
+			await fetchSubscriptionHubTree();
+			return true;
 		} catch (e) {
 			reportError(e, "Failed to mark all unread");
 		}

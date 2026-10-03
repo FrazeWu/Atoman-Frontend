@@ -701,17 +701,45 @@ onBeforeUnmount(() => {
   min-height: 22rem;
 }
 
+.portal-hot__section-placeholder--blog {
+  min-height: 30.625rem;
+}
+
+.portal-hot__section-placeholder--feed {
+  min-height: 30.625rem;
+}
+
+.portal-hot__section-placeholder--music {
+  min-height: 16.625rem;
+}
+
+.portal-hot__section-placeholder--video {
+  min-height: 37.875rem;
+}
+
+.portal-hot__section-placeholder--debate {
+  min-height: 9.8125rem;
+}
+
 @media (max-width: 720px) {
   .portal-hot__section-placeholder--blog {
-    min-height: 50rem;
+    min-height: 49.4375rem;
   }
 
   .portal-hot__section-placeholder--feed {
-    min-height: 47rem;
+    min-height: 46.75rem;
   }
 
   .portal-hot__section-placeholder--music {
-    min-height: 30rem;
+    min-height: 28.875rem;
+  }
+
+  .portal-hot__section-placeholder--video {
+    min-height: 74.3125rem;
+  }
+
+  .portal-hot__section-placeholder--debate {
+    min-height: 9.8125rem;
   }
 }
 

@@ -180,6 +180,8 @@ const readingTime = computed(() => {
   return `约 ${Math.max(1, Math.ceil(plainText.length / 400))} 分钟阅读`
 })
 
+const publicationDate = computed(() => post.value?.published_at || post.value?.created_at || '')
+
 function formatAcademicDate(value?: string) {
   if (!value) return '未记录'
   return new Date(value).toLocaleDateString('zh-CN')
@@ -292,8 +294,9 @@ async function fetchPost() {
     }
 
     void fetchRelatedPosts(detail.id)
-    await loadMediaEmbeds(detail.content, authStore.token ?? undefined)
-    if (!currentLoad(sequence, requestedId)) return
+    void loadMediaEmbeds(detail.content, authStore.token ?? undefined).catch((error) => {
+      reportError(error, 'Failed to load blog media embeds:')
+    })
 
     if (authStore.isAuthenticated && detail.channel_id) {
       void feedStore.isSubscribedToChannel(detail.channel_id).then((subscribed) => {
@@ -503,15 +506,23 @@ async function loadBookmarkFolders() {
 
 async function addBookmark(folderId: string) {
   if (!post.value) return false
-  const response = await apiRequestResult(`${api.url}/blog/bookmarks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ content_id: post.value.id, bookmark_folder_id: folderId }),
-  })
-  if (!response.ok) return false
-  feedStore.bookmarkedPostIds = new Set([...feedStore.bookmarkedPostIds, post.value.id])
-  bookmarked.value = true
-  return true
+  try {
+    const response = await apiRequestResult(`${api.url}/blog/bookmarks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ content_id: post.value.id, bookmark_folder_id: folderId }),
+    })
+    if (!response.ok) {
+      bookmarkFolderError.value = response.error?.message || '收藏失败，请重试'
+      return false
+    }
+    feedStore.bookmarkedPostIds = new Set([...feedStore.bookmarkedPostIds, post.value.id])
+    bookmarked.value = true
+    return true
+  } catch {
+    bookmarkFolderError.value = '收藏失败，请重试'
+    return false
+  }
 }
 
 async function createBookmarkFolder(close: () => void) {
@@ -634,7 +645,7 @@ defineExpose({
         <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
         <div class="post-sheet-author-info">
           <div class="post-sheet-author-row"><span class="post-sheet-author">{{ authorName }}</span><span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span></div>
-          <div class="post-sheet-publishing-meta"><span>发布于 {{ new Date(post.created_at).toLocaleDateString('zh-CN') }}</span><span aria-hidden="true">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
+          <div class="post-sheet-publishing-meta"><span>发布于 {{ new Date(publicationDate).toLocaleDateString('zh-CN') }}</span><span aria-hidden="true">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
         </div>
         <button v-if="post.channel_id && authStore.isAuthenticated" type="button" class="post-sheet-subscribe" :class="{ 'is-subscribed': channelSubscribed }" :disabled="channelSubscriptionBusy" @click="toggleChannelSubscription">{{ channelSubscribed ? '已订阅频道' : '订阅频道' }}</button>
         <RouterLink v-else-if="post.channel_id" to="/login" class="post-sheet-subscribe">登录后订阅频道</RouterLink>
@@ -663,7 +674,7 @@ defineExpose({
             :music-embeds="musicEmbeds"
             :video-embeds="videoEmbeds"
           />
-          <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(post.created_at) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
+          <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(publicationDate) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
         </section>
       </div>
       <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :disabled="!authStore.isAuthenticated" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />

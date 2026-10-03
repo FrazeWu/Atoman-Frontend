@@ -104,6 +104,7 @@
         <span>{{ interactions.commentCount.value ? `${interactions.commentCount.value} 条讨论` : '讨论' }}</span>
       </button>
     </footer>
+    <p v-if="voteError" class="sticky-vote-error" role="alert">{{ voteError }}</p>
 
     <PImageLightbox
       v-model:show="showLightbox"
@@ -150,6 +151,7 @@ const interactions = useInteractions('blog', 'short_note', props.note.id)
 const dislikeCount = ref(0)
 const viewerVote = ref<'up' | 'down' | 'none'>('none')
 const votePending = ref(false)
+const voteError = ref('')
 const localRead = ref(isNoteRead(props.note.id))
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const voteTotal = computed(() => (interactions.likeCount.value || 0) + dislikeCount.value)
@@ -220,6 +222,7 @@ watch(() => [interactions.liked.value, interactions.likeCount.value, dislikeCoun
 async function setVote(direction: 'up' | 'down' | 'none') {
   if (votePending.value || !authStore.isAuthenticated) return
   votePending.value = true
+  voteError.value = ''
   try {
     const response = await apiRequestEnvelope<ShortNote>(api.blog.shortNoteVote(props.note.id), {
       method: direction === 'none' ? 'DELETE' : 'PUT',
@@ -231,6 +234,8 @@ async function setVote(direction: 'up' | 'down' | 'none') {
     interactions.liked.value = viewerVote.value === 'up'
     interactions.likeCount.value = note.likes_count
     dislikeCount.value = note.dislikes_count ?? 0
+  } catch {
+    voteError.value = '投票失败，请重试'
   } finally {
     votePending.value = false
   }
@@ -267,6 +272,12 @@ function formatDate(value: string) {
   background: transparent;
   transition: background-color 0.18s ease;
   overflow: visible;
+}
+
+.sticky-vote-error {
+  margin: 0;
+  color: var(--a-color-danger);
+  font-size: 0.75rem;
 }
 
 .sticky-memo-card:not(:has(~ .sticky-memo-card)) {

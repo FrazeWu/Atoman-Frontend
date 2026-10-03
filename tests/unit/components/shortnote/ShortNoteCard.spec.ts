@@ -78,6 +78,27 @@ describe('ShortNoteCard', () => {
     expect(wrapper.get('.sticky-stat').text()).toBe('57.1(7)')
   })
 
+  it('投票失败时显示可重试提示而不是产生未处理错误', async () => {
+    const pinia = createPinia()
+    const authStore = useAuthStore(pinia)
+    authStore.token = 'token'
+    authStore.user = { uuid: 'reader-1', username: 'reader', role: 'user' } as never
+    authStore.isAuthenticated = true
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: mockNote },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true, PInteractionActions: InteractionActionsStub },
+      },
+    })
+
+    await wrapper.get('[data-test="short-note-votes"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('投票失败')
+  })
+
   it('正文区域支持键盘打开讨论', async () => {
     const wrapper = mount(ShortNoteCard, {
       props: { note: mockNote },

@@ -34,6 +34,29 @@ describe('BlogSheetStack', () => {
     expect(wrapper.find('[data-test="post-layer"]').text()).toBe('1')
   })
 
+  it('keeps layers mounted on the current blog route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/blog', component: { template: '<div />' } }],
+    })
+    await router.push('/blog')
+    await router.isReady()
+
+    const sheets = useBlogSheets()
+    sheets.openPost('post-1', '文章一')
+
+    const wrapper = mount(BlogSheetStack, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BlogPostSheet: { props: ['layerIndex'], template: '<div data-test="post-layer">{{ layerIndex }}</div>' },
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-test="post-layer"]').exists()).toBe(true)
+  })
+
   it('closes all layers when entering the article editor', async () => {
     const router = createRouter({
       history: createMemoryHistory(),

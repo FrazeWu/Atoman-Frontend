@@ -55,7 +55,8 @@ describe("runtime loading boundaries", () => {
 			expect(source).not.toContain(`import ${importPath}`);
 			expect(source).toContain(`import('${importPath}')`);
 		}
-		expect(source).toContain('v-if="sheetStore.stack.length > 0"');
+		expect(source).toContain('<BlogSheetStack />');
+		expect(source).not.toContain('<BlogSheetStack v-if="sheetStore.stack.length > 0" />');
 		expect(source).not.toContain("NotificationToastStack");
 		expect(readSource("src/components/system/AppTopbarAuthControls.vue")).toContain(
 			"NotificationToastStack",

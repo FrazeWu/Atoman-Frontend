@@ -35,6 +35,10 @@ import {
 	normalizePlaybackSong,
 	playbackItemKey,
 } from "@/utils/playerState";
+import {
+	buildPrefetchCandidates,
+	shufflePlaybackItems,
+} from "@/utils/playerQueue";
 
 const api = useApi();
 const audioStartPrefetchBytes = 512 * 1024;
@@ -109,15 +113,6 @@ export const usePlayerStore = defineStore("player", () => {
 	const shuffledQueue = ref<Song[]>([]);
 	const currentAlbum = ref<Song[] | null>(null);
 
-	const shuffleArray = <T>(array: T[]): T[] => {
-		const arr = [...array];
-		for (let i = arr.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[arr[i], arr[j]] = [arr[j], arr[i]];
-		}
-		return arr;
-	};
-
 	const recomputeShuffledQueue = () => {
 		if (!isShuffled.value) {
 			shuffledQueue.value = [];
@@ -126,7 +121,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const list = queue.value.length > 0 ? queue.value : songs.value;
 		if (list.length === 0) return;
 
-		const newList = shuffleArray(list);
+		const newList = shufflePlaybackItems(list);
 		if (currentSong.value) {
 			const currentKey = playbackItemKey(currentSong.value);
 			const idx = newList.findIndex((s) => playbackItemKey(s) === currentKey);
@@ -539,16 +534,13 @@ export const usePlayerStore = defineStore("player", () => {
 		audioStartPrefetchKey = prefetchKey;
 		const controller = new AbortController();
 		audioStartPrefetchController = controller;
-		const urls = [
-			...new Set(
-				queue.value
-					.filter(
-						(song) => playbackItemKey(song) !== currentKey && hasPlayableAudio(song),
-					)
-					.map((song) => resolvePlaybackAudioUrl(song.audio_url))
-					.filter((url) => !prefetchedAudioStartUrls.has(url)),
-			),
-		];
+		const urls = buildPrefetchCandidates(
+			queue.value,
+			currentKey,
+			resolvePlaybackAudioUrl,
+			hasPlayableAudio,
+			prefetchedAudioStartUrls,
+		);
 		let nextUrlIndex = 0;
 		const prefetch = async () => {
 			while (!controller.signal.aborted) {

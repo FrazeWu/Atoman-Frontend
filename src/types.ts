@@ -486,6 +486,7 @@ export interface Post {
 	weighted_rating_count?: number;
 	weighted_rating_active?: boolean;
 	tags?: string[];
+	public_tags?: Array<{ id: string; name: string; count: number; viewer_added: boolean; created_at: string }>;
 	liked?: boolean;
 	bookmarks_count?: number;
 	channel_followers_count?: number;

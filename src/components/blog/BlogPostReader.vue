@@ -93,6 +93,9 @@ const bookmarkFoldersLoading = ref(false)
 const newBookmarkFolderName = ref('')
 const creatingBookmarkFolder = ref(false)
 const bookmarkFolderError = ref('')
+const publicTagInput = ref('')
+const publicTagLoading = ref(false)
+const publicTagError = ref('')
 
 let loadSequence = 0
 let ratingOperationSequence = 0
@@ -264,7 +267,8 @@ async function fetchPost() {
     const payload = await Promise.resolve(response.data)
     if (!currentLoad(sequence, requestedId)) return
     const detail = (payload.data || payload) as PostDetailResponse
-    post.value = detail
+  post.value = detail
+    void loadPublicTags(requestedId)
     commentCount.value = detail.comments_count ?? detail.comment_count ?? 0
     interactions.liked.value = detail.liked ?? detail.is_liked ?? false
     interactions.likeCount.value = detail.likes_count ?? detail.like_count ?? 0
@@ -569,6 +573,52 @@ function openTag(tag: string) {
   void router.push({ path: '/posts', query: { tag } })
 }
 
+async function loadPublicTags(id: string) {
+  const response = await apiRequestResult(api.blog.postPublicTags(id), { headers: authHeaders() })
+  if (!response.ok) return
+  const payload = await Promise.resolve(response.data)
+  if (post.value && id === post.value.id) post.value.public_tags = (payload.data || payload) as Post['public_tags']
+}
+
+async function addPublicTag() {
+  if (!post.value || !authStore.isAuthenticated || publicTagLoading.value) return
+  const name = publicTagInput.value.trim()
+  if (!name) return
+  publicTagLoading.value = true
+  publicTagError.value = ''
+  try {
+    const response = await apiRequestResult(api.blog.postPublicTags(post.value.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ name }),
+    })
+    if (!response.ok) {
+      publicTagError.value = response.error?.message || '添加标签失败'
+      return
+    }
+    publicTagInput.value = ''
+    await loadPublicTags(post.value.id)
+  } finally {
+    publicTagLoading.value = false
+  }
+}
+
+async function removePublicTag(tag: NonNullable<Post['public_tags']>[number]) {
+  if (!post.value || !authStore.isAuthenticated || publicTagLoading.value) return
+  publicTagLoading.value = true
+  publicTagError.value = ''
+  try {
+    const response = await apiRequestResult(api.blog.postPublicTag(post.value.id, tag.id), { method: 'DELETE', headers: authHeaders() })
+    if (!response.ok) {
+      publicTagError.value = response.error?.message || '移除标签失败'
+      return
+    }
+    await loadPublicTags(post.value.id)
+  } finally {
+    publicTagLoading.value = false
+  }
+}
+
 function openComments() {
   commentSheetMode.value = 'partial'
   commentsOpen.value = true
@@ -653,9 +703,20 @@ defineExpose({
       <h1>{{ post.title }}</h1>
       <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
       <div class="post-sheet-detail-toolbar">
-        <div v-if="post.tags?.length" class="post-sheet-tags" aria-label="文章标签"><button v-for="tag in post.tags" :key="tag" type="button" @click="openTag(tag)">{{ tag }}</button></div>
+        <div v-if="post.tags?.length || post.public_tags?.length" class="post-sheet-tags" aria-label="文章标签">
+          <button v-for="tag in post.tags" :key="`author-${tag}`" type="button" @click="openTag(tag)">{{ tag }}</button>
+          <span v-for="tag in post.public_tags" :key="tag.id" class="post-public-tag">
+            <button type="button" @click="openTag(tag.name)">{{ tag.name }} <small>{{ tag.count }}</small></button>
+            <button v-if="tag.viewer_added || isOwner || isAdminRole(authStore.user?.role)" type="button" class="post-public-tag__remove" :aria-label="`移除标签 ${tag.name}`" @click.stop="removePublicTag(tag)">×</button>
+          </span>
+        </div>
+        <form v-if="authStore.isAuthenticated" class="post-public-tag-form" @submit.prevent="addPublicTag">
+          <input v-model="publicTagInput" maxlength="48" placeholder="添加公共标签" aria-label="添加公共标签" :disabled="publicTagLoading" />
+          <PButton type="submit" size="sm" variant="ghost" :loading="publicTagLoading">添加</PButton>
+        </form>
         <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
       </div>
+      <p v-if="publicTagError" class="post-public-tag-error" role="alert">{{ publicTagError }}</p>
       <BlogPostUpdateNotice :variant="isSheet ? 'compact' : 'default'" :updated-at="post.updated_at" />
       <template v-if="!isAcademic">
         <BlogMediaContent
@@ -836,6 +897,13 @@ defineExpose({
 .post-sheet-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-right: auto; }
 .post-sheet-tags button { border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); color: var(--a-color-fg); cursor: pointer; font-size: 0.78rem; line-height: 1.2; padding: 0.35rem 0.6rem; }
 .post-sheet-tags button:hover { border-color: var(--a-color-primary); color: var(--a-color-primary); }
+.post-public-tag { display: inline-flex; align-items: center; gap: 0.1rem; }
+.post-public-tag__remove { border: 0 !important; background: transparent !important; padding: 0 0.25rem !important; color: var(--a-color-fg-muted); }
+.post-public-tag__remove:hover { color: var(--a-color-danger) !important; }
+.post-public-tag small { color: var(--a-color-fg-muted); }
+.post-public-tag-form { display: inline-flex; align-items: center; gap: 0.25rem; }
+.post-public-tag-form input { width: 8rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-fg); padding: 0.35rem 0.5rem; font-size: 0.78rem; }
+.post-public-tag-error { margin: 0.25rem 0 0; color: var(--a-color-danger); font-size: 0.78rem; }
 .post-sheet-content { max-width: 46rem; margin: 0 auto; }
 .prose-blog :deep(h1), .prose-blog :deep(h3), .prose-blog :deep(h4) { font-weight: 500; letter-spacing: 0; margin: 2rem 0 1rem; line-height: 1.25; }
 .prose-blog :deep(h1) { font-size: 2rem; }

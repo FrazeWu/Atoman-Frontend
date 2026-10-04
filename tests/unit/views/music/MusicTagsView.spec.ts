@@ -75,11 +75,11 @@ describe('MusicTagsView.vue', () => {
     vi.restoreAllMocks()
   })
 
-  it('shows the hierarchy and guides users to search before loading results', async () => {
+  it('shows the tag dimensions and loads the root directory', async () => {
     const { wrapper } = await mountView()
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="music-tags-view"]').text()).toContain('一级维度')
+    expect(wrapper.get('[role="tablist"]').attributes('aria-label')).toBe('标签维度')
     expect(wrapper.get('[data-testid="music-tag-scope-mood"]').text()).toContain('情绪')
     expect(wrapper.text()).toContain('电子')
     expect(mocks.listMusicTagOptions).toHaveBeenCalled()

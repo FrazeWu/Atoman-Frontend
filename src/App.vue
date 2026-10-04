@@ -20,7 +20,7 @@
           </Transition>
         </RouterView>
       </main>
-      <BlogSheetStack v-if="sheetStore.stack.length > 0" />
+      <BlogSheetStack />
       <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
@@ -43,7 +43,6 @@ import { useTransitionRelay } from '@/composables/useTransitionRelay'
 import { useKeyboardShortcuts, type KeyboardShortcut } from '@/composables/useKeyboardShortcuts'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
-import { useSheetStore } from '@/stores/sheet'
 
 declare global {
   interface Window {
@@ -58,7 +57,6 @@ const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/M
 const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFooter.vue'))
 
 const route = useRoute()
-const sheetStore = useSheetStore()
 const playerPresence = usePlayerPresenceStore()
 const uiStore = useUIStore()
 const siteAccessStore = useSiteAccessStore()

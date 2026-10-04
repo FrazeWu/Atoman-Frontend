@@ -324,6 +324,8 @@ export type MusicAlbumImport = {
 		error?: string;
 	}>;
 	metadataFieldSources?: Record<string, string>;
+	trackCount?: number;
+	hasCommitRequest?: boolean;
 	missingArtists?: string[];
 	lastSyncedAt: string;
 	errorMessage: string;
@@ -445,6 +447,8 @@ export function normalizeMusicAlbumImport(
 		targetSongId: snapshot.targetSongId ?? "",
 		artistId: snapshot.artistId ?? "",
 		commitRequest: snapshot.commitRequest,
+		trackCount: snapshot.trackCount ?? snapshot.derivedTracks?.length ?? 0,
+		hasCommitRequest: snapshot.hasCommitRequest ?? Boolean(snapshot.commitRequest),
 		albumTitle: snapshot.albumTitle ?? "",
 		derivedTracks: arrayOrEmpty(snapshot.derivedTracks),
 		files: arrayOrEmpty(snapshot.files),

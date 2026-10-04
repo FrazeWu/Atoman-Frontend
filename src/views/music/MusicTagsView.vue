@@ -15,6 +15,7 @@ import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PTab from '@/components/ui/PTab.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 
 type TagScope = 'all' | MusicTagKind
@@ -182,8 +183,8 @@ onBeforeUnmount(() => {
     <PPageHeader
       kicker="音乐 / 浏览索引"
       title="标签"
-      sub="按维度浏览标签；类型最多三级，其他维度保持平级。"
-      mb="1.5rem"
+      sub="按类型、情绪、场景等维度浏览音乐标签。"
+      mb="1rem"
     />
 
     <div class="music-tags-view__toolbar">
@@ -203,88 +204,78 @@ onBeforeUnmount(() => {
       <span class="music-tags-view__result-note" aria-live="polite">{{ resultLabel }}</span>
     </div>
 
-    <div class="music-tags-view__hierarchy">
-      <nav class="music-tags-view__level-one" aria-label="一级标签分类">
-            <span class="music-tags-view__panel-kicker">一级维度</span>
-        <h2>选择范围</h2>
-        <div class="music-tags-view__category-list" role="tablist">
-          <button
-            v-for="option in scopeOptions"
-            :key="option.value"
-            type="button"
-            class="music-tags-view__category"
-            :class="{ 'is-active': scope === option.value }"
-            role="tab"
-            :aria-selected="scope === option.value"
-            :data-testid="`music-tag-scope-${option.value}`"
-            @click="updateRoute(option.value)"
-          >
-            <span>{{ option.label }}</span>
-            <ArrowRight :size="15" aria-hidden="true" />
-          </button>
+    <nav class="music-tags-view__tabs" aria-label="标签维度" role="tablist">
+      <PTab
+        v-for="option in scopeOptions"
+        :key="option.value"
+        :label="option.label"
+        :active="scope === option.value"
+        role="tab"
+        :aria-selected="scope === option.value"
+        :data-testid="`music-tag-scope-${option.value}`"
+        @click="updateRoute(option.value)"
+      />
+    </nav>
+
+    <section class="music-tags-view__directory" aria-labelledby="music-tags-directory-title">
+      <header class="music-tags-view__directory-head">
+        <div>
+          <span class="music-tags-view__eyebrow">标签目录</span>
+          <h2 id="music-tags-directory-title">{{ parentTag?.name || scopeLabel }}</h2>
         </div>
-      </nav>
+        <span class="music-tags-view__directory-total">{{ resultLabel }}</span>
+      </header>
 
-      <section class="music-tags-view__level-two" aria-labelledby="music-tags-level-two-title">
-        <header class="music-tags-view__level-two-head">
-          <div>
-            <span class="music-tags-view__panel-kicker">标签目录</span>
-            <h2 id="music-tags-level-two-title">{{ parentTag?.name || scopeLabel }}</h2>
-          </div>
-          <span class="music-tags-view__level-two-total">{{ resultLabel }}</span>
-        </header>
-
-        <div class="music-tags-view__breadcrumb" aria-label="当前层级">
-          <button v-if="parentTag" type="button" class="music-tags-view__breadcrumb-link" @click="goParent">标签</button>
-          <span v-else>标签</span>
+      <div class="music-tags-view__breadcrumb" aria-label="当前层级">
+        <button v-if="parentTag" type="button" class="music-tags-view__breadcrumb-link" @click="goParent">标签</button>
+        <span v-else>标签</span>
+        <ArrowRight :size="14" aria-hidden="true" />
+        <strong>{{ scopeLabel }}</strong>
+        <template v-if="parentTag">
           <ArrowRight :size="14" aria-hidden="true" />
-          <strong>{{ scopeLabel }}</strong>
-          <template v-if="parentTag">
-            <ArrowRight :size="14" aria-hidden="true" />
-            <strong>{{ parentTag.name }}</strong>
-          </template>
-        </div>
+          <strong>{{ parentTag.name }}</strong>
+        </template>
+      </div>
 
-        <PContentProgress :loading="loading" :error="error" :retry="retry">
-          <template #skeleton>
-            <div class="music-tags-view__grid">
-              <div v-for="index in 6" :key="index" class="music-tags-view__tag-skeleton">
-                <PSkeleton width="9rem" height="1rem" />
-                <PSkeleton width="5rem" height="0.75rem" />
-              </div>
+      <PContentProgress :loading="loading" :error="error" :retry="retry">
+        <template #skeleton>
+          <div class="music-tags-view__grid">
+            <div v-for="index in 6" :key="index" class="music-tags-view__tag-skeleton">
+              <PSkeleton width="9rem" height="1rem" />
+              <PSkeleton width="5rem" height="0.75rem" />
             </div>
-          </template>
-
-          <PEmpty v-if="!tags.length" :title="hasQuery ? '没有找到标签' : '暂无标签'" :description="hasQuery ? '可以在当前维度和父级下创建这个标签。' : '这个维度还没有标签。'">
-            <template #icon>
-              <Search v-if="hasQuery" :size="30" aria-hidden="true" />
-              <Hash v-else :size="30" aria-hidden="true" />
-            </template>
-            <template #action>
-              <PButton v-if="canCreate" size="sm" variant="secondary" :loading="creating" :disabled="!isAuthenticated" data-testid="music-tag-create" @click="createTag">
-                创建“{{ query.trim() }}”
-              </PButton>
-            </template>
-          </PEmpty>
-          <div v-else class="music-tags-view__grid" data-testid="music-tag-results">
-            <RouterLink
-              v-for="tag in tags"
-              :key="tag.id"
-              :to="tagRoute(tag)"
-              class="music-tags-view__tag-link"
-              :data-testid="`music-tag-result-${tag.id}`"
-            >
-              <Hash :size="15" aria-hidden="true" />
-              <span class="music-tags-view__tag-copy">
-                <strong>{{ tag.name }}</strong>
-                <small>{{ tagKindLabel(tag.kind) }} · {{ tag.assignment_count || 0 }} 项<span v-if="tag.child_count"> · {{ tag.child_count }} 个子标签</span></small>
-              </span>
-              <ArrowRight class="music-tags-view__tag-arrow" :size="17" aria-hidden="true" />
-            </RouterLink>
           </div>
-        </PContentProgress>
-      </section>
-    </div>
+        </template>
+
+        <PEmpty v-if="!tags.length" :title="hasQuery ? '没有找到标签' : '暂无标签'" :description="hasQuery ? '可以在当前维度和父级下创建这个标签。' : '这个维度还没有标签。'">
+          <template #icon>
+            <Search v-if="hasQuery" :size="30" aria-hidden="true" />
+            <Hash v-else :size="30" aria-hidden="true" />
+          </template>
+          <template #action>
+            <PButton v-if="canCreate" size="sm" variant="secondary" :loading="creating" :disabled="!isAuthenticated" data-testid="music-tag-create" @click="createTag">
+              创建“{{ query.trim() }}”
+            </PButton>
+          </template>
+        </PEmpty>
+        <div v-else class="music-tags-view__grid" data-testid="music-tag-results">
+          <RouterLink
+            v-for="tag in tags"
+            :key="tag.id"
+            :to="tagRoute(tag)"
+            class="music-tags-view__tag-link"
+            :data-testid="`music-tag-result-${tag.id}`"
+          >
+            <Hash :size="15" aria-hidden="true" />
+            <span class="music-tags-view__tag-copy">
+              <strong>{{ tag.name }}</strong>
+              <small>{{ tagKindLabel(tag.kind) }} · {{ tag.assignment_count || 0 }} 项<span v-if="tag.child_count"> · {{ tag.child_count }} 个子标签</span></small>
+            </span>
+            <ArrowRight class="music-tags-view__tag-arrow" :size="17" aria-hidden="true" />
+          </RouterLink>
+        </div>
+      </PContentProgress>
+    </section>
   </main>
 </template>
 
@@ -292,9 +283,8 @@ onBeforeUnmount(() => {
 .music-tags-view {
   display: grid;
   gap: 1.25rem;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1.5rem 0 3rem;
+  min-width: 0;
+  padding-bottom: 3rem;
 }
 
 .music-tags-view__toolbar {
@@ -302,8 +292,6 @@ onBeforeUnmount(() => {
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .music-tags-view__search {
@@ -320,96 +308,59 @@ onBeforeUnmount(() => {
 }
 
 .music-tags-view__result-note,
-.music-tags-view__level-two-total {
+.music-tags-view__directory-total {
   color: var(--a-color-muted);
   font-size: 0.8rem;
   white-space: nowrap;
 }
 
-.music-tags-view__hierarchy {
-  display: grid;
-  grid-template-columns: minmax(13rem, 0.32fr) minmax(0, 1fr);
-  gap: 1rem;
-}
-
-.music-tags-view__level-one,
-.music-tags-view__level-two {
-  min-width: 0;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-}
-
-.music-tags-view__level-one {
-  align-self: start;
-  padding: 1rem;
-}
-
-.music-tags-view__panel-kicker {
+.music-tags-view__eyebrow {
   color: var(--a-color-muted);
   font-size: 0.72rem;
   font-weight: 600;
 }
 
-.music-tags-view__level-one h2,
-.music-tags-view__level-two h2 {
+.music-tags-view__directory h2 {
   margin: 0.25rem 0 0;
   color: var(--a-color-text);
   font-size: 1.05rem;
   font-weight: 600;
 }
 
-.music-tags-view__category-list {
-  display: grid;
-  gap: 0.25rem;
-  margin-top: 1rem;
-}
-
-.music-tags-view__category {
+.music-tags-view__tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: 100%;
-  min-height: 2.75rem;
-  padding: 0 0.75rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  color: var(--a-color-muted);
-  background: transparent;
-  font: inherit;
-  font-size: 0.86rem;
-  text-align: left;
-  cursor: pointer;
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.music-tags-view__category:hover,
-.music-tags-view__category:focus-visible {
-  color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-  outline: none;
+.music-tags-view__tabs :deep(.p-tab) {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 1rem;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-.music-tags-view__category.is-active {
-  color: var(--a-color-primary);
-  border-color: color-mix(in srgb, var(--a-color-primary) 25%, var(--a-color-border-soft));
-  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
-  font-weight: 600;
+.music-tags-view__directory {
+  min-width: 0;
 }
 
-.music-tags-view__level-two-head {
+.music-tags-view__directory-head {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.15rem 1.25rem 0.9rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 1.25rem 0 0.85rem;
 }
 
 .music-tags-view__breadcrumb {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.7rem 1.25rem;
+  min-height: 36px;
+  padding: 0 0 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
   font-size: 0.75rem;
@@ -435,7 +386,7 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-.music-tags-view__level-two :deep(.p-content-progress) {
+.music-tags-view__directory :deep(.p-content-progress) {
   min-height: 15rem;
 }
 
@@ -443,7 +394,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 1.25rem;
-  padding: 0.25rem 1.25rem 1rem;
+  padding: 0.25rem 0 1rem;
 }
 
 .music-tags-view__tag-link,
@@ -453,7 +404,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.65rem;
   min-width: 0;
-  min-height: 4rem;
+  min-height: 4.25rem;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
@@ -517,7 +468,8 @@ onBeforeUnmount(() => {
 
 @media (max-width: 720px) {
   .music-tags-view {
-    padding: 1.25rem 1rem 3rem;
+    gap: 1rem;
+    padding-bottom: 3rem;
   }
 
   .music-tags-view__toolbar {
@@ -529,26 +481,12 @@ onBeforeUnmount(() => {
     width: 100%;
   }
 
-  .music-tags-view__hierarchy {
-    grid-template-columns: 1fr;
-  }
-
-  .music-tags-view__category-list {
-    display: flex;
-    overflow-x: auto;
-    gap: 0.3rem;
-    margin-top: 0.75rem;
-    padding-bottom: 0.1rem;
-  }
-
-  .music-tags-view__category {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 6.25rem;
-  }
-
   .music-tags-view__grid {
     grid-template-columns: 1fr;
+  }
+
+  .music-tags-view__directory-head {
+    align-items: start;
   }
 }
 

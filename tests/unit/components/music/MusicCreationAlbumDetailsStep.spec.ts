@@ -22,7 +22,7 @@ vi.mock("@/api/musicV1", () => ({
 	SUPPORTED_VIDEO_ACCEPT: ".mp4,.mkv",
 }));
 
-vi.mock("music-metadata-browser", () => ({
+vi.mock("music-metadata", () => ({
 	parseBlob: vi.fn(),
 }));
 
@@ -312,7 +312,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		const flow = drawers.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
 
-		const { parseBlob } = await import("music-metadata-browser");
+		const { parseBlob } = await import("music-metadata");
 		vi.mocked(parseBlob).mockResolvedValue({
 			common: { title: "标签曲名" },
 		} as never);
@@ -441,7 +441,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		const flow = drawers.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
 
-		const { parseBlob } = await import("music-metadata-browser");
+		const { parseBlob } = await import("music-metadata");
 		vi.mocked(parseBlob).mockRejectedValueOnce(
 			new Error("metadata unavailable"),
 		);

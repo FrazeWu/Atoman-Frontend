@@ -89,6 +89,8 @@ export function useApi() {
 			recommendationFeedback: `${apiUrl}/blog/recommendation-feedback`,
 			recommendationFeedbackItem: (id: number | string) =>
 				`${apiUrl}/blog/recommendation-feedback/${id}`,
+			recommendationPreference: `${apiUrl}/blog/recommendation-preference`,
+			recommendationData: `${apiUrl}/blog/recommendation-data`,
 			digest: `${apiUrl}/blog/digest`,
 			relatedPosts: (id: number | string) => `${apiUrl}/blog/posts/${id}/related`,
 			post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,

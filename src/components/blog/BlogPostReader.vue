@@ -210,9 +210,24 @@ function trackReadingProgress() {
   consumptionTracker.update(progress)
 }
 
+async function recordLifecycleEvent(
+  contentId: string,
+  event: 'open' | 'engaged' | 'complete',
+  source: string,
+) {
+  try {
+    await lifecycle.recordEvent({ module: 'blog', content_id: contentId, event, source })
+    if (event === 'open' && authStore.isAuthenticated) {
+      await feedStore.fetchSubscriptionHubTree()
+    }
+  } catch {
+    // 阅读事件失败不应影响文章阅读。
+  }
+}
+
 function startReadingTracking(contentId: string, source: string) {
   consumptionTracker = createContentConsumptionTracker({
-    onEvent: event => void lifecycle.recordEvent({ module: 'blog', content_id: contentId, event, source }).catch(() => undefined),
+    onEvent: event => void recordLifecycleEvent(contentId, event, source),
     onProgress: progress => {
       if (!authStore.token) return
       void lifecycle.saveProgress({
@@ -280,7 +295,7 @@ async function fetchPost() {
     interactions.commentCount.value = commentCount.value
 
     if (isSheet.value) {
-      void lifecycle.recordEvent({ module: 'blog', content_id: detail.id, event: 'open', source: 'blog_sheet' }).catch(() => undefined)
+      void recordLifecycleEvent(detail.id, 'open', 'blog_sheet')
     } else {
       startReadingTracking(detail.id, readingSource())
       const description = detail.summary?.trim() || detail.content.replace(/[#*`>~_\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160)

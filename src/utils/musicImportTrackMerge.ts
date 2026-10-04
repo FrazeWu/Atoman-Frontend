@@ -24,6 +24,26 @@ function normalizedTrackTitle(title?: string) {
 	return title?.trim().replace(/\s+/g, " ").toLocaleLowerCase() || "";
 }
 
+function trackTitleVariants(title?: string) {
+	const normalized = normalizedTrackTitle(title);
+	if (!normalized) return [];
+	const variants = new Set([normalized]);
+	const artistSeparator = normalized.search(/\s[-–—]\s/);
+	if (artistSeparator >= 0) {
+		variants.add(normalized.slice(artistSeparator + 3).trim());
+	}
+	for (const variant of [...variants]) {
+		const base = variant.split(/[([（【]/, 1)[0]?.trim();
+		if (base) variants.add(base);
+	}
+	return [...variants];
+}
+
+function sameTrackTitle(left?: string, right?: string) {
+	const rightVariants = new Set(trackTitleVariants(right));
+	return trackTitleVariants(left).some((variant) => rightVariants.has(variant));
+}
+
 function positionKey(track: TrackWithIdentity) {
 	const disc = track.discNumber ?? track.originalDiscNumber;
 	const position = track.trackNumber ?? track.originalTrackNumber;
@@ -175,12 +195,11 @@ function findCurrentTrack(
 		});
 		if (originalMatch) return originalMatch;
 	}
-	const originalTitle = normalizedTrackTitle(track.originalTitle);
-	if (originalTitle) {
+	if (track.originalTitle) {
 		const titleMatches = current.filter((candidate) => {
 			if (used.has(candidate.id)) return false;
 			return [candidate.title, candidate.originalTitle].some(
-				(title) => normalizedTrackTitle(title) === originalTitle,
+				(title) => sameTrackTitle(title, track.originalTitle) || sameTrackTitle(title, track.title),
 			);
 		});
 		if (titleMatches.length === 1) return titleMatches[0];

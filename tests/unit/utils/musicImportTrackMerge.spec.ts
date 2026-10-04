@@ -88,4 +88,32 @@ describe("mergeImportedTracksIntoDraft", () => {
 			audioUrl: "https://assets.example.test/celebration.mp3",
 		});
 	});
+
+	it("restores server audio identity after metadata reorders a customized draft", () => {
+		const flow = flowWithTracks([
+			{
+				id: "local-county",
+				sequence: 1,
+				title: "县道184",
+				origin: "import",
+				titleCustomized: true,
+			},
+		]);
+		flow.tracksCustomized = true;
+
+		mergeImportedTracksIntoDraft(flow, [{
+			fileId: "file-county",
+			audioKey: "audio-county",
+			title: "县道184",
+			originalTitle: "交工乐队 - 县道184(卷首诗)",
+			origin: "file",
+		}]);
+
+		expect(flow.draft.tracks).toHaveLength(1);
+		expect(flow.draft.tracks[0]).toMatchObject({
+			id: "local-county",
+			importFileId: "file-county",
+			audioKey: "audio-county",
+		});
+	});
 });

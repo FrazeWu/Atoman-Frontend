@@ -521,6 +521,53 @@ describe("FeedRecommendedView", () => {
 		);
 	});
 
+	it("uses loaded subscriptions without requesting each channel status", async () => {
+		const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({
+					data: [{ id: "chan-1", title: "Channel 1", source_type: "internal_channel" }],
+				}), { status: 200 });
+			}
+			return new Response(JSON.stringify({ error: "unexpected request" }), { status: 404 });
+		});
+
+		const authStore = useAuthStore();
+		authStore.token = "token";
+		authStore.isAuthenticated = true;
+		const feedStore = useFeedStore();
+		feedStore.subscriptions = [{
+			id: "subscription-1",
+			user_id: "user-1",
+			feed_source_id: "source-1",
+			feed_source: { id: "source-1", source_type: "internal_channel", source_id: "chan-1", hash: "hash", provider: "internal", hidden: false, created_at: "2026-01-01", updated_at: "2026-01-01" },
+			created_at: "2026-01-01",
+		}];
+		feedStore.subscriptionsLoaded = true;
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+					PSegmentedControl: segmentedControlStub,
+					PButton: true,
+					PEmpty: { props: ["title"], template: '<div class="p-empty">{{ title }}</div>' },
+				},
+			},
+		});
+
+		await flushPromises();
+
+		expect(fetchSpy.mock.calls.some(([input]) => String(input).includes("/feed/subscribe/channel/chan-1/status"))).toBe(false);
+		expect(wrapper.find('[data-test="feed-source-subscribe"]').text()).toContain("已订阅");
+	});
+
 	it("does not trigger a second subscribe for already subscribed recommended channels", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			const url = String(input);

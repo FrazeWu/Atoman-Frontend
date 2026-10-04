@@ -113,6 +113,7 @@ export const useFeedStore = defineStore("feed", () => {
 
 	const {
 		subscriptions,
+		subscriptionsLoaded,
 		groups,
 		starGroups,
 		healthChecking,
@@ -486,6 +487,7 @@ export const useFeedStore = defineStore("feed", () => {
 	return {
 		// Feed
 		subscriptions,
+		subscriptionsLoaded,
 		subscriptionRules,
 		ruleApplySummary,
 		groups,

@@ -22,10 +22,10 @@ import PaginationBar from "@/components/ui/PaginationBar.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
-  musicImportAlbumTitle,
-  musicImportGroupForStatus,
-  uniqueMusicAlbumImports,
-  type MusicImportGroup,
+	musicImportAlbumTitle,
+	musicImportGroupForStatus,
+	submittedMusicAlbumImports,
+	type MusicImportGroup,
 } from '@/utils/musicImportDisplay'
 import { normalizeMusicImportSource } from '@/utils/musicImportSource'
 
@@ -46,7 +46,7 @@ const { resumeMusicCreationFlow } = useMusicDrawers()
 const importRequests = useRequestGeneration()
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 
-const albumImports = computed(() => uniqueMusicAlbumImports(imports.value))
+const albumImports = computed(() => submittedMusicAlbumImports(imports.value))
 
 const importGroups = computed(() => {
   const filtered = albumImports.value.filter((item) => {
@@ -141,7 +141,7 @@ async function loadImports(silent = false, nextPage = page.value) {
       rawHasMore = response.meta.has_more
       rawPage += 1
     }
-    const allImports = uniqueMusicAlbumImports(rawImports)
+    const allImports = submittedMusicAlbumImports(rawImports)
     const start = (nextPage - 1) * importPageSize
     const nextImports = allImports.slice(start, start + importPageSize)
     imports.value = nextImports

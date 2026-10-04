@@ -3,6 +3,7 @@ import type { MusicAlbumImport } from "../../../src/api/musicV1";
 import {
 	musicImportAlbumTitle,
 	musicImportGroupForStatus,
+	submittedMusicAlbumImports,
 	uniqueMusicAlbumImports,
 } from "../../../src/utils/musicImportDisplay";
 
@@ -146,5 +147,23 @@ describe("music import album display", () => {
 		expect(musicImportGroupForStatus("analyzing")).toBe("in_progress");
 		expect(musicImportGroupForStatus("failed")).toBe("needs_attention");
 		expect(musicImportGroupForStatus("committed")).toBe("published");
+	});
+
+	it("only displays sessions that have been submitted", () => {
+		const records = submittedMusicAlbumImports([
+			importRecord({ importId: "uploaded", status: "ready", targetAlbumId: "album-1" }),
+			importRecord({ importId: "failed-upload", status: "failed" }),
+			importRecord({
+				importId: "submitted",
+				status: "uploaded",
+				targetAlbumId: "album-1",
+				commitRequest: {
+					artist: { name: "Artist", legal_name: "", bio: "", nationality: "", birth_date: "", stage_names: [], birth_place: "" },
+					album: { title: "Album", description: "", album_type: "album", release_year: 2024, tracks: [] },
+				},
+			}),
+		]);
+
+		expect(records.map((item) => item.importId)).toEqual(["submitted"]);
 	});
 });

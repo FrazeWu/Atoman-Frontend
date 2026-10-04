@@ -620,6 +620,7 @@ import {
   subscriptionHealthLabel,
   subscriptionHealthStatus,
 } from '@/utils/subscriptionHealth'
+import { batchFlagPayload, batchPauseValue, selectedSubscriptionIds as serializeSelectedSubscriptionIds } from '@/utils/subscriptionBatch'
 import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 import type { FeedAutomationRules, FeedFilterRules, FeedOPMLImportResult } from '@/stores/feed'
 import { buildSourceFaviconURL, normalizeSourceUrlForCard } from '@/utils/feedSourcePresentation'
@@ -1096,7 +1097,7 @@ const retryOPMLFailure = (failure: { url: string; title?: string; group?: string
   emit('retry-opml-failure', failure)
 }
 
-const selectedIds = () => [...selectedSubscriptionIds.value]
+const selectedIds = () => serializeSelectedSubscriptionIds(selectedSubscriptionIds.value)
 
 const isSubscriptionSettingsExpanded = (id: string) => expandedSubscriptionSettingIds.value.has(id)
 
@@ -1143,7 +1144,7 @@ const applyBatchGroup = () => {
 const applyBatchFlag = (key: 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list', value: boolean) => {
   const ids = selectedIds()
   if (props.busy || !ids.length) return
-  emit('batch-update-subscriptions', ids, { [key]: value })
+  emit('batch-update-subscriptions', ids, batchFlagPayload(key, value))
 }
 
 const applyBatchOperation = () => {
@@ -1151,8 +1152,9 @@ const applyBatchOperation = () => {
   const operation = batchOperation.value
   if (props.busy || !ids.length || !operation) return
 
-  if (operation === 'pause' || operation === 'resume') {
-    ids.forEach(id => emit('set-subscription-paused', id, operation === 'pause'))
+  const paused = batchPauseValue(operation)
+  if (paused !== null) {
+    ids.forEach(id => emit('set-subscription-paused', id, paused))
   } else if (operation === 'mute' || operation === 'unmute') {
     emit('batch-update-subscriptions', ids, { is_muted: operation === 'mute' })
   } else if (operation === 'sync') {

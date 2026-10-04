@@ -159,6 +159,8 @@ export const musicV1Endpoints = {
 	albumImports: () => `${apiV1Base()}/music/imports/albums`,
 	albumImportMetadataPreview: () =>
 		`${apiV1Base()}/music/imports/albums/metadata-preview`,
+	albumImportMetadataMatch: (importId: string) =>
+		`${apiV1Base()}/music/imports/albums/${importId}/metadata-match`,
 	albumImport: (importId: string) =>
 		`${apiV1Base()}/music/imports/albums/${importId}`,
 	albumImportArchive: (importId: string) =>

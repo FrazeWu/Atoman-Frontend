@@ -187,11 +187,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			title: "IGOR",
 			tracks: ["EARFQUAKE", "IGOR'S THEME"],
 		});
-		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: false,
-			sourceUrl: "",
-			tracks: [],
-		});
+		const metadataMatch = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata").mockResolvedValue(
+			snapshot({ status: "uploading", stage: "upload", inputMode: "archive" }),
+		);
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
 			inputMode: "archive",
@@ -203,7 +201,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const files = { 0: archive, length: 1, item: () => archive } as unknown as FileList;
 		await useAlbumImportUpload().handleFilesUpload(files);
 		const flow = useMusicDrawers().state.value.creationFlow!;
-		expect(metadataPreview).toHaveBeenCalledWith({
+		expect(metadataMatch).toHaveBeenCalledWith("import-1", {
 			albumTitle: "IGOR",
 			artist: "",
 			trackTitles: ["EARFQUAKE", "IGOR'S THEME"],
@@ -223,11 +221,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			title: "IGOR",
 			tracks: ["EARFQUAKE", "IGOR'S THEME"],
 		});
-		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: false,
-			sourceUrl: "",
-			tracks: [],
-		});
+		const metadataMatch = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata").mockResolvedValue(
+			snapshot({ status: "uploading", stage: "upload", inputMode: "archive" }),
+		);
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
 			inputMode: "archive",
@@ -251,7 +247,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"EARFQUAKE",
 			"IGOR'S THEME",
 		]);
-		expect(metadataPreview).toHaveBeenCalled();
+		expect(metadataMatch).toHaveBeenCalled();
 	});
 
 	it("上传完成后仍停留在上传页，等待曲目解析后自动匹配", async () => {
@@ -260,11 +256,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			title: "IGOR",
 			tracks: ["EARFQUAKE"],
 		});
-		const metadataPreview = vi.spyOn(musicApi, "previewMusicAlbumImportMetadata").mockResolvedValue({
-			matched: false,
-			sourceUrl: "",
-			tracks: [],
-		});
+		const metadataMatch = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata").mockResolvedValue(
+			snapshot({ status: "uploading", stage: "upload", inputMode: "archive" }),
+		);
 		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
 		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
 			inputMode: "archive",
@@ -292,12 +286,12 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		await vi.waitFor(() => expect(musicApi.createMusicAlbumImport).toHaveBeenCalled());
 		expect(flow.step).toBe("albumImport");
-		await vi.waitFor(() => expect(metadataPreview).toHaveBeenCalled());
+		await vi.waitFor(() => expect(metadataMatch).toHaveBeenCalled());
 
 		resolveUpload("etag-1");
 		await uploadPromise;
 		expect(flow.step).toBe("albumImport");
-		expect(metadataPreview).toHaveBeenCalled();
+		expect(metadataMatch).toHaveBeenCalled();
 	});
 
 	it("自动匹配后回填完整发行版元信息，不等待音频处理", async () => {

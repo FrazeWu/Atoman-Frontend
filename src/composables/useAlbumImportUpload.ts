@@ -8,7 +8,7 @@ import {
 	completeMusicAlbumImportFilePart,
 	completeMusicAlbumImportFile,
 	completeMusicAlbumImportSession,
-	previewMusicAlbumImportMetadata,
+	matchMusicAlbumImportMetadata,
 	registerMusicAlbumImportFiles,
 	getMusicAlbumImport,
 	retryMusicAlbumImportFile,
@@ -25,6 +25,7 @@ import { runMultipartUpload } from "@/api/multipartUpload";
 import {
 	readAlbumImportPreview,
 	shouldIgnoreAlbumImportPath,
+	type MusicAlbumImportPreview,
 } from "@/utils/musicImportPreview";
 import { parsePartialDateParts } from "@/components/music/birthDateMask";
 import { localizedMusicCountry } from "@/utils/musicImportMetadata";
@@ -92,43 +93,6 @@ function mergeUploadedImportFile(
 				}
 			: file,
 	);
-}
-
-function applyEarlyMetadataPreview(
-	flow: MusicCreationFlowState,
-	preview: Awaited<ReturnType<typeof previewMusicAlbumImportMetadata>>,
-) {
-	const draft = flow.draft.albumImport;
-	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
-		draft.derivedAlbumTitle = preview.albumTitle.trim();
-		flow.draft.albumDetails.title = preview.albumTitle.trim();
-	}
-	if (preview.releaseDate?.trim() && !flow.releaseDateCustomized) {
-		draft.derivedReleaseDate = preview.releaseDate.trim();
-		flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(preview.releaseDate);
-	}
-	if (preview.coverUrl?.trim() && !flow.coverCustomized) {
-		draft.derivedCover = preview.coverUrl.trim();
-		flow.draft.albumDetails.coverUrl = preview.coverUrl.trim();
-	}
-	draft.metadataMatched = preview.matched;
-	draft.metadataSourceUrl = preview.sourceUrl || undefined;
-	draft.metadataSource = preview.metadataSource;
-	draft.metadataExternalId = preview.externalId;
-	draft.metadataMatchStatus = preview.matchStatus || "unmatched";
-	draft.metadataMatchConfidence = preview.matchConfidence ?? 0;
-	draft.metadataError = preview.metadataError || "";
-	draft.metadataGenres = preview.genres ?? [];
-	draft.metadataStyles = preview.styles ?? [];
-	draft.metadataLabels = preview.labels ?? [];
-	draft.metadataCountry = localizedMusicCountry(preview.country);
-	draft.metadataFormats = preview.formats ?? [];
-	draft.metadataSources = preview.sources ?? [];
-	draft.metadataMatchingStarted = true;
-	if (preview.tracks.length) {
-		draft.derivedTracks = preview.tracks;
-		mergeImportedTracksIntoDraft(flow, preview.tracks);
-	}
 }
 
 const uploadStates = new WeakMap<
@@ -726,9 +690,11 @@ export function useAlbumImportUpload() {
 							file.name,
 						),
 					);
+		let localPreviewData: Promise<MusicAlbumImportPreview> | null = null;
 		let localPreviewPromise: Promise<void> | null = null;
 		if (previewFile) {
-			localPreviewPromise = readAlbumImportPreview(previewFile, artistName)
+			localPreviewData = readAlbumImportPreview(previewFile, artistName);
+			localPreviewPromise = localPreviewData
 				.then(async (preview) => {
 					if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
 					if (files.length === 1) {
@@ -755,25 +721,6 @@ export function useAlbumImportUpload() {
 								flow.draft.albumDetails.coverUrl = draft.derivedCover;
 							}
 						}
-						if (preview.tracks.length && isCurrent()) {
-							draft.metadataMatchingStarted = true;
-							draft.metadataMatchStatus = "matching";
-							const albumTitle = preview.title.trim() || files[0]?.name.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, "").trim() || "";
-							void previewMusicAlbumImportMetadata({
-								albumTitle,
-								artist: artistName,
-								trackTitles: preview.tracks,
-							}).then((metadata) => {
-								if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
-									applyEarlyMetadataPreview(flow, metadata);
-								}
-							}).catch((error) => {
-								if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
-									draft.metadataMatchStatus = "unmatched";
-									draft.metadataError = error instanceof Error ? error.message : "外部元数据匹配失败";
-								}
-							});
-						}
 				})
 				.catch(() => {
 					// 后台提取会在上传完成后提供完整信息。
@@ -789,6 +736,28 @@ export function useAlbumImportUpload() {
 			});
 				if (!isCurrent()) return;
 				draft.importId = session.importId;
+				if (localPreviewData) {
+					void localPreviewData.then((preview) => {
+						if (!isCurrent() || !preview.tracks.length) return;
+						draft.metadataMatchingStarted = true;
+						draft.metadataMatchStatus = "matching";
+						const albumTitle = preview.title.trim() || files[0]?.name.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, "").trim() || "";
+						return matchMusicAlbumImportMetadata(session.importId, {
+							albumTitle,
+							artist: artistName,
+							trackTitles: preview.tracks,
+						}).then((matched) => {
+							if (isCurrent() && draft.importId === session.importId) {
+								applyImportSnapshotToFlow(flow, matched, session.importId);
+							}
+						});
+					}).catch((error) => {
+						if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
+							draft.metadataMatchStatus = "unmatched";
+							draft.metadataError = error instanceof Error ? error.message : "外部元数据匹配失败";
+						}
+					});
+				}
 
 				const fileInputs = files.map((file) => ({
 				relativePath:

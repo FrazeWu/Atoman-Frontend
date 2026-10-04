@@ -1155,6 +1155,21 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
+	it("uploaded 状态会继续轮询后台匹配", async () => {
+		vi.useFakeTimers();
+		const flow = useMusicDrawers().state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.status = "uploaded";
+		const getImport = vi.spyOn(musicApi, "getMusicAlbumImport").mockResolvedValue(
+			snapshot({ status: "queued", stage: "queued" }),
+		);
+		mount(MusicCreationAlbumUploadZone);
+		await vi.advanceTimersByTimeAsync(2000);
+		await flushPromises();
+		expect(getImport).toHaveBeenCalledWith("import-1");
+	});
+
 	it("上传后应用后台处理中的最新快照", async () => {
 		vi.useFakeTimers();
 		const archive = new File(["zip"], "stages.zip", {

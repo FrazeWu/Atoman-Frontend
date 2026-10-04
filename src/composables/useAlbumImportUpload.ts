@@ -353,7 +353,10 @@ export function useAlbumImportUpload() {
 		) {
 			flow.draft.albumDetails.source = snapshot.metadataSourceUrl;
 		}
-		const processingFinished = ["ready", "needs_attention"].includes(snapshot.status) || (
+		const metadataMatchFinished = ["matched", "unmatched", "ambiguous", "manual"].includes(
+			metadataMatchStatus,
+		);
+		const processingFinished = metadataMatchFinished || ["ready", "needs_attention"].includes(snapshot.status) || (
 			snapshot.status === "failed" && snapshot.stage !== "upload"
 		);
 		if (flow.step === "albumImport" && processingFinished) {

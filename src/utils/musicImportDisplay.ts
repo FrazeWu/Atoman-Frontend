@@ -66,3 +66,9 @@ export function uniqueMusicAlbumImports(
 		return true;
 	});
 }
+
+export function submittedMusicAlbumImports(
+	items: MusicAlbumImport[],
+): MusicAlbumImport[] {
+	return uniqueMusicAlbumImports(items.filter((item) => Boolean(item.commitRequest)));
+}

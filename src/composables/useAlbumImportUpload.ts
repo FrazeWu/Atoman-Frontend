@@ -593,7 +593,7 @@ export function useAlbumImportUpload() {
 		importId: string,
 	) {
 		if (
-			["queued", "extracting", "analyzing", "transcoding"].includes(
+			["uploaded", "queued", "extracting", "analyzing", "transcoding"].includes(
 				snapshot.status,
 			)
 		) {

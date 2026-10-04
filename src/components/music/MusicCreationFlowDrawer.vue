@@ -432,12 +432,12 @@ const albumImportMatching = computed(() => {
   const flow = creationFlow.value
   if (!flow || flow.step !== 'albumImport') return false
   const draft = flow.draft.albumImport
-  return draft.metadataMatchStatus === 'matching'
+  return draft.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)
     || (draft.metadataMatchingStarted === true && !['matched', 'unmatched'].includes(draft.metadataMatchStatus ?? ''))
 })
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
-  if (creationFlow.value?.draft.albumImport.metadataMatchStatus === 'matching') return '匹配中…'
+  if (creationFlow.value?.draft.albumImport.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(creationFlow.value?.draft.albumImport.status ?? '')) return '匹配中…'
   if (
     creationFlow.value?.draft.albumImport.metadataMatchingStarted
     && !['matched', 'unmatched'].includes(creationFlow.value.draft.albumImport.metadataMatchStatus ?? '')

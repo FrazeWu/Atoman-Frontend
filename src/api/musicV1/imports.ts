@@ -457,6 +457,18 @@ export async function previewMusicAlbumImportMetadata(
 	);
 }
 
+export async function matchMusicAlbumImportMetadata(
+	importId: string,
+	input: MusicAlbumImportMetadataPreviewInput,
+): Promise<MusicAlbumImport> {
+	return normalizeMusicAlbumImport(
+		await apiPostJson<MusicAlbumImport>(
+			musicV1Endpoints.albumImportMetadataMatch(importId),
+			input,
+		),
+	);
+}
+
 export async function getMusicAlbumImport(
 	importId: string,
 ): Promise<MusicAlbumImport> {

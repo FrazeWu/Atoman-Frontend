@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { parseBlob } from "music-metadata-browser";
+import { parseBlob } from "music-metadata";
 
 const audioExtensions = new Set([
 	"mp3",

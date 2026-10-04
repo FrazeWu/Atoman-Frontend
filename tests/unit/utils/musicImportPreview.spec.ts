@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseBlob } from "music-metadata-browser";
+import { parseBlob } from "music-metadata";
 import {
 	readAlbumImportPreview,
 	shouldIgnoreAlbumImportPath,
@@ -15,7 +15,7 @@ vi.mock("node-unrar-js/esm/js/unrar.wasm?url", () => ({
 	default: "/assets/unrar.wasm",
 }));
 
-vi.mock("music-metadata-browser", () => ({
+vi.mock("music-metadata", () => ({
 	parseBlob: vi.fn(),
 }));
 

@@ -8,6 +8,7 @@ import {
 	completeMusicAlbumImportFilePart,
 	completeMusicAlbumImportFile,
 	completeMusicAlbumImportSession,
+	previewMusicAlbumImportMetadata,
 	registerMusicAlbumImportFiles,
 	getMusicAlbumImport,
 	retryMusicAlbumImportFile,
@@ -91,6 +92,43 @@ function mergeUploadedImportFile(
 				}
 			: file,
 	);
+}
+
+function applyEarlyMetadataPreview(
+	flow: MusicCreationFlowState,
+	preview: Awaited<ReturnType<typeof previewMusicAlbumImportMetadata>>,
+) {
+	const draft = flow.draft.albumImport;
+	if (preview.albumTitle?.trim() && !flow.titleCustomized) {
+		draft.derivedAlbumTitle = preview.albumTitle.trim();
+		flow.draft.albumDetails.title = preview.albumTitle.trim();
+	}
+	if (preview.releaseDate?.trim() && !flow.releaseDateCustomized) {
+		draft.derivedReleaseDate = preview.releaseDate.trim();
+		flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(preview.releaseDate);
+	}
+	if (preview.coverUrl?.trim() && !flow.coverCustomized) {
+		draft.derivedCover = preview.coverUrl.trim();
+		flow.draft.albumDetails.coverUrl = preview.coverUrl.trim();
+	}
+	draft.metadataMatched = preview.matched;
+	draft.metadataSourceUrl = preview.sourceUrl || undefined;
+	draft.metadataSource = preview.metadataSource;
+	draft.metadataExternalId = preview.externalId;
+	draft.metadataMatchStatus = preview.matchStatus || "unmatched";
+	draft.metadataMatchConfidence = preview.matchConfidence ?? 0;
+	draft.metadataError = preview.metadataError || "";
+	draft.metadataGenres = preview.genres ?? [];
+	draft.metadataStyles = preview.styles ?? [];
+	draft.metadataLabels = preview.labels ?? [];
+	draft.metadataCountry = localizedMusicCountry(preview.country);
+	draft.metadataFormats = preview.formats ?? [];
+	draft.metadataSources = preview.sources ?? [];
+	draft.metadataMatchingStarted = true;
+	if (preview.tracks.length) {
+		draft.derivedTracks = preview.tracks;
+		mergeImportedTracksIntoDraft(flow, preview.tracks);
+	}
 }
 
 const uploadStates = new WeakMap<
@@ -716,6 +754,25 @@ export function useAlbumImportUpload() {
 							if (!flow.coverCustomized) {
 								flow.draft.albumDetails.coverUrl = draft.derivedCover;
 							}
+						}
+						if (preview.tracks.length && isCurrent()) {
+							draft.metadataMatchingStarted = true;
+							draft.metadataMatchStatus = "matching";
+							const albumTitle = preview.title.trim() || files[0]?.name.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, "").trim() || "";
+							void previewMusicAlbumImportMetadata({
+								albumTitle,
+								artist: artistName,
+								trackTitles: preview.tracks,
+							}).then((metadata) => {
+								if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
+									applyEarlyMetadataPreview(flow, metadata);
+								}
+							}).catch((error) => {
+								if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
+									draft.metadataMatchStatus = "unmatched";
+									draft.metadataError = error instanceof Error ? error.message : "外部元数据匹配失败";
+								}
+							});
 						}
 				})
 				.catch(() => {

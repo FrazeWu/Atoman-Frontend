@@ -51,6 +51,41 @@ test.describe("Blog", () => {
 		).toBeVisible();
 	});
 
+	test("public post deep link survives refresh on mobile", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.route("**/api/v1/auth/session", (route) =>
+			route.fulfill({ status: 401, json: { error: { code: "auth.unauthorized" } } }),
+		);
+		const post = {
+			id: "post-release-1",
+			user_id: "user-1",
+			title: "发布链路验收文章",
+			content: "这是一篇用于验证公开深链的文章。",
+			summary: "深链刷新测试",
+			status: "published",
+			visibility: "public",
+			pinned: false,
+			created_at: "2026-10-04T09:00:00Z",
+			updated_at: "2026-10-04T09:00:00Z",
+			published_at: "2026-10-04T09:00:00Z",
+		};
+		await page.route("**/api/v1/blog/posts/post-release-1", (route) =>
+			route.fulfill({ status: 200, json: { data: post } }),
+		);
+		await page.route("**/api/v1/blog/posts/post-release-1/related*", (route) =>
+			route.fulfill({ status: 200, json: { data: [] } }),
+		);
+		await page.route("**/api/v1/blog/posts/post-release-1/public-tags", (route) =>
+			route.fulfill({ status: 200, json: { data: [] } }),
+		);
+
+		await page.goto("/posts/post/post-release-1");
+		await expect(page.getByRole("heading", { name: post.title })).toBeVisible();
+		await page.reload();
+		await expect(page).toHaveURL(/\/posts\/post\/post-release-1$/);
+		await expect(page.getByRole("heading", { name: post.title })).toBeVisible();
+	});
+
 	test("create new post as authenticated user", async ({
 		authenticatedPage,
 	}) => {

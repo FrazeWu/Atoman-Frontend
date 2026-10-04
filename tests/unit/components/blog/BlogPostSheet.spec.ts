@@ -10,6 +10,7 @@ import BlogPostSheet from "../../../../src/components/blog/BlogPostSheet.vue";
 import type { BlogPostLayer } from "../../../../src/components/blog/blogSheetTypes";
 import { useBlogSheets } from "../../../../src/composables/useBlogSheets";
 import { useAuthStore } from "../../../../src/stores/auth";
+import { useFeedStore } from "../../../../src/stores/feed";
 
 const layer: BlogPostLayer = {
 	key: "post:post-1",
@@ -284,6 +285,35 @@ describe("BlogPostSheet", () => {
 			event: "open",
 			source: "blog_sheet",
 		});
+	});
+
+	it("文章打开后刷新博客和订阅侧边栏的未读数", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.isAuthenticated = true;
+		const fetchSubscriptionHubTree = vi
+			.spyOn(useFeedStore(), "fetchSubscriptionHubTree")
+			.mockResolvedValue(true);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+		mountedWrappers.push(wrapper);
+		await flushPromises();
+
+		expect(fetchSubscriptionHubTree).toHaveBeenCalledTimes(1);
 	});
 
 	it("shows the rating API error instead of a generic retry prompt", async () => {

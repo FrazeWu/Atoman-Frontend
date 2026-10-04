@@ -663,13 +663,24 @@ async function fetchRecommendations() {
     channels.value = recommendationChannels
 
     if (authStore.isAuthenticated && channels.value.length) {
+      const subscribedChannelIds = new Set(
+        feedStore.subscriptions
+          .filter((subscription) => (
+            subscription.feed_source?.source_type === 'internal_channel'
+            && !subscription.is_paused
+            && Boolean(subscription.feed_source.source_id)
+          ))
+          .map((subscription) => subscription.feed_source?.source_id as string),
+      )
       const subscribedStates = await Promise.all(
         channels.value.map((item) => item.source_type === 'external_rss'
           ? Promise.resolve(feedStore.subscriptions.some((subscription) => (
             subscription.feed_source_id === (item.source_id || item.id)
             || subscription.feed_source?.id === (item.source_id || item.id)
           )))
-          : feedStore.isSubscribedToChannel(item.id)),
+          : feedStore.subscriptionsLoaded
+            ? subscribedChannelIds.has(item.source_id || item.id)
+            : feedStore.isSubscribedToChannel(item.id)),
       )
       channels.value = channels.value.map((item, index) => ({
         ...item,

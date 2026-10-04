@@ -28,6 +28,7 @@ const apiErrorMessage = (payload: unknown, fallback: string) => {
 
 export const createFeedCoreState = () => {
 	const subscriptions = ref<Subscription[]>([]);
+	const subscriptionsLoaded = ref(false);
 	const groups = ref<SubscriptionGroup[]>([]);
 	const starGroups = ref<FeedStarGroup[]>([]);
 	const healthChecking = ref(false);
@@ -48,6 +49,7 @@ export const createFeedCoreState = () => {
 		const token = authStore.token;
 		if (!authStore.isAuthenticated) {
 			subscriptions.value = [];
+			subscriptionsLoaded.value = false;
 			return false;
 		}
 		try {
@@ -69,6 +71,7 @@ export const createFeedCoreState = () => {
 				)
 					return false;
 				subscriptions.value = data.data || [];
+				subscriptionsLoaded.value = true;
 				return true;
 			}
 		} catch (e) {
@@ -604,6 +607,7 @@ export const createFeedCoreState = () => {
 		subscriptionsRequestGeneration += 1;
 		groupsRequestGeneration += 1;
 		subscriptions.value = [];
+		subscriptionsLoaded.value = false;
 		groups.value = [];
 		starGroups.value = [];
 		healthChecking.value = false;
@@ -614,6 +618,7 @@ export const createFeedCoreState = () => {
 
 	return {
 		subscriptions,
+		subscriptionsLoaded,
 		groups,
 		starGroups,
 		healthChecking,

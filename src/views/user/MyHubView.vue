@@ -27,14 +27,7 @@
       </RouterLink>
     </section>
 
-    <section class="my-hub__continue" aria-labelledby="my-hub-continue-title">
-      <div class="my-hub__section-heading">
-        <div>
-          <p class="my-hub__eyebrow">CONTINUE</p>
-          <h2 id="my-hub-continue-title">继续使用</h2>
-        </div>
-        <p>从上次离开的地方继续。</p>
-      </div>
+    <section class="my-hub__continue" aria-label="继续使用">
       <ContentContinueSection module="blog" />
       <ContentContinueSection module="podcast" />
       <ContentContinueSection module="video" />
@@ -346,7 +339,7 @@ onMounted(() => {
 .my-hub h1, .my-hub h2 { margin: 0; }
 .my-hub h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 600; }
 .my-hub__name { margin: 0.2rem 0 0; font-weight: 600; }
-.my-hub__subtitle, .my-hub__section-heading > p { margin: 0.4rem 0 0; color: var(--a-color-muted); }
+.my-hub__subtitle { margin: 0.4rem 0 0; color: var(--a-color-muted); }
 .my-hub__header-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
 .my-hub__shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; padding: 1.5rem 0 2rem; }
 .my-hub__shortcut { display: flex; min-width: 0; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
@@ -355,12 +348,10 @@ onMounted(() => {
 .my-hub__shortcut-copy strong { font-size: 0.9rem; font-weight: 600; }
 .my-hub__shortcut-copy small { overflow: hidden; color: var(--a-color-muted); text-overflow: ellipsis; white-space: nowrap; }
 .my-hub__shortcut-badge { display: grid; min-width: 1.35rem; height: 1.35rem; margin-left: auto; place-items: center; border-radius: 999px; background: var(--a-color-fg); color: var(--a-color-bg); font-size: 0.7rem; }
-.my-hub__section-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 0.5rem; }
-.my-hub__section-heading > p { margin: 0; }
 .my-hub__continue :deep(.continue-section) { margin-bottom: 1rem; }
 @media (max-width: 900px) { .my-hub__shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) {
-  .my-hub__header, .my-hub__section-heading { align-items: flex-start; flex-direction: column; }
+  .my-hub__header { align-items: flex-start; flex-direction: column; }
   .my-hub__header-actions { justify-content: flex-start; }
   .my-hub__shortcuts { grid-template-columns: 1fr; }
 }

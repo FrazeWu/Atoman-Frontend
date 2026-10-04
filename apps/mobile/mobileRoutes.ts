@@ -17,6 +17,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		meta: requiresAuth,
 	},
 	{
+		path: "/me",
+		component: () => import("@/views/user/MyHubView.vue"),
+		meta: requiresAuth,
+	},
+	{
 		path: "/feed",
 		component: () => import("@/views/feed/FeedLayout.vue"),
 		children: [

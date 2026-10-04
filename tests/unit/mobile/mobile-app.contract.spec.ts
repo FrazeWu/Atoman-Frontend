@@ -49,6 +49,7 @@ describe("mobile app route boundary", () => {
 			expect.arrayContaining([
 				"/modules",
 				"/inbox",
+				"/me",
 				"/studio",
 				"/studio/:module(blog|podcast|video)/content",
 				"/studio/:module(blog|podcast|video)/:id/edit",

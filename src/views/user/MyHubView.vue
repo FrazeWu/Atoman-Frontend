@@ -39,6 +39,36 @@
       <ContentContinueSection module="podcast" />
       <ContentContinueSection module="video" />
     </section>
+
+    <section class="my-hub__previews" aria-label="个人内容预览">
+      <MyHubPreviewSection
+        test-id="hub-preview-saved"
+        title="最近收藏"
+        view-all-to="/posts/bookmarks"
+        :items="contentPreviews.saved"
+        :loading="previewsLoading"
+        :error="previewsError"
+        empty-text="还没有收藏内容"
+      />
+      <MyHubPreviewSection
+        test-id="hub-preview-recent"
+        title="最近播放"
+        view-all-to="/music/history"
+        :items="contentPreviews.recent"
+        :loading="previewsLoading"
+        :error="previewsError"
+        empty-text="还没有播放记录"
+      />
+      <MyHubPreviewSection
+        test-id="hub-preview-reading"
+        title="稍后阅读"
+        view-all-to="/feed/reading-list"
+        :items="contentPreviews.reading"
+        :loading="previewsLoading"
+        :error="previewsError"
+        empty-text="稍后阅读列表为空"
+      />
+    </section>
   </main>
 </template>
 
@@ -56,6 +86,7 @@ import {
 } from '@tabler/icons-vue'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
+import MyHubPreviewSection, { type MyHubPreviewItem } from '@/components/content/MyHubPreviewSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import { apiRequestResult } from '@/api/client'
 import { listAlbumBookmarks, listArtistBookmarks, listMusicListeningHistory, listPlaylistBookmarks } from '@/api/musicV1'
@@ -88,13 +119,29 @@ const contentCounts = ref<PersonalContentCounts>({
   podcastBookmarks: null,
 })
 
+const contentPreviews = ref({
+  saved: [] as MyHubPreviewItem[],
+  recent: [] as MyHubPreviewItem[],
+  reading: [] as MyHubPreviewItem[],
+})
+const previewsLoading = ref(false)
+const previewsError = ref(false)
+
 const countLabel = (value: number | null) => value === null ? '' : String(value)
 
 function responseItemsCount(payload: unknown): number {
-  if (Array.isArray(payload)) return payload.length
-  if (!payload || typeof payload !== 'object') return 0
+  return responseItems(payload).length
+}
+
+function responseItems(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) return payload
+  if (!payload || typeof payload !== 'object') return []
   const data = (payload as { data?: unknown }).data
-  return Array.isArray(data) ? data.length : 0
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object' && Array.isArray((data as { items?: unknown[] }).items)) {
+    return (data as { items: unknown[] }).items
+  }
+  return []
 }
 
 async function loadPersonalContentCounts() {
@@ -174,6 +221,100 @@ async function loadPersonalContentCounts() {
   }
 }
 
+async function loadPersonalContentPreviews() {
+  if (!authStore.token && !await authStore.restoreSession()) return
+  const token = authStore.token
+  previewsLoading.value = true
+  previewsError.value = false
+
+  const [savedBlog, savedMedia, reading] = await Promise.all([
+    (async () => {
+      const items: MyHubPreviewItem[] = []
+      try {
+        const response = await apiRequestResult(`${api.blog.bookmarks}?sort=latest`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        for (const bookmark of response.ok ? responseItems(response.data) : []) {
+          const content = (bookmark as { content?: { id?: string; title?: string; cover_url?: string } }).content
+          if (content?.id && content.title) items.push({ id: `blog:${content.id}`, title: content.title, subtitle: '博客', coverUrl: content.cover_url, to: `/posts/post/${content.id}` })
+        }
+      } catch {
+        previewsError.value = true
+      }
+      return items.slice(0, 6)
+    })(),
+    (async () => {
+      const items: MyHubPreviewItem[] = []
+      const recentItems: MyHubPreviewItem[] = []
+      try {
+        const [albums, artists, playlists, podcasts, history] = await Promise.all([
+          listAlbumBookmarks({ sort: 'latest', page: 1, page_size: 6 }),
+          listArtistBookmarks({ sort: 'latest', page: 1, page_size: 6 }),
+          listPlaylistBookmarks({ sort: 'latest', page: 1, page_size: 6 }),
+          getPodcastBookmarks<{ data?: Array<{ id: string; episode?: { id: string; post?: { title?: string }; episode_cover_url?: string } }> }>('favorite', token ?? undefined),
+          listMusicListeningHistory({ page: 1, page_size: 6 }),
+        ])
+        albums.data.forEach((bookmark) => {
+          if (bookmark.album) items.push({ id: `album:${bookmark.album.id}`, title: bookmark.album.title, subtitle: '音乐专辑', coverUrl: bookmark.album.cover_url, to: `/music/album/${bookmark.album.id}` })
+        })
+        artists.data.forEach((bookmark) => {
+          if (bookmark.artist) items.push({ id: `artist:${bookmark.artist.id}`, title: bookmark.artist.name, subtitle: '音乐艺术家', coverUrl: bookmark.artist.image_url, to: `/music/artist/${bookmark.artist.id}` })
+        })
+        playlists.data.forEach((bookmark) => {
+          if (bookmark.playlist) items.push({ id: `playlist:${bookmark.playlist.id}`, title: bookmark.playlist.name, subtitle: '音乐歌单', coverUrl: bookmark.playlist.cover_url, to: `/music/playlist/${bookmark.playlist.id}` })
+        })
+        for (const bookmark of podcasts.data || []) {
+          const episode = bookmark.episode
+          if (episode?.id) items.push({ id: `podcast:${episode.id}`, title: episode.post?.title || '未命名播客', subtitle: '播客', coverUrl: episode.episode_cover_url, to: `/podcasts/episode/${episode.id}` })
+        }
+        history.data.forEach((item) => {
+          if (item.song) recentItems.push({
+            id: `history:${item.id}`,
+            title: item.song.title,
+            subtitle: item.song.artists?.map((artist) => artist.name).join(' / ') || '音乐',
+            coverUrl: item.song.cover_url || item.song.album?.cover_url,
+            to: `/music/song/${item.song.id}`,
+          })
+        })
+      } catch {
+        previewsError.value = true
+      }
+      try {
+        await videoBookmarks.load()
+        Object.values(videoBookmarks.records.value).forEach((bookmark) => {
+          if (bookmark.video) items.push({ id: `video:${bookmark.video.id}`, title: bookmark.video.title, subtitle: '视频', coverUrl: bookmark.video.thumbnail_url, to: `/videos/watch/${bookmark.video.id}` })
+        })
+      } catch {
+        previewsError.value = true
+      }
+      return { saved: items.slice(0, 6), recent: recentItems.slice(0, 6) }
+    })(),
+    (async () => {
+      const items: MyHubPreviewItem[] = []
+      try {
+        const response = await apiRequestResult(`${api.url}/feed/reading-list?page=1&limit=6`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        for (const entry of response.ok ? responseItems(response.data) : []) {
+          const row = entry as { target_type?: string; target_id?: string; post?: { id?: string; title?: string; cover_url?: string }; feed_item?: { id?: string; title?: string; image_url?: string; feed_source?: { title?: string } } }
+          if (row.feed_item?.id && row.feed_item.title) items.push({ id: `feed:${row.feed_item.id}`, title: row.feed_item.title, subtitle: row.feed_item.feed_source?.title || '订阅文章', coverUrl: row.feed_item.image_url, to: `/feed/item/${row.feed_item.id}` })
+          else if (row.post?.id && row.post.title) items.push({ id: `post:${row.post.id}`, title: row.post.title, subtitle: '博客文章', coverUrl: row.post.cover_url, to: `/posts/post/${row.post.id}` })
+        }
+      } catch {
+        previewsError.value = true
+      }
+      return items.slice(0, 6)
+    })(),
+  ])
+
+  contentPreviews.value = {
+    saved: [savedBlog[0], ...savedMedia.saved].filter((item): item is MyHubPreviewItem => Boolean(item)).slice(0, 6),
+    recent: savedMedia.recent,
+    reading,
+  }
+  previewsLoading.value = false
+}
+
 const username = computed(() => authStore.user?.username || '')
 const displayName = computed(() => authStore.user?.display_name || username.value || '用户')
 const profilePath = computed(() => `/users/${username.value}`)
@@ -192,7 +333,7 @@ const shortcuts = computed(() => [
 ])
 
 onMounted(() => {
-  void loadPersonalContentCounts()
+  void loadPersonalContentCounts().then(() => loadPersonalContentPreviews())
 })
 </script>
 

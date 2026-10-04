@@ -1,11 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { defineComponent, ref } from 'vue'
+import { defineComponent } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 
-const { apiRequestResult, videoLoad } = vi.hoisted(() => ({
+const { apiRequestResult, videoLoad, videoRecords } = vi.hoisted(() => ({
   apiRequestResult: vi.fn(),
   videoLoad: vi.fn(),
+  videoRecords: { value: {} as Record<string, unknown> },
 }))
 
 vi.mock('@/api/client', () => ({ apiRequestResult }))
@@ -19,7 +20,7 @@ vi.mock('@/api/musicV1', () => ({
 vi.mock('@/api/podcast', () => ({ getPodcastBookmarks: vi.fn() }))
 vi.mock('@/composables/useVideoBookmarks', () => ({
   useVideoBookmarks: () => ({
-    records: ref({}),
+    records: videoRecords,
     load: videoLoad,
   }),
 }))
@@ -43,15 +44,22 @@ describe('MyHubView', () => {
     const { getPodcastBookmarks } = await import('@/api/podcast')
 
     apiRequestResult.mockImplementation((url: string) => {
-      if (url.endsWith('/blog/bookmarks')) return Promise.resolve({ ok: true, data: { data: [{ id: 'blog-1' }, { id: 'blog-2' }] } })
-      if (url.includes('/feed/reading-list')) return Promise.resolve({ ok: true, data: { meta: { total: 4 } } })
+      if (url.includes('/blog/bookmarks')) return Promise.resolve({ ok: true, data: { data: [
+        { id: 'blog-1', content: { id: 'post-1', title: '博客文章一', cover_url: '/post-1.jpg' } },
+        { id: 'blog-2', content: { id: 'post-2', title: '博客文章二' } },
+      ] } })
+      if (url.includes('/feed/reading-list')) return Promise.resolve({ ok: true, data: {
+        meta: { total: 4 },
+        data: [{ target_type: 'post', target_id: 'reading-1', post: { id: 'reading-1', title: '稍后阅读一', cover_url: '/reading-1.jpg' } }],
+      } })
       return Promise.resolve({ ok: true, data: { data: [] } })
     })
-    vi.mocked(listAlbumBookmarks).mockResolvedValue({ data: [{ id: 'album-1' }], meta: { total: 1 } } as never)
-    vi.mocked(listArtistBookmarks).mockResolvedValue({ data: [{ id: 'artist-1' }, { id: 'artist-2' }], meta: { total: 2 } } as never)
-    vi.mocked(listPlaylistBookmarks).mockResolvedValue({ data: [], meta: { total: 3 } } as never)
-    vi.mocked(listMusicListeningHistory).mockResolvedValue({ data: [], meta: { total: 7 } } as never)
-    vi.mocked(getPodcastBookmarks).mockResolvedValue({ data: [{ id: 'podcast-1' }] })
+    vi.mocked(listAlbumBookmarks).mockResolvedValue({ data: [{ id: 'album-1', album: { id: 'album-1', title: '收藏专辑', cover_url: '/album-1.jpg' } }], meta: { total: 1 } } as never)
+    vi.mocked(listArtistBookmarks).mockResolvedValue({ data: [{ id: 'artist-1', artist: { id: 'artist-1', name: '收藏艺术家' } }, { id: 'artist-2' }], meta: { total: 2 } } as never)
+    vi.mocked(listPlaylistBookmarks).mockResolvedValue({ data: [{ id: 'playlist-1', playlist: { id: 'playlist-1', name: '收藏歌单' } }], meta: { total: 3 } } as never)
+    vi.mocked(listMusicListeningHistory).mockResolvedValue({ data: [{ id: 'history-1', song: { id: 'song-1', title: '最近播放歌曲', artists: [{ id: 'artist-1', name: '歌手一' }], album: { id: 'album-1', title: '专辑一' } } }], meta: { total: 7 } } as never)
+    vi.mocked(getPodcastBookmarks).mockResolvedValue({ data: [{ id: 'podcast-1', episode: { id: 'episode-1', post: { title: '收藏播客' }, episode_cover_url: '/podcast-1.jpg' } }] })
+    videoRecords.value = { 'video-1': { id: 'video-bookmark-1', video_id: 'video-1', video: { id: 'video-1', title: '收藏视频', thumbnail_url: '/video-1.jpg' } } }
     videoLoad.mockResolvedValue(undefined)
 
     const pinia = createPinia()
@@ -84,8 +92,15 @@ describe('MyHubView', () => {
     expect(wrapper.get('a[href="/posts/bookmarks"]').text()).toContain('2')
     expect(wrapper.get('a[href="/music/bookmarks"]').text()).toContain('6')
     expect(wrapper.get('a[href="/music/history"]').text()).toContain('7')
-    expect(wrapper.get('a[href="/videos/favorites"]').text()).toContain('0')
+    expect(wrapper.get('a[href="/videos/favorites"]').text()).toContain('1')
     expect(wrapper.get('a[href="/podcasts/favorites"]').text()).toContain('1')
+    expect(wrapper.get('[data-testid="hub-preview-saved"]').text()).toContain('博客文章一')
+    expect(wrapper.get('[data-testid="hub-preview-saved"]').text()).toContain('收藏专辑')
+    expect(wrapper.get('[data-testid="hub-preview-saved"]').text()).toContain('收藏视频')
+    expect(wrapper.get('[data-testid="hub-preview-saved"]').text()).toContain('收藏播客')
+    expect(wrapper.get('[data-testid="hub-preview-recent"]').text()).toContain('最近播放歌曲')
+    expect(wrapper.get('[data-testid="hub-preview-reading"]').text()).toContain('稍后阅读一')
+    expect(wrapper.get('[data-testid="hub-preview-reading"] a[href="/feed/reading-list"]').exists()).toBe(true)
   })
 
   it('keeps failed content counts hidden without blocking the hub', async () => {

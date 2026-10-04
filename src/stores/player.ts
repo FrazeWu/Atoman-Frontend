@@ -29,7 +29,12 @@ import {
 	resolvePlayableAudioURL,
 	resolveUploadedMediaURL,
 } from "@/utils/mediaUrl";
-import { hasPlayableMusicAudio } from "@/utils/musicMedia";
+import {
+	compactPlaybackSong,
+	hasPlayableAudio,
+	normalizePlaybackSong,
+	playbackItemKey,
+} from "@/utils/playerState";
 
 const api = useApi();
 const audioStartPrefetchBytes = 512 * 1024;
@@ -49,28 +54,6 @@ type PersistedPlaybackState = {
 
 function resolvePlaybackAudioUrl(url: string) {
 	return resolvePlayableAudioURL(url, api.url);
-}
-
-function normalizePlaybackSong(song: Song) {
-	return { ...song, audio_url: resolvePlaybackAudioUrl(song.audio_url) };
-}
-
-function hasPlayableAudio(song: Song | null | undefined) {
-	if (!song) return false;
-	if (song.source_type && song.source_type !== "music") {
-		return Boolean(song.audio_url?.trim());
-	}
-	return hasPlayableMusicAudio(song);
-}
-
-function compactPlaybackSong(song: Song): Song {
-	const { lyrics: _lyrics, waveform_peaks: _waveformPeaks, ...compact } = song;
-	return compact as Song;
-}
-
-function playbackItemKey(song: Song) {
-	const sourceType = song.source_type || "music";
-	return `${sourceType}:${song.source_id || song.id}`;
 }
 
 export const usePlayerStore = defineStore("player", () => {
@@ -281,7 +264,7 @@ export const usePlayerStore = defineStore("player", () => {
 			waveform_peaks: source.waveform_peaks,
 			track_number: source.track_number,
 			status: "open",
-		} as Song);
+		} as Song, resolvePlaybackAudioUrl);
 
 	const restoreMusicSession = async () => {
 		if (!authStore.isAuthenticated || musicSessionRestored) return false;
@@ -732,7 +715,7 @@ export const usePlayerStore = defineStore("player", () => {
 		);
 		if (!refreshedSong) return;
 
-		const normalizedSong = normalizePlaybackSong(refreshedSong);
+		const normalizedSong = normalizePlaybackSong(refreshedSong, resolvePlaybackAudioUrl);
 		currentSong.value = normalizedSong;
 
 		if (!audio) return;
@@ -819,10 +802,10 @@ export const usePlayerStore = defineStore("player", () => {
 			currentTime.value =
 				typeof state.currentTime === "number" ? state.currentTime : 0;
 			const restoredSong = hasPlayableAudio(state.song)
-				? normalizePlaybackSong(state.song!)
+				? normalizePlaybackSong(state.song!, resolvePlaybackAudioUrl)
 				: null;
 			const restoredQueue = Array.isArray(state.queue)
-				? state.queue.filter(hasPlayableAudio).map(normalizePlaybackSong)
+				? state.queue.filter(hasPlayableAudio).map((song) => normalizePlaybackSong(song, resolvePlaybackAudioUrl))
 				: restoredSong
 					? [restoredSong]
 					: [];
@@ -904,7 +887,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const startSong = (song: Song, startAt?: number, persistPrevious = true) => {
-		const normalizedSong = normalizePlaybackSong(song);
+		const normalizedSong = normalizePlaybackSong(song, resolvePlaybackAudioUrl);
 		if (!hasPlayableAudio(normalizedSong)) {
 			currentSong.value = null;
 			queue.value = queue.value.filter(hasPlayableAudio);

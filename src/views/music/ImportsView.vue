@@ -65,8 +65,9 @@ const importGroups = computed(() => {
 
 const visibleImports = computed(() => importGroups.value[activeGroup.value])
 const selectedImport = computed(
-  () => visibleImports.value.find((item) => item.importId === selectedId.value)
-    ?? (selectedId.value ? importSnapshots.value[selectedId.value] ?? null : null),
+	() => (selectedId.value ? importSnapshots.value[selectedId.value] : null)
+		?? visibleImports.value.find((item) => item.importId === selectedId.value)
+		?? null,
 )
 
 watch(activeGroup, () => {
@@ -129,36 +130,13 @@ function formatDate(isoString?: string): string {
 async function loadImports(silent = false, nextPage = page.value) {
   const request = importRequests.beginRequest()
   if (!silent) loading.value = true;
-  errorMessage.value = "";
-  try {
-    const rawImports: MusicAlbumImport[] = []
-    let rawPage = 1
-    let rawHasMore = true
-    while (rawHasMore) {
-      const response = await listMusicAlbumImports({ page: rawPage, page_size: 100 })
-      if (!request.isCurrent()) return
-      rawImports.push(...response.data)
-      rawHasMore = response.meta.has_more
-      rawPage += 1
-    }
-    const allImports = submittedMusicAlbumImports(rawImports)
-    const start = (nextPage - 1) * importPageSize
-    const nextImports = allImports.slice(start, start + importPageSize)
-    imports.value = nextImports
-    importSnapshots.value = allImports.reduce<Record<string, MusicAlbumImport>>(
-      (snapshots, item) => {
-        snapshots[item.importId] = item
-        return snapshots
-      },
-      { ...importSnapshots.value },
-    )
-    page.value = nextPage
-    importsMeta.value = {
-      page: nextPage,
-      page_size: importPageSize,
-      total: allImports.length,
-      has_more: start + importPageSize < allImports.length,
-    }
+	errorMessage.value = "";
+	try {
+		const response = await listMusicAlbumImports({ page: nextPage, page_size: importPageSize })
+		if (!request.isCurrent()) return
+		imports.value = submittedMusicAlbumImports(response.data)
+		page.value = nextPage
+		importsMeta.value = response.meta
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
     if (selected) {
       activeGroup.value = musicImportGroupForStatus(selected.status)
@@ -169,19 +147,7 @@ async function loadImports(silent = false, nextPage = page.value) {
     ) {
       selectedId.value = visibleImports.value[0]?.importId ?? null;
     }
-    if (selectedId.value && !albumImports.value.some((item) => item.importId === selectedId.value)) {
-      try {
-        const detail = await getMusicAlbumImport(selectedId.value)
-        if (request.isCurrent() && detail) {
-          importSnapshots.value = {
-            ...importSnapshots.value,
-            [detail.importId]: detail,
-          }
-        }
-      } catch {
-        // The last known snapshot keeps the detail pane usable during a transient list/detail mismatch.
-      }
-    }
+	if (selectedId.value) await loadImportDetail(selectedId.value, request)
   } catch {
     if (request.isCurrent() && !silent) errorMessage.value = "导入记录加载失败";
   } finally {
@@ -190,6 +156,22 @@ async function loadImports(silent = false, nextPage = page.value) {
       checkPollState()
     }
   }
+}
+
+async function loadImportDetail(importId: string, request = importRequests.beginRequest()) {
+	try {
+		const detail = await getMusicAlbumImport(importId)
+		if (request.isCurrent() && detail) {
+			importSnapshots.value = { ...importSnapshots.value, [detail.importId]: detail }
+		}
+	} catch {
+		// Keep the lightweight list item visible during a transient detail failure.
+	}
+}
+
+async function selectImport(importId: string) {
+	selectedId.value = importId
+	if (!importSnapshots.value[importId]) await loadImportDetail(importId)
 }
 
 async function deleteRecord() {
@@ -498,14 +480,14 @@ function continueImport() {
                 item.importId === selectedId,
             },
           ]"
-          @click="selectedId = item.importId"
+          @click="selectImport(item.importId)"
         >
           <div class="item-header">
             <strong>{{ musicImportAlbumTitle(item) }}</strong>
             <span class="status-badge" :data-status="item.status">{{ statusText[item.status] ?? item.status }}</span>
           </div>
           <div class="item-sub">
-            <small v-if="item.derivedTracks.length">{{ item.derivedTracks.length }} 首曲目</small>
+            <small v-if="item.trackCount">{{ item.trackCount }} 首曲目</small>
             <small v-if="item.archiveName" class="archive-name">{{ item.archiveName }}</small>
             <small v-if="formatDate(item.lastSyncedAt)" class="sync-time">{{ formatDate(item.lastSyncedAt) }}</small>
           </div>

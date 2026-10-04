@@ -1423,7 +1423,7 @@ async function completeCreation() {
             关闭
           </button>
           <button
-            v-if="creationFlow.mode !== 'edit' && creationFlow.step !== 'artist'"
+            v-if="creationFlow.mode !== 'edit' && creationFlow.step !== 'artist' && (creationFlow.step !== 'albumImport' || creationFlow.artistFirstFlow)"
             data-testid="album-details-back-button"
             type="button"
             class="ui-action"

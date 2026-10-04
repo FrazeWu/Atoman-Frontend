@@ -316,6 +316,12 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(wrapper.get('[data-testid="artist-next-button"]').attributes("disabled")).toBeDefined();
 	});
 
+	it("直接添加专辑时上传页不显示返回上一步", () => {
+		const wrapper = mount(MusicCreationFlowDrawer);
+
+		expect(wrapper.find('[data-testid="album-details-back-button"]').exists()).toBe(false);
+	});
+
 	it("导入匹配失败后保留本地曲目并停留填写页", async () => {
 		const flow = createFlowState({ step: "albumDetails" });
 		flow.draft.albumImport.status = "failed";

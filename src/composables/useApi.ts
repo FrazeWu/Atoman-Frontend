@@ -96,6 +96,8 @@ export function useApi() {
 			post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,
 			postPublicTags: (id: number | string) => `${apiUrl}/blog/posts/${id}/public-tags`,
 			postPublicTag: (id: number | string, tagId: number | string) => `${apiUrl}/blog/posts/${id}/public-tags/${tagId}`,
+			postReports: (id: number | string) => `${apiUrl}/blog/posts/${id}/reports`,
+			postAppeals: (id: number | string) => `${apiUrl}/blog/posts/${id}/appeals`,
 			postRating: (id: number | string) => `${apiUrl}/blog/posts/${id}/rating`,
 			postPublish: (id: number | string) => `${apiUrl}/blog/posts/${id}/publish`,
 			postUnpublish: (id: number | string) =>

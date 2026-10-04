@@ -96,6 +96,11 @@ const bookmarkFolderError = ref('')
 const publicTagInput = ref('')
 const publicTagLoading = ref(false)
 const publicTagError = ref('')
+const reportOpen = ref(false)
+const reportReason = ref('spam')
+const reportNote = ref('')
+const reportLoading = ref(false)
+const reportMessage = ref('')
 
 let loadSequence = 0
 let ratingOperationSequence = 0
@@ -619,6 +624,28 @@ async function removePublicTag(tag: NonNullable<Post['public_tags']>[number]) {
   }
 }
 
+async function reportPost() {
+  if (!post.value || !authStore.isAuthenticated || reportLoading.value) return
+  reportLoading.value = true
+  reportMessage.value = ''
+  try {
+    const response = await apiRequestResult(api.blog.postReports(post.value.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ reason: reportReason.value, note: reportNote.value.trim() }),
+    })
+    if (!response.ok) {
+      reportMessage.value = response.error?.message || '举报失败'
+      return
+    }
+    reportOpen.value = false
+    reportNote.value = ''
+    reportMessage.value = '举报已提交，感谢你的反馈'
+  } finally {
+    reportLoading.value = false
+  }
+}
+
 function openComments() {
   commentSheetMode.value = 'partial'
   commentsOpen.value = true
@@ -776,8 +803,21 @@ defineExpose({
         <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Bookmark :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
         <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleReadingList"><Clock :size="15" aria-hidden="true" />{{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}</PButton>
         <PButton variant="secondary" size="sm" @click="sharePost">分享</PButton>
+        <PButton v-if="authStore.isAuthenticated && !isOwner" variant="ghost" size="sm" @click="reportOpen = !reportOpen">举报</PButton>
         <a v-if="!isSheet && post.user?.username" :href="api.rss.user(post.user.username)" target="_blank" class="a-link post-detail-toolbar__rss">RSS ↗</a>
       </div>
+      <form v-if="reportOpen" class="post-report-form" @submit.prevent="reportPost">
+        <select v-model="reportReason" aria-label="举报理由">
+          <option value="spam">垃圾内容</option>
+          <option value="harassment">骚扰或仇恨</option>
+          <option value="copyright">版权问题</option>
+          <option value="misinformation">错误信息</option>
+          <option value="other">其他</option>
+        </select>
+        <input v-model="reportNote" maxlength="500" placeholder="补充说明（可选）" aria-label="举报补充说明" />
+        <PButton type="submit" size="sm" variant="primary" :loading="reportLoading">提交举报</PButton>
+      </form>
+      <p v-if="reportMessage" class="post-report-message" role="status">{{ reportMessage }}</p>
       <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
     </article>
     <PDiscussionFAB v-if="post && isActiveSheet && !commentsOpen" :count="activeCommentCount" @click="openComments" />
@@ -904,6 +944,10 @@ defineExpose({
 .post-public-tag-form { display: inline-flex; align-items: center; gap: 0.25rem; }
 .post-public-tag-form input { width: 8rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-fg); padding: 0.35rem 0.5rem; font-size: 0.78rem; }
 .post-public-tag-error { margin: 0.25rem 0 0; color: var(--a-color-danger); font-size: 0.78rem; }
+.post-report-form { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.post-report-form select, .post-report-form input { min-height: 2rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-fg); padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+.post-report-form input { flex: 1 1 12rem; }
+.post-report-message { margin: 0.35rem 0 0; color: var(--a-color-muted); font-size: 0.8rem; }
 .post-sheet-content { max-width: 46rem; margin: 0 auto; }
 .prose-blog :deep(h1), .prose-blog :deep(h3), .prose-blog :deep(h4) { font-weight: 500; letter-spacing: 0; margin: 2rem 0 1rem; line-height: 1.25; }
 .prose-blog :deep(h1) { font-size: 2rem; }

@@ -161,6 +161,12 @@
                   no-dot
                   :label="streamItem.post.recommendationReason"
                 />
+                <PBadge
+                  v-if="streamItem.post.publicTagCount"
+                  type="info"
+                  no-dot
+                  :label="`公共标签 ${streamItem.post.publicTagCount}`"
+                />
               </template>
               <template #source-action>
                 <PButton
@@ -315,6 +321,7 @@ interface BlogHomeListItem {
   sourceTitle?: string
   targetPath: string
   recommendationReason?: string
+  publicTagCount?: number
 }
 
 interface RecommendationPayload {
@@ -338,6 +345,7 @@ interface RecommendationPayload {
   bookmarks_count?: number
   likes_count?: number
   comments_count?: number
+  public_tag_count?: number
   created_at?: string
   published_at?: string
   user?: BlogHomeListItem['user']
@@ -861,6 +869,7 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
           bookmarks_count: item.bookmarks_count ?? item.bookmark_count ?? 0,
           likes_count: item.likes_count ?? 0,
           comments_count: item.comments_count ?? 0,
+          publicTagCount: item.public_tag_count ?? 0,
           user: item.user,
           channel: item.channel,
           source,

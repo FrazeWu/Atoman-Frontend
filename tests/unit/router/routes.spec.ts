@@ -92,6 +92,13 @@ describe('host-scoped route tables', () => {
     expect(appRoutePaths).not.toContain('/feed/inbox')
   })
 
+  it('registers the personal hub as an authenticated top-level route', () => {
+    const personalRoute = buildAppRoutes().find((route) => route.path === '/me')
+
+    expect(personalRoute?.meta?.requiresAuth).toBe(true)
+    expect(lazyImportPath(personalRoute?.component)).toContain('MyHubView.vue')
+  })
+
   it('redirects legacy post links to the canonical blog route', () => {
     const legacyPostRoute = buildAppRoutes().find((route) => route.path === '/post/:id')
     const redirect = legacyPostRoute?.redirect

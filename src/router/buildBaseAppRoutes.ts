@@ -55,6 +55,7 @@ export function buildBaseAppRoutes(extraRoutes: RouteRecordRaw[] = []): RouteRec
       }),
     },
     { path: '/notes', redirect: '/posts/notes' },
+    { path: '/me', component: () => import('@/views/user/MyHubView.vue'), meta: { requiresAuth: true } },
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
     { path: '/dev/showcase', component: () => import('@/views/dev/InteractionShowcaseView.vue') },

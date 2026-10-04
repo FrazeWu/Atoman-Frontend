@@ -343,6 +343,23 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(wrapper.text()).toContain("已选中 IGOR");
 	});
 
+	it("元信息匹配完成但上传仍在进行时自动进入信息页", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "uploading",
+			stage: "upload",
+			metadataSource: "discogs",
+			metadataSourceUrl: "https://www.discogs.com/release/chrysanthemum",
+			metadataExternalId: "release-1",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+		}));
+
+		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
+	});
+
 	it("后端已进入信息页时使用快照中的匹配结果", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";

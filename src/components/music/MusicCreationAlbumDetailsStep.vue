@@ -53,6 +53,8 @@ const importedMetadata = computed(() => {
   ].filter(([, value]) => value)
 })
 const matchedTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.source === 'matched'))
+const matchedGenreTags = computed(() => matchedTags.value.filter((tag) => tag.kind === 'type'))
+const matchedStyleTags = computed(() => matchedTags.value.filter((tag) => tag.kind === 'mood'))
 const customTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.source === 'custom'))
 
 function addCustomTag() {
@@ -626,11 +628,23 @@ watch(
           </div>
 
           <section class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
-            <div class="album-tags-editor__row">
-              <span class="field-label">匹配标签</span>
+            <div class="album-tags-editor__row" data-testid="album-matched-genres-row">
+              <span class="field-label">匹配风格</span>
               <div class="album-tags-editor__items">
-                <span v-if="!matchedTags.length" class="album-tags-editor__empty">未匹配到标签</span>
-                <span v-for="tag in matchedTags" :key="`matched-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`matched-album-tag-${tag.name}`">
+                <span v-if="!matchedGenreTags.length" class="album-tags-editor__empty">未匹配到风格</span>
+                <span v-for="tag in matchedGenreTags" :key="`matched-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`matched-album-tag-${tag.name}`">
+                  {{ tag.name }}
+                  <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
+                    <X :size="13" aria-hidden="true" />
+                  </button>
+                </span>
+              </div>
+            </div>
+            <div class="album-tags-editor__row" data-testid="album-matched-styles-row">
+              <span class="field-label">匹配场景</span>
+              <div class="album-tags-editor__items">
+                <span v-if="!matchedStyleTags.length" class="album-tags-editor__empty">未匹配到场景</span>
+                <span v-for="tag in matchedStyleTags" :key="`matched-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`matched-album-tag-${tag.name}`">
                   {{ tag.name }}
                   <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
                     <X :size="13" aria-hidden="true" />

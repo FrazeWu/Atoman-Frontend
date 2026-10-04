@@ -89,9 +89,15 @@ export function useApi() {
 			recommendationFeedback: `${apiUrl}/blog/recommendation-feedback`,
 			recommendationFeedbackItem: (id: number | string) =>
 				`${apiUrl}/blog/recommendation-feedback/${id}`,
+			recommendationPreference: `${apiUrl}/blog/recommendation-preference`,
+			recommendationData: `${apiUrl}/blog/recommendation-data`,
 			digest: `${apiUrl}/blog/digest`,
 			relatedPosts: (id: number | string) => `${apiUrl}/blog/posts/${id}/related`,
 			post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,
+			postPublicTags: (id: number | string) => `${apiUrl}/blog/posts/${id}/public-tags`,
+			postPublicTag: (id: number | string, tagId: number | string) => `${apiUrl}/blog/posts/${id}/public-tags/${tagId}`,
+			postReports: (id: number | string) => `${apiUrl}/blog/posts/${id}/reports`,
+			postAppeals: (id: number | string) => `${apiUrl}/blog/posts/${id}/appeals`,
 			postRating: (id: number | string) => `${apiUrl}/blog/posts/${id}/rating`,
 			postPublish: (id: number | string) => `${apiUrl}/blog/posts/${id}/publish`,
 			postUnpublish: (id: number | string) =>

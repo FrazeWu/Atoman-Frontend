@@ -3,6 +3,12 @@
     <PPageHeader title="发现" accent>
       <template #action>
         <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
+        <div v-else class="blog-home__preference-actions">
+          <PButton size="sm" variant="ghost" :loading="recommendationPreferenceLoading" @click="toggleRecommendationPreference">
+            {{ personalizedRecommendations ? '个性化推荐：开' : '个性化推荐：关' }}
+          </PButton>
+          <PButton size="sm" variant="ghost" :loading="recommendationPreferenceLoading" @click="clearRecommendationData">清除推荐数据</PButton>
+        </div>
       </template>
     </PPageHeader>
 
@@ -154,6 +160,12 @@
                   type="info"
                   no-dot
                   :label="streamItem.post.recommendationReason"
+                />
+                <PBadge
+                  v-if="streamItem.post.publicTagCount"
+                  type="info"
+                  no-dot
+                  :label="`公共标签 ${streamItem.post.publicTagCount}`"
                 />
               </template>
               <template #source-action>
@@ -309,6 +321,7 @@ interface BlogHomeListItem {
   sourceTitle?: string
   targetPath: string
   recommendationReason?: string
+  publicTagCount?: number
 }
 
 interface RecommendationPayload {
@@ -332,6 +345,7 @@ interface RecommendationPayload {
   bookmarks_count?: number
   likes_count?: number
   comments_count?: number
+  public_tag_count?: number
   created_at?: string
   published_at?: string
   user?: BlogHomeListItem['user']
@@ -393,6 +407,8 @@ const digestError = ref(false)
 const hiddenRecommendation = ref<BlogHomeListItem | null>(null)
 const hidingPostId = ref<string | null>(null)
 const feedbackError = ref('')
+const personalizedRecommendations = ref(true)
+const recommendationPreferenceLoading = ref(false)
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
@@ -421,6 +437,43 @@ const searchChannelID = ref(typeof queryValue(route.query.channel_id) === 'strin
 const searchCollectionID = ref(typeof queryValue(route.query.collection_id) === 'string' ? queryValue(route.query.collection_id) as string : '')
 let postsRequestSequence = 0
 const recordedImpressions = new Set<string>()
+
+async function loadRecommendationPreference() {
+  if (!authStore.isAuthenticated) return
+  const response = await apiRequestResult(api.blog.recommendationPreference, { headers: { Authorization: `Bearer ${authStore.token}` } })
+  if (!response.ok) return
+  const payload = await Promise.resolve(response.data) as { data?: { enabled?: boolean } }
+  personalizedRecommendations.value = payload.data?.enabled !== false
+}
+
+async function toggleRecommendationPreference() {
+  if (!authStore.isAuthenticated || recommendationPreferenceLoading.value) return
+  recommendationPreferenceLoading.value = true
+  try {
+    const next = !personalizedRecommendations.value
+    const response = await apiRequestResult(api.blog.recommendationPreference, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+      body: JSON.stringify({ enabled: next }),
+    })
+    if (!response.ok) return
+    personalizedRecommendations.value = next
+    if (!isSearchMode.value) await fetchPosts()
+  } finally {
+    recommendationPreferenceLoading.value = false
+  }
+}
+
+async function clearRecommendationData() {
+  if (!authStore.isAuthenticated || recommendationPreferenceLoading.value) return
+  recommendationPreferenceLoading.value = true
+  try {
+    const response = await apiRequestResult(api.blog.recommendationData, { method: 'DELETE', headers: { Authorization: `Bearer ${authStore.token}` } })
+    if (response.ok && !isSearchMode.value) await fetchPosts()
+  } finally {
+    recommendationPreferenceLoading.value = false
+  }
+}
 
 const recordPostImpressions = (items: BlogHomeListItem[]) => {
   const source = isSearchMode.value
@@ -816,6 +869,7 @@ const fetchPosts = async (append = false, requestedPage?: number) => {
           bookmarks_count: item.bookmarks_count ?? item.bookmark_count ?? 0,
           likes_count: item.likes_count ?? 0,
           comments_count: item.comments_count ?? 0,
+          publicTagCount: item.public_tag_count ?? 0,
           user: item.user,
           channel: item.channel,
           source,
@@ -855,6 +909,7 @@ const loadMore = () => {
 onMounted(() => {
   void Promise.all([fetchPosts(), fetchShortNotes(), fetchChannels(), fetchSearchCollections(searchChannelID.value), fetchDigest()])
   if (authStore.isAuthenticated) {
+    void loadRecommendationPreference()
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchStarredIds()
     void feedStore.fetchReadingListIds()
@@ -1004,6 +1059,14 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1.5rem;
+}
+
+.blog-home__preference-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .blog-home__filter-group--search {

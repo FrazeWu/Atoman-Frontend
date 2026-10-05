@@ -41,6 +41,7 @@ import { desktopAppBaseUrl } from '@/utils/desktopAppUrl'
 import { resolveSiteContext } from '@/router/siteContext'
 import type { ModuleRoomKey } from '@atoman/module-config'
 import { MOBILE_MODULES } from './mobileInitialRoutes'
+import { isMobileDetailRoute } from './mobileRouteMeta'
 
 const availableModules: ModuleRoomKey[] = [...MOBILE_MODULES]
 const availableModuleSet = new Set<ModuleRoomKey>(availableModules)
@@ -69,7 +70,7 @@ const mobileModuleLabel = computed(() => {
   if (mobileModule.value === 'music') return '音乐'
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/|feed\/item\/|post\/|posts\/(?:post\/|channel\/|notes\/[^/]+)|channel\/|collection\/|channels\/|users\/|music\/(?:tags\/|player|lyrics|artist\/|album\/|song\/|playlist\/)|videos\/watch\/)/.test(route.path)))
+const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || isMobileDetailRoute(route.path) || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/)/.test(route.path)))
 
 const goBack = () => {
   if (route.path === '/modules') {

@@ -381,6 +381,22 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.text()).toContain("其他艺术家");
 	});
 
+	it("does not render albums without an artist", async () => {
+		mocks.listMusicAlbums.mockReset();
+		mocks.listMusicAlbums.mockResolvedValueOnce({
+			data: [{ id: "unknown", title: "没有艺术家的专辑", artists: [] }],
+			meta: { page: 1, page_size: 24, total: 1, has_more: false },
+		});
+
+		const wrapper = mount(DiscoverView, {
+			props: { pageTitle: "专辑", contentMode: "albums" },
+		});
+		await flushPromises();
+
+		expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(0);
+		expect(wrapper.text()).not.toContain("没有艺术家的专辑");
+	});
+
 	it("opens the album creation flow from the album landing page", async () => {
 		const wrapper = mount(DiscoverView, {
 			props: {
@@ -402,15 +418,15 @@ describe("Music DiscoverView.vue", () => {
 		try {
 			mocks.listMusicAlbums
 				.mockResolvedValueOnce({
-					data: [{ id: "album-1", title: "First", artists: [] }],
+					data: [{ id: "album-1", title: "First", artists: [{ id: "artist-1", name: "Artist" }] }],
 					meta: { page: 1, page_size: 24, total: 2, has_more: true },
 				})
 				.mockResolvedValueOnce({
-					data: [{ id: "album-2", title: "Second", artists: [] }],
+					data: [{ id: "album-2", title: "Second", artists: [{ id: "artist-1", name: "Artist" }] }],
 					meta: { page: 2, page_size: 24, total: 2, has_more: false },
 				})
 				.mockResolvedValueOnce({
-					data: [{ id: "album-3", title: "Search Result", artists: [] }],
+					data: [{ id: "album-3", title: "Search Result", artists: [{ id: "artist-1", name: "Artist" }] }],
 					meta: { page: 1, page_size: 24, total: 1, has_more: false },
 				});
 

@@ -360,6 +360,27 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.text()).not.toContain("Late Night Mix");
 	});
 
+	it("deduplicates same-title albums while preserving different artists", async () => {
+		mocks.listMusicAlbums.mockReset();
+		mocks.listMusicAlbums.mockResolvedValueOnce({
+			data: [
+				{ id: "unknown-1", title: "菊花夜行军", artists: [] },
+				{ id: "known", title: "菊花夜行军", artists: [{ id: "artist-1", name: "交工乐队" }] },
+				{ id: "other", title: "菊花夜行军", artists: [{ id: "artist-2", name: "其他艺术家" }] },
+			],
+			meta: { page: 1, page_size: 12, total: 3, has_more: false },
+		});
+
+		const wrapper = mount(DiscoverView, {
+			props: { pageTitle: "专辑", contentMode: "albums" },
+		});
+		await flushPromises();
+
+		expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(2);
+		expect(wrapper.text()).toContain("交工乐队");
+		expect(wrapper.text()).toContain("其他艺术家");
+	});
+
 	it("opens the album creation flow from the album landing page", async () => {
 		const wrapper = mount(DiscoverView, {
 			props: {

@@ -17,8 +17,6 @@ export function useMusicSheetRouteSync(router: Router) {
   const drawers = useMusicDrawers()
 
   if (!registrations.has(router)) {
-    const pushedLayerKeys = new Set<string>()
-
     const stopLayersWatch = watch(drawers.layers, async (layers, previousLayers) => {
       const top = layers.at(-1)
       const currentPath = router.currentRoute.value.fullPath
@@ -30,15 +28,11 @@ export function useMusicSheetRouteSync(router: Router) {
         const currentRouteWasRemoved = removedRouteLayers
           .some(layer => layer.route === currentPath)
 
-        const canReturnThroughHistory = removedRouteLayers.every(layer => pushedLayerKeys.has(layer.key))
-        for (const layer of removedRouteLayers) pushedLayerKeys.delete(layer.key)
-
         if (currentRouteWasRemoved && removedRouteLayers.length > 0) {
-          if (!canReturnThroughHistory) {
-            await router.replace(retainedRoute(layers))
-            return
-          }
-          router.go(-removedRouteLayers.length)
+          // Closing a sheet must not depend on the browser history shape. A
+          // direct route visit, refresh, or interrupted navigation may not have
+          // a matching history entry to go back to.
+          await router.replace(retainedRoute(layers))
           return
         }
       }
@@ -55,7 +49,6 @@ export function useMusicSheetRouteSync(router: Router) {
           await router.replace(retainedRoute(drawers.layers.value))
           return
         }
-        if (isNewLayer) pushedLayerKeys.add(top.key)
       }
     })
 

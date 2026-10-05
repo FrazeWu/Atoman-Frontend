@@ -52,10 +52,8 @@ const importedMetadata = computed(() => {
     ['格式', (importDraft.metadataFormats ?? []).join('、')],
   ].filter(([, value]) => value)
 })
-const matchedTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.source === 'matched'))
-const matchedGenreTags = computed(() => matchedTags.value.filter((tag) => tag.kind === 'type'))
-const matchedStyleTags = computed(() => matchedTags.value.filter((tag) => tag.kind === 'mood'))
-const customTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.source === 'custom'))
+const styleTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind === 'type'))
+const otherTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind !== 'type'))
 
 function addCustomTag() {
   const draft = albumDetailsDraft.value
@@ -66,7 +64,7 @@ function addCustomTag() {
     tagInput.value = ''
     return
   }
-  draft.tags.push({ name, kind: 'type', source: 'custom' })
+	draft.tags.push({ name, kind: 'type' })
   tagInput.value = ''
 }
 
@@ -628,11 +626,11 @@ watch(
           </div>
 
           <section class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
-            <div class="album-tags-editor__row" data-testid="album-matched-genres-row">
-              <span class="field-label">匹配风格</span>
+            <div class="album-tags-editor__row" data-testid="album-style-tags-row">
+	              <span class="field-label">风格</span>
               <div class="album-tags-editor__items">
-                <span v-if="!matchedGenreTags.length" class="album-tags-editor__empty">未匹配到风格</span>
-                <span v-for="tag in matchedGenreTags" :key="`matched-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`matched-album-tag-${tag.name}`">
+	                <span v-if="!styleTags.length" class="album-tags-editor__empty">暂无风格标签</span>
+	                <span v-for="tag in styleTags" :key="`style-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
                   {{ tag.name }}
                   <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
                     <X :size="13" aria-hidden="true" />
@@ -640,11 +638,11 @@ watch(
                 </span>
               </div>
             </div>
-            <div class="album-tags-editor__row" data-testid="album-matched-styles-row">
-              <span class="field-label">匹配场景</span>
+            <div class="album-tags-editor__row" data-testid="album-other-tags-row">
+	              <span class="field-label">其他标签</span>
               <div class="album-tags-editor__items">
-                <span v-if="!matchedStyleTags.length" class="album-tags-editor__empty">未匹配到场景</span>
-                <span v-for="tag in matchedStyleTags" :key="`matched-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`matched-album-tag-${tag.name}`">
+	                <span v-if="!otherTags.length" class="album-tags-editor__empty">暂无其他标签</span>
+	                <span v-for="tag in otherTags" :key="`other-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
                   {{ tag.name }}
                   <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
                     <X :size="13" aria-hidden="true" />
@@ -653,16 +651,8 @@ watch(
               </div>
             </div>
             <div class="album-tags-editor__row album-tags-editor__row--custom">
-              <span class="field-label">自定义标签</span>
+              <span class="field-label">添加标签</span>
               <div class="album-tags-editor__custom-content">
-                <div class="album-tags-editor__items">
-                  <span v-for="tag in customTags" :key="`custom-${tag.name}`" class="album-tag album-tag--custom" :data-testid="`custom-album-tag-${tag.name}`">
-                    {{ tag.name }}
-                    <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
-                      <X :size="13" aria-hidden="true" />
-                    </button>
-                  </span>
-                </div>
                 <PInput
                   v-model="tagInput"
                   class="album-tags-editor__input"

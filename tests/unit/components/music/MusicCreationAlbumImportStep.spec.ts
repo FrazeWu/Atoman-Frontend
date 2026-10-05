@@ -440,8 +440,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumImport.metadataGenres).toEqual(["摇滚"]);
 		expect(flow.draft.albumImport.metadataStyles).toEqual(["民谣摇滚"]);
 		expect(flow.draft.albumDetails.tags).toEqual([
-			{ name: "摇滚", kind: "type", source: "matched" },
-			{ name: "民谣摇滚", kind: "mood", source: "matched" },
+			{ name: "摇滚", kind: "type" },
+			{ name: "民谣摇滚", kind: "type", parentName: "摇滚" },
 		]);
 	});
 
@@ -472,8 +472,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"https://cover.test/matched-cover.jpg",
 		);
 		expect(flow.draft.albumDetails.tags).toEqual([
-			{ name: "Hip Hop", kind: "type", source: "matched" },
-			{ name: "Conscious", kind: "mood", source: "matched" },
+			{ name: "Hip Hop", kind: "type" },
+			{ name: "Conscious", kind: "type", parentName: "Hip Hop" },
 		]);
 	});
 

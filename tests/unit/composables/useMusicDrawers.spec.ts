@@ -538,8 +538,8 @@ describe("useMusicDrawers music creation flow", () => {
 			day: "17",
 		});
 		expect(flow?.draft.albumDetails.tags).toEqual([
-			{ name: "Hip Hop", kind: "type", source: "matched" },
-			{ name: "Conscious", kind: "mood", source: "matched" },
+			{ name: "Hip Hop", kind: "type" },
+			{ name: "Conscious", kind: "type", parentName: "Hip Hop" },
 		]);
 	});
 

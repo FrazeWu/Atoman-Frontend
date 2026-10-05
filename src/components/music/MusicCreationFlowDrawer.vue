@@ -757,7 +757,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
         country: flow.draft.albumImport.metadataCountry ?? '',
         formats: flow.draft.albumImport.metadataFormats ?? [],
       },
-      tags: flow.draft.albumDetails.tags.map(({ kind, name }) => ({ kind, name })),
+	  tags: flow.draft.albumDetails.tags.map(({ kind, name, parentName }) => ({ kind, name, ...(parentName ? { parent_name: parentName } : {}) })),
       tracks: flow.draft.tracks.map((track, index) => ({
         ...(track.songId ? { song_id: track.songId } : {}),
         ...(track.importFileId ? { file_id: track.importFileId } : {}),

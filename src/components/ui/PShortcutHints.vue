@@ -86,21 +86,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 <style scoped>
 .shortcut-hints {
   position: fixed;
-  right: 1.25rem;
-  bottom: calc(
-    var(--a-footer-reserved-height, 0px) +
-    var(--a-player-reserved-height, 0px) +
-    1.25rem
-  );
-  z-index: var(--a-z-navigation, 20);
+  top: calc(var(--a-topbar-height, 56px) + 0.75rem);
+  right: 1rem;
+  bottom: auto;
+  z-index: calc(var(--a-z-navigation, 20) + 1);
 }
 
 .shortcut-hints__trigger {
   display: inline-flex;
-  min-width: 2.5rem;
-  height: 2.5rem;
-  gap: 0.4rem;
-  padding: 0 0.7rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  gap: 0.35rem;
+  padding: 0 0.6rem;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--a-color-border-soft);
@@ -111,7 +108,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 }
 
 .shortcut-hints__label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -125,48 +122,52 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 .shortcut-hints__panel {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 0.75rem);
-  width: min(20rem, calc(100vw - 2rem));
-  padding: 1rem;
+  top: calc(100% + 0.5rem);
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 0.75rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-lg);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .shortcut-hints__header {
-  padding-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   color: var(--a-color-fg);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 650;
 }
 
 .shortcut-hints__list {
   display: grid;
-  gap: 0.5rem;
-  margin: 0.75rem 0 0;
+  gap: 0.25rem;
+  margin: 0.6rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .shortcut-hints__item {
   display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
+  grid-template-columns: 4.75rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.5rem;
   color: var(--a-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .shortcut-hints__item kbd {
+  display: inline-grid;
+  min-height: 1.75rem;
   min-width: 2rem;
-  padding: 0.15rem 0.35rem;
+  padding: 0.1rem 0.3rem;
+  align-items: center;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   font: inherit;
   font-weight: 650;
   text-align: center;
+  white-space: nowrap;
 }
 
 @media (max-width: 767px) {

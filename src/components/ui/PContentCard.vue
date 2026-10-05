@@ -301,6 +301,18 @@ defineEmits(['click'])
 }
 
 @media (max-width: 767px) {
+  .p-entry.content-stream-entry {
+    padding: 0.875rem 0.25rem;
+  }
+
+  .p-entry.content-stream-entry .p-entry__body {
+    gap: 0.5rem;
+  }
+
+  .p-entry.content-stream-entry .feed-entry-title {
+    font-size: 0.98rem;
+  }
+
   .p-entry.content-stream-entry :deep(.feed-entry-stats) {
     display: none;
   }

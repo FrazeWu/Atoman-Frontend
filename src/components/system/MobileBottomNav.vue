@@ -39,6 +39,13 @@ const siteContext = computed(() => {
 })
 
 const currentModule = computed(() => {
+  if (
+    route.path === '/modules'
+    || route.path === '/inbox'
+    || route.path === '/me'
+    || route.path.startsWith('/studio')
+    || route.path.startsWith('/videos/')
+  ) return undefined
   if (siteContext.value.type === 'module') return siteContext.value.module
   if (/^\/(?:post\/|posts\/(?:post\/|channel\/|notes(?:\/|$))|channel\/|collection\/|channels\/|users\/)/.test(route.path)) return 'blog'
   return undefined
@@ -46,13 +53,17 @@ const currentModule = computed(() => {
 const tabs = computed(() => currentModule.value
   ? getMobilePrimaryTabs(currentModule.value)
   : getMobileGlobalTabs())
-const shouldRender = computed(() => route.path !== '/' && route.path !== '/modules')
+const shouldRender = computed(() => route.path !== '/')
 const navStyle = computed(() => ({ '--mobile-nav-count': String(tabs.value.length) }))
 
 const isTabActive = (tab: MobilePrimaryTab) => {
   const currentPath = route.path.replace(/\/$/, '') || '/'
   const targetPath = router.resolve(tab.href).path.replace(/\/$/, '') || '/'
-  if (tab.key === 'more') return currentPath === '/modules'
+  if (tab.key === 'more') {
+    return currentPath === (siteContext.value.type === 'module' && siteContext.value.module === 'music'
+      ? targetPath
+      : '/modules')
+  }
   if (siteContext.value.type !== 'module' || siteContext.value.module !== tab.module) return false
   if (currentPath === targetPath) return true
 
@@ -75,20 +86,26 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
 
 <style scoped>
 .mobile-bottom-nav {
-  position: relative;
-  z-index: var(--a-z-navigation);
-}
-
-.mobile-bottom-nav__bar {
   position: fixed;
   right: 0;
   bottom: 0;
   left: 0;
+  display: block !important;
+  z-index: var(--a-z-navigation);
+  pointer-events: none;
+}
+
+.mobile-bottom-nav__bar {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(var(--mobile-nav-count, 4), minmax(0, 1fr));
   border-top: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface);
   box-shadow: none;
+  pointer-events: auto;
 }
 
 .mobile-bottom-nav__tab {
@@ -120,9 +137,4 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
   white-space: nowrap;
 }
 
-@media (min-width: 768px) {
-  .mobile-bottom-nav__bar {
-    display: none;
-  }
-}
 </style>

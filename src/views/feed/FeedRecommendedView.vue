@@ -1484,6 +1484,28 @@ onMounted(() => {
 }
 
 @media (max-width: 720px) {
+  .feed-recommended-view {
+    gap: 1rem;
+    padding: 0 0 1rem;
+  }
+
+  .discovery-pills-bar {
+    flex-wrap: nowrap;
+    margin-right: -1rem;
+    padding-right: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .discovery-pills-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topic-pill {
+    flex: 0 0 auto;
+    min-height: 40px;
+  }
+
   .stream-column__head {
     display: grid;
     align-items: start;

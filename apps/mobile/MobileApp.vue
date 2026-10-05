@@ -42,7 +42,7 @@ const siteAccessStore = useSiteAccessStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
-const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && !route.path.startsWith('/modules'))
+const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/')
 const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
 const mobileRouteTransition = ref('')
 

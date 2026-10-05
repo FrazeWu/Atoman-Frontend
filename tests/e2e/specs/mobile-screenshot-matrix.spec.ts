@@ -327,7 +327,7 @@ test.describe("Mobile route screenshot matrix", () => {
 
       const shouldShowBottomNav =
         !/^\/(?:login|register|forgot-password)$/.test(pathname) &&
-        pathname !== "/modules";
+        pathname !== "/";
       if (shouldShowBottomNav) {
         await expect(
           page.locator(".mobile-bottom-nav__bar"),
@@ -401,6 +401,25 @@ test.describe("Mobile route screenshot matrix", () => {
       });
     });
   }
+
+  test("navigates through the mobile bottom tabs", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockMobileApi(page);
+
+    await page.goto("/feed", { waitUntil: "domcontentloaded" });
+    await page.locator('[data-tab-key="reading-list"]').click();
+    await expect(page).toHaveURL(/\/feed\/reading-list$/);
+    await expect(page.locator('[data-tab-key="reading-list"]')).toHaveClass(/is-active/);
+
+    await page.goto("/modules", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".mobile-bottom-nav__bar")).toBeVisible();
+    await page.locator('[data-tab-key="music"]').click();
+    await expect(page).toHaveURL(/\/music$/);
+
+    await page.locator('[data-tab-key="more"]').click();
+    await expect(page).toHaveURL(/\/music\/more$/);
+    await expect(page.locator('[data-tab-key="more"]')).toHaveClass(/is-active/);
+  });
 
   test("keeps playlist covers visible at the target mobile widths", async ({
     page,

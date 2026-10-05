@@ -125,6 +125,33 @@ function albumTrackCount(album: MusicAlbumListItem) {
   return 0
 }
 
+function normalizeAlbumIdentity(value: string | undefined): string {
+  return (value ?? '').normalize('NFKC').toLocaleLowerCase().replace(/[\s\u3000]+/g, '')
+}
+
+function albumIdentity(album: MusicAlbumListItem): string {
+  const releaseDate = album.release_date || (album.year ? String(album.year) : '')
+  return `${normalizeAlbumIdentity(album.title)}|${normalizeAlbumIdentity(releaseDate)}`
+}
+
+function albumCompleteness(album: MusicAlbumListItem): number {
+  return (album.description?.trim() ? 4 : 0)
+    + (album.cover_url?.trim() ? 2 : 0)
+    + (albumTrackCount(album) > 0 ? 1 : 0)
+}
+
+function dedupeArtistAlbums(items: MusicAlbumListItem[]): MusicAlbumListItem[] {
+  const byIdentity = new Map<string, MusicAlbumListItem>()
+  for (const album of items) {
+    const key = albumIdentity(album)
+    const existing = byIdentity.get(key)
+    if (!existing || albumCompleteness(album) > albumCompleteness(existing)) {
+      byIdentity.set(key, album)
+    }
+  }
+  return [...byIdentity.values()]
+}
+
 function compareAlbumReleaseDate(a: MusicAlbumListItem, b: MusicAlbumListItem, descending = false) {
   const dateA = a.release_date || (a.year ? `${a.year}-01-01` : '')
   const dateB = b.release_date || (b.year ? `${b.year}-01-01` : '')
@@ -258,7 +285,7 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
         : await listMusicAlbums(filters)
       if (!isCurrentLoad()) return
       releaseMeta.value = response.meta
-      albums.value = response.data
+      albums.value = dedupeArtistAlbums(response.data)
     } else {
       const filters = {
         artist_id: targetArtistId,

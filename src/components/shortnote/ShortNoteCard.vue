@@ -125,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect } from 'vue'
+import { computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { IconHeart as Heart, IconMessage as MessageSquare, IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
@@ -175,6 +175,10 @@ watch(() => props.note.id, (id) => {
 
 watch(() => props.isRead, (isRead) => {
   if (isRead) serverReadSynced.value = true
+})
+
+onMounted(() => {
+  if (localRead.value && !serverReadSynced.value) markRead()
 })
 
 const showLightbox = ref(false)

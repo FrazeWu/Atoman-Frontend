@@ -119,12 +119,18 @@ const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
 const starredPlaylistIds = ref<string[]>([])
 
+function hasDiscoverArtist(album: MusicAlbumListItem): boolean {
+  return (album.artists?.length ?? 0) > 0
+}
+
 const localFilteredAlbums = computed(() => {
   if (props.contentMode !== 'albums') return []
-  return albumItems.value
+  return albumItems.value.filter(hasDiscoverArtist)
 })
 
-const personalizedAlbums = computed(() => musicHome.value?.for_you ?? [])
+const personalizedAlbums = computed(() => (
+  (musicHome.value?.for_you ?? []).filter(hasDiscoverArtist)
+))
 const forYouBatchSize = 6
 const forYouBatchIndex = ref(0)
 const visiblePersonalizedAlbums = computed(() => {
@@ -489,7 +495,9 @@ async function loadDiscoverSection(
       while (true) {
         const response = await listMusicAlbums({ page, page_size: discoverAlbumPageSize, sort: 'hot' })
         if (!isCurrent()) return
-        const albums = response.data.map((album) => ({ ...album, reason: '近期热门专辑' }))
+        const albums = response.data
+          .filter(hasDiscoverArtist)
+          .map((album) => ({ ...album, reason: '近期热门专辑' }))
         discoverAlbums.value = shouldAppend ? mergeDiscoverAlbums(discoverAlbums.value, albums) : mergeDiscoverAlbums([], albums)
         discoverSectionMeta.album = response.meta
         if (
@@ -561,7 +569,7 @@ async function fetchAlbumIndex(nextPage = 1) {
       sort: 'hot',
     })
     if (!request.isCurrent()) return
-    albumItems.value = mergeDiscoverAlbums([], response.data ?? [])
+    albumItems.value = mergeDiscoverAlbums([], (response.data ?? []).filter(hasDiscoverArtist))
     albumMeta.value = response.meta
     const currentBookmarkRequestId = ++bookmarkRequestId
     void fetchAlbumBookmarks(currentBookmarkRequestId)

@@ -825,7 +825,7 @@ watch(
               @click="copyAlbumUuid"
             >
               <Copy :size="16" aria-hidden="true" />
-              复制 UUID
+              <span class="album-copy-uuid-label">复制 UUID</span>
             </PButton>
             <PDropdown class="album-more-dropdown" position="right">
               <template #trigger>
@@ -1374,6 +1374,17 @@ watch(
   .album-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.75rem;
+  }
+
+  .album-actions :deep([data-testid="album-copy-uuid"]) {
+    min-width: 2.75rem;
+    padding-inline: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .album-actions :deep(.album-copy-uuid-label) {
+    display: none;
   }
 
   .album-actions :deep(.p-button) {

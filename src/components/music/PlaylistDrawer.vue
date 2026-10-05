@@ -1064,6 +1064,26 @@ button.album-name:hover {
 }
 
 @media (max-width: 640px) {
+  .playlist-header-container {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .playlist-cover-wrapper {
+    width: 88px;
+    height: 88px;
+  }
+
+  .playlist-title {
+    font-size: 1.5rem;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .playlist-stats {
+    flex-wrap: wrap;
+  }
+
   .tracks-header,
   .track-row {
     grid-template-columns: 2rem minmax(0, 1fr) auto;

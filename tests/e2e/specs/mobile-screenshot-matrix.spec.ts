@@ -385,8 +385,25 @@ test.describe("Mobile route screenshot matrix", () => {
         ).toBeLessThanOrEqual(32);
       }
 
-      if (pathname === "/music/album/album-1") {
+      if (/^\/music\/(?:artist|album|playlist)\//.test(pathname)) {
         await expect(page.locator(".mobile-bottom-nav__bar")).toBeVisible();
+        const sheetContent = page.locator(".p-sheet-mobile-page__content");
+        const sheetMetrics = await sheetContent.evaluate((element) => ({
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        }));
+        expect(sheetMetrics.scrollWidth, pathname + " detail content has horizontal overflow").toBeLessThanOrEqual(sheetMetrics.clientWidth);
+        const navTab = page.locator('[data-tab-key="discover"]');
+        const navBox = await navTab.boundingBox();
+        expect(navBox, `${pathname} bottom navigation has no layout`).not.toBeNull();
+        const navHit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest(".mobile-bottom-nav__tab")?.getAttribute("data-tab-key"), {
+          x: navBox!.x + navBox!.width / 2,
+          y: navBox!.y + navBox!.height / 2,
+        });
+        expect(navHit, `${pathname} detail sheet covers the bottom navigation`).toBe("discover");
+      }
+
+      if (pathname === "/music/album/album-1") {
         const track = page.locator('[data-testid="track-play-song-1"]').locator("..");
         await expect(track).toBeVisible();
         const trackMetrics = await track.evaluate((element) => ({
@@ -396,14 +413,6 @@ test.describe("Mobile route screenshot matrix", () => {
         }));
         expect(trackMetrics.right, pathname + " track row exceeds the viewport").toBeLessThanOrEqual(390);
         expect(trackMetrics.scrollWidth, pathname + " track row has horizontal overflow").toBeLessThanOrEqual(trackMetrics.clientWidth);
-        const navTab = page.locator('[data-tab-key="discover"]');
-        const navBox = await navTab.boundingBox();
-        expect(navBox, `${pathname} bottom navigation has no layout`).not.toBeNull();
-        const navHit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest(".mobile-bottom-nav__tab")?.getAttribute("data-tab-key"), {
-          x: navBox!.x + navBox!.width / 2,
-          y: navBox!.y + navBox!.height / 2,
-        });
-        expect(navHit, `${pathname} detail sheet covers the bottom navigation`).toBe("discover");
       }
 
       const mobileContentSelectors: Record<string, string> = {

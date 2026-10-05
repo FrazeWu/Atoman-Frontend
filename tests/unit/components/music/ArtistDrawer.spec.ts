@@ -118,8 +118,8 @@ describe("ArtistDrawer.vue", () => {
 			legal_name: "Kanye Omari West",
 			stage_names_json: JSON.stringify([
 				{ name: "Ye", is_primary: true },
-				{ name: "Yeezy", is_primary: false },
-				{ name: "kanye", is_primary: false },
+				{ name: "Yeezy", is_primary: false, start_date_text: "2015" },
+				{ name: "kanye", is_primary: false, start_date_text: "2012", end_date_text: "2014" },
 			]),
 			artist_form: "group",
 			aliases: [{ alias: "Kanye West" }, { alias: "kanye" }],
@@ -200,7 +200,7 @@ describe("ArtistDrawer.vue", () => {
 		// Check if artist title is rendered (artistId is '1' in mock)
 		expect(wrapper.text()).toContain("Ye");
 		expect(wrapper.text()).toContain("本名：Kanye Omari West");
-		expect(wrapper.text()).toContain("曾用名：Kanye West / kanye / Yeezy");
+		expect(wrapper.text()).toContain("曾用名：Kanye West / kanye（2012-2014） / Yeezy（2015-）");
 
 		// Check if album list is rendered
 		expect(

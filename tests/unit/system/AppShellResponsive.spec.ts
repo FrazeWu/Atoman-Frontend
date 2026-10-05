@@ -140,11 +140,11 @@ describe("App responsive shell", () => {
 		});
 	});
 
-	it("mounts mobile bottom nav on sidebar module routes", async () => {
+	it("does not mount mobile bottom nav in the desktop sidebar shell", async () => {
 		const { wrapper } = await mountAppAt("/");
 
 		expect(wrapper.findComponent({ name: "MobileBottomNav" }).exists()).toBe(
-			true,
+			false,
 		);
 	});
 

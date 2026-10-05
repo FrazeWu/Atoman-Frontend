@@ -825,7 +825,7 @@ watch(
               @click="copyAlbumUuid"
             >
               <Copy :size="16" aria-hidden="true" />
-              复制 UUID
+              <span class="album-copy-uuid-label">复制 UUID</span>
             </PButton>
             <PDropdown class="album-more-dropdown" position="right">
               <template #trigger>
@@ -1376,6 +1376,17 @@ watch(
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.75rem;
   }
 
+  .album-actions :deep([data-testid="album-copy-uuid"]) {
+    min-width: 2.75rem;
+    padding-inline: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .album-actions :deep(.album-copy-uuid-label) {
+    display: none;
+  }
+
   .album-actions :deep(.p-button) {
     width: 100%;
     min-height: 2.75rem;
@@ -1651,25 +1662,43 @@ watch(
 
 @media (max-width: 767px) {
   .track {
-    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
-    gap: 0.5rem;
-    padding: 0.25rem 0;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 0.1rem 0.5rem;
+    padding: 0.35rem 0;
   }
 
   .track-play-btn,
-  .track-fav-btn,
-  .track-add-btn,
   .track-detail-btn {
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .track-title {
+    min-height: 2rem;
+    font-size: 0.95rem;
   }
 
   .track-meta {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
     gap: 0.5rem;
     grid-column: 2 / -1;
     grid-row: 2;
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .track-meta .track-time,
+  .track-meta .track-match-status {
+    order: -1;
+  }
+
+  .track-fav-btn,
+  .track-add-btn {
+    width: 2rem;
+    height: 2rem;
   }
 
   .album-skeleton-track-play {

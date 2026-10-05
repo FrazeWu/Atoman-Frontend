@@ -1277,6 +1277,21 @@ watch([releaseType, albumSortMode], () => {
 }
 
 @media (max-width: 767px) {
+  .artist-header-profile {
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .artist-header-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .title {
+    font-size: 1.75rem;
+    overflow-wrap: anywhere;
+  }
+
   .track {
     grid-template-columns: 2.75rem minmax(0, 1fr) auto;
     gap: 0.5rem;

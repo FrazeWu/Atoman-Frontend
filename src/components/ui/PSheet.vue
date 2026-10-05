@@ -564,6 +564,7 @@ const mobileSheetStyle = computed(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100vw;
   padding: 1rem 0 2rem;
   border-left: 1px solid var(--a-color-border-soft);
   background: #ffffff;
@@ -627,9 +628,11 @@ const mobileSheetStyle = computed(() => {
 .p-sheet-mobile-page__content {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   min-height: 0;
   overflow-y: auto;
-  padding-inline: 1rem;
+  overflow-x: clip;
+  padding: 0 1rem calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
 }
 
 .p-sheet-mobile-backdrop {

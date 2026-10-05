@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell has-sidebar mobile-app-shell">
+  <div class="app-shell has-sidebar mobile-app-shell" :class="{ 'mobile-app-shell--with-player': showMobilePlayer }">
     <MobileTopbar />
     <main
       class="app-main mobile-app-main"
@@ -115,6 +115,7 @@ body {
   overflow-x: hidden;
   overflow-x: clip;
   --mobile-app-player-height: 76px;
+  --mobile-app-player-reserved-height: 0px;
   --a-color-bg: #f2f2f7;
   --a-color-fg: #1c1c1e;
   --a-color-text: #1c1c1e;
@@ -156,6 +157,10 @@ body {
 
 .mobile-app-main--with-player {
   padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-app-shell--with-player {
+  --mobile-app-player-reserved-height: var(--mobile-app-player-height);
 }
 
 .mobile-app-main > .mobile-detail-forward-enter-active,

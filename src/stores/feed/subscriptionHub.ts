@@ -34,6 +34,7 @@ export function createSubscriptionHubState() {
     try {
       const api = useApi()
       const response = await apiRequestResult(`${api.url}/feed/subscription-hub/tree`, {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (generation !== requestGeneration) return false

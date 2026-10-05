@@ -871,7 +871,7 @@ describe("feed store", () => {
     );
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/feed/subscription-hub/tree",
-      expect.anything(),
+      expect.objectContaining({ cache: "no-store" }),
     );
   });
 

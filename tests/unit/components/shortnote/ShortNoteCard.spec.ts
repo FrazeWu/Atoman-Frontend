@@ -1,11 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia } from 'pinia'
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 // @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
 import type { ShortNote } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 
 const CommentSideSheetStub = {
   name: 'CommentSideSheet',
@@ -21,6 +22,11 @@ const InteractionActionsStub = {
 }
 
 describe('ShortNoteCard', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
   const mockNote: ShortNote = {
     id: 'note-test-1',
     user_id: 'user-1',
@@ -147,5 +153,27 @@ describe('ShortNoteCard', () => {
 
     // 扫过后变为已读
     expect(article.classes()).toContain('is-read')
+  })
+
+  it('点击未读短笺后同步服务端已读状态', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const authStore = useAuthStore(pinia)
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const markItemsRead = vi.spyOn(useFeedStore(pinia), 'markItemsRead').mockResolvedValue(true)
+    const note = { ...mockNote, id: 'note-click-1' }
+    const wrapper = mount(ShortNoteCard, {
+      props: { note },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
+      },
+    })
+
+    await wrapper.get('.sticky-memo-body').trigger('click')
+    await flushPromises()
+
+    expect(markItemsRead).toHaveBeenCalledWith([], ['note-click-1'])
   })
 })

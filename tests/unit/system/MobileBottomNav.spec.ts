@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import MobileBottomNav from "../../../src/components/system/MobileBottomNav.vue";
 import {
 	getMobileMoreItems,
+	getMobileGlobalTabs,
 	getMobilePrimaryTabs,
 	type MobileMoreItem,
 	type MobilePrimaryTab,
@@ -122,6 +123,19 @@ describe("useResponsiveShell", () => {
 		expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(
 			false,
 		);
+	});
+
+	it("keeps global navigation visible outside a module context", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/inbox", component: { template: "<div />" } }],
+		});
+		await router.push("/inbox");
+		await router.isReady();
+		const wrapper = mount(MobileBottomNav, { global: { plugins: [router] } });
+
+		expect(getMobileGlobalTabs().map((tab) => tab.label)).toEqual(["Feed", "博客", "音乐", "更多"]);
+		expect(wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')).toHaveLength(4);
 	});
 
 	it("does not render module tabs for the portal context", async () => {

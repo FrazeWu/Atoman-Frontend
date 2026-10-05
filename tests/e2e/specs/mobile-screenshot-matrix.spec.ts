@@ -325,6 +325,16 @@ test.describe("Mobile route screenshot matrix", () => {
         timeout: 10_000,
       });
 
+      const shouldShowBottomNav =
+        !/^\/(?:login|register|forgot-password)$/.test(pathname) &&
+        pathname !== "/modules";
+      if (shouldShowBottomNav) {
+        await expect(
+          page.locator(".mobile-bottom-nav__bar"),
+          `${pathname} lost the mobile bottom navigation`,
+        ).toBeVisible();
+      }
+
       const layout = await page.evaluate(() => ({
         viewportWidth: window.innerWidth,
         scrollWidth: document.documentElement.scrollWidth,

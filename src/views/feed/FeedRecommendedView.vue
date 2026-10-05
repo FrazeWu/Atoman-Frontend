@@ -84,7 +84,7 @@
           variant="primary"
           class="discovery-add-btn"
           data-test="open-discovery-add-subscription"
-          :label="showAddModal ? '取消添加' : '+ 订阅'"
+          :label="showAddModal ? '取消添加' : '添加订阅'"
           @click="toggleAddModal"
         />
       </div>

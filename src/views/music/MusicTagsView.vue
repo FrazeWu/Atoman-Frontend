@@ -34,7 +34,7 @@ let queryTimer: ReturnType<typeof setTimeout> | null = null
 
 const scopeOptions: Array<{ value: TagScope; label: string }> = [
   { value: 'all', label: '全部标签' },
-  { value: 'type', label: '类型' },
+  { value: 'type', label: '风格' },
   { value: 'mood', label: '情绪' },
   { value: 'scene', label: '场景' },
   { value: 'theme', label: '主题' },

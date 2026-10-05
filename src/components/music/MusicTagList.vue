@@ -32,7 +32,7 @@ const actionTagID = ref('')
 const pendingDelete = ref<MusicTag | null>(null)
 let loadRequestID = 0
 const tagGroupOptions: Array<{ kind: MusicTagKind; label: string }> = [
-  { kind: 'type', label: '类型' },
+  { kind: 'type', label: '风格' },
   { kind: 'mood', label: '情绪' },
   { kind: 'scene', label: '场景' },
   { kind: 'theme', label: '主题' },

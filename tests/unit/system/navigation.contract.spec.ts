@@ -24,6 +24,9 @@ describe("application navigation contracts", () => {
 		const source = readSource("src/components/system/AppTopbar.vue");
 
 		expect(source).toContain('v-for="room in navRooms"');
+		expect(source).toContain("<RouterLink");
+		expect(source).toContain(':to="moduleUrl(room.key)"');
+		expect(source).not.toContain('@click.prevent="handleModuleNavigation');
 		expect(source).toContain(
 			"topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key])",
 		);

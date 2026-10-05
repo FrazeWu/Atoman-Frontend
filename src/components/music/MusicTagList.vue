@@ -102,7 +102,7 @@ async function loadTags() {
   error.value = ''
   try {
     const result = await listMusicTags(props.entity, props.entityId)
-    if (requestID === loadRequestID) tags.value = result
+    if (requestID === loadRequestID) tags.value = Array.isArray(result) ? result : []
   } catch (cause) {
     if (requestID !== loadRequestID) return
     tags.value = []

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="tabs.length > 0" class="mobile-bottom-nav">
+  <div v-if="shouldRender && tabs.length > 0" class="mobile-bottom-nav">
     <nav class="mobile-bottom-nav__bar" :style="navStyle" aria-label="当前模块导航">
       <a
         v-for="tab in tabs"
@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
+import { getMobileGlobalTabs, getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
 import { resolveSiteContext } from '@/router/siteContext'
 
 
@@ -43,13 +43,17 @@ const currentModule = computed(() => {
   if (/^\/(?:post\/|posts\/(?:post\/|channel\/|notes(?:\/|$))|channel\/|collection\/|channels\/|users\/)/.test(route.path)) return 'blog'
   return undefined
 })
-const tabs = computed(() => getMobilePrimaryTabs(currentModule.value))
+const tabs = computed(() => currentModule.value
+  ? getMobilePrimaryTabs(currentModule.value)
+  : getMobileGlobalTabs())
+const shouldRender = computed(() => route.path !== '/' && route.path !== '/modules')
 const navStyle = computed(() => ({ '--mobile-nav-count': String(tabs.value.length) }))
 
 const isTabActive = (tab: MobilePrimaryTab) => {
-  if (siteContext.value.type !== 'module' || siteContext.value.module !== tab.module) return false
   const currentPath = route.path.replace(/\/$/, '') || '/'
   const targetPath = router.resolve(tab.href).path.replace(/\/$/, '') || '/'
+  if (tab.key === 'more') return currentPath === '/modules'
+  if (siteContext.value.type !== 'module' || siteContext.value.module !== tab.module) return false
   if (currentPath === targetPath) return true
 
   const homeKeys = new Set(['discover', 'topics', 'timeline'])

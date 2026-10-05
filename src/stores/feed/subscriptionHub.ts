@@ -8,6 +8,12 @@ import { reportError } from '@/utils/logger'
 
 const emptyTree = (): SubscriptionHubTree => ({ types: [] })
 
+const isSubscriptionHubTree = (value: unknown): value is SubscriptionHubTree => (
+  Boolean(value) &&
+  typeof value === 'object' &&
+  Array.isArray((value as { types?: unknown }).types)
+)
+
 export function createSubscriptionHubState() {
   const subscriptionHubTree = ref<SubscriptionHubTree>(emptyTree())
   const loadingSubscriptionHubTree = ref(false)
@@ -42,8 +48,14 @@ export function createSubscriptionHubState() {
         subscriptionHubTreeError.value = '订阅树加载失败，请重试'
         return false
       }
-      const payload = response.data as { data?: SubscriptionHubTree }
-      subscriptionHubTree.value = payload.data ?? (response.data as SubscriptionHubTree)
+      const payload = response.data as { data?: unknown }
+      const candidate = payload.data ?? response.data
+      if (!isSubscriptionHubTree(candidate)) {
+        subscriptionHubTree.value = emptyTree()
+        subscriptionHubTreeError.value = '订阅树加载失败，请重试'
+        return false
+      }
+      subscriptionHubTree.value = candidate
       return true
     } catch (error) {
       if (generation === requestGeneration) {

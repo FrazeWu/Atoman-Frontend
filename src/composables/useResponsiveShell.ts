@@ -126,6 +126,16 @@ export const getMobilePrimaryTabs = (
 ): MobilePrimaryTab[] =>
 	module ? MOBILE_PRIMARY_TABS[module].map((tab) => ({ ...tab })) : [];
 
+const MOBILE_GLOBAL_TABS: MobilePrimaryTab[] = [
+	{ key: 'feed', label: 'Feed', module: 'feed', href: moduleUrl('feed'), icon: Rss },
+	{ key: 'blog', label: '博客', module: 'blog', href: moduleUrl('blog'), icon: Compass },
+	{ key: 'music', label: '音乐', module: 'music', href: moduleUrl('music'), icon: Radio },
+	{ key: 'more', label: '更多', module: 'feed', href: '/modules', icon: Ellipsis },
+];
+
+export const getMobileGlobalTabs = (): MobilePrimaryTab[] =>
+	MOBILE_GLOBAL_TABS.map((tab) => ({ ...tab }));
+
 export const getMobileMoreItems = (
 	isModuleVisible?: (module: ModuleRoomKey) => boolean,
 ): MobileMoreItem[] =>

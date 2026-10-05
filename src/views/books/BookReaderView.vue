@@ -103,34 +103,7 @@
         <textarea v-model="privateNotes" maxlength="50000" rows="3" placeholder="记录只对你可见的想法" />
       </label>
 
-      <details class="books-reader__publication">
-        <summary>申请发布为公共正文</summary>
-        <form @submit.prevent="submitPublication">
-          <label for="publication-work-id">公共作品 UUID</label>
-          <input id="publication-work-id" v-model="publicationWorkID" required placeholder="粘贴作品 UUID" />
-          <label for="publication-license">授权类型</label>
-          <select id="publication-license" v-model="publicationLicense">
-            <option value="public_domain">公版</option>
-            <option value="open_license">开放许可</option>
-            <option value="creator_owned">本人创作</option>
-            <option value="authorized_distribution">已获授权</option>
-          </select>
-          <label for="publication-holder">权利人</label>
-          <input id="publication-holder" v-model="publicationRightsHolder" required maxlength="500" />
-          <label for="publication-source">授权来源 URL</label>
-          <input id="publication-source" v-model="publicationSourceURL" type="url" required maxlength="4096" placeholder="https://" />
-          <label for="publication-declaration">授权声明</label>
-          <textarea id="publication-declaration" v-model="publicationDeclaration" required maxlength="20000" rows="4" />
-          <label for="publication-evidence">授权证据文件（可选）</label>
-          <input id="publication-evidence" type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" @change="selectPublicationEvidence" />
-          <p v-if="publicationEvidence" class="books-reader__publication-file">已选择：{{ publicationEvidence.name }}</p>
-          <PButton type="submit" variant="secondary" :loading="publicationSaving">
-            <Send :size="16" aria-hidden="true" />
-            <span>提交申请</span>
-          </PButton>
-        </form>
-        <p v-if="publicationMessage" class="books-reader__publication-message" aria-live="polite">{{ publicationMessage }}</p>
-      </details>
+      <p class="books-reader__public-status">文件通过安全扫描后会自动公开，公共副本与此处的私有阅读进度相互独立。</p>
     </section>
   </main>
 </template>
@@ -138,7 +111,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconArrowLeft as ArrowLeft, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconDownload as Download, IconDeviceFloppy as Save, IconSend as Send } from '@tabler/icons-vue'
+import { IconArrowLeft as ArrowLeft, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconDownload as Download, IconDeviceFloppy as Save } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
@@ -150,11 +123,8 @@ import {
   getBookAsset,
   getBookReadingState,
   saveBookReadingState,
-  submitPublicationRequest,
-  uploadPublicationEvidence,
   type BookPrivateAsset,
   type BookReadingState,
-  type SubmitPublicationInput,
 } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -183,14 +153,6 @@ const textContent = ref('')
 const textPages = ref<TextPage[]>([])
 const textPage = ref(1)
 const privateNotes = ref('')
-const publicationWorkID = ref('')
-const publicationLicense = ref<SubmitPublicationInput['license_type']>('public_domain')
-const publicationRightsHolder = ref('')
-const publicationSourceURL = ref('')
-const publicationDeclaration = ref('')
-const publicationEvidence = ref<File | null>(null)
-const publicationSaving = ref(false)
-const publicationMessage = ref('')
 const readingPercent = ref(0)
 const epubTOC = ref<EpubTOCItem[]>([])
 const pdfPage = ref(1)
@@ -314,41 +276,6 @@ async function loadReader() {
     errorMessage.value = error instanceof Error ? error.message : '电子书打开失败，请稍后重试'
   } finally {
     isLoading.value = false
-  }
-}
-
-function selectPublicationEvidence(event: Event) {
-  const input = event.target as HTMLInputElement
-  publicationEvidence.value = input.files?.[0] || null
-}
-
-async function submitPublication() {
-  if (!asset.value) return
-  publicationSaving.value = true
-  publicationMessage.value = ''
-  let requestSubmitted = false
-  try {
-    const request = await submitPublicationRequest(asset.value.id, {
-      work_id: publicationWorkID.value.trim(),
-      license_type: publicationLicense.value,
-      rights_holder: publicationRightsHolder.value.trim(),
-      source_url: publicationSourceURL.value.trim(),
-      declaration: publicationDeclaration.value.trim(),
-    })
-    requestSubmitted = true
-    if (publicationEvidence.value) {
-      await uploadPublicationEvidence(request.id, publicationEvidence.value)
-    }
-    publicationMessage.value = publicationEvidence.value ? '申请和授权证据已提交，等待审核' : '申请已提交，审核期间仍可继续私有阅读'
-    publicationWorkID.value = ''
-    publicationRightsHolder.value = ''
-    publicationSourceURL.value = ''
-    publicationDeclaration.value = ''
-    publicationEvidence.value = null
-  } catch (error) {
-    publicationMessage.value = requestSubmitted ? '申请已提交，但授权证据上传失败，请稍后重试' : (error instanceof Error ? error.message : '公共发布申请失败，请稍后重试')
-  } finally {
-    publicationSaving.value = false
   }
 }
 
@@ -709,43 +636,10 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 12px rgb(0 0 0 / 12%);
 }
 
-.books-reader__publication {
-  display: grid;
-  gap: 0.75rem;
-  border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 0.75rem;
-}
-
-.books-reader__publication summary {
-  color: var(--a-color-muted);
-  cursor: pointer;
-}
-
-.books-reader__publication form {
-  display: grid;
-  gap: 0.5rem;
-  max-width: 42rem;
-}
-
-.books-reader__publication input,
-.books-reader__publication select,
-.books-reader__publication textarea {
-  width: 100%;
-  border: 1px solid var(--a-color-border);
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-  padding: 0.6rem;
-  font: inherit;
-}
-
-.books-reader__publication-file {
+.books-reader__public-status {
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.85rem;
-}
-.books-reader__publication-message {
-  margin: 0;
-  color: var(--a-color-muted);
 }
 
 .books-reader__notes {

@@ -13,7 +13,7 @@
       <header class="books-library__header">
         <div>
           <h2 id="library-title">我的书库</h2>
-          <p class="books-library__meta">私有导入仅对你可见</p>
+          <p class="books-library__meta">上传完成并通过安全扫描后，正文会自动公开</p>
         </div>
         <div class="books-library__actions">
           <select v-model="shelfStatusFilter" aria-label="筛选书架状态" @change="loadLibraryData">
@@ -110,6 +110,7 @@
             <strong v-else>{{ item.title || item.file_name }}</strong>
             <span>{{ item.file_name }} · {{ formatSize(item.size) }}</span>
             <RouterLink v-if="item.work_id" class="books-import-row__catalog-link" :to="`/books/work/${item.work_id}`">已关联公共作品</RouterLink>
+            <RouterLink v-if="item.published_asset_id" class="books-import-row__catalog-link" :to="`/books/public-read/${item.published_asset_id}`">打开公共正文</RouterLink>
           </div>
           <div class="books-import-row__status">
             <span>{{ statusLabel(item) }}</span>
@@ -156,7 +157,7 @@
       <header class="books-catalog__header">
         <div>
           <h2 id="catalog-title">公共书目</h2>
-          <p class="books-library__meta">只展示已审核公开的书目资料</p>
+          <p class="books-library__meta">公共书目与已完成安全扫描的电子书</p>
         </div>
         <form class="books-catalog__search" role="search" @submit.prevent="submitCatalogSearch">
           <input v-model="searchInput" type="search" placeholder="搜索标题或作者" aria-label="搜索公共书目" />
@@ -179,6 +180,25 @@
           </RouterLink>
         </li>
       </ul>
+      <section class="books-public-assets" aria-labelledby="public-assets-title">
+        <header class="books-catalog__header">
+          <div>
+            <h2 id="public-assets-title">公共正文</h2>
+            <p class="books-library__meta">用户上传并通过安全扫描的电子书</p>
+          </div>
+        </header>
+        <p v-if="publicAssetsLoading" class="books-feedback" aria-live="polite">正在加载公共正文...</p>
+        <p v-else-if="publicAssets.length === 0" class="books-empty">还没有公开正文</p>
+        <ul v-else class="books-catalog-list">
+          <li v-for="asset in publicAssets" :key="asset.id" class="books-catalog-row">
+            <RouterLink :to="`/books/public-read/${asset.id}`" class="books-catalog-row__link">
+              <strong>{{ asset.title || asset.file_name }}</strong>
+              <span>{{ asset.author || '作者信息待补充' }}</span>
+              <small>{{ asset.format.toUpperCase() }} · {{ formatSize(asset.size) }}</small>
+            </RouterLink>
+          </li>
+        </ul>
+      </section>
     </section>
     <section v-else class="books-empty books-empty--discovery">
       <BookOpen :size="22" aria-hidden="true" />
@@ -201,12 +221,14 @@ import {
   listBookImports,
   listBookShelf,
   listContinueReading,
+  listPublicBookAssets,
   retryBookImport,
   searchPublicBooks,
   uploadBookFile,
   type BookContinueReading,
   type BookImportSession,
   type BookPublicWork,
+  type BookPublishedAsset,
   type BookShelfItem,
 } from '@/api/books'
 
@@ -223,8 +245,10 @@ const shelfTotal = ref(0)
 const shelfLoading = ref(false)
 const shelfError = ref('')
 const catalogItems = ref<BookPublicWork[]>([])
+const publicAssets = ref<BookPublishedAsset[]>([])
 const searchInput = ref('')
 const catalogLoading = ref(false)
+const publicAssetsLoading = ref(false)
 const catalogError = ref('')
 const isLoading = ref(false)
 const isUploading = ref(false)
@@ -308,15 +332,18 @@ async function removeShelf(workID: string) {
 async function loadCatalog() {
   if (!isCatalog.value) return
   catalogLoading.value = true
+  publicAssetsLoading.value = true
   catalogError.value = ''
   try {
     searchInput.value = typeof route.query.q === 'string' ? route.query.q : ''
-    const result = await searchPublicBooks(searchInput.value)
+    const [result, publicResult] = await Promise.all([searchPublicBooks(searchInput.value), listPublicBookAssets()])
     catalogItems.value = result.items
+    publicAssets.value = publicResult.items
   } catch {
     catalogError.value = '公共书目加载失败，请稍后重试'
   } finally {
     catalogLoading.value = false
+    publicAssetsLoading.value = false
   }
 }
 

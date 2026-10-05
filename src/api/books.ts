@@ -48,6 +48,7 @@ export interface BookImportSession {
   work_id?: string
   edition_id?: string
   asset_id?: string
+  published_asset_id?: string
   processing_status?: BookAssetProcessingStatus | string
   error_code?: string
   error_message?: string
@@ -255,6 +256,8 @@ export interface BookPublishedAsset {
   edition_id?: string
   format: 'epub' | 'pdf' | 'txt' | string
   file_name: string
+  title?: string
+  author?: string
   content_type: string
   size: number
   status: string
@@ -566,6 +569,9 @@ export const reviewPublicationRequest = (requestId: string, decision: 'published
 
 export const listPublishedBookAssets = (workId: string, limit = 20, offset = 0) =>
   apiGet<BookPublishedAssetListResult>(`${catalogUrl(`/works/${encodeURIComponent(workId)}/assets`)}?limit=${limit}&offset=${offset}`)
+
+export const listPublicBookAssets = (limit = 20, offset = 0) =>
+  apiGet<BookPublishedAssetListResult>(`${catalogUrl('/assets')}?limit=${limit}&offset=${offset}`)
 
 export const getPublishedBookAsset = (assetId: string) =>
   apiGet<BookPublishedAsset>(catalogUrl(`/assets/${encodeURIComponent(assetId)}`))

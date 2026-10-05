@@ -1192,6 +1192,7 @@ describe("FeedRecommendedView", () => {
 		await flushPromises();
 		const addBtn = wrapper.find('[data-test="open-discovery-add-subscription"]');
 		expect(addBtn.exists()).toBe(true);
+		expect(addBtn.text()).toBe("添加订阅");
 		await addBtn.trigger("click");
 		await flushPromises();
 		expect(

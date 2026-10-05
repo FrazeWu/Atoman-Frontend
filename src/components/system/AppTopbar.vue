@@ -45,16 +45,16 @@
       />
 
       <nav v-if="!isAuthRoute" class="nav">
-        <a
+        <RouterLink
           v-for="room in navRooms"
           :key="room.key"
-          :href="moduleUrl(room.key)"
+          :to="moduleUrl(room.key)"
           class="nav-link"
           :class="{ active: isRoomActive(room.key) }"
-          @click.prevent="handleModuleNavigation(room.key)"
+          @click="handleModuleNavigation"
         >
           <span class="nav-link-name">{{ room.name }}</span>
-        </a>
+        </RouterLink>
       </nav>
 
       <div class="nav-right">
@@ -86,7 +86,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
+import { moduleUrl } from '@/router/siteUrls'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
@@ -101,7 +101,6 @@ const route = useRoute()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
 const playerPresence = usePlayerPresenceStore()
-const { navigateTo } = useModuleNav()
 const MobileModuleSwitcher = defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))
 const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
@@ -122,9 +121,9 @@ const requestLyricsClose = () => {
   playerPresence.requestLyricsClose()
 }
 
-const handleModuleNavigation = (key: ModuleRoomKey) => {
+const handleModuleNavigation = () => {
   requestLyricsClose()
-  navigateTo(key)
+  if (sheetStore.stack.length > 0) sheetStore.clearStack(false)
 }
 
 const authStore = useAuthStore()

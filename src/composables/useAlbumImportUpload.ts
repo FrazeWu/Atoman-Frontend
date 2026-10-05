@@ -285,9 +285,7 @@ export function useAlbumImportUpload() {
 				draft.metadataMatchStatus = snapshot.metadataMatchStatus;
 				draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
 				draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
-				if (snapshot.metadataMatchStatus?.trim()) {
-					draft.metadataMatchingStarted = true;
-				}
+				draft.metadataMatchingStarted = false;
 				draft.metadataError = snapshot.metadataError || "";
 				draft.metadataGenres = snapshot.metadataGenres ?? [];
 				draft.metadataStyles = snapshot.metadataStyles ?? [];
@@ -754,8 +752,9 @@ export function useAlbumImportUpload() {
 								applyImportSnapshotToFlow(flow, matched, session.importId);
 							}
 						});
-					}).catch((error) => {
+				}).catch((error) => {
 						if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
+							draft.metadataMatchingStarted = false;
 							draft.metadataMatchStatus = "unmatched";
 							draft.metadataError = error instanceof Error ? error.message : "外部元数据匹配失败";
 						}

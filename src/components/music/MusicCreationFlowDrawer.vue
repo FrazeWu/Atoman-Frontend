@@ -368,7 +368,7 @@ const stepCopy: Record<CreationStepKey, { cta: string }> = {
     cta: '创建专辑/歌曲',
   },
   albumImport: {
-    cta: '开始匹配',
+    cta: '下一步',
   },
   albumDetails: {
     cta: '继续',
@@ -432,28 +432,33 @@ const albumImportMatching = computed(() => {
   const flow = creationFlow.value
   if (!flow || flow.step !== 'albumImport') return false
   const draft = flow.draft.albumImport
-  return draft.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)
+  return draft.metadataMatchStatus === 'matching'
     || (draft.metadataMatchingStarted === true && !['matched', 'unmatched'].includes(draft.metadataMatchStatus ?? ''))
 })
 const finishButtonLabel = computed(() => {
-  if (creationFlow.value?.mode === 'edit') return creationFlow.value.submitting ? '保存中…' : '保存'
-  if (creationFlow.value?.draft.albumImport.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(creationFlow.value?.draft.albumImport.status ?? '')) return '匹配中…'
-  if (
-    creationFlow.value?.draft.albumImport.metadataMatchingStarted
-    && !['matched', 'unmatched'].includes(creationFlow.value.draft.albumImport.metadataMatchStatus ?? '')
-  ) return '匹配中…'
-  if (creationFlow.value?.entity === 'artist' && creationFlow.value.step === 'artist') {
-    return creationFlow.value.submitting ? '创建中…' : '创建艺术家'
+  const flow = creationFlow.value
+  if (!flow) return ''
+  const step = flow.step
+  if (flow.mode === 'edit') return flow.submitting ? '保存中…' : '保存'
+  if (step === 'albumImport' && (
+    flow.draft.albumImport.metadataMatchStatus === 'matching'
+    || (
+    flow.draft.albumImport.metadataMatchingStarted
+    && !['matched', 'unmatched'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
+    )
+  )) return '匹配中…'
+  if (flow.entity === 'artist' && flow.step === 'artist') {
+    return flow.submitting ? '创建中…' : '创建艺术家'
   }
-  if (creationFlow.value?.step === 'albumImport') {
-    if (albumImportMatching.value || creationFlow.value.submitting) return '匹配中…'
-    if (creationFlow.value.draft.albumImport.metadataMatchStatus === 'matched') return '已匹配'
-    if (creationFlow.value.draft.albumImport.metadataMatchStatus === 'unmatched') return '继续填写'
-    return '读取曲目中…'
+  if (step === 'albumImport') {
+    if (albumImportMatching.value || flow.submitting) return '匹配中…'
+    if (['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status)) return '处理中…'
+    if (['ready', 'needs_attention', 'failed'].includes(flow.draft.albumImport.status)) return '下一步'
+    return activeStep.value.cta
   }
-  if (creationFlow.value?.step === 'artist' && creationFlow.value.editingContributorId) return '完成创作者'
-  if (creationFlow.value?.submitting && creationFlow.value.step === 'preview') return '提交中…'
-  if (creationFlow.value?.assetUploading) return '图片上传中…'
+  if (flow.step === 'artist' && flow.editingContributorId) return '完成创作者'
+  if (flow.submitting && flow.step === 'preview') return '提交中…'
+  if (flow.assetUploading) return '图片上传中…'
   return activeStep.value.cta
 })
 const forwardBlockReason = computed(() => {

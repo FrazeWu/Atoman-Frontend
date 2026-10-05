@@ -111,7 +111,7 @@ const metadataMatchLabel = computed(() => {
 	if (draft.status === 'canceled') return '已取消'
 	if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') return '已匹配'
 	if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
-	if (draft.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) return '正在读取曲目并匹配'
+	if (draft.metadataMatchStatus === 'matching') return '正在匹配元信息'
 	return '等待开始匹配'
 })
 const metadataMatchState = computed(() => {
@@ -120,7 +120,7 @@ const metadataMatchState = computed(() => {
   if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched' || draft.metadataMatchStatus === 'unmatched') {
     return 'done'
   }
-	if (draft.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(draft.status)) {
+	if (draft.metadataMatchStatus === 'matching') {
 		return 'active'
   }
   return 'idle'
@@ -251,7 +251,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-		<small>{{ albumImportDraft.metadataMatchStatus === 'matching' || ['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(albumImportDraft.status) ? '正在并行检索 Discogs 与 MusicBrainz，完成后进入信息确认' : '读取到曲目和内嵌元信息后会自动开始匹配' }}</small>
+		<small>{{ metadataMatchState === 'active' ? '正在并行检索 Discogs 与 MusicBrainz，完成后进入信息确认' : '读取到曲目和内嵌元信息后会自动开始匹配' }}</small>
 		</div>
 	</div>
 	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">
@@ -474,7 +474,18 @@ function formatUploadSpeed(bytesPerSecond: number) {
   background: var(--a-color-text);
 }
 .parallel-progress__steps .is-active {
-  background: var(--a-color-accent-blue);
+	background: repeating-linear-gradient(
+		-45deg,
+		var(--a-color-accent-blue) 0,
+		var(--a-color-accent-blue) 0.35rem,
+		color-mix(in srgb, var(--a-color-accent-blue) 35%, white) 0.35rem,
+		color-mix(in srgb, var(--a-color-accent-blue) 35%, white) 0.7rem
+	);
+	background-size: 1rem 1rem;
+	animation: album-import-progress-stripes 0.7s linear infinite;
+}
+@keyframes album-import-progress-stripes {
+	to { background-position: 1rem 0; }
 }
 .state-line {
   margin: 0;

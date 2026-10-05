@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 // @ts-expect-error Vitest resolves the alias through Vite; this test is outside the Vue TS project.
 import type { ShortNote } from '@/types'
+import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 
@@ -175,5 +176,27 @@ describe('ShortNoteCard', () => {
     await flushPromises()
 
     expect(markItemsRead).toHaveBeenCalledWith([], ['note-click-1'])
+  })
+
+  it('旧的本地已读标记仍会补写服务端状态', async () => {
+    useShortNoteSync().markNoteAsRead('note-legacy-1')
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const authStore = useAuthStore(pinia)
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const markItemsRead = vi.spyOn(useFeedStore(pinia), 'markItemsRead').mockResolvedValue(true)
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: { ...mockNote, id: 'note-legacy-1' }, isRead: false },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
+      },
+    })
+
+    await wrapper.get('.sticky-memo-body').trigger('click')
+    await flushPromises()
+
+    expect(markItemsRead).toHaveBeenCalledWith([], ['note-legacy-1'])
   })
 })

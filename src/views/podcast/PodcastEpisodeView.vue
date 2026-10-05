@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import PButton from '@/components/ui/PButton.vue'
 import PodcastShownotes from '@/components/podcast/PodcastShownotes.vue'
@@ -13,6 +14,7 @@ import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { writePodcastProgress } from '@/composables/usePodcastProgress'
 
 const authStore = useAuthStore()
+const feedStore = useFeedStore()
 const player = usePlayerStore()
 const lifecycle = useContentLifecycle()
 const route = useRoute()
@@ -48,7 +50,7 @@ async function loadEpisode(id: string) {
           content_id: episode.id,
           event: 'open',
           source: typeof route.query.source === 'string' ? route.query.source : 'direct',
-        }).catch(() => undefined)
+        }).then(() => feedStore.fetchSubscriptionHubTree()).catch(() => undefined)
         const serverProgress = await lifecycle.getProgress('podcast', episode.id).catch(() => null)
         if (request !== latestRequest) return
         if (serverProgress?.position_sec) {

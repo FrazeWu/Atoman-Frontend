@@ -8,6 +8,7 @@ import PodcastEpisodeView from "../../../../src/views/podcast/PodcastEpisodeView
 // @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
 import PodcastFavoritesView from "../../../../src/views/podcast/PodcastFavoritesView.vue";
 import { useAuthStore } from "../../../../src/stores/auth";
+import { useFeedStore } from "../../../../src/stores/feed";
 import { usePlayerStore } from "../../../../src/stores/player";
 
 const CommentSideSheetStub = {
@@ -49,6 +50,43 @@ describe("podcast bookmark kinds", () => {
 	beforeEach(() => {
 		setActivePinia(createPinia());
 		useAuthStore().token = "test-token";
+	});
+
+	it("打开播客单集后刷新订阅侧边栏未读数", async () => {
+		const refreshSubscriptionHubTree = vi
+			.spyOn(useFeedStore(), "fetchSubscriptionHubTree")
+			.mockResolvedValue(true);
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.endsWith("/podcast/episodes/episode-1")) {
+				return response({
+					id: "episode-1",
+					audio_url: "https://cdn.example.com/episode.mp3",
+					post: { title: "测试单集", content: "" },
+				});
+			}
+			return response({});
+		});
+
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/podcasts/episode/:id", component: PodcastEpisodeView }],
+		});
+		await router.push("/podcasts/episode/episode-1");
+		await router.isReady();
+
+		mount(PodcastEpisodeView, {
+			global: {
+				plugins: [router],
+				stubs: {
+					PodcastShownotes: true,
+					CommentSideSheet: CommentSideSheetStub,
+				},
+			},
+		});
+		await flushPromises();
+
+		expect(refreshSubscriptionHubTree).toHaveBeenCalledTimes(1);
 	});
 
 	it("sends the selected kind when favoriting or adding an episode to listen later", async () => {

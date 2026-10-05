@@ -685,8 +685,8 @@ describe("AlbumDrawer.vue", () => {
 			page_size: 100,
 		});
 		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain(
-			"已订阅",
-		);
+				"已收藏",
+			);
 	});
 
 	it("paginates playlists in the add-to-playlist menu", async () => {
@@ -904,7 +904,7 @@ describe("AlbumDrawer.vue", () => {
 		expect(wrapper.get(".album-cover").text()).toContain("暂无封面");
 	});
 
-	it("creates an album bookmark when clicking 订阅 and reflects the new state", async () => {
+	it("creates an album bookmark when clicking 收藏 and reflects the new state", async () => {
 		const wrapper = mount(AlbumDrawer, {
 			global: {
 				stubs: {
@@ -921,18 +921,18 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		const bookmarkButton = wrapper.get('[data-testid="album-bookmark-toggle"]');
-		expect(bookmarkButton.text()).toContain("订阅");
+		expect(bookmarkButton.text()).toContain("收藏");
 
 		await bookmarkButton.trigger("click");
 		await flushPromises();
 
 		expect(createAlbumBookmark).toHaveBeenCalledWith("1");
 		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain(
-			"已订阅",
+			"已收藏",
 		);
 	});
 
-	it("shows a loading state while updating album subscription", async () => {
+	it("shows a loading state while updating album bookmark", async () => {
 		let resolveBookmark!: () => void;
 		createAlbumBookmark.mockReturnValueOnce(
 			new Promise<void>((resolve) => {
@@ -1101,8 +1101,8 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		expect(wrapper.text()).toContain("Album B");
-		expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toBe(
-			"订阅",
+			expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toBe(
+			"收藏",
 		);
 	});
 
@@ -1115,6 +1115,6 @@ describe("AlbumDrawer.vue", () => {
 		await wrapper.get('[data-testid="album-bookmark-toggle"]').trigger("click");
 		await flushPromises();
 
-		expect(document.body.textContent).toContain("订阅失败");
+		expect(document.body.textContent).toContain("收藏失败");
 	});
 });

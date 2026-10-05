@@ -622,7 +622,7 @@ async function toggleAlbumBookmark() {
   } catch (error) {
     if (!isCurrentTarget()) return
     reportError(error, 'Failed to toggle album bookmark:')
-    toastMessage.value = wasBookmarked ? '取消订阅失败' : '订阅失败'
+    toastMessage.value = wasBookmarked ? '取消收藏失败' : '收藏失败'
     toastVisible.value = true
   } finally {
     if (isCurrentTarget()) bookmarkLoading.value = false
@@ -815,7 +815,7 @@ watch(
               data-testid="album-bookmark-toggle"
               @click="toggleAlbumBookmark"
             >
-              {{ bookmarkLoading ? '处理中...' : isBookmarked ? '已订阅' : '订阅' }}
+              {{ bookmarkLoading ? '处理中...' : isBookmarked ? '已收藏' : '收藏' }}
             </PButton>
             <PButton
               variant="secondary"

@@ -663,6 +663,10 @@ async function fetchRecommendations() {
     channels.value = recommendationChannels
 
     if (authStore.isAuthenticated && channels.value.length) {
+      // 订阅列表尚未完成时只补一次批量请求，避免为每个频道发起单独状态请求。
+      if (!feedStore.subscriptionsLoaded) {
+        await feedStore.fetchSubscriptions()
+      }
       const subscribedChannelIds = new Set(
         feedStore.subscriptions
           .filter((subscription) => (
@@ -680,7 +684,7 @@ async function fetchRecommendations() {
           )))
           : feedStore.subscriptionsLoaded
             ? subscribedChannelIds.has(item.source_id || item.id)
-            : feedStore.isSubscribedToChannel(item.id)),
+            : false),
       )
       channels.value = channels.value.map((item, index) => ({
         ...item,

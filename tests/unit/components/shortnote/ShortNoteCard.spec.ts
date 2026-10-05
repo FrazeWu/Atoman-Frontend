@@ -199,4 +199,25 @@ describe('ShortNoteCard', () => {
 
     expect(markItemsRead).toHaveBeenCalledWith([], ['note-legacy-1'])
   })
+
+  it('挂载时自动迁移旧的本地已读标记', async () => {
+    useShortNoteSync().markNoteAsRead('note-legacy-mount')
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const authStore = useAuthStore(pinia)
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const markItemsRead = vi.spyOn(useFeedStore(pinia), 'markItemsRead').mockResolvedValue(true)
+    mount(ShortNoteCard, {
+      props: { note: { ...mockNote, id: 'note-legacy-mount' }, isRead: false },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
+      },
+    })
+
+    await flushPromises()
+
+    expect(markItemsRead).toHaveBeenCalledWith([], ['note-legacy-mount'])
+  })
 })

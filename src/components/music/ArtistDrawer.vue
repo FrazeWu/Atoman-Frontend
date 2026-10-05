@@ -77,15 +77,27 @@ const formerNames = computed(() => {
       .filter((name): name is string => Boolean(name)),
   )
   const seen = new Set<string>()
-  const names: string[] = []
+  const names: Array<{ name: string; startDate?: string; endDate?: string }> = []
 
-  const addName = (value: unknown) => {
+  const addName = (value: unknown, startDate?: unknown, endDate?: unknown) => {
     if (typeof value !== 'string') return
     const name = value.trim()
     const key = name.toLocaleLowerCase()
-    if (!name || currentNames.has(key) || seen.has(key)) return
+    if (!name || currentNames.has(key)) return
+    if (seen.has(key)) {
+      const existing = names.find((item) => item.name.toLocaleLowerCase() === key)
+      if (existing) {
+        if (!existing.startDate && typeof startDate === 'string' && startDate.trim()) existing.startDate = startDate.trim()
+        if (!existing.endDate && typeof endDate === 'string' && endDate.trim()) existing.endDate = endDate.trim()
+      }
+      return
+    }
     seen.add(key)
-    names.push(name)
+    names.push({
+      name,
+      startDate: typeof startDate === 'string' && startDate.trim() ? startDate.trim() : undefined,
+      endDate: typeof endDate === 'string' && endDate.trim() ? endDate.trim() : undefined,
+    })
   }
 
   for (const alias of artist.value?.aliases ?? []) addName(alias.alias)
@@ -94,14 +106,22 @@ const formerNames = computed(() => {
     const stageNames = JSON.parse(artist.value?.stage_names_json || '[]') as unknown
     if (Array.isArray(stageNames)) {
       for (const stageName of stageNames) {
-        addName(typeof stageName === 'string' ? stageName : (stageName as { name?: unknown })?.name)
+        if (typeof stageName === 'string') {
+          addName(stageName)
+        } else {
+          const record = stageName as { name?: unknown; start_date_text?: unknown; end_date_text?: unknown }
+          addName(record?.name, record?.start_date_text, record?.end_date_text)
+        }
       }
     }
   } catch {
     // Ignore malformed legacy data and keep aliases available.
   }
 
-  return names
+  return names.map(({ name, startDate, endDate }) => ({
+    name,
+    period: startDate || endDate ? `（${startDate || ''}-${endDate || ''}）` : '',
+  }))
 })
 const memberGroups = computed(() => artist.value?.member_groups ?? { current: [], former: [] })
 const hasMemberGroups = computed(() => (
@@ -550,7 +570,7 @@ watch([releaseType, albumSortMode], () => {
             <div class="artist-header-info">
               <h2 class="title">{{ displayName || `Artist ${artistId}` }}</h2>
               <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
-              <p v-if="formerNames.length" class="artist-meta-line">曾用名：{{ formerNames.join(' / ') }}</p>
+              <p v-if="formerNames.length" class="artist-meta-line">曾用名：{{ formerNames.map((item) => `${item.name}${item.period}`).join(' / ') }}</p>
             </div>
           </div>
           <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>

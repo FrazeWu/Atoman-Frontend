@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { defineComponent, h } from "vue";
 import VideoDetailView from "@/views/video/VideoDetailView.vue";
 import { useAuthStore } from "@/stores/auth";
+import { useFeedStore } from "@/stores/feed";
 
 const mocks = vi.hoisted(() => ({
 	useInteractions: vi.fn(),
@@ -142,6 +143,7 @@ const makeVideo = (
 async function mountVideoDetail(
 	path = "/videos/watch/video-1",
 	authenticated = true,
+	configureFeedStore?: (feedStore: ReturnType<typeof useFeedStore>) => void,
 ) {
 	const pinia = createPinia();
 	setActivePinia(pinia);
@@ -152,6 +154,8 @@ async function mountVideoDetail(
 	authStore.user = authenticated
 		? { uuid: "user-2", username: "reader", email: "reader@example.com" }
 		: null;
+	const feedStore = useFeedStore();
+	configureFeedStore?.(feedStore);
 
 	const router = createRouter({
 		history: createMemoryHistory(),
@@ -200,6 +204,8 @@ describe("VideoDetailView shared interactions", () => {
 				const url = String(input);
 				if (init?.method === "POST" && url.endsWith("/view"))
 					return makeJsonResponse({});
+				if (url.includes("/content/events") || url.includes("/content/progress"))
+					return makeJsonResponse({});
 				if (url.endsWith("/videos/video-1")) {
 					return makeJsonResponse(
 						makeVideo("video-1", "当前视频", {
@@ -213,6 +219,15 @@ describe("VideoDetailView shared interactions", () => {
 				throw new Error(`unexpected fetch: ${url}`);
 			}),
 		);
+	});
+
+	it("打开视频详情后刷新订阅侧边栏未读数", async () => {
+		const refreshSubscriptionHubTree = vi.fn().mockResolvedValue(true);
+		await mountVideoDetail("/videos/watch/video-1", true, (feedStore) => {
+			vi.spyOn(feedStore, "fetchSubscriptionHubTree").mockImplementation(refreshSubscriptionHubTree);
+		});
+
+		expect(refreshSubscriptionHubTree).toHaveBeenCalledTimes(1);
 	});
 
 	it("通过评论抽屉初始化统一评论目标和互动状态", async () => {

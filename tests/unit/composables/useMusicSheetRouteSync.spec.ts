@@ -122,6 +122,30 @@ describe('useMusicSheetRouteSync', () => {
     expect(drawers.layers.value).toHaveLength(0)
   })
 
+  it('closes to the retained route when browser history cannot go back', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music')
+    drawers.openAlbum('album-1')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/music/album/album-1')
+
+    vi.spyOn(router, 'go').mockImplementation(() => undefined)
+    drawers.closeAlbum()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music')
+    expect(drawers.layers.value).toHaveLength(0)
+  })
+
   it('preserves the retained parent layer when closing a routed child layer', async () => {
     const router = createRouter({
       history: createMemoryHistory(),

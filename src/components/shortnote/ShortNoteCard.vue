@@ -155,6 +155,7 @@ const viewerVote = ref<'up' | 'down' | 'none'>('none')
 const votePending = ref(false)
 const voteError = ref('')
 const localRead = ref(isNoteRead(props.note.id))
+const serverReadSynced = ref(Boolean(props.isRead))
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const voteTotal = computed(() => (interactions.likeCount.value || 0) + dislikeCount.value)
 const likeRate = computed(() => (
@@ -169,6 +170,11 @@ function handleMouseEnter() {
 
 watch(() => props.note.id, (id) => {
   localRead.value = isNoteRead(id)
+  serverReadSynced.value = Boolean(props.isRead)
+})
+
+watch(() => props.isRead, (isRead) => {
+  if (isRead) serverReadSynced.value = true
 })
 
 const showLightbox = ref(false)
@@ -180,16 +186,20 @@ const mediaUrls = computed(() => (props.note.media || []).map(m => resolveMediaU
 let readRequest: Promise<boolean> | null = null
 
 function markRead() {
-  if (isRead.value) return
-  localRead.value = true
-  markNoteAsRead(props.note.id)
+  if (serverReadSynced.value || readRequest) return
+  if (!isRead.value) {
+    localRead.value = true
+    markNoteAsRead(props.note.id)
+  }
   if (!authStore.isAuthenticated) {
     emit('mark-read')
     return
   }
-  if (readRequest) return
   readRequest = feedStore.markItemsRead([], [props.note.id]).then((success) => {
-    if (success) emit('mark-read')
+    if (success) {
+      serverReadSynced.value = true
+      emit('mark-read')
+    }
     return success
   }).finally(() => {
     readRequest = null

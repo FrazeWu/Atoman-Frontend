@@ -21,7 +21,6 @@
         </RouterView>
       </main>
       <BlogSheetStack />
-      <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
       <PShortcutHints v-if="!isAuthRoute" v-model="shortcutHelpOpen" :hints="shortcutHints" />
@@ -53,7 +52,6 @@ declare global {
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
-const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFooter.vue'))
 
 const route = useRoute()
@@ -67,7 +65,6 @@ const apiUrl = useApiUrl()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
-const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
 const showDeferredShell = ref(false)
 const shortcutHelpOpen = ref(false)
 const isMediaModule = computed(() => /^\/(music|podcasts|videos)(\/|$)/.test(route.path))

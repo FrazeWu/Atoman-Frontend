@@ -210,6 +210,37 @@ describe("ArtistDrawer.vue", () => {
 		expect(wrapper.text()).toContain("1975");
 	});
 
+	it("deduplicates same-date albums and keeps the more complete record", async () => {
+		listMusicAlbums.mockResolvedValueOnce({
+			data: [
+				{
+					id: "duplicate-a",
+					title: "Kendrick Lamar",
+					release_date: "2009-12-31",
+					songs: new Array(15).fill(null),
+					cover_url: "/cover.jpg",
+					album_type: "album",
+				},
+				{
+					id: "duplicate-b",
+					title: " Kendrick  Lamar ",
+					release_date: "2009-12-31",
+					description: "完整专辑简介",
+					songs: new Array(15).fill(null),
+					cover_url: "/cover.jpg",
+					album_type: "album",
+				},
+			],
+			meta: { page: 1, page_size: 20, total: 2, has_more: false },
+		});
+
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+
+		expect(wrapper.findAll(".album-row")).toHaveLength(1);
+		expect(wrapper.text()).toContain("完整专辑简介");
+	});
+
 	it("renders an artist-shaped skeleton while details load", async () => {
 		getMusicArtist.mockReturnValueOnce(new Promise(() => undefined));
 

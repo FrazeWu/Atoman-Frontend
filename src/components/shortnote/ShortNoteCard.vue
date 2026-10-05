@@ -57,7 +57,7 @@
       role="button"
       tabindex="0"
       :aria-expanded="showComments"
-      @click="toggleComments"
+      @click="activateBody"
       @keydown.enter="toggleComments"
       @keydown.space="toggleComments"
     >
@@ -137,6 +137,7 @@ import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import { useApi } from '@/composables/useApi'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { useInteractions } from '@/composables/useInteractions'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import type { ShortNote } from '@/types'
@@ -147,6 +148,7 @@ const emit = defineEmits<{ delete: [note: ShortNote]; 'mark-read': [] }>()
 const api = useApi()
 const authStore = useAuthStore()
 const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNoteSync()
+const feedStore = useFeedStore()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const dislikeCount = ref(0)
 const viewerVote = ref<'up' | 'down' | 'none'>('none')
@@ -162,11 +164,7 @@ const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
 const isRead = computed(() => Boolean(props.isRead || localRead.value || isNoteRead(props.note.id)))
 
 function handleMouseEnter() {
-  if (!isRead.value) {
-    localRead.value = true
-    markNoteAsRead(props.note.id)
-    emit('mark-read')
-  }
+  markRead()
 }
 
 watch(() => props.note.id, (id) => {
@@ -178,6 +176,25 @@ const lightboxIndex = ref(0)
 const showComments = ref(false)
 const cardAnchor = ref<HTMLElement | null>(null)
 const mediaUrls = computed(() => (props.note.media || []).map(m => resolveMediaURL(m.url)))
+
+let readRequest: Promise<boolean> | null = null
+
+function markRead() {
+  if (isRead.value) return
+  localRead.value = true
+  markNoteAsRead(props.note.id)
+  if (!authStore.isAuthenticated) {
+    emit('mark-read')
+    return
+  }
+  if (readRequest) return
+  readRequest = feedStore.markItemsRead([], [props.note.id]).then((success) => {
+    if (success) emit('mark-read')
+    return success
+  }).finally(() => {
+    readRequest = null
+  })
+}
 
 function setCardAnchor(value: unknown) {
   const element = value instanceof HTMLElement
@@ -197,6 +214,11 @@ function toggleComments(event?: Event) {
     event.preventDefault()
   }
   showComments.value = !showComments.value
+}
+
+function activateBody(event: Event) {
+  markRead()
+  toggleComments(event)
 }
 
 watchEffect(() => {

@@ -116,12 +116,7 @@ const toggleReadingList = (id: string) => {
 
 const markShortNoteRead = (item: TimelineItem) => {
   if (item.type !== 'short_note' || !item.short_note || item.is_read) return
-  void (async () => {
-    const success = await feedStore.markItemsRead([], [item.short_note!.id])
-    if (!success) return
-    item.is_read = true
-    await feedStore.fetchSubscriptions()
-  })()
+  item.is_read = true
 }
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({

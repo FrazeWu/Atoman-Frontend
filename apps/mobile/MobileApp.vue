@@ -3,9 +3,13 @@
     <MobileTopbar />
     <main
       class="app-main mobile-app-main"
-      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'mobile-app-main--with-player': showMobilePlayer, 'shutter-exit': transition.isExiting, 'shutter-entry': transition.isEntering }"
+      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'mobile-app-main--with-player': showMobilePlayer }"
     >
-      <RouterView />
+      <RouterView v-slot="{ Component, route: viewRoute }">
+        <Transition :name="mobileRouteTransition">
+          <component :is="Component" :key="viewRoute.fullPath" />
+        </Transition>
+      </RouterView>
     </main>
     <MobileAudioPlayer v-if="showMobilePlayer" />
     <MobileBottomNav v-if="showMobileBottomNav" />
@@ -13,15 +17,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { useTransitionStore } from '@/stores/transition'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
+import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './MobileTopbar.vue'
 
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
@@ -35,12 +39,24 @@ declare global {
 
 const route = useRoute()
 const siteAccessStore = useSiteAccessStore()
-const transition = useTransitionStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && !route.path.startsWith('/modules') && !route.path.startsWith('/inbox') && !route.path.startsWith('/studio') && !route.path.startsWith('/videos/watch/'))
 const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
+const mobileRouteTransition = ref('')
+
+watch(() => route.fullPath, (to, from) => {
+  if (isMobileDetailRoute(to)) {
+    mobileRouteTransition.value = 'mobile-detail-forward'
+  } else if (isMobileDetailRoute(from)) {
+    mobileRouteTransition.value = 'mobile-detail-back'
+  } else {
+    mobileRouteTransition.value = ''
+  }
+  reportPageView()
+  reportAnalyticsPageView()
+})
 
 const reportPageView = () => {
   if (isAuthRoute.value) return
@@ -54,11 +70,6 @@ const reportAnalyticsPageView = () => {
     ga('event', 'page_view', { page_path: route.fullPath, page_location: window.location.href })
   }
 }
-
-watch(() => route.fullPath, () => {
-  reportPageView()
-  reportAnalyticsPageView()
-})
 
 let cancelStartupTasks: (() => void) | undefined
 
@@ -145,6 +156,55 @@ body {
 
 .mobile-app-main--with-player {
   padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-app-main > .mobile-detail-forward-enter-active,
+.mobile-app-main > .mobile-detail-forward-leave-active,
+.mobile-app-main > .mobile-detail-back-enter-active,
+.mobile-app-main > .mobile-detail-back-leave-active {
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 240ms ease;
+}
+
+.mobile-app-main > .mobile-detail-forward-enter-active,
+.mobile-app-main > .mobile-detail-back-enter-active {
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-app-main > .mobile-detail-forward-leave-active,
+.mobile-app-main > .mobile-detail-back-leave-active {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+}
+
+.mobile-detail-forward-enter-from {
+  opacity: 0.96;
+  transform: translateY(100%);
+}
+
+.mobile-detail-forward-leave-to {
+  opacity: 0.96;
+  transform: translateY(-2%);
+}
+
+.mobile-detail-back-enter-from {
+  opacity: 0.96;
+  transform: translateY(-2%);
+}
+
+.mobile-detail-back-leave-to {
+  opacity: 0.96;
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-app-main > .mobile-detail-forward-enter-active,
+  .mobile-app-main > .mobile-detail-forward-leave-active,
+  .mobile-app-main > .mobile-detail-back-enter-active,
+  .mobile-app-main > .mobile-detail-back-leave-active {
+    transition-duration: 1ms;
+  }
 }
 
 .mobile-app-shell .p-dropdown-panel {

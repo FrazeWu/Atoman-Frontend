@@ -54,11 +54,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
       class="shortcut-hints__trigger"
       data-testid="shortcut-hints-trigger"
       aria-label="显示键盘快捷键"
+      aria-keyshortcuts="Shift+?"
       aria-haspopup="dialog"
       :aria-expanded="open"
+      title="查看快捷键（Shift + ?）"
       @click="open = !open"
     >
       <Keyboard :size="18" aria-hidden="true" />
+      <span class="shortcut-hints__label">快捷键</span>
     </button>
     <div
       v-if="open"
@@ -84,14 +87,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 .shortcut-hints {
   position: fixed;
   right: 1.25rem;
-  bottom: calc(var(--a-footer-reserved-height, 0px) + 1.25rem);
+  bottom: calc(
+    var(--a-footer-reserved-height, 0px) +
+    var(--a-player-reserved-height, 0px) +
+    1.25rem
+  );
   z-index: var(--a-z-navigation, 20);
 }
 
 .shortcut-hints__trigger {
   display: inline-flex;
-  width: 2.5rem;
+  min-width: 2.5rem;
   height: 2.5rem;
+  gap: 0.4rem;
+  padding: 0 0.7rem;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--a-color-border-soft);
@@ -99,6 +108,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
+}
+
+.shortcut-hints__label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
 .shortcut-hints__trigger:hover,

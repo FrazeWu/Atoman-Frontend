@@ -442,6 +442,38 @@ function mergeDiscoverByID<T extends { id: string }>(current: T[], incoming: T[]
   return [...byID.values()]
 }
 
+function normalizeDiscoverText(value: string | undefined): string {
+  return (value ?? '').normalize('NFKC').toLocaleLowerCase().replace(/[\s\u3000]+/g, '')
+}
+
+function mergeDiscoverAlbums(
+  current: MusicAlbumListItem[],
+  incoming: MusicAlbumListItem[],
+): MusicAlbumListItem[] {
+  const merged = [...current]
+  for (const album of incoming) {
+    const titleKey = normalizeDiscoverText(album.title)
+    const artistIDs = new Set((album.artists ?? []).map((artist) => String(artist.id)))
+    const duplicateIndex = merged.findIndex((existing) => {
+      if (String(existing.id) === String(album.id)) return true
+      if (normalizeDiscoverText(existing.title) !== titleKey) return false
+      const existingArtistIDs = new Set((existing.artists ?? []).map((artist) => String(artist.id)))
+      if (artistIDs.size === 0 || existingArtistIDs.size === 0) return true
+      return [...artistIDs].some((artistID) => existingArtistIDs.has(artistID))
+    })
+    if (duplicateIndex < 0) {
+      merged.push(album)
+      continue
+    }
+
+    const existing = merged[duplicateIndex]
+    if ((existing.artists?.length ?? 0) === 0 && artistIDs.size > 0) {
+      merged[duplicateIndex] = album
+    }
+  }
+  return merged
+}
+
 async function loadDiscoverSection(
   section: DiscoverSection,
   targetPage: number,
@@ -458,7 +490,7 @@ async function loadDiscoverSection(
         const response = await listMusicAlbums({ page, page_size: discoverAlbumPageSize, sort: 'hot' })
         if (!isCurrent()) return
         const albums = response.data.map((album) => ({ ...album, reason: '近期热门专辑' }))
-        discoverAlbums.value = shouldAppend ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
+        discoverAlbums.value = shouldAppend ? mergeDiscoverAlbums(discoverAlbums.value, albums) : mergeDiscoverAlbums([], albums)
         discoverSectionMeta.album = response.meta
         if (
           filteredDiscoverAlbums.value.length >= discoverAlbumPageSize
@@ -529,7 +561,7 @@ async function fetchAlbumIndex(nextPage = 1) {
       sort: 'hot',
     })
     if (!request.isCurrent()) return
-    albumItems.value = response.data ?? []
+    albumItems.value = mergeDiscoverAlbums([], response.data ?? [])
     albumMeta.value = response.meta
     const currentBookmarkRequestId = ++bookmarkRequestId
     void fetchAlbumBookmarks(currentBookmarkRequestId)

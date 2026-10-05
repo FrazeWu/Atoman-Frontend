@@ -117,9 +117,10 @@ const metadataMatchLabel = computed(() => {
 const metadataMatchState = computed(() => {
   const draft = albumImportDraft.value
   if (!draft) return 'idle'
-  if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched' || draft.metadataMatchStatus === 'unmatched') {
-    return 'done'
-  }
+	if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') {
+		return 'done'
+	}
+	if (draft.metadataMatchStatus === 'unmatched') return 'failed'
 	if (draft.metadataMatchStatus === 'matching') {
 		return 'active'
   }
@@ -246,7 +247,11 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span>元信息匹配</span>
           <strong>{{ metadataMatchLabel }}</strong>
         </div>
-        <div class="parallel-progress__steps" aria-hidden="true">
+		<div
+			class="parallel-progress__steps"
+			:class="`parallel-progress__steps--${metadataMatchState}`"
+			aria-hidden="true"
+		>
           <span :class="{ 'is-done': metadataMatchState === 'active' || metadataMatchState === 'done' }" />
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
@@ -461,28 +466,39 @@ function formatUploadSpeed(bytesPerSecond: number) {
   font-size: 0.72rem;
 }
 .parallel-progress__steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.3rem;
-  height: 0.3rem;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.3rem;
+	height: 0.3rem;
+	overflow: hidden;
+	background: var(--a-color-surface-3);
 }
 .parallel-progress__steps span {
-  background: var(--a-color-surface-3);
-  transition: background-color 0.2s ease;
+	background: var(--a-color-surface-3);
+	transition: background-color 0.2s ease;
 }
-.parallel-progress__steps .is-done {
-  background: var(--a-color-text);
-}
-.parallel-progress__steps .is-active {
+.parallel-progress__steps--active {
+	display: block;
 	background: repeating-linear-gradient(
 		-45deg,
-		var(--a-color-accent-blue) 0,
-		var(--a-color-accent-blue) 0.35rem,
-		color-mix(in srgb, var(--a-color-accent-blue) 35%, white) 0.35rem,
-		color-mix(in srgb, var(--a-color-accent-blue) 35%, white) 0.7rem
+		var(--a-color-text) 0,
+		var(--a-color-text) 0.35rem,
+		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 0.35rem,
+		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 0.7rem
 	);
 	background-size: 1rem 1rem;
-	animation: album-import-progress-stripes 0.7s linear infinite;
+	animation: album-import-progress-stripes 0.8s linear infinite;
+}
+.parallel-progress__steps--active span,
+.parallel-progress__steps--done span,
+.parallel-progress__steps--failed span {
+	display: none;
+}
+.parallel-progress__steps--done {
+	background: var(--a-color-text);
+}
+.parallel-progress__steps--failed {
+	background: var(--a-color-surface-3);
 }
 @keyframes album-import-progress-stripes {
 	to { background-position: 1rem 0; }

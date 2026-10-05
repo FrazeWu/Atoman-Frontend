@@ -732,12 +732,18 @@ export function useMusicDrawers() {
 			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
 		if (importedCover) flow.draft.albumDetails.coverUrl = importedCover;
 		const matchedTags = [
-			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
-			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const })),
+			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName: snapshot.metadataGenres?.length === 1 ? snapshot.metadataGenres[0] : undefined })),
 		];
 		if (matchedTags.length) {
-			const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
-			flow.draft.albumDetails.tags = [...matchedTags, ...customTags];
+			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`));
+			for (const tag of matchedTags) {
+				const key = `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`;
+				if (!existingKeys.has(key)) {
+					flow.draft.albumDetails.tags.push(tag);
+					existingKeys.add(key);
+				}
+			}
 		}
 		if (snapshot.metadataSourceUrl)
 			flow.draft.albumDetails.source = normalizeMusicImportSource(

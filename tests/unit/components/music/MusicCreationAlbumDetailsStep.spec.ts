@@ -197,24 +197,24 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		);
 	});
 
-	it("keeps matched and custom tags in separate stable rows", () => {
+	it("keeps style and other tags in stable rows without source labels", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
 		const flow = drawers.state.value.creationFlow;
 		if (!flow) throw new Error("creation flow missing");
 		flow.draft.albumDetails.tags = [
-			{ name: "摇滚", kind: "type", source: "matched" },
-			{ name: "民谣摇滚", kind: "mood", source: "matched" },
-			{ name: "现场", kind: "scene", source: "custom" },
+			{ name: "摇滚", kind: "type" },
+			{ name: "民谣摇滚", kind: "type" },
+			{ name: "现场", kind: "scene" },
 		];
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
 		expect(wrapper.get('[data-testid="album-tags-editor"]').findAll(".album-tags-editor__row")).toHaveLength(3);
-		expect(wrapper.get('[data-testid="album-matched-genres-row"]').text()).toContain("匹配风格");
-		expect(wrapper.get('[data-testid="album-matched-styles-row"]').text()).toContain("匹配场景");
-		expect(wrapper.get('[data-testid="matched-album-tag-摇滚"]').exists()).toBe(true);
-		expect(wrapper.get('[data-testid="matched-album-tag-民谣摇滚"]').exists()).toBe(true);
+		expect(wrapper.get('[data-testid="album-style-tags-row"]').text()).toContain("风格");
+		expect(wrapper.get('[data-testid="album-other-tags-row"]').text()).toContain("其他标签");
+		expect(wrapper.get('[data-testid="album-tag-摇滚"]').exists()).toBe(true);
+		expect(wrapper.get('[data-testid="album-tag-民谣摇滚"]').exists()).toBe(true);
 		expect(wrapper.get('[data-testid="album-tag-input"]').element.closest(".album-tags-editor__custom-content")).not.toBeNull();
 	});
 

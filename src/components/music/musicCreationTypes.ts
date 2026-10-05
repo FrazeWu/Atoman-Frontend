@@ -244,7 +244,7 @@ export interface MusicCreationAlbumContributorDraft {
 export interface MusicCreationAlbumTagDraft {
 	name: string;
 	kind: MusicTagKind;
-	source: "matched" | "custom";
+	parentName?: string;
 }
 
 export interface MusicCreationAlbumDetailsDraft {

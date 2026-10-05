@@ -142,7 +142,7 @@ export function useAlbumImportUpload() {
 			currentUploadState.value?.fileProgress.value ?? new Map<string, number>(),
 	);
 
-	function clearExternalMetadata(flow: MusicCreationFlowState) {
+	function clearExternalMetadata(flow: MusicCreationFlowState, clearTags = false) {
 		const draft = flow.draft.albumImport;
 		const albumDetails = flow.draft.albumDetails;
 		const previousSourceURL = draft.metadataSourceUrl;
@@ -189,10 +189,10 @@ export function useAlbumImportUpload() {
 		if (previousDerivedAlbumType && albumDetails.type === previousDerivedAlbumType) {
 			albumDetails.type = "album";
 		}
+		if (clearTags) albumDetails.tags = [];
 		if (!albumDetails.source.trim() || albumDetails.source === previousSourceURL) {
 			albumDetails.source = "";
 		}
-		albumDetails.tags = albumDetails.tags.filter((tag) => tag.source === "custom");
 	}
 
 	function applyImportSnapshotToFlow(
@@ -274,7 +274,7 @@ export function useAlbumImportUpload() {
 			mergeImportedTracksIntoDraft(flow, derivedTracks);
 		}
 		if (isCanceledSnapshot) {
-			clearExternalMetadata(flow);
+			clearExternalMetadata(flow, true);
 			draft.derivedTracks = [];
 		} else if (shouldApplyMetadata) {
 			draft.derivedReleaseDate = snapshot.derivedReleaseDate;
@@ -328,12 +328,19 @@ export function useAlbumImportUpload() {
 			flow.draft.albumDetails.coverUrl = importedCover;
 		}
 		if (!isCanceledSnapshot && shouldApplyMetadata) {
-			const customTags = flow.draft.albumDetails.tags.filter((tag) => tag.source === "custom");
-			const matchedTags = [
-				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, source: "matched" as const })),
-				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "mood" as const, source: "matched" as const })),
+			const parentName = snapshot.metadataGenres?.length === 1 ? snapshot.metadataGenres[0] : undefined;
+			const nextTags = [
+				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const })),
+				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName })),
 			];
-			flow.draft.albumDetails.tags = [...matchedTags, ...customTags];
+			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`));
+			for (const tag of nextTags) {
+				const key = `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`;
+				if (!existingKeys.has(key)) {
+					flow.draft.albumDetails.tags.push(tag);
+					existingKeys.add(key);
+				}
+			}
 		}
 		if (
 			!isCanceledSnapshot &&
@@ -661,7 +668,7 @@ export function useAlbumImportUpload() {
 		draft.errorMessage = "";
 		draft.metadataMatchingStarted = false;
 		draft.metadataError = "";
-		clearExternalMetadata(flow);
+		clearExternalMetadata(flow, true);
 		let autoMode: MusicAlbumImportInputMode = "files";
 		if (isArchive) {
 			autoMode = "archive";

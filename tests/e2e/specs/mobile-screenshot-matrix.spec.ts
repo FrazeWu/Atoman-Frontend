@@ -21,7 +21,24 @@ function detailResponse(pathname: string) {
       title: "测试专辑",
       cover_url: "",
       artists: [],
-      songs: [],
+      songs: [
+        {
+          id: "song-1",
+          title: "测试曲目",
+          track_number: 1,
+          duration_seconds: 210,
+          audio_url: "https://example.test/song.mp3",
+          artists: [],
+        },
+        {
+          id: "song-2",
+          title: "第二首曲目",
+          track_number: 2,
+          duration_seconds: 185,
+          audio_url: "https://example.test/song-2.mp3",
+          artists: [],
+        },
+      ],
     };
   }
   if (pathname.includes("/music/artists/")) {
@@ -366,6 +383,27 @@ test.describe("Mobile route screenshot matrix", () => {
           titleBox!.height,
           `${pathname} featured title wrapped vertically`,
         ).toBeLessThanOrEqual(32);
+      }
+
+      if (pathname === "/music/album/album-1") {
+        await expect(page.locator(".mobile-bottom-nav__bar")).toBeVisible();
+        const track = page.locator('[data-testid="track-play-song-1"]').locator("..");
+        await expect(track).toBeVisible();
+        const trackMetrics = await track.evaluate((element) => ({
+          right: element.getBoundingClientRect().right,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        }));
+        expect(trackMetrics.right, pathname + " track row exceeds the viewport").toBeLessThanOrEqual(390);
+        expect(trackMetrics.scrollWidth, pathname + " track row has horizontal overflow").toBeLessThanOrEqual(trackMetrics.clientWidth);
+        const navTab = page.locator('[data-tab-key="discover"]');
+        const navBox = await navTab.boundingBox();
+        expect(navBox, `${pathname} bottom navigation has no layout`).not.toBeNull();
+        const navHit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest(".mobile-bottom-nav__tab")?.getAttribute("data-tab-key"), {
+          x: navBox!.x + navBox!.width / 2,
+          y: navBox!.y + navBox!.height / 2,
+        });
+        expect(navHit, `${pathname} detail sheet covers the bottom navigation`).toBe("discover");
       }
 
       const mobileContentSelectors: Record<string, string> = {

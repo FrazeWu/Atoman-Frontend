@@ -629,7 +629,7 @@ const mobileSheetStyle = computed(() => {
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding-inline: 1rem;
+  padding: 0 1rem calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
 }
 
 .p-sheet-mobile-backdrop {

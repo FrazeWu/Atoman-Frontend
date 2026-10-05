@@ -91,7 +91,7 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
   bottom: 0;
   left: 0;
   display: block !important;
-  z-index: var(--a-z-navigation);
+  z-index: var(--a-z-player-sheet);
   pointer-events: none;
 }
 

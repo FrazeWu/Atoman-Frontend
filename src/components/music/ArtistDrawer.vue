@@ -70,12 +70,39 @@ const contributorTotal = ref(0)
 const artistAlbumPageSize = 24
 const releaseMeta = ref({ page: 1, page_size: artistAlbumPageSize, total: 0, has_more: false })
 
-const artistAliases = computed(() => (
-  artist.value?.aliases
-    ?.map((item) => item.alias.trim())
-    .filter((alias) => alias && alias.toLowerCase() !== artist.value?.name.toLowerCase())
-    ?? []
-))
+const formerNames = computed(() => {
+  const currentNames = new Set(
+    [artist.value?.name, artist.value?.display_name]
+      .map((name) => name?.trim().toLocaleLowerCase())
+      .filter((name): name is string => Boolean(name)),
+  )
+  const seen = new Set<string>()
+  const names: string[] = []
+
+  const addName = (value: unknown) => {
+    if (typeof value !== 'string') return
+    const name = value.trim()
+    const key = name.toLocaleLowerCase()
+    if (!name || currentNames.has(key) || seen.has(key)) return
+    seen.add(key)
+    names.push(name)
+  }
+
+  for (const alias of artist.value?.aliases ?? []) addName(alias.alias)
+
+  try {
+    const stageNames = JSON.parse(artist.value?.stage_names_json || '[]') as unknown
+    if (Array.isArray(stageNames)) {
+      for (const stageName of stageNames) {
+        addName(typeof stageName === 'string' ? stageName : (stageName as { name?: unknown })?.name)
+      }
+    }
+  } catch {
+    // Ignore malformed legacy data and keep aliases available.
+  }
+
+  return names
+})
 const memberGroups = computed(() => artist.value?.member_groups ?? { current: [], former: [] })
 const hasMemberGroups = computed(() => (
   artist.value?.artist_form === 'group'
@@ -523,7 +550,7 @@ watch([releaseType, albumSortMode], () => {
             <div class="artist-header-info">
               <h2 class="title">{{ displayName || `Artist ${artistId}` }}</h2>
               <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
-              <p v-if="artistAliases.length" class="artist-meta-line">曾用名：{{ artistAliases.join(' / ') }}</p>
+              <p v-if="formerNames.length" class="artist-meta-line">曾用名：{{ formerNames.join(' / ') }}</p>
             </div>
           </div>
           <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>

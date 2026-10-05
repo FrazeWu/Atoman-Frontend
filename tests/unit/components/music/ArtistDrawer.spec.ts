@@ -116,6 +116,11 @@ describe("ArtistDrawer.vue", () => {
 			id: "1",
 			name: "Ye",
 			legal_name: "Kanye Omari West",
+			stage_names_json: JSON.stringify([
+				{ name: "Ye", is_primary: true },
+				{ name: "Yeezy", is_primary: false },
+				{ name: "kanye", is_primary: false },
+			]),
 			artist_form: "group",
 			aliases: [{ alias: "Kanye West" }, { alias: "kanye" }],
 			member_groups: {
@@ -195,7 +200,7 @@ describe("ArtistDrawer.vue", () => {
 		// Check if artist title is rendered (artistId is '1' in mock)
 		expect(wrapper.text()).toContain("Ye");
 		expect(wrapper.text()).toContain("本名：Kanye Omari West");
-		expect(wrapper.text()).toContain("曾用名：Kanye West / kanye");
+		expect(wrapper.text()).toContain("曾用名：Kanye West / kanye / Yeezy");
 
 		// Check if album list is rendered
 		expect(
@@ -208,6 +213,21 @@ describe("ArtistDrawer.vue", () => {
 		expect(wrapper.text()).toContain("Wish You Were Here");
 		expect(wrapper.text()).toContain("1973");
 		expect(wrapper.text()).toContain("1975");
+	});
+
+	it("hides the former-name row when no former names exist", async () => {
+		getMusicArtist.mockResolvedValueOnce({
+			id: "1",
+			name: "Ye",
+			display_name: "Ye",
+			aliases: [{ alias: "Ye" }],
+			stage_names_json: JSON.stringify([{ name: "Ye", is_primary: true }]),
+		});
+
+		const wrapper = mount(ArtistDrawer);
+		await vi.dynamicImportSettled();
+
+		expect(wrapper.text()).not.toContain("曾用名：");
 	});
 
 	it("deduplicates same-date albums and keeps the more complete record", async () => {

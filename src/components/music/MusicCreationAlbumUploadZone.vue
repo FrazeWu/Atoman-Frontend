@@ -12,6 +12,7 @@ const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport)
 const metadataSourceLabel = computed(() => albumImportDraft.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
+const metadataConfirmed = computed(() => ['matched', 'manual'].includes(albumImportDraft.value?.metadataMatchStatus ?? ''))
 
 const {
   uploading,
@@ -109,7 +110,8 @@ const metadataMatchLabel = computed(() => {
 	const draft = albumImportDraft.value
 	if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
 	if (draft.status === 'canceled') return '已取消'
-	if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') return '已匹配'
+	if (draft.metadataMatched === true || ['matched', 'manual'].includes(draft.metadataMatchStatus ?? '')) return '已匹配'
+	if (draft.metadataMatchStatus === 'ambiguous') return '发现候选，待确认'
 	if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
 	if (draft.metadataMatchStatus === 'matching') return '正在匹配元信息'
 	return '等待开始匹配'
@@ -117,9 +119,10 @@ const metadataMatchLabel = computed(() => {
 const metadataMatchState = computed(() => {
   const draft = albumImportDraft.value
   if (!draft) return 'idle'
-	if (draft.metadataMatched === true || draft.metadataMatchStatus === 'matched') {
+	if (draft.metadataMatched === true || ['matched', 'manual'].includes(draft.metadataMatchStatus ?? '')) {
 		return 'done'
 	}
+	if (draft.metadataMatchStatus === 'ambiguous') return 'failed'
 	if (draft.metadataMatchStatus === 'unmatched') return 'failed'
 	if (draft.metadataMatchStatus === 'matching') {
 		return 'active'
@@ -218,7 +221,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
     </div>
 
     <p class="metadata-match-hint" data-testid="album-import-metadata-hint">
-      <template v-if="albumImportDraft.metadataSourceUrl">
+	      <template v-if="metadataConfirmed && albumImportDraft.metadataSourceUrl">
         已自动匹配专辑信息、曲序和歌词。
         <a
           :href="albumImportDraft.metadataSourceUrl"
@@ -228,8 +231,11 @@ function formatUploadSpeed(bytesPerSecond: number) {
           查看 {{ metadataSourceLabel }} 来源
           <ExternalLink :size="14" aria-hidden="true" />
         </a>
-      </template>
-		<template v-else>上传会立即读取本地元信息；读取到曲目后会自动开始匹配，完成后进入信息确认。</template>
+	      </template>
+			<template v-else-if="albumImportDraft.metadataMatchStatus === 'ambiguous'">
+				已找到候选发行版，但曲目未能完整确认，请在信息页核对曲序。
+			</template>
+			<template v-else>上传会立即读取本地元信息；读取到曲目后会自动开始匹配，完成后进入信息确认。</template>
     </p>
     <div class="parallel-progress" data-testid="album-import-parallel-progress">
       <div class="parallel-progress__lane">

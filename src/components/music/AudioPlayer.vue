@@ -343,6 +343,7 @@ import { useLoginRedirect } from "@/composables/useLoginRedirect";
 import { listMusicPlaylists, type MusicPlaylistSummary } from "@/api/musicV1";
 import { reportError } from "@/utils/logger";
 import { usePodcastPlayerActions } from "@/composables/usePodcastPlayerActions";
+import { resolveMusicPlayerShortcut } from "@/utils/musicKeyboardShortcuts";
 
 const player = usePlayerStore();
 const route = useRoute();
@@ -405,31 +406,16 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
   if (!player.currentSong) return
 
-  if (e.key === 'F' && e.shiftKey) {
-    e.preventDefault()
-    player.toggleLyrics()
-  } else if (e.code === 'Space' || e.key === ' ') {
-    e.preventDefault()
-    player.togglePlay()
-  } else if (e.altKey && e.key === 'ArrowLeft') {
-    e.preventDefault()
-    player.playPrevious()
-  } else if (e.altKey && e.key === 'ArrowRight') {
-    e.preventDefault()
-    player.playNext()
-  } else if (e.key === 'ArrowLeft') {
-    e.preventDefault()
-    player.skip(-5)
-  } else if (e.key === 'ArrowRight') {
-    e.preventDefault()
-    player.skip(5)
-  } else if (e.key === 'm' || e.key === 'M') {
-    e.preventDefault()
-    player.setVolume(player.volume > 0 ? 0 : 0.5)
-  } else if (e.key === 'l' || e.key === 'L') {
-    e.preventDefault()
-    player.toggleLyrics()
-  }
+  const shortcut = resolveMusicPlayerShortcut(e)
+  if (!shortcut) return
+  e.preventDefault()
+  if (shortcut === 'lyrics') player.toggleLyrics()
+  else if (shortcut === 'toggle-play') player.togglePlay()
+  else if (shortcut === 'previous') player.playPrevious()
+  else if (shortcut === 'next') player.playNext()
+  else if (shortcut === 'skip-back') player.skip(-5)
+  else if (shortcut === 'skip-forward') player.skip(5)
+  else if (shortcut === 'mute') player.setVolume(player.volume > 0 ? 0 : 0.5)
 }
 
 onMounted(() => {

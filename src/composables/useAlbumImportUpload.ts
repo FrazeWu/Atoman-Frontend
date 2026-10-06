@@ -202,6 +202,11 @@ export function useAlbumImportUpload() {
 	) {
 		const draft = flow.draft.albumImport;
 		if (draft.importId !== expectedImportId) return false;
+		const previousSyncedAt = Date.parse(draft.lastSyncedAt || '');
+		const nextSyncedAt = Date.parse(snapshot.lastSyncedAt || '');
+		if (Number.isFinite(previousSyncedAt) && Number.isFinite(nextSyncedAt) && nextSyncedAt < previousSyncedAt) {
+			return true;
+		}
 		const derivedTracks = snapshot.derivedTracks ?? [];
 		const isTerminalSnapshot = [
 			"ready",
@@ -284,7 +289,7 @@ export function useAlbumImportUpload() {
 			draft.metadataExternalId = snapshot.metadataExternalId;
 				draft.metadataMatchStatus = snapshot.metadataMatchStatus;
 				draft.metadataMatchConfidence = snapshot.metadataMatchConfidence;
-				draft.metadataMatched = snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl);
+				draft.metadataMatched = snapshot.metadataMatched ?? ['matched', 'manual'].includes(snapshot.metadataMatchStatus ?? '');
 				draft.metadataMatchingStarted = false;
 				draft.metadataError = snapshot.metadataError || "";
 				draft.metadataGenres = snapshot.metadataGenres ?? [];
@@ -413,6 +418,7 @@ export function useAlbumImportUpload() {
 					!applyImportSnapshotToFlow(flow, snapshot, importId)
 				)
 					return;
+				startMetadataMatchFromSnapshot(flow, snapshot);
 				const done = [
 					"ready",
 					"needs_attention",
@@ -441,6 +447,48 @@ export function useAlbumImportUpload() {
 	function stopPolling() {
 		const flow = creationFlow.value;
 		if (flow) stopPollingFor(flow);
+	}
+
+	function artistNameForMetadataMatch(flow: MusicCreationFlowState) {
+		return (
+			flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim() ||
+			flow.draft.artist.stageNames.find((item) => item.name.trim())?.name.trim() ||
+			flow.draft.artist.legalName.trim()
+		);
+	}
+
+	function startMetadataMatchFromSnapshot(flow: MusicCreationFlowState, snapshot: MusicAlbumImport) {
+		const draft = flow.draft.albumImport;
+		if (
+			!draft.importId ||
+			draft.metadataMatchingStarted ||
+			['matched', 'manual', 'ambiguous', 'unmatched'].includes(draft.metadataMatchStatus ?? '')
+		) return;
+		const importId = draft.importId;
+		if (!['analyzing', 'transcoding', 'ready'].includes(snapshot.status)) return;
+		const trackTitles = (snapshot.derivedTracks ?? []).map((track) => track.title.trim()).filter(Boolean);
+		if (!trackTitles.length) return;
+		const albumTitle = (snapshot.derivedAlbumTitle || draft.derivedAlbumTitle || draft.archiveName)
+			.trim()
+			.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, '');
+		draft.metadataMatchingStarted = true;
+		draft.metadataMatchStatus = 'matching';
+		void matchMusicAlbumImportMetadata(importId, {
+			albumTitle,
+			artist: artistNameForMetadataMatch(flow),
+			trackTitles,
+		})
+			.then((matched) => {
+				if (flow.draft.albumImport.importId === importId) {
+					applyImportSnapshotToFlow(flow, matched, importId);
+				}
+			})
+			.catch((error) => {
+				if (flow.draft.albumImport.importId !== importId) return;
+				draft.metadataMatchingStarted = false;
+				draft.metadataMatchStatus = 'unmatched';
+				draft.metadataError = error instanceof Error ? error.message : '外部元数据匹配失败';
+			});
 	}
 
 	function beginUploadOperation(uploadState: AlbumImportUploadState) {
@@ -744,30 +792,6 @@ export function useAlbumImportUpload() {
 			});
 				if (!isCurrent()) return;
 				draft.importId = session.importId;
-				if (localPreviewData) {
-					void localPreviewData.then((preview) => {
-						if (!isCurrent() || !preview.tracks.length) return;
-						draft.metadataMatchingStarted = true;
-						draft.metadataMatchStatus = "matching";
-						const albumTitle = preview.title.trim() || files[0]?.name.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, "").trim() || "";
-						return matchMusicAlbumImportMetadata(session.importId, {
-							albumTitle,
-							artist: artistName,
-							trackTitles: preview.tracks,
-						}).then((matched) => {
-							if (isCurrent() && draft.importId === session.importId) {
-								applyImportSnapshotToFlow(flow, matched, session.importId);
-							}
-						});
-				}).catch((error) => {
-						if (isCurrent() && !uploadState.serverDerivedSnapshotApplied) {
-							draft.metadataMatchingStarted = false;
-							draft.metadataMatchStatus = "unmatched";
-							draft.metadataError = error instanceof Error ? error.message : "外部元数据匹配失败";
-						}
-					});
-				}
-
 				const fileInputs = files.map((file) => ({
 				relativePath:
 					(file as File & { webkitRelativePath?: string }).webkitRelativePath ||

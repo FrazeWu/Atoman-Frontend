@@ -706,7 +706,7 @@ export function useMusicDrawers() {
 			metadataExternalId: snapshot.metadataExternalId,
 			metadataMatchStatus: snapshot.metadataMatchStatus,
 			metadataMatchConfidence: snapshot.metadataMatchConfidence,
-			metadataMatched: snapshot.metadataMatched ?? Boolean(snapshot.metadataSourceUrl),
+			metadataMatched: snapshot.metadataMatched ?? ['matched', 'manual'].includes(snapshot.metadataMatchStatus ?? ''),
 			metadataError: snapshot.metadataError,
 			metadataGenres: snapshot.metadataGenres ?? [],
 			metadataStyles: snapshot.metadataStyles ?? [],

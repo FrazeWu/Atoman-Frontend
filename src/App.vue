@@ -105,7 +105,7 @@ const shortcutHints = computed<ShortcutHint[]>(() => {
 
 const globalShortcuts = computed<KeyboardShortcut[]>(() => [
   { key: 'h', description: '聚焦侧边栏', handler: () => uiStore.focusSidebar() },
-  ...(!playerPresence.hasCurrentTrack ? [{ key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() }] : []),
+  { key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() },
   { key: '?', shift: true, description: '打开快捷键说明', handler: () => { shortcutHelpOpen.value = true } },
 ])
 

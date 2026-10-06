@@ -121,7 +121,7 @@ const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {
     for (const feature of siteAccessFeatures[key] ?? []) {
       features[feature.key] = true
     }
-    modules[key] = { enabled: key !== 'books', features }
+    modules[key] = { enabled: true, features }
   }
 
   return modules

@@ -92,7 +92,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 const MORE_ITEMS: MobileMoreItem[] = [
 	{ module: "feed", label: "订阅", href: moduleUrl("feed"), icon: Rss },
 	{ module: "blog", label: "博客", href: moduleUrl("blog"), icon: Compass },
-	{ module: "books", label: "读书", href: moduleUrl("books"), icon: BookOpen },
+	{ module: "books", label: "书籍", href: moduleUrl("books"), icon: BookOpen },
 	{ module: "music", label: "音乐", href: moduleUrl("music"), icon: Radio },
 	{
 		module: "forum",

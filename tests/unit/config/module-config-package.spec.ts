@@ -27,6 +27,7 @@ describe("@atoman/module-config", () => {
 			"music",
 			"video",
 			"podcast",
+			"books",
 		]);
 	});
 });

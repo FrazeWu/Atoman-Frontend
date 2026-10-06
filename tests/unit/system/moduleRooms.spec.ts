@@ -18,7 +18,7 @@ describe('module room naming config', () => {
   })
 
   it('keeps topbar navigation order stable', () => {
-    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast'])
+    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast', 'books'])
   })
 
   it('uses root home paths for subdomain-scoped modules', () => {

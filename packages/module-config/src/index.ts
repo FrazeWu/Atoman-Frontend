@@ -47,7 +47,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 		key: "books",
 		homePath: "/",
 		publicPathSegment: "books",
-		name: "读书",
+		name: "书籍",
 		helper: "书目与阅读",
 		homepageSub: "发现书目、整理书库与继续阅读。",
 	},
@@ -111,6 +111,7 @@ export const topbarNavOrder: ModuleRoomKey[] = [
 	"music",
 	"video",
 	"podcast",
+	"books",
 ];
 
 export const notificationRoom = {

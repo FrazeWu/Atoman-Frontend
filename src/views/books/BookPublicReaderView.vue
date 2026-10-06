@@ -2,7 +2,7 @@
   <main class="a-page-md public-reader">
     <PSectionHeader title="公共阅读" kicker="READER" rule />
     <header class="public-reader__header">
-      <RouterLink class="public-reader__back" to="/books" aria-label="返回读书" title="返回读书">
+      <RouterLink class="public-reader__back" to="/books" aria-label="返回书籍" title="返回书籍">
         <ArrowLeft :size="18" aria-hidden="true" />
       </RouterLink>
       <div>

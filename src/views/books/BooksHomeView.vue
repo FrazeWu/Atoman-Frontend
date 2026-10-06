@@ -1,7 +1,7 @@
 <template>
   <main class="a-page-md books-page">
-    <PSectionHeader title="读书" kicker="BOOKS" rule />
-    <nav class="books-nav" aria-label="读书模块">
+    <PSectionHeader title="书籍" kicker="BOOKS" rule />
+    <nav class="books-nav" aria-label="书籍模块">
       <RouterLink to="/books" exact-active-class="is-active">发现</RouterLink>
       <RouterLink to="/books/search" exact-active-class="is-active">搜索</RouterLink>
       <RouterLink to="/books/library" exact-active-class="is-active">我的书库</RouterLink>

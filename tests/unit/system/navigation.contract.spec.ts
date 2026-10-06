@@ -36,6 +36,7 @@ describe("application navigation contracts", () => {
 			"音乐",
 			"视频",
 			"播客",
+			"书籍",
 		]);
 		expect(topbarNavOrder).not.toContain("media");
 		for (const key of topbarNavOrder) {

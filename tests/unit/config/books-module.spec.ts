@@ -12,16 +12,16 @@ import { getMobileMoreItems, getMobilePrimaryTabs } from "@/composables/useRespo
 describe("books module foundation", () => {
   it("exposes a compact books room in shared navigation config", () => {
     expect(moduleRooms.books).toMatchObject({
-      name: "读书",
+      name: "书籍",
       helper: "书目与阅读",
       publicPathSegment: "books",
       homePath: "/",
     });
     expect(moduleNavOrder).toContain("books");
-    expect(topbarNavOrder).not.toContain("books");
+    expect(topbarNavOrder).toEqual(["feed", "blog", "music", "video", "podcast", "books"]);
   });
 
-  it("keeps the books feature definitions but disables the module by default", () => {
+  it("keeps the books feature definitions and enables the module by default", () => {
     const access = mergeSiteAccess(null);
 
     expect(siteAccessFeatures.books).toEqual([
@@ -29,7 +29,7 @@ describe("books module foundation", () => {
       { key: "books.review", label: "书目审核" },
       { key: "books.publish_asset", label: "发布公共正文" },
     ]);
-    expect(access.modules.books.enabled).toBe(false);
+    expect(access.modules.books.enabled).toBe(true);
     expect(access.modules.books.features).toEqual({
       "books.submit": true,
       "books.review": true,
@@ -37,10 +37,10 @@ describe("books module foundation", () => {
     });
   });
 
-  it("keeps books closed by default while retaining its opt-in routes and navigation", () => {
+  it("keeps books enabled by default while retaining its routes and navigation", () => {
     const access = mergeSiteAccess(null);
 
-    expect(access.modules.books.enabled).toBe(false);
+    expect(access.modules.books.enabled).toBe(true);
     expect(buildAppRoutes().some((route) => route.path === "/books")).toBe(true);
     expect(getMobilePrimaryTabs("books").length).toBeGreaterThan(0);
     expect(getMobileMoreItems().some((item) => item.module === "books")).toBe(true);

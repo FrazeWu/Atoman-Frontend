@@ -320,7 +320,7 @@ const shortcuts = computed(() => [
   { label: '博客收藏', description: '整理收藏的文章', to: '/posts/bookmarks', icon: Bookmark, badge: countLabel(contentCounts.value.blogBookmarks) },
   { label: '音乐收藏', description: '打开音乐资料库', to: '/music/bookmarks', icon: Headphones, badge: countLabel(contentCounts.value.musicBookmarks) },
   { label: '音乐历史', description: '继续播放记录', to: '/music/history', icon: Clock, badge: countLabel(contentCounts.value.musicHistory) },
-  { label: '读书书库', description: '查看书目和阅读进度', to: '/books/library', icon: BookOpen, badge: '' },
+  { label: '我的书库', description: '查看书目和阅读进度', to: '/books/library', icon: BookOpen, badge: '' },
   { label: '视频收藏', description: '继续观看保存的视频', to: '/videos/favorites', icon: Play, badge: countLabel(contentCounts.value.videoBookmarks) },
   { label: '播客收藏', description: '打开收藏的节目', to: '/podcasts/favorites', icon: Headphones, badge: countLabel(contentCounts.value.podcastBookmarks) },
 ])

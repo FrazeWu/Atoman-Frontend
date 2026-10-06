@@ -1,7 +1,7 @@
 <template>
   <main class="a-page-md books-governance">
     <PSectionHeader :title="isReview ? '审核台' : '贡献中心'" kicker="BOOKS" rule />
-    <nav class="books-governance__nav" aria-label="读书模块">
+    <nav class="books-governance__nav" aria-label="书籍模块">
       <RouterLink to="/books">发现</RouterLink>
       <RouterLink to="/books/library">我的书库</RouterLink>
       <RouterLink to="/books/contributions" :class="{ 'is-active': !isReview }">贡献</RouterLink>

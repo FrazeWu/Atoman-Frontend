@@ -314,6 +314,7 @@ const handleLayerWheel = (event: WheelEvent) => {
 }
 
 const transitionName = computed(() => {
+  if (isMobile.value) return 'slide-up'
   if (props.side === 'left') return 'slide-left'
   if (props.side === 'bottom') return 'slide-up'
   return 'slide-right'

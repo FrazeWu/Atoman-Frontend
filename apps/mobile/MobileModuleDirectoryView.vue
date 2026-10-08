@@ -40,11 +40,11 @@
           <span>Studio</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </RouterLink>
-        <a v-if="authStore.user" :href="desktopAppPath(`/users/${authStore.user.username}/settings`)" class="mobile-module-directory__row">
+        <RouterLink v-if="authStore.user" :to="`/users/${authStore.user.username}/settings`" class="mobile-module-directory__row">
           <Settings :size="20" aria-hidden="true" />
           <span>设置</span>
-          <ExternalLink :size="16" aria-hidden="true" />
-        </a>
+          <ChevronRight :size="18" aria-hidden="true" />
+        </RouterLink>
         <RouterLink v-else to="/login" class="mobile-module-directory__row">
           <LogIn :size="20" aria-hidden="true" />
           <span>登录</span>
@@ -58,11 +58,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconBell as Bell, IconCheck as Check, IconChevronRight as ChevronRight, IconExternalLink as ExternalLink, IconLogin as LogIn, IconMessageCircle as MessageCircle, IconPencil as PenLine, IconSettings as Settings, IconUser as UserRound } from '@tabler/icons-vue'
+import { IconBell as Bell, IconCheck as Check, IconChevronRight as ChevronRight, IconLogin as LogIn, IconMessageCircle as MessageCircle, IconPencil as PenLine, IconSettings as Settings, IconUser as UserRound } from '@tabler/icons-vue'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { desktopAppPath } from '@/utils/desktopAppUrl'
 import { MOBILE_MODULES } from './mobileRoutes'
 
 const route = useRoute()

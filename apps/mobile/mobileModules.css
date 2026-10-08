@@ -1,0 +1,103 @@
+.mobile-app-shell .feed-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.mobile-app-shell .feed-search {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.mobile-app-shell .feed-actions .source-type-filters,
+.mobile-app-shell .feed-actions .timeline-mode {
+  flex-shrink: 0;
+}
+
+.mobile-app-shell .feed-actions .p-segmented-control-label {
+  white-space: nowrap;
+}
+
+.mobile-app-shell .mobile-module-layout .books-nav {
+  display: none;
+}
+
+.mobile-app-shell .mobile-module-layout input,
+.mobile-app-shell .mobile-module-layout select,
+.mobile-app-shell .mobile-module-layout textarea {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 16px;
+}
+
+.mobile-app-shell .books-reader__header,
+.mobile-app-shell .public-reader__header,
+.mobile-app-shell .books-reader__toolbar,
+.mobile-app-shell .public-reader__toolbar,
+.mobile-app-shell .debate-filters {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.mobile-app-shell .books-reader__heading,
+.mobile-app-shell .public-reader__header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mobile-app-shell .books-reader__pdf canvas,
+.mobile-app-shell .public-reader__pdf canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.mobile-app-shell .debate-filter-status,
+.mobile-app-shell .debate-filter-tag {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.mobile-app-shell .vd-rating {
+  width: 100%;
+  flex-basis: auto;
+  max-width: 100%;
+}
+
+.mobile-app-shell .person-map-page {
+  flex-direction: column;
+  height: auto;
+}
+
+.mobile-app-shell .person-panel {
+  width: 100%;
+  max-height: 40dvh;
+  overflow-y: auto;
+}
+
+.mobile-app-shell .person-map-page .map-container {
+  flex: none;
+  height: 45dvh;
+  min-height: 280px;
+}
+
+.mobile-app-shell .person-map-page .ol-control button {
+  width: 44px;
+  height: 44px;
+}
+
+.mobile-module-detail-enter-active,
+.mobile-module-return-leave-active {
+  transition: transform 240ms ease, opacity 240ms ease;
+}
+
+.mobile-module-detail-enter-from,
+.mobile-module-return-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-module-detail-enter-active,
+  .mobile-module-return-leave-active {
+    transition-duration: 1ms;
+  }
+}

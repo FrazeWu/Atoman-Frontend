@@ -101,6 +101,7 @@ export default defineConfig(({ mode }) => {
 		},
 		plugins: [tailwindcss(), vue(), deferInitialStylesheetPlugin()],
 		resolve: {
+			dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
 			alias: {
 				"@": path.resolve(__dirname, "./src"),
 				"@atoman/module-config": path.resolve(

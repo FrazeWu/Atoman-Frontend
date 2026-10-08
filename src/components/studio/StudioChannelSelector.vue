@@ -23,13 +23,8 @@
 import { getCurrentInstance } from 'vue'
 import { useStudioStore } from '@/stores/studio'
 
-let idCounter = 0
-function useId() {
-  return `studio-channel-select-${getCurrentInstance()?.uid ?? ++idCounter}`
-}
-
 const studio = useStudioStore()
-const selectId = useId()
+const selectId = `studio-channel-select-${getCurrentInstance()?.uid ?? 0}`
 
 function selectChannel(event: Event) {
   const channelID = (event.target as HTMLSelectElement).value

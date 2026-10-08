@@ -28,6 +28,7 @@ import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './MobileTopbar.vue'
 import './mobileModules.css'
+import './mobileDiscovery.css'
 
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))

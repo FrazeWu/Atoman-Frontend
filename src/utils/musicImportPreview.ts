@@ -301,6 +301,8 @@ export async function readAlbumImportPreview(
 			} catch { /* 文件名仍可用于元信息预览。 */ }
 		}));
 	}
+	const knownArtist = artist || detectedArtist || inferCommonTrackArtist(details.map((track) => track.title));
+	for (const detail of details) detail.title = normalizeImportedTrackTitle(detail.title, knownArtist);
 	const preview = { title: detectedTitle, tracks: details.map((track) => track.title), trackDetails: details, ...(detectedArtist ? { artist: detectedArtist } : {}) };
 
 	const imageEntries = entries
@@ -349,6 +351,10 @@ export async function readAlbumImportFilesPreview(files: File[], artist = ''): P
 			detectedArtist ||= preview.artist || '';
 			cover ||= preview.albumCoverFile;
 		}));
+	}
+	const knownArtist = detectedArtist || inferCommonTrackArtist(details.map((track) => track.title));
+	for (const detail of details) {
+		detail.title = normalizeImportedTrackTitle(detail.title, knownArtist);
 	}
 	return { title, tracks: details.map((track) => track.title), trackDetails: details, artist: detectedArtist, albumCoverFile: cover };
 }

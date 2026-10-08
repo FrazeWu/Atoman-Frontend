@@ -65,6 +65,19 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		});
 	});
 
+	it("汇总未匹配资料并将音频替换和删除收进更多菜单", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		drawers.state.value.creationFlow!.draft.tracks = [{ id: "track-1", sequence: 1, title: "秋天", matchStatus: "unmatched", audioKey: "audio-key" }];
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		expect(wrapper.get('[data-testid="album-track-match-summary"]').text()).toContain("1 首未匹配资料");
+		expect(wrapper.get('[data-testid="album-track-match-summary"]').text()).toContain("不影响创建");
+		expect(wrapper.get('[data-testid="album-track-audio-track-1"]').element.closest("details")).not.toBeNull();
+		expect(wrapper.get('[data-testid="album-track-delete-track-1"]').element.closest("details")).not.toBeNull();
+		expect(wrapper.get('[data-testid="album-track-row-track-1"]').text()).toContain("音频就绪");
+	});
+
 	afterEach(() => vi.unstubAllGlobals());
 
 	it("wraps track actions on narrow screens without squeezing the title", () => {
@@ -595,7 +608,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 		expect(
 			wrapper.get('[data-testid="album-track-lyrics-existing-track"]').text(),
-		).toContain("编辑歌词");
+		).toContain("查看歌词");
 		await wrapper
 			.get('[data-testid="album-track-lyrics-existing-track"]')
 			.trigger("click");
@@ -668,10 +681,10 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			"name",
 			"date",
 			"type",
-			"bio",
 			"contributors",
-			"track-adjustment",
+			"bio",
 			"source",
+			"track-adjustment",
 		]);
 
 		const basicFields = wrapper.get(
@@ -682,10 +695,10 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(basicFields.find('[data-field="type"]').exists()).toBe(true);
 		expect(
 			wrapper
-				.get(".album-details-step__content-grid")
+				.get(".album-details-step__overview")
 				.find('[data-field="contributors"]')
 				.exists(),
-		).toBe(false);
+		).toBe(true);
 		expect(
 			wrapper.get(".album-details-step__contributor-field").text(),
 		).toContain("搜索其他艺人");

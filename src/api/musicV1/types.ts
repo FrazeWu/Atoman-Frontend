@@ -681,6 +681,8 @@ export type MusicTagOption = {
 	parent_id?: string | null;
 	depth?: number;
 	assignment_count?: number;
+	song_count?: number;
+	album_count?: number;
 	child_count?: number;
 };
 

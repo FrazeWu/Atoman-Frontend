@@ -85,6 +85,16 @@ describe('MusicTagsView.vue', () => {
     expect(mocks.listMusicTagOptions).toHaveBeenCalled()
   })
 
+  it('opens parent tag content separately from child navigation and shows content counts', async () => {
+    mocks.listMusicTagOptions.mockResolvedValue([{ id: 'folk', name: '民谣', kind: 'type', child_count: 2, song_count: 8, album_count: 1 }])
+    const { wrapper } = await mountView({ kind: 'type' })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="music-tag-result-folk"]').attributes('href')).toBe('/music/tags/folk')
+    expect(wrapper.get('[data-testid="music-tag-children-folk"]').attributes('href')).toBe('/music/tags')
+    expect(wrapper.text()).toContain('8 首歌曲')
+    expect(wrapper.text()).toContain('1 张专辑')
+  })
+
   it('searches both kinds and renders clickable tag results', async () => {
     const { wrapper, router } = await mountView({ q: '治' })
     await flushPromises()

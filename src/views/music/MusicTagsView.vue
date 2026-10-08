@@ -57,9 +57,6 @@ function tagKindLabel(kind: MusicTagKind) {
 }
 
 function tagRoute(tag: MusicTagOption) {
-  if (tag.child_count && tag.kind === 'type') {
-    return { path: '/music/tags', query: { kind: 'type', parent_id: tag.id } }
-  }
   return { path: `/music/tags/${tag.id}`, query: { view: 'songs' } }
 }
 
@@ -76,11 +73,13 @@ function updateRoute(nextScope: TagScope) {
 
 async function loadParent() {
   parentTag.value = null
-  if (!parentID.value) return
+  const id = parentID.value
+  if (!id) return
   try {
-    parentTag.value = await getMusicTag(parentID.value)
+    const result = await getMusicTag(id)
+    if (parentID.value === id) parentTag.value = result
   } catch {
-    parentTag.value = null
+    if (parentID.value === id) parentTag.value = null
   }
 }
 
@@ -90,22 +89,24 @@ async function loadTags() {
   error.value = ''
   loading.value = true
   try {
+    let result: MusicTagOption[]
     if (search) {
-      tags.value = await listMusicTagOptions({
+      result = await listMusicTagOptions({
         kind: scope.value === 'all' ? undefined : scope.value,
         query: search,
       })
     } else if (scope.value === 'all') {
       const results = await Promise.all(kindOptions.map(option => listMusicTagOptions({ kind: option.value, root: true })))
-      tags.value = results.flat()
+      result = results.flat()
     } else {
-      tags.value = await listMusicTagOptions({
+      result = await listMusicTagOptions({
         kind: scope.value,
         parentId: parentID.value || undefined,
         root: !parentID.value,
       })
     }
     if (current !== requestID) return
+    tags.value = result
   } catch {
     if (current !== requestID) return
     tags.value = []
@@ -181,9 +182,9 @@ onBeforeUnmount(() => {
 <template>
   <main class="music-tags-view" data-testid="music-tags-view">
     <PPageHeader
-      kicker="音乐 / 浏览索引"
+      kicker="音乐"
       title="标签"
-      sub="按类型、情绪、场景等维度浏览音乐标签。"
+      sub="按风格、情绪和场景发现歌曲与专辑。"
       mb="1rem"
     />
 
@@ -220,10 +221,9 @@ onBeforeUnmount(() => {
     <section class="music-tags-view__directory" aria-labelledby="music-tags-directory-title">
       <header class="music-tags-view__directory-head">
         <div>
-          <span class="music-tags-view__eyebrow">标签目录</span>
           <h2 id="music-tags-directory-title">{{ parentTag?.name || scopeLabel }}</h2>
         </div>
-        <span class="music-tags-view__directory-total">{{ resultLabel }}</span>
+        <RouterLink v-if="parentTag" :to="tagRoute(parentTag)" class="music-tags-view__all-content">查看全部内容 <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
       </header>
 
       <div class="music-tags-view__breadcrumb" aria-label="当前层级">
@@ -259,9 +259,12 @@ onBeforeUnmount(() => {
           </template>
         </PEmpty>
         <div v-else class="music-tags-view__grid" data-testid="music-tag-results">
-          <RouterLink
+          <div
             v-for="tag in tags"
             :key="tag.id"
+            class="music-tags-view__tag-row"
+          >
+          <RouterLink
             :to="tagRoute(tag)"
             class="music-tags-view__tag-link"
             :data-testid="`music-tag-result-${tag.id}`"
@@ -269,10 +272,18 @@ onBeforeUnmount(() => {
             <Hash :size="15" aria-hidden="true" />
             <span class="music-tags-view__tag-copy">
               <strong>{{ tag.name }}</strong>
-              <small>{{ tagKindLabel(tag.kind) }} · {{ tag.assignment_count || 0 }} 项<span v-if="tag.child_count"> · {{ tag.child_count }} 个子标签</span></small>
+              <small>{{ tagKindLabel(tag.kind) }} · {{ tag.song_count || 0 }} 首歌曲 · {{ tag.album_count || 0 }} 张专辑</small>
             </span>
             <ArrowRight class="music-tags-view__tag-arrow" :size="17" aria-hidden="true" />
           </RouterLink>
+          <RouterLink
+            v-if="tag.child_count && tag.kind === 'type'"
+            :to="{ path: '/music/tags', query: { kind: 'type', parent_id: tag.id } }"
+            class="music-tags-view__children"
+            :data-testid="`music-tag-children-${tag.id}`"
+            :aria-label="`展开 ${tag.name} 的 ${tag.child_count} 个子标签`"
+          >{{ tag.child_count }} 个子标签 <ArrowRight :size="14" aria-hidden="true" /></RouterLink>
+          </div>
         </div>
       </PContentProgress>
     </section>
@@ -397,6 +408,43 @@ onBeforeUnmount(() => {
   padding: 0.25rem 0 1rem;
 }
 
+.music-tags-view__tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.music-tags-view__tag-row .music-tags-view__tag-link {
+  flex: 1;
+}
+
+.music-tags-view__children,
+.music-tags-view__all-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.music-tags-view__children:hover,
+.music-tags-view__all-content:hover {
+  color: var(--a-color-text);
+}
+
+.music-tags-view__children:focus-visible,
+.music-tags-view__all-content:focus-visible,
+.music-tags-view__tag-link:focus-visible,
+.music-tags-view__breadcrumb-link:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
 .music-tags-view__tag-link,
 .music-tags-view__tag-skeleton {
   display: grid;
@@ -426,7 +474,6 @@ onBeforeUnmount(() => {
 .music-tags-view__tag-link:hover,
 .music-tags-view__tag-link:focus-visible {
   color: var(--a-color-primary);
-  outline: none;
 }
 
 .music-tags-view__tag-link:hover .music-tags-view__tag-arrow,

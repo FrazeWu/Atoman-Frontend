@@ -1,6 +1,7 @@
 const localObjectStorageHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0'])
 const imageProxyHosts = new Set([
   'assets.atoman.org',
+  'covers.openlibrary.org',
   'is1-ssl.mzstatic.com',
   'lh3.googleusercontent.com',
   'www.designmadeingermany.de',

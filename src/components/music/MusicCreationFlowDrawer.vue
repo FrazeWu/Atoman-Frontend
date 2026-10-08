@@ -444,6 +444,7 @@ const finishButtonLabel = computed(() => {
   if (flow.step === 'artist' && flow.editingContributorId) return '完成创作者'
   if (flow.submitting && flow.step === 'preview') return '提交中…'
   if (flow.assetUploading) return '图片上传中…'
+  if (flow.step === 'preview') return ['single', 'leak'].includes(flow.draft.albumDetails.type) ? '创建歌曲' : '创建专辑'
   return activeStep.value.cta
 })
 const forwardBlockReason = computed(() => {
@@ -1532,13 +1533,18 @@ async function completeCreation() {
   font-weight: 800;
 }
 .footer-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: #ffffff;
+  border-top: 1px solid var(--a-color-border-soft);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
   margin-top: auto;
-  padding-bottom: 1rem;
+  padding: 0.75rem 0 1rem;
 }
 /* The fixed player can cover the drawer's lower edge, so reserve its actual height. */
 :global(html[data-player-active="true"] .footer-actions) {

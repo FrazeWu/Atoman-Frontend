@@ -75,6 +75,13 @@ function response(status: TestImportStatus) {
 }
 
 describe("Music ImportsView", () => {
+	it("已提交且正在处理的任务不显示继续导入", async () => {
+		mocks.listMusicAlbumImports.mockResolvedValue({ data: [{ ...importRecord("uploaded"), hasCommitRequest: true }], meta: { page: 1, page_size: 50, total: 1, has_more: false } });
+		const wrapper = mount(ImportsView);
+		await flushPromises();
+		expect(wrapper.text()).not.toContain("继续导入");
+		expect(wrapper.text()).toContain("等待处理");
+	});
 	beforeEach(() => {
 		vi.useFakeTimers();
 	mocks.listMusicAlbumImports.mockReset();

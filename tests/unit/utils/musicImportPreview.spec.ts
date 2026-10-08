@@ -22,6 +22,14 @@ vi.mock("music-metadata", () => ({
 }));
 
 describe("readAlbumImportPreview", () => {
+	it("文件夹预览没有艺术家标签时保留批量识别的艺术家清理结果", async () => {
+		vi.mocked(parseBlob).mockResolvedValue({ common: {} } as never);
+		const preview = await readAlbumImportFilesPreview([
+			new File(["audio"], "张智 - 巴克图口岸.mp3"),
+			new File(["audio"], "张智 - 秋天.mp3"),
+		]);
+		expect(preview.tracks).toEqual(["巴克图口岸", "秋天"]);
+	});
 	it("保留合作艺人、歌曲名和括号中的连字符", () => {
 		expect(normalizeImportedTrackTitle("Kendrick Lamar,Ab-Soul,ScHoolboy Q - Welcome to C4", "Kendrick Lamar")).toBe("Welcome to C4");
 		expect(normalizeImportedTrackTitle("Kendrick Lamar - The Real Hip Hop (Ab-Soul Freestyle)", "Kendrick Lamar")).toBe("The Real Hip Hop (Ab-Soul Freestyle)");

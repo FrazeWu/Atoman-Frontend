@@ -12,6 +12,7 @@ type TrackWithIdentity = {
 	importFileId?: string;
 	audioKey?: string;
 	audioAssetId?: string;
+	origin?: string;
 	title?: string;
 	originalTitle?: string;
 	discNumber?: number;
@@ -57,6 +58,7 @@ export function importTrackAliases(track: TrackWithIdentity): string[] {
 		track.fileId ? `file:${track.fileId}` : "",
 		track.importFileId ? `file:${track.importFileId}` : "",
 		track.audioKey ? `audio:${track.audioKey}` : "",
+		track.origin && !['file', 'import', 'archive', 'manual'].includes(track.origin) && !track.origin.startsWith('local_preview:') ? `origin:${track.origin}` : "",
 		positionKey(track),
 		track.originalDiscNumber && track.originalTrackNumber
 			? `position:${track.originalDiscNumber}:${track.originalTrackNumber}`
@@ -67,7 +69,7 @@ export function importTrackAliases(track: TrackWithIdentity): string[] {
 
 function stableTrackAliases(track: TrackWithIdentity): string[] {
 	return importTrackAliases(track).filter((alias) =>
-		alias.startsWith("file:") || alias.startsWith("audio:"),
+		alias.startsWith("file:") || alias.startsWith("audio:") || alias.startsWith('origin:'),
 	);
 }
 
@@ -75,7 +77,8 @@ export function rememberDeletedImportedTrack(
 	flow: MusicCreationFlowState,
 	track: MusicCreationTrackDraft,
 ) {
-	const aliases = importTrackAliases(track);
+	const stable = stableTrackAliases(track);
+	const aliases = stable.length ? stable : importTrackAliases(track);
 	for (const alias of aliases) {
 		if (!flow.deletedImportTrackKeys.includes(alias)) {
 			flow.deletedImportTrackKeys.push(alias);
@@ -219,9 +222,11 @@ export function mergeImportedTracksIntoDraft(
 	const current = flow.draft.tracks;
 	const deleted = new Set(flow.deletedImportTrackKeys);
 	const used = new Set<string>();
-	const imported = derivedTracks.filter((track) =>
-		!importTrackAliases(track).some((alias) => deleted.has(alias)),
-	);
+	const imported = derivedTracks.filter((track) => {
+		const stable = stableTrackAliases(track);
+		const aliases = stable.length ? stable : importTrackAliases(track);
+		return !aliases.some((alias) => deleted.has(alias));
+	});
 	const mergedImported = imported.flatMap((track, index) => {
 		const existing = findCurrentTrack(track, current, used);
 		if (!existing && flow.tracksCustomized) return [];

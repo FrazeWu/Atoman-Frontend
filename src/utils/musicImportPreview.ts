@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { parseBlob } from "music-metadata";
+import type { MusicAlbumImportTrack } from "@/api/musicV1";
 
 const audioExtensions = new Set([
 	"mp3",
@@ -72,7 +73,7 @@ function inferCommonTrackArtist(titles: string[]): string {
 
 function isAudioPath(fileName: string): boolean {
 	const extension = fileName.split(".").pop()?.toLowerCase();
-	return !!extension && audioExtensions.has(extension);
+	return !!extension && (audioExtensions.has(extension) || ["mp4", "mkv", "mov", "webm", "avi", "m4v"].includes(extension));
 }
 
 export function shouldIgnoreAlbumImportPath(fileName: string): boolean {
@@ -167,6 +168,18 @@ function archiveTracks(paths: string[], artist = ""): string[] {
 	return titles.map((title) => normalizeImportedTrackTitle(title, knownArtist))
 }
 
+function archiveTrackDetails(paths: string[], artist = ""): MusicAlbumImportTrack[] {
+	const sorted = paths.filter(isAudioPath).sort((left, right) => trackPathCollator.compare(left, right));
+	const titles = archiveTracks(sorted, artist);
+	const nextByDisc = new Map<number, number>();
+	return sorted.map((origin, index) => {
+		const discNumber = archiveTrackDisc(origin);
+		const trackNumber = (nextByDisc.get(discNumber) ?? 0) + 1;
+		nextByDisc.set(discNumber, trackNumber);
+		return { title: titles[index], origin, audioKey: "", discNumber, trackNumber, originalTitle: titles[index], originalDiscNumber: discNumber, originalTrackNumber: trackNumber };
+	});
+}
+
 async function readRarAlbumImportPreview(
 	file: File,
 	title: string,
@@ -192,12 +205,13 @@ async function readRarAlbumImportPreview(
 		.filter((entry) => !entry.flags.directory)
 		.map((entry) => entry.name)
 		.filter((entry) => !shouldIgnoreAlbumImportPath(entry));
-	return { title, tracks: archiveTracks(paths, artist) };
+	return { title, tracks: archiveTracks(paths, artist), trackDetails: archiveTrackDetails(paths, artist) };
 }
 
 export type MusicAlbumImportPreview = {
 	title: string;
 	tracks: string[];
+	trackDetails?: MusicAlbumImportTrack[];
 	artist?: string;
 	albumCoverFile?: File;
 };
@@ -221,18 +235,38 @@ export async function readAlbumImportPreview(
 			return {
 				title: albumTitle,
 				tracks: [trackTitle],
+				trackDetails: [{ title: trackTitle, origin: file.name, audioKey: "", discNumber: metadata.common.disk?.no || undefined, trackNumber: metadata.common.track?.no || undefined, originalTitle: trackTitle, originalDiscNumber: metadata.common.disk?.no || undefined, originalTrackNumber: metadata.common.track?.no || undefined }],
 				...(detectedArtist ? { artist: detectedArtist } : {}),
 				...(albumCoverFile ? { albumCoverFile } : {}),
 			};
-		} catch (e) {
-			console.warn("ID3 parse failed", e);
+		} catch {
+			// 没有可读标签时保留文件名，上传和匹配均可继续。
 		}
-		return { title, tracks: [normalizeImportedTrackTitle(title, artist)] };
+		return { title, tracks: [normalizeImportedTrackTitle(title, artist)], trackDetails: [{ title: normalizeImportedTrackTitle(title, artist), origin: file.name, audioKey: '' }] };
 	}
 
 	const lowerFileName = file.name.toLowerCase();
 	if (lowerFileName.endsWith(".rar")) {
 		return readRarAlbumImportPreview(file, title, artist);
+	}
+	if (/\.tar(?:\.gz)?$/.test(lowerFileName)) {
+		const buffer = lowerFileName.endsWith('.gz')
+			? await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
+			: await file.arrayBuffer();
+		const bytes = new Uint8Array(buffer);
+		const decoder = new TextDecoder();
+		const paths: string[] = [];
+		for (let offset = 0; offset + 512 <= bytes.length;) {
+			const name = decoder.decode(bytes.slice(offset, offset + 100)).split('\0')[0];
+			if (!name) break;
+			const size = parseInt(decoder.decode(bytes.slice(offset + 124, offset + 136)).replace(/\0/g, '').trim(), 8) || 0;
+			const prefix = decoder.decode(bytes.slice(offset + 345, offset + 500)).split('\0')[0];
+			const origin = prefix ? `${prefix}/${name}` : name;
+			if (!shouldIgnoreAlbumImportPath(origin)) paths.push(origin);
+			offset += 512 + Math.ceil(size / 512) * 512;
+		}
+		if (paths.some((path) => /\.cue$/i.test(path))) return { title, tracks: [] };
+		return { title: title.replace(/\.tar$/i, ''), tracks: archiveTracks(paths, artist), trackDetails: archiveTrackDetails(paths, artist) };
 	}
 	if (!lowerFileName.endsWith(".zip")) return { title, tracks: [] };
 
@@ -243,7 +277,29 @@ export async function readAlbumImportPreview(
 	const audioEntries = entries
 		.filter((entry) => isAudioPath(entry.name))
 		.sort((left, right) => trackPathCollator.compare(left.name, right.name));
-	const tracks = archiveTracks(audioEntries.map((entry) => entry.name), artist);
+	// CUE 会把一个来源文件拆成多首曲目，交给后端解析，避免提前锁定错误列表。
+	if (entries.some((entry) => /\.cue$/i.test(entry.name))) return { title, tracks: [] };
+	const details = archiveTrackDetails(audioEntries.map((entry) => entry.name), artist);
+	let detectedArtist = "";
+	let detectedTitle = title;
+	let embeddedCover: File | undefined;
+	for (let offset = 0; offset < audioEntries.length; offset += 3) {
+		await Promise.all(audioEntries.slice(offset, offset + 3).map(async (entry, innerIndex) => {
+			try {
+				const metadata = await parseBlob(await entry.async("blob"));
+				const detail = details[offset + innerIndex];
+				const tagArtist = metadata.common.albumartist || metadata.common.artist || "";
+				if (tagArtist && !detectedArtist) detectedArtist = tagArtist;
+				if (metadata.common.album) detectedTitle = metadata.common.album;
+				detail.title = normalizeImportedTrackTitle(metadata.common.title || detail.title, artist || tagArtist);
+				detail.originalTitle = detail.title;
+				detail.discNumber = detail.originalDiscNumber = metadata.common.disk?.no || detail.discNumber;
+				detail.trackNumber = detail.originalTrackNumber = metadata.common.track?.no || detail.trackNumber;
+				embeddedCover ||= coverFileFromPicture(metadata.common.picture?.[0]);
+			} catch { /* 文件名仍可用于元信息预览。 */ }
+		}));
+	}
+	const preview = { title: detectedTitle, tracks: details.map((track) => track.title), trackDetails: details, ...(detectedArtist ? { artist: detectedArtist } : {}) };
 
 	const imageEntries = entries
 		.map((entry) => ({ entry, contentType: imageContentType(entry.name) }))
@@ -260,8 +316,7 @@ export async function readAlbumImportPreview(
 		);
 	if (imageEntries[0]) {
 		return {
-			title,
-			tracks,
+			...preview,
 			albumCoverFile: await coverFileFromArchiveImage(
 				imageEntries[0].entry,
 				imageEntries[0].contentType,
@@ -269,15 +324,29 @@ export async function readAlbumImportPreview(
 		};
 	}
 
-	for (const entry of audioEntries.slice(0, 8)) {
-		try {
-			const metadata = await parseBlob(await entry.async("blob"));
-			const albumCoverFile = coverFileFromPicture(metadata.common.picture?.[0]);
-			if (albumCoverFile) return { title, tracks, albumCoverFile };
-		} catch {
-			// A malformed audio file must not prevent the remaining files from being checked.
-		}
-	}
+	return { ...preview, ...(embeddedCover ? { albumCoverFile: embeddedCover } : {}) };
+}
 
-	return { title, tracks };
+export async function readAlbumImportFilesPreview(files: File[], artist = ''): Promise<MusicAlbumImportPreview> {
+	const media = files.filter((file) => isAudioPath(file.name));
+	const origins = media.map((file) => (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name);
+	const details = archiveTrackDetails(origins, artist);
+	const byOrigin = new Map(details.map((track) => [track.origin, track]));
+	let title = origins[0]?.includes('/') ? origins[0].split('/')[0] : '';
+	let detectedArtist = artist;
+	let cover = files.find((file) => imageContentType(file.name));
+	for (let offset = 0; offset < media.length; offset += 3) {
+		await Promise.all(media.slice(offset, offset + 3).map(async (file) => {
+			const preview = await readAlbumImportPreview(file, artist);
+			const origin = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+			const detail = byOrigin.get(origin)!;
+			detail.title = detail.originalTitle = preview.tracks[0] || detail.title;
+			if (preview.trackDetails?.[0].trackNumber) detail.trackNumber = detail.originalTrackNumber = preview.trackDetails[0].trackNumber;
+			if (preview.trackDetails?.[0].discNumber) detail.discNumber = detail.originalDiscNumber = preview.trackDetails[0].discNumber;
+			title ||= preview.title;
+			detectedArtist ||= preview.artist || '';
+			cover ||= preview.albumCoverFile;
+		}));
+	}
+	return { title, tracks: details.map((track) => track.title), trackDetails: details, artist: detectedArtist, albumCoverFile: cover };
 }

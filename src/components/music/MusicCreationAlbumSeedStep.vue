@@ -3,34 +3,41 @@ import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
+import MusicCreationContributorPicker from './MusicCreationContributorPicker.vue'
+import { createEmptyMusicArtistDraft } from './musicCreationTypes'
+import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
+import { musicCreationProgress } from '@/utils/musicCreationProgress'
 
 const { state } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const artistFirstFlow = computed(() => creationFlow.value?.artistFirstFlow === true)
+const progress = computed(() => musicCreationProgress(creationFlow.value))
+function createArtist(name: string) {
+  const flow = creationFlow.value
+  if (!flow) return
+  const id = `new-contributor-${Date.now()}`
+  const hasPrimary = flow.draft.albumDetails.contributors.some((item) => item.roles.some((role) => role.role === 'primary'))
+  flow.draft.albumDetails.contributors.push({ id, artistId: null, name, avatarUrl: '', kind: 'person', locked: false, newArtistDraft: createEmptyMusicArtistDraft({ name }), roles: hasPrimary ? [{ id: `role-${id}-featured`, role: 'featured', label: '' }] : [primaryAlbumRole(`role-${id}-primary`)] })
+  flow.editingContributorId = id
+  flow.contributorReturnStep = 'albumImport'
+  flow.step = 'artist'
+}
 </script>
 
 <template>
   <div v-if="albumImportDraft" class="album-import-step" data-testid="album-import-upload-page">
     <section class="progress-card" aria-label="创建专辑进度">
       <div class="progress-copy">
-        <p class="progress-label">{{ artistFirstFlow ? '第 2 步 / 上传与匹配' : '第 1 步 / 上传与匹配' }}</p>
-        <p class="progress-value">{{ artistFirstFlow ? '2 / 3' : '1 / 2' }}</p>
+        <p class="progress-label">{{ progress.label }}</p>
+        <p class="progress-value">{{ progress.value }}</p>
       </div>
       <div class="progress-steps">
-        <template v-if="artistFirstFlow">
-          <span class="progress-step progress-step--done">1 创建艺术家</span>
-          <span class="progress-step progress-step--active">2 上传与匹配</span>
-          <span class="progress-step">3 完善专辑信息</span>
-        </template>
-        <template v-else>
-          <span class="progress-step progress-step--active">1 上传与匹配</span>
-          <span class="progress-step">2 完善专辑信息</span>
-        </template>
+        <span v-for="(step, index) in progress.steps" :key="step.key" class="progress-step" :class="{ 'progress-step--active': index === progress.index }">{{ index + 1 }} {{ step.label }}</span>
       </div>
       <div class="progress-track" aria-hidden="true">
-        <div class="progress-bar" />
+        <div class="progress-bar" :style="{ width: `${(progress.index + 1) / progress.steps.length * 100}%` }" />
       </div>
     </section>
 
@@ -38,7 +45,7 @@ const artistFirstFlow = computed(() => creationFlow.value?.artistFirstFlow === t
       <div>
         <p class="eyebrow">Album creation</p>
         <h2>上传专辑文件</h2>
-        <p>上传、元信息匹配和音频处理会分别进行，匹配完成后自动进入专辑信息。</p>
+        <p>读取到曲目并确认艺术家后开始匹配；上传会继续进行，匹配结束后进入信息填写。</p>
       </div>
     </header>
 
@@ -46,11 +53,16 @@ const artistFirstFlow = computed(() => creationFlow.value?.artistFirstFlow === t
       <div class="card-header">
         <div>
           <p class="card-kicker">上传与匹配</p>
-          <p class="card-copy">文件选择后立即上传。读取到曲目和内嵌元信息后会自动请求外部资料。</p>
+          <p class="card-copy">文件选择后立即上传。读取到曲目并确认艺术家后开始核对外部资料。</p>
         </div>
       </div>
-      <p class="archive-hint">建议优先上传 ZIP、RAR 或 TAR，以便尽早读取曲目目录与元信息。</p>
+      <p class="archive-hint">推荐 ZIP。无法在本地读取的格式将由后台解析后匹配。</p>
       <MusicCreationAlbumUploadZone />
+    </section>
+    <section v-if="creationFlow && !creationFlow.draft.artist.id" class="album-card" aria-label="匹配艺术家">
+      <h3>确认艺术家</h3>
+      <p>选择主艺术家后开始匹配；找不到时可以直接新建。</p>
+      <MusicCreationContributorPicker v-model="creationFlow.draft.albumDetails.contributors" allow-create @create-artist="createArtist" />
     </section>
   </div>
 </template>

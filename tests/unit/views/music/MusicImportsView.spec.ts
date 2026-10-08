@@ -45,6 +45,7 @@ function importRecord(
 ) {
 	return {
 		importId,
+		hasDraftRequest: true,
 		targetAlbumId: status === "committed" ? "album-1" : "",
 		albumTitle: "Album",
 		status,
@@ -256,12 +257,16 @@ describe("Music ImportsView", () => {
 		);
 		mocks.listMusicAlbumImports
 			.mockResolvedValueOnce({
-				data: initialImports,
-				meta: { page: 1, page_size: 100, total: 51, has_more: false },
+				data: initialImports.slice(0, 50),
+				meta: { page: 1, page_size: 50, total: 51, has_more: true },
 			})
 			.mockResolvedValueOnce({
-				data: readyImports,
-				meta: { page: 1, page_size: 100, total: 51, has_more: false },
+				data: initialImports.slice(50),
+				meta: { page: 2, page_size: 50, total: 51, has_more: false },
+			})
+			.mockResolvedValueOnce({
+				data: readyImports.slice(50),
+				meta: { page: 2, page_size: 50, total: 51, has_more: false },
 			});
 
 		const wrapper = mount(ImportsView);
@@ -275,15 +280,15 @@ describe("Music ImportsView", () => {
 
 		expect(wrapper.findAll(".music-imports-view__item")).toHaveLength(1);
 		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({
-			page: 1,
-			page_size: 100,
+			page: 2,
+			page_size: 50,
 		});
 
 		await vi.advanceTimersByTimeAsync(3_000);
 		await flushPromises();
 		expect(mocks.listMusicAlbumImports).toHaveBeenLastCalledWith({
-			page: 1,
-			page_size: 100,
+			page: 2,
+			page_size: 50,
 		});
 		wrapper.unmount();
 	});

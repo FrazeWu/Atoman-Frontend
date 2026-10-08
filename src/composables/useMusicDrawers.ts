@@ -163,7 +163,8 @@ function restoreCommittedAlbumImportDraft(
 	flow.draft.albumDetails.title = request.album.title ?? "";
 	flow.draft.albumDetails.bio = request.album.description ?? "";
 	flow.draft.albumDetails.type = request.album.album_type?.trim() || "album";
-	flow.draft.albumDetails.coverUrl = request.album.cover_url?.trim() || "";
+	const cover = request.album.cover_url?.trim() || "";
+	flow.draft.albumDetails.coverUrl = cover.startsWith('blob:') ? "" : cover;
 	flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
 		request.album.release_date ?? "",
 	);
@@ -186,6 +187,18 @@ function restoreCommittedAlbumImportDraft(
 				avatarUrl: contributor.image_url ?? "",
 				kind: contributor.artist_form === "group" ? "group" : "person",
 				locked: !!contributor.artist_id,
+				...(!contributor.artist_id ? { newArtistDraft: {
+					...createEmptyMusicArtistDraft({ name: contributor.name, legalName: contributor.legal_name, kind: contributor.artist_form === 'group' ? 'group' : 'person' }),
+					avatarUrl: contributor.image_url || '',
+					disambiguation: contributor.disambiguation || '',
+					bio: contributor.bio || '', nationality: contributor.nationality || '',
+					birthPlace: contributor.birth_place || '', birthDateParts: parsePartialDateParts(contributor.birth_date || ''),
+					activeStartDateParts: parsePartialDateParts(contributor.active_start_date || ''),
+					activeEndDateParts: parsePartialDateParts(contributor.active_end_date || ''),
+					stageNames: contributor.stage_names.map((stage, stageIndex) => ({ id: `stage-${stageIndex}`, name: stage.name, isPrimary: stage.is_primary, startDateText: stage.start_date_text, endDateText: stage.end_date_text })),
+					members: contributor.members.map((member, memberIndex) => ({ id: `member-${memberIndex}`, artistId: member.artist_id || null, name: member.name || '', joinDateParts: parsePartialDateParts(member.join_date), leaveDateParts: parsePartialDateParts(member.leave_date) })),
+					...(contributor === primary ? { source: flow.draft.artist.source } : {}),
+				} } : {}),
 				roles: contributor.roles.map((role, roleIndex) => ({
 					id: `role-${contributor.artist_id || index}-${roleIndex}`,
 					role: role.role,
@@ -238,8 +251,14 @@ function restoreCommittedAlbumImportDraft(
 				}
 			: {}),
 	}));
-	flow.titleCustomized = true;
-	flow.tracksCustomized = true;
+	const customization = request.draft_customization;
+	flow.titleCustomized = customization?.title ?? true;
+	flow.tracksCustomized = customization?.tracks ?? true;
+	flow.releaseDateCustomized = customization?.releaseDate ?? true;
+	flow.coverCustomized = customization?.cover ?? true;
+	flow.typeCustomized = customization?.type ?? true;
+	flow.metadataTagsApplied = customization?.tags ?? true;
+	flow.draft.albumDetails.tags = (request.album.tags ?? []).map((tag) => ({ kind: tag.kind, name: tag.name, ...(tag.parent_name ? { parentName: tag.parent_name } : {}) }));
 }
 
 function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
@@ -421,7 +440,7 @@ export function useMusicDrawers() {
 		);
 		if (index < 0) return;
 		for (const layer of sheetStack.layers.value.slice(index + 1)) {
-			if (layer.kind === "creation")
+			if (layer.kind === "creation" && state.value.creationFlows[layer.key]?.parentKey !== key)
 				delete state.value.creationFlows[layer.key];
 		}
 		sheetStack.popTo(key);
@@ -434,8 +453,12 @@ export function useMusicDrawers() {
 		);
 		if (index < 0) return;
 		for (const layer of sheetStack.layers.value.slice(index)) {
-			if (layer.kind === "creation")
+			if (layer.kind === "creation") {
+				for (const [childKey, child] of Object.entries(state.value.creationFlows)) {
+					if (child.parentKey === layer.key) delete state.value.creationFlows[childKey];
+				}
 				delete state.value.creationFlows[layer.key];
+			}
 		}
 		sheetStack.popTo(key);
 		sheetStack.pop();
@@ -599,6 +622,16 @@ export function useMusicDrawers() {
 		seed: MusicCreationFlowSeed = {},
 		options: { artistDraft?: MusicCreationDraft["artist"] } = {},
 	) => {
+		const previous = seed.parentKey && Object.entries(state.value.creationFlows)
+			.find(([, candidate]) => candidate.parentKey === seed.parentKey);
+		if (previous) {
+			const [key, flow] = previous;
+			if (options.artistDraft) flow.draft.artist = options.artistDraft;
+			flow.step = seed.startStep ?? flow.step;
+			sheetStack.push({ key, kind: "creation", title: "创建专辑", payload: seed });
+			syncActiveCreationFlow();
+			return flow;
+		}
 		let targetId = seed.artistId ?? null;
 		if (seed.entity === "album") targetId = seed.albumId ?? null;
 		if (seed.entity === "song") targetId = seed.songId ?? null;
@@ -658,6 +691,8 @@ export function useMusicDrawers() {
 		}> = [],
 		artistSource = "",
 	) => {
+		// 草稿比上一次提交请求更新，恢复时不登记正式提交。
+		snapshot = { ...snapshot, commitRequest: snapshot.draftRequest ?? snapshot.commitRequest };
 		const resolvedArtistSource =
 			normalizeMusicImportSource(artistSource) ||
 			normalizeMusicImportSource(snapshot.artistSource) ||
@@ -668,7 +703,7 @@ export function useMusicDrawers() {
 			artistId: resolvedArtistID || undefined,
 			artistName: importedArtistName(snapshot, contributors),
 			artistSource: resolvedArtistSource,
-			startStep: "albumDetails",
+			startStep: ['matched', 'manual', 'ambiguous', 'unmatched'].includes(snapshot.metadataMatchStatus ?? '') ? "albumDetails" : "albumImport",
 		});
 		const flow = state.value.creationFlow;
 		if (!flow) return;

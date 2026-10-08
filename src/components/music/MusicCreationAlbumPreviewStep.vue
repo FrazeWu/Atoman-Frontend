@@ -11,6 +11,8 @@ const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const albumDetails = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const albumImport = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const metadataSourceLabel = computed(() => albumImport.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
+const metadataConfirmed = computed(() => ['matched', 'manual'].includes(albumImport.value?.metadataMatchStatus ?? ''))
+const uploadsPending = computed(() => (albumImport.value?.files ?? []).some((file) => file.uploadStatus !== 'uploaded'))
 const tracks = computed(() => creationFlow.value?.draft.tracks ?? [])
 const contributors = computed(() => creationFlow.value?.draft.albumDetails.contributors ?? [])
 const coverUrl = computed(() => (
@@ -87,11 +89,11 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
         上传进度 {{ uploadProgress }}%
       </span>
     </section>
-    <p v-if="albumImport.status !== 'ready'" class="album-preview-step__hint">
-      已开启导入中心后台托管，直接提交即可，解包与格式提取将在后台自动完成。
+    <p v-if="!['ready', 'committed'].includes(albumImport.status)" class="album-preview-step__hint">
+      提交后会继续处理，可在导入中心查看进度。{{ uploadsPending ? '文件尚未上传完成，请保持页面打开；关闭或刷新浏览器会中断上传。' : '文件已上传，后续音频处理会在后台继续。' }}
     </p>
     <p v-if="albumImport.metadataSourceUrl" class="album-preview-step__source" data-testid="album-import-metadata-source">
-      已自动匹配专辑信息、曲序和歌词。
+      {{ metadataConfirmed ? '已匹配专辑元信息和曲序；歌词获取情况以各曲目为准。' : '发现候选发行版，曲目尚未完整确认，请核对后提交。' }}
       <PLink :href="albumImport.metadataSourceUrl" external>
         查看 {{ metadataSourceLabel }} 来源
       </PLink>

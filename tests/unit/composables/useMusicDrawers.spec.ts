@@ -1,9 +1,22 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useMusicDrawers } from "../../../src/composables/useMusicDrawers";
+import { useAlbumImportUpload } from "../../../src/composables/useAlbumImportUpload";
 import type { MusicSheetLayer } from "../../../src/components/music/musicSheetTypes";
-import type { MusicAlbumImport } from "../../../src/api/musicV1";
+import type { MusicAlbumImport, MusicAlbumImportCommitInput } from "../../../src/api/musicV1";
 
 describe("useMusicDrawers", () => {
+	it("返回艺术家后继续使用原上传会话", () => {
+		const drawers = useMusicDrawers();
+		drawers.closeAll();
+		const parent = drawers.openMusicCreationFlow({ startStep: "artist" });
+		const parentKey = drawers.layers.value[0]!.key;
+		const child = drawers.openMusicCreationFlow({ parentKey, startStep: "albumImport" }, { artistDraft: parent.draft.artist });
+		child.draft.albumImport.importId = "existing-upload";
+		drawers.returnToLayer(parentKey);
+		const resumed = drawers.openMusicCreationFlow({ parentKey, startStep: "albumImport" }, { artistDraft: parent.draft.artist });
+		expect(resumed.draft.albumImport.importId).toBe("existing-upload");
+		expect(drawers.layers.value).toHaveLength(2);
+	});
 	beforeEach(() => {
 		const { closeAll } = useMusicDrawers();
 		closeAll();
@@ -484,7 +497,7 @@ describe("useMusicDrawers music creation flow", () => {
 			errorMessage: "",
 		});
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
 		expect(drawers.state.value.creationFlow?.draft.artist.id).toBeNull();
 		expect(
 			drawers.state.value.creationFlow?.draft.albumDetails.contributors,
@@ -665,6 +678,127 @@ describe("useMusicDrawers music creation flow", () => {
 		]);
 	});
 
+	it.each([
+		{ name: "自动值允许后续匹配补充", customized: false },
+		{ name: "手改值在后续匹配中保留", customized: true },
+	])("优先恢复 draftRequest 完整草稿：$name", ({ customized }) => {
+		const drawers = useMusicDrawers();
+		const request: MusicAlbumImportCommitInput = {
+			draft_only: true,
+			draft_customization: {
+				title: customized, tracks: customized, releaseDate: customized,
+				cover: customized, type: customized, tags: customized,
+			},
+			artist: {
+				name: "新乐队", legal_name: "乐队登记名", bio: "保存的艺人简介",
+				nationality: "FR", birth_date: "1990-03-12", birth_place: "Paris", stage_names: [],
+			},
+			artists: [{
+				artist_id: "", name: "新乐队", legal_name: "乐队登记名", artist_form: "group",
+				disambiguation: "巴黎乐队", bio: "保存的艺人简介", image_url: "https://cdn.test/artist.jpg",
+				nationality: "FR", birth_date: "1990-03-12", birth_place: "Paris",
+				active_start_date: "2008-06-01", active_end_date: "2025",
+				roles: [{ role: "primary" }, { role: "custom", label: "现场演出" }],
+				stage_names: [
+					{ name: "新乐队", is_primary: true, start_date_text: "2008", end_date_text: "" },
+					{ name: "原乐队名", is_primary: false, start_date_text: "2006", end_date_text: "2008" },
+				],
+				members: [{ artist_id: "member-1", name: "成员甲", join_date: "2008-06-01", leave_date: "2024-12-31" }],
+			}],
+			artist_source: "https://example.test/new-artist",
+			album: {
+				title: "保存的标题", description: "保存的专辑简介", album_type: "album",
+				cover_url: "https://cdn.test/saved-cover.jpg", release_date: "2020-02-03", release_year: 2020,
+				tags: [{ kind: "type", name: "Dream Pop", parent_name: "Rock" }],
+				tracks: [{
+					file_id: "file-1", title: "保存的曲名",
+					disc_number: customized ? 3 : 1, track_number: customized ? 7 : 1,
+					original_title: "原始曲名", original_disc_number: 1, original_track_number: 1,
+					title_customized: customized, sequence_customized: customized,
+				}],
+			},
+		};
+		const snapshot: MusicAlbumImport = {
+			importId: "import-draft", targetAlbumId: "", status: "analyzing", inputMode: "archive",
+			stage: "analyzing", progress: { current: 1, total: 1 }, files: [], errors: [],
+			archiveName: "Album.zip", uploadProgress: 100, uploadSpeed: 0, coverUrl: "", coverKey: "",
+			derivedAlbumTitle: "文件名标题", derivedCover: "", derivedTracks: [],
+			lastSyncedAt: "2026-10-08T08:00:00Z", errorMessage: "",
+			draftRequest: request,
+			commitRequest: { ...request, artist_id: "old-artist", album: { ...request.album, title: "旧提交标题" } },
+		};
+
+		drawers.resumeMusicCreationFlow(snapshot);
+		const flow = drawers.state.value.creationFlow!;
+		expect(flow).toMatchObject({
+			titleCustomized: customized, tracksCustomized: customized, releaseDateCustomized: customized,
+			coverCustomized: customized, typeCustomized: customized, metadataTagsApplied: customized,
+		});
+		expect(flow.draft.albumDetails).toMatchObject({
+			title: "保存的标题", bio: "保存的专辑简介",
+			tags: [{ kind: "type", name: "Dream Pop", parentName: "Rock" }],
+			contributors: [{
+				artistId: null, name: "新乐队", kind: "group", locked: false,
+				roles: [{ role: "primary", label: "" }, { role: "custom", label: "现场演出" }],
+				newArtistDraft: {
+					id: null, kind: "group", legalName: "乐队登记名", disambiguation: "巴黎乐队",
+					bio: "保存的艺人简介", avatarUrl: "https://cdn.test/artist.jpg", nationality: "FR",
+					birthPlace: "Paris", birthDateParts: { year: "1990", month: "03", day: "12" },
+					activeStartDateParts: { year: "2008", month: "06", day: "01" },
+					activeEndDateParts: { year: "2025", month: "", day: "" },
+					source: "https://example.test/new-artist",
+					stageNames: [
+						{ name: "新乐队", isPrimary: true, startDateText: "2008", endDateText: "" },
+						{ name: "原乐队名", isPrimary: false, startDateText: "2006", endDateText: "2008" },
+					],
+					members: [{
+						artistId: "member-1", name: "成员甲",
+						joinDateParts: { year: "2008", month: "06", day: "01" },
+						leaveDateParts: { year: "2024", month: "12", day: "31" },
+					}],
+				},
+			}],
+		});
+
+		useAlbumImportUpload().applyImportSnapshot({
+			...snapshot, status: "ready", stage: "ready", metadataMatchStatus: "matched",
+			derivedAlbumTitle: "匹配标题", derivedReleaseDate: "2021-04-05", derivedAlbumType: "ep",
+			derivedCover: "https://cdn.test/matched-cover.jpg",
+			metadataGenres: ["Electronic"], metadataStyles: ["Ambient"],
+			lastSyncedAt: "2026-10-08T08:01:00Z",
+			derivedTracks: [
+				{
+					fileId: "file-1", title: "匹配曲名", origin: "Album/CD1/01.flac",
+					discNumber: 2, trackNumber: 4, originalDiscNumber: 1, originalTrackNumber: 1,
+					audioKey: "processed-1", audioUrl: "https://cdn.test/track-1.mp3",
+				},
+				{ fileId: "file-2", title: "新增曲目", origin: "Album/CD2/05.mp4", discNumber: 2, trackNumber: 5, audioKey: "processed-2" },
+			],
+		});
+
+		expect(flow.draft.albumDetails).toMatchObject({
+			title: customized ? "保存的标题" : "匹配标题",
+			coverUrl: customized ? "https://cdn.test/saved-cover.jpg" : "https://cdn.test/matched-cover.jpg",
+			type: customized ? "album" : "ep",
+			releaseDateParts: customized
+				? { year: "2020", month: "02", day: "03" }
+				: { year: "2021", month: "04", day: "05" },
+		});
+		expect(flow.draft.tracks).toHaveLength(customized ? 1 : 2);
+		expect(flow.draft.tracks[0]).toMatchObject({
+			title: customized ? "保存的曲名" : "匹配曲名",
+			discNumber: customized ? 3 : 2, sequence: customized ? 7 : 4,
+			importFileId: "file-1", audioKey: "processed-1", audioUrl: "https://cdn.test/track-1.mp3",
+		});
+		expect(flow.draft.albumDetails.tags).toEqual([
+			{ kind: "type", name: "Dream Pop", parentName: "Rock" },
+			...(customized ? [] : [
+				{ kind: "type", name: "Electronic" },
+				{ kind: "type", name: "Ambient", parentName: "Electronic" },
+			]),
+		]);
+	});
+
 	it("resumes an unfinished import at upload when the original artist is stored", () => {
 		const drawers = useMusicDrawers();
 
@@ -691,7 +825,7 @@ describe("useMusicDrawers music creation flow", () => {
 			errorMessage: "",
 		});
 
-		expect(drawers.state.value.creationFlow?.step).toBe("albumDetails");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
 		expect(drawers.state.value.creationFlow?.draft.artist.id).toBe("artist-2");
 		expect(drawers.state.value.creationFlow?.draft.albumDetails.title).toBe(
 			"Discovery",

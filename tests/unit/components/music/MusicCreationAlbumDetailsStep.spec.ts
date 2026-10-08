@@ -692,15 +692,15 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		expect(
 			wrapper.get('[data-testid="album-details-progress-label"]').text(),
-		).toContain("第 2 步");
+		).toContain("第 3 步");
 		expect(
 			wrapper.get('[data-testid="album-details-progress-value"]').text(),
-		).toContain("2 / 2");
+		).toContain("3 / 4");
 		expect(
 			wrapper
 				.findAll('[data-testid="album-details-step-label"]')
 				.map((node) => node.text()),
-		).toEqual(["1 上传与匹配", "2 完善专辑"]);
+		).toEqual(["1 上传文件", "2 确认艺术家与匹配", "3 填写信息", "4 核对并提交"]);
 		expect(
 			wrapper.get('[data-testid="album-details-title-input"]').element,
 		).toHaveValue("Late Registration");
@@ -1119,7 +1119,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		await wrapper
 			.get('[data-testid="album-details-back-button"]')
 			.trigger("click");
-		expect(drawers.state.value.creationFlow?.step).toBe("artist");
+		expect(drawers.state.value.creationFlow?.step).toBe("albumImport");
 
 		drawers.setMusicCreationStep("albumDetails");
 		await wrapper
@@ -1131,7 +1131,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 	it("上传中仍展示详情表单且不重复显示汇总进度", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({
-			mode: "edit",
+			mode: "create",
 			entity: "album",
 			albumId: "album-1",
 			artistId: "artist-seeded",

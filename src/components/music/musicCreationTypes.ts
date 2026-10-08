@@ -290,6 +290,10 @@ export interface MusicCreationFlowState {
 	submitting: boolean;
 	errorMessage: string;
 	editingContributorId?: string | null;
+	contributorReturnStep?: "albumImport" | "albumDetails";
+	metadataTagsApplied?: boolean;
+	typeCustomized?: boolean;
+	returnedToImport?: boolean;
 }
 
 export function musicCreationContributorForFlow(flow: MusicCreationFlowState) {

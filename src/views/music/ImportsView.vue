@@ -108,7 +108,7 @@ const emptyTrackStateText = computed(() =>
 
 function importErrorText(value: string, status?: string, stage?: string) {
   if (value === 'at least one source is required') return '请填写艺术家和专辑资料来源'
-  if (['failed', 'needs_attention'].includes(status || '') && stage !== 'ready') return '处理失败，请重试'
+  if (value === 'every track must have processed audio') return '部分曲目尚未完成音频处理，请重试对应文件或移除失败曲目'
   return value
 }
 
@@ -344,7 +344,7 @@ async function resumeImport(snapshot: MusicAlbumImport) {
     || snapshot.commitRequest?.artists?.find((artist) => artist.artist_id?.trim())?.artist_id?.trim()
     || ''
   const flow = resumeMusicCreationFlow(snapshot)
-  if (snapshot.commitRequest || !flow) return
+  if (snapshot.commitRequest || snapshot.draftRequest || !flow) return
 
   const artistRequest = artistId
     ? getMusicArtist(artistId).catch(() => null)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { SUPPORTED_ARCHIVE_ACCEPT, SUPPORTED_AUDIO_ACCEPT, SUPPORTED_VIDEO_ACCEPT } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
@@ -26,6 +26,7 @@ const {
   cancelUpload,
   startPolling,
   stopPolling,
+  startMetadataMatching,
 } = useAlbumImportUpload()
 
 onMounted(() => {
@@ -36,6 +37,10 @@ onMounted(() => {
 })
 
 onUnmounted(stopPolling)
+
+watch(() => [creationFlow.value?.draft.albumDetails.contributors.map((item) => `${item.name}:${item.roles.map((role) => role.role).join(',')}`).join('|'), albumImportDraft.value?.derivedTracks.length], () => {
+  void startMetadataMatching()
+}, { immediate: true })
 
 const filesInputRef = ref<HTMLInputElement | null>(null)
 const folderInputRef = ref<HTMLInputElement | null>(null)
@@ -77,9 +82,7 @@ const processingErrorMessage = computed(() => {
   if (errorMessage.value) return errorMessage.value
   const message = albumImportDraft.value?.errorMessage?.trim() || ''
   if (message === 'at least one source is required') return '请填写艺术家和专辑资料来源'
-  if (['failed', 'needs_attention'].includes(albumImportDraft.value?.status || '') && albumImportDraft.value?.stage !== 'ready') {
-    return '处理失败，请重试'
-  }
+  if (message === 'every track must have processed audio') return '部分曲目尚未完成音频处理，请重试对应文件或移除失败曲目'
   return message
 })
 
@@ -110,6 +113,7 @@ const metadataMatchLabel = computed(() => {
 	const draft = albumImportDraft.value
 	if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
 	if (draft.status === 'canceled') return '已取消'
+	if (draft.metadataMatchStatus === 'waiting_artist') return '请先确认艺术家'
 	if (draft.metadataMatched === true || ['matched', 'manual'].includes(draft.metadataMatchStatus ?? '')) return '已匹配'
 	if (draft.metadataMatchStatus === 'ambiguous') return '发现候选，待确认'
 	if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
@@ -222,7 +226,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 
     <p class="metadata-match-hint" data-testid="album-import-metadata-hint">
 	      <template v-if="metadataConfirmed && albumImportDraft.metadataSourceUrl">
-        已自动匹配专辑信息、曲序和歌词。
+        已匹配专辑元信息和曲序；歌词将单独读取或检索。
         <a
           :href="albumImportDraft.metadataSourceUrl"
           target="_blank"
@@ -235,7 +239,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 			<template v-else-if="albumImportDraft.metadataMatchStatus === 'ambiguous'">
 				已找到候选发行版，但曲目未能完整确认，请在信息页核对曲序。
 			</template>
-			<template v-else>上传会立即读取本地元信息；读取到曲目后会自动开始匹配，完成后进入信息确认。</template>
+			<template v-else>读取到曲目并确认艺术家后开始匹配，匹配结束后进入信息填写。上传未完成时请保持页面打开。</template>
     </p>
     <div class="parallel-progress" data-testid="album-import-parallel-progress">
       <div class="parallel-progress__lane">
@@ -262,7 +266,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-		<small>{{ metadataMatchState === 'active' ? '正在并行检索 Discogs 与 MusicBrainz，完成后进入信息确认' : '读取到曲目和内嵌元信息后会自动开始匹配' }}</small>
+			<small>{{ metadataMatchState === 'active' ? '正在核对 Discogs 与 MusicBrainz；完整匹配优先，同等结果优先使用 Discogs' : metadataMatchState === 'done' ? '元信息匹配已完成，歌词获取结果以各曲目为准' : '读取到曲目并确认艺术家后开始匹配' }}</small>
 		</div>
 	</div>
 	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">
@@ -271,10 +275,13 @@ function formatUploadSpeed(bytesPerSecond: number) {
 			<span v-if="source.candidateCount !== undefined">检索 {{ source.candidateCount }} 个候选</span>
 			<span v-if="source.selected">已选中 {{ source.selectedTitle || '安全发行版' }}</span>
 			<span v-else-if="source.status === 'matched'">发现 {{ source.selectedTitle || '安全发行版' }}，未采用</span>
-			<span v-else>未找到可安全采用的发行版</span>
+				<span v-else-if="source.status === 'ambiguous'">发现候选 {{ source.selectedTitle }}，需人工核对</span>
+				<span v-else-if="source.error">检索失败：{{ source.error }}</span>
+				<span v-else>未找到匹配发行版</span>
 		</p>
 	</div>
-	<p v-if="albumImportDraft.metadataError" class="metadata-artist-hint" role="status">{{ albumImportDraft.metadataError }}</p>
+		<p v-if="albumImportDraft.metadataError" class="metadata-artist-hint" role="status">{{ albumImportDraft.metadataError }}</p>
+    <PButton v-if="['matched', 'manual', 'ambiguous', 'unmatched'].includes(albumImportDraft.metadataMatchStatus ?? '') && !['committed', 'canceled'].includes(albumImportDraft.status)" variant="secondary" @click="startMetadataMatching(true)">重新匹配</PButton>
     <p
       v-if="['ready', 'needs_attention'].includes(albumImportDraft.status)"
       class="metadata-artist-hint"

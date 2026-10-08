@@ -2,7 +2,7 @@
 import type { RouteRecordRaw } from "vue-router";
 import PortalView from "@/views/portal/PortalView.vue";
 
-export const MOBILE_MODULES = ["feed", "blog", "music"] as const;
+export const MOBILE_MODULES = ["feed", "blog", "music", "books"] as const;
 
 export const mobileInitialRoutes: RouteRecordRaw[] = [
 	{

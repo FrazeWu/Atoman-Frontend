@@ -10,6 +10,8 @@ import BookWorkView from '@/views/books/BookWorkView.vue'
 beforeEach(() => {
   setActivePinia(createPinia())
   useAuthStore().isAuthenticated = true
+  vi.spyOn(booksApi, 'getMyBookReview').mockRejectedValue(new Error('No review'))
+  vi.spyOn(booksApi, 'listPublishedBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
 })
 
 afterEach(() => {
@@ -159,6 +161,7 @@ describe('BookWorkView', () => {
     const wrapper = mount(BookWorkView, { global: { plugins: [router], stubs: { CommentSection: true } } })
     await flushPromises()
     expect(ratingSpy).not.toHaveBeenCalled()
+    expect(booksApi.getMyBookReview).not.toHaveBeenCalled()
 
     authStore.isAuthenticated = true
     await flushPromises()

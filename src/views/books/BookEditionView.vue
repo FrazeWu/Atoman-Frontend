@@ -1,13 +1,15 @@
 <template>
   <main class="a-page-md books-detail">
-    <PSectionHeader title="版本详情" kicker="EDITION" rule />
     <p v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ errorMessage }}</p>
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载版本...</p>
     <template v-else-if="detail">
       <header class="books-detail__header">
-        <RouterLink class="books-detail__back" :to="`/books/work/${detail.work.id}`">返回作品</RouterLink>
+        <BookCover :src="detail.edition.cover_url" :title="detail.edition.title || detail.work.title" />
+        <div>
+        <RouterLink class="books-detail__back" :to="{ path: `/books/work/${detail.work.id}`, query: route.query }">返回作品</RouterLink>
         <h1>{{ detail.edition.title || detail.work.title }}</h1>
         <p>{{ detail.work.title }}</p>
+        </div>
       </header>
 
       <dl class="books-edition-facts">
@@ -32,7 +34,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import BookCover from '@/components/books/BookCover.vue'
 import PLink from '@/components/ui/PLink.vue'
 import { getPublicBookEdition, type BookPublicEditionDetail } from '@/api/books'
 
@@ -48,7 +50,7 @@ const facts = computed(() => {
     { label: '出版社', value: edition.publisher || '待补充' },
     { label: 'ISBN-10', value: edition.isbn10 || '待补充' },
     { label: 'ISBN-13', value: edition.isbn13 || '待补充' },
-    { label: '语言', value: edition.language || '待补充' },
+    { label: '语言', value: ['chi', 'zho', 'zh'].includes(edition.language || '') ? '中文' : edition.language || '待补充' },
     { label: '页数', value: edition.page_count ? `${edition.page_count} 页` : '待补充' },
     { label: '装帧', value: edition.binding || '待补充' },
   ]
@@ -74,6 +76,7 @@ onMounted(async () => {
 
 .books-detail__header {
   display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
   gap: 0.45rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);

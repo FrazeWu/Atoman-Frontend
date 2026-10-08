@@ -41,13 +41,16 @@ describe("mobile app route boundary", () => {
 		expect(homeRoute).toMatchObject({ path: "/" });
 		expect(homeRoute).not.toHaveProperty("redirect");
 		expect(homeRoute?.component).toBe(PortalView);
-		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music"]);
+		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music", "books"]);
 	});
 
 	it("keeps the pilot module routes available for deep links", () => {
 		expect(routePaths()).toEqual(
 			expect.arrayContaining([
 				"/modules",
+				"/books",
+				"/books/work/:workId",
+				"/books/edition/:editionId",
 				"/inbox",
 				"/me",
 				"/studio",

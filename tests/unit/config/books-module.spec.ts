@@ -79,4 +79,14 @@ describe("books module foundation", () => {
       feature: "books.review",
     });
   });
+
+  it("keeps discovery mounted under route-driven detail sheets", () => {
+    const children = moduleFeatureRoutes.books[0].children ?? [];
+    const home = children.find(route => route.path === "")?.component;
+    for (const path of ["work/:workId", "edition/:editionId"]) {
+      const detail = children.find(route => route.path === path);
+      expect(detail?.components?.default).toBe(home);
+      expect(detail?.components?.overlay).toBeDefined();
+    }
+  });
 });

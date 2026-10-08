@@ -266,7 +266,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-			<small>{{ metadataMatchState === 'active' ? '正在核对 Discogs 与 MusicBrainz；完整匹配优先，同等结果优先使用 Discogs' : metadataMatchState === 'done' ? '元信息匹配已完成，歌词获取结果以各曲目为准' : '读取到曲目并确认艺术家后开始匹配' }}</small>
+			<small>{{ metadataMatchState === 'active' ? '正在核对 Discogs 与 MusicBrainz；完整匹配优先，同等结果优先使用 Discogs' : metadataMatchState === 'done' ? '元信息匹配已完成' : '读取到曲目并确认艺术家后开始匹配' }}</small>
 		</div>
 	</div>
 	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">

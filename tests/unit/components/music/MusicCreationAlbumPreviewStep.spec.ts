@@ -38,6 +38,19 @@ describe('MusicCreationAlbumPreviewStep.vue', () => {
     expect(wrapper.get('.album-preview-step__failures').text()).toContain('broken.mp3：转码失败')
   })
 
+  it('在对应曲目上展示歌词匹配结果', () => {
+    const flow=useMusicDrawers().state.value.creationFlow!
+    flow.draft.albumImport.status='ready'
+    flow.draft.tracks=[
+      {id:'local',title:'本地曲目',sequence:1,lyrics:'歌词',lyricsSource:'local'},
+      {id:'empty',title:'无歌词曲目',sequence:2,matchStatus:'matched'},
+    ]
+    const wrapper=mount(MusicCreationAlbumPreviewStep)
+    const rows=wrapper.findAll('.album-preview-step__track')
+    expect(rows[0].text()).toContain('本地歌词')
+    expect(rows[1].text()).toContain('暂无歌词')
+  })
+
   it('展示导入会话的失败原因', () => {
     const drawers = useMusicDrawers()
     if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')

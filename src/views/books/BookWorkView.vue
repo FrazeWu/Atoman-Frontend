@@ -30,6 +30,7 @@
             class="books-shelf-editor__select"
             :model-value="shelfStatusInput"
             :options="shelfOptions"
+            placeholder="书架状态"
             aria-label="书架状态"
             @update:model-value="shelfStatusInput = $event as BookShelfItem['status']"
           />
@@ -65,6 +66,7 @@
               class="books-review-editor__visibility"
               :model-value="reviewVisibility"
               :options="visibilityOptions"
+              placeholder="书评可见性"
               aria-label="书评可见性"
               @update:model-value="reviewVisibility = $event as 'public' | 'private'"
             />
@@ -427,6 +429,7 @@ onMounted(async () => {
 .books-detail h1 {
   margin: 0.25rem 0 0;
   font-size: 1.8rem;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 

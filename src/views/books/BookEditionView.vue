@@ -129,7 +129,6 @@ onMounted(async () => {
   grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
   margin: 0;
   border-top: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
 }
 
 .books-edition-facts dt,

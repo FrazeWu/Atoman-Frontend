@@ -1,13 +1,13 @@
 <template>
   <main class="a-page-md public-reader">
-    <PSectionHeader title="公共阅读" kicker="READER" rule />
+    <PPageHeader title="公共阅读" mb="0" />
     <header class="public-reader__header">
       <RouterLink class="public-reader__back" to="/books" aria-label="返回书籍" title="返回书籍">
         <ArrowLeft :size="18" aria-hidden="true" />
       </RouterLink>
-      <div>
-        <h1>{{ asset?.file_name || '公共电子书' }}</h1>
-        <p v-if="asset">{{ formatLabel }} · {{ Math.round(readingPercent * 100) }}%</p>
+      <div class="public-reader__heading">
+        <h2>{{ asset?.file_name || '公共电子书' }}</h2>
+        <p v-if="asset" class="tabular-nums">{{ formatLabel }} · {{ Math.round(readingPercent * 100) }}%</p>
       </div>
       <div class="public-reader__actions">
         <PButton type="button" variant="ghost" :disabled="!asset" @click="reportAsset">
@@ -23,7 +23,7 @@
     <section v-else class="public-reader__surface" aria-label="公共电子书阅读器">
       <div class="public-reader__toolbar">
         <span>公共正文</span>
-        <div v-if="asset?.format === 'pdf'" class="public-reader__pagination">
+        <div v-if="asset?.format === 'pdf'" class="public-reader__pagination tabular-nums">
           <button type="button" aria-label="上一页" title="上一页" :disabled="pdfPage <= 1" @click="changePdfPage(-1)"><ChevronLeft :size="17" aria-hidden="true" /></button>
           <span>第 {{ pdfPage }} / {{ pdfPageCount }} 页</span>
           <button type="button" aria-label="下一页" title="下一页" :disabled="pdfPage >= pdfPageCount" @click="changePdfPage(1)"><ChevronRight :size="17" aria-hidden="true" /></button>
@@ -59,7 +59,7 @@ import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -132,7 +132,7 @@ async function loadEPUB() {
 
 function reportAsset() {
   if (!asset.value) return
-  const reason = window.prompt('请输入举报理由')?.trim()
+  const reason = window.prompt('请输入举报原因')?.trim()
   if (!reason) return
   void reportPublishedBookAsset(asset.value.id, reason)
     .then(() => { reportMessage.value = '举报已提交，感谢你的反馈' })
@@ -183,29 +183,246 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.public-reader { display: grid; gap: 1.25rem; padding-top: var(--a-page-start-space); }
-.public-reader__header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.85rem; }
-.public-reader__back, .public-reader__pagination button { display: inline-grid; place-items: center; min-width: 2.25rem; height: 2.25rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); color: var(--a-color-muted); }
-.public-reader__actions { display: flex; justify-content: end; }
+.public-reader {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: var(--a-page-start-space);
+}
 
-.public-reader__header h1 { margin: 0; font-size: 1.35rem; overflow-wrap: anywhere; }
-.public-reader__header p, .public-reader__feedback { margin: 0.25rem 0 0; color: var(--a-color-muted); font-size: 0.88rem; }
-.public-reader__feedback--error { color: var(--a-color-danger); }
-.public-reader__surface { display: grid; gap: 0.9rem; min-width: 0; }
-.public-reader__toolbar { display: flex; justify-content: space-between; align-items: center; min-height: 2.5rem; color: var(--a-color-muted); border-block: 1px solid var(--a-color-border-soft); }
-.public-reader__pagination { display: flex; align-items: center; gap: 0.65rem; }
-.public-reader__pagination button { cursor: pointer; }
-.public-reader__pagination button:disabled { cursor: not-allowed; opacity: 0.4; }
-.public-reader__toc { border-block: 1px solid var(--a-color-border-soft); }
-.public-reader__toc summary { padding: 0.65rem 0; color: var(--a-color-muted); cursor: pointer; }
-.public-reader__toc ol { display: grid; gap: 0.15rem; max-height: 16rem; margin: 0; padding: 0 0 0.75rem 1.2rem; overflow: auto; }
-.public-reader__toc button { border: 0; background: transparent; color: var(--a-color-fg); cursor: pointer; font: inherit; text-align: left; }
-.public-reader__toc button:hover, .public-reader__toc button:focus-visible { text-decoration: underline; }
-.public-reader__toc button.is-nested { padding-left: 1rem; color: var(--a-color-muted); }
-.public-reader__text, .public-reader__epub, .public-reader__pdf { min-height: min(68vh, 720px); overflow: hidden; border: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); }
-.public-reader__text { overflow: auto; padding: clamp(1.25rem, 4vw, 3rem); }
-.public-reader__text pre { max-width: 72ch; margin: 0 auto; color: var(--a-color-fg); font: inherit; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
-.public-reader__epub { padding: 1rem; }
-.public-reader__pdf { display: grid; place-items: start center; overflow: auto; padding: 1rem; }
-.public-reader__pdf canvas { display: block; max-width: 100%; height: auto; }
+.public-reader__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.public-reader__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.public-reader__back:hover {
+  background-color: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.public-reader__back:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+
+.public-reader__heading {
+  min-width: 0;
+}
+
+.public-reader__heading h1,
+.public-reader__heading h2,
+.public-reader__header h1,
+.public-reader__header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.public-reader__heading p,
+.public-reader__header p,
+.public-reader__feedback {
+  margin: 0.25rem 0 0;
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.public-reader__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.public-reader__feedback--error {
+  color: var(--a-color-danger);
+}
+
+.public-reader__surface {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.public-reader__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.public-reader__pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.public-reader__pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.public-reader__pagination button:hover:not(:disabled) {
+  background-color: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.public-reader__pagination button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+
+.public-reader__pagination button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.public-reader__toc {
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
+}
+
+.public-reader__toc summary {
+  padding: 0.65rem 0.85rem;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.public-reader__toc summary:hover {
+  color: var(--a-color-fg);
+}
+
+.public-reader__toc[open] summary {
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.public-reader__toc ol {
+  display: grid;
+  gap: 0.15rem;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0.5rem 0.85rem 0.75rem 2rem;
+  overflow: auto;
+  background: #ffffff;
+}
+
+.public-reader__toc button {
+  border: 0;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  padding: 0.2rem 0;
+}
+
+.public-reader__toc button:hover,
+.public-reader__toc button:focus-visible {
+  text-decoration: underline;
+}
+
+.public-reader__toc button.is-nested {
+  padding-left: 1rem;
+  color: var(--a-color-muted);
+}
+
+.public-reader__text,
+.public-reader__epub,
+.public-reader__pdf {
+  min-height: min(68vh, 720px);
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: #ffffff;
+}
+
+.public-reader__text {
+  overflow: auto;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  background: #ffffff;
+}
+
+.public-reader__text pre {
+  max-width: 72ch;
+  margin: 0 auto;
+  color: var(--a-color-fg);
+  font: inherit;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.public-reader__epub {
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.public-reader__pdf {
+  display: grid;
+  place-items: start center;
+  overflow: auto;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.public-reader__pdf canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .public-reader__header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .public-reader__actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .public-reader__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-block: 0.6rem;
+  }
+}
 </style>

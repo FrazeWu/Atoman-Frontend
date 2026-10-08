@@ -1,13 +1,13 @@
 <template>
   <main class="a-page-md books-reader">
-    <PSectionHeader title="阅读" kicker="READER" rule />
+    <PPageHeader title="阅读" mb="0" />
 
     <header class="books-reader__header">
       <RouterLink class="books-back-link" to="/books/library" aria-label="返回我的书库" title="返回我的书库">
         <ArrowLeft :size="18" aria-hidden="true" />
       </RouterLink>
       <div class="books-reader__heading">
-        <h1>{{ asset?.title || '私有电子书' }}</h1>
+        <h2>{{ asset?.title || '私有电子书' }}</h2>
         <p v-if="asset">{{ asset.file_name }} · {{ statusLabel }}</p>
       </div>
       <div class="books-reader__actions">
@@ -41,11 +41,11 @@
 
     <section v-if="canRead" class="books-reader__surface" aria-label="电子书阅读器">
       <div class="books-reader__toolbar">
-        <div class="books-reader__progress" aria-live="polite">
+        <div class="books-reader__progress tabular-nums" aria-live="polite">
           <span>阅读进度</span>
           <strong>{{ Math.round(readingPercent * 100) }}%</strong>
         </div>
-        <div v-if="asset?.format === 'pdf'" class="books-reader__pagination">
+        <div v-if="asset?.format === 'pdf'" class="books-reader__pagination tabular-nums">
           <button type="button" aria-label="上一页" title="上一页" :disabled="pdfPage <= 1" @click="changePdfPage(-1)">
             <ChevronLeft :size="17" aria-hidden="true" />
           </button>
@@ -63,7 +63,7 @@
             <ChevronRight :size="17" aria-hidden="true" />
           </button>
         </div>
-        <div v-else-if="asset?.format === 'txt' && textPages.length" class="books-reader__pagination">
+        <div v-else-if="asset?.format === 'txt' && textPages.length" class="books-reader__pagination tabular-nums">
           <span>第 {{ textPage }} / {{ textPages.length }} 页</span>
         </div>
       </div>
@@ -86,7 +86,7 @@
             class="books-reader__text-page"
           >
             <div class="books-reader__text-page-content">{{ page.content }}</div>
-            <span class="books-reader__text-page-number">{{ index + 1 }}</span>
+            <span class="books-reader__text-page-number tabular-nums">{{ index + 1 }}</span>
           </article>
         </div>
         <div ref="textPageFrame" class="books-reader__text-page books-reader__text-page--measure" aria-hidden="true">
@@ -103,7 +103,7 @@
         <textarea v-model="privateNotes" maxlength="50000" rows="3" placeholder="记录只对你可见的想法" />
       </label>
 
-      <p class="books-reader__public-status">文件通过安全扫描后会自动公开，公共副本与此处的私有阅读进度相互独立。</p>
+      <p class="books-reader__public-status">公共副本与此处的私有阅读进度相互独立。</p>
     </section>
   </main>
 </template>
@@ -116,7 +116,7 @@ import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
@@ -437,30 +437,39 @@ onBeforeUnmount(() => {
   gap: 0.85rem;
 }
 
-.books-back-link,
-.books-reader__pagination button {
-  display: inline-grid;
-  place-items: center;
-  color: var(--a-color-muted);
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
-  min-width: 2.25rem;
+.books-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
   height: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.books-back-link:hover,
-.books-reader__pagination button:hover:not(:disabled) {
+.books-back-link:hover {
+  background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border-color: var(--a-color-border);
+}
+
+.books-back-link:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
 }
 
 .books-reader__heading {
   min-width: 0;
 }
 
-.books-reader__heading h1 {
+.books-reader__heading h1,
+.books-reader__heading h2 {
   margin: 0;
   font-size: 1.35rem;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -493,7 +502,10 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 1rem;
   min-height: 2.5rem;
-  border-block: 1px solid var(--a-color-border-soft);
+  padding: 0.25rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
   color: var(--a-color-muted);
   font-size: 0.88rem;
 }
@@ -503,25 +515,66 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .books-reader__progress strong {
   color: var(--a-color-fg);
+  font-weight: 600;
+}
+
+.books-reader__pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.books-reader__pagination button:hover:not(:disabled) {
+  background-color: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.books-reader__pagination button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
 }
 
 .books-reader__pagination button:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .books-reader__toc {
-  border-block: 1px solid var(--a-color-border-soft);
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
 }
 
 .books-reader__toc summary {
-  padding: 0.65rem 0;
+  padding: 0.65rem 0.85rem;
   color: var(--a-color-muted);
   cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.books-reader__toc summary:hover {
+  color: var(--a-color-fg);
+}
+
+.books-reader__toc[open] summary {
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
 }
 
 .books-reader__toc ol {
@@ -529,8 +582,9 @@ onBeforeUnmount(() => {
   gap: 0.15rem;
   max-height: 16rem;
   margin: 0;
-  padding: 0 0 0.75rem 1.2rem;
+  padding: 0.5rem 0.85rem 0.75rem 2rem;
   overflow: auto;
+  background: #ffffff;
 }
 
 .books-reader__toc button {
@@ -540,6 +594,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font: inherit;
   text-align: left;
+  padding: 0.2rem 0;
 }
 
 .books-reader__toc button:hover,
@@ -556,8 +611,8 @@ onBeforeUnmount(() => {
 .books-reader__epub,
 .books-reader__pdf {
   min-height: min(68vh, 720px);
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: #ffffff;
   overflow: hidden;
 }
 
@@ -566,7 +621,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   max-height: min(78vh, 60rem);
   padding: clamp(0.75rem, 2vw, 1.5rem);
-  background: var(--a-color-surface-muted);
+  background: #ffffff;
 }
 
 .books-reader__text-pages {
@@ -582,7 +637,8 @@ onBeforeUnmount(() => {
   aspect-ratio: 1 / 1.414;
   padding: clamp(2rem, 5vw, 4.75rem) clamp(1.75rem, 7vw, 6.5rem) 3.25rem;
   background: #ffffff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 22%);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  box-shadow: none;
 }
 
 .books-reader__text-page-content {
@@ -597,7 +653,7 @@ onBeforeUnmount(() => {
   column-count: 2;
   column-fill: auto;
   column-gap: clamp(1.5rem, 4vw, 3.5rem);
-  column-rule: 1px solid var(--a-color-border-soft);
+  column-rule: 1px solid var(--a-color-border-soft, #e2e8f0);
   overflow: hidden;
 }
 
@@ -607,6 +663,7 @@ onBeforeUnmount(() => {
   color: var(--a-color-muted);
   font-size: 0.75rem;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .books-reader__text-page--measure {
@@ -619,6 +676,7 @@ onBeforeUnmount(() => {
 
 .books-reader__epub {
   padding: 1rem;
+  background: #ffffff;
 }
 
 .books-reader__pdf {
@@ -626,14 +684,16 @@ onBeforeUnmount(() => {
   place-items: start center;
   overflow: auto;
   padding: 1rem;
+  background: #ffffff;
 }
 
 .books-reader__pdf canvas {
   display: block;
   max-width: 100%;
   height: auto;
-  background: white;
-  box-shadow: 0 2px 12px rgb(0 0 0 / 12%);
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  box-shadow: none;
 }
 
 .books-reader__public-status {
@@ -651,6 +711,26 @@ onBeforeUnmount(() => {
 .books-reader__notes span {
   color: var(--a-color-muted);
   font-size: 0.88rem;
+}
+
+.books-reader__notes textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 5rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  background: #ffffff;
+  color: var(--a-color-fg);
+  padding: 0.75rem;
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.books-reader__notes textarea:focus {
+  border-color: var(--a-color-primary);
 }
 
 @media (max-width: 720px) {
@@ -672,17 +752,6 @@ onBeforeUnmount(() => {
     column-rule: 0;
     font-size: 1rem;
   }
-}
-
-.books-reader__notes textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 5rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-  padding: 0.7rem;
-  font: inherit;
 }
 
 @media (max-width: 640px) {

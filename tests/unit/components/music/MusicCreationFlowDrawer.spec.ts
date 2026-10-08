@@ -174,7 +174,7 @@ vi.mock("@/components/ui/PSheet.vue", () => ({
 	default: {
 		name: "PSheet",
 		props: ["show", "width", "index"],
-		template: '<section v-if="show"><slot /></section>',
+        template: '<section v-if="show"><slot /><footer data-testid="sheet-footer"><slot name="footer" /></footer></section>',
 	},
 }));
 
@@ -238,6 +238,12 @@ const completeMusicAlbumImportSessionMock = vi.mocked(
 );
 
 describe("MusicCreationFlowDrawer", () => {
+	it("操作条位于独立页脚，不占用表单滚动区", () => {
+		drawerMocks.state.value.creationFlow = createFlowState({step:"albumDetails"});
+		const wrapper = mount(MusicCreationFlowDrawer);
+		expect(wrapper.get('[data-testid="creation-flow-footer"]').element.closest("footer")).not.toBeNull();
+		expect(wrapper.get(".drawer-body").find('[data-testid="creation-flow-footer"]').exists()).toBe(false);
+	});
 	beforeEach(() => {
 		commitMusicAlbumImportMock.mockReset();
 		createMusicArtistMock.mockReset();

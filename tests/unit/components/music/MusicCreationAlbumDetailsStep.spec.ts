@@ -677,10 +677,10 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			.findAll('[data-testid="album-details-field"]')
 			.map((node) => node.attributes("data-field"));
 		expect(fieldOrder).toEqual([
-			"cover",
 			"name",
 			"date",
 			"type",
+			"cover",
 			"contributors",
 			"bio",
 			"source",
@@ -698,10 +698,14 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 				.get(".album-details-step__overview")
 				.find('[data-field="contributors"]')
 				.exists(),
-		).toBe(true);
+		).toBe(false);
 		expect(
 			wrapper.get(".album-details-step__contributor-field").text(),
 		).toContain("搜索其他艺人");
+		expect(wrapper.get('[data-testid="album-details-bio-input"]').element.closest("details")).toBeNull();
+		expect(wrapper.get('[data-testid="album-tags-editor"]').element.closest("details")).toBeNull();
+		expect(wrapper.get('[data-field="date"]').element.parentElement).toBe(wrapper.get('[data-field="type"]').element.parentElement);
+		expect(wrapper.get('[data-field="bio"]').element.parentElement).toBe(wrapper.get('[data-field="source"]').element.parentElement);
 
 		expect(
 			wrapper.get('[data-testid="album-details-progress-label"]').text(),

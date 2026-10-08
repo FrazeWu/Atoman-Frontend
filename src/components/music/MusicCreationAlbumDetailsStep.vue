@@ -471,7 +471,7 @@ watch(
 
     <MusicBrainzEditNotice v-if="musicBrainzMatched" data-testid="musicbrainz-edit-notice" />
 
-    <details v-if="!isEditMode || albumImportDraft?.importId" class="album-import-panel" :open="!orderedTracks.length">
+    <details v-if="!isEditMode || albumImportDraft?.importId" class="album-import-panel">
       <summary>上传与处理进度</summary>
       <section v-if="!isEditMode || albumImportDraft?.importId"
         class="album-card album-card--primary album-import-status-card"
@@ -490,6 +490,53 @@ watch(
 
     <div class="album-details-step__form">
       <div class="album-details-step__overview">
+        <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
+          <div class="album-details-step__basic-fields">
+            <!-- 专辑名称 -->
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
+              <PInput
+                v-model="titleModel"
+                data-testid="album-details-title-input"
+                type="text"
+                placeholder="输入名称"
+                :label="requiredLabel(detailsTitleLabel)"
+                @blur="handleTitleBlur"
+              />
+            </div>
+
+            <div class="album-details-step__row-two-col">
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
+              <PMaskedDateInput
+                v-model="releaseDateModel"
+                :label="requiredLabel('日期')"
+                testId="album-details-date-input"
+              />
+            </div>
+
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
+              <PSelect
+                v-model="albumTypeSelection"
+                :label="requiredLabel('类型')"
+                :options="albumTypeOptions"
+              />
+              <PInput
+                v-if="albumTypeSelection === 'custom'"
+                v-model="customAlbumType"
+                label="自定义类型"
+                placeholder="输入专辑类型"
+              />
+              <input
+                v-model="albumDetailsDraft.type"
+                data-testid="album-details-type-input"
+                type="hidden"
+              />
+              <p v-if="standaloneHasMultipleTracks" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
+                单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
+              </p>
+            </div>
+            </div>
+          </div>
+        </div>
       <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
         <input
           ref="coverInputRef"
@@ -559,50 +606,7 @@ watch(
           </PButton>
         </div>
       </div>
-        <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
-          <div class="album-details-step__basic-fields">
-            <!-- 专辑名称 -->
-            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
-              <PInput
-                v-model="titleModel"
-                data-testid="album-details-title-input"
-                type="text"
-                placeholder="输入名称"
-                :label="requiredLabel(detailsTitleLabel)"
-                @blur="handleTitleBlur"
-              />
-            </div>
-
-            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
-              <PMaskedDateInput
-                v-model="releaseDateModel"
-                :label="requiredLabel('日期')"
-                testId="album-details-date-input"
-              />
-            </div>
-
-            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
-              <PSelect
-                v-model="albumTypeSelection"
-                :label="requiredLabel('类型')"
-                :options="albumTypeOptions"
-              />
-              <PInput
-                v-if="albumTypeSelection === 'custom'"
-                v-model="customAlbumType"
-                label="自定义类型"
-                placeholder="输入专辑类型"
-              />
-              <input
-                v-model="albumDetailsDraft.type"
-                data-testid="album-details-type-input"
-                type="hidden"
-              />
-              <p v-if="standaloneHasMultipleTracks" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
-                单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
-              </p>
-            </div>
-          </div>
+      </div>
 
       <section class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
         <span class="field-label">创作者</span>
@@ -613,19 +617,28 @@ watch(
         />
       </section>
 
-          <details class="album-details-step__additional">
-            <summary>简介、标签与识别资料</summary>
+      <div class="album-details-step__editorial-row">
           <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
             <PTextarea
               id="album-details-description"
               v-model="albumDetailsDraft.bio"
               data-testid="album-details-bio-input"
-              :rows="5"
+              :rows="4"
               :placeholder="detailsDescriptionPlaceholder"
               label="简介"
               aria-label="简介"
             />
           </div>
+      <div class="field-group" data-testid="album-details-field" data-field="source">
+        <PTextarea
+          v-model="albumDetailsDraft.source"
+          data-testid="album-details-source-input"
+          :rows="4"
+          :placeholder="sourceFieldPlaceholder"
+          :label="sourceFieldLabel"
+        />
+      </div>
+      </div>
 
           <section class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
             <div class="album-tags-editor__row" data-testid="album-style-tags-row">
@@ -674,20 +687,6 @@ watch(
               <dd>{{ value }}</dd>
             </div>
           </dl>
-          </details>
-        </div>
-      </div>
-
-      <!-- 下一行：来源 -->
-      <div class="field-group" data-testid="album-details-field" data-field="source">
-        <PTextarea
-          v-model="albumDetailsDraft.source"
-          data-testid="album-details-source-input"
-          :rows="2"
-          :placeholder="sourceFieldPlaceholder"
-          :label="sourceFieldLabel"
-        />
-      </div>
 
       <!-- 下一行：曲目列表 -->
       <section v-if="showsTrackList" class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
@@ -973,29 +972,32 @@ watch(
 
 .album-details-step__overview {
   display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 15rem;
   align-items: start;
   gap: 2rem;
 }
 
-.album-import-panel > summary,
-.album-details-step__additional > summary {
+.album-import-panel > summary {
   cursor: pointer;
   padding: 0.75rem 0;
   color: var(--a-color-muted);
   font-size: 0.9rem;
 }
 
-.album-details-step__additional[open] > summary {
-  margin-bottom: 0.75rem;
+.album-details-step__editorial-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
 }
 
-.album-details-step__additional .album-tags-editor {
-  margin-top: 1.25rem;
+.album-details-step__editorial-row > .field-group :deep(.p-textarea) {
+  min-height: 8rem;
 }
 
 @container album-details (max-width: 48rem) {
   .album-details-step__overview { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  .album-details-step__editorial-row { grid-template-columns: minmax(0, 1fr); }
   .album-details-step__cover-card { max-width: 15rem; }
 }
 
@@ -1028,7 +1030,7 @@ watch(
   box-shadow: none;
 }
 
-/* 专辑名、日期、类型纵向排列 */
+/* 名字一排，发行日期与类型并排。 */
 .album-details-step__basic-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1083,7 +1085,7 @@ watch(
 
 .album-details-step__bio-field :deep(.p-textarea) {
   flex: 1;
-  min-height: 12rem;
+  min-height: 8rem;
   resize: vertical;
 }
 
@@ -1135,11 +1137,11 @@ watch(
 .album-details-step__contributor-field {
   display: grid;
   gap: 1rem;
-  padding: 1.25rem;
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0;
+  border: 0;
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .album-details-step__contributor-field :deep(.picker-search .p-field) {

@@ -1393,7 +1393,10 @@ async function completeCreation() {
 
         <MusicCreationAlbumPreviewStep v-else-if="creationFlow.step === 'preview'" />
 
-        <div v-if="showFooterActions" class="footer-actions" data-testid="creation-flow-footer">
+      </div>
+    </div>
+    <template #footer>
+        <div v-if="creationFlow && showFooterActions" class="footer-actions" data-testid="creation-flow-footer" :style="{ maxWidth: contentMaxWidth }">
           <p v-if="draftSaveMessage && !isEditFlow" role="status">{{ draftSaveMessage }}</p>
           <p
             v-if="forwardBlockReason"
@@ -1448,8 +1451,7 @@ async function completeCreation() {
             {{ finishButtonLabel }}
           </button>
         </div>
-      </div>
-    </div>
+    </template>
   </PSheet>
 
   <PConfirm
@@ -1533,22 +1535,14 @@ async function completeCreation() {
   font-weight: 800;
 }
 .footer-actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
   background: #ffffff;
-  border-top: 1px solid var(--a-color-border-soft);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: auto;
-  padding: 0.75rem 0 1rem;
-}
-/* The fixed player can cover the drawer's lower edge, so reserve its actual height. */
-:global(html[data-player-active="true"] .footer-actions) {
-  padding-bottom: calc(var(--a-player-height) + 2.5rem);
+  width: 100%;
+  margin: 0 auto;
 }
 .forward-block-reason {
   margin: 0 auto 0 0;
@@ -1588,15 +1582,20 @@ async function completeCreation() {
 .drawer-body :deep(.progress-card) { display: none; }
 
 :global(.creation-flow-drawer) {
-  background: var(--a-color-bg) !important;
+  background: #ffffff !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
+:global(.creation-flow-drawer.p-sheet-layer.is-right) {
+  bottom: var(--a-content-bottom-offset) !important;
+}
+:global(.creation-flow-drawer.p-sheet-mobile-page) {
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
+  padding-bottom: 0;
+}
+:global(.creation-flow-drawer .p-sheet-mobile-page__content) { padding-bottom: 1rem; }
 @media (max-width: 48rem) {
   .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
   .creation-progress__list li::after { display: none; }
-  :global(html[data-player-active="true"] .footer-actions) {
-    padding-bottom: calc(var(--a-mobile-player-height) + var(--a-mobile-nav-reserved-height) + 1rem);
-  }
 }
 </style>

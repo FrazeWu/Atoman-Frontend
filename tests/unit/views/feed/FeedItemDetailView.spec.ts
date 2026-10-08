@@ -24,6 +24,36 @@ describe("FeedItemDetailView", () => {
     isMobileApp.value = false;
   });
 
+  it("移动端关闭详情时返回原来的个人列表", async () => {
+    isMobileApp.value = true;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({
+      item: { id: "feed-item-1", title: "收藏文章", published_at: "2026-10-08T00:00:00Z" },
+      reader: {},
+    }));
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/feed", component: { template: "<div />" } },
+        { path: "/feed/item/:id", component: FeedItemDetailView },
+      ],
+    });
+    await router.push("/feed/item/feed-item-1");
+    await router.isReady();
+    window.history.replaceState({ back: "/feed/starred?group=reading&page=2" }, "", "/feed/item/feed-item-1");
+    const back = vi.spyOn(router, "back");
+    const wrapper = mount(FeedItemDetailView, {
+      global: {
+        plugins: [router],
+        stubs: { FeedArticleSheet: true, FeedSourceArticlesSheet: true, PEmpty: true },
+      },
+    });
+    await flushPromises();
+    wrapper.findComponent({ name: "FeedArticleSheet" }).vm.$emit("close");
+    expect(back).toHaveBeenCalledOnce();
+    wrapper.unmount();
+    window.history.replaceState({}, "", "/");
+  });
+
   it("marks a signed-in reader's feed item as read after loading it", async () => {
     const auth = useAuthStore();
     auth.token = "token";

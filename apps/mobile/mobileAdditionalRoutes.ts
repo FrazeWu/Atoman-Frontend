@@ -12,7 +12,9 @@ export const mobileAdditionalRoutes: RouteRecordRaw[] = additionalModules.flatMa
     return {
       path: prefix,
       component: mobileModuleLayout,
-      children: route.children,
+      children: route.children?.map((child) => module === 'video' && child.path === 'favorites'
+        ? { path: child.path, name: child.name, meta: child.meta, component: () => import('./MobileSavedView.vue'), props: { page: 'video-favorites' } }
+        : child),
       meta: { mobileModule: module },
     }
   })

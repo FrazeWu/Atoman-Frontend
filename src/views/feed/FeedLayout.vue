@@ -13,7 +13,13 @@
             订阅
           </button>
         </header>
-        <router-view />
+        <RouterView v-slot="{ Component, route: viewRoute }">
+          <Transition :name="isMobileApp ? (route.path.startsWith('/feed/item/') ? 'mobile-module-detail' : 'mobile-module-return') : ''">
+            <KeepAlive :include="isMobileApp ? ['MobileSavedView'] : []" :max="2">
+              <component :is="Component" :key="viewRoute.path" />
+            </KeepAlive>
+          </Transition>
+        </RouterView>
       </div>
     </main>
     <FeedMobileSourcesSheet

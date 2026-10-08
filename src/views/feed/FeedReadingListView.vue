@@ -24,9 +24,13 @@
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
 
-      <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage" />
+      <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage">
+        <template #action><PButton variant="secondary" @click="fetchItems">重试</PButton></template>
+      </PEmpty>
 
-      <PEmpty v-else-if="!items.length" title="稍后阅读列表为空" description="在文章或订阅列表中点击「稍后阅读」保存内容。" />
+      <PEmpty v-else-if="!items.length" title="稍后阅读列表为空" description="在文章或订阅列表中点击「稍后阅读」保存内容。">
+        <template #action><RouterLink to="/feed" class="a-btn a-btn--primary">去发现文章</RouterLink></template>
+      </PEmpty>
 
     <div v-else class="feed-timeline">
       <template v-for="(entry, index) in items" :key="`${entry.target_type}:${entry.target_id}`">

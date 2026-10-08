@@ -3,6 +3,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { onRequestGet } from '../../../functions/media/image'
 
 describe('media image proxy', () => {
+  it('follows trusted Open Library cover redirects and caches the image', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'https://archive.org/download/covers/123-M.jpg' } }))
+      .mockResolvedValueOnce(new Response('cover', { headers: { 'content-type': 'image/jpeg' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const response = await onRequestGet({ request: new Request('https://www.atoman.org/media/image?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fid%2F123-M.jpg&width=320') })
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('cover')
+    expect(response.headers.get('cache-control')).toContain('immutable')
+    expect(fetchMock.mock.calls[1][0].toString()).toBe('https://archive.org/download/covers/123-M.jpg')
+  })
+
+  it('does not follow a cover redirect to an untrusted host', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 302, headers: { location: 'http://127.0.0.1/private' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const response = await onRequestGet({ request: new Request('https://www.atoman.org/media/image?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fid%2F123-M.jpg&width=320') })
+    expect(response.status).toBe(502)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()

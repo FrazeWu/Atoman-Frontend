@@ -18,6 +18,7 @@ type CloudflareImageRequestInit = RequestInit & {
 
 const IMAGE_SOURCE_HOSTS = new Set([
   'assets.atoman.org',
+  'covers.openlibrary.org',
   'is1-ssl.mzstatic.com',
   'lh3.googleusercontent.com',
   'blogger.googleusercontent.com',
@@ -75,11 +76,27 @@ export async function onRequestGet(context: ImageProxyContext) {
   const transform = imageTransform(context.request)
   if (!imageUrl || !transform) return new Response('Invalid image request', { status: 400 })
 
-  const response = await fetch(imageUrl, {
-    headers: { Accept: IMAGE_ACCEPT },
-    redirect: 'manual',
-    cf: { image: transform },
-  } as CloudflareImageRequestInit)
+  let source = imageUrl
+  let response: Response
+  for (let redirects = 0; ; redirects++) {
+    response = await fetch(source, {
+      headers: { Accept: IMAGE_ACCEPT },
+      redirect: 'manual',
+      cf: { image: transform },
+    } as CloudflareImageRequestInit)
+    if (![301, 302, 303, 307, 308].includes(response.status)) break
+    const location = response.headers.get('location')
+    if (imageUrl.hostname !== 'covers.openlibrary.org' || redirects >= 3 || !location) {
+      return new Response('Image unavailable', { status: 502 })
+    }
+    // Open Library 的封面存储在 Archive.org，只跟随其 HTTPS 跳转。
+    const next = new URL(location, source)
+    if (next.protocol !== 'https:' || next.port || next.username || next.password ||
+      !(next.hostname === 'covers.openlibrary.org' || next.hostname === 'archive.org' || next.hostname.endsWith('.archive.org'))) {
+      return new Response('Image unavailable', { status: 502 })
+    }
+    source = next
+  }
 
   if (!isImageResponse(response)) return new Response('Image unavailable', { status: 502 })
 

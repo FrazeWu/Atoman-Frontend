@@ -25,18 +25,19 @@
         />
         <p v-if="ratingMessage" class="books-detail__feedback" aria-live="polite">{{ ratingMessage }}</p>
         <div class="books-shelf-editor">
-          <select id="shelf-status" v-model="shelfStatusInput" aria-label="书架状态">
-            <option value="want_to_read">想读</option>
-            <option value="reading">在读</option>
-            <option value="read">读过</option>
-            <option value="on_hold">搁置</option>
-            <option value="dropped">弃读</option>
-          </select>
+          <PSelect
+            id="shelf-status"
+            class="books-shelf-editor__select"
+            :model-value="shelfStatusInput"
+            :options="shelfOptions"
+            aria-label="书架状态"
+            @update:model-value="shelfStatusInput = $event as BookShelfItem['status']"
+          />
           <PButton type="button" variant="secondary" :loading="shelfSaving" :disabled="!authStore.isAuthenticated" @click="submitShelf">
             <Bookmark :size="16" aria-hidden="true" />
             <span>加入书架</span>
           </PButton>
-          <PButton v-if="publishedAssets[0]" :to="`/books/public-read/${publishedAssets[0].id}`">开始阅读</PButton>
+          <PButton v-if="publishedAssets[0]" variant="primary" :to="`/books/public-read/${publishedAssets[0].id}`">开始阅读</PButton>
         </div>
         <p v-if="shelfError" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ shelfError }}</p>
         <p v-if="shelfMessage" class="books-detail__feedback" aria-live="polite">{{ shelfMessage }}</p>
@@ -51,14 +52,26 @@
       <section class="books-detail__section books-detail__engagement" aria-labelledby="engagement-title">
         <h2 id="engagement-title">参与评价</h2>
         <form class="books-review-editor" @submit.prevent="submitReview">
-          <label for="book-review">短书评</label>
-          <textarea id="book-review" v-model="reviewInput" maxlength="5000" rows="4" placeholder="写下对这部作品的简短感受" />
+          <PTextarea
+            id="book-review"
+            v-model="reviewInput"
+            label="短书评"
+            maxlength="5000"
+            :rows="4"
+            placeholder="写下对这部作品的简短感受"
+          />
           <div class="books-review-editor__options">
-            <select v-model="reviewVisibility" aria-label="书评可见性">
-              <option value="public">公开</option>
-              <option value="private">仅自己可见</option>
-            </select>
-            <label><input v-model="reviewSpoiler" type="checkbox" /> 含剧透</label>
+            <PSelect
+              class="books-review-editor__visibility"
+              :model-value="reviewVisibility"
+              :options="visibilityOptions"
+              aria-label="书评可见性"
+              @update:model-value="reviewVisibility = $event as 'public' | 'private'"
+            />
+            <label class="books-review-editor__spoiler">
+              <input v-model="reviewSpoiler" type="checkbox" />
+              <span>含剧透</span>
+            </label>
             <PButton type="submit" variant="secondary" :loading="reviewSaving" :disabled="!reviewInput.trim()">
               <Send :size="16" aria-hidden="true" />
               <span>保存书评</span>
@@ -157,6 +170,8 @@ import { IconBookmark as Bookmark, IconSend as Send, IconTrash as Trash2 } from 
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import PLink from '@/components/ui/PLink.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import RatingControl from '@/components/shared/RatingControl.vue'
@@ -179,6 +194,19 @@ import {
   type BookShelfItem,
 } from '@/api/books'
 import { useAuthStore } from '@/stores/auth'
+
+const shelfOptions = [
+  { value: 'want_to_read', label: '想读' },
+  { value: 'reading', label: '在读' },
+  { value: 'read', label: '读过' },
+  { value: 'on_hold', label: '搁置' },
+  { value: 'dropped', label: '弃读' },
+]
+
+const visibilityOptions = [
+  { value: 'public', label: '公开' },
+  { value: 'private', label: '私密' },
+]
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -440,7 +468,22 @@ onMounted(async () => {
 }
 
 
-.books-shelf-editor,
+.books-shelf-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.books-shelf-editor__select {
+  min-width: 8.5rem;
+}
+
+.books-review-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .books-review-editor__options {
   display: flex;
   align-items: center;
@@ -448,43 +491,18 @@ onMounted(async () => {
   gap: 0.65rem;
 }
 
-.books-review-editor > label {
-  color: var(--a-color-muted);
-  font-size: 0.88rem;
+.books-review-editor__visibility {
+  min-width: 7rem;
 }
 
-.books-shelf-editor select,
-.books-review-editor select,
-.books-review-editor textarea {
-  border: 1px solid var(--a-color-border);
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-  font: inherit;
-}
-
-.books-shelf-editor select,
-.books-review-editor select {
-  height: 2.25rem;
-  padding: 0 0.55rem;
-}
-
-.books-review-editor {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.books-review-editor textarea {
-  width: 100%;
-  resize: vertical;
-  padding: 0.7rem;
-}
-
-.books-review-editor__options label {
+.books-review-editor__spoiler {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   color: var(--a-color-muted);
   font-size: 0.88rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .books-review-list,
@@ -504,6 +522,10 @@ onMounted(async () => {
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
+.books-source-list li {
+  padding: 0.65rem 0;
+}
+
 .books-review-list li {
   display: grid;
   gap: 0.35rem;
@@ -519,8 +541,7 @@ onMounted(async () => {
   color: var(--a-color-muted);
 }
 
-.books-edition-list a,
-.books-source-list a {
+.books-edition-list a {
   display: grid;
   gap: 0.25rem;
   padding: 0.8rem 0;
@@ -528,8 +549,7 @@ onMounted(async () => {
   text-decoration: none;
 }
 
-.books-edition-list a:hover strong,
-.books-source-list a:hover {
+.books-edition-list a:hover strong {
   text-decoration: underline;
 }
 

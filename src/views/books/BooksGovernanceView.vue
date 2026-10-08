@@ -1,12 +1,6 @@
 <template>
   <main class="a-page-md books-governance">
-    <PSectionHeader :title="isReview ? '审核台' : '贡献中心'" kicker="BOOKS" rule />
-    <nav class="books-governance__nav" aria-label="书籍模块">
-      <RouterLink to="/books">发现</RouterLink>
-      <RouterLink to="/books/library">我的书库</RouterLink>
-      <RouterLink to="/books/contributions" :class="{ 'is-active': !isReview }">贡献</RouterLink>
-      <RouterLink to="/books/review" :class="{ 'is-active': isReview }">审核</RouterLink>
-    </nav>
+    <PPageHeader :title="isReview ? '审核' : '贡献'" mb="0" />
 
     <template v-if="!isReview">
       <section class="books-governance__section" aria-labelledby="new-edit-title">
@@ -172,10 +166,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { IconCheck as Check, IconExternalLink as ExternalLink, IconPlus as Plus, IconRotate2 as RotateCcw, IconX as X } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import {
   fetchPublicationEvidence,
   listBookEditReviewQueue,
@@ -370,9 +364,6 @@ onMounted(load)
 
 <style scoped>
 .books-governance { display: grid; gap: 1.25rem; padding-top: var(--a-page-start-space); }
-.books-governance__nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; border-bottom: 1px solid var(--a-color-border-soft); }
-.books-governance__nav a { padding: 0.5rem 0 0.75rem; border-bottom: 2px solid transparent; color: var(--a-color-muted); text-decoration: none; }
-.books-governance__nav a:hover, .books-governance__nav a:focus-visible, .books-governance__nav a.is-active { border-bottom-color: var(--a-color-fg); color: var(--a-color-fg); }
 .books-governance__section { display: grid; gap: 0.75rem; }
 .books-governance__section h2 { margin: 0; font-size: 1.05rem; }
 .books-governance__form { display: grid; gap: 0.55rem; max-width: 42rem; }

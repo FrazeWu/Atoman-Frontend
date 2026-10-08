@@ -1,14 +1,17 @@
 <template>
   <main ref="workContentAnchor" class="a-page-md books-detail">
-    <PSectionHeader title="作品详情" kicker="BOOK" rule />
     <p v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ errorMessage }}</p>
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载作品...</p>
     <template v-else-if="work">
       <header class="books-detail__header">
-        <RouterLink class="books-detail__back" to="/books">返回公共书目</RouterLink>
+        <BookCover :src="primaryEdition?.cover_url" :title="work.title" />
+        <div class="books-detail__identity">
         <h1>{{ work.title }}</h1>
         <p v-if="work.subtitle">{{ work.subtitle }}</p>
+        <p v-if="work.original_title && work.original_title !== work.title" class="books-detail__original">{{ work.original_title }}</p>
+        <p v-if="['chi', 'zho', 'zh'].includes(work.language || '') && /\p{L}/u.test(work.title) && !/\p{Script=Han}/u.test(work.title)" class="books-detail__original">中文书名待补充，暂用来源名称</p>
         <p class="books-detail__authors">{{ authorLabel }}</p>
+        <p v-if="primaryEdition">{{ editionSummary(primaryEdition) }}</p>
         <RatingControl
           :aria-label="`${work.title} 评分`"
           :rating-score="work.rating_score"
@@ -21,15 +24,6 @@
           @clear="clearRating"
         />
         <p v-if="ratingMessage" class="books-detail__feedback" aria-live="polite">{{ ratingMessage }}</p>
-      </header>
-
-      <section v-if="work.description" class="books-detail__section">
-        <h2>简介</h2>
-        <p>{{ work.description }}</p>
-      </section>
-
-      <section class="books-detail__section books-detail__shelf" aria-labelledby="shelf-title">
-        <h2 id="shelf-title">加入书架</h2>
         <div class="books-shelf-editor">
           <select id="shelf-status" v-model="shelfStatusInput" aria-label="书架状态">
             <option value="want_to_read">想读</option>
@@ -38,13 +32,20 @@
             <option value="on_hold">搁置</option>
             <option value="dropped">弃读</option>
           </select>
-          <PButton type="button" variant="secondary" :loading="shelfSaving" @click="submitShelf">
+          <PButton type="button" variant="secondary" :loading="shelfSaving" :disabled="!authStore.isAuthenticated" @click="submitShelf">
             <Bookmark :size="16" aria-hidden="true" />
-            <span>保存书架状态</span>
+            <span>加入书架</span>
           </PButton>
+          <PButton v-if="publishedAssets[0]" :to="`/books/public-read/${publishedAssets[0].id}`">开始阅读</PButton>
         </div>
         <p v-if="shelfError" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ shelfError }}</p>
         <p v-if="shelfMessage" class="books-detail__feedback" aria-live="polite">{{ shelfMessage }}</p>
+        </div>
+      </header>
+
+      <section v-if="work.description" class="books-detail__section">
+        <h2>简介</h2>
+        <p class="books-detail__description">{{ work.description }}</p>
       </section>
 
       <section class="books-detail__section books-detail__engagement" aria-labelledby="engagement-title">
@@ -119,7 +120,7 @@
         <p v-if="work.editions.length === 0" class="books-detail__muted">暂无版本资料</p>
         <ul v-else class="books-edition-list">
           <li v-for="edition in work.editions" :key="edition.id">
-            <RouterLink :to="`/books/edition/${edition.id}`">
+            <RouterLink :to="{ path: `/books/edition/${edition.id}`, query: route.query }">
               <strong>{{ edition.title || work.title }}</strong>
               <span>{{ editionSummary(edition) }}</span>
             </RouterLink>
@@ -154,6 +155,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { IconBookmark as Bookmark, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
+import BookCover from '@/components/books/BookCover.vue'
 import PLink from '@/components/ui/PLink.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
@@ -181,6 +183,7 @@ import { useAuthStore } from '@/stores/auth'
 const route = useRoute()
 const authStore = useAuthStore()
 const work = ref<BookPublicWork | null>(null)
+const primaryEdition = computed(() => work.value?.editions.find(item => item.cover_url) || work.value?.editions[0])
 const reviews = ref<BookReview[]>([])
 const publishedAssets = ref<BookPublishedAsset[]>([])
 const myReview = ref<BookReview | null>(null)
@@ -215,7 +218,8 @@ function formatSize(size: number): string {
 }
 
 function editionSummary(edition: BookPublicEdition): string {
-  return [edition.publisher, edition.language, edition.page_count ? `${edition.page_count} 页` : ''].filter(Boolean).join(' · ') || '版本资料待补充'
+  const language = ['chi', 'zho', 'zh'].includes(edition.language || '') ? '中文' : edition.language
+  return [edition.publisher, language, edition.page_count ? `${edition.page_count} 页` : ''].filter(Boolean).join(' · ') || '版本资料待补充'
 }
 
 function formatDate(value: string): string {
@@ -344,10 +348,12 @@ onMounted(async () => {
   } finally {
     reviewsLoading.value = false
   }
-  try {
-    myReview.value = await getMyBookReview(work.value.id)
-  } catch {
-    // Anonymous visitors and users without a review have no private review entry.
+  if (authStore.isAuthenticated) {
+    try {
+      myReview.value = await getMyBookReview(work.value.id)
+    } catch {
+      // Users without a review have no private review entry.
+    }
   }
   try {
     publishedAssets.value = (await listPublishedBookAssets(work.value.id)).items
@@ -366,7 +372,8 @@ onMounted(async () => {
 
 .books-detail__header {
   display: grid;
-  gap: 0.45rem;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1.75rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
@@ -375,6 +382,13 @@ onMounted(async () => {
   color: var(--a-color-muted);
   font-size: 0.88rem;
   text-decoration: none;
+}
+.books-detail__identity { display: grid; align-content: start; gap: 0.7rem; min-width: 0; }
+.books-detail__description { white-space: pre-line; }
+.books-detail__original { font-size: 0.875rem; }
+@media (max-width: 540px) {
+  .books-detail__header { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .books-detail__header > :deep(.book-cover) { max-width: 8rem; }
 }
 
 .books-detail__back:hover {

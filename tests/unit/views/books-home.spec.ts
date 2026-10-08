@@ -44,6 +44,7 @@ describe('BooksHomeView', () => {
   })
 
   it('shows public catalog results without private import fields', async () => {
+    vi.spyOn(booksApi, 'listPublicBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
     vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({
       items: [{
         id: 'work-1',
@@ -52,7 +53,7 @@ describe('BooksHomeView', () => {
         rating_score: 0,
         rating_count: 0,
         authors: [{ id: 'person-1', name: 'Public Author', role: 'author' }],
-        editions: [{ id: 'edition-1', work_id: 'work-1', publisher: 'Public Press' }],
+        editions: [{ id: 'edition-1', work_id: 'work-1', publisher: 'Public Press', cover_url: 'https://covers.openlibrary.org/b/id/123-M.jpg' }],
       }],
       total: 1,
       limit: 20,
@@ -60,14 +61,32 @@ describe('BooksHomeView', () => {
     })
 
     const router = createRouter({ history: createMemoryHistory(), routes })
-    await router.push('/books')
+    await router.push('/books?q=novel&page=2')
     await router.isReady()
     const wrapper = mount(BooksHomeView, { global: { plugins: [router] } })
     await flushPromises()
 
     expect(wrapper.text()).toContain('Public Work')
     expect(wrapper.text()).toContain('Public Author')
-    expect(wrapper.find('a[href="/books/work/work-1"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/books/work/work-1?q=novel&page=2"]').exists()).toBe(true)
+    expect(wrapper.find('img').attributes('src')).toBe('https://covers.openlibrary.org/b/id/123-M.jpg')
+    expect(wrapper.find('.books-nav').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('keeps catalog results visible when readable assets fail to load', async () => {
+    vi.spyOn(booksApi, 'listPublicBookAssets').mockRejectedValue(new Error('Assets unavailable'))
+    vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({
+      items: [{ id: 'work-1', title: '书籍仍可查看', lifecycle_status: 'active', rating_score: 0, rating_count: 0, authors: [], editions: [] }],
+      total: 1, limit: 24, offset: 0,
+    })
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/books')
+    await router.isReady()
+    const wrapper = mount(BooksHomeView, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('书籍仍可查看')
+    expect(wrapper.text()).toContain('电子书加载失败，请重试')
     wrapper.unmount()
   })
 })

@@ -40,7 +40,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 :global(.studio-route-sheet.p-sheet-layer) {
-  min-height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 3.75rem);
+  min-height: calc(100dvh - var(--a-topbar-height, 3.5rem));
   border: 0;
   box-shadow: none;
 }

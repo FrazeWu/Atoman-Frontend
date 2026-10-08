@@ -648,7 +648,7 @@ describe("Music DiscoverView.vue", () => {
 				data: Array.from({ length: 12 }, (_, index) => ({
 					id: `album-${index + 1}`,
 					title: `Album ${index + 1}`,
-					artists: [],
+					artists: [{ id: "artist-1", name: "Artist" }],
 				})),
 				meta: { page: 1, page_size: 12, total: 15, has_more: true },
 			})
@@ -656,7 +656,7 @@ describe("Music DiscoverView.vue", () => {
 				data: Array.from({ length: 3 }, (_, index) => ({
 					id: `album-${index + 13}`,
 					title: `Album ${index + 13}`,
-					artists: [],
+					artists: [{ id: "artist-1", name: "Artist" }],
 				})),
 				meta: { page: 2, page_size: 12, total: 15, has_more: false },
 			});
@@ -668,9 +668,9 @@ describe("Music DiscoverView.vue", () => {
 			personalized: true,
 			recently_played: [],
 			for_you: [
-				{ id: "album-1", title: "Recommended 1" },
-				{ id: "album-2", title: "Recommended 2" },
-				{ id: "album-3", title: "Recommended 3" },
+				{ id: "album-1", title: "Recommended 1", artists: [{ id: "artist-1", name: "Artist" }] },
+				{ id: "album-2", title: "Recommended 2", artists: [{ id: "artist-1", name: "Artist" }] },
+				{ id: "album-3", title: "Recommended 3", artists: [{ id: "artist-1", name: "Artist" }] },
 			],
 		});
 		await flushPromises();
@@ -687,7 +687,7 @@ describe("Music DiscoverView.vue", () => {
 		mocks.listMusicAlbums
 			.mockResolvedValueOnce({
 				data: [
-					{ id: "album-1", title: "First", artists: [], entry_status: "open" },
+					{ id: "album-1", title: "First", artists: [{ id: "artist-1", name: "Artist" }], entry_status: "open" },
 				],
 				meta: { page: 1, page_size: 12, total: 2, has_more: true },
 			})
@@ -696,7 +696,7 @@ describe("Music DiscoverView.vue", () => {
 					{
 						id: "album-more",
 						title: "Second",
-						artists: [],
+						artists: [{ id: "artist-1", name: "Artist" }],
 						entry_status: "open",
 					},
 				],

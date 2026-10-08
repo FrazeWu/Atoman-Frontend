@@ -2,6 +2,14 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 
+// 保证异步编辑器和测试代码使用同一套 ESM 实例，避免跨 CJS/ESM 的 instanceof 失败。
+const runtimeAliases = {
+	'@codemirror/state': path.resolve(__dirname, 'node_modules/@codemirror/state/dist/index.js'),
+	'@codemirror/view': path.resolve(__dirname, 'node_modules/@codemirror/view/dist/index.js'),
+	'@codemirror/language': path.resolve(__dirname, 'node_modules/@codemirror/language/dist/index.js'),
+	'pdfjs-dist/build/pdf.worker.mjs?url': path.resolve(__dirname, 'tests/unit/fixtures/pdfWorkerUrl.ts'),
+};
+
 // Test workers must not inherit a production Vue runtime from the shell.
 process.env.NODE_ENV = "test";
 
@@ -35,6 +43,7 @@ export default defineConfig({
 	plugins: [vue()],
 	resolve: {
 		alias: {
+			...runtimeAliases,
 			"@": path.resolve(__dirname, "./src"),
 			"@atoman/module-config": path.resolve(
 				__dirname,
@@ -53,6 +62,7 @@ export default defineConfig({
 				plugins: [vue()],
 				resolve: {
 					alias: {
+						...runtimeAliases,
 						"@": path.resolve(__dirname, "./src"),
 						"@atoman/module-config": path.resolve(
 							__dirname,
@@ -65,6 +75,7 @@ export default defineConfig({
 					},
 				},
 				test: {
+					server: { deps: { inline: [/@codemirror\//, /y-codemirror.next/] } },
 					name: "node-contracts",
 					environment: "node",
 					env: { NODE_ENV: "test" },
@@ -77,6 +88,7 @@ export default defineConfig({
 				plugins: [vue()],
 				resolve: {
 					alias: {
+						...runtimeAliases,
 						"@": path.resolve(__dirname, "./src"),
 						"@atoman/module-config": path.resolve(
 							__dirname,
@@ -93,6 +105,7 @@ export default defineConfig({
 					},
 				},
 				test: {
+					server: { deps: { inline: [/@codemirror\//, /y-codemirror.next/] } },
 					name: "happy-dom",
 					environment: "happy-dom",
 					env: { NODE_ENV: "test" },
@@ -109,6 +122,7 @@ export default defineConfig({
 				plugins: [vue()],
 				resolve: {
 					alias: {
+						...runtimeAliases,
 						"@": path.resolve(__dirname, "./src"),
 						"@atoman/module-config": path.resolve(
 							__dirname,
@@ -121,6 +135,7 @@ export default defineConfig({
 					},
 				},
 				test: {
+					server: { deps: { inline: [/@codemirror\//, /y-codemirror.next/] } },
 					name: "jsdom",
 					environment: "jsdom",
 					env: { NODE_ENV: "test" },

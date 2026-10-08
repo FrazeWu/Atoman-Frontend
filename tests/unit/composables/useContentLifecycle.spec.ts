@@ -4,6 +4,19 @@ import { createContentConsumptionTracker, createContentLifecycleClient } from '@
 describe('content lifecycle client', () => {
   afterEach(() => vi.unstubAllGlobals())
 
+  it('skips authenticated consumption requests for guests', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = createContentLifecycleClient({ baseUrl: '/api/v1/content', token: () => null })
+
+    await client.recordEvent({ module: 'blog', content_id: 'post-1', event: 'open' })
+    await client.saveProgress({ module: 'blog', content_id: 'post-1', position_sec: 50, duration_sec: 100, progress: 0.5, completed: false })
+    await client.getProgress('blog', 'post-1')
+    await client.listContinue('blog')
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('records events and saves authenticated progress', async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify({
       data: init?.method === 'PUT' ? { content_id: 'video-1', progress: 0.4 } : { recorded: true },
@@ -32,6 +45,27 @@ describe('content lifecycle client', () => {
       credentials: 'include',
       headers: expect.not.objectContaining({ Authorization: expect.any(String) }),
     }))
+  })
+
+  it('keeps progress and continue requests enabled for authenticated cookie sessions', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
+      data: String(input).includes('/continue') ? [{ content_id: 'post-1', title: '继续读' }] : { content_id: 'post-1', progress: 0.5 },
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = createContentLifecycleClient({ baseUrl: '/api/v1/content', token: () => 'cookie-session' })
+
+    const saved = await client.saveProgress({ module: 'blog', content_id: 'post-1', position_sec: 50, duration_sec: 100, progress: 0.5, completed: false })
+    const loaded = await client.getProgress('blog', 'post-1')
+    const continued = await client.listContinue('blog')
+
+    expect(saved.progress).toBe(0.5)
+    expect(loaded?.content_id).toBe('post-1')
+    expect(continued[0].title).toBe('继续读')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init?.credentials).toBe('include')
+      expect(new Headers(init?.headers).get('Authorization')).toBeNull()
+    }
   })
 
   it('loads module continue items and manages a blog publication schedule', async () => {

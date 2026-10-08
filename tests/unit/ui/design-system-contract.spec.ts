@@ -95,15 +95,20 @@ describe("modern flat UI design-system contract", () => {
     expect(sectionHeader).not.toMatch(/font-size:\s*2\.75rem/);
   });
 
-  it("removes retired paper assets and visual metaphors from source styles", () => {
+  it("removes retired paper decoration from shared controls while preserving the academic reader", () => {
     const source = sourceText("src");
+    const sharedControls = sourceText("src/components/ui");
+    const reader = read("src/components/blog/BlogPostReader.vue");
 
     expect(existsSync(resolve(root, "src/assets/paper-ink.css"))).toBe(false);
-    expect(source).not.toMatch(/paper-[\w-]+/);
+    expect(sharedControls).not.toMatch(/paper-[\w-]+/);
     expect(source).not.toMatch(/\bdashed\b/);
     expect(source).not.toContain("var(--a-font-mono)");
-    expect(source).not.toMatch(/repeating-linear-gradient/);
+    expect(sharedControls).not.toMatch(/repeating-linear-gradient/);
     expect(source).not.toMatch(/box-shadow:\s*-?\d+px\s+-?\d+px\s+0(?:px)?/);
+    expect(reader).toContain('class="academic-paper"');
+    expect(reader).toContain("aspect-ratio: 210 / 297;");
+    expect(reader).toContain("column-count: 2;");
   });
 
   it("uses neutral shared field naming and standard form styling", () => {

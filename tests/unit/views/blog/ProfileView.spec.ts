@@ -125,7 +125,8 @@ function setProfileResponses(privateProfile = false) {
         { id: 'channel-anonymous', user_id: '', name: '其他频道', slug: 'other', description: '不应显示', cover_url: '' },
       ] } }
     }
-    if (url.startsWith('/blog/posts?user_id=linmo-id')) {
+    const requestUrl = new URL(url, 'http://localhost')
+    if (requestUrl.pathname === '/blog/posts' && requestUrl.searchParams.get('user_id') === 'linmo-id') {
       return { ok: true, data: { data: [{ id: 'post-a', user_id: 'linmo-id', title: '一篇文章', content: '正文', status: 'published', visibility: 'public', pinned: false, created_at: '2026-09-07T08:00:00Z', updated_at: '2026-09-07T08:00:00Z' }] } }
     }
     if (url === '/api/v1/videos?channel_id=channel-a&limit=12') {

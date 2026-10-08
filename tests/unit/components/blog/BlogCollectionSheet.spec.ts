@@ -22,14 +22,14 @@ describe('BlogCollectionSheet', () => {
     auth.token = 'token'
     auth.isAuthenticated = true
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      if (url.endsWith('/blog/collections/collection-1')) {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname === '/api/v1/blog/collections/collection-1') {
         return response({ id: 'collection-1', channel_id: 'channel-1', name: '界面与秩序', is_default: false })
       }
-      if (url.includes('/blog/posts?collection_id=collection-1')) {
+      if (url.pathname === '/api/v1/blog/posts' && url.searchParams.get('collection_id') === 'collection-1') {
         return response([{ id: 'post-1', title: '已发布文章', status: 'published', updated_at: '2026-07-12T00:00:00Z' }])
       }
-      if (url.endsWith('/blog/posts/drafts')) {
+      if (url.pathname === '/api/v1/blog/posts/drafts') {
         return response([{ id: 'draft-1', title: '草稿文章', status: 'draft', updated_at: '2026-07-13T00:00:00Z', collection_id: 'collection-1' }])
       }
       throw new Error(`unexpected fetch: ${url}`)

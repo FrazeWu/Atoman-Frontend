@@ -113,6 +113,8 @@ describe("AppTopbarGlobalSearch", () => {
     await input.setValue("atom");
     await vi.advanceTimersByTimeAsync(250);
     await flushPromises();
+    await vi.dynamicImportSettled();
+    await nextTick();
 
     expect(referenceApi.search).toHaveBeenCalledOnce();
     expect(wrapper.findAll(".topbar-search-section__item")).toHaveLength(2);

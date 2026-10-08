@@ -1471,6 +1471,27 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(drawerMocks.routerPush).toHaveBeenCalledWith("/music/imports");
 	});
 
+	it("提交时不保存本地封面预览，并保留改名曲目的音频文件 ID", async () => {
+		commitMusicAlbumImportMock.mockResolvedValue({ importId: "import-1", status: "committed" });
+		const base = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "preview",
+			draft: {
+				...base.draft,
+				albumImport: { ...base.draft.albumImport, status: "ready" },
+				albumDetails: { ...base.draft.albumDetails, title: "C4", coverUrl: "https://assets.atoman.org/cover.webp", coverAsset: { url: "blob:https://www.atoman.org/local-cover" } },
+				tracks: [{ id: "local-track", title: "用户改名", sequence: 17, importFileId: "file-welcome", originalTitle: "Welcome to C4", titleCustomized: true }],
+			},
+		});
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="music-creation-finish-button"]').trigger("click");
+		await flushPromises();
+		const input = commitMusicAlbumImportMock.mock.calls[0]?.[1];
+		expect(input).toBeDefined();
+		expect(input.album).not.toHaveProperty("cover_url");
+		expect(input.album.tracks[0]).toMatchObject({ title: "用户改名", file_id: "file-welcome", original_title: "Welcome to C4" });
+	});
+
 	it("提交时携带已上传的艺人头像和专辑封面", async () => {
 		commitMusicAlbumImportMock.mockResolvedValue({
 			importId: "import-1",

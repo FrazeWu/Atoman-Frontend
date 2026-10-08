@@ -438,7 +438,7 @@ onMounted(load)
   max-width: 42rem;
   padding: 1.25rem;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-card);
   box-shadow: none;
 }
@@ -464,7 +464,7 @@ onMounted(load)
   gap: 1rem;
   padding: 0.85rem 1rem;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-card);
   box-shadow: none;
 }

@@ -44,9 +44,13 @@
         </button>
       </div>
 
-      <PEmpty v-if="!loading && errorMessage" title="收藏加载失败" :description="errorMessage" />
+      <PEmpty v-if="!loading && errorMessage" title="收藏加载失败" :description="errorMessage">
+        <template #action><PButton variant="secondary" @click="fetchStarred()">重试</PButton></template>
+      </PEmpty>
 
-      <PEmpty v-if="!loading && !errorMessage && !items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。" />
+      <PEmpty v-if="!loading && !errorMessage && !items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。">
+        <template #action><RouterLink to="/feed" class="a-btn a-btn--primary">去发现文章</RouterLink></template>
+      </PEmpty>
 
     <div v-if="!loading && !errorMessage && items.length" class="feed-timeline">
       <template v-for="(item, index) in items" :key="item.id">
@@ -129,6 +133,7 @@ import { useKeyboardList } from '@/composables/useKeyboardList'
 import { feedArticleRouteState } from '@/composables/feed/feedArticleRouteState'
 import type { FeedItem, StarredFeedItem, TimelineItem, FeedStarGroup } from '@/types'
 import { useApi } from '@/composables/useApi'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,6 +142,7 @@ const feedStore = useFeedStore()
 const playerStore = usePlayerStore()
 const uiStore = useUIStore()
 const api = useApi()
+const isMobileApp = isStandaloneMobileApp()
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
 const viewOptions: Array<{ label: string; value: 'starred' | 'reading'; test: string }> = [
@@ -168,7 +174,7 @@ const totalItems = ref(0)
 const page = ref(1)
 const pageLimit = 20
 const activeStarGroupId = ref<string | null>(null)
-const starGroups = ref<FeedStarGroup[]>([])
+const starGroups = computed(() => feedStore.starGroups)
 
 let starredRequestSeq = 0
 
@@ -301,11 +307,11 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   playerStore.playQueuedSong(tempSong)
 }
 
-const fetchStarred = async () => {
+const fetchStarred = async (background = false) => {
   if (!authStore.isAuthenticated) return
   const requestId = ++starredRequestSeq
   const groupId = activeStarGroupId.value
-  loading.value = true
+  loading.value = !background
   errorMessage.value = ''
   try {
     const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
@@ -400,10 +406,14 @@ const unstar = async (feedItemId: string) => {
 watch(
   () => route.query,
   async (query) => {
+    if (isMobileApp && route.path !== '/feed/starred') return
     if (activeView.value !== 'starred') return
-    activeStarGroupId.value = typeof query.group === 'string' ? query.group : null
-    page.value = normalizePage(query.page)
-    await fetchStarred()
+    const nextGroup = typeof query.group === 'string' ? query.group : null
+    const nextPage = normalizePage(query.page)
+    const background = items.value.length > 0 && nextGroup === activeStarGroupId.value && nextPage === page.value
+    activeStarGroupId.value = nextGroup
+    page.value = nextPage
+    await fetchStarred(background)
   },
   { immediate: true },
 )

@@ -25,6 +25,10 @@
         <h1 v-if="title && !slots.header">{{ title }}</h1>
         <slot name="header" />
       </header>
+      <nav v-if="navigation" class="p-sheet-mobile-page__navigation" aria-label="切换内容">
+        <button type="button" data-navigation="previous" :disabled="!navigation.previous || navigationLoading" :title="navigation.previous?.label" @click="emit('navigate', 'previous')">上一项</button>
+        <button type="button" data-navigation="next" :disabled="!navigation.next || navigationLoading" :title="navigation.next?.label" @click="emit('navigate', 'next')">下一项</button>
+      </nav>
       <div class="p-sheet-mobile-page__content">
         <slot />
       </div>
@@ -624,6 +628,28 @@ const mobileSheetStyle = computed(() => {
   color: var(--a-color-primary);
   font: inherit;
   cursor: pointer;
+}
+
+.p-sheet-mobile-page__navigation {
+  display: flex;
+  gap: 8px;
+  margin: 0 16px 16px;
+}
+
+.p-sheet-mobile-page__navigation button {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: #ffffff;
+  color: var(--a-color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.p-sheet-mobile-page__navigation button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .p-sheet-mobile-page__content {

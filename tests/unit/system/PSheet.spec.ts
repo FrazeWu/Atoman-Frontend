@@ -15,6 +15,21 @@ const directorySource = readFileSync(
 config.global.plugins = [createTestingPinia({ stubActions: false })];
 
 describe("PSheet.vue", () => {
+  it("移动详情保留内容切换按钮和边界状态", async () => {
+    document.documentElement.dataset.atomanApp = "mobile";
+    const wrapper = mount(PSheet, {
+      props: { show: true, title: "专辑", navigation: { previous: null, next: { label: "下一张专辑" } } },
+    });
+    try {
+      const navigation = wrapper.get('.p-sheet-mobile-page__navigation');
+      expect(navigation.get('[data-navigation="previous"]').attributes('disabled')).toBeDefined();
+      await navigation.get('[data-navigation="next"]').trigger('click');
+      expect(wrapper.emitted('navigate')).toEqual([['next']]);
+    } finally {
+      wrapper.unmount();
+      delete document.documentElement.dataset.atomanApp;
+    }
+  });
 	it("uses the full viewport as the desktop sheet backdrop", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/ui/PSheet.vue"),

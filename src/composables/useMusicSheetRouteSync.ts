@@ -2,6 +2,7 @@ import { getCurrentScope, onScopeDispose, watch } from 'vue'
 import type { Router } from 'vue-router'
 
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 interface RouteSyncRegistration {
   stop: () => void
@@ -29,6 +30,11 @@ export function useMusicSheetRouteSync(router: Router) {
           .some(layer => layer.route === currentPath)
 
         if (currentRouteWasRemoved && removedRouteLayers.length > 0) {
+          const back = window.history.state?.back
+          if (isStandaloneMobileApp() && layers.length === 0 && typeof back === 'string' && !musicEntityRoutePattern.test(back.split('?')[0] || '')) {
+            router.back()
+            return
+          }
           // Closing a sheet must not depend on the browser history shape. A
           // direct route visit, refresh, or interrupted navigation may not have
           // a matching history entry to go back to.

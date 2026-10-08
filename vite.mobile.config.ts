@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		root: mobileRoot,
+		cacheDir: path.resolve(frontendRoot, 'node_modules/.vite-mobile'),
 		define: {
 			__APP_VERSION__: JSON.stringify(`v${packageVersion}`),
 		},
@@ -55,6 +56,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		resolve: {
+			dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
 			alias: {
 				"@": path.resolve(frontendRoot, "src"),
 				"@mobile": mobileRoot,

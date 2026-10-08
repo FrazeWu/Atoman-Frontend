@@ -7,7 +7,7 @@
     >
       <RouterView v-slot="{ Component, route: viewRoute }">
         <Transition :name="mobileRouteTransition">
-          <component :is="Component" :key="viewRoute.fullPath" />
+          <component :is="Component" :key="viewRoute.meta.mobileModule || viewRoute.path.startsWith('/studio') ? viewRoute.matched[0]?.path : viewRoute.fullPath" />
         </Transition>
       </RouterView>
     </main>
@@ -27,6 +27,7 @@ import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './MobileTopbar.vue'
+import './mobileModules.css'
 
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))

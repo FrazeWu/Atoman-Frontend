@@ -1,14 +1,13 @@
 // pi-lens-ignore: typescript:2307
 import type { RouteRecordRaw } from "vue-router";
 import { mobileInitialRoutes } from "./mobileInitialRoutes";
-import { moduleFeatureRoutes } from "@/router/routes/modules";
+import { mobileAdditionalRoutes } from './mobileAdditionalRoutes';
 
 const requiresAuth = { requiresAuth: true };
 export { MOBILE_MODULES } from "./mobileInitialRoutes";
 
 export const mobileRoutes: RouteRecordRaw[] = [
 	...mobileInitialRoutes.filter((route) => route.path !== "/:pathMatch(.*)*"),
-	{ ...moduleFeatureRoutes.books[0], path: "/books" },
 	{
 		path: "/modules",
 		component: () => import("./MobileModuleDirectoryView.vue"),
@@ -27,6 +26,8 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		path: "/feed",
 		component: () => import("@/views/feed/FeedLayout.vue"),
 		children: [
+			{ path: 'explore', component: () => import('@/views/feed/FeedRecommendedView.vue') },
+			{ path: 'stats', component: () => import('@/views/feed/FeedStatsView.vue'), meta: requiresAuth },
 			{
 				path: "",
 				component: () => import("@/views/feed/FeedRecommendedView.vue"),
@@ -60,6 +61,10 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/posts",
 		component: () => import("@/views/blog/BlogHomeView.vue"),
+	},
+	{
+		path: '/posts/articles',
+		component: () => import('@/views/blog/BlogArticlesView.vue'),
 	},
 	{
 		path: "/posts/notes",
@@ -138,6 +143,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		component: () => import("./MobileMusicLayout.vue"),
 		children: [
 			{ path: "", component: () => import("@/views/music/DiscoverView.vue") },
+			{ path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
+			{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
+			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
+			{ path: 'library', redirect: '/music/bookmarks', meta: requiresAuth },
+			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },
 			{
 				path: "discover",
 				component: () => import("@/views/music/DiscoverView.vue"),
@@ -194,8 +204,5 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 		],
 	},
-	{
-		path: "/videos/watch/:id",
-		component: () => import("@/views/video/VideoDetailView.vue"),
-	},
+	...mobileAdditionalRoutes,
 ];

@@ -114,6 +114,9 @@ describe("StudioDashboardView", () => {
     expect(wrapper.find('[data-testid="dashboard-create"]').exists()).toBe(
       true,
     );
+    expect(
+      wrapper.find('[data-testid="studio-channel-selector"]').exists(),
+    ).toBe(true);
   });
 
   it("routes stale drafts and scheduled content to actionable views", async () => {

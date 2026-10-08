@@ -112,4 +112,3 @@ const needsChineseTitle = computed(() => ['chi', 'zho', 'zh'].includes(props.wor
   outline-offset: 5px;
 }
 </style>
-

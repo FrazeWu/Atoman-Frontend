@@ -54,4 +54,3 @@ watch(() => props.src, () => { failed.value = false })
   overflow: hidden;
 }
 </style>
-

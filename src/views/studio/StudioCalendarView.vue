@@ -189,7 +189,7 @@ onMounted(async () => {
 .studio-calendar__days > li.is-today {
   background: color-mix(in srgb, var(--a-color-primary) 3%, #ffffff);
 }
-.studio-calendar__days > li.is-today > time { color: var(--a-color-primary); font-weight: 700; }
+.studio-calendar__days > li.is-today > time { color: var(--a-color-primary); font-weight: 600; }
 .studio-calendar__days > li > time { display: block; color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; text-align: right; }
 .studio-calendar__items { display: grid; gap: 0.5rem; margin: 0.5rem 0 0; padding: 0; list-style: none; }
 .studio-calendar__items > li { min-width: 0; display: grid; gap: 0.25rem; }

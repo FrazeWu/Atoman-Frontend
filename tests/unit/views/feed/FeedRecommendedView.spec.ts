@@ -47,6 +47,56 @@ const buttonStub = {
 		'<button class="p-button" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ loading ? "处理中..." : label }}</button>',
 };
 
+function setSubscribedChannel(channelId: string) {
+	const store = useFeedStore();
+	store.subscriptions = [{
+		id: "subscription-1", user_id: "user-1", feed_source_id: "source-1", created_at: "2026-01-01",
+		feed_source: { id: "source-1", source_type: "internal_channel", source_id: channelId, hash: "hash", provider: "internal", hidden: false, created_at: "2026-01-01", updated_at: "2026-01-01" },
+	}];
+	store.subscriptionsLoaded = true;
+}
+
+function deferredResponse() {
+	let resolveResponse!: (response: Response) => void;
+	const promise = new Promise<Response>((resolve) => {
+		resolveResponse = resolve;
+	});
+	return { promise, resolve: resolveResponse };
+}
+
+function recommendationResponse(title: string) {
+	return new Response(
+		JSON.stringify({ data: [{ id: title, title }], meta: { total: 1 } }),
+		{ status: 200 },
+	);
+}
+
+function mountRecommendationStreams() {
+	return mount(FeedRecommendedView, {
+		global: {
+			plugins: [createPinia()],
+			stubs: {
+				PPageHeader: {
+					template: '<header><slot /><slot name="action" /></header>',
+				},
+				PSegmentedControl: segmentedControlStub,
+				PButton: buttonStub,
+				PEmpty: true,
+				FeedArticleSheet: true,
+				FeedSourceArticlesSheet: true,
+				PContentCard: {
+					props: ["title"],
+					template: "<article>{{ title }}</article>",
+				},
+				FeedSourceIdentityCard: {
+					props: ["source"],
+					template: "<article>{{ source.title }}</article>",
+				},
+			},
+		},
+	});
+}
+
 async function applyFilter(wrapper: any, _field: string, optionLabel: string) {
 	const pill = wrapper
 		.findAll(".topic-pill")
@@ -86,6 +136,102 @@ describe("FeedRecommendedView", () => {
 		routeQuery.theme = undefined;
 		routeQuery.scope = undefined;
 		setActivePinia(createPinia());
+	});
+
+	it.each(["articles", "channels"] as const)(
+		"shows completed %s while the other recommendation stream is pending",
+		async (completedStream) => {
+			const pending = {
+				articles: deferredResponse(),
+				channels: deferredResponse(),
+			};
+			vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+				const url = String(input);
+				if (url.includes("/feed/recommend/articles?")) return pending.articles.promise;
+				if (url.includes("/feed/recommend/channels?")) return pending.channels.promise;
+				return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }));
+			});
+			const wrapper = mountRecommendationStreams();
+			try {
+				await flushPromises();
+				pending[completedStream].resolve(recommendationResponse(`Ready ${completedStream}`));
+				await flushPromises();
+
+				expect(wrapper.text()).toContain(`Ready ${completedStream}`);
+				expect(wrapper.text()).toContain("正在加载");
+			} finally {
+				wrapper.unmount();
+			}
+		},
+	);
+
+	it.each(["articles", "channels"] as const)(
+		"keeps successful %s visible when the other recommendation stream fails",
+		async (successfulStream) => {
+			const pending = {
+				articles: deferredResponse(),
+				channels: deferredResponse(),
+			};
+			vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+				const url = String(input);
+				if (url.includes("/feed/recommend/articles?")) return pending.articles.promise;
+				if (url.includes("/feed/recommend/channels?")) return pending.channels.promise;
+				return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }));
+			});
+			const wrapper = mountRecommendationStreams();
+			try {
+				await flushPromises();
+				pending[successfulStream].resolve(recommendationResponse(`Retained ${successfulStream}`));
+				await flushPromises();
+				const failedStream = successfulStream === "articles" ? "channels" : "articles";
+				pending[failedStream].resolve(new Response(JSON.stringify({ error: "unavailable" }), { status: 500 }));
+				await flushPromises();
+
+				expect(wrapper.text()).toContain(`Retained ${successfulStream}`);
+				pending[failedStream] = deferredResponse();
+				await wrapper.get(".p-content-progress__retry-link").trigger("click");
+				await flushPromises();
+				expect(wrapper.text()).toContain(`Retained ${successfulStream}`);
+				pending[failedStream].resolve(recommendationResponse(`Recovered ${failedStream}`));
+				await flushPromises();
+				expect(wrapper.text()).toContain(`Recovered ${failedStream}`);
+			} finally {
+				wrapper.unmount();
+			}
+		},
+	);
+
+	it("ignores late recommendation responses after changing category", async () => {
+		const initial = { articles: deferredResponse(), channels: deferredResponse() };
+		const news = { articles: deferredResponse(), channels: deferredResponse() };
+		vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+			const url = String(input);
+			const pending = url.includes("category=news") ? news : initial;
+			if (url.includes("/feed/recommend/articles?")) return pending.articles.promise;
+			if (url.includes("/feed/recommend/channels?")) return pending.channels.promise;
+			return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }));
+		});
+		const wrapper = mountRecommendationStreams();
+		try {
+			await flushPromises();
+			await applyFilter(wrapper, "category", "新闻");
+			news.articles.resolve(recommendationResponse("Current news article"));
+			news.channels.resolve(recommendationResponse("Current news channel"));
+			await flushPromises();
+			expect(wrapper.text()).toContain("Current news article");
+			expect(wrapper.text()).toContain("Current news channel");
+
+			initial.articles.resolve(recommendationResponse("Outdated article"));
+			initial.channels.resolve(recommendationResponse("Outdated channel"));
+			await flushPromises();
+
+			expect(wrapper.text()).toContain("Current news article");
+			expect(wrapper.text()).toContain("Current news channel");
+			expect(wrapper.text()).not.toContain("Outdated article");
+			expect(wrapper.text()).not.toContain("Outdated channel");
+		} finally {
+			wrapper.unmount();
+		}
 	});
 
 	it("searches shared discovery results with sources before articles", async () => {
@@ -330,7 +476,7 @@ describe("FeedRecommendedView", () => {
 		]);
 	});
 
-	it("treats an already subscribed channel conflict as a successful article source subscription", async () => {
+	it("marks an already subscribed article source using loaded subscriptions", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			const url = String(input);
 			if (url.includes("/feed/recommend/themes")) {
@@ -379,7 +525,7 @@ describe("FeedRecommendedView", () => {
 		authStore.isAuthenticated = true;
 		const feedStore = useFeedStore();
 		vi.spyOn(feedStore, "subscribeToChannel").mockResolvedValue(false);
-		vi.spyOn(feedStore, "isSubscribedToChannel").mockResolvedValue(true);
+		setSubscribedChannel("channel-1");
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -601,7 +747,7 @@ describe("FeedRecommendedView", () => {
 		authStore.token = "token";
 		authStore.isAuthenticated = true;
 		const feedStore = useFeedStore();
-		vi.spyOn(feedStore, "isSubscribedToChannel").mockResolvedValue(true);
+		setSubscribedChannel("chan-1");
 		const subscribeSpy = vi
 			.spyOn(feedStore, "subscribeToChannel")
 			.mockResolvedValue(true);
@@ -884,7 +1030,7 @@ describe("FeedRecommendedView", () => {
 		authStore.token = "token";
 		authStore.isAuthenticated = true;
 		const feedStore = useFeedStore();
-		vi.spyOn(feedStore, "isSubscribedToChannel").mockResolvedValue(true);
+		setSubscribedChannel("channel-mikan");
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -928,7 +1074,8 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
-		expect(wrapper.text()).toContain("推荐内容加载失败");
+		expect(wrapper.text()).toContain("文章推荐加载失败");
+		expect(wrapper.text()).toContain("频道推荐加载失败");
 	});
 
 	it("renders a compact discovery toolbar with a single filter entry", async () => {

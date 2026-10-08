@@ -135,35 +135,10 @@
     </div>
 
     <p v-if="currentThemeDescription" class="theme-desc-banner">{{ currentThemeDescription }}</p>
-    <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
 
     <!-- ═══════════════════════════════════════════════════════════════
          3. 核心左右双并列信息流（Dual Parallel Streams）
          ═══════════════════════════════════════════════════════════════ -->
-    <PContentProgress :loading="loading" :retry="fetchRecommendations">
-      <template #skeleton>
-        <div class="dual-streams-container">
-          <div class="stream-column">
-            <div class="feed-timeline-box">
-              <div v-for="i in 5" :key="`skel-art-${i}`" style="padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <PSkeleton width="40%" height="14px" style="margin-bottom: 6px;" />
-                <PSkeleton width="85%" height="20px" style="margin-bottom: 6px;" />
-                <PSkeleton width="60%" height="14px" />
-              </div>
-            </div>
-          </div>
-          <div class="stream-column">
-            <div class="channels-stack">
-              <div v-for="i in 4" :key="`skel-chan-${i}`" style="padding: 1rem; border: 1px solid rgba(0,0,0,0.06); border-radius: var(--a-radius-control);">
-                <PSkeleton width="50%" height="18px" style="margin-bottom: 8px;" />
-                <PSkeleton width="90%" height="14px" style="margin-bottom: 8px;" />
-                <PSkeleton width="35%" height="12px" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-
       <div class="dual-streams-container">
         <!-- 👈 左信息流：🔥 精选热门文章流 -->
         <section class="stream-column" aria-label="精选文章">
@@ -178,6 +153,14 @@
             </div>
           </div>
 
+          <PContentProgress :loading="articlesLoading" :error="articlesError" :retry="() => fetchArticleRecommendations(recommendationParams(), recommendationRequest)">
+            <template #skeleton>
+              <div v-for="i in 5" :key="i" class="recommendation-skeleton">
+                <PSkeleton width="40%" height="14px" />
+                <PSkeleton width="85%" height="20px" />
+                <PSkeleton width="60%" height="14px" />
+              </div>
+            </template>
           <PEmpty
             v-if="!articles.length"
             kicker="文章"
@@ -249,6 +232,7 @@
               </template>
             </PContentCard>
           </div>
+          </PContentProgress>
         </section>
 
         <!-- 👉 右信息流：💡 优质频道与源推荐流 -->
@@ -261,6 +245,14 @@
             </div>
           </div>
 
+          <PContentProgress :loading="channelsLoading" :error="channelsError" :retry="() => fetchChannelRecommendations(recommendationParams(), recommendationRequest)">
+            <template #skeleton>
+              <div v-for="i in 4" :key="i" class="recommendation-skeleton">
+                <PSkeleton width="50%" height="18px" />
+                <PSkeleton width="90%" height="14px" />
+                <PSkeleton width="35%" height="12px" />
+              </div>
+            </template>
           <PEmpty
             v-if="!channels.length"
             kicker="频道"
@@ -289,6 +281,7 @@
               @subscribe="subscribeRecommendedChannel(item)"
             />
           </div>
+          </PContentProgress>
         </section>
       </div>
 
@@ -301,7 +294,6 @@
           @click="refreshRecommendationBatch"
         />
       </div>
-    </PContentProgress>
 
     <!-- 文章详情阅读抽屉 -->
     <FeedArticleSheet
@@ -338,7 +330,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { IconBookmark as Bookmark, IconClock as Clock, IconEye as Eye, IconGauge as Gauge } from '@tabler/icons-vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -485,9 +477,13 @@ const theme = ref(typeof route.query.theme === 'string' ? route.query.theme : AL
 const language = ref<RecommendationLanguage>(normalizeLanguage(route.query.language))
 const themes = ref<FeedRecommendationTheme[]>([])
 const themesLoading = ref(false)
-const loading = ref(false)
+const articlesLoading = ref(false)
+const channelsLoading = ref(false)
+const loading = computed(() => articlesLoading.value || channelsLoading.value)
 const subscribingChannelIds = ref<string[]>([])
-const errorMessage = ref('')
+const articlesError = ref('')
+const channelsError = ref('')
+let recommendationRequest = 0
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
 
@@ -629,44 +625,69 @@ async function fetchThemes() {
   }
 }
 
+function recommendationParams() {
+  return new URLSearchParams({
+    mode: mode.value,
+    page: String(page.value),
+    page_size: String(pageSize),
+    category: normalizedCategoryParam(category.value),
+    theme: theme.value,
+    language: language.value,
+  }).toString()
+}
+
 async function fetchRecommendations() {
-  loading.value = true
-  errorMessage.value = ''
+  const request = ++recommendationRequest
+  articles.value = []
+  channels.value = []
+  totalArticles.value = 0
+  totalChannels.value = 0
+  const params = recommendationParams()
+  await Promise.all([
+    fetchArticleRecommendations(params, request),
+    fetchChannelRecommendations(params, request),
+  ])
+}
+
+async function fetchArticleRecommendations(params: string, request: number) {
+  articlesLoading.value = true
+  articlesError.value = ''
   try {
-    const params = new URLSearchParams({
-      mode: mode.value,
-      page: String(page.value),
-      page_size: String(pageSize),
-      category: normalizedCategoryParam(category.value),
-      theme: theme.value,
-      language: language.value,
-    })
+    const result = await apiRequestResult(`${api.url}/feed/recommend/articles?${params}`)
+    if (request !== recommendationRequest) return
+    if (!result.ok) throw new Error(`article recommend failed: ${result.status}`)
+    const payload = result.data
+    const items = Array.isArray(payload?.data) ? payload.data : []
+    articles.value = deduplicateRecommendationItems(items)
+    const total = Number(payload?.meta?.total ?? payload?.total)
+    totalArticles.value = Number.isFinite(total)
+      ? Math.max(articles.value.length, total - (items.length - articles.value.length))
+      : articles.value.length
+  } catch (error) {
+    if (request !== recommendationRequest) return
+    reportError(error, 'Failed to fetch article recommendations:')
+    articlesError.value = '文章推荐加载失败'
+  } finally {
+    if (request === recommendationRequest) articlesLoading.value = false
+  }
+}
 
-    // 并行获取推荐文章和推荐频道（双流）
-    const [articleRes, channelRes] = await Promise.all([
-      apiRequestResult(`${api.url}/feed/recommend/articles?${params.toString()}`),
-      apiRequestResult(`${api.url}/feed/recommend/channels?${params.toString()}`),
-    ])
+async function fetchChannelRecommendations(params: string, request: number) {
+  channelsLoading.value = true
+  channelsError.value = ''
+  try {
+    const result = await apiRequestResult(`${api.url}/feed/recommend/channels?${params}`)
+    if (request !== recommendationRequest) return
+    if (!result.ok) throw new Error(`channel recommend failed: ${result.status}`)
+    const payload = result.data
+    const items: RecommendationItem[] = Array.isArray(payload?.data) ? payload.data : []
 
-    if (!articleRes.ok || !channelRes.ok) {
-      throw new Error(`feed recommend failed: ${articleRes.status}/${channelRes.status}`)
-    }
-
-    const [articlePayload, channelPayload] = await Promise.all([
-      articleRes.data,
-      channelRes.data,
-    ])
-
-    const recommendationArticles = Array.isArray(articlePayload?.data) ? articlePayload.data : []
-    const recommendationChannels = Array.isArray(channelPayload?.data) ? channelPayload.data : []
-    articles.value = deduplicateRecommendationItems(recommendationArticles)
-    channels.value = recommendationChannels
-
-    if (authStore.isAuthenticated && channels.value.length) {
+    if (authStore.isAuthenticated && items.length) {
       // 订阅列表尚未完成时只补一次批量请求，避免为每个频道发起单独状态请求。
       if (!feedStore.subscriptionsLoaded) {
         await feedStore.fetchSubscriptions()
       }
+      if (request !== recommendationRequest) return
       const subscribedChannelIds = new Set(
         feedStore.subscriptions
           .filter((subscription) => (
@@ -676,42 +697,31 @@ async function fetchRecommendations() {
           ))
           .map((subscription) => subscription.feed_source?.source_id as string),
       )
-      const subscribedStates = await Promise.all(
-        channels.value.map((item) => item.source_type === 'external_rss'
-          ? Promise.resolve(feedStore.subscriptions.some((subscription) => (
+      for (const item of items) {
+        item.subscribed = Boolean(item.subscribed) || (item.source_type === 'external_rss'
+          ? feedStore.subscriptions.some((subscription) => (
             subscription.feed_source_id === (item.source_id || item.id)
             || subscription.feed_source?.id === (item.source_id || item.id)
-          )))
+          ))
           : feedStore.subscriptionsLoaded
             ? subscribedChannelIds.has(item.source_id || item.id)
-            : false),
-      )
-      channels.value = channels.value.map((item, index) => ({
-        ...item,
-        subscribed: subscribedStates[index] ?? false,
-      }))
+            : false)
+      }
     }
-    channels.value = deduplicateRecommendedChannels(channels.value)
-    const reportedArticleTotal = Number(articlePayload?.meta?.total ?? articlePayload?.total)
-    const articleDuplicateCount = recommendationArticles.length - articles.value.length
-    const reportedChannelTotal = Number(channelPayload?.meta?.total ?? channelPayload?.total)
-    const channelDuplicateCount = recommendationChannels.length - channels.value.length
-    totalArticles.value = Number.isFinite(reportedArticleTotal)
-      ? Math.max(articles.value.length, reportedArticleTotal - articleDuplicateCount)
-      : articles.value.length
-    totalChannels.value = Number.isFinite(reportedChannelTotal)
-      ? Math.max(channels.value.length, reportedChannelTotal - channelDuplicateCount)
+    channels.value = deduplicateRecommendedChannels(items)
+    const total = Number(payload?.meta?.total ?? payload?.total)
+    totalChannels.value = Number.isFinite(total)
+      ? Math.max(channels.value.length, total - (items.length - channels.value.length))
       : channels.value.length
   } catch (error) {
-    reportError(error, 'Failed to fetch feed recommendations:')
-    errorMessage.value = '推荐内容加载失败'
-    articles.value = []
-    channels.value = []
-    totalArticles.value = 0
-    totalChannels.value = 0
+    if (request !== recommendationRequest) return
+    reportError(error, 'Failed to fetch channel recommendations:')
+    channelsError.value = '频道推荐加载失败'
   } finally {
-    loading.value = false
-    restorePendingSubscriptionSource()
+    if (request === recommendationRequest) {
+      channelsLoading.value = false
+      if (!channelsError.value) restorePendingSubscriptionSource()
+    }
   }
 }
 
@@ -1194,9 +1204,17 @@ onMounted(() => {
   void fetchThemes()
   void fetchRecommendations()
 })
+
+onUnmounted(() => { recommendationRequest++ })
 </script>
 
 <style scoped>
+.recommendation-skeleton {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
 .feed-recommendation-actions {
   display: flex;
   justify-content: center;

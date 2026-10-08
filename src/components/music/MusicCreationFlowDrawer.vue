@@ -20,6 +20,7 @@ import { parseMusicLyricDraft } from '@/utils/musicLyricsDraft'
 import { hasMusicBrainzSource, normalizeMusicImportSource } from '@/utils/musicImportSource'
 import { mergeImportedTracksIntoDraft } from '@/utils/musicImportTrackMerge'
 import { localizedMusicCountry } from '@/utils/musicImportMetadata'
+import { musicCreationProgress } from '@/utils/musicCreationProgress'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -42,6 +43,7 @@ const router = useRouter()
 
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const draftSaveMessage = ref('')
 let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingImportAutosave: { importId: string; input: musicApi.MusicAlbumImportCommitInput; generation: number } | null = null
 let importAutosaveDrain: Promise<void> | null = null
@@ -405,35 +407,17 @@ const showFullAlbumCreationProgress = computed(() => {
     && flow.mode !== 'edit'
     && !flow.editingContributorId
     && flow.entity !== 'artist'
-    && flow.artistFirstFlow,
   )
 })
-const fullAlbumCreationProgressSteps = [
-  { key: 'artist', label: '创建艺术家' },
-  { key: 'upload', label: '上传专辑' },
-  { key: 'match', label: '匹配' },
-  { key: 'details', label: '完善信息' },
-  { key: 'submit', label: '提交' },
-] as const
-const fullAlbumCreationProgressIndex = computed(() => {
-  const flow = creationFlow.value
-  if (!flow) return -1
-  if (flow.step === 'artist') return 0
-  if (flow.step === 'albumImport') {
-    return flow.draft.albumImport.metadataMatched
-      || flow.draft.albumImport.metadataMatchStatus === 'matched'
-      ? 2
-      : 1
-  }
-  if (flow.step === 'albumDetails') return 3
-  return 4
-})
+const creationProgress = computed(() => musicCreationProgress(creationFlow.value))
+const fullAlbumCreationProgressSteps = computed(() => creationProgress.value.steps)
+const fullAlbumCreationProgressIndex = computed(() => creationProgress.value.index)
 const albumImportMatching = computed(() => {
   const flow = creationFlow.value
   if (!flow || flow.step !== 'albumImport') return false
   const draft = flow.draft.albumImport
   return draft.metadataMatchStatus === 'matching'
-    || (draft.metadataMatchingStarted === true && !['matched', 'unmatched'].includes(draft.metadataMatchStatus ?? ''))
+    || (draft.metadataMatchingStarted === true && !['matched', 'unmatched', 'ambiguous', 'manual'].includes(draft.metadataMatchStatus ?? ''))
 })
 const finishButtonLabel = computed(() => {
   const flow = creationFlow.value
@@ -444,7 +428,7 @@ const finishButtonLabel = computed(() => {
     flow.draft.albumImport.metadataMatchStatus === 'matching'
     || (
     flow.draft.albumImport.metadataMatchingStarted
-    && !['matched', 'unmatched'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
+    && !['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
     )
   )) return '匹配中…'
   if (flow.entity === 'artist' && flow.step === 'artist') {
@@ -452,6 +436,7 @@ const finishButtonLabel = computed(() => {
   }
   if (step === 'albumImport') {
     if (albumImportMatching.value || flow.submitting) return '匹配中…'
+    if (['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')) return '填写信息'
     if (['uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status)) return '处理中…'
     if (['ready', 'needs_attention', 'failed'].includes(flow.draft.albumImport.status)) return '下一步'
     return activeStep.value.cta
@@ -489,10 +474,17 @@ const forwardBlockReason = computed(() => {
     if (!artist.source.trim()) return '请填写资料来源'
     return ''
   }
+  if (flow.step === 'albumImport') {
+    if (!flow.draft.albumImport.importId) return '请先选择专辑文件'
+    if (flow.draft.albumImport.metadataMatchStatus === 'waiting_artist') return '请选择主艺术家后开始匹配'
+    if (flow.draft.albumImport.status === 'failed') return flow.draft.albumImport.errorMessage || '上传或处理失败，请重试对应文件'
+    return ''
+  }
   if (!['albumDetails', 'preview'].includes(flow.step)) return ''
   if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
   if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
 	if (!flow.draft.albumDetails.coverUrl.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
+  if (flow.draft.albumDetails.coverUrl.startsWith('blob:')) return '请确认并上传本地封面'
 	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
 	if (!flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'
 	if (!flow.draft.tracks.length || flow.draft.tracks.some((track) => !track.title.trim())) return '请至少添加一首完整音轨'
@@ -534,13 +526,14 @@ const canGoForward = computed(() => {
       && !!formatDateFromParts(artist.birthDateParts)
       && !!artist.source.trim()
   }
-	if (flow.step === 'albumImport') {
-		return !!flow.draft.albumImport.importId
+		if (flow.step === 'albumImport') {
+			return !!flow.draft.albumImport.importId && ['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
 	}
 	if (flow.step === 'albumDetails') {
 		return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
 			&& !!flow.draft.albumDetails.title.trim()
-			&& !!flow.draft.albumDetails.coverUrl.trim()
+				&& !!flow.draft.albumDetails.coverUrl.trim()
+				&& !flow.draft.albumDetails.coverUrl.startsWith('blob:')
 			&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
 			&& !!flow.draft.albumDetails.source.trim()
 			&& flow.draft.tracks.length > 0
@@ -552,7 +545,8 @@ const canGoForward = computed(() => {
 	}
 	return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
 		&& !!flow.draft.albumDetails.title.trim()
-		&& !!flow.draft.albumDetails.coverUrl.trim()
+			&& !!flow.draft.albumDetails.coverUrl.trim()
+			&& !flow.draft.albumDetails.coverUrl.startsWith('blob:')
 		&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
 		&& !!flow.draft.albumDetails.source.trim()
 		&& flow.draft.tracks.length > 0
@@ -721,6 +715,11 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
 
   return {
     ...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
+    draft_customization: {
+      title: !!flow.titleCustomized, tracks: !!flow.tracksCustomized,
+      releaseDate: !!flow.releaseDateCustomized, cover: !!flow.coverCustomized,
+      type: !!flow.typeCustomized, tags: !!flow.metadataTagsApplied,
+    },
     artist: {
       name: primary?.newArtistDraft
         ? primary.name.trim()
@@ -797,37 +796,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
 }
 
 function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) {
-  if (flow.editingContributorId) return false
-  const details = flow.draft.albumDetails
-  const tracks = flow.draft.tracks
-  const hasRequiredDetails = !!details.title.trim()
-    && !!details.coverUrl.trim()
-    && !!formatDateFromParts(details.releaseDateParts)
-    && !!details.source.trim()
-    && tracks.length > 0
-    && tracks.every((track) => !!track.title.trim())
-    && tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
-    && hasValidAlbumContributors(details.contributors ?? [])
-    && hasRequiredArtistSource(flow)
-  const status = flow.draft.albumImport.status
-  const canSubmitAtCurrentStep = ['pending_upload', 'uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(status)
-    || (status === 'ready' && flow.step === 'albumDetails')
-
-  return !!flow.draft.albumImport.importId && hasRequiredDetails && canSubmitAtCurrentStep
-}
-
-async function finishAutomaticallyCommittedImport(
-  flow: NonNullable<typeof creationFlow.value>,
-  committed: Awaited<ReturnType<typeof musicApi.commitMusicAlbumImport>>,
-) {
-  if (committed.status !== 'committed' || flow.submitting) return
-  const artistId = committed.artistId?.trim() || flow.draft.artist.id?.trim()
-  refreshArtist()
-  refreshAlbum()
-  refreshSong()
-  invalidateImportAutosave()
-  closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
-  await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
+  return flow.mode !== 'edit' && !!flow.draft.albumImport.importId && !['committed', 'canceled'].includes(flow.draft.albumImport.status)
 }
 
 function flushImportAutosave() {
@@ -839,16 +808,14 @@ function flushImportAutosave() {
       const pendingGeneration = pending.generation
       if (pendingGeneration !== importAutosaveGeneration) continue
       try {
-        const committed = await musicApi.commitMusicAlbumImport(pending.importId, pending.input)
+        await musicApi.saveMusicAlbumImportDraft(pending.importId, pending.input)
         const flow = creationFlow.value
         if (pendingGeneration !== importAutosaveGeneration) continue
         if (flow && flow.draft.albumImport.importId === pending.importId) {
-          flow.draft.albumImport.status = committed.status
-          flow.draft.albumImport.errorMessage = committed.errorMessage ?? ''
-          await finishAutomaticallyCommittedImport(flow, committed)
+          draftSaveMessage.value = '草稿已保存'
         }
       } catch {
-        // 最终提交会再次保存并显示错误，避免打断资料填写。
+        draftSaveMessage.value = '草稿保存失败，请保持页面打开并重试'
       }
     }
   })().finally(() => {
@@ -862,6 +829,7 @@ function scheduleImportAutosave() {
   if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
   const flow = creationFlow.value
   if (!flow || flow.submitting || !canAutosaveImportDetails(flow)) return
+  draftSaveMessage.value = '正在保存草稿…'
 
   importAutosaveTimer = setTimeout(() => {
     const currentFlow = creationFlow.value
@@ -892,7 +860,7 @@ function syncReadyImportToDraft() {
   if (albumImport.derivedCover.trim() && !flow.coverCustomized) {
     albumDetails.coverUrl = albumImport.derivedCover.trim()
   }
-  if (albumImport.derivedAlbumType?.trim() && albumDetails.type === 'album') {
+  if (albumImport.derivedAlbumType?.trim() && albumDetails.type === 'album' && !flow.typeCustomized) {
     albumDetails.type = albumImport.derivedAlbumType.trim()
   }
 
@@ -927,9 +895,16 @@ watch(
   { deep: true },
 )
 
-function requestClose() {
+async function requestClose() {
   const flow = creationFlow.value
   if (!flow) return
+
+  if (flow.draft.albumImport.importId && canAutosaveImportDetails(flow)) {
+    if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
+    pendingImportAutosave = { importId: flow.draft.albumImport.importId, input: buildCommitInput(flow), generation: importAutosaveGeneration }
+    await flushImportAutosave()
+    if (creationFlow.value !== flow) return
+  }
 
   const hasDraft = hasCreationDraft(flow)
 
@@ -939,6 +914,14 @@ function requestClose() {
   }
   closeCurrentCreationFlow()
 }
+
+const closeConfirmMessage = computed(() => {
+  const flow = creationFlow.value
+  if (flow?.mode === 'edit' || !flow?.draft.albumImport.importId) return '确认关闭？未保存的内容将丢失。'
+  const saved = draftSaveMessage.value === '草稿已保存'
+  const uploadPending = flow.draft.albumImport.files.some((file) => file.uploadStatus !== 'uploaded')
+  return `${saved ? '草稿已保存，可从导入中心继续。' : '草稿尚未保存成功，关闭会丢失本次填写。'}${uploadPending ? '关闭面板不会取消上传，但请保持当前浏览器页面打开。' : '文件已上传，关闭面板不会取消后台处理。'}`
+})
 
 function confirmClose() {
   closePending.value = false
@@ -955,7 +938,7 @@ function ensurePrimaryArtistContributor(flow: NonNullable<typeof creationFlow.va
   const existing = flow.draft.albumDetails.contributors.find((contributor) => (
     artist.id
       ? contributor.artistId === artist.id
-      : !contributor.artistId && contributor.name.trim() === primaryName
+      : !contributor.artistId && (contributor.id === 'contributor-new-artist' || contributor.name.trim() === primaryName)
   ))
   if (existing) {
     existing.name = primaryName
@@ -1038,7 +1021,7 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         contributor.kind = artist.kind
         contributor.source = artist.source.trim()
         flow.editingContributorId = null
-        setMusicCreationStep('albumDetails')
+        setMusicCreationStep(flow.contributorReturnStep ?? 'albumDetails')
         return
       }
       if (flow.entity === 'artist') {
@@ -1099,7 +1082,8 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
       flow.submitting = false
     }
 	} else if (flow.step === "albumImport") {
-		if (["ready", "needs_attention", "failed"].includes(flow.draft.albumImport.status)) {
+		if (['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')) {
+			flow.returnedToImport = false
 			setMusicCreationStep("albumDetails")
 		}
 
@@ -1142,15 +1126,15 @@ function goBackStep() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'artist' && creationFlow.value.editingContributorId) {
     creationFlow.value.editingContributorId = null
-    setMusicCreationStep('albumDetails')
+    setMusicCreationStep(creationFlow.value.contributorReturnStep ?? 'albumDetails')
   } else if (creationFlow.value.step === 'preview') {
     setMusicCreationStep('albumDetails')
   } else if (creationFlow.value.step === 'albumDetails') {
-    if (creationFlow.value.parentKey) {
-      closeCurrentCreationFlow()
-    } else {
-      setMusicCreationStep('artist')
-    }
+    creationFlow.value.returnedToImport = true
+    setMusicCreationStep('albumImport')
+  } else if (creationFlow.value.step === 'albumImport' && creationFlow.value.artistFirstFlow) {
+    if (creationFlow.value.parentKey) returnToLayer(creationFlow.value.parentKey)
+    else setMusicCreationStep('artist')
   }
 }
 
@@ -1332,7 +1316,7 @@ async function completeCreation() {
     if (uploadsComplete) {
       committedImport = await musicApi.completeMusicAlbumImportSession(importId)
     }
-    toastMessage.value = '已提交至导入中心，后台将继续处理'
+    toastMessage.value = committedImport.status === 'committed' ? '创建成功' : '已提交，可在导入中心查看处理进度；上传未完成时请保持页面打开'
     toastVisible.value = true
     const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     refreshArtist()
@@ -1340,7 +1324,7 @@ async function completeCreation() {
     refreshSong()
     invalidateImportAutosave()
     closeMusicCreationFlow(flow.parentKey ?? props.layer?.key)
-    await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
+    await router.push(committedImport.status === 'committed' && artistId ? `/music/artist/${artistId}` : '/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {
@@ -1408,6 +1392,7 @@ async function completeCreation() {
         <MusicCreationAlbumPreviewStep v-else-if="creationFlow.step === 'preview'" />
 
         <div v-if="showFooterActions" class="footer-actions" data-testid="creation-flow-footer">
+          <p v-if="draftSaveMessage && !isEditFlow" role="status">{{ draftSaveMessage }}</p>
           <p
             v-if="forwardBlockReason"
             class="forward-block-reason"
@@ -1455,7 +1440,7 @@ async function completeCreation() {
             :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="primary-action"
-            :disabled="creationFlow.submitting || albumImportMatching"
+            :disabled="creationFlow.submitting || albumImportMatching || (creationFlow.step === 'albumImport' && !canGoForward)"
             @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction('create_album')"
           >
             {{ finishButtonLabel }}
@@ -1469,7 +1454,7 @@ async function completeCreation() {
     above-player
     :show="closePending"
     title="关闭创建流程"
-    message="确认关闭？未保存的内容将丢失。"
+    :message="closeConfirmMessage"
     confirm-text="关闭"
     danger
     @confirm="confirmClose"
@@ -1591,6 +1576,9 @@ async function completeCreation() {
 .drawer-body :deep(.album-details-step .footer-actions) {
   display: none;
 }
+
+/* 流程导航由外层统一显示，独立组件预览保留自己的进度。 */
+.drawer-body :deep(.progress-card) { display: none; }
 
 :global(.creation-flow-drawer) {
   background: var(--a-color-bg) !important;

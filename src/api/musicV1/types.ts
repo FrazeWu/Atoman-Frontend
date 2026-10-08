@@ -124,6 +124,8 @@ export type MusicAlbumImportMetadataPreviewInput = {
 	albumTitle: string;
 	artist: string;
 	trackTitles: string[];
+	tracks?: MusicAlbumImportTrack[];
+	force?: boolean;
 };
 
 export type MusicAlbumImportCommitStageName = {
@@ -166,6 +168,7 @@ export type MusicAlbumImportCommitTrack = {
 export type MusicAlbumImportTag = {
 	kind: MusicTagKind;
 	name: string;
+	parent_name?: string;
 };
 
 export type MusicAlbumImportCommitMember = {
@@ -241,6 +244,8 @@ export type MusicSongArtistCredit = {
 };
 
 export type MusicAlbumImportCommitInput = {
+	draft_only?: boolean;
+	draft_customization?: Record<string, boolean>;
 	artist_id?: string;
 	artist: {
 		name: string;
@@ -287,6 +292,7 @@ export type MusicAlbumImport = {
 	artistId?: string;
 	artistSource?: string;
 	commitRequest?: MusicAlbumImportCommitInput;
+	draftRequest?: MusicAlbumImportCommitInput;
 	albumTitle?: string;
 	albumSource?: string;
 	status: MusicAlbumImportStatus;
@@ -326,6 +332,7 @@ export type MusicAlbumImport = {
 	metadataFieldSources?: Record<string, string>;
 	trackCount?: number;
 	hasCommitRequest?: boolean;
+	hasDraftRequest?: boolean;
 	missingArtists?: string[];
 	lastSyncedAt: string;
 	errorMessage: string;
@@ -447,8 +454,10 @@ export function normalizeMusicAlbumImport(
 		targetSongId: snapshot.targetSongId ?? "",
 		artistId: snapshot.artistId ?? "",
 		commitRequest: snapshot.commitRequest,
+		draftRequest: snapshot.draftRequest,
 		trackCount: snapshot.trackCount ?? snapshot.derivedTracks?.length ?? 0,
 		hasCommitRequest: snapshot.hasCommitRequest ?? Boolean(snapshot.commitRequest),
+		hasDraftRequest: snapshot.hasDraftRequest ?? Boolean(snapshot.draftRequest),
 		albumTitle: snapshot.albumTitle ?? "",
 		derivedTracks: arrayOrEmpty(snapshot.derivedTracks),
 		files: arrayOrEmpty(snapshot.files),

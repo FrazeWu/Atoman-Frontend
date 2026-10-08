@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MusicAlbumImportTrack } from "@/api/musicV1";
 import type { MusicCreationFlowState } from "@/components/music/musicCreationTypes";
-import { mergeImportedTracksIntoDraft } from "@/utils/musicImportTrackMerge";
+import { mergeImportedTracksIntoDraft, rememberDeletedImportedTrack } from "@/utils/musicImportTrackMerge";
 
 function flowWithTracks(tracks: MusicCreationFlowState["draft"]["tracks"]): MusicCreationFlowState {
 	return {
@@ -11,6 +11,16 @@ function flowWithTracks(tracks: MusicCreationFlowState["draft"]["tracks"]): Musi
 }
 
 describe("mergeImportedTracksIntoDraft", () => {
+	it("删除曲目后重排不会删除占据同一位置的另一首", () => {
+		const removed = { id: "a", importFileId: "file-a", discNumber: 1, sequence: 1, originalDiscNumber: 1, originalTrackNumber: 1, title: "A" };
+		const flow = flowWithTracks([]);
+		rememberDeletedImportedTrack(flow, removed);
+		mergeImportedTracksIntoDraft(flow, [
+			{ fileId: "file-b", title: "B", discNumber: 1, trackNumber: 1, origin: "02-b.flac" },
+			{ fileId: "file-a", title: "A", discNumber: 1, trackNumber: 2, origin: "01-a.flac" },
+		]);
+		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["B"]);
+	});
 	it("uses stable file identity when the server snapshot is reordered", () => {
 		const flow = flowWithTracks([
 			{

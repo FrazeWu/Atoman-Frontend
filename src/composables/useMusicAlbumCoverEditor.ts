@@ -65,7 +65,6 @@ export function useMusicAlbumCoverEditor() {
 			pendingCoverCrop.value?.kind === "imported"
 				? pendingCoverCrop.value.sourceUrl?.trim() || ""
 				: "";
-		const isManualCover = pendingCoverCrop.value?.kind === "manual";
 
 		clearCoverPreviewUrl();
 		coverPreviewUrl.value = URL.createObjectURL(file);
@@ -74,7 +73,7 @@ export function useMusicAlbumCoverEditor() {
 		flow.assetUploading = true;
 		if (importedSourceUrl) handledImportedCoverUrl.value = importedSourceUrl;
 		pendingCoverCrop.value = null;
-		if (isManualCover) flow.coverCustomized = true;
+		flow.coverCustomized = true;
 
 		try {
 			const asset = await uploadMusicAsset(file, "music.cover");

@@ -71,6 +71,6 @@ export function submittedMusicAlbumImports(
 	items: MusicAlbumImport[],
 ): MusicAlbumImport[] {
 	return uniqueMusicAlbumImports(
-		items.filter((item) => item.hasCommitRequest === true || Boolean(item.commitRequest)),
+		items.filter((item) => item.hasCommitRequest === true || Boolean(item.commitRequest) || item.hasDraftRequest === true || Boolean(item.draftRequest)),
 	);
 }

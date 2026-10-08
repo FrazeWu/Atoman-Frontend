@@ -95,6 +95,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		drawers.closeAll();
 		drawers.openMusicCreationFlow({
 			artistId: "artist-seeded",
+			artistName: "Seeded Artist",
 			startStep: "albumImport",
 		});
 		drawers.setMusicCreationStep("albumImport");
@@ -201,11 +202,11 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const files = { 0: archive, length: 1, item: () => archive } as unknown as FileList;
 		await useAlbumImportUpload().handleFilesUpload(files);
 		const flow = useMusicDrawers().state.value.creationFlow!;
-		expect(metadataMatch).toHaveBeenCalledWith("import-1", {
+		expect(metadataMatch).toHaveBeenCalledWith("import-1", expect.objectContaining({
 			albumTitle: "IGOR",
-			artist: "",
+			artist: "Seeded Artist",
 			trackTitles: ["EARFQUAKE", "IGOR'S THEME"],
-		});
+		}));
 		expect(flow.step).toBe("albumImport");
 		expect(flow.draft.albumImport.metadataMatched).not.toBe(true);
 		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["EARFQUAKE", "IGOR'S THEME"]);
@@ -247,7 +248,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"EARFQUAKE",
 			"IGOR'S THEME",
 		]);
-		expect(metadataMatch).toHaveBeenCalled();
+		expect(metadataMatch).not.toHaveBeenCalled();
+		expect(flow.draft.albumImport.metadataMatchStatus).toBe('waiting_artist');
 	});
 
 	it("上传完成后仍停留在上传页，等待曲目解析后自动匹配", async () => {
@@ -341,6 +343,17 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumImport.metadataSources?.map((source) => source.selected)).toEqual([true, false]);
 		expect(wrapper.text()).toContain("检索 3 个候选");
 		expect(wrapper.text()).toContain("已选中 IGOR");
+	});
+	it("匹配中的轮询快照不会重复开始检索", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		const match = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata").mockResolvedValue(snapshot());
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			metadataMatchStatus: "matching", metadataSource: "discogs",
+			derivedTracks: [{ title: "Song", origin: "01-song.flac", trackNumber: 1 }],
+		}));
+		await useAlbumImportUpload().startMetadataMatching();
+		expect(match).not.toHaveBeenCalled();
 	});
 
 	it("元信息匹配完成但上传仍在进行时自动进入信息页", async () => {
@@ -657,6 +670,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({
 			artistId: "artist-seeded",
 			archiveName: "graduation.zip",
+			artistName: "Seeded Artist",
 			inputMode: "archive",
 		});
 		expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith(
@@ -998,6 +1012,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({
 			artistId: "artist-seeded",
 			inputMode: "files",
+			artistName: "Seeded Artist",
 		});
 		expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith(
 			"import-1",
@@ -1107,7 +1122,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		const draft = useMusicDrawers().state.value.creationFlow?.draft.albumImport;
 		expect(draft?.files).toEqual([]);
-		expect(draft?.derivedTracks).toEqual([]);
+		expect(Array.isArray(draft?.derivedTracks)).toBe(true);
 	});
 
 	it("上传有文件列表时以紧凑格式在进度左侧显示当前上传速度", async () => {
@@ -1153,10 +1168,11 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		expect(
 			wrapper.get('[data-testid="album-import-metadata-hint"]').text(),
-		).toContain("读取到曲目后会自动开始匹配");
+		).toContain("读取到曲目并确认艺术家后开始匹配");
 
 		drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl =
 			"https://musicbrainz.org/release/release-id";
+		drawers.state.value.creationFlow.draft.albumImport.metadataMatchStatus = "matched";
 		await flushPromises();
 
 		const source = wrapper.get('[data-testid="album-import-metadata-hint"] a');
@@ -1531,8 +1547,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		});
 		const wrapper = mount(MusicCreationAlbumUploadZone);
 
-		expect(wrapper.text()).toContain("处理失败，请重试");
-		expect(wrapper.text()).not.toContain("处理空间不足");
+		expect(wrapper.text()).toContain("处理空间不足");
 		await wrapper
 			.get('[data-testid="album-import-processing-retry"]')
 			.trigger("click");

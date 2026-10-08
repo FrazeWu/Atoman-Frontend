@@ -502,6 +502,10 @@ export async function commitMusicAlbumImport(
 	);
 }
 
+export async function saveMusicAlbumImportDraft(importId: string, input: MusicAlbumImportCommitInput): Promise<MusicAlbumImport> {
+	return commitMusicAlbumImport(importId, { ...input, draft_only: true });
+}
+
 export async function repairMusicAlbumImport(
 	importId: string,
 ): Promise<MusicAlbumImport> {

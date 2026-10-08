@@ -22,10 +22,12 @@ import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEdito
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { createEmptyMusicArtistDraft } from './musicCreationTypes'
+import { musicCreationProgress } from '@/utils/musicCreationProgress'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
+const progress = computed(() => musicCreationProgress(creationFlow.value))
 const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const isSongEdit = computed(() => isEditMode.value && creationFlow.value?.entity === 'song')
 const artistFirstFlow = computed(() => creationFlow.value?.artistFirstFlow === true)
@@ -243,11 +245,11 @@ const albumTypeSelection = computed<string>({
 		const value = albumDetailsDraft.value?.type ?? ''
 		return knownAlbumTypes.includes(value) ? value : value ? 'custom' : ''
 	},
-	set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value },
+		set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value; if (creationFlow.value) creationFlow.value.typeCustomized = true },
 })
 const customAlbumType = computed<string>({
 	get: () => albumDetailsDraft.value?.type === 'custom' ? '' : knownAlbumTypes.includes(albumDetailsDraft.value?.type ?? '') ? '' : albumDetailsDraft.value?.type ?? '',
-	set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value },
+		set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value; if (creationFlow.value) creationFlow.value.typeCustomized = true },
 })
 const titleModel = computed({
   get: () => albumDetailsDraft.value?.title ?? '',
@@ -369,11 +371,8 @@ function syncLockedNewArtistContributor() {
 }
 
 function goBack() {
-  if (creationFlow.value?.parentKey) {
-    closeMusicCreationFlow()
-    return
-  }
-  setMusicCreationStep('artist')
+	if (creationFlow.value) creationFlow.value.returnedToImport = true
+	setMusicCreationStep('albumImport')
 }
 
 function createNewContributor(name: string) {
@@ -396,6 +395,7 @@ function createNewContributor(name: string) {
       : [primaryAlbumRole(`role-${id}-primary`)],
   })
   flow.editingContributorId = id
+  flow.contributorReturnStep = 'albumDetails'
   setMusicCreationStep('artist')
 }
 
@@ -447,29 +447,18 @@ watch(
       @confirm="confirmCoverCrop"
     />
 
-    <section class="progress-card">
+    <h2 v-if="isEditMode">{{ isSongEdit ? '编辑歌曲' : '编辑专辑' }}</h2>
+    <section v-if="!isEditMode" class="progress-card">
       <div class="progress-copy">
         <p class="progress-label" data-testid="album-details-progress-label">
-          {{ isEditMode ? (isSongEdit ? '编辑歌曲' : '编辑专辑') : artistFirstFlow ? '第 3 步 / 完善专辑' : '第 2 步 / 完善专辑' }}
+          {{ progress.label }}
         </p>
       </div>
       <p class="progress-value" data-testid="album-details-progress-value">
-        {{ artistFirstFlow ? '3 / 3' : '2 / 2' }}
+        {{ progress.value }}
       </p>
       <div class="progress-steps">
-        <template v-if="artistFirstFlow">
-          <span class="progress-step" data-testid="album-details-step-label">1 创建艺术家</span>
-          <span class="progress-step" data-testid="album-details-step-label">2 上传与匹配</span>
-          <span class="progress-step progress-step--active" data-testid="album-details-step-label">
-            {{ standaloneTypeSelected ? '3 新建歌曲' : '3 完善专辑' }}
-          </span>
-        </template>
-        <template v-else>
-          <span class="progress-step" data-testid="album-details-step-label">1 上传与匹配</span>
-          <span class="progress-step progress-step--active" data-testid="album-details-step-label">
-            {{ standaloneTypeSelected ? '2 新建歌曲' : '2 完善专辑' }}
-          </span>
-        </template>
+        <span v-for="(step, index) in progress.steps" :key="step.key" class="progress-step" :class="{ 'progress-step--active': index === progress.index }" data-testid="album-details-step-label">{{ index + 1 }} {{ step.label }}</span>
       </div>
       <div class="progress-track" aria-hidden="true">
         <div class="progress-bar" />
@@ -480,7 +469,7 @@ watch(
 
     <!-- 导入进度与封面并排 -->
     <div class="album-details-step__upload-cover-grid">
-      <section
+      <section v-if="!isEditMode || albumImportDraft?.importId"
         class="album-card album-card--primary album-import-status-card"
         data-testid="album-import-status"
       >
@@ -551,7 +540,7 @@ watch(
           class="imported-cover-callout"
           data-testid="album-details-imported-cover-callout"
         >
-          <p class="imported-cover-callout__copy">已识别到封面，确认裁剪后才会作为最终封面。</p>
+          <p class="imported-cover-callout__copy">{{ unresolvedImportedCoverUrl.startsWith('blob:') ? '已识别本地封面，请确认裁剪并上传后使用。' : '已采用识别到的封面，也可以重新裁剪或更换。' }}</p>
           <PButton
             type="button"
             variant="secondary"

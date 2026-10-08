@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseBlob } from "music-metadata";
 import {
 	readAlbumImportPreview,
+	readAlbumImportFilesPreview,
 	shouldIgnoreAlbumImportPath,
 } from "../../../src/utils/musicImportPreview";
 
@@ -52,7 +53,7 @@ describe("readAlbumImportPreview", () => {
 			}),
 		);
 
-		expect(preview).toEqual({
+		expect(preview).toMatchObject({
 			title: "Northern Lights",
 			tracks: ["Intro", "Main Theme", "Finale"],
 		});
@@ -88,6 +89,84 @@ describe("readAlbumImportPreview", () => {
 		expect(preview.albumCoverFile).toBeInstanceOf(File);
 		expect(preview.albumCoverFile?.name).toBe("cover.jpg");
 		expect(preview.albumCoverFile?.type).toBe("image/jpeg");
+	});
+
+	it.each(["ZIP", "文件夹"])(
+		"%s 多媒体预览保留完整来源路径及标签碟号曲号",
+		async (input) => {
+			const sources = [
+				{ path: "录音集/CD2/01 - Filename.mp4", content: "video" },
+				{ path: "录音集/CD1/01 - Filename.flac", content: "audio" },
+			];
+			vi.mocked(parseBlob).mockImplementation(async (blob) => {
+				const isVideo = await blob.text() === "video";
+				return {
+					common: {
+						album: "标签专辑", albumartist: "标签艺术家",
+						title: isVideo ? "现场版 (完整)" : "序曲 (重制版)",
+						disk: { no: isVideo ? 4 : 3 }, track: { no: isVideo ? 9 : 7 },
+					},
+				} as never;
+			});
+
+			let preview;
+			if (input === "ZIP") {
+				const zip = new JSZip();
+				for (const { path, content } of sources) zip.file(path, content);
+				preview = await readAlbumImportPreview(new File(
+					[await zip.generateAsync({ type: "uint8array" })],
+					"录音集.zip",
+					{ type: "application/zip" },
+				));
+			} else {
+				const files = sources.map(({ path, content }) => {
+					const file = new File([content], path.split("/").pop()!);
+					Object.defineProperty(file, "webkitRelativePath", { value: path });
+					return file;
+				});
+				preview = await readAlbumImportFilesPreview(files);
+			}
+
+			expect(preview).toMatchObject({
+				artist: "标签艺术家",
+				tracks: ["序曲 (重制版)", "现场版 (完整)"],
+				trackDetails: [
+					{
+						title: "序曲 (重制版)", origin: sources[1].path, audioKey: "",
+						discNumber: 3, trackNumber: 7,
+						originalTitle: "序曲 (重制版)", originalDiscNumber: 3, originalTrackNumber: 7,
+					},
+					{
+						title: "现场版 (完整)", origin: sources[0].path, audioKey: "",
+						discNumber: 4, trackNumber: 9,
+						originalTitle: "现场版 (完整)", originalDiscNumber: 4, originalTrackNumber: 9,
+					},
+				],
+			});
+		},
+	);
+
+	it("ZIP 中的 CUE 整轨音频等待后端拆曲，不提前识别成单首", async () => {
+		const zip = new JSZip();
+		zip.file("Album/Album.flac", "audio");
+		zip.file("Album/Album.cue", [
+			'FILE "Album.flac" WAVE',
+			'  TRACK 01 AUDIO',
+			'    TITLE "Intro"',
+			'    INDEX 01 00:00:00',
+			'  TRACK 02 AUDIO',
+			'    TITLE "Finale"',
+			'    INDEX 01 03:00:00',
+		].join("\n"));
+		vi.mocked(parseBlob).mockResolvedValue({ common: { title: "整轨音频" } } as never);
+
+		const preview = await readAlbumImportPreview(new File(
+			[await zip.generateAsync({ type: "uint8array" })],
+			"Album.zip",
+			{ type: "application/zip" },
+		));
+
+		expect(preview).toEqual({ title: "Album", tracks: [] });
 	});
 
 	it("预览曲目会移除已知艺术家前缀", async () => {
@@ -145,7 +224,7 @@ describe("readAlbumImportPreview", () => {
 			type: "audio/flac",
 		});
 
-		await expect(readAlbumImportPreview(file)).resolves.toEqual({
+		await expect(readAlbumImportPreview(file)).resolves.toMatchObject({
 			title: "Live at Home",
 			tracks: ["Live at Home"],
 		});

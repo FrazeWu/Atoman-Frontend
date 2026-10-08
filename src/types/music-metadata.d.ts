@@ -9,6 +9,8 @@ declare module 'music-metadata' {
     artist?: string
     albumartist?: string
     album?: string
+    track?: { no?: number | null }
+    disk?: { no?: number | null }
     picture?: MusicMetadataPicture[]
   }
 

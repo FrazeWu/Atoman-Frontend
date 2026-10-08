@@ -155,6 +155,7 @@ vi.mock("../../../../src/api/musicV1", async () => {
 	return {
 		...actual,
 		commitMusicAlbumImport: vi.fn(),
+		saveMusicAlbumImportDraft: vi.fn().mockResolvedValue({ status: 'ready' }),
 		completeMusicAlbumImportSession: vi.fn(),
 		createMusicArtist: vi.fn(),
 		getMusicArtist: vi.fn(),
@@ -322,6 +323,35 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(wrapper.find('[data-testid="album-details-back-button"]').exists()).toBe(false);
 	});
 
+	it("填写完整信息并等待不会在用户提交前创建专辑", async () => {
+		vi.useFakeTimers();
+		try {
+			const flow = createFlowState({ step: "albumDetails" });
+			flow.draft.albumImport.status = "ready";
+			flow.draft.albumDetails.title = "尚未提交";
+			flow.draft.albumDetails.source = "https://example.test/album";
+			drawerMocks.state.value.creationFlow = flow;
+			mount(MusicCreationFlowDrawer);
+			flow.draft.albumDetails.bio = "仍在编辑";
+			await nextTick();
+			await vi.advanceTimersByTimeAsync(1000);
+			expect(commitMusicAlbumImportMock).not.toHaveBeenCalled();
+			expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("信息页返回上传页并保留已有信息", async () => {
+		const flow = createFlowState({ step: "albumDetails" });
+		flow.draft.albumDetails.title = "保留标题";
+		drawerMocks.state.value.creationFlow = flow;
+		const wrapper = mount(MusicCreationFlowDrawer);
+		await wrapper.get('[data-testid="album-details-back-button"]').trigger("click");
+		expect(flow.step).toBe("albumImport");
+		expect(flow.draft.albumDetails.title).toBe("保留标题");
+	});
+
 	it("导入匹配失败后保留本地曲目并停留填写页", async () => {
 		const flow = createFlowState({ step: "albumDetails" });
 		flow.draft.albumImport.status = "failed";
@@ -443,9 +473,8 @@ describe("MusicCreationFlowDrawer", () => {
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 
-		expect(wrapper.find('[data-testid="creation-flow-progress"]').exists()).toBe(
-			false,
-		);
+		expect(wrapper.find('[data-testid="creation-flow-progress"]').exists()).toBe(true);
+		expect(wrapper.find('[data-testid="creation-flow-progress-step-artist"]').exists()).toBe(false);
 	});
 
 	it("回填 ready import 的专辑标题和曲目", async () => {
@@ -2378,6 +2407,7 @@ describe("MusicCreationFlowDrawer", () => {
 		await wrapper
 			.get('[data-testid="music-creation-close-button"]')
 			.trigger("click");
+		await flushPromises();
 
 		const confirm = wrapper.getComponent({ name: "PConfirm" });
 		expect(confirm.props("show")).toBe(true);

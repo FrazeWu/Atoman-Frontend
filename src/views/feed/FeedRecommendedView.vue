@@ -966,6 +966,7 @@ async function fetchChannelArticles(source: FeedArticleSource) {
     const params = new URLSearchParams({ page: '1', page_size: '20' })
     let url: string
     if (source.type === 'internal_channel') {
+      params.set('view', 'summary')
       params.set('channel_id', source.id)
       url = `${api.blog.posts}?${params}`
     } else {

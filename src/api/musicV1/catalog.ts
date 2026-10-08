@@ -118,7 +118,7 @@ export async function searchMusic(
 	} = {},
 ): Promise<MusicSearchResults> {
 	return apiGet<MusicSearchResults>(
-		`${musicV1Endpoints.search()}${queryString({ q: query, type: options.type, page: options.page, page_size: options.page_size })}`,
+		`${musicV1Endpoints.search()}${queryString({ q: query, type: options.type, page: options.page, page_size: options.page_size, view: 'summary' })}`,
 		{ signal: options.signal },
 	);
 }
@@ -353,7 +353,7 @@ export async function listMusicSongs(
 		musicListCacheKey("songs", filters),
 		async () => {
 			const response = await apiGetEnvelope<MusicSongListItem[], PaginationMeta>(
-				`${musicV1Endpoints.songs()}${queryString(filters)}`,
+				`${musicV1Endpoints.songs()}${queryString({ ...filters, view: 'summary' })}`,
 			);
 			return listResponseWithPaginationFallback(response, filters);
 		},

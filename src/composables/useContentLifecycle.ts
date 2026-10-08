@@ -142,17 +142,21 @@ export function createContentLifecycleClient(options: ClientOptions) {
   const auth = () => options.token()
   return {
     recordEvent(input: ContentEventInput) {
+      if (!auth()) return Promise.resolve({ recorded: false })
       return request<{ recorded: boolean }>(`${options.baseUrl}/events`, auth(), {
         method: 'POST', body: JSON.stringify({ ...input, client_event_id: input.client_event_id || eventID() }),
       })
     },
     saveProgress(input: ContentProgressInput) {
+      if (!auth()) return Promise.resolve(input)
       return request<ContentProgress>(`${options.baseUrl}/progress`, auth(), { method: 'PUT', body: JSON.stringify(input) })
     },
     getProgress(module: StudioModule, contentID: string) {
+      if (!auth()) return Promise.resolve(null)
       return request<ContentProgress | null>(`${options.baseUrl}/progress/${module}/${contentID}`, auth())
     },
     listContinue(module: StudioModule, limit = 12) {
+      if (!auth()) return Promise.resolve([] as ContinueContentItem[])
       const query = new URLSearchParams({ module, limit: String(limit) })
       return request<ContinueContentItem[]>(`${options.baseUrl}/continue?${query}`, auth())
     },

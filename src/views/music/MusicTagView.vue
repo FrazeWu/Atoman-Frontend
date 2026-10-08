@@ -123,6 +123,7 @@ function changeView(value: TagView) {
 function playSong(song: MusicSongListItem) {
   if (!hasPlayableMusicAudio(song)) return
   player.playSong({
+    summary_only: song.summary_only,
     id: song.id,
     title: song.title,
     artist: song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家',

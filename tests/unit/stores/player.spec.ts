@@ -1,12 +1,14 @@
 import { createPinia, getActivePinia, setActivePinia } from "pinia";
 import { clearSessionStores } from "@/stores/sessionReset";
 import { nextTick } from "vue";
+import { flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { usePlayerStore } from "../../../src/stores/player";
 import { useAuthStore } from "../../../src/stores/auth";
 import type { Song } from "../../../src/types";
 
 const mocks = vi.hoisted(() => ({
+	getMusicSongDetail: vi.fn(),
 	recordMusicSongPlay: vi.fn(),
 	recordMusicRecommendationEvents: vi.fn(),
 	getMusicPlaybackProgress: vi.fn(),
@@ -16,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/api/musicV1", () => ({
+	getMusicSongDetail: mocks.getMusicSongDetail,
 	recordMusicSongPlay: mocks.recordMusicSongPlay,
 	recordMusicRecommendationEvents: mocks.recordMusicRecommendationEvents,
 	getMusicPlaybackProgress: mocks.getMusicPlaybackProgress,
@@ -77,6 +80,7 @@ describe("player store", () => {
 		vi.restoreAllMocks();
 		audioInstances.length = 0;
 		audioPlayImplementation = () => Promise.resolve();
+		mocks.getMusicSongDetail.mockReset();
 		mocks.recordMusicSongPlay.mockReset();
 		mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true });
 		mocks.recordMusicRecommendationEvents.mockReset();
@@ -91,6 +95,64 @@ describe("player store", () => {
 		mocks.saveMusicPlaybackSession.mockResolvedValue({});
 		useAuthStore().isAuthenticated = true;
 		// localStorage.clear()
+	});
+
+	it("plays summary songs immediately and hydrates lyrics and waveform in the current song and queue", async () => {
+		let resolveDetail!: (detail: unknown) => void;
+		mocks.getMusicSongDetail.mockReturnValue(new Promise(resolve => { resolveDetail = resolve; }));
+		const player = usePlayerStore();
+		const song = { id: "summary-song", title: "Summary Song", audio_url: "summary.mp3", lyrics: "", summary_only: true } as Song & { summary_only: boolean };
+		player.playSong(song);
+
+		expect(audioInstances[0].src).toContain("summary.mp3");
+		expect(audioInstances[0].play).toHaveBeenCalledOnce();
+		expect(player.currentSong?.lyrics).toBe("");
+		expect(mocks.getMusicSongDetail).toHaveBeenCalledWith("summary-song");
+
+		resolveDetail({ song: { ...song, lyrics: "[00:01]完整歌词", waveform_peaks: [0.2, 0.8], summary_only: false }, artists: [], playable: true });
+		await flushPromises();
+
+		expect(player.currentSong?.lyrics).toBe("[00:01]完整歌词");
+		expect(player.currentSong?.waveform_peaks).toEqual([0.2, 0.8]);
+		expect(player.queue[0].lyrics).toBe("[00:01]完整歌词");
+		expect(player.queue[0].waveform_peaks).toEqual([0.2, 0.8]);
+		expect(audioInstances[0].play).toHaveBeenCalledOnce();
+	});
+
+	it("ignores summary song details from an old playback after quickly switching tracks", async () => {
+		let resolveFirst!: (detail: unknown) => void;
+		let resolveSecond!: (detail: unknown) => void;
+		mocks.getMusicSongDetail
+			.mockReturnValueOnce(new Promise(resolve => { resolveFirst = resolve; }))
+			.mockReturnValueOnce(new Promise(resolve => { resolveSecond = resolve; }));
+		const player = usePlayerStore();
+		const first = { id: "summary-first", title: "First", audio_url: "first.mp3", lyrics: "", summary_only: true } as Song & { summary_only: boolean };
+		const second = { id: "summary-second", title: "Second", audio_url: "second.mp3", lyrics: "", summary_only: true } as Song & { summary_only: boolean };
+		player.playAlbum([first, second]);
+		player.playNext();
+		expect(mocks.getMusicSongDetail).toHaveBeenCalledTimes(2);
+
+		resolveSecond({ song: { ...second, lyrics: "第二首歌词", waveform_peaks: [0.7] }, artists: [], playable: true });
+		await flushPromises();
+		expect(player.currentSong?.id).toBe("summary-second");
+		expect(player.currentSong?.lyrics).toBe("第二首歌词");
+
+		resolveFirst({ song: { ...first, lyrics: "迟到的第一首歌词", waveform_peaks: [0.1] }, artists: [], playable: true });
+		await flushPromises();
+		expect(player.currentSong?.id).toBe("summary-second");
+		expect(player.currentSong?.lyrics).toBe("第二首歌词");
+		expect(player.currentSong?.waveform_peaks).toEqual([0.7]);
+		expect(player.queue[1].lyrics).toBe("第二首歌词");
+		expect(player.queue[0].lyrics).toBe("");
+	});
+
+	it("does not request song details when playing an already complete song", async () => {
+		const player = usePlayerStore();
+		player.playSong({ id: "complete-song", title: "Complete", audio_url: "complete.mp3", lyrics: "完整歌词", waveform_peaks: [0.2, 0.6], summary_only: false } as Song & { summary_only: boolean });
+		await flushPromises();
+
+		expect(player.currentSong?.lyrics).toBe("完整歌词");
+		expect(mocks.getMusicSongDetail).not.toHaveBeenCalled();
 	});
 
 	it("records one play only after five seconds of active playback", async () => {

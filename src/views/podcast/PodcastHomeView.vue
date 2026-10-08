@@ -42,9 +42,9 @@ const router = useRouter()
 const podcastSearchTypes = ['podcast', 'episode'] as const
 const podcastSearchQuery = ref('')
 const episodes = ref<PodcastEpisode[]>([])
-const loading = ref(false)
+const loading = ref(true)
 const recommendedEpisodes = ref<RecommendedEpisode[]>([])
-const recommendationLoading = ref(false)
+const recommendationLoading = ref(true)
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const recommendationOptions = [
   { label: '热度', value: 'hot' },
@@ -66,8 +66,7 @@ async function loadEpisodes() {
 }
 
 onMounted(async () => {
-  await loadEpisodes()
-  void fetchRecommendedEpisodes()
+  await Promise.all([loadEpisodes(), fetchRecommendedEpisodes()])
 })
 
 async function fetchRecommendedEpisodes() {
@@ -145,13 +144,16 @@ function playEpisode(ep: PodcastEpisode) {
       <PContentProgress
         :loading="recommendationLoading"
         :retry="fetchRecommendedEpisodes"
+        class="ph-recommendations-content"
       >
         <template #skeleton>
           <div class="ph-recommendation-grid" aria-label="正在加载推荐">
-            <div v-for="i in 3" :key="i" class="ph-recommendation-card-skeleton" style="display:flex;flex-direction:column;gap:0.75rem;">
-              <PSkeleton height="180px" variant="rect" />
-              <PSkeleton width="80%" height="20px" variant="text" />
-              <PSkeleton width="50%" height="16px" variant="text" />
+            <div v-for="i in 4" :key="i" class="ph-recommendation-card ph-recommendation-card-skeleton">
+              <PSkeleton height="7rem" variant="rect" />
+              <div class="ph-recommendation-content">
+                <PSkeleton width="80%" height="20px" variant="text" />
+                <PSkeleton width="50%" height="16px" variant="text" />
+              </div>
             </div>
           </div>
         </template>
@@ -283,6 +285,8 @@ function playEpisode(ep: PodcastEpisode) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
+
+.ph-recommendations-content { min-height: 15rem; }
 
 .ph-recommendation-card {
   position: relative;

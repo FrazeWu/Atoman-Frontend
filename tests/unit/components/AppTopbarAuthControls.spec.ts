@@ -40,7 +40,8 @@ const createTestRouter = () =>
 	createRouter({
 		history: createMemoryHistory(),
 		routes: [
-			{ path: "/posts", component: { template: "<div />" } },
+				{ path: "/posts", component: { template: "<div />" } },
+				{ path: "/me", component: { template: "<div />" } },
 			{ path: "/videos", component: { template: "<div />" } },
 			{ path: "/podcasts", component: { template: "<div />" } },
 			{ path: "/inbox", component: { template: "<div />" } },

@@ -47,7 +47,7 @@ export function useBlogSheetNavigation(
 
 		while (true) {
 			const params = new URLSearchParams({ page: String(page), page_size: "100" });
-			if (kind === "post") params.set("status", "published");
+			if (kind === "post") { params.set("status", "published"); params.set("view", "summary"); }
 			const channelId = scope?.channelId ? toValue(scope.channelId) : "";
 			const collectionId = scope?.collectionId ? toValue(scope.collectionId) : "";
 			if (channelId && (kind === "post" || kind === "collection")) params.set("channel_id", channelId);

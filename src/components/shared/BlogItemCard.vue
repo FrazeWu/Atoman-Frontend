@@ -209,7 +209,7 @@ const displaySummary = computed(() => {
   const post = postItem.value as (Post & { excerpt?: string; description?: string }) | null
   if (post) {
     const summary = post.summary?.trim() || post.excerpt?.trim() || post.description?.trim()
-    return summary || markdownExcerpt(post.content || '')
+    return markdownExcerpt(summary || post.content || '')
   }
   const feed = feedItem.value as (FeedItem & { description?: string }) | null
   if (feed) {

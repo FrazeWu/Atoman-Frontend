@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
 				output: {
 					manualChunks(id) {
 						if (id.includes("node_modules/highlight.js")) return "highlight";
-						if (id.includes("node_modules/marked")) return "markdown-runtime";
+						if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (
 							id.includes("node_modules/yjs") ||
 							id.includes("node_modules/y-websocket") ||

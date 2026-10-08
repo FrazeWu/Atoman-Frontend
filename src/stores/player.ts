@@ -7,6 +7,7 @@ import { isPlayableFeedPodcast } from "@/utils/feedPodcast";
 import { useApi } from "@/composables/useApi";
 import {
 	getMusicPlaybackProgress,
+	getMusicSongDetail,
 	getMusicPlaybackSession,
 	recordMusicRecommendationEvents,
 	recordMusicSongPlay,
@@ -244,8 +245,10 @@ export const usePlayerStore = defineStore("player", () => {
 		lyrics?: string;
 		waveform_peaks?: number[];
 		track_number?: number;
+		summary_only?: boolean;
 	}): Song =>
 		normalizePlaybackSong({
+			summary_only: source.summary_only,
 			id: source.id,
 			title: source.title,
 			artist:
@@ -895,6 +898,14 @@ export const usePlayerStore = defineStore("player", () => {
 		const player = ensureAudio();
 		const generation = ++playGeneration;
 		currentSong.value = normalizedSong;
+		if (normalizedSong.summary_only && isMusicSong(normalizedSong)) {
+			void getMusicSongDetail(String(normalizedSong.id)).then(({ song: detail }) => {
+				if (generation !== playGeneration || !currentSong.value || playbackItemKey(currentSong.value) !== playbackItemKey(normalizedSong)) return;
+				const update = { lyrics: detail.lyrics || '', waveform_peaks: detail.waveform_peaks, summary_only: false };
+				currentSong.value = { ...currentSong.value, ...update };
+				queue.value = queue.value.map(item => playbackItemKey(item) === playbackItemKey(normalizedSong) ? { ...item, ...update } : item);
+			}).catch(error => reportError(error, 'Failed to load playing song details'));
+		}
 		playbackError.value = "";
 		isLoading.value = true;
 		player.src = normalizedSong.audio_url;

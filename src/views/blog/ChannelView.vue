@@ -325,6 +325,7 @@ const fetchPosts = async (loadedChannel: Channel, generation: number, page = 1, 
     if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
     const params = new URLSearchParams({
       channel_id: loadedChannel.id,
+      view: 'summary',
       page: String(page),
       page_size: '20',
     })

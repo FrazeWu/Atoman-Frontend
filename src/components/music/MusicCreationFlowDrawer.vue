@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
-import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
-import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
-import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
+const MusicCreationArtistStep = defineAsyncComponent(() => import('./MusicCreationArtistStep.vue'))
+const MusicCreationAlbumSeedStep = defineAsyncComponent(() => import('./MusicCreationAlbumSeedStep.vue'))
+const MusicCreationAlbumDetailsStep = defineAsyncComponent(() => import('./MusicCreationAlbumDetailsStep.vue'))
+const MusicCreationAlbumPreviewStep = defineAsyncComponent(() => import('./MusicCreationAlbumPreviewStep.vue'))
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import { activeArtistRequiresFullProfile, activeMusicArtistDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'

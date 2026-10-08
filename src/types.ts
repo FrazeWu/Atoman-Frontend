@@ -59,6 +59,7 @@ export type MusicRecommendationContext = {
 };
 
 export interface Song {
+	summary_only?: boolean;
 	id: number | string;
 	source_type?: "music" | "podcast_episode" | "feed_podcast";
 	source_id?: string;

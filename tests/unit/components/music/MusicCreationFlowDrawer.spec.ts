@@ -186,6 +186,7 @@ vi.mock("vue-router", () => ({
 }));
 
 vi.mock("@/components/music/MusicCreationArtistStep.vue", () => ({
+	__esModule: true,
 	default: {
 		name: "MusicCreationArtistStep",
 		template: '<section data-testid="artist-step">artist step</section>',
@@ -1016,6 +1017,8 @@ describe("MusicCreationFlowDrawer", () => {
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		await flushPromises();
+		await vi.dynamicImportSettled();
+		await nextTick();
 
 		expect(wrapper.text()).toContain("编辑歌曲");
 		const flow = drawerMocks.state.value.creationFlow;
@@ -1623,6 +1626,8 @@ describe("MusicCreationFlowDrawer", () => {
 		await flushPromises();
 
 		expect(drawerMocks.state.value.creationFlow?.step).toBe("preview");
+		await vi.dynamicImportSettled();
+		await nextTick();
 		expect(
 			wrapper.get('[data-testid="album-import-preview-step"]').text(),
 		).toContain("Preview Track");

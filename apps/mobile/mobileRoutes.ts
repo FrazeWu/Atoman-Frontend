@@ -1,12 +1,14 @@
 // pi-lens-ignore: typescript:2307
 import type { RouteRecordRaw } from "vue-router";
 import { mobileInitialRoutes } from "./mobileInitialRoutes";
+import { moduleFeatureRoutes } from "@/router/routes/modules";
 
 const requiresAuth = { requiresAuth: true };
 export { MOBILE_MODULES } from "./mobileInitialRoutes";
 
 export const mobileRoutes: RouteRecordRaw[] = [
 	...mobileInitialRoutes.filter((route) => route.path !== "/:pathMatch(.*)*"),
+	{ ...moduleFeatureRoutes.books[0], path: "/books" },
 	{
 		path: "/modules",
 		component: () => import("./MobileModuleDirectoryView.vue"),

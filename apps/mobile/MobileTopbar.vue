@@ -68,6 +68,7 @@ const mobileModuleLabel = computed(() => {
   if (mobileModule.value === 'blog') return '博客'
   if (mobileModule.value === 'feed') return 'Feed'
   if (mobileModule.value === 'music') return '音乐'
+  if (mobileModule.value === 'books') return '书籍'
   return '模块'
 })
 const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || isMobileDetailRoute(route.path) || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/)/.test(route.path)))

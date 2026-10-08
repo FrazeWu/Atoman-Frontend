@@ -4,6 +4,7 @@ const mobileDetailPatterns = [
   /^\/music\/(?:tags|artist|album|song|playlist)\//,
   /^\/music\/(?:player|lyrics)$/,
   /^\/videos\/watch\//,
+  /^\/books\/(?:work|edition|read|public-read)\//,
 ]
 
 export function isMobileDetailRoute(path: string) {

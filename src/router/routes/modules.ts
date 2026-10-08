@@ -5,6 +5,7 @@ import { settingRoutes } from "@/router/routes/settings";
 const videoHomeView = () => import("@/views/video/VideoHomeView.vue");
 const videoDetailRouteSheet = () => import("@/views/video/VideoDetailRouteSheet.vue");
 const feedRecommendedView = () => import("@/views/feed/FeedRecommendedView.vue");
+const booksHomeView = () => import("@/views/books/BooksHomeView.vue");
 
 function musicBookmarksPath(path: string) {
 	return path.startsWith("/music/") ? "/music/bookmarks" : "/bookmarks";
@@ -201,10 +202,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			component: () => import("@/views/books/BooksLayout.vue"),
 			meta: { hasSidebar: true },
 			children: [
-				{ path: "", component: () => import("@/views/books/BooksHomeView.vue") },
-				{ path: "search", component: () => import("@/views/books/BooksHomeView.vue") },
-				{ path: "work/:workId", component: () => import("@/views/books/BookWorkView.vue") },
-				{ path: "edition/:editionId", component: () => import("@/views/books/BookEditionView.vue") },
+				{ path: "", component: booksHomeView },
+				{ path: "search", component: booksHomeView },
+				{ path: "work/:workId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookWorkView.vue") } },
+				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookEditionView.vue") } },
 				{
 					path: "library",
 					component: () => import("@/views/books/BooksHomeView.vue"),

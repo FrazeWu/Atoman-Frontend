@@ -53,9 +53,11 @@ export function normalizeImportedTrackTitle(title: string, artist = ""): string 
 	const normalizedTitle = title.trim()
 	const normalizedArtist = artist.trim()
 	if (!normalizedTitle || !normalizedArtist) return normalizedTitle
-	const parts = normalizedTitle.split(/\s*(?:-|–|—)\s*/, 2)
-	if (parts.length !== 2) return normalizedTitle
-	const [left, right] = parts.map((part) => part.trim())
+	// 优先使用有空格的分隔符，保留 Ab-Soul 和歌曲后缀中的连字符。
+	const separator = /\s+(?:-|–|—)\s+/.exec(normalizedTitle) ?? /(?:-|–|—)/.exec(normalizedTitle)
+	if (!separator) return normalizedTitle
+	const left = normalizedTitle.slice(0, separator.index).trim()
+	const right = normalizedTitle.slice(separator.index + separator[0].length).trim()
 	const artistKey = compactMusicText(normalizedArtist)
 	const leftKey = compactMusicText(left)
 	const rightKey = compactMusicText(right)

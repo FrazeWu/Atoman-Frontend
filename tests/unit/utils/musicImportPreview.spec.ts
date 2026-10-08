@@ -4,6 +4,7 @@ import { parseBlob } from "music-metadata";
 import {
 	readAlbumImportPreview,
 	readAlbumImportFilesPreview,
+	normalizeImportedTrackTitle,
 	shouldIgnoreAlbumImportPath,
 } from "../../../src/utils/musicImportPreview";
 
@@ -21,6 +22,11 @@ vi.mock("music-metadata", () => ({
 }));
 
 describe("readAlbumImportPreview", () => {
+	it("保留合作艺人、歌曲名和括号中的连字符", () => {
+		expect(normalizeImportedTrackTitle("Kendrick Lamar,Ab-Soul,ScHoolboy Q - Welcome to C4", "Kendrick Lamar")).toBe("Welcome to C4");
+		expect(normalizeImportedTrackTitle("Kendrick Lamar - The Real Hip Hop (Ab-Soul Freestyle)", "Kendrick Lamar")).toBe("The Real Hip Hop (Ab-Soul Freestyle)");
+		expect(normalizeImportedTrackTitle("Ab-Soul - Still Hustlin - Remix", "Ab-Soul")).toBe("Still Hustlin - Remix");
+	});
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		vi.clearAllMocks();

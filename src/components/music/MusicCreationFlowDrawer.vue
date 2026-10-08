@@ -712,6 +712,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
   const isStandaloneSong = ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase())
   const deletedImportTrackKeys = flow.deletedImportTrackKeys ?? []
+  const coverURL = flow.draft.albumDetails.coverAsset?.url?.trim() || flow.draft.albumDetails.coverUrl.trim()
 
   return {
     ...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
@@ -746,7 +747,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       title: flow.draft.albumDetails.title.trim(),
       description: flow.draft.albumDetails.bio.trim(),
       album_type: flow.draft.albumDetails.type.trim() || 'album',
-      ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
+      ...(coverURL && !/^(blob:|data:)/i.test(coverURL) ? { cover_url: coverURL } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
       metadata: {

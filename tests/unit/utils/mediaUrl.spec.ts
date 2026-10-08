@@ -51,4 +51,9 @@ describe('resolveMediaURL', () => {
     expect(resolveMediaImageURL('https://cdn.example.test/cover.jpg', { width: 320 }))
       .toBe('https://cdn.example.test/cover.jpg')
   })
+
+  it('optimizes Open Library covers through the shared image cache', () => {
+    expect(resolveMediaImageURL('https://covers.openlibrary.org/b/id/123-M.jpg', { width: 320 }))
+      .toBe('/media/image?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fid%2F123-M.jpg&width=320')
+  })
 })

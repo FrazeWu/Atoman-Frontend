@@ -95,6 +95,20 @@ describe("MusicTagView.vue", () => {
 		expect(mocks.listMusicAlbums).not.toHaveBeenCalled();
 	});
 
+	it("shows separate counts and offers albums when the songs tab is empty", async () => {
+		mocks.getMusicTag.mockResolvedValue({ id: "tag-1", name: "民谣", kind: "type", song_count: 0, album_count: 2 });
+		mocks.listMusicSongs.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } });
+		const { wrapper, router } = await mountView();
+		await flushPromises();
+		expect(wrapper.get('[data-testid="tag-view-albums"]').text()).toContain("专辑 2");
+		expect(wrapper.text()).toContain("下暂无歌曲");
+		const action = wrapper.findAll("button").find(button => button.text().includes("查看专辑"));
+		expect(action).toBeDefined();
+		await action!.trigger("click");
+		await flushPromises();
+		expect(router.currentRoute.value.query.view).toBe("albums");
+	});
+
 	it("switches to albums and keeps the selected view in the URL", async () => {
 		const { router, wrapper } = await mountView();
 		await flushPromises();

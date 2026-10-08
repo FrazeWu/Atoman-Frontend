@@ -16,7 +16,8 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PTab from '@/components/ui/PTab.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { hasPlayableMusicAudio } from '@/utils/musicMedia'
@@ -35,10 +36,12 @@ const error = ref('')
 const meta = ref({ page: 1, page_size: 20, total: 0, has_more: false })
 let requestID = 0
 
-const viewOptions = [
-  { label: '歌曲', value: 'songs' as const, testid: 'tag-view-songs' },
-  { label: '专辑', value: 'albums' as const, testid: 'tag-view-albums' },
-]
+const viewOptions = computed(() => [
+  { label: `歌曲 ${tag.value?.song_count ?? 0}`, value: 'songs' as const, testid: 'tag-view-songs' },
+  { label: `专辑 ${tag.value?.album_count ?? 0}`, value: 'albums' as const, testid: 'tag-view-albums' },
+])
+const otherView = computed<TagView>(() => selectedView.value === 'songs' ? 'albums' : 'songs')
+const otherCount = computed(() => selectedView.value === 'songs' ? tag.value?.album_count : tag.value?.song_count)
 
 const tagID = computed(() => typeof route.params.tagId === 'string' ? route.params.tagId : '')
 const tagKindLabels: Record<string, string> = {
@@ -77,7 +80,9 @@ async function loadPage(targetPage = 1) {
   error.value = ''
   try {
     if (!tag.value || tag.value.id !== id) {
-      tag.value = await getMusicTag(id)
+      const result = await getMusicTag(id)
+      if (current !== requestID) return
+      tag.value = result
     }
     if (current !== requestID) return
 
@@ -165,13 +170,14 @@ onBeforeUnmount(() => {
       mb="0"
     >
       <template #action>
-        <PSegmentedControl
-          :model-value="selectedView"
-          :options="viewOptions"
-          @update:model-value="changeView"
-        />
+        <RouterLink to="/music/tags" class="music-tag-back">全部标签</RouterLink>
       </template>
     </PPageHeader>
+
+    <nav class="music-tag-tabs" aria-label="标签内容" role="tablist">
+      <PTab v-for="option in viewOptions" :key="option.value" :label="option.label" :active="selectedView === option.value" role="tab" :aria-selected="selectedView === option.value" :data-testid="option.testid" @click="changeView(option.value)" />
+    </nav>
+    <RouterLink v-if="tag?.child_count" :to="{ path: '/music/tags', query: { kind: tag.kind, parent_id: tag.id } }" class="music-tag-back">浏览 {{ tag.child_count }} 个子标签</RouterLink>
 
     <PContentProgress :loading="loading" :error="error" :retry="() => loadPage(1)">
       <template #skeleton>
@@ -196,8 +202,12 @@ onBeforeUnmount(() => {
       <PEmpty
         v-if="!hasResults"
         :title="`暂无${currentLabel}`"
-        :description="`还没有内容使用“${tag?.name || '此标签'}”`"
-      />
+        :description="`“${tag?.name || '此标签'}”下暂无${currentLabel}`"
+      >
+        <template #action>
+          <PButton v-if="otherCount" variant="secondary" @click="changeView(otherView)">查看{{ otherView === 'albums' ? '专辑' : '歌曲' }}（{{ otherCount }}）</PButton>
+        </template>
+      </PEmpty>
 
       <section v-else class="music-tag-results" :aria-label="`${currentLabel}列表`">
         <header class="music-tag-results__header">
@@ -223,7 +233,7 @@ onBeforeUnmount(() => {
                 <template v-if="song.artists?.length">
                   <template v-for="(artist, index) in song.artists" :key="artist.id">
                     <span v-if="index" aria-hidden="true"> / </span>
-                    <RouterLink v-if="artist.id" :to="`/music/artist/${artist.id}`" @click="openArtist(artist.id)">{{ artist.name }}</RouterLink>
+                    <RouterLink v-if="artist.id" :to="`/music/artist/${artist.id}`">{{ artist.name }}</RouterLink>
                     <span v-else>{{ artist.name }}</span>
                   </template>
                 </template>
@@ -271,10 +281,29 @@ onBeforeUnmount(() => {
 .music-tag-view {
   display: grid;
   gap: 1.25rem;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1.5rem 0 3rem;
+  min-width: 0;
+  padding-bottom: 3rem;
 }
+
+.music-tag-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.music-tag-tabs :deep(.p-tab) { min-height: 44px; }
+
+.music-tag-back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: 44px;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.music-tag-back:hover { color: var(--a-color-text); }
+.music-tag-back:focus-visible { outline: 2px solid var(--a-color-text); outline-offset: 2px; }
 
 .music-tag-results {
   display: grid;
@@ -306,13 +335,12 @@ onBeforeUnmount(() => {
 
 .tag-song-list {
   display: grid;
-  border-top: 2px solid var(--a-color-border);
-  border-bottom: 2px solid var(--a-color-border);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .tag-song-row {
   display: grid;
-  grid-template-columns: 2.75rem minmax(0, 1fr) 2.5rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
   min-height: 3.25rem;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
@@ -415,10 +443,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 720px) {
-  .music-tag-view {
-    padding-inline: 1rem;
-  }
-
   .tag-album-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;

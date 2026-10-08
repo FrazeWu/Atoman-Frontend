@@ -1,6 +1,6 @@
 <template>
   <section class="books-page">
-    <PPageHeader :title="isLibrary ? '我的书库' : route.path === '/books/search' ? '搜索' : '发现'" mb="0" />
+    <PPageHeader :title="pageTitle" :sub="pageSub" mb="0" />
 
     <section v-if="isLibrary" class="books-library" aria-labelledby="library-title">
       <header class="books-library__header">
@@ -20,11 +20,12 @@
           <PButton
             type="button"
             variant="secondary"
+            size="sm"
             :loading="isUploading"
             loading-text="上传中..."
             @click="openFilePicker"
           >
-            <Upload :size="16" aria-hidden="true" />
+            <Upload :size="15" aria-hidden="true" />
             <span>导入电子书</span>
           </PButton>
         </div>
@@ -57,7 +58,7 @@
         <ul class="books-shelf-list">
           <li v-for="item in shelves" :key="item.id">
             <BookCard :work="item.work" />
-            <button class="books-icon-button" type="button" :aria-label="`移出书架 ${item.work.title}`" title="移出书架" @click="removeShelf(item.work_id)">
+            <button class="books-icon-button books-icon-button--danger" type="button" :aria-label="`移出书架 ${item.work.title}`" title="移出书架" @click="removeShelf(item.work_id)">
               <Trash2 :size="16" aria-hidden="true" />
             </button>
           </li>
@@ -98,7 +99,10 @@
             <RouterLink v-if="item.published_asset_id" class="books-import-row__catalog-link" :to="`/books/public-read/${item.published_asset_id}`">打开公共正文</RouterLink>
           </div>
           <div class="books-import-row__status">
-            <span>{{ statusLabel(item) }}</span>
+            <span class="books-import-row__badge" :class="`books-import-row__badge--${statusType(item)}`">
+              <span class="books-import-row__dot" aria-hidden="true" />
+              <span>{{ statusLabel(item) }}</span>
+            </span>
             <small v-if="item.error_message">{{ item.error_message }}</small>
           </div>
           <div class="books-import-row__actions">
@@ -123,7 +127,7 @@
               <RotateCcw :size="16" aria-hidden="true" />
             </button>
             <button
-              class="books-icon-button"
+              class="books-icon-button books-icon-button--danger"
               type="button"
               title="删除导入"
               aria-label="删除导入"
@@ -173,7 +177,7 @@
     </section>
     <section v-else class="books-empty books-empty--discovery">
       <BookOpen :size="22" aria-hidden="true" />
-      <p>公共书目和阅读器正在建设中</p>
+      <p>公共书目暂未开放</p>
     </section>
   </section>
 </template>
@@ -246,6 +250,18 @@ const isDetail = computed(() => route.path.startsWith('/books/work/') || route.p
 const isLibrary = computed(() => route.path === '/books/library' || (isDetail.value && route.query.from === '/books/library'))
 const isCatalog = computed(() => !isLibrary.value && (route.path === '/books' || route.path === '/books/search' || isDetail.value))
 
+const pageTitle = computed(() => {
+  if (isLibrary.value) return '我的书库'
+  if (route.path === '/books/search' || Boolean(route.query.q)) return '搜索'
+  return '发现'
+})
+
+const pageSub = computed(() => {
+  if (isLibrary.value) return '管理在读进度与个人藏书'
+  if (route.path === '/books/search' || Boolean(route.query.q)) return '检索公共图书与作者'
+  return '浏览公共书目与开放阅读资源'
+})
+
 function formatSize(size: number): string {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
@@ -265,8 +281,18 @@ function statusLabel(item: BookImportSession): string {
   return '上传中'
 }
 
-async function loadLibraryData() {
+function statusType(item: BookImportSession): 'success' | 'warning' | 'danger' | 'info' {
+  if (item.status === 'failed' || item.processing_status === 'quarantined') return 'danger'
+  if (item.status === 'metadata_ready') return 'success'
+  if (item.processing_status === 'publication_requested' || item.processing_status === 'pending_review') return 'warning'
+  return 'info'
+}
+
+async function loadLibraryData(statusFilter?: string | number) {
   if (!isLibrary.value) return
+  if (typeof statusFilter === 'string') {
+    shelfStatusFilter.value = statusFilter
+  }
   shelfLoading.value = true
   shelfError.value = ''
   try {
@@ -449,7 +475,29 @@ onBeforeUnmount(() => {
 .books-shelf-list li { position: relative; display: block; padding: 0; border: 0; }
 .books-shelf-list li > .books-icon-button { position: absolute; right: 0.35rem; top: 0.35rem; background: var(--a-color-bg); }
 .books-public-assets { margin-top: 1.5rem; }
-.books-continue-list progress { display: block; width: min(20rem, 100%); height: 3px; margin-top: 0.6rem; accent-color: var(--a-color-primary); }
+.books-continue-list progress {
+  display: block;
+  width: min(20rem, 100%);
+  height: 3px;
+  margin-top: 0.6rem;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--a-color-border-soft);
+  accent-color: var(--a-color-primary);
+  overflow: hidden;
+}
+.books-continue-list progress::-webkit-progress-bar {
+  background-color: var(--a-color-border-soft);
+  border-radius: 999px;
+}
+.books-continue-list progress::-webkit-progress-value {
+  background-color: var(--a-color-primary);
+  border-radius: 999px;
+}
+.books-continue-list progress::-moz-progress-bar {
+  background-color: var(--a-color-primary);
+  border-radius: 999px;
+}
 @media (max-width: 480px) { .books-grid, .books-shelf-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1rem; } }
 
 .books-library {
@@ -484,18 +532,20 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  justify-content: end;
+  justify-content: flex-end;
   gap: 0.5rem;
   flex-shrink: 0;
 }
 
-.books-library__actions select {
+.books-library__actions :deep(.p-field) {
+  min-width: 8.5rem;
+}
+
+.books-library__actions :deep(.p-select-trigger) {
   height: 2.25rem;
-  border: 1px solid var(--a-color-border);
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-  padding: 0 0.5rem;
-  font: inherit;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .books-library__section {
@@ -612,9 +662,9 @@ onBeforeUnmount(() => {
 
 .books-import-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(7rem, auto) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.875rem;
+  gap: 1rem;
   padding: 0.875rem 0;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
@@ -649,33 +699,79 @@ onBeforeUnmount(() => {
 }
 
 .books-import-row__status {
-  display: grid;
-  justify-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 0.15rem;
   color: var(--a-color-fg);
   font-size: 0.875rem;
 }
 
+.books-import-row__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+}
+
+.books-import-row__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--a-color-muted);
+}
+
+.books-import-row__badge--success .books-import-row__dot {
+  background-color: var(--a-color-success);
+}
+
+.books-import-row__badge--warning .books-import-row__dot {
+  background-color: var(--a-color-warning);
+}
+
+.books-import-row__badge--danger .books-import-row__dot {
+  background-color: var(--a-color-danger);
+}
+
+.books-import-row__badge--info .books-import-row__dot {
+  background-color: var(--a-color-primary);
+}
+
 .books-import-row__actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .books-icon-button {
-  display: inline-grid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  place-items: center;
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.books-icon-button:hover:not(:disabled),
+.books-icon-button:hover:not(:disabled) {
+  background-color: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
 .books-icon-button:focus-visible {
-  border-color: var(--a-color-danger);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+
+.books-icon-button--danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--a-color-danger) 8%, transparent);
   color: var(--a-color-danger);
 }
 
@@ -755,16 +851,18 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
   .books-library__actions {
-    justify-content: start;
+    justify-content: flex-start;
+    width: 100%;
   }
 
-  .books-library__actions select {
-    max-width: 100%;
+  .books-library__actions :deep(.p-field) {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .books-library__header,
   .books-catalog__header {
-    align-items: start;
+    align-items: flex-start;
     flex-direction: column;
   }
 
@@ -779,7 +877,7 @@ onBeforeUnmount(() => {
 
   .books-import-row__status {
     grid-column: 2;
-    justify-items: start;
+    align-items: flex-start;
   }
 
   .books-import-row__actions {

@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import AlbumDrawer from './AlbumDrawer.vue'
-import ArtistDrawer from './ArtistDrawer.vue'
-import MusicCreationFlowDrawer from './MusicCreationFlowDrawer.vue'
-import MusicEntityEditorDrawer from './MusicEntityEditorDrawer.vue'
-import MusicMergeDrawer from './MusicMergeDrawer.vue'
-import MusicAlbumCreditLinkDrawer from './MusicAlbumCreditLinkDrawer.vue'
-import NestedActionDrawer from './NestedActionDrawer.vue'
-import PlaylistDrawer from './PlaylistDrawer.vue'
-import SongDrawer from './SongDrawer.vue'
+import { defineAsyncComponent } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const { renderLayers } = useMusicDrawers()
+const AlbumDrawer = defineAsyncComponent(() => import('./AlbumDrawer.vue'))
+const ArtistDrawer = defineAsyncComponent(() => import('./ArtistDrawer.vue'))
+const MusicCreationFlowDrawer = defineAsyncComponent(() => import('./MusicCreationFlowDrawer.vue'))
+const MusicEntityEditorDrawer = defineAsyncComponent(() => import('./MusicEntityEditorDrawer.vue'))
+const MusicMergeDrawer = defineAsyncComponent(() => import('./MusicMergeDrawer.vue'))
+const MusicAlbumCreditLinkDrawer = defineAsyncComponent(() => import('./MusicAlbumCreditLinkDrawer.vue'))
+const NestedActionDrawer = defineAsyncComponent(() => import('./NestedActionDrawer.vue'))
+const PlaylistDrawer = defineAsyncComponent(() => import('./PlaylistDrawer.vue'))
+const SongDrawer = defineAsyncComponent(() => import('./SongDrawer.vue'))
 </script>
 
 <template>

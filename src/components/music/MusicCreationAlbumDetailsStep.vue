@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { parseBlob } from 'music-metadata'
 import { IconFileText as FileText, IconGripVertical as GripVertical, IconPhotoUp as ImageUp, IconLoader as LoaderCircle, IconPlus as Plus, IconRefresh as RefreshCw, IconX as X } from '@tabler/icons-vue'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -167,6 +166,7 @@ function titleFromAudioFile(file: File): string {
 
 async function readTrackTitle(file: File): Promise<string> {
   try {
+    const { parseBlob } = await import('music-metadata')
     const metadata = (await parseBlob(file)).common
     return normalizeImportedTrackTitle(metadata.title?.trim() || titleFromAudioFile(file), metadata.artist || albumDetailsDraft.value?.contributors.find(item => item.roles.some(role => role.role === 'primary'))?.name || '')
   } catch {

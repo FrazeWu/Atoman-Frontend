@@ -684,7 +684,7 @@ async function loadChannelsAndContent(generation = profileLoadSequence) {
 
     const base = api.url || '/api/v1'
     const postRequest = api.blog.posts
-      ? apiRequestResult(`${api.blog.posts}?user_id=${encodeURIComponent(profileID)}&status=published&page=1&page_size=12`)
+      ? apiRequestResult(`${api.blog.posts}?view=summary&user_id=${encodeURIComponent(profileID)}&status=published&page=1&page_size=12`)
       : Promise.resolve(null)
     const videoRequests = channels.value.map((channel) => apiRequestResult(`${base}/videos?channel_id=${encodeURIComponent(channel.id)}&limit=12`))
     const podcastRequests = channels.value

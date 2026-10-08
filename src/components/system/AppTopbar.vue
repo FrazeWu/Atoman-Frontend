@@ -59,7 +59,7 @@
 
       <div class="nav-right">
         <div v-if="!isAuthRoute" class="topbar-search-slot">
-          <AppTopbarGlobalSearch v-if="searchReady" />
+          <AppTopbarGlobalSearch />
         </div>
         <button
           type="button"
@@ -90,7 +90,7 @@ import { moduleUrl } from '@/router/siteUrls'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
-import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
+import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
 
 const { toggleSidebar } = useSidebar()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
@@ -102,12 +102,9 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const sheetStore = useSheetStore()
 const playerPresence = usePlayerPresenceStore()
 const MobileModuleSwitcher = defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))
-const AppTopbarGlobalSearch = defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
-const searchReady = ref(false)
 const showMobileModuleSwitcher = ref(false)
 let mobileViewportQuery: MediaQueryList | null = null
-let cancelSearchIdleTask = () => {}
 
 const handleBrandClick = () => {
   requestLyricsClose()
@@ -192,13 +189,9 @@ onMounted(() => {
   syncMobileViewport()
   mobileViewportQuery?.addEventListener('change', syncMobileViewport)
 
-  cancelSearchIdleTask = scheduleIdleTask(() => {
-    searchReady.value = true
-  }, 3000, 3000)
 })
 
 onBeforeUnmount(() => {
-  cancelSearchIdleTask()
   mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
   window.removeEventListener('scroll', handleScroll, { capture: true })
 })

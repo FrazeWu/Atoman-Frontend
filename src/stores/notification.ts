@@ -1,4 +1,5 @@
 import { apiRequestResult } from '@/api/client'
+import { createRequestCoalescer } from '@/utils/coalesceRequest'
 import { computed, onScopeDispose, ref } from 'vue'
 import { registerSessionReset } from '@/stores/sessionReset'
 import { defineStore, getActivePinia } from 'pinia'
@@ -93,16 +94,18 @@ export const useNotificationStore = defineStore('notification', () => {
     'Content-Type': 'application/json',
   })
 
-  const fetchUnreadCounts = async () => {
+  const unreadRequests = createRequestCoalescer<void>()
+  const fetchUnreadCounts = () => unreadRequests(JSON.stringify([requestGeneration, authStore.token, authStore.user?.uuid]), async () => {
     if (!authStore.token) return
     const generation = requestGeneration
     const token = authStore.token
+    const userId = authStore.user?.uuid
     const res = await apiRequestResult(api.notifications.unreadCounts, { headers: authHeaders() })
-    if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
+    if (!res.ok || generation !== requestGeneration || token !== authStore.token || userId !== authStore.user?.uuid) return
     const data = res.data
     const payload = data.data || data
-    if (generation === requestGeneration && token === authStore.token) unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
-  }
+    if (generation === requestGeneration && token === authStore.token && userId === authStore.user?.uuid) unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
+  })
 
   const fetchUnreadCount = fetchUnreadCounts
 

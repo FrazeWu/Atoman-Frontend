@@ -428,7 +428,7 @@ export function useAlbumImportUpload() {
 					"failed",
 					"canceled",
 					"committed",
-				].includes(snapshot.status);
+				].includes(snapshot.status) && snapshot.metadataMatchStatus !== 'matching' && !flow.draft.albumImport.metadataMatchingStarted;
 				uploadState.pollTimer = done ? null : setTimeout(poll, 3000);
 			} catch {
 				if (
@@ -491,9 +491,11 @@ export function useAlbumImportUpload() {
 				trackTitles: tracks.map((track) => track.title),
 				tracks,
 				force,
+				async: true,
 			});
 			if (flow.draft.albumImport.importId === importId && matchGeneration === uploadStateFor(flow).matchGeneration) {
 				applyImportSnapshotToFlow(flow, matched, importId);
+				if (matched.metadataMatchStatus === 'matching') startPollingFor(flow, importId);
 			}
 		} catch (error) {
 			if (flow.draft.albumImport.importId !== importId || matchGeneration !== uploadStateFor(flow).matchGeneration) return;

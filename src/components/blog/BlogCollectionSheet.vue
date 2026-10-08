@@ -69,7 +69,7 @@ async function loadCollection() {
     const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     const [collectionRes, publishedRes] = await Promise.all([
       apiRequestResult(api.blog.collection(requestedCollectionId), { headers }),
-      apiRequestResult(`${api.blog.posts}?collection_id=${requestedCollectionId}&page=1&page_size=20`, { headers }),
+      apiRequestResult(`${api.blog.posts}?view=summary&collection_id=${requestedCollectionId}&page=1&page_size=20`, { headers }),
     ])
     if (requestSequence !== loadSequence || requestedCollectionId !== collectionId.value) return
     if (!collectionRes.ok || !publishedRes.ok) throw new Error('load failed')
@@ -105,7 +105,7 @@ async function loadMorePosts() {
   const nextPage = postsPage.value + 1
   try {
     const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
-    const response = await apiRequestResult(`${api.blog.posts}?collection_id=${collectionId.value}&page=${nextPage}&page_size=20`, { headers })
+    const response = await apiRequestResult(`${api.blog.posts}?view=summary&collection_id=${collectionId.value}&page=${nextPage}&page_size=20`, { headers })
     if (!response.ok) throw new Error('post load failed')
     const payload = await Promise.resolve(response.data)
     posts.value = [...posts.value, ...((payload.data || []) as Post[])]

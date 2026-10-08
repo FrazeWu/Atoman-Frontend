@@ -1,4 +1,5 @@
 import { computed, onScopeDispose, ref } from 'vue'
+import { reportError } from '@/utils/logger'
 import { defineStore, getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -32,6 +33,7 @@ export const useInboxStore = defineStore('inbox', () => {
   let reconnectAttempt = 0
   let disconnecting = false
   let lifecycleGeneration = 0
+  let pollInFlight = false
 
   const totalUnread = computed(() => notificationStore.unreadCount)
   const toastItems = ref<InboxToastItem[]>([])
@@ -94,8 +96,17 @@ export const useInboxStore = defineStore('inbox', () => {
     if (pollingTimer || !authStore.isAuthenticated) return
     polling.value = true
     pollingTimer = window.setInterval(async () => {
-      await notificationStore.fetchUnreadCounts()
-      await useDMStore().reconcileFromServer()
+      if (document.hidden || pollInFlight || !authStore.isAuthenticated) return
+      const generation = lifecycleGeneration
+      pollInFlight = true
+      try {
+        await notificationStore.fetchUnreadCounts()
+        if (generation === lifecycleGeneration && authStore.isAuthenticated) await useDMStore().reconcileFromServer()
+      } catch (error) {
+        reportError(error, 'Inbox fallback refresh failed')
+      } finally {
+        pollInFlight = false
+      }
     }, 60000)
   }
 

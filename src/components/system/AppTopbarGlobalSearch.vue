@@ -154,10 +154,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { IconSearch as Search, IconX as X } from '@tabler/icons-vue'
-import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
+const TopbarSearchSection = defineAsyncComponent(() => import('@/components/system/TopbarSearchSection.vue'))
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import { useSiteAccessStore } from '@/stores/siteAccess'

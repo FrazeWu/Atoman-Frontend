@@ -318,6 +318,29 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		).toContain("上传歌词");
 	});
 
+	it("每首曲目显示自己的歌词来源和获取结果", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.status = "ready";
+		flow.draft.tracks = [
+			{ id:"local",sequence:1,title:"本地曲目",lyrics:"[00:01.00]歌词",lyricsSource:"local" },
+			{ id:"matched",sequence:2,title:"在线曲目",lyrics:"歌词",lyricsSource:"lrclib" },
+			{ id:"empty",sequence:3,title:"无歌词曲目",matchStatus:"matched" },
+		];
+		const wrapper=mount(MusicCreationAlbumDetailsStep);
+		expect(wrapper.get('[data-testid="album-track-row-local"]').text()).toContain("本地歌词");
+		expect(wrapper.get('[data-testid="album-track-row-matched"]').text()).toContain("已匹配歌词");
+		expect(wrapper.get('[data-testid="album-track-row-empty"]').text()).toContain("暂无歌词");
+		flow.draft.albumImport.status = "analyzing";
+		await nextTick();
+		expect(wrapper.get('[data-testid="album-track-row-empty"]').text()).toContain("歌词待处理");
+		expect(wrapper.get('[data-testid="album-track-row-local"]').text()).toContain("本地歌词");
+		flow.draft.albumImport.status = "committed";
+		await nextTick();
+		expect(wrapper.get('[data-testid="album-track-row-empty"]').text()).toContain("暂无歌词");
+	});
+
 	it("shows an extracted title and upload progress for a new audio track", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

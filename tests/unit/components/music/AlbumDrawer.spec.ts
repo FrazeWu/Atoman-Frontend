@@ -135,6 +135,20 @@ vi.mock("@/stores/player", () => ({
 }));
 
 describe("AlbumDrawer.vue", () => {
+	it("只在有歌词的歌曲行尾显示词标记", async () => {
+		getMusicAlbum.mockResolvedValue({id:"1",title:"Album",songs:[
+			{id:"has",title:"有歌词",track_number:1,lyrics:"[00:01.00]歌词"},
+			{id:"blank",title:"空白歌词",track_number:2,lyrics:"  \n "},
+			{id:"missing",title:"没有歌词",track_number:3},
+		]});
+		const wrapper=mount(AlbumDrawer);
+		await flushPromises();
+		const marker=wrapper.get('[data-testid="track-has-lyrics-has"]');
+		expect(marker.text()).toBe("词");
+		expect(marker.element.parentElement?.lastElementChild).toBe(marker.element);
+		expect(wrapper.find('[data-testid="track-has-lyrics-blank"]').exists()).toBe(false);
+		expect(wrapper.find('[data-testid="track-has-lyrics-missing"]').exists()).toBe(false);
+	});
 	beforeEach(() => {
 		openNestedAction.mockReset();
 		openMusicEditor.mockReset();

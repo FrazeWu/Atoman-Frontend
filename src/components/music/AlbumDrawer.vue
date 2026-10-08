@@ -972,6 +972,14 @@ watch(
             >
               <ChevronDown :size="16" aria-hidden="true" />
             </button>
+            <span
+              v-if="track.lyrics?.trim()"
+              class="track-lyrics-marker"
+              title="有歌词"
+              role="img"
+              aria-label="有歌词"
+              :data-testid="`track-has-lyrics-${track.id}`"
+            >词</span>
           </div>
           <div v-if="expandedTrackId === String(track.id)" class="track-specification">
             <p v-if="sourceSpecification(track)" class="track-specification__line">
@@ -1524,6 +1532,15 @@ watch(
   flex-shrink: 0;
 }
 .track-match-status { color: var(--a-text-muted); font-size: 0.6875rem; white-space: nowrap; }
+.track-lyrics-marker {
+  flex-shrink: 0;
+  padding: 0.1rem 0.25rem;
+  border: 1px solid var(--a-border);
+  border-radius: 4px;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+}
 .track-detail-btn {
   display: inline-grid;
   width: 1.75rem;

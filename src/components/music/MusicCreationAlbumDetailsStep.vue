@@ -24,6 +24,7 @@ import { parsePartialDateParts, serializePartialDate } from '@/components/music/
 import { createEmptyMusicArtistDraft } from './musicCreationTypes'
 import { musicCreationProgress } from '@/utils/musicCreationProgress'
 import { normalizeImportedTrackTitle } from '@/utils/musicImportPreview'
+import { musicTrackLyricsLabel } from '@/utils/musicTrackLyrics'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
@@ -788,17 +789,20 @@ watch(
 
             </div>
 
-            <PButton
-              type="button"
-              size="sm"
-              variant="secondary"
-              class="track-row__lyrics-btn"
-              :data-testid="`album-track-lyrics-${track.id}`"
-              @click="openTrackLyrics(track.id)"
-            >
-              <FileText :size="15" aria-hidden="true" />
-{{ track.songId || track.lyricsDraft ? '查看歌词' : '上传歌词' }}
-            </PButton>
+            <div class="track-row__lyrics">
+              <span class="track-row__lyrics-status">{{ musicTrackLyricsLabel(track, albumImportDraft?.status) }}</span>
+              <PButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                class="track-row__lyrics-btn"
+                :data-testid="`album-track-lyrics-${track.id}`"
+                @click="openTrackLyrics(track.id)"
+              >
+                <FileText :size="15" aria-hidden="true" />
+                {{ track.songId || track.lyricsDraft ? '查看歌词' : '上传歌词' }}
+              </PButton>
+            </div>
 
             <details class="track-row__more">
               <summary :aria-label="`${track.title}的更多操作`">更多</summary>
@@ -1551,8 +1555,15 @@ watch(
   color: var(--a-color-primary);
 }
 
-.track-row__lyrics-btn {
+.track-row__lyrics {
+  display: inline-grid;
+  gap: 0.25rem;
   flex: 0 0 auto;
+}
+.track-row__lyrics-status {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-align: center;
 }
 
 .track-row__remove-btn {
@@ -1593,7 +1604,7 @@ watch(
     flex-basis: calc(100% - 8rem);
   }
 
-  .track-row__lyrics-btn {
+  .track-row__lyrics {
     order: 5;
     margin-left: auto;
   }

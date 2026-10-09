@@ -539,7 +539,7 @@ async function save() {
 .wiki-editor__label {
   color: var(--a-color-muted);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .wiki-editor__reference,
@@ -620,7 +620,7 @@ async function save() {
 .wiki-conflict {
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
-  border-left: 3px solid var(--a-color-accent-destructive);
+  border-left: 3px solid var(--a-color-danger);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
 }
@@ -688,11 +688,11 @@ async function save() {
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .wiki-editor__error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .wiki-editor__footer {

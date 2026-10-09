@@ -389,7 +389,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   font-weight: 500;
   letter-spacing: 0;
   text-align: center;
-  text-transform: uppercase;
 }
 
 .topic-header {
@@ -460,8 +459,8 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .topic-action-danger {
-  color: var(--a-color-accent-destructive);
-  border-color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
+  border-color: var(--a-color-danger);
 }
 
 .topic-action-btn-active {
@@ -512,7 +511,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .reply-form-title {
   font-weight: 500;
   font-size: 0.7rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   margin: 0 0 1rem;
 }
@@ -529,7 +527,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   text-align: center;
   font-weight: 500;
   font-size: 0.8rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted-soft);
 }
@@ -555,7 +552,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .reply-count-title {
   font-weight: 500;
   font-size: 0.75rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   margin: 0;
   padding-bottom: 0.75rem;
@@ -635,7 +631,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .back-link-muted {
   font-weight: 500;
   font-size: 0.75rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   text-decoration: none;
   color: var(--a-color-muted);

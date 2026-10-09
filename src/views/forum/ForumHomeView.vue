@@ -966,6 +966,7 @@ const submitCategoryRequest = async () => {
 
 .tr-stat-val {
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
   color: var(--a-color-muted);
 }
 

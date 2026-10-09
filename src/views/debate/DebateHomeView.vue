@@ -2,7 +2,7 @@
   <div class="a-page-xl" style="padding-bottom:6rem">
     <PPageHeader title="辩论" mb="1.25rem">
       <template #action>
-        <PButton to="/debate/rules" outline>规则</PButton>
+        <PButton to="/debate/rules" variant="secondary">规则</PButton>
         <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">发起辩题</PButton>
       </template>
     </PPageHeader>
@@ -23,7 +23,7 @@
         class="debate-filter-tag"
       />
 
-      <PButton outline @click="loadDebates">筛选</PButton>
+      <PButton variant="secondary" @click="loadDebates">筛选</PButton>
     </div>
 
     <!-- Debate List with PContentProgress -->
@@ -34,7 +34,7 @@
     >
       <template #skeleton>
         <div class="debate-list">
-          <div v-for="i in 6" :key="i" style="padding:1rem 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+          <div v-for="i in 6" :key="i" style="padding:1rem 0;border-bottom:1px solid var(--a-color-border-soft)">
             <PSkeleton width="50%" height="20px" style="margin-bottom:8px" />
             <PSkeleton width="80%" height="16px" />
           </div>
@@ -114,7 +114,7 @@
     <!-- Load More -->
     <div v-if="debates.length > 0 && debates.length < debatesTotal" class="mt-6 text-center">
       <PButton
-        outline
+        variant="secondary"
         :loading="loading"
         :disabled="loading"
         label="加载更多"
@@ -135,7 +135,7 @@
           <p v-if="createError" class="a-field-error" role="alert">{{ createError }}</p>
 
           <div class="debate-modal-actions">
-            <PButton outline type="button" @click="showCreateModal = false">取消</PButton>
+            <PButton variant="secondary" type="button" @click="showCreateModal = false">取消</PButton>
             <PButton type="submit" :disabled="creating">
               {{ creating ? '创建中...' : '创建' }}
             </PButton>

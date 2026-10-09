@@ -45,8 +45,20 @@ onMounted(() => {
 .forum-categories-view { min-height: 100%; padding-bottom: 3rem; }
 .forum-categories__search { display: inline-flex; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; color: var(--a-color-fg); }
 .forum-categories__list { display: grid; gap: 0.5rem; }
-.forum-categories__item { display: flex; min-height: 66px; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
-.forum-categories__item:hover, .forum-categories__item:focus-visible { border-color: var(--a-color-fg); }
+.forum-categories__item {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+  box-shadow: none;
+}
+.forum-categories__item:hover, .forum-categories__item:focus-visible { border-color: var(--a-color-primary); }
 .forum-categories__icon { display: inline-flex; flex: 0 0 auto; }
 .forum-categories__copy { display: grid; min-width: 0; gap: 0.2rem; flex: 1; }
 .forum-categories__copy strong { font-weight: 500; }

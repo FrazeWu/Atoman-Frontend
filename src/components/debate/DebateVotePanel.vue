@@ -106,9 +106,9 @@ async function choose(direction: DebateVoteDirection) {
   gap: 16px;
   min-height: 168px;
   padding: 20px;
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .vote-panel__summary {
@@ -138,6 +138,7 @@ async function choose(direction: DebateVoteDirection) {
 
 .vote-panel__summary strong,
 .vote-panel__choice strong {
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -176,7 +177,7 @@ async function choose(direction: DebateVoteDirection) {
 .vote-panel__choice.is-selected {
   border-color: var(--a-color-primary);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 3px 0 0 var(--a-color-primary);
+  border-left-width: 3px;
 }
 
 .vote-panel__choice:disabled {

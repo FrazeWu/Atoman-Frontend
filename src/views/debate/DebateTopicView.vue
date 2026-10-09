@@ -752,8 +752,8 @@ function formatDate(value: string) {
   margin-inline: 2px;
   padding: 2px 6px;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   line-height: 1.5;
   vertical-align: baseline;
@@ -762,15 +762,15 @@ function formatDate(value: string) {
 .debate-content :deep(.debate-reference__kind),
 .debate-content :deep(.debate-reference__qualifier),
 .debate-content :deep(.debate-reference__state) { color: var(--a-color-muted); font-size: 0.78em; white-space: nowrap; }
-.debate-content :deep(.debate-reference__title) { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.debate-content :deep(.debate-reference__title) { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
 .debate-content :deep(.debate-reference--stale) {
   border-style: solid;
-  box-shadow: inset 0 -2px 0 var(--a-color-warning);
+  border-bottom: 2px solid var(--a-color-warning);
 }
 .debate-content :deep(.debate-reference--stale .debate-reference__state) { color: var(--a-color-warning); }
 .debate-content :deep(.debate-reference--unavailable .debate-reference__title) { text-decoration: line-through; }
 .debate-content :deep(.debate-reference--unavailable .debate-reference__state) { color: var(--a-color-danger); }
-.debate-content :deep(.debate-reference__action) { min-height: 28px; padding: 0 6px; border: 0; border-radius: 4px; background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; font: inherit; font-size: 0.78em; font-weight: 600; }
+.debate-content :deep(.debate-reference__action) { min-height: 28px; padding: 0 6px; border: 0; border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; font: inherit; font-size: 0.78em; font-weight: 500; }
 .debate-content :deep(.debate-reference__action:hover:not(:disabled)) { color: var(--a-color-primary); }
 .debate-content :deep(.debate-reference__action:focus-visible) { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .debate-content :deep(.debate-reference__action:disabled) { cursor: wait; opacity: 0.6; }

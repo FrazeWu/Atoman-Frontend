@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    :title="`版本-${debateTitle || '辩题'}`"
+    :title="debateTitle ? `${debateTitle} · 版本` : '辩题版本'"
     mode="partial"
     partial-width="var(--a-comment-sheet-width)"
     close-type="header"
@@ -355,6 +355,7 @@ async function revert(revisionId: string) {
 .revision-revert h3,
 .revision-diff__field h4 {
   margin: 0;
+  font-weight: 500;
 }
 
 .revision-diff__fields {
@@ -391,7 +392,7 @@ async function revert(revisionId: string) {
   overflow: auto;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg-soft);
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   font: inherit;
   line-height: 1.5;

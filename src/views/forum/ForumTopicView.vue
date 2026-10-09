@@ -65,18 +65,18 @@
           <PButton
             v-if="authStore.isAuthenticated"
             @click="forumStore.toggleTopicBookmark(forumStore.currentTopic!.id)"
-            outline
+            variant="secondary"
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
           >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</PButton>
 
           <div v-if="canEditTopic || canPinTopic || canLockTopic" class="topic-action-group">
-            <PButton v-if="canEditTopic" outline size="sm" @click="editTopic">编辑</PButton>
-            <PButton v-if="canEditTopic" outline size="sm" class="topic-action-danger" @click="deleteTopic">删除</PButton>
-            <PButton v-if="canLockTopic" outline size="sm" @click="toggleClosed">
+            <PButton v-if="canEditTopic" variant="secondary" size="sm" @click="editTopic">编辑</PButton>
+            <PButton v-if="canEditTopic" variant="secondary" size="sm" class="topic-action-danger" @click="deleteTopic">删除</PButton>
+            <PButton v-if="canLockTopic" variant="secondary" size="sm" @click="toggleClosed">
               {{ forumStore.currentTopic.closed ? '解锁' : '锁定' }}
             </PButton>
-            <PButton v-if="canPinTopic" outline size="sm" @click="togglePinned">
+            <PButton v-if="canPinTopic" variant="secondary" size="sm" @click="togglePinned">
               {{ forumStore.currentTopic.pinned ? '取消置顶' : '置顶' }}
             </PButton>
           </div>
@@ -85,7 +85,7 @@
           <PButton
             v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
             @click="openReportModal(forumStore.currentTopic!.id)"
-            outline
+            variant="secondary"
             size="sm"
           >举报</PButton>
 
@@ -93,7 +93,7 @@
           <PButton
             v-if="isAdminRole(authStore.user?.role)"
             @click="toggleFeatured"
-            outline
+            variant="secondary"
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.featured }"
           >{{ forumStore.currentTopic.featured ? '取消精华' : '设为精华' }}</PButton>
@@ -117,7 +117,7 @@
     <!-- Back to top button -->
     <PButton
       v-if="showBackTop"
-      outline
+      variant="secondary"
       size="sm"
       class="back-to-top"
       @click="scrollToTop"
@@ -127,7 +127,7 @@
   <CommentSideSheet
     v-if="forumStore.currentTopic"
     :show="commentsOpen"
-    :title="`话题回复-${forumStore.currentTopic.title}`"
+    :title="`${forumStore.currentTopic.title} · 回复`"
     :partial-anchor="topicContentAnchor"
     :target="{ kind: 'forum_topic', resourceId: topicId }"
     noun="回复"
@@ -158,7 +158,7 @@
     </div>
     <div v-if="reportFeedback" class="report-feedback">{{ reportFeedback }}</div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <PButton outline @click="reportModal.show = false">取消</PButton>
+      <PButton variant="secondary" @click="reportModal.show = false">取消</PButton>
       <PButton @click="submitReport">提交举报</PButton>
     </div>
   </PModal>
@@ -293,7 +293,10 @@ const openReportModal = (targetId: string) => {
 }
 
 const submitReport = async () => {
-  if (!reportForm.value.reason.trim()) { alert('请选择举报原因'); return }
+  if (!reportForm.value.reason.trim()) {
+    reportFeedback.value = '请选择举报原因'
+    return
+  }
   const res = await apiRequestResult(`${api.url}/forum/report`, {
     method: 'POST',
     headers: {
@@ -604,11 +607,12 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 1rem;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   border: var(--a-border);
+  border-radius: var(--a-radius-card);
   margin-bottom: 1rem;
   font-size: 0.8rem;
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
 }
 
 .topic-breadcrumb {

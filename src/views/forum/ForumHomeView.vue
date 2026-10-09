@@ -12,7 +12,7 @@
             </PButton>
             <PButton
               v-if="authStore.isAuthenticated && canRequestCategory"
-              outline
+              variant="secondary"
               @click="catReqModalOpen = true"
             >
               申请分类
@@ -45,7 +45,7 @@
       >
         <template #skeleton>
           <div class="topic-list">
-            <div v-for="i in 6" :key="i" style="padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);">
+            <div v-for="i in 6" :key="i" style="padding: 1rem 0; border-bottom: 1px solid var(--a-color-border-soft);">
               <PSkeleton width="40%" height="20px" style="margin-bottom: 8px;" />
               <PSkeleton width="80%" height="16px" />
             </div>
@@ -115,7 +115,7 @@
 
       <!-- Load more -->
       <div v-if="hasMore && !forumStore.topicsLoading" class="load-more-wrap">
-        <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
+        <PButton variant="secondary" @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </main>
   </div>
@@ -603,7 +603,7 @@ const submitCategoryRequest = async () => {
 }
 
 .sidebar-item-active .sidebar-item-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--a-color-bg) 20%, transparent);
   color: var(--a-color-bg);
 }
 
@@ -776,8 +776,8 @@ const submitCategoryRequest = async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1.5rem;
-  border-bottom: none;
-  background: var(--a-color-surface);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .th-title {
@@ -820,11 +820,11 @@ const submitCategoryRequest = async () => {
 
 .topic-row:hover,
 .topic-row-focused {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 .topic-row-pinned {
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 /* Left side */

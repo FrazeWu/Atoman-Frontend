@@ -146,7 +146,7 @@ const emit = defineEmits<{ expand: [nodeId: string] }>()
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.45;
   letter-spacing: 0;
 }

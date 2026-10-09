@@ -133,7 +133,7 @@ describe("module style contract", () => {
 		const portal = read("src/views/portal/PortalView.vue");
 
 		expect(portal).toMatch(
-			/\.portal-hot__tag\.portal-hot__tag--debate\s*\{[^}]*background:\s*color-mix\([^}]*\)[^}]*color:\s*#3730a3/s,
+			/\.portal-hot__tag\.portal-hot__tag--debate\s*\{[^}]*background:\s*color-mix\([^}]*\)[^}]*color:\s*var\(--a-color-primary\)/s,
 		);
 	});
 

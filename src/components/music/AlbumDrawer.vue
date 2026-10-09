@@ -264,6 +264,7 @@ function formatSampleRate(value: unknown) {
 
 function sourceSpecification(track: AlbumTrack) {
   const parts = [
+    track.source_file_name,
     track.source_container?.toUpperCase(),
     track.source_lossless ? '无损' : '',
     track.source_bit_depth ? `${track.source_bit_depth}-bit` : '',
@@ -283,6 +284,13 @@ function playbackSpecification(track: AlbumTrack) {
     track.playback_channels ? `${track.playback_channels} ch` : '',
   ]
   return parts.filter(Boolean).join(' · ')
+}
+
+function audioStatusSpecification(track: AlbumTrack) {
+  if (track.audio_status === 'ready') return '已就绪'
+  if (track.audio_status === 'processing') return '处理中'
+  if (track.audio_status === 'failed') return '处理失败'
+  return ''
 }
 
 function playAlbum() {
@@ -984,6 +992,9 @@ watch(
           <div v-if="expandedTrackId === String(track.id)" class="track-specification">
             <p v-if="sourceSpecification(track)" class="track-specification__line">
               <span>音频源</span>{{ sourceSpecification(track) }}
+            </p>
+            <p v-if="audioStatusSpecification(track)" class="track-specification__line">
+              <span>音频状态</span>{{ audioStatusSpecification(track) }}
             </p>
             <p v-if="playbackSpecification(track)" class="track-specification__line">
               <span>播放版本</span>{{ playbackSpecification(track) }}

@@ -417,8 +417,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   display: inline-flex;
   align-items: center;
   font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
+  font-weight: 500;
   letter-spacing: 0;
   padding: 0.15rem 0.4rem;
   border: var(--a-border);
@@ -487,9 +486,8 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   border-color: var(--a-color-disabled-border);
   padding: 1.25rem 1.5rem;
   text-align: center;
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
   font-size: 0.8rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted);
 }
@@ -654,7 +652,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .tag-pill {
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
   border-color: var(--a-color-disabled-border);
   color: var(--a-color-muted);
 }
@@ -696,7 +694,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .report-feedback {
   margin-top: 0.75rem;
   font-size: 0.8rem;
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 

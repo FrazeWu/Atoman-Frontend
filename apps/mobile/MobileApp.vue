@@ -33,6 +33,7 @@ import MobileTopbar from './MobileTopbar.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'
+import './mobileContent.css'
 
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))

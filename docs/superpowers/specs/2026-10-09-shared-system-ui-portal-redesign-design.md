@@ -1,8 +1,8 @@
 # Shared, System UI Components & PortalView Redesign Specification
 
-**Date**: 2026-10-09  
-**Status**: Approved (Brainstorming Phase)  
-**Branch**: `feature/shared-system-ui-portal-refactor`  
+**Date**: 2026-10-09
+**Status**: Approved (Brainstorming Phase)
+**Branch**: `feature/shared-system-ui-portal-refactor`
 **Reference**: `docs/superpowers/audits/2026-10-09-ui-audit.md`, `design_system.md`, `AGENTS.md`
 
 ---

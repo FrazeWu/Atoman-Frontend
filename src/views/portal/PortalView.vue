@@ -7,11 +7,10 @@
           <span>ATOMAN</span>
         </div>
         <h1 class="portal-hot__hero-title">
-          3 分钟建立你的<br>
-          <span>高质量内容订阅流</span>
+          内容聚合
         </h1>
         <p class="portal-hot__hero-subtitle">
-          聚合博客、播客、音乐与讨论，不用在多个平台反复筛选。
+          探索全站精选与最新动态
         </p>
         <div class="portal-hot__hero-actions">
           <PButton variant="primary" size="md" :to="modulePathUrl('feed', '/explore')">

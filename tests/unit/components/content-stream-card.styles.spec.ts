@@ -27,11 +27,11 @@ describe("content stream card styles", () => {
   it("uses single top and bottom separators for article and feed entries", () => {
     expect(contentStreamRule).toContain("border: 0;");
     expect(contentStreamRule).toContain(
-      "border-top: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);",
+      "border-top: 1px solid var(--a-color-border-soft);",
     );
     expect(contentStreamRule).not.toMatch(/border-(right|left):/);
     expect(contentCardSource).toContain(
-      ".p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {\n  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);",
+      ".p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {\n  border-bottom: 1px solid var(--a-color-border-soft);",
     );
   });
 

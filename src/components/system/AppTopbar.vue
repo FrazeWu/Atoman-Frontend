@@ -259,7 +259,6 @@ const toggleTheme = (event: MouseEvent) => {
   top: 0;
   z-index: var(--a-z-navigation);
   background: var(--a-color-bg);
-  border-bottom: 1px solid var(--a-color-border);
   height: var(--a-topbar-height);
 }
 

@@ -1,0 +1,321 @@
+.mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) {
+  --a-color-border-soft: #e4e5eb;
+  --a-radius-card: 16px;
+  --a-radius-control: 12px;
+  min-width: 0;
+  max-width: none;
+  padding: 20px 16px 7rem;
+}
+
+.mobile-app-shell :is(.p-sheet-mobile-backdrop, .p-sheet-mobile-page) {
+  z-index: calc(var(--a-z-navigation) - 1) !important;
+}
+
+.mobile-app-shell .p-sheet-mobile-backdrop {
+  z-index: calc(var(--a-z-navigation) - 2) !important;
+}
+
+.mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) .p-page-header {
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 0 !important;
+  padding: 8px 0 0;
+}
+
+.mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) .p-page-header__title {
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+}
+
+.mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) .p-page-header__action,
+.mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) .p-page-header__action > * {
+  width: 100%;
+  min-width: 0;
+}
+
+.mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) :is(input, select, textarea) {
+  min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 16px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page {
+  display: grid;
+  gap: 20px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-library,
+.mobile-app-shell .mobile-app-main .books-page .books-catalog {
+  display: grid;
+  gap: 20px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page :is(.books-library__header, .books-library__section-header, .books-catalog__header) {
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-library__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  width: 100%;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-library__actions .p-select {
+  min-width: 0;
+}
+
+.mobile-app-shell .mobile-app-main .books-page :is(.books-continue-list, .books-shelf-list, .books-import-list, .books-catalog-list) {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-continue-list li,
+.mobile-app-shell .mobile-app-main .books-page .books-import-row,
+.mobile-app-shell .mobile-app-main .books-page .books-catalog-row__link {
+  min-width: 0;
+  padding: 14px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-continue-list a {
+  min-height: 64px;
+  gap: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-continue-list strong,
+.mobile-app-shell .mobile-app-main .books-page .books-import-row__body,
+.mobile-app-shell .mobile-app-main .books-page .books-catalog-row__link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-continue-list progress {
+  width: 100%;
+  height: 6px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-shelf-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-shelf-list li {
+  position: relative;
+  min-width: 0;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-shelf-list .books-icon-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-import-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-import-row__status,
+.mobile-app-shell .mobile-app-main .books-page .books-import-row__actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-import-row__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page .books-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 12px;
+}
+
+.mobile-app-shell .mobile-app-main .books-page :is(.books-public-assets, .books-catalog-list) {
+  display: grid;
+  gap: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page {
+  display: grid;
+  gap: 24px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-search {
+  width: 100%;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page :is(.ph-recommendations, .ph-latest) {
+  gap: 16px;
+  margin-top: 0;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-section-header {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-section-header .p-segmented-control {
+  width: 100%;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .p-segmented-control-item {
+  flex: 1;
+  min-height: 44px;
+  min-width: 0;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-recommendation-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-recommendation-card {
+  grid-template-columns: 88px minmax(0, 1fr);
+  min-height: 88px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-recommendation-content {
+  padding: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-recommendation-content h3 {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-episode-list {
+  gap: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-episode-row {
+  grid-template-columns: 64px minmax(0, 1fr) 44px;
+  gap: 10px;
+  min-height: 80px;
+  padding: 12px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-episode-cover {
+  width: 64px;
+  border-radius: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-episode-content p {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .ph-page .ph-play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 20px 16px 7rem;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .forum-main {
+  width: 100%;
+  min-width: 0;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .forum-header-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .forum-header-actions .p-button {
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 8px;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .forum-topic-filters {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .topic-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .p-entry {
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .p-entry__arrow {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .feed-entry-title,
+.mobile-app-shell .mobile-app-main .forum-page .topic-title-link {
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .topic-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--a-color-muted);
+  font-size: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page .load-more-wrap .p-button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.music-library, .music-history-view) {
+  padding-inline: 16px !important;
+}
+
+@media (max-width: 360px) {
+  .mobile-app-shell .mobile-app-main .books-page .books-grid,
+  .mobile-app-shell .mobile-app-main .books-page .books-shelf-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

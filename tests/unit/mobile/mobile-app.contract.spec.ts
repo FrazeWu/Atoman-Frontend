@@ -120,7 +120,7 @@ describe("mobile app route boundary", () => {
 	});
 
 	it("keeps the portal debate tag text at accessible contrast", () => {
-		expect(portalSource).toContain("color: #3730a3;");
+		expect(portalSource).toContain("color: var(--a-color-primary);");
 		expect(portalSource).not.toContain("color: #4f46e5;");
 	});
 });

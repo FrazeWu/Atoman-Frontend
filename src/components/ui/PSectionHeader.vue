@@ -37,14 +37,13 @@ withDefaults(defineProps<{
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .p-section-header__title {
   margin: 0;
   color: var(--a-color-text);
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
   line-height: 1.1;
 }

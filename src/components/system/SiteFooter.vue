@@ -39,7 +39,7 @@ function openPanel(panel: FootbarPanel, label: string) {
       <div class="site-footer-grid">
         <div class="site-footer-column site-footer-primary">
           <RouterLink v-if="isAdmin" to="/site/setting" class="site-footer-brand">凹凸庵</RouterLink>
-          <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
+          <span v-else class="site-footer-brand site-footer-brand--disabled">凹凸庵</span>
           <SiteVisitStats />
         </div>
 

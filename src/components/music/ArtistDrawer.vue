@@ -627,7 +627,7 @@ watch([releaseType, albumSortMode], () => {
           {{ isBookmarked ? '已订阅' : '订阅' }}
         </PButton>
         <PButton
-          variant="warning"
+          variant="primary"
           :disabled="artist?.edit_status && artist.edit_status !== 'development'"
           data-testid="artist-edit-action"
           @click="editArtist"

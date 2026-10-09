@@ -358,7 +358,6 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .debate-card:hover {
   border-color: var(--a-color-border);
-  background: var(--a-color-surface-muted);
 }
 
 .debate-card:hover::before {
@@ -380,7 +379,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .debate-status-badge {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.15em 0.5em;
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
@@ -394,7 +393,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .debate-tag {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-primary);
   background: color-mix(in srgb, var(--a-color-primary) 8%, transparent);
   padding: 0.15em 0.5em;
@@ -427,7 +426,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 .stance-bar {
   display: flex;
   height: 6px;
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   overflow: hidden;
   background: var(--a-color-border-soft);
   gap: 2px;
@@ -435,13 +434,13 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .stance-bar__pro {
   background: var(--a-color-primary);
-  border-radius: var(--a-radius-pill, 999px) 0 0 var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control) 0 0 var(--a-radius-control);
   transition: width 0.3s ease;
 }
 
 .stance-bar__con {
   background: var(--a-color-danger);
-  border-radius: 0 var(--a-radius-pill, 999px) var(--a-radius-pill, 999px) 0;
+  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
   transition: width 0.3s ease;
 }
 
@@ -464,7 +463,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .stance-action {
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-muted);
   letter-spacing: 0.02em;
 }

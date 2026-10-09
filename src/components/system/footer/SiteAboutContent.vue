@@ -46,7 +46,7 @@ withDefaults(defineProps<{
 .site-info-title {
   margin: 0;
   font-size: 2rem;
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
   line-height: 1.2;
   letter-spacing: 0;
 }
@@ -75,7 +75,7 @@ withDefaults(defineProps<{
 .site-info-section h3 {
   margin: 0 0 var(--a-space-4);
   font-size: var(--a-text-md);
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
 }
 
 .site-info-section p {

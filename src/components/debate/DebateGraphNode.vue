@@ -113,13 +113,13 @@ const emit = defineEmits<{ expand: [nodeId: string] }>()
 .debate-node__kind::before {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-primary);
   content: '';
 }
 
 .debate-node__stamp {
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   padding: 4px 8px;
   font-size: 10px;
   font-weight: 600;

@@ -389,7 +389,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   font-weight: 500;
   letter-spacing: 0;
   text-align: center;
-  text-transform: uppercase;
 }
 
 .topic-header {
@@ -417,8 +416,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   display: inline-flex;
   align-items: center;
   font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
+  font-weight: 500;
   letter-spacing: 0;
   padding: 0.15rem 0.4rem;
   border: var(--a-border);
@@ -461,8 +459,8 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .topic-action-danger {
-  color: var(--a-color-accent-destructive);
-  border-color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
+  border-color: var(--a-color-danger);
 }
 
 .topic-action-btn-active {
@@ -487,9 +485,8 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   border-color: var(--a-color-disabled-border);
   padding: 1.25rem 1.5rem;
   text-align: center;
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
   font-size: 0.8rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted);
 }
@@ -514,7 +511,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .reply-form-title {
   font-weight: 500;
   font-size: 0.7rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   margin: 0 0 1rem;
 }
@@ -531,7 +527,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   text-align: center;
   font-weight: 500;
   font-size: 0.8rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted-soft);
 }
@@ -557,7 +552,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .reply-count-title {
   font-weight: 500;
   font-size: 0.75rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   margin: 0;
   padding-bottom: 0.75rem;
@@ -637,7 +631,6 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .back-link-muted {
   font-weight: 500;
   font-size: 0.75rem;
-  text-transform: uppercase;
   letter-spacing: 0;
   text-decoration: none;
   color: var(--a-color-muted);
@@ -654,7 +647,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .tag-pill {
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
   border-color: var(--a-color-disabled-border);
   color: var(--a-color-muted);
 }
@@ -696,7 +689,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .report-feedback {
   margin-top: 0.75rem;
   font-size: 0.8rem;
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 

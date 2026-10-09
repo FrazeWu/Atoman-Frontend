@@ -32,10 +32,9 @@ describe('AppTopbar auth loading', () => {
     expect(topbarSource).toContain('align-items: flex-start;')
   })
 
-  it('renders the beta label in the same meta row as the version', () => {
-    expect(topbarSource).toContain('beta')
+  it('does not render internal beta notice in the meta row', () => {
+    expect(topbarSource).not.toContain('<span class="logo-notice">beta</span>')
     expect(topbarSource).not.toContain('测试阶段，不保留用户数据')
-    expect(topbarSource).toContain('class="logo-notice"')
     expect(topbarSource).toContain('class="logo-meta"')
   })
 

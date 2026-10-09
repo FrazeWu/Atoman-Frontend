@@ -41,8 +41,8 @@ describe('RatingControl.vue', () => {
     expect(wrapper.findAll('.rating-control__star-base')).toHaveLength(5)
     expect(wrapper.findAll('.rating-control__star-fill')).toHaveLength(5)
     expect(ratingControlSource).toContain('IconStarFilled as StarFilled')
-    expect(baseStarRule).toMatch(/color:\s*#d7dbe0/)
-    expect(fillRule).toMatch(/color:\s*#ff9d24/)
+    expect(baseStarRule).toMatch(/color:\s*var\(--a-color-border\)/)
+    expect(fillRule).toMatch(/color:\s*var\(--a-color-warning\)/)
   })
 
   it('emits integer ten-point scores from half-star targets', async () => {

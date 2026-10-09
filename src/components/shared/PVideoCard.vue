@@ -135,7 +135,7 @@ const avatarLetter = () =>
 .vc-thumb {
   position: relative;
   aspect-ratio: 16/9;
-  background: var(--a-color-surface-muted, #18181b);
+  background: var(--a-color-surface-muted);
   border-radius: var(--a-radius-card);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
@@ -144,7 +144,7 @@ const avatarLetter = () =>
 }
 
 .vc-card:hover .vc-thumb {
-  border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft));
+  border-color: color-mix(in srgb, var(--a-color-primary) 35%, var(--a-color-border-soft));
 }
 
 .vc-thumb-link { display: block; width: 100%; height: 100%; color: inherit; position: relative; }
@@ -306,13 +306,13 @@ const avatarLetter = () =>
   height: 36px;
   border-radius: 4px;
   overflow: hidden;
-  background: #000;
+  background: var(--a-color-fg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--a-color-bg);
 }
 .vc-avatar img {
   width: 100%;

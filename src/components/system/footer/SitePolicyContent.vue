@@ -108,7 +108,7 @@ const document = computed(() => documents[props.kind])
 .site-policy-title {
   margin: 0;
   font-size: 2rem;
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
   line-height: 1.2;
   letter-spacing: 0;
 }
@@ -144,7 +144,7 @@ const document = computed(() => documents[props.kind])
 .site-policy-section h3 {
   margin: 0 0 var(--a-space-3);
   font-size: var(--a-text-md);
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
 }
 
 .site-policy-section p {

@@ -343,7 +343,7 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   z-index: var(--a-z-global-menu);
-  background: color-mix(in srgb, #000 45%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 45%, transparent);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
   width: 100%;
   max-width: 640px;
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-modal);
   overflow: hidden;
@@ -384,7 +384,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--a-color-fg);
   font-size: 1.05rem;
-  font-weight: 550;
+  font-weight: 500;
   font-family: inherit;
 }
 
@@ -411,7 +411,7 @@ onBeforeUnmount(() => {
 
 .palette-close-badge {
   font-size: 0.65rem;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--a-color-muted);
   background: var(--a-color-surface-muted);
   padding: 0.2em 0.45em;
@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
 .guide-title {
   margin: 0 0 0.6rem 0.25rem;
   font-size: 0.72rem;
-  font-weight: 650;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--a-color-muted-soft);
   letter-spacing: 0.05em;
@@ -568,7 +568,7 @@ onBeforeUnmount(() => {
 
 .guide-tag {
   font-size: 0.82rem;
-  font-weight: 650;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -636,7 +636,7 @@ onBeforeUnmount(() => {
 }
 
 .footer-brand {
-  font-weight: 650;
+  font-weight: 600;
   font-size: 0.65rem;
   letter-spacing: 0.08em;
   color: var(--a-color-muted-soft);

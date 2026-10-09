@@ -298,7 +298,7 @@ function formatCount(value?: number) {
 }
 
 .blog-item-card__channel:hover {
-  color: var(--a-color-primary, #3b82f6);
+  color: var(--a-color-primary);
 }
 
 .blog-item-card__source {
@@ -318,7 +318,7 @@ function formatCount(value?: number) {
 
 .blog-item-card__source-button:hover,
 .blog-item-card__source-button:focus-visible {
-  color: var(--a-color-primary, #3b82f6);
+  color: var(--a-color-primary);
   text-decoration: underline;
 }
 
@@ -332,7 +332,7 @@ function formatCount(value?: number) {
 }
 
 .blog-item-card__source-link:hover {
-  color: var(--a-color-primary, #3b82f6);
+  color: var(--a-color-primary);
 }
 
 .blog-item-card__time {
@@ -362,8 +362,8 @@ function formatCount(value?: number) {
   color: var(--a-color-blog);
 }
 .feed-type-tag--rss {
-  background: color-mix(in srgb, #1e40af 12%, transparent);
-  color: #1e40af;
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  color: var(--a-color-primary);
 }
 
 .blog-item-card__external-link {

@@ -175,7 +175,7 @@ describe("SiteFooter", () => {
 	});
 
 	it.each([
-		["about", "关于-Atoman", "我们希望打造一个纯粹、求真的网络空间。"],
+		["about", "Atoman · 关于", "我们希望打造一个纯粹、求真的网络空间。"],
 		["contact", "联系-Atoman", "support@atoman.org"],
 		["feedback", "反馈-Atoman", "发送给 @fazong"],
 		["terms", "条款-Atoman", "不得发布违反良法、侵权的内容。"],
@@ -256,7 +256,7 @@ describe("SiteFooter", () => {
 		trigger.element.focus();
 
 		await trigger.trigger("click");
-		await wrapper.get('[aria-label="关闭关于-Atoman"]').trigger("click");
+		await wrapper.get('[aria-label="关闭Atoman · 关于"]').trigger("click");
 		vi.runAllTimers();
 
 		expect(document.activeElement).toBe(trigger.element);

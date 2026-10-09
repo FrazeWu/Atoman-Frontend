@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
 
 .notification-toast__title {
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
 }
 

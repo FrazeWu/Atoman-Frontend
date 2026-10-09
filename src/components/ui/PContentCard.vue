@@ -110,7 +110,7 @@ defineEmits(['click'])
   padding: 0.875rem 1rem;
   margin-bottom: 0;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-top: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   box-shadow: none;
   background: transparent;
@@ -123,7 +123,7 @@ defineEmits(['click'])
 }
 
 .p-entry.content-stream-entry:not(:has(~ .p-entry.content-stream-entry)) {
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .p-entry.content-stream-entry::before {
@@ -135,7 +135,7 @@ defineEmits(['click'])
   width: 2px;
   height: 14px;
   border-radius: 999px;
-  background-color: #10b981;
+  background-color: var(--a-color-success);
   opacity: 1;
   transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
@@ -218,7 +218,7 @@ defineEmits(['click'])
   max-width: 100%;
   font-family: var(--a-font-sans);
   font-size: 1.05rem;
-  font-weight: 550;
+  font-weight: 500;
   line-height: 1.35;
   margin-bottom: 0.15rem;
   color: var(--a-color-fg);

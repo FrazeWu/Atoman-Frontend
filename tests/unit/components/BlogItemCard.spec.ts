@@ -41,9 +41,9 @@ describe("BlogItemCard", () => {
 
   it("uses a readable RSS tag color", () => {
     expect(blogItemCardSource).toContain(
-      "background: color-mix(in srgb, #1e40af 12%, transparent);",
+      "background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);",
     );
-    expect(blogItemCardSource).toContain("color: #1e40af;");
+    expect(blogItemCardSource).toContain("color: var(--a-color-primary);");
   });
 
   it("uses the explicit summary when it is available", () => {

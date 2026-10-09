@@ -24,7 +24,7 @@ import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
 	musicImportAlbumTitle,
 	musicImportGroupForStatus,
-	submittedMusicAlbumImports,
+	uniqueMusicAlbumImports,
 	type MusicImportGroup,
 } from '@/utils/musicImportDisplay'
 import { normalizeMusicImportSource } from '@/utils/musicImportSource'
@@ -46,7 +46,7 @@ const { resumeMusicCreationFlow } = useMusicDrawers()
 const importRequests = useRequestGeneration()
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 
-const albumImports = computed(() => submittedMusicAlbumImports(imports.value))
+const albumImports = computed(() => uniqueMusicAlbumImports(imports.value))
 
 const importGroups = computed(() => {
   const filtered = albumImports.value.filter((item) => {
@@ -134,7 +134,7 @@ async function loadImports(silent = false, nextPage = page.value) {
 	try {
 		const response = await listMusicAlbumImports({ page: nextPage, page_size: importPageSize })
 		if (!request.isCurrent()) return
-		imports.value = submittedMusicAlbumImports(response.data)
+		imports.value = uniqueMusicAlbumImports(response.data)
 		page.value = nextPage
 		importsMeta.value = response.meta
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
@@ -533,11 +533,11 @@ function continueImport() {
 
           <div class="music-imports-view__actions">
             <PButton
-              v-if="!['committed', 'canceled'].includes(selectedImport.status) && (!selectedImport.hasCommitRequest || ['needs_attention', 'failed'].includes(selectedImport.status))"
+              v-if="['ready', 'needs_attention', 'failed'].includes(selectedImport.status)"
               variant="primary"
               @click="continueImport"
             >
-              {{ ['needs_attention', 'failed'].includes(selectedImport.status) ? '处理问题' : '继续导入' }}
+              {{ ['needs_attention', 'failed'].includes(selectedImport.status) ? '处理问题' : '打开编辑' }}
             </PButton>
 
             <PButton

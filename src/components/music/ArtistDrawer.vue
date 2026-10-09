@@ -35,6 +35,7 @@ import {
 } from '@/api/musicV1'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -45,6 +46,7 @@ const artistId = computed(() => props.layer?.payload.artistId ?? state.value.art
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : artistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const canCreateMusic = !isStandaloneMobileApp()
 const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useMusicSheetNavigation('artist', artistId, replaceArtist, topLayer)
 const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)
@@ -635,6 +637,7 @@ watch([releaseType, albumSortMode], () => {
           修改艺术家信息
         </PButton>
         <PButton
+          v-if="canCreateMusic"
           variant="primary"
           data-testid="artist-create-album-action"
           @click="createAlbum"

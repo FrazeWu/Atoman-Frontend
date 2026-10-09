@@ -477,7 +477,6 @@ const forwardBlockReason = computed(() => {
   }
   if (flow.step === 'albumImport') {
     if (!flow.draft.albumImport.importId) return '请先选择专辑文件'
-    if (flow.draft.albumImport.metadataMatchStatus === 'waiting_artist') return '请选择主艺术家后开始匹配'
     if (flow.draft.albumImport.status === 'failed') return flow.draft.albumImport.errorMessage || '上传或处理失败，请重试对应文件'
     return ''
   }

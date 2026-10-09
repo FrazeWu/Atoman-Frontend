@@ -1,7 +1,8 @@
 import { computed, ref } from "vue";
 import type { MusicSongLyrics } from "@/api/musicV1";
 import type { UploadAsset } from "@/api/types";
-import type { MusicCreationLyricsDraft } from "@/components/music/musicCreationTypes";
+import type { MusicCreationLyricsCandidate, MusicCreationLyricsDraft } from "@/components/music/musicCreationTypes";
+import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { useMusicCreationFlow } from "@/components/music/musicCreationFlowContext";
 import { rememberDeletedImportedTrack } from "@/utils/musicImportTrackMerge";
@@ -256,6 +257,28 @@ export function useMusicAlbumTrackEditor() {
 		closeTrackLyrics();
 	}
 
+	function selectLyricsCandidate(trackId: string, candidate: MusicCreationLyricsCandidate) {
+		const track = tracksDraft.value.find((item) => item.id === trackId);
+		if (!track) return;
+		const parsed = parseMusicLyricDraft(candidate.content, candidate.translation, candidate.format);
+		track.lyricsDraft = {
+			content: candidate.content,
+			translation: candidate.translation,
+			format: candidate.format,
+			language: candidate.language,
+			editSummary: candidate.editSummary || "选择歌词候选",
+			lines: parsed.map((row) => ({
+				line_key: row.lineKey,
+				text: row.original,
+				translation: row.translation,
+				time_ms: row.timeMs,
+			})),
+		};
+		track.lyrics = candidate.content;
+		track.lyricsSource = candidate.source;
+		track.lyricsCandidateChoice = candidate.source;
+	}
+
 	return {
 		tracksDraft,
 		orderedTracks: tracksDraft,
@@ -280,6 +303,7 @@ export function useMusicAlbumTrackEditor() {
 		closeTrackLyrics,
 		saveExistingTrackLyrics,
 		saveTrackLyrics,
+		selectLyricsCandidate,
 		formatSequence: (sequence: number) => String(sequence).padStart(2, "0"),
 	};
 }

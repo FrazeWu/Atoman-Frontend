@@ -86,6 +86,16 @@ export type MusicAlbumImportTrack = {
 		edit_summary: string;
 	};
 	lyricsSource?: "local" | "lrclib" | string;
+	lyricsCandidates?: MusicAlbumImportLyricsCandidate[];
+};
+
+export type MusicAlbumImportLyricsCandidate = {
+	source: string;
+	content: string;
+	translation: string;
+	format: MusicLyricsFormat;
+	language: string;
+	edit_summary: string;
 };
 
 export type MusicAlbumImportMetadataPreview = {

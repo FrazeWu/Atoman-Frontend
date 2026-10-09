@@ -1,0 +1,441 @@
+.mobile-app-main:has(.mobile-saved-page),
+.feed-module-layout:has(.mobile-saved-page) :is(.a-main-content, .a-content-frame) {
+  background: #f2f2f7;
+}
+
+.feed-module-layout:has(.mobile-saved-page) .module-mobile-header {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page {
+  --a-color-border-soft: #e4e5eb;
+  --a-radius-card: 16px;
+  --a-radius-control: 12px;
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  padding: 20px 16px;
+}
+
+.mobile-app-shell .mobile-app-main :is(.feed-module-layout, .mobile-module-layout) .mobile-saved-page {
+  padding: 8px 0 20px;
+}
+
+.mobile-app-shell .mobile-saved-heading h1 {
+  margin: 6px 0 8px;
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+}
+
+.mobile-app-shell .mobile-saved-heading p {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.mobile-app-shell .mobile-saved-heading .mobile-saved-heading__eyebrow {
+  font-size: 11px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.a-page-xl, .music-library, .music-history-view) {
+  min-width: 0;
+  margin: 0;
+  padding: 0 !important;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-page-header {
+  padding: 0;
+  margin: 0 0 16px !important;
+  gap: 0;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-page-header > div:first-child {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-page-header__action {
+  width: 100%;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-page-header__action > div {
+  flex-wrap: wrap;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page[data-page^='feed-'] .p-page-header__action .p-button,
+.mobile-app-shell .mobile-app-main .mobile-saved-page[data-page='feed-reading'] .p-page-header {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.p-segmented-control, .p-input) {
+  width: 100%;
+  min-width: 0;
+  border-radius: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-segmented-control-item {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 4px;
+  font-size: 13px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-segmented-control-label {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(input:not([type='checkbox']), select, .p-button) {
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page input:not([type='checkbox']) {
+  font-size: 16px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-empty {
+  padding: 24px 20px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.feed-timeline, .bookmark-post-list) {
+  display: grid;
+  gap: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-entry.content-stream-entry {
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-entry.content-stream-entry::before {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .p-entry__body {
+  gap: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.p-entry__arrow, .feed-type-tag) {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .feed-entry-meta {
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .feed-entry-title {
+  margin: 8px 0 6px;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .feed-entry-summary {
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .feed-entry-actions {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  background: transparent;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library {
+  gap: 16px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library .p-page-header {
+  margin-bottom: 0 !important;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .entry-action-btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 50%;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.star-groups-bar, .bookmark-folders) {
+  display: flex;
+  width: 100% !important;
+  min-width: 0;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.star-group-button, .bookmark-folders .sidebar-item) {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 24px;
+  background: #ffffff;
+  white-space: nowrap;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.star-group-button.active, .sidebar-item-active) {
+  background: var(--a-color-text);
+  color: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .bookmark-layout {
+  flex-direction: column;
+  min-height: 0 !important;
+  gap: 16px !important;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .bookmark-results {
+  min-width: 0;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.star-group-select, .feed-entry-footer) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__sort {
+  gap: 4px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__sort button {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 24px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__sort button.active {
+  background: var(--a-color-text);
+  color: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 12px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__cards:has(> .music-library__song-card) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.music-album-card, .music-artist-card, .music-playlist-card) {
+  border: 0;
+  background: transparent;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.cover-frame, .avatar-frame) {
+  border: 0;
+  border-radius: 14px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.music-info, .playlist-info) {
+  padding: 10px 0 0;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.stats-overlay, .cover-stats, .music-info__arrow, .artist-info__arrow) {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .bookmark-btn.is-bookmarked {
+  background: #e9f3ff;
+  color: var(--a-color-primary);
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-card {
+  grid-template-columns: 64px minmax(0, 1fr) 44px;
+  grid-template-areas: 'cover copy action';
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-cover {
+  display: contents;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-play {
+  position: relative;
+  grid-area: cover;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__later-remove {
+  position: static;
+  grid-area: action;
+  border: 0;
+  background: #f2f2f7;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-info {
+  grid-area: copy;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-info h3 {
+  font-size: 15px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-info p {
+  font-size: 12px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-list {
+  display: grid;
+  gap: 10px;
+  border: 0;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-song {
+  grid-column: 1;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-actions {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-actions button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-album {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  text-align: left;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page :is(.history-time, .history-count) {
+  display: block;
+  color: var(--a-color-muted);
+  font-size: 11px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-time {
+  text-align: right;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-loading__row {
+  grid-template-columns: 48px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .history-actions .p-dropdown-panel {
+  position: absolute;
+  right: 0;
+  min-width: 160px;
+  z-index: var(--a-z-dropdown);
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .video-favorites-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .vc-card {
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .vc-thumb {
+  border: 0;
+  border-radius: 16px 16px 0 0;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .vc-info {
+  padding: 14px;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .vc-info__arrow {
+  display: none;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .vc-watch-later {
+  width: 44px;
+  height: 44px;
+  opacity: 1;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .video-queue-select {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+}
+
+.mobile-app-shell .mobile-app-main .mobile-saved-page .video-favorites-links a {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.mobile-app-shell .feed-article-page__navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.mobile-app-shell .feed-article-page :is(.article-title, .article-meta, .article-toolbar) {
+  overflow-wrap: anywhere;
+}
+
+.mobile-app-shell .feed-article-page .article-title {
+  font-size: 26px;
+  line-height: 1.45;
+}
+
+.mobile-app-shell .feed-article-page .article-body {
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.mobile-app-shell .feed-article-page__navigation .p-button {
+  min-height: 44px;
+}

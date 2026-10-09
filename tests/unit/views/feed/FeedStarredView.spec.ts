@@ -61,6 +61,19 @@ describe("FeedStarredView", () => {
 		authStore.isAuthenticated = true;
 	});
 
+	it("显示服务端已加载的收藏分组", async () => {
+		const feedStore = useFeedStore();
+		feedStore.starGroups = [
+			{ id: "group-1", name: "默认", user_id: "user-1", created_at: "2026-10-08T00:00:00Z" },
+			{ id: "group-2", name: "阅读灵感", user_id: "user-1", created_at: "2026-10-08T00:00:00Z" },
+		];
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }));
+		const wrapper = mount(FeedStarredView);
+		await flushPromises();
+		expect(wrapper.findAll('.star-group-button').map((button) => button.text())).toEqual(['默认', '阅读灵感']);
+		wrapper.unmount();
+	});
+
 	it("treats loaded starred entries as already starred before unstar", async () => {
 		const fetchMock = vi
 			.spyOn(globalThis, "fetch")

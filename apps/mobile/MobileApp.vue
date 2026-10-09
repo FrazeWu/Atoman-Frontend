@@ -7,7 +7,9 @@
     >
       <RouterView v-slot="{ Component, route: viewRoute }">
         <Transition :name="mobileRouteTransition">
-          <component :is="Component" :key="viewRoute.meta.mobileModule || viewRoute.path.startsWith('/studio') ? viewRoute.matched[0]?.path : viewRoute.fullPath" />
+          <KeepAlive :key="authStore.user?.uuid || 'guest'" include="MobileSavedView" :max="6">
+            <component :is="Component" :key="viewRoute.meta.mobileModule || /^\/(feed|music|studio)(\/|$)/.test(viewRoute.path) ? viewRoute.matched[0]?.path : viewRoute.path" />
+          </KeepAlive>
         </Transition>
       </RouterView>
     </main>
@@ -20,6 +22,7 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { useAuthStore } from '@/stores/auth'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
@@ -29,6 +32,7 @@ import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './MobileTopbar.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
+import './mobileSaved.css'
 
 const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
@@ -41,6 +45,7 @@ declare global {
 
 const route = useRoute()
 const siteAccessStore = useSiteAccessStore()
+const authStore = useAuthStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))

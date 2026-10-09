@@ -2,7 +2,9 @@
   <section class="mobile-module-layout">
     <RouterView v-slot="{ Component, route: viewRoute }">
       <Transition :name="detailTransition">
-        <component :is="Component" :key="viewRoute.meta.routeOverlay ? viewRoute.matched[0]?.path : viewRoute.path" />
+        <KeepAlive include="MobileSavedView" :max="2">
+          <component :is="Component" :key="viewRoute.meta.routeOverlay ? viewRoute.matched[0]?.path : viewRoute.path" />
+        </KeepAlive>
       </Transition>
     </RouterView>
     <RouterView name="overlay" @close="closeOverlay" />

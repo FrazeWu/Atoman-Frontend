@@ -40,6 +40,7 @@ const requestedQuery = ref('')
 const loading = ref(false)
 const loadingMore = ref(false)
 const error = ref('')
+const actionError = ref('')
 const page = ref(1)
 const hasMore = ref(false)
 const libraryMeta = ref({ page: 1, page_size: 24, total: 0, has_more: false })
@@ -75,7 +76,7 @@ async function playAllLater() {
   if (playingAll.value || !playableSongs.value.length) return
   player.playAlbum(playableSongs.value)
   playingAll.value = true
-  error.value = ''
+  actionError.value = ''
   try {
     const allSongs = [...songs.value]
     let nextPage = page.value + 1
@@ -97,7 +98,7 @@ async function playAllLater() {
     page.value = nextPage - 1
     hasMore.value = false
   } catch {
-    error.value = '加载剩余稍后内容失败'
+    actionError.value = '加载剩余稍后内容失败'
   } finally {
     playingAll.value = false
   }
@@ -107,7 +108,7 @@ async function removeLibraryItem(itemKind: LibraryKind, id: string) {
   const key = `${itemKind}:${id}`
   if (removingKey.value) return
   removingKey.value = key
-  error.value = ''
+  actionError.value = ''
   try {
     if (itemKind === 'later') {
       await removeMusicSongFromLater(id)
@@ -123,7 +124,7 @@ async function removeLibraryItem(itemKind: LibraryKind, id: string) {
       playlists.value = playlists.value.filter(item => String(item.id) !== id)
     }
   } catch {
-    error.value = itemKind === 'later' ? '移出稍后播放失败' : '取消收藏失败'
+    actionError.value = itemKind === 'later' ? '移出稍后播放失败，请重试' : '取消收藏失败，请重试'
   } finally {
     removingKey.value = ''
   }
@@ -254,13 +255,19 @@ onUnmounted(() => clearTimeout(queryTimer))
 
       <PInput v-model="query" type="search" placeholder="搜索收藏" aria-label="搜索收藏" />
 
+      <p v-if="actionError" class="state error" role="alert">{{ actionError }}</p>
+
       <p v-if="loading" class="state">正在加载...</p>
-      <p v-else-if="error" class="state error">{{ error }}</p>
+      <PEmpty v-else-if="error" title="收藏加载失败" :description="error">
+        <template #action><PButton variant="secondary" @click="load()">重试</PButton></template>
+      </PEmpty>
       <PEmpty
         v-else-if="kind === 'album' ? !albums.length : kind === 'artist' ? !artists.length : kind === 'playlist' ? !playlists.length : !songs.length"
         title="这里还没有收藏内容"
         description="浏览发现页面，收藏你喜爱的专辑、艺术家或歌单。"
-      />
+      >
+        <template #action><RouterLink to="/music/discover" class="a-btn a-btn--primary">去发现音乐</RouterLink></template>
+      </PEmpty>
       <div v-else class="music-library__cards">
         <article v-for="song in songs" v-if="kind === 'later'" :key="song.id" class="music-library__song-card" data-testid="library-song-card">
           <div class="music-library__song-cover">

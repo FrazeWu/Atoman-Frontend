@@ -44,7 +44,7 @@ const emit = defineEmits<{
   margin: 0;
   font-family: var(--a-font-sans);
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .vcl-list {

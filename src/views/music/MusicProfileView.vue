@@ -15,6 +15,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useAuthStore } from '@/stores/auth'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 const authStore = useAuthStore()
@@ -110,7 +111,7 @@ watch(
       description="登录账号以同步收藏、播放历史和跨端收听记录。"
     >
       <template #action>
-        <RouterLink to="/login" class="a-btn a-btn--primary">登录</RouterLink>
+        <PButton to="/login" variant="primary">登录</PButton>
       </template>
     </PEmpty>
 
@@ -263,7 +264,7 @@ watch(
 .music-profile__section-header h2 {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .music-profile__section-header span {

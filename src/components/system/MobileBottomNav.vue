@@ -102,7 +102,7 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
   display: grid;
   grid-template-columns: repeat(var(--mobile-nav-count, 4), minmax(0, 1fr));
   border-top: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   box-shadow: none;
   pointer-events: auto;
 }

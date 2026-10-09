@@ -8,70 +8,69 @@ import StudioLayout from "../../../../src/views/studio/StudioLayout.vue";
 import { useStudioStore } from "../../../../src/stores/studio";
 
 describe("StudioLayout", () => {
-	it("loads one channel state and renders the five primary destinations", async () => {
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: [
-				{ path: "/studio", component: { template: "<div />" } },
-				{ path: "/studio/blog", component: { template: "<div />" } },
-				{ path: "/studio/podcast", component: { template: "<div />" } },
-				{ path: "/studio/video", component: { template: "<div />" } },
-				{ path: "/studio/channel", component: { template: "<div />" } },
-			],
-		});
-		await router.push("/studio");
-		await router.isReady();
-		const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
-		const store = useStudioStore(pinia);
-		store.loaded = true;
-		store.currentChannel = {
-			id: "channel-1",
-			name: "主频道",
-			slug: "main",
-			description: "",
-			cover_url: "",
-		};
-		store.channels = [store.currentChannel];
+  it("renders standard a-module-layout shell and five primary nav items", async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/studio", component: { template: "<div />" } },
+        { path: "/studio/blog", component: { template: "<div />" } },
+        { path: "/studio/podcast", component: { template: "<div />" } },
+        { path: "/studio/video", component: { template: "<div />" } },
+        { path: "/studio/channel", component: { template: "<div />" } },
+      ],
+    });
+    await router.push("/studio");
+    await router.isReady();
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
+    const store = useStudioStore(pinia);
+    store.loaded = true;
+    store.currentChannel = {
+      id: "channel-1",
+      name: "主频道",
+      slug: "main",
+      description: "",
+      cover_url: "",
+    };
+    store.channels = [store.currentChannel];
 
-		const wrapper = mount(StudioLayout, {
-			global: { plugins: [pinia, router] },
-		});
+    const wrapper = mount(StudioLayout, {
+      global: { plugins: [pinia, router] },
+    });
 
-		expect(store.loadState).toHaveBeenCalledOnce();
-		expect(
-			wrapper.find('[data-testid="studio-channel-selector"]').exists(),
-		).toBe(true);
-		expect(
-			wrapper
-				.findAll('[data-testid="studio-primary-nav"] a')
-				.map((link) => link.text()),
-		).toEqual(["概览", "管理", "博客", "播客", "视频"]);
-	});
+    expect(store.loadState).toHaveBeenCalledOnce();
+    expect(wrapper.find(".a-module-layout").exists()).toBe(true);
+    expect(wrapper.find(".studio-header").exists()).toBe(false);
+    expect(
+      wrapper
+        .findAll('[data-testid="studio-primary-nav"] a')
+        .map((link) => link.text()),
+    ).toEqual(["概览", "管理", "博客", "播客", "视频"]);
+  });
 
-	it("keeps channel settings reachable before the first channel exists", async () => {
-		const router = createRouter({
-			history: createMemoryHistory(),
-			routes: [
-				{
-					path: "/studio/channel",
-					component: {
-						template: '<div data-testid="channel-page">频道页面</div>',
-					},
-				},
-			],
-		});
-		await router.push("/studio/channel");
-		await router.isReady();
-		const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
-		const store = useStudioStore(pinia);
-		store.loaded = true;
-		store.currentChannel = null;
-		store.channels = [];
+  it("keeps channel settings reachable before the first channel exists", async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studio/channel",
+          component: {
+            template: '<div data-testid="channel-page">频道页面</div>',
+          },
+        },
+      ],
+    });
+    await router.push("/studio/channel");
+    await router.isReady();
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
+    const store = useStudioStore(pinia);
+    store.loaded = true;
+    store.currentChannel = null;
+    store.channels = [];
 
-		const wrapper = mount(StudioLayout, {
-			global: { plugins: [pinia, router] },
-		});
+    const wrapper = mount(StudioLayout, {
+      global: { plugins: [pinia, router] },
+    });
 
-		expect(wrapper.find('[data-testid="channel-page"]').exists()).toBe(true);
-	});
+    expect(wrapper.find('[data-testid="channel-page"]').exists()).toBe(true);
+  });
 });

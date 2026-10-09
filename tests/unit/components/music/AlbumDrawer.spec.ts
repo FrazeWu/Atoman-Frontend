@@ -845,14 +845,36 @@ describe("AlbumDrawer.vue", () => {
 		await wrapper.get('[data-testid="track-details-song-1"]').trigger("click");
 
 		expect(wrapper.text()).toContain(
-			"FLAC · 无损 · 24-bit · 96 kHz · 2 ch · 95.0 MB",
+			"01 - Master.flac · FLAC · 无损 · 24-bit · 96 kHz · 2 ch · 95.0 MB",
 		);
 		expect(wrapper.text()).toContain("MP3 · 320 kbps");
 		expect(wrapper.text()).toContain("歌词已上传");
 		expect(
 			wrapper.get('[data-testid="track-edit-lyrics-song-1"]').text(),
 		).toContain("编辑歌词");
-		expect(wrapper.text()).not.toContain("01 - Master.flac");
+		expect(wrapper.text()).toContain("01 - Master.flac");
+	});
+
+	it("shows the audio filename and status when technical metadata is incomplete", async () => {
+		getMusicAlbum.mockResolvedValue({
+			id: "1",
+			title: "Archive Album",
+			entry_status: "open",
+			songs: [{
+				id: "song-1",
+				title: "Master",
+				track_number: 1,
+				audio_status: "ready",
+				source_file_name: "Master.mp3",
+			}],
+		});
+
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+		await wrapper.get('[data-testid="track-details-song-1"]').trigger("click");
+
+		expect(wrapper.text()).toContain("音频源Master.mp3");
+		expect(wrapper.text()).toContain("音频状态已就绪");
 	});
 
 	it("opens unified album editor from the more menu", async () => {

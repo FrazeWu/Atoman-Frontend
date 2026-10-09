@@ -492,12 +492,15 @@ function formatUploadSpeed(bytesPerSecond: number) {
 }
 .parallel-progress__steps--active {
 	display: block;
-	background: repeating-linear-gradient(
+	background: linear-gradient(
 		-45deg,
-		var(--a-color-text) 0,
-		var(--a-color-text) 0.35rem,
-		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 0.35rem,
-		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 0.7rem
+		var(--a-color-text) 25%,
+		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 25%,
+		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 50%,
+		var(--a-color-text) 50%,
+		var(--a-color-text) 75%,
+		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 75%,
+		color-mix(in srgb, var(--a-color-text) 30%, var(--a-color-surface-3)) 100%
 	);
 	background-size: 1rem 1rem;
 	animation: album-import-progress-stripes 0.8s linear infinite;

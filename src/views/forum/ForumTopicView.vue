@@ -724,7 +724,7 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 
 .markdown-body :deep(th) {
   font-weight: 500;
-  background: var(--a-color-disabled-bg);
+  background: var(--a-color-bg);
 }
 
 .markdown-body :deep(img) {

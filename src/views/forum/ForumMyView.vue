@@ -4,6 +4,7 @@ import { IconBookmark as Bookmark, IconMessage as MessageSquare, IconUser as Use
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 const authStore = useAuthStore()
@@ -24,7 +25,7 @@ onMounted(() => {
       title="登录后查看论坛个人中心"
       description="登录账号以查看发起的话题、回复、收藏和关注。"
     >
-      <template #action><RouterLink to="/login" class="a-btn a-btn--primary">登录</RouterLink></template>
+      <template #action><PButton to="/login" variant="primary">登录</PButton></template>
     </PEmpty>
 
     <template v-else>
@@ -53,7 +54,18 @@ onMounted(() => {
 <style scoped>
 .forum-my-view { min-height: 100%; padding-bottom: 3rem; }
 .forum-my__links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 2rem; }
-.forum-my__links a { display: flex; min-height: 52px; align-items: center; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
+.forum-my__links a {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+}
 .forum-my__links a:hover, .forum-my__links a:focus-visible { border-color: var(--a-color-fg); }
 .forum-my__following { display: grid; gap: 0.75rem; }
 .forum-my__following h2 { margin: 0; font-size: 1rem; font-weight: 500; }

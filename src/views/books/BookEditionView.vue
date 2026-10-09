@@ -5,7 +5,7 @@
     <template v-else-if="detail">
       <header class="books-detail__header">
         <BookCover :src="detail.edition.cover_url" :title="detail.edition.title || detail.work.title" eager :width="480" />
-        <div>
+        <div class="books-detail__identity">
         <RouterLink class="books-detail__back" :to="{ path: `/books/work/${detail.work.id}`, query: route.query }">返回作品</RouterLink>
         <h1>{{ detail.edition.title || detail.work.title }}</h1>
         <p>{{ detail.work.title }}</p>
@@ -77,9 +77,16 @@ onMounted(async () => {
 .books-detail__header {
   display: grid;
   grid-template-columns: 8rem minmax(0, 1fr);
-  gap: 0.45rem;
+  gap: 1.25rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.books-detail__identity {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
 .books-detail__back,
@@ -101,7 +108,8 @@ onMounted(async () => {
 
 .books-detail h1 {
   margin: 0.25rem 0 0;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
@@ -118,7 +126,7 @@ onMounted(async () => {
 
 .books-edition-facts {
   display: grid;
-  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
   margin: 0;
   border-top: 1px solid var(--a-color-border-soft);
 }
@@ -128,14 +136,19 @@ onMounted(async () => {
   margin: 0;
   padding: 0.75rem 0;
   border-bottom: 1px solid var(--a-color-border-soft);
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 
 .books-edition-facts dt {
   color: var(--a-color-muted);
+  font-weight: 400;
 }
 
 .books-edition-facts dd {
   color: var(--a-color-fg);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .books-detail__section {
@@ -146,6 +159,7 @@ onMounted(async () => {
 .books-detail__section h2 {
   margin: 0;
   font-size: 1.05rem;
+  font-weight: 500;
 }
 
 .books-source-list {
@@ -158,17 +172,7 @@ onMounted(async () => {
 }
 
 .books-source-list li {
+  padding: 0.65rem 0;
   border-bottom: 1px solid var(--a-color-border-soft);
-}
-
-.books-source-list a {
-  display: block;
-  padding: 0.8rem 0;
-  color: var(--a-color-fg);
-  text-decoration: none;
-}
-
-.books-source-list a:hover {
-  text-decoration: underline;
 }
 </style>

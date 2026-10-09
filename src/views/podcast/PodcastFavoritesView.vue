@@ -87,7 +87,7 @@ watch(activeTab, loadActiveTab)
         description="登录账号以同步你收藏的单集、播客节目与稍后听列表。"
       >
         <template #action>
-          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+          <PButton to="/login" variant="primary">立即登录</PButton>
         </template>
       </PEmpty>
     </div>
@@ -142,6 +142,6 @@ watch(activeTab, loadActiveTab)
 .pf-list { display: grid; gap: 0.6rem; }
 .pf-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .pf-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
-.pf-title { min-width: 0; color: var(--a-color-fg); font-weight: 600; text-decoration: none; font-size: 0.925rem; }
+.pf-title { min-width: 0; color: var(--a-color-fg); font-weight: 500; text-decoration: none; font-size: 0.925rem; }
 .pf-title:hover { text-decoration: underline; }
 </style>

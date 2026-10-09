@@ -7,16 +7,16 @@
         你访问的路径可能已迁移、删除，或输入有误。
       </p>
       <div class="notfound-actions">
-        <RouterLink to="/" class="btn-main">回到首页</RouterLink>
-        <a :href="moduleUrl('music')" class="btn-sub">到专辑收藏</a>
+        <PButton to="/" variant="primary">回到首页</PButton>
+        <PButton :href="moduleUrl('music')" variant="secondary">到专辑收藏</PButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
 import { moduleUrl } from '@/router/siteUrls'
+import PButton from '@/components/ui/PButton.vue'
 </script>
 
 <style scoped>
@@ -31,8 +31,9 @@ import { moduleUrl } from '@/router/siteUrls'
 .notfound-card {
   width: min(40rem, 100%);
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
   padding: 2rem;
-  background: #fff;
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 
@@ -53,7 +54,7 @@ import { moduleUrl } from '@/router/siteUrls'
 
 .notfound-desc {
   margin: 1rem 0 0;
-  color: #4b5563;
+  color: var(--a-color-text-secondary);
   font-size: 0.95rem;
 }
 
@@ -62,37 +63,5 @@ import { moduleUrl } from '@/router/siteUrls'
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.btn-main,
-.btn-sub {
-  text-decoration: none;
-  border: 1px solid var(--a-color-border-soft);
-  padding: 0.6rem 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
-}
-
-.btn-main {
-  background: #000;
-  color: #fff;
-}
-
-.btn-main:hover {
-  background: #fff;
-  color: #000;
-}
-
-.btn-sub {
-  background: #fff;
-  color: #000;
-}
-
-.btn-sub:hover {
-  background: #000;
-  color: #fff;
 }
 </style>

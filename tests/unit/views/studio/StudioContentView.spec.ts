@@ -95,6 +95,9 @@ describe("StudioContentView", () => {
 		expect(
 			wrapper.find('[data-testid="create-content"]').attributes("href"),
 		).toBe("/studio/blog/new?collection=collection-1");
+		expect(
+			wrapper.find('[data-testid="studio-channel-selector"]').exists(),
+		).toBe(true);
 	});
 
 	it("keeps filter changes in route query and omits collection for all collections", async () => {

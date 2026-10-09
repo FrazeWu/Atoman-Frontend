@@ -1,6 +1,6 @@
 <template>
   <section class="studio-goals">
-    <PPageHeader title="经营目标" sub="把当前频道的目标、行动和周期复盘放在一起">
+    <PPageHeader title="经营目标" sub="设定与跟踪当前周期目标">
       <template #action>
         <RouterLink class="studio-goals__back" to="/studio">回到概览</RouterLink>
       </template>
@@ -13,7 +13,7 @@
 
       <section v-if="!cycles.length" class="studio-goals__empty" aria-labelledby="goals-empty-title">
         <h2 id="goals-empty-title">先建立一个周期</h2>
-        <p>用一个明确的时间范围开始记录频道的经营重点。</p>
+        <p>设定时间范围开始记录经营重点。</p>
         <form class="studio-goals__cycle-form" @submit.prevent="createCycle">
           <PInput v-model="cycleDraft.start_date" type="date" label="开始日期" required />
           <PInput v-model="cycleDraft.end_date" type="date" label="结束日期" required />
@@ -46,10 +46,10 @@
           </header>
 
           <p v-if="selectedCycle.status === 'needs_review'" class="studio-goals__review-prompt">
-            这个周期已经结束，记录结果后再开始下一轮调整。
+            当前周期已结束，记录结果后开启下一周期。
           </p>
           <p v-else-if="selectedCycle.status === 'reviewed'" class="studio-goals__reviewed-note">
-            已完成复盘，下面的数字是周期结束时保存的结果。
+            已完成复盘，显示当前周期归档结果。
           </p>
 
           <div v-if="selectedCycle.goals.length" class="studio-goals__goal-list">
@@ -106,7 +106,7 @@
         <section v-if="selectedCycle?.status === 'needs_review'" class="studio-goals__review" aria-labelledby="review-title">
           <header>
             <h2 id="review-title">周期复盘</h2>
-            <p>记录结果和下一步，不要求为未完成目标找一个单一原因。</p>
+            <p>记录周期结果与后续调整。</p>
           </header>
           <form @submit.prevent="submitReview">
             <PTextarea v-model="reviewDraft.result" label="实际结果" placeholder="这次周期最终完成了什么？" :rows="3" required />
@@ -357,14 +357,47 @@ onMounted(() => { void load() })
 
 <style scoped>
 .studio-goals { display: grid; gap: 1.25rem; }
-.studio-goals__back { color: var(--a-color-muted); font-size: 0.85rem; text-decoration: none; }
-.studio-goals__back:hover { color: var(--a-color-text); }
+.studio-goals__back {
+  min-height: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color var(--a-motion-micro, 140ms) ease, background-color var(--a-motion-micro, 140ms) ease;
+}
+.studio-goals__back:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface);
+  color: var(--a-color-text);
+}
 .studio-goals__message { padding: 2rem 0; color: var(--a-color-muted); }
 .studio-goals__message--error { color: var(--a-color-accent-destructive); }
-.studio-goals__notice { margin: 0; padding: 0.75rem 1rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-surface-muted); }
+.studio-goals__notice {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: #ffffff;
+  color: var(--a-color-text);
+}
 .studio-goals__empty,
 .studio-goals__cycle,
-.studio-goals__review { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); }
+.studio-goals__review {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: #ffffff;
+  box-shadow: none;
+}
 .studio-goals__empty h2,
 .studio-goals__empty p,
 .studio-goals__cycle h2,
@@ -382,7 +415,13 @@ onMounted(() => { void load() })
 .studio-goals__action-form :deep(.p-button),
 .studio-goals__review form :deep(.p-button) { width: max-content; }
 .studio-goals__cycle-actions { display: flex; gap: 0.5rem; }
-.studio-goals__cycle-form--next { padding: 1rem 1.25rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-surface-muted); }
+.studio-goals__cycle-form--next {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: #ffffff;
+  box-shadow: none;
+}
 .studio-goals__cycle-form--next :deep(.p-button) { width: max-content; }
 .studio-goals__toolbar { display: flex; align-items: end; gap: 1rem; }
 .studio-goals__toolbar :deep(.p-field) { min-width: min(28rem, 100%); }
@@ -394,13 +433,21 @@ onMounted(() => { void load() })
 .studio-goals__goal-label { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-goals__cycle-header h2 { margin-top: 0.25rem; font-size: 1.25rem; }
 .studio-goals__review-prompt,
-.studio-goals__reviewed-note { margin: 0; padding: 0.75rem 1rem; background: var(--a-color-surface-muted); color: var(--a-color-muted); font-size: 0.85rem; }
+.studio-goals__reviewed-note {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface);
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
 .studio-goals__goal-list { display: grid; gap: 1rem; }
 .studio-goals__goal { display: grid; gap: 0.75rem; padding: 1rem 0; border-top: 1px solid var(--a-color-border-soft); }
 .studio-goals__goal h3 { margin-top: 0.2rem; font-size: 1rem; }
 .studio-goals__goal-header > strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.studio-goals__progress { height: 0.5rem; overflow: hidden; background: var(--a-color-surface-muted); }
-.studio-goals__progress span { display: block; height: 100%; background: var(--a-color-primary); transition: width 0.2s ease; }
+.studio-goals__progress { height: 0.5rem; overflow: hidden; background: var(--a-color-surface-muted); border-radius: var(--a-radius-control); }
+.studio-goals__progress span { display: block; height: 100%; background: var(--a-color-primary); border-radius: var(--a-radius-control); transition: width var(--a-motion-state, 220ms) ease; }
 .studio-goals__progress-caption { margin: 0; color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-goals__actions { display: grid; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
 .studio-goals__actions li { display: flex; align-items: center; gap: 0.5rem; min-width: 0; padding: 0.45rem 0; }
@@ -408,9 +455,25 @@ onMounted(() => { void load() })
 .studio-goals__actions label span { overflow: hidden; text-overflow: ellipsis; }
 .studio-goals__actions .is-completed { color: var(--a-color-muted); text-decoration: line-through; }
 .studio-goals__actions time { color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
-.studio-goals__actions a { display: inline-flex; color: var(--a-color-muted); }
-.studio-goals__icon-button { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 0; background: transparent; color: var(--a-color-muted); cursor: pointer; }
-.studio-goals__icon-button:hover { color: var(--a-color-accent-destructive); }
+.studio-goals__actions a { display: inline-flex; color: var(--a-color-muted); transition: color var(--a-motion-micro, 140ms) ease; }
+.studio-goals__actions a:hover { color: var(--a-color-primary); }
+.studio-goals__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: color var(--a-motion-micro, 140ms) ease, background-color var(--a-motion-micro, 140ms) ease;
+}
+.studio-goals__icon-button:hover {
+  color: var(--a-color-accent-destructive);
+  background: var(--a-color-surface);
+}
 .studio-goals__empty-inline { margin: 0; color: var(--a-color-muted); font-size: 0.8rem; }
 .studio-goals__goal-form { grid-template-columns: minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(8rem, 1fr) 7rem auto; padding-top: 1rem; border-top: 1px solid var(--a-color-border-soft); }
 .studio-goals__action-form { grid-template-columns: minmax(12rem, 2fr) 10rem minmax(10rem, 1.25fr) auto; padding-top: 0.5rem; }

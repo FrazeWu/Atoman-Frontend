@@ -1,23 +1,53 @@
 <template>
   <main class="a-page-md books-governance">
-    <PPageHeader :title="isReview ? '审核' : '贡献'" mb="0" />
+    <PPageHeader
+      :title="isReview ? '图书审核' : '图书贡献'"
+      :sub="isReview ? '处理条目与正文审核队列' : '提交与查看条目编辑记录'"
+      mb="1.5rem"
+    />
+
+    <p v-if="message" class="books-governance__feedback" aria-live="polite">{{ message }}</p>
+    <p v-if="errorMessage" class="books-governance__feedback books-governance__feedback--error" role="alert">{{ errorMessage }}</p>
 
     <template v-if="!isReview">
       <section class="books-governance__section" aria-labelledby="new-edit-title">
         <h2 id="new-edit-title">提交公共作品</h2>
         <form class="books-governance__form" @submit.prevent="submitEdit">
-          <label for="edit-title">标题</label>
-          <input id="edit-title" v-model="editTitle" required maxlength="500" />
-          <label for="edit-description">简介</label>
-          <textarea id="edit-description" v-model="editDescription" maxlength="20000" rows="4" />
-          <label for="edit-source">资料来源 URL</label>
-          <input id="edit-source" v-model="editSource" type="url" required maxlength="4096" placeholder="https://" />
-          <label for="edit-reason">提交理由</label>
-          <input id="edit-reason" v-model="editReason" maxlength="2000" />
-          <PButton type="submit" variant="secondary" :loading="saving">
-            <Plus :size="16" aria-hidden="true" />
-            <span>提交审核</span>
-          </PButton>
+          <PInput
+            id="edit-title"
+            v-model="editTitle"
+            label="标题"
+            required
+            maxlength="500"
+          />
+          <PTextarea
+            id="edit-description"
+            v-model="editDescription"
+            label="简介"
+            maxlength="20000"
+            :rows="4"
+          />
+          <PInput
+            id="edit-source"
+            v-model="editSource"
+            label="资料来源 URL"
+            type="url"
+            required
+            maxlength="4096"
+            placeholder="https://"
+          />
+          <PInput
+            id="edit-reason"
+            v-model="editReason"
+            label="修改原因"
+            maxlength="2000"
+          />
+          <div class="books-governance__form-actions">
+            <PButton type="submit" variant="primary" :loading="saving">
+              <Plus :size="16" aria-hidden="true" />
+              <span>提交审核</span>
+            </PButton>
+          </div>
         </form>
       </section>
 
@@ -26,16 +56,18 @@
         <p v-if="loading" class="books-governance__muted">正在加载...</p>
         <p v-else-if="edits.length === 0" class="books-governance__muted">暂无申请</p>
         <ul v-else class="books-governance__list">
-          <li v-for="edit in edits" :key="edit.id">
-            <div>
+          <li v-for="edit in edits" :key="edit.id" class="books-governance__card">
+            <div class="books-governance__card-main">
               <strong>{{ editTitleLabel(edit) }}</strong>
               <span>{{ edit.entity_type }} · {{ editStatusLabel(edit.status) }}</span>
               <small v-if="edit.decision_note">{{ edit.decision_note }}</small>
             </div>
-            <PButton v-if="edit.status === 'pending'" type="button" variant="ghost" @click="withdraw(edit.id)">
-              <X :size="16" aria-hidden="true" />
-              <span>撤回</span>
-            </PButton>
+            <div class="books-governance__actions">
+              <PButton v-if="edit.status === 'pending'" type="button" variant="ghost" size="sm" @click="withdraw(edit.id)">
+                <X :size="16" aria-hidden="true" />
+                <span>撤回</span>
+              </PButton>
+            </div>
           </li>
         </ul>
       </section>
@@ -45,38 +77,41 @@
         <p v-if="loading" class="books-governance__muted">正在加载...</p>
         <p v-else-if="publicationRequests.length === 0" class="books-governance__muted">暂无申请</p>
         <ul v-else class="books-governance__list">
-          <li v-for="request in publicationRequests" :key="request.id">
-            <div>
+          <li v-for="request in publicationRequests" :key="request.id" class="books-governance__card">
+            <div class="books-governance__card-main">
               <strong>{{ request.status }}</strong>
               <span>{{ request.published_asset_status || '尚未生成公共资源' }}</span>
               <small v-if="request.decision_note">{{ request.decision_note }}</small>
             </div>
-            <PButton v-if="request.published_asset_status === 'removed'" type="button" variant="secondary" @click="submitAppeal(request.id)">
-              <RotateCcw :size="16" aria-hidden="true" />
-              <span>提交申诉</span>
-            </PButton>
+            <div class="books-governance__actions">
+              <PButton v-if="request.published_asset_status === 'removed'" type="button" variant="secondary" size="sm" @click="submitAppeal(request.id)">
+                <RotateCcw :size="16" aria-hidden="true" />
+                <span>提交申诉</span>
+              </PButton>
+            </div>
           </li>
         </ul>
       </section>
+    </template>
 
-      <p v-if="errorMessage" class="books-governance__feedback" role="alert">{{ errorMessage }}</p>
+    <template v-else>
       <p v-if="loading" class="books-governance__muted">正在加载审核队列...</p>
       <section class="books-governance__section" aria-labelledby="review-edits-title">
         <h2 id="review-edits-title">书目申请</h2>
         <p v-if="!loading && edits.length === 0" class="books-governance__muted">暂无待审核申请</p>
         <ul v-else class="books-governance__list">
-          <li v-for="edit in edits" :key="edit.id">
-            <div>
+          <li v-for="edit in edits" :key="edit.id" class="books-governance__card">
+            <div class="books-governance__card-main">
               <strong>{{ editTitleLabel(edit) }}</strong>
               <span>{{ edit.entity_type }} · {{ edit.reason || '无理由' }}</span>
               <small>{{ edit.sources[0]?.title || edit.sources[0]?.url }}</small>
             </div>
             <div class="books-governance__actions">
-              <PButton type="button" variant="secondary" :loading="decisionID === edit.id" @click="decideEdit(edit.id, 'approved')">
+              <PButton type="button" variant="secondary" size="sm" :loading="decisionID === edit.id" @click="decideEdit(edit.id, 'approved')">
                 <Check :size="16" aria-hidden="true" />
                 <span>通过</span>
               </PButton>
-              <PButton type="button" variant="ghost" :loading="decisionID === edit.id" @click="decideEdit(edit.id, 'rejected')">
+              <PButton type="button" variant="ghost" size="sm" :loading="decisionID === edit.id" @click="decideEdit(edit.id, 'rejected')">
                 <X :size="16" aria-hidden="true" />
                 <span>驳回</span>
               </PButton>
@@ -89,22 +124,22 @@
         <h2 id="review-publication-title">公共正文申请</h2>
         <p v-if="!loading && publicationRequests.length === 0" class="books-governance__muted">暂无待审核申请</p>
         <ul v-else class="books-governance__list">
-          <li v-for="request in publicationRequests" :key="request.id">
-            <div>
+          <li v-for="request in publicationRequests" :key="request.id" class="books-governance__card">
+            <div class="books-governance__card-main">
               <strong>{{ request.license_type }}</strong>
               <span>{{ request.rights_holder || '未填写权利人' }}</span>
               <small>{{ request.source_url }}</small>
             </div>
             <div class="books-governance__actions">
-              <PButton v-if="request.evidence_uploaded" type="button" variant="ghost" :loading="evidenceOpeningID === request.id" @click="viewEvidence(request.id)">
+              <PButton v-if="request.evidence_uploaded" type="button" variant="ghost" size="sm" :loading="evidenceOpeningID === request.id" @click="viewEvidence(request.id)">
                 <ExternalLink :size="16" aria-hidden="true" />
                 <span>查看证据</span>
               </PButton>
-              <PButton type="button" variant="secondary" :loading="decisionID === request.id" @click="decidePublication(request.id, 'published')">
+              <PButton type="button" variant="secondary" size="sm" :loading="decisionID === request.id" @click="decidePublication(request.id, 'published')">
                 <Check :size="16" aria-hidden="true" />
                 <span>发布</span>
               </PButton>
-              <PButton type="button" variant="ghost" :loading="decisionID === request.id" @click="decidePublication(request.id, 'rejected')">
+              <PButton type="button" variant="ghost" size="sm" :loading="decisionID === request.id" @click="decidePublication(request.id, 'rejected')">
                 <X :size="16" aria-hidden="true" />
                 <span>驳回</span>
               </PButton>
@@ -117,17 +152,17 @@
         <h2 id="review-appeals-title">公共正文申诉</h2>
         <p v-if="!loading && publicationAppeals.length === 0" class="books-governance__muted">暂无待处理申诉</p>
         <ul v-else class="books-governance__list">
-          <li v-for="appeal in publicationAppeals" :key="appeal.id">
-            <div>
+          <li v-for="appeal in publicationAppeals" :key="appeal.id" class="books-governance__card">
+            <div class="books-governance__card-main">
               <strong>{{ appeal.reason }}</strong>
               <span>申请 {{ appeal.publication_request_id }}</span>
             </div>
             <div class="books-governance__actions">
-              <PButton type="button" variant="secondary" :loading="decisionID === appeal.id" @click="decideAppeal(appeal.id, 'approved')">
+              <PButton type="button" variant="secondary" size="sm" :loading="decisionID === appeal.id" @click="decideAppeal(appeal.id, 'approved')">
                 <Check :size="16" aria-hidden="true" />
                 <span>恢复公开</span>
               </PButton>
-              <PButton type="button" variant="ghost" :loading="decisionID === appeal.id" @click="decideAppeal(appeal.id, 'rejected')">
+              <PButton type="button" variant="ghost" size="sm" :loading="decisionID === appeal.id" @click="decideAppeal(appeal.id, 'rejected')">
                 <X :size="16" aria-hidden="true" />
                 <span>驳回</span>
               </PButton>
@@ -140,17 +175,17 @@
         <h2 id="review-reports-title">公共正文举报</h2>
         <p v-if="!loading && reports.length === 0" class="books-governance__muted">暂无待处理举报</p>
         <ul v-else class="books-governance__list">
-          <li v-for="report in reports" :key="report.id">
-            <div>
+          <li v-for="report in reports" :key="report.id" class="books-governance__card">
+            <div class="books-governance__card-main">
               <strong>{{ report.reason }}</strong>
               <span>资源 {{ report.asset_id }}</span>
             </div>
             <div class="books-governance__actions">
-              <PButton type="button" variant="secondary" :loading="decisionID === report.id" @click="decideReport(report.id, 'removed')">
+              <PButton type="button" variant="secondary" size="sm" :loading="decisionID === report.id" @click="decideReport(report.id, 'removed')">
                 <Check :size="16" aria-hidden="true" />
                 <span>下架</span>
               </PButton>
-              <PButton type="button" variant="ghost" :loading="decisionID === report.id" @click="decideReport(report.id, 'rejected')">
+              <PButton type="button" variant="ghost" size="sm" :loading="decisionID === report.id" @click="decideReport(report.id, 'rejected')">
                 <X :size="16" aria-hidden="true" />
                 <span>驳回</span>
               </PButton>
@@ -159,17 +194,23 @@
         </ul>
       </section>
     </template>
-    <p v-if="message" class="books-governance__feedback" aria-live="polite">{{ message }}</p>
-    <p v-if="errorMessage && !isReview" class="books-governance__feedback" role="alert">{{ errorMessage }}</p>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { IconCheck as Check, IconExternalLink as ExternalLink, IconPlus as Plus, IconRotate2 as RotateCcw, IconX as X } from '@tabler/icons-vue'
+import {
+  IconCheck as Check,
+  IconExternalLink as ExternalLink,
+  IconPlus as Plus,
+  IconRotate2 as RotateCcw,
+  IconX as X,
+} from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import {
   fetchPublicationEvidence,
   listBookEditReviewQueue,
@@ -222,7 +263,12 @@ async function load() {
   errorMessage.value = ''
   try {
     if (isReview.value) {
-      const [editResult, publicationResult, reportResult, appealResult] = await Promise.all([listBookEditReviewQueue(), listPublicationReviewQueue(), listPublicationReports(), listPublicationAppealReviewQueue()])
+      const [editResult, publicationResult, reportResult, appealResult] = await Promise.all([
+        listBookEditReviewQueue(),
+        listPublicationReviewQueue(),
+        listPublicationReports(),
+        listPublicationAppealReviewQueue(),
+      ])
       edits.value = editResult.items
       publicationRequests.value = publicationResult.items
       reports.value = reportResult.items
@@ -278,7 +324,7 @@ async function withdraw(editID: string) {
 }
 
 async function submitAppeal(requestID: string) {
-  const reason = window.prompt('请输入申诉理由')?.trim()
+  const reason = window.prompt('请输入申诉原因')?.trim()
   if (!reason) return
   try {
     await submitPublicationAppeal(requestID, reason)
@@ -359,24 +405,123 @@ async function decidePublication(requestID: string, decision: 'published' | 'rej
   }
 }
 
+watch(() => route.path, () => {
+  load()
+})
+
 onMounted(load)
 </script>
 
 <style scoped>
-.books-governance { display: grid; gap: 1.25rem; padding-top: var(--a-page-start-space); }
-.books-governance__section { display: grid; gap: 0.75rem; }
-.books-governance__section h2 { margin: 0; font-size: 1.05rem; }
-.books-governance__form { display: grid; gap: 0.55rem; max-width: 42rem; }
-.books-governance__form label { color: var(--a-color-muted); font-size: 0.88rem; }
-.books-governance__form input, .books-governance__form textarea { width: 100%; border: 1px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-fg); padding: 0.65rem; font: inherit; }
-.books-governance__form button { justify-self: start; }
-.books-governance__list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--a-color-border-soft); }
-.books-governance__list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
-.books-governance__list li > div:first-child { display: grid; min-width: 0; gap: 0.2rem; }
-.books-governance__list span, .books-governance__list small, .books-governance__muted { color: var(--a-color-muted); font-size: 0.85rem; }
-.books-governance__list small { overflow-wrap: anywhere; }
-.books-governance__actions { display: flex; flex-shrink: 0; gap: 0.4rem; }
-.books-governance__feedback { margin: 0; color: var(--a-color-muted); }
-.books-governance__feedback[role='alert'] { color: var(--a-color-danger); }
-@media (max-width: 640px) { .books-governance__list li { align-items: flex-start; flex-direction: column; } .books-governance__actions { width: 100%; } }
+.books-governance {
+  display: grid;
+  gap: 1.5rem;
+  padding-top: var(--a-page-start-space);
+  padding-bottom: 2.5rem;
+}
+
+.books-governance__section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.books-governance__section h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+}
+
+.books-governance__form {
+  display: grid;
+  gap: 1rem;
+  max-width: 42rem;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card);
+  box-shadow: none;
+}
+
+.books-governance__form-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.25rem;
+}
+
+.books-governance__list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.books-governance__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card);
+  box-shadow: none;
+}
+
+.books-governance__card-main {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.books-governance__card-main strong {
+  color: var(--a-color-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.books-governance__card-main span,
+.books-governance__card-main small,
+.books-governance__muted {
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.books-governance__card-main small {
+  overflow-wrap: anywhere;
+}
+
+.books-governance__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.books-governance__feedback {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface);
+  color: var(--a-color-muted-soft);
+  font-size: 0.85rem;
+}
+
+.books-governance__feedback--error,
+.books-governance__feedback[role='alert'] {
+  background: color-mix(in srgb, var(--a-color-danger) 8%, #ffffff);
+  color: var(--a-color-danger);
+}
+
+@media (max-width: 640px) {
+  .books-governance__card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .books-governance__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
 </style>

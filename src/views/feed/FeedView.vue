@@ -201,7 +201,7 @@
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.post.id)"
-                :title="readingListIds.has(item.post.id) ? '移除稍后阅读' : '稍后阅读'"
+                :title="readingListIds.has(item.post.id) ? '取消稍后阅读' : '稍后阅读'"
                 @click="toggleReadingList(item.post.id)"
               >
                 <Clock :size="14" />
@@ -279,8 +279,8 @@
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.feed_item.id)"
-                :title="readingListIds.has(item.feed_item.id) ? '移除稍后阅读' : '稍后阅读'"
-                :aria-label="readingListIds.has(item.feed_item.id) ? '移除稍后阅读' : '稍后阅读'"
+                :title="readingListIds.has(item.feed_item.id) ? '取消稍后阅读' : '稍后阅读'"
+                :aria-label="readingListIds.has(item.feed_item.id) ? '取消稍后阅读' : '稍后阅读'"
                 @click="toggleReadingList(item.feed_item.id)"
               >
                 <Clock :size="14" aria-hidden="true" />

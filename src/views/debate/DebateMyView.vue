@@ -4,6 +4,7 @@ import { IconBook2 as BookOpen, IconMessage as MessageSquare, IconSettings as Se
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 const authStore = useAuthStore()
@@ -19,7 +20,7 @@ onMounted(() => {
   <div class="a-page-md debate-my-view">
     <PPageHeader title="我的" mb="1.25rem" />
     <PEmpty v-if="!authStore.isAuthenticated" title="登录后查看我的辩题" description="登录账号以查看发起的辩题和参与记录。">
-      <template #action><RouterLink to="/login" class="a-btn a-btn--primary">登录</RouterLink></template>
+      <template #action><PButton to="/login" variant="primary">登录</PButton></template>
     </PEmpty>
     <template v-else>
       <nav class="debate-my__links" aria-label="辩题个人入口">
@@ -39,7 +40,18 @@ onMounted(() => {
 <style scoped>
 .debate-my-view { min-height: 100%; padding-bottom: 3rem; }
 .debate-my__links { display: grid; gap: 0.5rem; margin-bottom: 2rem; }
-.debate-my__links a { display: flex; min-height: 48px; align-items: center; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
+.debate-my__links a {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+}
 .debate-my__links a:hover, .debate-my__links a:focus-visible { border-color: var(--a-color-fg); }
 .debate-my__list { display: grid; gap: 0.75rem; }
 .debate-my__list h2 { margin: 0; font-size: 1rem; font-weight: 500; }

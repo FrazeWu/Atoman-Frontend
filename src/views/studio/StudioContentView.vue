@@ -6,6 +6,7 @@
         <p>查看、筛选并管理{{ config.itemLabel }}。</p>
       </div>
       <div class="studio-content__heading-meta">
+        <StudioChannelSelector />
         <span v-if="studio.contentPagination[module]?.total !== undefined">
           共 {{ studio.contentPagination[module]?.total ?? 0 }} 条
         </span>
@@ -122,6 +123,7 @@ import { IconCheck as Check, IconPlus as Plus, IconSearch as Search } from '@tab
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import StudioContentTable from '@/components/studio/StudioContentTable.vue'
+import StudioChannelSelector from '@/components/studio/StudioChannelSelector.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -353,9 +355,9 @@ watch(
 .studio-content__heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8125rem; }
 .studio-content__heading-meta { display: flex; align-items: center; gap: 0.75rem; }
 .studio-content__heading-meta > span { color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
-.studio-content__filters { position: relative; display: grid; grid-template-columns: minmax(12rem, 1fr) repeat(3, minmax(9rem, auto)); gap: 0.625rem; align-items: center; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
+.studio-content__filters { position: relative; display: grid; grid-template-columns: minmax(12rem, 1fr) repeat(3, minmax(9rem, auto)); gap: 0.625rem; align-items: center; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); box-shadow: none; }
 .studio-content__filter-label { grid-column: 1 / -1; color: var(--a-color-muted); font-size: 0.75rem; font-weight: 600; }
-.studio-content__search { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); }
+.studio-content__search { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); transition: border-color var(--a-motion-micro, 140ms) ease; }
 .studio-content__search:focus-within { outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent); outline-offset: 1px; border-color: var(--a-color-primary); }
 .studio-content__search :deep(.p-field) { flex: 1; min-width: 0; }
 .studio-content__search :deep(.p-input) { min-width: 0; min-height: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--a-color-text); font: inherit; padding: 0; }
@@ -376,8 +378,8 @@ watch(
   .studio-content__search { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
-  .studio-content__heading { align-items: flex-start; }
-  .studio-content__heading-meta { align-items: flex-end; flex-direction: column; gap: 0.5rem; }
+  .studio-content__heading { align-items: flex-start; flex-direction: column; gap: 0.75rem; }
+  .studio-content__heading-meta { width: 100%; align-items: stretch; flex-direction: column; gap: 0.5rem; }
   .studio-content__filters { grid-template-columns: 1fr; }
   .studio-content__filter-label { grid-column: auto; }
   .studio-content__search { grid-column: auto; }

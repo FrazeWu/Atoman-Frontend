@@ -14,7 +14,7 @@
         description="登录账号以同步你的稍后阅读文章清单。"
       >
         <template #action>
-          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+          <PButton to="/login" variant="primary">立即登录</PButton>
         </template>
       </PEmpty>
     </div>

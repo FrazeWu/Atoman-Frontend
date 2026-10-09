@@ -64,7 +64,7 @@ async function listenLater(episode: PodcastEpisode) {
     <div v-if="!authStore.isAuthenticated" class="psub-unauth">
       <PEmpty title="请登录后查看播客订阅" description="登录账号以同步你订阅的播客节目和最新更新。">
         <template #action>
-          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+          <PButton to="/login" variant="primary">立即登录</PButton>
         </template>
       </PEmpty>
     </div>
@@ -121,7 +121,7 @@ async function listenLater(episode: PodcastEpisode) {
 .psub-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .psub-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
 .psub-main { min-width: 0; }
-.psub-title { color: var(--a-color-fg); font-weight: 600; text-decoration: none; font-size: 0.925rem; }
+.psub-title { color: var(--a-color-fg); font-weight: 500; text-decoration: none; font-size: 0.925rem; }
 .psub-title:hover { text-decoration: underline; }
 .psub-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.775rem; }
 .psub-actions { display: flex; flex: 0 0 auto; gap: 0.5rem; }

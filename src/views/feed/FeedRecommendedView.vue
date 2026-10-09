@@ -224,7 +224,7 @@
                 <PClip
                   v-if="authStore.isAuthenticated"
                   :active="isReadingList(item)"
-                  :title="isReadingList(item) ? '移除稍后阅读' : '稍后阅读'"
+                  :title="isReadingList(item) ? '取消稍后阅读' : '稍后阅读'"
                   @click.stop="toggleReadingList(item)"
                 >
                   <Clock :size="14" />

@@ -27,10 +27,12 @@ import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useAuthStore } from '@/stores/auth'
 import { MUSIC_RECOMMENDATION_MODE_OPTIONS } from '@/utils/musicRecommendations'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 type ArtistFilterTab = 'all' | 'subscribed'
 const activeTab = ref<ArtistFilterTab>('all')
 const recommendationMode = ref<MusicRecommendationMode>('hot')
+const canCreateMusic = !isStandaloneMobileApp()
 
 const tabOptions = [
   { label: '全部', value: 'all' },
@@ -351,6 +353,7 @@ function handleSearchBlur() {
             </SearchSurface>
           </div>
           <PButton
+            v-if="canCreateMusic"
             variant="primary"
             class="search-side-action"
             @click="startArtistCreation"
@@ -388,6 +391,7 @@ function handleSearchBlur() {
           <p class="state-line">{{ activeTab === 'subscribed' ? '暂无订阅的艺术家' : '没有匹配的艺术家' }}</p>
           <div class="empty-actions">
             <PButton
+              v-if="canCreateMusic"
               variant="primary"
               data-testid="empty-add-artist"
               @click="startArtistCreation"

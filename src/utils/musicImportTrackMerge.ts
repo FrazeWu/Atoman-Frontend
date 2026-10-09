@@ -1,6 +1,7 @@
-import type { MusicAlbumImportTrack } from "@/api/musicV1";
+import type { MusicAlbumImportLyricsCandidate, MusicAlbumImportTrack } from "@/api/musicV1";
 import type {
 	MusicCreationFlowState,
+	MusicCreationLyricsCandidate,
 	MusicCreationLyricsDraft,
 	MusicCreationTrackDraft,
 } from "@/components/music/musicCreationTypes";
@@ -109,6 +110,17 @@ function lyricsDraftFromTrack(
 	};
 }
 
+function lyricsCandidatesFromTrack(track: MusicAlbumImportTrack): MusicCreationLyricsCandidate[] {
+	return (track.lyricsCandidates ?? []).map((candidate: MusicAlbumImportLyricsCandidate) => ({
+		source: candidate.source,
+		content: candidate.content,
+		translation: candidate.translation || "",
+		format: candidate.format,
+		language: candidate.language || "",
+		editSummary: candidate.edit_summary || "自动匹配歌词",
+	}));
+}
+
 function trackFromImport(
 	track: MusicAlbumImportTrack,
 	index: number,
@@ -117,6 +129,7 @@ function trackFromImport(
 	const preserveTitle = current?.titleCustomized === true;
 	const preserveSequence = current?.sequenceCustomized === true;
 	const lyricDraft = lyricsDraftFromTrack(track);
+	const lyricsCandidates = lyricsCandidatesFromTrack(track);
 	const manuallyChanged = preserveTitle || preserveSequence;
 	const songId = track.songId || current?.songId;
 	const importFileId = track.fileId || current?.importFileId;
@@ -171,6 +184,10 @@ function trackFromImport(
 		...(track.lyricsSource || current?.lyricsSource
 			? { lyricsSource: track.lyricsSource || current?.lyricsSource }
 			: {}),
+		...(lyricsCandidates.length > 0 || current?.lyricsCandidates
+			? { lyricsCandidates: lyricsCandidates.length > 0 ? lyricsCandidates : current?.lyricsCandidates }
+			: {}),
+		...(current?.lyricsCandidateChoice ? { lyricsCandidateChoice: current.lyricsCandidateChoice } : {}),
 	};
 }
 

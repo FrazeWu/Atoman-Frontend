@@ -113,7 +113,6 @@ const metadataMatchLabel = computed(() => {
 	const draft = albumImportDraft.value
 	if (!draft || (draft.status === 'pending_upload' && !draft.files.length)) return '等待上传'
 	if (draft.status === 'canceled') return '已取消'
-	if (draft.metadataMatchStatus === 'waiting_artist') return '请先确认艺术家'
 	if (draft.metadataMatched === true || ['matched', 'manual'].includes(draft.metadataMatchStatus ?? '')) return '已匹配'
 	if (draft.metadataMatchStatus === 'ambiguous') return '发现候选，待确认'
 	if (draft.metadataMatchStatus === 'unmatched') return '未匹配，可人工核对'
@@ -132,6 +131,19 @@ const metadataMatchState = computed(() => {
 		return 'active'
   }
   return 'idle'
+})
+const recognitionState = computed(() => {
+  const status = albumImportDraft.value?.status
+  if (!status || status === 'pending_upload' || status === 'uploading' || status === 'uploaded') return 'idle'
+  if (['extracting', 'analyzing', 'transcoding'].includes(status)) return 'active'
+  if (['failed', 'canceled'].includes(status)) return 'failed'
+  return 'done'
+})
+const recognitionLabel = computed(() => {
+  if (recognitionState.value === 'active') return '识别中'
+  if (recognitionState.value === 'done') return '已完成'
+  if (recognitionState.value === 'failed') return '失败'
+  return albumImportDraft.value?.files.length ? '等待处理' : '等待上传'
 })
 
 function formatUploadSpeed(bytesPerSecond: number) {
@@ -239,7 +251,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 			<template v-else-if="albumImportDraft.metadataMatchStatus === 'ambiguous'">
 				已找到候选发行版，但曲目未能完整确认，请在信息页核对曲序。
 			</template>
-			<template v-else>读取到曲目并确认艺术家后开始匹配，匹配结束后进入信息填写。上传未完成时请保持页面打开。</template>
+			<template v-else>读取到曲目后开始匹配；没有艺术家信息时也会按曲目资料继续。匹配结束后自动进入信息填写。</template>
     </p>
     <div class="parallel-progress" data-testid="album-import-parallel-progress">
       <div class="parallel-progress__lane">
@@ -251,6 +263,16 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :style="{ width: `${totalUploadProgress}%` }" />
         </div>
         <small>{{ albumImportDraft.files.length ? `${albumImportDraft.files.length} 个文件` : '等待选择文件' }}</small>
+      </div>
+      <div class="parallel-progress__lane">
+        <div class="parallel-progress__heading">
+          <span>文件识别</span>
+          <strong>{{ recognitionLabel }}</strong>
+        </div>
+        <div class="parallel-progress__steps" :class="`parallel-progress__steps--${recognitionState}`" aria-hidden="true">
+          <span /><span /><span />
+        </div>
+        <small>音频、歌词、封面和 CUE 自动分类</small>
       </div>
       <div class="parallel-progress__lane parallel-progress__lane--matching">
         <div class="parallel-progress__heading">
@@ -266,7 +288,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           <span :class="{ 'is-active': metadataMatchState === 'active', 'is-done': metadataMatchState === 'done' }" />
           <span :class="{ 'is-done': metadataMatchState === 'done' }" />
         </div>
-			<small>{{ metadataMatchState === 'active' ? '正在核对 Discogs 与 MusicBrainz；完整匹配优先，同等结果优先使用 Discogs' : metadataMatchState === 'done' ? '元信息匹配已完成' : '读取到曲目并确认艺术家后开始匹配' }}</small>
+			<small>{{ metadataMatchState === 'active' ? '正在核对 Discogs 与 MusicBrainz；完整匹配优先，同等结果优先使用 Discogs' : metadataMatchState === 'done' ? '元信息匹配已完成' : '读取到曲目后开始匹配，艺术家信息可稍后补充' }}</small>
 		</div>
 	</div>
 	<div v-if="albumImportDraft.metadataSources?.length" class="metadata-sources" data-testid="album-import-metadata-sources" role="status">
@@ -434,7 +456,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 }
 .parallel-progress {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   padding-top: 0.85rem;
   border-top: 1px solid var(--a-color-border-soft);

@@ -50,6 +50,8 @@ export interface MusicCreationTrackDraft {
 	lyrics?: string;
 	lyricsDraft?: MusicCreationLyricsDraft;
 	lyricsSource?: string;
+	lyricsCandidates?: MusicCreationLyricsCandidate[];
+	lyricsCandidateChoice?: string;
 	coverUrl?: string;
 	contributors?: MusicCreationAlbumContributorDraft[];
 }
@@ -66,6 +68,15 @@ export interface MusicCreationLyricsDraft {
 		translation: string;
 		time_ms: number | null;
 	}>;
+}
+
+export interface MusicCreationLyricsCandidate {
+	source: string;
+	content: string;
+	translation: string;
+	format: "plain" | "lrc";
+	language: string;
+	editSummary: string;
 }
 
 export interface MusicCreationArtistStageNameDraft {

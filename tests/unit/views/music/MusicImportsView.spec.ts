@@ -95,9 +95,9 @@ describe("Music ImportsView", () => {
 		vi.useRealTimers();
 	});
 
-	it("opens an import before its artist source lookup finishes", async () => {
+	it("opens a ready import before its artist source lookup finishes", async () => {
 		const pendingImport = {
-			...importRecord("pending_upload"),
+			...importRecord("ready"),
 			artistId: "artist-1",
 		};
 		mocks.listMusicAlbumImports.mockResolvedValue({
@@ -116,7 +116,7 @@ describe("Music ImportsView", () => {
 
 		const continueButton = wrapper
 			.findAll("button")
-			.find((button) => button.text() === "继续导入");
+			.find((button) => button.text() === "打开编辑");
 		expect(continueButton).toBeDefined();
 		await continueButton!.trigger("click");
 
@@ -127,7 +127,7 @@ describe("Music ImportsView", () => {
 
 	it("restores the existing artist as the import contributor", async () => {
 		const pendingImport = {
-			...importRecord("pending_upload"),
+			...importRecord("ready"),
 			artistId: "artist-1",
 		};
 		const flow = {
@@ -154,7 +154,7 @@ describe("Music ImportsView", () => {
 
 		const continueButton = wrapper
 			.findAll("button")
-			.find((button) => button.text() === "继续导入");
+			.find((button) => button.text() === "打开编辑");
 		await continueButton!.trigger("click");
 		await flushPromises();
 
@@ -194,7 +194,7 @@ describe("Music ImportsView", () => {
 
 		const continueButton = wrapper
 			.findAll("button")
-			.find((button) => button.text() === "继续导入");
+			.find((button) => button.text() === "打开编辑");
 		expect(continueButton).toBeDefined();
 		await continueButton!.trigger("click");
 
@@ -355,7 +355,7 @@ describe("Music ImportsView", () => {
 		await flushPromises();
 
 		const cases = [
-			{ label: "进行中", title: "进行中的导入", action: "继续导入" },
+			{ label: "进行中", title: "进行中的导入", action: "" },
 			{ label: "需处理", title: "需要处理的导入", action: "处理问题" },
 			{ label: "已发布", title: "已发布的导入", action: "修复资料" },
 			{ label: "已取消", title: "已取消的导入", action: "删除记录" },
@@ -372,7 +372,12 @@ describe("Music ImportsView", () => {
 			expect(tab!.attributes("aria-selected")).toBe("true");
 			expect(wrapper.find(".music-imports-view__detail h2").text()).toContain(testCase.title);
 			expect(wrapper.findAll(".music-imports-view__item--selected")).toHaveLength(1);
-			expect(wrapper.find(".music-imports-view__detail").text()).toContain(testCase.action);
+			if (testCase.action) {
+				expect(wrapper.find(".music-imports-view__detail").text()).toContain(testCase.action);
+			} else {
+				expect(wrapper.find(".music-imports-view__actions").text()).not.toContain("打开编辑");
+				expect(wrapper.find(".music-imports-view__actions").text()).not.toContain("继续导入");
+			}
 		}
 		wrapper.unmount();
 	});

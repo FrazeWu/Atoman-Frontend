@@ -24,6 +24,7 @@ import { createEmptyMusicArtistDraft } from './musicCreationTypes'
 import { musicCreationProgress } from '@/utils/musicCreationProgress'
 import { normalizeImportedTrackTitle } from '@/utils/musicImportPreview'
 import { musicTrackLyricsLabel } from '@/utils/musicTrackLyrics'
+import type { MusicCreationTrackDraft } from './musicCreationTypes'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
@@ -112,6 +113,7 @@ const {
   closeTrackLyrics,
   saveExistingTrackLyrics,
   saveTrackLyrics,
+  selectLyricsCandidate,
   formatSequence,
 } = useMusicAlbumTrackEditor()
 
@@ -121,6 +123,16 @@ const trackAudioUploading = ref(false)
 const trackAudioError = ref('')
 const pendingTrackRemovalId = ref<string | null>(null)
 const activeTrackUploads = new Map<string, AbortController>()
+
+function lyricsCandidateLabel(source: string) {
+  if (source === 'local') return '本地歌词'
+  if (source === 'lrclib') return '在线歌词'
+  return source || '歌词候选'
+}
+
+function selectTrackLyricsCandidate(trackId: string, candidate: NonNullable<MusicCreationTrackDraft['lyricsCandidates']>[number]) {
+  selectLyricsCandidate(trackId, candidate)
+}
 
 onUnmounted(() => {
   for (const controller of activeTrackUploads.values()) controller.abort()
@@ -803,6 +815,26 @@ watch(
                 {{ track.songId || track.lyricsDraft ? '查看歌词' : '上传歌词' }}
               </PButton>
             </div>
+
+            <details v-if="track.lyricsCandidates && track.lyricsCandidates.length > 1" class="track-row__lyrics-candidates">
+              <summary>对比歌词</summary>
+              <div class="track-row__lyrics-candidate-list">
+                <article v-for="candidate in track.lyricsCandidates" :key="`${candidate.source}-${candidate.content}`" class="track-row__lyrics-candidate">
+                  <header>
+                    <strong>{{ lyricsCandidateLabel(candidate.source) }}</strong>
+                    <PButton
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      @click="selectTrackLyricsCandidate(track.id, candidate)"
+                    >
+                      {{ track.lyricsCandidateChoice === candidate.source ? '已选择' : '采用' }}
+                    </PButton>
+                  </header>
+                  <pre>{{ candidate.content }}</pre>
+                </article>
+              </div>
+            </details>
 
             <details class="track-row__more">
               <summary :aria-label="`${track.title}的更多操作`">更多</summary>
@@ -1566,6 +1598,52 @@ watch(
   text-align: center;
 }
 
+.track-row__lyrics-candidates {
+  flex: 1 1 100%;
+  margin: 0.2rem 2.25rem 0.15rem 2.1rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 0.35rem;
+}
+
+.track-row__lyrics-candidates > summary {
+  color: var(--a-color-accent-warning);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.track-row__lyrics-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.track-row__lyrics-candidate {
+  min-width: 0;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  padding: 0.45rem;
+  background: var(--a-color-bg);
+}
+
+.track-row__lyrics-candidate header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.track-row__lyrics-candidate pre {
+  max-height: 8rem;
+  margin: 0.4rem 0 0;
+  overflow: auto;
+  color: var(--a-color-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+}
+
 .track-row__remove-btn {
   display: flex;
   align-items: center;
@@ -1598,6 +1676,10 @@ watch(
 @media (max-width: 640px) {
   .track-row {
     flex-wrap: wrap;
+  }
+
+  .track-row__lyrics-candidate-list {
+    grid-template-columns: 1fr;
   }
 
   .track-row__input {

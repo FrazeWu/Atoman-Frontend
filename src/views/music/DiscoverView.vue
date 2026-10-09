@@ -42,6 +42,7 @@ import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { getMountedPinia } from '@/utils/pinia'
 import { hasPlayableMusicAudio } from '@/utils/musicMedia'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import {
   claimMusicRecommendationImpression,
   getMusicRecommendationAlbumContext,
@@ -55,6 +56,7 @@ const props = withDefaults(defineProps<{
   pageTitle: '发现',
   contentMode: 'discover',
 })
+const canCreateMusic = !isStandaloneMobileApp()
 
 const authStore = getMountedPinia() ? useAuthStore() : null
 const router = useRouter()
@@ -821,6 +823,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           </SearchSurface>
         </div>
         <PButton
+          v-if="canCreateMusic"
           variant="primary"
           class="search-side-action"
           data-testid="add-album"

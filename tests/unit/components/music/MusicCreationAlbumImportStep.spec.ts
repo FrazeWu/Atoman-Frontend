@@ -171,7 +171,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(fileInput(wrapper).attributes("accept")).toContain(".mkv");
 	});
 
-	it("上传页显示独立的上传与元信息匹配进度", () => {
+	it("上传页显示独立的上传、识别与匹配进度", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 
 		expect(wrapper.get('[data-testid="album-import-parallel-progress"]').text()).toContain(
@@ -179,6 +179,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 		expect(wrapper.get('[data-testid="album-import-parallel-progress"]').text()).toContain(
 			"上传文件",
+		);
+		expect(wrapper.get('[data-testid="album-import-parallel-progress"]').text()).toContain(
+			"文件识别",
 		);
 	});
 
@@ -213,7 +216,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
 	});
 
-	it("直接创建专辑上传后不跳转到艺术家步骤", async () => {
+	it("没有艺术家时也按曲目资料开始匹配", async () => {
 		const drawers = useMusicDrawers();
 		drawers.closeAll();
 		drawers.openMusicCreationFlow({ startStep: "albumImport" });
@@ -248,8 +251,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"EARFQUAKE",
 			"IGOR'S THEME",
 		]);
-		expect(metadataMatch).not.toHaveBeenCalled();
-		expect(flow.draft.albumImport.metadataMatchStatus).toBe('waiting_artist');
+		expect(metadataMatch).toHaveBeenCalledOnce();
+		expect(metadataMatch.mock.calls[0][1].artist).toBe('');
 	});
 
 	it("上传完成后仍停留在上传页，等待曲目解析后自动匹配", async () => {
@@ -409,7 +412,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(match).not.toHaveBeenCalled();
 	});
 
-	it("元信息匹配完成但上传仍在进行时自动进入信息页", async () => {
+	it("元信息匹配完成但文件识别仍在进行时继续等待", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";
 
@@ -423,6 +426,13 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			metadataMatched: true,
 		}));
 
+		await vi.waitFor(() => expect(flow.step).toBe("albumImport"));
+		useAlbumImportUpload().applyImportSnapshot(snapshot({
+			status: "ready",
+			stage: "ready",
+			metadataMatchStatus: "matched",
+			metadataMatched: true,
+		}));
 		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
 	});
 
@@ -1221,7 +1231,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		expect(
 			wrapper.get('[data-testid="album-import-metadata-hint"]').text(),
-		).toContain("读取到曲目并确认艺术家后开始匹配");
+		).toContain("没有艺术家信息时也会按曲目资料继续");
 
 		drawers.state.value.creationFlow.draft.albumImport.metadataSourceUrl =
 			"https://musicbrainz.org/release/release-id";

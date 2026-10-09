@@ -45,7 +45,7 @@ function createArtist(name: string) {
       <div>
         <p class="eyebrow">Album creation</p>
         <h2>上传专辑文件</h2>
-        <p>读取到曲目并确认艺术家后开始匹配；上传会继续进行，匹配结束后进入信息填写。</p>
+        <p>读取到曲目后开始识别和匹配；没有艺术家信息时也会继续，全部结束后进入信息填写。</p>
       </div>
     </header>
 
@@ -60,8 +60,8 @@ function createArtist(name: string) {
       <MusicCreationAlbumUploadZone />
     </section>
     <section v-if="creationFlow && !creationFlow.draft.artist.id" class="album-card" aria-label="匹配艺术家">
-      <h3>确认艺术家</h3>
-      <p>选择主艺术家后开始匹配；找不到时可以直接新建。</p>
+      <h3>补充艺术家（可选）</h3>
+      <p>可以补充主艺术家；不补充也不影响识别和匹配。</p>
       <MusicCreationContributorPicker v-model="creationFlow.draft.albumDetails.contributors" allow-create @create-artist="createArtist" />
     </section>
   </div>

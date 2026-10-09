@@ -371,9 +371,11 @@ export function useAlbumImportUpload() {
 		const metadataMatchFinished = ["matched", "unmatched", "ambiguous", "manual"].includes(
 			metadataMatchStatus,
 		);
-		const processingFinished = metadataMatchFinished;
+		const processingFinished = isTerminalSnapshot;
 		if (flow.step === "albumImport" && processingFinished && !flow.returnedToImport) {
-			flow.step = "albumDetails";
+			if (metadataMatchFinished || ["failed", "canceled"].includes(snapshot.status)) {
+				flow.step = "albumDetails";
+			}
 		}
 		return true;
 	}
@@ -474,7 +476,6 @@ export function useAlbumImportUpload() {
 		const tracks = draft.derivedTracks ?? [];
 		if (!tracks.length) return;
 		const artist = artistNameForMetadataMatch(flow);
-		if (!artist) { draft.metadataMatchStatus = 'waiting_artist'; return; }
 		const albumTitle = (flow.draft.albumDetails.title || draft.derivedAlbumTitle || draft.archiveName)
 			.trim()
 			.replace(/\.(?:zip|rar|7z|tar|gz|bz2|xz)$/i, '');

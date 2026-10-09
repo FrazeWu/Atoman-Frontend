@@ -478,8 +478,8 @@ onBeforeUnmount(() => {
   position: relative;
   overflow: hidden;
   padding: 44px 24px 36px;
-  background: var(--a-color-surface);
-  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  border-bottom: 1px solid var(--a-color-border);
   text-align: center;
 }
 
@@ -556,7 +556,7 @@ onBeforeUnmount(() => {
 
 .portal-hot__secondary-btn:hover {
   border-color: var(--a-color-text);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 /* ─── 辩题专属卡片 ──────────────────────────────────── */
@@ -574,14 +574,14 @@ onBeforeUnmount(() => {
 }
 
 .portal-hot__tag.portal-hot__tag--debate {
-  background: color-mix(in srgb, #6366f1 10%, transparent);
-  color: #3730a3;
+  background: color-mix(in srgb, var(--a-color-primary) 10%, transparent);
+  color: var(--a-color-primary);
 }
 
 .portal-hot__debate-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
   line-height: 1.4;
 }
@@ -611,12 +611,12 @@ onBeforeUnmount(() => {
 
 .portal-hot__stance-pro {
   width: 58%;
-  background: #1d4ed8;
+  background: var(--a-color-primary);
 }
 
 .portal-hot__stance-con {
   width: 42%;
-  background: #b91c1c;
+  background: var(--a-color-danger);
 }
 
 .portal-hot__stance-info {
@@ -627,12 +627,12 @@ onBeforeUnmount(() => {
 }
 
 .portal-hot__stance-badge--pro {
-  color: #1d4ed8;
+  color: var(--a-color-primary);
   font-weight: 500;
 }
 
 .portal-hot__stance-badge--con {
-  color: #b91c1c;
+  color: var(--a-color-danger);
   font-weight: 500;
 }
 
@@ -655,7 +655,6 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .portal-hot__card-link {
@@ -676,8 +675,8 @@ onBeforeUnmount(() => {
 }
 
 .portal-hot__tag--feed {
-  background: color-mix(in srgb, #2563eb 12%, transparent);
-  color: #1d4ed8;
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  color: var(--a-color-primary);
 }
 
 .portal-hot__tag--blog {
@@ -686,13 +685,13 @@ onBeforeUnmount(() => {
 }
 
 .portal-hot__tag--music {
-  background: color-mix(in srgb, #8b5cf6 12%, transparent);
-  color: #6d28d9;
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  color: var(--a-color-primary);
 }
 
 .portal-hot__tag--video {
-  background: color-mix(in srgb, #ea580c 12%, transparent);
-  color: #c2410c;
+  background: color-mix(in srgb, var(--a-color-warning) 12%, transparent);
+  color: var(--a-color-warning);
 }
 
 .portal-hot__score {
@@ -823,7 +822,7 @@ onBeforeUnmount(() => {
 .portal-hot__section-head h2 {
   margin: 0;
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-text);
 }
 
@@ -870,7 +869,7 @@ onBeforeUnmount(() => {
   width: 2px;
   height: 14px;
   border-radius: 1px;
-  background: #10b981;
+  background: var(--a-color-success);
   margin-top: 0.2rem;
   flex-shrink: 0;
 }
@@ -880,8 +879,8 @@ onBeforeUnmount(() => {
   margin-top: 48px;
   padding: 16px 24px;
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -908,7 +907,7 @@ onBeforeUnmount(() => {
 
 .portal-hot__strip-links a:hover {
   border-color: var(--a-color-text);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 /* ─── Empty State ──────────────────────────────────────── */
@@ -953,7 +952,7 @@ onBeforeUnmount(() => {
 
 .portal-hot__fallback-links a:hover {
   border-color: var(--a-color-text);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 @media (max-width: 768px) {

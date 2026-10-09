@@ -12,7 +12,25 @@
       <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
       <PInput v-model="draft.slug" data-testid="channel-slug" label="地址标识" placeholder="channel-name" />
       <PTextarea v-model="draft.description" label="简介" placeholder="频道简介" :rows="3" />
-      <PInput v-model="draft.cover_url" label="封面地址" placeholder="https://..." />
+      <div class="studio-channels__cover-field">
+        <span class="studio-channels__field-label">封面</span>
+        <PostCoverField
+          :cover-url="coverPreviewUrl"
+          :uploading="coverUploading"
+          :error="coverUploadError"
+          @trigger-upload="triggerCoverUpload"
+          @remove-cover="removeCover"
+        />
+        <input
+          ref="coverInput"
+          class="studio-channels__cover-input"
+          data-testid="channel-cover-input"
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          :disabled="coverUploading"
+          @change="handleCoverUpload"
+        />
+      </div>
       <div class="studio-channels__form-actions">
         <PButton type="button" variant="ghost" @click="cancelEdit">取消</PButton>
         <PButton data-testid="save-channel" type="button" :loading="saving" @click="saveChannel">保存</PButton>
@@ -24,6 +42,7 @@
     <ul v-else-if="studio.channels.length" class="studio-channels__list">
       <li v-for="channel in studio.channels" :key="channel.id">
         <div class="studio-channels__identity">
+          <img v-if="channel.cover_url" :src="channel.cover_url" :alt="`${channel.name} 封面`" class="studio-channels__cover-thumb" loading="lazy" />
           <strong>{{ channel.name }}</strong>
           <span v-if="channel.id === studio.currentChannel?.id">当前频道</span>
           <p v-if="channel.description">{{ channel.description }}</p>
@@ -70,11 +89,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { apiDeleteJson, apiPatchJson, apiPostJson } from '@/api/client'
+import { apiDeleteJson, apiPatchJson, apiPostJson, apiRequestResult } from '@/api/client'
+import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -82,12 +102,16 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioChannel } from '@/types'
 
-const api = useApi().studio
+const apiClient = useApi()
+const api = apiClient.studio
+const blogApi = apiClient.blog
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const studio = useStudioStore()
 const editing = ref(false)
 const editingID = ref('')
@@ -96,6 +120,11 @@ const deleting = ref(false)
 const nameError = ref('')
 const error = ref('')
 const pendingDelete = ref<StudioChannel | null>(null)
+const coverInput = ref<HTMLInputElement | null>(null)
+const coverPreviewUrl = ref('')
+const coverObjectUrl = ref('')
+const coverUploading = ref(false)
+const coverUploadError = ref('')
 const draft = reactive({ name: '', slug: '', description: '', cover_url: '' })
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
@@ -103,6 +132,7 @@ const deleteModalOpen = computed({
 })
 
 function resetDraft() {
+  clearCoverPreview()
   editing.value = false
   editingID.value = ''
   draft.name = ''
@@ -110,6 +140,19 @@ function resetDraft() {
   draft.description = ''
   draft.cover_url = ''
   nameError.value = ''
+  coverUploadError.value = ''
+}
+
+function clearCoverPreview() {
+  if (coverObjectUrl.value) URL.revokeObjectURL(coverObjectUrl.value)
+  coverObjectUrl.value = ''
+  coverPreviewUrl.value = ''
+}
+
+function setCoverPreview(url: string, objectUrl = false) {
+  if (coverObjectUrl.value) URL.revokeObjectURL(coverObjectUrl.value)
+  coverObjectUrl.value = objectUrl ? url : ''
+  coverPreviewUrl.value = url
 }
 
 function startCreate() {
@@ -125,6 +168,8 @@ function startEdit(channel: StudioChannel) {
   draft.slug = channel.slug
   draft.description = channel.description || ''
   draft.cover_url = channel.cover_url || ''
+  setCoverPreview(draft.cover_url)
+  coverUploadError.value = ''
   nameError.value = ''
   error.value = ''
 }
@@ -133,7 +178,64 @@ function cancelEdit() {
   resetDraft()
 }
 
+function triggerCoverUpload() {
+  coverInput.value?.click()
+}
+
+async function handleCoverUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+  if (!allowedTypes.has(file.type)) {
+    coverUploadError.value = '只支持 JPEG、PNG、GIF、WebP 格式的图片'
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    coverUploadError.value = '图片不能超过 5MB'
+    return
+  }
+  if (!authStore.isAuthenticated) {
+    coverUploadError.value = '请先登录后再上传封面'
+    return
+  }
+
+  const previousUrl = draft.cover_url
+  const previewUrl = URL.createObjectURL(file)
+  setCoverPreview(previewUrl, true)
+  coverUploading.value = true
+  coverUploadError.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const response = await apiRequestResult(blogApi.uploadImage, {
+      method: 'POST',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : undefined,
+      body: formData,
+    })
+    const payload = await Promise.resolve(response.data).catch(() => null) as { url?: unknown; error?: unknown } | null
+    if (!response.ok) throw new Error(typeof payload?.error === 'string' ? payload.error : '封面上传失败')
+    if (typeof payload?.url !== 'string' || !payload.url) throw new Error('服务器没有返回封面地址')
+    draft.cover_url = payload.url
+    setCoverPreview(payload.url)
+  } catch (cause) {
+    setCoverPreview(previousUrl)
+    coverUploadError.value = cause instanceof Error ? cause.message : '封面上传失败'
+  } finally {
+    coverUploading.value = false
+  }
+}
+
+function removeCover() {
+  draft.cover_url = ''
+  clearCoverPreview()
+  coverUploadError.value = ''
+}
+
 async function saveChannel() {
+  if (coverUploading.value) return
   const name = draft.name.trim()
   if (!name) {
     nameError.value = '请输入频道名称'
@@ -191,6 +293,8 @@ async function deleteChannel() {
 onMounted(() => {
   if (!studio.loaded) void studio.loadState()
 })
+
+onBeforeUnmount(clearCoverPreview)
 </script>
 
 <style scoped>
@@ -205,6 +309,9 @@ onMounted(() => {
   background: var(--a-color-bg);
 }
 .studio-channels__form > :nth-child(n + 3) { grid-column: 1 / -1; }
+.studio-channels__cover-field { display: grid; gap: 0.5rem; grid-column: 1 / -1; }
+.studio-channels__field-label { color: var(--a-color-muted); font-size: 0.8rem; font-weight: 600; }
+.studio-channels__cover-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .studio-channels__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; grid-column: 1 / -1; padding-top: 0.25rem; }
 .studio-channels__error { margin: 0; padding: 0.75rem 1rem; border: 1px solid var(--a-color-danger-border); border-radius: var(--a-radius-card); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-danger); }
 .studio-channels__confirm { margin: 0; }
@@ -228,7 +335,8 @@ onMounted(() => {
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .studio-channels__list li:hover { border-color: var(--a-color-border); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
-.studio-channels__identity { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.6rem; align-items: center; }
+.studio-channels__identity { min-width: 0; display: grid; grid-template-columns: auto auto 1fr; gap: 0.25rem 0.6rem; align-items: center; }
+.studio-channels__cover-thumb { width: 3rem; height: 3rem; border-radius: var(--a-radius-control); object-fit: cover; grid-row: span 2; }
 .studio-channels__identity > span {
   width: max-content;
   padding: 0.2rem 0.5rem;
@@ -250,6 +358,7 @@ onMounted(() => {
   .studio-channels__form > * { grid-column: auto !important; }
   .studio-channels__form-actions { grid-column: 1 / -1 !important; }
   .studio-channels__list li { align-items: start; grid-template-columns: 1fr; padding: 1rem; }
+  .studio-channels__identity { grid-template-columns: auto auto 1fr; }
   .studio-channels__actions { justify-content: flex-end; width: 100%; }
 }
 </style>

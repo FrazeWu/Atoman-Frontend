@@ -229,6 +229,14 @@
                 >
                   <Clock :size="14" />
                 </PClip>
+                <details v-if="authStore.isAuthenticated" class="recommendation-feedback" @click.stop>
+                  <summary aria-label="推荐反馈" title="推荐反馈"><span aria-hidden="true">⋯</span></summary>
+                  <div class="recommendation-feedback__menu">
+                    <button type="button" @click="submitRecommendationFeedback(item, 'hide')">不感兴趣</button>
+                    <button v-if="item.source_id || item.source_title" type="button" @click="submitRecommendationFeedback(item, 'less_source')">少推荐此来源</button>
+                    <button type="button" @click="showRecommendationReason(item)">为什么推荐？</button>
+                  </div>
+                </details>
               </template>
             </PContentCard>
           </div>
@@ -279,7 +287,18 @@
               data-test="channel-card"
               @select="openRecommendedChannel(item)"
               @subscribe="subscribeRecommendedChannel(item)"
-            />
+            >
+              <template #actions>
+                <details v-if="authStore.isAuthenticated" class="recommendation-feedback" @click.stop>
+                  <summary aria-label="推荐反馈" title="推荐反馈"><span aria-hidden="true">⋯</span></summary>
+                  <div class="recommendation-feedback__menu">
+                    <button type="button" @click="submitRecommendationFeedback(item, 'hide')">不感兴趣</button>
+                    <button type="button" @click="submitRecommendationFeedback(item, 'less_source')">少推荐此来源</button>
+                    <button type="button" @click="showRecommendationReason(item)">为什么推荐？</button>
+                  </div>
+                </details>
+              </template>
+            </FeedSourceIdentityCard>
           </div>
           </PContentProgress>
         </section>
@@ -453,6 +472,29 @@ const toggleStar = async (item: RecommendationItem) => {
 
 const toggleReadingList = async (item: RecommendationItem) => {
   await feedStore.toggleReadingListItem(item.id)
+}
+
+async function submitRecommendationFeedback(item: RecommendationItem, action: 'hide' | 'less_source') {
+  const targetType = action === 'less_source' || item.target_path?.startsWith('/channels/') || item.source_type === 'internal_channel' ? 'channel' : 'article'
+  const targetID = targetType === 'channel' ? (item.source_id || item.id) : item.id
+  const result = await apiRequestResult(`${api.url}/feed/recommendation-feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_type: targetType, target_id: targetID, action }),
+  })
+  if (!result.ok) {
+    reportError(new Error(`recommendation feedback failed: ${result.status}`), '保存推荐反馈失败:')
+    return
+  }
+  if (targetType === 'channel' || action === 'less_source') {
+    channels.value = channels.value.filter((candidate) => candidate.id !== item.id)
+  } else {
+    articles.value = articles.value.filter((candidate) => candidate.id !== item.id)
+  }
+}
+
+function showRecommendationReason(item: RecommendationItem) {
+  window.alert(item.score_label ? `推荐依据：${item.score_label}` : '推荐依据：综合你的关注、收藏、评分和内容新鲜度')
 }
 
 function normalizeMode(raw: unknown): RecommendationMode {
@@ -1484,6 +1526,48 @@ onUnmounted(() => { recommendationRequest++ })
 .channels-stack :deep(.feed-source-card:first-child) {
   border-top: 0;
 }
+
+.recommendation-feedback {
+  position: relative;
+  display: inline-flex;
+}
+
+.recommendation-feedback summary {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--a-color-muted);
+  border-radius: 999px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.recommendation-feedback summary::-webkit-details-marker { display: none; }
+.recommendation-feedback summary:hover,
+.recommendation-feedback[open] summary { color: var(--a-color-primary); background: var(--a-color-surface-muted); }
+
+.recommendation-feedback__menu {
+  position: absolute;
+  z-index: 45;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  display: grid;
+  min-width: 9rem;
+  padding: 0.3rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: #fff;
+  box-shadow: var(--a-shadow-sm);
+}
+
+.recommendation-feedback__menu button {
+  padding: 0.45rem 0.6rem;
+  color: var(--a-color-fg);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.recommendation-feedback__menu button:hover { background: var(--a-color-surface-muted); color: var(--a-color-primary); }
 
 @media (max-width: 880px) {
   .dual-streams-container {

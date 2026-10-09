@@ -2,7 +2,7 @@
   <div class="a-page">
     <PPageHeader :title="isEditing ? '编辑话题' : '发布话题'">
       <template #action>
-        <PButton outline @click="router.back()">取消</PButton>
+        <PButton variant="secondary" @click="router.back()">取消</PButton>
       </template>
     </PPageHeader>
 
@@ -20,7 +20,7 @@
           <PButton
             v-for="cat in forumStore.categories"
             :key="cat.id"
-            outline
+            variant="secondary"
             size="sm"
             class="category-btn"
             :class="{ 'category-btn-selected': selectedCategoryId === cat.id }"
@@ -91,8 +91,8 @@
         <PButton :disabled="submitting" @click="submit">
           {{ submitting ? (isEditing ? '保存中...' : '发布中...') : (isEditing ? '保存修改' : '发布话题') }}
         </PButton>
-        <PButton outline @click="router.back()">取消</PButton>
-        <PButton v-if="hasDraft" outline size="sm" @click="clearDraft">清除草稿</PButton>
+        <PButton variant="secondary" @click="router.back()">取消</PButton>
+        <PButton v-if="hasDraft" variant="secondary" size="sm" @click="clearDraft">清除草稿</PButton>
       </div>
     </div>
   </div>

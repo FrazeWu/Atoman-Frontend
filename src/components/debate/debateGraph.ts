@@ -129,7 +129,7 @@ export function buildDebateFlow(
         ...(support ? {} : { strokeDasharray: '7 5' }),
       },
       labelStyle: { fill: color, fontSize: 11, fontWeight: 600 },
-      labelBgStyle: { fill: 'var(--a-color-surface)', fillOpacity: 0.96 },
+      labelBgStyle: { fill: 'var(--a-color-bg)', fillOpacity: 0.96 },
       labelBgPadding: [6, 4],
       labelBgBorderRadius: 4,
     }

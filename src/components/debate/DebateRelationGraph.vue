@@ -79,9 +79,9 @@ const flow = computed(() => props.graph
   height: min(760px, 72vh);
   min-height: 560px;
   overflow: hidden;
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .debate-flow__canvas { width: 100%; height: 100%; }
@@ -121,7 +121,7 @@ const flow = computed(() => props.graph
   color: var(--a-color-text);
 }
 
-.debate-flow :deep(.vue-flow__edge-textbg) { fill: var(--a-color-surface); }
+.debate-flow :deep(.vue-flow__edge-textbg) { fill: var(--a-color-bg); }
 
 @media (max-width: 640px) {
   .debate-flow { height: 640px; min-height: 560px; }

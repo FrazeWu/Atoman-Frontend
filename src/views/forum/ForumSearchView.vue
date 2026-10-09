@@ -2,7 +2,7 @@
   <div class="a-page-xl forum-search-page">
     <PPageHeader title="搜索结果" :sub="searchQuery ? `「${searchQuery}」的搜索结果` : ''">
       <template #action>
-        <PButton outline @click="router.push('/forum')">返回论坛</PButton>
+        <PButton variant="secondary" @click="router.push('/forum')">返回论坛</PButton>
       </template>
     </PPageHeader>
 
@@ -69,7 +69,7 @@
 
       <!-- Load more -->
       <div v-if="forumStore.searchResults.length < forumStore.searchTotal" class="forum-search-load-more">
-        <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
+        <PButton variant="secondary" @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </template>
   </div>

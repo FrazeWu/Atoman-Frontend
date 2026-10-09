@@ -126,6 +126,7 @@ export type MusicAlbumImportMetadataPreviewInput = {
 	trackTitles: string[];
 	tracks?: MusicAlbumImportTrack[];
 	force?: boolean;
+	async?: boolean;
 };
 
 export type MusicAlbumImportCommitStageName = {
@@ -740,6 +741,7 @@ export type MusicAlbumRatingSummary = {
 };
 
 export type MusicSongListItem = {
+	summary_only?: boolean;
 	id: string;
 	title: string;
 	description?: string;

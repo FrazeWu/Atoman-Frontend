@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 import { registerSessionReset } from '@/stores/sessionReset'
+import { createRequestCoalescer } from '@/utils/coalesceRequest'
 
 const api = useApi()
 
@@ -28,6 +29,8 @@ export const useForumStore = defineStore('forum', () => {
   let topicGeneration = 0
   let topicListGeneration = 0
   let searchGeneration = 0
+  let categoriesGeneration = 0
+  const categoryRequests = createRequestCoalescer<void>()
   const loading = ref(false)
   const topicsLoading = ref(false)
   const searchLoading = ref(false)
@@ -41,6 +44,7 @@ export const useForumStore = defineStore('forum', () => {
   }
 
   const resetStore = () => {
+    categoriesGeneration += 1
     followsGeneration += 1
     topicGeneration += 1
     topicListGeneration += 1
@@ -68,21 +72,28 @@ export const useForumStore = defineStore('forum', () => {
 
   // ─── Categories ──────────────────────────────────────────────────────────────
 
-  const fetchCategories = async () => {
+  const fetchCategories = () => {
+    const authStore = useAuthStore()
+    const generation = categoriesGeneration
+    const token = authStore.token
+    const userId = authStore.user?.uuid
+    const current = () => generation === categoriesGeneration && token === authStore.token && userId === authStore.user?.uuid
+    return categoryRequests(JSON.stringify([generation, token, userId]), async () => {
     try {
       const authStore = useAuthStore()
       const res = await apiRequestResult(`${api.url}/forum/categories`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
-      if (res.ok) {
+      if (res.ok && current()) {
         const data = res.data
         categories.value = data.data || []
       }
     } catch (e) {
       reportError(e, 'Failed to fetch forum categories')
     } finally {
-      categoriesLoaded.value = true
+      if (current()) categoriesLoaded.value = true
     }
+    })
   }
 
   // ─── Topics ──────────────────────────────────────────────────────────────────

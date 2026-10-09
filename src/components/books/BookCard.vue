@@ -1,6 +1,6 @@
 <template>
   <RouterLink :to="target" class="book-card">
-    <BookCover :src="edition?.cover_url" :title="work.title" />
+    <BookCover :src="edition?.cover_url" :title="work.title" :eager="eager" />
     <div class="book-card__heading">
       <strong>{{ work.title }}</strong>
       <ArrowRight :size="16" aria-hidden="true" />
@@ -21,7 +21,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { IconArrowRight as ArrowRight, IconStar as Star } from '@tabler/icons-vue'
 import type { BookPublicWork } from '@/api/books'
 import BookCover from './BookCover.vue'
-const props = defineProps<{ work: BookPublicWork }>()
+const props = defineProps<{ work: BookPublicWork; eager?: boolean }>()
 const route = useRoute()
 const target = computed(() => ({
   path: `/books/work/${props.work.id}`,

@@ -65,6 +65,19 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		});
 	});
 
+	it("汇总未匹配资料并将音频替换和删除收进更多菜单", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		drawers.state.value.creationFlow!.draft.tracks = [{ id: "track-1", sequence: 1, title: "秋天", matchStatus: "unmatched", audioKey: "audio-key" }];
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		expect(wrapper.get('[data-testid="album-track-match-summary"]').text()).toContain("1 首未匹配资料");
+		expect(wrapper.get('[data-testid="album-track-match-summary"]').text()).toContain("不影响创建");
+		expect(wrapper.get('[data-testid="album-track-audio-track-1"]').element.closest("details")).not.toBeNull();
+		expect(wrapper.get('[data-testid="album-track-delete-track-1"]').element.closest("details")).not.toBeNull();
+		expect(wrapper.get('[data-testid="album-track-row-track-1"]').text()).toContain("音频就绪");
+	});
+
 	afterEach(() => vi.unstubAllGlobals());
 
 	it("wraps track actions on narrow screens without squeezing the title", () => {
@@ -303,6 +316,29 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(
 			wrapper.get('[data-testid="album-track-lyrics-track-lyrics"]').text(),
 		).toContain("上传歌词");
+	});
+
+	it("每首曲目显示自己的歌词来源和获取结果", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.status = "ready";
+		flow.draft.tracks = [
+			{ id:"local",sequence:1,title:"本地曲目",lyrics:"[00:01.00]歌词",lyricsSource:"local" },
+			{ id:"matched",sequence:2,title:"在线曲目",lyrics:"歌词",lyricsSource:"lrclib" },
+			{ id:"empty",sequence:3,title:"无歌词曲目",matchStatus:"matched" },
+		];
+		const wrapper=mount(MusicCreationAlbumDetailsStep);
+		expect(wrapper.get('[data-testid="album-track-row-local"]').text()).toContain("本地歌词");
+		expect(wrapper.get('[data-testid="album-track-row-matched"]').text()).toContain("已匹配歌词");
+		expect(wrapper.get('[data-testid="album-track-row-empty"]').text()).toContain("暂无歌词");
+		flow.draft.albumImport.status = "analyzing";
+		await nextTick();
+		expect(wrapper.get('[data-testid="album-track-row-empty"]').text()).toContain("歌词待处理");
+		expect(wrapper.get('[data-testid="album-track-row-local"]').text()).toContain("本地歌词");
+		flow.draft.albumImport.status = "committed";
+		await nextTick();
+		expect(wrapper.get('[data-testid="album-track-row-empty"]').text()).toContain("暂无歌词");
 	});
 
 	it("shows an extracted title and upload progress for a new audio track", async () => {
@@ -595,7 +631,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 		expect(
 			wrapper.get('[data-testid="album-track-lyrics-existing-track"]').text(),
-		).toContain("编辑歌词");
+		).toContain("查看歌词");
 		await wrapper
 			.get('[data-testid="album-track-lyrics-existing-track"]')
 			.trigger("click");
@@ -664,14 +700,14 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			.findAll('[data-testid="album-details-field"]')
 			.map((node) => node.attributes("data-field"));
 		expect(fieldOrder).toEqual([
-			"cover",
 			"name",
 			"date",
 			"type",
-			"bio",
+			"cover",
 			"contributors",
-			"track-adjustment",
+			"bio",
 			"source",
+			"track-adjustment",
 		]);
 
 		const basicFields = wrapper.get(
@@ -682,13 +718,17 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(basicFields.find('[data-field="type"]').exists()).toBe(true);
 		expect(
 			wrapper
-				.get(".album-details-step__content-grid")
+				.get(".album-details-step__overview")
 				.find('[data-field="contributors"]')
 				.exists(),
 		).toBe(false);
 		expect(
 			wrapper.get(".album-details-step__contributor-field").text(),
 		).toContain("搜索其他艺人");
+		expect(wrapper.get('[data-testid="album-details-bio-input"]').element.closest("details")).toBeNull();
+		expect(wrapper.get('[data-testid="album-tags-editor"]').element.closest("details")).toBeNull();
+		expect(wrapper.get('[data-field="date"]').element.parentElement).toBe(wrapper.get('[data-field="type"]').element.parentElement);
+		expect(wrapper.get('[data-field="bio"]').element.parentElement).toBe(wrapper.get('[data-field="source"]').element.parentElement);
 
 		expect(
 			wrapper.get('[data-testid="album-details-progress-label"]').text(),

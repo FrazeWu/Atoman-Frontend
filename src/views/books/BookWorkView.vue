@@ -4,7 +4,7 @@
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载作品...</p>
     <template v-else-if="work">
       <header class="books-detail__header">
-        <BookCover :src="primaryEdition?.cover_url" :title="work.title" />
+        <BookCover :src="primaryEdition?.cover_url" :title="work.title" eager :width="480" />
         <div class="books-detail__identity">
         <h1>{{ work.title }}</h1>
         <p v-if="work.subtitle">{{ work.subtitle }}</p>

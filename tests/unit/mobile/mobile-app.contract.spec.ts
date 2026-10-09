@@ -36,12 +36,12 @@ function routePaths(routes = [...mobileRoutes, ...studioRoutes], parentPath = ""
 }
 
 describe("mobile app route boundary", () => {
-	it("starts at the portal homepage and exposes only the pilot modules", () => {
+	it("starts at the portal homepage and exposes all business modules", () => {
 		const homeRoute = mobileRoutes[0];
 		expect(homeRoute).toMatchObject({ path: "/" });
 		expect(homeRoute).not.toHaveProperty("redirect");
 		expect(homeRoute?.component).toBe(PortalView);
-		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music", "books"]);
+		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music", "books", "podcast", "video", "forum", "debate", "timeline"]);
 	});
 
 	it("keeps the pilot module routes available for deep links", () => {
@@ -96,8 +96,15 @@ describe("mobile app route boundary", () => {
 		expect(routePaths()).toContain("/inbox");
 	});
 
-	it("does not advertise modules that are not in the pilot", () => {
-		expect(routePaths()).not.toContain("/forum");
+	it("registers module home, list and detail routes without desktop layouts", () => {
+		expect(routePaths()).toEqual(expect.arrayContaining([
+			"/books", "/books/search", "/books/library", "/books/work/:workId", "/books/read/:assetId",
+			"/podcasts", "/podcasts/subscriptions", "/podcasts/show/:channelSlug", "/podcasts/episode/:id",
+			"/videos", "/videos/search", "/videos/subscriptions", "/videos/watch/:id",
+			"/forum", "/forum/categories", "/forum/new", "/forum/topic/:id",
+			"/debate", "/debate/search", "/debate/:id",
+			"/timeline", "/timeline/persons", "/timeline/person/:id",
+		]));
 	});
 
 	it("enables viewport-fit=cover so safe-area insets work for fixed mobile chrome", () => {

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
-import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
-import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
-import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
+const MusicCreationArtistStep = defineAsyncComponent(() => import('./MusicCreationArtistStep.vue'))
+const MusicCreationAlbumSeedStep = defineAsyncComponent(() => import('./MusicCreationAlbumSeedStep.vue'))
+const MusicCreationAlbumDetailsStep = defineAsyncComponent(() => import('./MusicCreationAlbumDetailsStep.vue'))
+const MusicCreationAlbumPreviewStep = defineAsyncComponent(() => import('./MusicCreationAlbumPreviewStep.vue'))
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import { activeArtistRequiresFullProfile, activeMusicArtistDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -444,6 +444,7 @@ const finishButtonLabel = computed(() => {
   if (flow.step === 'artist' && flow.editingContributorId) return '完成创作者'
   if (flow.submitting && flow.step === 'preview') return '提交中…'
   if (flow.assetUploading) return '图片上传中…'
+  if (flow.step === 'preview') return ['single', 'leak'].includes(flow.draft.albumDetails.type) ? '创建歌曲' : '创建专辑'
   return activeStep.value.cta
 })
 const forwardBlockReason = computed(() => {
@@ -712,6 +713,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
   const isStandaloneSong = ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase())
   const deletedImportTrackKeys = flow.deletedImportTrackKeys ?? []
+  const coverURL = flow.draft.albumDetails.coverAsset?.url?.trim() || flow.draft.albumDetails.coverUrl.trim()
 
   return {
     ...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
@@ -746,7 +748,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       title: flow.draft.albumDetails.title.trim(),
       description: flow.draft.albumDetails.bio.trim(),
       album_type: flow.draft.albumDetails.type.trim() || 'album',
-      ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
+      ...(coverURL && !/^(blob:|data:)/i.test(coverURL) ? { cover_url: coverURL } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
       metadata: {
@@ -1391,7 +1393,10 @@ async function completeCreation() {
 
         <MusicCreationAlbumPreviewStep v-else-if="creationFlow.step === 'preview'" />
 
-        <div v-if="showFooterActions" class="footer-actions" data-testid="creation-flow-footer">
+      </div>
+    </div>
+    <template #footer>
+        <div v-if="creationFlow && showFooterActions" class="footer-actions" data-testid="creation-flow-footer" :style="{ maxWidth: contentMaxWidth }">
           <p v-if="draftSaveMessage && !isEditFlow" role="status">{{ draftSaveMessage }}</p>
           <p
             v-if="forwardBlockReason"
@@ -1446,8 +1451,7 @@ async function completeCreation() {
             {{ finishButtonLabel }}
           </button>
         </div>
-      </div>
-    </div>
+    </template>
   </PSheet>
 
   <PConfirm
@@ -1531,17 +1535,14 @@ async function completeCreation() {
   font-weight: 800;
 }
 .footer-actions {
+  background: #ffffff;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: auto;
-  padding-bottom: 1rem;
-}
-/* The fixed player can cover the drawer's lower edge, so reserve its actual height. */
-:global(html[data-player-active="true"] .footer-actions) {
-  padding-bottom: calc(var(--a-player-height) + 2.5rem);
+  width: 100%;
+  margin: 0 auto;
 }
 .forward-block-reason {
   margin: 0 auto 0 0;
@@ -1581,15 +1582,20 @@ async function completeCreation() {
 .drawer-body :deep(.progress-card) { display: none; }
 
 :global(.creation-flow-drawer) {
-  background: var(--a-color-bg) !important;
+  background: #ffffff !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
+:global(.creation-flow-drawer.p-sheet-layer.is-right) {
+  bottom: var(--a-content-bottom-offset) !important;
+}
+:global(.creation-flow-drawer.p-sheet-mobile-page) {
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
+  padding-bottom: 0;
+}
+:global(.creation-flow-drawer .p-sheet-mobile-page__content) { padding-bottom: 1rem; }
 @media (max-width: 48rem) {
   .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
   .creation-progress__list li::after { display: none; }
-  :global(html[data-player-active="true"] .footer-actions) {
-    padding-bottom: calc(var(--a-mobile-player-height) + var(--a-mobile-nav-reserved-height) + 1rem);
-  }
 }
 </style>

@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
 				output: {
 					manualChunks(id) {
 						if (id.includes("node_modules/highlight.js")) return "highlight";
-						if (id.includes("node_modules/marked")) return "markdown-runtime";
+						if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (
 							id.includes("node_modules/yjs") ||
 							id.includes("node_modules/y-websocket") ||
@@ -101,6 +101,7 @@ export default defineConfig(({ mode }) => {
 		},
 		plugins: [tailwindcss(), vue(), deferInitialStylesheetPlugin()],
 		resolve: {
+			dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
 			alias: {
 				"@": path.resolve(__dirname, "./src"),
 				"@atoman/module-config": path.resolve(

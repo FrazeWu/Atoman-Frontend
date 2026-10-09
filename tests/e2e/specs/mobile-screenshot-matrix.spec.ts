@@ -1,5 +1,6 @@
-import { test, expect } from "../fixtures/base";
+import { test, expect as baseExpect } from "../fixtures/base";
 import { mobileScreenshotRoutes } from "../helpers/mobile-screenshot-routes";
+const expect = baseExpect.configure({ timeout: 20_000 });
 
 const listMeta = { page: 1, page_size: 100, total: 0, has_more: false };
 const coverDataURL =
@@ -9,6 +10,11 @@ const user = {
   username: "mobile-test",
   email: "mobile-test@example.com",
 };
+const book = { id: 'work-1', title: '移动阅读测试作品', authors: [], editions: [], lifecycle_status: 'active', rating_score: 0, rating_count: 0 };
+const episode = { id: 'episode-1', audio_url: '', duration_sec: 120, episode_cover_url: coverDataURL, channel: { id: 'show-1', slug: 'demo', name: '移动播客测试节目', cover_url: coverDataURL }, post: { id: 'podcast-post-1', title: '移动播客测试单集', content: '这是一段用于检查手机阅读布局的节目说明。' } };
+const forumCategory = { id: 'category-1', name: '交流', color: '#007aff', created_at: '2026-01-01T00:00:00Z' };
+const forumTopic = { id: 'topic-1', title: '移动论坛测试话题', content: '这是一段手机话题正文。', category_id: forumCategory.id, category: forumCategory, user_id: user.uuid, user, tags: [], reply_count: 0, like_count: 0, view_count: 0, created_at: '2026-01-01T00:00:00Z' };
+const debate = { id: 'debate-1', title: '移动辩论测试辩题', description: '手机阅读与操作布局检查', content: '测试辩题正文。', user_id: user.uuid, user, status: 'active', tags: [], references: [], created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' };
 
 function listResponse(data: unknown[] = []) {
   return { data, meta: { ...listMeta, total: data.length } };
@@ -88,6 +94,7 @@ function detailResponse(pathname: string) {
   if (pathname.includes("/short-notes/")) {
     return {
       id: "note-1",
+      user_id: user.uuid,
       content: "测试短文",
       media: [],
       likes_count: 0,
@@ -126,6 +133,7 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
       body = {
         modules: {
           feed: { enabled: true, features: {} },
+          books: { enabled: true, features: { 'books.submit': true } },
           blog: { enabled: true, features: {} },
           music: { enabled: true, features: {} },
           podcast: { enabled: true, features: {} },
@@ -135,6 +143,44 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
           timeline: { enabled: true, features: {} },
         },
       };
+    } else if (/\/timeline\/(events|persons)$/.test(pathname)) {
+      const persons = pathname.endsWith('/persons') ? [{ id: 'person-1', name: '移动时间线测试人物', tags: [], locations: [] }] : [];
+      body = { data: persons, total: persons.length, page: Number(requestURL.searchParams.get('page') || 1), limit: Number(requestURL.searchParams.get('limit') || 200) };
+    } else if (pathname.endsWith('/podcast/episodes')) {
+      body = [episode];
+    } else if (pathname.endsWith('/podcast/episodes/episode-1')) {
+      body = episode;
+    } else if (pathname.endsWith('/podcast/shows/demo/episodes')) {
+      body = { channel: episode.channel, episodes: [episode] };
+    } else if (pathname.endsWith('/forum/categories')) {
+      body = { data: [forumCategory] };
+    } else if (pathname.endsWith('/forum/topics')) {
+      body = { data: [forumTopic], meta: { ...listMeta, page_size: 20, total: 1 } };
+    } else if (pathname.endsWith('/forum/topics/topic-1')) {
+      body = { data: forumTopic };
+    } else if (pathname.endsWith('/debate/topics')) {
+      body = listResponse([debate]);
+    } else if (pathname.endsWith('/debate/topics/debate-1')) {
+      body = { data: debate };
+    } else if (pathname.endsWith('/debate/topics/debate-1/votes')) {
+      body = { data: { yes_votes: 0, no_votes: 0, total_votes: 0, current_direction: '', current_user_vote: '' } };
+    } else if (pathname.endsWith('/timeline/persons/person-1')) {
+      body = { data: { id: 'person-1', name: '移动时间线测试人物', bio: '用于检查人物信息和地图布局。', tags: [], locations: [] } };
+    } else if (pathname.endsWith('/books/assets/asset-1/content')) {
+      await route.fulfill({ status: 200, contentType: 'text/plain', body: '移动阅读测试正文。\n'.repeat(100) });
+      return;
+    } else if (pathname.endsWith('/books/assets/asset-1')) {
+      body = { data: { id: 'asset-1', title: '移动阅读测试正文', file_name: 'mobile.txt', format: 'txt', processing_status: 'private_available' } };
+    } else if (pathname.endsWith('/books/assets/asset-1/reading-state')) {
+      body = { data: { asset_id: 'asset-1', pdf_page: 1, txt_offset: 0, reading_percent: 0, preferences: {} } };
+    } else if (pathname.endsWith('/books/catalog/works/work-1')) {
+      body = { data: book };
+    } else if (pathname.endsWith('/books/catalog/editions/edition-1')) {
+      body = { data: { work: book, edition: { id: 'edition-1', work_id: book.id, title: '移动阅读测试版本', publisher: '测试出版社' } } };
+    } else if (pathname.endsWith('/books/catalog/search')) {
+      body = { data: { items: [book], total: 1, limit: 20, offset: 0 } };
+    } else if (pathname.includes('/books/')) {
+      body = { data: /\/(imports|continue)$/.test(pathname) ? [] : { items: [], total: 0, limit: 20, offset: 0 } };
     } else if (pathname.endsWith("/music/playlists/public")) {
       body = listResponse([
         {
@@ -247,6 +293,11 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
       body = {
         data: { personalized: false, recently_played: [], for_you: [] },
       };
+    } else if (pathname.endsWith('/videos')) {
+      const videos = [{ id: 'video-1', title: '测试视频', thumbnail_url: coverDataURL, duration_sec: 120, tags: [], view_count: 0, created_at: '2026-01-01T00:00:00Z' }];
+      body = requestURL.searchParams.has('collection_id') ? videos : listResponse(videos);
+    } else if (pathname.endsWith('/feed/stats')) {
+      body = { data: { period: 'week', total_read: 0, points: [], source_breakdown: [] } };
     } else if (pathname.endsWith("/videos/video-1/recommended")) {
       body = [];
     } else if (pathname.endsWith("/videos/video-1")) {
@@ -306,7 +357,8 @@ function routeSlug(pathname: string) {
 }
 
 test.describe("Mobile route screenshot matrix", () => {
-  test.describe.configure({ mode: "serial", timeout: 30_000 });
+  test.describe.configure({ timeout: 90_000 });
+  test.use({ actionTimeout: 20_000 });
 
   for (const pathname of mobileScreenshotRoutes) {
     test(`renders ${pathname} without mobile layout regressions`, async ({
@@ -341,6 +393,37 @@ test.describe("Mobile route screenshot matrix", () => {
       await expect(page.locator(".mobile-app-main")).not.toBeEmpty({
         timeout: 10_000,
       });
+      const expectedContent: Record<string, string> = {
+        '/books': '移动阅读测试作品',
+        '/books/work/work-1': '移动阅读测试作品',
+        '/books/edition/edition-1': '移动阅读测试版本',
+        '/books/read/asset-1': '移动阅读测试正文',
+        '/podcasts': '移动播客测试单集',
+        '/podcasts/show/demo': '移动播客测试节目',
+        '/podcasts/episode/episode-1': '移动播客测试单集',
+        '/forum': '移动论坛测试话题',
+        '/forum/topic/topic-1': '移动论坛测试话题',
+        '/debate': '移动辩论测试辩题',
+        '/debate/debate-1': '移动辩论测试辩题',
+        '/timeline/person/person-1': '移动时间线测试人物',
+      };
+      if (expectedContent[pathname]) await expect(page.getByText(expectedContent[pathname], { exact: true }).first()).toBeVisible();
+      if (pathname === '/forum/new') await expect(page.locator('.cm-editor')).toBeVisible();
+      if (pathname === '/posts/notes/note-1/edit') await expect(page.locator('.short-note-composer')).toBeVisible();
+      if (pathname === '/feed/subscriptions') {
+        const mode = page.locator('[data-test="timeline-mode-chronological"]');
+        await expect(mode).toBeVisible();
+        const lines = await mode.locator('.p-segmented-control-label').evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getClientRects().length;
+        });
+        expect(lines, '订阅筛选文字被挤成竖排').toBe(1);
+      }
+      if (pathname === '/timeline/person/person-1') {
+        await expect(page.locator('.ol-viewport')).toBeVisible();
+        await expect(page.locator('.ol-zoom')).toHaveCSS('position', 'absolute');
+      }
 
       const shouldShowBottomNav =
         !/^\/(?:login|register|forgot-password)$/.test(pathname) &&
@@ -350,6 +433,12 @@ test.describe("Mobile route screenshot matrix", () => {
           page.locator(".mobile-bottom-nav__bar"),
           `${pathname} lost the mobile bottom navigation`,
         ).toBeVisible();
+        const firstTab = page.locator('.mobile-bottom-nav__tab').first();
+        const hit = await firstTab.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return element.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
+        });
+        expect(hit, `${pathname} bottom navigation is covered`).toBe(true);
       }
 
       const layout = await page.evaluate(() => ({
@@ -443,11 +532,72 @@ test.describe("Mobile route screenshot matrix", () => {
       }
 
       await page.screenshot({
+        animations: 'disabled',
         path: testInfo.outputPath(`mobile-${routeSlug(pathname)}.png`),
         fullPage: true,
       });
     });
   }
+
+  test('keeps new module content usable at 320px and returns from details', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await mockMobileApi(page);
+    const journeys = [
+      ['/books', '/books/work/work-1', '.books-detail'],
+      ['/podcasts', '/podcasts/episode/episode-1', '.pev-wrap'],
+      ['/forum', '/forum/topic/topic-1', '.topic-header'],
+      ['/debate', '/debate/debate-1', '.debate-header'],
+      ['/timeline/persons', '/timeline/person/person-1', '.person-panel'],
+      ['/videos', '/videos/watch/video-1', '.p-sheet-mobile-page__content'],
+    ];
+    for (const [home, detail, selector] of journeys) {
+      await page.goto(home!);
+      await expect(page.locator('.mobile-module-layout')).toBeVisible();
+      await page.evaluate(() => document.querySelector('.mobile-module-layout')?.setAttribute('data-retained', 'yes'));
+      if (home === '/timeline/persons') await page.getByText('移动时间线测试人物', { exact: true }).click();
+      else await page.locator(`a[href="${detail}"]`).first().click();
+      await expect(page.locator(selector!)).toBeVisible();
+      if (home === '/timeline/persons') await expect(page.locator('.ol-viewport')).toBeVisible();
+      await expect(page.locator('.mobile-module-layout')).toHaveAttribute('data-retained', 'yes');
+      const bounds = await page.locator(selector!).evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth, right: element.getBoundingClientRect().right, overflow: [...element.querySelectorAll('*')].filter(child => child.getBoundingClientRect().right > window.innerWidth).slice(0, 12).map(child => ({ class: child.className, right: child.getBoundingClientRect().right })) }));
+      expect(bounds.scroll, `${detail} ${JSON.stringify(bounds.overflow)}`).toBeLessThanOrEqual(bounds.width + 1);
+      expect(bounds.right, detail).toBeLessThanOrEqual(320);
+      await expect(page.locator('.mobile-bottom-nav__bar')).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`narrow-${routeSlug(detail!)}.png`), fullPage: true, animations: 'disabled' });
+      const back = home === '/videos' ? page.locator('.p-sheet-mobile-page__back') : page.getByRole('button', { name: '返回上一页', exact: true });
+      await back.click();
+      await expect(page).toHaveURL(new RegExp(home + '$'));
+    }
+  });
+
+  test('opens mobile Studio editors with a real channel layout', async ({ page }, testInfo) => {
+    const runtimeErrors: string[] = [];
+    page.on('pageerror', (error) => runtimeErrors.push(error.message));
+    page.on('console', (message) => { if (message.type() === 'error') runtimeErrors.push(message.text()); });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockMobileApi(page);
+    const channel = { id: 'channel-1', slug: 'demo', name: '移动创作测试频道', description: '', cover_url: '' };
+    await page.route('**/api/v1/studio/state', (route) => route.fulfill({ json: { data: { current_channel: channel, channels: [channel] } } }));
+    for (const module of ['blog', 'podcast', 'video']) {
+      await page.goto(`/studio/${module}/content`);
+      await expect(page.locator('[data-testid="create-content"]')).toBeVisible();
+      await page.locator('[data-testid="create-content"]').click();
+      await expect(page).toHaveURL(new RegExp(`/studio/${module}/new$`));
+      await expect(page.locator('.studio-route-sheet')).toBeVisible();
+      if (module === 'blog') {
+        await expect.poll(async () => runtimeErrors.length > 0 || await page.locator('.p-editor').isVisible(), { timeout: 20_000 }).toBe(true);
+        expect(runtimeErrors).toEqual([]);
+        await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 20_000 });
+      }
+      if (module === 'podcast') await expect(page.locator('.pe-drop-zone')).toBeVisible();
+      if (module === 'video') await expect(page.locator('.ve-wrap')).toBeVisible();
+      expect(runtimeErrors).toEqual([]);
+      await expect(page.locator('.mobile-bottom-nav__bar')).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`studio-${module}-editor.png`), fullPage: true, animations: 'disabled' });
+      await page.locator('.studio-route-sheet').getByRole('button', { name: /关闭/ }).first().click();
+      await expect(page).toHaveURL(new RegExp(`/studio/${module}/content$`));
+    }
+  });
 
   test("navigates through the mobile bottom tabs", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -504,12 +654,27 @@ test.describe("Mobile route screenshot matrix", () => {
     }
   });
 
+  test('keeps desktop module layouts separate from mobile navigation', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await mockMobileApi(page);
+    for (const pathname of ['/books', '/podcasts', '/videos', '/forum', '/debate', '/timeline']) {
+      await page.goto(pathname);
+      await expect(page.locator('html[data-atoman-app=desktop]')).toHaveCount(1);
+      await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
+      await expect(page.locator('.mobile-module-layout')).toHaveCount(0);
+      await expect(page.locator('.a-main-content')).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`desktop-${routeSlug(pathname)}.png`), fullPage: true });
+    }
+  });
+
   test("renders playlist covers in the desktop library list", async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await mockMobileApi(page);
     await page.goto("/music/bookmarks", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('html[data-atoman-app=desktop]')).toHaveCount(1);
+    await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
     await page.getByRole("radio", { name: "歌单", exact: true }).click();
     await expect(
       page.locator('[data-testid="library-playlist-card"] img'),

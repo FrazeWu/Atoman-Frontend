@@ -138,6 +138,9 @@ function deferred<T>() {
 const response = (data: unknown) =>
 	new Response(JSON.stringify(data), { status: 200 });
 
+const isPostDetailRequest = (url: string, id: string) =>
+	new URL(url, "http://localhost").pathname === `/api/v1/blog/posts/${id}`;
+
 const postDetail = (
 	id: string,
 	title: string,
@@ -207,7 +210,7 @@ describe("PostDetailView shared interactions", () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async (url: string) => {
-				if (url.includes("/blog/posts/post-1")) {
+				if (isPostDetailRequest(url, "post-1")) {
 					return {
 						ok: true,
 						json: async () => ({
@@ -281,8 +284,8 @@ describe("PostDetailView shared interactions", () => {
 			"fetch",
 			vi.fn((input) => {
 				const url = String(input);
-				if (url.includes("/blog/posts/post-1")) return postA.promise;
-				if (url.includes("/blog/posts/post-2")) return postB.promise;
+				if (isPostDetailRequest(url, "post-1")) return postA.promise;
+				if (isPostDetailRequest(url, "post-2")) return postB.promise;
 				if (url.includes("/blog/bookmarks"))
 					return Promise.resolve(response({ data: [] }));
 				return Promise.resolve(response({ data: [] }));
@@ -340,7 +343,7 @@ describe("PostDetailView shared interactions", () => {
 			"fetch",
 			vi.fn((input) => {
 				const url = String(input);
-				if (url.includes("/blog/posts/post-1")) {
+				if (isPostDetailRequest(url, "post-1")) {
 					return Promise.resolve(
 						response({
 							data: postDetail("post-1", "文章 A", {
@@ -349,12 +352,12 @@ describe("PostDetailView shared interactions", () => {
 						}),
 					);
 				}
-				if (url.includes(`/blog/posts/${embedID}`)) {
+				if (isPostDetailRequest(url, embedID)) {
 					return Promise.resolve(
 						response({ data: postDetail(embedID, "嵌入文章") }),
 					);
 				}
-				if (url.includes("/blog/posts/post-2")) return postB.promise;
+				if (isPostDetailRequest(url, "post-2")) return postB.promise;
 				if (url.includes("/blog/bookmarks"))
 					return Promise.resolve(response({ data: [{ post_id: "post-1" }] }));
 				return Promise.resolve(response({ data: [] }));
@@ -390,9 +393,9 @@ describe("PostDetailView shared interactions", () => {
 			"fetch",
 			vi.fn((input) => {
 				const url = String(input);
-				if (url.includes("/blog/posts/post-1"))
+				if (isPostDetailRequest(url, "post-1"))
 					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
-				if (url.includes("/blog/posts/post-2"))
+				if (isPostDetailRequest(url, "post-2"))
 					return Promise.resolve(response({ data: postDetail("post-2", "文章 B") }));
 				if (url.includes("/blog/bookmarks"))
 					return Promise.resolve(response({ data: [] }));
@@ -427,9 +430,9 @@ describe("PostDetailView shared interactions", () => {
 			"fetch",
 			vi.fn((input) => {
 				const url = String(input);
-				if (url.includes("/blog/posts/post-1"))
+				if (isPostDetailRequest(url, "post-1"))
 					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
-				if (url.includes("/blog/posts/post-2"))
+				if (isPostDetailRequest(url, "post-2"))
 					return Promise.resolve(response({ data: postDetail("post-2", "文章 B") }));
 				if (url.includes("/blog/bookmarks"))
 					return Promise.resolve(response({ data: [] }));
@@ -489,7 +492,7 @@ describe("PostDetailView shared interactions", () => {
 			"fetch",
 			vi.fn((input) => {
 				const url = String(input);
-				if (url.includes("/blog/posts/post-1"))
+				if (isPostDetailRequest(url, "post-1"))
 					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
 				if (url.includes("/blog/bookmarks")) return initialBookmarkState.promise;
 				return Promise.resolve(response({ data: [] }));
@@ -521,8 +524,8 @@ describe("PostDetailView shared interactions", () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn((input) => {
-				const url = String(input);
-				if (url.includes("/blog/posts/post-1")) {
+				const pathname = new URL(String(input), "http://localhost").pathname;
+				if (pathname === "/api/v1/blog/posts/post-1") {
 					return Promise.resolve(
 						response({
 							data: postDetail("post-1", "文章 A", {
@@ -531,13 +534,12 @@ describe("PostDetailView shared interactions", () => {
 						}),
 					);
 				}
-				if (url.includes(`/blog/posts/${embedID}`)) return embedA.promise;
-				if (url.includes("/blog/posts/post-2")) return postB.promise;
-				if (url.includes("/blog/bookmarks")) {
+				if (pathname === `/api/v1/blog/posts/${embedID}`) return embedA.promise;
+				if (pathname === "/api/v1/blog/posts/post-2") return postB.promise;
+				if (pathname === "/api/v1/blog/bookmarks") {
 					bookmarkRequests += 1;
-					if (bookmarkRequests === 1)
-						return Promise.resolve(response({ data: [{ post_id: "post-2" }] }));
-					return bookmarkA.promise;
+					if (bookmarkRequests === 1) return bookmarkA.promise;
+					return Promise.resolve(response({ data: [{ post_id: "post-2" }] }));
 				}
 				return Promise.resolve(response({ data: [] }));
 			}),
@@ -548,19 +550,18 @@ describe("PostDetailView shared interactions", () => {
 		await flushPromises();
 		postB.resolve(response({ data: postDetail("post-2", "文章 B") }));
 		await flushPromises();
-		expect(wrapper.vm.$.setupState.bookmarked).toBe(true);
+		expect(wrapper.findAll("button").some((button) => button.text() === "取消收藏")).toBe(true);
 
 		embedA.resolve(response({ data: postDetail(embedID, "A 的嵌入文章") }));
 		await flushPromises();
-		if (bookmarkRequests > 1) {
-			bookmarkA.resolve(response({ data: [] }));
-			await flushPromises();
-		}
+		bookmarkA.resolve(response({ data: [] }));
+		await flushPromises();
 
-		expect(wrapper.vm.$.setupState.post.title).toBe("文章 B");
-		expect(wrapper.vm.$.setupState.postEmbeds).toEqual({});
-		expect(wrapper.vm.$.setupState.bookmarked).toBe(true);
-		expect(bookmarkRequests).toBe(1);
+		expect(wrapper.get("h1").text()).toBe("文章 B");
+		expect(wrapper.get(".post-sheet-content").text()).toBe("文章 B正文");
+		expect(wrapper.text()).not.toContain("A 的嵌入文章");
+		expect(wrapper.findAll("button").some((button) => button.text() === "取消收藏")).toBe(true);
+		expect(bookmarkRequests).toBe(2);
 	});
 
 	it("文章详情使用评分而不是点赞", async () => {
@@ -592,10 +593,10 @@ describe("PostDetailView shared interactions", () => {
 					url.includes("/blog/posts/post-1/rating") &&
 					(init as RequestInit | undefined)?.method === "PUT"
 				) return delayedRating.promise;
-				if (url.includes("/blog/posts/post-1")) {
+				if (isPostDetailRequest(url, "post-1")) {
 					return Promise.resolve(response({ data: postDetail("post-1", "文章 A") }));
 				}
-				if (url.includes("/blog/posts/post-2")) {
+				if (isPostDetailRequest(url, "post-2")) {
 					return Promise.resolve(response({ data: postDetail("post-2", "文章 B") }));
 				}
 				return Promise.resolve(response({ data: [] }));

@@ -145,6 +145,7 @@ function clearTagFilter() {
 
 function asSong(song: MusicSongListItem): Song {
   return {
+    summary_only: song.summary_only,
     id: song.id,
     title: song.title,
     artist: song.artists?.map((item) => item.name).join(" / ") || "未知艺术家",

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { parseBlob } from 'music-metadata'
 import { IconFileText as FileText, IconGripVertical as GripVertical, IconPhotoUp as ImageUp, IconLoader as LoaderCircle, IconPlus as Plus, IconRefresh as RefreshCw, IconX as X } from '@tabler/icons-vue'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -23,6 +22,8 @@ import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { createEmptyMusicArtistDraft } from './musicCreationTypes'
 import { musicCreationProgress } from '@/utils/musicCreationProgress'
+import { normalizeImportedTrackTitle } from '@/utils/musicImportPreview'
+import { musicTrackLyricsLabel } from '@/utils/musicTrackLyrics'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
@@ -39,6 +40,7 @@ const detailsDescriptionPlaceholder = computed(() => standaloneTypeSelected.valu
 const showsTrackList = computed(() => !standaloneTypeSelected.value || (creationFlow.value?.draft.tracks.length ?? 0) !== 1 || isEditMode.value)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const tagInput = ref('')
+const unmatchedTrackCount = computed(() => (creationFlow.value?.draft.tracks ?? []).filter(track => track.matchStatus === 'unmatched' || track.matchStatus === 'ambiguous').length)
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
 const importMetadataMatched = computed(() => !isEditMode.value && albumImportDraft.value?.metadataMatched === true)
 const importMetadataSourceLabel = computed(() => albumImportDraft.value?.metadataSource === 'discogs' ? 'Discogs' : 'MusicBrainz')
@@ -159,12 +161,15 @@ function openTrackAudioPicker(trackId: string | null = null) {
 
 function titleFromAudioFile(file: File): string {
   const baseName = file.name.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '').trim() || file.name
-  return baseName.replace(/^\s*(?:track\s*)?\d{1,3}\s*(?:[-_.]\s*|\s+)/i, '').trim() || baseName
+  const title = baseName.replace(/^\s*(?:track\s*)?\d{1,3}\s*(?:[-_.]\s*|\s+)/i, '').trim() || baseName
+  return normalizeImportedTrackTitle(title, albumDetailsDraft.value?.contributors.find(item => item.roles.some(role => role.role === 'primary'))?.name || '')
 }
 
 async function readTrackTitle(file: File): Promise<string> {
   try {
-    return (await parseBlob(file)).common.title?.trim() || titleFromAudioFile(file)
+    const { parseBlob } = await import('music-metadata')
+    const metadata = (await parseBlob(file)).common
+    return normalizeImportedTrackTitle(metadata.title?.trim() || titleFromAudioFile(file), metadata.artist || albumDetailsDraft.value?.contributors.find(item => item.roles.some(role => role.role === 'primary'))?.name || '')
   } catch {
     return titleFromAudioFile(file)
   }
@@ -467,8 +472,8 @@ watch(
 
     <MusicBrainzEditNotice v-if="musicBrainzMatched" data-testid="musicbrainz-edit-notice" />
 
-    <!-- 导入进度与封面并排 -->
-    <div class="album-details-step__upload-cover-grid">
+    <details v-if="!isEditMode || albumImportDraft?.importId" class="album-import-panel">
+      <summary>上传与处理进度</summary>
       <section v-if="!isEditMode || albumImportDraft?.importId"
         class="album-card album-card--primary album-import-status-card"
         data-testid="album-import-status"
@@ -482,6 +487,57 @@ watch(
         <MusicCreationAlbumUploadZone />
       </section>
 
+    </details>
+
+    <div class="album-details-step__form">
+      <div class="album-details-step__overview">
+        <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
+          <div class="album-details-step__basic-fields">
+            <!-- 专辑名称 -->
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
+              <PInput
+                v-model="titleModel"
+                data-testid="album-details-title-input"
+                type="text"
+                placeholder="输入名称"
+                :label="requiredLabel(detailsTitleLabel)"
+                @blur="handleTitleBlur"
+              />
+            </div>
+
+            <div class="album-details-step__row-two-col">
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
+              <PMaskedDateInput
+                v-model="releaseDateModel"
+                :label="requiredLabel('日期')"
+                testId="album-details-date-input"
+              />
+            </div>
+
+            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
+              <PSelect
+                v-model="albumTypeSelection"
+                :label="requiredLabel('类型')"
+                :options="albumTypeOptions"
+              />
+              <PInput
+                v-if="albumTypeSelection === 'custom'"
+                v-model="customAlbumType"
+                label="自定义类型"
+                placeholder="输入专辑类型"
+              />
+              <input
+                v-model="albumDetailsDraft.type"
+                data-testid="album-details-type-input"
+                type="hidden"
+              />
+              <p v-if="standaloneHasMultipleTracks" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
+                单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
+              </p>
+            </div>
+            </div>
+          </div>
+        </div>
       <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
         <input
           ref="coverInputRef"
@@ -551,68 +607,39 @@ watch(
           </PButton>
         </div>
       </div>
-    </div>
+      </div>
 
-    <!-- 专辑创建表单布局 -->
-    <div class="album-details-step__form">
-      <!-- 专辑名、日期、类型与简介同一行 -->
-      <div class="album-details-step__content-grid">
-        <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
-          <div class="album-details-step__basic-fields">
-            <!-- 专辑名称 -->
-            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
-              <PInput
-                v-model="titleModel"
-                data-testid="album-details-title-input"
-                type="text"
-                placeholder="输入名称"
-                :label="requiredLabel(detailsTitleLabel)"
-                @blur="handleTitleBlur"
-              />
-            </div>
+      <section class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
+        <span class="field-label">创作者</span>
+        <MusicCreationContributorPicker
+          v-model="albumDetailsDraft.contributors"
+          allow-create
+          @create-artist="createNewContributor"
+        />
+      </section>
 
-            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
-              <PMaskedDateInput
-                v-model="releaseDateModel"
-                :label="requiredLabel('日期')"
-                testId="album-details-date-input"
-              />
-            </div>
-
-            <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
-              <PSelect
-                v-model="albumTypeSelection"
-                :label="requiredLabel('类型')"
-                :options="albumTypeOptions"
-              />
-              <PInput
-                v-if="albumTypeSelection === 'custom'"
-                v-model="customAlbumType"
-                label="自定义类型"
-                placeholder="输入专辑类型"
-              />
-              <input
-                v-model="albumDetailsDraft.type"
-                data-testid="album-details-type-input"
-                type="hidden"
-              />
-              <p v-if="standaloneHasMultipleTracks" class="track-adjustment__error" role="alert" data-testid="album-details-single-track-error">
-                单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型。
-              </p>
-            </div>
-          </div>
-
+      <div class="album-details-step__editorial-row">
           <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
             <PTextarea
               id="album-details-description"
               v-model="albumDetailsDraft.bio"
               data-testid="album-details-bio-input"
-              :rows="5"
+              :rows="4"
               :placeholder="detailsDescriptionPlaceholder"
               label="简介"
               aria-label="简介"
             />
           </div>
+      <div class="field-group" data-testid="album-details-field" data-field="source">
+        <PTextarea
+          v-model="albumDetailsDraft.source"
+          data-testid="album-details-source-input"
+          :rows="4"
+          :placeholder="sourceFieldPlaceholder"
+          :label="sourceFieldLabel"
+        />
+      </div>
+      </div>
 
           <section class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
             <div class="album-tags-editor__row" data-testid="album-style-tags-row">
@@ -661,17 +688,6 @@ watch(
               <dd>{{ value }}</dd>
             </div>
           </dl>
-        </div>
-      </div>
-
-      <section class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
-        <span class="field-label">创作者</span>
-        <MusicCreationContributorPicker
-          v-model="albumDetailsDraft.contributors"
-          allow-create
-          @create-artist="createNewContributor"
-        />
-      </section>
 
       <!-- 下一行：曲目列表 -->
       <section v-if="showsTrackList" class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
@@ -713,6 +729,7 @@ watch(
             <span>{{ trackAudioUploading && !pendingAudioTrackId ? '上传中...' : '添加曲目' }}</span>
           </button>
         </div>
+        <p v-if="unmatchedTrackCount" class="track-adjustment__hint" data-testid="album-track-match-summary">{{ unmatchedTrackCount }} 首未匹配资料，仅表示未找到外部曲目资料，不影响创建。</p>
         <p v-if="trackAudioError" class="track-adjustment__error" role="alert">{{ trackAudioError }}</p>
 
         <div v-if="orderedTracks.length" class="track-list">
@@ -756,14 +773,7 @@ watch(
               />
             </div>
 
-            <span
-              v-if="track.matchStatus"
-              class="track-row__match-status"
-              :class="`is-${track.matchStatus}`"
-              :title="track.matchProvider ? `来源：${track.matchProvider}` : undefined"
-            >
-              {{ track.matchStatus === 'manual' ? '已修改' : track.matchStatus === 'matched' ? '已匹配' : track.matchStatus === 'ambiguous' ? '待确认' : '未匹配' }}
-            </span>
+
 
             <div class="track-row__audio">
               <span v-if="track.uploadProgress !== undefined" class="track-row__upload-status" :data-testid="`album-track-upload-${track.id}`">
@@ -773,9 +783,30 @@ watch(
               <div v-if="track.uploadProgress !== undefined" class="track-row__upload-progress" aria-hidden="true">
                 <span :style="{ width: `${track.uploadProgress}%` }" />
               </div>
-              <span v-else-if="track.audioFileName || track.audioUrl || track.audioKey" class="track-row__audio-name">
-                {{ track.audioFileName || '已上传音频' }}
+              <span v-else class="track-row__audio-name" :title="track.audioFileName">
+                {{ track.audioUrl || track.audioKey || track.audioAssetId ? '音频就绪' : track.origin === 'manual' ? '待上传音频' : '音频处理中' }}
               </span>
+
+            </div>
+
+            <div class="track-row__lyrics">
+              <span class="track-row__lyrics-status">{{ musicTrackLyricsLabel(track, albumImportDraft?.status) }}</span>
+              <PButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                class="track-row__lyrics-btn"
+                :data-testid="`album-track-lyrics-${track.id}`"
+                @click="openTrackLyrics(track.id)"
+              >
+                <FileText :size="15" aria-hidden="true" />
+                {{ track.songId || track.lyricsDraft ? '查看歌词' : '上传歌词' }}
+              </PButton>
+            </div>
+
+            <details class="track-row__more">
+              <summary :aria-label="`${track.title}的更多操作`">更多</summary>
+              <div class="track-row__menu">
               <button
                 type="button"
                 class="track-row__audio-btn"
@@ -786,21 +817,6 @@ watch(
                 <RefreshCw :size="14" aria-hidden="true" />
                 <span>{{ track.uploadProgress !== undefined ? `上传中 ${track.uploadProgress}%` : track.uploadError ? '重试上传' : trackAudioUploading && pendingAudioTrackId === track.id ? '上传中...' : '替换音频' }}</span>
               </button>
-            </div>
-
-            <PButton
-              type="button"
-              size="sm"
-              variant="secondary"
-              class="track-row__lyrics-btn"
-              :data-testid="`album-track-lyrics-${track.id}`"
-              @click="openTrackLyrics(track.id)"
-            >
-              <FileText :size="15" aria-hidden="true" />
-              {{ track.songId || track.lyricsDraft ? '编辑歌词' : '上传歌词' }}
-            </PButton>
-
-            <!-- 极简 X 删除按钮 -->
             <button
               :data-testid="`album-track-delete-${track.id}`"
               type="button"
@@ -809,26 +825,13 @@ watch(
               title="删除曲目"
               @click="requestTrackRemoval(track.id)"
             >
-              <X :size="15" />
+              <X :size="15" aria-hidden="true" />
+              <span>删除曲目</span>
             </button>
-
-            <!-- 隐藏保留的上移与下移节点以确保 E2E/Unit 测试断言通过 -->
-            <button
-              :data-testid="`album-track-move-up-${track.id}`"
-              type="button"
-              class="track-action-hidden"
-              :disabled="index === 0"
-              style="display: none;"
-              @click="moveTrack(index, -1)"
-            />
-            <button
-              :data-testid="`album-track-move-down-${track.id}`"
-              type="button"
-              class="track-action-hidden"
-              :disabled="index === orderedTracks.length - 1"
-              style="display: none;"
-              @click="moveTrack(index, 1)"
-            />
+                <button :data-testid="`album-track-move-up-${track.id}`" type="button" :disabled="index === 0" @click="moveTrack(index, -1)">上移曲目</button>
+                <button :data-testid="`album-track-move-down-${track.id}`" type="button" :disabled="index === orderedTracks.length - 1" @click="moveTrack(index, 1)">下移曲目</button>
+              </div>
+            </details>
             </div>
           </template>
           <div
@@ -842,16 +845,6 @@ watch(
         </div>
       </section>
 
-      <!-- 下一行：来源 -->
-      <div class="field-group" data-testid="album-details-field" data-field="source">
-        <PTextarea
-          v-model="albumDetailsDraft.source"
-          data-testid="album-details-source-input"
-          :rows="2"
-          :placeholder="sourceFieldPlaceholder"
-          :label="sourceFieldLabel"
-        />
-      </div>
     </div>
 
     <!-- 底部固底操作条 -->
@@ -981,6 +974,37 @@ watch(
   gap: 1.5rem;
 }
 
+.album-details-step__overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  align-items: start;
+  gap: 2rem;
+}
+
+.album-import-panel > summary {
+  cursor: pointer;
+  padding: 0.75rem 0;
+  color: var(--a-color-muted);
+  font-size: 0.9rem;
+}
+
+.album-details-step__editorial-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.album-details-step__editorial-row > .field-group :deep(.p-textarea) {
+  min-height: 8rem;
+}
+
+@container album-details (max-width: 48rem) {
+  .album-details-step__overview { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  .album-details-step__editorial-row { grid-template-columns: minmax(0, 1fr); }
+  .album-details-step__cover-card { max-width: 15rem; }
+}
+
 /* 上传专辑与封面并排 */
 .album-details-step__upload-cover-grid {
   display: grid;
@@ -999,18 +1023,18 @@ watch(
 
 .album-details-step__header-main {
   display: grid;
-  grid-template-columns: minmax(0, 35fr) minmax(0, 65fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   align-items: stretch;
   min-width: 0;
-  padding: 1.25rem;
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0;
+  border: 0;
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
-/* 专辑名、日期、类型纵向排列 */
+/* 名字一排，发行日期与类型并排。 */
 .album-details-step__basic-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1029,12 +1053,12 @@ watch(
 }
 
 .album-details-step__cover-card {
-  align-self: end;
-  padding: 1rem;
-  border: 1px solid var(--a-color-border-soft);
+  align-self: start;
+  padding: 0;
+  border: 0;
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .album-details-step__bio-field {
@@ -1065,7 +1089,7 @@ watch(
 
 .album-details-step__bio-field :deep(.p-textarea) {
   flex: 1;
-  min-height: 12rem;
+  min-height: 8rem;
   resize: vertical;
 }
 
@@ -1117,11 +1141,11 @@ watch(
 .album-details-step__contributor-field {
   display: grid;
   gap: 1rem;
-  padding: 1.25rem;
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0;
+  border: 0;
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .album-details-step__contributor-field :deep(.picker-search .p-field) {
@@ -1318,10 +1342,11 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.35rem 0.65rem;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  padding: 0.55rem 0;
+  background: var(--a-color-bg);
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
@@ -1333,6 +1358,55 @@ watch(
   border-style: solid;
   border-color: var(--a-color-primary);
 }
+
+.track-row__more { position: relative; flex: 0 0 auto; }
+.track-row__more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  min-height: 2.75rem;
+  list-style: none;
+  cursor: pointer;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
+.track-row__more > summary::-webkit-details-marker { display: none; }
+.track-row__more > summary:hover,
+.track-row__more > summary:active { background: var(--a-color-surface-muted); }
+.track-row__menu {
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  right: 0;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 10rem;
+  padding: 0.5rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  box-shadow: var(--a-shadow-sm);
+}
+.track-row__menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  height: auto;
+  padding: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.track-row__menu button:hover,
+.track-row__menu button:active { background: var(--a-color-surface-muted); }
+.track-row__menu button:disabled { opacity: 0.45; cursor: default; }
+.track-row__menu .track-row__remove-btn { color: var(--a-color-danger); }
 
 .track-row:hover {
   background: var(--a-color-bg);
@@ -1481,8 +1555,15 @@ watch(
   color: var(--a-color-primary);
 }
 
-.track-row__lyrics-btn {
+.track-row__lyrics {
+  display: inline-grid;
+  gap: 0.25rem;
   flex: 0 0 auto;
+}
+.track-row__lyrics-status {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-align: center;
 }
 
 .track-row__remove-btn {
@@ -1523,16 +1604,18 @@ watch(
     flex-basis: calc(100% - 8rem);
   }
 
-  .track-row__lyrics-btn {
+  .track-row__lyrics {
     order: 5;
     margin-left: auto;
   }
 
   .track-row__audio {
     order: 4;
-    flex: 1 1 100%;
+    flex: 1 1 auto;
     padding-left: 3.5rem;
   }
+
+  .track-row__more { order: 6; }
 }
 
 .progress-card {

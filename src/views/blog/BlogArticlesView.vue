@@ -330,6 +330,7 @@ const fetchPosts = async (append = false) => {
     params.set('page', String(targetPage))
     params.set('page_size', String(PAGE_SIZE))
     const endpoint = searchMode ? api.blog.search : api.blog.posts
+    if (!searchMode) params.set('view', 'summary')
     const response = await apiRequestResult(`${endpoint}?${params}`)
     if (currentRequestId !== requestId) return
     if (!response.ok) throw new Error(`Failed to fetch blog posts (${response.status})`)

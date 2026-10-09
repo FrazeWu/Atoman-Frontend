@@ -40,12 +40,12 @@ describe('music shell matches the established design system', () => {
     expect(source).toMatch(/@media \(max-width: 720px\)\s*\{[\s\S]*?\.artist-results-grid\s*\{[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)/)
   })
 
-  it('uses shared color tokens throughout the music creation flow', () => {
+  it('uses solid white sheets and shared form styling in the music creation flow', () => {
     const drawer = read('src/components/music/MusicCreationFlowDrawer.vue')
     const albumImport = read('src/components/music/MusicCreationAlbumSeedStep.vue')
     const albumDetails = read('src/components/music/MusicCreationAlbumDetailsStep.vue')
 
-    expect(drawer).toContain('background: var(--a-color-bg) !important')
+    expect(drawer).toContain('background: #ffffff !important')
     expect(drawer).not.toContain('rgba(255, 255, 255, 0.85)')
     expect(drawer).not.toContain('rgba(15, 23, 42, 0.88)')
     expect(albumImport).not.toContain('--color-')

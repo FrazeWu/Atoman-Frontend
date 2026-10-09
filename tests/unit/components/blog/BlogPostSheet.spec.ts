@@ -244,7 +244,7 @@ describe("BlogPostSheet", () => {
 			"/studio/blog/post-1/edit?channel=channel-1&collection=collection-1",
 		);
 	});
-	it("records an open event after loading the post", async () => {
+	it("records an authenticated open event after loading the post", async () => {
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 			const url = String(input);
 			if (url.includes("/related")) return response([]);
@@ -257,6 +257,8 @@ describe("BlogPostSheet", () => {
 
 		const pinia = createPinia();
 		setActivePinia(pinia);
+		useAuthStore().token = "cookie-session";
+		useAuthStore().isAuthenticated = true;
 		const router = createRouter({
 			history: createMemoryHistory(),
 			routes: [{ path: "/posts", component: { template: "<div />" } }],

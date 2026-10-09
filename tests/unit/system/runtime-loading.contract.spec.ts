@@ -49,12 +49,15 @@ describe("runtime loading boundaries", () => {
 		const source = readSource("src/App.vue");
 
 		for (const importPath of [
-			"@/components/system/MobileBottomNav.vue",
 			"@/components/system/SiteFooter.vue",
 		]) {
 			expect(source).not.toContain(`import ${importPath}`);
 			expect(source).toContain(`import('${importPath}')`);
 		}
+		expect(source).not.toContain("MobileBottomNav");
+		expect(readSource("apps/mobile/MobileApp.vue")).toContain(
+			"defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))",
+		);
 		expect(source).toContain('<BlogSheetStack />');
 		expect(source).not.toContain('<BlogSheetStack v-if="sheetStore.stack.length > 0" />');
 		expect(source).not.toContain("NotificationToastStack");
@@ -81,7 +84,8 @@ describe("runtime loading boundaries", () => {
 		expect(portalSource).not.toContain("onMounted(loadHotContent)");
 		const topbarSource = readSource("src/components/system/AppTopbar.vue");
 		expect(topbarSource).toContain('v-if="!isAuthRoute" class="topbar-search-slot"');
-		expect(topbarSource).toContain('v-if="searchReady"');
+		expect(topbarSource).toContain('<AppTopbarGlobalSearch />');
+		expect(topbarSource).not.toContain('v-if="searchReady"');
 		expect(topbarSource).not.toContain("scheduleIdleTask(() => authStore.restoreSession()");
 	});
 
@@ -157,15 +161,14 @@ describe("runtime loading boundaries", () => {
 		expect(mobileRoutesSource).not.toContain("...studioRoutes");
 	});
 
-	it("defers the global search panel from the initial shell", () => {
+	it("makes the global search entry available in the initial shell", () => {
 		const source = readSource("src/components/system/AppTopbar.vue");
 
-		expect(source).not.toContain(
+		expect(source).toContain(
 			"import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'",
 		);
-		expect(source).toContain(
-			"defineAsyncComponent(() => import('@/components/system/AppTopbarGlobalSearch.vue'))",
-		);
+		expect(source).toContain('<AppTopbarGlobalSearch />');
+		expect(source).not.toContain("scheduleIdleTask");
 	});
 
 	it("does not load the mobile-only switcher in the desktop shell", () => {

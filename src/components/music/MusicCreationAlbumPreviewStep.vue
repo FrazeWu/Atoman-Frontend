@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
+import { musicTrackLyricsLabel } from '@/utils/musicTrackLyrics'
 import PLink from '@/components/ui/PLink.vue'
 
 const { state } = useMusicDrawers()
@@ -93,7 +94,7 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
       提交后会继续处理，可在导入中心查看进度。{{ uploadsPending ? '文件尚未上传完成，请保持页面打开；关闭或刷新浏览器会中断上传。' : '文件已上传，后续音频处理会在后台继续。' }}
     </p>
     <p v-if="albumImport.metadataSourceUrl" class="album-preview-step__source" data-testid="album-import-metadata-source">
-      {{ metadataConfirmed ? '已匹配专辑元信息和曲序；歌词获取情况以各曲目为准。' : '发现候选发行版，曲目尚未完整确认，请核对后提交。' }}
+      {{ metadataConfirmed ? '已匹配专辑元信息和曲序。' : '发现候选发行版，曲目尚未完整确认，请核对后提交。' }}
       <PLink :href="albumImport.metadataSourceUrl" external>
         查看 {{ metadataSourceLabel }} 来源
       </PLink>
@@ -121,9 +122,12 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
         <li v-for="track in tracks" :key="track.id" class="album-preview-step__track">
           <span class="album-preview-step__track-number">{{ track.discNumber ?? 1 }}-{{ track.sequence }}</span>
           <span>{{ track.title }}</span>
-          <span v-if="track.matchStatus" class="album-preview-step__match" :class="`is-${track.matchStatus}`">
-            {{ trackMatchLabel(track) }}<template v-if="trackMatchSource(track)"> · {{ trackMatchSource(track) }}</template>
-          </span>
+          <div class="album-preview-step__track-statuses">
+            <span v-if="track.matchStatus" class="album-preview-step__match" :class="`is-${track.matchStatus}`">
+              {{ trackMatchLabel(track) }}<template v-if="trackMatchSource(track)"> · {{ trackMatchSource(track) }}</template>
+            </span>
+            <span class="album-preview-step__match">{{ musicTrackLyricsLabel(track, albumImport.status) }}</span>
+          </div>
         </li>
       </ol>
       <p v-else>未识别到曲目</p>
@@ -162,8 +166,13 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
 .album-preview-step__tracks, .album-preview-step__failures, .album-preview-step__contributors { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
 .album-preview-step__track { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
 .album-preview-step__track-number { color: var(--a-color-muted); font-variant-numeric: tabular-nums; }
+.album-preview-step__track-statuses { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
 .album-preview-step__match { color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
 .album-preview-step__match.is-matched { color: #866b2d; }
 .album-preview-step__match.is-manual { color: var(--a-color-text); }
 .album-preview-step__match.is-ambiguous { color: var(--a-color-accent-warning); }
+@media (max-width: 640px) {
+  .album-preview-step__track { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .album-preview-step__track-statuses { grid-column: 2; justify-content: flex-start; }
+}
 </style>

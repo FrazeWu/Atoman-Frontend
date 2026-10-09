@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		root: mobileRoot,
+		cacheDir: path.resolve(frontendRoot, 'node_modules/.vite-mobile'),
 		define: {
 			__APP_VERSION__: JSON.stringify(`v${packageVersion}`),
 		},
@@ -55,6 +56,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		resolve: {
+			dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
 			alias: {
 				"@": path.resolve(frontendRoot, "src"),
 				"@mobile": mobileRoot,
@@ -77,7 +79,7 @@ export default defineConfig(({ mode }) => {
 				output: {
 					manualChunks(id) {
 						if (id.includes("node_modules/highlight.js")) return "highlight";
-						if (id.includes("node_modules/marked")) return "markdown-runtime";
+							if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (
 							id.includes("node_modules/yjs") ||
 							id.includes("node_modules/y-websocket") ||

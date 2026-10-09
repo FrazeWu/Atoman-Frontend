@@ -150,8 +150,8 @@
       <div v-else-if="catalogLoading" class="books-grid" aria-label="正在加载书籍" aria-busy="true"><PSkeleton v-for="index in 12" :key="index" height="16rem" /></div>
       <p v-else-if="catalogItems.length === 0" class="books-empty">还没有公开书目</p>
       <ul v-else class="books-grid">
-        <li v-for="work in catalogItems" :key="work.id" class="books-catalog-row">
-          <BookCard :work="work" />
+        <li v-for="(work, index) in catalogItems" :key="work.id" class="books-catalog-row">
+          <BookCard :work="work" :eager="index < 6" />
         </li>
       </ul>
       <PaginationBar :meta="catalogMeta" :loading="catalogLoading" @change="changeCatalogPage" />

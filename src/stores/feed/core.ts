@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { createRequestCoalescer } from '@/utils/coalesceRequest';
 import { apiRequestResult } from "@/api/client";
 import { useApi } from "@/composables/useApi";
 import { useAuthStore } from "@/stores/auth";
@@ -42,7 +43,11 @@ export const createFeedCoreState = () => {
 	let groupsRequestGeneration = 0;
 	let sessionGeneration = 0;
 
-	const fetchSubscriptions = async () => {
+	const subscriptionRequests = createRequestCoalescer<boolean>();
+	const groupRequests = createRequestCoalescer<boolean>();
+	const fetchSubscriptions = () => {
+		const owner = useAuthStore();
+		return subscriptionRequests(JSON.stringify([sessionGeneration, owner.user?.uuid, owner.token, owner.isAuthenticated]), async () => {
 		const authStore = useAuthStore();
 		const generation = ++subscriptionsRequestGeneration;
 		const userId = authStore.user?.uuid;
@@ -78,9 +83,12 @@ export const createFeedCoreState = () => {
 			reportError(e, "Failed to fetch subscriptions");
 		}
 		return false;
+		});
 	};
 
-	const fetchGroups = async () => {
+	const fetchGroups = () => {
+		const owner = useAuthStore();
+		return groupRequests(JSON.stringify([sessionGeneration, owner.user?.uuid, owner.token, owner.isAuthenticated]), async () => {
 		const authStore = useAuthStore();
 		const generation = ++groupsRequestGeneration;
 		const userId = authStore.user?.uuid;
@@ -114,6 +122,7 @@ export const createFeedCoreState = () => {
 			reportError(e, "Failed to fetch groups");
 		}
 		return false;
+		});
 	};
 
 	const createGroup = async (name: string) => {

@@ -44,7 +44,6 @@ const currentModule = computed(() => {
     || route.path === '/inbox'
     || route.path === '/me'
     || route.path.startsWith('/studio')
-    || route.path.startsWith('/videos/')
   ) return undefined
   if (siteContext.value.type === 'module') return siteContext.value.module
   if (/^\/(?:post\/|posts\/(?:post\/|channel\/|notes(?:\/|$))|channel\/|collection\/|channels\/|users\/)/.test(route.path)) return 'blog'
@@ -91,7 +90,7 @@ const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {
   bottom: 0;
   left: 0;
   display: block !important;
-  z-index: var(--a-z-player-sheet);
+  z-index: var(--a-z-navigation);
   pointer-events: none;
 }
 

@@ -336,6 +336,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 
 		const wrapper = mount(MusicCreationFlowDrawer);
 		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
+		await vi.dynamicImportSettled();
+		await flushPromises();
 
 		expect(flow.draft.albumDetails.releaseDateParts).toEqual({ year: "2019", month: "05", day: "17" });
 		expect(flow.draft.albumDetails.coverUrl).toBe("https://cover.test/igor.jpg");
@@ -353,6 +355,57 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			derivedTracks: [{ title: "Song", origin: "01-song.flac", trackNumber: 1 }],
 		}));
 		await useAlbumImportUpload().startMetadataMatching();
+		expect(match).not.toHaveBeenCalled();
+	});
+
+	it("异步匹配响应会启动轮询，音频已就绪仍等待匹配完成才停止", async () => {
+		vi.useFakeTimers();
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.status = "ready";
+		flow.draft.albumImport.derivedAlbumTitle = "Test Album";
+		flow.draft.albumImport.derivedTracks = [{ title: "Test Song", origin: "01-song.flac", trackNumber: 1 }];
+		const matching = snapshot({
+			status: "ready", stage: "ready", derivedAlbumTitle: "Test Album",
+			metadataMatchStatus: "matching", derivedTracks: flow.draft.albumImport.derivedTracks,
+		});
+		const matched = snapshot({ ...matching, metadataMatchStatus: "matched", metadataMatched: true });
+		const match = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata").mockResolvedValue(matching);
+		const refresh = vi.spyOn(musicApi, "getMusicAlbumImport")
+			.mockResolvedValueOnce(matching)
+			.mockResolvedValueOnce(matched);
+		const uploader = useAlbumImportUpload();
+
+		await uploader.startMetadataMatching();
+		await vi.advanceTimersByTimeAsync(2000);
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(flow.draft.albumImport.metadataMatchStatus).toBe("matching");
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(refresh).toHaveBeenCalledTimes(2);
+		expect(flow.draft.albumImport.metadataMatchStatus).toBe("matched");
+		await vi.advanceTimersByTimeAsync(9000);
+		expect(refresh).toHaveBeenCalledTimes(2);
+		expect(match).toHaveBeenCalledOnce();
+	});
+
+	it("ready 导入快照处于 matching 时保留已有轮询", async () => {
+		vi.useFakeTimers();
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		const matching = snapshot({ status: "ready", stage: "ready", metadataMatchStatus: "matching" });
+		const refresh = vi.spyOn(musicApi, "getMusicAlbumImport")
+			.mockResolvedValueOnce(matching)
+			.mockResolvedValueOnce(snapshot({ ...matching, metadataMatchStatus: "matched", metadataMatched: true }));
+		const match = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata");
+		useAlbumImportUpload().startPolling("import-1");
+
+		await vi.advanceTimersByTimeAsync(2000);
+		expect(refresh).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(refresh).toHaveBeenCalledTimes(2);
+		expect(flow.draft.albumImport.metadataMatchStatus).toBe("matched");
+		await vi.advanceTimersByTimeAsync(9000);
+		expect(refresh).toHaveBeenCalledTimes(2);
 		expect(match).not.toHaveBeenCalled();
 	});
 

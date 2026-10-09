@@ -1,21 +1,32 @@
 <template>
   <div class="book-cover">
-    <img v-if="src && !failed" :src="src" :alt="title" loading="lazy" @error="failed = true" />
-    <div v-else class="book-cover__fallback" aria-label="暂无封面">
+    <img v-if="src && !failed" :src="imageSrc" :alt="title" :loading="eager ? 'eager' : 'lazy'" decoding="async" @load="loaded = true" @error="onError" />
+    <div v-if="!src || failed || !loaded" class="book-cover__fallback" :aria-label="src && !failed ? '正在加载封面' : '暂无封面'">
       <Book :size="28" aria-hidden="true" />
       <span>{{ title }}</span>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { IconBook2 as Book } from '@tabler/icons-vue'
+import { resolveMediaImageURL, resolveMediaURL } from '@/utils/mediaUrl'
 
-const props = defineProps<{ src?: string; title: string }>()
+const props = withDefaults(defineProps<{ src?: string; title: string; eager?: boolean; width?: number }>(), { eager: false, width: 320 })
 const failed = ref(false)
+const proxyFailed = ref(false)
+const loaded = ref(false)
+const originalSrc = computed(() => resolveMediaURL(props.src || ''))
+const imageSrc = computed(() => proxyFailed.value ? originalSrc.value : resolveMediaImageURL(props.src || '', { width: props.width }))
 
-watch(() => props.src, () => { failed.value = false })
+function onError() {
+  if (!proxyFailed.value && imageSrc.value !== originalSrc.value) proxyFailed.value = true
+  else failed.value = true
+}
+
+watch(() => props.src, () => { failed.value = false; proxyFailed.value = false; loaded.value = false })
 </script>
+
 <style scoped>
 .book-cover {
   position: relative;
@@ -34,6 +45,8 @@ watch(() => props.src, () => { failed.value = false })
   object-fit: contain;
 }
 .book-cover__fallback {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -42,6 +55,7 @@ watch(() => props.src, () => { failed.value = false })
   height: 100%;
   padding: 1rem;
   color: var(--a-color-muted);
+  background: var(--a-color-surface);
   text-align: center;
 }
 .book-cover__fallback span {

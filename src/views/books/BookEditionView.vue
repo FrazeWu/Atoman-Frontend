@@ -4,7 +4,7 @@
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载版本...</p>
     <template v-else-if="detail">
       <header class="books-detail__header">
-        <BookCover :src="detail.edition.cover_url" :title="detail.edition.title || detail.work.title" />
+        <BookCover :src="detail.edition.cover_url" :title="detail.edition.title || detail.work.title" eager :width="480" />
         <div class="books-detail__identity">
         <RouterLink class="books-detail__back" :to="{ path: `/books/work/${detail.work.id}`, query: route.query }">返回作品</RouterLink>
         <h1>{{ detail.edition.title || detail.work.title }}</h1>

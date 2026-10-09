@@ -511,7 +511,10 @@ function continueImport() {
             <span v-if="formatDate(selectedImport.lastSyncedAt)" class="meta-time">更新于 {{ formatDate(selectedImport.lastSyncedAt) }}</span>
           </div>
 
-          <p v-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
+          <p v-if="selectedImport.hasCommitRequest && musicImportGroupForStatus(selectedImport.status) === 'in_progress'" class="status-hint" role="status">
+            已提交，正在自动处理，无需操作。
+          </p>
+          <p v-else-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
             上传尚未完成，可继续填写资料。
           </p>
           <p v-else-if="selectedImport.status === 'needs_attention' && selectedImport.stage === 'ready'" class="status-hint">
@@ -530,11 +533,11 @@ function continueImport() {
 
           <div class="music-imports-view__actions">
             <PButton
-              v-if="!['committed', 'canceled'].includes(selectedImport.status)"
+              v-if="!['committed', 'canceled'].includes(selectedImport.status) && (!selectedImport.hasCommitRequest || ['needs_attention', 'failed'].includes(selectedImport.status))"
               variant="primary"
               @click="continueImport"
             >
-              {{ selectedImport.status === 'needs_attention' ? '处理问题' : '继续导入' }}
+              {{ ['needs_attention', 'failed'].includes(selectedImport.status) ? '处理问题' : '继续导入' }}
             </PButton>
 
             <PButton

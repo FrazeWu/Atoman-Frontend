@@ -10,7 +10,7 @@
       <ArrowLeft :size="18" aria-hidden="true" />
     </button>
     <MobileModuleSwitcher
-      v-if="!isAuthRoute && !isVideoRoute && route.path !== '/modules'"
+      v-if="!isAuthRoute && route.path !== '/modules'"
       :label="mobileModuleLabel"
       :current-module="mobileModule"
       :available-modules="availableModules"
@@ -37,6 +37,7 @@ import { IconArrowLeft as ArrowLeft, IconPlayerPlay as PlayCircle } from '@table
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import MobileModuleSwitcher from '@/components/system/MobileModuleSwitcher.vue'
 import { moduleUrl } from '@/router/siteUrls'
+import { moduleRooms } from '@/config/moduleRooms'
 import { desktopAppBaseUrl } from '@/utils/desktopAppUrl'
 import { resolveSiteContext } from '@/router/siteContext'
 import type { ModuleRoomKey } from '@atoman/module-config'
@@ -68,7 +69,7 @@ const mobileModuleLabel = computed(() => {
   if (mobileModule.value === 'blog') return '博客'
   if (mobileModule.value === 'feed') return 'Feed'
   if (mobileModule.value === 'music') return '音乐'
-  if (mobileModule.value === 'books') return '书籍'
+  if (mobileModule.value) return moduleRooms[mobileModule.value].name
   return '模块'
 })
 const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || isMobileDetailRoute(route.path) || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/)/.test(route.path)))
@@ -88,6 +89,11 @@ const goBack = () => {
 </script>
 
 <style scoped>
+.mobile-app-topbar :deep(.mobile-module-switcher) {
+  display: inline-flex;
+  flex: 1;
+}
+
 .mobile-app-topbar {
   position: sticky;
   top: 0;

@@ -231,6 +231,7 @@ const playableArtistSongs = computed<Song[]>(() => {
     if (!audioUrl) continue
     const releaseDate = song.release_date || ''
     playable.push({
+      summary_only: song.summary_only,
       id: song.id,
       title: song.title,
       artist: song.artists?.map((item) => item.name).join(', ') || displayName.value || '未知艺术家',

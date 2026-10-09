@@ -133,7 +133,7 @@
       <main class="blog-home__stream">
 
         <!-- 主文章列表流 -->
-        <div v-if="isStreamLoading && !streamItems.length" class="blog-home__skeleton-list">
+        <div v-if="isStreamLoading && !initialStreamReady" class="blog-home__skeleton-list">
           <div v-for="i in 5" :key="i" class="a-skeleton" style="height: 8rem; border-radius: var(--a-radius-card);" />
         </div>
 
@@ -531,6 +531,7 @@ const collectionOptions = computed(() => [
 ])
 
 const isStreamLoading = computed(() => loading.value || notesLoading.value)
+const initialStreamReady = ref(false)
 const streamItems = computed<BlogHomeStreamItem[]>(() => {
   const postItems: BlogHomeStreamItem[] = typeFilter.value === 'note'
     ? []
@@ -907,7 +908,8 @@ const loadMore = () => {
 }
 
 onMounted(() => {
-  void Promise.all([fetchPosts(), fetchShortNotes(), fetchChannels(), fetchSearchCollections(searchChannelID.value), fetchDigest()])
+  void Promise.all([fetchPosts(), fetchShortNotes()]).finally(() => { initialStreamReady.value = true })
+  void Promise.all([fetchChannels(), fetchSearchCollections(searchChannelID.value), fetchDigest()])
   if (authStore.isAuthenticated) {
     void loadRecommendationPreference()
     void feedStore.fetchBookmarkedPostIds()

@@ -309,6 +309,7 @@ const fetchPosts = async (page = 1, append = false) => {
   try {
     const params = new URLSearchParams({
       collection_id: requestedCollectionId,
+      view: 'summary',
       page_size: '20',
       page: String(page),
     })

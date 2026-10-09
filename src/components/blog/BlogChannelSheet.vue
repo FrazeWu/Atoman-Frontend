@@ -60,7 +60,7 @@ async function loadChannel() {
     const channelPayload = await Promise.resolve(channelResponse.data)
     if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     channel.value = channelPayload.data || channelPayload
-    const postResponse = await apiRequestResult(`${api.blog.posts}?channel_id=${encodeURIComponent(requestedChannelId)}&page=1&page_size=20`)
+    const postResponse = await apiRequestResult(`${api.blog.posts}?view=summary&channel_id=${encodeURIComponent(requestedChannelId)}&page=1&page_size=20`)
     if (requestSequence !== loadSequence || requestedChannelId !== channelId.value) return
     if (!postResponse.ok) throw new Error('post load failed')
     const postPayload = await Promise.resolve(postResponse.data)
@@ -88,7 +88,7 @@ async function loadMorePosts() {
   postsLoading.value = true
   const nextPage = postsPage.value + 1
   try {
-    const response = await apiRequestResult(`${api.blog.posts}?channel_id=${encodeURIComponent(channelId.value)}&page=${nextPage}&page_size=20`)
+    const response = await apiRequestResult(`${api.blog.posts}?view=summary&channel_id=${encodeURIComponent(channelId.value)}&page=${nextPage}&page_size=20`)
     if (!response.ok) throw new Error('post load failed')
     const payload = await Promise.resolve(response.data)
     posts.value = [...posts.value, ...(Array.isArray(payload.data) ? payload.data : [])]

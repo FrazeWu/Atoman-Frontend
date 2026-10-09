@@ -85,7 +85,7 @@
             <div class="palette-body hide-scrollbar">
               <div v-if="globalSearch.loading.value" class="palette-state">
                 <div class="palette-spinner" />
-                <p>正在智能检索全站内容...</p>
+                <p>正在搜索...</p>
               </div>
 
               <div v-else-if="searchDraft.trim().length === 0" class="palette-empty-guide">
@@ -354,8 +354,7 @@ onBeforeUnmount(() => {
 .palette-modal {
   width: 100%;
   max-width: 640px;
-  background: color-mix(in srgb, var(--a-color-bg) 88%, transparent);
-  backdrop-filter: blur(24px);
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-modal);

@@ -110,7 +110,7 @@ function removeTag(tag: string) {
 }
 
 const storageOptions = [
-  { label: '上传至 R2', value: 'local' },
+  { label: '本地上传', value: 'local' },
   { label: '外部链接', value: 'external' },
 ]
 
@@ -767,7 +767,7 @@ async function duplicateDraft() {
               <h3>{{ form.title || '未命名视频' }}</h3>
               <p v-if="form.description">{{ form.description }}</p>
               <dl>
-                <div><dt>来源</dt><dd>{{ form.storage_type === 'local' ? '上传至 R2' : '外部链接' }}</dd></div>
+                <div><dt>来源</dt><dd>{{ form.storage_type === 'local' ? '本地上传' : '外部链接' }}</dd></div>
                 <div><dt>合集</dt><dd>{{ collections.find(item => item.id === selectedCollectionId)?.name || '默认合集' }}</dd></div>
               </dl>
             </div>

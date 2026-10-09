@@ -5,6 +5,7 @@ import ModuleSubscriptionSourcesPicker from '@/components/feed/ModuleSubscriptio
 import SubscriptionInboxToolbar from '@/components/feed/SubscriptionInboxToolbar.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import { useModuleSubscriptionTimeline } from '@/composables/feed/useModuleSubscriptionTimeline'
@@ -35,7 +36,7 @@ const pageMeta = computed(() => ({
     <div v-if="!authStore.isAuthenticated" class="video-subscriptions-unauth">
       <PEmpty title="请登录后查看视频订阅" description="登录账号以同步你订阅的频道与合集更新。">
         <template #action>
-          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+          <PButton to="/login" variant="primary">立即登录</PButton>
         </template>
       </PEmpty>
     </div>

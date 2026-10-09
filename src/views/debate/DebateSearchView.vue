@@ -4,6 +4,7 @@ import { IconSearch as Search } from '@tabler/icons-vue'
 import { useDebateStore } from '@/stores/debate'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 const store = useDebateStore()
@@ -31,7 +32,7 @@ watch(query, (value) => {
     <PPageHeader title="搜索" mb="1.25rem" />
     <form class="debate-search__form" @submit.prevent="search">
       <PInput v-model="query" type="search" placeholder="搜索辩题、正文或标签" autofocus />
-      <button type="submit" class="debate-search__submit" aria-label="开始搜索" title="开始搜索"><Search :size="18" aria-hidden="true" /></button>
+      <PButton type="submit" aria-label="开始搜索" title="开始搜索"><Search :size="18" aria-hidden="true" /></PButton>
     </form>
 
     <div v-if="loading" class="debate-search__state">搜索中...</div>
@@ -50,10 +51,18 @@ watch(query, (value) => {
 .debate-search-view { min-height: 100%; padding-bottom: 3rem; }
 .debate-search__form { display: flex; align-items: stretch; gap: 0.5rem; margin-bottom: 1.5rem; }
 .debate-search__form :deep(input) { min-width: 0; }
-.debate-search__submit { display: inline-flex; width: 46px; flex: 0 0 46px; align-items: center; justify-content: center; border: 1px solid var(--a-color-fg); background: var(--a-color-fg); color: var(--a-color-bg); cursor: pointer; }
 .debate-search__state { color: var(--a-color-muted); }
 .debate-search__results { display: grid; gap: 0.5rem; }
-.debate-search__result { display: grid; gap: 0.35rem; padding: 0.9rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
+.debate-search__result {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+}
 .debate-search__result:hover, .debate-search__result:focus-visible { border-color: var(--a-color-fg); }
 .debate-search__result strong { font-weight: 500; }
 .debate-search__result span { color: var(--a-color-muted); font-size: 0.8rem; }

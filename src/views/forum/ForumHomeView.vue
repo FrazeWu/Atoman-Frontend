@@ -126,10 +126,12 @@
     <div class="forum-modal-fields">
       <PInput v-model="catReqForm.name" label="分类名称 *" placeholder="分类名称" />
       <PTextarea v-model="catReqForm.description" label="描述" :rows="3" placeholder="分类用途说明" />
-      <PTextarea v-model="catReqForm.reason" label="补充说明 *" :rows="4" placeholder="说明为什么需要此分区" />
+      <PTextarea v-model="catReqForm.reason" label="申请说明 *" :rows="4" placeholder="填写申请说明" />
+      <p v-if="catReqError" class="forum-modal-error">{{ catReqError }}</p>
+      <p v-if="catReqSuccess" class="forum-modal-success">{{ catReqSuccess }}</p>
     </div>
     <div class="forum-modal-actions">
-      <PButton outline @click="catReqModalOpen = false">取消</PButton>
+      <PButton variant="secondary" @click="catReqModalOpen = false">取消</PButton>
       <PButton @click="submitCategoryRequest">提交申请</PButton>
     </div>
   </PModal>
@@ -472,10 +474,14 @@ onBeforeUnmount(() => {
 const API_URL = useApiUrl()
 const catReqModalOpen = ref(false)
 const catReqForm = ref({ name: '', description: '', reason: '' })
+const catReqError = ref('')
+const catReqSuccess = ref('')
 
 const submitCategoryRequest = async () => {
+  catReqError.value = ''
+  catReqSuccess.value = ''
   if (!catReqForm.value.name.trim() || !catReqForm.value.reason.trim()) {
-    alert('请填写分区名称和申请理由')
+    catReqError.value = '请填写分类名称和申请说明'
     return
   }
   const res = await apiRequestResult(`${API_URL}/forum/category-requests`, {
@@ -487,12 +493,15 @@ const submitCategoryRequest = async () => {
     body: JSON.stringify(catReqForm.value),
   })
   if (res.ok) {
-    catReqModalOpen.value = false
     catReqForm.value = { name: '', description: '', reason: '' }
-    alert('申请已提交，请等待管理员审核')
+    catReqSuccess.value = '申请已提交'
+    setTimeout(() => {
+      catReqModalOpen.value = false
+      catReqSuccess.value = ''
+    }, 1500)
   } else {
     const d = await Promise.resolve(res.data)
-    alert(`提交失败: ${d.error || '未知错误'}`)
+    catReqError.value = `提交失败: ${d?.error || '请稍后重试'}`
   }
 }
 </script>
@@ -1008,8 +1017,22 @@ const submitCategoryRequest = async () => {
 }
 
 .forum-modal-actions {
+  display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
   margin-top: 1.5rem;
+}
+
+.forum-modal-error {
+  margin: 0;
+  font-size: var(--a-text-xs);
+  color: var(--a-color-danger);
+}
+
+.forum-modal-success {
+  margin: 0;
+  font-size: var(--a-text-xs);
+  color: var(--a-color-success);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */

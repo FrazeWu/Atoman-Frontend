@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useTimelineStore } from '@/stores/timeline'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 const authStore = useAuthStore()
@@ -21,7 +22,7 @@ onMounted(() => {
   <div class="a-page-md timeline-my-view">
     <PPageHeader title="我的" mb="1.25rem" />
     <PEmpty v-if="!authStore.isAuthenticated" title="登录后查看我的时间线内容" description="登录账号以查看创建的人物和事件。">
-      <template #action><RouterLink to="/login" class="a-btn a-btn--primary">登录</RouterLink></template>
+      <template #action><PButton to="/login" variant="primary">登录</PButton></template>
     </PEmpty>
     <template v-else>
       <nav class="timeline-my__links" aria-label="时间线个人入口">
@@ -42,7 +43,18 @@ onMounted(() => {
 <style scoped>
 .timeline-my-view { min-height: 100%; padding-bottom: 3rem; }
 .timeline-my__links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 2rem; }
-.timeline-my__links a { display: flex; min-height: 48px; align-items: center; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
+.timeline-my__links a {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+}
 .timeline-my__links a:hover, .timeline-my__links a:focus-visible { border-color: var(--a-color-fg); }
 .timeline-my__list { display: grid; gap: 0.75rem; }
 .timeline-my__list h2 { margin: 0; font-size: 1rem; font-weight: 500; }

@@ -4,17 +4,25 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import StudioChannelView from '@/views/studio/StudioChannelView.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 
 const apiMocks = vi.hoisted(() => ({
   post: vi.fn().mockResolvedValue({ id: 'channel-new' }),
   patch: vi.fn().mockResolvedValue({ id: 'channel-2' }),
   remove: vi.fn().mockResolvedValue({ message: 'ok' }),
+  upload: vi.fn(),
 }))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
-  return { ...actual, apiPostJson: apiMocks.post, apiPatchJson: apiMocks.patch, apiDeleteJson: apiMocks.remove }
+  return {
+    ...actual,
+    apiPostJson: apiMocks.post,
+    apiPatchJson: apiMocks.patch,
+    apiDeleteJson: apiMocks.remove,
+    apiRequestResult: apiMocks.upload,
+  }
 })
 
 const PModal = {
@@ -33,6 +41,9 @@ async function setup(withChannels: boolean) {
   await router.push('/studio/channel')
   await router.isReady()
   const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+  const authStore = useAuthStore(pinia)
+  authStore.isAuthenticated = true
+  authStore.token = 'test-token'
   const store = useStudioStore(pinia)
   store.loaded = true
   store.channels = withChannels ? [
@@ -46,7 +57,10 @@ async function setup(withChannels: boolean) {
 }
 
 describe('StudioChannelView', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    apiMocks.upload.mockResolvedValue({ ok: true, data: { url: 'https://assets.test/channel-cover.webp' } })
+  })
 
   it('creates the first channel and returns to dashboard', async () => {
     const { wrapper, store, router } = await setup(false)
@@ -81,5 +95,25 @@ describe('StudioChannelView', () => {
     await flushPromises()
     expect(apiMocks.remove).toHaveBeenCalledWith('/api/v1/studio/channels/channel-2')
     expect(store.loadState).toHaveBeenCalledWith(true)
+  })
+
+  it('uploads a channel cover instead of asking for a URL', async () => {
+    const { wrapper } = await setup(false)
+    await wrapper.find('[data-testid="new-channel"]').trigger('click')
+
+    const file = new File(['cover'], 'cover.webp', { type: 'image/webp' })
+    const input = wrapper.find('[data-testid="channel-cover-input"]')
+    Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(apiMocks.upload).toHaveBeenCalledWith('/api/v1/blog/upload-image', expect.objectContaining({
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+    }))
+    const request = apiMocks.upload.mock.calls[0]?.[1] as RequestInit
+    expect((request.body as FormData).get('image')).toBe(file)
+    expect(wrapper.find('.cover-preview-image').attributes('src')).toBe('https://assets.test/channel-cover.webp')
+    expect(wrapper.find('[data-testid="channel-cover-input"]').exists()).toBe(true)
   })
 })

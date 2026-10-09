@@ -354,14 +354,6 @@ html.dark .topbar--auth {
   margin-top: 2px;
   min-width: 0;
 }
-.logo-notice {
-  font-size: 0.62rem;
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: 0;
-  color: var(--a-color-muted-soft);
-  white-space: nowrap;
-}
 .logo-version {
   font-size: 0.52rem;
   font-weight: 500;
@@ -449,10 +441,6 @@ html.dark .topbar--auth {
   .brand-link {
     min-width: auto;
     padding-right: 1rem;
-  }
-
-  .logo-notice {
-    display: none;
   }
 }
 

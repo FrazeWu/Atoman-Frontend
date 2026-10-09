@@ -181,7 +181,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .rating-control__public-score {
-  color: #b45309;
+  color: var(--a-color-warning);
   font-size: 1.1rem;
   line-height: 1;
 }
@@ -215,13 +215,13 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .rating-control__star-base {
-  color: #d7dbe0;
+  color: var(--a-color-border);
 }
 
 .rating-control__star-fill {
   left: calc(50% - 11px);
   overflow: hidden;
-  color: #ff9d24;
+  color: var(--a-color-warning);
   transform: translateY(-50%);
 }
 
@@ -291,12 +291,8 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .rating-control__preview {
-  color: var(--a-color-muted);
+  color: var(--a-color-warning);
   white-space: nowrap;
-}
-
-.rating-control__preview {
-  color: #b45309;
 }
 
 .rating-control__login {
@@ -306,7 +302,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 }
 
 .rating-control__error {
-  color: var(--a-color-danger, #b91c1c);
+  color: var(--a-color-danger);
 }
 
 .rating-control--compact {

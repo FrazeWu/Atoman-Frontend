@@ -113,26 +113,26 @@ const emit = defineEmits<{
 
 /* 点赞按钮激活态 */
 .interaction-bar__like-btn.is-active {
-  color: #e11d48;
-  border-color: rgba(225, 29, 72, 0.25);
-  background: rgba(225, 29, 72, 0.05);
+  color: var(--a-color-danger);
+  border-color: color-mix(in srgb, var(--a-color-danger) 25%, transparent);
+  background: color-mix(in srgb, var(--a-color-danger) 10%, transparent);
 }
 
 .interaction-bar__like-btn.is-active:hover:not(:disabled) {
-  border-color: rgba(225, 29, 72, 0.4);
-  background: rgba(225, 29, 72, 0.08);
+  border-color: color-mix(in srgb, var(--a-color-danger) 40%, transparent);
+  background: color-mix(in srgb, var(--a-color-danger) 20%, transparent);
 }
 
 /* 收藏按钮激活态 */
 .interaction-bar__bookmark-btn.is-active {
-  color: #d97706;
-  border-color: rgba(217, 119, 6, 0.25);
-  background: rgba(217, 119, 6, 0.05);
+  color: var(--a-color-warning);
+  border-color: color-mix(in srgb, var(--a-color-warning) 25%, transparent);
+  background: color-mix(in srgb, var(--a-color-warning) 10%, transparent);
 }
 
 .interaction-bar__bookmark-btn.is-active:hover:not(:disabled) {
-  border-color: rgba(217, 119, 6, 0.4);
-  background: rgba(217, 119, 6, 0.08);
+  border-color: color-mix(in srgb, var(--a-color-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--a-color-warning) 20%, transparent);
 }
 
 .interaction-bar__icon {

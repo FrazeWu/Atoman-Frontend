@@ -742,8 +742,8 @@ function initCodeMirror() {
         padding: '1.5rem 1.5rem 2rem',
         overflow: 'auto',
       },
-      '.cm-content': { caretColor: '#000' },
-      '.cm-cursor': { borderLeftColor: '#000' },
+      '.cm-content': { caretColor: 'var(--a-color-fg)' },
+      '.cm-cursor': { borderLeftColor: 'var(--a-color-fg)' },
       '.cm-selectionBackground, ::selection': { backgroundColor: '#d4e0ff' },
       '.cm-focused .cm-selectionBackground': { backgroundColor: '#b3ccff' },
       '.cm-line': { padding: '0' },
@@ -1172,7 +1172,7 @@ onBeforeUnmount(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--a-color-bg);
   position: relative;
 }
 
@@ -1186,7 +1186,7 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   padding: 0.4rem 1.25rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   flex-shrink: 0;
 }
 
@@ -1279,13 +1279,13 @@ onBeforeUnmount(() => {
 }
 
 .mode-switch.active {
-  background: #000;
-  color: #fff;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
 }
 
 .mode-switch.active .mode-switch-state {
-  background: #fff;
-  color: #000;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 
 .p-editor-toolbar {
@@ -1341,8 +1341,8 @@ onBeforeUnmount(() => {
 
 .tb-btn:hover,
 .tb-btn.active {
-  background: #000;
-  color: #fff;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
 }
 
 .tb-btn.uploading {
@@ -1354,7 +1354,7 @@ onBeforeUnmount(() => {
   display: inline-block;
   width: 1px;
   height: 1.2rem;
-  background: #d1d5db;
+  background: var(--a-color-border-soft);
   margin: 0 0.2rem;
   flex-shrink: 0;
 }
@@ -1391,7 +1391,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-weight: 500;
   font-size: 1rem;
-  color: #000;
+  color: var(--a-color-fg);
   pointer-events: none;
   z-index: 5;
 }
@@ -1476,13 +1476,13 @@ onBeforeUnmount(() => {
   overflow-x: auto;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
 }
 
 .sv-preview {
   padding: 1.5rem 1.5rem 2rem;
-  background: #fff;
+  background: var(--a-color-bg);
   overflow: auto;
   min-height: 16rem;
 }
@@ -1597,8 +1597,7 @@ onBeforeUnmount(() => {
 
 .p-editor-label {
   font-size: var(--a-text-xs);
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
+  font-weight: 500;
   letter-spacing: 0;
 }
 </style>

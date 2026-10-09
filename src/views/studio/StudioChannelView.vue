@@ -10,7 +10,13 @@
 
     <form v-if="editing" class="studio-channels__form" @submit.prevent="saveChannel">
       <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
-      <PInput v-model="draft.slug" data-testid="channel-slug" label="地址标识" placeholder="channel-name" />
+      <PInput
+        v-model="draft.slug"
+        data-testid="channel-slug"
+        label="频道网址"
+        placeholder="channel-name"
+        :hint="channelAddress ? `访问地址：${channelAddress}` : '用于生成频道链接，建议使用英文、数字和连字符。修改会影响原链接。'"
+      />
       <PTextarea v-model="draft.description" label="简介" placeholder="频道简介" :rows="3" />
       <div class="studio-channels__cover-field">
         <span class="studio-channels__field-label">封面</span>
@@ -103,6 +109,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { channelUrl } from '@/router/siteUrls'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioChannel } from '@/types'
 
@@ -126,6 +133,12 @@ const coverObjectUrl = ref('')
 const coverUploading = ref(false)
 const coverUploadError = ref('')
 const draft = reactive({ name: '', slug: '', description: '', cover_url: '' })
+const channelAddress = computed(() => {
+  const slug = draft.slug.trim()
+  if (!slug) return ''
+  const path = channelUrl(slug)
+  return typeof window === 'undefined' ? path : new URL(path, window.location.origin).toString()
+})
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
   set: value => { if (!value) pendingDelete.value = null },

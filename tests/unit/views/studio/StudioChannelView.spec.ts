@@ -67,6 +67,8 @@ describe('StudioChannelView', () => {
     await wrapper.find('[data-testid="new-channel"]').trigger('click')
     await wrapper.find('[data-testid="channel-name"]').setValue('新频道')
     await wrapper.find('[data-testid="channel-slug"]').setValue('new-channel')
+    expect(wrapper.text()).toContain('频道网址')
+    expect(wrapper.text()).toContain('/channels/new-channel')
     await wrapper.find('[data-testid="save-channel"]').trigger('click')
     await flushPromises()
 

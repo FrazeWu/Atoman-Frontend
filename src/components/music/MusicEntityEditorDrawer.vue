@@ -578,7 +578,7 @@ async function handleSongEditSubmit() {
           >
           <div class="song-editor__save-action">
             <PButton
-              variant="warning"
+              variant="primary"
               :loading="songSubmitting"
               loading-text="正在保存..."
               @click="handleSongEditSubmit"

@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
   target?: string
   rel?: string
   label?: string
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'warning'
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
   outline?: boolean
   danger?: boolean
   size?: 'sm' | 'md' | 'lg'
@@ -199,22 +199,6 @@ const handleClick = (event: MouseEvent) => {
   border-color: var(--a-color-danger-border);
 }
 
-.p-button--warning {
-  background: #eab308;
-  color: #0f172a;
-  border-color: #eab308;
-}
-
-.p-button--warning:hover:not(.p-button--disabled) {
-  background: #ca8a04;
-  border-color: #ca8a04;
-}
-
-.p-button--warning:active:not(.p-button--disabled) {
-  background: #a16207;
-  border-color: #a16207;
-  color: #ffffff;
-}
 
 .p-button--block {
   width: 100%;

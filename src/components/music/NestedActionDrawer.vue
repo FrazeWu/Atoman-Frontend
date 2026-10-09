@@ -635,7 +635,7 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <PButton variant="warning" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
+        <PButton variant="primary" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
       </form>
 
       <form v-else-if="isAlbumForm" data-test="music-edit-submit" class="wiki-form wiki-form--player-safe" @submit.prevent="submitEdit">
@@ -739,7 +739,7 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <PButton variant="warning" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
+        <PButton variant="primary" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
       </form>
 
       <!-- History placeholder -->

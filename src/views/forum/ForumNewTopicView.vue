@@ -298,7 +298,7 @@ onMounted(async () => {
 .empty-category-note {
   padding: 0.5rem 0;
   font-size: 0.875rem;
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
 }
 
 .category-loading {

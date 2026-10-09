@@ -536,7 +536,6 @@ const submitCategoryRequest = async () => {
   font-size: 0.6rem;
   font-weight: 500;
   letter-spacing: 0;
-  text-transform: uppercase;
   color: var(--a-color-muted-soft);
   padding: 0.25rem 1.25rem 0.5rem;
 }
@@ -618,7 +617,7 @@ const submitCategoryRequest = async () => {
 .sidebar-tag {
   display: inline-block;
   font-size: 0.7rem;
-  font-weight: var(--a-font-weight-strong);
+  font-weight: 500;
   padding: 0.2rem 0.6rem;
   margin: 0.15rem 0.25rem;
   margin-left: 1.25rem;
@@ -712,7 +711,7 @@ const submitCategoryRequest = async () => {
 .forum-category-select :deep(.p-select-trigger) {
   min-height: 2.5rem;
   font-size: 0.8rem;
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
   letter-spacing: 0;
 }
 
@@ -843,23 +842,20 @@ const submitCategoryRequest = async () => {
 
 .tr-badge {
   font-size: 0.6rem;
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
 }
 
 .tr-badge-pin {
   color: var(--a-color-fg);
-  text-transform: uppercase;
 }
 
 .tr-badge-closed {
   border-color: var(--a-color-disabled-border);
   color: var(--a-color-muted-soft);
-  text-transform: uppercase;
 }
 
 .tr-badge-cat {
   cursor: pointer;
-  text-transform: uppercase;
   transition: color 0.1s, background-color 0.1s, border-color 0.1s, opacity 0.1s, transform 0.1s, box-shadow 0.1s;
 }
 
@@ -919,7 +915,6 @@ const submitCategoryRequest = async () => {
   font-weight: 500;
   color: var(--a-color-fg);
   font-size: 0.6rem;
-  text-transform: uppercase;
   letter-spacing: 0;
 }
 
@@ -971,6 +966,7 @@ const submitCategoryRequest = async () => {
 
 .tr-stat-val {
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
   color: var(--a-color-muted);
 }
 

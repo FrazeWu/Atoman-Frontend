@@ -401,7 +401,7 @@ async function revert(revisionId: string) {
 }
 
 .revision-sheet__error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 640px) {

@@ -17,7 +17,7 @@ defineEmits<{
 const supportEmail = 'support@atoman.org'
 const copied = ref(false)
 const title = computed(() => ({
-  about: '关于-Atoman',
+  about: 'Atoman · 关于',
   contact: '联系-Atoman',
   feedback: '反馈-Atoman',
   terms: '条款-Atoman',
@@ -227,7 +227,7 @@ async function copyEmail() {
 
 .footer-community h3 {
   font-size: var(--a-text-md);
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
 }
 
 .footer-community p {
@@ -262,7 +262,7 @@ async function copyEmail() {
 
 .footer-feedback-channel h3 {
   font-size: var(--a-text-md);
-  font-weight: var(--a-font-weight-black);
+  font-weight: 500;
 }
 
 .footer-feedback-channel p {

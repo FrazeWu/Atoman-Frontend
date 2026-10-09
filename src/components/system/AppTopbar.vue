@@ -18,7 +18,6 @@
               <span class="logo-text">ATOMAN</span>
               <span class="logo-meta">
                 <span v-if="appVersion" class="logo-version">{{ appVersion }}</span>
-                <span class="logo-notice">beta</span>
               </span>
             </span>
           </span>
@@ -71,7 +70,7 @@
           <Moon v-else :size="18" />
         </button>
         <AppTopbarAuthControls v-if="showAuthControls" />
-        <RouterLink v-else to="/login" class="a-btn a-btn--primary a-btn--sm">登录</RouterLink>
+        <PButton v-else to="/login" size="sm">登录</PButton>
       </div>
     </div>
   </header>
@@ -91,6 +90,7 @@ import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } fr
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const { toggleSidebar } = useSidebar()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
@@ -258,9 +258,8 @@ const toggleTheme = (event: MouseEvent) => {
   position: sticky;
   top: 0;
   z-index: var(--a-z-navigation);
-  background: rgba(255, 255, 255, 0.58);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
+  background: var(--a-color-bg);
+  border-bottom: 1px solid var(--a-color-border);
   height: var(--a-topbar-height);
 }
 
@@ -282,9 +281,7 @@ const toggleTheme = (event: MouseEvent) => {
 
 :root.dark .topbar,
 html.dark .topbar {
-  background: rgba(9, 10, 15, 0.75);
-  -webkit-backdrop-filter: blur(20px) saturate(190%);
-  backdrop-filter: blur(20px) saturate(190%);
+  background: var(--a-color-bg);
 }
 .topbar:has(.topbar-search-wrap.is-open),
 .topbar:has(.dropdown-wrap .dropdown) {
@@ -292,11 +289,11 @@ html.dark .topbar {
 }
 
 .topbar--auth {
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--a-color-bg);
 }
 :root.dark .topbar--auth,
 html.dark .topbar--auth {
-  background: rgba(9, 10, 15, 0.75);
+  background: var(--a-color-bg);
 }
 .topbar-inner {
   padding: 0 2rem 0 0;

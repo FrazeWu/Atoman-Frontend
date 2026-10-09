@@ -196,7 +196,7 @@ const logout = async () => {
   background: var(--a-color-danger);
   color: var(--a-color-bg);
   font-size: 0.62rem;
-  font-weight: var(--a-font-weight-strong, 700);
+  font-weight: var(--a-font-weight-strong, 600);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -247,7 +247,7 @@ const logout = async () => {
   border-radius: var(--a-radius-none);
   background: var(--a-color-text);
   color: var(--a-color-bg);
-  font-weight: var(--a-font-weight-strong, 700);
+  font-weight: var(--a-font-weight-strong, 600);
   font-size: 0.75rem;
   display: flex;
   align-items: center;

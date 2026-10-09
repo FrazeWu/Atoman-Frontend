@@ -126,9 +126,8 @@ function itemIcon(targetType: ReferenceTargetType): LucideIcon {
 .topbar-search-section__header h3 {
   margin: 0;
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .section-count {
@@ -199,7 +198,7 @@ function itemIcon(targetType: ReferenceTargetType): LucideIcon {
 
 .topbar-search-section__title {
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
   overflow: hidden;
   text-overflow: ellipsis;

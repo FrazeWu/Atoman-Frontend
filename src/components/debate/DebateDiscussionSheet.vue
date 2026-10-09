@@ -1,7 +1,7 @@
 <template>
   <CommentSideSheet
     :show="show"
-    :title="`讨论-${debateTitle || '辩题'}`"
+    :title="debateTitle ? `${debateTitle} · 讨论` : '辩题讨论'"
     :target="{ kind: 'debate', resourceId: debateId }"
     noun="讨论"
     @close="emit('close')"

@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    :title="`编辑-${debate.title || '辩题'}`"
+    :title="debate.title ? `${debate.title} · 编辑` : '辩题编辑'"
     mode="full"
     close-type="header"
     @close="requestClose"
@@ -619,11 +619,17 @@ async function save() {
 
 .wiki-conflict {
   padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
   border-left: 3px solid var(--a-color-accent-destructive);
-  background: var(--a-color-bg-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
 }
 
-.wiki-conflict h3,
+.wiki-conflict h3 {
+  margin: 0;
+  font-weight: 500;
+}
+
 .wiki-conflict p {
   margin: 0;
 }
@@ -645,6 +651,7 @@ async function save() {
   display: grid;
   gap: 0.25rem;
   margin: 0;
+  font-weight: 500;
 }
 
 .wiki-conflict h4 small {

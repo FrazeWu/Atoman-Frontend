@@ -1,5 +1,6 @@
 import { defineStore, getActivePinia } from 'pinia'
 import { clearSessionStores } from '@/stores/sessionReset'
+import { clearQueryCache } from '@/composables/useQueryCache'
 import { ref } from 'vue'
 
 import { apiRequest } from '@/api/client'
@@ -139,7 +140,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const applySession = (session: { csrfToken: string; user: User }) => {
-    if (user.value?.uuid && user.value.uuid !== session.user.uuid) clearDependentState()
+    if (user.value?.uuid && user.value.uuid !== session.user.uuid) {
+      clearDependentState()
+      clearQueryCache()
+    }
     user.value = session.user
     token.value = 'cookie-session'
     isAuthenticated.value = true
@@ -149,6 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const clearSessionState = () => {
     clearDependentState()
+    clearQueryCache()
     token.value = null
     user.value = null
     isAuthenticated.value = false

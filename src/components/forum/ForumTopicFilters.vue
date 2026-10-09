@@ -30,7 +30,7 @@
         <PButton
           v-if="activeFollowTarget"
           data-testid="forum-filter-follow"
-          outline
+          variant="secondary"
           size="sm"
           :class="{ 'forum-tab-btn-active': following }"
           @click="$emit('toggle-follow', activeFollowTarget)"

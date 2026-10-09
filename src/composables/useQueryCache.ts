@@ -6,6 +6,12 @@ interface CacheEntry<T> {
 const cache = new Map<string, CacheEntry<unknown>>()
 const inFlight = new Map<string, Promise<unknown>>()
 const defaultStaleTime = 1000 * 60 * 5
+let cacheGeneration = 0
+
+export function clearQueryCache() {
+  cacheGeneration += 1
+  cache.clear()
+}
 
 export type QueryCacheOptions = {
   force?: boolean
@@ -29,10 +35,11 @@ export function useQueryCache() {
     const running = inFlight.get(key)
     if (running) return running as Promise<T>
 
+    const requestGeneration = cacheGeneration
     const request = Promise.resolve()
       .then(fetcher)
       .then((data) => {
-        cache.set(key, { data, timestamp: Date.now() })
+        if (requestGeneration === cacheGeneration) cache.set(key, { data, timestamp: Date.now() })
         return data
       })
       .finally(() => {
@@ -50,7 +57,7 @@ export function useQueryCache() {
     }
   }
 
-  const clear = () => cache.clear()
+  const clear = clearQueryCache
 
   return {
     fetchWithCache,

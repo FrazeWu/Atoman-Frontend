@@ -218,6 +218,11 @@
         </footer>
       </div>
     </template>
+    <nav v-if="presentation === 'page'" class="feed-article-page__navigation" aria-label="文章导航">
+      <PButton variant="secondary" @click="emit('close')">返回列表</PButton>
+      <PButton v-if="hasPrevious" variant="ghost" @click="emit('previous')">上一篇</PButton>
+      <PButton v-if="hasNext" variant="ghost" @click="emit('next')">下一篇</PButton>
+    </nav>
     <PDiscussionFAB
     v-if="article && isFeedItemTimeline(article) && article.feed_item && show && presentation !== 'page' && !commentsOpen"
       :count="commentCount"

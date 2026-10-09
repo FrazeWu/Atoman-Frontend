@@ -13,7 +13,7 @@ export interface FeedArticleRouteState {
 export function feedArticleRouteState(
 	state: FeedArticleRouteState,
 ): HistoryState {
-	return { [STATE_KEY]: state as unknown as HistoryState };
+	return { [STATE_KEY]: JSON.parse(JSON.stringify(state)) as HistoryState };
 }
 
 export function readFeedArticleRouteState(): FeedArticleRouteState | null {

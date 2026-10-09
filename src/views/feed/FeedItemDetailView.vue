@@ -1,4 +1,5 @@
 <template>
+  <section class="feed-item-detail-view">
   <FeedSourceArticlesSheet
     v-if="!isMobileApp && articleSource && sourceSheetVisible"
     :show="sourceSheetVisible"
@@ -47,6 +48,7 @@
     </div>
     <PEmpty v-else text="内容不存在或已被删除" />
   </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -124,6 +126,10 @@ function openRelativeArticle(offset: -1 | 1) {
 }
 
 function close() {
+  if (isMobileApp && window.history.state?.back) {
+    router.back()
+    return
+  }
   void router.push('/feed')
 }
 

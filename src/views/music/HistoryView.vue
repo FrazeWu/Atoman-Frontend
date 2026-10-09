@@ -231,6 +231,7 @@ watch(
 
     <template v-else-if="errorMessage">
       <p class="history-state history-state--error" role="alert">{{ errorMessage }}</p>
+      <PButton variant="secondary" @click="loadPage(1)">重试</PButton>
     </template>
 
     <PEmpty

@@ -4,6 +4,7 @@ import { mobileInitialRoutes } from "./mobileInitialRoutes";
 import { mobileAdditionalRoutes } from './mobileAdditionalRoutes';
 
 const requiresAuth = { requiresAuth: true };
+const mobileSavedView = () => import('./MobileSavedView.vue');
 export { MOBILE_MODULES } from "./mobileInitialRoutes";
 
 export const mobileRoutes: RouteRecordRaw[] = [
@@ -44,12 +45,14 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "reading-list",
-				component: () => import("@/views/feed/FeedReadingListView.vue"),
+				component: mobileSavedView,
+				props: { page: 'feed-reading' },
 				meta: requiresAuth,
 			},
 			{
 				path: "starred",
-				component: () => import("@/views/feed/FeedStarredView.vue"),
+				component: mobileSavedView,
+				props: { page: 'feed-starred' },
 				meta: requiresAuth,
 			},
 			{
@@ -86,7 +89,8 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts/bookmarks",
-		component: () => import("@/views/blog/BookmarkView.vue"),
+		component: mobileSavedView,
+		props: { page: 'blog-bookmarks' },
 		meta: requiresAuth,
 	},
 	{
@@ -169,12 +173,14 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "bookmarks",
-				component: () => import("@/views/music/LibraryView.vue"),
+				component: mobileSavedView,
+				props: { page: 'music-library' },
 				meta: requiresAuth,
 			},
 			{
 				path: "history",
-				component: () => import("@/views/music/HistoryView.vue"),
+				component: mobileSavedView,
+				props: { page: 'music-history' },
 				meta: requiresAuth,
 			},
 			{

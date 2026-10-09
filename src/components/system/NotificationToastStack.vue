@@ -115,9 +115,9 @@ onBeforeUnmount(() => {
   display: block;
   overflow: hidden;
   border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-none);
+  border-radius: var(--a-radius-card);
   padding: 0.8rem 0.9rem;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   cursor: pointer;
   pointer-events: auto;

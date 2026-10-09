@@ -109,7 +109,7 @@
             :disabled="deletingId === assignment.id"
             :loading="deletingId === assignment.id"
             loading-text="删除中..."
-            @click="removeAssignment(assignment.id)"
+            @click="pendingDeleteAssignment = assignment"
           >
             删除
           </PButton>
@@ -119,6 +119,17 @@
     </div>
 
     <p v-else class="setting-forum-moderator__empty">暂未分配任何版主。</p>
+
+    <PConfirm
+      :show="Boolean(pendingDeleteAssignment)"
+      title="移除版主"
+      :message="`确认移除版主“${pendingDeleteAssignment?.user?.display_name || pendingDeleteAssignment?.user?.username || ''}”？`"
+      confirm-text="确认移除"
+      danger
+      :loading="Boolean(deletingId)"
+      @confirm="confirmDelete"
+      @cancel="pendingDeleteAssignment = null"
+    />
   </div>
 </template>
 
@@ -127,6 +138,7 @@ import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -171,6 +183,7 @@ const loading = ref(false)
 const searching = ref(false)
 const saving = ref(false)
 const deletingId = ref('')
+const pendingDeleteAssignment = ref<ForumModeratorAssignment | null>(null)
 const editingId = ref('')
 const query = ref('')
 const selectedUserId = ref('')
@@ -366,7 +379,13 @@ async function removeAssignment(id: string) {
     deleteErrorId.value = id
   } finally {
     deletingId.value = ''
+    pendingDeleteAssignment.value = null
   }
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteAssignment.value) return
+  await removeAssignment(pendingDeleteAssignment.value.id)
 }
 
 onMounted(() => {

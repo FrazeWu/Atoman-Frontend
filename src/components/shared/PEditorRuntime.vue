@@ -1594,10 +1594,11 @@ onBeforeUnmount(() => {
   color: #1a1a2e;
   border-color: #9ca3af;
 }
-</style>
+
 .p-editor-label {
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
   letter-spacing: 0;
 }
+</style>

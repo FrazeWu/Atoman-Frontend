@@ -14,7 +14,7 @@
           加载中...
         </div>
         <div v-else-if="forumStore.categories.length === 0" class="a-muted empty-category-note">
-          暂无分类，请联系管理员创建分类后再发帖
+          暂无可用分类，请稍后重试
         </div>
         <div v-else class="category-grid">
           <PButton
@@ -343,6 +343,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 0.4rem;
   border: var(--a-border);
+  border-radius: var(--a-radius-control);
   padding: 0.5rem 0.75rem;
   background: var(--a-color-bg);
   min-height: 2.75rem;

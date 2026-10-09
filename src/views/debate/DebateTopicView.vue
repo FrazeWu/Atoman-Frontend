@@ -714,7 +714,7 @@ function formatDate(value: string) {
 .debate-header__content { min-width: 0; }
 .debate-header__eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--a-color-muted); font-size: 12px; }
 .debate-header__archive { padding: 3px 7px; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); color: var(--a-color-text-secondary); }
-.debate-header h1 { max-width: 880px; margin: 0; overflow-wrap: anywhere; font-size: 32px; font-weight: 650; line-height: 1.25; letter-spacing: 0; }
+.debate-header h1 { max-width: 880px; margin: 0; overflow-wrap: anywhere; font-size: 32px; font-weight: 500; line-height: 1.25; letter-spacing: 0; }
 .debate-header__description { max-width: 760px; margin: 12px 0 0; color: var(--a-color-text-secondary); line-height: 1.6; }
 .debate-header__meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; color: var(--a-color-muted); font-size: 12px; }
 .debate-header__actions { display: flex; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }

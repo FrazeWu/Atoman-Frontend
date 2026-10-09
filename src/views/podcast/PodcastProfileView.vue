@@ -5,6 +5,7 @@ import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 const authStore = useAuthStore()
@@ -47,7 +48,7 @@ onMounted(() => void loadOverview())
       title="登录后查看播客收听中心"
       description="登录账号以同步订阅、收藏和收听进度。"
     >
-      <template #action><RouterLink to="/login" class="a-btn a-btn--primary">登录</RouterLink></template>
+      <template #action><PButton to="/login" variant="primary">登录</PButton></template>
     </PEmpty>
 
     <template v-else>

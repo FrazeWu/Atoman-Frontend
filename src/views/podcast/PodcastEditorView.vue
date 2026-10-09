@@ -540,7 +540,7 @@ async function schedulePublish() {
             <PInput
               v-model="form.title"
               label="单集标题 *"
-              placeholder="上传音频后自动填充，可手动修改"
+              placeholder="单集标题"
               :error="titleError"
               @input="titleError = ''"
             />

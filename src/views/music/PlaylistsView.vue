@@ -185,7 +185,7 @@ watch(isAuthenticated, (authenticated) => {
       description="登录后可以查看自己创建和收藏的歌单。"
     >
       <template #action>
-        <RouterLink to="/login" class="a-btn a-btn--primary">登录</RouterLink>
+        <PButton to="/login" variant="primary">登录</PButton>
       </template>
     </PEmpty>
 
@@ -290,7 +290,8 @@ watch(isAuthenticated, (authenticated) => {
   margin-bottom: 1.5rem;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
 }
 
 .music-playlists__create-field {
@@ -301,7 +302,7 @@ watch(isAuthenticated, (authenticated) => {
 .music-playlists__create-field label {
   color: var(--a-color-text-secondary);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .music-playlists__create-field input {
@@ -309,8 +310,8 @@ watch(isAuthenticated, (authenticated) => {
   width: 100%;
   padding: 0 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 8px;
-  background: var(--a-color-surface);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
   font: inherit;
 }
@@ -333,7 +334,7 @@ watch(isAuthenticated, (authenticated) => {
   gap: 0.4rem;
   padding: 0 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 8px;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-fg);
   font: inherit;
@@ -342,7 +343,7 @@ watch(isAuthenticated, (authenticated) => {
 
 .music-playlists__create-cancel:hover,
 .music-playlists__create-cancel:focus-visible {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 .music-playlists__create-cancel:disabled {
@@ -379,7 +380,7 @@ watch(isAuthenticated, (authenticated) => {
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.05rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .music-playlists__section-header span {

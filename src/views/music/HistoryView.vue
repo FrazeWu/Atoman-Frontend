@@ -210,7 +210,7 @@ watch(
         description="登录账号以记录与跨端同步你的音乐播放历史。"
       >
         <template #action>
-          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+          <PButton to="/login" variant="primary">立即登录</PButton>
         </template>
       </PEmpty>
     </div>
@@ -240,7 +240,7 @@ watch(
       description="去发现页播放一首歌曲，这里会记录你的收听足迹。"
     >
       <template #action>
-        <RouterLink to="/music/discover" class="a-btn a-btn--primary">去发现音乐</RouterLink>
+        <PButton to="/music/discover" variant="primary">去发现音乐</PButton>
       </template>
     </PEmpty>
 

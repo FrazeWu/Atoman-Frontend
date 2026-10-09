@@ -404,7 +404,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 .debate-card__title {
   margin: 0;
   font-size: 1.15rem;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.4;
   color: var(--a-color-fg);
 }
@@ -419,8 +419,8 @@ watch([routeStatus, routeTag], ([status, tag]) => {
   display: grid;
   gap: 0.45rem;
   padding: 0.75rem 0.85rem;
-  background: var(--a-color-surface-muted);
-  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
   border: 1px solid var(--a-color-border-soft);
 }
 
@@ -434,13 +434,13 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 }
 
 .stance-bar__pro {
-  background: #3b82f6;
+  background: var(--a-color-primary);
   border-radius: var(--a-radius-pill, 999px) 0 0 var(--a-radius-pill, 999px);
   transition: width 0.3s ease;
 }
 
 .stance-bar__con {
-  background: #ef4444;
+  background: var(--a-color-danger);
   border-radius: 0 var(--a-radius-pill, 999px) var(--a-radius-pill, 999px) 0;
   transition: width 0.3s ease;
 }
@@ -454,12 +454,12 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .stance-label--pro {
   font-weight: 600;
-  color: #2563eb;
+  color: var(--a-color-primary);
 }
 
 .stance-label--con {
   font-weight: 600;
-  color: #dc2626;
+  color: var(--a-color-danger);
 }
 
 .stance-action {

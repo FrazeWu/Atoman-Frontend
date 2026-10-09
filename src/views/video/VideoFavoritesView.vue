@@ -102,7 +102,7 @@ watch([activeTab, () => authStore.isAuthenticated, queueState, queueSort], () =>
         description="登录账号以同步稍后看、收藏频道与收藏合集。"
       >
         <template #action>
-          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+          <PButton to="/login" variant="primary">立即登录</PButton>
         </template>
       </PEmpty>
     </div>

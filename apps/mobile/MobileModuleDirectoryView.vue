@@ -25,7 +25,7 @@
           <span>个人资料</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </RouterLink>
-        <RouterLink to="/inbox?tab=notifications" class="mobile-module-directory__row">
+        <RouterLink to="/inbox" class="mobile-module-directory__row">
           <Bell :size="20" aria-hidden="true" />
           <span>通知</span>
           <ChevronRight :size="18" aria-hidden="true" />

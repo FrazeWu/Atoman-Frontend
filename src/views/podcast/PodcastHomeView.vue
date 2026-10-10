@@ -43,6 +43,7 @@ const podcastSearchTypes = ['podcast', 'episode'] as const
 const podcastSearchQuery = ref('')
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(true)
+const episodeError = ref('')
 const recommendedEpisodes = ref<RecommendedEpisode[]>([])
 const recommendationLoading = ref(true)
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
@@ -58,8 +59,12 @@ function openPodcastSearchTarget(target: ReferenceTarget) {
 
 async function loadEpisodes() {
   loading.value = true
+  episodeError.value = ''
   try {
     episodes.value = await listPodcastEpisodes()
+  } catch {
+    episodes.value = []
+    episodeError.value = '单集加载失败'
   } finally {
     loading.value = false
   }
@@ -189,6 +194,7 @@ function playEpisode(ep: PodcastEpisode) {
 
       <PContentProgress
         :loading="loading"
+        :error="episodeError"
         :retry="loadEpisodes"
       >
         <template #skeleton>

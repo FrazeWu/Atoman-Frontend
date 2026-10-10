@@ -25,6 +25,7 @@ const videoSearchTypes = ['video'] as const
 const videoSearchQuery = ref('')
 const recommendedVideos = ref<Video[]>([])
 const loading = ref(false)
+const videoError = ref('')
 const recommendationLoading = ref(false)
 const recommendationError = ref('')
 const recommendationFeedbackError = ref('')
@@ -54,11 +55,17 @@ function openVideoSearchTarget(target: ReferenceTarget) {
 async function fetchVideos(page = videoMeta.value.page) {
   const seq = ++fetchVideosSeq
   loading.value = true
+  videoError.value = ''
   try {
     const data = await listVideoPage(sort.value, page, videoMeta.value.page_size, authStore.token ?? undefined)
     if (seq === fetchVideosSeq) {
       videos.value = data.data
       videoMeta.value = data.meta
+    }
+  } catch {
+    if (seq === fetchVideosSeq) {
+      videos.value = []
+      videoError.value = '视频加载失败'
     }
   } finally {
     if (seq === fetchVideosSeq) loading.value = false
@@ -221,6 +228,7 @@ watch(sort, () => {
     <!-- Main Videos List -->
     <PContentProgress
       :loading="loading"
+      :error="videoError"
       :retry="fetchVideos"
     >
       <template #skeleton>

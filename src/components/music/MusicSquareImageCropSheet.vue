@@ -139,6 +139,11 @@ function onImageLoad() {
   offset.value = clampOffset(offset.value)
 }
 
+function onImageError() {
+  loading.value = false
+  loadErrorMessage.value = '图片解码失败，请重新选择图片'
+}
+
 function onZoomInput(event: Event) {
   const target = event.target as HTMLInputElement
   zoom.value = Number(target.value)
@@ -269,6 +274,7 @@ onBeforeUnmount(() => {
           :style="imageStyle"
           draggable="false"
           @load="onImageLoad"
+          @error="onImageError"
         />
         <div class="crop-sheet__frame" aria-hidden="true" />
         <div v-if="loading" class="crop-sheet__state">图片加载中…</div>

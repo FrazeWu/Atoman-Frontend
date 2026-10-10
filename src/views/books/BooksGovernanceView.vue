@@ -428,7 +428,7 @@ onMounted(load)
 .books-governance__section h2 {
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-text);
 }
 
@@ -437,8 +437,8 @@ onMounted(load)
   gap: 1rem;
   max-width: 42rem;
   padding: 1.25rem;
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   box-shadow: none;
 }
@@ -463,8 +463,8 @@ onMounted(load)
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1rem;
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   box-shadow: none;
 }
@@ -503,7 +503,7 @@ onMounted(load)
   margin: 0;
   padding: 0.5rem 0.75rem;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted-soft);
   font-size: 0.85rem;
 }

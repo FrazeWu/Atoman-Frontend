@@ -18,4 +18,21 @@ describe('book reading progress', () => {
     localStorage.setItem('atoman:book-reading-progress:asset-1', '{bad')
     expect(getLocalBookReadingProgress('asset-1')).toBeNull()
   })
+
+  it('在更新阅读位置时保留本地书签', () => {
+    const bookmark = {
+      id: 'bookmark-1',
+      label: '第 1 页',
+      reading_percent: 0,
+      txt_offset: 0,
+      created_at: '2026-10-10',
+    }
+    saveLocalBookReadingProgress('asset-1', { reading_percent: 0, bookmarks: [bookmark] })
+    saveLocalBookReadingProgress('asset-1', { reading_percent: 0.5 })
+
+    expect(getLocalBookReadingProgress('asset-1')).toMatchObject({
+      reading_percent: 0.5,
+      bookmarks: [bookmark],
+    })
+  })
 })

@@ -23,6 +23,10 @@
           <Flag :size="16" aria-hidden="true" />
           <span>举报正文</span>
         </PButton>
+        <PButton type="button" variant="ghost" :disabled="!asset" aria-label="添加书签" title="添加书签" @click="addBookmark">
+          <Bookmark :size="16" aria-hidden="true" />
+          <span>书签</span>
+        </PButton>
       </template>
       <template #status>
         <p v-if="reportMessage" class="public-reader__feedback" aria-live="polite">{{ reportMessage }}</p>
@@ -38,6 +42,17 @@
         </figure>
       </div>
       <div v-else class="public-reader__pdf"><canvas ref="pdfCanvas" aria-label="PDF 页面" /></div>
+      <template #footer>
+        <details v-if="bookmarks.length" class="public-reader__bookmarks">
+          <summary>书签（{{ bookmarks.length }}）</summary>
+          <ol>
+            <li v-for="bookmark in bookmarks" :key="bookmark.id">
+              <button type="button" @click="jumpToBookmark(bookmark)">{{ bookmark.label }}</button>
+              <button type="button" :aria-label="`删除书签 ${bookmark.label}`" @click="removeBookmark(bookmark.id)">删除</button>
+            </li>
+          </ol>
+        </details>
+      </template>
     </BookReaderShell>
   </main>
 </template>
@@ -45,7 +60,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { IconFlag as Flag } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconFlag as Flag } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
@@ -54,6 +69,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
+import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -77,6 +93,7 @@ const epubTOC = ref<EpubTOCItem[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const reportMessage = ref('')
+const bookmarks = ref<BookReaderBookmark[]>([])
 const textViewport = ref<HTMLElement | null>(null)
 const epubViewport = ref<HTMLElement | null>(null)
 const comicViewport = ref<HTMLElement | null>(null)
@@ -136,7 +153,7 @@ async function renderPDFPage() {
   canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
   await page.render({ canvas, canvasContext: context, viewport }).promise
   readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 async function loadEPUB() {
@@ -149,6 +166,7 @@ async function loadEPUB() {
     saveLocalBookReadingProgress(asset.value?.id || '', {
       reading_percent: readingPercent.value,
       epub_cfi: location.start?.cfi || '',
+      bookmarks: bookmarks.value,
     })
   })
   await epubRendition.display(localProgress?.epub_cfi || undefined)
@@ -180,7 +198,7 @@ function handleTextScroll() {
   textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / pageHeight))
   textPage.value = Math.min(textPageCount.value, Math.floor(viewport.scrollTop / pageHeight) + 1)
   readingPercent.value = Math.max(0, Math.min(1, viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight)))
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 function updateTextPageCount() {
@@ -215,7 +233,7 @@ function setComicPageRef(index: number, element: unknown) {
 function scrollToComicPage() {
   comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
   readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 function changeComicPage(delta: number) {
@@ -229,7 +247,55 @@ function changeTextPage(delta: number) {
   textPage.value = nextPage
   textViewport.value?.scrollTo?.({ top: (nextPage - 1) * Math.max(1, textViewport.value?.clientHeight || 0), behavior: 'smooth' })
   readingPercent.value = textPageCount.value > 1 ? (nextPage - 1) / (textPageCount.value - 1) : 1
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+}
+
+function createBookmarkID() {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `bookmark-${Date.now()}`
+}
+
+function addBookmark() {
+  if (!asset.value) return
+  bookmarks.value = [{
+    id: createBookmarkID(),
+    label: pageLabel.value || `${Math.round(readingPercent.value * 100)}%`,
+    reading_percent: readingPercent.value,
+    epub_cfi: localProgress?.epub_cfi || '',
+    pdf_page: asset.value.format === 'pdf' ? pdfPage.value : undefined,
+    comic_page: asset.value.format === 'cbz' || asset.value.format === 'cbr' ? comicPage.value : undefined,
+    created_at: new Date().toISOString(),
+  }, ...bookmarks.value]
+  saveLocalBookReadingProgress(asset.value.id, {
+    reading_percent: readingPercent.value,
+    epub_cfi: localProgress?.epub_cfi || '',
+    bookmarks: bookmarks.value,
+  })
+}
+
+function removeBookmark(id: string) {
+  if (!asset.value) return
+  bookmarks.value = bookmarks.value.filter((bookmark) => bookmark.id !== id)
+  saveLocalBookReadingProgress(asset.value.id, {
+    reading_percent: readingPercent.value,
+    epub_cfi: localProgress?.epub_cfi || '',
+    bookmarks: bookmarks.value,
+  })
+}
+
+function jumpToBookmark(bookmark: BookReaderBookmark) {
+  if (!asset.value) return
+  readingPercent.value = bookmark.reading_percent
+  if (asset.value.format === 'epub' && bookmark.epub_cfi && epubRendition) void epubRendition.display(bookmark.epub_cfi)
+  else if (asset.value.format === 'pdf' && bookmark.pdf_page) {
+    pdfPage.value = Math.min(Math.max(1, bookmark.pdf_page), pdfPageCount.value)
+    void renderPDFPage()
+  } else if (asset.value.format === 'txt') {
+    const viewport = textViewport.value
+    if (viewport) viewport.scrollTop = bookmark.reading_percent * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+  } else if ((asset.value.format === 'cbz' || asset.value.format === 'cbr') && bookmark.comic_page) {
+    comicPage.value = Math.min(Math.max(1, bookmark.comic_page), comicPages.value.length)
+    scrollToComicPage()
+  }
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {
@@ -247,6 +313,7 @@ onMounted(async () => {
     asset.value = await getPublishedBookAsset(assetID)
     localProgress = getLocalBookReadingProgress(assetID)
     readingPercent.value = localProgress?.reading_percent || 0
+    bookmarks.value = localProgress?.bookmarks || []
     contentBlob = await fetchPublishedBookAssetContent(assetID)
     await nextTick()
     if (asset.value.format === 'txt') await loadText()
@@ -366,6 +433,40 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   box-shadow: none;
+}
+
+.public-reader__bookmarks {
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  padding-top: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.public-reader__bookmarks ol {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.public-reader__bookmarks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.public-reader__bookmarks button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.public-reader__bookmarks li button:first-child {
+  color: var(--a-color-link, #2563eb);
+  text-align: left;
 }
 
 @media (prefers-reduced-motion: reduce) {

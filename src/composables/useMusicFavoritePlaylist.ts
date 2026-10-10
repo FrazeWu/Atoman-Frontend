@@ -8,11 +8,12 @@ import {
 } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 
+const favoriteSongIds = ref<Set<string>>(new Set());
+const playlists = ref<MusicPlaylistSummary[]>([]);
+const favoritePlaylistId = ref("");
+
 export function useMusicFavoritePlaylist() {
 	const { refreshPlaylists } = useMusicDrawers();
-	const favoriteSongIds = ref<Set<string>>(new Set());
-	const playlists = ref<MusicPlaylistSummary[]>([]);
-	const favoritePlaylistId = ref("");
 
 	async function loadPlaylists() {
 		const response = await listMusicPlaylists({ page: 1, page_size: 100 });

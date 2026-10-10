@@ -1428,7 +1428,7 @@ watch(
 
 .track-row.is-dragged {
   opacity: 0.35;
-  border-bottom: 1px dashed var(--a-color-primary);
+  border-bottom: 1px solid var(--a-color-primary);
   background: color-mix(in srgb, var(--a-color-primary) 4%, var(--a-color-bg));
 }
 

@@ -408,7 +408,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--a-color-border-soft);
   overflow: hidden;
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .tl-event-map {

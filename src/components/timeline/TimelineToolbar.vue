@@ -12,13 +12,13 @@
       <label class="filter-label">分类</label>
       <PInput :model-value="categoryValue" placeholder="政治 / 文化 / 科技…" style="width:160px" @update:model-value="updateCategory" />
     </div>
-    <PButton outline @click="emit('apply')">筛选</PButton>
-    <PButton outline @click="emit('reset')">重置</PButton>
+    <PButton variant="secondary" @click="emit('apply')">筛选</PButton>
+    <PButton variant="secondary" @click="emit('reset')">重置</PButton>
 
     <div v-if="batchSelectedCount" class="tl-toolbar-batch">
       <span class="tl-toolbar-batch-count">已勾选 {{ batchSelectedCount }} 条</span>
       <PButton class="tl-action-btn" size="sm" @click="emit('add-batch-to-compare')">加入对比池</PButton>
-      <PButton class="tl-action-btn tl-action-btn-secondary" size="sm" outline @click="emit('clear-batch-selection')">清空勾选</PButton>
+      <PButton class="tl-action-btn tl-action-btn-secondary" size="sm" variant="secondary" @click="emit('clear-batch-selection')">清空勾选</PButton>
     </div>
 
     <div class="tl-mode-switch" style="margin-left:auto">

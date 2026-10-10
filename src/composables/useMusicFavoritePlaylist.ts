@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import {
 	addMusicPlaylistSong,
 	getMusicPlaylistSongStatus,
@@ -7,6 +7,7 @@ import {
 	type MusicPlaylistSummary,
 } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
+import { useAuthStore } from "@/stores/auth";
 
 const favoriteSongIds = ref<Set<string>>(new Set());
 const playlists = ref<MusicPlaylistSummary[]>([]);
@@ -14,6 +15,17 @@ const favoritePlaylistId = ref("");
 
 export function useMusicFavoritePlaylist() {
 	const { refreshPlaylists } = useMusicDrawers();
+	const authStore = useAuthStore();
+	watch(
+		() => [authStore.user?.uuid, authStore.token] as const,
+		([userID, token], previous) => {
+			if (!previous || (userID === previous[0] && token === previous[1])) return;
+			favoritePlaylistId.value = "";
+			favoriteSongIds.value = new Set();
+			playlists.value = [];
+		},
+		{ immediate: true },
+	);
 
 	async function loadPlaylists() {
 		const response = await listMusicPlaylists({ page: 1, page_size: 100 });

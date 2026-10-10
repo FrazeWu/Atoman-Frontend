@@ -6,14 +6,7 @@
           <p class="studio-management__kicker">Studio</p>
           <h1>管理</h1>
         </div>
-        <PSelect
-          v-if="studio.channels.length"
-          class="studio-management__channel-picker"
-          label="当前频道"
-          :model-value="studio.currentChannel?.id ?? ''"
-          :options="channelOptions"
-          @update:model-value="selectChannel"
-        />
+        <StudioChannelSelector v-if="studio.channels.length" class="studio-management__channel-picker" />
       </div>
       <nav class="studio-management__nav" aria-label="管理">
         <RouterLink to="/studio/manage/channel">频道</RouterLink>
@@ -38,10 +31,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
-import PSelect from '@/components/ui/PSelect.vue'
+import StudioChannelSelector from '@/components/studio/StudioChannelSelector.vue'
 import StudioRouteSheet from '@/components/studio/StudioRouteSheet.vue'
 import { hasAppHistory } from '@/router/studioEditor'
 import { useStudioStore } from '@/stores/studio'
@@ -50,12 +43,6 @@ const studio = useStudioStore()
 const route = useRoute()
 const router = useRouter()
 const overlayTitle = ref('编辑内容')
-const channelOptions = computed(() => studio.channels.map(channel => ({ label: channel.name, value: channel.id })))
-
-async function selectChannel(value: string | number) {
-  if (String(value) === studio.currentChannel?.id) return
-  await studio.selectChannel(String(value))
-}
 
 function closeOverlay() {
   if (hasAppHistory()) router.back()

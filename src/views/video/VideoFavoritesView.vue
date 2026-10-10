@@ -14,6 +14,7 @@ const authStore = useAuthStore()
 const activeTab = ref<string>('channel')
 const videos = ref<Video[]>([])
 const bookmarks = useVideoBookmarks()
+const accountIdentity = computed(() => authStore.user?.uuid || String(authStore.user?.id || '') || authStore.token || '')
 const queueState = ref<VideoBookmarkState>('active')
 const queueSort = ref<VideoBookmarkSort>('latest')
 const selectedVideoIds = ref<string[]>([])
@@ -85,7 +86,26 @@ async function removeSelected() {
   }
 }
 
-watch([activeTab, () => authStore.isAuthenticated, queueState, queueSort], () => void loadFavorites(), { immediate: true })
+watch(
+  [activeTab, () => authStore.isAuthenticated, queueState, queueSort, accountIdentity],
+  ([, isAuthenticated, , , identity], previous) => {
+    if (previous && identity !== previous[4]) {
+      loadSequence += 1
+      channels.value = []
+      collections.value = []
+      selectedVideoIds.value = []
+      bookmarks.reset()
+    }
+    if (!isAuthenticated) {
+      channels.value = []
+      collections.value = []
+      selectedVideoIds.value = []
+      bookmarks.reset()
+    }
+    void loadFavorites()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

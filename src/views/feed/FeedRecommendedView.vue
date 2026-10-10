@@ -1246,6 +1246,13 @@ watch([mode, language], () => {
 onMounted(() => {
   void fetchThemes()
   void fetchRecommendations()
+  if (authStore.isAuthenticated) {
+    void Promise.all([
+      feedStore.fetchStarredIds(),
+      feedStore.fetchBookmarkedPostIds(),
+      feedStore.fetchReadingListIds(),
+    ]).catch((error) => reportError(error, '加载内容状态失败:'))
+  }
 })
 
 onUnmounted(() => { recommendationRequest++ })

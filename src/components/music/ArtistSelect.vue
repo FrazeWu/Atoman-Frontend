@@ -154,10 +154,10 @@ watch(query, (v) => { if (v) open.value = true })
 .field-label {
   display: block;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #6b7280;
+  color: var(--a-color-muted);
   margin-bottom: 0.5rem;
 }
 .tags {
@@ -170,16 +170,17 @@ watch(query, (v) => { if (v) open.value = true })
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background: #000;
-  color: #fff;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+  border-radius: var(--a-radius-control);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.25rem 0.5rem;
 }
 .tag-remove {
   background: none;
   border: none;
-  color: #fff;
+  color: var(--a-color-bg);
   cursor: pointer;
   font-size: 0.7rem;
   padding: 0;

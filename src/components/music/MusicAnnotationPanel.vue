@@ -165,7 +165,7 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   margin: 0;
   color: var(--a-color-text);
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .music-annotation-panel__count,

@@ -42,7 +42,7 @@ const providerLabel = () => props.provider?.toLowerCase() === 'discogs' ? 'Disco
 
 .musicbrainz-edit-notice strong {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .musicbrainz-edit-notice p {

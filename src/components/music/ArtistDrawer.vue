@@ -884,7 +884,7 @@ watch([releaseType, albumSortMode], () => {
 .kicker {
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  font-weight: bold;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted);
@@ -940,7 +940,7 @@ watch([releaseType, albumSortMode], () => {
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 .member-row:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 .member-row--private {
   cursor: default;
@@ -964,7 +964,7 @@ watch([releaseType, albumSortMode], () => {
   object-fit: cover;
 }
 .member-avatar-placeholder {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1066,7 +1066,7 @@ watch([releaseType, albumSortMode], () => {
   border-top: 1px solid var(--a-color-border-soft);
 }
 .album-row:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   border-left-color: var(--a-color-text);
 }
 .album-row-left {
@@ -1273,7 +1273,7 @@ watch([releaseType, albumSortMode], () => {
 }
 
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
-.state-line--error { color: var(--a-color-accent-destructive); }
+.state-line--error { color: var(--a-color-danger); }
 
 .artist-loading-skeleton,
 .artist-release-loading-skeleton { pointer-events: none; }
@@ -1362,7 +1362,7 @@ watch([releaseType, albumSortMode], () => {
   border-radius: 4px;
   box-shadow: none;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   display: flex;
   align-items: center;
   justify-content: center;

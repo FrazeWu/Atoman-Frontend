@@ -332,7 +332,7 @@ onBeforeUnmount(() => {
     linear-gradient(-45deg, transparent 75%, rgba(15, 23, 42, 0.06) 75%);
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0;
-  border-radius: 1rem;
+  border-radius: var(--a-radius-card);
   touch-action: none;
   user-select: none;
 }
@@ -350,9 +350,8 @@ onBeforeUnmount(() => {
 .crop-sheet__frame {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(15, 23, 42, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
-  border-radius: 1rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card);
   pointer-events: none;
 }
 

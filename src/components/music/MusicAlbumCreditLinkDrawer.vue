@@ -287,7 +287,7 @@ onBeforeUnmount(() => {
 .album-link__selected-head p,
 .album-link__state { color: var(--a-color-muted); }
 .album-link__section { display: grid; gap: 0.75rem; }
-.album-link__section h2 { margin: 0; font-size: 0.9rem; font-weight: 700; }
+.album-link__section h2 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .album-link__browse-head { display: grid; gap: 0.75rem; }
 .album-link__results { display: grid; border-top: 1px solid var(--a-color-border-soft); }
 .album-link__results button { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 0.8rem; min-height: 72px; border: 0; border-bottom: 1px solid var(--a-color-border-soft); background: transparent; color: inherit; text-align: left; cursor: pointer; }
@@ -311,6 +311,6 @@ onBeforeUnmount(() => {
 .album-link__selected-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 0.8rem; }
 .album-link__selected-head button { border: 0; background: transparent; color: var(--a-color-muted); cursor: pointer; }
 .album-link__actions { display: flex; justify-content: flex-end; gap: 0.7rem; }
-.album-link__error { color: var(--a-color-accent-destructive); }
+.album-link__error { color: var(--a-color-danger); }
 :global(.album-credit-link-drawer) { background: var(--a-color-bg) !important; }
 </style>

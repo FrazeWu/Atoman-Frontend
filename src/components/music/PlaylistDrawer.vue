@@ -995,7 +995,7 @@ button.album-name:hover {
 }
 
 .track-remove-btn:hover {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .track-remove-btn:disabled {
@@ -1047,7 +1047,7 @@ button.album-name:hover {
 }
 
 .state-line.error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .track-empty {

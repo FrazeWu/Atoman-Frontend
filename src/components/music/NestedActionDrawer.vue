@@ -830,7 +830,7 @@ async function submitEdit() {
   gap: 1.1rem;
   padding: 1.1rem 1.15rem 1.2rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 .section-heading { display: flex; align-items: flex-start; gap: 0.75rem; }
 .section-dot {
@@ -872,15 +872,15 @@ async function submitEdit() {
 }
 .form-textarea { resize: vertical; min-height: 6rem; line-height: 1.65; }
 .source-row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1rem; }
-.form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 500; font-size: 0.9rem; }
-.form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 500; font-size: 0.9rem; }
+.form-error { margin: 0; color: var(--a-color-danger); font-weight: 500; font-size: 0.9rem; }
+.form-success { margin: 0; color: var(--a-color-success); font-weight: 500; font-size: 0.9rem; }
 .primary-action {
   width: 100%;
   border: 0;
   border-radius: 0px;
   padding: 0.95rem 1.5rem;
   font-weight: 500;
-  background: var(--a-color-accent-confirm);
+  background: var(--a-color-primary);
   color: var(--a-color-bg);
   cursor: pointer;
   font-family: var(--a-font-sans);
@@ -889,10 +889,10 @@ async function submitEdit() {
   transition: background-color 0.15s ease;
 }
 .primary-action:hover {
-  background: var(--a-color-accent-confirm-hover);
+  background: color-mix(in srgb, var(--a-color-primary) 88%, black);
 }
 .primary-action:disabled { opacity: 0.55; cursor: not-allowed; }
-.a-btn-secondary { border: 1.5px solid var(--a-color-text); padding: 0.75rem 1rem; font-weight: bold; background: var(--a-color-bg); cursor: pointer; font-family: var(--a-font-sans); }
+.a-btn-secondary { border: 1.5px solid var(--a-color-text); padding: 0.75rem 1rem; font-weight: 500; background: var(--a-color-bg); cursor: pointer; font-family: var(--a-font-sans); }
 .a-btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .history-item { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--a-color-border-soft); }
@@ -930,7 +930,7 @@ async function submitEdit() {
 .history-badge {
   margin-left: 0.5rem;
   font-size: 0.72rem;
-  color: var(--a-color-accent-confirm);
+  color: var(--a-color-success);
   font-family: var(--a-font-sans);
   font-weight: 500;
 }
@@ -941,7 +941,7 @@ async function submitEdit() {
 .history-diff-panel {
   padding: 1rem 1.1rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 .history-diff-list {
   display: grid;

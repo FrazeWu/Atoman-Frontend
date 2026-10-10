@@ -600,7 +600,7 @@ async function handleSongEditSubmit() {
 }
 .song-editor__error {
   margin: 0;
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-size: 0.92rem;
 }
 .song-editor__save-action { display: grid; justify-items: end; gap: 0.35rem; }

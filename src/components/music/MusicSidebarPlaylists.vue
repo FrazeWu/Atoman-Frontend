@@ -324,7 +324,7 @@ watch(
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.14em;
   font-family: var(--a-font-sans);
   text-transform: uppercase;
@@ -367,7 +367,7 @@ watch(
 
 .music-sidebar-playlists__item.is-active {
   background-color: var(--a-color-surface-muted);
-  font-weight: 800;
+  font-weight: 600;
   border-color: transparent;
   border-left-color: var(--a-color-text);
   box-shadow: none;
@@ -392,7 +392,7 @@ watch(
   min-width: 0;
   overflow: hidden;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--a-color-muted);

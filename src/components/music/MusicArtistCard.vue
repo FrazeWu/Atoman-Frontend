@@ -154,7 +154,7 @@ const formattedSubscribers = computed(() => {
 .avatar-frame {
   position: relative;
   aspect-ratio: 1 / 1;
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
@@ -196,7 +196,7 @@ const formattedSubscribers = computed(() => {
   align-items: center;
   justify-content: center;
   font-size: 2.2rem;
-  font-weight: 900;
+  font-weight: 600;
   color: var(--a-color-text);
   background: var(--a-color-surface-muted);
   text-transform: uppercase;
@@ -213,7 +213,7 @@ const formattedSubscribers = computed(() => {
   z-index: 5;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -233,20 +233,14 @@ const formattedSubscribers = computed(() => {
 }
 
 .bookmark-btn:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 
 .bookmark-btn.is-bookmarked {
-  color: #eaaa08; /* Star gold */
-  border-color: #fce99f;
-  background: #fefcf0;
-}
-
-:root.dark .bookmark-btn.is-bookmarked {
-  color: #fcd34d;
-  border-color: rgba(252, 211, 77, 0.2);
-  background: rgba(252, 211, 77, 0.1);
+  color: var(--a-color-warning);
+  border-color: color-mix(in srgb, var(--a-color-warning) 30%, transparent);
+  background: color-mix(in srgb, var(--a-color-warning) 10%, var(--a-color-bg));
 }
 
 .stats-overlay {
@@ -274,7 +268,7 @@ const formattedSubscribers = computed(() => {
   color: #fff;
   font-size: 0.85rem;
   font-family: var(--a-font-sans);
-  font-weight: 700;
+  font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 

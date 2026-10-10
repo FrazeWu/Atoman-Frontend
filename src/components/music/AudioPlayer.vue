@@ -1572,7 +1572,7 @@ watch(
 .track-add-menu-header {
   font-family: var(--a-font-sans);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--a-color-muted);
   padding: 0.3rem 0.8rem;

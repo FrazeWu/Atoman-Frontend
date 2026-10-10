@@ -732,7 +732,7 @@ function handleSave() {
   gap: 0.75rem;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 8px;
+  border-radius: var(--a-radius-card);
   background: var(--a-color-surface-muted, var(--a-color-bg));
   color: var(--a-color-muted);
   font-size: 0.875rem;
@@ -776,7 +776,7 @@ function handleSave() {
   place-items: center;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
@@ -843,7 +843,7 @@ function handleSave() {
   gap: 0.85rem;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 12px;
+  border-radius: var(--a-radius-card);
   background: var(--a-color-surface-muted, var(--a-color-bg));
 }
 

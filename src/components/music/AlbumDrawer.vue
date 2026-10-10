@@ -1182,7 +1182,7 @@ watch(
   color: var(--a-color-muted);
 }
 .artist-name {
-  font-weight: bold;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1628,7 +1628,7 @@ watch(
   color: var(--a-color-muted);
 }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
-.state-line--error { color: var(--a-color-accent-destructive); }
+.state-line--error { color: var(--a-color-danger); }
 .state-line--error {
   display: flex;
   align-items: center;
@@ -1662,7 +1662,7 @@ watch(
 }
 .track-fav-btn.is-active {
   opacity: 1 !important;
-  color: #e05e5e !important;
+  color: var(--a-color-danger) !important;
 }
 .track-add-btn {
   background: transparent;

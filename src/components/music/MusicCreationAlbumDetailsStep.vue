@@ -1310,8 +1310,8 @@ watch(
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   color: var(--a-color-primary);
-  background: rgba(37, 99, 235, 0.06);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: color-mix(in srgb, var(--a-color-primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent);
   border-radius: var(--a-radius-control);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -1320,8 +1320,8 @@ watch(
 }
 
 .track-adjustment__add-btn:hover {
-  background: rgba(37, 99, 235, 0.12);
-  border-color: rgba(37, 99, 235, 0.35);
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-primary) 35%, transparent);
 }
 
 .track-adjustment__add-btn:disabled,

@@ -534,7 +534,7 @@ onBeforeUnmount(() => {
 
 .music-tag__delete:hover:not(:disabled) {
   background: var(--a-color-surface-muted);
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .music-tag__delete:disabled {
@@ -597,7 +597,7 @@ onBeforeUnmount(() => {
 }
 
 .music-tags__error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-size: 0.85rem;
 }
 

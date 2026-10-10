@@ -533,7 +533,7 @@ function formatTime(timeMs: number | null | undefined): string {
   justify-content: center;
   gap: 0.35rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control);
   padding: 0.4rem 0.75rem;
   background: var(--a-color-bg);
   color: var(--a-color-muted);

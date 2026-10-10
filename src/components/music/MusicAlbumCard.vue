@@ -313,7 +313,7 @@ const albumYear = computed(() => {
   z-index: 5;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -333,20 +333,14 @@ const albumYear = computed(() => {
 }
 
 .bookmark-btn:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 
 .bookmark-btn.is-bookmarked {
-  color: #eaaa08;
-  border-color: #fce99f;
-  background: #fefcf0;
-}
-
-:root.dark .bookmark-btn.is-bookmarked {
-  color: #fcd34d;
-  border-color: rgba(252, 211, 77, 0.2);
-  background: rgba(252, 211, 77, 0.1);
+  color: var(--a-color-warning);
+  border-color: color-mix(in srgb, var(--a-color-warning) 30%, transparent);
+  background: color-mix(in srgb, var(--a-color-warning) 10%, var(--a-color-bg));
 }
 
 .music-info {

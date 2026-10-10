@@ -174,7 +174,8 @@ const fetchAll = async () => {
       apiRequestResult(api.blog.bookmarkFolders, { headers: authHeader.value }),
       apiRequestResult(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
     ])
-    if (requestSequence !== fetchAllSequence || !fRes.ok || !bRes.ok) {
+    if (requestSequence !== fetchAllSequence) return false
+    if (!fRes.ok || !bRes.ok) {
       loadError.value = '收藏加载失败，请稍后重试'
       return false
     }
@@ -184,7 +185,7 @@ const fetchAll = async () => {
     bookmarks.value = bookmarksData.data || []
     return true
   } catch (e) {
-    loadError.value = '收藏加载失败，请稍后重试'
+    if (requestSequence === fetchAllSequence) loadError.value = '收藏加载失败，请稍后重试'
     reportError(e)
   } finally {
     if (requestSequence === fetchAllSequence) loadingPosts.value = false

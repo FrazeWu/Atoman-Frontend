@@ -383,6 +383,7 @@ function handleSearchBlur() {
 
       <PContentProgress
         :loading="loading"
+        :error="errorMessage"
         :retry="fetchArtists"
       >
         <template #skeleton>

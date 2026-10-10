@@ -10,8 +10,19 @@
         <p v-if="work.subtitle">{{ work.subtitle }}</p>
         <p v-if="work.original_title && work.original_title !== work.title" class="books-detail__original">{{ work.original_title }}</p>
         <p v-if="['chi', 'zho', 'zh'].includes(work.language || '') && /\p{L}/u.test(work.title) && !/\p{Script=Han}/u.test(work.title)" class="books-detail__original">中文书名待补充，暂用来源名称</p>
-        <p class="books-detail__authors">{{ authorLabel }}</p>
+        <p class="books-detail__authors">
+          <span v-if="work.authors.length === 0">作者信息待补充</span>
+          <template v-for="(author, index) in work.authors" :key="author.id">
+            <span v-if="index > 0">、</span>
+            <button v-if="authStore.isAuthenticated" type="button" class="books-detail__entity-edit" @click="personEdit = author">{{ author.name }}</button>
+            <span v-else>{{ author.name }}</span>
+          </template>
+        </p>
         <p v-if="primaryEdition">{{ editionSummary(primaryEdition) }}</p>
+        <PButton v-if="authStore.isAuthenticated" type="button" variant="ghost" size="sm" class="books-detail__edit-button" @click="editOpen = true">
+          <Pencil :size="15" aria-hidden="true" />
+          <span>编辑资料</span>
+        </PButton>
         <RatingControl
           :aria-label="`${work.title} 评分`"
           :rating-score="work.rating_score"
@@ -50,6 +61,7 @@
         :title="work.title"
         :author="authorLabel"
       />
+      <p v-if="editMessage" class="books-detail__feedback" aria-live="polite">{{ editMessage }}</p>
 
       <section v-if="work.description" class="books-detail__section">
         <h2>简介</h2>
@@ -169,15 +181,34 @@
     @close="discussionOpen = false"
     @count-change="discussionCount = $event"
   />
+  <BookMetadataEditSheet
+    v-if="work"
+    :show="editOpen"
+    entity-type="work"
+    :entity-id="work.id"
+    :work="work"
+    @close="editOpen = false"
+    @submitted="editOpen = false; editMessage = '修改已提交，审核通过后生效'"
+  />
+  <BookMetadataEditSheet
+    v-if="personEdit"
+    :show="Boolean(personEdit)"
+    entity-type="person"
+    :entity-id="personEdit.id"
+    :person="personEdit"
+    @close="personEdit = null"
+    @submitted="personEdit = null"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconBookmark as Bookmark, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconPencil as Pencil, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import BookPrivateUpload from '@/components/books/BookPrivateUpload.vue'
+import BookMetadataEditSheet from '@/components/books/BookMetadataEditSheet.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -244,6 +275,9 @@ const reviewSaving = ref(false)
 const discussionOpen = ref(false)
 const discussionCount = ref<number | undefined>(undefined)
 const workContentAnchor = ref<HTMLElement | null>(null)
+const editOpen = ref(false)
+const editMessage = ref('')
+const personEdit = ref<BookPublicWork['authors'][number] | null>(null)
 
 const authorLabel = computed(() => work.value?.authors.map((author) => author.name).join('、') || '作者信息待补充')
 
@@ -451,6 +485,20 @@ onMounted(async () => {
 
 .books-detail__authors {
   color: var(--a-color-fg) !important;
+}
+
+.books-detail__entity-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.books-detail__entity-edit:hover {
+  color: var(--a-color-primary);
+  text-decoration: underline;
 }
 
 .books-detail__feedback--error {

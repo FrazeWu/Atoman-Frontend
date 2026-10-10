@@ -9,6 +9,14 @@
         <RouterLink class="books-detail__back" :to="{ path: `/books/work/${detail.work.id}`, query: route.query }">返回作品</RouterLink>
         <h1>{{ detail.edition.title || detail.work.title }}</h1>
         <p>{{ detail.work.title }}</p>
+        <PButton v-if="authStore.isAuthenticated" type="button" variant="ghost" size="sm" @click="editOpen = true">
+          <Pencil :size="15" aria-hidden="true" />
+          <span>编辑资料</span>
+        </PButton>
+        <PButton v-if="authStore.isAuthenticated && detail.edition.publisher_info" type="button" variant="ghost" size="sm" @click="publisherEdit = detail.edition.publisher_info">
+          <Pencil :size="15" aria-hidden="true" />
+          <span>编辑出版社</span>
+        </PButton>
         </div>
       </header>
 
@@ -35,20 +43,46 @@
       </section>
     </template>
   </main>
+  <BookMetadataEditSheet
+    v-if="detail"
+    :show="editOpen"
+    entity-type="edition"
+    :entity-id="detail.edition.id"
+    :work="detail.work"
+    :edition="detail.edition"
+    @close="editOpen = false"
+    @submitted="editOpen = false"
+  />
+  <BookMetadataEditSheet
+    v-if="publisherEdit"
+    :show="Boolean(publisherEdit)"
+    entity-type="publisher"
+    :entity-id="publisherEdit.id"
+    :publisher="publisherEdit"
+    @close="publisherEdit = null"
+    @submitted="publisherEdit = null"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { IconPencil as Pencil } from '@tabler/icons-vue'
+import PButton from '@/components/ui/PButton.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import BookPrivateUpload from '@/components/books/BookPrivateUpload.vue'
+import BookMetadataEditSheet from '@/components/books/BookMetadataEditSheet.vue'
 import PLink from '@/components/ui/PLink.vue'
-import { getPublicBookEdition, type BookPublicEditionDetail } from '@/api/books'
+import { getPublicBookEdition, type BookPublicEditionDetail, type BookPublicPublisher } from '@/api/books'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const detail = ref<BookPublicEditionDetail | null>(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
+const editOpen = ref(false)
+const authStore = useAuthStore()
+const publisherEdit = ref<BookPublicPublisher | null>(null)
 
 const facts = computed(() => {
   if (!detail.value) return []

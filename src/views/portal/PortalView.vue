@@ -368,8 +368,27 @@ const visibleRooms = computed(() => (
 
 const loadingModules = computed(() => homeModuleOrder.filter((module) => siteAccessStore.isModuleVisible(module)))
 
+const combinedSections = computed<PortalHotSection[]>(() => {
+  const sections = hotContent.value.sections.map((section) => ({
+    ...section,
+    items: [...section.items],
+  }))
+  for (const item of hotContent.value.featured) {
+    if (!isModuleRoomKey(item.module)) continue
+    let section = sections.find((candidate) => candidate.module === item.module)
+    if (!section) {
+      section = { module: item.module, title: moduleLabel(item.module), items: [] }
+      sections.push(section)
+    }
+    if (!section.items.some((candidate) => candidate.id === item.id)) {
+      section.items.unshift(item)
+    }
+  }
+  return sections
+})
+
 const visibleSections = computed(() => (
-  hotContent.value.sections.filter((section) => (
+  combinedSections.value.filter((section) => (
     isModuleRoomKey(section.module) && siteAccessStore.isModuleVisible(section.module)
   ))
 ))

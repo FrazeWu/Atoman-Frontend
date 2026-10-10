@@ -556,7 +556,10 @@ async function loadFavorites(songId?: string) {
     return;
   }
   try {
-    await loadFavoriteSongs(songId ? [songId] : []);
+    const requestedSongId = songId || ''
+    await loadFavoriteSongs(requestedSongId ? [requestedSongId] : [], () => (
+      requestedSongId === String(player.currentSong?.id || '') && !isPodcast.value
+    ));
   } catch (err) {
     reportError(err, "加载最爱歌单失败");
   }

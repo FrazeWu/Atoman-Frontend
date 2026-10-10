@@ -29,8 +29,13 @@ watch(() => props.panel, () => {
 })
 
 async function copyEmail() {
-  await navigator.clipboard.writeText(supportEmail)
-  copied.value = true
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(supportEmail)
+    copied.value = true
+  } catch {
+    copied.value = false
+  }
 }
 </script>
 

@@ -134,8 +134,13 @@ async function listenLater() {
 }
 
 async function shareEpisode() {
-  await navigator.clipboard?.writeText(window.location.href)
-  actionMessage.value = '已复制链接'
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(window.location.href)
+    actionMessage.value = '已复制链接'
+  } catch {
+    actionMessage.value = '复制失败，请手动复制地址'
+  }
 }
 
 function currentCommentTime() {

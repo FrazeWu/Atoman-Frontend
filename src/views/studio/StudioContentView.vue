@@ -280,7 +280,8 @@ async function shareContent(item: StudioContentItem) {
   try {
     const result = await studio.shareContent(module.value, item.id)
     const url = new URL(result.path, window.location.origin).toString()
-    await navigator.clipboard?.writeText(url)
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(url)
     actionMessage.value = '分享地址已复制'
   } catch (cause) {
     actionError.value = cause instanceof Error ? cause.message : '分享失败'

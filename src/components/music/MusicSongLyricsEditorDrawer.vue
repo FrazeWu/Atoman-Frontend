@@ -84,7 +84,9 @@ async function handleSave(payload: {
   }
   try {
     saveError.value = ''
-    const updated = await save(props.songId, input)
+    const requestedSongId = props.songId
+    const updated = await save(requestedSongId, input)
+    if (props.songId !== requestedSongId) return
     editorDirty.value = false
     emit('saved', updated)
     emit('close')
@@ -118,7 +120,9 @@ async function confirmAnnotationConflict() {
   conflictingAnnotationIds.value = []
   try {
     saveError.value = ''
-    const updated = await save(props.songId, input)
+    const requestedSongId = props.songId
+    const updated = await save(requestedSongId, input)
+    if (props.songId !== requestedSongId) return
     editorDirty.value = false
     emit('saved', updated)
     emit('close')

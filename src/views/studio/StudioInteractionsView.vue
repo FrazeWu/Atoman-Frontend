@@ -36,7 +36,10 @@
     </header>
 
     <p v-if="loading" class="studio-interactions__message">加载中...</p>
-    <p v-else-if="error" class="studio-interactions__message" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="studio-interactions__message" role="alert">
+      <p>{{ error }}</p>
+      <PButton type="button" size="sm" @click="loadInteractions">重试</PButton>
+    </div>
     <PEmpty v-else-if="!studio.interactions[module].length" kicker="" title="暂无互动" />
     <div v-else class="studio-interactions__list">
       <article v-for="item in studio.interactions[module]" :key="item.id" class="studio-interactions__item">

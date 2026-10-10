@@ -178,6 +178,7 @@ const templateName = ref('')
 const templateContent = ref('')
 const templateSaving = ref(false)
 const templateError = ref('')
+const initializedChannelID = ref('')
 const filters = reactive<StudioInteractionFilters>({
   q: '',
   content_id: '',
@@ -409,10 +410,22 @@ onMounted(async () => {
       studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
       studio.loadReplyTemplates(),
     ])
+    initializedChannelID.value = studio.currentChannel?.id || ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败'
     loading.value = false
   }
+})
+
+watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
+  if (!initializedChannelID.value || !channelID || channelID === previousChannelID) return
+  initializedChannelID.value = channelID
+  filters.page = 1
+  void Promise.all([
+    loadInteractions(),
+    studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
+    studio.loadReplyTemplates(),
+  ])
 })
 
 watch(module, () => {

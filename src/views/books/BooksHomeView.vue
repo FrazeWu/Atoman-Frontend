@@ -13,7 +13,7 @@
             ref="fileInput"
             class="books-file-input"
             type="file"
-            accept=".epub,.pdf,.txt,.cbz,.cbr,application/epub+zip,application/pdf,text/plain,application/vnd.comicbook+zip,application/vnd.rar"
+            accept=".epub,.pdf,.txt,.cbz,.cbr,.mobi,.azw3,application/epub+zip,application/pdf,text/plain,application/vnd.comicbook+zip,application/vnd.rar,application/x-mobipocket-ebook,application/vnd.amazon.mobi8-ebook"
             aria-label="选择电子书文件"
             @change="handleFileChange"
           />
@@ -383,8 +383,8 @@ async function handleFileChange(event: Event) {
   input.value = ''
   if (!file) return
   const extension = file.name.toLowerCase().split('.').pop()
-  if (!extension || !['epub', 'pdf', 'txt', 'cbz', 'cbr'].includes(extension)) {
-    errorMessage.value = '仅支持 EPUB、PDF、TXT、CBZ 和 CBR 文件'
+  if (!extension || !['epub', 'pdf', 'txt', 'cbz', 'cbr', 'mobi', 'azw3'].includes(extension)) {
+    errorMessage.value = '仅支持 EPUB、PDF、TXT、CBZ、CBR、MOBI 和 AZW3 文件'
     return
   }
 

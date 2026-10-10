@@ -199,7 +199,11 @@ watch(
       return
     }
     try {
-      await loadFavoriteSongs([String(songId)])
+      const requestedSongId = String(songId)
+      await loadFavoriteSongs([requestedSongId], () => (
+        String(detail.value?.song.id || '') === requestedSongId &&
+        String(route.params.songId || '') === requestedSongId
+      ))
     } catch {
       favoriteSongIds.value = new Set()
     }

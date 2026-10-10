@@ -35,6 +35,7 @@ const dragState = ref<{
   originX: number
   originY: number
 } | null>(null)
+let resolveGeneration = 0
 
 const mimeType = computed(() => props.sourceFile?.type || 'image/png')
 const fileName = computed(() => {
@@ -87,6 +88,7 @@ function resetTransform() {
 }
 
 async function resolveSource() {
+  const generation = ++resolveGeneration
   revokeResolvedUrl()
   resolvedSourceUrl.value = ''
   loadErrorMessage.value = ''
@@ -112,16 +114,18 @@ async function resolveSource() {
       }
       const proxyUrl = `/media/cover?url=${encodeURIComponent(sourceUrl)}`
       const response = await fetch(proxyUrl)
+      if (generation !== resolveGeneration) return
       if (!response.ok) throw new Error('封面加载失败，请重新选择图片')
       const blob = await response.blob()
+      if (generation !== resolveGeneration) return
       resolvedObjectUrl.value = URL.createObjectURL(blob)
       resolvedSourceUrl.value = resolvedObjectUrl.value
       return
     }
   } catch {
-    loadErrorMessage.value = '封面加载失败，请重新选择图片'
+    if (generation === resolveGeneration) loadErrorMessage.value = '封面加载失败，请重新选择图片'
   } finally {
-    loading.value = false
+    if (generation === resolveGeneration) loading.value = false
   }
 }
 
@@ -176,6 +180,10 @@ async function emitConfirm() {
   if (!image || !naturalSize.value.width || !naturalSize.value.height) return
 
   confirming.value = true
+  const generation = resolveGeneration
+  const sourceSnapshot = resolvedSourceUrl.value
+  const outputMimeType = mimeType.value || 'image/png'
+  const outputFileName = fileName.value
 
   try {
     const scale = displayScale.value
@@ -204,12 +212,13 @@ async function emitConfirm() {
     )
 
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, mimeType.value || 'image/png', 0.92)
+      canvas.toBlob(resolve, outputMimeType, 0.92)
     })
 
     if (!blob) throw new Error('裁剪失败')
+    if (generation !== resolveGeneration || sourceSnapshot !== resolvedSourceUrl.value) return
 
-    emit('confirm', new File([blob], fileName.value, { type: blob.type || mimeType.value }))
+    emit('confirm', new File([blob], outputFileName, { type: blob.type || outputMimeType }))
   } finally {
     confirming.value = false
   }

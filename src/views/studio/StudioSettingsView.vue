@@ -181,6 +181,9 @@ onMounted(async () => {
 })
 
 watch(module, () => void loadSettings())
+watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
+  if (channelID && channelID !== previousChannelID) void loadSettings()
+})
 </script>
 
 <style scoped>

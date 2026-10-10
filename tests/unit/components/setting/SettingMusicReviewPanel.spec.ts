@@ -61,13 +61,14 @@ describe('SettingMusicReviewPanel', () => {
     mocks.apiRequestResult.mockImplementation((url: string) => {
       if (url.startsWith('/admin/music/entries')) {
         return Promise.resolve({
+          ok: true,
           data: {
             data: [{ id: `entry-${url.includes('page=2') ? '2' : '1'}`, name: '示例条目', type: 'album', edit_status: 'development' }],
             total: 21,
           },
         })
       }
-      return Promise.resolve({ data: { data: [], total: 0, has_more: false } })
+      return Promise.resolve({ ok: true, data: { data: [], total: 0, has_more: false } })
     })
     mocks.listRequests.mockResolvedValue([])
 
@@ -88,7 +89,7 @@ describe('SettingMusicReviewPanel', () => {
   })
 
   it('paginates state requests locally because the API returns an array', async () => {
-    mocks.apiRequestResult.mockResolvedValue({ data: { data: [], total: 0, has_more: false } })
+    mocks.apiRequestResult.mockResolvedValue({ ok: true, data: { data: [], total: 0, has_more: false } })
     mocks.listRequests.mockResolvedValue(Array.from({ length: 21 }, (_, index) => ({
       id: `request-${index + 1}`,
       entity_type: 'song',
@@ -123,6 +124,7 @@ describe('SettingMusicReviewPanel', () => {
       if (url.startsWith('/admin/music/quality')) {
         const page = url.includes('page=2') ? 2 : 1
         return Promise.resolve({
+          ok: true,
           data: {
             data: [{ type: 'missing_audio', entity_type: 'song', entity_id: `song-${page}`, title: `歌曲 ${page}` }],
             total: 21,
@@ -130,7 +132,7 @@ describe('SettingMusicReviewPanel', () => {
           },
         })
       }
-      return Promise.resolve({ data: { data: [], total: 0, has_more: false } })
+      return Promise.resolve({ ok: true, data: { data: [], total: 0, has_more: false } })
     })
     mocks.listRequests.mockResolvedValue([])
 

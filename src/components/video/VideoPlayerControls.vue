@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { IconVolume2 as Volume2, IconVolume as Volume1, IconVolumeOff as VolumeX, IconPlayerPlay as Play, IconPlayerPause as Pause, IconMaximize as Maximize, IconMinimize as Minimize, IconSettings as Settings, IconDeviceTv as Tv, IconSubtitles as Captions, IconPictureInPicture as PictureInPicture } from '@tabler/icons-vue'
 import type { VideoPreviewThumbnail } from '@/types'
 import { formatTimestampLabel } from '@/composables/useMediaTimeAnchors'
@@ -32,8 +32,26 @@ const isFullscreen = ref(false)
 const subtitlesEnabled = ref(false)
 const isPictureInPicture = ref(false)
 
-let syncTimer: number | undefined
 const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2]
+const mediaEvents: Array<keyof HTMLMediaElementEventMap> = [
+  'canplay',
+  'durationchange',
+  'emptied',
+  'ended',
+  'error',
+  'loadeddata',
+  'loadedmetadata',
+  'loadstart',
+  'pause',
+  'playing',
+  'progress',
+  'ratechange',
+  'seeked',
+  'seeking',
+  'timeupdate',
+  'volumechange',
+  'waiting',
+]
 
 const progressPercent = computed(() => {
   if (!duration.value) return 0
@@ -57,7 +75,13 @@ const activeThumbnail = computed(() => {
 
 function syncState() {
   const video = props.videoElement
-  if (!video) return
+  if (!video) {
+    isPlaying.value = false
+    currentTime.value = 0
+    duration.value = 0
+    bufferedTime.value = 0
+    return
+  }
   if (!isSeeking.value) {
     currentTime.value = video.currentTime || 0
   }
@@ -78,8 +102,26 @@ function syncState() {
 
   playbackRate.value = video.playbackRate || 1
   subtitlesEnabled.value = video.textTracks?.[0]?.mode === 'showing'
-  isFullscreen.value = Boolean(document.fullscreenElement)
-  isPictureInPicture.value = document.pictureInPictureElement === video
+  isFullscreen.value = typeof document !== 'undefined' && Boolean(document.fullscreenElement)
+  isPictureInPicture.value = typeof document !== 'undefined' && document.pictureInPictureElement === video
+}
+
+function bindVideo(video: HTMLVideoElement | null) {
+  if (!video) {
+    syncState()
+    return
+  }
+  for (const eventName of mediaEvents) {
+    video.addEventListener(eventName, syncState)
+  }
+  syncState()
+}
+
+function unbindVideo(video: HTMLVideoElement | null) {
+  if (!video) return
+  for (const eventName of mediaEvents) {
+    video.removeEventListener(eventName, syncState)
+  }
 }
 
 async function togglePlay() {
@@ -208,18 +250,23 @@ function handlePictureInPictureChange() {
 }
 
 onMounted(() => {
-  syncState()
-  syncTimer = window.setInterval(syncState, 250)
+  bindVideo(props.videoElement)
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   document.addEventListener('enterpictureinpicture', handlePictureInPictureChange)
   document.addEventListener('leavepictureinpicture', handlePictureInPictureChange)
 })
 
 onUnmounted(() => {
-  if (syncTimer) window.clearInterval(syncTimer)
+  unbindVideo(props.videoElement)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
   document.removeEventListener('enterpictureinpicture', handlePictureInPictureChange)
   document.removeEventListener('leavepictureinpicture', handlePictureInPictureChange)
+})
+
+watch(() => props.videoElement, (video, previousVideo) => {
+  if (video === previousVideo) return
+  unbindVideo(previousVideo)
+  bindVideo(video)
 })
 </script>
 

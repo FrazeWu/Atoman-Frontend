@@ -1,65 +1,58 @@
 <template>
   <main class="a-page-md public-reader">
     <PPageHeader title="公共阅读" mb="0" />
-    <header class="public-reader__header">
-      <RouterLink class="public-reader__back" to="/books" aria-label="返回书籍" title="返回书籍">
-        <ArrowLeft :size="18" aria-hidden="true" />
-      </RouterLink>
-      <div class="public-reader__heading">
-        <h2>{{ asset?.file_name || '公共电子书' }}</h2>
-        <p v-if="asset" class="tabular-nums">{{ formatLabel }} · {{ Math.round(readingPercent * 100) }}%</p>
-      </div>
-      <div class="public-reader__actions">
+    <BookReaderShell
+      :title="asset?.file_name || '公共电子书'"
+      :format="formatLabel"
+      :progress="readingPercent"
+      :page-label="pageLabel"
+      toolbar-label="公共正文"
+      back-to="/books"
+      back-label="返回书籍"
+      :can-prev="canPrev"
+      :can-next="canNext"
+      :show-pagination="showPagination"
+      :show-surface="!isLoading && !errorMessage"
+      :toc="epubTOC"
+      @previous="movePrevious"
+      @next="moveNext"
+      @toc-select="jumpToEpubTOC"
+    >
+      <template #actions>
         <PButton type="button" variant="ghost" :disabled="!asset" @click="reportAsset">
           <Flag :size="16" aria-hidden="true" />
           <span>举报正文</span>
         </PButton>
-      </div>
-    </header>
-
-    <p v-if="reportMessage" class="public-reader__feedback" aria-live="polite">{{ reportMessage }}</p>
-    <p v-if="errorMessage" class="public-reader__feedback public-reader__feedback--error" role="alert">{{ errorMessage }}</p>
-    <p v-else-if="isLoading" class="public-reader__feedback" aria-live="polite">正在打开公共正文...</p>
-    <section v-else class="public-reader__surface" aria-label="公共电子书阅读器">
-      <div class="public-reader__toolbar">
-        <span>公共正文</span>
-        <div v-if="asset?.format === 'pdf'" class="public-reader__pagination tabular-nums">
-          <button type="button" aria-label="上一页" title="上一页" :disabled="pdfPage <= 1" @click="changePdfPage(-1)"><ChevronLeft :size="17" aria-hidden="true" /></button>
-          <span>第 {{ pdfPage }} / {{ pdfPageCount }} 页</span>
-          <button type="button" aria-label="下一页" title="下一页" :disabled="pdfPage >= pdfPageCount" @click="changePdfPage(1)"><ChevronRight :size="17" aria-hidden="true" /></button>
-        </div>
-        <div v-else-if="asset?.format === 'epub'" class="public-reader__pagination">
-          <button type="button" aria-label="上一页" title="上一页" @click="moveEpubPage('prev')"><ChevronLeft :size="17" aria-hidden="true" /></button>
-          <span>EPUB</span>
-          <button type="button" aria-label="下一页" title="下一页" @click="moveEpubPage('next')"><ChevronRight :size="17" aria-hidden="true" /></button>
-        </div>
-      </div>
-
-      <details v-if="epubTOC.length > 0" class="public-reader__toc" open>
-        <summary>目录</summary>
-        <ol>
-          <li v-for="item in epubTOC" :key="item.id || item.href">
-            <button type="button" :class="{ 'is-nested': item.depth > 0 }" @click="jumpToEpubTOC(item.href)">{{ item.label }}</button>
-          </li>
-        </ol>
-      </details>
-
+      </template>
+      <template #status>
+        <p v-if="reportMessage" class="public-reader__feedback" aria-live="polite">{{ reportMessage }}</p>
+        <p v-if="errorMessage" class="public-reader__feedback public-reader__feedback--error" role="alert">{{ errorMessage }}</p>
+        <p v-else-if="isLoading" class="public-reader__feedback" aria-live="polite">正在打开公共正文...</p>
+      </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" @scroll="handleTextScroll"><pre>{{ textContent }}</pre></div>
       <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="public-reader__epub" />
+      <div v-else-if="asset?.format === 'cbz' || asset?.format === 'cbr'" ref="comicViewport" class="public-reader__comic" aria-label="漫画页面">
+        <figure v-for="(page, index) in comicPages" :key="page.name" :ref="element => setComicPageRef(index, element)" class="public-reader__comic-page">
+          <img :src="page.url" :alt="`${asset?.file_name || '漫画'} 第 ${index + 1} 页`" loading="lazy" />
+          <figcaption class="tabular-nums">{{ index + 1 }}</figcaption>
+        </figure>
+      </div>
       <div v-else class="public-reader__pdf"><canvas ref="pdfCanvas" aria-label="PDF 页面" /></div>
-    </section>
+    </BookReaderShell>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { IconArrowLeft as ArrowLeft, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconFlag as Flag } from '@tabler/icons-vue'
+import { useRoute } from 'vue-router'
+import { IconFlag as Flag } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import BookReaderShell from '@/components/books/BookReaderShell.vue'
+import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -75,13 +68,17 @@ const textContent = ref('')
 const readingPercent = ref(0)
 const pdfPage = ref(1)
 const pdfPageCount = ref(0)
+const comicPage = ref(1)
+const comicPages = ref<Array<ComicPage & { url: string }>>([])
 const epubTOC = ref<EpubTOCItem[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const reportMessage = ref('')
 const textViewport = ref<HTMLElement | null>(null)
 const epubViewport = ref<HTMLElement | null>(null)
+const comicViewport = ref<HTMLElement | null>(null)
 const pdfCanvas = ref<HTMLCanvasElement | null>(null)
+const comicPageElements: Array<HTMLElement | undefined> = []
 let contentBlob: Blob | null = null
 let pdfDocument: PDFDocumentProxy | null = null
 let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
@@ -89,6 +86,15 @@ let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
 
 const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
+const pageLabel = computed(() => {
+  if (asset.value?.format === 'pdf') return `第 ${pdfPage.value} / ${pdfPageCount.value} 页`
+  if (asset.value?.format === 'epub') return 'EPUB'
+  if ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length) return `第 ${comicPage.value} / ${comicPages.value.length} 页`
+  return ''
+})
+const showPagination = computed(() => ['pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
+const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
+const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
 
 function flattenEpubTOC(items: EpubTOCSource[], depth = 0): EpubTOCItem[] {
   return items.flatMap((item) => [{ ...item, depth }, ...flattenEpubTOC(item.subitems || [], depth + 1)])
@@ -130,6 +136,16 @@ async function loadEPUB() {
   await epubRendition.display()
 }
 
+async function loadComic() {
+  const format = asset.value?.format
+  if (format !== 'cbz' && format !== 'cbr') return
+  const pages = await extractComicPages(contentBlob!, format)
+  comicPages.value = pages.map((page) => ({ ...page, url: URL.createObjectURL(page.blob) }))
+  comicPage.value = 1
+  await nextTick()
+  scrollToComicPage()
+}
+
 function reportAsset() {
   if (!asset.value) return
   const reason = window.prompt('请输入举报原因')?.trim()
@@ -150,6 +166,32 @@ function changePdfPage(delta: number) {
   void renderPDFPage()
 }
 
+function movePrevious() {
+  if (asset.value?.format === 'pdf') changePdfPage(-1)
+  else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(-1)
+  else moveEpubPage('prev')
+}
+
+function moveNext() {
+  if (asset.value?.format === 'pdf') changePdfPage(1)
+  else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(1)
+  else moveEpubPage('next')
+}
+
+function setComicPageRef(index: number, element: unknown) {
+  comicPageElements[index] = element instanceof HTMLElement ? element : undefined
+}
+
+function scrollToComicPage() {
+  comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
+}
+
+function changeComicPage(delta: number) {
+  comicPage.value = Math.min(Math.max(1, comicPage.value + delta), comicPages.value.length)
+  scrollToComicPage()
+}
+
 function moveEpubPage(direction: 'prev' | 'next') {
   if (!epubRendition) return
   void (direction === 'prev' ? epubRendition.prev() : epubRendition.next())
@@ -167,6 +209,7 @@ onMounted(async () => {
     await nextTick()
     if (asset.value.format === 'txt') await loadText()
     else if (asset.value.format === 'pdf') await loadPDF()
+    else if (asset.value.format === 'cbz' || asset.value.format === 'cbr') await loadComic()
     else await loadEPUB()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '公共正文打开失败，请稍后重试'
@@ -179,6 +222,7 @@ onBeforeUnmount(() => {
   if (epubRendition) epubRendition.destroy()
   if (epubBook) epubBook.destroy()
   if (pdfLoadingTask) void pdfLoadingTask.destroy()
+  for (const page of comicPages.value) URL.revokeObjectURL(page.url)
 })
 </script>
 
@@ -189,62 +233,10 @@ onBeforeUnmount(() => {
   padding-top: var(--a-page-start-space);
 }
 
-.public-reader__header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.public-reader__back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  color: var(--a-color-muted);
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.public-reader__back:hover {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.public-reader__back:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-}
-
-.public-reader__heading {
-  min-width: 0;
-}
-
-.public-reader__heading h1,
-.public-reader__heading h2,
-.public-reader__header h1,
-.public-reader__header h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.public-reader__heading p,
-.public-reader__header p,
 .public-reader__feedback {
   margin: 0.25rem 0 0;
   color: var(--a-color-muted);
   font-size: 0.88rem;
-}
-
-.public-reader__actions {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .public-reader__feedback--error {
@@ -255,111 +247,6 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 0.9rem;
   min-width: 0;
-}
-
-.public-reader__toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  min-height: 2.5rem;
-  padding: 0.25rem 0.75rem;
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control);
-  color: var(--a-color-muted);
-  font-size: 0.88rem;
-}
-
-.public-reader__pagination {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.public-reader__pagination button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.public-reader__pagination button:hover:not(:disabled) {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.public-reader__pagination button:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-}
-
-.public-reader__pagination button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.public-reader__toc {
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-}
-
-.public-reader__toc summary {
-  padding: 0.65rem 0.85rem;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  font-weight: 500;
-  user-select: none;
-  transition: color 0.15s ease;
-}
-
-.public-reader__toc summary:hover {
-  color: var(--a-color-fg);
-}
-
-.public-reader__toc[open] summary {
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
-}
-
-.public-reader__toc ol {
-  display: grid;
-  gap: 0.15rem;
-  max-height: 16rem;
-  margin: 0;
-  padding: 0.5rem 0.85rem 0.75rem 2rem;
-  overflow: auto;
-  background: #ffffff;
-}
-
-.public-reader__toc button {
-  border: 0;
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  padding: 0.2rem 0;
-}
-
-.public-reader__toc button:hover,
-.public-reader__toc button:focus-visible {
-  text-decoration: underline;
-}
-
-.public-reader__toc button.is-nested {
-  padding-left: 1rem;
-  color: var(--a-color-muted);
 }
 
 .public-reader__text,
@@ -392,6 +279,36 @@ onBeforeUnmount(() => {
   background: #ffffff;
 }
 
+.public-reader__comic {
+  display: grid;
+  gap: 1rem;
+  max-height: min(78vh, 60rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: #ffffff;
+  scroll-behavior: smooth;
+}
+
+.public-reader__comic-page {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.public-reader__comic-page img {
+  display: block;
+  max-width: min(100%, 64rem);
+  height: auto;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.public-reader__comic-page figcaption {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
 .public-reader__pdf {
   display: grid;
   place-items: start center;
@@ -409,20 +326,10 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-@media (max-width: 640px) {
-  .public-reader__header {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .public-reader__actions {
-    grid-column: 2;
-    justify-content: flex-start;
-  }
-
-  .public-reader__toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding-block: 0.6rem;
+@media (prefers-reduced-motion: reduce) {
+  .public-reader__comic {
+    scroll-behavior: auto;
   }
 }
+
 </style>

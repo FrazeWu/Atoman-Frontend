@@ -670,6 +670,19 @@ describe("player store", () => {
 		expect(player.queue).toEqual([]);
 	});
 
+	it("preserves UUID feed item ids for podcast songs", () => {
+		const player = usePlayerStore();
+		const song = player.createPodcastSong({
+			id: "019f5eb9-285b-7a06-ba5f-034975eab083",
+			title: "UUID episode",
+			enclosure_url: "episode.mp3",
+			enclosure_type: "audio/mpeg",
+		} as any);
+
+		expect(song?.id).toBe("019f5eb9-285b-7a06-ba5f-034975eab083");
+		expect(song?.source_id).toBe("019f5eb9-285b-7a06-ba5f-034975eab083");
+	});
+
 	it("keeps album queue when selecting another song from the same queue", () => {
 		const player = usePlayerStore();
 		const firstSong = {

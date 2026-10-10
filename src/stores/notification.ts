@@ -186,7 +186,14 @@ export const useNotificationStore = defineStore('notification', () => {
     notifications.value = notifications.value.map((item) =>
       matches(item) ? { ...item, read_at: item.read_at || readAt } : item,
     )
-    if (!isTypeSelection(selection)) unreadCounts.value[selection] = 0
+    if (isTypeSelection(selection)) {
+      const categories = new Set(
+        notifications.value
+          .filter((item) => selection.includes(item.type))
+          .map((item) => item.category),
+      )
+      for (const category of categories) unreadCounts.value[category] = 0
+    } else unreadCounts.value[selection] = 0
   }
 
   const receiveNotification = (notification: Notification) => {

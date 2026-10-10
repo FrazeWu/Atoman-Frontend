@@ -1165,7 +1165,7 @@ export const usePlayerStore = defineStore("player", () => {
 		if (!isPlayableFeedPodcast(feedItem)) return null;
 
 		return {
-			id: Number(feedItem.id),
+			id: /^\d+$/.test(String(feedItem.id)) ? Number(feedItem.id) : String(feedItem.id),
 			source_type: "feed_podcast",
 			source_id: String(feedItem.id),
 			title: feedItem.title || "未知播客",

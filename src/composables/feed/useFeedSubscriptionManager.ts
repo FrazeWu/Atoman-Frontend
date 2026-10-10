@@ -141,21 +141,30 @@ export function useFeedSubscriptionManager({
 		onboardingMessage.value = "";
 		try {
 			const results = await Promise.all(
-				recommendations.map((recommendation) =>
-					feedStore.subscribeToRSS(recommendation.rss_url, recommendation.title),
-				),
-			);
+            recommendations.map(async (recommendation) => {
+              try {
+                return await feedStore.subscribeToRSS(recommendation.rss_url, recommendation.title)
+              } catch {
+                return false
+              }
+            }),
+          );
 			const successCount = results.filter(Boolean).length;
 			const failedCount = results.length - successCount;
-			if (!successCount) {
-				onboardingFailedIds.value = recommendations.map(
-					(recommendation) => recommendation.id,
-				);
-				onboardingActionError.value = "订阅未成功，请重试。";
-				return;
-			}
+            if (!successCount) {
+              onboardingFailedIds.value = recommendations.map((recommendation) => recommendation.id);
+              onboardingActionError.value = "订阅未成功，请重试。";
+              return;
+            }
 
-			await onboardingStore.complete();
+            if (failedCount) {
+              onboardingFailedIds.value = recommendations
+                .filter((_, index) => !results[index])
+                .map((recommendation) => recommendation.id)
+              onboardingActionError.value = `有 ${failedCount} 个来源订阅失败，请重试。`
+            } else {
+              await onboardingStore.complete();
+            }
 			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 			onboardingMessage.value = failedCount
 				? `已订阅 ${successCount} 个来源，${failedCount} 个未成功`

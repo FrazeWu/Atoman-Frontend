@@ -176,6 +176,18 @@
 
         <button
           type="button"
+          class="feature-link player-offline-btn"
+          :disabled="isCachingAudio"
+          :aria-label="isCachingAudio ? '正在保存音频' : '保存音频供离线播放'"
+          :title="isCachingAudio ? '正在保存音频' : '保存音频供离线播放'"
+          @click="cacheCurrentAudio"
+        >
+          <Download :size="16" aria-hidden="true" />
+          <span>{{ isCachingAudio ? '存' : '离线' }}</span>
+        </button>
+
+        <button
+          type="button"
           class="feature-link"
           aria-label="歌词"
           title="歌词"
@@ -331,7 +343,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronRight as ChevronRight, IconChevronLeft as ChevronLeft, IconChevronUp as ChevronUp, IconPlayerPlay as Play } from '@tabler/icons-vue';
+import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronRight as ChevronRight, IconChevronLeft as ChevronLeft, IconChevronUp as ChevronUp, IconPlayerPlay as Play, IconDownload as Download } from '@tabler/icons-vue';
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
@@ -476,10 +488,22 @@ const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);
 const toastVisible = ref(false);
 const toastMessage = ref("");
+const isCachingAudio = ref(false);
 const showToast = (message: string) => {
   toastMessage.value = message;
   toastVisible.value = true;
 };
+
+async function cacheCurrentAudio() {
+  if (isCachingAudio.value || !player.currentSong) return
+  isCachingAudio.value = true
+  try {
+    const cached = await player.cacheCurrentAudio()
+    showToast(cached ? '音频已保存，可离线播放' : '音频保存失败，请稍后重试')
+  } finally {
+    isCachingAudio.value = false
+  }
+}
 const { addPodcastBookmark, addPodcastListenLater } = usePodcastPlayerActions(showToast);
 const {
   favoriteSongIds,

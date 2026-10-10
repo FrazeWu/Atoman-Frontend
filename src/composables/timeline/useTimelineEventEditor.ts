@@ -45,6 +45,7 @@ export function useTimelineEventEditor({
   const deletingEvent = ref<TimelineEvent | null>(null)
   const submitting = ref(false)
   const formError = ref('')
+  const deleteError = ref('')
   const form = ref(emptyForm())
   const tagsInput = ref('')
 
@@ -154,16 +155,23 @@ export function useTimelineEventEditor({
   const confirmDelete = (event: TimelineEvent) => {
     detailEvent.value = null
     deletingEvent.value = event
+    deleteError.value = ''
   }
 
   const doDelete = async () => {
     if (!deletingEvent.value) return
     const deletingId = deletingEvent.value.id
-    await store.deleteEvent(deletingId)
-    removeCompareId(deletingId)
-    removeHydratedEvent(deletingId)
-    if (detailEvent.value?.id === deletingId) detailEvent.value = null
-    deletingEvent.value = null
+    try {
+      await store.deleteEvent(deletingId)
+      removeCompareId(deletingId)
+      removeHydratedEvent(deletingId)
+      if (detailEvent.value?.id === deletingId) detailEvent.value = null
+      deletingEvent.value = null
+      deleteError.value = ''
+    } catch (error) {
+      reportError(error)
+      deleteError.value = error instanceof Error ? error.message : '删除失败，请稍后重试。'
+    }
   }
 
   return {
@@ -173,6 +181,7 @@ export function useTimelineEventEditor({
     deletingEvent,
     submitting,
     formError,
+    deleteError,
     form,
     tagsInput,
     openDetail,

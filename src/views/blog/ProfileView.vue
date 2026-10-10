@@ -350,6 +350,7 @@ const toastMessage = ref('')
 const resolvedChannelSlug = ref('')
 const resolvedUsername = ref('')
 let profileLoadSequence = 0
+let followRequestSequence = 0
 let relationRequestSequence = 0
 
 const relationModalOpen = ref(false)
@@ -576,6 +577,8 @@ async function fetchFollowingState(generation = profileLoadSequence) {
 
 async function toggleFollow() {
   if (!profile.value || followBusy.value) return
+  const requestSequence = ++followRequestSequence
+  const profileID = profile.value.uuid
   followBusy.value = true
   const wasFollowing = following.value
   try {
@@ -584,16 +587,19 @@ async function toggleFollow() {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (!response.ok) throw new Error('follow request failed')
+    if (requestSequence !== followRequestSequence || profile.value?.uuid !== profileID) return
     following.value = !wasFollowing
     profile.value.followers_count = Math.max(0, (profile.value.followers_count || 0) + (following.value ? 1 : -1))
     relationLoaded.value.followers = false
     toastMessage.value = following.value ? '已订阅该用户' : '已取消订阅'
-    toastVisible.value = true
+    if (requestSequence === followRequestSequence && profile.value?.uuid === profileID) toastVisible.value = true
   } catch {
-    toastMessage.value = '订阅操作失败，请重试'
-    toastVisible.value = true
+    if (requestSequence === followRequestSequence && profile.value?.uuid === profileID) {
+      toastMessage.value = '订阅操作失败，请重试'
+      toastVisible.value = true
+    }
   } finally {
-    followBusy.value = false
+    if (requestSequence === followRequestSequence && profile.value?.uuid === profileID) followBusy.value = false
   }
 }
 
@@ -617,24 +623,27 @@ async function loadChannelSubscriptionState(generation = profileLoadSequence) {
 async function toggleChannelSubscription(channel: Channel) {
   if (!authStore.isAuthenticated || isSelf.value || channelSubscriptionBusy.value.has(channel.id)) return
   channelSubscriptionBusy.value = new Set(channelSubscriptionBusy.value).add(channel.id)
+  const profileID = profile.value?.uuid
+  const generation = profileLoadSequence
   const subscribed = isChannelSubscribed(channel.id)
   try {
     const success = subscribed
       ? await feedStore.unsubscribeFromChannel(channel.id)
       : await feedStore.subscribeToChannel(channel.id)
     if (!success) throw new Error('subscription failed')
+    if (generation !== profileLoadSequence || profile.value?.uuid !== profileID) return
     const next = new Set(channelSubscriptionIds.value)
     if (subscribed) next.delete(channel.id)
     else next.add(channel.id)
     channelSubscriptionIds.value = next
     toastMessage.value = subscribed ? '已取消订阅频道' : '已订阅频道'
   } catch {
-    toastMessage.value = '频道订阅操作失败，请重试'
+    if (generation === profileLoadSequence && profile.value?.uuid === profileID) toastMessage.value = '频道订阅操作失败，请重试'
   } finally {
     const nextBusy = new Set(channelSubscriptionBusy.value)
     nextBusy.delete(channel.id)
     channelSubscriptionBusy.value = nextBusy
-    toastVisible.value = true
+    if (generation === profileLoadSequence && profile.value?.uuid === profileID) toastVisible.value = true
   }
 }
 

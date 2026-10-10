@@ -173,6 +173,7 @@ describe("LoginView redirect", () => {
   it.each([
     "https://evil.example/phish",
     "//evil.example/phish",
+    "/\\evil.example/phish",
     "/feed\nnext",
   ])("falls back to Feed for unsafe redirect %s", async (redirect) => {
     const router = await mountLogin(redirect);

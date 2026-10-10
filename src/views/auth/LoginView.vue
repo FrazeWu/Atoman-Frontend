@@ -287,6 +287,7 @@ const canSendVerification = computed(() => (
 const safeRedirectPath = (redirect: unknown) => {
   if (typeof redirect !== 'string') return '/feed'
   if (!redirect.startsWith('/') || redirect.startsWith('//')) return '/feed'
+  if (redirect.includes('\\')) return '/feed'
   if (/[\u0000-\u001F\u007F]/.test(redirect)) return '/feed'
   return redirect
 }

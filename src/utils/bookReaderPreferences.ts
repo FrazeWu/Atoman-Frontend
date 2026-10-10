@@ -9,6 +9,29 @@ export type BookReaderBookmark = {
   created_at: string
 }
 
+export type BookReaderTheme = 'paper' | 'dim' | 'night'
+
+export type BookReaderDisplayPreferences = {
+  font_scale: number
+  theme: BookReaderTheme
+}
+
+export const defaultBookReaderDisplayPreferences: BookReaderDisplayPreferences = {
+  font_scale: 1,
+  theme: 'paper',
+}
+
+export function parseBookReaderDisplayPreferences(value: unknown): BookReaderDisplayPreferences {
+  if (!value || typeof value !== 'object') return { ...defaultBookReaderDisplayPreferences }
+  const candidate = value as Partial<BookReaderDisplayPreferences>
+  const fontScale = Number(candidate.font_scale)
+  const theme = candidate.theme === 'dim' || candidate.theme === 'night' ? candidate.theme : 'paper'
+  return {
+    font_scale: Number.isFinite(fontScale) ? Math.max(0.85, Math.min(1.35, fontScale)) : 1,
+    theme,
+  }
+}
+
 export function parseBookReaderBookmarks(value: unknown): BookReaderBookmark[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((item) => {

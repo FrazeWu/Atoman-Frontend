@@ -1,9 +1,16 @@
-import { parseBookReaderBookmarks, type BookReaderBookmark } from '@/utils/bookReaderPreferences'
+import {
+  defaultBookReaderDisplayPreferences,
+  parseBookReaderBookmarks,
+  parseBookReaderDisplayPreferences,
+  type BookReaderBookmark,
+  type BookReaderDisplayPreferences,
+} from '@/utils/bookReaderPreferences'
 
 export type LocalBookReadingProgress = {
   reading_percent: number
   epub_cfi?: string
   bookmarks: BookReaderBookmark[]
+  display: BookReaderDisplayPreferences
   updated_at: string
 }
 
@@ -33,13 +40,14 @@ export function getLocalBookReadingProgress(assetID: string): LocalBookReadingPr
       ...value,
       epub_cfi: typeof value.epub_cfi === 'string' ? value.epub_cfi : '',
       bookmarks: parseBookReaderBookmarks(value.bookmarks),
+      display: parseBookReaderDisplayPreferences(value.display),
     }
   } catch {
     return null
   }
 }
 
-export function saveLocalBookReadingProgress(assetID: string, progress: Pick<LocalBookReadingProgress, 'reading_percent' | 'epub_cfi'> & Partial<Pick<LocalBookReadingProgress, 'bookmarks'>>) {
+export function saveLocalBookReadingProgress(assetID: string, progress: Pick<LocalBookReadingProgress, 'reading_percent' | 'epub_cfi'> & Partial<Pick<LocalBookReadingProgress, 'bookmarks' | 'display'>>) {
   const store = storage()
   if (!store) return
   try {
@@ -48,6 +56,7 @@ export function saveLocalBookReadingProgress(assetID: string, progress: Pick<Loc
       reading_percent: Math.max(0, Math.min(1, progress.reading_percent ?? existing?.reading_percent ?? 0)),
       epub_cfi: progress.epub_cfi ?? existing?.epub_cfi ?? '',
       bookmarks: progress.bookmarks ?? existing?.bookmarks ?? [],
+      display: progress.display ?? existing?.display ?? { ...defaultBookReaderDisplayPreferences },
       updated_at: new Date().toISOString(),
     }))
   } catch {

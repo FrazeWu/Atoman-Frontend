@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseBookReaderBookmarks } from '@/utils/bookReaderPreferences'
+import { parseBookReaderBookmarks, parseBookReaderDisplayPreferences } from '@/utils/bookReaderPreferences'
 
 describe('book reader preferences', () => {
   it('keeps valid bookmarks and clamps unsafe positions', () => {
@@ -17,5 +17,10 @@ describe('book reader preferences', () => {
       comic_page: undefined,
       created_at: '2026-10-10',
     }])
+  })
+
+  it('keeps display preferences inside the supported range', () => {
+    expect(parseBookReaderDisplayPreferences({ font_scale: 2, theme: 'night' })).toEqual({ font_scale: 1.35, theme: 'night' })
+    expect(parseBookReaderDisplayPreferences({ font_scale: 0.2, theme: 'unknown' })).toEqual({ font_scale: 0.85, theme: 'paper' })
   })
 })

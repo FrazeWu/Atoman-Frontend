@@ -1,5 +1,5 @@
 <template>
-  <main class="a-page-md books-reader">
+  <main class="a-page-md books-reader" :class="`books-reader--theme-${displayPreferences.theme}`" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
     <PPageHeader title="阅读" mb="0" />
     <BookReaderShell
       :title="asset?.title || '私有电子书'"
@@ -77,6 +77,7 @@
         <canvas ref="pdfCanvas" aria-label="PDF 页面" />
       </div>
       <template #footer>
+        <BookReaderDisplayControls v-model="displayPreferences" @update:model-value="updateDisplayPreferences" />
         <form v-if="asset?.format === 'txt'" class="books-reader__search" @submit.prevent="searchText">
           <label for="private-book-search">搜索正文</label>
           <div class="books-reader__search-row">
@@ -123,10 +124,11 @@ import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-d
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
-import { parseBookReaderBookmarks, type BookReaderBookmark } from '@/utils/bookReaderPreferences'
+import { parseBookReaderBookmarks, parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences } from '@/utils/bookReaderPreferences'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
@@ -164,6 +166,7 @@ const textPages = ref<TextPage[]>([])
 const textPage = ref(1)
 const privateNotes = ref('')
 const bookmarks = ref<BookReaderBookmark[]>([])
+const displayPreferences = ref<BookReaderDisplayPreferences>(parseBookReaderDisplayPreferences(null))
 const textSearchQuery = ref('')
 const textSearchMatches = ref<BookTextSearchMatch[]>([])
 const readingPercent = ref(0)
@@ -231,6 +234,7 @@ function applyReadingState(state: BookReadingState) {
   readingPercent.value = clampPercent(state.reading_percent)
   pdfPage.value = Math.max(1, state.pdf_page || 1)
   bookmarks.value = parseBookReaderBookmarks(state.preferences?.bookmarks)
+  displayPreferences.value = parseBookReaderDisplayPreferences(state.preferences?.display)
 }
 
 async function loadText() {
@@ -417,7 +421,7 @@ async function saveState() {
       txt_offset: readingState.value?.txt_offset || 0,
       reading_percent: readingPercent.value,
       private_notes: privateNotes.value,
-      preferences: { ...(readingState.value?.preferences || {}), bookmarks: bookmarks.value },
+      preferences: { ...(readingState.value?.preferences || {}), bookmarks: bookmarks.value, display: displayPreferences.value },
     })
     applyReadingState(saved)
   } catch (error) {
@@ -454,6 +458,11 @@ function removeBookmark(id: string) {
 function searchText() {
   if (asset.value?.format !== 'txt') return
   textSearchMatches.value = findBookTextMatches(textContent.value, textSearchQuery.value)
+}
+
+function updateDisplayPreferences(value: BookReaderDisplayPreferences) {
+  displayPreferences.value = parseBookReaderDisplayPreferences(value)
+  void saveState()
 }
 
 function jumpToTextMatch(match: BookTextSearchMatch) {
@@ -566,6 +575,21 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 1.25rem;
   padding-top: var(--a-page-start-space);
+  --book-reader-surface: #ffffff;
+  --book-reader-text: var(--a-color-fg);
+  --book-reader-muted: var(--a-color-muted);
+}
+
+.books-reader--theme-dim {
+  --book-reader-surface: #f3eee4;
+  --book-reader-text: #423a2f;
+  --book-reader-muted: #756b5d;
+}
+
+.books-reader--theme-night {
+  --book-reader-surface: #1f2430;
+  --book-reader-text: #e7e9ee;
+  --book-reader-muted: #aab2c0;
 }
 
 .books-reader__feedback {
@@ -589,7 +613,7 @@ onBeforeUnmount(() => {
 .books-reader__pdf {
   min-height: min(68vh, 720px);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: #ffffff;
+  background: var(--book-reader-surface);
   overflow: hidden;
 }
 
@@ -598,7 +622,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   max-height: min(78vh, 60rem);
   padding: clamp(0.75rem, 2vw, 1.5rem);
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .books-reader__text-pages {
@@ -613,17 +637,17 @@ onBeforeUnmount(() => {
   width: min(100%, 56rem);
   aspect-ratio: 1 / 1.414;
   padding: clamp(2rem, 5vw, 4.75rem) clamp(1.75rem, 7vw, 6.5rem) 3.25rem;
-  background: #ffffff;
+  background: var(--book-reader-surface);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   box-shadow: none;
 }
 
 .books-reader__text-page-content {
   height: 100%;
-  color: var(--a-color-fg);
+  color: var(--book-reader-text);
   font: inherit;
   font-family: Georgia, "Songti SC", "SimSun", serif;
-  font-size: clamp(0.9rem, 1vw, 1.05rem);
+  font-size: calc(clamp(0.9rem, 1vw, 1.05rem) * var(--book-reader-font-scale, 1));
   line-height: 1.78;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -653,7 +677,7 @@ onBeforeUnmount(() => {
 
 .books-reader__epub {
   padding: 1rem;
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .books-reader__comic {
@@ -663,7 +687,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: #ffffff;
+  background: var(--book-reader-surface);
   scroll-behavior: smooth;
 }
 
@@ -697,14 +721,14 @@ onBeforeUnmount(() => {
   place-items: start center;
   overflow: auto;
   padding: 1rem;
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .books-reader__pdf canvas {
   display: block;
   max-width: 100%;
   height: auto;
-  background: #ffffff;
+  background: var(--book-reader-surface);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   box-shadow: none;
 }
@@ -740,8 +764,8 @@ onBeforeUnmount(() => {
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
-  color: var(--a-color-fg);
+  background: var(--book-reader-surface);
+  color: var(--book-reader-text);
 }
 
 .books-reader__search-row input:focus-visible,
@@ -771,8 +795,8 @@ onBeforeUnmount(() => {
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted, #f8fafc);
-  color: var(--a-color-fg);
+  background: color-mix(in srgb, var(--book-reader-surface) 92%, var(--book-reader-text));
+  color: var(--book-reader-text);
   text-align: left;
   cursor: pointer;
 }
@@ -835,8 +859,8 @@ onBeforeUnmount(() => {
   min-height: 5rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
-  color: var(--a-color-fg);
+  background: var(--book-reader-surface);
+  color: var(--book-reader-text);
   padding: 0.75rem;
   font: inherit;
   font-size: 0.88rem;

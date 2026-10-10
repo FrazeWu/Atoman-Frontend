@@ -102,7 +102,7 @@
           <button type="button" :data-testid="`reply-${item.id}`" @click="startReply(item.id)">
             <Reply :size="16" aria-hidden="true" /> 回复
           </button>
-          <button type="button" :data-testid="`pin-${item.id}`" @click="togglePin(item)">
+          <button type="button" :data-testid="`pin-${item.id}`" :disabled="mutating" @click="togglePin(item)">
             <Pin :size="16" aria-hidden="true" /> {{ item.pinned ? '取消置顶' : '置顶' }}
           </button>
           <button type="button" :data-testid="`delete-${item.id}`" @click="pendingDelete = item">
@@ -380,6 +380,7 @@ async function sendReply(item: StudioInteractionItem) {
 }
 
 async function togglePin(item: StudioInteractionItem) {
+  if (mutating.value) return
   mutating.value = true
   error.value = ''
   try {

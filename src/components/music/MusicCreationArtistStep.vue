@@ -760,7 +760,7 @@ defineExpose({
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -789,11 +789,11 @@ defineExpose({
 }
 
 .artist-card--primary {
-  background: color-mix(in srgb, var(--a-color-bg) 82%, var(--a-color-surface));
+  background: var(--a-color-bg);
 }
 
 .artist-card--soft {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 .card-header {
@@ -881,7 +881,7 @@ defineExpose({
   justify-content: center;
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 600;
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -943,7 +943,7 @@ defineExpose({
 .member-card__title {
   color: var(--a-color-muted);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .member-card__actions {
@@ -973,7 +973,7 @@ defineExpose({
 }
 
 .state-line--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .step-actions {
@@ -986,7 +986,7 @@ defineExpose({
   border-radius: 0;
   padding: 0.85rem 1.2rem;
   font-family: var(--a-font-sans);
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 

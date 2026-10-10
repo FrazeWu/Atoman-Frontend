@@ -450,7 +450,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   align-items: center;
   gap: 0.25rem;
   color: var(--a-color-text);
-  font-weight: 800;
+  font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
@@ -476,7 +476,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   gap: 0.75rem;
   color: var(--a-color-text);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .parallel-progress__heading strong {
   color: var(--a-color-muted);
@@ -546,9 +546,9 @@ function formatUploadSpeed(bytesPerSecond: number) {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
 }
-.state-line--error { color: var(--a-color-accent-destructive); }
+.state-line--error { color: var(--a-color-danger); }
 
 /* Custom File Picker UI */
 .custom-file-picker {
@@ -577,7 +577,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface-3);
 }
 .file-picker-text {
@@ -589,7 +589,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 .file-picker-title {
   color: var(--a-color-text);
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .file-picker-subtitle {
   color: var(--a-color-muted);
@@ -609,7 +609,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   border: none;
   color: var(--a-color-muted);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
@@ -662,7 +662,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   color: var(--a-color-muted);
   text-transform: uppercase;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .import-file-speed {
   color: var(--a-color-muted);
@@ -676,7 +676,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   font-family: monospace;
 }
 .import-file-error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   margin-right: 0.5rem;
 }
 .import-file-action {
@@ -689,7 +689,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   padding: 0 0.25rem;
 }
 .import-file-action--danger {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .stage-banner {
@@ -697,13 +697,13 @@ function formatUploadSpeed(bytesPerSecond: number) {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: color-mix(in srgb, var(--a-color-accent-blue) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--a-color-accent-blue) 30%, transparent);
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--a-color-primary) 30%, transparent);
+  border-radius: var(--a-radius-control);
 }
 .stage-label {
-  color: var(--a-color-accent-blue);
-  font-weight: 800;
+  color: var(--a-color-primary);
+  font-weight: 500;
   font-size: 0.85rem;
 }
 .stage-hint {

@@ -234,7 +234,7 @@ function createArtistFromQuery() {
 
 .contributor-chip__name,
 .picker-option__name {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .contributor-chip__kind,
@@ -243,12 +243,12 @@ function createArtistFromQuery() {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .contributor-chip__remove,
 .picker-option {
-  border-radius: 0;
+  border-radius: var(--a-radius-control);
 }
 
 .contributor-chip__remove {
@@ -258,7 +258,7 @@ function createArtistFromQuery() {
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -287,11 +287,11 @@ function createArtistFromQuery() {
   min-height: 2.75rem;
   padding: 0.65rem 0.8rem;
   border: 1px solid var(--a-color-text);
-  border-radius: 0;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
-  font-weight: 800;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }

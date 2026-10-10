@@ -961,7 +961,7 @@ watch(
   align-items: center;
   gap: 0.3rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   padding: 0.28rem 0.45rem 0.28rem 0.65rem;
   color: var(--a-color-text);
   background: var(--a-color-surface-muted);
@@ -1293,7 +1293,7 @@ watch(
   display: inline-flex;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 0.48rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 0.76rem;
   justify-content: center;
   letter-spacing: -0.03em;
@@ -1336,9 +1336,9 @@ watch(
 
 .track-adjustment__error {
   margin: -0.4rem 0 0.75rem;
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .track-list {
@@ -1505,7 +1505,7 @@ watch(
   border-radius: var(--a-radius-control);
   color: var(--a-color-muted);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -1520,7 +1520,7 @@ watch(
 }
 
 .track-row__match-status.is-ambiguous {
-  color: var(--a-color-accent-warning);
+  color: var(--a-color-warning);
 }
 
 .track-row__match-status.is-unmatched {
@@ -1539,7 +1539,7 @@ watch(
 }
 
 .track-row__upload-error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .track-row__upload-progress {
@@ -1547,7 +1547,7 @@ watch(
   height: 4px;
   overflow: hidden;
   background: var(--a-color-border-soft);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
 }
 
 .track-row__upload-progress > span {
@@ -1606,10 +1606,10 @@ watch(
 }
 
 .track-row__lyrics-candidates > summary {
-  color: var(--a-color-accent-warning);
+  color: var(--a-color-warning);
   cursor: pointer;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .track-row__lyrics-candidate-list {
@@ -1728,7 +1728,7 @@ watch(
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1739,7 +1739,7 @@ watch(
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .progress-track {
@@ -1758,7 +1758,7 @@ watch(
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .progress-step--active {
@@ -1819,7 +1819,7 @@ watch(
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .state-line--strong {
@@ -1827,7 +1827,7 @@ watch(
 }
 
 .state-line--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .imported-cover-callout {
@@ -1862,7 +1862,7 @@ watch(
   border-radius: 0px;
   padding: 0.85rem 1.2rem;
   font-family: var(--a-font-sans);
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -1942,7 +1942,7 @@ watch(
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
 }
@@ -1954,7 +1954,7 @@ watch(
 }
 .file-picker-title {
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-text);
   word-break: break-all;
   line-height: 1.4;
@@ -1983,7 +1983,7 @@ watch(
 .imported-metadata dt {
   color: var(--a-color-muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .imported-metadata dd {

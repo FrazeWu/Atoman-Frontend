@@ -79,7 +79,7 @@ function createArtist(name: string) {
   gap: 0.8rem;
   padding: 1rem 1.1rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .progress-copy {
@@ -95,7 +95,7 @@ function createArtist(name: string) {
   margin: 0;
   font-family: var(--a-font-sans);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .progress-value { color: var(--a-color-muted); }
@@ -142,7 +142,7 @@ function createArtist(name: string) {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -152,6 +152,7 @@ function createArtist(name: string) {
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
   font-size: clamp(1.4rem, 2.4vw, 2rem);
+  font-weight: 500;
   line-height: 1.1;
 }
 
@@ -239,7 +240,7 @@ function createArtist(name: string) {
   white-space: nowrap;
 }
 .artist-search-state { margin: 0; font-size: 0.82rem; }
-.artist-search-state--error { color: var(--a-color-accent-destructive); }
+.artist-search-state--error { color: var(--a-color-danger); }
 .artist-search-empty { display: grid; gap: 0.6rem; justify-items: start; }
 
 .card-header {

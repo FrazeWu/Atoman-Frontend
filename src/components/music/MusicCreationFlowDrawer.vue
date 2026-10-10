@@ -1487,7 +1487,7 @@ async function completeCreation() {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   white-space: nowrap;
 }
 .creation-progress__list li::after {
@@ -1507,7 +1507,7 @@ async function completeCreation() {
   width: 1.45rem;
   height: 1.45rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   font-size: 0.68rem;
 }
 .creation-progress__list li.is-active .creation-progress__index {
@@ -1528,13 +1528,13 @@ async function completeCreation() {
 }
 .error-message {
   margin: 0;
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-family: var(--a-font-sans);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .footer-actions {
-  background: #ffffff;
+  background: var(--a-color-bg);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1553,10 +1553,10 @@ async function completeCreation() {
 .ui-action,
 .primary-action {
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   padding: 0.85rem 1.2rem;
   font-family: var(--a-font-sans);
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 .ui-action {

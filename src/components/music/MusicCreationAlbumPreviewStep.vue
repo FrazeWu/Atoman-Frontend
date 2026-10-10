@@ -159,10 +159,10 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
 .album-preview-step__cover img { display: block; width: min(100%, 16rem); aspect-ratio: 1; object-fit: cover; }
 .album-preview-step__section { display: grid; gap: 0.5rem; }
 .album-preview-step__section h4, .album-preview-step__section p { margin: 0; }
-.album-preview-step__error { margin: 0; color: var(--a-color-accent-destructive); }
+.album-preview-step__error { margin: 0; color: var(--a-color-danger); }
 .album-preview-step__hint { margin: 0; padding: 0.5rem 0.75rem; background: var(--a-color-surface-muted); border-radius: 4px; color: var(--a-color-muted); font-size: 0.82rem; }
 .album-preview-step__source { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: 0; color: var(--a-color-muted); font-size: 0.82rem; }
-.album-preview-step__source a { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--a-color-text); font-weight: 800; text-decoration: underline; text-underline-offset: 0.18em; }
+.album-preview-step__source a { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--a-color-text); font-weight: 500; text-decoration: underline; text-underline-offset: 0.18em; }
 .album-preview-step__tracks, .album-preview-step__failures, .album-preview-step__contributors { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
 .album-preview-step__track { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
 .album-preview-step__track-number { color: var(--a-color-muted); font-variant-numeric: tabular-nums; }
@@ -170,7 +170,7 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
 .album-preview-step__match { color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
 .album-preview-step__match.is-matched { color: #866b2d; }
 .album-preview-step__match.is-manual { color: var(--a-color-text); }
-.album-preview-step__match.is-ambiguous { color: var(--a-color-accent-warning); }
+.album-preview-step__match.is-ambiguous { color: var(--a-color-warning); }
 @media (max-width: 640px) {
   .album-preview-step__track { grid-template-columns: 2.5rem minmax(0, 1fr); }
   .album-preview-step__track-statuses { grid-column: 2; justify-content: flex-start; }

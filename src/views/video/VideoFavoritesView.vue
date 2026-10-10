@@ -135,7 +135,7 @@ watch([activeTab, () => authStore.isAuthenticated, queueState, queueSort], () =>
         </div>
       </template>
       <div v-else-if="activeTab === 'channel'" class="video-favorites-links">
-        <RouterLink v-for="channel in channels" :key="channel.id" :to="`/channel/${channel.slug || channel.id}`">{{ channel.name }}</RouterLink>
+        <RouterLink v-for="channel in channels" :key="channel.id" :to="`/channels/${channel.slug || channel.id}`">{{ channel.name }}</RouterLink>
         <PEmpty v-if="!channels.length" title="暂无收藏频道" />
       </div>
       <div v-else class="video-favorites-links">

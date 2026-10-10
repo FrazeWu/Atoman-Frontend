@@ -7,6 +7,8 @@ import type {
 const studioContentView = () => import("@/views/studio/StudioContentView.vue");
 const studioEditorRouteView = () =>
 	import("@/views/studio/StudioEditorRouteView.vue");
+const studioCalendarView = () =>
+	import("@/views/studio/StudioCalendarView.vue");
 const manageCollectionsRedirect = (to: RouteLocation): RouteLocationRaw => ({
 	path: "/studio/manage/collections",
 	query: to.query,
@@ -40,7 +42,19 @@ export const studioRoutes: RouteRecordRaw[] = [
 					{
 						path: "calendar",
 						name: "studio-manage-calendar",
-						component: () => import("@/views/studio/StudioCalendarView.vue"),
+						component: studioCalendarView,
+					},
+					{
+						path: "calendar/:module(blog|podcast|video)/:id/edit",
+						name: "studio-manage-calendar-edit",
+						components: {
+							default: studioCalendarView,
+							overlay: studioEditorRouteView,
+						},
+						meta: {
+							studioOverlay: true,
+							studioOverlayMode: "edit",
+						},
 					},
 					{
 						path: "goals",

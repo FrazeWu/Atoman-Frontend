@@ -26,7 +26,7 @@
           <time :datetime="day.key">{{ day.date.getDate() }}</time>
           <ol v-if="itemsForDay(day.key).length" class="studio-calendar__items">
             <li v-for="item in itemsForDay(day.key)" :key="item.id">
-              <RouterLink :to="`/studio/${item.module}/${item.id}/edit`">
+              <RouterLink :to="`/studio/manage/calendar/${item.module}/${item.id}/edit`">
                 <time :datetime="item.scheduled_at">{{ formatTime(item.scheduled_at) }}</time>
                 <strong>{{ item.title || '未命名内容' }}</strong>
               </RouterLink>

@@ -170,6 +170,7 @@ const normalizePage = (value: unknown) => {
 const loading = ref(true)
 const errorMessage = ref('')
 const items = ref<StarredFeedItem[]>([])
+const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
 const totalItems = ref(0)
 const page = ref(1)
 const pageLimit = 20
@@ -417,6 +418,14 @@ watch(
   },
   { immediate: true },
 )
+
+watch(accountIdentity, (identity, previous) => {
+  if (identity === previous) return
+  starredRequestSeq += 1
+  items.value = []
+  totalItems.value = 0
+  if (authStore.isAuthenticated) void fetchStarred()
+})
 
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {

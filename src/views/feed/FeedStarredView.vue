@@ -473,7 +473,7 @@ onUnmounted(() => {
 }
 
 .star-group-button:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
 }
@@ -483,7 +483,7 @@ onUnmounted(() => {
   color: var(--a-color-fg);
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .star-group-select {
@@ -492,7 +492,9 @@ onUnmounted(() => {
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
   border: 1px solid var(--a-color-border-soft);
-  background: #fff;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 
 .feed-loading,

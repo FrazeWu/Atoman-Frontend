@@ -54,13 +54,13 @@ withDefaults(defineProps<{
 <style scoped>
 .hub-preview { margin-top: 1.25rem; border-block: 1px solid var(--a-color-border-soft); padding: 1rem 0; }
 .hub-preview__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
-.hub-preview__header h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.hub-preview__header h2 { margin: 0; font-size: 1rem; font-weight: 500; }
 .hub-preview__more { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--a-color-muted); font-size: 0.8rem; text-decoration: none; }
 .hub-preview__more:hover, .hub-preview__more:focus-visible { color: var(--a-color-fg); }
 .hub-preview__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
 .hub-preview__item { display: grid; min-width: 0; grid-template-columns: 3rem minmax(0, 1fr); gap: 0.7rem; align-items: center; color: var(--a-color-fg); text-decoration: none; }
 .hub-preview__item:hover .hub-preview__copy strong, .hub-preview__item:focus-visible .hub-preview__copy strong { text-decoration: underline; }
-.hub-preview__cover { display: grid; width: 3rem; aspect-ratio: 1; place-items: center; overflow: hidden; background: var(--a-color-surface); color: var(--a-color-muted); }
+.hub-preview__cover { display: grid; width: 3rem; aspect-ratio: 1; place-items: center; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-muted); }
 .hub-preview__cover img { width: 100%; height: 100%; object-fit: cover; }
 .hub-preview__copy { display: grid; min-width: 0; gap: 0.2rem; }
 .hub-preview__copy strong, .hub-preview__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

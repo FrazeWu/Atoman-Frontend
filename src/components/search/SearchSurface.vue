@@ -143,7 +143,7 @@ function handleInput(event: Event) {
   position: relative;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   box-shadow: var(--a-shadow-sm);
   padding: 0.65rem 0.85rem;
   display: grid;
@@ -194,7 +194,7 @@ function handleInput(event: Event) {
   cursor: pointer;
   font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.35rem 0.75rem;
   white-space: nowrap;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
@@ -217,9 +217,8 @@ function handleInput(event: Event) {
 .search-frame__eyebrow,
 .search-frame__status {
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.04em;
 }
 
 .search-frame__eyebrow {
@@ -307,7 +306,7 @@ function handleInput(event: Event) {
   left: 0;
   right: 0;
   margin-top: 0;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
   box-shadow: var(--a-shadow-dropdown);
@@ -319,7 +318,7 @@ function handleInput(event: Event) {
   padding: 0.75rem 1.05rem;
   color: var(--a-color-muted);
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .search-actions {

@@ -73,7 +73,7 @@
       />
     </div>
 
-    <PButton v-if="comments.hasMore.value" block outline :loading="comments.loading.value" @click="loadMore">
+    <PButton v-if="comments.hasMore.value" block variant="secondary" :loading="comments.loading.value" @click="loadMore">
       加载更多
     </PButton>
 
@@ -420,11 +420,11 @@ async function submitReport(input: ReportCommentInput) {
 .comment-section { display: grid; gap: 0.75rem; min-width: 0; }
 .comment-section__header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .comment-section__title-group { display: inline-flex; align-items: baseline; gap: 0.4rem; min-width: 0; }
-.comment-section__header h2 { margin: 0; color: var(--a-color-text); font-size: 1.125rem; font-weight: var(--a-font-weight-strong); line-height: 1.25; }
+.comment-section__header h2 { margin: 0; color: var(--a-color-text); font-size: 1.125rem; font-weight: 500; line-height: 1.25; }
 .comment-section__count { color: var(--a-color-muted); font-size: var(--a-text-xs); font-variant-numeric: tabular-nums; }
-.comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 7rem; padding: 1rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-card); background: var(--a-color-surface); color: var(--a-color-text-secondary); text-align: center; }
+.comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 7rem; padding: 1rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-card); background: var(--a-color-bg); color: var(--a-color-text-secondary); text-align: center; }
 .comment-section__login :deep(.p-button) { margin-left: 0.25rem; }
 .comment-section__threads { display: grid; gap: 0; }
-.comment-section__error { margin: 0; padding: 0.75rem 1rem; border-left: 3px solid var(--a-color-accent-destructive); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
+.comment-section__error { margin: 0; padding: 0.75rem 1rem; border-left: 3px solid var(--a-color-danger); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-danger); font-size: var(--a-text-sm); }
 @media (max-width: 640px) { .comment-section { gap: 0.65rem; } .comment-section__header { align-items: stretch; flex-direction: column; } .comment-section__header :deep(.p-segmented-control) { display: grid; grid-template-columns: repeat(3, 1fr); } }
 </style>

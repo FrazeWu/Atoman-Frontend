@@ -222,10 +222,9 @@ function submit() {
   height: 1.6rem;
   place-items: center;
   border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  color: #ffffff;
-  backdrop-filter: blur(4px);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-text) 65%, transparent);
+  color: var(--a-color-bg);
   cursor: grab;
   touch-action: none;
   transition: background 0.15s ease;
@@ -233,7 +232,7 @@ function submit() {
 
 .short-note-composer__drag-handle:active {
   cursor: grabbing;
-  background: rgba(0, 0, 0, 0.75);
+  background: color-mix(in srgb, var(--a-color-text) 85%, transparent);
 }
 
 .short-note-composer__remove-btn {
@@ -245,10 +244,9 @@ function submit() {
   height: 1.6rem;
   place-items: center;
   border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  color: #ffffff;
-  backdrop-filter: blur(4px);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-text) 65%, transparent);
+  color: var(--a-color-bg);
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }

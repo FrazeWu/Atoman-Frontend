@@ -222,10 +222,10 @@ function anchorText(start: number, end: number) {
 .comment-item__images img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; transition: transform 0.2s ease; }
 .comment-item__images a:hover img { transform: scale(1.02); }
 .comment-item__anchors { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
-.comment-item__anchors button { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 44px; padding: 0 0.65rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface); color: var(--a-color-text-secondary); cursor: pointer; font: inherit; font-size: var(--a-text-sm); }
+.comment-item__anchors button { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 44px; padding: 0 0.65rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text-secondary); cursor: pointer; font: inherit; font-size: var(--a-text-sm); }
 .comment-item__anchors button:hover { border-color: var(--a-color-primary); color: var(--a-color-primary); }
 .comment-item__anchors button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
-.comment-item__folded { display: flex; align-items: center; gap: 0.5rem; min-height: 52px; margin: 0.75rem 0; padding: 0.75rem; border-left: 3px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
+.comment-item__folded { display: flex; align-items: center; gap: 0.5rem; min-height: 52px; margin: 0.75rem 0; padding: 0.75rem; border-left: 3px solid var(--a-color-border); background: var(--a-color-bg); color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
 .comment-item__folded button { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-primary); cursor: pointer; font: inherit; }
 .comment-item__folded button:hover { background: var(--a-color-surface-muted); }
 .comment-item__folded button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }

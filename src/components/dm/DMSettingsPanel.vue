@@ -145,7 +145,7 @@ watch(() => `${props.subject.type}:${props.subject.id}`, load)
 
 .dm-settings__message--error,
 .dm-settings__state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 640px) {

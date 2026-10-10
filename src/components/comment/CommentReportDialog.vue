@@ -16,7 +16,7 @@
       <PTextarea v-model="note" label="补充说明" :rows="3" placeholder="可选" />
       <p v-if="error" class="comment-report__error" role="alert">{{ error }}</p>
       <div class="comment-report__actions">
-        <PButton type="button" size="sm" outline @click="$emit('update:modelValue', false)">取消</PButton>
+        <PButton type="button" size="sm" variant="secondary" @click="$emit('update:modelValue', false)">取消</PButton>
         <button type="button" class="comment-report__submit" data-test="submit-report" :disabled="pending" @click="submit">
           {{ pending ? '提交中...' : '提交' }}
         </button>
@@ -89,9 +89,9 @@ async function submit() {
 
 <style scoped>
 .comment-report { display: grid; gap: 1rem; }
-.comment-report label { display: grid; gap: 0.45rem; color: var(--a-color-muted); font-size: var(--a-text-sm); font-weight: 800; }
-.comment-report select { min-height: 42px; padding: 0 0.65rem; border: 1px solid var(--a-color-border); background: var(--a-color-bg); color: var(--a-color-text); font: inherit; }
+.comment-report label { display: grid; gap: 0.45rem; color: var(--a-color-muted); font-size: var(--a-text-sm); font-weight: 500; }
+.comment-report select { min-height: 42px; padding: 0 0.65rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); font: inherit; }
 .comment-report__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
-.comment-report__submit { min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-text); background: var(--a-color-text); color: var(--a-color-bg); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
-.comment-report__error { margin: 0; color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
+.comment-report__submit { min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-text); border-radius: var(--a-radius-control); background: var(--a-color-text); color: var(--a-color-bg); font: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; }
+.comment-report__error { margin: 0; color: var(--a-color-danger); font-size: var(--a-text-sm); }
 </style>

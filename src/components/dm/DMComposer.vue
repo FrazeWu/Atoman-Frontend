@@ -21,5 +21,13 @@ const submit = () => { if (props.disabled || (!props.modelValue.trim() && !image
 </script>
 
 <style scoped>
-.dm-composer { display:grid; gap:.65rem; border-top:1px solid var(--a-color-border-soft); padding:1rem; }.dm-composer textarea { width:100%; resize:vertical; border:1px solid var(--a-color-border-soft); background:var(--a-color-bg); color:var(--a-color-text); padding:.65rem; font:inherit; }.dm-composer__reply-as,.dm-composer__error { margin:0; font-size:.8rem; color:var(--a-color-muted); }.dm-composer__error { color:var(--a-color-danger); }.dm-composer__actions { display:flex; justify-content:flex-end; gap:.5rem; }.dm-composer__actions button,.dm-composer__image button { display:grid; place-items:center; width:2.25rem; height:2.25rem; border:1px solid var(--a-color-border-soft); background:var(--a-color-bg); color:var(--a-color-text); cursor:pointer; }.dm-composer__image { position:relative; width:max-content; }.dm-composer__image img { display:block; width:7rem; height:7rem; object-fit:cover; }.dm-composer__image button { position:absolute; right:.25rem; top:.25rem; background:var(--a-color-surface); }
+.dm-composer { display:grid; gap:.65rem; border-top:1px solid var(--a-color-border-soft); padding:1rem; }
+.dm-composer textarea { width:100%; resize:vertical; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-bg); color:var(--a-color-text); padding:.65rem; font:inherit; }
+.dm-composer__reply-as,.dm-composer__error { margin:0; font-size:.8rem; color:var(--a-color-muted); }
+.dm-composer__error { color:var(--a-color-danger); }
+.dm-composer__actions { display:flex; justify-content:flex-end; gap:.5rem; }
+.dm-composer__actions button,.dm-composer__image button { display:grid; place-items:center; width:2.25rem; height:2.25rem; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-bg); color:var(--a-color-text); cursor:pointer; }
+.dm-composer__image { position:relative; width:max-content; }
+.dm-composer__image img { display:block; width:7rem; height:7rem; object-fit:cover; border-radius:var(--a-radius-control); }
+.dm-composer__image button { position:absolute; right:.25rem; top:.25rem; background:var(--a-color-bg); }
 </style>

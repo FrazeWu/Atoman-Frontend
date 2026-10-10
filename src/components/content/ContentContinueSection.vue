@@ -46,10 +46,10 @@ onMounted(async () => {
 
 <style scoped>
 .continue-section { margin: 0 0 2rem; border-block: 1px solid var(--a-color-border-soft); padding: 1rem 0; }
-.continue-section h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; }
+.continue-section h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 500; }
 .continue-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
 .continue-item { min-width: 0; display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0.75rem; align-items: center; color: var(--a-color-fg); text-decoration: none; }
-.continue-cover { width: 3rem; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; background: var(--a-color-surface); }
+.continue-cover { width: 3rem; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); }
 .continue-cover img { width: 100%; height: 100%; object-fit: cover; }
 .continue-copy { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.5rem; }
 .continue-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; font-weight: 500; }

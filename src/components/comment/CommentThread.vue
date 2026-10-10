@@ -226,6 +226,6 @@ async function submitEdit(input: CreateCommentInput) {
 .comment-thread__expand:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .comment-thread__expand:disabled { cursor: not-allowed; opacity: 0.6; }
 .comment-thread__composer { margin-left: clamp(0.5rem, 2vw, 1rem); }
-.comment-thread__error { margin: 0; padding-left: clamp(0.5rem, 2vw, 1rem); color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
+.comment-thread__error { margin: 0; padding-left: clamp(0.5rem, 2vw, 1rem); color: var(--a-color-danger); font-size: var(--a-text-sm); }
 @media (max-width: 560px) { .comment-thread { gap: 0.4rem; } .comment-thread__replies { margin-left: 0.4rem; padding-left: 0.55rem; } .comment-thread__composer { margin-left: 0.4rem; } .comment-thread__error { padding-left: 0.4rem; } }
 </style>

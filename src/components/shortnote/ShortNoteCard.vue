@@ -384,17 +384,17 @@ function formatDate(value: string) {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-text);
   color: var(--a-color-bg);
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .sticky-author {
-  font-weight: 650;
+  font-weight: 600;
   color: var(--a-color-fg);
 }
 
@@ -427,11 +427,11 @@ function formatDate(value: string) {
 
 .sticky-badge {
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0.1em 0.45em;
-  border-radius: var(--a-radius-pill, 999px);
-  background: color-mix(in srgb, #f59e0b 12%, transparent);
-  color: #d97706;
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-warning) 12%, transparent);
+  color: var(--a-color-warning);
 }
 
 .sticky-owner-actions {
@@ -532,7 +532,7 @@ function formatDate(value: string) {
   align-items: center;
   gap: 0.3rem;
   padding: 0.25rem 0.65rem;
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   font-size: 0.72rem;
@@ -550,9 +550,9 @@ function formatDate(value: string) {
 }
 
 .sticky-pill-btn.is-liked {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: color-mix(in srgb, #ef4444 8%, transparent);
+  border-color: var(--a-color-danger);
+  color: var(--a-color-danger);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, transparent);
 }
 
 .sticky-pill-btn.is-active {

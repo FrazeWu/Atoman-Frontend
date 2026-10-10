@@ -38,7 +38,7 @@ export interface BookImportSession {
   title: string
   author?: string
   file_name: string
-  format: 'epub' | 'pdf' | 'txt' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
   content_type: string
   size: number
   status: BookImportStatus | string
@@ -153,7 +153,7 @@ export interface BookContinueReading {
   title: string
   author?: string
   file_name: string
-  format: 'epub' | 'pdf' | 'txt' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
   processing_status: BookAssetProcessingStatus | string
   reading_percent: number
   last_read_at?: string
@@ -254,7 +254,7 @@ export interface BookPublishedAsset {
   id: string
   work_id?: string
   edition_id?: string
-  format: 'epub' | 'pdf' | 'txt' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
   file_name: string
   title?: string
   author?: string
@@ -315,7 +315,7 @@ export interface BookPrivateAsset {
   title: string
   author?: string
   file_name: string
-  format: 'epub' | 'pdf' | 'txt' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
   content_type: string
   size: number
   status: BookImportStatus | string
@@ -629,11 +629,13 @@ export async function uploadBookImportPart(uploadUrl: string, body: Blob): Promi
 }
 
 export function bookContentType(file: Pick<File, 'name' | 'type'>): string {
-  if (file.type) return file.type
   switch (file.name.toLowerCase().split('.').pop()) {
     case 'epub': return 'application/epub+zip'
     case 'pdf': return 'application/pdf'
-    default: return 'application/octet-stream'
+    case 'txt': return 'text/plain'
+    case 'cbz': return 'application/vnd.comicbook+zip'
+    case 'cbr': return 'application/vnd.rar'
+    default: return file.type || 'application/octet-stream'
   }
 }
 

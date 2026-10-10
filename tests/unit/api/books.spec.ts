@@ -147,7 +147,9 @@ describe('books API', () => {
   it('infers accepted content types and reads signed upload ETags', async () => {
     expect(bookContentType({ name: 'book.epub', type: '' })).toBe('application/epub+zip')
     expect(bookContentType({ name: 'book.pdf', type: '' })).toBe('application/pdf')
-    expect(bookContentType({ name: 'book.txt', type: '' })).toBe('application/octet-stream')
+    expect(bookContentType({ name: 'book.txt', type: '' })).toBe('text/plain')
+    expect(bookContentType({ name: 'book.cbz', type: 'application/octet-stream' })).toBe('application/vnd.comicbook+zip')
+    expect(bookContentType({ name: 'book.cbr', type: '' })).toBe('application/vnd.rar')
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response('', { status: 200, headers: { ETag: 'etag-1' } }),

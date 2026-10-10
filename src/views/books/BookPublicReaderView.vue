@@ -31,6 +31,12 @@
       </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" @scroll="handleTextScroll"><pre>{{ textContent }}</pre></div>
       <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="public-reader__epub" />
+      <div v-else-if="asset?.format === 'cbz' || asset?.format === 'cbr'" ref="comicViewport" class="public-reader__comic" aria-label="漫画页面">
+        <figure v-for="(page, index) in comicPages" :key="page.name" :ref="element => setComicPageRef(index, element)" class="public-reader__comic-page">
+          <img :src="page.url" :alt="`${asset?.file_name || '漫画'} 第 ${index + 1} 页`" loading="lazy" />
+          <figcaption class="tabular-nums">{{ index + 1 }}</figcaption>
+        </figure>
+      </div>
       <div v-else class="public-reader__pdf"><canvas ref="pdfCanvas" aria-label="PDF 页面" /></div>
     </BookReaderShell>
   </main>
@@ -46,6 +52,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
+import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -61,13 +68,17 @@ const textContent = ref('')
 const readingPercent = ref(0)
 const pdfPage = ref(1)
 const pdfPageCount = ref(0)
+const comicPage = ref(1)
+const comicPages = ref<Array<ComicPage & { url: string }>>([])
 const epubTOC = ref<EpubTOCItem[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const reportMessage = ref('')
 const textViewport = ref<HTMLElement | null>(null)
 const epubViewport = ref<HTMLElement | null>(null)
+const comicViewport = ref<HTMLElement | null>(null)
 const pdfCanvas = ref<HTMLCanvasElement | null>(null)
+const comicPageElements: Array<HTMLElement | undefined> = []
 let contentBlob: Blob | null = null
 let pdfDocument: PDFDocumentProxy | null = null
 let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
@@ -78,11 +89,12 @@ const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
 const pageLabel = computed(() => {
   if (asset.value?.format === 'pdf') return `第 ${pdfPage.value} / ${pdfPageCount.value} 页`
   if (asset.value?.format === 'epub') return 'EPUB'
+  if ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length) return `第 ${comicPage.value} / ${comicPages.value.length} 页`
   return ''
 })
-const showPagination = computed(() => asset.value?.format === 'pdf' || asset.value?.format === 'epub')
-const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1))
-const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value))
+const showPagination = computed(() => ['pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
+const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
+const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
 
 function flattenEpubTOC(items: EpubTOCSource[], depth = 0): EpubTOCItem[] {
   return items.flatMap((item) => [{ ...item, depth }, ...flattenEpubTOC(item.subitems || [], depth + 1)])
@@ -124,6 +136,16 @@ async function loadEPUB() {
   await epubRendition.display()
 }
 
+async function loadComic() {
+  const format = asset.value?.format
+  if (format !== 'cbz' && format !== 'cbr') return
+  const pages = await extractComicPages(contentBlob!, format)
+  comicPages.value = pages.map((page) => ({ ...page, url: URL.createObjectURL(page.blob) }))
+  comicPage.value = 1
+  await nextTick()
+  scrollToComicPage()
+}
+
 function reportAsset() {
   if (!asset.value) return
   const reason = window.prompt('请输入举报原因')?.trim()
@@ -146,12 +168,28 @@ function changePdfPage(delta: number) {
 
 function movePrevious() {
   if (asset.value?.format === 'pdf') changePdfPage(-1)
+  else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(-1)
   else moveEpubPage('prev')
 }
 
 function moveNext() {
   if (asset.value?.format === 'pdf') changePdfPage(1)
+  else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(1)
   else moveEpubPage('next')
+}
+
+function setComicPageRef(index: number, element: unknown) {
+  comicPageElements[index] = element instanceof HTMLElement ? element : undefined
+}
+
+function scrollToComicPage() {
+  comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
+}
+
+function changeComicPage(delta: number) {
+  comicPage.value = Math.min(Math.max(1, comicPage.value + delta), comicPages.value.length)
+  scrollToComicPage()
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {
@@ -171,6 +209,7 @@ onMounted(async () => {
     await nextTick()
     if (asset.value.format === 'txt') await loadText()
     else if (asset.value.format === 'pdf') await loadPDF()
+    else if (asset.value.format === 'cbz' || asset.value.format === 'cbr') await loadComic()
     else await loadEPUB()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '公共正文打开失败，请稍后重试'
@@ -183,6 +222,7 @@ onBeforeUnmount(() => {
   if (epubRendition) epubRendition.destroy()
   if (epubBook) epubBook.destroy()
   if (pdfLoadingTask) void pdfLoadingTask.destroy()
+  for (const page of comicPages.value) URL.revokeObjectURL(page.url)
 })
 </script>
 
@@ -239,6 +279,36 @@ onBeforeUnmount(() => {
   background: #ffffff;
 }
 
+.public-reader__comic {
+  display: grid;
+  gap: 1rem;
+  max-height: min(78vh, 60rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: #ffffff;
+  scroll-behavior: smooth;
+}
+
+.public-reader__comic-page {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.public-reader__comic-page img {
+  display: block;
+  max-width: min(100%, 64rem);
+  height: auto;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.public-reader__comic-page figcaption {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
 .public-reader__pdf {
   display: grid;
   place-items: start center;
@@ -254,6 +324,12 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-reader__comic {
+    scroll-behavior: auto;
+  }
 }
 
 </style>

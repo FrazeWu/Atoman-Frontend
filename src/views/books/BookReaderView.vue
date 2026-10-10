@@ -63,6 +63,12 @@
         </div>
       </div>
       <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="books-reader__epub" />
+      <div v-else-if="asset?.format === 'cbz' || asset?.format === 'cbr'" ref="comicViewport" class="books-reader__comic" aria-label="漫画页面">
+        <figure v-for="(page, index) in comicPages" :key="page.name" :ref="element => setComicPageRef(index, element)" class="books-reader__comic-page">
+          <img :src="page.url" :alt="`${asset?.title || '漫画'} 第 ${index + 1} 页`" loading="lazy" />
+          <figcaption class="tabular-nums">{{ index + 1 }}</figcaption>
+        </figure>
+      </div>
       <div v-else class="books-reader__pdf">
         <canvas ref="pdfCanvas" aria-label="PDF 页面" />
       </div>
@@ -87,6 +93,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
+import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
@@ -127,6 +134,8 @@ const readingPercent = ref(0)
 const epubTOC = ref<EpubTOCItem[]>([])
 const pdfPage = ref(1)
 const pdfPageCount = ref(0)
+const comicPage = ref(1)
+const comicPages = ref<Array<ComicPage & { url: string }>>([])
 const isLoading = ref(true)
 const isSaving = ref(false)
 const errorMessage = ref('')
@@ -134,8 +143,10 @@ const textViewport = ref<HTMLElement | null>(null)
 const textPageFrame = ref<HTMLElement | null>(null)
 const textMeasure = ref<HTMLElement | null>(null)
 const epubViewport = ref<HTMLElement | null>(null)
+const comicViewport = ref<HTMLElement | null>(null)
 const pdfCanvas = ref<HTMLCanvasElement | null>(null)
 const textPageElements: Array<HTMLElement | undefined> = []
+const comicPageElements: Array<HTMLElement | undefined> = []
 let pdfDocument: PDFDocumentProxy | null = null
 let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
 let epubBook: EpubBook | null = null
@@ -150,11 +161,12 @@ const pageLabel = computed(() => {
   if (asset.value?.format === 'pdf') return `第 ${pdfPage.value} / ${pdfPageCount.value} 页`
   if (asset.value?.format === 'txt' && textPages.value.length) return `第 ${textPage.value} / ${textPages.value.length} 页`
   if (asset.value?.format === 'epub') return 'EPUB'
+  if ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length) return `第 ${comicPage.value} / ${comicPages.value.length} 页`
   return ''
 })
-const showPagination = computed(() => asset.value?.format === 'pdf' || asset.value?.format === 'epub')
-const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1))
-const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value))
+const showPagination = computed(() => ['pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
+const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
+const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
 const statusLabel = computed(() => {
   if (!asset.value) return ''
   if (asset.value.processing_status === 'private_available' || asset.value.processing_status === 'publication_requested' || asset.value.processing_status === 'pending_review' || asset.value.processing_status === 'rejected') return '可以阅读'
@@ -236,6 +248,16 @@ async function loadEPUB() {
   await epubRendition.display(readingState.value?.epub_cfi || undefined)
 }
 
+async function loadComic() {
+  const format = asset.value?.format
+  if (format !== 'cbz' && format !== 'cbr') return
+  const pages = await extractComicPages(contentBlob.value!, format)
+  comicPages.value = pages.map((page) => ({ ...page, url: URL.createObjectURL(page.blob) }))
+  comicPage.value = Math.min(Math.max(1, Number(readingState.value?.preferences?.comic_page || 1)), comicPages.value.length)
+  await nextTick()
+  scrollToComicPage()
+}
+
 async function loadReader() {
   const assetID = String(route.params.assetId || '')
   if (!assetID) {
@@ -251,6 +273,7 @@ async function loadReader() {
     await nextTick()
     if (asset.value.format === 'txt') await loadText()
     else if (asset.value.format === 'pdf') await loadPDF()
+    else if (asset.value.format === 'cbz' || asset.value.format === 'cbr') await loadComic()
     else await loadEPUB()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '电子书打开失败，请稍后重试'
@@ -374,12 +397,32 @@ function changePdfPage(delta: number) {
 
 function movePrevious() {
   if (asset.value?.format === 'pdf') changePdfPage(-1)
+  else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(-1)
   else moveEpubPage('prev')
 }
 
 function moveNext() {
   if (asset.value?.format === 'pdf') changePdfPage(1)
+  else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(1)
   else moveEpubPage('next')
+}
+
+function setComicPageRef(index: number, element: unknown) {
+  comicPageElements[index] = element instanceof HTMLElement ? element : undefined
+}
+
+function scrollToComicPage() {
+  comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
+  if (readingState.value) {
+    readingState.value.preferences = { ...readingState.value.preferences, comic_page: comicPage.value }
+  }
+  scheduleSaveState()
+}
+
+function changeComicPage(delta: number) {
+  comicPage.value = Math.min(Math.max(1, comicPage.value + delta), comicPages.value.length)
+  scrollToComicPage()
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {
@@ -410,6 +453,7 @@ onBeforeUnmount(() => {
   if (epubRendition) epubRendition.destroy()
   if (epubBook) epubBook.destroy()
   if (pdfLoadingTask) void pdfLoadingTask.destroy()
+  for (const page of comicPages.value) URL.revokeObjectURL(page.url)
 })
 </script>
 
@@ -506,6 +550,42 @@ onBeforeUnmount(() => {
 .books-reader__epub {
   padding: 1rem;
   background: #ffffff;
+}
+
+.books-reader__comic {
+  display: grid;
+  gap: 1rem;
+  max-height: min(78vh, 60rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: #ffffff;
+  scroll-behavior: smooth;
+}
+
+.books-reader__comic-page {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.books-reader__comic-page img {
+  display: block;
+  max-width: min(100%, 64rem);
+  height: auto;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.books-reader__comic-page figcaption {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .books-reader__comic {
+    scroll-behavior: auto;
+  }
 }
 
 .books-reader__pdf {

@@ -1,6 +1,9 @@
 <template>
   <main ref="workContentAnchor" class="a-page-md books-detail">
-    <p v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ errorMessage }}</p>
+    <div v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">
+      <p>{{ errorMessage }}</p>
+      <button type="button" @click="loadWorkPage">重试</button>
+    </div>
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载作品...</p>
     <template v-else-if="work">
       <header class="books-detail__header">
@@ -367,11 +370,14 @@ async function deleteReview() {
   }
 }
 
-onMounted(async () => {
+async function loadWorkPage() {
+  isLoading.value = true
+  errorMessage.value = ''
+  work.value = null
   try {
     work.value = await getPublicBookWork(String(route.params.workId || ''))
   } catch {
-    errorMessage.value = '作品不存在或尚未公开'
+    errorMessage.value = '作品加载失败，请稍后重试'
   } finally {
     isLoading.value = false
   }
@@ -397,7 +403,9 @@ onMounted(async () => {
   } catch {
     // Public reading assets are optional; metadata remains usable when the asset list is unavailable.
   }
-})
+}
+
+onMounted(() => void loadWorkPage())
 </script>
 
 <style scoped>

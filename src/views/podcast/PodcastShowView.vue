@@ -14,6 +14,7 @@ const route = useRoute()
 const channel = ref<Channel | null>(null)
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(true)
+const error = ref('')
 const actionMessage = ref('')
 let latestRequest = 0
 
@@ -26,6 +27,7 @@ async function loadShow(slug: string) {
   channel.value = null
   episodes.value = []
   actionMessage.value = ''
+  error.value = ''
   loading.value = true
 
   try {
@@ -35,6 +37,7 @@ async function loadShow(slug: string) {
     episodes.value = data.episodes
   } catch {
     if (request !== latestRequest) return
+    error.value = '节目加载失败，请重试'
   } finally {
     if (request === latestRequest) loading.value = false
   }
@@ -62,6 +65,9 @@ async function subscribeShow() {
 
 <template>
   <div v-if="loading" class="ps-state">加载中...</div>
+  <PEmpty v-else-if="error" title="节目加载失败" :description="error">
+    <template #action><PButton variant="secondary" @click="route.params.channelSlug && loadShow(String(route.params.channelSlug))">重试</PButton></template>
+  </PEmpty>
   <PEmpty v-else-if="!channel" title="节目不存在" description="该播客节目可能已被移除或地址有误。" />
   <div v-else class="ps-wrap">
     <header class="ps-header">

@@ -486,7 +486,10 @@ async function submitRecommendationFeedback(item: RecommendationItem, action: 'h
     reportError(new Error(`recommendation feedback failed: ${result.status}`), '保存推荐反馈失败:')
     return
   }
-  if (targetType === 'channel' || action === 'less_source') {
+  if (action === 'less_source') {
+    channels.value = channels.value.filter((candidate) => candidate.id !== item.id && candidate.id !== item.source_id)
+    articles.value = articles.value.filter((candidate) => candidate.id !== item.id)
+  } else if (targetType === 'channel') {
     channels.value = channels.value.filter((candidate) => candidate.id !== item.id)
   } else {
     articles.value = articles.value.filter((candidate) => candidate.id !== item.id)

@@ -37,6 +37,7 @@ const selectedId = ref(typeof route.query.task === 'string' ? route.query.task :
 const processingStatuses = ref<Record<string, string>>({})
 const resumeInput = ref<HTMLInputElement | null>(null)
 let pollTimer: ReturnType<typeof setTimeout> | null = null
+let loadGeneration = 0
 
 const mergedImports = computed(() => imports.value.map(task => uploader.uploads.value[task.id]?.task ?? task))
 const groups = computed(() => mergedImports.value.reduce<Record<ImportGroup, VideoImportTask[]>>((result, task) => {
@@ -86,6 +87,7 @@ watch(() => route.query.task, (task) => {
 })
 
 async function loadImports(silent = false) {
+  const generation = ++loadGeneration
   if (!silent) loading.value = true
   error.value = ''
   try {
@@ -99,6 +101,7 @@ async function loadImports(silent = false) {
         // The import record remains useful even while the video endpoint is unavailable.
       }
     }))
+    if (generation !== loadGeneration) return
     processingStatuses.value = nextProcessingStatuses
     imports.value.forEach(uploader.applyTask)
     const selectedTask = mergedImports.value.find(task => task.id === selectedId.value)
@@ -109,10 +112,12 @@ async function loadImports(silent = false) {
     }
     if (!visibleImports.value.some(task => task.id === selectedId.value)) selectedId.value = visibleImports.value[0]?.id ?? ''
   } catch (cause) {
-    if (!silent) error.value = errorMessage(cause, '导入记录加载失败')
+    if (generation === loadGeneration && !silent) error.value = errorMessage(cause, '导入记录加载失败')
   } finally {
-    loading.value = false
-    schedulePoll()
+    if (generation === loadGeneration) {
+      loading.value = false
+      schedulePoll()
+    }
   }
 }
 

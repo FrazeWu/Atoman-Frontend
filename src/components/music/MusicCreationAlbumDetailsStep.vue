@@ -104,6 +104,7 @@ const {
   replaceTrackAudio,
   updateTrackTitle,
   moveTrack,
+  reorderTrackBySequence,
   handleTrackDragStart,
   handleTrackDragOver,
   handleTrackDragLeave,
@@ -166,6 +167,18 @@ function confirmTrackRemoval() {
 
 function cancelTrackRemoval() {
   pendingTrackRemovalId.value = null
+}
+
+function handleTrackSequenceChange(trackId: string, event: Event) {
+  const input = event.target as HTMLInputElement
+  const rawValue = input.value.trim()
+  const parsed = parseInt(rawValue, 10)
+  const track = orderedTracks.value.find((t) => t.id === trackId)
+  if (isNaN(parsed) || parsed < 1) {
+    if (track) input.value = formatSequence(track.sequence)
+    return
+  }
+  reorderTrackBySequence(trackId, parsed)
 }
 
 function openTrackAudioPicker(trackId: string | null = null) {
@@ -782,10 +795,21 @@ watch(
             <span
               class="track-sequence"
               data-testid="album-track-sequence"
-              draggable="true"
-              title="按住拖拽排序"
-              @dragstart="handleTrackDragStart(track.id, $event)"
-            >{{ formatSequence(track.sequence) }}</span>
+            >
+              <span class="track-sequence__text">{{ formatSequence(track.sequence) }}</span>
+              <input
+                :data-testid="`album-track-sequence-input-${track.id}`"
+                class="track-sequence__input"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                :value="formatSequence(track.sequence)"
+                :aria-label="`修改曲目 ${track.title || track.sequence} 序号`"
+                title="修改序号以重排"
+                @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+                @change="handleTrackSequenceChange(track.id, $event)"
+              />
+            </span>
 
             <div class="track-row__input">
               <PInput
@@ -1492,18 +1516,53 @@ watch(
 }
 
 .track-sequence {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--a-color-muted);
-  min-width: 1.6rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
   flex-shrink: 0;
-  text-align: center;
-  user-select: none;
-  cursor: grab;
 }
 
-.track-sequence:active {
-  cursor: grabbing;
+.track-sequence__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.track-sequence__input {
+  width: 2.1rem;
+  height: 1.85rem;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+  font-family: var(--a-font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--a-color-text);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.track-sequence__input:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+}
+
+.track-sequence__input:focus {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-bg);
+  box-shadow: 0 0 0 1px var(--a-color-primary);
 }
 
 .track-row__input {

@@ -173,6 +173,20 @@ export function useMusicAlbumTrackEditor() {
 		}, "sequence");
 	}
 
+	function reorderTrackBySequence(trackId: string, targetSequence: number) {
+		updateTracks((tracks) => {
+			const sourceIndex = tracks.findIndex((t) => t.id === trackId);
+			if (sourceIndex < 0) return tracks;
+			const clampedSequence = Math.max(1, Math.min(tracks.length, targetSequence));
+			const targetIndex = clampedSequence - 1;
+			if (sourceIndex === targetIndex) return tracks;
+			const next = [...tracks];
+			const [sourceTrack] = next.splice(sourceIndex, 1);
+			next.splice(targetIndex, 0, sourceTrack);
+			return next;
+		}, "sequence");
+	}
+
 	function handleTrackDragStart(trackId: string, event: DragEvent) {
 		draggedTrackId.value = trackId;
 		hoverTrackIndex.value = tracksDraft.value.findIndex((t) => t.id === trackId);
@@ -371,6 +385,7 @@ export function useMusicAlbumTrackEditor() {
 		replaceTrackAudio,
 		updateTrackTitle,
 		moveTrack,
+		reorderTrackBySequence,
 		handleTrackDragStart,
 		handleTrackDragOver,
 		handleTrackDragLeave,

@@ -1217,9 +1217,15 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			effectAllowed: "move",
 		};
 
-		// Drag track-3 directly from sequence badge
-		const sequenceBadges = wrapper.findAll('[data-testid="album-track-sequence"]');
-		await sequenceBadges[2].trigger("dragstart", { dataTransfer });
+		// Verify sequence element is not draggable
+		expect(
+			wrapper.get('[data-testid="album-track-sequence"]').attributes("draggable"),
+		).toBeUndefined();
+
+		// Drag track-3 via drag handle
+		await wrapper
+			.get('[data-testid="album-track-drag-handle-track-3"]')
+			.trigger("dragstart", { dataTransfer });
 
 		// Hover over track-1
 		await wrapper
@@ -1248,6 +1254,73 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			"track-2",
 		]);
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3]);
+	});
+
+	it("reorders tracks immediately when a track sequence number is edited", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+
+		flow.draft.tracks = [
+			{ id: "track-1", sequence: 1, title: "Track A" },
+			{ id: "track-2", sequence: 2, title: "Track B" },
+			{ id: "track-3", sequence: 3, title: "Track C" },
+		];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+
+		// Initial sequence input values
+		expect(
+			(wrapper.get('[data-testid="album-track-sequence-input-track-1"]').element as HTMLInputElement).value,
+		).toBe("01");
+		expect(
+			(wrapper.get('[data-testid="album-track-sequence-input-track-2"]').element as HTMLInputElement).value,
+		).toBe("02");
+		expect(
+			(wrapper.get('[data-testid="album-track-sequence-input-track-3"]').element as HTMLInputElement).value,
+		).toBe("03");
+
+		// Change track-3 sequence to 1 -> it should jump to first place
+		const track3Input = wrapper.get('[data-testid="album-track-sequence-input-track-3"]');
+		await track3Input.setValue("1");
+
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
+			"track-3",
+			"track-1",
+			"track-2",
+		]);
+		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3]);
+		expect(
+			wrapper
+				.findAll('[data-testid="album-track-sequence"]')
+				.map((node) => node.text()),
+		).toEqual(["01", "02", "03"]);
+
+		// Change track-3 sequence to 3 -> it should move to the end
+		await wrapper
+			.get('[data-testid="album-track-sequence-input-track-3"]')
+			.setValue("3");
+
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
+			"track-1",
+			"track-2",
+			"track-3",
+		]);
+		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3]);
+
+		// Enter invalid value -> should not change order, reverts to current formatted sequence
+		const track1Input = wrapper.get('[data-testid="album-track-sequence-input-track-1"]');
+		await track1Input.setValue("not-a-number");
+
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
+			"track-1",
+			"track-2",
+			"track-3",
+		]);
+		expect((track1Input.element as HTMLInputElement).value).toBe("01");
 	});
 
 	it("synchronizes displacement visual classes when dragging over track drop slots", async () => {

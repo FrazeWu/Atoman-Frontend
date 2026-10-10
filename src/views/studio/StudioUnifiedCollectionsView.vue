@@ -5,6 +5,7 @@
     <p v-if="loading" class="studio-unified-collections__message">加载中...</p>
     <p v-else-if="error" class="studio-unified-collections__message studio-unified-collections__message--error" role="alert">
       {{ error }}
+      <PButton type="button" variant="secondary" size="sm" @click="loadCollections">重试</PButton>
     </p>
     <PEmpty v-else-if="!studio.currentChannel" kicker="" title="请先创建频道" description="合集需要归属于一个频道。">
       <template #action>
@@ -23,6 +24,7 @@ import { RouterLink } from 'vue-router'
 import StudioCollectionManager from '@/components/studio/StudioCollectionManager.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useStudioStore } from '@/stores/studio'
 
 const studio = useStudioStore()

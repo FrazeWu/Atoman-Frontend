@@ -15,7 +15,10 @@
     </PPageHeader>
 
     <p v-if="loading" class="studio-calendar__message">加载中...</p>
-    <p v-else-if="error" class="studio-calendar__message studio-calendar__message--error" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="studio-calendar__message studio-calendar__message--error" role="alert">
+      <span>{{ error }}</span>
+      <PButton type="button" variant="secondary" size="sm" @click="loadCalendar">重试</PButton>
+    </div>
     <PEmpty v-else-if="!studio.currentChannel" kicker="" title="请先创建频道" />
     <div v-else class="studio-calendar__grid-scroll">
       <div class="studio-calendar__weekdays" aria-hidden="true">

@@ -42,6 +42,7 @@ export function useFeedTimelineController({
   })
   const queryHubGroupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : null)
   const queryHubMembershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : null)
+  const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
   const isHubTimeline = computed(() => Boolean(queryHubType.value))
   const isBookmarksTimeline = computed(() => route.query.view === 'bookmarks')
   const queryPage = computed(() => normalizePage(route.query.page))
@@ -403,6 +404,7 @@ export function useFeedTimelineController({
   })
 
   watch([
+    accountIdentity,
     querySourceId,
     queryGroupId,
     queryHubType,
@@ -413,7 +415,17 @@ export function useFeedTimelineController({
     querySearch,
     queryMergeDuplicates,
     timelineMode,
-  ], async () => {
+  ], async ([identity], previous) => {
+    if (previous && identity !== previous[0]) {
+      timelineRequestSequence += 1
+      timeline.value = []
+      feedStore.timeline = []
+      totalItems.value = 0
+      currentPage.value = 1
+      allRead.value = false
+      timelineUpdatesCursor.value = ''
+      hasNewTimelineContent.value = false
+    }
     mergeDuplicates.value = queryMergeDuplicates.value
     currentPage.value = queryPage.value
     await fetchTimeline()

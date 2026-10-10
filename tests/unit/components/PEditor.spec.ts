@@ -130,10 +130,8 @@ Object.defineProperty(document, "compatMode", {
 });
 
 async function flushCollabSync() {
-	vi.useFakeTimers();
-	await vi.runAllTimersAsync();
+	await new Promise((resolve) => setTimeout(resolve, 20));
 	await nextTick();
-	vi.useRealTimers();
 }
 
 async function mountEditor(props: Record<string, unknown>) {

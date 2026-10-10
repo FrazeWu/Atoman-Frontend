@@ -804,16 +804,19 @@ onBeforeUnmount(() => {
   min-height: 2.25rem;
   padding: 0 0.8rem;
   border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-control);
   color: var(--a-color-fg);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   text-decoration: none;
   font-size: 0.875rem;
+  font-weight: 500;
 }
 .books-upload-link:hover, .books-upload-link:focus-visible { border-color: var(--a-color-primary); color: var(--a-color-primary); }
 
 .books-catalog__header h2 {
   margin: 0;
   font-size: 1.25rem;
+  font-weight: 500;
 }
 
 .books-catalog__search {
@@ -828,7 +831,8 @@ onBeforeUnmount(() => {
   flex: 1;
   height: 2.35rem;
   border: 1px solid var(--a-color-border);
-  background: var(--a-color-surface);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
   padding: 0 0.7rem;
   font: inherit;

@@ -1,6 +1,9 @@
 <template>
   <main class="a-page-md books-detail">
-    <p v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">{{ errorMessage }}</p>
+    <div v-if="errorMessage" class="books-detail__feedback books-detail__feedback--error" role="alert">
+      <p>{{ errorMessage }}</p>
+      <button type="button" @click="loadEdition">重试</button>
+    </div>
     <p v-else-if="isLoading" class="books-detail__feedback" aria-live="polite">正在加载版本...</p>
     <template v-else-if="detail">
       <header class="books-detail__header">
@@ -63,15 +66,19 @@ const facts = computed(() => {
   ]
 })
 
-onMounted(async () => {
+async function loadEdition() {
+  isLoading.value = true
+  errorMessage.value = ''
   try {
     detail.value = await getPublicBookEdition(String(route.params.editionId || ''))
   } catch {
-    errorMessage.value = '版本不存在或尚未公开'
+    errorMessage.value = '版本加载失败，请稍后重试'
   } finally {
     isLoading.value = false
   }
-})
+}
+
+onMounted(() => void loadEdition())
 </script>
 
 <style scoped>

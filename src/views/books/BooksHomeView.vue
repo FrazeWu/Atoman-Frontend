@@ -221,6 +221,8 @@ const route = useRoute()
 const router = useRouter()
 const fileInput = ref<HTMLInputElement | null>(null)
 const imports = ref<BookImportSession[]>([])
+let libraryRequestSequence = 0
+let importsRequestSequence = 0
 const shelves = ref<BookShelfItem[]>([])
 const continueItems = ref<BookContinueReading[]>([])
 const shelfStatusFilter = ref('')
@@ -296,6 +298,7 @@ async function loadLibraryData(statusFilter?: string | number) {
   if (typeof statusFilter === 'string') {
     shelfStatusFilter.value = statusFilter
   }
+  const requestID = ++libraryRequestSequence
   shelfLoading.value = true
   shelfError.value = ''
   try {
@@ -303,13 +306,14 @@ async function loadLibraryData(statusFilter?: string | number) {
       listBookShelf(shelfStatusFilter.value),
       listContinueReading(),
     ])
+    if (requestID !== libraryRequestSequence) return
     shelves.value = shelfResult.items
     shelfTotal.value = shelfResult.total
     continueItems.value = continueResult
   } catch {
-    shelfError.value = '书架加载失败，请稍后重试'
+    if (requestID === libraryRequestSequence) shelfError.value = '书架加载失败，请稍后重试'
   } finally {
-    shelfLoading.value = false
+    if (requestID === libraryRequestSequence) shelfLoading.value = false
   }
 }
 
@@ -360,16 +364,19 @@ async function submitCatalogSearch() {
 
 async function loadImports() {
   if (!isLibrary.value) return
+  const requestID = ++importsRequestSequence
   isLoading.value = true
   errorMessage.value = ''
   try {
-    imports.value = await listBookImports()
+    const result = await listBookImports()
+    if (requestID === importsRequestSequence) imports.value = result
   } catch (error) {
+    if (requestID !== importsRequestSequence) return
     errorMessage.value = error instanceof ApiErrorResponseError && error.status === 401
       ? '登录后才能查看私有书库'
       : '书库加载失败，请稍后重试'
   } finally {
-    isLoading.value = false
+    if (requestID === importsRequestSequence) isLoading.value = false
   }
 }
 

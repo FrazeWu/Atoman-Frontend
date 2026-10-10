@@ -70,7 +70,7 @@ async function searchArtists(nextQuery: string) {
   error.value = ''
 
   try {
-    const result = await listMusicArtists({ q: trimmed, page: 1, page_size: 20 })
+    const result = await listMusicArtists({ q: trimmed, page: 1, page_size: 100 })
     if (requestId !== latestRequestId.value) return
     options.value = result.data
       .map(toContributor)

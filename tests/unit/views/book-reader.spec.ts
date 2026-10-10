@@ -85,4 +85,43 @@ describe('BookReaderView', () => {
     await wrapper.find('[aria-label="上一页"]').trigger('click')
     expect(wrapper.text()).toContain('第 1 / 3 页')
   })
+
+  it('添加、跳转并删除私有书签', async () => {
+    vi.spyOn(booksApi, 'getBookAsset').mockResolvedValue(asset)
+    vi.spyOn(booksApi, 'getBookReadingState').mockResolvedValue(readingState)
+    vi.spyOn(booksApi, 'fetchBookAssetContent').mockResolvedValue(new Blob(['Private text']))
+    const saveState = vi.spyOn(booksApi, 'saveBookReadingState').mockImplementation(async (_assetId, input) => ({
+      ...readingState,
+      ...input,
+      preferences: input.preferences || {},
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/read/:assetId', component: BookReaderView }],
+    })
+    await router.push('/books/read/asset-1')
+    await router.isReady()
+    const wrapper = mount(BookReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    await wrapper.find('[aria-label="添加书签"]').trigger('click')
+    await flushPromises()
+
+    expect(saveState).toHaveBeenCalledWith('asset-1', expect.objectContaining({
+      preferences: expect.objectContaining({
+        bookmarks: [expect.objectContaining({ label: expect.any(String), txt_offset: 0 })],
+      }),
+    }))
+    expect(wrapper.find('.books-reader__bookmarks').exists()).toBe(true)
+
+    await wrapper.find('.books-reader__bookmarks li button').trigger('click')
+    await wrapper.find('.books-reader__bookmarks li button:nth-child(2)').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.books-reader__bookmarks').exists()).toBe(false)
+    expect(saveState).toHaveBeenLastCalledWith('asset-1', expect.objectContaining({
+      preferences: expect.objectContaining({ bookmarks: [] }),
+    }))
+  })
 })

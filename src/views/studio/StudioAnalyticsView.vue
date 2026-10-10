@@ -119,6 +119,7 @@ const range = ref<7 | 28 | 90>(28)
 const filters = reactive<StudioAnalyticsFilters>({ collection_id: '', content_id: '' })
 const loading = ref(true)
 const error = ref('')
+let analyticsRequestSequence = 0
 const trendCanvas = ref<HTMLCanvasElement | null>(null)
 const analytics = computed(() => studio.analytics[module.value])
 const collectionOptions = computed(() => [
@@ -244,7 +245,12 @@ function renderChart() {
 }
 
 async function loadAnalytics() {
-  if (!studio.currentChannel) return
+  const requestSequence = ++analyticsRequestSequence
+  if (!studio.currentChannel) {
+    loading.value = false
+    error.value = '请先创建频道'
+    return
+  }
   loading.value = true
   error.value = ''
   let loaded = false
@@ -252,12 +258,14 @@ async function loadAnalytics() {
     await studio.loadAnalytics(module.value, range.value, filters)
     loaded = true
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '加载失败'
-    destroyChart()
+    if (requestSequence === analyticsRequestSequence) {
+      error.value = cause instanceof Error ? cause.message : '加载失败'
+      destroyChart()
+    }
   } finally {
-    loading.value = false
+    if (requestSequence === analyticsRequestSequence) loading.value = false
   }
-  if (loaded) {
+  if (loaded && requestSequence === analyticsRequestSequence) {
     await nextTick()
     renderChart()
   }

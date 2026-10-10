@@ -25,8 +25,8 @@
     </div>
     <template #footer>
       <div v-if="canEdit" class="a-modal-footer">
-        <PButton data-test="timeline-detail-edit" outline @click="emit('edit')">编辑</PButton>
-        <PButton data-test="timeline-detail-history" outline @click="emit('history')">历史版本</PButton>
+        <PButton data-test="timeline-detail-edit" variant="secondary" @click="emit('edit')">编辑</PButton>
+        <PButton data-test="timeline-detail-history" variant="secondary" @click="emit('history')">历史版本</PButton>
         <PButton data-test="timeline-detail-delete" variant="danger" @click="emit('delete')">删除</PButton>
       </div>
     </template>
@@ -51,9 +51,9 @@ const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 .a-modal-body { padding: 1.5rem; }
 .a-modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--a-color-border-soft); }
 .tl-detail-meta { font-size: 0.8rem; font-weight: 500; color: var(--a-color-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.tl-badge { font-size: 0.65rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0; border: 1px solid var(--a-color-border-soft); padding: 2px 6px; color: var(--a-color-fg); }
+.tl-badge { font-size: 0.65rem; font-weight: 500; letter-spacing: 0; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); padding: 2px 6px; color: var(--a-color-fg); }
 .tl-detail-field { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; }
-.tl-field-label { font-size: 0.65rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0; color: var(--a-color-muted); flex-shrink: 0; }
+.tl-field-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0; color: var(--a-color-muted); flex-shrink: 0; }
 .tl-detail-desc { font-size: 0.9rem; color: var(--a-color-muted); margin-bottom: 1rem; line-height: 1.6; }
 .tl-detail-content { font-size: 0.875rem; line-height: 1.7; margin-bottom: 1rem; }
 .tl-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }

@@ -51,7 +51,7 @@
           @report="openReport"
         />
       </article>
-      <PButton v-if="rootHasMore" class="timeline-proposals__more" outline data-test="load-more-proposals" :disabled="loading" @click="loadMoreRoots">继续加载提案</PButton>
+      <PButton v-if="rootHasMore" class="timeline-proposals__more" variant="secondary" data-test="load-more-proposals" :disabled="loading" @click="loadMoreRoots">继续加载提案</PButton>
     </div>
     <CommentReportDialog v-model="reportVisible" :on-submit="submitReport" />
   </section>
@@ -307,13 +307,13 @@ function displayValue(changed: unknown) { return Array.isArray(changed) ? change
 .timeline-proposals__composer, .timeline-proposals__list { display: grid; gap: 0.75rem; }
 .timeline-proposals__change { display: grid; grid-template-columns: minmax(9rem, 0.4fr) minmax(0, 1fr); gap: 0.75rem; }
 .timeline-proposals__coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.timeline-proposals label { display: grid; gap: 0.35rem; font-size: var(--a-text-sm); font-weight: 700; }
+.timeline-proposals label { display: grid; gap: 0.35rem; font-size: var(--a-text-sm); font-weight: 500; }
 .timeline-proposals__item { display: grid; gap: 0.55rem; }
-.timeline-proposals__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.65rem; border: 1px solid var(--a-color-border); background: var(--a-color-surface); font-size: var(--a-text-sm); }
-.timeline-proposals__status { font-weight: 800; }
+.timeline-proposals__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.65rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); font-size: var(--a-text-sm); }
+.timeline-proposals__status { font-weight: 600; }
 .timeline-proposals__actions { display: flex; gap: 0.5rem; }
 .timeline-proposals__actions button { min-height: 36px; }
 .timeline-proposals__more { justify-self: start; }
-.timeline-proposals__error { margin: 0; color: var(--a-color-accent-destructive); }
+.timeline-proposals__error { margin: 0; color: var(--a-color-danger); }
 @media (max-width: 560px) { .timeline-proposals__change { grid-template-columns: 1fr; } }
 </style>

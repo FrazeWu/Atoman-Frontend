@@ -70,14 +70,13 @@ const updateCategory = (value: string) => emit('update:category', value)
   padding: 1rem 1.15rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
 }
 
 .filter-label {
   font-size: 0.72rem;
-  font-weight: 550;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -96,14 +95,14 @@ const updateCategory = (value: string) => emit('update:category', value)
 
 .tl-toolbar-batch-count {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
 .tl-mode-switch {
   display: inline-flex;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   padding: 2px;
   overflow: hidden;
@@ -111,13 +110,13 @@ const updateCategory = (value: string) => emit('update:category', value)
 
 .tl-mode-btn {
   border: none;
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
   padding: 0.4rem 0.85rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -129,12 +128,13 @@ const updateCategory = (value: string) => emit('update:category', value)
 .tl-mode-btn.tl-mode-btn-active {
   background: var(--a-color-text);
   color: var(--a-color-bg);
+  font-weight: 600;
 }
 
 .tl-action-btn {
   border-color: var(--a-color-border-soft);
   font-size: 0.72rem;
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .tl-action-btn-secondary {

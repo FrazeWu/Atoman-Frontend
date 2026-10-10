@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { IconExternalLink as ExternalLink, IconPencil as Pencil, IconRefresh as RefreshCw, IconTrash as Trash2, IconUpload as Upload, IconCircleX as XCircle } from '@tabler/icons-vue'
 
@@ -77,6 +77,13 @@ function statusDescription(task: VideoImportTask) {
 
 onMounted(() => void loadImports())
 onUnmounted(() => { if (pollTimer) clearTimeout(pollTimer) })
+
+watch(() => route.query.task, (task) => {
+  const nextID = typeof task === 'string' ? task : ''
+  selectedId.value = nextID
+  const selectedTask = mergedImports.value.find(item => item.id === nextID)
+  if (selectedTask) activeGroup.value = groupFor(selectedTask.status)
+})
 
 async function loadImports(silent = false) {
   if (!silent) loading.value = true

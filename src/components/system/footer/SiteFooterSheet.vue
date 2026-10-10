@@ -123,7 +123,7 @@ async function copyEmail() {
           <a
             class="footer-sheet-action"
             data-footer-action="message-owner"
-            href="/inbox?tab=dm&amp;user=fazong"
+            href="/inbox?tab=dm"
           >
             <MessageCircle :size="16" aria-hidden="true" />
             发起私信

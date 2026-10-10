@@ -1,7 +1,7 @@
 <template>
   <section class="setting-management-overview" aria-labelledby="management-overview-title">
     <div class="setting-management-overview__heading">
-      <p class="settings-center__kicker">MODULES</p>
+      <p class="settings-center__kicker">模块开关</p>
       <h2 id="management-overview-title">模块开关</h2>
       <p>控制各模块是否在站点开放，详细管理请到下方模块管理区。</p>
     </div>

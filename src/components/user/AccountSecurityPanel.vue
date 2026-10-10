@@ -405,7 +405,7 @@ onBeforeUnmount(() => {
 
 .security-message--error,
 .security-state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .security-state {

@@ -101,7 +101,7 @@
                 <component :is="moduleIcons[selectedModule]" :size="18" stroke-width="1.8" />
               </span>
               <div>
-                <p class="settings-center__kicker">{{ moduleKeyLabel(selectedModule) }}</p>
+                <p class="settings-center__kicker">模块配置</p>
                 <h2 :id="detailTitleId">{{ selectedModuleTitle }}</h2>
                 <p>{{ moduleDescriptions[selectedModule] }}</p>
               </div>

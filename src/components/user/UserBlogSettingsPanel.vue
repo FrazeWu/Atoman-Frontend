@@ -552,6 +552,6 @@ onMounted(async () => {
 }
 
 .profile-settings-state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 </style>

@@ -79,6 +79,14 @@ describe('P action components', () => {
     expect(wrapper.attributes('href')).toBeUndefined()
   })
 
+  it('does not emit external URLs containing backslashes', () => {
+    const wrapper = mount(PLink, {
+      props: { href: '//evil.com\\path', external: true, label: '外链' },
+    })
+
+    expect(wrapper.attributes('href')).toBeUndefined()
+  })
+
   it('renders PReject as a destructive action and still emits click', async () => {
     const wrapper = mount(PReject, { props: { label: 'Reject' } })
 

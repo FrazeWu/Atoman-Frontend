@@ -52,18 +52,23 @@ const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const albumPreview = ref<MusicAlbumMergePreview | null>(null)
+let searchRequestID = 0
 
 async function search() {
+  const requestID = ++searchRequestID
+  const searchQuery = query.value.trim()
   errorMessage.value = ''
   loading.value = true
   try {
     if (entity.value === 'artist') {
-      const response = await listMusicArtists({ q: query.value, page: 1, page_size: 20 })
+      const response = await listMusicArtists({ q: searchQuery, page: 1, page_size: 100 })
+      if (requestID !== searchRequestID) return
       targets.value = response.data
         .filter(item => item.id !== sourceId.value && item.entry_status !== 'closed')
         .map(item => ({ id: item.id, label: item.name, meta: item.legal_name || '艺术家' }))
     } else {
-      const response = await listMusicAlbums({ q: query.value, page: 1, page_size: 20 })
+      const response = await listMusicAlbums({ q: searchQuery, page: 1, page_size: 100 })
+      if (requestID !== searchRequestID) return
       targets.value = response.data
         .filter(item => item.id !== sourceId.value && item.entry_status !== 'closed')
         .map(item => ({
@@ -73,9 +78,9 @@ async function search() {
         }))
     }
   } catch {
-    errorMessage.value = '搜索失败，请重试'
+    if (requestID === searchRequestID) errorMessage.value = '搜索失败，请重试'
   } finally {
-    loading.value = false
+    if (requestID === searchRequestID) loading.value = false
   }
 }
 

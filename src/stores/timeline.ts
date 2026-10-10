@@ -20,6 +20,7 @@ export const useTimelineStore = defineStore('timeline', () => {
   const personsLoading = ref(false)
   const personsError = ref<string | null>(null)
   let personsRequestSequence = 0
+  let personRequestSequence = 0
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -256,19 +257,20 @@ export const useTimelineStore = defineStore('timeline', () => {
   }
 
   const fetchPerson = async (id: string) => {
+    const requestSequence = ++personRequestSequence
     loading.value = true
     error.value = null
     try {
       const res = await apiRequestResult(`${api.url}/timeline/persons/${id}`)
       if (res.ok) {
         const data = res.data
-        currentPerson.value = data.data
+        if (requestSequence === personRequestSequence) currentPerson.value = data.data
       }
     } catch (e) {
-      error.value = 'Failed to fetch person'
+      if (requestSequence === personRequestSequence) error.value = 'Failed to fetch person'
       reportError(e)
     } finally {
-      loading.value = false
+      if (requestSequence === personRequestSequence) loading.value = false
     }
   }
 

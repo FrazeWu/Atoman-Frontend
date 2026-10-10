@@ -1,6 +1,9 @@
 <template>
   <div class="forum-group-panel">
-	<p v-if="error" class="forum-group-panel__notice forum-group-panel__notice--error" role="alert">{{ error }}</p>
+	<div v-if="error" class="forum-group-panel__notice forum-group-panel__notice--error" role="alert">
+	  <span>{{ error }}</span>
+	  <PButton size="sm" variant="secondary" @click="loadAll">重试</PButton>
+	</div>
 	<p v-else-if="message" class="forum-group-panel__notice" role="status">{{ message }}</p>
 
 	<div class="forum-group-panel__layout">

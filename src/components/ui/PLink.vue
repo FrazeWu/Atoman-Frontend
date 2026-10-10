@@ -44,7 +44,7 @@ const emit = defineEmits<{
 const isInternalHref = (value: string) => {
   const href = value.trim()
   if (!href) return false
-  if (href.startsWith('/') || href.startsWith('#') || href.startsWith('./') || href.startsWith('../')) return true
+  if ((href.startsWith('/') && !href.startsWith('//')) || href.startsWith('#') || href.startsWith('./') || href.startsWith('../')) return true
   if (typeof window === 'undefined') return false
   try {
     return new URL(href, window.location.origin).origin === window.location.origin

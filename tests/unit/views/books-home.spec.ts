@@ -39,7 +39,7 @@ describe('BooksHomeView', () => {
     expect(wrapper.text()).toContain('Private PDF')
     expect(wrapper.text()).toContain('等待扫描')
     expect(wrapper.find('[aria-label="删除导入"]').exists()).toBe(true)
-    expect(wrapper.find('input[type="file"]').attributes('accept')).toBe('.epub,.pdf,application/epub+zip,application/pdf')
+    expect(wrapper.find('input[type="file"]').attributes('accept')).toBe('.epub,.pdf,.txt,.cbz,.cbr,.mobi,.azw3,application/epub+zip,application/pdf,text/plain,application/vnd.comicbook+zip,application/vnd.rar,application/x-mobipocket-ebook,application/vnd.amazon.mobi8-ebook')
     wrapper.unmount()
   })
 

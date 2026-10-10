@@ -17,6 +17,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
+import { safeExternalUrl } from '@/utils/safeExternalUrl'
 
 const props = withDefaults(defineProps<{
   label?: string
@@ -61,12 +62,7 @@ const componentType = computed(() => (isRouterLink.value ? RouterLink : 'a'))
 const resolvedTo = computed(() => props.to ?? props.href)
 const safeHref = computed(() => {
   if (!props.href || !isAnchor.value) return props.href
-  try {
-    const protocol = new URL(props.href, typeof window === 'undefined' ? 'http://localhost' : window.location.origin).protocol
-    return protocol === 'http:' || protocol === 'https:' ? props.href : undefined
-  } catch {
-    return undefined
-  }
+  return safeExternalUrl(props.href)
 })
 const resolvedTarget = computed(() => (isExternal.value ? (props.target ?? '_blank') : props.target))
 const computedRel = computed(() => {

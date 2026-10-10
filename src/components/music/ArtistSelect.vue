@@ -68,6 +68,8 @@ const wrapRef = ref<HTMLElement | null>(null)
 const query = ref('')
 const open = ref(false)
 const allArtists = ref<Artist[]>([])
+let artistRequestID = 0
+let artistSearchTimer: ReturnType<typeof setTimeout> | undefined
 
 const selected = computed(() => props.modelValue)
 
@@ -126,9 +128,11 @@ const toArtistOption = (artist: MusicArtistListItem): Artist => ({
   updated_at: artist.updated_at,
 })
 
-const fetchArtists = async () => {
+const fetchArtists = async (search = '') => {
+  const requestID = ++artistRequestID
   try {
-    const result = await listMusicArtists({ page: 1, page_size: 100 })
+    const result = await listMusicArtists({ page: 1, page_size: 100, ...(search ? { q: search } : {}) })
+    if (requestID !== artistRequestID) return
     allArtists.value = dedupeArtistsByName(
       result.data
         .filter((artist) => artist.entry_status !== 'draft')
@@ -142,11 +146,19 @@ const clickOutside = (e: MouseEvent) => {
 }
 
 onMounted(() => {
-  fetchArtists()
+  void fetchArtists()
   document.addEventListener('click', clickOutside)
 })
-onUnmounted(() => document.removeEventListener('click', clickOutside))
-watch(query, (v) => { if (v) open.value = true })
+onUnmounted(() => {
+  if (artistSearchTimer) clearTimeout(artistSearchTimer)
+  document.removeEventListener('click', clickOutside)
+})
+watch(query, (v) => {
+  if (v) open.value = true
+  if (artistSearchTimer) clearTimeout(artistSearchTimer)
+  const search = v.trim()
+  if (search) artistSearchTimer = setTimeout(() => { void fetchArtists(search) }, 250)
+})
 </script>
 
 <style scoped>

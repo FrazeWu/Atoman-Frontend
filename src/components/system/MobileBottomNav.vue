@@ -74,7 +74,10 @@ const isTabActive = (tab: MobilePrimaryTab) => {
       : tab.module === 'video'
         ? '/videos'
         : `/${tab.module}`
-  return homeKeys.has(tab.key) && currentPath === homePath
+  return homeKeys.has(tab.key) && (
+    currentPath === homePath
+    || (tab.module === 'feed' && tab.key === 'discover' && currentPath === '/feed/explore')
+  )
 }
 
 const onTabClick = async (tab: MobilePrimaryTab, event: MouseEvent) => {

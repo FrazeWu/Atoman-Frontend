@@ -7,7 +7,10 @@
     </PPageHeader>
 
     <p v-if="loading" class="studio-goals__message">加载中...</p>
-    <p v-else-if="error" class="studio-goals__message studio-goals__message--error" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="studio-goals__message studio-goals__message--error" role="alert">
+      <span>{{ error }}</span>
+      <PButton type="button" variant="secondary" size="sm" @click="load">重试</PButton>
+    </div>
     <template v-else>
       <p v-if="notice" class="studio-goals__notice" role="status">{{ notice }}</p>
 

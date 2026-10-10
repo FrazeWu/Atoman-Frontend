@@ -26,6 +26,10 @@ export const mobileInitialRoutes: RouteRecordRaw[] = [
 		meta: { authLayout: true, guestOnly: true },
 	},
 	{
+		path: "/__disabled__",
+		component: () => import("@/views/system/ModuleUnavailableView.vue"),
+	},
+	{
 		path: "/:pathMatch(.*)*",
 		component: () => import("@/views/system/NotFoundView.vue"),
 	},

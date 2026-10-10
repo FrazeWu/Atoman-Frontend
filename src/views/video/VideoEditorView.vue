@@ -263,6 +263,7 @@ async function onCoverFileChange(e: Event) {
     errorMsg.value = errorMessage(err, '封面上传失败')
   } finally {
     coverUploading.value = false
+    ;(e.target as HTMLInputElement).value = ''
   }
 }
 
@@ -304,6 +305,7 @@ async function onSubtitleFileChange(event: Event) {
   if (!file) return
   try { form.value.subtitle_url = (await uploadVideoSubtitle(file, authStore.token ?? undefined)).url }
   catch (cause) { errorMsg.value = errorMessage(cause, '字幕上传失败') }
+  finally { (event.target as HTMLInputElement).value = '' }
 }
 
 function addChapter() { form.value.chapters.push({ title: '', start_sec: 0 }) }

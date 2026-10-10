@@ -577,9 +577,26 @@ export const getPublishedBookAsset = (assetId: string) =>
   apiGet<BookPublishedAsset>(catalogUrl(`/assets/${encodeURIComponent(assetId)}`))
 
 export const fetchPublishedBookAssetContent = async (assetId: string): Promise<Blob> => {
-  const response = await apiRequest(catalogUrl(`/assets/${encodeURIComponent(assetId)}/content`), { headers: { Accept: '*/*' } })
-  if (!response.ok) throw new Error(`无法读取公共电子书内容 (${response.status})`)
-  return response.blob()
+  const url = catalogUrl(`/assets/${encodeURIComponent(assetId)}/content`)
+  const cacheName = 'atoman-public-books-v1'
+  const cacheStorage = typeof caches !== 'undefined' ? caches : null
+  const cached = cacheStorage ? await cacheStorage.match(url) : undefined
+  try {
+    const response = await apiRequest(url, { headers: { Accept: '*/*' } })
+    if (!response.ok) throw new Error(`无法读取公共电子书内容 (${response.status})`)
+    if (cacheStorage) {
+      try {
+        const cache = await cacheStorage.open(cacheName)
+        await cache.put(url, response.clone())
+      } catch {
+        // Offline cache is best-effort.
+      }
+    }
+    return response.blob()
+  } catch (error) {
+    if (cached) return cached.blob()
+    throw error
+  }
 }
 
 export const reportPublishedBookAsset = (assetId: string, reason: string) =>

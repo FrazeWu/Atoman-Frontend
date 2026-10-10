@@ -383,6 +383,7 @@ const initMap = () => {
       locForm.value.longitude = parseFloat(lng.toFixed(6))
       lastPickedCoords.value = { lat, lng }
       pickingCoords.value = false
+      showLocationForm.value = true
       return
     }
 
@@ -444,11 +445,12 @@ const focusLocation = (loc: PersonLocation) => {
 const startPickCoords = () => {
   if (!showLocationForm.value) return
   pickingCoords.value = true
-  // Briefly close modal focus so map is clickable — modal stays open but map click is captured first
+  showLocationForm.value = false
 }
 
 const cancelPickCoords = () => {
   pickingCoords.value = false
+  showLocationForm.value = true
 }
 
 // Watch for location changes to re-render map

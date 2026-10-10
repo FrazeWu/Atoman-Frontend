@@ -49,7 +49,7 @@
       </PEmpty>
 
       <PEmpty v-if="!loading && !errorMessage && !items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。">
-        <template #action><RouterLink to="/feed" class="a-btn a-btn--primary">去发现文章</RouterLink></template>
+        <template #action><PButton variant="primary" @click="router.push('/feed')">去发现文章</PButton></template>
       </PEmpty>
 
     <div v-if="!loading && !errorMessage && items.length" class="feed-timeline">

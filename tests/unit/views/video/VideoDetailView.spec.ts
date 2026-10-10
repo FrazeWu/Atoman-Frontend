@@ -762,7 +762,7 @@ describe("VideoDetailView shared interactions", () => {
 		expect(wrapper.text()).toContain("链接已复制");
 	});
 
-	it("copies the video UUID from the detail actions", async () => {
+	it("copies the video ID from the detail actions", async () => {
 		const writeText = vi.fn().mockResolvedValue(undefined);
 		Object.defineProperty(navigator, "clipboard", {
 			configurable: true,

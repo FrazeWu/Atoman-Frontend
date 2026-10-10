@@ -26,6 +26,7 @@ describe("studio routes", () => {
 				"/studio/manage",
 				"/studio/manage/channel",
 				"/studio/manage/calendar",
+				"/studio/manage/calendar/:module(blog|podcast|video)/:id/edit",
 				"/studio/manage/goals",
 				"/studio/manage/collections",
 				"/studio/manage/collections/:id",
@@ -39,6 +40,15 @@ describe("studio routes", () => {
 				"/studio/:module(blog|podcast|video)/:id/edit",
 			]),
 		);
+	});
+
+	it("keeps the management calendar mounted while opening an editor overlay", () => {
+		const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() });
+		const calendar = router.resolve("/studio/manage/calendar");
+		const editor = router.resolve("/studio/manage/calendar/blog/post-1/edit");
+		expect(editor.name).toBe("studio-manage-calendar-edit");
+		expect(editor.matched[2]?.components?.default).toBe(calendar.matched[2]?.components?.default);
+		expect(editor.matched[2]?.components?.overlay).toBeDefined();
 	});
 
 	it("redirects channel and module collection legacy URLs into management", () => {

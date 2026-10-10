@@ -11,40 +11,50 @@
       </PButton>
     </header>
 
-    <form v-if="editing" class="studio-collections__form" @submit.prevent="saveCollection">
-      <PInput
-        v-model="draft.name"
-        data-testid="collection-name"
-        label="名称"
-        placeholder="合集名称"
-        :error="nameError"
-      />
-      <PTextarea
-        v-model="draft.description"
-        data-testid="collection-description"
-        label="描述"
-        placeholder="合集描述"
-        :rows="3"
-      />
-      <PInput
-        v-model="draft.cover_url"
-        data-testid="collection-cover-url"
-        label="封面地址"
-        placeholder="https://..."
-      />
-      <img
-        v-if="draft.cover_url.trim() && !coverPreviewFailed"
-        class="studio-collections__cover studio-collections__cover--preview"
-        :src="draft.cover_url.trim()"
-        alt="合集封面预览"
-        @error="coverPreviewFailed = true"
-      />
-      <p v-else-if="draft.cover_url.trim()" class="studio-collections__cover-error">无法加载该封面地址</p>
-      <div class="studio-collections__form-actions">
-        <PButton data-testid="cancel-collection" type="button" variant="ghost" size="sm" @click="cancelEdit">取消</PButton>
-        <PButton data-testid="save-collection" type="button" size="sm" :loading="saving" @click="saveCollection">保存</PButton>
-      </div>
-    </form>
+    <StudioManagementSheet v-if="editing" :title="editingID ? '编辑合集' : '新建合集'" @close="cancelEdit">
+      <form id="studio-collection-form" class="studio-collections__form" @submit.prevent="saveCollection">
+        <PInput
+          v-model="draft.name"
+          data-testid="collection-name"
+          label="名称"
+          placeholder="合集名称"
+          :error="nameError"
+        />
+        <PTextarea
+          v-model="draft.description"
+          data-testid="collection-description"
+          label="描述"
+          placeholder="合集描述"
+          :rows="3"
+        />
+        <div class="studio-collections__cover-field">
+          <span class="studio-collections__field-label">封面</span>
+          <PostCoverField
+            :cover-url="coverPreviewUrl"
+            :uploading="coverUploading"
+            :error="coverUploadError"
+            @trigger-upload="triggerCoverUpload"
+            @remove-cover="removeCover"
+          />
+          <input
+            ref="coverInput"
+            class="studio-collections__cover-input"
+            data-testid="collection-cover-input"
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            :disabled="coverUploading"
+            @change="handleCoverUpload"
+          />
+        </div>
+      </form>
+      <p v-if="error" class="studio-collections__error" role="alert">{{ error }}</p>
+      <template #footer>
+        <div class="studio-collections__form-actions">
+          <PButton data-testid="cancel-collection" type="button" variant="ghost" size="sm" @click="cancelEdit">取消</PButton>
+          <PButton data-testid="save-collection" type="button" form="studio-collection-form" size="sm" :loading="saving" @click="saveCollection">保存</PButton>
+        </div>
+      </template>
+    </StudioManagementSheet>
 
     <p v-if="error" class="studio-collections__error" role="alert">{{ error }}</p>
 
@@ -107,20 +117,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
 
+import { apiRequestResult } from '@/api/client'
+import PostCoverField from '@/components/blog/PostCoverField.vue'
+import StudioManagementSheet from '@/components/studio/StudioManagementSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import { useApi } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioCollection } from '@/types'
 
 const emit = defineEmits<{ changed: [] }>()
 const studio = useStudioStore()
+const apiClient = useApi()
+const authStore = useAuthStore()
 const editing = ref(false)
 const editingID = ref('')
 const saving = ref(false)
@@ -133,15 +150,15 @@ const deleteModalOpen = computed({
   set: value => { if (!value) pendingDelete.value = null },
 })
 const draft = reactive({ name: '', description: '', cover_url: '' })
-const coverPreviewFailed = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+const coverPreviewUrl = ref('')
+const coverObjectUrl = ref('')
+const coverUploading = ref(false)
+const coverUploadError = ref('')
 const failedCollectionCovers = ref(new Set<string>())
 
 watch(editing, () => {
   if (!editing.value) pendingDelete.value = null
-})
-
-watch(() => draft.cover_url, () => {
-  coverPreviewFailed.value = false
 })
 
 watch(() => studio.currentChannel?.id, () => {
@@ -156,7 +173,8 @@ function resetDraft() {
   draft.name = ''
   draft.description = ''
   draft.cover_url = ''
-  coverPreviewFailed.value = false
+  clearCoverPreview()
+  coverUploadError.value = ''
   nameError.value = ''
 }
 
@@ -172,7 +190,8 @@ function startEdit(collection: StudioCollection) {
   draft.name = collection.name
   draft.description = collection.description || ''
   draft.cover_url = collection.cover_url || ''
-  coverPreviewFailed.value = false
+  setCoverPreview(draft.cover_url)
+  coverUploadError.value = ''
   nameError.value = ''
   error.value = ''
 }
@@ -181,11 +200,67 @@ function cancelEdit() {
   resetDraft()
 }
 
+function clearCoverPreview() {
+  if (coverObjectUrl.value) URL.revokeObjectURL(coverObjectUrl.value)
+  coverObjectUrl.value = ''
+  coverPreviewUrl.value = ''
+}
+
+function setCoverPreview(url: string, objectUrl = false) {
+  if (coverObjectUrl.value) URL.revokeObjectURL(coverObjectUrl.value)
+  coverObjectUrl.value = objectUrl ? url : ''
+  coverPreviewUrl.value = url
+}
+
+function triggerCoverUpload() {
+  coverInput.value?.click()
+}
+
+async function handleCoverUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+  if (!allowedTypes.has(file.type)) { coverUploadError.value = '只支持 JPEG、PNG、GIF、WebP 格式的图片'; return }
+  if (file.size > 5 * 1024 * 1024) { coverUploadError.value = '图片不能超过 5MB'; return }
+  if (!authStore.isAuthenticated) { coverUploadError.value = '请先登录后再上传封面'; return }
+  const previousUrl = draft.cover_url
+  setCoverPreview(URL.createObjectURL(file), true)
+  coverUploading.value = true
+  coverUploadError.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const response = await apiRequestResult(apiClient.blog.uploadImage, {
+      method: 'POST',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : undefined,
+      body: formData,
+    })
+    const payload = await Promise.resolve(response.data).catch(() => null) as { url?: unknown; error?: unknown } | null
+    if (!response.ok) throw new Error(typeof payload?.error === 'string' ? payload.error : '封面上传失败')
+    if (typeof payload?.url !== 'string' || !payload.url) throw new Error('服务器没有返回封面地址')
+    draft.cover_url = payload.url
+    setCoverPreview(payload.url)
+  } catch (cause) {
+    draft.cover_url = previousUrl
+    setCoverPreview(previousUrl)
+    coverUploadError.value = cause instanceof Error ? cause.message : '封面上传失败'
+  } finally { coverUploading.value = false }
+}
+
+function removeCover() {
+  draft.cover_url = ''
+  clearCoverPreview()
+  coverUploadError.value = ''
+}
+
 function markCollectionCoverFailed(url: string) {
   failedCollectionCovers.value = new Set([...failedCollectionCovers.value, url])
 }
 
 async function saveCollection() {
+  if (coverUploading.value) return
   const name = draft.name.trim()
   if (!name) {
     nameError.value = '请输入合集名称'
@@ -221,6 +296,8 @@ async function deleteCollection() {
     deleting.value = false
   }
 }
+
+onBeforeUnmount(clearCoverPreview)
 </script>
 
 <style scoped>
@@ -231,6 +308,9 @@ async function deleteCollection() {
 .studio-collections__heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 .studio-collections__form { display: grid; gap: 0.875rem; padding: 1.25rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .studio-collections__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.studio-collections__cover-field { display: grid; gap: 0.5rem; }
+.studio-collections__field-label { color: var(--a-color-muted); font-size: 0.8rem; font-weight: 600; }
+.studio-collections__cover-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .studio-collections__error, .studio-collections__confirm { margin: 0; }
 .studio-collections__error { color: var(--a-color-danger); }
 .studio-collections__list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }

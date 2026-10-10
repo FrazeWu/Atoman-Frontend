@@ -8,49 +8,57 @@
       </template>
     </PPageHeader>
 
-    <form v-if="editing" class="studio-channels__form" @submit.prevent="saveChannel">
-      <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
-      <div class="studio-channels__readonly-field">
-        <span class="studio-channels__field-label">UUID</span>
-        <code data-testid="channel-uuid">{{ editingID || '保存后生成' }}</code>
-        <p>系统生成的频道唯一标识，不可修改。</p>
-      </div>
-      <PTextarea v-model="draft.description" label="简介" placeholder="频道简介" :rows="3" />
-      <div class="studio-channels__cover-field">
-        <span class="studio-channels__field-label">封面</span>
-        <PostCoverField
-          :cover-url="coverPreviewUrl"
-          :uploading="coverUploading"
-          :error="coverUploadError"
-          @trigger-upload="triggerCoverUpload"
-          @remove-cover="removeCover"
-        />
-        <input
-          ref="coverInput"
-          class="studio-channels__cover-input"
-          data-testid="channel-cover-input"
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          :disabled="coverUploading"
-          @change="handleCoverUpload"
-        />
-      </div>
-      <div class="studio-channels__form-actions">
-        <PButton type="button" variant="ghost" @click="cancelEdit">取消</PButton>
-        <PButton data-testid="save-channel" type="button" :loading="saving" @click="saveChannel">保存</PButton>
-      </div>
-    </form>
+    <StudioManagementSheet v-if="editing" :title="editingID ? '编辑频道' : '新建频道'" @close="cancelEdit">
+      <form id="studio-channel-form" class="studio-channels__form" @submit.prevent="saveChannel">
+        <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
+        <div class="studio-channels__readonly-field">
+          <span class="studio-channels__field-label">UUID</span>
+          <div class="studio-channels__uuid-row">
+            <code data-testid="channel-uuid">{{ editingID || '保存后生成' }}</code>
+            <PButton v-if="editingID" data-testid="copy-channel-uuid" type="button" variant="ghost" size="sm" @click="copyUUID">{{ copied ? '已复制' : '复制 UUID' }}</PButton>
+          </div>
+          <p>系统生成的频道唯一标识，不可修改。</p>
+        </div>
+        <PTextarea v-model="draft.description" label="简介" placeholder="频道简介" :rows="3" />
+        <div class="studio-channels__cover-field">
+          <span class="studio-channels__field-label">封面</span>
+          <PostCoverField
+            :cover-url="coverPreviewUrl"
+            :uploading="coverUploading"
+            :error="coverUploadError"
+            @trigger-upload="triggerCoverUpload"
+            @remove-cover="removeCover"
+          />
+          <input
+            ref="coverInput"
+            class="studio-channels__cover-input"
+            data-testid="channel-cover-input"
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            :disabled="coverUploading"
+            @change="handleCoverUpload"
+          />
+        </div>
+      </form>
+      <p v-if="error" class="studio-channels__error" role="alert">{{ error }}</p>
+      <template #footer>
+        <div class="studio-channels__form-actions">
+          <PButton type="button" variant="ghost" @click="cancelEdit">取消</PButton>
+          <PButton data-testid="save-channel" type="button" form="studio-channel-form" :loading="saving" @click="saveChannel">保存</PButton>
+        </div>
+      </template>
+    </StudioManagementSheet>
 
-    <p v-if="error" class="studio-channels__error" role="alert">{{ error }}</p>
+    <p v-if="error && !editing" class="studio-channels__error" role="alert">{{ error }}</p>
     <PEmpty v-if="!studio.channels.length && !editing" kicker="" title="暂无频道" />
     <ul v-else-if="studio.channels.length" class="studio-channels__list">
       <li v-for="channel in studio.channels" :key="channel.id">
         <div class="studio-channels__identity">
           <img v-if="channel.cover_url" :src="channel.cover_url" :alt="`${channel.name} 封面`" class="studio-channels__cover-thumb" loading="lazy" />
           <strong>{{ channel.name }}</strong>
-          <span v-if="channel.id === studio.currentChannel?.id">当前频道</span>
+          <span :class="{ 'is-active': channel.id === studio.currentChannel?.id }">{{ channelStatus(channel) }}</span>
           <p v-if="channel.description">{{ channel.description }}</p>
-          <small>UUID：{{ channel.id }}</small>
+          <small>文章 {{ channelContentCount(channel) }} · 更新于 {{ formatUpdatedAt(channel) }} · UUID：{{ channel.id }}</small>
         </div>
         <div class="studio-channels__actions">
           <PButton
@@ -99,6 +107,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { apiDeleteJson, apiPatchJson, apiPostJson, apiRequestResult } from '@/api/client'
 import PostCoverField from '@/components/blog/PostCoverField.vue'
+import StudioManagementSheet from '@/components/studio/StudioManagementSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -129,6 +138,7 @@ const coverPreviewUrl = ref('')
 const coverObjectUrl = ref('')
 const coverUploading = ref(false)
 const coverUploadError = ref('')
+const copied = ref(false)
 const draft = reactive({ name: '', description: '', cover_url: '' })
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
@@ -144,6 +154,7 @@ function resetDraft() {
   draft.cover_url = ''
   nameError.value = ''
   coverUploadError.value = ''
+  copied.value = false
 }
 
 function clearCoverPreview() {
@@ -162,6 +173,7 @@ function startCreate() {
   resetDraft()
   error.value = ''
   editing.value = true
+  copied.value = false
 }
 
 function startEdit(channel: StudioChannel) {
@@ -174,10 +186,34 @@ function startEdit(channel: StudioChannel) {
   coverUploadError.value = ''
   nameError.value = ''
   error.value = ''
+  copied.value = false
 }
 
 function cancelEdit() {
   resetDraft()
+}
+
+async function copyUUID() {
+  if (!editingID.value || !navigator.clipboard?.writeText) return
+  await navigator.clipboard.writeText(editingID.value)
+  copied.value = true
+  window.setTimeout(() => { copied.value = false }, 1600)
+}
+
+function channelContentCount(channel: StudioChannel) {
+  const value = (channel as StudioChannel & { article_count?: number; content_count?: number }).article_count
+    ?? (channel as StudioChannel & { content_count?: number }).content_count
+  return typeof value === 'number' ? value : 0
+}
+
+function channelStatus(channel: StudioChannel) {
+  if (channel.id === studio.currentChannel?.id) return '当前频道'
+  return channel.status === 'archived' ? '已归档' : '可用'
+}
+
+function formatUpdatedAt(channel: StudioChannel) {
+  const value = (channel as StudioChannel & { updated_at?: string }).updated_at
+  return value ? new Date(value).toLocaleDateString('zh-CN') : '暂无'
 }
 
 function triggerCoverUpload() {
@@ -315,6 +351,7 @@ onBeforeUnmount(clearCoverPreview)
 .studio-channels__field-label { color: var(--a-color-muted); font-size: 0.8rem; font-weight: 600; }
 .studio-channels__readonly-field { display: grid; gap: 0.35rem; grid-column: 1 / -1; }
 .studio-channels__readonly-field code { width: fit-content; max-width: 100%; overflow-wrap: anywhere; color: var(--a-color-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+.studio-channels__uuid-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .studio-channels__readonly-field p { margin: 0; color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-channels__cover-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .studio-channels__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; grid-column: 1 / -1; padding-top: 0.25rem; }
@@ -351,6 +388,7 @@ onBeforeUnmount(clearCoverPreview)
   font-size: 0.7rem;
   font-weight: 600;
 }
+.studio-channels__identity > span:not(.is-active) { background: var(--a-color-surface-muted); color: var(--a-color-muted); }
 .studio-channels__identity p, .studio-channels__identity small { grid-column: 1 / -1; margin: 0; color: var(--a-color-muted); }
 .studio-channels__identity p { font-size: 0.8rem; line-height: 1.4; }
 .studio-channels__identity small { font-size: 0.7rem; }

@@ -172,6 +172,10 @@ export interface StudioChannel {
 	slug: string;
 	description: string;
 	cover_url: string;
+	article_count?: number;
+	content_count?: number;
+	updated_at?: string;
+	status?: string;
 }
 
 export interface StudioState {

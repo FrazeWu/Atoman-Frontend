@@ -53,7 +53,7 @@ describe("StudioCalendarView", () => {
     );
     expect(wrapper.text()).toContain("定时文章");
     expect(wrapper.text()).toContain("缺少封面");
-    expect(wrapper.find('a[href="/studio/blog/post-1/edit"]').exists()).toBe(
+    expect(wrapper.find('a[href="/studio/manage/calendar/blog/post-1/edit"]').exists()).toBe(
       true,
     );
 

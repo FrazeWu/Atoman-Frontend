@@ -27,15 +27,6 @@
           <span v-if="selectedCycle" class="studio-goals__timezone">按 {{ selectedCycle.timezone }} 计算周期边界</span>
         </section>
 
-        <form v-if="cycleFormVisible" class="studio-goals__cycle-form studio-goals__cycle-form--next" @submit.prevent="createCycle">
-          <PInput v-model="cycleDraft.start_date" type="date" label="开始日期" required />
-          <PInput v-model="cycleDraft.end_date" type="date" label="结束日期" required />
-          <div class="studio-goals__cycle-actions">
-            <PButton type="submit" :loading="saving" loading-text="创建中...">创建周期</PButton>
-            <PButton type="button" variant="secondary" @click="cycleFormVisible = false">取消</PButton>
-          </div>
-        </form>
-
         <section v-if="selectedCycle" class="studio-goals__cycle" aria-labelledby="cycle-title">
           <header class="studio-goals__cycle-header">
             <div>
@@ -83,24 +74,12 @@
               </ul>
               <p v-else class="studio-goals__empty-inline">还没有行动</p>
 
-              <form v-if="selectedCycle.status !== 'reviewed'" class="studio-goals__action-form" @submit.prevent="createAction(goal)">
-                <PInput v-model="actionDraft(goal.id).title" label="新增行动" placeholder="例如：完成产品更新第 2 篇" required />
-                <PInput v-model="actionDraft(goal.id).due_date" type="date" label="截止日期" />
-                <PSelect v-model="actionDraft(goal.id).content_id" label="关联内容" :options="contentOptions(goal.module)" placeholder="不关联内容" />
-                <PButton type="submit" size="sm" :loading="actionSaving === `new:${goal.id}`">添加</PButton>
-              </form>
+              <PButton v-if="selectedCycle.status !== 'reviewed'" type="button" variant="secondary" size="sm" @click="openActionForm(goal)">在弹出层添加行动</PButton>
             </article>
           </div>
           <p v-else class="studio-goals__empty-inline">这个周期还没有目标。</p>
 
-          <form v-if="selectedCycle.status !== 'reviewed'" class="studio-goals__goal-form" @submit.prevent="createGoal">
-            <h3>添加目标</h3>
-            <PInput v-model="goalDraft.name" label="目标名称" placeholder="例如：稳定发布产品观察" required />
-            <PSelect v-model="goalDraft.module" label="内容模块" :options="moduleOptions" />
-            <PSelect v-model="goalDraft.metric" label="衡量指标" :options="metricOptions" />
-            <PInput v-model="goalDraft.target_value" type="number" min="1" label="目标值" required />
-            <PButton type="submit" :loading="saving" loading-text="添加中...">添加目标</PButton>
-          </form>
+          <PButton v-if="selectedCycle.status !== 'reviewed'" type="button" variant="secondary" @click="goalFormVisible = true">在弹出层添加目标</PButton>
         </section>
 
         <section v-if="selectedCycle?.status === 'needs_review'" class="studio-goals__review" aria-labelledby="review-title">
@@ -108,12 +87,7 @@
             <h2 id="review-title">周期复盘</h2>
             <p>记录周期结果与后续调整。</p>
           </header>
-          <form @submit.prevent="submitReview">
-            <PTextarea v-model="reviewDraft.result" label="实际结果" placeholder="这次周期最终完成了什么？" :rows="3" required />
-            <PTextarea v-model="reviewDraft.learning" label="有效做法与原因" placeholder="哪些行动值得保留？" :rows="3" />
-            <PTextarea v-model="reviewDraft.next_action" label="下一步调整" placeholder="下个周期准备改变什么？" :rows="3" />
-            <PButton type="submit" :loading="saving" loading-text="提交中...">提交复盘</PButton>
-          </form>
+          <PButton type="button" variant="secondary" @click="reviewFormVisible = true">填写复盘</PButton>
         </section>
 
         <section v-if="selectedCycle?.review" class="studio-goals__review studio-goals__review--readonly" aria-labelledby="review-result-title">
@@ -130,6 +104,39 @@
       </template>
     </template>
   </section>
+
+  <StudioManagementSheet v-if="cycleFormVisible || goalFormVisible || actionFormVisible || reviewFormVisible" :title="sheetTitle" @close="closeSheet">
+    <form v-if="cycleFormVisible" id="studio-cycle-form" class="studio-goals__sheet-form" @submit.prevent="createCycle">
+      <PInput v-model="cycleDraft.start_date" type="date" label="开始日期" required />
+      <PInput v-model="cycleDraft.end_date" type="date" label="结束日期" required />
+    </form>
+    <form v-else-if="goalFormVisible" id="studio-goal-form" class="studio-goals__sheet-form" @submit.prevent="createGoal">
+      <PInput v-model="goalDraft.name" label="目标名称" placeholder="例如：稳定发布产品观察" required />
+      <PSelect v-model="goalDraft.module" label="内容模块" :options="moduleOptions" />
+      <PSelect v-model="goalDraft.metric" label="衡量指标" :options="metricOptions" />
+      <PInput v-model="goalDraft.target_value" type="number" min="1" label="目标值" required />
+    </form>
+    <form v-else-if="actionFormVisible && activeGoal" id="studio-action-form" class="studio-goals__sheet-form" @submit.prevent="createAction(activeGoal)">
+      <PInput v-model="actionDraft(activeGoal.id).title" label="行动" placeholder="例如：完成产品更新第 2 篇" required />
+      <PInput v-model="actionDraft(activeGoal.id).due_date" type="date" label="截止日期" />
+      <PSelect v-model="actionDraft(activeGoal.id).content_id" label="关联内容" :options="contentOptions(activeGoal.module)" placeholder="不关联内容" />
+    </form>
+    <form v-else id="studio-review-form" class="studio-goals__sheet-form" @submit.prevent="submitReview">
+      <PTextarea v-model="reviewDraft.result" label="实际结果" placeholder="这次周期最终完成了什么？" :rows="3" required />
+      <PTextarea v-model="reviewDraft.learning" label="有效做法与原因" placeholder="哪些行动值得保留？" :rows="3" />
+      <PTextarea v-model="reviewDraft.next_action" label="下一步调整" placeholder="下个周期准备改变什么？" :rows="3" />
+    </form>
+    <p v-if="error" class="studio-goals__message studio-goals__message--error" role="alert">{{ error }}</p>
+    <template #footer>
+      <div class="studio-goals__sheet-actions">
+        <PButton type="button" variant="ghost" @click="closeSheet">取消</PButton>
+        <PButton v-if="cycleFormVisible" type="submit" form="studio-cycle-form" :loading="saving">创建周期</PButton>
+        <PButton v-else-if="goalFormVisible" type="submit" form="studio-goal-form" :loading="saving">添加目标</PButton>
+        <PButton v-else-if="actionFormVisible" type="submit" form="studio-action-form" :loading="Boolean(actionSaving)">添加行动</PButton>
+        <PButton v-else type="submit" form="studio-review-form" :loading="saving">提交复盘</PButton>
+      </div>
+    </template>
+  </StudioManagementSheet>
 </template>
 
 <script setup lang="ts">
@@ -137,6 +144,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { IconExternalLink as ExternalLink, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { RouterLink } from 'vue-router'
 
+import StudioManagementSheet from '@/components/studio/StudioManagementSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -153,6 +161,10 @@ const error = ref('')
 const notice = ref('')
 const selectedCycleID = ref('')
 const cycleFormVisible = ref(false)
+const goalFormVisible = ref(false)
+const actionFormVisible = ref(false)
+const reviewFormVisible = ref(false)
+const activeGoal = ref<StudioGoal | null>(null)
 const cycleDraft = reactive({ start_date: monthStart(), end_date: monthEnd() })
 const goalDraft = reactive<{ name: string; module: StudioModule; metric: string; target_value: string }>({
   name: '', module: 'blog', metric: 'published', target_value: '1',
@@ -172,6 +184,7 @@ const cycles = computed(() => {
 const selectedCycle = computed(() => cycles.value.find(cycle => cycle.id === selectedCycleID.value) ?? studio.goals?.current_cycle ?? cycles.value[0])
 const cycleOptions = computed(() => cycles.value.map(cycle => ({ label: `${cycle.start_date} 至 ${cycle.end_date} · ${statusLabel(cycle.status)}`, value: cycle.id })))
 const metricOptions = computed(() => (studio.goals?.metrics ?? []).filter(option => option.module === goalDraft.module).map(option => ({ label: option.label, value: option.metric })))
+const sheetTitle = computed(() => cycleFormVisible.value ? '新建下一周期' : goalFormVisible.value ? '添加目标' : actionFormVisible.value ? '添加行动' : '周期复盘')
 
 function monthStart() {
   const date = new Date()
@@ -229,6 +242,19 @@ function openCycleForm() {
   cycleFormVisible.value = true
 }
 
+function openActionForm(goal: StudioGoal) {
+  activeGoal.value = goal
+  actionFormVisible.value = true
+}
+
+function closeSheet() {
+  cycleFormVisible.value = false
+  goalFormVisible.value = false
+  actionFormVisible.value = false
+  reviewFormVisible.value = false
+  activeGoal.value = null
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -273,6 +299,7 @@ async function createGoal() {
     })
     goalDraft.name = ''
     goalDraft.target_value = '1'
+    closeSheet()
     notice.value = '目标已添加'
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '添加目标失败'
@@ -295,6 +322,7 @@ async function createAction(goal: StudioGoal) {
     draft.title = ''
     draft.due_date = ''
     draft.content_id = ''
+    closeSheet()
     notice.value = '行动已添加'
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '添加行动失败'
@@ -335,6 +363,7 @@ async function submitReview() {
     reviewDraft.result = ''
     reviewDraft.learning = ''
     reviewDraft.next_action = ''
+    closeSheet()
     notice.value = '复盘已保存'
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '提交复盘失败'
@@ -378,6 +407,8 @@ onMounted(() => { void load() })
   color: var(--a-color-text);
 }
 .studio-goals__message { padding: 2rem 0; color: var(--a-color-muted); }
+.studio-goals__sheet-form { display: grid; gap: 1rem; }
+.studio-goals__sheet-actions { display: flex; justify-content: flex-end; gap: 0.5rem; width: 100%; }
 .studio-goals__message--error { color: var(--a-color-danger); }
 .studio-goals__notice {
   margin: 0;

@@ -39,15 +39,12 @@ describe("StudioCollectionManager", () => {
 		await wrapper
 			.find('[data-testid="collection-description"]')
 			.setValue("新描述");
-		await wrapper
-			.find('[data-testid="collection-cover-url"]')
-			.setValue("https://example.com/cover.jpg");
-		await wrapper.find('[data-testid="save-collection"]').trigger("click");
+    await wrapper.find('[data-testid="save-collection"]').trigger("click");
 		await flushPromises();
 		expect(store.createUnifiedCollection).toHaveBeenCalledWith({
 			name: "新合集",
 			description: "新描述",
-			cover_url: "https://example.com/cover.jpg",
+      cover_url: "",
 		});
 
 		await wrapper

@@ -170,9 +170,17 @@ async function fetchAlbumBookmarks(requestId = bookmarkRequestId) {
     return
   }
   try {
-    const response = await listAlbumBookmarks()
+    const bookmarks = [] as Awaited<ReturnType<typeof listAlbumBookmarks>>['data']
+    let page = 1
+    let hasMore = true
+    while (hasMore) {
+      const response = await listAlbumBookmarks({ page, page_size: 100 })
+      bookmarks.push(...(response.data ?? []))
+      hasMore = Boolean(response.meta?.has_more)
+      page += 1
+    }
     if (requestId === bookmarkRequestId) {
-      starredAlbumIds.value = (response.data ?? []).map((bookmark) => String(bookmark.album_id))
+      starredAlbumIds.value = bookmarks.map((bookmark) => String(bookmark.album_id))
     }
   } catch (e) {
     if (requestId === bookmarkRequestId) starredAlbumIds.value = []
@@ -185,9 +193,17 @@ async function fetchArtistBookmarks(requestId = bookmarkRequestId) {
     return
   }
   try {
-    const response = await listArtistBookmarks()
+    const bookmarks = [] as Awaited<ReturnType<typeof listArtistBookmarks>>['data']
+    let page = 1
+    let hasMore = true
+    while (hasMore) {
+      const response = await listArtistBookmarks({ page, page_size: 100 })
+      bookmarks.push(...(response.data ?? []))
+      hasMore = Boolean(response.meta?.has_more)
+      page += 1
+    }
     if (requestId === bookmarkRequestId) {
-      starredArtistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.artist_id))
+      starredArtistIds.value = bookmarks.map((bookmark) => String(bookmark.artist_id))
     }
   } catch (e) {
     if (requestId === bookmarkRequestId) starredArtistIds.value = []
@@ -200,9 +216,17 @@ async function fetchPlaylistBookmarks(requestId = bookmarkRequestId) {
     return
   }
   try {
-    const response = await listPlaylistBookmarks()
+    const bookmarks = [] as Awaited<ReturnType<typeof listPlaylistBookmarks>>['data']
+    let page = 1
+    let hasMore = true
+    while (hasMore) {
+      const response = await listPlaylistBookmarks({ page, page_size: 100 })
+      bookmarks.push(...(response.data ?? []))
+      hasMore = Boolean(response.meta?.has_more)
+      page += 1
+    }
     if (requestId === bookmarkRequestId) {
-      starredPlaylistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.playlist_id))
+      starredPlaylistIds.value = bookmarks.map((bookmark) => String(bookmark.playlist_id))
     }
   } catch (e) {
     if (requestId === bookmarkRequestId) starredPlaylistIds.value = []

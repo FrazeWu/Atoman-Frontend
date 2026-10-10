@@ -110,20 +110,15 @@ describe("UI 准则", () => {
 		expect(sidebar).not.toMatch(/CATEGORIES|TAGS|<kbd>|上下选择|打开话题/);
 	});
 
-	it("认证页面统一使用原有 24px 网格背景", () => {
+	it("认证页面统一使用纯白极简底色背景", () => {
 		const sources = [
 			read("src/views/auth/LoginView.vue"),
 			read("src/views/auth/ForgotPasswordView.vue"),
 		];
 
 		for (const source of sources) {
-			expect(source).toContain(
-				"linear-gradient(var(--a-color-surface-muted) 1px, transparent 1px)",
-			);
-			expect(source).toContain(
-				"linear-gradient(90deg, var(--a-color-surface-muted) 1px, transparent 1px)",
-			);
-			expect(source).toContain("background-size: 24px 24px");
+			expect(source).toContain("background: var(--a-color-bg);");
+			expect(source).not.toContain("background-size: 24px 24px");
 		}
 	});
 

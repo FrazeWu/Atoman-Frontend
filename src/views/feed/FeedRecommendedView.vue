@@ -1538,7 +1538,7 @@ onUnmounted(() => { recommendationRequest++ })
   width: 1.75rem;
   height: 1.75rem;
   color: var(--a-color-muted);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   cursor: pointer;
   list-style: none;
 }

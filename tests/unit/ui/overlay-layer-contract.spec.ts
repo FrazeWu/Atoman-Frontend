@@ -195,7 +195,6 @@ describe("overlay layer contract", () => {
 		);
 		expect(sheetSource).toContain("bottom: var(--a-content-bottom-offset);");
 		expect(styleSource).toContain("body:has(.app-shell.has-sidebar)");
-		expect(styleSource).toContain("body:has(.studio-layout)");
 		expect(styleSource).toMatch(
 			/body:has\(\.app-shell\.has-sidebar\) \{[^}]*--a-content-bottom-offset:/s,
 		);

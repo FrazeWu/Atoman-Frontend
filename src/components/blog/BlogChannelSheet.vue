@@ -44,6 +44,7 @@ const replaceCurrentChannel = (id: string) => sheets.replaceChannel(id, '频道'
 const isTopSheet = computed(() => sheets.isTop(props.layer.key))
 const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useBlogSheetNavigation('channel', channelId, replaceCurrentChannel, isTopSheet)
 let loadSequence = 0
+let subscribeSequence = 0
 
 async function loadChannel() {
   const requestedChannelId = channelId.value
@@ -103,18 +104,28 @@ async function loadMorePosts() {
 
 async function toggleSubscribe() {
   if (!channel.value || !authStore.isAuthenticated || subscribeLoading.value) return
+  const requestedChannelId = channel.value.id
+  const requestSequence = ++subscribeSequence
   subscribeLoading.value = true
   try {
     const success = subscribed.value
-      ? await feedStore.unsubscribeFromChannel(channel.value.id)
-      : await feedStore.subscribeToChannel(channel.value.id)
-    if (success) subscribed.value = !subscribed.value
+      ? await feedStore.unsubscribeFromChannel(requestedChannelId)
+      : await feedStore.subscribeToChannel(requestedChannelId)
+    if (success && requestSequence === subscribeSequence && requestedChannelId === channelId.value) {
+      subscribed.value = !subscribed.value
+    }
   } finally {
-    subscribeLoading.value = false
+    if (requestSequence === subscribeSequence && requestedChannelId === channelId.value) {
+      subscribeLoading.value = false
+    }
   }
 }
 
-watch(channelId, () => void loadChannel(), { immediate: true })
+watch(channelId, () => {
+  subscribeSequence++
+  subscribeLoading.value = false
+  void loadChannel()
+}, { immediate: true })
 </script>
 
 <template>

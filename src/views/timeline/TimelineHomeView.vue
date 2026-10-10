@@ -3,7 +3,7 @@
     <PPageHeader title="时间线" mb="1.25rem">
       <template #action>
         <div class="tl-page-actions">
-          <PButton v-if="authStore.isAuthenticated" outline @click="showPersonForm = true">新建人物</PButton>
+          <PButton v-if="authStore.isAuthenticated" variant="secondary" @click="showPersonForm = true">新建人物</PButton>
           <PButton v-if="authStore.isAuthenticated" @click="openCreate">新建事件</PButton>
         </div>
       </template>
@@ -22,7 +22,7 @@
     />
 
     <div v-if="loading && events.length === 0" class="tl-state-block">
-      <p class="font-bold">加载中...</p>
+      <p style="font-weight: 500;">加载中...</p>
     </div>
 
     <PEmpty
@@ -262,7 +262,7 @@
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <PButton outline @click="closeForm">取消</PButton>
+          <PButton variant="secondary" @click="closeForm">取消</PButton>
           <PButton :disabled="submitting" @click="submitForm">
             {{ submitting ? '保存中...' : (editingEvent ? '保存' : '创建') }}
           </PButton>
@@ -301,7 +301,7 @@
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <PButton outline @click="showPersonForm = false">取消</PButton>
+          <PButton variant="secondary" @click="showPersonForm = false">取消</PButton>
           <PButton :disabled="personSubmitting" @click="submitPerson">
             {{ personSubmitting ? '创建中...' : '创建并添加轨迹' }}
           </PButton>
@@ -527,9 +527,9 @@ onMounted(async () => {
   flex-wrap: wrap;
   align-items: flex-end;
   padding: 1.1rem 1.15rem 1.2rem;
-  border: none;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .tl-toolbar-batch {
@@ -660,11 +660,12 @@ onMounted(async () => {
 
 .tl-panel-empty {
   padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   font-size: 0.82rem;
   line-height: 1.6;
   color: var(--a-color-muted);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .tl-panel-actions {
@@ -682,7 +683,6 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   padding: 0.55rem 0.8rem;
 }
@@ -700,7 +700,7 @@ onMounted(async () => {
 .tl-action-btn.danger,
 .tl-mini-btn.danger,
 .tl-inline-link.danger {
-  color: #991b1b;
+  color: var(--a-color-danger);
 }
 
 .tl-compare-list,
@@ -970,7 +970,7 @@ onMounted(async () => {
   grid-template-columns: minmax(250px, 0.9fr) minmax(0, 1.4fr);
   gap: 1rem;
   padding: 1rem 0;
-  border-top: 2px solid rgba(0, 0, 0, 0.08);
+  border-top: 2px solid var(--a-color-border-soft);
 }
 
 .tl-lane-row:first-of-type {
@@ -995,7 +995,7 @@ onMounted(async () => {
   top: 50%;
   height: 4px;
   transform: translateY(-50%);
-  background: linear-gradient(90deg, #d1d5db 0%, var(--a-color-fg) 100%);
+  background: linear-gradient(90deg, var(--a-color-border-soft) 0%, var(--a-color-fg) 100%);
 }
 
 .tl-lane-bar-shell {
@@ -1074,7 +1074,7 @@ onMounted(async () => {
   border: 1px solid var(--a-color-border-soft);
   overflow: hidden;
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .tl-event-map {
@@ -1231,8 +1231,9 @@ onMounted(async () => {
   margin: -0.25rem 0 1rem;
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--a-color-border-soft);
-  background: #fef2f2;
-  color: #991b1b;
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-danger) 10%, transparent);
+  color: var(--a-color-danger);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;

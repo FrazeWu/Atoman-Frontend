@@ -9,7 +9,7 @@
     <!-- Search -->
     <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
       <PInput v-model="searchText" :disabled="deleting || !!deletingPerson" placeholder="搜索人物姓名…" style="max-width:320px" @keyup.enter="doSearch" />
-      <PButton outline :disabled="deleting || !!deletingPerson" @click="doSearch">搜索</PButton>
+      <PButton variant="secondary" :disabled="deleting || !!deletingPerson" @click="doSearch">搜索</PButton>
     </div>
 
     <!-- Content list with PContentProgress -->
@@ -20,7 +20,7 @@
     >
       <template #skeleton>
         <div class="person-list">
-          <div v-for="i in 6" :key="i" style="padding:1rem 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+          <div v-for="i in 6" :key="i" style="padding:1rem 0;border-bottom:1px solid var(--a-color-border-soft)">
             <PSkeleton width="30%" height="20px" style="margin-bottom:8px" />
             <PSkeleton width="70%" height="16px" />
           </div>
@@ -78,7 +78,7 @@
 
     <div v-if="persons.length > 0 && (paginationInvalidated || persons.length < personsTotal)" style="margin-top:1.5rem;text-align:center">
       <PButton
-        outline
+        variant="secondary"
         :loading="loading"
         :disabled="loading || deleting || !!deletingPerson"
         :label="error || paginationInvalidated ? '加载失败，请重试' : '加载更多'"
@@ -112,7 +112,7 @@
         <PInput v-model="tagsInput" placeholder="政治家, 军事家, 哲学家" />
       </div>
       <template #footer>
-        <PButton outline @click="closeForm">取消</PButton>
+        <PButton variant="secondary" @click="closeForm">取消</PButton>
         <PButton :disabled="submitting" @click="submitForm">
           {{ submitting ? '保存中...' : (editingPerson ? '保存' : '创建') }}
         </PButton>
@@ -329,7 +329,6 @@ onMounted(() => {
 .person-link {
   font-size: 0.75rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted);
 }
@@ -340,7 +339,6 @@ onMounted(() => {
   display: block;
   font-size: 0.75rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   margin-bottom: 0.4rem;
 }

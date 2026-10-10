@@ -18,7 +18,7 @@
             <span v-for="tag in currentPerson.tags" :key="tag" class="a-badge" style="margin-right:4px">{{ tag }}</span>
           </div>
           <div v-if="canEdit" class="person-actions">
-            <PButton size="sm" outline @click="openEditPerson">编辑人物</PButton>
+            <PButton size="sm" variant="secondary" @click="openEditPerson">编辑人物</PButton>
             <button class="danger-btn" @click="confirmDeletePerson">删除</button>
           </div>
         </template>
@@ -157,7 +157,7 @@
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <PButton outline @click="closeLocationForm">取消</PButton>
+          <PButton variant="secondary" @click="closeLocationForm">取消</PButton>
           <PButton :disabled="locSubmitting" @click="submitLocation">
             {{ locSubmitting ? '保存中...' : (editingLocation ? '保存' : '添加') }}
           </PButton>
@@ -197,7 +197,7 @@
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <PButton outline @click="showPersonForm = false">取消</PButton>
+          <PButton variant="secondary" @click="showPersonForm = false">取消</PButton>
           <PButton :disabled="personSubmitting" @click="submitEditPerson">
             {{ personSubmitting ? '保存中...' : '保存' }}
           </PButton>
@@ -613,7 +613,6 @@ onUnmounted(() => {
 .back-link {
   font-size: 0.75rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted);
   text-decoration: none;
@@ -639,7 +638,7 @@ onUnmounted(() => {
 
 .person-bio {
   font-size: 0.8rem;
-  color: #4b5563;
+  color: var(--a-color-muted);
   line-height: 1.5;
   margin-bottom: 0.75rem;
   overflow: hidden;
@@ -661,9 +660,8 @@ onUnmounted(() => {
 .danger-btn {
   font-size: 0.75rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
-  color: #ef4444;
+  color: var(--a-color-danger);
   background: none;
   border: none;
   cursor: pointer;
@@ -691,7 +689,6 @@ onUnmounted(() => {
 .locations-title {
   font-size: 0.7rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   color: var(--a-color-muted);
 }
@@ -712,15 +709,15 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background 0.1s;
 }
-.location-item:hover { background: #f9fafb; }
-.location-item.active { background: #f0f0f0; border-left: 3px solid var(--a-color-fg); }
+.location-item:hover { background: var(--a-color-surface-muted); }
+.location-item.active { background: var(--a-color-surface-muted); border-left: 3px solid var(--a-color-fg); }
 
 .loc-index {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -771,7 +768,7 @@ onUnmounted(() => {
   transition: color 0.15s;
 }
 .icon-btn:hover { color: var(--a-color-fg); }
-.icon-btn.danger:hover { color: #ef4444; }
+.icon-btn.danger:hover { color: var(--a-color-danger); }
 
 /* Map */
 .map-container {
@@ -816,7 +813,6 @@ onUnmounted(() => {
   color: var(--a-color-bg);
   font-size: 0.7rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   padding: 2px 8px;
   cursor: pointer;
@@ -865,7 +861,7 @@ onUnmounted(() => {
 .popup-name { font-size: 0.875rem; font-weight: 500; margin-bottom: 3px; padding-right: 16px; }
 .popup-date { font-size: 0.7rem; color: var(--a-color-muted); font-weight: 600; }
 .popup-source { font-size: 0.65rem; color: var(--a-color-muted-soft); margin-top: 2px; font-style: italic; }
-.popup-note { font-size: 0.75rem; color: #4b5563; margin-top: 4px; }
+.popup-note { font-size: 0.75rem; color: var(--a-color-muted); margin-top: 4px; }
 
 /* Location form */
 .form-group { margin-bottom: 1rem; }
@@ -874,14 +870,13 @@ onUnmounted(() => {
   display: block;
   font-size: 0.75rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   margin-bottom: 0.4rem;
 }
 
 /* Coordinates section */
 .coords-section {
-  border: 2px solid #e5e7eb;
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.75rem;
   margin-bottom: 0;
 }
@@ -896,7 +891,6 @@ onUnmounted(() => {
 .pick-map-btn {
   font-size: 0.7rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   background: none;
   border: 1px solid var(--a-color-border-soft);
@@ -913,7 +907,7 @@ onUnmounted(() => {
 
 .picked-coords-hint {
   font-size: 0.7rem;
-  color: #059669;
+  color: var(--a-color-success);
   font-weight: 500;
   margin-top: 0.4rem;
   margin-bottom: 0;

@@ -370,26 +370,30 @@ async function loadMore() {
 }
 
 async function markComment(commentId: string) {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
   if (pendingActions.has(commentId)) return
   pendingActions.add(commentId)
   try {
     await comments.mark(commentId)
-    emit('marked-change', true)
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) emit('marked-change', true)
   } catch {
-    mutationError.value = '设置失败，请重试'
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) mutationError.value = '设置失败，请重试'
   } finally {
     pendingActions.delete(commentId)
   }
 }
 
 async function unmarkComment() {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
   if (pendingActions.has('target')) return
   pendingActions.add('target')
   try {
     await comments.unmark()
-    emit('marked-change', false)
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) emit('marked-change', false)
   } catch {
-    mutationError.value = '取消失败，请重试'
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) mutationError.value = '取消失败，请重试'
   } finally {
     pendingActions.delete('target')
   }

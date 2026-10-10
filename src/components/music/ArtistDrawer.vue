@@ -385,9 +385,17 @@ async function loadArtistBookmarkState(targetArtistId: string, isCurrentLoad: ()
     return
   }
   try {
-    const response = await listArtistBookmarks()
+    const bookmarks = [] as Awaited<ReturnType<typeof listArtistBookmarks>>['data']
+    let page = 1
+    let hasMore = true
+    while (hasMore) {
+      const response = await listArtistBookmarks({ page, page_size: 100 })
+      bookmarks.push(...response.data)
+      hasMore = Boolean(response.meta?.has_more)
+      page += 1
+    }
     if (!isCurrentLoad()) return
-    isBookmarked.value = response.data.some((bookmark) => String(bookmark.artist_id) === targetArtistId)
+    isBookmarked.value = bookmarks.some((bookmark) => String(bookmark.artist_id) === targetArtistId)
   } catch (error) {
     if (!isCurrentLoad()) return
     isBookmarked.value = false

@@ -82,8 +82,16 @@ async function fetchBookmarks() {
     return
   }
   try {
-    const response = await listArtistBookmarks()
-    starredArtistIds.value = response.data.map((bookmark) => String(bookmark.artist_id))
+    const bookmarks = [] as Awaited<ReturnType<typeof listArtistBookmarks>>['data']
+    let page = 1
+    let hasMore = true
+    while (hasMore) {
+      const response = await listArtistBookmarks({ page, page_size: 100 })
+      bookmarks.push(...response.data)
+      hasMore = Boolean(response.meta?.has_more)
+      page += 1
+    }
+    starredArtistIds.value = bookmarks.map((bookmark) => String(bookmark.artist_id))
   } catch (e) {
     if (e instanceof ApiErrorResponseError && e.status === 401) {
       starredArtistIds.value = []

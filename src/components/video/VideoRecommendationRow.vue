@@ -75,7 +75,7 @@ function markThumbnailFailed(videoID: string) {
   margin: 0;
   color: var(--a-color-fg);
   font-size: 0.95rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .vrr__grid {

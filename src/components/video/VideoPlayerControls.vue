@@ -430,7 +430,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   height: 100%;
-  background: var(--a-color-primary, #3b82f6);
+  background: var(--a-color-primary);
   border-radius: 999px;
   pointer-events: none;
   display: flex;
@@ -443,7 +443,7 @@ onUnmounted(() => {
   height: 12px;
   background: #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.25));
   transform: scale(0);
   transition: transform 150ms ease;
   margin-right: -6px;
@@ -464,8 +464,8 @@ onUnmounted(() => {
   pointer-events: none;
   background: rgba(18, 18, 20, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-radius: var(--a-radius-control);
+  box-shadow: var(--a-shadow-md);
   transform: translateX(-50%);
   z-index: 60;
 }
@@ -555,7 +555,7 @@ onUnmounted(() => {
 }
 
 .vpc-vol-icon--muted {
-  color: #ef4444;
+  color: var(--a-color-danger);
 }
 
 .vpc-speed-menu,
@@ -566,8 +566,8 @@ onUnmounted(() => {
   background: rgba(18, 18, 20, 0.95);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-radius: var(--a-radius-control);
+  box-shadow: var(--a-shadow-md);
   transform: translate(-50%, 0.25rem);
   opacity: 0;
   transition: opacity 160ms ease, transform 160ms ease;
@@ -598,7 +598,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   font-weight: 500;
   text-align: center;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
@@ -606,7 +606,7 @@ onUnmounted(() => {
 .vpc-speed-option--active {
   background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* 音量滑动条 */
@@ -629,7 +629,7 @@ onUnmounted(() => {
 .vpc-volume-slider {
   width: 80px;
   height: 4px;
-  accent-color: var(--a-color-primary, #3b82f6);
+  accent-color: var(--a-color-primary);
   cursor: pointer;
   transform: rotate(-90deg);
   background: rgba(255, 255, 255, 0.25);

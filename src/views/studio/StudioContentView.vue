@@ -346,6 +346,10 @@ watch(
     if (ready.value) void loadPage(currentModule !== previousModule)
   },
 )
+
+watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
+  if (ready.value && channelID && channelID !== previousChannelID) void loadPage(true)
+})
 </script>
 
 <style scoped>

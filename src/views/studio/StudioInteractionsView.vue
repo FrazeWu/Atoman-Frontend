@@ -418,7 +418,7 @@ onMounted(async () => {
 watch(module, () => {
   filters.q = ''
   filters.content_id = ''
-  filters.unreplied = false
+  filters.unreplied = route.query.unreplied === 'true'
   filters.anchored = false
   filters.handled = ''
   filters.priority = ''
@@ -428,6 +428,14 @@ watch(module, () => {
     loadInteractions(),
     studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
   ])
+})
+
+watch(() => route.query.unreplied, (value) => {
+  const next = value === 'true'
+  if (filters.unreplied === next) return
+  filters.unreplied = next
+  filters.page = 1
+  void loadInteractions()
 })
 </script>
 

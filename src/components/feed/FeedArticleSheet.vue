@@ -312,6 +312,7 @@ const authStore = useAuthStore()
 const api = useApi()
 const feedStore = useFeedStore()
 const ratingLoading = ref(false)
+let ratingRequestSequence = 0
 const ratingError = ref('')
 const feedCoverFailed = ref(false)
 const feedCoverCandidateIndex = ref(0)
@@ -621,6 +622,9 @@ async function toggleFeedItemStar() {
 async function ratePost(score: number) {
   const post = props.article?.type === 'post' ? props.article.post : null
   if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  const requestSequence = ++ratingRequestSequence
+  const requestedKey = articleKey.value
+  const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
   ratingError.value = ''
   ratingLoading.value = true
   try {
@@ -630,24 +634,28 @@ async function ratePost(score: number) {
       body: JSON.stringify({ score }),
     })
     if (!res.ok) {
-      ratingError.value = '评分未保存，请重试'
+      if (isCurrent()) ratingError.value = '评分未保存，请重试'
       return
     }
     const payload = await Promise.resolve(res.data)
     const summary = payload.data || payload
+    if (!isCurrent()) return
     post.rating_score = Number(summary.rating_score ?? post.rating_score ?? 0)
     post.rating_count = Number(summary.rating_count ?? post.rating_count ?? 0)
     post.viewer_rating = Number(summary.viewer_rating ?? score)
   } catch {
-    ratingError.value = '评分未保存，请重试'
+    if (isCurrent()) ratingError.value = '评分未保存，请重试'
   } finally {
-    ratingLoading.value = false
+    if (isCurrent()) ratingLoading.value = false
   }
 }
 
 async function clearPostRating() {
   const post = props.article?.type === 'post' ? props.article.post : null
   if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  const requestSequence = ++ratingRequestSequence
+  const requestedKey = articleKey.value
+  const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
   ratingError.value = ''
   ratingLoading.value = true
   try {
@@ -656,18 +664,19 @@ async function clearPostRating() {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!res.ok) {
-      ratingError.value = '评分未清除，请重试'
+      if (isCurrent()) ratingError.value = '评分未清除，请重试'
       return
     }
     const payload = await Promise.resolve(res.data)
     const summary = payload.data || payload
+    if (!isCurrent()) return
     post.rating_score = Number(summary.rating_score ?? 0)
     post.rating_count = Number(summary.rating_count ?? 0)
     post.viewer_rating = undefined
   } catch {
-    ratingError.value = '评分未清除，请重试'
+    if (isCurrent()) ratingError.value = '评分未清除，请重试'
   } finally {
-    ratingLoading.value = false
+    if (isCurrent()) ratingLoading.value = false
   }
 }
 
@@ -684,6 +693,9 @@ function applyFeedItemRating(summary: Record<string, unknown>, fallbackScore?: n
 async function rateFeedItem(score: number) {
   const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!item || !authStore.isAuthenticated || ratingLoading.value) return
+  const requestSequence = ++ratingRequestSequence
+  const requestedKey = articleKey.value
+  const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
   ratingError.value = ''
   ratingLoading.value = true
   try {
@@ -693,21 +705,24 @@ async function rateFeedItem(score: number) {
       body: JSON.stringify({ score }),
     })
     if (!response.ok) {
-      ratingError.value = '评分未保存，请重试'
+      if (isCurrent()) ratingError.value = '评分未保存，请重试'
       return
     }
     const payload = await Promise.resolve(response.data)
-    applyFeedItemRating(payload.data || payload, score)
+    if (isCurrent()) applyFeedItemRating(payload.data || payload, score)
   } catch {
-    ratingError.value = '评分未保存，请重试'
+    if (isCurrent()) ratingError.value = '评分未保存，请重试'
   } finally {
-    ratingLoading.value = false
+    if (isCurrent()) ratingLoading.value = false
   }
 }
 
 async function clearFeedItemRating() {
   const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
   if (!item || !authStore.isAuthenticated || ratingLoading.value) return
+  const requestSequence = ++ratingRequestSequence
+  const requestedKey = articleKey.value
+  const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
   ratingError.value = ''
   ratingLoading.value = true
   try {
@@ -716,16 +731,17 @@ async function clearFeedItemRating() {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!response.ok) {
-      ratingError.value = '评分未清除，请重试'
+      if (isCurrent()) ratingError.value = '评分未清除，请重试'
       return
     }
     const payload = await Promise.resolve(response.data)
+    if (!isCurrent()) return
     applyFeedItemRating(payload.data || payload)
     item.viewer_rating = undefined
   } catch {
-    ratingError.value = '评分未清除，请重试'
+    if (isCurrent()) ratingError.value = '评分未清除，请重试'
   } finally {
-    ratingLoading.value = false
+    if (isCurrent()) ratingLoading.value = false
   }
 }
 

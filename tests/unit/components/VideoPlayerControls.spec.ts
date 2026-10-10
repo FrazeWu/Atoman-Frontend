@@ -30,9 +30,8 @@ describe("VideoPlayerControls", () => {
 	});
 
 	it("synchronizes from media events instead of a polling timer", () => {
-		expect(playerControlsSource).toContain("const mediaEvents")
-		expect(playerControlsSource).toContain("video.addEventListener(eventName, syncState)")
-		expect(playerControlsSource).toContain("video.removeEventListener(eventName, syncState)")
+		expect(playerControlsSource).toContain("subscribeToMediaElement(video, syncState)")
+		expect(playerControlsSource).toContain("removeVideoListeners?.()")
 		expect(playerControlsSource).not.toContain("setInterval(syncState, 250)")
 	});
 });

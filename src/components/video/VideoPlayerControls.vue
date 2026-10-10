@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { IconVolume2 as Volume2, IconVolume as Volume1, IconVolumeOff as VolumeX, IconPlayerPlay as Play, IconPlayerPause as Pause, IconMaximize as Maximize, IconMinimize as Minimize, IconSettings as Settings, IconDeviceTv as Tv, IconSubtitles as Captions, IconPictureInPicture as PictureInPicture } from '@tabler/icons-vue'
 import type { VideoPreviewThumbnail } from '@/types'
 import { formatTimestampLabel } from '@/composables/useMediaTimeAnchors'
+import { subscribeToMediaElement } from '@/utils/mediaElementState'
 
 const props = defineProps<{
   videoElement: HTMLVideoElement | null
@@ -33,25 +34,7 @@ const subtitlesEnabled = ref(false)
 const isPictureInPicture = ref(false)
 
 const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2]
-const mediaEvents: Array<keyof HTMLMediaElementEventMap> = [
-  'canplay',
-  'durationchange',
-  'emptied',
-  'ended',
-  'error',
-  'loadeddata',
-  'loadedmetadata',
-  'loadstart',
-  'pause',
-  'playing',
-  'progress',
-  'ratechange',
-  'seeked',
-  'seeking',
-  'timeupdate',
-  'volumechange',
-  'waiting',
-]
+let removeVideoListeners: (() => void) | null = null
 
 const progressPercent = computed(() => {
   if (!duration.value) return 0
@@ -111,17 +94,14 @@ function bindVideo(video: HTMLVideoElement | null) {
     syncState()
     return
   }
-  for (const eventName of mediaEvents) {
-    video.addEventListener(eventName, syncState)
-  }
+  removeVideoListeners = subscribeToMediaElement(video, syncState)
   syncState()
 }
 
 function unbindVideo(video: HTMLVideoElement | null) {
   if (!video) return
-  for (const eventName of mediaEvents) {
-    video.removeEventListener(eventName, syncState)
-  }
+  removeVideoListeners?.()
+  removeVideoListeners = null
 }
 
 async function togglePlay() {

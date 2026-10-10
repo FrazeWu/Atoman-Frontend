@@ -196,7 +196,7 @@
         <PEmpty v-if="!isStreamLoading && !streamError && !streamItems.length" title="暂无内容" description="还没有发布任何内容" />
 
         <PButton
-          v-if="hasMore"
+          v-if="hasMore || notesHasMore"
           block
           variant="secondary"
           :loading="loading"
@@ -412,6 +412,8 @@ const recommendationPreferenceLoading = ref(false)
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
+const notesPage = ref(1)
+const notesHasMore = ref(false)
 const queryValue = (value: unknown) => Array.isArray(value) ? value[0] : value
 const normalizeTypeFilter = (value: unknown): 'all' | 'post' | 'note' => (
   queryValue(value) === 'post' || queryValue(value) === 'note' ? queryValue(value) as 'post' | 'note' : 'all'
@@ -764,9 +766,11 @@ const restoreRecommendation = async () => {
   }
 }
 
-const fetchShortNotes = async () => {
+const fetchShortNotes = async (append = false) => {
   if (typeFilter.value === 'post' || isSearchMode.value) {
     shortNotes.value = []
+    notesPage.value = 1
+    notesHasMore.value = false
     notesError.value = false
     notesLoading.value = false
     return true
@@ -774,9 +778,12 @@ const fetchShortNotes = async () => {
   notesLoading.value = true
   notesError.value = false
   try {
-    const query = new URLSearchParams({ page: '1', page_size: String(PAGE_SIZE) })
+    const targetPage = append ? notesPage.value + 1 : 1
+    const query = new URLSearchParams({ page: String(targetPage), page_size: String(PAGE_SIZE) })
     const response = await apiRequestEnvelope<ShortNote[], { has_more?: boolean }>(`${api.blog.shortNotes}?${query}`)
-    shortNotes.value = response.data
+    shortNotes.value = append ? [...shortNotes.value, ...response.data] : response.data
+    notesPage.value = targetPage
+    notesHasMore.value = Boolean(response.meta?.has_more)
     return true
   } catch (error) {
     reportError(error)
@@ -905,7 +912,9 @@ const refreshStreamBatch = () => {
 }
 
 const loadMore = () => {
-  if (!loading.value && hasMore.value) void fetchPosts(true)
+  if (loading.value || notesLoading.value) return
+  if (hasMore.value) void fetchPosts(true)
+  if (notesHasMore.value) void fetchShortNotes(true)
 }
 
 onMounted(() => {

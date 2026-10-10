@@ -252,7 +252,7 @@ const deletingId = ref('')
 const retryingId = ref('')
 const errorMessage = ref('')
 const isDetail = computed(() => route.path.startsWith('/books/work/') || route.path.startsWith('/books/edition/'))
-const isLibrary = computed(() => route.path === '/books/library' || (isDetail.value && route.query.from === '/books/library'))
+const isLibrary = computed(() => route.path === '/books/library' || route.path.startsWith('/books/import/') || (isDetail.value && route.query.from === '/books/library'))
 const isCatalog = computed(() => !isLibrary.value && (route.path === '/books' || route.path === '/books/search' || isDetail.value))
 
 const pageTitle = computed(() => {

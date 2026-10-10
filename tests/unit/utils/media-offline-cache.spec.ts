@@ -5,6 +5,7 @@ import { cacheMediaForOffline, getCachedMediaObjectURL, isMediaCached, MEDIA_OFF
 const cache = {
   match: vi.fn(),
   put: vi.fn(),
+  delete: vi.fn(),
 }
 const originalCaches = window.caches
 
@@ -33,5 +34,15 @@ describe('media offline cache', () => {
     await expect(isMediaCached('/media/video.mp4')).resolves.toBe(true)
     await expect(getCachedMediaObjectURL('/media/video.mp4')).resolves.toBe('blob:cached')
     expect(createObjectURL).toHaveBeenCalled()
+  })
+
+  it('removes a cached media response', async () => {
+    Object.defineProperty(window, 'caches', { configurable: true, value: { open: vi.fn().mockResolvedValue(cache) } })
+    cache.delete.mockResolvedValue(true)
+
+    const { removeCachedMedia } = await import('@/utils/mediaOfflineCache')
+    await removeCachedMedia('/media/video.mp4')
+
+    expect(cache.delete).toHaveBeenCalledWith('/media/video.mp4')
   })
 })

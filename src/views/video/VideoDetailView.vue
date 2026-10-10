@@ -100,6 +100,7 @@ const {
   isCaching: isVideoCaching,
   cacheError: videoCacheError,
   cacheCurrentMedia: cacheCurrentVideo,
+  removeCurrentMedia: removeCurrentVideo,
 } = useOfflineMediaSource(nativeVideoUrl)
 const subtitleUrl = computed(() => video.value?.subtitle_url ? resolveMediaURL(video.value.subtitle_url) : '')
 const channelCoverUrl = computed(() => {
@@ -749,10 +750,10 @@ async function toggleChannelSubscription() {
             type="button"
             class="vd-offline-action"
             :disabled="isVideoCaching"
-            :aria-label="isVideoCached ? '已保存视频离线副本' : '保存视频供离线播放'"
-            @click="cacheCurrentVideo"
+            :aria-label="isVideoCached ? '移除视频离线副本' : '保存视频供离线播放'"
+            @click="isVideoCached ? removeCurrentVideo() : cacheCurrentVideo()"
           >
-            {{ isVideoCaching ? '保存中…' : isVideoCached ? '已保存离线副本' : '保存离线副本' }}
+            {{ isVideoCaching ? '保存中…' : isVideoCached ? '移除离线副本' : '保存离线副本' }}
           </button>
         </template>
       </PVideoPlayerShell>

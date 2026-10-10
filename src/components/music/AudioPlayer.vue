@@ -178,12 +178,12 @@
           type="button"
           class="feature-link player-offline-btn"
           :disabled="isCachingAudio"
-          :aria-label="isCachingAudio ? '正在保存音频' : '保存音频供离线播放'"
-          :title="isCachingAudio ? '正在保存音频' : '保存音频供离线播放'"
-          @click="cacheCurrentAudio"
+          :aria-label="isCachingAudio ? '正在保存音频' : player.isCurrentAudioCached ? '移除音频离线副本' : '保存音频供离线播放'"
+          :title="isCachingAudio ? '正在保存音频' : player.isCurrentAudioCached ? '移除音频离线副本' : '保存音频供离线播放'"
+          @click="player.isCurrentAudioCached ? removeCurrentAudio() : cacheCurrentAudio()"
         >
           <Download :size="16" aria-hidden="true" />
-          <span>{{ isCachingAudio ? '存' : '离线' }}</span>
+          <span>{{ isCachingAudio ? '存' : player.isCurrentAudioCached ? '清除' : '离线' }}</span>
         </button>
 
         <button
@@ -500,6 +500,17 @@ async function cacheCurrentAudio() {
   try {
     const cached = await player.cacheCurrentAudio()
     showToast(cached ? '音频已保存，可离线播放' : '音频保存失败，请稍后重试')
+  } finally {
+    isCachingAudio.value = false
+  }
+}
+
+async function removeCurrentAudio() {
+  if (isCachingAudio.value || !player.currentSong) return
+  isCachingAudio.value = true
+  try {
+    const removed = await player.removeCurrentAudio()
+    showToast(removed ? '已移除音频离线副本' : '没有可移除的离线副本')
   } finally {
     isCachingAudio.value = false
   }

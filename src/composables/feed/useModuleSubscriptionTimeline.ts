@@ -23,6 +23,7 @@ export function useModuleSubscriptionTimeline(subscriptionType: SubscriptionHubT
   const lastSyncedAt = ref('')
   const groupId = computed(() => typeof route.query.hub_group_id === 'string' ? route.query.hub_group_id : '')
   const membershipId = computed(() => typeof route.query.hub_membership_id === 'string' ? route.query.hub_membership_id : '')
+  const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
   let requestSequence = 0
 
   const fetchPage = async (targetPage = 1, append = false) => {
@@ -111,8 +112,18 @@ export function useModuleSubscriptionTimeline(subscriptionType: SubscriptionHubT
   }
 
   watch(
-    [() => authStore.isAuthenticated, () => authStore.token, groupId, membershipId, unreadOnly],
-    () => { void fetchPage(1) },
+    [() => authStore.isAuthenticated, accountIdentity, groupId, membershipId, unreadOnly],
+    ([, identity], previous) => {
+      if (previous && identity !== previous[1]) {
+        requestSequence += 1
+        items.value = []
+        page.value = 1
+        total.value = 0
+        hasMore.value = false
+        lastSyncedAt.value = ''
+      }
+      void fetchPage(1)
+    },
     { immediate: true },
   )
 

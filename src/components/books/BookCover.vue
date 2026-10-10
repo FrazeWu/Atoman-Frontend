@@ -34,7 +34,7 @@ watch(() => props.src, () => { failed.value = false; proxyFailed.value = false; 
   width: 100%;
   overflow: hidden;
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
@@ -55,7 +55,7 @@ watch(() => props.src, () => { failed.value = false; proxyFailed.value = false; 
   height: 100%;
   padding: 1rem;
   color: var(--a-color-muted);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   text-align: center;
 }
 .book-cover__fallback span {

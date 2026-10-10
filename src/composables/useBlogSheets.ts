@@ -2,6 +2,7 @@ import { useRouter } from "vue-router";
 import { createSheetStack } from "@/composables/useSheetStack";
 import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import type { BlogSheetLayer } from "@/components/blog/blogSheetTypes";
+import { modulePathUrl } from "@/router/siteUrls";
 
 const stack = createSheetStack<BlogSheetLayer>({
 	maxLayers: 3,
@@ -16,7 +17,7 @@ export function useBlogSheets() {
 	const router = mobile ? useRouter() : null;
 	const openChannel = (channelId: string, title: string) => {
 		if (mobile) {
-			void router?.push(`/channel/${encodeURIComponent(channelId)}`);
+			void router?.push(modulePathUrl('blog', `/channel/${encodeURIComponent(channelId)}`));
 			return;
 		}
 		stack.push({
@@ -33,7 +34,7 @@ export function useBlogSheets() {
 			title,
 			payload: { channelId },
 		};
-		if (mobile) void router?.replace(`/channel/${encodeURIComponent(channelId)}`);
+		if (mobile) void router?.replace(modulePathUrl('blog', `/channel/${encodeURIComponent(channelId)}`));
 		else stack.replaceTop(layer, true);
 	};
 	const openCollection = (
@@ -42,7 +43,7 @@ export function useBlogSheets() {
 		channelId: string,
 	) => {
 		if (mobile) {
-			void router?.push(`/collection/${encodeURIComponent(collectionId)}`);
+			void router?.push(modulePathUrl('blog', `/collection/${encodeURIComponent(collectionId)}`));
 			return;
 		}
 		stack.push({
@@ -63,7 +64,7 @@ export function useBlogSheets() {
 			title,
 			payload: { collectionId, channelId },
 		};
-		if (mobile) void router?.replace(`/collection/${encodeURIComponent(collectionId)}`);
+		if (mobile) void router?.replace(modulePathUrl('blog', `/collection/${encodeURIComponent(collectionId)}`));
 		else stack.replaceTop(layer, true);
 	};
 

@@ -668,7 +668,7 @@ function continueImport() {
 }
 .music-imports-view__error {
   margin: 0;
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 .music-imports-view__layout {
   min-width: 0;
@@ -711,7 +711,7 @@ function continueImport() {
   cursor: pointer;
 }
 .music-imports-view__filter--active {
-  border-bottom-color: var(--a-color-accent) !important;
+  border-bottom-color: var(--a-color-primary) !important;
   color: var(--a-color-text) !important;
   font-weight: 600 !important;
 }
@@ -725,7 +725,7 @@ function continueImport() {
   padding: 0.85rem;
   text-align: left;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 6px;
+  border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   color: inherit;
   cursor: pointer;
@@ -735,7 +735,7 @@ function continueImport() {
   background-color: var(--a-color-surface-muted);
 }
 .music-imports-view__item--selected {
-  border-color: var(--a-color-accent);
+  border-color: var(--a-color-primary);
   background-color: var(--a-color-surface-muted);
 }
 .item-header {
@@ -747,7 +747,7 @@ function continueImport() {
 }
 .item-header strong {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -757,7 +757,7 @@ function continueImport() {
 .status-badge {
   font-size: 0.7rem;
   padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   border: 1px solid var(--a-color-border-soft);
@@ -765,21 +765,21 @@ function continueImport() {
   flex-shrink: 0;
 }
 .status-badge[data-status="ready"] {
-  background: color-mix(in srgb, #22c55e 12%, transparent);
-  color: #16a34a;
-  border-color: color-mix(in srgb, #22c55e 25%, transparent);
+  background: color-mix(in srgb, var(--a-color-success) 12%, transparent);
+  color: var(--a-color-success);
+  border-color: color-mix(in srgb, var(--a-color-success) 25%, transparent);
 }
 .status-badge[data-status="failed"] {
-  background: color-mix(in srgb, #ef4444 12%, transparent);
-  color: #dc2626;
-  border-color: color-mix(in srgb, #ef4444 25%, transparent);
+  background: color-mix(in srgb, var(--a-color-danger) 12%, transparent);
+  color: var(--a-color-danger);
+  border-color: color-mix(in srgb, var(--a-color-danger) 25%, transparent);
 }
 .status-badge[data-status="extracting"],
 .status-badge[data-status="analyzing"],
 .status-badge[data-status="transcoding"] {
-  background: color-mix(in srgb, #3b82f6 12%, transparent);
-  color: #2563eb;
-  border-color: color-mix(in srgb, #3b82f6 25%, transparent);
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  color: var(--a-color-primary);
+  border-color: color-mix(in srgb, var(--a-color-primary) 25%, transparent);
 }
 .item-sub {
   display: flex;
@@ -810,7 +810,7 @@ function continueImport() {
   gap: 1.25rem;
   padding: 1.25rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 6px;
+  border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
 }
 .cover-wrapper {
@@ -821,7 +821,7 @@ function continueImport() {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
 }
 .no-cover {
   width: 100%;
@@ -833,7 +833,7 @@ function continueImport() {
   border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
   font-size: 0.8rem;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
 }
 .detail-main {
   min-width: 0;
@@ -844,7 +844,7 @@ function continueImport() {
 .detail-main h2 {
   overflow-wrap: anywhere;
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 .detail-meta {
   display: flex;
@@ -857,16 +857,16 @@ function continueImport() {
 .status-hint {
   margin: 0;
   padding: 0.5rem 0.75rem;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
   border: 1px solid var(--a-color-border-soft);
   font-size: 0.82rem;
   color: var(--a-color-text-secondary);
 }
 .status-hint--ready {
-  background: color-mix(in srgb, #22c55e 10%, transparent);
-  border-color: color-mix(in srgb, #22c55e 25%, transparent);
-  color: #16a34a;
+  background: color-mix(in srgb, var(--a-color-success) 10%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-success) 25%, transparent);
+  color: var(--a-color-success);
 }
 .music-imports-view__actions {
   display: flex;
@@ -911,7 +911,7 @@ function continueImport() {
   overflow-wrap: anywhere;
 }
 .file-err {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-size: 0.75rem;
   margin-top: 0.15rem;
 }

@@ -95,15 +95,15 @@ async function subscribeShow() {
 .ps-wrap { max-width: 52rem; margin: 0 auto; padding: 2rem 0 4rem; }
 .ps-header { display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 1.75rem; }
 .ps-cover { width: 8rem; height: 8rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; border: 1px solid var(--a-color-border-soft); }
-.ps-name { font-size: 1.5rem; font-weight: 600; color: var(--a-color-fg); margin: 0; }
+.ps-name { font-size: 1.5rem; font-weight: 500; color: var(--a-color-fg); margin: 0; }
 .ps-desc { font-size: 0.875rem; color: var(--a-color-muted); margin-top: 0.35rem; line-height: 1.5; }
 .ps-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; }
 .ps-message { margin: 0.5rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
 .ps-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
 .ps-ep { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-.ps-ep:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
+.ps-ep:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); }
 .ps-ep-cover { width: 2.75rem; height: 2.75rem; border-radius: var(--a-radius-control); object-fit: cover; flex-shrink: 0; }
 .ps-ep-num { font-size: 0.75rem; color: var(--a-color-muted); flex-shrink: 0; }
-.ps-ep-title { min-width: 0; flex: 1; font-size: 0.9rem; font-weight: 600; text-decoration: none; color: var(--a-color-fg); }
+.ps-ep-title { min-width: 0; flex: 1; font-size: 0.9rem; font-weight: 500; text-decoration: none; color: var(--a-color-fg); }
 .ps-ep-title:hover { text-decoration: underline; }
 </style>

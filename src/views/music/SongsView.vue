@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
 .songs-view h2 {
   margin: 0.5rem 0 0.25rem;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -510,7 +510,7 @@ onBeforeUnmount(() => {
 .song-title {
   justify-self: start;
   color: var(--a-color-fg);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.92rem;
   text-decoration: none;
 }
@@ -544,7 +544,7 @@ onBeforeUnmount(() => {
 }
 
 .error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .entity-row {
@@ -552,6 +552,7 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(0, 1fr) 2.75rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
   overflow: hidden;
   transition: border-color 0.2s ease, background 0.2s ease;
 }

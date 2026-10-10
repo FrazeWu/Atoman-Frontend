@@ -13,9 +13,9 @@
       <PInput
         v-model="draft.slug"
         data-testid="channel-slug"
-        label="频道网址"
+        label="Slug"
         placeholder="channel-name"
-        :hint="channelAddress ? `访问地址：${channelAddress}` : '用于生成频道链接，建议使用英文、数字和连字符。修改会影响原链接。'"
+        :hint="channelSlugHint"
       />
       <PTextarea v-model="draft.description" label="简介" placeholder="频道简介" :rows="3" />
       <div class="studio-channels__cover-field">
@@ -138,6 +138,10 @@ const channelAddress = computed(() => {
   if (!slug) return ''
   const path = channelUrl(slug)
   return typeof window === 'undefined' ? path : new URL(path, window.location.origin).toString()
+})
+const channelSlugHint = computed(() => {
+  const explanation = 'Slug 是频道链接中的唯一标识，建议使用英文、数字和连字符。修改会影响原链接。'
+  return channelAddress.value ? `${explanation} 当前链接：${channelAddress.value}` : explanation
 })
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,

@@ -19,6 +19,10 @@
       @toc-select="jumpToEpubTOC"
     >
       <template #actions>
+        <PButton type="button" variant="ghost" :disabled="!canRead" aria-label="添加书签" title="添加书签" @click="addBookmark">
+          <Bookmark :size="16" aria-hidden="true" />
+          <span>书签</span>
+        </PButton>
         <PButton
           type="button"
           variant="ghost"
@@ -78,6 +82,15 @@
           <textarea v-model="privateNotes" maxlength="50000" rows="3" placeholder="记录只对你可见的想法" />
         </label>
         <p class="books-reader__public-status">公共副本与此处的私有阅读进度相互独立。</p>
+        <details v-if="bookmarks.length" class="books-reader__bookmarks">
+          <summary>书签（{{ bookmarks.length }}）</summary>
+          <ol>
+            <li v-for="bookmark in bookmarks" :key="bookmark.id">
+              <button type="button" @click="jumpToBookmark(bookmark)">{{ bookmark.label }}</button>
+              <button type="button" :aria-label="`删除书签 ${bookmark.label}`" @click="removeBookmark(bookmark.id)">删除</button>
+            </li>
+          </ol>
+        </details>
       </template>
     </BookReaderShell>
   </main>
@@ -86,7 +99,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { IconDownload as Download, IconDeviceFloppy as Save } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconDownload as Download, IconDeviceFloppy as Save } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
@@ -94,6 +107,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
+import { parseBookReaderBookmarks, type BookReaderBookmark } from '@/utils/bookReaderPreferences'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
@@ -130,6 +144,7 @@ const textContent = ref('')
 const textPages = ref<TextPage[]>([])
 const textPage = ref(1)
 const privateNotes = ref('')
+const bookmarks = ref<BookReaderBookmark[]>([])
 const readingPercent = ref(0)
 const epubTOC = ref<EpubTOCItem[]>([])
 const pdfPage = ref(1)
@@ -194,6 +209,7 @@ function applyReadingState(state: BookReadingState) {
   privateNotes.value = state.private_notes || ''
   readingPercent.value = clampPercent(state.reading_percent)
   pdfPage.value = Math.max(1, state.pdf_page || 1)
+  bookmarks.value = parseBookReaderBookmarks(state.preferences?.bookmarks)
 }
 
 async function loadText() {
@@ -380,13 +396,53 @@ async function saveState() {
       txt_offset: readingState.value?.txt_offset || 0,
       reading_percent: readingPercent.value,
       private_notes: privateNotes.value,
-      preferences: readingState.value?.preferences || {},
+      preferences: { ...(readingState.value?.preferences || {}), bookmarks: bookmarks.value },
     })
     applyReadingState(saved)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '阅读位置保存失败'
   } finally {
     isSaving.value = false
+  }
+}
+
+function createBookmarkID() {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `bookmark-${Date.now()}`
+}
+
+function addBookmark() {
+  if (!canRead.value) return
+  bookmarks.value = [{
+    id: createBookmarkID(),
+    label: pageLabel.value || `${Math.round(readingPercent.value * 100)}%`,
+    reading_percent: readingPercent.value,
+    epub_cfi: readingState.value?.epub_cfi || '',
+    pdf_page: asset.value?.format === 'pdf' ? pdfPage.value : undefined,
+    txt_offset: asset.value?.format === 'txt' ? readingState.value?.txt_offset || 0 : undefined,
+    comic_page: asset.value?.format === 'cbz' || asset.value?.format === 'cbr' ? comicPage.value : undefined,
+    created_at: new Date().toISOString(),
+  }, ...bookmarks.value]
+  void saveState()
+}
+
+function removeBookmark(id: string) {
+  bookmarks.value = bookmarks.value.filter((bookmark) => bookmark.id !== id)
+  void saveState()
+}
+
+function jumpToBookmark(bookmark: BookReaderBookmark) {
+  readingPercent.value = bookmark.reading_percent
+  if (asset.value?.format === 'epub' && bookmark.epub_cfi && epubRendition) void epubRendition.display(bookmark.epub_cfi)
+  else if (asset.value?.format === 'pdf' && bookmark.pdf_page) {
+    pdfPage.value = Math.min(Math.max(1, bookmark.pdf_page), pdfPageCount.value)
+    void renderPDFPage()
+  } else if (asset.value?.format === 'txt') {
+    const offset = bookmark.txt_offset || 0
+    if (readingState.value) readingState.value.txt_offset = offset
+    restoreTextPosition(offset)
+  } else if ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && bookmark.comic_page) {
+    comicPage.value = Math.min(Math.max(1, bookmark.comic_page), comicPages.value.length)
+    scrollToComicPage()
   }
 }
 
@@ -623,6 +679,47 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.85rem;
+}
+
+.books-reader__bookmarks {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 42rem;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
+
+.books-reader__bookmarks summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.books-reader__bookmarks ol {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.books-reader__bookmarks li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.books-reader__bookmarks button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.books-reader__bookmarks button:last-child {
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
 }
 
 .books-reader__notes {

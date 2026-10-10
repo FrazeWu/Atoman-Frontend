@@ -480,11 +480,12 @@ const forwardBlockReason = computed(() => {
     if (flow.draft.albumImport.status === 'failed') return flow.draft.albumImport.errorMessage || '上传或处理失败，请重试对应文件'
     return ''
   }
-  if (!['albumDetails', 'preview'].includes(flow.step)) return ''
-  if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
-  if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
-	if (!flow.draft.albumDetails.coverUrl.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
-  if (flow.draft.albumDetails.coverUrl.startsWith('blob:')) return '请确认并上传本地封面'
+	if (!['albumDetails', 'preview'].includes(flow.step)) return ''
+	if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
+	if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
+	const coverUrl = resolvedAlbumCoverUrl(flow)
+	if (!coverUrl) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
+	if (/^(blob:|data:)/i.test(coverUrl)) return '请确认并上传本地封面'
 	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
 	if (!flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'
 	if (!flow.draft.tracks.length || flow.draft.tracks.some((track) => !track.title.trim())) return '请至少添加一首完整音轨'
@@ -529,11 +530,12 @@ const canGoForward = computed(() => {
 		if (flow.step === 'albumImport') {
 			return !!flow.draft.albumImport.importId && ['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
 	}
-	if (flow.step === 'albumDetails') {
-		return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
-			&& !!flow.draft.albumDetails.title.trim()
-				&& !!flow.draft.albumDetails.coverUrl.trim()
-				&& !flow.draft.albumDetails.coverUrl.startsWith('blob:')
+		if (flow.step === 'albumDetails') {
+			const coverUrl = resolvedAlbumCoverUrl(flow)
+			return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
+				&& !!flow.draft.albumDetails.title.trim()
+					&& !!coverUrl
+					&& !/^(blob:|data:)/i.test(coverUrl)
 			&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
 			&& !!flow.draft.albumDetails.source.trim()
 			&& flow.draft.tracks.length > 0
@@ -543,10 +545,10 @@ const canGoForward = computed(() => {
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 			&& hasRequiredArtistSource(flow)
 	}
-	return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
-		&& !!flow.draft.albumDetails.title.trim()
-			&& !!flow.draft.albumDetails.coverUrl.trim()
-			&& !flow.draft.albumDetails.coverUrl.startsWith('blob:')
+		return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
+			&& !!flow.draft.albumDetails.title.trim()
+				&& !!resolvedAlbumCoverUrl(flow)
+				&& !/^(blob:|data:)/i.test(resolvedAlbumCoverUrl(flow))
 		&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
 		&& !!flow.draft.albumDetails.source.trim()
 		&& flow.draft.tracks.length > 0
@@ -624,12 +626,23 @@ function resolvedArtistSource(flow: NonNullable<typeof creationFlow.value>) {
 
 function requiresArtistSource(flow: NonNullable<typeof creationFlow.value>) {
   const primary = primaryContributor(flow)
+  if (primary?.newArtistDraft) return false
   return !primary?.artistId || !primary.entryStatus || primary.entryStatus === 'draft'
 }
 
 function hasRequiredArtistSource(flow: NonNullable<typeof creationFlow.value>) {
   if (flow.mode === 'edit' && (flow.entity === 'album' || flow.entity === 'song')) return true
   return !requiresArtistSource(flow) || !!resolvedArtistSource(flow)
+}
+
+function resolvedAlbumCoverUrl(flow: NonNullable<typeof creationFlow.value>) {
+  const coverAssetUrl = flow.draft.albumDetails.coverAsset?.url?.trim() || ''
+  if (coverAssetUrl && !/^(blob:|data:)/i.test(coverAssetUrl)) return coverAssetUrl
+
+  const coverUrl = flow.draft.albumDetails.coverUrl.trim()
+  if (coverUrl && !/^(blob:|data:)/i.test(coverUrl)) return coverUrl
+
+  return flow.draft.albumImport.coverUrl.trim() || flow.draft.albumImport.derivedCover.trim()
 }
 
 function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): NonNullable<musicApi.MusicAlbumImportCommitInput['artists']> {
@@ -712,7 +725,10 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
   const isStandaloneSong = ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase())
   const deletedImportTrackKeys = flow.deletedImportTrackKeys ?? []
-  const coverURL = flow.draft.albumDetails.coverAsset?.url?.trim() || flow.draft.albumDetails.coverUrl.trim()
+  const coverAssetUrl = flow.draft.albumDetails.coverAsset?.url?.trim() || ''
+  const coverURL = coverAssetUrl
+    ? (/^(blob:|data:)/i.test(coverAssetUrl) ? '' : coverAssetUrl)
+    : resolvedAlbumCoverUrl(flow)
 
   return {
     ...(primaryArtistID ? { artist_id: primaryArtistID } : {}),

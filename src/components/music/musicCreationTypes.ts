@@ -318,5 +318,7 @@ export function activeMusicArtistDraft(flow: MusicCreationFlowState) {
 
 export function activeArtistRequiresFullProfile(flow: MusicCreationFlowState) {
 	const contributor = musicCreationContributorForFlow(flow);
+	// 专辑流程中新建的临时创作者只需要名称，详细资料可在之后补充。
+	if (contributor?.newArtistDraft) return false;
 	return !contributor || contributor.roles.some((role) => role.role === "primary");
 }

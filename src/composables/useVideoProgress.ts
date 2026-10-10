@@ -5,7 +5,9 @@ export interface VideoProgressRecord {
 }
 
 function progressKey(videoId: string) {
-  return `atoman:video-progress:${videoId}`
+  const pinia = getActivePinia()
+  const account = pinia ? (useAuthStore(pinia).user?.uuid || 'anonymous') : 'anonymous'
+  return `atoman:video-progress:${account}:${videoId}`
 }
 
 function getLocalStorage(): Storage | null {
@@ -77,3 +79,5 @@ export function clearVideoProgress(videoId: string) {
     // Ignore unavailable storage; clearing progress should never block playback.
   }
 }
+import { getActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'

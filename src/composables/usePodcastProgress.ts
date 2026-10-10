@@ -6,8 +6,14 @@ export type PodcastProgressRecord = {
   last_played_at: string
 }
 
-const keyFor = (episodeId: string) => `atoman:podcast-progress:${episodeId}`
-const indexKey = 'atoman:podcast-progress:index'
+const accountScope = () => {
+  const pinia = getActivePinia()
+  if (!pinia) return 'anonymous'
+  const authStore = useAuthStore(pinia)
+  return authStore.user?.uuid || 'anonymous'
+}
+const keyFor = (episodeId: string) => `atoman:podcast-progress:${accountScope()}:${episodeId}`
+const indexKey = () => `atoman:podcast-progress:index:${accountScope()}`
 
 export function readPodcastProgress(episodeId: string): PodcastProgressRecord | null {
   if (typeof localStorage === 'undefined') return null
@@ -32,7 +38,7 @@ export function writePodcastProgress(record: PodcastProgressRecord) {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(keyFor(record.episode_id), JSON.stringify(record))
   const ids = readIndex()
-  if (!ids.includes(record.episode_id)) localStorage.setItem(indexKey, JSON.stringify([...ids, record.episode_id]))
+  if (!ids.includes(record.episode_id)) localStorage.setItem(indexKey(), JSON.stringify([...ids, record.episode_id]))
 }
 
 export function listPodcastProgress(): PodcastProgressRecord[] {
@@ -41,7 +47,7 @@ export function listPodcastProgress(): PodcastProgressRecord[] {
 }
 
 function readIndex(): string[] {
-  const raw = localStorage.getItem(indexKey)
+  const raw = localStorage.getItem(indexKey())
   if (!raw) return []
   try {
     const ids = JSON.parse(raw)
@@ -50,3 +56,5 @@ function readIndex(): string[] {
     return []
   }
 }
+import { getActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'

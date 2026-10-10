@@ -101,11 +101,11 @@ function formatNumber(value: number) {
   place-items: center;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
 }
 .dashboard-section h2, .dashboard-section p { margin: 0; }
-.dashboard-section h2 { font-size: 0.9375rem; font-weight: 600; color: var(--a-color-text); }
+.dashboard-section h2 { font-size: 0.9375rem; font-weight: 500; color: var(--a-color-text); }
 .dashboard-section p { margin-top: 0.1rem; color: var(--a-color-muted); font-size: 0.75rem; }
 .dashboard-section__manage {
   min-height: 2rem;
@@ -125,7 +125,7 @@ function formatNumber(value: number) {
 }
 .dashboard-section__manage:hover {
   border-color: var(--a-color-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 .dashboard-section__manage:focus-visible,
@@ -179,6 +179,6 @@ function formatNumber(value: number) {
 }
 .dashboard-section__error button:hover {
   border-color: var(--a-color-danger);
-  background: var(--a-color-surface);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
 }
 </style>

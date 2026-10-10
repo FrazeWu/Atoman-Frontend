@@ -317,7 +317,7 @@ onBeforeUnmount(destroyChart)
 .studio-analytics__funnel strong { font-size: 1.375rem; font-variant-numeric: tabular-nums; }
 .studio-analytics__totals { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); overflow: hidden; }
 .studio-analytics__totals div { min-width: 0; padding: 1rem; border-right: 1px solid var(--a-color-border-soft); }
-.studio-analytics__totals div:hover { background: var(--a-color-surface); }
+.studio-analytics__totals div:hover { background: var(--a-color-surface-muted); }
 .studio-analytics__totals div:last-child { border-right: 0; }
 .studio-analytics__totals dt { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-analytics__totals dd { margin: 0.35rem 0 0; font-size: 1.5rem; font-variant-numeric: tabular-nums; }

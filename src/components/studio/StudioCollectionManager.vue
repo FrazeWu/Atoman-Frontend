@@ -238,10 +238,10 @@ async function deleteCollection() {
 .studio-collections__cover { width: 3.5rem; height: 3.5rem; object-fit: cover; border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); }
 .studio-collections__cover--preview { width: min(12rem, 100%); height: auto; aspect-ratio: 16 / 9; }
 .studio-collections__cover-error { margin: 0; color: var(--a-color-danger); font-size: 0.8rem; }
-.studio-collections__list li:hover { border-color: var(--a-color-border); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
+.studio-collections__list li:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); }
 .studio-collections__identity { min-width: 0; }
 .studio-collections__name { display: flex; align-items: center; gap: 0.5rem; }
-.studio-collections__name a { min-width: 0; color: var(--a-color-text); font-weight: 650; overflow: hidden; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.studio-collections__name a { min-width: 0; color: var(--a-color-text); font-weight: 500; overflow: hidden; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .studio-collections__name a:hover { color: var(--a-color-primary); }
 .studio-collections__name span { padding: 0.15rem 0.4rem; background: var(--a-color-surface-muted); color: var(--a-color-muted); font-size: 0.7rem; }
 .studio-collections__list strong, .studio-collections__list p { margin: 0; }

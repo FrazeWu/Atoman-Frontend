@@ -300,7 +300,7 @@ onMounted(load)
 .studio-dashboard__create-menu { display: grid; min-width: 10rem; padding: 0.25rem; }
 .studio-dashboard__create-menu a { min-height: 2.5rem; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.625rem; color: var(--a-color-text); text-decoration: none; font-size: 0.8125rem; }
 .studio-dashboard__create-menu a:hover { background: var(--a-color-surface-muted); color: var(--a-color-primary); }
-.studio-dashboard__manage:hover { border-color: var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-text); }
+.studio-dashboard__manage:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .studio-dashboard__manage:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .studio-dashboard__summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); box-shadow: none; overflow: hidden; }
 .studio-dashboard__summary > div { min-width: 0; padding: 1rem; border-right: 1px solid var(--a-color-border-soft); }

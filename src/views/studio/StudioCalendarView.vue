@@ -209,7 +209,7 @@ onMounted(async () => {
 }
 .studio-calendar__items a:hover {
   border-color: var(--a-color-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-primary);
 }
 .studio-calendar__items a:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }

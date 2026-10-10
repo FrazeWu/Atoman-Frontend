@@ -275,6 +275,7 @@ async function onCoverFileChange(e: Event) {
     errorMsg.value = errorMessage(err, '封面上传失败')
   } finally {
     coverUploading.value = false
+    ;(e.target as HTMLInputElement).value = ''
   }
 }
 

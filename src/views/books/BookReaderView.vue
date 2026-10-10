@@ -164,9 +164,9 @@ const pageLabel = computed(() => {
   if ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length) return `第 ${comicPage.value} / ${comicPages.value.length} 页`
   return ''
 })
-const showPagination = computed(() => ['pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
-const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
-const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
+const showPagination = computed(() => ['txt', 'pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
+const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'txt' && textPage.value > 1) || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
+const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'txt' && textPage.value < textPages.value.length) || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
 const statusLabel = computed(() => {
   if (!asset.value) return ''
   if (asset.value.processing_status === 'private_available' || asset.value.processing_status === 'publication_requested' || asset.value.processing_status === 'pending_review' || asset.value.processing_status === 'rejected') return '可以阅读'
@@ -396,13 +396,15 @@ function changePdfPage(delta: number) {
 }
 
 function movePrevious() {
-  if (asset.value?.format === 'pdf') changePdfPage(-1)
+  if (asset.value?.format === 'txt') changeTextPage(-1)
+  else if (asset.value?.format === 'pdf') changePdfPage(-1)
   else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(-1)
   else moveEpubPage('prev')
 }
 
 function moveNext() {
-  if (asset.value?.format === 'pdf') changePdfPage(1)
+  if (asset.value?.format === 'txt') changeTextPage(1)
+  else if (asset.value?.format === 'pdf') changePdfPage(1)
   else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(1)
   else moveEpubPage('next')
 }
@@ -423,6 +425,18 @@ function scrollToComicPage() {
 function changeComicPage(delta: number) {
   comicPage.value = Math.min(Math.max(1, comicPage.value + delta), comicPages.value.length)
   scrollToComicPage()
+}
+
+function changeTextPage(delta: number) {
+  const nextPage = Math.min(Math.max(1, textPage.value + delta), textPages.value.length)
+  if (nextPage === textPage.value) return
+  textPage.value = nextPage
+  textViewport.value?.scrollTo?.({ top: textPageElements[nextPage - 1]?.offsetTop || 0, behavior: 'smooth' })
+  readingPercent.value = textPages.value.length > 1 ? (nextPage - 1) / (textPages.value.length - 1) : 1
+  if (readingState.value) {
+    readingState.value.txt_offset = textPages.value[nextPage - 1]?.start || 0
+  }
+  scheduleSaveState()
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {

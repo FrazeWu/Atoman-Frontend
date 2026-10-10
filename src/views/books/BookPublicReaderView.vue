@@ -12,7 +12,7 @@
       :can-prev="canPrev"
       :can-next="canNext"
       :show-pagination="showPagination"
-      :show-surface="!isLoading && !errorMessage"
+      :show-surface="!errorMessage"
       :toc="epubTOC"
       @previous="movePrevious"
       @next="moveNext"
@@ -66,6 +66,8 @@ const route = useRoute()
 const asset = ref<BookPublishedAsset | null>(null)
 const textContent = ref('')
 const readingPercent = ref(0)
+const textPage = ref(1)
+const textPageCount = ref(1)
 const pdfPage = ref(1)
 const pdfPageCount = ref(0)
 const comicPage = ref(1)
@@ -87,14 +89,15 @@ let epubRendition: EpubRendition | null = null
 
 const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
 const pageLabel = computed(() => {
+  if (asset.value?.format === 'txt') return `第 ${textPage.value} / ${textPageCount.value} 页`
   if (asset.value?.format === 'pdf') return `第 ${pdfPage.value} / ${pdfPageCount.value} 页`
   if (asset.value?.format === 'epub') return 'EPUB'
   if ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length) return `第 ${comicPage.value} / ${comicPages.value.length} 页`
   return ''
 })
-const showPagination = computed(() => ['pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
-const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
-const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
+const showPagination = computed(() => ['txt', 'pdf', 'epub', 'cbz', 'cbr'].includes(asset.value?.format || ''))
+const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'txt' && textPage.value > 1) || (asset.value?.format === 'pdf' && pdfPage.value > 1) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPage.value > 1))
+const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'txt' && textPage.value < textPageCount.value) || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value) || ((asset.value?.format === 'cbz' || asset.value?.format === 'cbr') && comicPages.value.length > 0 && comicPage.value < comicPages.value.length))
 
 function flattenEpubTOC(items: EpubTOCSource[], depth = 0): EpubTOCItem[] {
   return items.flatMap((item) => [{ ...item, depth }, ...flattenEpubTOC(item.subitems || [], depth + 1)])
@@ -102,6 +105,8 @@ function flattenEpubTOC(items: EpubTOCSource[], depth = 0): EpubTOCItem[] {
 
 async function loadText() {
   textContent.value = await contentBlob!.text()
+  await nextTick()
+  updateTextPageCount()
 }
 
 async function loadPDF() {
@@ -158,7 +163,16 @@ function reportAsset() {
 function handleTextScroll() {
   const viewport = textViewport.value
   if (!viewport) return
+  const pageHeight = Math.max(1, viewport.clientHeight)
+  textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / pageHeight))
+  textPage.value = Math.min(textPageCount.value, Math.floor(viewport.scrollTop / pageHeight) + 1)
   readingPercent.value = Math.max(0, Math.min(1, viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight)))
+}
+
+function updateTextPageCount() {
+  const viewport = textViewport.value
+  if (!viewport) return
+  textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / Math.max(1, viewport.clientHeight)))
 }
 
 function changePdfPage(delta: number) {
@@ -167,13 +181,15 @@ function changePdfPage(delta: number) {
 }
 
 function movePrevious() {
-  if (asset.value?.format === 'pdf') changePdfPage(-1)
+  if (asset.value?.format === 'txt') changeTextPage(-1)
+  else if (asset.value?.format === 'pdf') changePdfPage(-1)
   else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(-1)
   else moveEpubPage('prev')
 }
 
 function moveNext() {
-  if (asset.value?.format === 'pdf') changePdfPage(1)
+  if (asset.value?.format === 'txt') changeTextPage(1)
+  else if (asset.value?.format === 'pdf') changePdfPage(1)
   else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') changeComicPage(1)
   else moveEpubPage('next')
 }
@@ -190,6 +206,14 @@ function scrollToComicPage() {
 function changeComicPage(delta: number) {
   comicPage.value = Math.min(Math.max(1, comicPage.value + delta), comicPages.value.length)
   scrollToComicPage()
+}
+
+function changeTextPage(delta: number) {
+  const nextPage = Math.min(Math.max(1, textPage.value + delta), textPageCount.value)
+  if (nextPage === textPage.value) return
+  textPage.value = nextPage
+  textViewport.value?.scrollTo?.({ top: (nextPage - 1) * Math.max(1, textViewport.value?.clientHeight || 0), behavior: 'smooth' })
+  readingPercent.value = textPageCount.value > 1 ? (nextPage - 1) / (textPageCount.value - 1) : 1
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {

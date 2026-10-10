@@ -79,5 +79,10 @@ describe('BookReaderView', () => {
 
     expect(wrapper.findAll('.books-reader__text-page:not(.books-reader__text-page--measure)')).toHaveLength(3)
     expect(wrapper.text()).toContain('第 1 / 3 页')
+
+    await wrapper.find('[aria-label="下一页"]').trigger('click')
+    expect(wrapper.text()).toContain('第 2 / 3 页')
+    await wrapper.find('[aria-label="上一页"]').trigger('click')
+    expect(wrapper.text()).toContain('第 1 / 3 页')
   })
 })

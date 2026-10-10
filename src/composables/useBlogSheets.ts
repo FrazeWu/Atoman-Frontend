@@ -70,14 +70,14 @@ export function useBlogSheets() {
 
 	const openPost = (postId: string, title: string, collectionId?: string) => {
 		if (mobile) {
-			void router?.push(modulePathUrl('blog', `/post/${encodeURIComponent(postId)}`));
+			void router?.push(`/posts/post/${encodeURIComponent(postId)}`);
 			return;
 		}
 		stack.push({
 			key: `post:${postId}`,
 			kind: "post",
 			title,
-			route: `/post/${postId}`,
+			route: `/posts/post/${postId}`,
 			payload: { postId, collectionId },
 		});
 	};
@@ -86,10 +86,10 @@ export function useBlogSheets() {
 			key: `post:${postId}`,
 			kind: "post",
 			title,
-			route: `/post/${postId}`,
+			route: `/posts/post/${postId}`,
 			payload: { postId, collectionId },
 		};
-		if (mobile) void router?.replace(modulePathUrl('blog', `/post/${encodeURIComponent(postId)}`));
+		if (mobile) void router?.replace(`/posts/post/${encodeURIComponent(postId)}`);
 		else stack.replaceTop(layer, true);
 	};
 

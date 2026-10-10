@@ -4,6 +4,7 @@ import {
   bookContentType,
   createBookImport,
   fetchBookAssetContent,
+  fetchPublishedBookAssetContent,
   deleteBookRating,
   getBookAsset,
   getBookRating,
@@ -94,6 +95,19 @@ describe('books API', () => {
     await expect(saveBookReadingState('asset-1', { reading_percent: 0.5 })).resolves.toEqual({
       asset_id: 'asset-1', reading_percent: 0.5, preferences: {},
     })
+  })
+
+  it('opens cached public book content when the network is unavailable', async () => {
+    const cachedResponse = new Response('cached public book', { status: 200 })
+    const cache = {
+      match: vi.fn().mockResolvedValue(cachedResponse),
+      open: vi.fn(),
+    }
+    vi.stubGlobal('caches', cache)
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+
+    await expect((await fetchPublishedBookAssetContent('public-asset-1')).text()).resolves.toBe('cached public book')
+    expect(cache.match).toHaveBeenCalledWith('/api/v1/books/catalog/assets/public-asset-1/content')
   })
 
   it('loads private shelf, continue-reading state, and public assets through separate endpoints', async () => {

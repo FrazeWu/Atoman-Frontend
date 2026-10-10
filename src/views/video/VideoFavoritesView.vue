@@ -157,9 +157,9 @@ watch([activeTab, () => authStore.isAuthenticated, queueState, queueSort], () =>
 .video-favorites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.5rem; }
 .video-queue-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1rem; }
 .video-queue-sort, .video-queue-select-all { display: inline-flex; align-items: center; gap: .375rem; color: var(--a-color-muted); font-size: .875rem; }
-.video-queue-sort select { min-height: 2rem; border: 1px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-fg); }
+.video-queue-sort select { min-height: 2rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-fg); }
 .video-queue-item { position: relative; min-width: 0; }
-.video-queue-select { position: absolute; z-index: 1; top: .5rem; left: .5rem; display: grid; width: 1.75rem; height: 1.75rem; place-items: center; background: var(--a-color-surface); border: 1px solid var(--a-color-border); }
+.video-queue-select { position: absolute; z-index: 1; top: .5rem; left: .5rem; display: grid; width: 1.75rem; height: 1.75rem; place-items: center; background: var(--a-color-bg); border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); }
 .video-queue-select input, .video-queue-select-all input { accent-color: var(--a-color-primary); }
 .video-favorites-links { display: grid; gap: .75rem; }
 .video-favorites-links a { color: var(--a-color-fg); text-decoration: none; }

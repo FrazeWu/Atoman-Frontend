@@ -518,9 +518,9 @@ async function copyVideoUuid() {
   try {
     if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
     await navigator.clipboard.writeText(String(video.value.id))
-    actionFeedback.value = 'UUID 已复制'
+    actionFeedback.value = '视频 ID 已复制'
   } catch {
-    actionError.value = '复制 UUID 失败'
+    actionError.value = '复制视频 ID 失败'
   }
 }
 
@@ -792,13 +792,13 @@ async function toggleChannelSubscription() {
           <button
             type="button"
             class="vd-comment-action"
-            title="复制 UUID"
-            aria-label="复制视频 UUID"
+            title="复制视频 ID"
+            aria-label="复制视频 ID"
             data-testid="video-copy-uuid"
             @click="copyVideoUuid"
           >
             <Copy :size="16" aria-hidden="true" />
-            复制 UUID
+            复制视频 ID
           </button>
           <button type="button" class="vd-comment-action" data-testid="video-comments" @click="commentsOpen = true">
             <MessageSquare :size="16" aria-hidden="true" />
@@ -1067,7 +1067,7 @@ async function toggleChannelSubscription() {
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -1103,7 +1103,7 @@ async function toggleChannelSubscription() {
   color: var(--a-color-bg);
   background: var(--a-color-primary);
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .vd-author-avatar img {
@@ -1156,7 +1156,7 @@ async function toggleChannelSubscription() {
   min-height: 2rem;
   padding: 0.25rem 0.55rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 3px;
+  border-radius: var(--a-radius-control);
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   font: inherit;
@@ -1172,14 +1172,17 @@ async function toggleChannelSubscription() {
   margin: 0;
   padding: 0.5rem 0.65rem;
   color: var(--a-color-muted);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
   font-size: 0.75rem;
 }
 
 .vd-description {
   padding: 0.8rem;
-  border-radius: 4px;
-  background: var(--a-color-surface);
+  border-radius: var(--a-radius-card);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .vd-desc-text {
@@ -1274,7 +1277,7 @@ async function toggleChannelSubscription() {
   justify-content: center;
   gap: 0.35rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 3px;
+  border-radius: var(--a-radius-control);
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   font: inherit;

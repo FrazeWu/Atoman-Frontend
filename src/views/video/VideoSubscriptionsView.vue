@@ -54,7 +54,7 @@ const pageMeta = computed(() => ({
       <p v-if="timeline.loading.value && !videos.length" class="video-subscriptions-state">正在加载...</p>
       <PEmpty v-else-if="timeline.error.value && !videos.length" title="订阅内容加载失败">
         <template #action>
-          <button type="button" class="a-btn" @click="timeline.retry">重试</button>
+          <PButton variant="secondary" @click="timeline.retry">重试</PButton>
         </template>
       </PEmpty>
       <PEmpty v-else-if="!videos.length" title="暂无订阅更新" description="有新视频时会显示在这里。" />

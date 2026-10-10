@@ -896,7 +896,7 @@ async function duplicateDraft() {
   margin: 0;
   color: var(--a-color-text);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .ve-step-heading {
@@ -917,7 +917,7 @@ async function duplicateDraft() {
 .ve-field-label {
   display: block;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
   margin-bottom: 0.375rem;
 }

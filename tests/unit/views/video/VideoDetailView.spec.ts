@@ -774,7 +774,7 @@ describe("VideoDetailView shared interactions", () => {
 		await flushPromises();
 
 		expect(writeText).toHaveBeenCalledWith("video-1");
-		expect(wrapper.text()).toContain("UUID 已复制");
+		expect(wrapper.text()).toContain("视频 ID 已复制");
 	});
 
 	it("路由 id 快速切换时忽略过期详情响应", async () => {

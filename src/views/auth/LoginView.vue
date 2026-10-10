@@ -580,6 +580,10 @@ watch(email, () => {
     delete fieldErrors.value.email
   }
   emailAvailability.value = { status: 'idle', reason: '' }
+  if (codeSent.value || countdown.value > 0 || verificationCode.value) {
+    verificationCode.value = ''
+    resetCountdown()
+  }
   clearGeneralError()
 })
 

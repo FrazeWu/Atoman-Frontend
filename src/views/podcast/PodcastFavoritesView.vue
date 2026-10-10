@@ -17,6 +17,7 @@ type ShowBookmark = { id: string; channel?: Channel }
 
 const authStore = getActivePinia() ? useAuthStore() : null
 const isAuth = computed(() => !authStore || authStore.isAuthenticated || Boolean(authStore.token))
+const accountIdentity = computed(() => authStore?.user?.uuid || authStore?.token || '')
 const player = usePlayerStore()
 
 const activeTab = ref<TabKey>('episodes')
@@ -74,7 +75,15 @@ async function loadActiveTab() {
 }
 
 onMounted(loadActiveTab)
-watch(activeTab, loadActiveTab)
+watch([activeTab, accountIdentity], ([, identity], previous) => {
+  if (previous && identity !== previous[1]) {
+    latestLoadRequest += 1
+    episodeBookmarks.value = []
+    showBookmarks.value = []
+    listenLaterRows.value = []
+  }
+  void loadActiveTab()
+})
 </script>
 
 <template>

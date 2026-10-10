@@ -101,8 +101,12 @@ async function subscribeShow() {
     actionMessage.value = '请先登录'
     return
   }
-  const ok = await addPodcastShowBookmark(ep.value.channel_id, authStore.token ?? undefined)
-  actionMessage.value = ok ? '已订阅' : '订阅失败'
+  try {
+    const ok = await addPodcastShowBookmark(ep.value.channel_id, authStore.token ?? undefined)
+    actionMessage.value = ok ? '已订阅' : '订阅失败'
+  } catch {
+    actionMessage.value = '订阅失败，请重试'
+  }
 }
 
 async function favoriteEpisode() {

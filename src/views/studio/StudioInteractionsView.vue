@@ -172,6 +172,7 @@ const replyingID = ref('')
 const replyDraft = ref('')
 const pendingDelete = ref<StudioInteractionItem | null>(null)
 const selectedIDs = ref<string[]>([])
+let interactionsRequestID = 0
 const selectedTemplateID = ref('')
 const templateModalOpen = ref(false)
 const templateName = ref('')
@@ -241,14 +242,15 @@ async function loadInteractions() {
     error.value = '请先创建频道'
     return
   }
+  const requestID = ++interactionsRequestID
   loading.value = true
   error.value = ''
   try {
     await studio.loadInteractions(module.value, { ...filters })
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '加载失败'
+    if (requestID === interactionsRequestID) error.value = cause instanceof Error ? cause.message : '加载失败'
   } finally {
-    loading.value = false
+    if (requestID === interactionsRequestID) loading.value = false
   }
 }
 

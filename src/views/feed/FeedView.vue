@@ -286,7 +286,7 @@
                 <Clock :size="14" aria-hidden="true" />
               </PClip>
               <a
-                :href="item.feed_item.link"
+                :href="safeExternalUrl(item.feed_item.link)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="feed-item-external-link"
@@ -408,6 +408,7 @@ import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFee
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore } from '@/stores/onboarding'
+import { safeExternalUrl } from '@/utils/safeExternalUrl'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useFeedSubscriptionManager } from '@/composables/feed/useFeedSubscriptionManager'

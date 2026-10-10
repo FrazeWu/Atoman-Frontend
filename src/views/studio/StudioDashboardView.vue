@@ -41,7 +41,11 @@
     </PPageHeader>
 
     <p v-if="loading" class="studio-dashboard__state">加载中...</p>
-    <PEmpty v-else-if="error" title="加载失败" :description="error" />
+    <PEmpty v-else-if="error" title="加载失败" :description="error">
+      <template #action>
+        <PButton type="button" size="sm" @click="load">重试</PButton>
+      </template>
+    </PEmpty>
     <PEmpty v-else-if="!studio.dashboard" title="暂无创作内容" description="在此管理你的博客文章、播客单集与视频。" />
     <template v-else>
       <p v-if="retryError" class="studio-dashboard__retry-error" role="alert">{{ retryError }}</p>

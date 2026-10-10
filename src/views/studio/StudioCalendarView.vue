@@ -61,6 +61,7 @@ import type { StudioCalendarItem } from '@/types'
 const studio = useStudioStore()
 const displayMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 const loading = ref(true)
+let calendarRequestID = 0
 const error = ref('')
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const todayKey = localDateKey(new Date())
@@ -128,6 +129,7 @@ async function loadCalendar() {
     loading.value = false
     return
   }
+  const requestID = ++calendarRequestID
   loading.value = true
   error.value = ''
   const from = new Date(displayMonth.value.getFullYear(), displayMonth.value.getMonth(), 1)
@@ -135,9 +137,9 @@ async function loadCalendar() {
   try {
     await studio.loadCalendar(from.toISOString(), to.toISOString())
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '加载失败'
+    if (requestID === calendarRequestID) error.value = cause instanceof Error ? cause.message : '加载失败'
   } finally {
-    loading.value = false
+    if (requestID === calendarRequestID) loading.value = false
   }
 }
 

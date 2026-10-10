@@ -49,8 +49,11 @@
       </template>
     </StudioManagementSheet>
 
-    <p v-if="error && !editing" class="studio-channels__error" role="alert">{{ error }}</p>
-    <PEmpty v-if="!studio.channels.length && !editing" kicker="" title="暂无频道" />
+    <div v-if="error && !editing" class="studio-channels__error" role="alert">
+      <span>{{ error }}</span>
+      <PButton type="button" variant="secondary" size="sm" @click="loadChannelState">重试</PButton>
+    </div>
+    <PEmpty v-else-if="!studio.channels.length && !editing" kicker="" title="暂无频道" />
     <ul v-else-if="studio.channels.length" class="studio-channels__list">
       <li v-for="channel in studio.channels" :key="channel.id">
         <div class="studio-channels__identity">
@@ -357,10 +360,17 @@ async function deleteChannel() {
   }
 }
 
-onMounted(async () => {
-  if (!studio.loaded) await studio.loadState()
-  await loadChannelMetrics()
-})
+async function loadChannelState() {
+  error.value = ''
+  try {
+    await studio.loadState(true)
+    await loadChannelMetrics()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '频道加载失败'
+  }
+}
+
+onMounted(() => { void loadChannelState() })
 
 onBeforeUnmount(clearCoverPreview)
 </script>

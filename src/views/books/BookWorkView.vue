@@ -138,6 +138,10 @@
           </li>
         </ul>
       </section>
+      <p v-else-if="publishedAssetsError" class="books-detail__feedback books-detail__feedback--error" role="alert">
+        {{ publishedAssetsError }}
+        <button type="button" @click="loadPublishedAssets">重试</button>
+      </p>
 
       <section v-if="work.related_posts?.length" class="books-detail__section">
         <h2>相关文章</h2>
@@ -257,6 +261,7 @@ const work = ref<BookPublicWork | null>(null)
 const primaryEdition = computed(() => work.value?.editions.find(item => item.cover_url) || work.value?.editions[0])
 const reviews = ref<BookReview[]>([])
 const publishedAssets = ref<BookPublishedAsset[]>([])
+const publishedAssetsError = ref('')
 const myReview = ref<BookReview | null>(null)
 const isLoading = ref(true)
 const reviewsLoading = ref(false)
@@ -432,10 +437,17 @@ async function loadWorkPage() {
       // Users without a review have no private review entry.
     }
   }
+  await loadPublishedAssets()
+}
+
+async function loadPublishedAssets() {
+  if (!work.value) return
+  publishedAssetsError.value = ''
   try {
     publishedAssets.value = (await listPublishedBookAssets(work.value.id)).items
   } catch {
-    // Public reading assets are optional; metadata remains usable when the asset list is unavailable.
+    publishedAssets.value = []
+    publishedAssetsError.value = '公共正文加载失败，请稍后重试'
   }
 }
 

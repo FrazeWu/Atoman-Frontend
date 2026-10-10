@@ -4,7 +4,7 @@
     class="p-link"
     :class="[`p-link--${variant}`, `p-link--${linkKind}`]"
     :to="isRouterLink ? resolvedTo : undefined"
-    :href="isAnchor ? href : undefined"
+    :href="isAnchor ? safeHref : undefined"
     :target="isAnchor ? resolvedTarget : undefined"
     :rel="isAnchor ? computedRel : undefined"
     @click="emit('click', $event)"
@@ -59,6 +59,15 @@ const isRouterLink = computed(() => Boolean(props.to) || (Boolean(props.href) &&
 const isAnchor = computed(() => Boolean(props.href) && !isRouterLink.value)
 const componentType = computed(() => (isRouterLink.value ? RouterLink : 'a'))
 const resolvedTo = computed(() => props.to ?? props.href)
+const safeHref = computed(() => {
+  if (!props.href || !isAnchor.value) return props.href
+  try {
+    const protocol = new URL(props.href, typeof window === 'undefined' ? 'http://localhost' : window.location.origin).protocol
+    return protocol === 'http:' || protocol === 'https:' ? props.href : undefined
+  } catch {
+    return undefined
+  }
+})
 const resolvedTarget = computed(() => (isExternal.value ? (props.target ?? '_blank') : props.target))
 const computedRel = computed(() => {
   const rel = props.rel?.trim()

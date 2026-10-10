@@ -70,6 +70,15 @@ describe('P action components', () => {
     expect(wrapper.attributes('rel')).toContain('noreferrer')
   })
 
+  it('does not emit unsafe external URL schemes', () => {
+    const wrapper = mount(PLink, {
+      props: { href: 'javascript:alert(1)', external: true, label: '外链' },
+    })
+
+    expect(wrapper.element.tagName).toBe('A')
+    expect(wrapper.attributes('href')).toBeUndefined()
+  })
+
   it('renders PReject as a destructive action and still emits click', async () => {
     const wrapper = mount(PReject, { props: { label: 'Reject' } })
 

@@ -144,7 +144,10 @@
 
     <section v-else-if="isCatalog" class="books-catalog" aria-labelledby="catalog-title">
       <SearchSurface v-model:query="searchInput" :open="false" compact eyebrow="" placeholder="搜索书名或作者..." @submit="submitCatalogSearch" />
-      <header class="books-catalog__header"><h2 id="catalog-title">{{ route.query.q ? '搜索结果' : '书籍' }}</h2><span class="books-library__meta">{{ catalogTotal }} 本</span></header>
+      <header class="books-catalog__header">
+        <div class="books-catalog__title"><h2 id="catalog-title">{{ route.query.q ? '搜索结果' : '书籍' }}</h2><span class="books-library__meta">{{ catalogTotal }} 本</span></div>
+        <RouterLink class="books-upload-link" to="/books/library">导入电子书</RouterLink>
+      </header>
 
       <div v-if="catalogError" role="alert"><p class="books-feedback books-feedback--error">{{ catalogError }}</p><PButton variant="ghost" @click="loadCatalog">重试</PButton></div>
       <div v-else-if="catalogLoading" class="books-grid" aria-label="正在加载书籍" aria-busy="true"><PSkeleton v-for="index in 12" :key="index" height="16rem" /></div>
@@ -793,6 +796,20 @@ onBeforeUnmount(() => {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
+
+.books-catalog__title { display: flex; align-items: baseline; gap: 0.75rem; min-width: 0; }
+.books-upload-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.8rem;
+  border: 1px solid var(--a-color-border);
+  color: var(--a-color-fg);
+  background: var(--a-color-surface);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.books-upload-link:hover, .books-upload-link:focus-visible { border-color: var(--a-color-primary); color: var(--a-color-primary); }
 
 .books-catalog__header h2 {
   margin: 0;

@@ -276,11 +276,13 @@ export const usePlayerStore = defineStore("player", () => {
 	const restoreMusicSession = async () => {
 		if (!authStore.isAuthenticated || musicSessionRestored) return false;
 		const generation = musicAccountGeneration;
+		const playbackGeneration = playGeneration;
 		const userID = authStore.user?.uuid;
 		try {
 			const session = await getMusicPlaybackSession();
 			if (
 				generation !== musicAccountGeneration ||
+				playbackGeneration !== playGeneration ||
 				!authStore.isAuthenticated ||
 				authStore.user?.uuid !== userID
 			)
@@ -316,11 +318,13 @@ export const usePlayerStore = defineStore("player", () => {
 	const restoreMusicProgress = async () => {
 		if (!authStore.isAuthenticated || musicProgressRestored) return;
 		const generation = musicAccountGeneration;
+		const playbackGeneration = playGeneration;
 		const userID = authStore.user?.uuid;
 		try {
 			const progress = await getMusicPlaybackProgress();
 			if (
 				generation !== musicAccountGeneration ||
+				playbackGeneration !== playGeneration ||
 				!authStore.isAuthenticated ||
 				authStore.user?.uuid !== userID
 			)
@@ -349,8 +353,9 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const restoreMusicPlayback = async () => {
 		const generation = musicAccountGeneration;
+		const playbackGeneration = playGeneration;
 		if (await restoreMusicSession()) return;
-		if (generation !== musicAccountGeneration) return;
+		if (generation !== musicAccountGeneration || playbackGeneration !== playGeneration) return;
 		await restoreMusicProgress();
 	};
 

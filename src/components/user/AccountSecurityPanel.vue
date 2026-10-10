@@ -138,6 +138,7 @@ const activities = ref<Activity[]>([])
 const sessionsLoading = ref(true)
 const activitiesLoading = ref(true)
 const sessionsError = ref('')
+let sessionsRequestSequence = 0
 const activitiesError = ref('')
 const revokeError = ref('')
 const pendingRevoke = ref<string | null>(null)
@@ -189,17 +190,18 @@ function isValidEmail(value: string) {
 }
 
 async function loadSessions() {
+  const requestSequence = ++sessionsRequestSequence
   sessionsLoading.value = true
   sessionsError.value = ''
   try {
     const response = await apiRequestResult(`${base}/users/me/sessions`, { headers: authHeaders() })
     if (!response.ok) throw new Error('登录设备加载失败，请重试')
     const data = responsePayload(response.data)
-    sessions.value = Array.isArray(data.sessions) ? data.sessions as Session[] : []
+    if (requestSequence === sessionsRequestSequence) sessions.value = Array.isArray(data.sessions) ? data.sessions as Session[] : []
   } catch (cause) {
-    sessionsError.value = errorMessage(cause, '登录设备加载失败，请重试')
+    if (requestSequence === sessionsRequestSequence) sessionsError.value = errorMessage(cause, '登录设备加载失败，请重试')
   } finally {
-    sessionsLoading.value = false
+    if (requestSequence === sessionsRequestSequence) sessionsLoading.value = false
   }
 }
 

@@ -133,6 +133,7 @@ const { openMusicCreationFlow, openMusicEditor } = useMusicDrawers()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
+let loadGeneration = 0
 
 const song = computed(() => detail.value?.song as MusicSongListItem)
 const artistText = computed(() => detail.value?.artists.map((artist) => artist.name).join(' / ') || song.value?.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家')
@@ -169,16 +170,24 @@ function toPlayableSong(source: MusicSongListItem): Song {
 
 async function loadSong() {
   const songId = route.params.songId
-  if (typeof songId !== 'string' || !songId) return
+  const generation = ++loadGeneration
+  if (typeof songId !== 'string' || !songId) {
+    detail.value = null
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = ''
   try {
-    detail.value = await getMusicSongDetail(songId)
+    const nextDetail = await getMusicSongDetail(songId)
+    if (generation !== loadGeneration || route.params.songId !== songId) return
+    detail.value = nextDetail
   } catch {
+    if (generation !== loadGeneration || route.params.songId !== songId) return
     detail.value = null
     error.value = '请稍后重试'
   } finally {
-    loading.value = false
+    if (generation === loadGeneration && route.params.songId === songId) loading.value = false
   }
 }
 

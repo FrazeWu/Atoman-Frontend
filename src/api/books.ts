@@ -60,6 +60,11 @@ export interface BookPublicPerson {
   role: string
 }
 
+export interface BookPublicPublisher {
+  id: string
+  name: string
+}
+
 export interface BookPublicSource {
   kind?: string
   title?: string
@@ -71,7 +76,9 @@ export interface BookPublicEdition {
   id: string
   work_id: string
   title?: string
+  publisher_id?: string
   publisher?: string
+  publisher_info?: BookPublicPublisher
   isbn10?: string
   isbn13?: string
   language?: string
@@ -179,6 +186,7 @@ export interface BookEdit {
   sources: BookEditSource[]
   upvote_count: number
   downvote_count: number
+  payload?: Record<string, unknown>
 }
 
 export interface BookEditListResult {
@@ -190,7 +198,7 @@ export interface BookEditListResult {
 
 export interface SubmitBookEditInput {
   type: 'create' | 'update' | 'merge' | 'retire' | 'reopen'
-  entity_type: 'work' | 'edition' | 'person'
+  entity_type: 'work' | 'edition' | 'person' | 'publisher'
   entity_id?: string
   payload: Record<string, unknown>
   reason?: string
@@ -679,7 +687,13 @@ export async function uploadBookFile(
     completedParts: session.completed_parts.map(part => part.part_number),
     uploadPart: async ({ partNumber, body }) => {
       const upload = await createBookUploadPart(session.id, partNumber)
-      return uploadBookImportPart(upload.upload_url, body)
+      return uploadBlobPart(upload.upload_url, body, {
+        onProgress: ({ loaded, total }) => options.onProgress?.({
+          loaded: Math.min(file.size, (partNumber - 1) * session.part_size + loaded),
+          total: file.size,
+        }),
+        messages: { missingETag: '上传分片未返回 ETag' },
+      })
     },
     completePart: ({ partNumber, result: etag, size }) => (
       completeBookUploadPart(session.id, partNumber, { etag, size }).then(() => undefined)

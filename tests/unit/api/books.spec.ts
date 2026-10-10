@@ -176,6 +176,28 @@ describe('books API', () => {
 
   it('resumes a book upload by skipping completed parts and reports aggregate progress', async () => {
     const progress = vi.fn()
+    class FakeXMLHttpRequest {
+      status = 200
+      timeout = 0
+      withCredentials = false
+      url = ''
+      open = vi.fn((_method: string, url: string) => { this.url = url })
+      send = vi.fn(() => {
+        queueMicrotask(() => {
+          this.uploadListeners.get('progress')?.({ lengthComputable: true, loaded: 1, total: 2 } as ProgressEvent)
+          this.uploadListeners.get('progress')?.({ lengthComputable: true, loaded: 2, total: 2 } as ProgressEvent)
+          this.listeners.get('load')?.()
+        })
+      })
+      abort = vi.fn()
+      setRequestHeader = vi.fn()
+      getResponseHeader = vi.fn(() => 'etag-2')
+      private listeners = new Map<string, () => void>()
+      private uploadListeners = new Map<string, (event: ProgressEvent) => void>()
+      upload = { addEventListener: (_event: string, listener: (event: ProgressEvent) => void) => { this.uploadListeners.set('progress', listener) } }
+      addEventListener(event: string, listener: () => void) { this.listeners.set(event, listener) }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url === '/api/v1/books/imports') {

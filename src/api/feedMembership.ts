@@ -22,8 +22,23 @@ export async function loadUnreadFeedItemCount(baseURL: string, token: string | n
 }
 
 export async function loadStarredFeedItemIds(baseURL: string, token: string | null | undefined): Promise<string[]> {
-  const payload = await apiGetRaw<FeedMembershipPayload>(`${baseURL}/feed/stars?limit=500`, authInit(token))
-  return (payload.items || []).map(item => item.id || '').filter(Boolean)
+  const pageSize = 100
+  const entries: FeedMembershipEntry[] = []
+  for (let page = 1; ; page += 1) {
+    const payload = await apiGetRaw<FeedMembershipPayload>(
+      `${baseURL}/feed/stars?page=${page}&limit=${pageSize}`,
+      authInit(token),
+    )
+    const pageEntries = Array.isArray(payload.data)
+      ? payload.data
+      : Array.isArray(payload.data?.items)
+        ? payload.data.items
+        : payload.items || []
+    entries.push(...pageEntries)
+    const total = Number(payload.meta?.total ?? (Array.isArray(payload.data) ? undefined : payload.data?.total) ?? payload.total)
+    if ((Number.isFinite(total) && entries.length >= total) || pageEntries.length < pageSize) break
+  }
+  return entries.map(item => item.id || item.target_id || item.feed_item_id || '').filter(Boolean)
 }
 
 export async function loadReadingListFeedItemIds(baseURL: string, token: string | null | undefined): Promise<string[]> {

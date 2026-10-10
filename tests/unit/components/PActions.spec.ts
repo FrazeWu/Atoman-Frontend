@@ -87,6 +87,12 @@ describe('P action components', () => {
     expect(wrapper.attributes('href')).toBeUndefined()
   })
 
+  it('treats protocol-relative URLs as external links', () => {
+    const wrapper = mount(PLink, { props: { href: '//evil.com/path', label: '外链' } })
+    expect(wrapper.element.tagName).toBe('A')
+    expect(wrapper.attributes('href')).toBe('//evil.com/path')
+  })
+
   it('renders PReject as a destructive action and still emits click', async () => {
     const wrapper = mount(PReject, { props: { label: 'Reject' } })
 

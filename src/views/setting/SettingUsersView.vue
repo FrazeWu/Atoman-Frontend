@@ -346,6 +346,7 @@ const showResetPassword = ref(false)
 const confirmAction = ref<ConfirmAction | null>(null)
 const detailOpen = ref(false)
 const selectedUserId = ref<string | null>(null)
+let usersRequestSequence = 0
 
 const isOwner = computed(() => isOwnerRole(authStore.user?.role))
 const { discardPending: discardFormPending, requestClose: requestFormClose, cancelDiscard: cancelFormDiscard, confirmDiscard: confirmFormDiscard, reset: resetFormCloseGuard } = useSheetCloseGuard({
@@ -453,6 +454,7 @@ function errorText(cause: unknown, fallback: string) {
 }
 
 async function loadUsers(page = meta.value.page) {
+  const sequence = ++usersRequestSequence
   loading.value = true
   error.value = ''
   try {
@@ -464,12 +466,13 @@ async function loadUsers(page = meta.value.page) {
       page,
       page_size: meta.value.page_size,
     })
+    if (sequence !== usersRequestSequence) return
     users.value = response.data
     meta.value = response.meta ?? { ...meta.value, page, total: response.data.length, has_more: false }
   } catch (cause) {
-    error.value = errorText(cause, '加载用户失败，请重试')
+    if (sequence === usersRequestSequence) error.value = errorText(cause, '加载用户失败，请重试')
   } finally {
-    loading.value = false
+    if (sequence === usersRequestSequence) loading.value = false
   }
 }
 

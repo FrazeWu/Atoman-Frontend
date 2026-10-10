@@ -90,6 +90,7 @@ const topLayer = computed(() =>
 );
 let audioUploadController: AbortController | null = null;
 let songCoverObjectURL = "";
+let songLoadGeneration = 0;
 
 const songLoading = ref(false);
 const songSubmitting = ref(false);
@@ -194,14 +195,17 @@ function revokeSongCoverPreview() {
 }
 
 onBeforeUnmount(() => {
+  songLoadGeneration += 1;
   audioUploadController?.abort();
   revokeSongCoverPreview();
 });
 
 async function loadSong(songId: string) {
+  const generation = ++songLoadGeneration;
   songLoading.value = true;
   try {
     const detail = await getMusicSongDetail(songId);
+    if (generation !== songLoadGeneration || editor.value?.id !== songId) return;
     standaloneSong.value =
       detail.song.release_type === "single" ||
       detail.song.release_type === "leak";
@@ -245,10 +249,13 @@ async function loadSong(songId: string) {
     }
     songDraft.contributors = [...contributors.values()];
   } catch (error) {
+    if (generation !== songLoadGeneration || editor.value?.id !== songId) return;
     reportError(error, "Failed to load song:");
     songLoadError.value = "加载歌曲失败，请重试";
   } finally {
-    songLoading.value = false;
+    if (generation === songLoadGeneration && editor.value?.id === songId) {
+      songLoading.value = false;
+    }
   }
 }
 
@@ -440,6 +447,13 @@ async function handleSongEditSubmit() {
       />
       <p v-if="songLoadError" class="song-editor__error" role="alert">
         {{ songLoadError }}
+        <PButton
+          v-if="editor?.id"
+          type="button"
+          variant="secondary"
+          size="sm"
+          @click="loadSong(String(editor.id))"
+        >重试</PButton>
       </p>
       <p v-else-if="songLoading" class="song-editor__state">
         正在加载歌曲资料...

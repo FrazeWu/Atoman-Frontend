@@ -28,4 +28,11 @@ describe("VideoPlayerControls", () => {
 		expect(playerControlsSource).toContain('播放器设置暂不可用')
 		expect(playerControlsSource).not.toContain('1080P 高清')
 	});
+
+	it("synchronizes from media events instead of a polling timer", () => {
+		expect(playerControlsSource).toContain("const mediaEvents")
+		expect(playerControlsSource).toContain("video.addEventListener(eventName, syncState)")
+		expect(playerControlsSource).toContain("video.removeEventListener(eventName, syncState)")
+		expect(playerControlsSource).not.toContain("setInterval(syncState, 250)")
+	});
 });

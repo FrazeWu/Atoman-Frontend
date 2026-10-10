@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { useOfflineMediaSource } from '@/composables/useOfflineMediaSource'
 import { videoAvatarSource, videoThumbnailSource } from '@/utils/videoPresentation'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
@@ -92,6 +93,13 @@ const posterUrl = computed(() => {
   return thumbnail ? resolveMediaURL(thumbnail) : undefined
 })
 const nativeVideoUrl = computed(() => video.value?.video_url ? resolveMediaURL(video.value.video_url) : '')
+const {
+  playbackUrl: offlineVideoUrl,
+  isCached: isVideoCached,
+  isCaching: isVideoCaching,
+  cacheError: videoCacheError,
+  cacheCurrentMedia: cacheCurrentVideo,
+} = useOfflineMediaSource(nativeVideoUrl)
 const subtitleUrl = computed(() => video.value?.subtitle_url ? resolveMediaURL(video.value.subtitle_url) : '')
 const channelCoverUrl = computed(() => {
   const url = video.value ? videoAvatarSource(video.value) : ''
@@ -659,7 +667,7 @@ async function toggleChannelSubscription() {
           <template v-else-if="video.storage_type === 'local' && nativeVideoUrl">
             <video
               ref="videoElement"
-              :src="nativeVideoUrl"
+              :src="offlineVideoUrl"
               :poster="posterUrl"
               class="vd-native"
               playsinline
@@ -718,7 +726,20 @@ async function toggleChannelSubscription() {
             @toggle-theater="toggleTheaterMode"
           />
         </template>
+        <template #actions>
+          <button
+            v-if="video.storage_type === 'local' && nativeVideoUrl"
+            type="button"
+            class="vd-offline-action"
+            :disabled="isVideoCaching"
+            :aria-label="isVideoCached ? '已保存视频离线副本' : '保存视频供离线播放'"
+            @click="cacheCurrentVideo"
+          >
+            {{ isVideoCaching ? '保存中…' : isVideoCached ? '已保存离线副本' : '保存离线副本' }}
+          </button>
+        </template>
       </PVideoPlayerShell>
+      <p v-if="videoCacheError" class="vd-player-feedback" role="status">{{ videoCacheError }}</p>
 
       <section v-if="processingMessage" class="vd-processing-status" :class="{ 'vd-processing-status--error': video.processing_status === 'failed' }" role="status">
         <span>{{ processingMessage }}</span>
@@ -926,6 +947,27 @@ async function toggleChannelSubscription() {
 .vd-interactions {
   min-width: 0;
   grid-column: 1;
+}
+
+.vd-offline-action {
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface, #ffffff);
+  color: var(--a-color-fg);
+  cursor: pointer;
+}
+
+.vd-offline-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.vd-player-feedback {
+  margin: 0.5rem 0;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
 }
 
 .vd-title { grid-row: 1; }

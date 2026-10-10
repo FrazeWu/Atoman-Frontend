@@ -26,6 +26,10 @@ const emit = defineEmits<{
     </div>
     <div v-if="showCopyLink" class="vps-actions">
       <PButton variant="secondary" size="sm" @click="emit('copyLink')">复制链接</PButton>
+      <slot name="actions" />
+    </div>
+    <div v-else-if="$slots.actions" class="vps-actions">
+      <slot name="actions" />
     </div>
   </section>
 </template>

@@ -40,6 +40,7 @@ import {
 	buildPrefetchCandidates,
 	shufflePlaybackItems,
 } from "@/utils/playerQueue";
+import { cacheMediaForOffline, getCachedMediaObjectURL } from "@/utils/mediaOfflineCache";
 
 const api = useApi();
 const audioStartPrefetchBytes = 512 * 1024;
@@ -167,11 +168,18 @@ export const usePlayerStore = defineStore("player", () => {
 	);
 
 	let audio: HTMLAudioElement | null = null;
+	let cachedAudioObjectUrl = "";
 	let playGeneration = 0;
 	let playRequested = false;
 	let currentSongStartCached = false;
 	let audioStartPrefetchController: AbortController | null = null;
 	let audioStartPrefetchKey: string | null = null;
+
+	function releaseCachedAudioObjectUrl() {
+		if (!cachedAudioObjectUrl) return;
+		URL.revokeObjectURL(cachedAudioObjectUrl);
+		cachedAudioObjectUrl = "";
+	}
 	const prefetchedAudioStartUrls = new Set<string>();
 	let songsRequest: Promise<void> | null = null;
 	let musicProgressLastSavedAt = 0;
@@ -470,6 +478,7 @@ export const usePlayerStore = defineStore("player", () => {
 			previousAudio.removeAttribute("src");
 			previousAudio.load();
 		}
+		releaseCachedAudioObjectUrl();
 		clearListeningTimer();
 		listeningStartedAt = null;
 		listenedMs = 0;
@@ -881,7 +890,7 @@ export const usePlayerStore = defineStore("player", () => {
 		return songsRequest;
 	};
 
-	const startSong = (song: Song, startAt?: number, persistPrevious = true) => {
+	const startSong = async (song: Song, startAt?: number, persistPrevious = true) => {
 		const normalizedSong = normalizePlaybackSong(song, resolvePlaybackAudioUrl);
 		if (!hasPlayableAudio(normalizedSong)) {
 			currentSong.value = null;
@@ -908,7 +917,18 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 		playbackError.value = "";
 		isLoading.value = true;
-		player.src = normalizedSong.audio_url;
+		releaseCachedAudioObjectUrl();
+		const cachedSource = await getCachedMediaObjectURL(normalizedSong.audio_url);
+		if (generation !== playGeneration || audio !== player) {
+			if (cachedSource) URL.revokeObjectURL(cachedSource);
+			return;
+		}
+		if (cachedSource) {
+			cachedAudioObjectUrl = cachedSource;
+			player.src = cachedSource;
+		} else {
+			player.src = normalizedSong.audio_url;
+		}
 		player.volume = volume.value;
 		const savedProgress =
 			song.source_type === "podcast_episode" && song.source_id
@@ -1302,6 +1322,36 @@ export const usePlayerStore = defineStore("player", () => {
 		attemptPlay(player);
 	};
 
+	const cacheCurrentAudio = async () => {
+		const song = currentSong.value;
+		if (!song || !hasPlayableAudio(song)) return false;
+		const url = resolvePlaybackAudioUrl(song.audio_url);
+		const cached = await cacheMediaForOffline(url);
+		if (!cached || !currentSong.value || playbackItemKey(currentSong.value) !== playbackItemKey(song)) return false;
+		const cachedSource = await getCachedMediaObjectURL(url);
+		if (!cachedSource || !audio) return cachedSource !== null;
+		const player = audio;
+		const wasPlaying = isPlaying.value;
+		const resumePosition = player.currentTime || currentTime.value;
+		const generation = ++playGeneration;
+		releaseCachedAudioObjectUrl();
+		cachedAudioObjectUrl = cachedSource;
+		player.pause();
+		player.src = cachedSource;
+		player.load();
+		const restorePosition = () => {
+			if (generation !== playGeneration || audio !== player) return;
+			try {
+				player.currentTime = resumePosition;
+			} catch {
+				// Metadata may still be unavailable.
+			}
+		};
+		player.addEventListener('loadedmetadata', restorePosition, { once: true });
+		if (wasPlaying) attemptPlay(player, generation);
+		return true;
+	};
+
 	const toggleLyrics = () => {
 		showLyrics.value = !showLyrics.value;
 	};
@@ -1361,6 +1411,7 @@ export const usePlayerStore = defineStore("player", () => {
 		seek,
 		skip,
 		retryPlayback,
+		cacheCurrentAudio,
 		showLyrics,
 		lyricsCloseRequest,
 		toggleLyrics,

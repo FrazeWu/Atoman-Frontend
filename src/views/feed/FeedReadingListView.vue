@@ -123,6 +123,7 @@ const normalizePage = (value: unknown) => {
 const loading = ref(true)
 const errorMessage = ref('')
 const items = ref<ReadingListEntry[]>([])
+const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
 const totalItems = ref(0)
 const page = ref(1)
 const pageLimit = 20
@@ -366,6 +367,14 @@ watch(
   },
   { immediate: true },
 )
+
+watch(accountIdentity, (identity, previous) => {
+  if (identity === previous) return
+  readingListRequestId += 1
+  items.value = []
+  totalItems.value = 0
+  if (authStore.isAuthenticated) void fetchItems()
+})
 
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {

@@ -90,7 +90,7 @@
 
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
 import { RouterLink } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -134,6 +134,7 @@ const periodOptions: Array<{ value: FeedStatsPeriod; label: string }> = [
 const period = ref<FeedStatsPeriod>('day')
 const loading = ref(false)
 const stats = ref<FeedStatsData | null>(null)
+const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
 const errorMessage = ref('')
 const trendCanvas = ref<HTMLCanvasElement | null>(null)
 const sourceCanvas = ref<HTMLCanvasElement | null>(null)
@@ -276,6 +277,14 @@ onMounted(async () => {
   if (authStore.isAuthenticated) {
     await fetchStats()
   }
+})
+
+watch(accountIdentity, (identity, previous) => {
+  if (identity === previous) return
+  latestRequestId += 1
+  stats.value = null
+  destroyCharts()
+  if (authStore.isAuthenticated) void fetchStats()
 })
 
 onBeforeUnmount(() => {

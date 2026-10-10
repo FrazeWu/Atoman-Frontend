@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
+import { pickLatestMediaProgress } from '@/utils/mediaProgressConflict'
 import { useOfflineMediaSource } from '@/composables/useOfflineMediaSource'
 import { videoAvatarSource, videoThumbnailSource } from '@/utils/videoPresentation'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
@@ -434,12 +435,28 @@ async function restoreInitialPlaybackPosition() {
   if (authStore.token) {
     const serverProgress = await lifecycle.getProgress('video', detail.id).catch(() => null)
     if (video.value?.id !== detail.id) return
-    if (serverProgress) {
-      if (hasResumablePosition(serverProgress.position_sec, playbackDuration())) {
-        resumePosition.value = Math.floor(serverProgress.position_sec)
-      }
-      return
-    }
+    const saved = getVideoProgress(detail.id)
+    const localCandidate: {
+      position_sec: number
+      duration_sec: number
+      progress: number
+      completed: boolean
+      updated_at?: string
+    } | null = saved ? {
+      position_sec: saved.time_sec,
+      duration_sec: saved.duration_sec,
+      progress: saved.duration_sec > 0 ? saved.time_sec / saved.duration_sec : 0,
+      completed: false,
+      updated_at: saved.updated_at,
+    } : null
+    const serverCandidate = serverProgress ? {
+      ...serverProgress,
+      duration_sec: serverProgress.duration_sec || playbackDuration(),
+      progress: serverProgress.progress ?? (playbackDuration() > 0 ? serverProgress.position_sec / playbackDuration() : 0),
+    } : null
+    const selected = pickLatestMediaProgress(localCandidate, serverCandidate)
+    if (selected && hasResumablePosition(selected.position_sec, playbackDuration())) resumePosition.value = Math.floor(selected.position_sec)
+    return
   }
   const saved = getVideoProgress(detail.id)
   if (saved && hasResumablePosition(saved.time_sec, playbackDuration())) {

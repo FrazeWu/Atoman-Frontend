@@ -128,6 +128,7 @@ import BookReaderDisplayControls from '@/components/books/BookReaderDisplayContr
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
+import { mergeBookReadingProgress } from '@/utils/mediaProgressConflict'
 import { parseBookReaderBookmarks, parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences } from '@/utils/bookReaderPreferences'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
@@ -415,14 +416,16 @@ async function saveState() {
   if (!canRead.value || isSaving.value || !asset.value) return
   isSaving.value = true
   try {
-    const saved = await saveBookReadingState(asset.value.id, {
+    const localInput = {
       epub_cfi: readingState.value?.epub_cfi || '',
       pdf_page: pdfPage.value,
       txt_offset: readingState.value?.txt_offset || 0,
       reading_percent: readingPercent.value,
       private_notes: privateNotes.value,
       preferences: { ...(readingState.value?.preferences || {}), bookmarks: bookmarks.value, display: displayPreferences.value },
-    })
+    }
+    const remote = await getBookReadingState(asset.value.id).catch(() => null)
+    const saved = await saveBookReadingState(asset.value.id, mergeBookReadingProgress(localInput, remote))
     applyReadingState(saved)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '阅读位置保存失败'

@@ -801,6 +801,7 @@ const deletePendingNote = async () => {
     pendingDeleteNote.value = null
   } catch (error) {
     reportError(error)
+    feedbackError.value = '短笺删除失败，请稍后重试'
   } finally {
     deletingNote.value = false
   }

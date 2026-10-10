@@ -66,12 +66,12 @@ describe('StudioChannelView', () => {
     const { wrapper, store, router } = await setup(false)
     await wrapper.find('[data-testid="new-channel"]').trigger('click')
     await wrapper.find('[data-testid="channel-name"]').setValue('新频道')
-    await wrapper.find('[data-testid="channel-slug"]').setValue('new-channel')
+    expect(wrapper.find('[data-testid="channel-uuid"]').text()).toBe('保存后生成')
     await wrapper.find('[data-testid="save-channel"]').trigger('click')
     await flushPromises()
 
     expect(apiMocks.post).toHaveBeenCalledWith('/api/v1/studio/channels', {
-      name: '新频道', slug: 'new-channel', description: '', cover_url: '',
+      name: '新频道', slug: '', description: '', cover_url: '',
     })
     expect(store.loadState).toHaveBeenCalledWith(true)
     expect(router.currentRoute.value.path).toBe('/studio')
@@ -80,11 +80,12 @@ describe('StudioChannelView', () => {
   it('edits switches and deletes an existing channel', async () => {
     const { wrapper, store } = await setup(true)
     await wrapper.find('[data-testid="edit-channel-channel-2"]').trigger('click')
+    expect(wrapper.find('[data-testid="channel-uuid"]').text()).toBe('channel-2')
     await wrapper.find('[data-testid="channel-name"]').setValue('新的副频道')
     await wrapper.find('[data-testid="save-channel"]').trigger('click')
     await flushPromises()
     expect(apiMocks.patch).toHaveBeenCalledWith('/api/v1/studio/channels/channel-2', {
-      name: '新的副频道', slug: 'side', description: '', cover_url: '',
+      name: '新的副频道', slug: '', description: '', cover_url: '',
     })
 
     await wrapper.find('[data-testid="select-channel-channel-2"]').trigger('click')

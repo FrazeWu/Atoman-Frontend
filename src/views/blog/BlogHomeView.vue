@@ -615,6 +615,7 @@ const homeQuery = (search = activeQuery.value) => {
 const syncHomeQuery = () => router.replace({ path: route.path, query: homeQuery() })
 
 const submitBlogSearch = (value: string) => {
+  if (value.trim()) typeFilter.value = 'all'
   void router.replace({ path: route.path, query: homeQuery(value.trim()) })
 }
 
@@ -935,6 +936,7 @@ onUnmounted(() => {
 watch(
   [activeQuery, activeTag, () => queryValue(route.query.author_id), () => queryValue(route.query.channel_id), () => queryValue(route.query.collection_id)],
   ([value, _tag, rawAuthorID, rawChannelID, rawCollectionID], oldValues) => {
+    if (value && typeFilter.value !== 'all') typeFilter.value = 'all'
     if (value !== blogSearchQuery.value) blogSearchQuery.value = value
     const nextAuthorID = typeof rawAuthorID === 'string' ? rawAuthorID : ''
     const nextChannelID = typeof rawChannelID === 'string' ? rawChannelID : ''

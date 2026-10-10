@@ -924,6 +924,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
     <PContentProgress
       :loading="loading"
+      :error="errorMessage"
       :retry="fetchMusicHome"
     >
       <template #skeleton>

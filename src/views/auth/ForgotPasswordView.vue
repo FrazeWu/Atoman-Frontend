@@ -252,12 +252,7 @@ const handleTurnstileError = (errorCode?: string) => {
   justify-content: center;
   min-height: calc(100vh - 56px);
   padding: 4rem 1.5rem 6rem;
-  background-color: var(--a-color-surface);
-  background-image:
-    linear-gradient(var(--a-color-surface-muted) 1px, transparent 1px),
-    linear-gradient(90deg, var(--a-color-surface-muted) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: center;
+  background: var(--a-color-bg);
 }
 
 .auth-card {
@@ -282,7 +277,7 @@ const handleTurnstileError = (errorCode?: string) => {
   margin: 0;
   font-family: var(--a-font-sans);
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   letter-spacing: 0;
 }
@@ -300,7 +295,7 @@ const handleTurnstileError = (errorCode?: string) => {
 .step-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-border);
   transition: background-color 0.3s;
 }
@@ -323,7 +318,7 @@ const handleTurnstileError = (errorCode?: string) => {
 
 .step-label {
   color: var(--a-color-fg);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .step-label--inactive {
@@ -344,7 +339,7 @@ const handleTurnstileError = (errorCode?: string) => {
 .auth-form :deep(.p-input) {
   padding: 0.88rem 0.95rem;
   border: 1px solid var(--a-color-border-soft);
-  background: #fff;
+  background: var(--a-color-bg);
   box-shadow: none;
   font-size: 0.98rem;
 }
@@ -365,8 +360,8 @@ const handleTurnstileError = (errorCode?: string) => {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .auth-code-input-group {
@@ -374,7 +369,8 @@ const handleTurnstileError = (errorCode?: string) => {
   align-items: stretch;
   width: 100%;
   border: 1px solid var(--a-color-border-soft);
-  background: #fff;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -384,7 +380,7 @@ const handleTurnstileError = (errorCode?: string) => {
 }
 
 .auth-code-input-group--error {
-  border-color: var(--a-color-accent-destructive);
+  border-color: var(--a-color-danger);
 }
 
 .auth-code-input {
@@ -418,8 +414,8 @@ const handleTurnstileError = (errorCode?: string) => {
   cursor: pointer;
   font-family: inherit;
   font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -447,7 +443,7 @@ const handleTurnstileError = (errorCode?: string) => {
   background: var(--a-color-primary);
   color: var(--a-color-bg);
   box-shadow: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .auth-buttons-row {
@@ -464,14 +460,15 @@ const handleTurnstileError = (errorCode?: string) => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   box-shadow: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .auth-error {
   padding: 0.75rem 1rem;
-  border: 2px solid var(--a-color-accent-destructive);
-  background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, white);
-  color: var(--a-color-accent-destructive);
+  border: 1px solid var(--a-color-danger);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
+  color: var(--a-color-danger);
   font-size: 0.85rem;
 }
 

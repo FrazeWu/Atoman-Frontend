@@ -5,12 +5,7 @@
   display: grid;
   place-items: center;
   padding: 4rem 1.5rem 6rem;
-  background-color: var(--a-color-surface);
-  background-image:
-    linear-gradient(var(--a-color-surface-muted) 1px, transparent 1px),
-    linear-gradient(90deg, var(--a-color-surface-muted) 1px, transparent 1px);
-  background-position: center;
-  background-size: 24px 24px;
+  background: var(--a-color-bg);
 }
 
 .oauth-flow-card {
@@ -31,7 +26,7 @@
 
 .oauth-flow-card h1 {
   font-size: 1.75rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
   line-height: 1.2;
 }

@@ -176,11 +176,11 @@ onMounted(async () => {
   left: 50%;
   padding: 0.125rem 0.5rem;
   transform: translateX(-50%);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast);
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25rem;
   white-space: nowrap;
   pointer-events: none;

@@ -642,12 +642,7 @@ watch(username, (value) => {
   align-items: center;
   justify-content: center;
   padding: 4rem 1.5rem 6rem;
-  background-color: var(--a-color-surface);
-  background-image:
-    linear-gradient(var(--a-color-surface-muted) 1px, transparent 1px),
-    linear-gradient(90deg, var(--a-color-surface-muted) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: center;
+  background: var(--a-color-bg);
   min-height: calc(100vh - 56px);
 }
 
@@ -672,8 +667,8 @@ watch(username, (value) => {
 .auth-kicker {
   margin: 0 0 0.85rem;
   font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.28em;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -681,7 +676,7 @@ watch(username, (value) => {
   margin: 0;
   font-family: var(--a-font-sans);
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   letter-spacing: 0;
 }
@@ -727,7 +722,7 @@ watch(username, (value) => {
 .step-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-border);
   transition: background-color 0.3s;
 }
@@ -749,7 +744,7 @@ watch(username, (value) => {
 }
 
 .step-label {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-fg);
 }
 
@@ -764,14 +759,14 @@ watch(username, (value) => {
 .auth-form :deep(.a-field-label) {
   font-size: 0.72rem;
   color: var(--a-color-muted);
-  letter-spacing: 0.18em;
+  letter-spacing: 0;
 }
 
 .auth-form :deep(.p-input) {
   border: 1px solid var(--a-color-border-soft);
   padding: 0.88rem 0.95rem;
   box-shadow: none;
-  background: #fff;
+  background: var(--a-color-bg);
   font-size: 0.98rem;
 }
 
@@ -786,14 +781,14 @@ watch(username, (value) => {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .email-field-dot {
   width: 0.42rem;
   height: 0.42rem;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   flex-shrink: 0;
 }
@@ -802,7 +797,8 @@ watch(username, (value) => {
   display: flex;
   align-items: stretch;
   border: 1px solid var(--a-color-border-soft);
-  background: #fff;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
 }
@@ -813,7 +809,7 @@ watch(username, (value) => {
 }
 
 .auth-code-input-group--error {
-  border-color: var(--a-color-accent-destructive);
+  border-color: var(--a-color-danger);
 }
 
 .auth-code-input {
@@ -846,8 +842,8 @@ watch(username, (value) => {
   color: var(--a-color-primary-contrast);
   font-family: inherit;
   font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0;
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -887,7 +883,7 @@ watch(username, (value) => {
   background: var(--a-color-primary);
   color: var(--a-color-bg);
   box-shadow: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-decoration: none;
 }
 
@@ -913,7 +909,7 @@ watch(username, (value) => {
   color: var(--a-color-fg);
   border-radius: var(--a-radius-control);
   box-shadow: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .auth-back-btn:deep(.p-button:hover:not(:disabled)) {
@@ -928,7 +924,7 @@ watch(username, (value) => {
   background: var(--a-color-primary);
   color: var(--a-color-bg);
   box-shadow: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-decoration: none;
 }
 
@@ -945,9 +941,10 @@ watch(username, (value) => {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   margin-bottom: 0.5rem;
-  border: 2px solid var(--a-color-accent-destructive);
-  background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, white);
-  color: var(--a-color-accent-destructive);
+  border: 1px solid var(--a-color-danger);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
+  color: var(--a-color-danger);
   font-size: 0.85rem;
   transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
 }

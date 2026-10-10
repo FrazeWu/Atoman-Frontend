@@ -645,14 +645,23 @@ async function toggleBookmark() {
 async function toggleChannelSubscription() {
   const channelId = video.value?.channel?.id
   if (!channelId || !authStore.isAuthenticated || channelSubscriptionBusy.value) return
+  const videoId = video.value?.id
+  const requestSeq = loadSeq
   channelSubscriptionBusy.value = true
+  actionError.value = ''
   try {
     const success = channelSubscribed.value
       ? await feedStore.unsubscribeFromChannel(channelId)
       : await feedStore.subscribeToChannel(channelId)
-    if (success) channelSubscribed.value = !channelSubscribed.value
+    if (requestSeq === loadSeq && video.value?.id === videoId) {
+      if (success) channelSubscribed.value = !channelSubscribed.value
+      else actionError.value = '频道订阅操作失败，请稍后重试'
+    }
+  } catch {
+    if (requestSeq === loadSeq && video.value?.id === videoId) actionError.value = '频道订阅操作失败，请稍后重试'
   } finally {
-    channelSubscriptionBusy.value = false
+    if (requestSeq === loadSeq && video.value?.id === videoId) channelSubscriptionBusy.value = false
+    else channelSubscriptionBusy.value = false
   }
 }
 </script>

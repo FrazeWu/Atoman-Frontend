@@ -7,7 +7,9 @@
 
       <div class="setting-access__actions">
         <PButton variant="secondary" to="/">返回首页</PButton>
-        <PButton :loading="saving" loading-text="保存中..." @click="save">保存设置</PButton>
+        <PButton :loading="saving || siteAccessStore.loading" :disabled="!siteAccessStore.loaded" loading-text="保存中..." @click="save">保存设置</PButton>
+        <PActionFeedback class="setting-access__message" :message="siteAccessLoadError" />
+        <PButton v-if="siteAccessLoadError" variant="ghost" size="sm" @click="loadAccess">重试加载</PButton>
         <PActionFeedback class="setting-access__message" :message="error" />
         <PActionFeedback class="setting-access__message" :message="saved ? '已保存' : ''" tone="success" />
       </div>
@@ -235,6 +237,7 @@ const draft = ref<SiteAccess>(mergeSiteAccess(siteAccessStore.access))
 const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
+const siteAccessLoadError = ref('')
 const selectedModule = ref<ModuleRoomKey | null>(null)
 
 const moduleOrder = moduleNavOrder
@@ -351,7 +354,20 @@ async function save() {
   }
 }
 
-onMounted(scrollToRouteSection)
+async function loadAccess() {
+  siteAccessLoadError.value = ''
+  try {
+    await siteAccessStore.load()
+    draft.value = mergeSiteAccess(siteAccessStore.access)
+  } catch (cause) {
+    siteAccessLoadError.value = errorMessage(cause, '站点设置加载失败，请重试')
+  }
+}
+
+onMounted(async () => {
+  await loadAccess()
+  scrollToRouteSection()
+})
 </script>
 
 <style scoped>

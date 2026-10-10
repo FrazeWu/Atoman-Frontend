@@ -166,7 +166,11 @@
           <template #default="{ close }">
             <div class="track-add-menu">
               <div class="track-add-menu-header">添加到歌单</div>
-              <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
+              <div v-if="playlistLoadError" class="track-add-menu-empty">
+                {{ playlistLoadError }}
+                <button type="button" @click="loadPlaylists">重试</button>
+              </div>
+              <div v-else-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
               <button v-for="p in playlists" :key="p.id" type="button" class="track-add-menu-item" @click="addTrackToPlaylist(String(p.id), String(player.currentSong.id), close)">
                 {{ p.name }}
               </button>
@@ -360,7 +364,7 @@ import { resolveMusicPlayerShortcut } from "@/utils/musicKeyboardShortcuts";
 const player = usePlayerStore();
 const route = useRoute();
 const lyricsPanelRef = ref<{ requestClose: () => void } | null>(null);
-const { openAlbum, openArtist, openSong } = useMusicDrawers();
+const { openAlbum, openArtist, openSong, state: musicDrawerState } = useMusicDrawers();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
 const playerInfoRef = ref<HTMLElement | null>(null);
@@ -486,6 +490,7 @@ const miniProgressPercent = computed(() => {
 
 const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);
+const playlistLoadError = ref('');
 const toastVisible = ref(false);
 const toastMessage = ref("");
 const isCachingAudio = ref(false);
@@ -524,6 +529,7 @@ const {
 } = useMusicFavoritePlaylist();
 
 async function loadPlaylists() {
+  playlistLoadError.value = '';
   if (!authStore.isAuthenticated) {
     playlists.value = [];
     playlistsLoaded.value = false;
@@ -539,6 +545,7 @@ async function loadPlaylists() {
       playlistsLoaded.value = true;
       return;
     }
+    playlistLoadError.value = '歌单加载失败'
     reportError(err, "加载播放列表失败");
   }
 }
@@ -617,6 +624,14 @@ watch(
     }
   },
   { immediate: true },
+);
+
+watch(
+  () => musicDrawerState.value.playlistRefreshToken,
+  () => {
+    playlistsLoaded.value = false
+    void loadPlaylists()
+  },
 );
 
 watch(

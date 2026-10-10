@@ -1,5 +1,5 @@
 <template>
-  <div class="p-entry" :class="{ 'has-visual': Boolean($slots.visual || badge), 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }" @click="$emit('click')">
+  <div class="p-entry" role="button" tabindex="0" :class="{ 'has-visual': Boolean($slots.visual || badge), 'is-open': isOpen, 'is-read': isRead, 'is-focused': isFocused, 'force-show-actions': forceShowActions }" @click="$emit('click')" @keydown.enter.prevent="$emit('click')" @keydown.space.prevent="$emit('click')">
     <div class="p-entry__body">
 
       <!-- Left Badge / Image Area -->

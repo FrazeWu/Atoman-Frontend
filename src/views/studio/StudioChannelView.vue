@@ -105,7 +105,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { apiDeleteJson, apiPatchJson, apiPostJson, apiRequestResult } from '@/api/client'
+import { apiDeleteJson, apiGetEnvelope, apiPatchJson, apiPostJson, apiRequestResult } from '@/api/client'
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import StudioManagementSheet from '@/components/studio/StudioManagementSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -117,7 +117,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioChannel } from '@/types'
+import type { StudioChannel, StudioModule, StudioPagination, StudioContentItem } from '@/types'
 
 const apiClient = useApi()
 const api = apiClient.studio
@@ -139,6 +139,7 @@ const coverObjectUrl = ref('')
 const coverUploading = ref(false)
 const coverUploadError = ref('')
 const copied = ref(false)
+const channelMetrics = ref<Record<string, { count: number; updatedAt: string }>>({})
 const draft = reactive({ name: '', description: '', cover_url: '' })
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
@@ -200,20 +201,46 @@ async function copyUUID() {
   window.setTimeout(() => { copied.value = false }, 1600)
 }
 
-function channelContentCount(channel: StudioChannel) {
-  const value = (channel as StudioChannel & { article_count?: number; content_count?: number }).article_count
-    ?? (channel as StudioChannel & { content_count?: number }).content_count
-  return typeof value === 'number' ? String(value) : '—'
-}
-
 function channelStatus(channel: StudioChannel) {
   if (channel.id === studio.currentChannel?.id) return '当前频道'
   return channel.status === 'archived' ? '已归档' : '可用'
 }
 
 function formatUpdatedAt(channel: StudioChannel) {
-  const value = (channel as StudioChannel & { updated_at?: string }).updated_at
+  const value = channelMetrics.value[channel.id]?.updatedAt
+    || (channel as StudioChannel & { updated_at?: string }).updated_at
   return value ? new Date(value).toLocaleDateString('zh-CN') : '暂无'
+}
+
+function channelContentCount(channel: StudioChannel) {
+  const value = channelMetrics.value[channel.id]?.count
+    ?? (channel as StudioChannel & { article_count?: number; content_count?: number }).article_count
+    ?? (channel as StudioChannel & { content_count?: number }).content_count
+  return typeof value === 'number' ? String(value) : '—'
+}
+
+async function loadChannelMetrics() {
+  const metrics: Record<string, { count: number; updatedAt: string }> = {}
+  const modules: StudioModule[] = ['blog', 'podcast', 'video']
+  const results = await Promise.all(studio.channels.flatMap(channel => modules.map(async module => {
+    try {
+      const query = new URLSearchParams({ channel_id: channel.id, page: '1' })
+      const response = await apiGetEnvelope<StudioContentItem[], StudioPagination>(`${api.contents(module)}?${query}`)
+      return { channelID: channel.id, total: response.meta?.total ?? response.data?.length ?? 0, items: response.data ?? [] }
+    } catch {
+      return null
+    }
+  })))
+  for (const result of results) {
+    if (!result) continue
+    const current = metrics[result.channelID] ?? { count: 0, updatedAt: '' }
+    current.count += result.total
+    for (const item of result.items) {
+      if (item.updated_at > current.updatedAt) current.updatedAt = item.updated_at
+    }
+    metrics[result.channelID] = current
+  }
+  channelMetrics.value = metrics
 }
 
 function triggerCoverUpload() {
@@ -293,6 +320,7 @@ async function saveChannel() {
     else await apiPostJson<StudioChannel>(api.channels, input)
     resetDraft()
     await studio.loadState(true)
+    await loadChannelMetrics()
     if (firstChannel) {
       const returnTo = typeof route.query.return_to === 'string' ? route.query.return_to : ''
       await router.push(returnTo.startsWith('/studio/') ? returnTo : '/studio')
@@ -321,6 +349,7 @@ async function deleteChannel() {
     await apiDeleteJson<{ message: string }>(api.channel(pendingDelete.value.id))
     pendingDelete.value = null
     await studio.loadState(true)
+    await loadChannelMetrics()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '删除失败'
   } finally {
@@ -328,8 +357,9 @@ async function deleteChannel() {
   }
 }
 
-onMounted(() => {
-  if (!studio.loaded) void studio.loadState()
+onMounted(async () => {
+  if (!studio.loaded) await studio.loadState()
+  await loadChannelMetrics()
 })
 
 onBeforeUnmount(clearCoverPreview)

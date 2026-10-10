@@ -724,7 +724,7 @@ export async function uploadMusicAlbumArchiveMultipart(
 			while (cursor < missingPartNumbers.length) {
 				const partNumber = missingPartNumbers[cursor];
 				cursor += 1;
-			await retry(() => uploadPart(partNumber), 1);
+			await retry(() => uploadPart(partNumber), 2);
 			}
 			return undefined;
 		},

@@ -224,7 +224,7 @@ onMounted(load)
   height: 1.5rem;
   align-items: center;
   border: 1px solid var(--a-color-border);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -233,9 +233,9 @@ onMounted(load)
   width: 1.1rem;
   height: 1.1rem;
   margin-left: 0.15rem;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-text-secondary);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  box-shadow: none;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
@@ -245,7 +245,7 @@ onMounted(load)
 }
 
 .notification-switch__input:checked + .notification-switch__track .notification-switch__thumb {
-  background: #fff;
+  background: var(--a-color-bg);
   transform: translateX(1.2rem);
 }
 
@@ -281,7 +281,7 @@ onMounted(load)
 }
 
 .notification-settings__state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .notification-settings__note,
@@ -292,11 +292,11 @@ onMounted(load)
 
 .notification-settings__error {
   margin: 0;
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-size: var(--a-text-sm);
 }
 
 .notification-settings__saved {
-  color: var(--a-color-accent-success);
+  color: var(--a-color-success);
 }
 </style>

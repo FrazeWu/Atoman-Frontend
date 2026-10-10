@@ -87,7 +87,7 @@ onMounted(load)
 }
 
 .blocked-users__state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .blocked-users__list {

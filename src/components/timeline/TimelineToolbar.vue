@@ -12,13 +12,13 @@
       <label class="filter-label">分类</label>
       <PInput :model-value="categoryValue" placeholder="政治 / 文化 / 科技…" style="width:160px" @update:model-value="updateCategory" />
     </div>
-    <PButton outline @click="emit('apply')">筛选</PButton>
-    <PButton outline @click="emit('reset')">重置</PButton>
+    <PButton variant="secondary" @click="emit('apply')">筛选</PButton>
+    <PButton variant="secondary" @click="emit('reset')">重置</PButton>
 
     <div v-if="batchSelectedCount" class="tl-toolbar-batch">
       <span class="tl-toolbar-batch-count">已勾选 {{ batchSelectedCount }} 条</span>
       <PButton class="tl-action-btn" size="sm" @click="emit('add-batch-to-compare')">加入对比池</PButton>
-      <PButton class="tl-action-btn tl-action-btn-secondary" size="sm" outline @click="emit('clear-batch-selection')">清空勾选</PButton>
+      <PButton class="tl-action-btn tl-action-btn-secondary" size="sm" variant="secondary" @click="emit('clear-batch-selection')">清空勾选</PButton>
     </div>
 
     <div class="tl-mode-switch" style="margin-left:auto">
@@ -70,14 +70,13 @@ const updateCategory = (value: string) => emit('update:category', value)
   padding: 1rem 1.15rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
 }
 
 .filter-label {
   font-size: 0.72rem;
-  font-weight: 550;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -96,14 +95,14 @@ const updateCategory = (value: string) => emit('update:category', value)
 
 .tl-toolbar-batch-count {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
 .tl-mode-switch {
   display: inline-flex;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   padding: 2px;
   overflow: hidden;
@@ -111,13 +110,13 @@ const updateCategory = (value: string) => emit('update:category', value)
 
 .tl-mode-btn {
   border: none;
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
   padding: 0.4rem 0.85rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -129,12 +128,13 @@ const updateCategory = (value: string) => emit('update:category', value)
 .tl-mode-btn.tl-mode-btn-active {
   background: var(--a-color-text);
   color: var(--a-color-bg);
+  font-weight: 600;
 }
 
 .tl-action-btn {
   border-color: var(--a-color-border-soft);
   font-size: 0.72rem;
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .tl-action-btn-secondary {

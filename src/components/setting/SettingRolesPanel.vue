@@ -1,7 +1,7 @@
 <template>
   <section class="setting-roles">
     <div class="setting-roles__head">
-      <p class="settings-center__kicker">ROLE MANAGEMENT</p>
+      <p class="settings-center__kicker">角色管理</p>
       <h2>用户权限</h2>
       <p>授予或撤销管理员权限。</p>
     </div>

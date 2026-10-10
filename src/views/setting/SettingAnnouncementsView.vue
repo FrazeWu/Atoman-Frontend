@@ -1,6 +1,6 @@
 <template>
   <main class="setting-announcements settings-center">
-    <PSectionHeader title="公告管理" kicker="SITE ANNOUNCEMENTS" description="发布公告并查看历史投递记录。" />
+    <PSectionHeader title="公告管理" kicker="站点公告" description="发布公告并查看历史投递记录。" />
 
     <nav class="setting-announcements__views" aria-label="公告管理视图">
       <PTab label="发布公告" :active="view === 'publish'" @click="selectView('publish')" />
@@ -366,7 +366,7 @@ onMounted(() => {
 .setting-announcements__table th {
   color: var(--a-color-muted);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .setting-announcements__identity {
@@ -405,14 +405,13 @@ onMounted(() => {
   margin: 0 0 0.4rem;
   color: var(--a-color-muted);
   font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .setting-announcements__detail h2,
 .setting-announcements__detail h3,
 .setting-announcements__detail p { margin: 0; }
-.setting-announcements__detail h2 { font-size: 1.35rem; line-height: 1.35; }
+.setting-announcements__detail h2 { font-size: 1.35rem; font-weight: 500; line-height: 1.35; }
 
 .setting-announcements__facts {
   display: grid;
@@ -440,7 +439,7 @@ onMounted(() => {
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .setting-announcements__preview-meta {

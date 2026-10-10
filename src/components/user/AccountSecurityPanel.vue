@@ -405,7 +405,7 @@ onBeforeUnmount(() => {
 
 .security-message--error,
 .security-state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .security-state {
@@ -434,8 +434,8 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
 }
 
 .session-info {
@@ -446,9 +446,9 @@ onBeforeUnmount(() => {
 
 .session-current-badge {
   padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--a-color-accent) 15%, transparent);
-  color: var(--a-color-accent);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-primary) 15%, transparent);
+  color: var(--a-color-primary);
   font-size: 0.7rem;
 }
 

@@ -132,10 +132,10 @@ function formatContribution(value: number, exact: boolean) {
 }
 .user-summary-card__metric strong {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
 }
 .user-summary-card__metric--quality strong {
-  color: #b45309;
+  color: var(--a-color-warning);
 }
 .user-summary-card__metric--contribution strong {
   color: var(--a-color-text-secondary);

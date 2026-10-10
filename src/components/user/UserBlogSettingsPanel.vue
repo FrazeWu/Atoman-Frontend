@@ -377,14 +377,14 @@ onMounted(async () => {
 .avatar-preview-box {
   width: 3.5rem;
   height: 3.5rem;
-  border-radius: 6px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-text);
   color: var(--a-color-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -435,7 +435,8 @@ onMounted(async () => {
 
 .avatar-field__picker:focus-within {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 15%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
 }
 
 .avatar-field__picker.is-disabled {
@@ -490,7 +491,7 @@ onMounted(async () => {
 
 .section-title {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -551,6 +552,6 @@ onMounted(async () => {
 }
 
 .profile-settings-state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 </style>

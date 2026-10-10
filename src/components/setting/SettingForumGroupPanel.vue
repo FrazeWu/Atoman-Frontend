@@ -427,7 +427,7 @@ onMounted(loadAll)
 }
 
 .forum-group-panel__group.is-active {
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   border-left: 3px solid var(--a-color-text);
 }
 

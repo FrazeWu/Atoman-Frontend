@@ -239,6 +239,7 @@ const publicAssetsError = ref('')
 const catalogTotal = ref(0)
 const catalogPageSize = 24
 const catalogPage = computed(() => Math.max(1, Number(route.query.page) || 1))
+let catalogRequestSequence = 0
 const catalogMeta = computed(() => ({ page: catalogPage.value, page_size: catalogPageSize, total: catalogTotal.value, has_more: catalogPage.value * catalogPageSize < catalogTotal.value }))
 const shelfOptions = [
   { value: '', label: '全部书架' }, { value: 'want_to_read', label: '想读' },
@@ -330,17 +331,21 @@ async function removeShelf(workID: string) {
 
 async function loadCatalog() {
   if (!isCatalog.value) return
+  const requestID = ++catalogRequestSequence
+  const requestedQuery = typeof route.query.q === 'string' ? route.query.q : ''
+  const requestedPage = catalogPage.value
   catalogLoading.value = true
   catalogError.value = ''
   try {
-    searchInput.value = typeof route.query.q === 'string' ? route.query.q : ''
-    const result = await searchPublicBooks(searchInput.value, catalogPageSize, (catalogPage.value - 1) * catalogPageSize)
+    searchInput.value = requestedQuery
+    const result = await searchPublicBooks(searchInput.value, catalogPageSize, (requestedPage - 1) * catalogPageSize)
+    if (requestID !== catalogRequestSequence || requestedQuery !== (typeof route.query.q === 'string' ? route.query.q : '') || requestedPage !== catalogPage.value) return
     catalogItems.value = result.items
     catalogTotal.value = result.total
   } catch {
-    catalogError.value = '公共书目加载失败，请稍后重试'
+    if (requestID === catalogRequestSequence) catalogError.value = '公共书目加载失败，请稍后重试'
   } finally {
-    catalogLoading.value = false
+    if (requestID === catalogRequestSequence) catalogLoading.value = false
   }
 }
 

@@ -41,6 +41,7 @@
 
       <PContentProgress
         :loading="forumStore.topicsLoading"
+        :error="forumStore.error"
         :retry="() => loadTopics(true)"
       >
         <template #skeleton>
@@ -291,7 +292,10 @@ const loadTopics = async (resetPage = true) => {
     const res = await apiRequestResult(`${API_URL}/forum/topics?${query}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      if (generation === topicsGeneration) forumStore.error = '加载话题失败'
+      return
+    }
     const data: unknown = await Promise.resolve(res.data)
     if (generation !== topicsGeneration) return
     if (!isTopicPageEnvelope(data, page.value)) return
@@ -397,7 +401,10 @@ const loadMore = async () => {
     const res = await apiRequestResult(`${API_URL}/forum/topics?${query}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      if (generation === topicsGeneration) forumStore.error = '加载更多话题失败'
+      return
+    }
     const data: unknown = await Promise.resolve(res.data)
     if (generation !== topicsGeneration) return
     if (!isTopicPageEnvelope(data, nextPage)) return
@@ -412,7 +419,7 @@ const loadMore = async () => {
     page.value = nextPage
     hasMore.value = data.meta.has_more
   } catch {
-    // Keep the current page available so the user can retry.
+    if (generation === topicsGeneration) forumStore.error = '加载更多话题失败'
   } finally {
     if (loadingGeneration === generation) {
       loadingGeneration = null

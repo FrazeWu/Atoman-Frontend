@@ -86,25 +86,10 @@
             >{{ debate.title }}</RouterLink>
           </h2>
 
-          <!-- 正反立场进度条与观点导引 -->
-          <div class="debate-card__stance-box">
-            <div class="stance-bar" aria-label="正反双方立场支持比例">
-              <div class="stance-bar__pro" style="width: 58%" title="支持方 58%" />
-              <div class="stance-bar__con" style="width: 42%" title="反对方 42%" />
-            </div>
-            <div class="stance-labels">
-              <span class="stance-label stance-label--pro">支持观点 (58%)</span>
-              <span class="stance-action">参与讨论 ›</span>
-              <span class="stance-label stance-label--con">反对方 (42%)</span>
-            </div>
-          </div>
-
           <!-- 底部统计 -->
           <footer class="debate-card__footer">
             <div class="debate-card__stats">
               <span>浏览 {{ debate.view_count || 0 }}</span>
-              <span class="debate-dot" aria-hidden="true">·</span>
-              <span>论点 12</span>
             </div>
           </footer>
         </PInteractionCard>

@@ -69,21 +69,26 @@ const hasMore = ref(false)
 const loading = ref(false)
 const error = ref('')
 const pendingActions = reactive(new Map<string, CommentModerationAction>())
+let reportsRequestSequence = 0
 
 const statusLabel = computed(() => ({ pending: '待处理', upheld: '已通过', rejected: '已驳回' })[status.value])
 
 async function loadReports() {
+  const requestSequence = ++reportsRequestSequence
+  const requestedStatus = status.value
+  const requestedPage = page.value
   loading.value = true
   error.value = ''
   try {
     const result = await commentApi.listReports({ status: status.value, page: page.value, page_size: 20 })
+    if (requestSequence !== reportsRequestSequence || requestedStatus !== status.value || requestedPage !== page.value) return
     reports.value = result.items
     total.value = result.total
     hasMore.value = result.has_more
   } catch {
-    error.value = '加载举报失败，请重试'
+    if (requestSequence === reportsRequestSequence && requestedStatus === status.value && requestedPage === page.value) error.value = '加载举报失败，请重试'
   } finally {
-    loading.value = false
+    if (requestSequence === reportsRequestSequence) loading.value = false
   }
 }
 

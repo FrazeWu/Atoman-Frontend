@@ -203,7 +203,7 @@ async function copyUUID() {
 function channelContentCount(channel: StudioChannel) {
   const value = (channel as StudioChannel & { article_count?: number; content_count?: number }).article_count
     ?? (channel as StudioChannel & { content_count?: number }).content_count
-  return typeof value === 'number' ? value : 0
+  return typeof value === 'number' ? String(value) : '—'
 }
 
 function channelStatus(channel: StudioChannel) {

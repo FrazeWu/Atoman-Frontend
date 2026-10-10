@@ -37,6 +37,7 @@ const musicDrawers = vi.hoisted(() => ({
 	openAlbum: vi.fn(),
 	openArtist: vi.fn(),
 	openSong: vi.fn(),
+	state: { value: { playlistRefreshToken: 0 } },
 }));
 
 vi.mock("@/composables/useApi", () => ({

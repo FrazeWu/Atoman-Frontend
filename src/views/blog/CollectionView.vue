@@ -31,7 +31,7 @@
               title="复制 RSS 订阅地址"
               @click="copyCollectionRssLink"
             />
-            <PLink :to="channelPath" label="返回频道" />
+            <PLink :to="`/posts/channel/${channelId}`" label="返回频道" />
           </div>
         </template>
       </PPageHeader>
@@ -39,7 +39,7 @@
       <PCard class="collection-meta-card">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">所属频道</p>
-          <PLink :to="channelPath">
+          <PLink :to="`/posts/channel/${channelId}`">
             {{ channel?.name || '加载中...' }}
           </PLink>
         </div>
@@ -177,7 +177,6 @@ let postsRequestId = 0
 const collectionId = computed(() => props.id || (typeof route.params.id === 'string' ? route.params.id : ''))
 const collectionRssUrl = computed(() => collectionId.value ? api.rss.collection(collectionId.value) : '')
 const channelId = computed(() => collection.value?.channel_id || '')
-const channelPath = computed(() => `/channel/${encodeURIComponent(channel.value?.slug || channelId.value)}`)
 const authHeader = computed<Record<string, string>>(() => {
   const headers: Record<string, string> = {}
   if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
@@ -386,7 +385,7 @@ const deleteCollection = async () => {
     })
     if (!res.ok) throw new Error('合集删除失败，请重试')
     deleteModalOpen.value = false
-    router.push(channelPath.value)
+    router.push(`/posts/channel/${channelId.value}`)
   } catch (e) {
     reportError(e, 'Failed to delete collection:')
     actionError.value = errorMessage(e, '合集删除失败，请重试')

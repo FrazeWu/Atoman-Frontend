@@ -72,6 +72,7 @@ const moduleItems = computed(() => getMobileMoreItems().filter((item) => (
   moduleSet.has(item.module) && siteAccessStore.isModuleVisible(item.module)
 )))
 const currentModule = computed(() => {
+  if (route.path === '/modules') return ''
   if (route.path.startsWith('/posts') || route.path.startsWith('/post') || route.path.startsWith('/channel') || route.path.startsWith('/collection') || route.path.startsWith('/users')) return 'blog'
   if (route.path.startsWith('/music')) return 'music'
   if (route.path.startsWith('/books')) return 'books'

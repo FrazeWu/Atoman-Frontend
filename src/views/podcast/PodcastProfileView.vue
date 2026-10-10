@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { IconClock as Clock3, IconDownload as Download, IconHistory as History, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
+import { IconClock as Clock3, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
 import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'
@@ -63,8 +63,6 @@ onMounted(() => void loadOverview())
       <nav class="podcast-profile__links" aria-label="播客个人入口">
         <RouterLink to="/podcasts/favorites"><Star :size="18" aria-hidden="true" /><span>播放列表</span></RouterLink>
         <RouterLink to="/podcasts/subscriptions"><Clock3 :size="18" aria-hidden="true" /><span>继续收听</span></RouterLink>
-        <RouterLink to="/podcasts/me?view=history"><History :size="18" aria-hidden="true" /><span>播放历史</span></RouterLink>
-        <RouterLink to="/podcasts/me?view=downloads"><Download :size="18" aria-hidden="true" /><span>下载</span></RouterLink>
         <RouterLink :to="`/users/${authStore.user?.username}/settings`"><Settings :size="18" aria-hidden="true" /><span>播客设置</span></RouterLink>
       </nav>
     </template>

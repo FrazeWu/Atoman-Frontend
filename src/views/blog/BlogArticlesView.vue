@@ -183,6 +183,7 @@ const channelId = ref('')
 const collectionId = ref('')
 const sort = ref<'relevance' | 'recent'>('relevance')
 let requestId = 0
+let searchCollectionsRequestSequence = 0
 
 const queryValue = (value: unknown) => Array.isArray(value) ? value[0] : value
 const currentQuery = computed(() => typeof queryValue(route.query.q) === 'string' ? queryValue(route.query.q) as string : '')
@@ -270,11 +271,13 @@ const fetchChannels = async () => {
 }
 
 const fetchCollections = async (nextChannelID: string) => {
+  const sequence = ++searchCollectionsRequestSequence
   collections.value = []
   if (!nextChannelID) return
   collectionsLoading.value = true
   try {
     const response = await apiRequestResult(api.blog.channelCollections(nextChannelID))
+    if (sequence !== searchCollectionsRequestSequence) return
     if (!response.ok) return
     const payload = await Promise.resolve(response.data) as { data?: BlogCollection[] } | BlogCollection[]
     const items = Array.isArray(payload) ? payload : payload.data
@@ -282,7 +285,7 @@ const fetchCollections = async (nextChannelID: string) => {
   } catch (reason) {
     reportError(reason, 'Failed to fetch blog collections:')
   } finally {
-    collectionsLoading.value = false
+    if (sequence === searchCollectionsRequestSequence) collectionsLoading.value = false
   }
 }
 

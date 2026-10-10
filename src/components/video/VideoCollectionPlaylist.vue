@@ -109,7 +109,7 @@ function isComplete(videoId: string) {
   margin: 0;
   color: var(--a-color-fg);
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.35;
 }
 
@@ -195,7 +195,7 @@ function isComplete(videoId: string) {
 .vcp__item-title {
   overflow: hidden;
   font-size: 0.8rem;
-  font-weight: 550;
+  font-weight: 500;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;

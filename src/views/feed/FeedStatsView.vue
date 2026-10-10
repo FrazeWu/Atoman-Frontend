@@ -213,13 +213,13 @@ const renderCharts = () => {
       },
       scales: {
         x: {
-          ticks: { color: '#6b7280', font: { weight: 700 } },
+          ticks: { color: '#6b7280', font: { weight: 500 } },
           grid: { display: false },
           border: { color: 'rgba(0,0,0,0.1)' },
         },
         y: {
           beginAtZero: true,
-          ticks: { color: '#6b7280', precision: 0, font: { weight: 700 } },
+          ticks: { color: '#6b7280', precision: 0, font: { weight: 500 } },
           grid: { color: '#e5e7eb' },
           border: { color: 'rgba(0,0,0,0.1)' },
         },
@@ -251,12 +251,12 @@ const renderCharts = () => {
       scales: {
         x: {
           beginAtZero: true,
-          ticks: { color: '#6b7280', precision: 0, font: { weight: 700 } },
+          ticks: { color: '#6b7280', precision: 0, font: { weight: 500 } },
           grid: { color: '#f3f4f6' },
           border: { color: 'rgba(0,0,0,0.1)' },
         },
         y: {
-          ticks: { color: '#6b7280', font: { weight: 700 } },
+          ticks: { color: '#6b7280', font: { weight: 500 } },
           grid: { display: false },
           border: { color: 'rgba(0,0,0,0.1)' },
         },
@@ -314,12 +314,11 @@ onBeforeUnmount(() => {
 }
 
 .stats-card {
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .stats-card:hover {
   border-color: var(--a-color-border);
-  background: var(--a-color-surface-muted);
 }
 
 .stats-big-value {

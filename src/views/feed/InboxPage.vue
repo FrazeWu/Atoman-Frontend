@@ -431,7 +431,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 .inbox-category-pane {
   min-width: 0;
   border-right: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .inbox-category-item {

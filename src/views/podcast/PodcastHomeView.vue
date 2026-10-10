@@ -271,7 +271,7 @@ function playEpisode(ep: PodcastEpisode) {
 .ph-section-header h2 {
   color: var(--a-color-text);
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .ph-section-header p {
@@ -370,7 +370,7 @@ function playEpisode(ep: PodcastEpisode) {
 .ph-recommendation-content h3 {
   color: var(--a-color-text);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .ph-recommendation-content p {
@@ -411,7 +411,6 @@ function playEpisode(ep: PodcastEpisode) {
 .ph-episode-row:hover {
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
-  background: var(--a-color-surface-muted);
   transform: translateY(-1px);
 }
 
@@ -439,7 +438,7 @@ function playEpisode(ep: PodcastEpisode) {
   width: fit-content;
   color: var(--a-color-text);
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
 }
 

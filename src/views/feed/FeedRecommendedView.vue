@@ -1354,7 +1354,7 @@ onUnmounted(() => { recommendationRequest++ })
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   font-size: 0.78rem;
-  font-weight: 550;
+  font-weight: 500;
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1429,7 +1429,7 @@ onUnmounted(() => { recommendationRequest++ })
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.05rem;
-  font-weight: 650;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -1440,7 +1440,7 @@ onUnmounted(() => { recommendationRequest++ })
 
 .section-badge {
   font-size: 0.65rem;
-  font-weight: 650;
+  font-weight: 500;
   padding: 0.15em 0.5em;
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
@@ -1448,8 +1448,8 @@ onUnmounted(() => { recommendationRequest++ })
   letter-spacing: 0.05em;
 }
 .section-badge--hot {
-  background: color-mix(in srgb, #ea580c 15%, transparent);
-  color: #ea580c;
+  background: color-mix(in srgb, var(--a-color-warning) 15%, transparent);
+  color: var(--a-color-warning);
 }
 
 .stream-sub-filters {

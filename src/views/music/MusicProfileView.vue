@@ -191,7 +191,7 @@ watch(
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-fg);
   cursor: pointer;

@@ -449,7 +449,7 @@ watch(
 .history-copy > a {
   color: inherit;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -491,7 +491,7 @@ watch(
 .history-actions { display: flex; justify-content: flex-end; gap: 0.25rem; }
 .history-actions > button,
 .history-actions :deep(.p-dropdown-root > div:first-child > button) { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
-.history-actions button.is-active { color: var(--a-color-accent); }
+.history-actions button.is-active { color: var(--a-color-primary); }
 .history-action-menu { min-width: 11rem; padding: 0.3rem; }
 .history-action-menu button { width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .history-action-menu button:hover { background: var(--a-color-surface-muted); }
@@ -502,7 +502,7 @@ watch(
 }
 
 .history-state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .history-empty {
@@ -517,6 +517,7 @@ watch(
 .history-empty h2 {
   margin: 0;
   font-size: 1rem;
+  font-weight: 500;
 }
 
 @media (max-width: 900px) {

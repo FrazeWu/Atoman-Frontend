@@ -49,7 +49,7 @@
       </PEmpty>
 
       <PEmpty v-if="!loading && !errorMessage && !items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。">
-        <template #action><RouterLink to="/feed" class="a-btn a-btn--primary">去发现文章</RouterLink></template>
+        <template #action><PButton variant="primary" @click="router.push('/feed')">去发现文章</PButton></template>
       </PEmpty>
 
     <div v-if="!loading && !errorMessage && items.length" class="feed-timeline">
@@ -473,7 +473,7 @@ onUnmounted(() => {
 }
 
 .star-group-button:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
 }
@@ -483,7 +483,7 @@ onUnmounted(() => {
   color: var(--a-color-fg);
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .star-group-select {
@@ -492,7 +492,9 @@ onUnmounted(() => {
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
   border: 1px solid var(--a-color-border-soft);
-  background: #fff;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 
 .feed-loading,

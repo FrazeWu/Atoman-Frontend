@@ -747,7 +747,7 @@ async function schedulePublish() {
   margin: 0;
   color: var(--a-color-text);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .pe-step-heading {
@@ -792,7 +792,7 @@ async function schedulePublish() {
 .pe-field-label {
   display: block;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
   margin-bottom: 0.375rem;
 }
@@ -833,7 +833,7 @@ async function schedulePublish() {
   padding: 2rem 1rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -841,21 +841,22 @@ async function schedulePublish() {
 }
 .pe-drop-zone:hover:not(.pe-drop-zone--uploading) {
   border-color: var(--a-color-text-secondary);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 .pe-drop-zone--uploading { cursor: default; opacity: 0.7; }
 .pe-drop-hint { font-size: 0.875rem; font-weight: 500; color: var(--a-color-fg); }
 .pe-drop-sub { font-size: 0.75rem; color: var(--a-color-muted); }
-.pe-uploading-label { font-size: 0.875rem; font-weight: 600; color: var(--a-color-fg); }
+.pe-uploading-label { font-size: 0.875rem; font-weight: 500; color: var(--a-color-fg); }
 
 .pe-uploading-box {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 7rem;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
 }
 
 .pe-progress-track {

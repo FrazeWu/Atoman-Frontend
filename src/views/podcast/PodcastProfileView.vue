@@ -74,12 +74,12 @@ onMounted(() => void loadOverview())
 <style scoped>
 .podcast-profile-view { min-height: 100%; padding-bottom: 3rem; }
 .podcast-profile__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
-.podcast-profile__stats article { display: grid; gap: 0.35rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); }
+.podcast-profile__stats article { display: grid; gap: 0.35rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .podcast-profile__stats strong { font-size: 1.35rem; font-weight: 500; }
 .podcast-profile__stats span, .podcast-profile__state, .podcast-profile__error { color: var(--a-color-muted); font-size: 0.8rem; }
 .podcast-profile__error { color: var(--a-color-danger); margin-bottom: 1rem; }
 .podcast-profile__links { display: grid; gap: 0.5rem; }
-.podcast-profile__links a { display: flex; min-height: 48px; align-items: center; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); color: var(--a-color-fg); text-decoration: none; }
+.podcast-profile__links a { display: flex; min-height: 48px; align-items: center; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); color: var(--a-color-fg); text-decoration: none; }
 .podcast-profile__links a:hover, .podcast-profile__links a:focus-visible { border-color: var(--a-color-fg); }
 @media (max-width: 520px) { .podcast-profile__stats { grid-template-columns: 1fr; } }
 </style>

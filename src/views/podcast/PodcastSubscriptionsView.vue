@@ -119,7 +119,7 @@ async function listenLater(episode: PodcastEpisode) {
 .psub-message { color: var(--a-color-muted); font-size: 0.875rem; }
 .psub-list { display: grid; gap: 0.6rem; }
 .psub-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-.psub-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
+.psub-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); }
 .psub-main { min-width: 0; }
 .psub-title { color: var(--a-color-fg); font-weight: 500; text-decoration: none; font-size: 0.925rem; }
 .psub-title:hover { text-decoration: underline; }

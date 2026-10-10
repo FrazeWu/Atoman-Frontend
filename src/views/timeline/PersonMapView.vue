@@ -575,11 +575,16 @@ const doDeletePerson = async () => {
   router.push('/timeline/persons')
 }
 
-onMounted(async () => {
-  const id = route.params.id as string
+async function loadPerson() {
+  const id = String(route.params.id || '')
+  if (!id) return
+  store.currentPerson = null
   await store.fetchPerson(id)
-  initMap()
-})
+  if (String(route.params.id || '') === id) initMap()
+}
+
+onMounted(() => { void loadPerson() })
+watch(() => route.params.id, () => { void loadPerson() })
 
 onUnmounted(() => {
   olMap?.setTarget(undefined)

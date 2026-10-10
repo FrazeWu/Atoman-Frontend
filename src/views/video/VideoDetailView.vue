@@ -172,11 +172,13 @@ function scheduleProcessingRefresh() {
 
 async function retryVideoProcessing() {
   if (!video.value || !canReprocessVideo.value) return
+  const videoID = video.value.id
+  const requestSeq = loadSeq
   actionFeedback.value = ''
   actionError.value = ''
   try {
     await reprocessVideo(video.value.id, authStore.token ?? undefined)
-    video.value = { ...video.value, processing_status: 'pending', processing_error: '' }
+    if (requestSeq === loadSeq && video.value?.id === videoID) video.value = { ...video.value, processing_status: 'pending', processing_error: '' }
     scheduleProcessingRefresh()
   } catch {
     actionError.value = '重新处理失败，请稍后再试'
@@ -596,10 +598,12 @@ function applyRating(summary: VideoRatingSummary) {
 
 async function rateVideo(score: number) {
   if (!video.value || !authStore.token) return
+  const videoID = video.value.id
   ratingLoading.value = true
   ratingError.value = ''
   try {
-    applyRating(await setVideoRating(video.value.id, score, authStore.token))
+    const summary = await setVideoRating(videoID, score, authStore.token)
+    if (video.value?.id === videoID) applyRating(summary)
   } catch {
     ratingError.value = '评分失败，请稍后再试'
   } finally {
@@ -609,10 +613,12 @@ async function rateVideo(score: number) {
 
 async function clearRating() {
   if (!video.value || !authStore.token) return
+  const videoID = video.value.id
   ratingLoading.value = true
   ratingError.value = ''
   try {
-    applyRating(await deleteVideoRating(video.value.id, authStore.token))
+    const summary = await deleteVideoRating(videoID, authStore.token)
+    if (video.value?.id === videoID) applyRating(summary)
   } catch {
     ratingError.value = '清除评分失败，请稍后再试'
   } finally {

@@ -124,4 +124,28 @@ describe('BookReaderView', () => {
       preferences: expect.objectContaining({ bookmarks: [] }),
     }))
   })
+
+  it('搜索私有 TXT 正文并跳转到匹配位置', async () => {
+    vi.spyOn(booksApi, 'getBookAsset').mockResolvedValue(asset)
+    vi.spyOn(booksApi, 'getBookReadingState').mockResolvedValue(readingState)
+    vi.spyOn(booksApi, 'fetchBookAssetContent').mockResolvedValue(new Blob(['前言\n目标段落在这里']))
+    vi.spyOn(booksApi, 'saveBookReadingState').mockResolvedValue(readingState)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/read/:assetId', component: BookReaderView }],
+    })
+    await router.push('/books/read/asset-1')
+    await router.isReady()
+    const wrapper = mount(BookReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    await wrapper.get('#private-book-search').setValue('目标段落')
+    await wrapper.find('.books-reader__search').trigger('submit')
+
+    expect(wrapper.text()).toContain('找到 1 处匹配')
+    expect(wrapper.findAll('.books-reader__search-results button')).toHaveLength(1)
+    await wrapper.find('.books-reader__search-results button').trigger('click')
+    expect(booksApi.saveBookReadingState).toHaveBeenCalled()
+  })
 })

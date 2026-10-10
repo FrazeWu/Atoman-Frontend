@@ -43,6 +43,24 @@
       </div>
       <div v-else class="public-reader__pdf"><canvas ref="pdfCanvas" aria-label="PDF 页面" /></div>
       <template #footer>
+        <form v-if="asset?.format === 'txt'" class="public-reader__search" @submit.prevent="searchText">
+          <label for="public-book-search">搜索正文</label>
+          <div class="public-reader__search-row">
+            <input id="public-book-search" v-model="textSearchQuery" type="search" placeholder="输入关键词" autocomplete="off" />
+            <PButton type="submit" variant="ghost" aria-label="搜索正文">
+              <Search :size="16" aria-hidden="true" />
+              <span>搜索</span>
+            </PButton>
+          </div>
+          <p v-if="textSearchQuery" class="public-reader__search-status" aria-live="polite">
+            {{ textSearchMatches.length ? `找到 ${textSearchMatches.length} 处匹配` : '没有找到匹配内容' }}
+          </p>
+          <ol v-if="textSearchMatches.length" class="public-reader__search-results">
+            <li v-for="match in textSearchMatches" :key="match.index">
+              <button type="button" @click="jumpToTextMatch(match)">{{ match.preview }}</button>
+            </li>
+          </ol>
+        </form>
         <details v-if="bookmarks.length" class="public-reader__bookmarks">
           <summary>书签（{{ bookmarks.length }}）</summary>
           <ol>
@@ -60,7 +78,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { IconBookmark as Bookmark, IconFlag as Flag } from '@tabler/icons-vue'
+import { IconBookmark as Bookmark, IconFlag as Flag, IconSearch as Search } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
@@ -68,6 +86,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
+import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
@@ -94,6 +113,8 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const reportMessage = ref('')
 const bookmarks = ref<BookReaderBookmark[]>([])
+const textSearchQuery = ref('')
+const textSearchMatches = ref<BookTextSearchMatch[]>([])
 const textViewport = ref<HTMLElement | null>(null)
 const epubViewport = ref<HTMLElement | null>(null)
 const comicViewport = ref<HTMLElement | null>(null)
@@ -282,6 +303,19 @@ function removeBookmark(id: string) {
   })
 }
 
+function searchText() {
+  if (asset.value?.format !== 'txt') return
+  textSearchMatches.value = findBookTextMatches(textContent.value, textSearchQuery.value)
+}
+
+function jumpToTextMatch(match: BookTextSearchMatch) {
+  if (asset.value?.format !== 'txt') return
+  readingPercent.value = textContent.value.length ? match.index / textContent.value.length : 0
+  const viewport = textViewport.value
+  if (viewport) viewport.scrollTop = readingPercent.value * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+  saveLocalBookReadingProgress(asset.value.id, { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+}
+
 function jumpToBookmark(bookmark: BookReaderBookmark) {
   if (!asset.value) return
   readingPercent.value = bookmark.reading_percent
@@ -440,6 +474,68 @@ onBeforeUnmount(() => {
   padding-top: 0.75rem;
   color: var(--a-color-muted);
   font-size: 0.88rem;
+}
+
+.public-reader__search {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 42rem;
+}
+
+.public-reader__search > label {
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.public-reader__search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.public-reader__search-row input {
+  min-width: 0;
+  flex: 1;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  background: #ffffff;
+  color: var(--a-color-fg);
+}
+
+.public-reader__search-row input:focus-visible,
+.public-reader__search-results button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+
+.public-reader__search-status {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+}
+
+.public-reader__search-results {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-reader__search-results button {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted, #f8fafc);
+  color: var(--a-color-fg);
+  text-align: left;
+  cursor: pointer;
 }
 
 .public-reader__bookmarks ol {

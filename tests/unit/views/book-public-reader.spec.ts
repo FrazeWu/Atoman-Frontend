@@ -102,4 +102,34 @@ describe('BookPublicReaderView', () => {
     expect(wrapper.find('.public-reader__bookmarks').exists()).toBe(false)
     wrapper.unmount()
   })
+
+  it('搜索公共 TXT 正文并显示匹配片段', async () => {
+    vi.spyOn(booksApi, 'getPublishedBookAsset').mockResolvedValue({
+      id: 'public-asset-4',
+      work_id: 'work-4',
+      format: 'txt',
+      file_name: 'searchable.txt',
+      content_type: 'text/plain',
+      size: 20,
+      status: 'published',
+      created_at: '2026-08-27T00:00:00Z',
+    })
+    vi.spyOn(booksApi, 'fetchPublishedBookAssetContent').mockResolvedValue(new Blob(['公共正文中的关键词']))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/public-read/:assetId', component: BookPublicReaderView }],
+    })
+    await router.push('/books/public-read/public-asset-4')
+    await router.isReady()
+    const wrapper = mount(BookPublicReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    await wrapper.get('#public-book-search').setValue('关键词')
+    await wrapper.find('.public-reader__search').trigger('submit')
+
+    expect(wrapper.text()).toContain('找到 1 处匹配')
+    expect(wrapper.find('.public-reader__search-results button').text()).toContain('关键词')
+    wrapper.unmount()
+  })
 })

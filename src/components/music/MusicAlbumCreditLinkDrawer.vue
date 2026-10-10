@@ -65,7 +65,7 @@ async function loadAlbums(value: string) {
 	loading.value = true
 	errorMessage.value = ''
 	try {
-		const response = await listMusicAlbums({ ...(value ? { q: value } : {}), page: 1, page_size: 20 })
+		const response = await listMusicAlbums({ ...(value ? { q: value } : {}), page: 1, page_size: 100 })
 		if (currentRequest === requestID) results.value = response.data
 	} catch {
 		if (currentRequest === requestID) errorMessage.value = value ? '搜索专辑失败' : '加载专辑失败'

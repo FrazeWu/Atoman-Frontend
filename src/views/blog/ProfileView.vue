@@ -350,6 +350,7 @@ const toastMessage = ref('')
 const resolvedChannelSlug = ref('')
 const resolvedUsername = ref('')
 let profileLoadSequence = 0
+let relationRequestSequence = 0
 
 const relationModalOpen = ref(false)
 const relationTab = ref<RelationTab>('following')
@@ -516,6 +517,7 @@ function normalizeRelationItems(value: unknown): RelationEntry[] {
 }
 
 function resetRelations() {
+  relationRequestSequence += 1
   relationCache.value = { following: [], followers: [] }
   relationLoaded.value = { following: false, followers: false }
   relationLoading.value = false
@@ -727,6 +729,8 @@ async function loadChannelsAndContent(generation = profileLoadSequence) {
 async function loadRelations(tab: RelationTab, force = false) {
   if (!profile.value || !canViewRelations.value) return
   if (!force && relationLoaded.value[tab]) return
+  const requestSequence = ++relationRequestSequence
+  const profileID = profile.value.uuid
   relationLoading.value = true
   relationError.value = ''
   try {
@@ -735,12 +739,13 @@ async function loadRelations(tab: RelationTab, force = false) {
       : api.users.followers(profile.value.uuid)
     const response = await apiRequestResult(endpoint)
     if (!response.ok) throw new Error('relation request failed')
+    if (requestSequence !== relationRequestSequence || profile.value?.uuid !== profileID) return
     relationCache.value[tab] = normalizeRelationItems(response.data)
     relationLoaded.value[tab] = true
   } catch {
-    relationError.value = '订阅关系加载失败，请重试'
+    if (requestSequence === relationRequestSequence && profile.value?.uuid === profileID) relationError.value = '订阅关系加载失败，请重试'
   } finally {
-    relationLoading.value = false
+    if (requestSequence === relationRequestSequence && profile.value?.uuid === profileID) relationLoading.value = false
   }
 }
 

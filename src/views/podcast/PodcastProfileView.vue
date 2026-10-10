@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { IconClock as Clock3, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
 import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
@@ -14,10 +14,13 @@ const error = ref('')
 const subscribedCount = ref(0)
 const savedCount = ref(0)
 const listeningCount = ref(0)
+let loadGeneration = 0
 const isAuthenticated = computed(() => authStore.isAuthenticated && Boolean(authStore.user))
+const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
 
 async function loadOverview() {
   if (!isAuthenticated.value) return
+  const generation = ++loadGeneration
   loading.value = true
   error.value = ''
   try {
@@ -26,17 +29,26 @@ async function loadOverview() {
       getPodcastBookmarks<{ data?: unknown[] }>('favorite', authStore.token ?? undefined),
       getPodcastBookmarks<{ data?: unknown[] }>('listen_later', authStore.token ?? undefined),
     ])
+    if (generation !== loadGeneration) return
     subscribedCount.value = Array.isArray(shows?.data) ? shows.data.length : 0
     savedCount.value = Array.isArray(saved?.data) ? saved.data.length : 0
     listeningCount.value = Array.isArray(later?.data) ? later.data.length : listPodcastProgress().length
   } catch {
-    error.value = '统计加载失败，请重试'
+    if (generation === loadGeneration) error.value = '统计加载失败，请重试'
   } finally {
-    loading.value = false
+    if (generation === loadGeneration) loading.value = false
   }
 }
 
 onMounted(() => void loadOverview())
+watch(accountIdentity, (identity, previous) => {
+  if (identity === previous) return
+  subscribedCount.value = 0
+  savedCount.value = 0
+  listeningCount.value = 0
+  loadGeneration += 1
+  void loadOverview()
+})
 </script>
 
 <template>

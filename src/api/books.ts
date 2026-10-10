@@ -38,7 +38,7 @@ export interface BookImportSession {
   title: string
   author?: string
   file_name: string
-  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | 'mobi' | 'azw3' | string
   content_type: string
   size: number
   status: BookImportStatus | string
@@ -153,7 +153,7 @@ export interface BookContinueReading {
   title: string
   author?: string
   file_name: string
-  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | 'mobi' | 'azw3' | string
   processing_status: BookAssetProcessingStatus | string
   reading_percent: number
   last_read_at?: string
@@ -254,7 +254,7 @@ export interface BookPublishedAsset {
   id: string
   work_id?: string
   edition_id?: string
-  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | 'mobi' | 'azw3' | string
   file_name: string
   title?: string
   author?: string
@@ -315,7 +315,7 @@ export interface BookPrivateAsset {
   title: string
   author?: string
   file_name: string
-  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | string
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr' | 'mobi' | 'azw3' | string
   content_type: string
   size: number
   status: BookImportStatus | string
@@ -635,6 +635,8 @@ export function bookContentType(file: Pick<File, 'name' | 'type'>): string {
     case 'txt': return 'text/plain'
     case 'cbz': return 'application/vnd.comicbook+zip'
     case 'cbr': return 'application/vnd.rar'
+    case 'mobi': return 'application/x-mobipocket-ebook'
+    case 'azw3': return 'application/vnd.amazon.mobi8-ebook'
     default: return file.type || 'application/octet-stream'
   }
 }

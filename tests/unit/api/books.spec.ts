@@ -150,6 +150,8 @@ describe('books API', () => {
     expect(bookContentType({ name: 'book.txt', type: '' })).toBe('text/plain')
     expect(bookContentType({ name: 'book.cbz', type: 'application/octet-stream' })).toBe('application/vnd.comicbook+zip')
     expect(bookContentType({ name: 'book.cbr', type: '' })).toBe('application/vnd.rar')
+    expect(bookContentType({ name: 'book.mobi', type: '' })).toBe('application/x-mobipocket-ebook')
+    expect(bookContentType({ name: 'book.azw3', type: '' })).toBe('application/vnd.amazon.mobi8-ebook')
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response('', { status: 200, headers: { ETag: 'etag-1' } }),

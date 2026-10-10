@@ -106,7 +106,7 @@
         :active-id="activeSection"
         :mobile-open="mobileDirectoryOpen"
         mobile-side="right"
-        title="目录-账号设置"
+        title="账号设置目录"
         aria-label="设置导航"
         @select="scrollToSection"
         @close-mobile="mobileDirectoryOpen = false"
@@ -228,12 +228,12 @@ const settingSections: Array<{
   label: string
   description: string
 }> = [
-  { key: 'profile', kicker: '01 / PROFILE', label: '个人资料', description: '这些资料会显示在你的个人主页和内容中。' },
-  { key: 'security', kicker: '02 / SECURITY', label: '账号与安全', description: '保护登录凭据，查看设备和近期安全活动。' },
-  { key: 'notification', kicker: '03 / NOTIFICATIONS', label: '通知', description: '只接收站内通知；账号安全和关键权限变化始终开启。' },
-  { key: 'privacy', kicker: '04 / PRIVACY', label: '隐私与社交', description: '控制主页可见范围、订阅关系和私信权限。' },
-  { key: 'modules', kicker: '05 / MODULES', label: '模块设置', description: '每个内容模块使用独立设置，互不影响。' },
-  { key: 'danger', kicker: 'DANGER ZONE', label: '注销账户', description: '立即注销，已发布内容会匿名化保留。' },
+  { key: 'profile', kicker: '01 / 个人资料', label: '个人资料', description: '这些资料会显示在你的个人主页和内容中。' },
+  { key: 'security', kicker: '02 / 账号安全', label: '账号与安全', description: '保护登录凭据，查看设备和近期安全活动。' },
+  { key: 'notification', kicker: '03 / 消息通知', label: '通知', description: '只接收站内通知；账号安全和关键权限变化始终开启。' },
+  { key: 'privacy', kicker: '04 / 隐私权限', label: '隐私与社交', description: '控制主页可见范围、订阅关系和私信权限。' },
+  { key: 'modules', kicker: '05 / 模块管理', label: '模块设置', description: '每个内容模块使用独立设置，互不影响。' },
+  { key: 'danger', kicker: '06 / 账号注销', label: '注销账户', description: '立即注销，已发布内容会匿名化保留。' },
 ]
 
 const moduleSettings: Array<{ key: StudioModule; label: string; description: string }> = [
@@ -455,7 +455,7 @@ onMounted(async () => {
 }
 
 .settings-state--error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .subscription-status {
@@ -474,9 +474,9 @@ onMounted(async () => {
 .module-settings-list { display: grid; gap: 0; }
 .module-settings-list__item .settings-block__control { justify-content: flex-end; }
 .module-settings-list__item .settings-block__control > span { flex: 0 0 auto; }
-.account-danger { border-top-color: color-mix(in srgb, var(--a-color-accent-destructive) 35%, var(--a-color-border-soft)); }
+.account-danger { border-top-color: color-mix(in srgb, var(--a-color-danger) 35%, var(--a-color-border-soft)); }
 .account-danger :deep(.p-button) { flex: 0 0 auto; }
-.account-danger__error { margin: 0.75rem 0 0; color: var(--a-color-accent-destructive); }
+.account-danger__error { margin: 0.75rem 0 0; color: var(--a-color-danger); }
 
 @media (max-width: 1023px) {
   .user-settings__directory-trigger {

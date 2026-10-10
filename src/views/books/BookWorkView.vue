@@ -45,6 +45,12 @@
         </div>
       </header>
 
+      <BookPrivateUpload
+        :work-id="work.id"
+        :title="work.title"
+        :author="authorLabel"
+      />
+
       <section v-if="work.description" class="books-detail__section">
         <h2>简介</h2>
         <p class="books-detail__description">{{ work.description }}</p>
@@ -171,6 +177,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { IconBookmark as Bookmark, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from '@/components/books/BookCover.vue'
+import BookPrivateUpload from '@/components/books/BookPrivateUpload.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'

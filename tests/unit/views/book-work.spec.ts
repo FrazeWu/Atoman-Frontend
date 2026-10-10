@@ -13,6 +13,7 @@ beforeEach(() => {
   useAuthStore().isAuthenticated = true
   vi.spyOn(booksApi, 'getMyBookReview').mockRejectedValue(new Error('No review'))
   vi.spyOn(booksApi, 'listPublishedBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
+  vi.spyOn(booksApi, 'listBookImports').mockResolvedValue([])
 })
 
 afterEach(() => {
@@ -219,6 +220,48 @@ describe('BookWorkView', () => {
 
     expect(shelfSpy).toHaveBeenCalledWith('work-1', 'reading')
     expect(wrapper.text()).toContain('书架状态已保存')
+    wrapper.unmount()
+  })
+
+  it('uploads and links a private book from the work detail', async () => {
+    vi.spyOn(booksApi, 'getPublicBookWork').mockResolvedValue({
+      id: 'work-1',
+      title: 'Public Work',
+      lifecycle_status: 'active',
+      rating_score: 0,
+      rating_count: 0,
+      authors: [{ id: 'person-1', name: 'Author', role: 'author' }],
+      editions: [],
+    })
+    vi.spyOn(booksApi, 'getPublicBookReviews').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
+    vi.spyOn(booksApi, 'getBookRating').mockResolvedValue({ rating_score: 0, rating_count: 0 })
+    vi.spyOn(booksApi, 'uploadBookFile').mockResolvedValue({
+      id: 'import-1', title: 'Public Work', file_name: 'work.pdf', format: 'pdf', content_type: 'application/pdf',
+      size: 123, status: 'metadata_ready', part_size: 1, completed_parts: [], expires_at: '',
+    })
+    const linkSpy = vi.spyOn(booksApi, 'linkBookImportToCatalog').mockResolvedValue({
+      id: 'import-1', title: 'Public Work', file_name: 'work.pdf', format: 'pdf', content_type: 'application/pdf',
+      size: 123, status: 'metadata_ready', part_size: 1, completed_parts: [], expires_at: '', work_id: 'work-1',
+      processing_status: 'private_available', asset_id: 'asset-1',
+    })
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/work/:workId', component: BookWorkView }],
+    })
+    await router.push('/books/work/work-1')
+    await router.isReady()
+    const wrapper = mount(BookWorkView, { global: { plugins: [router], stubs: { CommentSection: true } } })
+    await flushPromises()
+
+    const input = wrapper.find('.book-private-upload__input')
+    Object.defineProperty(input.element, 'files', { value: [new File(['book'], 'work.pdf', { type: 'application/pdf' })] })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(linkSpy).toHaveBeenCalledWith('import-1', { work_id: 'work-1', edition_id: undefined })
+    expect(wrapper.text()).toContain('电子书已上传并关联到当前书籍')
+    expect(wrapper.text()).toContain('开始阅读')
     wrapper.unmount()
   })
 

@@ -12,6 +12,12 @@
         </div>
       </header>
 
+      <BookPrivateUpload
+        :work-id="detail.work.id"
+        :edition-id="detail.edition.id"
+        :title="detail.edition.title || detail.work.title"
+      />
+
       <dl class="books-edition-facts">
         <template v-for="fact in facts" :key="fact.label">
           <dt>{{ fact.label }}</dt>
@@ -35,6 +41,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import BookCover from '@/components/books/BookCover.vue'
+import BookPrivateUpload from '@/components/books/BookPrivateUpload.vue'
 import PLink from '@/components/ui/PLink.vue'
 import { getPublicBookEdition, type BookPublicEditionDetail } from '@/api/books'
 

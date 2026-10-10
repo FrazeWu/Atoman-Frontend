@@ -253,7 +253,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 .queue-title {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 1rem;
   margin: 0;
   color: var(--a-color-fg);
@@ -406,7 +406,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 
 .eq-bar {
   width: 2px;
-  background: #10b981;
+  background: var(--a-color-success);
   border-radius: 1px;
   animation: eq-bounce 1s ease-in-out infinite alternate;
 }
@@ -430,7 +430,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 
 .q-title {
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -489,8 +489,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 .q-remove:hover {
-  color: #ef4444;
-  background: color-mix(in srgb, #ef4444 12%, transparent);
+  color: var(--a-color-danger);
+  background: color-mix(in srgb, var(--a-color-danger) 12%, transparent);
 }
 
 .queue-empty-box {
@@ -500,7 +500,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 
 .placeholder-title {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   margin-bottom: 0.5rem;
 }

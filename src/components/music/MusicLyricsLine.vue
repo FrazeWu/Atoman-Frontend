@@ -392,7 +392,7 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line.is-active .music-lyrics-line__text {
-  font-weight: 700;
+  font-weight: 600;
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
 }
 

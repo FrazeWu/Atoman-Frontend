@@ -975,7 +975,7 @@ function cancelLyricsConflict() {
   color: var(--a-color-muted);
   font-family: var(--a-font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -985,7 +985,7 @@ function cancelLyricsConflict() {
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
   font-size: 1.85rem;
-  font-weight: 900;
+  font-weight: 500;
   letter-spacing: -0.02em;
 }
 
@@ -1025,8 +1025,8 @@ function cancelLyricsConflict() {
 }
 
 .music-lyrics-panel__action-btn {
-  border-radius: 9999px !important;
-  font-weight: 600 !important;
+  border-radius: var(--a-radius-control) !important;
+  font-weight: 500 !important;
   transition: transform 0.15s ease, background 0.2s ease !important;
 }
 
@@ -1046,7 +1046,7 @@ function cancelLyricsConflict() {
   color: var(--a-color-text);
   cursor: pointer;
   font-family: var(--a-font-sans);
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control);
   box-shadow: none;
   transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
 }
@@ -1066,7 +1066,7 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__versions {
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
-  border-radius: 12px;
+  border-radius: var(--a-radius-card);
   padding: 1rem;
 }
 
@@ -1100,8 +1100,8 @@ function cancelLyricsConflict() {
   cursor: pointer;
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  font-weight: 800;
-  border-radius: 9999px;
+  font-weight: 500;
+  border-radius: var(--a-radius-control);
   padding: 0.3rem 0.75rem;
   box-shadow: none;
   transition: background 0.2s ease;
@@ -1144,7 +1144,7 @@ function cancelLyricsConflict() {
 .music-lyrics-panel__version-diff-line > span {
   flex: 0 0 3rem;
   color: var(--a-color-muted);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .music-lyrics-panel__version-diff-line del,

@@ -609,16 +609,16 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   border-right: 0;
   border-radius: 0;
-  background: #fff;
+  background: var(--a-color-bg);
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
-  color: #131c2e;
+  color: var(--a-color-fg);
   transition: transform var(--a-motion-emphasis) var(--a-motion-ease-enter);
 }
 
 :root.dark .player {
   border-color: var(--a-color-border-soft);
-  background: #fff;
-  color: #131c2e;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 
 .player.is-auto-hidden {
@@ -676,7 +676,7 @@ watch(
   border: 0;
   border-radius: 0;
   padding: 0;
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
   cursor: pointer;
   flex-shrink: 0;
@@ -694,9 +694,9 @@ watch(
   justify-content: center;
   font-family: inherit;
   font-size: 1.4rem;
-  font-weight: var(--a-font-weight-strong, 700);
+  font-weight: 600;
   color: var(--a-color-text);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   text-transform: uppercase;
 }
 .cover-overlay {
@@ -710,7 +710,7 @@ watch(
   opacity: 0;
   transition: opacity var(--a-motion-state) ease;
   font-size: 20px;
-  font-weight: bold;
+  font-weight: 600;
 }
 .cover-wrap:hover .cover-overlay {
   opacity: 1;
@@ -761,7 +761,7 @@ watch(
   letter-spacing: 0.08em;
   margin: 0;
   color: var(--a-color-muted);
-  font-weight: 800;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -792,7 +792,7 @@ watch(
   color: var(--a-color-bg);
   font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.4;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -1235,7 +1235,7 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   border-right: 0;
   border-radius: 0;
-  background: #fff;
+  background: var(--a-color-bg);
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
 }
 
@@ -1312,7 +1312,7 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   border-right: 0;
   border-radius: 0;
-  background: #fff;
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
   transform: translateY(-50%);
@@ -1528,7 +1528,7 @@ watch(
   margin-left: 0.5rem;
 }
 .player-fav-btn.is-active {
-  color: #e05e5e !important;
+  color: var(--a-color-danger) !important;
 }
 .player-fav-btn:hover {
   background-color: var(--a-color-surface-muted);

@@ -436,6 +436,21 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await vi.waitFor(() => expect(flow.step).toBe("albumDetails"));
 	});
 
+	it("元信息匹配失败且文件识别未完成时不提前进入详情页", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.status = "analyzing";
+		flow.draft.albumImport.derivedAlbumTitle = "Test Album";
+		flow.draft.albumImport.derivedTracks = [{ title: "Test Song", origin: "01-song.flac", trackNumber: 1 }];
+		const match = vi.spyOn(musicApi, "matchMusicAlbumImportMetadata").mockRejectedValue(new Error("服务暂不可用"));
+
+		await useAlbumImportUpload().startMetadataMatching();
+
+		expect(match).toHaveBeenCalledTimes(2);
+		expect(flow.step).toBe("albumImport");
+		expect(flow.draft.albumImport.metadataMatchStatus).toBe("unmatched");
+	});
+
 	it("后端已进入信息页时使用快照中的匹配结果", async () => {
 		const flow = useMusicDrawers().state.value.creationFlow!;
 		flow.draft.albumImport.importId = "import-1";

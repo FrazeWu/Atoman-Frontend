@@ -51,6 +51,23 @@ type AlbumImportUploadState = {
 const FILE_PART_SIZE = 16 * 1024 * 1024;
 const ALBUM_IMPORT_CONTROL_TIMEOUT_MS = 30_000;
 const ALBUM_IMPORT_PART_TIMEOUT_MS = 5 * 60 * 1000;
+const ALBUM_IMPORT_AUTO_RETRIES = 1;
+
+async function retryAlbumImportRequest<T>(
+	operation: () => Promise<T>,
+	canRetry: () => boolean = () => true,
+): Promise<T> {
+	let lastError: unknown;
+	for (let attempt = 0; attempt <= ALBUM_IMPORT_AUTO_RETRIES; attempt += 1) {
+		try {
+			return await operation();
+		} catch (error) {
+			lastError = error;
+			if (attempt === ALBUM_IMPORT_AUTO_RETRIES || !canRetry()) throw error;
+		}
+	}
+	throw lastError;
+}
 
 async function withUploadRequestTimeout<T>(
 	parentSignal: AbortSignal,
@@ -417,7 +434,10 @@ export function useAlbumImportUpload() {
 				return;
 			}
 			try {
-				const snapshot = await getMusicAlbumImport(importId);
+				const snapshot = await retryAlbumImportRequest(
+					() => getMusicAlbumImport(importId),
+					() => generation === uploadState.pollingGeneration && isTrackedFlow(),
+				);
 				if (
 					generation !== uploadState.pollingGeneration ||
 					!applyImportSnapshotToFlow(flow, snapshot, importId)
@@ -486,14 +506,17 @@ export function useAlbumImportUpload() {
 		draft.metadataMatched = false;
 		draft.metadataError = '';
 		try {
-			const matched = await matchMusicAlbumImportMetadata(importId, {
-				albumTitle,
-				artist,
-				trackTitles: tracks.map((track) => track.title),
-				tracks,
-				force,
-				async: true,
-			});
+			const matched = await retryAlbumImportRequest(
+				() => matchMusicAlbumImportMetadata(importId, {
+					albumTitle,
+					artist,
+					trackTitles: tracks.map((track) => track.title),
+					tracks,
+					force,
+					async: true,
+				}),
+				() => matchGeneration === uploadStateFor(flow).matchGeneration,
+			);
 			if (flow.draft.albumImport.importId === importId && matchGeneration === uploadStateFor(flow).matchGeneration) {
 				applyImportSnapshotToFlow(flow, matched, importId);
 				if (matched.metadataMatchStatus === 'matching') startPollingFor(flow, importId);
@@ -503,7 +526,20 @@ export function useAlbumImportUpload() {
 			draft.metadataMatchingStarted = false;
 			draft.metadataMatchStatus = 'unmatched';
 			draft.metadataError = error instanceof Error ? error.message : '外部元数据匹配失败';
-			if (flow.step === 'albumImport') flow.step = 'albumDetails';
+			if (flow.step === 'albumImport') {
+				const processingFinished = [
+					'ready',
+					'needs_attention',
+					'failed',
+					'canceled',
+					'committed',
+				].includes(draft.status);
+				if (processingFinished) {
+					flow.step = 'albumDetails';
+				} else if (draft.importId) {
+					startPollingFor(flow, draft.importId);
+				}
+			}
 		}
 	}
 
@@ -522,18 +558,45 @@ export function useAlbumImportUpload() {
 	async function completeUploadSession(
 		uploadState: AlbumImportUploadState,
 		importId: string,
+		isCurrent: () => boolean = () => true,
 	): Promise<MusicAlbumImport> {
-		const controller = new AbortController();
-		uploadState.abortControllers.add(controller);
+		return retryAlbumImportRequest(
+			async () => {
+				const controller = new AbortController();
+				uploadState.abortControllers.add(controller);
+				try {
+					return await withUploadRequestTimeout(
+						controller.signal,
+						ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
+						"提交上传会话超时，请重试",
+						(signal) => completeMusicAlbumImportSession(importId, { signal }),
+					);
+				} finally {
+					uploadState.abortControllers.delete(controller);
+				}
+			},
+			isCurrent,
+		);
+	}
+
+	async function registerImportFiles(
+		importId: string,
+		input: Parameters<typeof registerMusicAlbumImportFiles>[1],
+		isCurrent: () => boolean,
+	): Promise<MusicAlbumImport> {
 		try {
-			return await withUploadRequestTimeout(
-				controller.signal,
-				ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
-				"提交上传会话超时，请重试",
-				(signal) => completeMusicAlbumImportSession(importId, { signal }),
-			);
-		} finally {
-			uploadState.abortControllers.delete(controller);
+			return await registerMusicAlbumImportFiles(importId, input);
+		} catch (firstError) {
+			if (!isCurrent()) throw firstError;
+			// 注册接口成功但响应丢失时，服务端已经从 pending_upload 变成 uploading；
+			// 先读取现状，避免重试 POST 产生重复文件。
+			try {
+				const snapshot = await getMusicAlbumImport(importId);
+				if (snapshot.files.length > 0 || snapshot.status !== "pending_upload") return snapshot;
+			} catch {
+				// GET 失败后继续唯一一次 POST 重试。
+			}
+			return registerMusicAlbumImportFiles(importId, input);
 		}
 	}
 
@@ -575,7 +638,7 @@ export function useAlbumImportUpload() {
 			isActive: isCurrent,
 			uploadPart: async ({ partNumber, body, size, onProgress }) => {
 				let lastError: unknown;
-				for (let attempt = 0; attempt < 3; attempt += 1) {
+				for (let attempt = 0; attempt <= ALBUM_IMPORT_AUTO_RETRIES; attempt += 1) {
 					const controller = new AbortController();
 					uploadState.abortControllers.add(controller);
 					try {
@@ -616,7 +679,7 @@ export function useAlbumImportUpload() {
 					} catch (error) {
 						lastError = error;
 						onProgress(0);
-						if (!isCurrent() || attempt === 2) throw error;
+						if (!isCurrent() || attempt === ALBUM_IMPORT_AUTO_RETRIES) throw error;
 					} finally {
 						uploadState.abortControllers.delete(controller);
 					}
@@ -647,24 +710,29 @@ export function useAlbumImportUpload() {
 		});
 		if (!finished) return;
 
-		const controller = new AbortController();
-		uploadState.abortControllers.add(controller);
-		try {
-			const completedFile = await withUploadRequestTimeout(
-				controller.signal,
-				ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
-				"确认文件上传超时，请重试",
-				(signal) => completeMusicAlbumImportFile(importId, fileId, { signal }),
-			);
-			if (!isCurrent()) return;
-			mergeUploadedImportFile(draft, completedFile);
-			uploadState.fileProgress.value = new Map(uploadState.fileProgress.value).set(
-				fileId,
-				100,
-			);
-		} finally {
-			uploadState.abortControllers.delete(controller);
-		}
+		const completedFile = await retryAlbumImportRequest(
+			async () => {
+				const controller = new AbortController();
+				uploadState.abortControllers.add(controller);
+				try {
+					return await withUploadRequestTimeout(
+						controller.signal,
+						ALBUM_IMPORT_CONTROL_TIMEOUT_MS,
+						"确认文件上传超时，请重试",
+						(signal) => completeMusicAlbumImportFile(importId, fileId, { signal }),
+					);
+				} finally {
+					uploadState.abortControllers.delete(controller);
+				}
+			},
+			isCurrent,
+		);
+		if (!isCurrent()) return;
+		mergeUploadedImportFile(draft, completedFile);
+		uploadState.fileProgress.value = new Map(uploadState.fileProgress.value).set(
+			fileId,
+			100,
+		);
 	}
 
 	function startPollingWhenProcessing(
@@ -811,9 +879,9 @@ export function useAlbumImportUpload() {
 				fileSize: file.size,
 				contentType: file.type || "application/octet-stream",
 			}));
-			const registered = await registerMusicAlbumImportFiles(session.importId, {
+			const registered = await registerImportFiles(session.importId, {
 				files: fileInputs,
-			});
+			}, isCurrent);
 			if (!isCurrent() || draft.importId !== session.importId) return;
 			draft.files = registered.files ?? [];
 			void localPreviewPromise?.then(() => {
@@ -860,7 +928,7 @@ export function useAlbumImportUpload() {
 				);
 			}
 			if (!isCurrent()) return;
-			const completed = await completeUploadSession(uploadState, session.importId);
+			const completed = await completeUploadSession(uploadState, session.importId, isCurrent);
 			if (isCurrent() && draft.importId === session.importId) {
 				refreshWhenFilesUploaded(flow, completed, session.importId);
 			}
@@ -906,7 +974,10 @@ export function useAlbumImportUpload() {
 		try {
 			let uploadRecord = fileRecord;
 			if (!canResumeUpload) {
-				const snapshot = await retryMusicAlbumImportFile(importId, fileId);
+				const snapshot = await retryAlbumImportRequest(
+					() => retryMusicAlbumImportFile(importId, fileId),
+					isCurrent,
+				);
 				if (!isCurrent() || !applyImportSnapshotToFlow(flow, snapshot, importId))
 					return;
 				uploadRecord = snapshot.files.find((file) => file.fileId === fileId);
@@ -929,14 +1000,17 @@ export function useAlbumImportUpload() {
 					uploadRecord,
 				);
 				if (!isCurrent()) return;
-				const latest = await getMusicAlbumImport(importId);
+				const latest = await retryAlbumImportRequest(
+					() => getMusicAlbumImport(importId),
+					isCurrent,
+				);
 				if (!isCurrent()) return;
 				if (
 					latest.status === "uploading" &&
 					latest.files.length > 0 &&
 					latest.files.every((item) => item.uploadStatus === "uploaded")
 				) {
-					const completed = await completeUploadSession(uploadState, importId);
+					const completed = await completeUploadSession(uploadState, importId, isCurrent);
 					if (!isCurrent()) return;
 					refreshWhenFilesUploaded(flow, completed, importId);
 				} else {
@@ -965,13 +1039,19 @@ export function useAlbumImportUpload() {
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		uploadState.uploading.value = true;
 		try {
-			await replaceMusicAlbumImportFile(importId, fileId, {
-				relativePath: file.name,
-				fileName: file.name,
-				fileSize: file.size,
-				contentType: file.type || "application/octet-stream",
-			});
-			const snapshot = await getMusicAlbumImport(importId);
+			await retryAlbumImportRequest(
+				() => replaceMusicAlbumImportFile(importId, fileId, {
+					relativePath: file.name,
+					fileName: file.name,
+					fileSize: file.size,
+					contentType: file.type || "application/octet-stream",
+				}),
+				isCurrent,
+			);
+			const snapshot = await retryAlbumImportRequest(
+				() => getMusicAlbumImport(importId),
+				isCurrent,
+			);
 			if (!isCurrent() || !applyImportSnapshotToFlow(flow, snapshot, importId))
 				return;
 			uploadState.selectedFiles.set(fileId, file);
@@ -985,7 +1065,10 @@ export function useAlbumImportUpload() {
 				draft.files.find((item) => item.fileId === fileId),
 			);
 			if (!isCurrent()) return;
-			const latest = await getMusicAlbumImport(importId);
+			const latest = await retryAlbumImportRequest(
+				() => getMusicAlbumImport(importId),
+				isCurrent,
+			);
 			if (!isCurrent()) return;
 			refreshWhenFilesUploaded(flow, latest, importId);
 		} catch (error) {

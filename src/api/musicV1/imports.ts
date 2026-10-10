@@ -339,7 +339,7 @@ async function uploadMusicAudioResumable(
 				while (next < missing.length) {
 					const partNumber = missing[next];
 					next += 1;
-					if (partNumber !== undefined) await retry(() => uploadPart(partNumber), 2);
+					if (partNumber !== undefined) await retry(() => uploadPart(partNumber), 1);
 				}
 				return undefined;
 			}),
@@ -623,7 +623,7 @@ export async function completeMusicAlbumImportMultipart(
 	);
 }
 
-async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
+async function retry<T>(operation: () => Promise<T>, retries = 1): Promise<T> {
 	let lastError: unknown;
 	for (let attempt = 0; attempt <= retries; attempt += 1) {
 		try {
@@ -724,7 +724,7 @@ export async function uploadMusicAlbumArchiveMultipart(
 			while (cursor < missingPartNumbers.length) {
 				const partNumber = missingPartNumbers[cursor];
 				cursor += 1;
-				await retry(() => uploadPart(partNumber), 2);
+			await retry(() => uploadPart(partNumber), 1);
 			}
 			return undefined;
 		},

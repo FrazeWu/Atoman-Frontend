@@ -236,7 +236,11 @@ function formatDuration(seconds: number) {
 }
 
 async function loadInteractions() {
-  if (!studio.currentChannel) return
+  if (!studio.currentChannel) {
+    loading.value = false
+    error.value = '请先创建频道'
+    return
+  }
   loading.value = true
   error.value = ''
   try {

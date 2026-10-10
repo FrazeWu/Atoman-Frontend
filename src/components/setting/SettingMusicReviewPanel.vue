@@ -41,6 +41,7 @@ const entriesStatusFilter = ref('all')
 const entriesTypeOptions = [
   { label: '全部类型', value: 'all' },
   { label: '专辑', value: 'album' },
+  { label: '艺术家', value: 'artist' },
   { label: '歌曲', value: 'song' },
 ]
 const entriesStatusOptions = [
@@ -118,6 +119,7 @@ async function fetchQualityIssues(page = qualityPage.value) {
   qualityLoading.value = true
   try {
     const response = await apiRequestResult(`${api.music.adminMusicQuality}?type=${qualityFilter.value}&page=${page}&page_size=${qualityPageSize}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await Promise.resolve(response.data) as { data?: MusicQualityIssue[]; total?: number; has_more?: boolean }
     qualityIssues.value = data.data ?? []
     qualityTotal.value = data.total ?? qualityIssues.value.length
@@ -164,6 +166,7 @@ const fetchEntries = async (page = entriesPage.value) => {
     const res = await apiRequestResult(`${api.music.adminMusicReview}?${params}`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await Promise.resolve(res.data) as { data?: MusicReviewEntry[]; total?: number }
     entries.value = data.data || []
     entriesTotal.value = data.total || 0

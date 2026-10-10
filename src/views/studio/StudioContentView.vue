@@ -304,7 +304,11 @@ async function reprocessVideo(item: StudioContentItem) {
 }
 
 async function loadPage(loadCollections = false) {
-  if (!studio.currentChannel) return
+  if (!studio.currentChannel) {
+    loading.value = false
+    error.value = '请先创建频道'
+    return
+  }
   const request = ++latestPageRequest
   loading.value = true
   error.value = ''

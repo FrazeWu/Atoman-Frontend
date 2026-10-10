@@ -7,7 +7,7 @@
       </div>
       <div class="comment-reports__filters">
         <label for="comment-report-status">状态</label>
-        <select id="comment-report-status" v-model="status" :disabled="loading" @change="loadReports">
+        <select id="comment-report-status" v-model="status" :disabled="loading" @change="changeStatus">
           <option value="pending">待处理</option>
           <option value="upheld">已通过</option>
           <option value="rejected">已驳回</option>
@@ -89,6 +89,11 @@ async function loadReports() {
 
 function changePage(nextPage: number) {
   page.value = nextPage
+  void loadReports()
+}
+
+function changeStatus() {
+  page.value = 1
   void loadReports()
 }
 

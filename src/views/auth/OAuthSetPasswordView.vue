@@ -32,9 +32,10 @@
             </PButton>
           </div>
         </form>
-        <PButton v-else data-test="oauth-password-back" to="/login" variant="secondary" size="lg" block>
-          返回登录
-        </PButton>
+        <div v-else class="oauth-flow-actions">
+          <PButton v-if="error" type="button" variant="secondary" size="lg" :loading="loadingFlow" @click="loadPending">重试</PButton>
+          <PButton data-test="oauth-password-back" to="/login" variant="secondary" size="lg" block>返回登录</PButton>
+        </div>
       </template>
     </section>
   </div>
@@ -66,7 +67,10 @@ const error = ref('')
 const loadingFlow = ref(true)
 const submitting = ref(false)
 
-onMounted(async () => {
+async function loadPending() {
+  loadingFlow.value = true
+  error.value = ''
+  pending.value = null
   try {
     const flow = await getPendingOAuth()
     if (flow.stage !== 'set_password') throw new Error('登录请求已失效，请重新登录')
@@ -76,7 +80,9 @@ onMounted(async () => {
   } finally {
     loadingFlow.value = false
   }
-})
+}
+
+onMounted(() => { void loadPending() })
 
 async function submit() {
   const passwordBytes = new TextEncoder().encode(password.value).length

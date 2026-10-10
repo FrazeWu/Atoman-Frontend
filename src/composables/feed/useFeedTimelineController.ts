@@ -335,13 +335,17 @@ export function useFeedTimelineController({
   const toggleAllRead = async () => {
     if (isHubTimeline.value || isBookmarksTimeline.value || markingAllRead.value) return
     markingAllRead.value = true
+    timelineError.value = ''
     const nextAllRead = !allRead.value
     try {
       if (sourceViewMode.value) {
         const success = nextAllRead
           ? await feedStore.markSubscriptionRead(querySourceId.value!)
           : await feedStore.markSubscriptionUnread(querySourceId.value!)
-        if (!success) return
+        if (!success) {
+          timelineError.value = nextAllRead ? '标记全部已读失败，请重试' : '标记全部未读失败，请重试'
+          return
+        }
         timeline.value.forEach((item) => {
           if (item.type === 'feed_item' || item.type === 'project_update' || item.type === 'short_note') item.is_read = nextAllRead
         })
@@ -353,12 +357,18 @@ export function useFeedTimelineController({
       const success = nextAllRead
         ? await feedStore.markAllFeedRead()
         : await feedStore.markAllFeedUnread()
-      if (!success) return
+      if (!success) {
+        timelineError.value = nextAllRead ? '标记全部已读失败，请重试' : '标记全部未读失败，请重试'
+        return
+      }
       timeline.value.forEach((item) => {
         if (item.type === 'feed_item' || item.type === 'project_update' || item.type === 'short_note') item.is_read = nextAllRead
       })
       await feedStore.fetchSubscriptions()
       allRead.value = nextAllRead
+    } catch (error) {
+      reportError(error)
+      timelineError.value = nextAllRead ? '标记全部已读失败，请重试' : '标记全部未读失败，请重试'
     } finally {
       markingAllRead.value = false
     }

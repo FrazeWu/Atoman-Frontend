@@ -268,7 +268,7 @@ onMounted(async () => {
             <span v-if="request.requester?.username" class="entry-editor">by {{ request.requester.username }}</span>
           </div>
           <div class="request-decision">
-            <input v-model="requestDecisionReasons[request.id]" maxlength="500" placeholder="处理理由" :aria-label="`${stateRequestActionLabel(request.action)}处理理由`" />
+            <input v-model="requestDecisionReasons[request.id]" maxlength="500" placeholder="填写原因" :aria-label="`${stateRequestActionLabel(request.action)}填写原因`" />
             <button type="button" :disabled="requestDecisionBusy === request.id || !requestDecisionReasons[request.id]?.trim() || request.requested_by === authStore.user?.uuid" @click="decideStateRequest(request, 'approved')">批准</button>
             <button type="button" :disabled="requestDecisionBusy === request.id || !requestDecisionReasons[request.id]?.trim() || request.requested_by === authStore.user?.uuid" @click="decideStateRequest(request, 'rejected')">拒绝</button>
           </div>
@@ -332,7 +332,7 @@ onMounted(async () => {
   transition: background 0.1s;
 }
 .entry-row:last-child { border-bottom-width: 1px; }
-.entry-row:hover { background: #f9fafb; }
+.entry-row:hover { background: var(--a-color-surface-muted); }
 .entry-info { display: flex; align-items: center; gap: 0.75rem; }
 .entry-name {
   font-size: 0.9375rem;
@@ -344,9 +344,9 @@ onMounted(async () => {
 .entry-type {
   font-size: 0.5rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   border: 1px solid var(--a-color-fg);
+  border-radius: var(--a-radius-control);
   padding: 0.125rem 0.375rem;
 }
 .entry-album-type {
@@ -354,6 +354,7 @@ onMounted(async () => {
   font-weight: 500;
   letter-spacing: 0;
   border: 1px solid var(--a-color-muted-soft);
+  border-radius: var(--a-radius-control);
   color: var(--a-color-muted);
   padding: 0.125rem 0.375rem;
 }
@@ -361,20 +362,20 @@ onMounted(async () => {
 .entry-status {
   font-size: 0.5rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0;
   padding: 0.125rem 0.5rem;
   border: 1px solid;
+  border-radius: var(--a-radius-control);
 }
-.entry-status-development { border-color: #166534; color: #166534; }
-.entry-status-locked { border-color: #b45309; color: #b45309; }
-.entry-status-closed { border-color: #991b1b; color: #991b1b; }
+.entry-status-development { border-color: var(--a-color-blog); color: var(--a-color-blog); }
+.entry-status-locked { border-color: var(--a-color-warning); color: var(--a-color-warning); }
+.entry-status-closed { border-color: var(--a-color-danger); color: var(--a-color-danger); }
 .state-request-row { align-items: flex-start; gap: 1rem; }
 .state-request-info { flex-wrap: wrap; }
 .request-reason { color: var(--a-color-muted); flex-basis: 100%; }
 .request-decision { display: flex; align-items: center; gap: 0.4rem; min-width: min(28rem, 55%); }
-.request-decision input { min-height: 2.25rem; min-width: 10rem; flex: 1; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: inherit; padding: 0.35rem 0.5rem; }
-.request-decision button { min-height: 2.25rem; border: 1px solid var(--a-color-border-soft); background: transparent; color: inherit; padding: 0.35rem 0.65rem; cursor: pointer; }
+.request-decision input { min-height: 2.25rem; min-width: 10rem; flex: 1; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: inherit; padding: 0.35rem 0.5rem; }
+.request-decision button { min-height: 2.25rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: transparent; color: inherit; padding: 0.35rem 0.65rem; cursor: pointer; }
 .request-decision button:disabled { opacity: 0.45; cursor: default; }
 .entry-disc { font-size: 0.75rem; color: var(--a-color-muted); }
 .entry-editor { font-size: 0.75rem; color: var(--a-color-muted-soft); }

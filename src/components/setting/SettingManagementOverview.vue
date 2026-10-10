@@ -146,7 +146,7 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
 
 .setting-management-overview__copy strong {
   font-size: 0.88rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .setting-management-overview__copy small {
@@ -192,7 +192,7 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
 .setting-management-overview__switch span {
   width: 100%;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-disabled-border);
   transition: background-color 0.15s ease;
 }
@@ -203,9 +203,9 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
   left: 0.1875rem;
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--a-color-text) 25%, transparent);
+  box-shadow: none;
   content: "";
   transition: transform 0.15s ease;
 }

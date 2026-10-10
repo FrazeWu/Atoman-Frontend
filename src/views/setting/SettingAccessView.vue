@@ -1,6 +1,6 @@
 <template>
   <section class="setting-access settings-center">
-    <PSectionHeader title="站点设置" kicker="SITE ACCESS" description="控制功能开放范围和各模块的默认策略。" />
+    <PSectionHeader title="站点设置" kicker="站点权限" description="控制功能开放范围和各模块的默认策略。" />
 
     <section id="module-access" class="setting-access__management-section" aria-label="模块开关">
       <SettingManagementOverview :access="draft" />
@@ -28,7 +28,7 @@
     <section id="module-management" class="setting-access__management-section" aria-label="模块管理">
       <PSectionHeader
         title="模块管理"
-        kicker="MODULE MANAGEMENT"
+        kicker="模块配置"
         description="从这里进入各模块的详细管理，详情内容不会直接铺在本页。"
       />
 
@@ -45,7 +45,7 @@
               <component :is="moduleIcons[key]" :size="18" stroke-width="1.8" />
             </span>
             <div>
-              <p class="settings-center__kicker">/{{ key.toUpperCase() }}</p>
+              <p class="settings-center__kicker">模块</p>
               <h3 :id="`${getSectionDomId(key)}-title`">{{ moduleRooms[key].name }}</h3>
               <p>{{ moduleDescriptions[key] }}</p>
             </div>
@@ -404,7 +404,7 @@ onMounted(scrollToRouteSection)
   scroll-margin-top: 5rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .setting-access__module-card-title {
@@ -421,6 +421,7 @@ onMounted(scrollToRouteSection)
 
 .setting-access__module-card-title h3 {
   font-size: 1.05rem;
+  font-weight: 500;
 }
 
 .setting-access__module-card-title p:last-child {
@@ -488,7 +489,7 @@ onMounted(scrollToRouteSection)
   overflow: hidden;
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .setting-access__detail-directory header {

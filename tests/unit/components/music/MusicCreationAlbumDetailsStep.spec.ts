@@ -1126,6 +1126,180 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3]);
 	});
 
+	it("applies real-time upward displacement when dragging a track downward over another track row and reorders on drop", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+
+		flow.draft.tracks = [
+			{ id: "track-1", sequence: 1, title: "Track A" },
+			{ id: "track-2", sequence: 2, title: "Track B" },
+			{ id: "track-3", sequence: 3, title: "Track C" },
+		];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		const dataTransfer = {
+			setData: vi.fn(),
+			getData: vi.fn(() => "track-1"),
+			setDragImage: vi.fn(),
+			dropEffect: "move",
+			effectAllowed: "move",
+		};
+
+		// Drag track-1
+		await wrapper
+			.get('[data-testid="album-track-drag-handle-track-1"]')
+			.trigger("dragstart", { dataTransfer });
+
+		// Hover over track-2
+		await wrapper
+			.get('[data-testid="album-track-row-track-2"]')
+			.trigger("dragover", { preventDefault: vi.fn(), dataTransfer });
+
+		// Verify displacement: track-1 is dragged, track-2 is displaced up, track-3 is unaffected
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-1"]').classes(),
+		).toContain("is-dragged");
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-2"]').classes(),
+		).toContain("is-displaced-up");
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-3"]').classes(),
+		).not.toContain("is-displaced-up");
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-3"]').classes(),
+		).not.toContain("is-displaced-down");
+
+		// Drop on track-2
+		await wrapper
+			.get('[data-testid="album-track-row-track-2"]')
+			.trigger("drop", { preventDefault: vi.fn(), dataTransfer });
+
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
+			"track-2",
+			"track-1",
+			"track-3",
+		]);
+		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3]);
+
+		// Verify displacement classes are cleaned up
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-1"]').classes(),
+		).not.toContain("is-dragged");
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-2"]').classes(),
+		).not.toContain("is-displaced-up");
+	});
+
+	it("applies real-time downward displacement when dragging a lower track upward via sequence badge and reorders on drop", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+
+		flow.draft.tracks = [
+			{ id: "track-1", sequence: 1, title: "Track A" },
+			{ id: "track-2", sequence: 2, title: "Track B" },
+			{ id: "track-3", sequence: 3, title: "Track C" },
+		];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		const dataTransfer = {
+			setData: vi.fn(),
+			getData: vi.fn(() => "track-3"),
+			setDragImage: vi.fn(),
+			dropEffect: "move",
+			effectAllowed: "move",
+		};
+
+		// Drag track-3 directly from sequence badge
+		const sequenceBadges = wrapper.findAll('[data-testid="album-track-sequence"]');
+		await sequenceBadges[2].trigger("dragstart", { dataTransfer });
+
+		// Hover over track-1
+		await wrapper
+			.get('[data-testid="album-track-row-track-1"]')
+			.trigger("dragover", { preventDefault: vi.fn(), dataTransfer });
+
+		// Verify displacement: track-1 and track-2 displaced down, track-3 is dragged
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-1"]').classes(),
+		).toContain("is-displaced-down");
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-2"]').classes(),
+		).toContain("is-displaced-down");
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-3"]').classes(),
+		).toContain("is-dragged");
+
+		// Drop on track-1
+		await wrapper
+			.get('[data-testid="album-track-row-track-1"]')
+			.trigger("drop", { preventDefault: vi.fn(), dataTransfer });
+
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
+			"track-3",
+			"track-1",
+			"track-2",
+		]);
+		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3]);
+	});
+
+	it("synchronizes displacement visual classes when dragging over track drop slots", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+
+		const flow = drawers.state.value.creationFlow;
+		if (!flow) throw new Error("creation flow missing");
+
+		flow.draft.tracks = [
+			{ id: "track-1", sequence: 1, title: "Track A" },
+			{ id: "track-2", sequence: 2, title: "Track B" },
+			{ id: "track-3", sequence: 3, title: "Track C" },
+		];
+
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		const dataTransfer = {
+			setData: vi.fn(),
+			getData: vi.fn(() => "track-1"),
+			setDragImage: vi.fn(),
+			dropEffect: "move",
+			effectAllowed: "move",
+		};
+
+		// Drag track-1
+		await wrapper
+			.get('[data-testid="album-track-drag-handle-track-1"]')
+			.trigger("dragstart", { dataTransfer });
+
+		// Hover over drop slot 2 (between track-2 and track-3)
+		await wrapper
+			.get('[data-testid="album-track-drop-slot-2"]')
+			.trigger("dragover", { preventDefault: vi.fn(), dataTransfer });
+
+		// Track-2 should be displaced up
+		expect(
+			wrapper.get('[data-testid="album-track-row-track-2"]').classes(),
+		).toContain("is-displaced-up");
+
+		// Drop on slot 2
+		await wrapper
+			.get('[data-testid="album-track-drop-slot-2"]')
+			.trigger("drop", { preventDefault: vi.fn(), dataTransfer });
+
+		expect(flow.draft.tracks.map((track) => track.id)).toEqual([
+			"track-2",
+			"track-1",
+			"track-3",
+		]);
+	});
+
 	it("renders a minimal non-dead-end footer with back, finish, and close affordances", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });

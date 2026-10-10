@@ -16,6 +16,7 @@ export function useMusicAlbumTrackEditor() {
 	const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? []);
 	const draggedTrackId = ref<string | null>(null);
 	const dragOverInsertionIndex = ref<number | null>(null);
+	const hoverTrackIndex = ref<number | null>(null);
 	const lyricTrackId = ref<string | null>(null);
 	const lyricTrack = computed(
 		() =>
@@ -174,14 +175,48 @@ export function useMusicAlbumTrackEditor() {
 
 	function handleTrackDragStart(trackId: string, event: DragEvent) {
 		draggedTrackId.value = trackId;
+		hoverTrackIndex.value = tracksDraft.value.findIndex((t) => t.id === trackId);
 		event.dataTransfer?.setData("text/plain", trackId);
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+
+		const target = event.target as HTMLElement | null;
+		const row = target?.closest<HTMLElement>(".track-row");
+		if (row) {
+			const list = row.closest<HTMLElement>(".track-list");
+			if (list && typeof list.style?.setProperty === "function") {
+				list.style.setProperty("--dragged-track-height", `${row.offsetHeight || 45}px`);
+			}
+			if (typeof event.dataTransfer?.setDragImage === "function") {
+				event.dataTransfer.setDragImage(row, 24, Math.round((row.offsetHeight || 45) / 2));
+			}
+		}
 	}
 
 	function handleTrackDragOver(insertionIndex: number, event: DragEvent) {
 		if (!draggedTrackId.value) return;
 		if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
 		dragOverInsertionIndex.value = insertionIndex;
+		const sourceIndex = tracksDraft.value.findIndex(
+			(t) => t.id === draggedTrackId.value,
+		);
+		if (sourceIndex >= 0) {
+			hoverTrackIndex.value =
+				insertionIndex <= sourceIndex ? insertionIndex : insertionIndex - 1;
+		}
+	}
+
+	function handleTrackRowDragOver(targetIndex: number, event: DragEvent) {
+		if (!draggedTrackId.value) return;
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+		hoverTrackIndex.value = targetIndex;
+		const sourceIndex = tracksDraft.value.findIndex(
+			(t) => t.id === draggedTrackId.value,
+		);
+		if (sourceIndex >= 0) {
+			dragOverInsertionIndex.value =
+				sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
+		}
 	}
 
 	function handleTrackDragLeave(insertionIndex: number) {
@@ -192,6 +227,26 @@ export function useMusicAlbumTrackEditor() {
 	function clearTrackDragState() {
 		draggedTrackId.value = null;
 		dragOverInsertionIndex.value = null;
+		hoverTrackIndex.value = null;
+	}
+
+	function handleTrackRowDrop(targetIndex: number, event: DragEvent) {
+		event.preventDefault();
+		const sourceTrackId =
+			event.dataTransfer?.getData("text/plain") || draggedTrackId.value;
+		clearTrackDragState();
+		if (!sourceTrackId) return;
+
+		updateTracks((tracks) => {
+			const next = [...tracks];
+			const sourceIndex = next.findIndex((track) => track.id === sourceTrackId);
+			if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= next.length)
+				return tracks;
+			if (sourceIndex === targetIndex) return tracks;
+			const [sourceTrack] = next.splice(sourceIndex, 1);
+			next.splice(targetIndex, 0, sourceTrack);
+			return next;
+		}, "sequence");
 	}
 
 	function handleTrackDrop(insertionIndex: number, event: DragEvent) {
@@ -212,6 +267,28 @@ export function useMusicAlbumTrackEditor() {
 			next.splice(targetIndex, 0, sourceTrack);
 			return next;
 		}, "sequence");
+	}
+
+	function getTrackDisplacementClass(index: number): string {
+		if (!draggedTrackId.value) return "";
+		const sourceIndex = tracksDraft.value.findIndex(
+			(t) => t.id === draggedTrackId.value,
+		);
+		if (sourceIndex < 0) return "";
+		if (index === sourceIndex) return "is-dragged";
+		if (hoverTrackIndex.value === null) return "";
+
+		const targetIndex = hoverTrackIndex.value;
+		if (sourceIndex < targetIndex) {
+			if (index > sourceIndex && index <= targetIndex) {
+				return "is-displaced-up";
+			}
+		} else if (sourceIndex > targetIndex) {
+			if (index >= targetIndex && index < sourceIndex) {
+				return "is-displaced-down";
+			}
+		}
+		return "";
 	}
 
 	function removeTrack(trackId: string) {
@@ -284,6 +361,7 @@ export function useMusicAlbumTrackEditor() {
 		orderedTracks: tracksDraft,
 		draggedTrackId,
 		dragOverInsertionIndex,
+		hoverTrackIndex,
 		lyricTrack,
 		addTrack,
 		addPendingTrack,
@@ -297,6 +375,9 @@ export function useMusicAlbumTrackEditor() {
 		handleTrackDragOver,
 		handleTrackDragLeave,
 		handleTrackDrop,
+		handleTrackRowDragOver,
+		handleTrackRowDrop,
+		getTrackDisplacementClass,
 		clearTrackDragState,
 		removeTrack,
 		openTrackLyrics,

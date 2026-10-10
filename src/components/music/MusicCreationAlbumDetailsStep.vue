@@ -95,6 +95,7 @@ const {
   orderedTracks,
   draggedTrackId,
   dragOverInsertionIndex,
+  hoverTrackIndex,
   lyricTrack,
   addPendingTrack,
   updateTrackUpload,
@@ -107,6 +108,9 @@ const {
   handleTrackDragOver,
   handleTrackDragLeave,
   handleTrackDrop,
+  handleTrackRowDragOver,
+  handleTrackRowDrop,
+  getTrackDisplacementClass,
   clearTrackDragState,
   removeTrack: removeTrackDraft,
   openTrackLyrics,
@@ -744,7 +748,7 @@ watch(
         <p v-if="unmatchedTrackCount" class="track-adjustment__hint" data-testid="album-track-match-summary">{{ unmatchedTrackCount }} 首未匹配资料，仅表示未找到外部曲目资料，不影响创建。</p>
         <p v-if="trackAudioError" class="track-adjustment__error" role="alert">{{ trackAudioError }}</p>
 
-        <div v-if="orderedTracks.length" class="track-list">
+        <div v-if="orderedTracks.length" class="track-list" :class="{ 'is-dragging-active': draggedTrackId !== null }">
           <template
             v-for="(track, index) in orderedTracks"
             :key="track.id"
@@ -760,7 +764,9 @@ watch(
             <div
               :data-testid="`album-track-row-${track.id}`"
               class="track-row"
-              :class="{ 'is-dragged': draggedTrackId === track.id }"
+              :class="getTrackDisplacementClass(index)"
+              @dragover.prevent="handleTrackRowDragOver(index, $event)"
+              @drop="handleTrackRowDrop(index, $event)"
               @dragend="clearTrackDragState"
             >
             <div
@@ -773,7 +779,13 @@ watch(
               <GripVertical :size="14" />
             </div>
 
-            <span class="track-sequence" data-testid="album-track-sequence">{{ formatSequence(track.sequence) }}</span>
+            <span
+              class="track-sequence"
+              data-testid="album-track-sequence"
+              draggable="true"
+              title="按住拖拽排序"
+              @dragstart="handleTrackDragStart(track.id, $event)"
+            >{{ formatSequence(track.sequence) }}</span>
 
             <div class="track-row__input">
               <PInput
@@ -1346,6 +1358,10 @@ watch(
   flex-direction: column;
 }
 
+.track-list.is-dragging-active .track-row * {
+  pointer-events: none;
+}
+
 .track-drop-slot {
   position: relative;
   flex: 0 0 0.5rem;
@@ -1382,13 +1398,22 @@ watch(
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  will-change: transform;
 }
 
 .track-row.is-dragged {
-  opacity: 0.4;
-  border-style: solid;
-  border-color: var(--a-color-primary);
+  opacity: 0.35;
+  border-bottom: 1px dashed var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 4%, var(--a-color-bg));
+}
+
+.track-row.is-displaced-down {
+  transform: translateY(calc(var(--dragged-track-height, 45px) + 0.5rem));
+}
+
+.track-row.is-displaced-up {
+  transform: translateY(calc(-1 * (var(--dragged-track-height, 45px) + 0.5rem)));
 }
 
 .track-row__more { position: relative; flex: 0 0 auto; }
@@ -1468,12 +1493,17 @@ watch(
 
 .track-sequence {
   font-size: 0.8125rem;
-  font-weight: 650;
+  font-weight: 500;
   color: var(--a-color-muted);
   min-width: 1.6rem;
   flex-shrink: 0;
   text-align: center;
   user-select: none;
+  cursor: grab;
+}
+
+.track-sequence:active {
+  cursor: grabbing;
 }
 
 .track-row__input {

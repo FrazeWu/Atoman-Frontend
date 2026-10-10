@@ -62,7 +62,7 @@ describe("MobileModuleSwitcher", () => {
 		expect(wrapper.text()).toContain("通知");
 		expect(wrapper.text()).toContain("私信");
 		expect(wrapper.text()).toContain("Studio");
-		expect(wrapper.findAll('a[href="/inbox?tab=notifications"]').length).toBe(
+		expect(wrapper.findAll('a[href="/inbox"]').length).toBe(
 			1,
 		);
 		expect(wrapper.findAll('a[href="/inbox?tab=dm"]').length).toBe(1);

@@ -211,7 +211,7 @@ describe("SiteFooter", () => {
 		).toBe("https://github.com/FrazeWu/Atoman-Frontend/issues");
 		expect(
 			wrapper.get('[data-footer-action="message-owner"]').attributes("href"),
-		).toBe("/inbox?tab=dm&user=fazong");
+		).toBe("/inbox?tab=dm");
 	});
 
 	it("keeps community links in the contact sheet", async () => {

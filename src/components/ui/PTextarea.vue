@@ -1,11 +1,12 @@
 <template>
   <div class="p-field">
-    <label v-if="label" class="p-field-label">{{ label }}</label>
+    <label v-if="label" class="p-field-label" :for="textareaId">{{ label }}</label>
     <div class="p-textarea-wrapper" :class="{ 'p-textarea-wrapper--with-suffix': $slots.suffix }">
       <textarea
         class="p-textarea"
         :class="error ? 'p-textarea--error' : ''"
         v-bind="$attrs"
+        :id="textareaId"
         :value="modelValue"
         :rows="rows"
         :disabled="disabled"
@@ -24,6 +25,8 @@
 
 defineOptions({ inheritAttrs: false })
 
+let textareaIDSequence = 0
+
 const props = withDefaults(defineProps<{
   modelValue?: string
   label?: string
@@ -31,6 +34,7 @@ const props = withDefaults(defineProps<{
   error?: string
   disabled?: boolean
   rows?: number
+  id?: string
 }>(), {
   modelValue: '',
   label: '',
@@ -39,6 +43,8 @@ const props = withDefaults(defineProps<{
   disabled: false,
   rows: 4,
 })
+
+const textareaId = props.id || `p-textarea-${++textareaIDSequence}`
 
 const emit = defineEmits<{
   'update:modelValue': [string]

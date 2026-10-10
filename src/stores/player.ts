@@ -892,7 +892,34 @@ export const usePlayerStore = defineStore("player", () => {
 		return songsRequest;
 	};
 
-	const startSong = async (song: Song, startAt?: number, persistPrevious = true) => {
+	const applyCachedAudioSource = async (player: HTMLAudioElement, song: Song, generation: number) => {
+		const cachedSource = await getCachedMediaObjectURL(song.audio_url);
+		if (!cachedSource) return;
+		if (generation !== playGeneration || audio !== player || !currentSong.value || playbackItemKey(currentSong.value) !== playbackItemKey(song)) {
+			URL.revokeObjectURL(cachedSource);
+			return;
+		}
+		const wasPlaying = !player.paused && !player.ended;
+		const resumePosition = player.currentTime || currentTime.value;
+		releaseCachedAudioObjectUrl();
+		cachedAudioObjectUrl = cachedSource;
+		isCurrentAudioCached.value = true;
+		player.pause();
+		player.src = cachedSource;
+		player.load();
+		const restorePosition = () => {
+			if (generation !== playGeneration || audio !== player) return;
+			try {
+				player.currentTime = resumePosition;
+			} catch {
+				// Metadata may still be unavailable.
+			}
+		};
+		player.addEventListener('loadedmetadata', restorePosition, { once: true });
+		if (wasPlaying) attemptPlay(player, generation);
+	};
+
+	const startSong = (song: Song, startAt?: number, persistPrevious = true) => {
 		const normalizedSong = normalizePlaybackSong(song, resolvePlaybackAudioUrl);
 		if (!hasPlayableAudio(normalizedSong)) {
 			currentSong.value = null;
@@ -920,19 +947,8 @@ export const usePlayerStore = defineStore("player", () => {
 		playbackError.value = "";
 		isLoading.value = true;
 		releaseCachedAudioObjectUrl();
-		const cachedSource = await getCachedMediaObjectURL(normalizedSong.audio_url);
-		if (generation !== playGeneration || audio !== player) {
-			if (cachedSource) URL.revokeObjectURL(cachedSource);
-			return;
-		}
-		if (cachedSource) {
-			cachedAudioObjectUrl = cachedSource;
-			player.src = cachedSource;
-			isCurrentAudioCached.value = true;
-		} else {
-			player.src = normalizedSong.audio_url;
-			isCurrentAudioCached.value = false;
-		}
+		player.src = normalizedSong.audio_url;
+		isCurrentAudioCached.value = false;
 		player.volume = volume.value;
 		const savedProgress =
 			song.source_type === "podcast_episode" && song.source_id
@@ -997,6 +1013,7 @@ export const usePlayerStore = defineStore("player", () => {
 			podcastTracker.open();
 		}
 		attemptPlay(player, generation);
+		void applyCachedAudioSource(player, normalizedSong, generation);
 	};
 
 	const playSong = (song: Song) => {

@@ -277,7 +277,7 @@ const fetchCollection = async () => {
       loadError.value = '合集加载失败，请重试'
     }
   } catch (e) {
-    loadError.value = '合集加载失败，请重试'
+    if (requestId === collectionRequestId) loadError.value = '合集加载失败，请重试'
     reportError(e, 'Failed to fetch collection:')
   } finally {
     if (requestId === collectionRequestId) loading.value = false
@@ -326,7 +326,7 @@ const fetchPosts = async (page = 1, append = false) => {
     postsTotal.value = Number(data.meta?.total ?? posts.value.length)
     postsHasMore.value = Boolean(data.meta?.has_more)
   } catch (e) {
-    postsError.value = '合集文章加载失败，请重试'
+    if (requestId === postsRequestId && requestedCollectionId === collectionId.value) postsError.value = '合集文章加载失败，请重试'
     reportError(e, 'Failed to fetch posts:')
   } finally {
     if (requestId === postsRequestId) postsLoading.value = false

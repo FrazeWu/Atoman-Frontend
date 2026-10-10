@@ -197,15 +197,23 @@ async function replaceQuery(values: Record<string, string | number>) {
   await router.replace({ query })
 }
 
+function clearConflictSelection() {
+  selectedConflictIDs.value = new Set()
+  conflictCandidates.value = new Map()
+}
+
 async function updateFilter(key: 'status' | 'visibility' | 'collection_id', value: string) {
+  clearConflictSelection()
   await replaceQuery({ [key]: value, page: 1 })
 }
 
 async function applySearch() {
+  clearConflictSelection()
   await replaceQuery({ q: searchQuery.value.trim(), page: 1 })
 }
 
 async function changePage(page: number) {
+  clearConflictSelection()
   await replaceQuery({ page })
 }
 
@@ -347,6 +355,7 @@ watch(
   () => [module.value, route.fullPath],
   ([currentModule], [previousModule]) => {
     searchQuery.value = filters.value.q
+    clearConflictSelection()
     if (ready.value) void loadPage(currentModule !== previousModule)
   },
 )

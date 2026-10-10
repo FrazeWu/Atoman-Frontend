@@ -16,7 +16,10 @@
     </form>
 
     <p v-if="loading" class="studio-analytics__message">加载中...</p>
-    <p v-else-if="error" class="studio-analytics__message" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="studio-analytics__message" role="alert">
+      <p>{{ error }}</p>
+      <PButton type="button" size="sm" @click="loadAnalytics">重试</PButton>
+    </div>
     <template v-else-if="analytics">
       <section class="studio-analytics__funnel" aria-labelledby="analytics-funnel-title">
         <header>

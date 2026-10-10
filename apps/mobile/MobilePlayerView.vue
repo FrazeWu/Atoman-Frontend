@@ -259,6 +259,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import { usePodcastPlayerActions } from '@/composables/usePodcastPlayerActions'
+import { modulePathUrl } from '@/router/siteUrls'
 import AudioWaveformProgress from '@/components/music/AudioWaveformProgress.vue'
 
 const player = usePlayerStore()
@@ -291,7 +292,17 @@ function showToast(message: string) {
 }
 
 function openLyrics() {
-  if (player.currentSong) void router.push('/music/lyrics')
+  const song = player.currentSong
+  if (!song) return
+  if (song.source_type === 'podcast_episode') {
+    void router.push(modulePathUrl('podcast', `/episode/${encodeURIComponent(String(song.source_id || song.id))}`))
+    return
+  }
+  if (song.source_type === 'feed_podcast') {
+    void router.push(modulePathUrl('feed', `/item/${encodeURIComponent(String(song.source_id || song.id))}`))
+    return
+  }
+  void router.push('/music/lyrics')
 }
 
 const { addPodcastBookmark, addPodcastListenLater } = usePodcastPlayerActions(showToast)

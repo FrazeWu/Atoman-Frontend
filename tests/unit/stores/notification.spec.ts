@@ -352,7 +352,7 @@ describe("notification store", () => {
     expect(store.loading).toBe(false);
   });
 
-  it("marks both forum notification types read", async () => {
+	it("marks both forum notification types read", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(
@@ -374,8 +374,26 @@ describe("notification store", () => {
       store.notifications.every(({ read_at }: Notification) =>
         Boolean(read_at),
       ),
-    ).toBe(true);
-  });
+		).toBe(true);
+	});
+
+	it("clears unread category counts when marking forum types read", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(
+			async () => new Response(JSON.stringify({ data: {}, meta: {} }), { status: 200 }),
+		);
+		const store = useNotificationStore();
+		store.unreadCounts.reply = 3;
+		store.unreadCounts.interaction = 2;
+		store.notifications = [
+			makeNotification("topic-comment", "reply", null, "forum_topic_comment"),
+			makeNotification("new-topic", "interaction", null, "forum_follow"),
+		];
+
+		await store.markAllRead(["forum_topic_comment", "forum_follow"]);
+
+		expect(store.unreadCounts.reply).toBe(0);
+		expect(store.unreadCounts.interaction).toBe(0);
+	});
 
   it("does not mark type notifications read when one mark-all request fails", async () => {
     vi.spyOn(globalThis, "fetch")

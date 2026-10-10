@@ -39,9 +39,9 @@
       </button>
     </nav>
     <form class="pagination-jump" @submit.prevent="jumpToPage">
-      <label for="pagination-jump-input">跳转</label>
+      <label :for="jumpInputId">跳转</label>
       <input
-        id="pagination-jump-input"
+        :id="jumpInputId"
         v-model="jumpPage"
         type="number"
         min="1"
@@ -59,6 +59,8 @@ import { computed, ref } from 'vue'
 import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 
+let paginationIDSequence = 0
+
 type PaginationMeta = { page: number; page_size: number; total: number; has_more: boolean }
 type PageItem = { key: string; kind: 'page'; page: number } | { key: string; kind: 'ellipsis' }
 
@@ -68,6 +70,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ change: [page: number] }>()
 const jumpPage = ref('')
+const jumpInputId = `pagination-jump-input-${++paginationIDSequence}`
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.meta.total / Math.max(1, props.meta.page_size))))
 

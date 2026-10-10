@@ -1,9 +1,10 @@
 <template>
   <div class="p-field">
-    <label v-if="label" class="p-field-label">{{ label }}</label>
+    <label v-if="label" class="p-field-label" :for="triggerId">{{ label }}</label>
     <div ref="rootRef" class="p-select-root">
       <button
         ref="triggerRef"
+        :id="triggerId"
         type="button"
         class="p-select-trigger"
         :class="[
@@ -85,6 +86,7 @@ const emit = defineEmits<{
 }>()
 
 const instanceId = `p-select-${getCurrentInstance()?.uid ?? 0}`
+const triggerId = `${instanceId}-trigger`
 const listboxId = `${instanceId}-listbox`
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)

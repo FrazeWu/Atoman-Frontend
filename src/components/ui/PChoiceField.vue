@@ -66,6 +66,9 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
       type="button"
       class="p-choice-field-trigger"
       :disabled="disabled"
+      :aria-label="label"
+      :aria-expanded="open"
+      aria-haspopup="listbox"
       @click="toggle"
     >
       <span :class="{ 'p-choice-field-placeholder': !selectedLabel }">{{ selectedLabel || placeholder }}</span>

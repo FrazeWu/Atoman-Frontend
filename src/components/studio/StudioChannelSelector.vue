@@ -5,7 +5,7 @@
       <select
         :id="selectId"
         :value="studio.currentChannel?.id || ''"
-        :disabled="studio.loading || studio.channels.length === 0"
+        :disabled="studio.loading || switching || studio.channels.length === 0"
         aria-label="选择频道"
         @change="selectChannel"
       >
@@ -16,19 +16,31 @@
       </select>
       <span class="studio-channel-selector__arrow" aria-hidden="true">▾</span>
     </div>
+    <span v-if="error" class="studio-channel-selector__error" role="alert">{{ error }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance } from 'vue'
+import { getCurrentInstance, ref } from 'vue'
 import { useStudioStore } from '@/stores/studio'
 
 const studio = useStudioStore()
 const selectId = `studio-channel-select-${getCurrentInstance()?.uid ?? 0}`
+const switching = ref(false)
+const error = ref('')
 
-function selectChannel(event: Event) {
+async function selectChannel(event: Event) {
   const channelID = (event.target as HTMLSelectElement).value
-  if (channelID) void studio.selectChannel(channelID)
+  if (!channelID) return
+  switching.value = true
+  error.value = ''
+  try {
+    await studio.selectChannel(channelID)
+  } catch {
+    error.value = '频道切换失败，请重试'
+  } finally {
+    switching.value = false
+  }
 }
 </script>
 

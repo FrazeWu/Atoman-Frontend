@@ -1,6 +1,9 @@
 <template>
   <div class="forum-group-panel">
-	<p v-if="error" class="forum-group-panel__notice forum-group-panel__notice--error" role="alert">{{ error }}</p>
+	<div v-if="error" class="forum-group-panel__notice forum-group-panel__notice--error" role="alert">
+	  <span>{{ error }}</span>
+	  <PButton size="sm" variant="secondary" @click="loadAll">重试</PButton>
+	</div>
 	<p v-else-if="message" class="forum-group-panel__notice" role="status">{{ message }}</p>
 
 	<div class="forum-group-panel__layout">
@@ -144,6 +147,7 @@ const groupModalOpen = ref(false)
 const deleteModalOpen = ref(false)
 const editingGroupId = ref('')
 const searching = ref(false)
+let userSearchRequestID = 0
 const savingMember = ref(false)
 const savingGroup = ref(false)
 const deletingGroup = ref(false)
@@ -275,14 +279,16 @@ async function deleteGroup() {
 }
 
 async function searchUsers() {
+  const requestID = ++userSearchRequestID
   searching.value = true
   try {
 	const params = new URLSearchParams({ q: userQuery.value.trim(), limit: '20' })
-	users.value = await responseData(await apiRequestResult(`${api.users.search}?${params}`, { headers: headers() }), '搜索用户失败') || []
+	const result = await responseData<User[]>(await apiRequestResult(`${api.users.search}?${params}`, { headers: headers() }), '搜索用户失败') || []
+	if (requestID === userSearchRequestID) users.value = result
   } catch (cause) {
-	error.value = cause instanceof Error ? cause.message : '搜索用户失败'
+	if (requestID === userSearchRequestID) error.value = cause instanceof Error ? cause.message : '搜索用户失败'
   } finally {
-	searching.value = false
+	if (requestID === userSearchRequestID) searching.value = false
   }
 }
 

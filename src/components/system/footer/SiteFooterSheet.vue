@@ -29,8 +29,13 @@ watch(() => props.panel, () => {
 })
 
 async function copyEmail() {
-  await navigator.clipboard.writeText(supportEmail)
-  copied.value = true
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(supportEmail)
+    copied.value = true
+  } catch {
+    copied.value = false
+  }
 }
 </script>
 
@@ -118,7 +123,7 @@ async function copyEmail() {
           <a
             class="footer-sheet-action"
             data-footer-action="message-owner"
-            href="/inbox?tab=dm&amp;user=fazong"
+            href="/inbox?tab=dm"
           >
             <MessageCircle :size="16" aria-hidden="true" />
             发起私信

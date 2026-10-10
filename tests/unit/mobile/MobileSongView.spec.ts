@@ -92,4 +92,32 @@ describe('MobileSongView', () => {
     expect(mocks.toggleFavoriteSong).toHaveBeenCalledWith('song-1')
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({ entity: 'song', mode: 'edit', id: 'song-1' })
   })
+
+  it('ignores a stale detail response after switching songs', async () => {
+    mocks.getMusicSongDetail.mockReset()
+    let resolveFirst!: (value: unknown) => void
+    const first = new Promise((resolve) => { resolveFirst = resolve })
+    mocks.getMusicSongDetail
+      .mockReturnValueOnce(first)
+      .mockResolvedValueOnce({
+        song: { id: 'song-2', title: '第二首', audio_url: '/two.mp3', artists: [], album: null },
+        artists: [],
+        playable: true,
+      })
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/music/song/:songId', component: MobileSongView }],
+    })
+    await router.push('/music/song/song-1')
+    await router.isReady()
+    const wrapper = mount(MobileSongView, { global: { plugins: [router] } })
+    await router.push('/music/song/song-2')
+    await flushPromises()
+    resolveFirst({ song: { id: 'song-1', title: '第一首', audio_url: '/one.mp3' }, playable: true })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('第二首')
+    expect(wrapper.text()).not.toContain('第一首')
+  })
 })

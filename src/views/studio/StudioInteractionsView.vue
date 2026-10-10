@@ -36,7 +36,10 @@
     </header>
 
     <p v-if="loading" class="studio-interactions__message">加载中...</p>
-    <p v-else-if="error" class="studio-interactions__message" role="alert">{{ error }}</p>
+    <div v-else-if="error" class="studio-interactions__message" role="alert">
+      <p>{{ error }}</p>
+      <PButton type="button" size="sm" @click="loadInteractions">重试</PButton>
+    </div>
     <PEmpty v-else-if="!studio.interactions[module].length" kicker="" title="暂无互动" />
     <div v-else class="studio-interactions__list">
       <article v-for="item in studio.interactions[module]" :key="item.id" class="studio-interactions__item">
@@ -175,6 +178,7 @@ const templateName = ref('')
 const templateContent = ref('')
 const templateSaving = ref(false)
 const templateError = ref('')
+const initializedChannelID = ref('')
 const filters = reactive<StudioInteractionFilters>({
   q: '',
   content_id: '',
@@ -406,16 +410,28 @@ onMounted(async () => {
       studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
       studio.loadReplyTemplates(),
     ])
+    initializedChannelID.value = studio.currentChannel?.id || ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败'
     loading.value = false
   }
 })
 
+watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
+  if (!initializedChannelID.value || !channelID || channelID === previousChannelID) return
+  initializedChannelID.value = channelID
+  filters.page = 1
+  void Promise.all([
+    loadInteractions(),
+    studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
+    studio.loadReplyTemplates(),
+  ])
+})
+
 watch(module, () => {
   filters.q = ''
   filters.content_id = ''
-  filters.unreplied = false
+  filters.unreplied = route.query.unreplied === 'true'
   filters.anchored = false
   filters.handled = ''
   filters.priority = ''
@@ -425,6 +441,14 @@ watch(module, () => {
     loadInteractions(),
     studio.loadContents(module.value, { q: '', status: '', visibility: '', collection_id: '', page: 1 }, false),
   ])
+})
+
+watch(() => route.query.unreplied, (value) => {
+  const next = value === 'true'
+  if (filters.unreplied === next) return
+  filters.unreplied = next
+  filters.page = 1
+  void loadInteractions()
 })
 </script>
 

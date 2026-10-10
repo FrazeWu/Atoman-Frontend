@@ -174,10 +174,16 @@ const itemLabels = { blog: '文章', podcast: '单集', video: '视频' } as con
 
 function copyCollectionRssLink() {
   if (!collectionRssUrl.value) return
-  void navigator.clipboard.writeText(collectionRssUrl.value).then(() => {
-    toastMessage.value = '已复制 RSS 链接'
+  void (async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+      await navigator.clipboard.writeText(collectionRssUrl.value)
+      toastMessage.value = '已复制 RSS 链接'
+    } catch {
+      toastMessage.value = '复制失败，请手动复制链接'
+    }
     toastVisible.value = true
-  })
+  })()
 }
 
 async function load() {

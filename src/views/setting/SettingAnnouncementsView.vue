@@ -186,6 +186,7 @@ const error = ref('')
 const success = ref('')
 const historyError = ref('')
 const loading = ref(false)
+let announcementsRequestSequence = 0
 const announcements = ref<Announcement[]>([])
 const selectedAnnouncement = ref<Announcement | null>(null)
 const meta = ref<AnnouncementPageMeta>({ page: 1, page_size: 20, total: 0, has_more: false })
@@ -234,6 +235,7 @@ const publish = async () => {
 }
 
 async function loadAnnouncements(page = meta.value.page) {
+  const sequence = ++announcementsRequestSequence
   loading.value = true
   historyError.value = ''
   try {
@@ -243,12 +245,13 @@ async function loadAnnouncements(page = meta.value.page) {
       page,
       page_size: meta.value.page_size,
     })
+    if (sequence !== announcementsRequestSequence) return
     announcements.value = response.data
     meta.value = response.meta ?? { ...meta.value, page, total: response.data.length, has_more: false }
   } catch (cause) {
-    historyError.value = errorMessage(cause, '加载公告记录失败，请重试。')
+    if (sequence === announcementsRequestSequence) historyError.value = errorMessage(cause, '加载公告记录失败，请重试。')
   } finally {
-    loading.value = false
+    if (sequence === announcementsRequestSequence) loading.value = false
   }
 }
 

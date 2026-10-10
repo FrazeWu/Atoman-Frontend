@@ -31,6 +31,7 @@ describe('OAuth API service', () => {
     expect(safeOAuthReturnPath('/forum?tab=latest')).toBe('/forum?tab=latest')
     expect(safeOAuthReturnPath('https://evil.example')).toBe('/')
     expect(safeOAuthReturnPath('//evil.example')).toBe('/')
+    expect(safeOAuthReturnPath('/\\evil.example')).toBe('/')
   })
 
   it('completes a profile with the pending cookie and returns the destination', async () => {

@@ -207,7 +207,7 @@
             <a
               v-for="item in relatedFeedItems"
               :key="item.id"
-              :href="item.link"
+              :href="safeExternalUrl(item.link)"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -275,6 +275,7 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { hasFeedReaderImage } from '@/utils/feedReader'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
+import { safeExternalUrl } from '@/utils/safeExternalUrl'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'

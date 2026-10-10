@@ -25,7 +25,7 @@
           <span>个人资料</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </RouterLink>
-        <RouterLink to="/inbox?tab=notifications" class="mobile-module-directory__row">
+        <RouterLink to="/inbox" class="mobile-module-directory__row">
           <Bell :size="20" aria-hidden="true" />
           <span>通知</span>
           <ChevronRight :size="18" aria-hidden="true" />
@@ -75,6 +75,11 @@ const currentModule = computed(() => {
   if (route.path.startsWith('/posts') || route.path.startsWith('/post') || route.path.startsWith('/channel') || route.path.startsWith('/collection') || route.path.startsWith('/users')) return 'blog'
   if (route.path.startsWith('/music')) return 'music'
   if (route.path.startsWith('/books')) return 'books'
+  if (route.path.startsWith('/podcasts')) return 'podcast'
+  if (route.path.startsWith('/videos')) return 'video'
+  if (route.path.startsWith('/forum')) return 'forum'
+  if (route.path.startsWith('/debate')) return 'debate'
+  if (route.path.startsWith('/timeline')) return 'timeline'
   return 'feed'
 })
 </script>

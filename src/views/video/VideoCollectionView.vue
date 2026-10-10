@@ -6,23 +6,27 @@ import type { Video } from '@/types'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const route = useRoute()
 const videos = ref<Video[]>([])
 const loading = ref(false)
 const error = ref('')
+let loadSequence = 0
 
 async function load() {
   const id = String(route.params.id || '')
   if (!id) return
+  const sequence = ++loadSequence
   loading.value = true
   error.value = ''
   try {
-    videos.value = await getVideoResource<Video[]>(`/videos?collection_id=${encodeURIComponent(id)}`)
+    const result = await getVideoResource<Video[]>(`/videos?collection_id=${encodeURIComponent(id)}`)
+    if (sequence === loadSequence) videos.value = result
   } catch {
-    error.value = '合集加载失败，请重试'
+    if (sequence === loadSequence) error.value = '合集加载失败，请重试'
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 
@@ -33,7 +37,10 @@ watch(() => route.params.id, () => void load())
 <template>
   <div class="a-page-xl video-collection-view">
     <PPageHeader title="视频合集" mb="1.25rem" />
-    <p v-if="error" class="video-collection-state video-collection-state--error">{{ error }}</p>
+    <div v-if="error" class="video-collection-state video-collection-state--error">
+      <p>{{ error }}</p>
+      <PButton type="button" size="sm" @click="load">重试</PButton>
+    </div>
     <p v-else-if="loading" class="video-collection-state">加载中...</p>
     <PEmpty v-else-if="!videos.length" title="暂无视频" description="这个合集还没有已发布的视频。" />
     <div v-else class="video-collection-grid">

@@ -243,8 +243,10 @@ const loadingAudit = ref(false)
 const auditError = ref('')
 const pendingRevoke = ref<RevokeAction | null>(null)
 const revoking = ref(false)
+let userRequestGeneration = 0
 
 watch(() => [props.show, props.userId] as const, ([show, userId]) => {
+  userRequestGeneration++
   if (!show || !userId) return
   tab.value = 'overview'
   loginEvents.value = []
@@ -253,21 +255,30 @@ watch(() => [props.show, props.userId] as const, ([show, userId]) => {
   void loadDetail()
 }, { immediate: true })
 
+const isCurrentUserRequest = (userId: string, generation: number) => (
+  props.show && props.userId === userId && userRequestGeneration === generation
+)
+
 function errorText(cause: unknown, fallback: string) {
   return cause instanceof Error && cause.message ? cause.message : fallback
 }
 
 async function loadDetail() {
   if (!props.userId) return
+  const userId = props.userId
+  const generation = userRequestGeneration
   loadingDetail.value = true
   detailError.value = ''
   try {
-    detail.value = await getAdminUser(props.userId)
+    const result = await getAdminUser(userId)
+    if (isCurrentUserRequest(userId, generation)) detail.value = result
   } catch (cause) {
-    detail.value = null
-    detailError.value = errorText(cause, '加载用户详情失败')
+    if (isCurrentUserRequest(userId, generation)) {
+      detail.value = null
+      detailError.value = errorText(cause, '加载用户详情失败')
+    }
   } finally {
-    loadingDetail.value = false
+    if (isCurrentUserRequest(userId, generation)) loadingDetail.value = false
   }
 }
 
@@ -280,44 +291,55 @@ function selectTab(next: DetailTab) {
 
 async function loadLogins(page = loginMeta.page) {
   if (!props.userId) return
+  const userId = props.userId
+  const generation = userRequestGeneration
   loadingLogins.value = true
   loginsError.value = ''
   try {
-    const response = await listAdminUserLoginEvents(props.userId, page, loginMeta.page_size)
-    loginEvents.value = response.data
-    Object.assign(loginMeta, response.meta)
+    const response = await listAdminUserLoginEvents(userId, page, loginMeta.page_size)
+    if (isCurrentUserRequest(userId, generation)) {
+      loginEvents.value = response.data
+      Object.assign(loginMeta, response.meta)
+    }
   } catch (cause) {
-    loginsError.value = errorText(cause, '加载登录记录失败')
+    if (isCurrentUserRequest(userId, generation)) loginsError.value = errorText(cause, '加载登录记录失败')
   } finally {
-    loadingLogins.value = false
+    if (isCurrentUserRequest(userId, generation)) loadingLogins.value = false
   }
 }
 
 async function loadSessions() {
   if (!props.userId) return
+  const userId = props.userId
+  const generation = userRequestGeneration
   loadingSessions.value = true
   sessionsError.value = ''
   try {
-    sessions.value = await listAdminUserSessions(props.userId)
+    const result = await listAdminUserSessions(userId)
+    if (isCurrentUserRequest(userId, generation)) sessions.value = result
   } catch (cause) {
-    sessionsError.value = errorText(cause, '加载登录设备失败')
+    if (isCurrentUserRequest(userId, generation)) sessionsError.value = errorText(cause, '加载登录设备失败')
   } finally {
-    loadingSessions.value = false
+    if (isCurrentUserRequest(userId, generation)) loadingSessions.value = false
   }
 }
 
 async function loadAudit(page = auditMeta.page) {
   if (!props.userId) return
+  const userId = props.userId
+  const generation = userRequestGeneration
   loadingAudit.value = true
   auditError.value = ''
   try {
-    const response = await listAdminUserAuditLogs(props.userId, page, auditMeta.page_size)
-    auditLogs.value = response.data
-    Object.assign(auditMeta, response.meta)
+    const response = await listAdminUserAuditLogs(userId, page, auditMeta.page_size)
+    if (isCurrentUserRequest(userId, generation)) {
+      auditLogs.value = response.data
+      Object.assign(auditMeta, response.meta)
+    }
   } catch (cause) {
-    auditError.value = errorText(cause, '加载管理记录失败')
+    if (isCurrentUserRequest(userId, generation)) auditError.value = errorText(cause, '加载管理记录失败')
   } finally {
-    loadingAudit.value = false
+    if (isCurrentUserRequest(userId, generation)) loadingAudit.value = false
   }
 }
 

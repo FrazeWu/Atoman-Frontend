@@ -309,6 +309,7 @@
       </template>
     </PModal>
 
+    <p v-if="deleteError" class="tl-error" role="alert">{{ deleteError }}</p>
     <PConfirm
       :show="!!deletingEvent"
       title="删除事件"
@@ -346,7 +347,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useTimelineStore } from '@/stores/timeline'
@@ -423,6 +424,7 @@ const {
   deletingEvent,
   submitting,
   formError,
+  deleteError,
   form,
   tagsInput,
   openDetail,
@@ -480,19 +482,29 @@ const resetFilter = () => {
   store.fetchEvents({ limit: 200 })
 }
 
-onMounted(async () => {
-  void store.fetchEvents({ limit: 200 })
-
+const applyRouteQuery = async () => {
   const eventId = typeof route.query.event === 'string' ? route.query.event : ''
   if (eventId) {
     const event = await fetchEventById(eventId)
     if (event) openDetail(event)
+  } else if (route.query.create !== 'event') {
+    detailEvent.value = null
   }
 
   if (route.query.create === 'event' && authStore.isAuthenticated) {
     openCreate()
   }
+}
+
+onMounted(() => {
+  void store.fetchEvents({ limit: 200 })
 })
+
+watch(
+  () => [route.query.event, route.query.create] as const,
+  () => { void applyRouteQuery() },
+  { immediate: true },
+)
 
 </script>
 

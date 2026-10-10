@@ -13,17 +13,17 @@ export const mobileInitialRoutes: RouteRecordRaw[] = [
 	{
 		path: "/login",
 		component: () => import("@/views/auth/LoginView.vue"),
-		meta: { authLayout: true },
+		meta: { authLayout: true, guestOnly: true },
 	},
 	{
 		path: "/register",
 		component: () => import("@/views/auth/LoginView.vue"),
-		meta: { authLayout: true },
+		meta: { authLayout: true, guestOnly: true },
 	},
 	{
 		path: "/forgot-password",
 		component: () => import("@/views/auth/ForgotPasswordView.vue"),
-		meta: { authLayout: true },
+		meta: { authLayout: true, guestOnly: true },
 	},
 	{
 		path: "/:pathMatch(.*)*",

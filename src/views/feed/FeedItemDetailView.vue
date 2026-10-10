@@ -195,7 +195,7 @@ async function subscribeSource() {
 }
 
 function openSourceArticle(next: TimelineItem) {
-  if (next.type !== 'feed_item' || !next.feed_item) return
+  if ((next.type !== 'feed_item' && next.type !== 'project_update') || !next.feed_item) return
   const source = articleSource.value
   const state: FeedArticleRouteState = {
     article: next,

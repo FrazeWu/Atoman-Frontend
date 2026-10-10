@@ -20,7 +20,8 @@ describe('TimelineEventDetailModal', () => {
     })
 
     expect(wrapper.text()).toContain('历史事件')
-    expect(wrapper.html()).toContain('第一行<br>第二行')
+    expect(wrapper.get('.tl-detail-content').text()).toBe('第一行\n第二行')
+    expect(wrapper.html()).not.toContain('<br>')
     await wrapper.get('button').trigger('click')
     await wrapper.get('[data-test="timeline-detail-edit"]').trigger('click')
 

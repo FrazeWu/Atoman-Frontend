@@ -17,6 +17,7 @@ import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { safeExternalUrl } from '@/utils/safeExternalUrl'
 import {
 	albumArtistCreditsFromContributors,
 	albumContributorsFromResponse,
@@ -234,7 +235,7 @@ onBeforeUnmount(() => {
 						<a
 							v-for="release in suggestions.external_only"
 							:key="release.release_id"
-							:href="release.source_url"
+							:href="safeExternalUrl(release.source_url)"
 							target="_blank"
 							rel="noopener noreferrer"
 						>

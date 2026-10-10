@@ -10,6 +10,34 @@ export { MOBILE_MODULES } from "./mobileInitialRoutes";
 export const mobileRoutes: RouteRecordRaw[] = [
 	...mobileInitialRoutes.filter((route) => route.path !== "/:pathMatch(.*)*"),
 	{
+		path: "/auth/oauth/callback",
+		component: () => import("@/views/auth/OAuthCallbackView.vue"),
+		meta: { authLayout: true },
+	},
+	{
+		path: "/auth/oauth/verify-email",
+		component: () => import("@/views/auth/OAuthVerifyEmailView.vue"),
+		meta: { authLayout: true },
+	},
+	{
+		path: "/auth/oauth/complete-profile",
+		component: () => import("@/views/auth/OAuthCompleteProfileView.vue"),
+		meta: { authLayout: true },
+	},
+	{
+		path: "/auth/oauth/confirm-account",
+		component: () => import("@/views/auth/OAuthConfirmAccountView.vue"),
+		meta: { authLayout: true },
+	},
+	{
+		path: "/auth/oauth/set-password",
+		component: () => import("@/views/auth/OAuthSetPasswordView.vue"),
+		meta: { authLayout: true },
+	},
+	{ path: "/about", component: () => import("@/views/system/AboutView.vue") },
+	{ path: "/terms", component: () => import("@/views/system/TermsView.vue") },
+	{ path: "/privacy", component: () => import("@/views/system/PrivacyView.vue") },
+	{
 		path: "/modules",
 		component: () => import("./MobileModuleDirectoryView.vue"),
 	},

@@ -11,11 +11,14 @@ import { nextTick, ref, watch } from 'vue'
 import type { DMConversation, DMMessage } from '@/api/dm'
 const props = withDefaults(defineProps<{ conversation?: DMConversation | null; messages: DMMessage[]; hasMore: boolean; loading: boolean; mobile?: boolean; targetLabel?: string }>(), { conversation: null, mobile: false, targetLabel: '' })
 const emit = defineEmits<{ 'load-older': []; back: []; block: []; unblock: []; report: [messageId: string] }>()
-const scroller = ref<HTMLElement | null>(null); let previousHeight: number | null = null
+const scroller = ref<HTMLElement | null>(null); let previousHeight: number | null = null; let previousMessageCount = 0
 const toggleBlock = () => { if (props.conversation?.blocked) emit('unblock'); else emit('block') }
-const requestOlder = () => { if (!scroller.value || previousHeight !== null) return; previousHeight = scroller.value.scrollHeight; emit('load-older') }
+const requestOlder = () => { if (!scroller.value || previousHeight !== null) return; previousHeight = scroller.value.scrollHeight; previousMessageCount = props.messages.length; emit('load-older') }
 const onScroll = () => { if (scroller.value && scroller.value.scrollTop < 32 && props.hasMore) requestOlder() }
 watch(() => props.messages.length, async () => { if (!scroller.value) return; if (previousHeight !== null) { const height = previousHeight; previousHeight = null; await nextTick(); scroller.value.scrollTop += scroller.value.scrollHeight - height } else { await nextTick(); scroller.value.scrollTop = scroller.value.scrollHeight } })
+watch(() => props.loading, (loading, wasLoading) => {
+  if (wasLoading && !loading && previousHeight !== null && props.messages.length === previousMessageCount) previousHeight = null
+})
 </script>
 
 <style scoped>

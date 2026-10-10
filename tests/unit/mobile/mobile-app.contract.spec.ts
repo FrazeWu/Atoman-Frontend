@@ -86,8 +86,22 @@ describe("mobile app route boundary", () => {
 				"/music/bookmarks",
 				"/music/me",
 				"/videos/watch/:id",
+				"/auth/oauth/callback",
+				"/auth/oauth/verify-email",
+				"/auth/oauth/complete-profile",
+				"/auth/oauth/confirm-account",
+				"/auth/oauth/set-password",
+				"/about",
+				"/terms",
+				"/privacy",
 			]),
 		);
+	});
+
+	it("marks mobile authentication entry routes as guest-only", () => {
+		const routes = mobileRoutes.filter((route) => ["/login", "/register", "/forgot-password"].includes(String(route.path)));
+		expect(routes).toHaveLength(3);
+		expect(routes.every((route) => route.meta?.guestOnly === true)).toBe(true);
 	});
 
 	it("keeps Studio and personal routes outside the bottom-navigation modules", () => {

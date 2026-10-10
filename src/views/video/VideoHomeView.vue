@@ -26,6 +26,8 @@ const videoSearchQuery = ref('')
 const recommendedVideos = ref<Video[]>([])
 const loading = ref(false)
 const recommendationLoading = ref(false)
+const recommendationError = ref('')
+const recommendationFeedbackError = ref('')
 const sort = ref<'latest' | 'popular'>('latest')
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const recommendationMeta = ref({ page: 1, page_size: 8, total: 0, has_more: false })
@@ -71,6 +73,7 @@ function changeVideoPage(page: number) {
 async function fetchRecommendedVideos() {
   const seq = ++fetchRecommendationsSeq
   recommendationLoading.value = true
+  recommendationError.value = ''
   try {
     const data = await getVideoRecommendations<RecommendedVideoPayload>(
       recommendationMode.value,
@@ -82,7 +85,10 @@ async function fetchRecommendedVideos() {
     recommendedVideos.value = data.data.flatMap(item => item.video ? [item.video] : [])
     recommendationMeta.value = data.meta
   } catch {
-    if (seq === fetchRecommendationsSeq) recommendedVideos.value = []
+    if (seq === fetchRecommendationsSeq) {
+      recommendedVideos.value = []
+      recommendationError.value = '推荐加载失败'
+    }
   } finally {
     if (seq === fetchRecommendationsSeq) recommendationLoading.value = false
   }
@@ -101,10 +107,15 @@ function changeRecommendationMode() {
 
 async function submitRecommendationFeedback(scope: VideoRecommendationFeedbackScope, targetID: string, videoID: string, close: () => void) {
   if (!authStore.isAuthenticated) { await router.push('/login'); return }
-  const response = await createVideoRecommendationFeedback(scope, targetID, authStore.token ?? undefined)
-  if (!response.ok) throw new Error('推荐反馈提交失败')
-  recommendedVideos.value = recommendedVideos.value.filter(video => video.id !== videoID)
-  close()
+  recommendationFeedbackError.value = ''
+  try {
+    const response = await createVideoRecommendationFeedback(scope, targetID, authStore.token ?? undefined)
+    if (!response.ok) throw new Error('推荐反馈提交失败')
+    recommendedVideos.value = recommendedVideos.value.filter(video => video.id !== videoID)
+    close()
+  } catch {
+    recommendationFeedbackError.value = '推荐反馈提交失败，请稍后重试'
+  }
 }
 
 onMounted(() => {
@@ -151,6 +162,7 @@ watch(sort, () => {
 
       <PContentProgress
         :loading="recommendationLoading"
+        :error="recommendationError"
         :retry="fetchRecommendedVideos"
       >
         <template #skeleton>
@@ -188,6 +200,7 @@ watch(sort, () => {
           @change="changeRecommendationPage"
         />
       </PContentProgress>
+      <p v-if="recommendationFeedbackError" class="a-error" role="alert">{{ recommendationFeedbackError }}</p>
     </section>
 
     <!-- Sticky filter bar -->

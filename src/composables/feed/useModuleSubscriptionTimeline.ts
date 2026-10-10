@@ -85,6 +85,10 @@ export function useModuleSubscriptionTimeline(subscriptionType: SubscriptionHubT
   }
   const markAllRead = async () => {
     if (!authStore.isAuthenticated || markingAllRead.value) return false
+    if (groupId.value && !membershipId.value) {
+      error.value = '当前分组暂不支持全部标记已读，请进入具体来源后操作'
+      return false
+    }
     markingAllRead.value = true
     try {
       const endpoint = membershipId.value

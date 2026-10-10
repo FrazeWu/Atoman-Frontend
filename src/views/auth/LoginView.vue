@@ -205,7 +205,7 @@
 <script setup lang="ts">
 import { errorMessage } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -230,6 +230,7 @@ const verificationCode = ref('')
 const codeSent = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
+let countdownTimer: ReturnType<typeof setInterval> | undefined
 const errorMsg = ref('')
 const loading = ref(false)
 const hasSubmitted = ref(false)
@@ -287,6 +288,7 @@ const canSendVerification = computed(() => (
 const safeRedirectPath = (redirect: unknown) => {
   if (typeof redirect !== 'string') return '/feed'
   if (!redirect.startsWith('/') || redirect.startsWith('//')) return '/feed'
+  if (redirect.includes('\\')) return '/feed'
   if (/[\u0000-\u001F\u007F]/.test(redirect)) return '/feed'
   return redirect
 }
@@ -331,14 +333,23 @@ const handleTurnstileError = (errorCode?: string) => {
 }
 
 const startCountdown = () => {
+  if (countdownTimer) clearInterval(countdownTimer)
   countdown.value = 60
-  const timer = setInterval(() => {
+  countdownTimer = setInterval(() => {
     countdown.value--
     if (countdown.value <= 0) {
-      clearInterval(timer)
+      clearInterval(countdownTimer)
+      countdownTimer = undefined
       codeSent.value = false
     }
   }, 1000)
+}
+
+const resetCountdown = () => {
+  if (countdownTimer) clearInterval(countdownTimer)
+  countdownTimer = undefined
+  countdown.value = 0
+  codeSent.value = false
 }
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase()
@@ -594,6 +605,7 @@ watch(passwordConfirm, () => {
 })
 
 watch(() => route.path, () => {
+  resetCountdown()
   currentStep.value = 1
   hasSubmitted.value = false
   errorMsg.value = ''
@@ -607,6 +619,8 @@ watch(() => route.path, () => {
   emailAvailability.value = { status: 'idle', reason: '' }
   usernameAvailability.value = { status: 'idle', reason: '' }
 })
+
+onBeforeUnmount(resetCountdown)
 
 let emailCheckTimer: ReturnType<typeof setTimeout> | null = null
 watch(email, (value) => {

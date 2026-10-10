@@ -85,6 +85,7 @@ export function oauthStartURL(
 
 export function safeOAuthReturnPath(value: unknown) {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/'
+  if (value.includes('\\')) return '/'
   if (/[\u0000-\u001F\u007F]/.test(value)) return '/'
   return value
 }

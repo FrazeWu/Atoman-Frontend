@@ -52,6 +52,7 @@ const recommendationOptions = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
+let recommendationRequestSequence = 0
 
 function openPodcastSearchTarget(target: ReferenceTarget) {
   void router.push(modulePathUrl('podcast', target.path))
@@ -75,9 +76,12 @@ onMounted(async () => {
 })
 
 async function fetchRecommendedEpisodes() {
+  const requestSequence = ++recommendationRequestSequence
+  const mode = recommendationMode.value
   recommendationLoading.value = true
   try {
-    const data = await getPodcastRecommendations<RecommendedEpisodePayload>(recommendationMode.value)
+    const data = await getPodcastRecommendations<RecommendedEpisodePayload>(mode)
+    if (requestSequence !== recommendationRequestSequence) return
     recommendedEpisodes.value = Array.isArray(data.data)
       ? data.data.map((item) => ({
           id: item.id,
@@ -89,9 +93,9 @@ async function fetchRecommendedEpisodes() {
         }))
       : []
   } catch {
-    recommendedEpisodes.value = []
+    if (requestSequence === recommendationRequestSequence) recommendedEpisodes.value = []
   } finally {
-    recommendationLoading.value = false
+    if (requestSequence === recommendationRequestSequence) recommendationLoading.value = false
   }
 }
 

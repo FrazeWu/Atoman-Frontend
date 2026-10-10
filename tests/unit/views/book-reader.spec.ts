@@ -148,4 +148,32 @@ describe('BookReaderView', () => {
     await wrapper.find('.books-reader__search-results button').trigger('click')
     expect(booksApi.saveBookReadingState).toHaveBeenCalled()
   })
+
+  it('保存私有阅读器的字号和主题偏好', async () => {
+    vi.spyOn(booksApi, 'getBookAsset').mockResolvedValue(asset)
+    vi.spyOn(booksApi, 'getBookReadingState').mockResolvedValue(readingState)
+    vi.spyOn(booksApi, 'fetchBookAssetContent').mockResolvedValue(new Blob(['Private text']))
+    const saveState = vi.spyOn(booksApi, 'saveBookReadingState').mockImplementation(async (_assetId, input) => ({
+      ...readingState,
+      ...input,
+      preferences: input.preferences || {},
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/read/:assetId', component: BookReaderView }],
+    })
+    await router.push('/books/read/asset-1')
+    await router.isReady()
+    const wrapper = mount(BookReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    await wrapper.find('.book-reader-display-controls select').setValue('1.35')
+    await wrapper.find('[aria-label="夜间主题"]').trigger('click')
+    await flushPromises()
+
+    expect(saveState).toHaveBeenLastCalledWith('asset-1', expect.objectContaining({
+      preferences: expect.objectContaining({ display: { font_scale: 1.35, theme: 'night' } }),
+    }))
+  })
 })

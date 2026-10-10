@@ -132,4 +132,34 @@ describe('BookPublicReaderView', () => {
     expect(wrapper.find('.public-reader__search-results button').text()).toContain('关键词')
     wrapper.unmount()
   })
+
+  it('保存匿名阅读器的显示偏好', async () => {
+    vi.spyOn(booksApi, 'getPublishedBookAsset').mockResolvedValue({
+      id: 'public-asset-5',
+      work_id: 'work-5',
+      format: 'txt',
+      file_name: 'preferences.txt',
+      content_type: 'text/plain',
+      size: 12,
+      status: 'published',
+      created_at: '2026-08-27T00:00:00Z',
+    })
+    vi.spyOn(booksApi, 'fetchPublishedBookAssetContent').mockResolvedValue(new Blob(['Public text']))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/public-read/:assetId', component: BookPublicReaderView }],
+    })
+    await router.push('/books/public-read/public-asset-5')
+    await router.isReady()
+    const wrapper = mount(BookPublicReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    await wrapper.find('.book-reader-display-controls select').setValue('0.85')
+    await wrapper.find('[aria-label="夜间主题"]').trigger('click')
+
+    expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"theme":"night"')
+    expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"font_scale":0.85')
+    wrapper.unmount()
+  })
 })

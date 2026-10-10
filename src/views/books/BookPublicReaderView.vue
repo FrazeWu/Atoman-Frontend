@@ -1,5 +1,5 @@
 <template>
-  <main class="a-page-md public-reader">
+  <main class="a-page-md public-reader" :class="`public-reader--theme-${displayPreferences.theme}`" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
     <PPageHeader title="公共阅读" mb="0" />
     <BookReaderShell
       :title="asset?.file_name || '公共电子书'"
@@ -43,6 +43,7 @@
       </div>
       <div v-else class="public-reader__pdf"><canvas ref="pdfCanvas" aria-label="PDF 页面" /></div>
       <template #footer>
+        <BookReaderDisplayControls v-model="displayPreferences" @update:model-value="updateDisplayPreferences" />
         <form v-if="asset?.format === 'txt'" class="public-reader__search" @submit.prevent="searchText">
           <label for="public-book-search">搜索正文</label>
           <div class="public-reader__search-row">
@@ -84,11 +85,12 @@ import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-d
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
-import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
+import { parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences } from '@/utils/bookReaderPreferences'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -113,6 +115,7 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const reportMessage = ref('')
 const bookmarks = ref<BookReaderBookmark[]>([])
+const displayPreferences = ref<BookReaderDisplayPreferences>(parseBookReaderDisplayPreferences(null))
 const textSearchQuery = ref('')
 const textSearchMatches = ref<BookTextSearchMatch[]>([])
 const textViewport = ref<HTMLElement | null>(null)
@@ -308,6 +311,17 @@ function searchText() {
   textSearchMatches.value = findBookTextMatches(textContent.value, textSearchQuery.value)
 }
 
+function updateDisplayPreferences(value: BookReaderDisplayPreferences) {
+  displayPreferences.value = parseBookReaderDisplayPreferences(value)
+  if (!asset.value) return
+  saveLocalBookReadingProgress(asset.value.id, {
+    reading_percent: readingPercent.value,
+    epub_cfi: localProgress?.epub_cfi || '',
+    bookmarks: bookmarks.value,
+    display: displayPreferences.value,
+  })
+}
+
 function jumpToTextMatch(match: BookTextSearchMatch) {
   if (asset.value?.format !== 'txt') return
   readingPercent.value = textContent.value.length ? match.index / textContent.value.length : 0
@@ -348,6 +362,7 @@ onMounted(async () => {
     localProgress = getLocalBookReadingProgress(assetID)
     readingPercent.value = localProgress?.reading_percent || 0
     bookmarks.value = localProgress?.bookmarks || []
+    displayPreferences.value = localProgress?.display || parseBookReaderDisplayPreferences(null)
     contentBlob = await fetchPublishedBookAssetContent(assetID)
     await nextTick()
     if (asset.value.format === 'txt') await loadText()
@@ -374,6 +389,21 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 1.25rem;
   padding-top: var(--a-page-start-space);
+  --book-reader-surface: #ffffff;
+  --book-reader-text: var(--a-color-fg);
+  --book-reader-muted: var(--a-color-muted);
+}
+
+.public-reader--theme-dim {
+  --book-reader-surface: #f3eee4;
+  --book-reader-text: #423a2f;
+  --book-reader-muted: #756b5d;
+}
+
+.public-reader--theme-night {
+  --book-reader-surface: #1f2430;
+  --book-reader-text: #e7e9ee;
+  --book-reader-muted: #aab2c0;
 }
 
 .public-reader__feedback {
@@ -398,20 +428,21 @@ onBeforeUnmount(() => {
   min-height: min(68vh, 720px);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .public-reader__text {
   overflow: auto;
   padding: clamp(1.25rem, 4vw, 3rem);
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .public-reader__text pre {
   max-width: 72ch;
   margin: 0 auto;
-  color: var(--a-color-fg);
+  color: var(--book-reader-text);
   font: inherit;
+  font-size: calc(1rem * var(--book-reader-font-scale, 1));
   line-height: 1.85;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -419,7 +450,7 @@ onBeforeUnmount(() => {
 
 .public-reader__epub {
   padding: 1rem;
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .public-reader__comic {
@@ -429,7 +460,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: #ffffff;
+  background: var(--book-reader-surface);
   scroll-behavior: smooth;
 }
 
@@ -457,14 +488,14 @@ onBeforeUnmount(() => {
   place-items: start center;
   overflow: auto;
   padding: 1rem;
-  background: #ffffff;
+  background: var(--book-reader-surface);
 }
 
 .public-reader__pdf canvas {
   display: block;
   max-width: 100%;
   height: auto;
-  background: #ffffff;
+  background: var(--book-reader-surface);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   box-shadow: none;
 }
@@ -501,8 +532,8 @@ onBeforeUnmount(() => {
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
-  color: var(--a-color-fg);
+  background: var(--book-reader-surface);
+  color: var(--book-reader-text);
 }
 
 .public-reader__search-row input:focus-visible,
@@ -532,8 +563,8 @@ onBeforeUnmount(() => {
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted, #f8fafc);
-  color: var(--a-color-fg);
+  background: color-mix(in srgb, var(--book-reader-surface) 92%, var(--book-reader-text));
+  color: var(--book-reader-text);
   text-align: left;
   cursor: pointer;
 }

@@ -1,16 +1,24 @@
 <template>
   <main class="a-page-md books-reader">
     <PPageHeader title="阅读" mb="0" />
-
-    <header class="books-reader__header">
-      <RouterLink class="books-back-link" to="/books/library" aria-label="返回我的书库" title="返回我的书库">
-        <ArrowLeft :size="18" aria-hidden="true" />
-      </RouterLink>
-      <div class="books-reader__heading">
-        <h2>{{ asset?.title || '私有电子书' }}</h2>
-        <p v-if="asset">{{ asset.file_name }} · {{ statusLabel }}</p>
-      </div>
-      <div class="books-reader__actions">
+    <BookReaderShell
+      :title="asset?.title || '私有电子书'"
+      :subtitle="asset ? `${asset.file_name} · ${statusLabel}` : ''"
+      :format="formatLabel"
+      :progress="readingPercent"
+      :page-label="pageLabel"
+      :back-to="'/books/library'"
+      back-label="返回我的书库"
+      :can-prev="canPrev"
+      :can-next="canNext"
+      :show-pagination="showPagination"
+      :show-surface="canRead"
+      :toc="epubTOC"
+      @previous="movePrevious"
+      @next="moveNext"
+      @toc-select="jumpToEpubTOC"
+    >
+      <template #actions>
         <PButton
           type="button"
           variant="ghost"
@@ -32,51 +40,12 @@
           <Save :size="16" aria-hidden="true" />
           <span>保存位置</span>
         </PButton>
-      </div>
-    </header>
-
-    <p v-if="errorMessage" class="books-reader__feedback books-reader__feedback--error" role="alert">{{ errorMessage }}</p>
-    <p v-else-if="isLoading" class="books-reader__feedback" aria-live="polite">正在打开电子书...</p>
-    <p v-else-if="asset && !canRead" class="books-reader__feedback" aria-live="polite">{{ unavailableMessage }}</p>
-
-    <section v-if="canRead" class="books-reader__surface" aria-label="电子书阅读器">
-      <div class="books-reader__toolbar">
-        <div class="books-reader__progress tabular-nums" aria-live="polite">
-          <span>阅读进度</span>
-          <strong>{{ Math.round(readingPercent * 100) }}%</strong>
-        </div>
-        <div v-if="asset?.format === 'pdf'" class="books-reader__pagination tabular-nums">
-          <button type="button" aria-label="上一页" title="上一页" :disabled="pdfPage <= 1" @click="changePdfPage(-1)">
-            <ChevronLeft :size="17" aria-hidden="true" />
-          </button>
-          <span>第 {{ pdfPage }} / {{ pdfPageCount }} 页</span>
-          <button type="button" aria-label="下一页" title="下一页" :disabled="pdfPage >= pdfPageCount" @click="changePdfPage(1)">
-            <ChevronRight :size="17" aria-hidden="true" />
-          </button>
-        </div>
-        <div v-else-if="asset?.format === 'epub'" class="books-reader__pagination">
-          <button type="button" aria-label="上一页" title="上一页" @click="moveEpubPage('prev')">
-            <ChevronLeft :size="17" aria-hidden="true" />
-          </button>
-          <span>EPUB</span>
-          <button type="button" aria-label="下一页" title="下一页" @click="moveEpubPage('next')">
-            <ChevronRight :size="17" aria-hidden="true" />
-          </button>
-        </div>
-        <div v-else-if="asset?.format === 'txt' && textPages.length" class="books-reader__pagination tabular-nums">
-          <span>第 {{ textPage }} / {{ textPages.length }} 页</span>
-        </div>
-      </div>
-
-      <details v-if="epubTOC.length > 0" class="books-reader__toc" open>
-        <summary>目录</summary>
-        <ol>
-          <li v-for="item in epubTOC" :key="item.id || item.href">
-            <button type="button" :class="{ 'is-nested': item.depth > 0 }" @click="jumpToEpubTOC(item.href)">{{ item.label }}</button>
-          </li>
-        </ol>
-      </details>
-
+      </template>
+      <template #status>
+        <p v-if="errorMessage" class="books-reader__feedback books-reader__feedback--error" role="alert">{{ errorMessage }}</p>
+        <p v-else-if="isLoading" class="books-reader__feedback" aria-live="polite">正在打开电子书...</p>
+        <p v-else-if="asset && !canRead" class="books-reader__feedback" aria-live="polite">{{ unavailableMessage }}</p>
+      </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="books-reader__text" @scroll="handleTextScroll">
         <div class="books-reader__text-pages">
           <article
@@ -97,26 +66,27 @@
       <div v-else class="books-reader__pdf">
         <canvas ref="pdfCanvas" aria-label="PDF 页面" />
       </div>
-
-      <label class="books-reader__notes">
-        <span>私有笔记</span>
-        <textarea v-model="privateNotes" maxlength="50000" rows="3" placeholder="记录只对你可见的想法" />
-      </label>
-
-      <p class="books-reader__public-status">公共副本与此处的私有阅读进度相互独立。</p>
-    </section>
+      <template #footer>
+        <label class="books-reader__notes">
+          <span>私有笔记</span>
+          <textarea v-model="privateNotes" maxlength="50000" rows="3" placeholder="记录只对你可见的想法" />
+        </label>
+        <p class="books-reader__public-status">公共副本与此处的私有阅读进度相互独立。</p>
+      </template>
+    </BookReaderShell>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { IconArrowLeft as ArrowLeft, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconDownload as Download, IconDeviceFloppy as Save } from '@tabler/icons-vue'
+import { useRoute } from 'vue-router'
+import { IconDownload as Download, IconDeviceFloppy as Save } from '@tabler/icons-vue'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
@@ -175,6 +145,16 @@ let textResizeObserver: ResizeObserver | null = null
 let textPaginationFrame: number | null = null
 
 const canRead = computed(() => ['private_available', 'publication_requested', 'pending_review', 'rejected'].includes(asset.value?.processing_status || ''))
+const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
+const pageLabel = computed(() => {
+  if (asset.value?.format === 'pdf') return `第 ${pdfPage.value} / ${pdfPageCount.value} 页`
+  if (asset.value?.format === 'txt' && textPages.value.length) return `第 ${textPage.value} / ${textPages.value.length} 页`
+  if (asset.value?.format === 'epub') return 'EPUB'
+  return ''
+})
+const showPagination = computed(() => asset.value?.format === 'pdf' || asset.value?.format === 'epub')
+const canPrev = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPage.value > 1))
+const canNext = computed(() => asset.value?.format === 'epub' || (asset.value?.format === 'pdf' && pdfPageCount.value > 0 && pdfPage.value < pdfPageCount.value))
 const statusLabel = computed(() => {
   if (!asset.value) return ''
   if (asset.value.processing_status === 'private_available' || asset.value.processing_status === 'publication_requested' || asset.value.processing_status === 'pending_review' || asset.value.processing_status === 'rejected') return '可以阅读'
@@ -392,6 +372,16 @@ function changePdfPage(delta: number) {
   void renderPDFPage()
 }
 
+function movePrevious() {
+  if (asset.value?.format === 'pdf') changePdfPage(-1)
+  else moveEpubPage('prev')
+}
+
+function moveNext() {
+  if (asset.value?.format === 'pdf') changePdfPage(1)
+  else moveEpubPage('next')
+}
+
 function moveEpubPage(direction: 'prev' | 'next') {
   if (!epubRendition) return
   void (direction === 'prev' ? epubRendition.prev() : epubRendition.next())
@@ -430,60 +420,10 @@ onBeforeUnmount(() => {
   padding-top: var(--a-page-start-space);
 }
 
-.books-reader__header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.books-back-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  color: var(--a-color-muted);
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.books-back-link:hover {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.books-back-link:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-}
-
-.books-reader__heading {
-  min-width: 0;
-}
-
-.books-reader__heading h1,
-.books-reader__heading h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.books-reader__heading p,
 .books-reader__feedback {
   margin: 0.25rem 0 0;
   color: var(--a-color-muted);
   font-size: 0.88rem;
-}
-
-.books-reader__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .books-reader__feedback--error {
@@ -494,117 +434,6 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 0.9rem;
   min-width: 0;
-}
-
-.books-reader__toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  min-height: 2.5rem;
-  padding: 0.25rem 0.75rem;
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control);
-  color: var(--a-color-muted);
-  font-size: 0.88rem;
-}
-
-.books-reader__progress,
-.books-reader__pagination {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.books-reader__progress strong {
-  color: var(--a-color-fg);
-  font-weight: 600;
-}
-
-.books-reader__pagination button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.books-reader__pagination button:hover:not(:disabled) {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.books-reader__pagination button:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-}
-
-.books-reader__pagination button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.books-reader__toc {
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-}
-
-.books-reader__toc summary {
-  padding: 0.65rem 0.85rem;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  font-weight: 500;
-  user-select: none;
-  transition: color 0.15s ease;
-}
-
-.books-reader__toc summary:hover {
-  color: var(--a-color-fg);
-}
-
-.books-reader__toc[open] summary {
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
-}
-
-.books-reader__toc ol {
-  display: grid;
-  gap: 0.15rem;
-  max-height: 16rem;
-  margin: 0;
-  padding: 0.5rem 0.85rem 0.75rem 2rem;
-  overflow: auto;
-  background: #ffffff;
-}
-
-.books-reader__toc button {
-  border: 0;
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  padding: 0.2rem 0;
-}
-
-.books-reader__toc button:hover,
-.books-reader__toc button:focus-visible {
-  text-decoration: underline;
-}
-
-.books-reader__toc button.is-nested {
-  padding-left: 1rem;
-  color: var(--a-color-muted);
 }
 
 .books-reader__text,
@@ -754,19 +583,4 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 640px) {
-  .books-reader__header {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .books-reader__actions {
-    grid-column: 2;
-  }
-
-  .books-reader__toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding-block: 0.6rem;
-  }
-}
 </style>

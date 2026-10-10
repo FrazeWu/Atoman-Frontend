@@ -248,6 +248,7 @@ const editTitle = ref('')
 const editDescription = ref('')
 const editSource = ref('')
 const editReason = ref('')
+let loadRequestID = 0
 
 function editStatusLabel(status: string): string {
   const labels: Record<string, string> = { pending: '待审核', approved: '已通过', rejected: '已驳回', withdrawn: '已撤回' }
@@ -259,32 +260,37 @@ function editTitleLabel(edit: BookEdit): string {
 }
 
 async function load() {
+  const requestID = ++loadRequestID
+  const reviewMode = isReview.value
   loading.value = true
   errorMessage.value = ''
   try {
-    if (isReview.value) {
+    if (reviewMode) {
       const [editResult, publicationResult, reportResult, appealResult] = await Promise.all([
         listBookEditReviewQueue(),
         listPublicationReviewQueue(),
         listPublicationReports(),
         listPublicationAppealReviewQueue(),
       ])
+      if (requestID !== loadRequestID) return
       edits.value = editResult.items
       publicationRequests.value = publicationResult.items
       reports.value = reportResult.items
       publicationAppeals.value = appealResult.items
     } else {
-      edits.value = (await listMyBookEdits()).items
+      const nextEdits = (await listMyBookEdits()).items
+      if (requestID !== loadRequestID) return
+      edits.value = nextEdits
       try {
         publicationRequests.value = (await listMyPublicationRequests()).items
       } catch {
-        publicationRequests.value = []
+        if (requestID === loadRequestID) publicationRequests.value = []
       }
     }
   } catch {
-    errorMessage.value = '审核数据加载失败，请稍后重试'
+    if (requestID === loadRequestID) errorMessage.value = '审核数据加载失败，请稍后重试'
   } finally {
-    loading.value = false
+    if (requestID === loadRequestID) loading.value = false
   }
 }
 

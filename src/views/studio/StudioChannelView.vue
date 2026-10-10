@@ -10,13 +10,11 @@
 
     <form v-if="editing" class="studio-channels__form" @submit.prevent="saveChannel">
       <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
-      <PInput
-        v-model="draft.slug"
-        data-testid="channel-slug"
-        label="Slug"
-        placeholder="channel-name"
-        :hint="channelSlugHint"
-      />
+      <div class="studio-channels__readonly-field">
+        <span class="studio-channels__field-label">UUID</span>
+        <code data-testid="channel-uuid">{{ editingID || '保存后生成' }}</code>
+        <p>系统生成的频道唯一标识，不可修改。</p>
+      </div>
       <PTextarea v-model="draft.description" label="简介" placeholder="频道简介" :rows="3" />
       <div class="studio-channels__cover-field">
         <span class="studio-channels__field-label">封面</span>
@@ -52,7 +50,7 @@
           <strong>{{ channel.name }}</strong>
           <span v-if="channel.id === studio.currentChannel?.id">当前频道</span>
           <p v-if="channel.description">{{ channel.description }}</p>
-          <small>/{{ channel.slug }}</small>
+          <small>UUID：{{ channel.id }}</small>
         </div>
         <div class="studio-channels__actions">
           <PButton
@@ -109,7 +107,6 @@ import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import { channelUrl } from '@/router/siteUrls'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioChannel } from '@/types'
 
@@ -132,17 +129,7 @@ const coverPreviewUrl = ref('')
 const coverObjectUrl = ref('')
 const coverUploading = ref(false)
 const coverUploadError = ref('')
-const draft = reactive({ name: '', slug: '', description: '', cover_url: '' })
-const channelAddress = computed(() => {
-  const slug = draft.slug.trim()
-  if (!slug) return ''
-  const path = channelUrl(slug)
-  return typeof window === 'undefined' ? path : new URL(path, window.location.origin).toString()
-})
-const channelSlugHint = computed(() => {
-  const explanation = 'Slug 是频道链接中的唯一标识，建议使用英文、数字和连字符。修改会影响原链接。'
-  return channelAddress.value ? `${explanation} 当前链接：${channelAddress.value}` : explanation
-})
+const draft = reactive({ name: '', description: '', cover_url: '' })
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
   set: value => { if (!value) pendingDelete.value = null },
@@ -153,7 +140,6 @@ function resetDraft() {
   editing.value = false
   editingID.value = ''
   draft.name = ''
-  draft.slug = ''
   draft.description = ''
   draft.cover_url = ''
   nameError.value = ''
@@ -182,7 +168,6 @@ function startEdit(channel: StudioChannel) {
   editing.value = true
   editingID.value = channel.id
   draft.name = channel.name
-  draft.slug = channel.slug
   draft.description = channel.description || ''
   draft.cover_url = channel.cover_url || ''
   setCoverPreview(draft.cover_url)
@@ -260,7 +245,7 @@ async function saveChannel() {
   }
   const input = {
     name,
-    slug: draft.slug.trim(),
+    slug: '',
     description: draft.description.trim(),
     cover_url: draft.cover_url.trim(),
   }
@@ -328,6 +313,9 @@ onBeforeUnmount(clearCoverPreview)
 .studio-channels__form > :nth-child(n + 3) { grid-column: 1 / -1; }
 .studio-channels__cover-field { display: grid; gap: 0.5rem; grid-column: 1 / -1; }
 .studio-channels__field-label { color: var(--a-color-muted); font-size: 0.8rem; font-weight: 600; }
+.studio-channels__readonly-field { display: grid; gap: 0.35rem; grid-column: 1 / -1; }
+.studio-channels__readonly-field code { width: fit-content; max-width: 100%; overflow-wrap: anywhere; color: var(--a-color-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+.studio-channels__readonly-field p { margin: 0; color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-channels__cover-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .studio-channels__form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; grid-column: 1 / -1; padding-top: 0.25rem; }
 .studio-channels__error { margin: 0; padding: 0.75rem 1rem; border: 1px solid var(--a-color-danger-border); border-radius: var(--a-radius-card); background: color-mix(in srgb, var(--a-color-danger) 5%, var(--a-color-bg)); color: var(--a-color-danger); }

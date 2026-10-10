@@ -1,5 +1,5 @@
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue'
-import { cacheMediaForOffline, getCachedMediaObjectURL, isMediaCached } from '@/utils/mediaOfflineCache'
+import { cacheMediaForOffline, getCachedMediaObjectURL, isMediaCached, removeCachedMedia } from '@/utils/mediaOfflineCache'
 
 export function useOfflineMediaSource(source: Readonly<Ref<string>>) {
   const playbackUrl = ref(source.value)
@@ -51,8 +51,19 @@ export function useOfflineMediaSource(source: Readonly<Ref<string>>) {
     }
   }
 
+  async function removeCurrentMedia() {
+    const url = source.value
+    if (!url) return false
+    await removeCachedMedia(url)
+    requestID += 1
+    releaseObjectURL()
+    playbackUrl.value = url
+    isCached.value = false
+    return true
+  }
+
   watch(source, () => { void refresh() }, { immediate: true })
   onBeforeUnmount(releaseObjectURL)
 
-  return { playbackUrl, isCached, isCaching, cacheError, cacheCurrentMedia, refresh }
+  return { playbackUrl, isCached, isCaching, cacheError, cacheCurrentMedia, removeCurrentMedia, refresh }
 }

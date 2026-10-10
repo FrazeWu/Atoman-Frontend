@@ -40,7 +40,7 @@ import {
 	buildPrefetchCandidates,
 	shufflePlaybackItems,
 } from "@/utils/playerQueue";
-import { cacheMediaForOffline, getCachedMediaObjectURL } from "@/utils/mediaOfflineCache";
+import { cacheMediaForOffline, getCachedMediaObjectURL, removeCachedMedia } from "@/utils/mediaOfflineCache";
 
 const api = useApi();
 const audioStartPrefetchBytes = 512 * 1024;
@@ -83,6 +83,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const currentTime = ref(0);
 	const duration = ref(0);
 	const isLoading = ref(false);
+	const isCurrentAudioCached = ref(false);
 	const playbackError = ref("");
 	const songLibraryLoading = ref(false);
 	const songLibraryBootstrapped = ref(false);
@@ -501,6 +502,7 @@ export const usePlayerStore = defineStore("player", () => {
 		duration.value = 0;
 		isPlaying.value = false;
 		isLoading.value = false;
+		isCurrentAudioCached.value = false;
 		playbackError.value = "";
 		songLibraryLoading.value = false;
 		songLibraryBootstrapped.value = false;
@@ -926,8 +928,10 @@ export const usePlayerStore = defineStore("player", () => {
 		if (cachedSource) {
 			cachedAudioObjectUrl = cachedSource;
 			player.src = cachedSource;
+			isCurrentAudioCached.value = true;
 		} else {
 			player.src = normalizedSong.audio_url;
+			isCurrentAudioCached.value = false;
 		}
 		player.volume = volume.value;
 		const savedProgress =
@@ -1336,6 +1340,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const generation = ++playGeneration;
 		releaseCachedAudioObjectUrl();
 		cachedAudioObjectUrl = cachedSource;
+		isCurrentAudioCached.value = true;
 		player.pause();
 		player.src = cachedSource;
 		player.load();
@@ -1349,6 +1354,19 @@ export const usePlayerStore = defineStore("player", () => {
 		};
 		player.addEventListener('loadedmetadata', restorePosition, { once: true });
 		if (wasPlaying) attemptPlay(player, generation);
+		return true;
+	};
+
+	const removeCurrentAudio = async () => {
+		const song = currentSong.value;
+		if (!song) return false;
+		const url = resolvePlaybackAudioUrl(song.audio_url);
+		await removeCachedMedia(url);
+		if (audio && cachedAudioObjectUrl) {
+			releaseCachedAudioObjectUrl();
+			audio.src = url;
+		}
+		isCurrentAudioCached.value = false;
 		return true;
 	};
 
@@ -1412,6 +1430,8 @@ export const usePlayerStore = defineStore("player", () => {
 		skip,
 		retryPlayback,
 		cacheCurrentAudio,
+		removeCurrentAudio,
+		isCurrentAudioCached,
 		showLyrics,
 		lyricsCloseRequest,
 		toggleLyrics,

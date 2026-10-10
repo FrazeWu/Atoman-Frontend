@@ -45,6 +45,7 @@ async function ensureStudioRoutes(router: Router) {
 function resolveGuestRedirect(value: unknown) {
 	if (typeof value !== "string") return "/feed";
 	if (!value.startsWith("/") || value.startsWith("//")) return "/feed";
+	if (value.includes("\\")) return "/feed";
 	if (/[^\x20-\x7E]/.test(value)) return "/feed";
 	const pathname = value.split(/[?#]/, 1)[0];
 	return guestOnlyPaths.has(pathname) ? "/feed" : value;

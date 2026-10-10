@@ -435,6 +435,18 @@ describe("router auth guards", () => {
 		},
 	);
 
+	it("rejects backslash-based external guest redirects", async () => {
+		const router = await createGuardRouter("blog");
+		const auth = useAuthStore();
+		auth.token = makeToken(3600);
+		auth.user = { username: "member", role: "user" } as never;
+		auth.isAuthenticated = true;
+
+		await router.push({ path: "/login", query: { redirect: "/\\evil.example" } });
+
+		expect(router.currentRoute.value.path).toBe("/feed");
+	});
+
 	it("initializes onboarding after restoring authenticated session", async () => {
 		const auth = useAuthStore();
 		const onboarding = useOnboardingStore();

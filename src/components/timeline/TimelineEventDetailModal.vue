@@ -13,7 +13,7 @@
       <div v-if="event.location" class="tl-detail-field"><span class="tl-field-label">所在位置</span><span>{{ event.location }}</span></div>
       <div v-if="event.source" class="tl-detail-field"><span class="tl-field-label">来源</span><span>{{ event.source }}</span></div>
       <p v-if="event.description" class="tl-detail-desc">{{ event.description }}</p>
-      <div v-if="event.content" class="tl-detail-content" v-html="renderContent(event.content)" />
+      <div v-if="event.content" class="tl-detail-content">{{ event.content }}</div>
       <div v-if="event.tags?.length" class="tl-tags"><span v-for="tag in event.tags" :key="tag" class="a-badge">{{ tag }}</span></div>
       <TimelineRevisionProposal
         :target-id="event.id"
@@ -41,7 +41,6 @@ import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProp
 
 defineProps<{ event: TimelineEvent; canEdit: boolean; formatDatetime: (value: string) => string }>()
 const emit = defineEmits<{ close: []; edit: []; history: []; delete: []; decided: [] }>()
-const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 </script>
 
 <style scoped>
@@ -55,6 +54,6 @@ const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 .tl-detail-field { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; }
 .tl-field-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0; color: var(--a-color-muted); flex-shrink: 0; }
 .tl-detail-desc { font-size: 0.9rem; color: var(--a-color-muted); margin-bottom: 1rem; line-height: 1.6; }
-.tl-detail-content { font-size: 0.875rem; line-height: 1.7; margin-bottom: 1rem; }
+.tl-detail-content { font-size: 0.875rem; line-height: 1.7; margin-bottom: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .tl-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 </style>

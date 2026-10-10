@@ -497,7 +497,7 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   font-size: 2rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .channel-identity-card__cover img {
@@ -524,6 +524,7 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.35rem;
+  font-weight: 500;
   line-height: 1.3;
 }
 

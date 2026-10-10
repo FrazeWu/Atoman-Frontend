@@ -61,7 +61,7 @@ const emit = defineEmits<{
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .blog-related__list {
@@ -127,7 +127,7 @@ const emit = defineEmits<{
   margin: 0;
   overflow: hidden;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

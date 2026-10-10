@@ -121,13 +121,13 @@ const formattedUpdatedAt = computed(() => {
 .blog-entity-card__fallback {
   color: var(--a-color-fg);
   font-size: 1.05rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .blog-entity-card__title {
   margin: 0;
   font-size: 0.92rem;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--a-color-fg);
   overflow: hidden;

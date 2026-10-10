@@ -245,7 +245,7 @@ const triggerCoverUpload = () => coverInput.value?.click()
 .publication-sheet__section-title {
   color: var(--a-color-fg);
   font-size: 0.82rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .publication-sheet__readonly {
@@ -254,7 +254,7 @@ const triggerCoverUpload = () => coverInput.value?.click()
   align-items: center;
   padding: 0 0.85rem;
   border: var(--a-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
   font-size: 0.85rem;
 }
@@ -275,7 +275,7 @@ const triggerCoverUpload = () => coverInput.value?.click()
 }
 
 .publication-sheet__blocking strong {
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .publication-sheet__blocking ul,
@@ -290,7 +290,7 @@ const triggerCoverUpload = () => coverInput.value?.click()
   gap: 0.45rem;
   padding: 0.85rem 0.9rem;
   border: var(--a-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .publication-sheet__suggestions ul {

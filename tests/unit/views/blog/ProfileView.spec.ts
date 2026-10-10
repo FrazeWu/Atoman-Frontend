@@ -196,7 +196,7 @@ describe('ProfileView', () => {
 		expect(wrapper.get('.summary-card').attributes('data-exact-contribution')).toBe('true')
     expect(wrapper.get('[data-testid="profile-following-count"]').text()).toBe('128')
     expect(wrapper.get('[data-testid="profile-followers-count"]').text()).toBe('1k+')
-    expect(wrapper.get('.profile-section__kicker').text()).toBe('CHANNELS')
+    expect(wrapper.get('.profile-section__kicker').text()).toBe('频道')
     expect(wrapper.get('.profile-section__note').text()).toContain('仅显示')
     expect(wrapper.get('.profile-content__filters').exists()).toBe(true)
     expect(wrapper.get('[data-testid="profile-content-filter-all"]').attributes('aria-pressed')).toBe('true')

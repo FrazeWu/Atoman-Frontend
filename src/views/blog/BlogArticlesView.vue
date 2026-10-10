@@ -75,7 +75,7 @@
           <PButton
             v-if="hasMore"
             block
-            outline
+            variant="secondary"
             :loading="loading"
             style="margin-top: 1rem"
             @click="loadMore"
@@ -423,7 +423,7 @@ onMounted(() => {
   margin: 0 0 0.75rem;
   color: var(--a-color-text);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
 }
 

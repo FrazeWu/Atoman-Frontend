@@ -61,7 +61,7 @@ defineEmits<{
 .cover-preview-wrap {
   overflow: hidden;
   border: var(--a-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .cover-preview-image {
@@ -77,7 +77,7 @@ defineEmits<{
   gap: 0.35rem;
   padding: 1rem;
   border: var(--a-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .cover-empty-state strong {

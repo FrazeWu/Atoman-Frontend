@@ -13,7 +13,7 @@
         </div>
         <p v-if="error" class="short-note-timeline__error" role="alert">{{ error }}</p>
         <div v-if="hasMore" ref="loadMoreSentinel" class="short-note-timeline__more">
-          <PButton outline :loading="loading" @click="loadMore">加载更多</PButton>
+          <PButton variant="secondary" :loading="loading" @click="loadMore">加载更多</PButton>
         </div>
       </main>
 
@@ -240,13 +240,13 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   gap: 0.5rem;
   padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
 }
 
 .short-note-timeline__rail-header h2 {
   margin: 0;
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -314,7 +314,7 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 .short-note-timeline__rail-title {
   font-size: 0.85rem;
   line-height: 1.45;
-  font-weight: 550;
+  font-weight: 500;
   color: var(--a-color-fg);
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -339,7 +339,7 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 
 .short-note-timeline__rail-author {
   font-size: 0.85rem;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--a-color-fg);
 }
 

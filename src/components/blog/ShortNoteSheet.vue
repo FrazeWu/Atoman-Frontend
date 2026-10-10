@@ -410,7 +410,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
   color: var(--a-color-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control);
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -422,7 +422,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
 }
 
 .short-note-sheet-action-btn.is-danger:hover {
-  background: #fef2f2;
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
   color: var(--a-color-danger);
   border-color: var(--a-color-danger-border);
 }

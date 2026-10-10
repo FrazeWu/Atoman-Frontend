@@ -2,7 +2,7 @@
   <div class="a-page blog-home">
     <PPageHeader title="发现" accent>
       <template #action>
-        <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
+        <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary">登录</PButton>
         <div v-else class="blog-home__preference-actions">
           <PButton size="sm" variant="ghost" :loading="recommendationPreferenceLoading" @click="toggleRecommendationPreference">
             {{ personalizedRecommendations ? '个性化推荐：开' : '个性化推荐：关' }}
@@ -198,7 +198,7 @@
         <PButton
           v-if="hasMore"
           block
-          outline
+          variant="secondary"
           :loading="loading"
           style="margin-top: 1rem"
           @click="loadMore"
@@ -1016,7 +1016,7 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
 
 .blog-home__digest-item > span {
   font-size: 0.82rem;
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .blog-home__digest-item > small {
@@ -1183,13 +1183,13 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   gap: 0.5rem;
   padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
 }
 
 .blog-home__rail-header h2 {
   margin: 0;
   font-size: 0.875rem;
-  font-weight: 650;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 

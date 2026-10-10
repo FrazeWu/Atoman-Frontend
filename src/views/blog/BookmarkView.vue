@@ -4,7 +4,7 @@
       <template #action>
         <div style="display:flex;align-items:center;gap:0.75rem">
           <PSegmentedControl v-model="sortMode" :options="sortOptions" />
-          <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
+          <PButton size="sm" variant="secondary" @click="showNewFolder = true">+ 新建收藏夹</PButton>
         </div>
       </template>
     </PPageHeader>
@@ -30,7 +30,7 @@
           <span
             @click.stop="requestDeleteFolder(folder.id)"
             class="delete-btn"
-            :style="activeFolder === folder.id ? 'color:#9ca3af' : 'color:#ef4444'"
+            :style="activeFolder === folder.id ? 'color: var(--a-color-muted)' : 'color: var(--a-color-danger)'"
           >✕</span>
         </button>
       </div>
@@ -75,7 +75,7 @@
       />
       <div style="display:flex;gap:.5rem">
         <PButton style="flex:1" @click="createFolder">创建</PButton>
-        <PButton outline @click="showNewFolder = false">取消</PButton>
+        <PButton variant="secondary" @click="showNewFolder = false">取消</PButton>
       </div>
     </PModal>
 
@@ -286,7 +286,7 @@ watch(sortMode, () => {
 }
 
 .sidebar-item:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border-soft);
 }
@@ -296,7 +296,7 @@ watch(sortMode, () => {
   color: var(--a-color-fg);
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .bookmark-post-list.feed-timeline-box {

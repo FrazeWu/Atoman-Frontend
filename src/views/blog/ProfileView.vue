@@ -108,7 +108,7 @@
       <section v-if="!isProfilePrivate" class="profile-section" aria-labelledby="profile-channels-title">
         <div class="profile-section__heading">
           <div>
-            <p class="profile-section__kicker">CHANNELS</p>
+            <p class="profile-section__kicker">频道</p>
             <h2 id="profile-channels-title" class="profile-section__title">频道</h2>
           </div>
           <p class="profile-section__note">仅显示{{ displayName }}创建的频道 · 每个频道可包含所有内容类型</p>
@@ -156,7 +156,7 @@
       <section v-if="!isProfilePrivate" class="profile-section" aria-labelledby="profile-content-title">
         <div class="profile-section__heading">
           <div>
-            <p class="profile-section__kicker">CONTENT</p>
+            <p class="profile-section__kicker">内容</p>
             <h2 id="profile-content-title" class="profile-section__title">内容</h2>
           </div>
           <div class="profile-content__filters" role="group" aria-label="内容筛选">
@@ -809,7 +809,7 @@ onMounted(() => { void loadProfilePage() })
   padding: 1.5rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .profile-header__avatar { margin-top: 0.15rem; }
@@ -831,7 +831,7 @@ onMounted(() => { void loadProfilePage() })
   margin: 0;
   color: var(--a-color-text);
   font-size: 1.75rem;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: 0;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -915,10 +915,10 @@ onMounted(() => { void loadProfilePage() })
 .profile-section { margin-top: 2rem; }
 .profile-section__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .profile-section__kicker { margin: 0 0 0.2rem; color: var(--a-color-primary); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; }
-.profile-section__title { margin: 0; color: var(--a-color-text); font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
+.profile-section__title { margin: 0; color: var(--a-color-text); font-size: 1.15rem; font-weight: 500; line-height: 1.3; }
 .profile-section__note { margin: 0; color: var(--a-color-muted); font-size: 0.78rem; line-height: 1.45; text-align: right; }
 .profile-channel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }
-.profile-channel-card { display: grid; grid-template-rows: 1fr auto; min-width: 0; min-height: 11rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-surface); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.profile-channel-card { display: grid; grid-template-rows: 1fr auto; min-width: 0; min-height: 11rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.15s ease, background-color 0.15s ease; }
 .profile-channel-card:hover,
 .profile-channel-card:focus-within { border-color: var(--a-color-border); background: var(--a-color-surface-muted); }
 .profile-channel-card__link { display: grid; gap: 0.75rem; min-width: 0; color: inherit; text-decoration: none; }
@@ -926,7 +926,7 @@ onMounted(() => { void loadProfilePage() })
 .profile-channel-card__identity { min-width: 0; }
 .profile-channel-card__identity h3 { margin: 0; color: var(--a-color-text); font-size: 1rem; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile-channel-card__handle { margin: 0.25rem 0 0; color: var(--a-color-muted); font-size: 0.75rem; overflow-wrap: anywhere; }
-.profile-channel-card__cover { display: grid; flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; place-items: center; overflow: hidden; border-radius: var(--a-radius-control); background: var(--a-color-text); color: var(--a-color-bg); font-size: 1rem; font-weight: 650; }
+.profile-channel-card__cover { display: grid; flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; place-items: center; overflow: hidden; border-radius: var(--a-radius-control); background: var(--a-color-text); color: var(--a-color-bg); font-size: 1rem; font-weight: 600; }
 .profile-channel-card__cover img { width: 100%; height: 100%; object-fit: cover; }
 .profile-channel-card__description { display: -webkit-box; margin: 0; overflow: hidden; color: var(--a-color-text-secondary); font-size: 0.82rem; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .profile-channel-card__footer { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; margin-top: 0.85rem; padding-top: 0.7rem; border-top: 1px solid var(--a-color-border-soft); color: var(--a-color-muted); font-size: 0.72rem; }
@@ -940,10 +940,10 @@ onMounted(() => { void loadProfilePage() })
 .profile-content__filters { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .profile-content__filters button { min-height: 2rem; padding: 0 0.65rem; border: 1px solid transparent; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-muted); cursor: pointer; font: inherit; font-size: 0.76rem; font-weight: 600; }
 .profile-content__filters button:hover,
-.profile-content__filters button.is-active { border-color: var(--a-color-border-soft); background: var(--a-color-surface); color: var(--a-color-primary); }
+.profile-content__filters button.is-active { border-color: var(--a-color-border-soft); background: var(--a-color-surface-muted); color: var(--a-color-primary); }
 .profile-content__filters button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .profile-content__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; align-items: stretch; }
-.profile-content-card { display: grid; min-width: 0; min-height: 11.5rem; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-surface); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.profile-content-card { display: grid; min-width: 0; min-height: 11.5rem; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.15s ease, background-color 0.15s ease; }
 .profile-content-card:hover,
 .profile-content-card:focus-within { border-color: var(--a-color-border); background: var(--a-color-surface-muted); }
 .profile-content-card > :deep(.blog-item-card) { height: 100%; margin: 0; padding: 0.9rem; border: 0; border-radius: 0; background: transparent; }
@@ -1005,7 +1005,7 @@ onMounted(() => { void loadProfilePage() })
   color: var(--a-color-text-secondary);
   text-align: center;
 }
-.profile-relations-modal__state--error { color: var(--a-color-accent-destructive); }
+.profile-relations-modal__state--error { color: var(--a-color-danger); }
 .profile-relations-modal__list {
   display: grid;
   max-height: min(26rem, 55vh);

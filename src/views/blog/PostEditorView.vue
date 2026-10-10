@@ -845,7 +845,7 @@ watch(() => route.params.id, () => { void initializeEditor() }, { immediate: tru
   gap: 1rem;
   padding: 0 1rem;
   border-top: var(--a-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
@@ -957,12 +957,12 @@ watch(() => route.params.id, () => { void initializeEditor() }, { immediate: tru
 }
 
 .editor-body :deep(.cm-activeLine) {
-  background-color: #fffdf0 !important;
-  box-shadow: -0.75rem 0 #fffdf0, 0.75rem 0 #fffdf0;
+  background-color: var(--a-color-surface-muted) !important;
+  box-shadow: -0.75rem 0 var(--a-color-surface-muted), 0.75rem 0 var(--a-color-surface-muted);
 }
 
 .editor-body :deep(.cm-activeLineGutter) {
-  background-color: #fffdf0 !important;
+  background-color: var(--a-color-surface-muted) !important;
 }
 
 .draft-recovery-actions {
@@ -1005,7 +1005,8 @@ watch(() => route.params.id, () => { void initializeEditor() }, { immediate: tru
 }
 
 .draft-manager-card-accent {
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .draft-manager-preview,

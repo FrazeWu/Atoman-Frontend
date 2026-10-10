@@ -222,10 +222,12 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
   place-items: center;
   aspect-ratio: 4 / 3;
   overflow: hidden;
+  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   font-size: 2rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .collection-sheet-visual img {

@@ -181,7 +181,7 @@ const handleImport = () => fileInput.value?.click()
 
 .editor-topbar__title {
   font-size: 0.86rem;
-  font-weight: 650;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -242,6 +242,7 @@ const handleImport = () => fileInput.value?.click()
   gap: 0.55rem;
   padding: 0.5rem 0.65rem;
   border: 0;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-fg);
   cursor: pointer;
@@ -252,7 +253,7 @@ const handleImport = () => fileInput.value?.click()
 
 .editor-topbar__menu-item:hover,
 .editor-topbar__menu-item:focus-visible {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   outline: none;
 }
 

@@ -114,9 +114,10 @@ function formatDate(value?: string) {
   width: 100%;
   max-height: 22rem;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--a-radius-card);
+  border: 1px solid var(--a-color-border-soft);
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .post-header__cover {
@@ -148,8 +149,8 @@ function formatDate(value?: string) {
 }
 
 .post-header__mode-btn {
-  border-radius: 9999px !important;
-  font-weight: 600 !important;
+  border-radius: var(--a-radius-control) !important;
+  font-weight: 500 !important;
   height: 2rem !important;
   min-height: auto !important;
   padding: 0.25rem 0.85rem !important;
@@ -180,19 +181,18 @@ function formatDate(value?: string) {
 .post-header__avatar {
   width: 2.25rem;
   height: 2.25rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--a-color-primary, #3b82f6), #8b5cf6);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  font-weight: 700;
+  color: var(--a-color-bg);
+  font-weight: 600;
   font-size: 0.85rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .post-header__author-name {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
 }
 </style>

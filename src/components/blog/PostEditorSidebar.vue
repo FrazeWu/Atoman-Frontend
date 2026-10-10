@@ -133,7 +133,7 @@ defineEmits<{
 .outline-node:focus-visible {
   color: var(--a-color-fg);
   border-left-color: var(--a-color-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 .outline-node:focus-visible {
@@ -144,7 +144,7 @@ defineEmits<{
 .outline-node.is-active {
   color: var(--a-color-fg);
   border-left-color: var(--a-color-fg);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   font-weight: 600;
 }
 

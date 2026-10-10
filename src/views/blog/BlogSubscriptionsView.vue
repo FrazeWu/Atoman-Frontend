@@ -3,7 +3,7 @@
     <ModuleSubscriptionSourcesPicker subscription-type="blog" subscription-path="/posts/subscriptions" />
     <PPageHeader title="订阅" accent>
       <template #action>
-        <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
+        <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary">登录</PButton>
       </template>
     </PPageHeader>
 
@@ -56,7 +56,7 @@
       </div>
 
       <div v-if="hasMore && !loading" class="subscription-load-more">
-        <PButton outline @click="loadMore">加载更多</PButton>
+        <PButton variant="secondary" @click="loadMore">加载更多</PButton>
       </div>
       <p v-else-if="loading && posts.length" class="subscription-loading a-muted">加载中...</p>
     </section>

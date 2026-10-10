@@ -53,6 +53,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
+import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -86,6 +87,7 @@ let pdfDocument: PDFDocumentProxy | null = null
 let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
 let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
+let localProgress: LocalBookReadingProgress | null = null
 
 const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
 const pageLabel = computed(() => {
@@ -107,12 +109,18 @@ async function loadText() {
   textContent.value = await contentBlob!.text()
   await nextTick()
   updateTextPageCount()
+  if (localProgress) {
+    const viewport = textViewport.value
+    if (viewport) viewport.scrollTop = localProgress.reading_percent * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+    handleTextScroll()
+  }
 }
 
 async function loadPDF() {
   pdfLoadingTask = getDocument({ data: await contentBlob!.arrayBuffer() })
   pdfDocument = await pdfLoadingTask.promise
   pdfPageCount.value = pdfDocument.numPages
+  if (localProgress) pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, Math.round(localProgress.reading_percent * pdfPageCount.value)))
   await renderPDFPage()
 }
 
@@ -128,6 +136,7 @@ async function renderPDFPage() {
   canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
   await page.render({ canvas, canvasContext: context, viewport }).promise
   readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
 }
 
 async function loadEPUB() {
@@ -135,10 +144,14 @@ async function loadEPUB() {
   await epubBook.ready
   epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
   epubRendition = epubBook.renderTo(epubViewport.value!, { width: '100%', height: '100%', flow: 'paginated', manager: 'default', allowScriptedContent: false })
-  epubRendition.on('relocated', (location: { start?: { percentage?: number } }) => {
+  epubRendition.on('relocated', (location: { start?: { cfi?: string; percentage?: number } }) => {
     readingPercent.value = Math.max(0, Math.min(1, location.start?.percentage || 0))
+    saveLocalBookReadingProgress(asset.value?.id || '', {
+      reading_percent: readingPercent.value,
+      epub_cfi: location.start?.cfi || '',
+    })
   })
-  await epubRendition.display()
+  await epubRendition.display(localProgress?.epub_cfi || undefined)
 }
 
 async function loadComic() {
@@ -146,7 +159,7 @@ async function loadComic() {
   if (format !== 'cbz' && format !== 'cbr') return
   const pages = await extractComicPages(contentBlob!, format)
   comicPages.value = pages.map((page) => ({ ...page, url: URL.createObjectURL(page.blob) }))
-  comicPage.value = 1
+  comicPage.value = localProgress ? Math.min(comicPages.value.length, Math.max(1, Math.round(localProgress.reading_percent * Math.max(1, comicPages.value.length - 1)) + 1)) : 1
   await nextTick()
   scrollToComicPage()
 }
@@ -167,6 +180,7 @@ function handleTextScroll() {
   textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / pageHeight))
   textPage.value = Math.min(textPageCount.value, Math.floor(viewport.scrollTop / pageHeight) + 1)
   readingPercent.value = Math.max(0, Math.min(1, viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight)))
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
 }
 
 function updateTextPageCount() {
@@ -201,6 +215,7 @@ function setComicPageRef(index: number, element: unknown) {
 function scrollToComicPage() {
   comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
   readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
 }
 
 function changeComicPage(delta: number) {
@@ -214,6 +229,7 @@ function changeTextPage(delta: number) {
   textPage.value = nextPage
   textViewport.value?.scrollTo?.({ top: (nextPage - 1) * Math.max(1, textViewport.value?.clientHeight || 0), behavior: 'smooth' })
   readingPercent.value = textPageCount.value > 1 ? (nextPage - 1) / (textPageCount.value - 1) : 1
+  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value })
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {
@@ -229,6 +245,8 @@ onMounted(async () => {
   try {
     const assetID = String(route.params.assetId || '')
     asset.value = await getPublishedBookAsset(assetID)
+    localProgress = getLocalBookReadingProgress(assetID)
+    readingPercent.value = localProgress?.reading_percent || 0
     contentBlob = await fetchPublishedBookAssetContent(assetID)
     await nextTick()
     if (asset.value.format === 'txt') await loadText()

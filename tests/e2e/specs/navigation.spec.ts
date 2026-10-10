@@ -53,6 +53,24 @@ test.describe('Navigation', () => {
     await expect(userBtn).toBeVisible({ timeout: 10000 })
   })
 
+  test('unifies personal workspace and public profile under one entry', async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/feed')
+    await authenticatedPage.locator('.user-btn').click()
+
+    const myLink = authenticatedPage.getByRole('link', { name: '我的', exact: true })
+    await expect(myLink).toBeVisible()
+    await expect(authenticatedPage.getByText('我的空间', { exact: true })).toHaveCount(0)
+    await expect(authenticatedPage.getByText('我的主页', { exact: true })).toHaveCount(0)
+
+    await myLink.click()
+    await expect(authenticatedPage).toHaveURL(/\/me$/)
+    await expect(authenticatedPage.getByTestId('my-space-tab-workspace')).toHaveAttribute('aria-selected', 'true')
+
+    await authenticatedPage.getByTestId('my-space-tab-profile').click()
+    await expect(authenticatedPage).toHaveURL(/\/me\?view=profile$/)
+    await expect(authenticatedPage.getByTestId('my-space-tab-profile')).toHaveAttribute('aria-selected', 'true')
+  })
+
   test('responsive viewport does not crash', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await page.goto('/')

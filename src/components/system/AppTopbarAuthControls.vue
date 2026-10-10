@@ -33,8 +33,7 @@
     </button>
     <Transition name="user-menu">
       <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
-        <RouterLink to="/me" class="dropdown-item" @click="closeDropdown">我的空间</RouterLink>
-        <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
+        <RouterLink to="/me" class="dropdown-item" @click="closeDropdown">我的</RouterLink>
         <RouterLink :to="userSettingsPath" class="dropdown-item" @click="closeDropdown">用户设置</RouterLink>
         <RouterLink v-if="showSiteSettings" to="/site/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
         <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
@@ -49,7 +48,6 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
-import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { IconMail as Mail, IconPencil as PencilLine } from '@tabler/icons-vue'

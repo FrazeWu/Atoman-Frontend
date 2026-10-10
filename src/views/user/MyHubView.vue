@@ -1,5 +1,5 @@
 <template>
-  <main class="my-hub a-page-xl" aria-labelledby="my-hub-title">
+  <section class="my-hub" aria-labelledby="my-hub-title">
     <header class="my-hub__header">
       <div class="my-hub__identity">
         <PAvatar :src="authStore.user?.avatar_url" :name="displayName" :alt="`${displayName}的头像`" size="lg" />
@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="my-hub__header-actions">
-        <PButton variant="secondary" :to="profilePath">我的主页</PButton>
+        <PButton variant="secondary" :to="profilePath">打开公开主页</PButton>
         <PButton variant="ghost" :to="settingsPath">账号设置</PButton>
       </div>
     </header>
@@ -61,7 +61,7 @@
         empty-text="稍后阅读列表为空"
       />
     </section>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">

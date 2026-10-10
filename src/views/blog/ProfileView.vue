@@ -1,6 +1,12 @@
 <template>
   <ChannelView v-if="resolvedChannelSlug" :entity-handle="resolvedChannelSlug" />
-  <main v-else class="profile-page a-page" aria-labelledby="profile-title">
+  <component
+    v-else
+    :is="embedded ? 'section' : 'main'"
+    class="profile-page"
+    :class="{ 'profile-page--embedded': embedded, 'a-page': !embedded }"
+    aria-labelledby="profile-title"
+  >
     <div v-if="loading" class="profile-page__skeleton" role="status" aria-label="正在加载用户资料">
       <div class="a-skeleton profile-page__skeleton-header" />
       <div class="a-skeleton profile-page__skeleton-line" style="width: 40%" />
@@ -220,7 +226,7 @@
         </div>
       </section>
     </template>
-  </main>
+  </component>
 
   <PSheet
     v-if="relationModalOpen"
@@ -321,6 +327,14 @@ type ProfileContentItem =
   | { type: 'video'; sortKey: string; data: Video }
   | { type: 'podcast'; sortKey: string; data: PodcastEpisode }
 
+const props = withDefaults(defineProps<{
+  handle?: string
+  embedded?: boolean
+}>(), {
+  handle: '',
+  embedded: false,
+})
+
 const route = useRoute()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
@@ -368,7 +382,7 @@ const siteContext = computed(() => resolveSiteContext(
   window.location.search,
   window.location.pathname,
 ))
-const username = computed(() => resolvedUsername.value || String(route.params.handle || ''))
+const username = computed(() => resolvedUsername.value || props.handle || String(route.params.handle || ''))
 const isSelf = computed(() => authStore.user?.username === profile.value?.username)
 const isProfilePrivate = computed(() => Boolean(profile.value?.private_profile && !isSelf.value))
 const displayName = computed(() => isProfilePrivate.value
@@ -783,7 +797,7 @@ async function loadProfilePage() {
   }
 }
 
-watch(() => route.fullPath, () => { void loadProfilePage() })
+watch([() => route.fullPath, () => props.handle], () => { void loadProfilePage() })
 onMounted(() => { void loadProfilePage() })
 </script>
 

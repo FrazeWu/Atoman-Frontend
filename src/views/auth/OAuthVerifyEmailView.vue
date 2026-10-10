@@ -38,7 +38,10 @@
             </PButton>
           </div>
         </form>
-        <PButton v-else to="/login" variant="secondary" size="lg" block>返回登录</PButton>
+        <div v-else class="oauth-flow-actions">
+          <PButton v-if="error" type="button" variant="secondary" size="lg" :loading="loadingFlow" @click="loadPending">重试</PButton>
+          <PButton to="/login" variant="secondary" size="lg" block>返回登录</PButton>
+        </div>
       </template>
     </section>
   </div>
@@ -68,7 +71,10 @@ const loadingFlow = ref(true)
 const sending = ref(false)
 const submitting = ref(false)
 
-onMounted(async () => {
+async function loadPending() {
+  loadingFlow.value = true
+  error.value = ''
+  pending.value = null
   try {
     const flow = await getPendingOAuth()
     if (flow.stage !== 'verify_email') throw new Error('登录请求已失效，请重新登录')
@@ -78,7 +84,9 @@ onMounted(async () => {
   } finally {
     loadingFlow.value = false
   }
-})
+}
+
+onMounted(() => { void loadPending() })
 
 async function sendCode() {
   sending.value = true

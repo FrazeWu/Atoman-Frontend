@@ -22,8 +22,13 @@
 
     <!-- Dropdown -->
     <div v-if="open" class="dropdown">
+      <div v-if="loadError" class="dropdown-empty">
+        {{ loadError }}
+        <button type="button" class="add-artist-link" @mousedown.prevent="fetchArtists(query.trim())">重试</button>
+      </div>
       <!-- Filtered results -->
       <div
+        v-else
         v-for="a in filtered"
         :key="a.id"
         class="dropdown-item"
@@ -68,6 +73,7 @@ const wrapRef = ref<HTMLElement | null>(null)
 const query = ref('')
 const open = ref(false)
 const allArtists = ref<Artist[]>([])
+const loadError = ref('')
 let artistRequestID = 0
 let artistSearchTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -138,7 +144,11 @@ const fetchArtists = async (search = '') => {
         .filter((artist) => artist.entry_status !== 'draft')
         .map(toArtistOption),
     )
-  } catch (e) { reportError(e) }
+    loadError.value = ''
+  } catch (e) {
+    reportError(e)
+    if (requestID === artistRequestID) loadError.value = '艺术家列表加载失败'
+  }
 }
 
 const clickOutside = (e: MouseEvent) => {

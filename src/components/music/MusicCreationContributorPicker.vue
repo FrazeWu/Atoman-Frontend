@@ -21,6 +21,7 @@ const emit = defineEmits<{
 
 const query = ref('')
 const loading = ref(false)
+const error = ref('')
 const options = ref<MusicCreationAlbumContributorDraft[]>([])
 const latestRequestId = ref(0)
 
@@ -59,12 +60,14 @@ async function searchArtists(nextQuery: string) {
     latestRequestId.value += 1
     loading.value = false
     options.value = []
+    error.value = ''
     return
   }
 
   const requestId = latestRequestId.value + 1
   latestRequestId.value = requestId
   loading.value = true
+  error.value = ''
 
   try {
     const result = await listMusicArtists({ q: trimmed, page: 1, page_size: 20 })
@@ -75,6 +78,7 @@ async function searchArtists(nextQuery: string) {
   } catch {
     if (requestId !== latestRequestId.value) return
     options.value = []
+    error.value = '搜索失败，请重试'
   } finally {
     if (requestId === latestRequestId.value) {
       loading.value = false
@@ -171,6 +175,10 @@ function createArtistFromQuery() {
 
     <div v-if="query.trim()" class="picker-results">
       <p v-if="loading" class="picker-state">搜索中…</p>
+      <div v-else-if="error" class="picker-empty">
+        <p class="picker-state">{{ error }}</p>
+        <button type="button" class="picker-create" @click="searchArtists(query)">重试</button>
+      </div>
       <div v-else-if="!options.length" class="picker-empty">
         <p class="picker-state">没有匹配的艺人</p>
         <button

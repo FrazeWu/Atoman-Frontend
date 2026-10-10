@@ -78,7 +78,10 @@ vi.mock('@/api/userProfile', () => ({
 function makeRouter() {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/users/:handle', component: ProfileView }],
+    routes: [
+      { path: '/users/:handle', component: ProfileView },
+      { path: '/me', component: ProfileView },
+    ],
   })
 }
 
@@ -139,11 +142,12 @@ function setProfileResponses(privateProfile = false) {
   })
 }
 
-async function mountProfile() {
+async function mountProfile(path = '/users/linmo', props: Record<string, unknown> = {}) {
   const router = makeRouter()
-  await router.push('/users/linmo')
+  await router.push(path)
   await router.isReady()
   const wrapper = mount(ProfileView, {
+    props,
     global: {
       plugins: [router],
       stubs: {
@@ -201,6 +205,14 @@ describe('ProfileView', () => {
     expect(wrapper.get('.profile-content__filters').exists()).toBe(true)
     expect(wrapper.get('[data-testid="profile-content-filter-all"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.findAll('.profile-content-card')).toHaveLength(3)
+  })
+
+  it('loads the full profile from an embedded handle on the personal route', async () => {
+    const wrapper = await mountProfile('/me?view=profile', { handle: 'linmo', embedded: true })
+
+    expect(wrapper.get('.profile-page').element.tagName).toBe('SECTION')
+    expect(wrapper.get('.profile-header__name').text()).toBe('林默')
+    expect(wrapper.get('.profile-channel-card').text()).toContain('设计观察')
   })
 
   it('filters profile content by type without reloading the profile', async () => {

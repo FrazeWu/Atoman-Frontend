@@ -169,7 +169,7 @@ describe('MyHubView', () => {
 		expect(wrapper.text()).toContain('Alice')
 		expect(wrapper.find('a[href="/inbox"]').exists()).toBe(true)
 		expect(wrapper.find('a[href="/studio"]').exists()).toBe(true)
-		expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true)
+		expect(wrapper.find('a[href="/users/alice"]').text()).toContain('打开公开主页')
 		expect(wrapper.find('a[href="/users/alice/settings"]').exists()).toBe(true)
 		expect(wrapper.findAll('.continue-stub').map((item) => item.attributes('data-module'))).toEqual([
 			'blog',

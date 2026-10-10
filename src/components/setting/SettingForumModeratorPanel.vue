@@ -181,6 +181,7 @@ const authStore = useAuthStore()
 
 const loading = ref(false)
 const searching = ref(false)
+let userSearchRequestID = 0
 const saving = ref(false)
 const deletingId = ref('')
 const pendingDeleteAssignment = ref<ForumModeratorAssignment | null>(null)
@@ -270,6 +271,7 @@ async function refresh() {
 }
 
 async function searchUsers() {
+  const requestID = ++userSearchRequestID
   if (!query.value.trim()) return
   searching.value = true
   searchError.value = ''
@@ -285,11 +287,11 @@ async function searchUsers() {
     if (!response.ok) {
       throw new Error(data.error || '搜索用户失败')
     }
-    users.value = data.data || []
+    if (requestID === userSearchRequestID) users.value = data.data || []
   } catch (err) {
-    searchError.value = errorMessage(err, '搜索用户失败')
+    if (requestID === userSearchRequestID) searchError.value = errorMessage(err, '搜索用户失败')
   } finally {
-    searching.value = false
+    if (requestID === userSearchRequestID) searching.value = false
   }
 }
 

@@ -328,14 +328,14 @@ onBeforeUnmount(() => {
 .music-tags-view__eyebrow {
   color: var(--a-color-muted);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .music-tags-view__directory h2 {
   margin: 0.25rem 0 0;
   color: var(--a-color-text);
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .music-tags-view__tabs {
@@ -491,7 +491,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   color: inherit;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

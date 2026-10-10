@@ -326,7 +326,7 @@ onBeforeUnmount(() => {
 .music-tag-results__header h2 {
   color: var(--a-color-text);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .music-tag-results__header span {
@@ -401,7 +401,7 @@ onBeforeUnmount(() => {
   justify-self: start;
   color: var(--a-color-text);
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
 }
 

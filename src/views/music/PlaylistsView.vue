@@ -262,7 +262,7 @@ watch(isAuthenticated, (authenticated) => {
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-fg);
   cursor: pointer;
@@ -361,7 +361,7 @@ watch(isAuthenticated, (authenticated) => {
 
 .music-playlists__form-error,
 .music-playlists__state--error {
-  color: var(--a-color-danger, #ff3b30);
+  color: var(--a-color-danger);
 }
 
 .music-playlists__section + .music-playlists__section {

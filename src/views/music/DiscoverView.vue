@@ -1174,7 +1174,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .state-line--error {
-  color: #8a2f2f;
+  color: var(--a-color-danger);
 }
 
 .music-home-section {
@@ -1192,7 +1192,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .music-home-section__header h2 {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .music-home-section__reason {

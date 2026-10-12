@@ -134,7 +134,7 @@ defineEmits(['click'])
   transform: translateY(-50%);
   width: 2px;
   height: 14px;
-  border-radius: 999px;
+  border-radius: var(--a-radius-none, 0px);
   background-color: var(--a-color-success);
   opacity: 1;
   transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);

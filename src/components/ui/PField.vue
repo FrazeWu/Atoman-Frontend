@@ -2,7 +2,7 @@
   <div class="p-field p-field--line" :class="{ 'p-field--error': error }">
     <label v-if="label" class="p-field-label">
       {{ label }}
-      <span v-if="required" class="text-red-500">*</span>
+      <span v-if="required" class="p-field-required">*</span>
     </label>
     
     <div class="p-field-content">
@@ -24,11 +24,14 @@ defineProps<{
 </script>
 
 <style scoped>
+.p-field-required {
+  color: var(--a-color-danger);
+}
 .p-field-error-msg {
   font-size: 0.75rem;
   color: var(--a-color-danger);
   margin-top: 0.25rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 .p-field-hint {
   font-size: 0.75rem;

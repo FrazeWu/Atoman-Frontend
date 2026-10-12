@@ -614,7 +614,7 @@ const mobileSheetStyle = computed(() => {
   flex: 1;
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .p-sheet-mobile-page__back {

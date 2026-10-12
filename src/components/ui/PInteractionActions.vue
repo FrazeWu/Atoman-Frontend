@@ -132,7 +132,7 @@ const dislikePercentage = computed(() => {
   width: 100%;
   height: 4px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-border-soft, #e2e8f0);
 }
 

@@ -175,7 +175,7 @@ onUnmounted(() => {
   width: 200px;
   height: 3px;
   background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.07));
-  border-radius: 999px;
+  border-radius: var(--a-radius-none, 0px);
   overflow: hidden;
 }
 
@@ -183,8 +183,8 @@ onUnmounted(() => {
 .p-content-progress__bar {
   height: 100%;
   width: 45%;
-  background: var(--a-color-primary, #3b82f6);
-  border-radius: 999px;
+  background: var(--a-color-primary);
+  border-radius: var(--a-radius-none, 0px);
   animation: p-bar-slide 1.6s linear infinite;
 }
 
@@ -221,7 +221,7 @@ onUnmounted(() => {
 .p-content-progress__retry-link {
   border: 0;
   background: none;
-  color: var(--a-color-primary, #3b82f6);
+  color: var(--a-color-primary);
   font-size: inherit;
   font-weight: 500;
   cursor: pointer;

@@ -118,7 +118,7 @@ onUnmounted(() => {
   transform: translateX(-50%);
   border-radius: var(--a-radius-none, 4px);
   padding: 8px 14px;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   border: 1px solid var(--a-color-border);
   box-shadow: var(--a-shadow-dropdown);
@@ -132,7 +132,7 @@ onUnmounted(() => {
   max-width: none;
   margin: 1rem 0;
   transform: none;
-  border-radius: 8px;
+  border-radius: var(--a-radius-card, 4px);
   box-shadow: none;
 }
 

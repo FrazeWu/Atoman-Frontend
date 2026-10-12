@@ -111,4 +111,56 @@ describe("AudioPlayerQueue.vue", () => {
 		);
 		expect(source).not.toContain("prefers-reduced-motion: reduce");
 	});
+
+	it("reorders queue items directly when changing sequence number in the sequence input", async () => {
+		const player = usePlayerStore();
+		player.queue = [
+			{ id: "song-1", title: "Song 1", artist: "Artist", audio_url: "/1.mp3" },
+			{ id: "song-2", title: "Song 2", artist: "Artist", audio_url: "/2.mp3" },
+			{ id: "song-3", title: "Song 3", artist: "Artist", audio_url: "/3.mp3" },
+		] as Song[];
+
+		const wrapper = mount(AudioPlayerQueue);
+		const inputs = wrapper.findAll(".q-sequence__input");
+		expect(inputs.length).toBeGreaterThanOrEqual(1);
+
+		// Change item 1 to position 3
+		const firstInput = inputs[0]!;
+		firstInput.element.value = "3";
+		await firstInput.trigger("change");
+
+		expect(player.queue.map((s: Song) => s.id)).toEqual([
+			"song-2",
+			"song-3",
+			"song-1",
+		]);
+		wrapper.unmount();
+	});
+
+	it("displaces neighboring rows up or down during dragover", async () => {
+		const player = usePlayerStore();
+		player.queue = [
+			{ id: "song-1", title: "Song 1", artist: "Artist", audio_url: "/1.mp3" },
+			{ id: "song-2", title: "Song 2", artist: "Artist", audio_url: "/2.mp3" },
+			{ id: "song-3", title: "Song 3", artist: "Artist", audio_url: "/3.mp3" },
+		] as Song[];
+
+		const wrapper = mount(AudioPlayerQueue);
+		const items = wrapper.findAll(".queue-item");
+		expect(items).toHaveLength(3);
+
+		const dataTransfer = { dropEffect: "move", setData: vi.fn(), setDragImage: vi.fn() };
+		await wrapper.findAll(".q-drag")[0]!.trigger("dragstart", { dataTransfer });
+
+		// Dragging item 0 downwards over slot 2
+		await wrapper
+			.get('[data-testid="queue-drop-slot-2"]')
+			.trigger("dragover", { dataTransfer });
+
+		expect(items[0]!.classes()).toContain("is-dragged");
+		expect(items[1]!.classes()).toContain("is-displaced-up");
+
+		wrapper.unmount();
+	});
 });
+

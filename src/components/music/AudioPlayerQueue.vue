@@ -44,11 +44,13 @@
             />
             <div
               class="queue-item"
-              :class="{
-                active: isSongActive(song),
-                'is-dragged': draggedQueueIndex === index,
-              }"
+              :class="[
+                { active: isSongActive(song) },
+                getQueueDisplacementClass(index),
+              ]"
               @click="player.playQueuedSong(song)"
+              @dragover.prevent="handleQueueItemDragOver(index, $event)"
+              @drop="dropQueueRow(index, $event)"
             >
               <!-- 拖动把手 -->
               <button
@@ -58,7 +60,7 @@
                 :aria-label="`拖动 ${song.title}`"
                 title="拖动排序"
                 @click.stop
-                @dragstart="draggedQueueIndex = index"
+                @dragstart="handleQueueDragStart(index, $event)"
                 @dragend="clearQueueDragState"
               >
                 <GripVertical :size="15" aria-hidden="true" />
@@ -71,7 +73,21 @@
                   <span class="eq-bar" />
                   <span class="eq-bar" />
                 </div>
-                <span v-else class="q-idx">{{ (index + 1).toString().padStart(2, '0') }}</span>
+                <span class="q-sequence" :class="{ 'is-active-track': isSongActive(song) }">
+                  <span class="q-sequence__text">{{ (index + 1).toString().padStart(2, '0') }}</span>
+                  <input
+                    class="q-sequence__input"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    :value="(index + 1).toString().padStart(2, '0')"
+                    :aria-label="`修改歌曲 ${song.title} 队列序号`"
+                    title="修改序号以重排"
+                    @click.stop
+                    @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+                    @change="handleQueueSequenceChange(index, $event)"
+                  />
+                </span>
               </div>
 
               <!-- 标题与艺人 -->
@@ -156,6 +172,7 @@ const { handleKeydown: handleDialogKeydown } = useDialogFocus(
 )
 const draggedQueueIndex = ref<number | null>(null)
 const dragOverQueueIndex = ref<number | null>(null)
+const hoverQueueIndex = ref<number | null>(null)
 const playbackModeLabel = computed(() => {
   const labels = {
     loop: '循环播放',
@@ -174,10 +191,56 @@ function moveQueueItem(from: number, to: number) {
   player.moveQueueItem(from, to)
 }
 
-function handleQueueDragOver(index: number, event: DragEvent) {
+function handleQueueSequenceChange(index: number, event: Event) {
+  const input = event.target as HTMLInputElement
+  const rawValue = input.value.trim()
+  const parsed = parseInt(rawValue, 10)
+  if (isNaN(parsed) || parsed < 1) {
+    input.value = (index + 1).toString().padStart(2, '0')
+    return
+  }
+  const clamped = Math.max(1, Math.min(player.queue.length, parsed))
+  const targetIndex = clamped - 1
+  if (targetIndex !== index) {
+    moveQueueItem(index, targetIndex)
+  }
+}
+
+function handleQueueDragStart(index: number, event: DragEvent) {
+  draggedQueueIndex.value = index
+  hoverQueueIndex.value = index
+  if (typeof event.dataTransfer?.setData === 'function') {
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+
+  const target = event.target as HTMLElement | null
+  const row = target?.closest<HTMLElement>('.queue-item')
+  if (row) {
+    const list = row.closest<HTMLElement>('.queue-list')
+    if (list && typeof list.style?.setProperty === 'function') {
+      list.style.setProperty('--dragged-item-height', `${row.offsetHeight || 52}px`)
+    }
+    if (typeof event.dataTransfer?.setDragImage === 'function') {
+      event.dataTransfer.setDragImage(row, 24, Math.round((row.offsetHeight || 52) / 2))
+    }
+  }
+}
+
+function handleQueueDragOver(insertionIndex: number, event: DragEvent) {
   if (draggedQueueIndex.value === null) return
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
-  dragOverQueueIndex.value = index
+  dragOverQueueIndex.value = insertionIndex
+  const sourceIndex = draggedQueueIndex.value
+  hoverQueueIndex.value = insertionIndex <= sourceIndex ? insertionIndex : insertionIndex - 1
+}
+
+function handleQueueItemDragOver(index: number, event: DragEvent) {
+  if (draggedQueueIndex.value === null) return
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  const sourceIndex = draggedQueueIndex.value
+  hoverQueueIndex.value = index
+  dragOverQueueIndex.value = index > sourceIndex ? index + 1 : index
 }
 
 function handleQueueDragLeave(index: number) {
@@ -187,6 +250,22 @@ function handleQueueDragLeave(index: number) {
 function clearQueueDragState() {
   draggedQueueIndex.value = null
   dragOverQueueIndex.value = null
+  hoverQueueIndex.value = null
+}
+
+function getQueueDisplacementClass(index: number) {
+  if (draggedQueueIndex.value === null || hoverQueueIndex.value === null) return {}
+  if (index === draggedQueueIndex.value) return { 'is-dragged': true }
+  const source = draggedQueueIndex.value
+  const target = hoverQueueIndex.value
+
+  if (target < source && index >= target && index < source) {
+    return { 'is-displaced-down': true }
+  }
+  if (target > source && index <= target && index > source) {
+    return { 'is-displaced-up': true }
+  }
+  return {}
 }
 
 function dropQueueItem(insertionIndex: number, event: DragEvent) {
@@ -196,6 +275,14 @@ function dropQueueItem(insertionIndex: number, event: DragEvent) {
   if (sourceIndex === null) return
   const targetIndex = sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex
   moveQueueItem(sourceIndex, targetIndex)
+}
+
+function dropQueueRow(index: number, event: DragEvent) {
+  event.preventDefault()
+  const sourceIndex = draggedQueueIndex.value
+  clearQueueDragState()
+  if (sourceIndex === null || sourceIndex === index) return
+  moveQueueItem(sourceIndex, index)
 }
 
 function handleKeydown(event: KeyboardEvent) {
@@ -348,8 +435,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   gap: 0.75rem;
   padding: 0.65rem 1.25rem;
   cursor: pointer;
-  transition: background-color 0.18s, color 0.18s;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), background-color 0.18s, color 0.18s;
+  will-change: transform;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 5%, transparent);
+}
+
+.queue-item.is-displaced-down {
+  transform: translateY(calc(var(--dragged-item-height, 52px) + 0.25rem));
+}
+
+.queue-item.is-displaced-up {
+  transform: translateY(calc(-1 * (var(--dragged-item-height, 52px) + 0.25rem)));
 }
 
 /* 贯穿完整黑线 Hover 效果 */
@@ -371,7 +467,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 .queue-item.is-dragged {
-  opacity: 0.4;
+  opacity: 0.35;
+  background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-bg));
 }
 
 .queue-item:hover:not(.active) {
@@ -384,10 +481,84 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 }
 
 .q-visual {
-  width: 20px;
+  min-width: 2.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.q-sequence {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.q-sequence.is-active-track {
+  display: none;
+}
+
+.queue-item:hover .q-sequence.is-active-track,
+.queue-item:focus-within .q-sequence.is-active-track {
+  display: inline-flex;
+}
+
+.queue-item:hover .q-equalizer,
+.queue-item:focus-within .q-equalizer {
+  display: none;
+}
+
+.q-sequence__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.q-sequence__input {
+  width: 2.1rem;
+  height: 1.65rem;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+  font-family: var(--a-font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--a-color-text);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.queue-item.active .q-sequence__input {
+  background: color-mix(in srgb, var(--a-color-bg) 15%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-bg) 30%, transparent);
+  color: var(--a-color-bg);
+}
+
+.q-sequence__input:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+}
+
+.queue-item.active .q-sequence__input:hover {
+  background: color-mix(in srgb, var(--a-color-bg) 25%, transparent);
+  border-color: var(--a-color-bg);
+}
+
+.q-sequence__input:focus {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-bg);
+  box-shadow: 0 0 0 1px var(--a-color-primary);
+  color: var(--a-color-text);
 }
 
 .q-idx {

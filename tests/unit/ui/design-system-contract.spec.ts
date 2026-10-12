@@ -125,4 +125,21 @@ describe("modern flat UI design-system contract", () => {
     );
     expect(textarea).toContain("border: 1px solid var(--a-color-border-soft);");
   });
+
+  it("prohibits backdrop-filter blur across all source files", () => {
+    const source = sourceText("src");
+    expect(source).not.toMatch(/backdrop-filter:\s*blur/);
+  });
+
+  it("enforces pure-white surface and 4px radius on PToast and PDirectoryNav", () => {
+    const toast = read("src/components/ui/PToast.vue");
+    const nav = read("src/components/ui/PDirectoryNav.vue");
+    const field = read("src/components/ui/PField.vue");
+
+    expect(toast).not.toContain("border-radius: 8px");
+    expect(nav).not.toContain("border-radius: 8px");
+    expect(field).not.toMatch(/font-weight:\s*700/);
+    expect(field).not.toContain("text-red-500");
+  });
 });
+

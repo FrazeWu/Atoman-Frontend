@@ -533,6 +533,7 @@ onMounted(() => void loadWorkPage())
 .books-detail__section h2 {
   margin: 0;
   font-size: 1.05rem;
+  font-weight: 500;
 }
 
 .books-detail__engagement {

@@ -38,8 +38,36 @@
       <p v-if="actionError" class="studio-collection-detail__message studio-collection-detail__message--error" role="alert">{{ actionError }}</p>
       <p v-if="!items.length" class="studio-collection-detail__message">暂无内容</p>
       <ol v-else class="studio-collection-detail__list">
-        <li v-for="(item, index) in items" :key="item.content_id">
-          <span class="studio-collection-detail__position" aria-hidden="true">{{ index + 1 }}</span>
+        <li
+          v-for="(item, index) in items"
+          :key="item.content_id"
+          :class="getDisplacementClass(index)"
+          @dragover.prevent="handleItemDragOver(index, $event)"
+          @drop="handleDrop(index, $event)"
+        >
+          <div
+            class="studio-collection-detail__drag-handle"
+            draggable="true"
+            title="拖拽排序"
+            @dragstart="handleDragStart(index, $event)"
+            @dragend="clearDragState"
+          >
+            <GripVertical :size="15" aria-hidden="true" />
+          </div>
+          <span class="collection-item-sequence">
+            <span class="collection-item-sequence__text">{{ index + 1 }}</span>
+            <input
+              class="collection-item-sequence__input"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              :value="index + 1"
+              :aria-label="`修改内容 ${item.title || itemLabels[item.module]} 序号`"
+              title="修改序号以重排"
+              @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+              @change="handleSequenceChange(index, $event)"
+            />
+          </span>
           <span class="studio-collection-detail__module" :data-module="item.module">
             <component :is="moduleIcons[item.module]" :size="16" aria-hidden="true" />
             {{ moduleLabels[item.module] }}
@@ -125,7 +153,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { IconArrowLeft as ArrowLeft, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconFileText as FileText, IconMicrophone2 as Mic2, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconVideo as Video } from '@tabler/icons-vue'
+import { IconArrowLeft as ArrowLeft, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconFileText as FileText, IconGripVertical as GripVertical, IconMicrophone2 as Mic2, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconVideo as Video } from '@tabler/icons-vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'
@@ -146,6 +174,8 @@ const loading = ref(true)
 const error = ref('')
 const actionError = ref('')
 const reordering = ref(false)
+const draggedItemIndex = ref<number | null>(null)
+const hoverItemIndex = ref<number | null>(null)
 const candidateModalOpen = ref(false)
 const candidateSearch = ref('')
 const candidateLoading = ref(false)
@@ -205,11 +235,13 @@ async function load() {
   }
 }
 
-async function moveItem(index: number, direction: -1 | 1) {
-  const target = index + direction
-  if (reordering.value || target < 0 || target >= items.value.length) return
+async function reorderTo(sourceIndex: number, targetIndex: number) {
+  if (reordering.value || sourceIndex === targetIndex) return
   const ordered = [...items.value]
-  ;[ordered[index], ordered[target]] = [ordered[target], ordered[index]]
+  const [moved] = ordered.splice(sourceIndex, 1)
+  if (!moved) return
+  ordered.splice(targetIndex, 0, moved)
+
   reordering.value = true
   actionError.value = ''
   try {
@@ -221,6 +253,82 @@ async function moveItem(index: number, direction: -1 | 1) {
     actionError.value = cause instanceof Error ? cause.message : '排序保存失败'
   } finally {
     reordering.value = false
+  }
+}
+
+async function moveItem(index: number, direction: -1 | 1) {
+  const target = index + direction
+  if (target < 0 || target >= items.value.length) return
+  await reorderTo(index, target)
+}
+
+function handleDragStart(index: number, event: DragEvent) {
+  draggedItemIndex.value = index
+  hoverItemIndex.value = index
+  if (typeof event.dataTransfer?.setData === 'function') {
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+
+  const target = event.target as HTMLElement | null
+  const row = target?.closest<HTMLElement>('li')
+  if (row) {
+    const list = row.closest<HTMLElement>('.studio-collection-detail__list')
+    if (list && typeof list.style?.setProperty === 'function') {
+      list.style.setProperty('--dragged-item-height', `${row.offsetHeight || 68}px`)
+    }
+    if (typeof event.dataTransfer?.setDragImage === 'function') {
+      event.dataTransfer.setDragImage(row, 24, Math.round((row.offsetHeight || 68) / 2))
+    }
+  }
+}
+
+function handleItemDragOver(index: number, event: DragEvent) {
+  if (draggedItemIndex.value === null) return
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  hoverItemIndex.value = index
+}
+
+function clearDragState() {
+  draggedItemIndex.value = null
+  hoverItemIndex.value = null
+}
+
+function getDisplacementClass(index: number) {
+  if (draggedItemIndex.value === null || hoverItemIndex.value === null) return {}
+  if (index === draggedItemIndex.value) return { 'is-dragged': true }
+  const source = draggedItemIndex.value
+  const target = hoverItemIndex.value
+
+  if (target < source && index >= target && index < source) {
+    return { 'is-displaced-down': true }
+  }
+  if (target > source && index <= target && index > source) {
+    return { 'is-displaced-up': true }
+  }
+  return {}
+}
+
+async function handleDrop(targetIndex: number, event: DragEvent) {
+  event.preventDefault()
+  const sourceIndex = draggedItemIndex.value
+  clearDragState()
+  if (sourceIndex === null || sourceIndex === targetIndex) return
+  await reorderTo(sourceIndex, targetIndex)
+}
+
+async function handleSequenceChange(index: number, event: Event) {
+  const input = event.target as HTMLInputElement
+  const rawValue = input.value.trim()
+  const parsed = parseInt(rawValue, 10)
+  if (isNaN(parsed) || parsed < 1) {
+    input.value = String(index + 1)
+    return
+  }
+  const clamped = Math.max(1, Math.min(items.value.length, parsed))
+  const targetIndex = clamped - 1
+  if (targetIndex !== index) {
+    await reorderTo(index, targetIndex)
   }
 }
 
@@ -308,8 +416,100 @@ watch(() => studio.currentChannel?.id, (current, previous) => {
 .studio-collection-detail__message { margin: 0; padding: 1.5rem 0; color: var(--a-color-muted); }
 .studio-collection-detail__message--error { color: var(--a-color-danger); }
 .studio-collection-detail__list { display: grid; gap: 0; margin: 0; padding: 0; border-top: 1px solid var(--a-color-border-soft); list-style: none; }
-.studio-collection-detail__list li { min-width: 0; display: grid; grid-template-columns: 2rem 5rem minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; min-height: 4.25rem; border-bottom: 1px solid var(--a-color-border-soft); }
-.studio-collection-detail__position { color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; text-align: center; }
+.studio-collection-detail__list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 2.2rem 5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+  will-change: transform;
+}
+
+.studio-collection-detail__list li.is-displaced-down {
+  transform: translateY(calc(var(--dragged-item-height, 68px)));
+}
+
+.studio-collection-detail__list li.is-displaced-up {
+  transform: translateY(calc(-1 * var(--dragged-item-height, 68px)));
+}
+
+.studio-collection-detail__list li.is-dragged {
+  opacity: 0.35;
+  background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-bg));
+}
+
+.studio-collection-detail__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 2.75rem;
+  color: var(--a-color-muted-soft);
+  cursor: grab;
+  touch-action: none;
+  transition: color 0.15s ease;
+}
+
+.studio-collection-detail__drag-handle:hover {
+  color: var(--a-color-muted);
+}
+
+.studio-collection-detail__drag-handle:active {
+  cursor: grabbing;
+}
+
+.collection-item-sequence {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collection-item-sequence__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.collection-item-sequence__input {
+  width: 2.1rem;
+  height: 1.75rem;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--a-color-text);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.collection-item-sequence__input:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+}
+
+.collection-item-sequence__input:focus {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-bg);
+  box-shadow: 0 0 0 1px var(--a-color-primary);
+  color: var(--a-color-text);
+}
+
 .studio-collection-detail__module { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
 .studio-collection-detail__content { min-width: 0; display: grid; gap: 0.15rem; color: var(--a-color-text); text-decoration: none; }
 .studio-collection-detail__content:hover { color: var(--a-color-primary); }
@@ -322,9 +522,9 @@ watch(() => studio.currentChannel?.id, (current, previous) => {
   .studio-collection-detail__header-actions { width: 100%; }
   .studio-collection-detail__header-actions > * { flex: 1; }
   .studio-collection-detail__back { width: 100%; }
-  .studio-collection-detail__list li { grid-template-columns: 1.5rem minmax(0, 1fr) auto; gap: 0.5rem; min-height: 5rem; }
-  .studio-collection-detail__module { grid-column: 2; }
-  .studio-collection-detail__content { grid-column: 2; }
-  .studio-collection-detail__actions { grid-column: 3; grid-row: 1 / span 2; }
+  .studio-collection-detail__list li { grid-template-columns: auto 2.2rem minmax(0, 1fr) auto; gap: 0.5rem; min-height: 5rem; }
+  .studio-collection-detail__module { grid-column: 3; }
+  .studio-collection-detail__content { grid-column: 3; }
+  .studio-collection-detail__actions { grid-column: 4; grid-row: 1 / span 2; }
 }
 </style>

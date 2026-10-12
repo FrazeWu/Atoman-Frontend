@@ -50,4 +50,43 @@ describe('StudioUnifiedCollectionDetailView', () => {
       'content-blog',
     ])
   })
+
+  it('reorders collection items when directly typing new position into sequence input', async () => {
+    const { wrapper, store } = await setup()
+
+    const inputs = wrapper.findAll('.collection-item-sequence__input')
+    expect(inputs.length).toBe(2)
+
+    // Move first item to position 2
+    const firstInput = inputs[0]!
+    firstInput.element.value = '2'
+    await firstInput.trigger('change')
+
+    expect(store.reorderUnifiedCollectionContents).toHaveBeenCalledWith('collection-1', [
+      'content-video',
+      'content-blog',
+    ])
+  })
+
+  it('displaces items during dragover and updates order on drop', async () => {
+    const { wrapper, store } = await setup()
+
+    const dragHandles = wrapper.findAll('.studio-collection-detail__drag-handle')
+    expect(dragHandles.length).toBe(2)
+
+    const items = wrapper.findAll('.studio-collection-detail__list li')
+    const dataTransfer = { dropEffect: 'move', setData: vi.fn(), setDragImage: vi.fn() }
+
+    await dragHandles[0]!.trigger('dragstart', { dataTransfer })
+    await items[1]!.trigger('dragover', { dataTransfer })
+
+    expect(items[0]!.classes()).toContain('is-dragged')
+    expect(items[1]!.classes()).toContain('is-displaced-up')
+
+    await items[1]!.trigger('drop', { dataTransfer })
+    expect(store.reorderUnifiedCollectionContents).toHaveBeenCalledWith('collection-1', [
+      'content-video',
+      'content-blog',
+    ])
+  })
 })

@@ -165,7 +165,7 @@ watch(() => authStore.isAuthenticated, (authenticated) => {
   gap: 1rem;
 }
 
-.book-private-upload__header h2 { margin: 0; }
+.book-private-upload__header h2 { margin: 0; font-weight: 500; }
 .book-private-upload__header p,
 .book-private-upload__feedback,
 .book-private-upload__empty { margin: 0.35rem 0 0; color: var(--a-color-muted); font-size: 0.88rem; }
@@ -173,6 +173,7 @@ watch(() => authStore.isAuthenticated, (authenticated) => {
 .book-private-upload__input { display: none; }
 .book-private-upload__list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--a-color-border-soft); }
 .book-private-upload__list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
+.book-private-upload__list strong { font-weight: 500; }
 .book-private-upload__list strong,
 .book-private-upload__list span { display: block; }
 .book-private-upload__list span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.8125rem; }

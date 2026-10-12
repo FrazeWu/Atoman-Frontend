@@ -496,22 +496,22 @@ onBeforeUnmount(() => {
   height: 3px;
   margin-top: 0.6rem;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   background-color: var(--a-color-border-soft);
   accent-color: var(--a-color-primary);
   overflow: hidden;
 }
 .books-continue-list progress::-webkit-progress-bar {
   background-color: var(--a-color-border-soft);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
 }
 .books-continue-list progress::-webkit-progress-value {
   background-color: var(--a-color-primary);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
 }
 .books-continue-list progress::-moz-progress-bar {
   background-color: var(--a-color-primary);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
 }
 @media (max-width: 480px) { .books-grid, .books-shelf-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1rem; } }
 
@@ -532,7 +532,7 @@ onBeforeUnmount(() => {
 .books-library__header h2 {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: var(--a-font-weight-strong, 700);
+  font-weight: 500;
 }
 
 .books-library__meta,

@@ -29,13 +29,13 @@
 - Consumes: `usePlayerStore()`, `moveQueueItem(currentIndex, targetIndex)`
 - Produces: Polished `.queue-item` with `.q-sequence` editable input and `.is-displaced-down` / `.is-displaced-up` classes
 
-- [ ] **Step 1: Add unit tests for queue sequence editing and displacement**
+- [x] **Step 1: Add unit tests for queue sequence editing and displacement**
   In `tests/unit/components/music/AudioPlayerQueue.spec.ts`, add test cases:
   - Reordering queue item via typing target sequence into `.q-sequence-input` (e.g. changing item 1 to 3 moves it to index 2).
   - Hovering / drag-over applies displacement classes to sibling rows.
   Run: `bun run test:unit tests/unit/components/music/AudioPlayerQueue.spec.ts` (verify new assertions fail).
 
-- [ ] **Step 2: Implement editable sequence input in `AudioPlayerQueue.vue`**
+- [x] **Step 2: Implement editable sequence input in `AudioPlayerQueue.vue`**
   - In `AudioPlayerQueue.vue`, replace the static `.q-idx` text with:
     ```html
     <span class="q-sequence">
@@ -58,7 +58,7 @@
     - Parse integer, clamp between `1` and `player.queue.length`.
     - If valid and different from `index + 1`, call `moveQueueItem(index, targetIndex)`.
 
-- [ ] **Step 3: Implement real-time displacement animation in `AudioPlayerQueue.vue`**
+- [x] **Step 3: Implement real-time displacement animation in `AudioPlayerQueue.vue`**
   - Add refs: `draggedQueueIndex`, `hoverQueueIndex`, `dragOverInsertionIndex`.
   - In `handleQueueDragStart(index, event)`: set `draggedQueueIndex`, dynamically set list property `--dragged-item-height` based on `row.offsetHeight`.
   - In `handleQueueDragOver(insertionIndex, event)`: calculate `hoverQueueIndex` to indicate the target insertion point.
@@ -70,11 +70,11 @@
     - Add transition: `transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease`.
     - Add `.queue-item.is-displaced-down` and `.queue-item.is-displaced-up` transforms using `var(--dragged-item-height, 52px)`.
 
-- [ ] **Step 4: Verify AudioPlayerQueue unit tests pass**
+- [x] **Step 4: Verify AudioPlayerQueue unit tests pass**
   Run: `bun run test:unit tests/unit/components/music/AudioPlayerQueue.spec.ts`
   Confirm all tests pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
   Commit: `feat(music): add real-time displacement and editable sequence reorder to AudioPlayerQueue`
 
 ---
@@ -89,20 +89,20 @@
 - Consumes: `useStudioStore()`, `reorderUnifiedCollectionContents(collectionID, contentIDs)`
 - Produces: Polished `.studio-collection-detail__list li` with drag grip handle, editable sequence input, and displacement classes
 
-- [ ] **Step 1: Add unit tests for collection sequence editing and displacement**
+- [x] **Step 1: Add unit tests for collection sequence editing and displacement**
   In `tests/unit/views/studio/StudioUnifiedCollectionDetailView.spec.ts`, add test cases:
   - Reordering collection item via direct sequence input calls `store.reorderUnifiedCollectionContents`.
   - Dragging item over slot shifts sibling rows and reorders contents.
   Run: `bun run test:unit tests/unit/views/studio/StudioUnifiedCollectionDetailView.spec.ts` (verify new assertions fail).
 
-- [ ] **Step 2: Add drag handle and displacement logic in `StudioUnifiedCollectionDetailView.vue`**
+- [x] **Step 2: Add drag handle and displacement logic in `StudioUnifiedCollectionDetailView.vue`**
   - Import `IconGripVertical as GripVertical` from `@tabler/icons-vue`.
   - Add drag states: `draggedItemIndex`, `hoverItemIndex`, `dragOverInsertionIndex`.
   - Implement `handleDragStart(index, event)`, `handleDragOver(index, event)`, `handleDrop(index, event)`, `clearDragState()`.
   - Add `getDisplacementClass(index)` with `is-displaced-down` and `is-displaced-up`.
   - In template, add `<div class="studio-collection-detail__drag-handle" draggable="true" title="拖拽排序">`.
 
-- [ ] **Step 3: Implement editable sequence input in `StudioUnifiedCollectionDetailView.vue`**
+- [x] **Step 3: Implement editable sequence input in `StudioUnifiedCollectionDetailView.vue`**
   - Replace `<span class="studio-collection-detail__position">{{ index + 1 }}</span>` with:
     ```html
     <span class="collection-item-sequence">
@@ -125,33 +125,33 @@
     - Splices and moves item to target index.
     - Calls `saveOrder()` to persist through `studio.reorderUnifiedCollectionContents(...)`.
 
-- [ ] **Step 4: Style displacement and sequence input in `StudioUnifiedCollectionDetailView.vue`**
+- [x] **Step 4: Style displacement and sequence input in `StudioUnifiedCollectionDetailView.vue`**
   - Add `.collection-item-sequence` and `.collection-item-sequence__input` styling adhering to design tokens.
   - Add `.studio-collection-detail__drag-handle` styling.
   - Add `transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1)` and displacement transforms.
 
-- [ ] **Step 5: Verify StudioUnifiedCollectionDetailView unit tests pass**
+- [x] **Step 5: Verify StudioUnifiedCollectionDetailView unit tests pass**
   Run: `bun run test:unit tests/unit/views/studio/StudioUnifiedCollectionDetailView.spec.ts`
   Confirm all tests pass.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
   Commit: `feat(studio): add drag displacement and editable sequence reorder to collection contents`
 
 ---
 
 ### Task 3: Whole-Module Integration & Final Verification
 
-- [ ] **Step 1: Run unit tests for affected modules**
+- [x] **Step 1: Run unit tests for affected modules**
   Run: `bun run test:unit tests/unit/components/music/AudioPlayerQueue.spec.ts tests/unit/views/studio/StudioUnifiedCollectionDetailView.spec.ts`
 
-- [ ] **Step 2: Run design system contract tests**
+- [x] **Step 2: Run design system contract tests**
   Run: `bun run test:unit tests/unit/ui/design-system-contract.spec.ts`
 
-- [ ] **Step 3: Run TypeScript type check**
+- [x] **Step 3: Run TypeScript type check**
   Run: `bun run type-check`
 
-- [ ] **Step 4: Run production build check**
+- [x] **Step 4: Run production build check**
   Run: `bun run build`
 
-- [ ] **Step 5: Check git diff**
+- [x] **Step 5: Check git diff**
   Run: `git diff --check`

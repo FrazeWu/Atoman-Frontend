@@ -183,8 +183,7 @@ const avatarLetter = () =>
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.85);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.25);
   transform: scale(0.9);
@@ -210,7 +209,7 @@ const avatarLetter = () =>
   place-items: center;
   opacity: 0;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   cursor: pointer;
@@ -256,8 +255,7 @@ const avatarLetter = () =>
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(0, 0, 0, 0.68);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.82);
   color: #fff;
   font-size: 11px;
   font-weight: 500;
@@ -269,8 +267,7 @@ const avatarLetter = () =>
   position: absolute;
   bottom: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.68);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.82);
   color: #fff;
   font-size: 11px;
   font-weight: 500;

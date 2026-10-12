@@ -514,7 +514,6 @@ const recommendedAuthors = ref([
   font-size: 0.7rem;
   color: #ffffff;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
   border-radius: var(--a-radius-control);
 }
 

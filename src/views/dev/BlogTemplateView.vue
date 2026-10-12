@@ -367,7 +367,6 @@ const weeklyMustRead = [
   font-weight: 600;
   color: #ffffff;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
   border-radius: var(--a-radius-control);
 }
 

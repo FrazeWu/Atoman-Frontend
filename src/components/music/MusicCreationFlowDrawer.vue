@@ -412,24 +412,26 @@ const showFullAlbumCreationProgress = computed(() => {
 const creationProgress = computed(() => musicCreationProgress(creationFlow.value))
 const fullAlbumCreationProgressSteps = computed(() => creationProgress.value.steps)
 const fullAlbumCreationProgressIndex = computed(() => creationProgress.value.index)
+function metadataMatchFinished(draft: NonNullable<typeof creationFlow.value>['draft']['albumImport']) {
+  return draft.metadataMatched === true
+    || ['matched', 'unmatched', 'ambiguous', 'manual'].includes(draft.metadataMatchStatus ?? '')
+}
 const albumImportMatching = computed(() => {
   const flow = creationFlow.value
   if (!flow || flow.step !== 'albumImport') return false
   const draft = flow.draft.albumImport
+  if (metadataMatchFinished(draft)) return false
   return draft.metadataMatchStatus === 'matching'
-    || (draft.metadataMatchingStarted === true && !['matched', 'unmatched', 'ambiguous', 'manual'].includes(draft.metadataMatchStatus ?? ''))
+    || draft.metadataMatchingStarted === true
 })
 const finishButtonLabel = computed(() => {
   const flow = creationFlow.value
   if (!flow) return ''
   const step = flow.step
   if (flow.mode === 'edit') return flow.submitting ? '保存中…' : '保存'
-  if (step === 'albumImport' && (
+  if (step === 'albumImport' && !metadataMatchFinished(flow.draft.albumImport) && (
     flow.draft.albumImport.metadataMatchStatus === 'matching'
-    || (
-    flow.draft.albumImport.metadataMatchingStarted
-    && !['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
-    )
+    || flow.draft.albumImport.metadataMatchingStarted
   )) return '匹配中…'
   if (flow.entity === 'artist' && flow.step === 'artist') {
     return flow.submitting ? '创建中…' : '创建艺术家'
@@ -528,7 +530,7 @@ const canGoForward = computed(() => {
       && !!artist.source.trim()
   }
 		if (flow.step === 'albumImport') {
-			return !!flow.draft.albumImport.importId && ['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')
+			return !!flow.draft.albumImport.importId && metadataMatchFinished(flow.draft.albumImport)
 	}
 		if (flow.step === 'albumDetails') {
 			const coverUrl = resolvedAlbumCoverUrl(flow)
@@ -1099,7 +1101,7 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
       flow.submitting = false
     }
 	} else if (flow.step === "albumImport") {
-		if (['matched', 'unmatched', 'ambiguous', 'manual'].includes(flow.draft.albumImport.metadataMatchStatus ?? '')) {
+		if (metadataMatchFinished(flow.draft.albumImport)) {
 			flow.returnedToImport = false
 			setMusicCreationStep("albumDetails")
 		}

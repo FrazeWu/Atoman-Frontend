@@ -324,6 +324,29 @@ describe("MusicCreationFlowDrawer", () => {
 		expect(wrapper.get('[data-testid="artist-next-button"]').attributes("disabled")).toBeDefined();
 	});
 
+	it("元信息已完成时不因音频仍在转码而显示匹配中", async () => {
+		const baseFlow = createFlowState();
+		drawerMocks.state.value.creationFlow = createFlowState({
+			step: "albumImport",
+			draft: {
+				...baseFlow.draft,
+				albumImport: {
+					...baseFlow.draft.albumImport,
+					status: "transcoding",
+					metadataMatchingStarted: true,
+					metadataMatchStatus: "matching",
+					metadataMatched: true,
+				},
+			},
+		});
+
+		const wrapper = mount(MusicCreationFlowDrawer);
+
+		expect(wrapper.get('[data-testid="creation-flow-footer"]').text()).not.toContain("匹配中…");
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		expect(drawerMocks.state.value.creationFlow?.step).toBe("albumDetails");
+	});
+
 	it("直接添加专辑时上传页不显示返回上一步", () => {
 		const wrapper = mount(MusicCreationFlowDrawer);
 

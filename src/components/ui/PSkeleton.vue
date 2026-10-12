@@ -1,7 +1,13 @@
 <template>
   <div
     class="p-skeleton"
-    :class="[`p-skeleton--${variant}`, { 'p-skeleton--shimmer': animated }]"
+    :class="[
+      `p-skeleton--${variant}`,
+      {
+        'p-skeleton--shimmer': animated,
+        'p-skeleton--bordered': bordered,
+      }
+    ]"
     :style="{ width, height }"
   ></div>
 </template>
@@ -12,11 +18,13 @@ withDefaults(defineProps<{
   width?: string
   height?: string
   animated?: boolean
+  bordered?: boolean
 }>(), {
   variant: 'rect',
   width: '100%',
   height: '1rem',
-  animated: true
+  animated: true,
+  bordered: false,
 })
 </script>
 
@@ -28,18 +36,23 @@ withDefaults(defineProps<{
 }
 
 .p-skeleton--text {
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   height: 0.85em;
   margin-top: 0.25em;
   margin-bottom: 0.25em;
 }
 
 .p-skeleton--rect {
-  border-radius: 6px;
+  border-radius: var(--a-radius-card, 4px);
 }
 
 .p-skeleton--circle {
   border-radius: 50%;
+}
+
+.p-skeleton--bordered {
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-bg, #ffffff);
 }
 
 .p-skeleton--shimmer::after {
@@ -52,8 +65,8 @@ withDefaults(defineProps<{
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.3) 20%,
-    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0.25) 30%,
+    rgba(255, 255, 255, 0.45) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   animation: shimmer 1.6s infinite;
@@ -63,6 +76,13 @@ withDefaults(defineProps<{
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-skeleton--shimmer::after {
+    animation: none;
+    display: none;
   }
 }
 </style>

@@ -269,7 +269,7 @@ onBeforeUnmount(() => {
 
     <!-- Default empty guidance state -->
     <div v-if="!query.trim() && !tagID && !loading" class="songs-view__default-empty">
-      <PEmpty title="搜索全库音乐资源" description="支持输入歌曲名称、专辑名、艺术家或歌单名称进行全量检索。">
+      <PEmpty title="搜索音乐" description="输入歌曲名、专辑名、艺术家或歌单检索。">
         <template #icon>
           <Search :size="32" style="color: var(--a-color-muted);" />
         </template>

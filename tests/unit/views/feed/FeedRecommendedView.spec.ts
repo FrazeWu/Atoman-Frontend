@@ -1602,7 +1602,7 @@ describe("FeedRecommendedView", () => {
 		await applyFilterValue(wrapper, "category", "video");
 
 		expect(wrapper.text()).not.toContain("Video encoding 深入笔记");
-		expect(wrapper.text()).toContain("当前分类下暂无文章");
+		expect(wrapper.text()).toContain("暂无推荐文章");
 	});
 
 	it("changes recommendation batches without rendering pagination and resets to page 1 when filters change", async () => {

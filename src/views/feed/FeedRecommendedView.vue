@@ -163,9 +163,8 @@
             </template>
           <PEmpty
             v-if="!articles.length"
-            kicker="文章"
-            title="当前分类下暂无文章"
-            description="尝试切换其他分类或主题查看更多精选内容。"
+            title="暂无推荐文章"
+            description="切换其他分类或主题查看更多精选内容。"
           />
 
           <div v-else class="feed-timeline-box">
@@ -263,9 +262,8 @@
             </template>
           <PEmpty
             v-if="!channels.length"
-            kicker="频道"
-            title="当前分类下暂无频道"
-            description="尝试切换其他分类或探索更多优质订阅源。"
+            title="暂无推荐频道"
+            description="切换其他分类或探索更多订阅源。"
           />
 
           <div v-else class="channels-stack">

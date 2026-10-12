@@ -237,8 +237,8 @@ watch(
     <PEmpty
       v-else-if="!historyItems.length"
       data-testid="history-empty"
-      title="还没有播放历史"
-      description="去发现页播放一首歌曲，这里会记录你的收听足迹。"
+      title="暂无播放历史"
+      description="在发现页面播放歌曲后将记录在这里。"
     >
       <template #action>
         <PButton to="/music/discover" variant="primary">去发现音乐</PButton>

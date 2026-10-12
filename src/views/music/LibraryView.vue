@@ -263,8 +263,8 @@ onUnmounted(() => clearTimeout(queryTimer))
       </PEmpty>
       <PEmpty
         v-else-if="kind === 'album' ? !albums.length : kind === 'artist' ? !artists.length : kind === 'playlist' ? !playlists.length : !songs.length"
-        title="这里还没有收藏内容"
-        description="浏览发现页面，收藏你喜爱的专辑、艺术家或歌单。"
+        title="暂无收藏内容"
+        description="在发现页面收藏你喜爱的专辑、艺术家或歌单。"
       >
         <template #action><RouterLink to="/music/discover" class="a-btn a-btn--primary">去发现音乐</RouterLink></template>
       </PEmpty>

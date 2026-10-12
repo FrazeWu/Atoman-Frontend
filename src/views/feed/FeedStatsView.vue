@@ -56,7 +56,7 @@
 
       <PEmpty v-else-if="errorMessage" :text="errorMessage" />
 
-      <PEmpty v-else-if="!stats || !stats.total_read" text="还没有阅读记录" sub="先去刷一会儿 RSS 再来看统计" />
+      <PEmpty v-else-if="!stats || !stats.total_read" title="暂无阅读记录" description="在订阅时间线中阅读文章后将在此显示统计。" />
 
       <div v-else class="stats-charts-grid">
         <section class="stats-chart-section">

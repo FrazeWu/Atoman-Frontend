@@ -22,7 +22,7 @@ onMounted(() => {
     </PPageHeader>
 
     <div v-if="!forumStore.categoriesLoaded" class="forum-categories__state">加载中...</div>
-    <PEmpty v-else-if="!categories.length" title="暂无分类" description="论坛分类将在可用时显示在这里。" />
+    <PEmpty v-else-if="!categories.length" title="暂无分类" />
     <nav v-else class="forum-categories__list" aria-label="论坛分类目录">
       <RouterLink
         v-for="category in categories"

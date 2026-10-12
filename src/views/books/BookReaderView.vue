@@ -578,7 +578,7 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 1.25rem;
   padding-top: var(--a-page-start-space);
-  --book-reader-surface: #ffffff;
+  --book-reader-surface: var(--a-color-bg);
   --book-reader-text: var(--a-color-fg);
   --book-reader-muted: var(--a-color-muted);
 }
@@ -615,7 +615,7 @@ onBeforeUnmount(() => {
 .books-reader__epub,
 .books-reader__pdf {
   min-height: min(68vh, 720px);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--book-reader-surface);
   overflow: hidden;
 }
@@ -641,7 +641,7 @@ onBeforeUnmount(() => {
   aspect-ratio: 1 / 1.414;
   padding: clamp(2rem, 5vw, 4.75rem) clamp(1.75rem, 7vw, 6.5rem) 3.25rem;
   background: var(--book-reader-surface);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
 
@@ -657,7 +657,7 @@ onBeforeUnmount(() => {
   column-count: 2;
   column-fill: auto;
   column-gap: clamp(1.5rem, 4vw, 3.5rem);
-  column-rule: 1px solid var(--a-color-border-soft, #e2e8f0);
+  column-rule: 1px solid var(--a-color-border-soft);
   overflow: hidden;
 }
 
@@ -689,7 +689,7 @@ onBeforeUnmount(() => {
   max-height: min(78vh, 60rem);
   overflow: auto;
   padding: 1rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--book-reader-surface);
   scroll-behavior: smooth;
 }
@@ -705,7 +705,7 @@ onBeforeUnmount(() => {
   display: block;
   max-width: min(100%, 64rem);
   height: auto;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .books-reader__comic-page figcaption {
@@ -732,7 +732,7 @@ onBeforeUnmount(() => {
   max-width: 100%;
   height: auto;
   background: var(--book-reader-surface);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
 
@@ -751,7 +751,7 @@ onBeforeUnmount(() => {
 .books-reader__search > label {
   color: var(--a-color-muted);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .books-reader__search-row {
@@ -765,7 +765,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 2.25rem;
   padding: 0.45rem 0.65rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--book-reader-surface);
   color: var(--book-reader-text);
@@ -796,7 +796,7 @@ onBeforeUnmount(() => {
 .books-reader__search-results button {
   width: 100%;
   padding: 0.45rem 0.55rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: color-mix(in srgb, var(--book-reader-surface) 92%, var(--book-reader-text));
   color: var(--book-reader-text);
@@ -814,7 +814,7 @@ onBeforeUnmount(() => {
 
 .books-reader__bookmarks summary {
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .books-reader__bookmarks ol {
@@ -860,7 +860,7 @@ onBeforeUnmount(() => {
   width: 100%;
   resize: vertical;
   min-height: 5rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--book-reader-surface);
   color: var(--book-reader-text);

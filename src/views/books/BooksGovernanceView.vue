@@ -516,7 +516,7 @@ onMounted(load)
 
 .books-governance__feedback--error,
 .books-governance__feedback[role='alert'] {
-  background: color-mix(in srgb, var(--a-color-danger) 8%, #ffffff);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
   color: var(--a-color-danger);
 }
 

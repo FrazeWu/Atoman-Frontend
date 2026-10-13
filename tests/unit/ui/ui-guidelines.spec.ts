@@ -72,15 +72,18 @@ describe("UI 准则", () => {
 		).not.toMatch(/后台审核|后台驳回|后台取消/);
 		expect(
 			read("src/components/music/MusicCreationAlbumSeedStep.vue"),
-		).not.toContain("由后台解析");
+		).not.toContain("后台");
 		expect(
 			read("src/components/music/MusicCreationAlbumPreviewStep.vue"),
-		).not.toContain("在后台继续");
+		).not.toContain("后台");
 		expect(read("src/views/video/VideoImportsView.vue")).not.toContain(
-			"后台会继续",
+			"后台",
 		);
 		expect(read("src/views/portal/PortalView.vue")).not.toContain(
 			"查看真实内容",
+		);
+		expect(read("src/views/blog/ProfileView.vue")).not.toContain(
+			"暂无此类型内容",
 		);
 	});
 

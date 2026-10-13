@@ -132,14 +132,14 @@ const dislikePercentage = computed(() => {
   width: 100%;
   height: 4px;
   overflow: hidden;
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-border-soft);
 }
 
 .p-interaction-actions__ratio-fill {
   height: 100%;
   border-radius: inherit;
-  background: var(--a-color-primary, #2563eb);
+  background: var(--a-color-primary);
   transition: width 0.3s ease;
 }
 </style>

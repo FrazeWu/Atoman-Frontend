@@ -947,7 +947,7 @@ onUnmounted(() => {
   border: 0;
   border-bottom: 2px solid var(--a-color-text);
   border-radius: 0;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   font: inherit;
   padding: 0 0.75rem;
@@ -956,7 +956,7 @@ onUnmounted(() => {
 }
 
 .feed-search__input:focus {
-  border-bottom-color: var(--a-color-accent-confirm);
+  border-bottom-color: var(--a-color-primary);
 }
 
 .feed-merge-duplicates {

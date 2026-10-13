@@ -209,7 +209,7 @@ const avatarLetter = () =>
   place-items: center;
   opacity: 0;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   cursor: pointer;

@@ -174,7 +174,7 @@ onUnmounted(() => {
 .p-content-progress__track {
   width: 200px;
   height: 3px;
-  background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.07));
+  background: var(--a-color-surface-muted);
   border-radius: var(--a-radius-none, 0px);
   overflow: hidden;
 }
@@ -206,7 +206,7 @@ onUnmounted(() => {
 
 .p-content-progress__text {
   font-size: 0.8125rem;
-  color: var(--a-color-muted, #94a3b8);
+  color: var(--a-color-muted);
   font-weight: 500;
   line-height: 1.4rem;
   white-space: nowrap;
@@ -215,7 +215,7 @@ onUnmounted(() => {
 }
 
 .p-content-progress__text--error {
-  color: var(--a-color-text, #1e293b);
+  color: var(--a-color-text);
 }
 
 .p-content-progress__retry-link {

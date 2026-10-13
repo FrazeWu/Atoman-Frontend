@@ -276,17 +276,17 @@ defineExpose({
 
 .p-help-tooltip__title {
   font-size: 0.78rem;
-  font-weight: 650;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
 .p-help-tooltip__kicker {
   font-size: 0.68rem;
   font-weight: 600;
-  color: #d97706;
-  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  color: var(--a-color-warning);
+  background: color-mix(in srgb, var(--a-color-warning) 12%, transparent);
   padding: 0.1em 0.45em;
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   white-space: nowrap;
 }
 

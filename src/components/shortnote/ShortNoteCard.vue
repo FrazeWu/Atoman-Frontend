@@ -329,8 +329,8 @@ function formatDate(value: string) {
   transform: translateY(-50%);
   width: 2px;
   height: 14px;
-  border-radius: 999px;
-  background-color: #10b981;
+  border-radius: var(--a-radius-control);
+  background-color: var(--a-color-success);
   opacity: 1;
   transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;

@@ -25,7 +25,7 @@ export function getVideoProgress(videoId: string): VideoProgressRecord | null {
 
   let raw: string | null
   try {
-    raw = storage.getItem(progressKey(videoId))
+    raw = storage.getItem(progressKey(videoId)) || storage.getItem(`atoman:video-progress:${videoId}`)
   } catch {
     return null
   }
@@ -75,6 +75,7 @@ export function clearVideoProgress(videoId: string) {
 
   try {
     storage.removeItem(progressKey(videoId))
+    storage.removeItem(`atoman:video-progress:${videoId}`)
   } catch {
     // Ignore unavailable storage; clearing progress should never block playback.
   }

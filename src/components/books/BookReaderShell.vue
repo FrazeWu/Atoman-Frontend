@@ -215,11 +215,11 @@ function togglePanel(panel: 'tools' | 'settings') {
   align-items: center;
   min-height: 1.4rem;
   padding: 0 0.45rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 999px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
   color: var(--book-reader-muted, var(--a-color-muted));
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
 }
 
@@ -349,7 +349,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-top: 0;
   border-radius: 0 0 var(--a-radius-card) var(--a-radius-card);
-  background: var(--book-reader-surface, #ffffff);
+  background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-muted, var(--a-color-muted));
   font-size: 0.78rem;
 }
@@ -357,8 +357,8 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__progress-track {
   height: 3px;
   overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--book-reader-surface, #ffffff) 80%, var(--book-reader-text, #111827));
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--book-reader-surface, var(--a-color-bg)) 80%, var(--book-reader-text, var(--a-color-fg)));
 }
 
 .book-reader-shell__progress-track span {

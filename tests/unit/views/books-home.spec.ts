@@ -94,7 +94,7 @@ describe('BooksHomeView', () => {
     })
     await flushPromises()
 
-    const importButton = wrapper.findAll('button').find(button => button.text().includes('导入电子书'))
+    const importButton = wrapper.findAll('button').find(button => button.text().includes('添加图书') || button.text().includes('导入电子书'))
     expect(importButton).toBeTruthy()
     await importButton!.trigger('click')
     expect(wrapper.find('[data-book-import-flow]').exists()).toBe(true)

@@ -28,7 +28,7 @@
         <div class="a-page explore-template">
         <PPageHeader title="博客探索范例" accent>
           <template #action>
-            <PButton outline to="/posts">返回实际博客</PButton>
+            <PButton variant="secondary" to="/posts">返回实际博客</PButton>
           </template>
         </PPageHeader>
 

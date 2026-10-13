@@ -6,7 +6,7 @@
         <div class="a-page blog-template">
         <PPageHeader title="博客范例" accent>
           <template #action>
-            <PButton outline to="/posts">返回实际博客</PButton>
+            <PButton variant="secondary" to="/posts">返回实际博客</PButton>
           </template>
         </PPageHeader>
 

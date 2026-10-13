@@ -22,7 +22,7 @@ describe('BookReaderShell', () => {
         progress: 0.42,
         pageLabel: '第 1 / 2 页',
         backTo: '/books/library',
-        backLabel: '返回我的书库',
+        backLabel: '返回书架',
         showPagination: true,
         toc: [{ href: 'chapter-1', label: '第一章', depth: 0 }],
       },
@@ -36,7 +36,7 @@ describe('BookReaderShell', () => {
     expect(wrapper.text()).toContain('42%')
     expect(wrapper.text()).toContain('第 1 / 2 页')
     expect(wrapper.text()).toContain('第一章')
-    expect(wrapper.find('[aria-label="返回我的书库"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="返回书架"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="上一页"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="下一页"]').exists()).toBe(true)
 
@@ -63,7 +63,7 @@ describe('BookReaderShell', () => {
         title: '测试书籍',
         format: 'epub',
         backTo: '/books/library',
-        backLabel: '返回我的书库',
+        backLabel: '返回书架',
         toc: [{ href: 'chapter-1', label: '第一章', depth: 0 }],
       },
       slots: {

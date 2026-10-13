@@ -7,7 +7,7 @@
       :progress="readingPercent"
       :page-label="pageLabel"
       :back-to="'/books/library'"
-      back-label="返回我的书库"
+      back-label="返回书架"
       :can-prev="canPrev"
       :can-next="canNext"
       :show-pagination="showPagination"

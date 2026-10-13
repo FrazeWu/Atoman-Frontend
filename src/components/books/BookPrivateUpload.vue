@@ -3,7 +3,7 @@
     <header class="book-private-upload__header">
       <div>
         <h2 id="private-books-title">我的电子书</h2>
-        <p>上传的文件仅自己可见，处理完成后可以直接阅读。</p>
+        <p>文件安全处理完成后会自动公开，其他人可以阅读。</p>
       </div>
       <PButton
         type="button"

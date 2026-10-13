@@ -71,7 +71,7 @@
 
       <p v-if="isUploading" class="books-feedback" aria-live="polite">正在上传 {{ uploadProgress }}%</p>
       <p v-if="errorMessage" class="books-feedback books-feedback--error" role="alert">{{ errorMessage }}</p>
-      <p v-else-if="isLoading" class="books-feedback" aria-live="polite">正在加载书库...</p>
+      <p v-else-if="isLoading" class="books-feedback" aria-live="polite">正在加载书架...</p>
 
       <section class="books-library__section" aria-labelledby="imports-title">
         <header class="books-library__section-header">
@@ -147,8 +147,7 @@
       <header class="books-catalog__header">
         <div class="books-catalog__title"><h2 id="catalog-title">{{ route.query.q ? '搜索结果' : '书籍' }}</h2><span class="books-library__meta">{{ catalogTotal }} 本</span></div>
         <div class="books-catalog__actions">
-          <PButton type="button" variant="secondary" size="sm" @click="createDrawerOpen = true">新建图书</PButton>
-          <RouterLink class="books-upload-link" to="/books/library">导入电子书</RouterLink>
+          <PButton type="button" variant="secondary" @click="createDrawerOpen = true">导入电子书</PButton>
         </div>
       </header>
 
@@ -263,13 +262,13 @@ const isLibrary = computed(() => route.path === '/books/library' || route.path.s
 const isCatalog = computed(() => !isLibrary.value && (route.path === '/books' || route.path === '/books/search' || isDetail.value))
 
 const pageTitle = computed(() => {
-  if (isLibrary.value) return '我的书库'
+  if (isLibrary.value) return '书架'
   if (route.path === '/books/search' || Boolean(route.query.q)) return '搜索'
   return '发现'
 })
 
 const pageSub = computed(() => {
-  if (isLibrary.value) return '管理在读进度与个人藏书'
+  if (isLibrary.value) return '管理书架、阅读进度与已导入的电子书'
   if (route.path === '/books/search' || Boolean(route.query.q)) return '检索公共图书与作者'
   return '浏览公共书目与开放阅读资源'
 })
@@ -389,8 +388,8 @@ async function loadImports() {
   } catch (error) {
     if (requestID !== importsRequestSequence) return
     errorMessage.value = error instanceof ApiErrorResponseError && error.status === 401
-      ? '登录后才能查看私有书库'
-      : '书库加载失败，请稍后重试'
+      ? '登录后才能查看你的书架'
+      : '书架加载失败，请稍后重试'
   } finally {
     if (requestID === importsRequestSequence) isLoading.value = false
   }

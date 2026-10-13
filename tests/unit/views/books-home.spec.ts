@@ -36,6 +36,7 @@ describe('BooksHomeView', () => {
     const wrapper = mount(BooksHomeView, { global: { plugins: [router] } })
     await flushPromises()
 
+    expect(wrapper.text()).toContain('书架')
     expect(wrapper.text()).toContain('Private PDF')
     expect(wrapper.text()).toContain('等待扫描')
     expect(wrapper.find('[aria-label="删除导入"]').exists()).toBe(true)
@@ -71,6 +72,33 @@ describe('BooksHomeView', () => {
     expect(wrapper.find('a[href="/books/work/work-1?q=novel&page=2"]').exists()).toBe(true)
     expect(wrapper.find('img').attributes('src')).toBe('https://covers.openlibrary.org/b/id/123-M.jpg')
     expect(wrapper.find('.books-nav').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('opens the import flow from the public catalog instead of navigating to the library', async () => {
+    vi.spyOn(booksApi, 'listPublicBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
+    vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({ items: [], total: 0, limit: 24, offset: 0 })
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/books')
+    await router.isReady()
+    const wrapper = mount(BooksHomeView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BookCreationFlowDrawer: {
+            props: ['show'],
+            template: '<div v-if="show" data-book-import-flow>导入流程</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const importButton = wrapper.findAll('button').find(button => button.text().includes('导入电子书'))
+    expect(importButton).toBeTruthy()
+    await importButton!.trigger('click')
+    expect(wrapper.find('[data-book-import-flow]').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/books')
     wrapper.unmount()
   })
 

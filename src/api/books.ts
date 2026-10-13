@@ -105,6 +105,7 @@ export interface BookPublicWork {
 }
 
 export interface CreatePublicBookInput {
+  import_id: string
   title: string
   subtitle?: string
   original_title?: string

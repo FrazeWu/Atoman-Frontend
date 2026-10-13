@@ -401,7 +401,7 @@ async function submitCreation() {
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1.5rem;
-  border: 1px dashed var(--a-color-border);
+  border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   cursor: pointer;

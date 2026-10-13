@@ -258,7 +258,15 @@ function restoreCommittedAlbumImportDraft(
 	flow.coverCustomized = customization?.cover ?? true;
 	flow.typeCustomized = customization?.type ?? true;
 	flow.metadataTagsApplied = customization?.tags ?? true;
-	flow.draft.albumDetails.tags = (request.album.tags ?? []).map((tag) => ({ kind: tag.kind, name: tag.name, ...(tag.parent_name ? { parentName: tag.parent_name } : {}) }));
+	const genres = new Set(request.album.metadata?.genres ?? []);
+	const styles = new Set(request.album.metadata?.styles ?? []);
+	flow.draft.albumDetails.tags = (request.album.tags ?? []).map((tag) => ({
+		kind: tag.kind,
+		name: tag.name,
+		...(tag.parent_name ? { parentName: tag.parent_name } : {}),
+		...(genres.has(tag.name) ? { metadataCategory: "genre" as const } : {}),
+		...(styles.has(tag.name) ? { metadataCategory: "style" as const } : {}),
+	}));
 }
 
 function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
@@ -746,7 +754,7 @@ export function useMusicDrawers() {
 			metadataGenres: snapshot.metadataGenres ?? [],
 			metadataStyles: snapshot.metadataStyles ?? [],
 			metadataLabels: snapshot.metadataLabels ?? [],
-			metadataCountry: snapshot.metadataCountry ?? "",
+			metadataCountry: snapshot.draftRequest?.album.metadata?.country ?? snapshot.commitRequest?.album.metadata?.country ?? snapshot.metadataCountry ?? "",
 			metadataFormats: snapshot.metadataFormats ?? [],
 			metadataSources: snapshot.metadataSources ?? [],
 			metadataFieldSources: snapshot.metadataFieldSources ?? {},
@@ -754,6 +762,10 @@ export function useMusicDrawers() {
 			lastSyncedAt: snapshot.lastSyncedAt,
 			errorMessage: snapshot.errorMessage,
 		};
+		flow.metadataCountryCustomized = Boolean(
+			snapshot.draftRequest?.album.metadata?.country ||
+			snapshot.commitRequest?.album.metadata?.country,
+		);
 		flow.draft.albumDetails.title =
 			snapshot.albumTitle?.trim() || snapshot.derivedAlbumTitle;
 		if (snapshot.derivedReleaseDate) {
@@ -767,13 +779,13 @@ export function useMusicDrawers() {
 			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
 		if (importedCover) flow.draft.albumDetails.coverUrl = importedCover;
 		const matchedTags = [
-			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const })),
-			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName: snapshot.metadataGenres?.length === 1 ? snapshot.metadataGenres[0] : undefined })),
+			...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, metadataCategory: "genre" as const })),
+			...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName: snapshot.metadataGenres?.length === 1 ? snapshot.metadataGenres[0] : undefined, metadataCategory: "style" as const })),
 		];
 		if (matchedTags.length) {
-			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`));
+			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.metadataCategory ?? ""}\u0000${tag.name.toLocaleLowerCase()}`));
 			for (const tag of matchedTags) {
-				const key = `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`;
+				const key = `${tag.kind}\u0000${tag.metadataCategory}\u0000${tag.name.toLocaleLowerCase()}`;
 				if (!existingKeys.has(key)) {
 					flow.draft.albumDetails.tags.push(tag);
 					existingKeys.add(key);

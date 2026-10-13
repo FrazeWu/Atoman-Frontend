@@ -121,6 +121,19 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		);
 	});
 
+	it("专辑导入详情中的国家/地区可手动修正", async () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		flow.draft.albumImport.metadataCountry = "XW";
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+
+		await wrapper.get('[data-testid="album-details-country-input"]').setValue("新疆维吾尔自治区");
+
+		expect(flow.draft.albumImport.metadataCountry).toBe("新疆维吾尔自治区");
+		expect(flow.metadataCountryCustomized).toBe(true);
+		wrapper.unmount();
+	});
+
 	it("上传页不显示上传前艺术家输入", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 
@@ -214,6 +227,36 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumImport.metadataMatched).not.toBe(true);
 		expect(flow.draft.tracks.map((track) => track.title)).toEqual(["EARFQUAKE", "IGOR'S THEME"]);
 		expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2]);
+	});
+
+	it("服务器匹配封面先到时仍回填文件内的本地封面", async () => {
+		const archive = new File(["zip"], "album.zip", { type: "application/zip" });
+		let resolvePreview!: (preview: musicImportPreview.MusicAlbumImportPreview) => void;
+		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockReturnValue(
+			new Promise((resolve) => { resolvePreview = resolve; }),
+		);
+		vi.spyOn(musicApi, "createMusicAlbumImport").mockResolvedValue(snapshot({ inputMode: "archive" }));
+		vi.spyOn(musicApi, "registerMusicAlbumImportFiles").mockResolvedValue(snapshot({
+			inputMode: "archive",
+			files: [importFile({ role: "archive", fileName: archive.name, relativePath: archive.name, detectedFormat: "zip" })],
+		}));
+		mockUploadTransport();
+		const complete = vi.spyOn(musicApi, "completeMusicAlbumImportSession").mockResolvedValue(snapshot({
+			inputMode: "archive",
+			status: "queued",
+			coverUrl: "https://cover.test/matched.jpg",
+			derivedCover: "https://cover.test/matched.jpg",
+		}));
+		vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:local-cover");
+
+		const upload = useAlbumImportUpload().handleFilesUpload(
+			{ 0: archive, length: 1, item: () => archive } as unknown as FileList,
+		);
+		await vi.waitFor(() => expect(complete).toHaveBeenCalled());
+		resolvePreview({ title: "Album", tracks: [], albumCoverFile: new File(["image"], "cover.jpg") });
+		await upload;
+
+		expect(useMusicDrawers().state.value.creationFlow!.draft.albumDetails.coverUrl).toBe("blob:local-cover");
 	});
 
 	it("没有艺术家时也按曲目资料开始匹配", async () => {
@@ -531,9 +574,22 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumImport.metadataGenres).toEqual(["摇滚"]);
 		expect(flow.draft.albumImport.metadataStyles).toEqual(["民谣摇滚"]);
 		expect(flow.draft.albumDetails.tags).toEqual([
-			{ name: "摇滚", kind: "type" },
-			{ name: "民谣摇滚", kind: "type", parentName: "摇滚" },
+			{ name: "摇滚", kind: "type", metadataCategory: "genre" },
+			{ name: "民谣摇滚", kind: "type", parentName: "摇滚", metadataCategory: "style" },
 		]);
+		expect(flow.draft.albumImport.metadataCountry).toBe("台湾");
+	});
+
+	it("手动修改国家/地区后后续匹配快照不会覆盖", () => {
+		const flow = useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId = "import-1";
+		useAlbumImportUpload().applyImportSnapshot(snapshot({ metadataCountry: "XW" }));
+		flow.draft.albumImport.metadataCountry = "新疆维吾尔自治区";
+		flow.metadataCountryCustomized = true;
+
+		useAlbumImportUpload().applyImportSnapshot(snapshot({ metadataCountry: "CN" }));
+
+		expect(flow.draft.albumImport.metadataCountry).toBe("新疆维吾尔自治区");
 	});
 
 	it("本地封面存在时仍回填外部匹配封面和专辑元信息", () => {
@@ -563,8 +619,8 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			"https://cover.test/matched-cover.jpg",
 		);
 		expect(flow.draft.albumDetails.tags).toEqual([
-			{ name: "Hip Hop", kind: "type" },
-			{ name: "Conscious", kind: "type", parentName: "Hip Hop" },
+			{ name: "Hip Hop", kind: "type", metadataCategory: "genre" },
+			{ name: "Conscious", kind: "type", parentName: "Hip Hop", metadataCategory: "style" },
 		]);
 	});
 

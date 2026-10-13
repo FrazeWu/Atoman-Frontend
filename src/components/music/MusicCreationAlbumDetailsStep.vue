@@ -53,12 +53,18 @@ const importedMetadata = computed(() => {
   if (!importDraft) return []
   return [
     ['厂牌', (importDraft.metadataLabels ?? []).join('、')],
-    ['国家/地区', importDraft.metadataCountry ?? ''],
     ['格式', (importDraft.metadataFormats ?? []).join('、')],
   ].filter(([, value]) => value)
 })
-const styleTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind === 'type'))
+const genreTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind === 'type' && tag.metadataCategory === 'genre'))
+const styleTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind === 'type' && tag.metadataCategory !== 'genre'))
 const otherTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind !== 'type'))
+
+function updateMetadataCountry(value: string | number) {
+  if (!albumImportDraft.value || !creationFlow.value) return
+  albumImportDraft.value.metadataCountry = String(value)
+  creationFlow.value.metadataCountryCustomized = true
+}
 
 function addCustomTag() {
   const draft = albumDetailsDraft.value
@@ -565,6 +571,66 @@ watch(
               </p>
             </div>
             </div>
+
+            <div v-if="albumImportDraft" class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="country">
+              <PInput
+                :model-value="albumImportDraft.metadataCountry ?? ''"
+                label="国家/地区"
+                placeholder="输入国家或地区"
+                data-testid="album-details-country-input"
+                @update:model-value="updateMetadataCountry"
+              />
+            </div>
+
+            <section v-if="!isEditMode || albumImportDraft" class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
+              <div class="album-tags-editor__row" data-testid="album-genre-tags-row">
+                <span class="field-label">分类</span>
+                <div class="album-tags-editor__items">
+                  <span v-if="!genreTags.length" class="album-tags-editor__empty">暂无分类</span>
+                  <span v-for="tag in genreTags" :key="`genre-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
+                    {{ tag.name }}
+                  </span>
+                </div>
+              </div>
+              <div class="album-tags-editor__row" data-testid="album-style-tags-row">
+                <span class="field-label">风格</span>
+                <div class="album-tags-editor__items">
+                  <span v-if="!styleTags.length" class="album-tags-editor__empty">暂无风格标签</span>
+                  <span v-for="tag in styleTags" :key="`style-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
+                    {{ tag.name }}
+                    <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
+                      <X :size="13" aria-hidden="true" />
+                    </button>
+                  </span>
+                </div>
+              </div>
+              <div class="album-tags-editor__row" data-testid="album-other-tags-row">
+                <span class="field-label">其他标签</span>
+                <div class="album-tags-editor__items">
+                  <span v-if="!otherTags.length" class="album-tags-editor__empty">暂无其他标签</span>
+                  <span v-for="tag in otherTags" :key="`other-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
+                    {{ tag.name }}
+                    <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
+                      <X :size="13" aria-hidden="true" />
+                    </button>
+                  </span>
+                </div>
+              </div>
+              <div class="album-tags-editor__row album-tags-editor__row--custom">
+                <span class="field-label">添加标签</span>
+                <div class="album-tags-editor__custom-content">
+                  <PInput
+                    v-model="tagInput"
+                    class="album-tags-editor__input"
+                    label="输入后按回车确认"
+                    placeholder="例如：经典、夜晚、现场"
+                    maxlength="48"
+                    data-testid="album-tag-input"
+                    @keydown.enter.prevent="addCustomTag"
+                  />
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
@@ -669,47 +735,6 @@ watch(
         />
       </div>
       </div>
-
-          <section class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
-            <div class="album-tags-editor__row" data-testid="album-style-tags-row">
-	              <span class="field-label">风格</span>
-              <div class="album-tags-editor__items">
-	                <span v-if="!styleTags.length" class="album-tags-editor__empty">暂无风格标签</span>
-	                <span v-for="tag in styleTags" :key="`style-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
-                  {{ tag.name }}
-                  <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
-                    <X :size="13" aria-hidden="true" />
-                  </button>
-                </span>
-              </div>
-            </div>
-            <div class="album-tags-editor__row" data-testid="album-other-tags-row">
-	              <span class="field-label">其他标签</span>
-              <div class="album-tags-editor__items">
-	                <span v-if="!otherTags.length" class="album-tags-editor__empty">暂无其他标签</span>
-	                <span v-for="tag in otherTags" :key="`other-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
-                  {{ tag.name }}
-                  <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
-                    <X :size="13" aria-hidden="true" />
-                  </button>
-                </span>
-              </div>
-            </div>
-            <div class="album-tags-editor__row album-tags-editor__row--custom">
-              <span class="field-label">添加标签</span>
-              <div class="album-tags-editor__custom-content">
-                <PInput
-                  v-model="tagInput"
-                  class="album-tags-editor__input"
-                  label="输入后按回车确认"
-                  placeholder="例如：经典、夜晚、现场"
-                  maxlength="48"
-                  data-testid="album-tag-input"
-                  @keydown.enter.prevent="addCustomTag"
-                />
-              </div>
-            </div>
-          </section>
 
           <dl v-if="importedMetadata.length" class="imported-metadata" data-testid="album-imported-metadata">
             <div v-for="([label, value]) in importedMetadata" :key="label" class="imported-metadata__item">

@@ -71,7 +71,7 @@
 
       <p v-if="isUploading" class="books-feedback" aria-live="polite">正在上传 {{ uploadProgress }}%</p>
       <p v-if="errorMessage" class="books-feedback books-feedback--error" role="alert">{{ errorMessage }}</p>
-      <p v-else-if="isLoading" class="books-feedback" aria-live="polite">正在加载书库...</p>
+      <p v-else-if="isLoading" class="books-feedback" aria-live="polite">正在加载书架...</p>
 
       <section class="books-library__section" aria-labelledby="imports-title">
         <header class="books-library__section-header">
@@ -192,7 +192,7 @@
     <BookCreationFlowDrawer
       :show="isCreationOpen"
       @close="isCreationOpen = false"
-      @created="handleBookCreated"
+      @created="onBookCreated"
     />
   </section>
 </template>
@@ -271,11 +271,14 @@ function openBookCreation() {
   isCreationOpen.value = true
 }
 
-function handleBookCreated() {
+async function handleBookCreated(workID?: string) {
   isCreationOpen.value = false
   loadCatalog()
   if (isLibrary.value) {
     loadLibraryData()
+  }
+  if (workID) {
+    await router.push(`/books/work/${encodeURIComponent(workID)}`)
   }
 }
 const isDetail = computed(() => route.path.startsWith('/books/work/') || route.path.startsWith('/books/edition/'))
@@ -401,6 +404,11 @@ async function submitCatalogSearch() {
   await router.push({ path: '/books/search', query: query ? { q: query } : {} })
 }
 
+async function onBookCreated(workID: string) {
+  isCreationOpen.value = false
+  await router.push(`/books/work/${encodeURIComponent(workID)}`)
+}
+
 async function loadImports() {
   if (!isLibrary.value) return
   const requestID = ++importsRequestSequence
@@ -412,8 +420,8 @@ async function loadImports() {
   } catch (error) {
     if (requestID !== importsRequestSequence) return
     errorMessage.value = error instanceof ApiErrorResponseError && error.status === 401
-      ? '登录后才能查看私有书库'
-      : '书库加载失败，请稍后重试'
+      ? '登录后才能查看你的书架'
+      : '书架加载失败，请稍后重试'
   } finally {
     if (requestID === importsRequestSequence) isLoading.value = false
   }
@@ -843,6 +851,8 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
+.books-catalog__actions { display: flex; align-items: center; gap: 0.5rem; }
+
 .books-catalog__title { display: flex; align-items: baseline; gap: 0.75rem; min-width: 0; }
 .books-upload-link {
   display: inline-flex;
@@ -960,6 +970,7 @@ onBeforeUnmount(() => {
     align-items: flex-start;
     flex-direction: column;
   }
+  .books-catalog__actions { flex-wrap: wrap; justify-content: flex-end; }
 
   .books-catalog__search {
     width: 100%;

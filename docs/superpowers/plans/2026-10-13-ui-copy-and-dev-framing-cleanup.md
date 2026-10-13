@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: Natural, user-focused copy adhering to `AGENTS.md`.
 
-- [ ] **Step 1: Update `PortalView.vue`**
+- [x] **Step 1: Update `PortalView.vue`**
 
 In `src/views/portal/PortalView.vue`:
 Replace line 20:
@@ -45,7 +45,7 @@ with:
           </a>
 ```
 
-- [ ] **Step 2: Update `MusicCreationAlbumSeedStep.vue`**
+- [x] **Step 2: Update `MusicCreationAlbumSeedStep.vue`**
 
 In `src/components/music/MusicCreationAlbumSeedStep.vue`:
 Replace line 59:
@@ -57,7 +57,7 @@ with:
       <p class="archive-hint">推荐 ZIP。无法在本地读取的格式将在上传后自动解析并匹配。</p>
 ```
 
-- [ ] **Step 3: Update `MusicCreationAlbumPreviewStep.vue`**
+- [x] **Step 3: Update `MusicCreationAlbumPreviewStep.vue`**
 
 In `src/components/music/MusicCreationAlbumPreviewStep.vue`:
 Replace line 94:
@@ -69,7 +69,7 @@ with:
 提交后会继续处理，可在导入中心查看进度。{{ uploadsPending ? '文件尚未上传完成，请保持页面打开；关闭或刷新浏览器会中断上传。' : '文件已上传，音频处理将自动继续完成。' }}
 ```
 
-- [ ] **Step 4: Update `VideoImportsView.vue`**
+- [x] **Step 4: Update `VideoImportsView.vue`**
 
 In `src/views/video/VideoImportsView.vue`:
 Replace line 71:
@@ -81,7 +81,7 @@ with:
 if (task.status === 'published') return '视频已发布，正在自动生成播放预览'
 ```
 
-- [ ] **Step 5: Update `ProfileView.vue`**
+- [x] **Step 5: Update `ProfileView.vue`**
 
 In `src/views/blog/ProfileView.vue`:
 Replace line 185:
@@ -93,12 +93,12 @@ with:
 :title="contentItems.length ? '暂无所选内容' : '暂无内容'"
 ```
 
-- [ ] **Step 6: Run component tests to verify no regressions**
+- [x] **Step 6: Run component tests to verify no regressions**
 
 Run: `bun run test:unit tests/unit/components/music/MusicCreationAlbumPreviewStep.spec.ts tests/unit/views/blog/ProfileView.spec.ts tests/unit/views/video/VideoImportsView.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/views/portal/PortalView.vue src/components/music/MusicCreationAlbumSeedStep.vue src/components/music/MusicCreationAlbumPreviewStep.vue src/views/video/VideoImportsView.vue src/views/blog/ProfileView.vue
@@ -113,13 +113,13 @@ git commit -m "style(ui): clean developer framing and tighten copy across portal
 - Modify: `tests/unit/ui/ui-guidelines.spec.ts`
 - Modify: `tests/unit/views/portal/PortalView.spec.ts`
 
-- [ ] **Step 1: Update `tests/unit/views/portal/PortalView.spec.ts`**
+- [x] **Step 1: Update `tests/unit/views/portal/PortalView.spec.ts`**
 
 In `tests/unit/views/portal/PortalView.spec.ts`:
 Line 225-231:
 Ensure `featured: featured.slice(0, 3)` is used in `it('使用后端返回的艺人和真实统计渲染热门音乐')` so the mocked music section items are tested without mock collision from `featured`.
 
-- [ ] **Step 2: Add negative assertions in `tests/unit/ui/ui-guidelines.spec.ts`**
+- [x] **Step 2: Add negative assertions in `tests/unit/ui/ui-guidelines.spec.ts`**
 
 In `tests/unit/ui/ui-guidelines.spec.ts`:
 In test `空状态和管理界面不暴露英文内部文案`:
@@ -139,12 +139,12 @@ Add:
 		);
 ```
 
-- [ ] **Step 3: Run contract test and portal test**
+- [x] **Step 3: Run contract test and portal test**
 
 Run: `bun run test:unit tests/unit/ui/ui-guidelines.spec.ts tests/unit/views/portal/PortalView.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/unit/ui/ui-guidelines.spec.ts tests/unit/views/portal/PortalView.spec.ts
@@ -158,22 +158,22 @@ git commit -m "test(ui): add guidelines assertions prohibiting developer perspec
 **Files:**
 - All modified files
 
-- [ ] **Step 1: Run type checking**
+- [x] **Step 1: Run type checking**
 
 Run: `bun run type-check`
 Expected: 0 errors.
 
-- [ ] **Step 2: Run all UI and modified tests**
+- [x] **Step 2: Run all UI and modified tests**
 
 Run: `bun run test:unit tests/unit/ui/ tests/unit/views/portal/PortalView.spec.ts`
 Expected: All tests pass.
 
-- [ ] **Step 3: Run production build**
+- [x] **Step 3: Run production build**
 
 Run: `bun run build`
 Expected: Build succeeds with 0 errors.
 
-- [ ] **Step 4: Check git diff**
+- [x] **Step 4: Check git diff**
 
 Run: `git diff --check`
 Expected: Clean.

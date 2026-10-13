@@ -1,6 +1,5 @@
 <template>
   <main class="a-page-md books-reader" :class="`books-reader--theme-${displayPreferences.theme}`" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
-    <PPageHeader title="阅读" mb="0" />
     <BookReaderShell
       :title="asset?.title || '私有电子书'"
       :subtitle="asset ? `${asset.file_name} · ${statusLabel}` : ''"
@@ -76,8 +75,10 @@
       <div v-else class="books-reader__pdf">
         <canvas ref="pdfCanvas" aria-label="PDF 页面" />
       </div>
-      <template #footer>
+      <template #settings>
         <BookReaderDisplayControls v-model="displayPreferences" @update:model-value="updateDisplayPreferences" />
+      </template>
+      <template #tools>
         <form v-if="asset?.format === 'txt'" class="books-reader__search" @submit.prevent="searchText">
           <label for="private-book-search">搜索正文</label>
           <div class="books-reader__search-row">
@@ -123,7 +124,6 @@ import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'

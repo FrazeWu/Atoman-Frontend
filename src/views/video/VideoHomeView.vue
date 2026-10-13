@@ -175,12 +175,12 @@ watch(sort, () => {
         <template #skeleton>
           <div class="vh-grid">
             <div v-for="i in 4" :key="i" class="vh-skel">
-              <div class="vh-skel-thumb" />
+              <PSkeleton variant="rect" height="auto" style="aspect-ratio: 16/9; width: 100%;" />
               <div class="vh-skel-info">
-                <div class="vh-skel-avatar" />
+                <PSkeleton variant="circle" width="2.25rem" height="2.25rem" style="flex-shrink: 0;" />
                 <div class="vh-skel-lines">
-                  <div class="vh-skel-line" style="width:85%" />
-                  <div class="vh-skel-line" style="width:55%" />
+                  <PSkeleton variant="text" width="85%" />
+                  <PSkeleton variant="text" width="55%" />
                 </div>
               </div>
             </div>
@@ -234,12 +234,12 @@ watch(sort, () => {
       <template #skeleton>
         <div class="vh-grid">
           <div v-for="i in 8" :key="i" class="vh-skel">
-            <div class="vh-skel-thumb" />
+            <PSkeleton variant="rect" height="auto" style="aspect-ratio: 16/9; width: 100%;" />
             <div class="vh-skel-info">
-              <div class="vh-skel-avatar" />
+              <PSkeleton variant="circle" width="2.25rem" height="2.25rem" style="flex-shrink: 0;" />
               <div class="vh-skel-lines">
-                <div class="vh-skel-line" style="width:85%" />
-                <div class="vh-skel-line" style="width:55%" />
+                <PSkeleton variant="text" width="85%" />
+                <PSkeleton variant="text" width="55%" />
               </div>
             </div>
           </div>
@@ -375,25 +375,10 @@ watch(sort, () => {
 
 /* Skeleton card */
 .vh-skel { display: flex; flex-direction: column; gap: 0; }
-.vh-skel-thumb {
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: var(--a-color-surface);
-  border-radius: 4px;
-  animation: pulse 1.4s ease-in-out infinite;
-}
 .vh-skel-info {
   display: flex;
   gap: 0.65rem;
   padding: 0.6rem 0 0;
-}
-.vh-skel-avatar {
-  flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: var(--a-color-surface);
-  animation: pulse 1.4s ease-in-out infinite;
 }
 .vh-skel-lines {
   flex: 1;
@@ -401,17 +386,6 @@ watch(sort, () => {
   flex-direction: column;
   gap: 0.35rem;
   padding-top: 0.1rem;
-}
-.vh-skel-line {
-  height: 0.75rem;
-  background: var(--a-color-surface);
-  border-radius: 0px;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
 }
 
 .vh-empty {

@@ -963,7 +963,7 @@ async function duplicateDraft() {
 
 .ve-tag button:hover,
 .ve-tag button:focus-visible {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 
@@ -1028,7 +1028,7 @@ async function duplicateDraft() {
 }
 .ve-drop-zone:hover:not(.ve-drop-zone--uploading) {
   border-color: var(--a-color-text-secondary);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 .ve-drop-zone--uploading { cursor: default; opacity: 0.7; }

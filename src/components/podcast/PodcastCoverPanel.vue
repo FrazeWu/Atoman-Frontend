@@ -120,7 +120,7 @@ function onCoverFileChange(event: Event) {
 .pe-cover-empty:hover:not(.pe-cover-empty--uploading),
 .pe-cover-empty:focus-within {
   border-color: var(--a-color-text-secondary);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 

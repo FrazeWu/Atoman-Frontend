@@ -100,13 +100,13 @@ const mergeDuplicatesValue = computed({ get: () => props.mergeDuplicates, set: v
 .feed-current-source__clear:hover { text-decoration: underline; text-underline-offset: 0.18em; }
 .feed-actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
 .feed-search { display: grid; grid-template-columns: minmax(12rem, 22rem) auto auto; align-items: center; gap: 0.5rem; margin-right: auto; }
-.feed-search__input { min-width: 0; height: 40px; border: 0; border-bottom: 2px solid var(--a-color-text); border-radius: 0; background: var(--a-color-surface); color: var(--a-color-text); font: inherit; padding: 0 0.75rem; outline: none; box-sizing: border-box; }
-.feed-search__input:focus { border-bottom-color: var(--a-color-accent-confirm); }
+.feed-search__input { min-width: 0; height: 40px; border: 0; border-bottom: 2px solid var(--a-color-text); border-radius: 0; background: var(--a-color-bg); color: var(--a-color-text); font: inherit; padding: 0 0.75rem; outline: none; box-sizing: border-box; }
+.feed-search__input:focus { border-bottom-color: var(--a-color-primary); }
 .feed-merge-duplicates { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; color: var(--a-color-muted); font-size: 0.8rem; white-space: nowrap; }
 .feed-merge-duplicates input { width: 1rem; height: 1rem; accent-color: var(--a-color-text); }
 .filter-toggle-btn { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: none; background: transparent; color: var(--a-color-muted); cursor: pointer; border-radius: var(--a-radius-none, 4px); transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s; }
 .filter-toggle-btn:hover, .filter-toggle-btn.active { background: var(--a-color-surface-muted); color: var(--a-color-text); }
-.filter-toggle-btn.active { font-weight: bold; }
+.filter-toggle-btn.active { font-weight: 600; }
 .feed-new-content-region { margin-bottom: 0.75rem; }
 .feed-new-content { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-none, 4px); background: var(--a-color-surface-muted); color: var(--a-color-fg); cursor: pointer; font: inherit; font-size: 0.875rem; font-weight: 600; transition: background-color 0.15s ease, color 0.15s ease; }
 .feed-new-content:hover { background: var(--a-color-text); color: var(--a-color-bg); }

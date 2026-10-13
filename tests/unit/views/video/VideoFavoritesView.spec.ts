@@ -20,6 +20,7 @@ vi.mock('@/composables/useVideoBookmarks', () => ({
     }),
     load,
     removeMany: vi.fn(),
+    reset: vi.fn(),
   }),
 }))
 

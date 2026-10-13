@@ -97,7 +97,7 @@ const emit = defineEmits<{
 .feed-mobile-sources-sheet__header h1 {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .feed-mobile-sources-sheet-page {
@@ -106,7 +106,7 @@ const emit = defineEmits<{
 
 .feed-mobile-sources-sheet-page :deep(.subscription-hub-sidebar) {
   padding: 0;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 
 .feed-mobile-sources-sheet {

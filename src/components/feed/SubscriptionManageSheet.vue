@@ -1997,7 +1997,7 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .subscription-settings-toggle:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 .subscription-settings-toggle:focus-visible {
@@ -2017,12 +2017,12 @@ watch(() => props.filterRules, (rules) => {
   place-items: center;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
-  color: var(--a-color-danger, #b91c1c);
+  color: var(--a-color-danger);
   cursor: pointer;
 }
 
 .subscription-remove:hover {
-  background: var(--a-color-surface);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
 }
 
 .subscription-remove:focus-visible {

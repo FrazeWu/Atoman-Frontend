@@ -31,7 +31,7 @@ withDefaults(defineProps<{
 .p-card--interactive:hover,
 .p-card--interactive:focus-within {
   border-color: var(--a-color-border);
-  background-color: var(--a-color-surface);
+  background-color: var(--a-color-surface-muted);
 }
 
 .p-card__arrow {

@@ -319,10 +319,10 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__filter {
   justify-self: start;
-  border: 1px solid transparent;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   padding: 0.35rem 0.65rem;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font: inherit;
@@ -371,16 +371,16 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__all:hover,
 .feed-sidebar-sources__item:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
 
 .feed-sidebar-sources__all.is-active,
 .feed-sidebar-sources__item.is-active {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-left-color: var(--a-color-fg);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .feed-sidebar-sources__badge {
@@ -400,7 +400,7 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__type {
-  color: #64748b;
+  color: var(--a-color-muted);
   font-size: 0.78em;
   font-weight: 500;
 }
@@ -408,7 +408,9 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__empty {
   margin: 0;
   padding: 0.75rem 0.55rem;
-  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   font-size: 0.82rem;
 }

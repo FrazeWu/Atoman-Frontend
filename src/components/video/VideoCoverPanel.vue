@@ -151,7 +151,7 @@ function onCoverFileChange(event: Event) {
 .ve-cover-empty:hover:not(.ve-cover-empty--uploading),
 .ve-cover-empty:focus-within {
   border-color: var(--a-color-text-secondary);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 

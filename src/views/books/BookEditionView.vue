@@ -92,6 +92,7 @@ const facts = computed(() => {
   const edition = detail.value.edition
   return [
     { label: '出版社', value: edition.publisher || '待补充' },
+    { label: '出品方', value: edition.producer || '待补充' },
     { label: 'ISBN-10', value: edition.isbn10 || '待补充' },
     { label: 'ISBN-13', value: edition.isbn13 || '待补充' },
     { label: '语言', value: ['chi', 'zho', 'zh'].includes(edition.language || '') ? '中文' : edition.language || '待补充' },

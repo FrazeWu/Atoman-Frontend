@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import * as booksApi from '@/api/books'
@@ -25,6 +26,10 @@ const readingState = {
   reading_percent: 0,
   preferences: {},
 }
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -173,7 +178,7 @@ describe('BookReaderView', () => {
     await flushPromises()
 
     expect(saveState).toHaveBeenLastCalledWith('asset-1', expect.objectContaining({
-      preferences: expect.objectContaining({ display: { font_scale: 1.35, theme: 'night' } }),
+      preferences: expect.objectContaining({ display: expect.objectContaining({ font_scale: 1.35, theme: 'night' }) }),
     }))
   })
 })

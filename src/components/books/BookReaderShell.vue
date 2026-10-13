@@ -21,12 +21,31 @@
     <slot name="status" />
 
     <section v-if="showSurface" class="book-reader-shell__workspace">
-      <!-- 左侧边栏：缩略图瀑布流 (PDF Expert 风格) -->
-      <slot name="thumbnails" />
+      <!-- 左侧边栏：导览面板 (PDF Expert 风格) -->
+      <div v-if="showSidebar && ($slots.sidebar || $slots.thumbnails)" class="book-reader-shell__sidebar-wrapper">
+        <slot name="sidebar">
+          <slot name="thumbnails" />
+        </slot>
+      </div>
 
       <div class="book-reader-shell__reading-column">
         <div class="book-reader-shell__toolbar">
-          <span v-if="toolbarLabel" class="book-reader-shell__toolbar-label">{{ toolbarLabel }}</span>
+          <div class="book-reader-shell__toolbar-left">
+            <button
+              v-if="$slots.sidebar || $slots.thumbnails"
+              type="button"
+              class="book-reader-shell__tool-btn"
+              :class="{ 'is-active': showSidebar }"
+              :aria-pressed="showSidebar"
+              title="切换导览侧栏"
+              aria-label="切换导览侧栏"
+              @click="showSidebar = !showSidebar"
+            >
+              <LayoutSidebar :size="16" aria-hidden="true" />
+            </button>
+            <span v-if="toolbarLabel" class="book-reader-shell__toolbar-label">{{ toolbarLabel }}</span>
+          </div>
+
           <div v-if="pageLabel || showPagination" class="book-reader-shell__pagination tabular-nums">
             <button v-if="showPagination" type="button" aria-label="上一页" title="上一页" :disabled="!canPrev" @click="emit('previous')">
               <ChevronLeft :size="18" aria-hidden="true" />
@@ -36,20 +55,48 @@
               <ChevronRight :size="18" aria-hidden="true" />
             </button>
           </div>
-          <nav v-if="hasTools" class="book-reader-shell__panel-tabs" aria-label="阅读工具">
-            <button
-              v-if="toc.length || $slots.tools"
-              type="button"
-              :aria-pressed="activePanel === 'tools'"
-              @click="togglePanel('tools')"
-            >目录与检索</button>
-            <button
-              v-if="$slots.settings"
-              type="button"
-              :aria-pressed="activePanel === 'settings'"
-              @click="togglePanel('settings')"
-            >显示设置</button>
-          </nav>
+
+          <div class="book-reader-shell__toolbar-right">
+            <!-- 缩放控制 (PDF Expert 风格) -->
+            <div v-if="showZoom" class="book-reader-shell__zoom-controls tabular-nums" role="group" aria-label="页面缩放">
+              <button
+                type="button"
+                class="book-reader-shell__zoom-btn"
+                aria-label="缩小"
+                title="缩小"
+                :disabled="zoom <= minZoom"
+                @click="changeZoom(-10)"
+              >
+                <ZoomOut :size="15" aria-hidden="true" />
+              </button>
+              <span class="book-reader-shell__zoom-value">{{ zoom }}%</span>
+              <button
+                type="button"
+                class="book-reader-shell__zoom-btn"
+                aria-label="放大"
+                title="放大"
+                :disabled="zoom >= maxZoom"
+                @click="changeZoom(10)"
+              >
+                <ZoomIn :size="15" aria-hidden="true" />
+              </button>
+            </div>
+
+            <nav v-if="hasTools" class="book-reader-shell__panel-tabs" aria-label="阅读工具">
+              <button
+                v-if="toc.length || $slots.tools"
+                type="button"
+                :aria-pressed="activePanel === 'tools'"
+                @click="togglePanel('tools')"
+              >目录与检索</button>
+              <button
+                v-if="$slots.settings"
+                type="button"
+                :aria-pressed="activePanel === 'settings'"
+                @click="togglePanel('settings')"
+              >显示设置</button>
+            </nav>
+          </div>
         </div>
 
         <div class="book-reader-shell__content">
@@ -93,7 +140,14 @@
 
 <script setup lang="ts">
 import { computed, ref, useSlots } from 'vue'
-import { IconArrowLeft as ArrowLeft, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
+import {
+  IconArrowLeft as ArrowLeft,
+  IconChevronLeft as ChevronLeft,
+  IconChevronRight as ChevronRight,
+  IconLayoutSidebar as LayoutSidebar,
+  IconZoomIn as ZoomIn,
+  IconZoomOut as ZoomOut,
+} from '@tabler/icons-vue'
 
 export type BookReaderTocItem = {
   id?: string
@@ -117,6 +171,10 @@ const props = withDefaults(defineProps<{
   showPagination?: boolean
   showSurface?: boolean
   toc?: BookReaderTocItem[]
+  showZoom?: boolean
+  initialZoom?: number
+  minZoom?: number
+  maxZoom?: number
 }>(), {
   subtitle: '',
   format: '',
@@ -129,12 +187,17 @@ const props = withDefaults(defineProps<{
   showPagination: false,
   showSurface: true,
   toc: () => [],
+  showZoom: false,
+  initialZoom: 100,
+  minZoom: 50,
+  maxZoom: 200,
 })
 
 const emit = defineEmits<{
   previous: []
   next: []
   'toc-select': [href: string]
+  'zoom-change': [zoom: number]
 }>()
 
 const progressPercent = computed(() => Math.round(Math.max(0, Math.min(1, props.progress)) * 100))
@@ -144,6 +207,17 @@ const activePanel = ref<'tools' | 'settings' | ''>(
   slots.settings && desktopLayout ? 'settings' : (props.toc.length || slots.tools ? 'tools' : ''),
 )
 const hasTools = computed(() => Boolean(props.toc.length || slots.tools || slots.settings))
+
+const showSidebar = ref(desktopLayout)
+const zoom = ref(props.initialZoom)
+
+function changeZoom(delta: number) {
+  const newZoom = Math.max(props.minZoom, Math.min(props.maxZoom, zoom.value + delta))
+  if (newZoom !== zoom.value) {
+    zoom.value = newZoom
+    emit('zoom-change', newZoom)
+  }
+}
 
 function togglePanel(panel: 'tools' | 'settings') {
   activePanel.value = activePanel.value === panel ? '' : panel
@@ -270,6 +344,92 @@ function togglePanel(panel: 'tools' | 'settings') {
   background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-muted, var(--a-color-muted));
   font-size: 0.85rem;
+}
+
+.book-reader-shell__sidebar-wrapper {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.book-reader-shell__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.book-reader-shell__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.book-reader-shell__tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--book-reader-surface, var(--a-color-bg));
+  color: var(--book-reader-muted, var(--a-color-muted));
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.book-reader-shell__tool-btn:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--book-reader-text, var(--a-color-fg));
+}
+
+.book-reader-shell__tool-btn.is-active {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.book-reader-shell__zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--book-reader-surface, var(--a-color-bg));
+}
+
+.book-reader-shell__zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--book-reader-muted, var(--a-color-muted));
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.book-reader-shell__zoom-btn:hover:not(:disabled) {
+  background: var(--a-color-surface-muted);
+  color: var(--book-reader-text, var(--a-color-fg));
+}
+
+.book-reader-shell__zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.book-reader-shell__zoom-value {
+  padding: 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--book-reader-text, var(--a-color-fg));
+  min-width: 2.75rem;
+  text-align: center;
 }
 
 .book-reader-shell__toolbar-label {

@@ -9,6 +9,15 @@
         <option :value="1.35">特大</option>
       </select>
     </label>
+
+    <label v-if="showLayout">
+      <span>版式</span>
+      <select :value="modelValue.page_layout || 'single'" aria-label="页面排版" @change="setPageLayout">
+        <option value="single">单页</option>
+        <option value="double">双页对开</option>
+      </select>
+    </label>
+
     <div class="book-reader-display-controls__themes" role="group" aria-label="阅读主题">
       <button type="button" :class="{ 'is-active': modelValue.theme === 'paper' }" aria-label="纸张主题" @click="setTheme('paper')">纸</button>
       <button type="button" :class="{ 'is-active': modelValue.theme === 'dim' }" aria-label="柔和主题" @click="setTheme('dim')">柔</button>
@@ -18,14 +27,25 @@
 </template>
 
 <script setup lang="ts">
-import type { BookReaderDisplayPreferences, BookReaderTheme } from '@/utils/bookReaderPreferences'
+import type { BookReaderDisplayPreferences, BookReaderPageLayout, BookReaderTheme } from '@/utils/bookReaderPreferences'
 
-const props = defineProps<{ modelValue: BookReaderDisplayPreferences }>()
+const props = withDefaults(defineProps<{
+  modelValue: BookReaderDisplayPreferences
+  showLayout?: boolean
+}>(), {
+  showLayout: true,
+})
+
 const emit = defineEmits<{ 'update:modelValue': [value: BookReaderDisplayPreferences] }>()
 
 function setFontScale(event: Event) {
   const value = Number((event.target as HTMLSelectElement).value)
   emit('update:modelValue', { ...props.modelValue, font_scale: value })
+}
+
+function setPageLayout(event: Event) {
+  const value = (event.target as HTMLSelectElement).value as BookReaderPageLayout
+  emit('update:modelValue', { ...props.modelValue, page_layout: value })
 }
 
 function setTheme(theme: BookReaderTheme) {

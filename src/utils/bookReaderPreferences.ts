@@ -10,15 +10,20 @@ export type BookReaderBookmark = {
 }
 
 export type BookReaderTheme = 'paper' | 'dim' | 'night'
+export type BookReaderPageLayout = 'single' | 'double'
 
 export type BookReaderDisplayPreferences = {
   font_scale: number
   theme: BookReaderTheme
+  page_layout?: BookReaderPageLayout
+  zoom_level?: number
 }
 
 export const defaultBookReaderDisplayPreferences: BookReaderDisplayPreferences = {
   font_scale: 1,
   theme: 'paper',
+  page_layout: 'single',
+  zoom_level: 100,
 }
 
 export function parseBookReaderDisplayPreferences(value: unknown): BookReaderDisplayPreferences {
@@ -26,10 +31,18 @@ export function parseBookReaderDisplayPreferences(value: unknown): BookReaderDis
   const candidate = value as Partial<BookReaderDisplayPreferences>
   const fontScale = Number(candidate.font_scale)
   const theme = candidate.theme === 'dim' || candidate.theme === 'night' ? candidate.theme : 'paper'
-  return {
+  const res: BookReaderDisplayPreferences = {
     font_scale: Number.isFinite(fontScale) ? Math.max(0.85, Math.min(1.35, fontScale)) : 1,
     theme,
   }
+  if (candidate.page_layout !== undefined) {
+    res.page_layout = candidate.page_layout === 'double' ? 'double' : 'single'
+  }
+  if (candidate.zoom_level !== undefined) {
+    const zoomLevel = Number(candidate.zoom_level)
+    res.zoom_level = Number.isFinite(zoomLevel) ? Math.max(50, Math.min(200, zoomLevel)) : 100
+  }
+  return res
 }
 
 export function parseBookReaderBookmarks(value: unknown): BookReaderBookmark[] {

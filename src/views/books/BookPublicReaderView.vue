@@ -13,9 +13,12 @@
       :show-pagination="showPagination"
       :show-surface="!errorMessage"
       :toc="epubTOC"
+      :show-zoom="asset?.format === 'pdf'"
+      :initial-zoom="displayPreferences.zoom_level || 100"
       @previous="movePrevious"
       @next="moveNext"
       @toc-select="jumpToEpubTOC"
+      @zoom-change="handleZoomChange"
     >
       <template #actions>
         <PButton type="button" variant="ghost" :disabled="!asset" @click="reportAsset">
@@ -32,12 +35,16 @@
         <p v-if="errorMessage" class="public-reader__feedback public-reader__feedback--error" role="alert">{{ errorMessage }}</p>
         <p v-else-if="isLoading" class="public-reader__feedback" aria-live="polite">正在打开公共正文...</p>
       </template>
-      <template #thumbnails>
-        <BookReaderThumbnailStrip
-          v-if="asset?.format === 'pdf' && pdfPageCount > 0"
-          :total-pages="pdfPageCount"
-          :current-page="pdfPage"
+      <template #sidebar>
+        <BookReaderSidebar
+          :total-pages="asset?.format === 'pdf' ? pdfPageCount : 0"
+          :current-page="asset?.format === 'pdf' ? pdfPage : 1"
+          :toc="epubTOC"
+          :bookmarks="bookmarks"
           @select-page="jumpToPdfPage"
+          @toc-select="jumpToEpubTOC"
+          @bookmark-jump="jumpToBookmark"
+          @bookmark-remove="removeBookmark"
         />
       </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" @scroll="handleTextScroll"><pre>{{ textContent }}</pre></div>
@@ -95,6 +102,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
+import BookReaderSidebar from '@/components/books/BookReaderSidebar.vue'
 import BookReaderThumbnailStrip from '@/components/books/BookReaderThumbnailStrip.vue'
 import { useBookReaderStore } from '@/stores/bookReader'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
@@ -179,7 +187,8 @@ async function loadPDF() {
 async function renderPDFPage() {
   if (!pdfDocument || !pdfCanvas.value) return
   const page = await pdfDocument.getPage(pdfPage.value)
-  const viewport = page.getViewport({ scale: 1.35 })
+  const zoomFactor = (displayPreferences.value.zoom_level || 100) / 100
+  const viewport = page.getViewport({ scale: 1.35 * zoomFactor })
   const canvas = pdfCanvas.value
   const context = canvas.getContext('2d')
   if (!context) return
@@ -190,6 +199,21 @@ async function renderPDFPage() {
   readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
   readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
   saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+}
+
+function handleZoomChange(newZoom: number) {
+  displayPreferences.value = { ...displayPreferences.value, zoom_level: newZoom }
+  if (asset.value?.format === 'pdf') {
+    void renderPDFPage()
+  }
+  if (asset.value) {
+    saveLocalBookReadingProgress(asset.value.id, {
+      reading_percent: readingPercent.value,
+      epub_cfi: localProgress?.epub_cfi || '',
+      bookmarks: bookmarks.value,
+      display: displayPreferences.value,
+    })
+  }
 }
 
 async function loadEPUB() {

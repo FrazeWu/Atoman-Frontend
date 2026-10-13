@@ -17,6 +17,7 @@
         <component :is="Component" :key="route.path" />
       </PSheet>
     </RouterView>
+    <BookMiniReaderBar />
   </div>
 </template>
 
@@ -26,6 +27,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import AppSidebar from '@/components/system/AppSidebar.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import BookWorkDrawer from '@/components/books/BookWorkDrawer.vue'
+import BookMiniReaderBar from '@/components/books/BookMiniReaderBar.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
 const { sidebarCollapsed } = useSidebar()

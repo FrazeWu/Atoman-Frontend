@@ -28,7 +28,7 @@
         <div class="a-page explore-template">
         <PPageHeader title="博客探索范例" accent>
           <template #action>
-            <PButton outline to="/posts">返回实际博客</PButton>
+            <PButton variant="secondary" to="/posts">返回实际博客</PButton>
           </template>
         </PPageHeader>
 
@@ -514,7 +514,6 @@ const recommendedAuthors = ref([
   font-size: 0.7rem;
   color: #ffffff;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
   border-radius: var(--a-radius-control);
 }
 

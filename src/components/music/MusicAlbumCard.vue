@@ -443,10 +443,8 @@ const albumYear = computed(() => {
   font-weight: 600;
   line-height: 1.2;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, 0.82);
   color: #ffffff;
-  backdrop-filter: blur(4px);
-  pointer-events: none;
 }
 
 .status-tag[data-status="ready"] {

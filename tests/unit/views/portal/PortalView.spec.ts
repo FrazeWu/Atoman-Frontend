@@ -227,7 +227,7 @@ describe('PortalView', () => {
       status: 200,
       json: async () => ({
         data: {
-          featured,
+          featured: featured.slice(0, 3),
           sections: [
             {
               module: 'music',

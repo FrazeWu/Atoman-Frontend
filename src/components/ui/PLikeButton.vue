@@ -81,7 +81,7 @@ function handleClick() {
   gap: 0.4rem;
   padding: 0.35rem 0.7rem;
   border-radius: var(--a-radius-control);
-  color: var(--a-color-text-secondary, #475569);
+  color: var(--a-color-text-secondary);
   font-weight: 500;
   cursor: pointer;
   line-height: 1;
@@ -132,19 +132,19 @@ function handleClick() {
   font-size: 0.875rem;
 }
 
-/* 点赞激活态 - 克莱因蓝 / 主题蓝 */
+/* 点赞激活态 - 语义品牌主色 */
 .p-like-button.is-active {
-  color: var(--a-color-primary, #2563eb);
-  background: rgba(37, 99, 235, 0.07);
+  color: var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 10%, transparent);
 }
 
 .p-like-button.is-variant-bordered.is-active {
-  border-color: rgba(37, 99, 235, 0.25);
+  border-color: color-mix(in srgb, var(--a-color-primary) 30%, transparent);
 }
 
 .p-like-button.is-active:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--a-color-primary-hover, #1d4ed8);
+  background: color-mix(in srgb, var(--a-color-primary) 16%, transparent);
+  color: var(--a-color-primary-hover);
 }
 
 .p-like-button__icon {

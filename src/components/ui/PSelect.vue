@@ -239,7 +239,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-select-trigger--error {
-  border-bottom-color: var(--a-color-accent-destructive);
+  border-bottom-color: var(--a-color-danger);
 }
 
 .p-select-value--placeholder,
@@ -306,7 +306,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-field-error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
 }
 
 .p-field-hint,

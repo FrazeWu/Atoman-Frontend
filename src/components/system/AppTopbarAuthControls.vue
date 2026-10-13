@@ -190,7 +190,7 @@ const logout = async () => {
   place-items: center;
   padding: 0 0.2rem;
   border: 1px solid var(--a-color-bg);
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-danger);
   color: var(--a-color-bg);
   font-size: 0.62rem;

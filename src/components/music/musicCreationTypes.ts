@@ -256,6 +256,7 @@ export interface MusicCreationAlbumTagDraft {
 	name: string;
 	kind: MusicTagKind;
 	parentName?: string;
+	metadataCategory?: "genre" | "style";
 }
 
 export interface MusicCreationAlbumDetailsDraft {
@@ -303,6 +304,7 @@ export interface MusicCreationFlowState {
 	editingContributorId?: string | null;
 	contributorReturnStep?: "albumImport" | "albumDetails";
 	metadataTagsApplied?: boolean;
+	metadataCountryCustomized?: boolean;
 	typeCustomized?: boolean;
 	returnedToImport?: boolean;
 }

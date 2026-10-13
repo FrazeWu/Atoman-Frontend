@@ -77,7 +77,7 @@ function handleClick() {
   gap: 0.4rem;
   padding: 0.35rem 0.7rem;
   border-radius: var(--a-radius-control);
-  color: var(--a-color-text-secondary, #475569);
+  color: var(--a-color-text-secondary);
   font-weight: 500;
   cursor: pointer;
   line-height: 1;
@@ -128,19 +128,19 @@ function handleClick() {
   font-size: 0.875rem;
 }
 
-/* 点踩激活态 - 板岩石板灰 */
+/* 点踩激活态 - 次级文字色令牌 */
 .p-dislike-button.is-active {
-  color: #334155;
-  background: rgba(51, 65, 85, 0.08);
+  color: var(--a-color-text-secondary);
+  background: color-mix(in srgb, var(--a-color-text-secondary) 10%, transparent);
 }
 
 .p-dislike-button.is-variant-bordered.is-active {
-  border-color: rgba(51, 65, 85, 0.25);
+  border-color: color-mix(in srgb, var(--a-color-text-secondary) 25%, transparent);
 }
 
 .p-dislike-button.is-active:hover:not(:disabled) {
-  background: rgba(51, 65, 85, 0.14);
-  color: #0f172a;
+  background: color-mix(in srgb, var(--a-color-text-secondary) 16%, transparent);
+  color: var(--a-color-fg);
 }
 
 .p-dislike-button__icon {

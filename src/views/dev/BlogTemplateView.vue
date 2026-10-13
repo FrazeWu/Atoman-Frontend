@@ -6,7 +6,7 @@
         <div class="a-page blog-template">
         <PPageHeader title="博客范例" accent>
           <template #action>
-            <PButton outline to="/posts">返回实际博客</PButton>
+            <PButton variant="secondary" to="/posts">返回实际博客</PButton>
           </template>
         </PPageHeader>
 
@@ -367,7 +367,6 @@ const weeklyMustRead = [
   font-weight: 600;
   color: #ffffff;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
   border-radius: var(--a-radius-control);
 }
 

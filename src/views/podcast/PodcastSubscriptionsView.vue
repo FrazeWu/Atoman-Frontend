@@ -101,12 +101,12 @@ async function listenLater(episode: PodcastEpisode) {
           </div>
           <div class="psub-actions">
             <PButton size="sm" @click="playEpisode(episode)">播放</PButton>
-            <PButton size="sm" outline @click="listenLater(episode)">稍后听</PButton>
+            <PButton size="sm" variant="secondary" @click="listenLater(episode)">稍后听</PButton>
           </div>
         </article>
       </div>
       <div v-if="timeline.hasMore.value && !timeline.loading.value" class="psub-more">
-        <PButton outline @click="timeline.loadMore">加载更多</PButton>
+        <PButton variant="secondary" @click="timeline.loadMore">加载更多</PButton>
       </div>
     </template>
   </div>

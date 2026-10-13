@@ -45,10 +45,9 @@ const onClick = (event: MouseEvent) => {
   background: transparent;
   color: var(--a-color-muted);
   font-family: inherit;
-  font-size: 11px;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -64,6 +63,7 @@ const onClick = (event: MouseEvent) => {
   border-bottom-color: var(--a-color-text); /* Black bottom highlight */
   background: transparent;
   color: var(--a-color-text);
+  font-weight: 600;
 }
 
 /* Remove old active before block */

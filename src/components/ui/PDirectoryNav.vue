@@ -123,10 +123,9 @@ function selectItem(id: string, mobile: boolean) {
   max-height: calc(100dvh - var(--a-topbar-height) - 2rem);
   overflow: hidden;
   border: 1px solid var(--a-color-border);
-  border-radius: 8px;
-  background: var(--a-color-surface);
-  box-shadow: 0 12px 28px
-    color-mix(in srgb, var(--a-color-text) 12%, transparent);
+  border-radius: var(--a-radius-card, 4px);
+  background: var(--a-color-bg);
+  box-shadow: var(--a-shadow-dropdown);
   transition: width 0.2s ease;
 }
 .p-directory-panel.is-collapsed {
@@ -281,8 +280,8 @@ function selectItem(id: string, mobile: boolean) {
   max-width: calc(100% - 1.5rem) !important;
   overflow: hidden;
   border: 1px solid var(--a-color-border) !important;
-  border-radius: 8px;
-  background: var(--a-color-surface) !important;
+  border-radius: var(--a-radius-card, 4px);
+  background: var(--a-color-bg) !important;
 }
 .p-directory-sheet .sheet-content,
 .p-directory-sheet .sheet-content-header-inline {

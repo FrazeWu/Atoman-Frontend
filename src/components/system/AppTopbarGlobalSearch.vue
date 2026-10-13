@@ -343,8 +343,7 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   z-index: var(--a-z-global-menu);
-  background: color-mix(in srgb, var(--a-color-text) 45%, transparent);
-  backdrop-filter: blur(4px);
+  background: var(--a-color-overlay-soft, rgba(15, 23, 42, 0.45));
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -519,7 +518,6 @@ onBeforeUnmount(() => {
   margin: 0 0 0.6rem 0.25rem;
   font-size: 0.72rem;
   font-weight: 500;
-  text-transform: uppercase;
   color: var(--a-color-muted-soft);
   letter-spacing: 0.05em;
 }

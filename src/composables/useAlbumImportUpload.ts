@@ -43,6 +43,7 @@ type AlbumImportUploadState = {
 	operationGeneration: number;
 	pollingGeneration: number;
 	serverDerivedSnapshotApplied: boolean;
+	localCoverDetected: boolean;
 	matchGeneration: number;
 	selectedFiles: Map<string, File>;
 	abortControllers: Set<AbortController>;
@@ -132,6 +133,7 @@ function uploadStateFor(flow: MusicCreationFlowState) {
 		operationGeneration: 0,
 		pollingGeneration: 0,
 		serverDerivedSnapshotApplied: false,
+		localCoverDetected: false,
 		matchGeneration: 0,
 		selectedFiles: new Map(),
 		abortControllers: new Set(),
@@ -183,6 +185,7 @@ export function useAlbumImportUpload() {
 		draft.metadataStyles = [];
 		draft.metadataLabels = [];
 		draft.metadataCountry = "";
+		flow.metadataCountryCustomized = false;
 		draft.metadataFormats = [];
 		draft.metadataSources = [];
 		draft.metadataFieldSources = {};
@@ -288,10 +291,10 @@ export function useAlbumImportUpload() {
 		} else {
 			draft.uploadSpeed = 0;
 		}
-		if (!isCanceledSnapshot) draft.coverUrl = snapshot.coverUrl;
+		if (!isCanceledSnapshot && !uploadState.localCoverDetected) draft.coverUrl = snapshot.coverUrl;
 		draft.coverKey = snapshot.coverKey;
-		if (!isCanceledSnapshot && serverDerivedDataAvailable) {
-				draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
+		if (!isCanceledSnapshot && serverDerivedDataAvailable && !uploadState.localCoverDetected) {
+			draft.derivedAlbumTitle = snapshot.derivedAlbumTitle;
 			draft.derivedCover = snapshot.derivedCover;
 		}
 		if (!isCanceledSnapshot && derivedTracks.length > 0) {
@@ -315,7 +318,9 @@ export function useAlbumImportUpload() {
 				draft.metadataGenres = snapshot.metadataGenres ?? [];
 				draft.metadataStyles = snapshot.metadataStyles ?? [];
 				draft.metadataLabels = snapshot.metadataLabels ?? [];
+			if (!flow.metadataCountryCustomized) {
 				draft.metadataCountry = localizedMusicCountry(snapshot.metadataCountry);
+			}
 				draft.metadataFormats = snapshot.metadataFormats ?? [];
 				draft.metadataSources = snapshot.metadataSources ?? [];
 				draft.metadataFieldSources = snapshot.metadataFieldSources ?? {};
@@ -347,20 +352,21 @@ export function useAlbumImportUpload() {
 				snapshot.derivedReleaseDate,
 			);
 		}
-		const importedCover =
-			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
+		const importedCover = uploadState.localCoverDetected
+			? draft.derivedCover.trim()
+			: snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
 		if (!isCanceledSnapshot && importedCover && !flow.coverCustomized) {
 			flow.draft.albumDetails.coverUrl = importedCover;
 		}
 		if (!isCanceledSnapshot && shouldApplyMetadata && !flow.metadataTagsApplied) {
 			const parentName = snapshot.metadataGenres?.length === 1 ? snapshot.metadataGenres[0] : undefined;
 			const nextTags = [
-				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const })),
-				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName })),
+				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, metadataCategory: "genre" as const })),
+				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName, metadataCategory: "style" as const })),
 			];
-			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`));
+			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.metadataCategory ?? ""}\u0000${tag.name.toLocaleLowerCase()}`));
 			for (const tag of nextTags) {
-				const key = `${tag.kind}\u0000${tag.name.toLocaleLowerCase()}`;
+				const key = `${tag.kind}\u0000${tag.metadataCategory}\u0000${tag.name.toLocaleLowerCase()}`;
 				if (!existingKeys.has(key)) {
 					flow.draft.albumDetails.tags.push(tag);
 					existingKeys.add(key);
@@ -765,6 +771,7 @@ export function useAlbumImportUpload() {
 		const uploadState = uploadStateFor(flow);
 		const generation = beginUploadOperation(uploadState);
 		uploadState.serverDerivedSnapshotApplied = false;
+			uploadState.localCoverDetected = false;
 		const isCurrent = () => generation === uploadState.operationGeneration;
 		const files = Array.from(fileList).filter((file) => {
 			const relativePath =
@@ -834,7 +841,8 @@ export function useAlbumImportUpload() {
 			localPreviewData = isArchive ? readAlbumImportPreview(files[0], artistName) : readAlbumImportFilesPreview(files, artistName);
 			localPreviewPromise = localPreviewData
 				.then(async (preview) => {
-					if (!isCurrent() || uploadState.serverDerivedSnapshotApplied) return;
+					if (!isCurrent()) return;
+					if (!uploadState.serverDerivedSnapshotApplied) {
 					const localTracks: MusicAlbumImportTrack[] = preview.trackDetails ?? preview.tracks.map((title, index) => ({
 						title,
 						audioKey: "",
@@ -844,17 +852,19 @@ export function useAlbumImportUpload() {
 						originalTrackNumber: index + 1,
 						matchStatus: "unmatched",
 					}));
-					draft.derivedAlbumTitle = preview.title;
-					draft.derivedTracks = localTracks;
-					mergeImportedTracksIntoDraft(flow, localTracks);
-					if (!flow.titleCustomized) {
-						flow.draft.albumDetails.title = preview.title;
-					}
-					if (preview.albumCoverFile) {
-						draft.derivedCover = URL.createObjectURL(preview.albumCoverFile);
-						if (!flow.coverCustomized) {
-							flow.draft.albumDetails.coverUrl = draft.derivedCover;
+						draft.derivedAlbumTitle = preview.title;
+						draft.derivedTracks = localTracks;
+						mergeImportedTracksIntoDraft(flow, localTracks);
+						if (!flow.titleCustomized) {
+							flow.draft.albumDetails.title = preview.title;
 						}
+					}
+					if (preview.albumCoverFile && !flow.coverCustomized) {
+						uploadState.localCoverDetected = true;
+						const localCoverUrl = URL.createObjectURL(preview.albumCoverFile);
+						draft.coverUrl = localCoverUrl;
+						draft.derivedCover = localCoverUrl;
+						flow.draft.albumDetails.coverUrl = localCoverUrl;
 					}
 				})
 				.catch(() => {

@@ -930,7 +930,7 @@ async function toggleChannelSubscription() {
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 4px;
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -943,7 +943,7 @@ async function toggleChannelSubscription() {
 .vd-loading-line {
   height: 1rem;
   border-radius: 0;
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -1092,7 +1092,8 @@ async function toggleChannelSubscription() {
   display: grid;
   aspect-ratio: 16 / 9;
   place-items: center;
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .vd-external-link {
@@ -1111,9 +1112,10 @@ async function toggleChannelSubscription() {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.6rem 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
   border-left: 3px solid var(--a-color-primary);
   color: var(--a-color-muted);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   font-size: 0.78rem;
 }
 

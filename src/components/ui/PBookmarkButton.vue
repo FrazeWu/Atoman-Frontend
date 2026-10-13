@@ -77,7 +77,7 @@ function handleClick() {
   gap: 0.4rem;
   padding: 0.35rem 0.7rem;
   border-radius: var(--a-radius-control);
-  color: var(--a-color-text-secondary, #475569);
+  color: var(--a-color-text-secondary);
   font-weight: 500;
   cursor: pointer;
   line-height: 1;
@@ -128,19 +128,19 @@ function handleClick() {
   font-size: 0.875rem;
 }
 
-/* 收藏激活态 - 极简暖金 */
+/* 收藏激活态 - 语义暖色令牌 */
 .p-bookmark-button.is-active {
-  color: #d97706;
-  background: rgba(217, 119, 6, 0.07);
+  color: var(--a-color-warning);
+  background: color-mix(in srgb, var(--a-color-warning) 10%, transparent);
 }
 
 .p-bookmark-button.is-variant-bordered.is-active {
-  border-color: rgba(217, 119, 6, 0.25);
+  border-color: color-mix(in srgb, var(--a-color-warning) 30%, transparent);
 }
 
 .p-bookmark-button.is-active:hover:not(:disabled) {
-  background: rgba(217, 119, 6, 0.12);
-  color: #b45309;
+  background: color-mix(in srgb, var(--a-color-warning) 16%, transparent);
+  color: var(--a-color-warning);
 }
 
 .p-bookmark-button__icon {

@@ -388,7 +388,7 @@ function describedByForField(
 .lyric-row {
   padding: 0.75rem;
   border-top: 1px solid var(--a-color-border-soft, #e4e4e7);
-  border-radius: 8px;
+  border-radius: var(--a-radius-control, 4px);
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -449,7 +449,7 @@ function describedByForField(
   box-sizing: border-box;
   padding: 0 0.85rem;
   border: 1px solid var(--a-color-border, #d4d4d8);
-  border-radius: 8px;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #18181b);
   font: inherit;
@@ -541,7 +541,7 @@ function describedByForField(
   place-items: center;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--a-color-muted, #52525b);
   cursor: pointer;

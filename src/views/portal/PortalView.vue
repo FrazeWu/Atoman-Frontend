@@ -622,7 +622,7 @@ onBeforeUnmount(() => {
   display: flex;
   height: 6px;
   width: 100%;
-  border-radius: var(--a-radius-pill, 999px);
+  border-radius: var(--a-radius-control);
   overflow: hidden;
   background: var(--a-color-surface-muted);
 }

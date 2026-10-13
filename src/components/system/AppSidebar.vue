@@ -543,7 +543,7 @@ watch(
   display: inline-block;
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control);
   margin-right: 0.5rem;
   flex-shrink: 0;
 }
@@ -557,7 +557,6 @@ watch(
   color: var(--a-color-muted);
   cursor: pointer;
   transition: color 0.1s, background-color 0.1s, border-color 0.1s, opacity 0.1s, transform 0.1s, box-shadow 0.1s;
-  text-transform: uppercase;
 }
 
 .forum-sidebar-tag:hover {

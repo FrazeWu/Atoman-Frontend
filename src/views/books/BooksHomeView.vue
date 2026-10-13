@@ -188,6 +188,12 @@
       <BookOpen :size="22" aria-hidden="true" />
       <p>公共书目暂未开放</p>
     </section>
+
+    <BookCreationFlowDrawer
+      :show="isCreationOpen"
+      @close="isCreationOpen = false"
+      @created="handleBookCreated"
+    />
   </section>
 </template>
 
@@ -202,6 +208,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import BookCard from '@/components/books/BookCard.vue'
+import BookCreationFlowDrawer from '@/components/books/BookCreationFlowDrawer.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   deleteBookImport,
@@ -262,6 +269,14 @@ const isCreationOpen = ref(false)
 
 function openBookCreation() {
   isCreationOpen.value = true
+}
+
+function handleBookCreated() {
+  isCreationOpen.value = false
+  loadCatalog()
+  if (isLibrary.value) {
+    loadLibraryData()
+  }
 }
 const isDetail = computed(() => route.path.startsWith('/books/work/') || route.path.startsWith('/books/edition/'))
 const isLibrary = computed(() => route.path === '/books/library' || route.path.startsWith('/books/import/') || (isDetail.value && route.query.from === '/books/library'))

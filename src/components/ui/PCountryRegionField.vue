@@ -561,7 +561,7 @@ function chooseCountry(country: CountryOption) {
   color: var(--a-color-muted);
   font-family: inherit;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.08em;
 }
 

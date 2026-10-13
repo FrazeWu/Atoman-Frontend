@@ -715,7 +715,7 @@ body:has(.app-shell.has-sidebar) {
 	background: var(--a-color-bg);
 	color: var(--a-color-fg);
 	border: none;
-	border-bottom: 1px solid #e5e7eb;
+	border-bottom: 1px solid var(--a-color-border-soft);
 	cursor: pointer;
 	text-align: left;
 	font: inherit;
@@ -963,7 +963,7 @@ body:has(.app-shell.has-sidebar) {
 }
 .a-dropdown-item--danger:hover,
 .p-dropdown-item--danger:hover {
-	background: #fef2f2;
+	background: color-mix(in srgb, var(--a-color-danger) 10%, transparent);
 	color: var(--a-color-danger);
 }
 .a-dropdown-divider,
@@ -980,10 +980,10 @@ body:has(.app-shell.has-sidebar) {
 
 /* ─── Feedback ────────────────────────────────────────── */
 .a-error {
-	border: 2px solid #ef4444;
-	background: #fef2f2;
+	border: 1px solid var(--a-color-danger);
+	background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
 	padding: var(--a-space-4);
-	color: #b91c1c;
+	color: var(--a-color-danger);
 	font-weight: var(--a-font-weight-strong);
 	font-size: var(--a-text-sm);
 }
@@ -1003,10 +1003,10 @@ body:has(.app-shell.has-sidebar) {
 	color: var(--a-color-muted);
 }
 .a-success {
-	border: 2px solid #16a34a;
-	background: #f0fdf4;
+	border: 1px solid var(--a-color-success);
+	background: color-mix(in srgb, var(--a-color-success) 8%, var(--a-color-bg));
 	padding: var(--a-space-4);
-	color: #15803d;
+	color: var(--a-color-success);
 	font-weight: var(--a-font-weight-strong);
 	font-size: var(--a-text-sm);
 }

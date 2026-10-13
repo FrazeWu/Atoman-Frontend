@@ -111,11 +111,11 @@ const handleInput = (event: Event) => {
 }
 
 .p-textarea--error {
-  border-color: var(--a-color-accent-destructive);
+  border-color: var(--a-color-danger);
 }
 
 .p-field-error {
-  color: var(--a-color-accent-destructive);
+  color: var(--a-color-danger);
   font-size: 0.75rem;
 }
 

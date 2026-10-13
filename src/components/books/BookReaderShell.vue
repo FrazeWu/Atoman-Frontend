@@ -21,6 +21,9 @@
     <slot name="status" />
 
     <section v-if="showSurface" class="book-reader-shell__workspace">
+      <!-- 左侧边栏：缩略图瀑布流 (PDF Expert 风格) -->
+      <slot name="thumbnails" />
+
       <div class="book-reader-shell__reading-column">
         <div class="book-reader-shell__toolbar">
           <span v-if="toolbarLabel" class="book-reader-shell__toolbar-label">{{ toolbarLabel }}</span>
@@ -39,7 +42,7 @@
               type="button"
               :aria-pressed="activePanel === 'tools'"
               @click="togglePanel('tools')"
-            >目录与工具</button>
+            >目录与检索</button>
             <button
               v-if="$slots.settings"
               type="button"
@@ -237,9 +240,8 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
-  align-items: start;
+  display: flex;
+  align-items: stretch;
   gap: 1rem;
   min-width: 0;
 }
@@ -248,6 +250,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
+  flex: 1;
 }
 
 .book-reader-shell__toolbar {

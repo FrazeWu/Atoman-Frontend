@@ -32,6 +32,14 @@
         <p v-if="errorMessage" class="public-reader__feedback public-reader__feedback--error" role="alert">{{ errorMessage }}</p>
         <p v-else-if="isLoading" class="public-reader__feedback" aria-live="polite">正在打开公共正文...</p>
       </template>
+      <template #thumbnails>
+        <BookReaderThumbnailStrip
+          v-if="asset?.format === 'pdf' && pdfPageCount > 0"
+          :total-pages="pdfPageCount"
+          :current-page="pdfPage"
+          @select-page="jumpToPdfPage"
+        />
+      </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" @scroll="handleTextScroll"><pre>{{ textContent }}</pre></div>
       <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="public-reader__epub" />
       <div v-else-if="asset?.format === 'cbz' || asset?.format === 'cbr'" ref="comicViewport" class="public-reader__comic" aria-label="漫画页面">
@@ -87,6 +95,8 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
+import BookReaderThumbnailStrip from '@/components/books/BookReaderThumbnailStrip.vue'
+import { useBookReaderStore } from '@/stores/bookReader'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
@@ -101,6 +111,7 @@ type EpubTOCSource = { id?: string; href: string; label: string; subitems?: Epub
 type EpubTOCItem = EpubTOCSource & { depth: number }
 
 const route = useRoute()
+const readerStore = useBookReaderStore()
 const asset = ref<BookPublishedAsset | null>(null)
 const textContent = ref('')
 const readingPercent = ref(0)
@@ -177,6 +188,7 @@ async function renderPDFPage() {
   canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
   await page.render({ canvas, canvasContext: context, viewport }).promise
   readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
+  readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
   saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
@@ -233,6 +245,11 @@ function updateTextPageCount() {
 
 function changePdfPage(delta: number) {
   pdfPage.value = Math.min(Math.max(1, pdfPage.value + delta), pdfPageCount.value)
+  void renderPDFPage()
+}
+
+function jumpToPdfPage(page: number) {
+  pdfPage.value = Math.min(Math.max(1, page), pdfPageCount.value)
   void renderPDFPage()
 }
 

@@ -49,6 +49,14 @@
         <p v-else-if="isLoading" class="books-reader__feedback" aria-live="polite">正在打开电子书...</p>
         <p v-else-if="asset && !canRead" class="books-reader__feedback" aria-live="polite">{{ unavailableMessage }}</p>
       </template>
+      <template #thumbnails>
+        <BookReaderThumbnailStrip
+          v-if="asset?.format === 'pdf' && pdfPageCount > 0"
+          :total-pages="pdfPageCount"
+          :current-page="pdfPage"
+          @select-page="jumpToPdfPage"
+        />
+      </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="books-reader__text" @scroll="handleTextScroll">
         <div class="books-reader__text-pages">
           <article
@@ -126,6 +134,8 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
+import BookReaderThumbnailStrip from '@/components/books/BookReaderThumbnailStrip.vue'
+import { useBookReaderStore } from '@/stores/bookReader'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { mergeBookReadingProgress } from '@/utils/mediaProgressConflict'
@@ -159,6 +169,7 @@ type EpubTOCSource = {
 type EpubTOCItem = EpubTOCSource & { depth: number }
 
 const route = useRoute()
+const readerStore = useBookReaderStore()
 const asset = ref<BookPrivateAsset | null>(null)
 const readingState = ref<BookReadingState | null>(null)
 const contentBlob = ref<Blob | null>(null)
@@ -266,6 +277,7 @@ async function renderPDFPage() {
   canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
   await page.render({ canvas, canvasContext: context, viewport }).promise
   readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
+  readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
   scheduleSaveState()
 }
 
@@ -494,6 +506,11 @@ function jumpToBookmark(bookmark: BookReaderBookmark) {
 
 function changePdfPage(delta: number) {
   pdfPage.value = Math.min(Math.max(1, pdfPage.value + delta), pdfPageCount.value)
+  void renderPDFPage()
+}
+
+function jumpToPdfPage(page: number) {
+  pdfPage.value = Math.min(Math.max(1, page), pdfPageCount.value)
   void renderPDFPage()
 }
 

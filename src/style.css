@@ -1206,10 +1206,9 @@ body:has(.app-shell.has-sidebar) {
 .p-sidebar-label {
 	padding: 1rem 2rem 0.5rem;
 	font-weight: 500;
-	font-size: 10px;
-	text-transform: uppercase;
-	letter-spacing: 0;
-	color: #adb5bd;
+	font-size: 11px;
+	letter-spacing: 0.02em;
+	color: var(--a-color-muted);
 }
 .a-sidebar-helper,
 .p-sidebar-helper {

@@ -518,7 +518,6 @@ onBeforeUnmount(() => {
   margin: 0 0 0.6rem 0.25rem;
   font-size: 0.72rem;
   font-weight: 500;
-  text-transform: uppercase;
   color: var(--a-color-muted-soft);
   letter-spacing: 0.05em;
 }

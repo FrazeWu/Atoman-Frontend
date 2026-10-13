@@ -433,7 +433,7 @@ watch(() => props.videoElement, (video, previousVideo) => {
   width: 100%;
   height: 4px;
   background: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   transition: height 150ms ease;
 }
 
@@ -448,7 +448,7 @@ watch(() => props.videoElement, (video, previousVideo) => {
   left: 0;
   height: 100%;
   background: rgba(255, 255, 255, 0.4);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   pointer-events: none;
 }
 
@@ -458,7 +458,7 @@ watch(() => props.videoElement, (video, previousVideo) => {
   left: 0;
   height: 100%;
   background: var(--a-color-primary);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -659,7 +659,7 @@ watch(() => props.videoElement, (video, previousVideo) => {
   cursor: pointer;
   transform: rotate(-90deg);
   background: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
 }
 
 @media (max-width: 720px) {

@@ -462,13 +462,13 @@ async function handleFileChange(event: Event) {
 }
 
 async function linkImport(item: BookImportSession) {
-  const workID = window.prompt('请输入公共作品 UUID', item.work_id || '')?.trim()
+  const workID = window.prompt('请输入公共作品 ID', item.work_id || '')?.trim()
   if (!workID) return
   try {
     const linked = await linkBookImportToCatalog(item.id, { work_id: workID })
     imports.value = imports.value.map((candidate) => candidate.id === item.id ? linked : candidate)
   } catch {
-    errorMessage.value = '公共书目关联失败，请确认作品 UUID 后重试'
+    errorMessage.value = '公共书目关联失败，请确认作品 ID 后重试'
   }
 }
 

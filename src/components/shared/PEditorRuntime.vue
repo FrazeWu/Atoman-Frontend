@@ -987,7 +987,7 @@ function toggleLineNumbers() {
 
 function insertEmbed(kind: 'post' | 'music' | 'video') {
   const labels = { post: '文章', music: '音乐/专辑', video: '视频' }
-  const id = window.prompt(`输入要引用的${labels[kind]} UUID`)?.trim()
+  const id = window.prompt(`输入要引用的${labels[kind]} ID`)?.trim()
   if (!id) return
   const { from } = getCmSelection()
   const md = `\n:::${kind}{id="${id}"}:::\n`

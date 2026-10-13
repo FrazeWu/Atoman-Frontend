@@ -194,9 +194,9 @@ async function copySongUuid() {
   try {
     if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
     await navigator.clipboard.writeText(String(id))
-    showToast('UUID 已复制')
+    showToast('歌曲 ID 已复制')
   } catch {
-    showToast('复制 UUID 失败')
+    showToast('复制失败')
   }
 }
 
@@ -573,7 +573,7 @@ watch(
             <PButton variant="secondary" :disabled="!detail.playable" aria-label="下一首" title="下一首" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" /></PButton>
             <PButton variant="secondary" :disabled="!detail.playable" aria-label="加入队列" title="加入队列" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" /></PButton>
             <PButton variant="secondary" aria-label="版本记录" title="版本记录" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本</PButton>
-            <PButton variant="secondary" data-testid="song-detail-copy-uuid" aria-label="复制歌曲 UUID" title="复制 UUID" @click="copySongUuid"><Copy :size="16" aria-hidden="true" />复制 UUID</PButton>
+            <PButton variant="secondary" data-testid="song-detail-copy-uuid" aria-label="复制歌曲 ID" title="复制歌曲 ID" @click="copySongUuid"><Copy :size="16" aria-hidden="true" />复制 ID</PButton>
           </div>
           <MusicDescriptionPreview
             v-if="detail.song.description"

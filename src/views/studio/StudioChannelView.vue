@@ -12,10 +12,10 @@
       <form id="studio-channel-form" class="studio-channels__form" @submit.prevent="saveChannel">
         <PInput v-model="draft.name" data-testid="channel-name" label="名称" placeholder="频道名称" :error="nameError" />
         <div class="studio-channels__readonly-field">
-          <span class="studio-channels__field-label">UUID</span>
+          <span class="studio-channels__field-label">频道 ID</span>
           <div class="studio-channels__uuid-row">
             <code data-testid="channel-uuid">{{ editingID || '保存后生成' }}</code>
-            <PButton v-if="editingID" data-testid="copy-channel-uuid" type="button" variant="ghost" size="sm" @click="copyUUID">{{ copied ? '已复制' : '复制 UUID' }}</PButton>
+            <PButton v-if="editingID" data-testid="copy-channel-uuid" type="button" variant="ghost" size="sm" @click="copyUUID">{{ copied ? '已复制' : '复制 ID' }}</PButton>
           </div>
           <p>系统生成的频道唯一标识，不可修改。</p>
         </div>
@@ -61,7 +61,7 @@
           <strong>{{ channel.name }}</strong>
           <span :class="{ 'is-active': channel.id === studio.currentChannel?.id }">{{ channelStatus(channel) }}</span>
           <p v-if="channel.description">{{ channel.description }}</p>
-          <small>文章 {{ channelContentCount(channel) }} · 更新于 {{ formatUpdatedAt(channel) }} · UUID：{{ channel.id }}</small>
+          <small>文章 {{ channelContentCount(channel) }} · 更新于 {{ formatUpdatedAt(channel) }} · ID：{{ channel.id }}</small>
         </div>
         <div class="studio-channels__actions">
           <PButton

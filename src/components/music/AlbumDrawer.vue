@@ -332,9 +332,9 @@ async function copyAlbumUuid() {
   try {
     if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
     await navigator.clipboard.writeText(String(id))
-    toastMessage.value = 'UUID 已复制'
+    toastMessage.value = '专辑 ID 已复制'
   } catch {
-    toastMessage.value = '复制 UUID 失败'
+    toastMessage.value = '复制失败'
   }
   toastVisible.value = true
 }
@@ -828,12 +828,12 @@ watch(
             <PButton
               variant="secondary"
               data-testid="album-copy-uuid"
-              aria-label="复制专辑 UUID"
-              title="复制 UUID"
+              aria-label="复制专辑 ID"
+              title="复制专辑 ID"
               @click="copyAlbumUuid"
             >
               <Copy :size="16" aria-hidden="true" />
-              <span class="album-copy-uuid-label">复制 UUID</span>
+              <span class="album-copy-uuid-label">复制 ID</span>
             </PButton>
             <PDropdown class="album-more-dropdown" position="right">
               <template #trigger>

@@ -107,6 +107,15 @@ vi.mock("@/composables/useLoginRedirect", () => ({
 	useLoginRedirect: () => ({ isAuthenticated, requireLogin }),
 }));
 
+vi.mock("@/composables/useMusicFavoritePlaylist", () => ({
+	useMusicFavoritePlaylist: () => ({
+		favoriteSongIds: { __v_isRef: true, value: new Set<string>() },
+		loadFavoriteSongs: vi.fn(),
+		toggleFavoriteSong: vi.fn(),
+		addSongToPlaylist: addMusicPlaylistSong,
+	}),
+}));
+
 vi.mock("@/api/musicV1", () => ({
 	getMusicAlbum,
 	listAlbumBookmarks,
@@ -632,7 +641,7 @@ describe("AlbumDrawer.vue", () => {
 		);
 	});
 
-	it("copies the album UUID from the detail action", async () => {
+	it("copies the album ID from the detail action", async () => {
 		const writeText = vi.fn().mockResolvedValue(undefined);
 		Object.defineProperty(navigator, "clipboard", {
 			configurable: true,
@@ -645,7 +654,7 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		expect(writeText).toHaveBeenCalledWith("1");
-		expect(document.body.textContent).toContain("UUID 已复制");
+		expect(document.body.textContent).toContain("专辑 ID 已复制");
 	});
 
 	it("does not show hard-coded discussion count or fake track durations when data is absent", async () => {

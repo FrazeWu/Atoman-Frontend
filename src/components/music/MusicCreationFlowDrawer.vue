@@ -939,7 +939,7 @@ const closeConfirmMessage = computed(() => {
   if (flow?.mode === 'edit' || !flow?.draft.albumImport.importId) return '确认关闭？未保存的内容将丢失。'
   const saved = draftSaveMessage.value === '草稿已保存'
   const uploadPending = flow.draft.albumImport.files.some((file) => file.uploadStatus !== 'uploaded')
-  return `${saved ? '草稿已保存，可从导入中心继续。' : '草稿尚未保存成功，关闭会丢失本次填写。'}${uploadPending ? '关闭面板不会取消上传，但请保持当前浏览器页面打开。' : '文件已上传，关闭面板不会取消后台处理。'}`
+  return `${saved ? '草稿已保存，可从导入中心继续。' : '草稿尚未保存成功，关闭会丢失本次填写。'}${uploadPending ? '关闭面板不会取消上传，但请保持当前浏览器页面打开。' : '文件已上传，关闭面板不会取消音频处理。'}`
 })
 
 function confirmClose() {

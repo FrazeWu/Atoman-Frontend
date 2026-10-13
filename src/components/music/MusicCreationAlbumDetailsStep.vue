@@ -1333,9 +1333,9 @@ watch(
 
 .track-adjustment__matched {
   align-items: center;
-  background: #1e1e1e;
-  border: 1px solid #2d2a22;
-  color: #cfb26f;
+  background: color-mix(in srgb, var(--a-color-warning) 10%, var(--a-color-bg));
+  border: 1px solid color-mix(in srgb, var(--a-color-warning) 30%, transparent);
+  color: var(--a-color-warning);
   display: inline-flex;
   font-size: 0.72rem;
   font-weight: 500;
@@ -1350,7 +1350,7 @@ watch(
   align-items: center;
   border: 1px solid currentColor;
   border-radius: 50%;
-  color: #e2cb90;
+  color: var(--a-color-warning);
   display: inline-flex;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 0.48rem;
@@ -1362,7 +1362,7 @@ watch(
 }
 
 .track-adjustment__matched-divider {
-  color: #8f7b4a;
+  color: color-mix(in srgb, var(--a-color-warning) 50%, transparent);
 }
 
 .track-adjustment__add-btn {
@@ -1624,8 +1624,8 @@ watch(
 }
 
 .track-row__match-status.is-matched {
-  border-color: #b89a55;
-  color: #866b2d;
+  border-color: color-mix(in srgb, var(--a-color-warning) 40%, transparent);
+  color: var(--a-color-warning);
 }
 
 .track-row__match-status.is-manual {

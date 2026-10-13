@@ -164,8 +164,8 @@ function togglePanel(panel: 'tools' | 'settings') {
   gap: 0.75rem;
   min-height: 3.75rem;
   padding: 0.45rem 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: var(--book-reader-surface, #ffffff);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--book-reader-surface, var(--a-color-bg));
 }
 
 .book-reader-shell__back {
@@ -183,7 +183,7 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__back:hover {
-  background-color: color-mix(in srgb, var(--book-reader-surface, #ffffff) 88%, var(--book-reader-text, #111827));
+  background-color: color-mix(in srgb, var(--book-reader-surface, var(--a-color-bg)) 88%, var(--book-reader-text, var(--a-color-fg)));
   color: var(--book-reader-text, var(--a-color-fg));
 }
 
@@ -264,10 +264,10 @@ function togglePanel(panel: 'tools' | 'settings') {
   gap: 0.65rem;
   min-height: 3.25rem;
   padding: 0.4rem 0.65rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-bottom: 0;
   border-radius: var(--a-radius-card) var(--a-radius-card) 0 0;
-  background: var(--book-reader-surface, #ffffff);
+  background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-muted, var(--a-color-muted));
   font-size: 0.85rem;
 }
@@ -292,16 +292,16 @@ function togglePanel(panel: 'tools' | 'settings') {
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--book-reader-surface, #ffffff);
+  background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-text, var(--a-color-fg));
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
 }
 
 .book-reader-shell__pagination button:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--book-reader-surface, #ffffff) 86%, var(--book-reader-text, #111827));
+  background-color: color-mix(in srgb, var(--book-reader-surface, var(--a-color-bg)) 86%, var(--book-reader-text, var(--a-color-fg)));
 }
 
 .book-reader-shell__pagination button:disabled {
@@ -328,8 +328,8 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__panel-tabs button[aria-pressed="true"] {
-  border-color: var(--a-color-border-soft, #e2e8f0);
-  background: var(--book-reader-surface, #ffffff);
+  border-color: var(--a-color-border-soft);
+  background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-text, var(--a-color-fg));
   font-weight: 600;
 }
@@ -340,16 +340,16 @@ function togglePanel(panel: 'tools' | 'settings') {
   min-width: 0;
   min-height: min(68vh, 720px);
   overflow: hidden;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: var(--book-reader-surface, #ffffff);
-  box-shadow: 0 12px 36px rgb(15 23 42 / 5%);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--book-reader-surface, var(--a-color-bg));
+  box-shadow: var(--a-shadow-md);
 }
 
 .book-reader-shell__progress {
   display: grid;
   gap: 0.4rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-top: 0;
   border-radius: 0 0 var(--a-radius-card) var(--a-radius-card);
   background: var(--book-reader-surface, var(--a-color-bg));
@@ -392,9 +392,9 @@ function togglePanel(panel: 'tools' | 'settings') {
   max-height: min(78vh, 56rem);
   overflow: auto;
   padding: 1rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--book-reader-surface, #ffffff);
+  background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-text, var(--a-color-fg));
 }
 

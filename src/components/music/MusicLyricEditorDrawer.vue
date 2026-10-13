@@ -1017,7 +1017,7 @@ function handleSave() {
 :global(.lyric-editor-drawer) {
   background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: var(--a-shadow-lg) !important;
 }
 
 :root.dark :global(.lyric-editor-drawer) {

@@ -168,7 +168,7 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
 .album-preview-step__track-number { color: var(--a-color-muted); font-variant-numeric: tabular-nums; }
 .album-preview-step__track-statuses { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
 .album-preview-step__match { color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
-.album-preview-step__match.is-matched { color: #866b2d; }
+.album-preview-step__match.is-matched { color: var(--a-color-warning); }
 .album-preview-step__match.is-manual { color: var(--a-color-text); }
 .album-preview-step__match.is-ambiguous { color: var(--a-color-warning); }
 @media (max-width: 640px) {

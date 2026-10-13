@@ -328,7 +328,7 @@ describe("AudioPlayer", () => {
 		await wrapper.vm.$nextTick();
 		await Promise.resolve();
 		expect(musicApi.listMusicPlaylists).toHaveBeenCalledOnce();
-		expect(favoriteApi.loadFavoriteSongs).toHaveBeenCalledWith(["song-1"]);
+		expect(favoriteApi.loadFavoriteSongs).toHaveBeenCalledWith(["song-1"], expect.any(Function));
 
 		favoriteApi.favoriteSongIds.value = new Set(["song-1"]);
 		auth.isAuthenticated = false;

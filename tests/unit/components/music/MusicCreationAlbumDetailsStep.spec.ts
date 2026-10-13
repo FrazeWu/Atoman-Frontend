@@ -223,7 +223,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
-		expect(wrapper.get('[data-testid="album-tags-editor"]').findAll(".album-tags-editor__row")).toHaveLength(3);
+		expect(wrapper.get('[data-testid="album-tags-editor"]').findAll(".album-tags-editor__row")).toHaveLength(4);
 		expect(wrapper.get('[data-testid="album-style-tags-row"]').text()).toContain("风格");
 		expect(wrapper.get('[data-testid="album-other-tags-row"]').text()).toContain("其他标签");
 		expect(wrapper.get('[data-testid="album-tag-摇滚"]').exists()).toBe(true);
@@ -703,6 +703,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			"name",
 			"date",
 			"type",
+			"country",
 			"cover",
 			"contributors",
 			"bio",

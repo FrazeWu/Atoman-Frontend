@@ -663,7 +663,7 @@ watch(
   border-right: 0;
   border-radius: 0;
   background: var(--a-color-bg);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+  box-shadow: var(--a-shadow-md);
   color: var(--a-color-fg);
   transition: transform var(--a-motion-emphasis) var(--a-motion-ease-enter);
 }
@@ -952,7 +952,7 @@ watch(
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+  box-shadow: var(--a-shadow-sm);
   transition:
     opacity 0.18s ease,
     transform 0.18s ease,
@@ -1177,10 +1177,10 @@ watch(
   direction: rtl;
   background: linear-gradient(
     to top,
-    var(--a-color-primary, #2563eb) 0%,
-    var(--a-color-primary, #2563eb) var(--vol-percent, 50%),
-    var(--a-color-surface-muted, #f1f5f9) var(--vol-percent, 50%),
-    var(--a-color-surface-muted, #f1f5f9) 100%
+    var(--a-color-primary) 0%,
+    var(--a-color-primary) var(--vol-percent, 50%),
+    var(--a-color-surface-muted) var(--vol-percent, 50%),
+    var(--a-color-surface-muted) 100%
   );
   transition: background 0.1s linear;
 }
@@ -1188,8 +1188,8 @@ watch(
 :root.dark .vol-slider {
   background: linear-gradient(
     to top,
-    var(--a-color-primary, #2563eb) 0%,
-    var(--a-color-primary, #2563eb) var(--vol-percent, 50%),
+    var(--a-color-primary) 0%,
+    var(--a-color-primary) var(--vol-percent, 50%),
     rgba(255, 255, 255, 0.12) var(--vol-percent, 50%),
     rgba(255, 255, 255, 0.12) 100%
   );
@@ -1202,8 +1202,8 @@ watch(
   height: 14px;
   border-radius: 50%;
   background: var(--a-color-bg);
-  border: 2px solid var(--a-color-primary, #2563eb);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--a-color-primary);
+  box-shadow: var(--a-shadow-sm);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1211,7 +1211,7 @@ watch(
 .vol-slider:hover::-webkit-slider-thumb,
 .vol-slider:active::-webkit-slider-thumb {
   transform: scale(1.25);
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
 }
 
 .vol-slider::-moz-range-thumb {
@@ -1219,8 +1219,8 @@ watch(
   height: 14px;
   border-radius: 50%;
   background: var(--a-color-bg);
-  border: 2px solid var(--a-color-primary, #2563eb);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--a-color-primary);
+  box-shadow: var(--a-shadow-sm);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1228,7 +1228,7 @@ watch(
 .vol-slider:hover::-moz-range-thumb,
 .vol-slider:active::-moz-range-thumb {
   transform: scale(1.25);
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
 }
 
 .queue-trigger {
@@ -1289,7 +1289,7 @@ watch(
   border-right: 0;
   border-radius: 0;
   background: var(--a-color-bg);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+  box-shadow: var(--a-shadow-md);
 }
 
 .player-mini-cover {

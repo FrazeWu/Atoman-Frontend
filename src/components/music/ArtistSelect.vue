@@ -229,7 +229,7 @@ watch(query, (v) => {
   top: calc(100% + 2px);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  box-shadow: var(--a-shadow-sm);
   z-index: 50;
   max-height: 240px;
   overflow-y: auto;

@@ -146,7 +146,10 @@
       <SearchSurface v-model:query="searchInput" :open="false" compact eyebrow="" placeholder="搜索书名或作者..." @submit="submitCatalogSearch" />
       <header class="books-catalog__header">
         <div class="books-catalog__title"><h2 id="catalog-title">{{ route.query.q ? '搜索结果' : '书籍' }}</h2><span class="books-library__meta">{{ catalogTotal }} 本</span></div>
-        <RouterLink class="books-upload-link" to="/books/library">导入电子书</RouterLink>
+        <div class="books-catalog__actions">
+          <PButton type="button" variant="secondary" size="sm" @click="createDrawerOpen = true">新建图书</PButton>
+          <RouterLink class="books-upload-link" to="/books/library">导入电子书</RouterLink>
+        </div>
       </header>
 
       <div v-if="catalogError" role="alert"><p class="books-feedback books-feedback--error">{{ catalogError }}</p><PButton variant="ghost" @click="loadCatalog">重试</PButton></div>
@@ -183,6 +186,7 @@
       <p>公共书目暂未开放</p>
     </section>
   </section>
+  <BookCreationFlowDrawer :show="createDrawerOpen" @close="createDrawerOpen = false" @created="onBookCreated" />
 </template>
 
 <script setup lang="ts">
@@ -196,6 +200,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import BookCard from '@/components/books/BookCard.vue'
+import BookCreationFlowDrawer from '@/components/books/BookCreationFlowDrawer.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   deleteBookImport,
@@ -219,6 +224,7 @@ let refreshTimer: ReturnType<typeof setInterval> | undefined
 
 const route = useRoute()
 const router = useRouter()
+const createDrawerOpen = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const imports = ref<BookImportSession[]>([])
 let libraryRequestSequence = 0
@@ -365,6 +371,11 @@ function changeCatalogPage(page: number) {
 async function submitCatalogSearch() {
   const query = searchInput.value.trim()
   await router.push({ path: '/books/search', query: query ? { q: query } : {} })
+}
+
+async function onBookCreated(workID: string) {
+  createDrawerOpen.value = false
+  await router.push(`/books/work/${encodeURIComponent(workID)}`)
 }
 
 async function loadImports() {
@@ -809,6 +820,8 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
+.books-catalog__actions { display: flex; align-items: center; gap: 0.5rem; }
+
 .books-catalog__title { display: flex; align-items: baseline; gap: 0.75rem; min-width: 0; }
 .books-upload-link {
   display: inline-flex;
@@ -898,6 +911,7 @@ onBeforeUnmount(() => {
     align-items: flex-start;
     flex-direction: column;
   }
+  .books-catalog__actions { flex-wrap: wrap; justify-content: flex-end; }
 
   .books-catalog__search {
     width: 100%;

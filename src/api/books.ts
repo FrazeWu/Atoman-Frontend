@@ -104,6 +104,27 @@ export interface BookPublicWork {
   related_posts?: BookPublicPost[]
 }
 
+export interface CreatePublicBookInput {
+  title: string
+  subtitle?: string
+  original_title?: string
+  description?: string
+  language?: string
+  authors?: string[]
+  edition: {
+    title?: string
+    publisher?: string
+    isbn10?: string
+    isbn13?: string
+    language?: string
+    published_date?: string
+    page_count?: number
+    binding?: string
+    cover_url?: string
+  }
+  source_url?: string
+}
+
 export interface BookPublicEditionDetail {
   edition: BookPublicEdition
   work: BookPublicWork
@@ -427,6 +448,13 @@ export const linkBookImportToCatalog = (importId: string, input: { work_id?: str
 
 export const searchPublicBooks = (query = '', limit = 20, offset = 0) =>
   apiGet<BookCatalogSearchResult>(`${catalogUrl('/search')}?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`)
+
+export const createPublicBook = (input: CreatePublicBookInput) =>
+  requestEnvelope<BookPublicWork>(catalogUrl('/works'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 
 export const getPublicBookWork = (workId: string) =>
   apiGet<BookPublicWork>(catalogUrl(`/works/${encodeURIComponent(workId)}`))

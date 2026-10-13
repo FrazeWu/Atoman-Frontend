@@ -143,10 +143,16 @@
     </section>
 
     <section v-else-if="isCatalog" class="books-catalog" aria-labelledby="catalog-title">
-      <SearchSurface v-model:query="searchInput" :open="false" compact eyebrow="" placeholder="搜索书名或作者..." @submit="submitCatalogSearch" />
+      <div class="books-toolbar-row">
+        <div class="books-toolbar-left">
+          <SearchSurface v-model:query="searchInput" :open="false" compact eyebrow="" placeholder="搜索书名或作者..." @submit="submitCatalogSearch" />
+          <PButton variant="primary" data-testid="add-book" @click="openBookCreation">
+            添加图书
+          </PButton>
+        </div>
+      </div>
       <header class="books-catalog__header">
         <div class="books-catalog__title"><h2 id="catalog-title">{{ route.query.q ? '搜索结果' : '书籍' }}</h2><span class="books-library__meta">{{ catalogTotal }} 本</span></div>
-        <RouterLink class="books-upload-link" to="/books/library">导入电子书</RouterLink>
       </header>
 
       <div v-if="catalogError" role="alert"><p class="books-feedback books-feedback--error">{{ catalogError }}</p><PButton variant="ghost" @click="loadCatalog">重试</PButton></div>
@@ -252,20 +258,33 @@ const uploadProgress = ref(0)
 const deletingId = ref('')
 const retryingId = ref('')
 const errorMessage = ref('')
+const isCreationOpen = ref(false)
+
+function openBookCreation() {
+  isCreationOpen.value = true
+}
 const isDetail = computed(() => route.path.startsWith('/books/work/') || route.path.startsWith('/books/edition/'))
 const isLibrary = computed(() => route.path === '/books/library' || route.path.startsWith('/books/import/') || (isDetail.value && route.query.from === '/books/library'))
 const isCatalog = computed(() => !isLibrary.value && (route.path === '/books' || route.path === '/books/search' || isDetail.value))
 
+const isLists = computed(() => route.path === '/books/lists')
+const isAuthors = computed(() => route.path === '/books/authors')
+const isNotes = computed(() => route.path === '/books/notes')
+
 const pageTitle = computed(() => {
-  if (isLibrary.value) return '我的书库'
-  if (route.path === '/books/search' || Boolean(route.query.q)) return '搜索'
-  return '发现'
+  if (isLibrary.value) return '书架'
+  if (isLists.value) return '书单'
+  if (isAuthors.value) return '作者'
+  if (isNotes.value) return '笔记'
+  return '探索'
 })
 
 const pageSub = computed(() => {
-  if (isLibrary.value) return '管理在读进度与个人藏书'
-  if (route.path === '/books/search' || Boolean(route.query.q)) return '检索公共图书与作者'
-  return '浏览公共书目与开放阅读资源'
+  if (isLibrary.value) return '在读进度与个人藏书'
+  if (isLists.value) return '精选书单与导读分类'
+  if (isAuthors.value) return '名家索引与出版著作'
+  if (isNotes.value) return '划线摘录与阅读笔记'
+  return '浏览公共书目与开放阅读'
 })
 
 function formatSize(size: number): string {
@@ -882,7 +901,35 @@ onBeforeUnmount(() => {
   font-size: 0.85rem;
 }
 
+.books-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.books-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.books-toolbar-left :deep(.search-surface) {
+  flex: 1;
+  max-width: 28rem;
+}
+
 @media (max-width: 640px) {
+  .books-toolbar-left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .books-toolbar-left :deep(.search-surface) {
+    max-width: 100%;
+  }
   .books-library__actions {
     justify-content: flex-start;
     width: 100%;

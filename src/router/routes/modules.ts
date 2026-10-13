@@ -212,6 +212,19 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					meta: { requiresAuth: true },
 				},
 				{
+					path: "lists",
+					component: () => import("@/views/books/BooksHomeView.vue"),
+				},
+				{
+					path: "authors",
+					component: () => import("@/views/books/BooksHomeView.vue"),
+				},
+				{
+					path: "notes",
+					component: () => import("@/views/books/BooksHomeView.vue"),
+					meta: { requiresAuth: true },
+				},
+				{
 					path: "import/:importId",
 					component: () => import("@/views/books/BooksHomeView.vue"),
 					meta: { requiresAuth: true },

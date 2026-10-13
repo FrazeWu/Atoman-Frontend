@@ -142,4 +142,3 @@ describe("modern flat UI design-system contract", () => {
     expect(field).not.toContain("text-red-500");
   });
 });
-

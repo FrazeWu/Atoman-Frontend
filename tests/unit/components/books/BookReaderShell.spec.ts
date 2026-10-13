@@ -48,4 +48,35 @@ describe('BookReaderShell', () => {
     expect(wrapper.emitted('next')).toHaveLength(1)
     expect(wrapper.emitted('toc-select')).toEqual([['chapter-1']])
   })
+
+  it('将显示设置和目录工具放入可切换侧栏', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/books/library', component: { template: '<div />' } }],
+    })
+    await router.push('/books/library')
+    await router.isReady()
+
+    const wrapper = mount(BookReaderShell, {
+      global: { plugins: [router] },
+      props: {
+        title: '测试书籍',
+        format: 'epub',
+        backTo: '/books/library',
+        backLabel: '返回我的书库',
+        toc: [{ href: 'chapter-1', label: '第一章', depth: 0 }],
+      },
+      slots: {
+        settings: '<div data-reader-settings>字号与主题</div>',
+        tools: '<div data-reader-tools>书签列表</div>',
+      },
+    })
+
+    expect(wrapper.find('[data-reader-settings]').isVisible()).toBe(true)
+    await wrapper.find('button[aria-pressed="false"]').trigger('click')
+    expect(wrapper.find('[data-reader-tools]').isVisible()).toBe(true)
+    expect(wrapper.find('.book-reader-shell__toc button').text()).toBe('第一章')
+    await wrapper.find('button[aria-pressed="false"]').trigger('click')
+    expect(wrapper.find('[data-reader-settings]').isVisible()).toBe(true)
+  })
 })

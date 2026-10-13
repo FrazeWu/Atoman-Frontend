@@ -68,7 +68,7 @@ function statusDescription(task: VideoImportTask) {
   if (task.target_video_id && processingStatus === 'failed') return '视频已发布，但封面或播放预览处理失败，可以重试'
   if (task.status === 'awaiting_submit') return '文件已上传，可以继续编辑或发布'
   if (task.status === 'publishing') return '资料已提交，正在创建视频'
-  if (task.status === 'published') return '视频已发布，后台会继续生成播放预览'
+  if (task.status === 'published') return '视频已发布，正在自动生成播放预览'
   if (task.status === 'failed') return task.upload_completed_at
     ? task.error_message || '发布失败，可以重试'
     : `${task.error_message || '上传失败'}，请重新开始上传后选择原视频文件继续`

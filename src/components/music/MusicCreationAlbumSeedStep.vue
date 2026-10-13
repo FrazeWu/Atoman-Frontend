@@ -56,7 +56,7 @@ function createArtist(name: string) {
           <p class="card-copy">文件选择后立即上传。读取到曲目并确认艺术家后开始核对外部资料。</p>
         </div>
       </div>
-      <p class="archive-hint">推荐 ZIP。无法在本地读取的格式将由后台解析后匹配。</p>
+      <p class="archive-hint">推荐 ZIP。无法在本地读取的格式将在上传后自动解析并匹配。</p>
       <MusicCreationAlbumUploadZone />
     </section>
     <section v-if="creationFlow && !creationFlow.draft.artist.id" class="album-card" aria-label="匹配艺术家">

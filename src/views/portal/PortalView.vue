@@ -17,7 +17,7 @@
             浏览今日精选
           </PButton>
           <a href="#sections" class="portal-hot__secondary-btn">
-            查看真实内容
+            浏览模块内容
           </a>
         </div>
       </div>

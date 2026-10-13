@@ -182,7 +182,7 @@
         </div>
         <PEmpty
           v-else-if="!filteredContentItems.length"
-          :title="contentItems.length ? '暂无此类型内容' : '暂无内容'"
+          :title="contentItems.length ? '暂无所选内容' : '暂无内容'"
           :description="contentItems.length ? '切换其他类型查看公开内容。' : '该用户还没有发布公开内容。'"
         />
         <div v-else class="profile-content__list">

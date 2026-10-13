@@ -91,7 +91,7 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
       </span>
     </section>
     <p v-if="!['ready', 'committed'].includes(albumImport.status)" class="album-preview-step__hint">
-      提交后会继续处理，可在导入中心查看进度。{{ uploadsPending ? '文件尚未上传完成，请保持页面打开；关闭或刷新浏览器会中断上传。' : '文件已上传，后续音频处理会在后台继续。' }}
+      提交后会继续处理，可在导入中心查看进度。{{ uploadsPending ? '文件尚未上传完成，请保持页面打开；关闭或刷新浏览器会中断上传。' : '文件已上传，音频处理将自动继续完成。' }}
     </p>
     <p v-if="albumImport.metadataSourceUrl" class="album-preview-step__source" data-testid="album-import-metadata-source">
       {{ metadataConfirmed ? '已匹配专辑元信息和曲序。' : '发现候选发行版，曲目尚未完整确认，请核对后提交。' }}

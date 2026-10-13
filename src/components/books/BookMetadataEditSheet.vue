@@ -16,6 +16,7 @@
 
       <PInput v-if="entityType === 'edition'" v-model="draft.title" label="版本名称" maxlength="500" />
       <PInput v-if="entityType === 'edition'" v-model="draft.publisher" label="出版社" maxlength="500" hint="按实际资料填写，不自动翻译。" />
+      <PInput v-if="entityType === 'edition'" v-model="draft.producer" label="出品方" maxlength="500" hint="按实际资料填写，不自动翻译。" />
       <PInput v-if="entityType === 'edition'" v-model="draft.isbn10" label="ISBN-10" maxlength="32" />
       <PInput v-if="entityType === 'edition'" v-model="draft.isbn13" label="ISBN-13" maxlength="32" />
       <PInput v-if="entityType === 'edition'" v-model="draft.language" label="语言" maxlength="64" />
@@ -63,7 +64,7 @@ const message = ref('')
 const sourceURL = ref('')
 const reason = ref('')
 const draft = reactive<Record<string, string>>({
-  title: '', original_title: '', subtitle: '', description: '', publisher: '', isbn10: '', isbn13: '', language: '', page_count: '', binding: '', cover_url: '', name: '', sort_name: '',
+  title: '', original_title: '', subtitle: '', description: '', publisher: '', producer: '', isbn10: '', isbn13: '', language: '', page_count: '', binding: '', cover_url: '', name: '', sort_name: '',
 })
 
 const sheetTitle = computed(() => ({ work: '编辑作品资料', edition: '编辑版本资料', person: '编辑作者资料', publisher: '编辑出版社资料' })[props.entityType])
@@ -75,6 +76,7 @@ function reset() {
   draft.subtitle = props.work?.subtitle || ''
   draft.description = props.work?.description || ''
   draft.publisher = props.edition?.publisher || ''
+  draft.producer = props.edition?.producer || ''
   draft.isbn10 = props.edition?.isbn10 || ''
   draft.isbn13 = props.edition?.isbn13 || ''
   draft.language = props.edition?.language || ''
@@ -103,7 +105,7 @@ async function submit() {
     const payload = props.entityType === 'work'
       ? { title: draft.title.trim(), original_title: draft.original_title.trim(), subtitle: draft.subtitle.trim(), description: draft.description.trim() }
       : props.entityType === 'edition' ? {
-          title: draft.title.trim(), publisher: draft.publisher.trim(), isbn10: draft.isbn10.trim(), isbn13: draft.isbn13.trim(), language: draft.language.trim(),
+          title: draft.title.trim(), publisher: draft.publisher.trim(), producer: draft.producer.trim(), isbn10: draft.isbn10.trim(), isbn13: draft.isbn13.trim(), language: draft.language.trim(),
           page_count: draft.page_count ? Number(draft.page_count) : 0, binding: draft.binding.trim(), cover_url: draft.cover_url.trim(),
         }
       : { name: draft.name.trim(), sort_name: draft.sort_name.trim(), description: draft.description.trim() }

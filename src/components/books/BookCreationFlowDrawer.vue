@@ -50,6 +50,7 @@
         <p class="book-create__hint">新作品会同时创建一个版本。出版社会作为独立资料保存，可按原文填写。</p>
         <PInput v-model="draft.editionTitle" label="版本名称" maxlength="500" hint="可填写具体版次或留空。" />
         <PInput v-model="draft.publisher" label="出版社" maxlength="500" />
+        <PInput v-model="draft.producer" label="出品方" maxlength="500" />
         <div class="book-create__columns">
           <PInput v-model="draft.isbn10" label="ISBN-10" maxlength="32" />
           <PInput v-model="draft.isbn13" label="ISBN-13" maxlength="32" />
@@ -75,6 +76,7 @@
           <div v-if="authors.length"><dt>作者</dt><dd>{{ authors.join('、') }}</dd></div>
           <div v-if="draft.language.trim()"><dt>作品语言</dt><dd>{{ draft.language.trim() }}</dd></div>
           <div v-if="draft.publisher.trim()"><dt>出版社</dt><dd>{{ draft.publisher.trim() }}</dd></div>
+          <div v-if="draft.producer.trim()"><dt>出品方</dt><dd>{{ draft.producer.trim() }}</dd></div>
           <div v-if="draft.isbn10.trim() || draft.isbn13.trim()"><dt>ISBN</dt><dd>{{ [draft.isbn13, draft.isbn10].filter(value => value.trim()).join(' · ') }}</dd></div>
           <div v-if="draft.publishedDate"><dt>出版日期</dt><dd>{{ draft.publishedDate }}</dd></div>
           <div v-if="draft.description.trim()"><dt>简介</dt><dd class="book-create__description">{{ draft.description.trim() }}</dd></div>
@@ -118,7 +120,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const errorMessage = ref('')
 const stepLabels = ['上传', '作品', '版本', '确认']
 const draft = reactive({
-  title: '', originalTitle: '', subtitle: '', language: '', authors: '', description: '', editionTitle: '', publisher: '',
+  title: '', originalTitle: '', subtitle: '', language: '', authors: '', description: '', editionTitle: '', publisher: '', producer: '',
   isbn10: '', isbn13: '', editionLanguage: '', publishedDate: '', pageCount: '', binding: '', coverURL: '', sourceURL: '',
 })
 const authors = computed(() => draft.authors.split('\n').map(name => name.trim()).filter(Boolean))
@@ -206,7 +208,7 @@ async function create() {
       title: draft.title.trim(), subtitle: draft.subtitle.trim(), original_title: draft.originalTitle.trim(),
       description: draft.description.trim(), language: draft.language.trim(), authors: authors.value,
       edition: {
-        title: draft.editionTitle.trim(), publisher: draft.publisher.trim(), isbn10: draft.isbn10.trim(), isbn13: draft.isbn13.trim(),
+        title: draft.editionTitle.trim(), publisher: draft.publisher.trim(), producer: draft.producer.trim(), isbn10: draft.isbn10.trim(), isbn13: draft.isbn13.trim(),
         language: draft.editionLanguage.trim(), published_date: draft.publishedDate, page_count: Number(draft.pageCount) || 0,
         binding: draft.binding.trim(), cover_url: draft.coverURL.trim(),
       },

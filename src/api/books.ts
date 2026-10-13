@@ -65,6 +65,11 @@ export interface BookPublicPublisher {
   name: string
 }
 
+export interface BookPublicProducer {
+  id: string
+  name: string
+}
+
 export interface BookPublicSource {
   kind?: string
   title?: string
@@ -79,6 +84,9 @@ export interface BookPublicEdition {
   publisher_id?: string
   publisher?: string
   publisher_info?: BookPublicPublisher
+  producer_id?: string
+  producer?: string
+  producer_info?: BookPublicProducer
   isbn10?: string
   isbn13?: string
   language?: string
@@ -115,6 +123,7 @@ export interface CreatePublicBookInput {
   edition: {
     title?: string
     publisher?: string
+    producer?: string
     isbn10?: string
     isbn13?: string
     language?: string

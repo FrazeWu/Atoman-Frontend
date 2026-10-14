@@ -143,7 +143,7 @@ describe('NotificationPopover', () => {
     expect(mockPush).toHaveBeenCalledWith('/inbox?tab=dm')
   })
 
-  it('renders clean empty state when list is empty', () => {
+  it('renders clean empty state with icon when list is empty', () => {
     const notifStore = useNotificationStore()
     notifStore.notifications = []
 
@@ -153,8 +153,34 @@ describe('NotificationPopover', () => {
       },
     })
 
-    expect(wrapper.find('[data-test="popover-empty"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('暂无未读通知')
+    const empty = wrapper.find('[data-test="popover-empty"]')
+    expect(empty.exists()).toBe(true)
+    expect(empty.text()).toContain('暂无未读通知')
+    expect(empty.find('.popover-empty-icon').exists()).toBe(true)
+  })
+
+  it('renders footer links with arrow icons', () => {
+    const wrapper = mount(NotificationPopover, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    const arrows = wrapper.findAll('.popover-footer-arrow')
+    expect(arrows.length).toBe(2)
+  })
+
+  it('automatically triggers fetchNotifications on mount', () => {
+    const notifStore = useNotificationStore()
+    const fetchSpy = vi.spyOn(notifStore, 'fetchNotifications').mockResolvedValue(undefined)
+
+    mount(NotificationPopover, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith('all')
   })
 
   it('emits close on Escape keydown', async () => {

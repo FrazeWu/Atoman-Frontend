@@ -42,7 +42,8 @@
         />
       </div>
       <div v-else class="popover-empty" data-test="popover-empty">
-        暂无未读通知
+        <IconBellOff :size="24" class="popover-empty-icon" />
+        <span>暂无未读通知</span>
       </div>
     </div>
 
@@ -54,7 +55,8 @@
         data-test="footer-all"
         @click.prevent="handleNavigate('/inbox')"
       >
-        进入收件箱查看全部
+        <span>进入收件箱查看全部</span>
+        <IconArrowRight :size="14" class="popover-footer-arrow" />
       </RouterLink>
       <RouterLink
         to="/inbox?tab=dm"
@@ -62,7 +64,8 @@
         data-test="footer-dm"
         @click.prevent="handleNavigate('/inbox?tab=dm')"
       >
-        私信
+        <span>私信</span>
+        <IconArrowRight :size="14" class="popover-footer-arrow" />
       </RouterLink>
     </footer>
   </div>
@@ -71,6 +74,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { IconArrowRight, IconBellOff } from '@tabler/icons-vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationTargetPath } from '@/utils/notificationHelpers'
@@ -158,12 +162,10 @@ onMounted(async () => {
     cleanupClickOutside = () => document.removeEventListener('click', handleClickOutside)
   }, 0)
 
-  if (notificationStore.notifications.length === 0) {
-    try {
-      await notificationStore.fetchNotifications('all')
-    } catch {
-      // ignore fetch errors on mount
-    }
+  try {
+    await notificationStore.fetchNotifications('all')
+  } catch {
+    // ignore fetch errors on mount
   }
 })
 
@@ -259,10 +261,20 @@ onBeforeUnmount(() => {
 }
 
 .popover-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   padding: 3rem 1rem;
   text-align: center;
   font-size: 0.875rem;
   color: var(--a-color-muted);
+}
+
+.popover-empty-icon {
+  color: var(--a-color-muted);
+  opacity: 0.7;
 }
 
 .popover-footer {
@@ -276,6 +288,9 @@ onBeforeUnmount(() => {
 }
 
 .popover-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--a-color-muted);
@@ -290,6 +305,16 @@ onBeforeUnmount(() => {
 .popover-footer-link:hover {
   color: var(--a-color-fg);
   text-decoration: none;
+}
+
+.popover-footer-arrow {
+  color: var(--a-color-muted);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.popover-footer-link:hover .popover-footer-arrow {
+  transform: translateX(2px);
+  color: var(--a-color-fg);
 }
 
 .popover-footer-link:focus-visible {

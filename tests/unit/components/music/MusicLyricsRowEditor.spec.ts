@@ -376,14 +376,14 @@ describe('MusicLyricsRowEditor', () => {
     expect(cssRule('.lyric-input', desktopCss)).toMatch(/box-sizing:\s*border-box;/)
   })
 
-  it('只使用项目 a-color 颜色令牌并保留 fallback', () => {
+  it('只使用项目 a-color 颜色令牌', () => {
     expect(componentSource).not.toMatch(/var\(--color-/)
-    expect(componentSource).toMatch(/var\(--a-color-muted,\s*#[0-9a-f]{6}\)/i)
-    expect(componentSource).toMatch(/var\(--a-color-border-soft,\s*#[0-9a-f]{6}\)/i)
-    expect(componentSource).toMatch(/var\(--a-color-bg,\s*#[0-9a-f]{6}\)/i)
-    expect(componentSource).toMatch(/var\(--a-color-text,\s*#[0-9a-f]{6}\)/i)
-    expect(componentSource).toMatch(/var\(--a-color-primary,\s*#[0-9a-f]{6}\)/i)
-    expect(componentSource).toMatch(/var\(--a-color-danger,\s*#[0-9a-f]{6}\)/i)
-    expect(componentSource).toMatch(/var\(--a-color-warning,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-muted\b/i)
+    expect(componentSource).toMatch(/var\(--a-color-border-soft\b/i)
+    expect(componentSource).toMatch(/var\(--a-color-bg\b/i)
+    expect(componentSource).toMatch(/var\(--a-color-text\b/i)
+    expect(componentSource).toMatch(/var\(--a-color-primary\b/i)
+    expect(componentSource).toMatch(/var\(--a-color-danger\b/i)
+    expect(componentSource).toMatch(/var\(--a-color-warning\b/i)
   })
 })

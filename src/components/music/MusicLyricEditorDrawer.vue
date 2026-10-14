@@ -1022,7 +1022,7 @@ function handleSave() {
 
 :root.dark :global(.lyric-editor-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+  border-left: 1px solid var(--a-color-border) !important;
 }
 .music-lyric-editor-drawer__page-header {
   display: flex;
@@ -1035,7 +1035,7 @@ function handleSave() {
 .music-lyric-editor-drawer__page-header h1 {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .music-lyric-editor-drawer__back {

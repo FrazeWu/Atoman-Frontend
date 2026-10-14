@@ -885,7 +885,7 @@ watch([releaseType, albumSortMode], () => {
 
 :global(:root.dark .artist-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+  border-left: 1px solid var(--a-color-border) !important;
 }
 
 .drawer-header-content { display: flex; flex-direction: column; gap: 0.25rem; }

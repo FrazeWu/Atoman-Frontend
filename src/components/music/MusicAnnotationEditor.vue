@@ -106,7 +106,7 @@ function handleSave() {
   border-left: 3px solid var(--a-color-primary);
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.45;
 }
 

@@ -136,5 +136,5 @@ watch(() => [props.entityType, props.entityId, authStore.isAuthenticated] as con
 .music-entry-state__pending button { border: 0; padding: 0.2rem; }
 .music-entry-state__form { display: flex; align-items: center; gap: 0.4rem; flex: 1 1 24rem; }
 .music-entry-state__form input { min-width: 12rem; flex: 1; min-height: 2rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: var(--a-color-text); padding: 0.35rem 0.5rem; }
-.music-entry-state__error { width: 100%; color: var(--a-color-danger, #b91c1c); }
+.music-entry-state__error { width: 100%; color: var(--a-color-danger); }
 </style>

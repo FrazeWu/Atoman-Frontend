@@ -213,7 +213,7 @@ const albumYear = computed(() => {
   position: relative;
   aspect-ratio: 1 / 1;
   width: 100%;
-  background: var(--a-color-surface-muted, #f4f4f5);
+  background: var(--a-color-surface-muted);
   border-radius: var(--a-radius-card);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
@@ -222,7 +222,7 @@ const albumYear = computed(() => {
 }
 
 .music-album-card:hover .cover-frame {
-  border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft));
+  border-color: color-mix(in srgb, var(--a-color-primary) 35%, var(--a-color-border-soft));
 }
 
 .cover-action {
@@ -438,9 +438,9 @@ const albumYear = computed(() => {
   left: 8px;
   z-index: 3;
   padding: 0.2rem 0.45rem;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   pointer-events: none;
   background: rgba(0, 0, 0, 0.82);
@@ -448,19 +448,19 @@ const albumYear = computed(() => {
 }
 
 .status-tag[data-status="ready"] {
-  background: #16a34a;
+  background: var(--a-color-success);
   color: #ffffff;
 }
 
 .status-tag[data-status="needs_attention"] {
-  background: #dc2626;
+  background: var(--a-color-danger);
   color: #ffffff;
 }
 
 .status-tag[data-status="extracting"],
 .status-tag[data-status="analyzing"],
 .status-tag[data-status="transcoding"] {
-  background: #2563eb;
+  background: var(--a-color-primary);
   color: #ffffff;
 }
 

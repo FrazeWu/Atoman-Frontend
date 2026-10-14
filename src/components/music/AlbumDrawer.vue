@@ -1465,7 +1465,7 @@ watch(
 }
 .album-tracks-musicbrainz-status b {
   color: var(--a-text-secondary);
-  font-weight: 650;
+  font-weight: 500;
 }
 .album-tracks-musicbrainz-status__divider {
   width: 1px;

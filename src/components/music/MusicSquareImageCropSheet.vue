@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
 }
 
 .crop-sheet__state--error {
-  color: var(--a-color-danger, #b42318);
+  color: var(--a-color-danger);
 }
 
 .crop-sheet__zoom {

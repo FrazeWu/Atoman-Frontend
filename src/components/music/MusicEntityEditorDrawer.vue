@@ -768,6 +768,6 @@ async function handleSongEditSubmit() {
 }
 :root.dark :global(.entity-editor-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+  border-left: 1px solid var(--a-color-border) !important;
 }
 </style>

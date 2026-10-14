@@ -36,6 +36,17 @@
         <Bookmark :size="15" aria-hidden="true" />
         <span>书签 ({{ bookmarks.length }})</span>
       </button>
+      <button
+        type="button"
+        role="tab"
+        class="book-reader-sidebar__tab"
+        :class="{ 'is-active': activeTab === 'annotations' }"
+        :aria-selected="activeTab === 'annotations'"
+        @click="activeTab = 'annotations'"
+      >
+        <Highlight :size="15" aria-hidden="true" />
+        <span>批注 ({{ annotations.length }})</span>
+      </button>
     </nav>
 
     <!-- 缩略图列表 -->
@@ -113,27 +124,133 @@
         </li>
       </ul>
     </div>
+
+    <!-- 批注与划线列表 -->
+    <div
+      v-show="activeTab === 'annotations'"
+      class="book-reader-sidebar__pane book-reader-sidebar__pane--annotations"
+      role="tabpanel"
+      aria-label="划线与批注"
+    >
+      <div v-if="annotations.length" class="book-reader-sidebar__annotations-bar">
+        <div class="book-reader-sidebar__filter-dots" role="radiogroup" aria-label="颜色筛选">
+          <button
+            type="button"
+            class="book-reader-sidebar__filter-all"
+            :class="{ 'is-active': selectedColorFilter === 'all' }"
+            @click="selectedColorFilter = 'all'"
+          >
+            全部
+          </button>
+          <button
+            v-for="color in filterColors"
+            :key="color"
+            type="button"
+            class="book-reader-sidebar__filter-dot"
+            :class="{ 'is-active': selectedColorFilter === color }"
+            :data-color="color"
+            :style="{ backgroundColor: getColorCode(color) }"
+            :title="`筛选 ${color} 高亮`"
+            @click="selectedColorFilter = selectedColorFilter === color ? 'all' : color"
+          />
+        </div>
+        <button
+          type="button"
+          class="book-reader-sidebar__export-btn"
+          data-testid="annotation-export"
+          title="导出划线与批注"
+          @click="$emit('annotation-export')"
+        >
+          <Download :size="13" aria-hidden="true" />
+          <span>导出</span>
+        </button>
+      </div>
+
+      <p v-if="!filteredAnnotations.length" class="book-reader-sidebar__empty-tip">
+        {{ annotations.length ? '没有匹配的划线与批注' : '暂无划线与批注' }}
+      </p>
+      <ul v-else class="book-reader-sidebar__annotation-list">
+        <li
+          v-for="item in filteredAnnotations"
+          :key="item.id"
+          class="book-annotation-card"
+          @click="$emit('annotation-jump', item)"
+        >
+          <span
+            class="book-annotation-card__stripe"
+            :data-color="item.color"
+            :style="{ backgroundColor: getColorCode(item.color) }"
+            aria-hidden="true"
+          />
+          <div class="book-annotation-card__body">
+            <blockquote
+              class="book-annotation-card__quote"
+              :class="{ 'is-underline': item.style === 'underline' }"
+            >
+              {{ item.text }}
+            </blockquote>
+            <div v-if="item.note" class="book-annotation-card__note">
+              <Notes :size="12" aria-hidden="true" />
+              <span>{{ item.note }}</span>
+            </div>
+            <div class="book-annotation-card__meta">
+              <span class="book-annotation-card__location">
+                {{ item.chapter_title || (item.pdf_page ? `第 ${item.pdf_page} 页` : (item.format === 'txt' ? '纯文本' : '')) }}
+              </span>
+              <div class="book-annotation-card__actions" @click.stop>
+                <button
+                  type="button"
+                  class="book-annotation-card__action-btn"
+                  data-testid="annotation-jump"
+                  title="定位到正文"
+                  :aria-label="`定位到划线 ${item.text.slice(0, 10)}`"
+                  @click="$emit('annotation-jump', item)"
+                >
+                  <ArrowUpRight :size="13" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  class="book-annotation-card__action-btn book-annotation-card__action-btn--delete"
+                  data-testid="annotation-delete"
+                  title="删除划线"
+                  :aria-label="`删除划线 ${item.text.slice(0, 10)}`"
+                  @click="$emit('annotation-delete', item.id)"
+                >
+                  <Trash :size="13" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   IconLayoutGrid as LayoutGrid,
   IconListTree as ListTree,
   IconBookmark as Bookmark,
   IconTrash as Trash,
+  IconHighlight as Highlight,
+  IconDownload as Download,
+  IconNotes as Notes,
+  IconArrowUpRight as ArrowUpRight,
 } from '@tabler/icons-vue'
 import type { BookReaderTocItem } from '@/components/books/BookReaderShell.vue'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
+import type { BookAnnotation, BookHighlightColor } from '@/api/books'
 
-export type SidebarTab = 'thumbnails' | 'outline' | 'bookmarks'
+export type SidebarTab = 'thumbnails' | 'outline' | 'bookmarks' | 'annotations'
 
 const props = withDefaults(defineProps<{
   totalPages?: number
   currentPage?: number
   toc?: BookReaderTocItem[]
   bookmarks?: BookReaderBookmark[]
+  annotations?: BookAnnotation[]
   defaultTab?: SidebarTab
   ariaLabel?: string
 }>(), {
@@ -141,6 +258,7 @@ const props = withDefaults(defineProps<{
   currentPage: 1,
   toc: () => [],
   bookmarks: () => [],
+  annotations: () => [],
   defaultTab: 'thumbnails',
   ariaLabel: '阅读器导览侧栏',
 })
@@ -150,18 +268,41 @@ defineEmits<{
   (e: 'toc-select', href: string): void
   (e: 'bookmark-jump', bookmark: BookReaderBookmark): void
   (e: 'bookmark-remove', bookmarkId: string): void
+  (e: 'annotation-jump', annotation: BookAnnotation): void
+  (e: 'annotation-edit', annotation: BookAnnotation): void
+  (e: 'annotation-delete', annotationId: string): void
+  (e: 'annotation-export'): void
 }>()
 
 const activeTab = ref<SidebarTab>(
   props.defaultTab === 'thumbnails' && props.totalPages === 0
-    ? (props.toc.length ? 'outline' : 'bookmarks')
+    ? (props.toc.length ? 'outline' : (props.bookmarks.length ? 'bookmarks' : (props.annotations.length ? 'annotations' : 'bookmarks')))
     : props.defaultTab,
 )
+
+const filterColors = ['yellow', 'green', 'blue', 'pink'] as const
+const selectedColorFilter = ref<'all' | BookHighlightColor>('all')
+
+const getColorCode = (color: BookHighlightColor) => {
+  switch (color) {
+    case 'green': return '#86efac'
+    case 'blue': return '#93c5fd'
+    case 'pink': return '#f472b6'
+    case 'yellow':
+    default:
+      return '#fde047'
+  }
+}
+
+const filteredAnnotations = computed(() => {
+  if (selectedColorFilter.value === 'all') return props.annotations
+  return props.annotations.filter((a) => a.color === selectedColorFilter.value)
+})
 
 watch(
   () => props.totalPages,
   (val) => {
-    if (val > 0 && activeTab.value === 'bookmarks' && !props.bookmarks.length) {
+    if (val > 0 && activeTab.value === 'bookmarks' && !props.bookmarks.length && !props.annotations.length) {
       activeTab.value = 'thumbnails'
     }
   },
@@ -193,16 +334,17 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   min-height: 2rem;
-  padding: 0.25rem 0.4rem;
+  padding: 0.25rem 0.3rem;
   border: 1px solid transparent;
   border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-muted);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -382,6 +524,198 @@ watch(
 }
 
 .book-reader-sidebar__bookmark-remove:hover {
+  background: color-mix(in srgb, var(--a-color-danger) 10%, transparent);
+  color: var(--a-color-danger);
+}
+
+/* 批注与划线列表 */
+.book-reader-sidebar__pane--annotations {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-reader-sidebar__annotations-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.book-reader-sidebar__filter-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.book-reader-sidebar__filter-all {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+
+.book-reader-sidebar__filter-all.is-active {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  font-weight: 600;
+}
+
+.book-reader-sidebar__filter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.book-reader-sidebar__filter-dot:hover {
+  transform: scale(1.15);
+}
+
+.book-reader-sidebar__filter-dot.is-active {
+  box-shadow: 0 0 0 1.5px var(--a-color-fg);
+}
+
+.book-reader-sidebar__export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.book-reader-sidebar__export-btn:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.book-reader-sidebar__annotation-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-annotation-card {
+  display: flex;
+  position: relative;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.book-annotation-card:hover {
+  border-color: var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 3%, var(--a-color-bg));
+}
+
+.book-annotation-card__stripe {
+  width: 4px;
+  flex-shrink: 0;
+}
+
+.book-annotation-card__body {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.book-annotation-card__quote {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--a-color-fg);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.book-annotation-card__quote.is-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--a-color-primary);
+  text-underline-offset: 2px;
+}
+
+.book-annotation-card__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.25rem 0.35rem;
+  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-control);
+  font-size: 0.74rem;
+  color: var(--a-color-muted);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.book-annotation-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.book-annotation-card__location {
+  font-size: 0.68rem;
+  color: var(--a-color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-annotation-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.book-annotation-card__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.book-annotation-card__action-btn:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.book-annotation-card__action-btn--delete:hover {
   background: color-mix(in srgb, var(--a-color-danger) 10%, transparent);
   color: var(--a-color-danger);
 }

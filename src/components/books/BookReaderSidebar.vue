@@ -149,13 +149,13 @@
             class="book-reader-sidebar__filter-dot"
             :class="{ 'is-active': selectedColorFilter === color }"
             :data-color="color"
-            :style="{ backgroundColor: getColorCode(color) }"
             :title="`筛选 ${color} 高亮`"
             @click="selectedColorFilter = selectedColorFilter === color ? 'all' : color"
           />
         </div>
-        <button
-          type="button"
+        <PButton
+          variant="ghost"
+          size="sm"
           class="book-reader-sidebar__export-btn"
           data-testid="annotation-export"
           title="导出划线与批注"
@@ -163,7 +163,7 @@
         >
           <Download :size="13" aria-hidden="true" />
           <span>导出</span>
-        </button>
+        </PButton>
       </div>
 
       <p v-if="!filteredAnnotations.length" class="book-reader-sidebar__empty-tip">
@@ -179,7 +179,6 @@
           <span
             class="book-annotation-card__stripe"
             :data-color="item.color"
-            :style="{ backgroundColor: getColorCode(item.color) }"
             aria-hidden="true"
           />
           <div class="book-annotation-card__body">
@@ -197,6 +196,9 @@
               <span class="book-annotation-card__location">
                 {{ item.chapter_title || (item.pdf_page ? `第 ${item.pdf_page} 页` : (item.format === 'txt' ? '纯文本' : '')) }}
               </span>
+              <time v-if="item.created_at" class="book-annotation-card__time" :datetime="item.created_at">
+                {{ formatRelativeTime(item.created_at) }}
+              </time>
               <div class="book-annotation-card__actions" @click.stop>
                 <button
                   type="button"
@@ -239,6 +241,7 @@ import {
   IconNotes as Notes,
   IconArrowUpRight as ArrowUpRight,
 } from '@tabler/icons-vue'
+import PButton from '@/components/ui/PButton.vue'
 import type { BookReaderTocItem } from '@/components/books/BookReaderShell.vue'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
 import type { BookAnnotation, BookHighlightColor } from '@/api/books'
@@ -283,15 +286,19 @@ const activeTab = ref<SidebarTab>(
 const filterColors = ['yellow', 'green', 'blue', 'pink'] as const
 const selectedColorFilter = ref<'all' | BookHighlightColor>('all')
 
-const getColorCode = (color: BookHighlightColor) => {
-  switch (color) {
-    case 'green': return '#86efac'
-    case 'blue': return '#93c5fd'
-    case 'pink': return '#f472b6'
-    case 'yellow':
-    default:
-      return '#fde047'
-  }
+function formatRelativeTime(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const diff = Math.max(0, Date.now() - d.getTime())
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '刚刚'
+  if (mins < 60) return `${mins} 分钟前`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} 小时前`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days} 天前`
+  return d.toLocaleDateString('zh-CN')
 }
 
 const filteredAnnotations = computed(() => {
@@ -567,10 +574,10 @@ watch(
 }
 
 .book-reader-sidebar__filter-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  width: 12px;
+  height: 12px;
+  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   padding: 0;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
@@ -584,23 +591,27 @@ watch(
   box-shadow: 0 0 0 1.5px var(--a-color-fg);
 }
 
-.book-reader-sidebar__export-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.72rem;
-  padding: 0.15rem 0.35rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-muted);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+.book-reader-sidebar__filter-dot[data-color="yellow"] {
+  background-color: color-mix(in srgb, var(--a-color-warning) 35%, transparent);
 }
 
-.book-reader-sidebar__export-btn:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
+.book-reader-sidebar__filter-dot[data-color="green"] {
+  background-color: color-mix(in srgb, var(--a-color-success) 35%, transparent);
+}
+
+.book-reader-sidebar__filter-dot[data-color="blue"] {
+  background-color: color-mix(in srgb, var(--a-color-primary) 35%, transparent);
+}
+
+.book-reader-sidebar__filter-dot[data-color="pink"] {
+  background-color: color-mix(in srgb, var(--a-color-danger) 35%, transparent);
+}
+
+.book-reader-sidebar__export-btn {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.35rem;
+  min-height: 1.5rem;
+  gap: 0.2rem;
 }
 
 .book-reader-sidebar__annotation-list {
@@ -630,6 +641,22 @@ watch(
 .book-annotation-card__stripe {
   width: 4px;
   flex-shrink: 0;
+}
+
+.book-annotation-card__stripe[data-color="yellow"] {
+  background-color: color-mix(in srgb, var(--a-color-warning) 70%, transparent);
+}
+
+.book-annotation-card__stripe[data-color="green"] {
+  background-color: color-mix(in srgb, var(--a-color-success) 70%, transparent);
+}
+
+.book-annotation-card__stripe[data-color="blue"] {
+  background-color: color-mix(in srgb, var(--a-color-primary) 70%, transparent);
+}
+
+.book-annotation-card__stripe[data-color="pink"] {
+  background-color: color-mix(in srgb, var(--a-color-danger) 70%, transparent);
 }
 
 .book-annotation-card__body {
@@ -687,6 +714,15 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.book-annotation-card__time {
+  font-size: 0.68rem;
+  color: var(--a-color-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 0.25rem;
 }
 
 .book-annotation-card__actions {

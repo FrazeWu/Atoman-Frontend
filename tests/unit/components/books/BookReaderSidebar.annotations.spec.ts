@@ -74,6 +74,16 @@ describe('BookReaderSidebar - Annotations Tab', () => {
     expect(indicator.exists()).toBe(true)
     expect(indicator.attributes('data-color')).toBe('yellow')
 
+    // Relative time indicator
+    const timeEl = cards[0].find('.book-annotation-card__time')
+    expect(timeEl.exists()).toBe(true)
+    expect(timeEl.text().length).toBeGreaterThan(0)
+
+    // Filter dots have data-color and no inline style
+    const filterDots = wrapper.findAll('.book-reader-sidebar__filter-dot')
+    expect(filterDots).toHaveLength(4)
+    expect(filterDots.map((d) => d.attributes('data-color'))).toEqual(['yellow', 'green', 'blue', 'pink'])
+
     expect(cards[1].text()).toContain('第二句下划线标记文本')
   })
 
@@ -117,7 +127,7 @@ describe('BookReaderSidebar - Annotations Tab', () => {
     expect(wrapper.emitted('annotation-delete')?.[0]).toEqual(['ann-1'])
   })
 
-  it('emits annotation-export when clicking export button', async () => {
+  it('emits annotation-export when clicking export button via PButton', async () => {
     const wrapper = mount(BookReaderSidebar, {
       props: {
         annotations: mockAnnotations,
@@ -127,6 +137,7 @@ describe('BookReaderSidebar - Annotations Tab', () => {
 
     const exportBtn = wrapper.find('[data-testid="annotation-export"]')
     expect(exportBtn.exists()).toBe(true)
+    expect(exportBtn.classes()).toContain('p-button--ghost')
 
     await exportBtn.trigger('click')
 

@@ -152,13 +152,13 @@
       @highlight="onToolbarHighlight"
       @save-note="onToolbarSaveNote"
       @delete="onToolbarDelete"
-      @close="selectionToolbar = null"
+      @close="closeSelectionToolbar"
     />
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { IconBookmark as Bookmark, IconDownload as Download, IconDeviceFloppy as Save, IconSearch as Search } from '@tabler/icons-vue'
 import ePub from 'epubjs'
@@ -363,25 +363,25 @@ async function loadEPUB() {
 
   epubRendition.themes.default({
     '.book-highlight': {
-      'background-color': 'rgba(254, 240, 138, 0.55)',
+      'background-color': 'color-mix(in srgb, #f59e0b 35%, transparent)',
       'cursor': 'pointer',
       'border-radius': '2px',
     },
     '.book-highlight--yellow': {
-      'background-color': 'rgba(254, 240, 138, 0.55)',
+      'background-color': 'color-mix(in srgb, #f59e0b 35%, transparent)',
     },
     '.book-highlight--green': {
-      'background-color': 'rgba(187, 247, 208, 0.55)',
+      'background-color': 'color-mix(in srgb, #10b981 35%, transparent)',
     },
     '.book-highlight--blue': {
-      'background-color': 'rgba(191, 219, 254, 0.55)',
+      'background-color': 'color-mix(in srgb, #3b82f6 35%, transparent)',
     },
     '.book-highlight--pink': {
-      'background-color': 'rgba(251, 207, 232, 0.55)',
+      'background-color': 'color-mix(in srgb, #f87171 35%, transparent)',
     },
     '.book-highlight.is-underline': {
       'background-color': 'transparent !important',
-      'text-decoration': 'underline wavy #6366f1 !important',
+      'text-decoration': 'underline wavy #3b82f6 !important',
       'text-underline-offset': '3px !important',
     },
   })
@@ -894,6 +894,18 @@ async function handleAnnotationClick(item: BookAnnotation) {
   }
 }
 
+function clearSelection() {
+  window.getSelection()?.removeAllRanges()
+  try {
+    epubViewport.value?.querySelector('iframe')?.contentWindow?.getSelection()?.removeAllRanges()
+  } catch {}
+}
+
+function closeSelectionToolbar() {
+  clearSelection()
+  selectionToolbar.value = null
+}
+
 const currentChapterTitle = computed(() => {
   if (asset.value?.format === 'pdf') {
     return `第 ${pdfPage.value} 页`
@@ -913,6 +925,12 @@ async function onToolbarHighlight(color: BookHighlightColor, style: BookHighligh
       const updated = await updateBookAnnotation(existing.id, { color, style })
       const idx = annotations.value.findIndex((a) => a.id === existing.id)
       if (idx >= 0) annotations.value[idx] = updated
+      if (asset.value.format === 'epub' && epubRendition && existing.epub_cfi) {
+        try {
+          (epubRendition as any).annotations?.remove(existing.epub_cfi, 'highlight')
+        } catch {}
+        registerSingleEpubAnnotation(updated)
+      }
     } else {
       const created = await createBookAnnotation(asset.value.id, {
         format: asset.value.format,
@@ -933,8 +951,7 @@ async function onToolbarHighlight(color: BookHighlightColor, style: BookHighligh
   } catch (err) {
     console.error('保存划线高亮失败', err)
   } finally {
-    window.getSelection()?.removeAllRanges()
-    selectionToolbar.value = null
+    closeSelectionToolbar()
   }
 }
 
@@ -947,6 +964,12 @@ async function onToolbarSaveNote(note: string, color: BookHighlightColor, style:
       const updated = await updateBookAnnotation(existing.id, { note, color, style })
       const idx = annotations.value.findIndex((a) => a.id === existing.id)
       if (idx >= 0) annotations.value[idx] = updated
+      if (asset.value.format === 'epub' && epubRendition && existing.epub_cfi) {
+        try {
+          (epubRendition as any).annotations?.remove(existing.epub_cfi, 'highlight')
+        } catch {}
+        registerSingleEpubAnnotation(updated)
+      }
     } else {
       const created = await createBookAnnotation(asset.value.id, {
         format: asset.value.format,
@@ -968,8 +991,7 @@ async function onToolbarSaveNote(note: string, color: BookHighlightColor, style:
   } catch (err) {
     console.error('保存批注想法失败', err)
   } finally {
-    window.getSelection()?.removeAllRanges()
-    selectionToolbar.value = null
+    closeSelectionToolbar()
   }
 }
 
@@ -986,9 +1008,21 @@ async function onToolbarDelete(id: string) {
   } catch (err) {
     console.error('删除高亮划线失败', err)
   } finally {
-    selectionToolbar.value = null
+    closeSelectionToolbar()
   }
 }
+
+watch(
+  () => route.query.annotationId,
+  async (targetAnnotationId) => {
+    if (!targetAnnotationId || typeof targetAnnotationId !== 'string') return
+    const target = annotations.value.find((a) => a.id === targetAnnotationId)
+    if (target) {
+      await nextTick()
+      await jumpToAnnotation(target)
+    }
+  },
+)
 
 async function handleDeleteAnnotation(annotationId: string) {
   try {
@@ -1408,22 +1442,22 @@ onBeforeUnmount(() => {
 
 :deep(.book-highlight--yellow),
 .book-highlight--yellow {
-  background-color: rgba(254, 240, 138, 0.65);
+  background-color: color-mix(in srgb, var(--a-color-warning) 30%, transparent);
 }
 
 :deep(.book-highlight--green),
 .book-highlight--green {
-  background-color: rgba(187, 247, 208, 0.65);
+  background-color: color-mix(in srgb, var(--a-color-success) 30%, transparent);
 }
 
 :deep(.book-highlight--blue),
 .book-highlight--blue {
-  background-color: rgba(191, 219, 254, 0.65);
+  background-color: color-mix(in srgb, var(--a-color-primary) 30%, transparent);
 }
 
 :deep(.book-highlight--pink),
 .book-highlight--pink {
-  background-color: rgba(251, 207, 232, 0.65);
+  background-color: color-mix(in srgb, var(--a-color-danger) 30%, transparent);
 }
 
 :deep(.book-highlight.is-underline),
